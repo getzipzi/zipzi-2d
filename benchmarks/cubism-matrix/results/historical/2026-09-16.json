@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-16",
+  "machine": {
+    "model": "Mac mini (Mac16,10)",
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "memory_gib": 16,
+    "display_refresh_hz": 120
+  },
+  "workload": {
+    "model": "mao_pro",
+    "resolution": "1280x720",
+    "motion": "Idle/0 loop",
+    "warmup_seconds": 5,
+    "sample_seconds": 15,
+    "vsync_requested": false
+  },
+  "gd_cubism": [
+    {"models": 1, "fps": 119.997, "p50_ms": 8.339, "p95_ms": 8.730, "p99_ms": 9.046, "draw_calls": 178},
+    {"models": 5, "fps": 47.574, "p50_ms": 20.987, "p95_ms": 24.497, "p99_ms": 25.208, "draw_calls": 886},
+    {"models": 10, "fps": 22.419, "p50_ms": 45.926, "p95_ms": 48.865, "p99_ms": 51.583, "draw_calls": 1771},
+    {"models": 20, "fps": 5.919, "p50_ms": 175.271, "p95_ms": 259.550, "p99_ms": 283.365, "draw_calls": 3541, "max_rss_bytes": 770768896}
+  ],
+  "cubism_native": {
+    "models": 20,
+    "backend": "OpenGL",
+    "fps": 120.013,
+    "p50_ms": 8.362,
+    "p95_ms": 8.584,
+    "p99_ms": 8.734,
+    "max_rss_bytes": 440107008,
+    "note": "Refresh-rate limited; actual uncapped throughput is at least 120 FPS."
+  }
+}

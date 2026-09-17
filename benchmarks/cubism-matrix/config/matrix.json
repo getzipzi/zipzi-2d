@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "cubism-native",
+      "core": "cubism",
+      "host": "cubism-framework-native"
+    },
+    {
+      "id": "purism-native",
+      "core": "purism",
+      "host": "cubism-framework-native"
+    },
+    {
+      "id": "cubism-godot",
+      "core": "cubism",
+      "host": "gd-cubism"
+    },
+    {
+      "id": "purism-godot",
+      "core": "purism",
+      "host": "gd-cubism"
+    },
+    {
+      "id": "cubism-core",
+      "core": "cubism",
+      "host": "core-only"
+    },
+    {
+      "id": "purism-core",
+      "core": "purism",
+      "host": "core-only"
+    }
+  ]
+}

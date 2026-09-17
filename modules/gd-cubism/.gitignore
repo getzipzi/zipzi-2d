@@ -1,0 +1,10 @@
+.vscode
+.venv/
+
+# SCons build state and objects
+.DS_Store
+.sconsign.dblite
+*.os
+*.obj
+*.exp
+*.lib

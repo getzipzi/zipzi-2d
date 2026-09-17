@@ -1,0 +1,16 @@
+dist
+target
+.DS_Store
+
+# Local-only dependencies and test fixtures. Their licenses do not permit them
+# to be redistributed with this repository.
+third_party/CubismNativeFramework/
+third_party/CubismSdkForNative*/
+demos/godot/assets/live2d/
+demos/godot/artifacts/
+benchmarks/cubism-matrix/addons/
+benchmarks/cubism-matrix/assets/live2d/
+benchmarks/cubism-matrix/artifacts/
+benchmarks/cubism-matrix/.godot/
+benchmarks/cubism-matrix/runners/native/build*/
+**/__pycache__/

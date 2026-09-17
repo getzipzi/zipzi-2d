@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "mao-40",
+  "model": "mao_pro",
+  "model_path": "res://assets/live2d/mao/runtime/mao_pro.model3.json",
+  "instances": 40,
+  "layout": {
+    "columns": 10,
+    "rows": 4,
+    "cell_fill": 0.92
+  },
+  "viewport": [1280, 720],
+  "timing": {
+    "warmup_seconds": 5.0,
+    "sample_seconds": 15.0
+  },
+  "motion": {
+    "group": "Idle",
+    "index": 0
+  }
+}
