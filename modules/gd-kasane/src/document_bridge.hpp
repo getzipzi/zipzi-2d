@@ -22,6 +22,16 @@ public:
                                           const godot::PackedInt64Array &vertex_ids,
                                           const godot::PackedVector2Array &positions);
     godot::Dictionary rename_mesh(const godot::String &id, const godot::String &name);
+    godot::Dictionary begin_transaction();
+    godot::Dictionary stage_vertex_positions(const godot::String &mesh_id,
+                                             const godot::PackedInt64Array &vertex_ids,
+                                             const godot::PackedVector2Array &positions);
+    godot::Dictionary commit_transaction();
+    godot::Dictionary cancel_transaction();
+    godot::Dictionary undo();
+    godot::Dictionary redo();
+    godot::Dictionary save_project(const godot::String &path);
+    godot::Dictionary open_project(const godot::String &path);
     godot::Dictionary get_mesh_snapshot(const godot::String &id) const;
     godot::Dictionary get_document_summary() const;
     KasaneMeshView *get_mesh_view(const godot::String &id) const;

@@ -30,7 +30,7 @@ static func populate(bridge: KasaneDocumentBridge, tex: Texture2D) -> Dictionary
 	var result := bridge.initialize(DOC, Vector2(320, 320))
 	if not result.ok:
 		return result
-	result = bridge.add_image_asset(ASSET, "Four quadrants", "memory://quadrants", tex)
+	result = bridge.add_image_asset(ASSET, "Four quadrants", "res://assets/quadrants.svg", tex)
 	if not result.ok:
 		return result
 	return bridge.create_mesh(mesh())

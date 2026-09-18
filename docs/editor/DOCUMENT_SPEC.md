@@ -1,6 +1,6 @@
 # Document specification v1（Stage 01）
 
-状态：已实现的**内存逻辑规格**，不定义磁盘格式或稳定的跨进程协议。
+状态：Stage 01 的**内存逻辑规格**。Stage 02 的事务扩展和 Stage 03 磁盘格式分别见 [交付记录](stages/02-03-delivery.md) 与 [项目格式](PROJECT_FORMAT.md)。
 
 实现入口：`modules/kasane-core/include/kasane/document.hpp`。Godot 调用示例：`demos/kasane-preview/fixture.gd`。
 
@@ -88,7 +88,7 @@ N 至少为 3，T 至少为 1；位置、UV 与顶点 ID 必须一一对应。�
 4. 未列出的顶点不改变；UV 和拓扑不改变。
 5. 空批次或与当前值完全相同的写入是 no-op，不推进 revision。
 
-重命名为原名称也是 no-op。此阶段保障**单个 API 操作**的完整性，不提供多个操作的事务、撤销或重做。正常内存分配失败不属于可恢复编辑错误协议。
+重命名为原名称也是 no-op。Stage 01 仅保障单个 API 操作完整性；当前实现已由 Stage 02 扩展为多个位置命令的短事务及 Undo/Redo，详见对应交付记录。正常内存分配失败不属于可恢复编辑错误协议。
 
 ## 8. ChangeSet 与错误
 
