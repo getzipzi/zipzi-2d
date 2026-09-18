@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: MIT
+#include <kasane/document.hpp>
+#include <iostream>
+#include <limits>
+#include <cstdlib>
+
+using namespace kasane;
+#define CHECK(...) do { if (!(__VA_ARGS__)) { std::cerr << "FAIL line " << __LINE__ << ": " << #__VA_ARGS__ << '\n'; std::exit(1); } } while (0)
+static const std::string DOC = "11111111-1111-4111-8111-111111111111";
+static const std::string ASSET = "22222222-2222-4222-8222-222222222222";
+static const std::string MESH = "33333333-3333-4333-8333-333333333333";
+Mesh sample() {
+    return {MESH, "quad", ASSET, {40, 10, 90, 20},
+        {{-10, 10}, {-10, -10}, {10, -10}, {10, 10}},
+        {{0, 0}, {0, 1}, {1, 1}, {1, 0}}, {{{40, 10, 90}}, {{40, 90, 20}}}};
+}
+int main() {
+    Document doc;
+    CHECK(!doc.create_mesh(sample()).status.ok());
+    CHECK(!doc.initialize("not-a-uuid", {100, 100}).ok());
+    CHECK(!doc.initialize(DOC, {0, 100}).ok());
+    CHECK(doc.initialize(DOC, {100, 100}).ok());
+    CHECK(!doc.initialize(DOC, {100, 100}).ok());
+    CHECK(!doc.create_mesh(sample()).status.ok());
+    CHECK(!doc.add_asset({DOC, "bad", "memory://test", 32, 32}).status.ok());
+    CHECK(doc.add_asset({ASSET, "checker", "memory://test", 32, 32}).status.ok());
+    auto invalid = sample();
+    invalid.vertex_ids[1] = 40;
+    CHECK(doc.create_mesh(invalid).status.code == "DUPLICATE_VERTEX");
+    invalid = sample(); invalid.triangles[0][0] = 99;
+    CHECK(doc.create_mesh(invalid).status.code == "MISSING_VERTEX");
+    invalid = sample(); invalid.triangles[0][0] = 10;
+    CHECK(doc.create_mesh(invalid).status.code == "REPEATED_VERTEX");
+    invalid = sample(); invalid.base_positions[0].x = std::numeric_limits<float>::infinity();
+    CHECK(doc.create_mesh(invalid).status.code == "NON_FINITE");
+    CHECK(doc.mesh_order().empty());
+    auto source = sample();
+    auto edit = doc.create_mesh(source);
+    CHECK(edit.status.ok() && edit.changes.kind == ChangeKind::structure);
+    source.base_positions[0].x = 999;
+    CHECK(doc.get_mesh(MESH)->base_positions[0].x == -10);
+    CHECK(!doc.create_mesh(sample()).status.ok());
+    std::vector<uint32_t> indices;
+    CHECK(doc.render_indices(MESH, indices).ok());
+    CHECK(indices == std::vector<uint32_t>({0, 1, 2, 0, 2, 3}));
+    auto revision = doc.revision();
+    auto before = *doc.get_mesh(MESH);
+    std::vector<VertexId> ids = {40, 999};
+    std::vector<Vec2> values = {{0, 0}, {1, 1}};
+    CHECK(doc.set_vertex_positions(MESH, ids, values).status.code == "MISSING_VERTEX");
+    CHECK(doc.get_mesh(MESH)->base_positions == before.base_positions && doc.revision() == revision);
+    ids = {40, 40};
+    CHECK(doc.set_vertex_positions(MESH, ids, values).status.code == "DUPLICATE_VERTEX");
+    ids = {40};
+    CHECK(doc.set_vertex_positions(MESH, ids, values).status.code == "INVALID_LENGTH");
+    values = {{std::numeric_limits<float>::quiet_NaN(), 0}};
+    CHECK(doc.set_vertex_positions(MESH, ids, values).status.code == "NON_FINITE");
+    values = {{-15, 12}};
+    edit = doc.set_vertex_positions(MESH, ids, values);
+    CHECK(edit.status.ok() && edit.changes.kind == ChangeKind::positions);
+    CHECK(doc.get_mesh(MESH)->base_positions[0] == values[0]);
+    CHECK(doc.get_mesh(MESH)->base_positions[1] == before.base_positions[1]);
+    revision = doc.revision();
+    CHECK(doc.set_vertex_positions(MESH, ids, values).changes.kind == ChangeKind::none);
+    CHECK(doc.revision() == revision);
+    CHECK(doc.rename_mesh(MESH, "renamed").changes.kind == ChangeKind::metadata);
+    CHECK(doc.get_mesh(MESH)->id == MESH && doc.get_mesh(MESH)->vertex_ids == before.vertex_ids);
+    // Coincident vertices and UVs outside [0,1] are allowed, not topology corruption.
+    auto collapsed = sample(); collapsed.id = "44444444-4444-4444-8444-444444444444";
+    collapsed.base_positions.assign(4, {0, 0}); collapsed.uvs[0] = {-1, 2};
+    CHECK(doc.create_mesh(collapsed).status.ok());
+    CHECK(doc.mesh_order() == std::vector<std::string>({MESH, collapsed.id}));
+    indices = {123};
+    CHECK(!doc.render_indices("missing", indices).ok() && indices == std::vector<uint32_t>({123}));
+    CHECK(doc.get_mesh(MESH)->base_positions[0] == values[0]);
+    std::cout << "KASANE_CORE_TESTS_OK: identity, topology, ownership, atomic edits, change sets\n";
+}

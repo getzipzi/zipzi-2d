@@ -6,7 +6,11 @@
   submodule.
 - `modules/gd-cubism/` — `gd_cubism` Godot GDExtension, imported from
   `gd_cubism` and adapted to support an alternate Cubism Core implementation.
+- `modules/kasane-core/` — independent C++20 source Document and geometry validation.
+- `modules/gd-kasane/` — native in-memory mesh rendering and Document bridge;
+  builds without the Cubism SDK or Framework.
 - `demos/godot/` — interactive Godot comparison and regression demo.
+- `demos/kasane-preview/` — native memory/Document preview and GPU checks.
 - `benchmarks/cubism-matrix/` — reproducible benchmark matrix between official
   Cubism Core and PurismCore.
 - `third_party/` — local, untracked third-party SDKs shared by modules and apps.
@@ -40,6 +44,13 @@ under `demos/godot/assets/live2d/`. The canonical Godot addon lives under
 `modules/gd-cubism/addons/`; `tools/stage_godot_addon.py` stages it into the
 demo and benchmark projects. See the demo, benchmark, and ABI READMEs for build
 and test commands.
+
+## Editor planning
+
+Stage 00–01 provide a reusable in-memory mesh API and a minimal source Document.
+Run `python3 tools/run_kasane_preview.py --render` to build and verify them without
+Cubism model files. See [Editor design and milestones](docs/editor/README.md)
+for implemented contracts, acceptance evidence, and later planned stages.
 
 ## Imported sources
 

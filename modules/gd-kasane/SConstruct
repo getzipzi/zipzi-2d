@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT
+# Reuse the pinned bindings without pulling in Cubism SDK or Framework.
+env = SConscript('../gd-cubism/godot-cpp/SConstruct')
+env.Append(CXXFLAGS=['/std:c++20'] if env.get('is_msvc', False) else ['-std=c++20'])
+env.Append(CPPPATH=['src', '../kasane-core/include'])
+sources = Glob('src/*.cpp')
+# Keep core object files in this module: avoid mixing flags with other builds.
+for name in ['geometry', 'document']:
+    sources += env.SharedObject('build/' + name, '../kasane-core/src/' + name + '.cpp')
+target = '../../demos/kasane-preview/addons/gd_kasane/bin/libgd_kasane' + env['suffix'] + env['SHLIBSUFFIX']
+library = env.SharedLibrary(target=target, source=sources)
+Default(library)
