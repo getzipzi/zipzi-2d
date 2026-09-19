@@ -2,8 +2,8 @@
 
 Stage 00–04 runnable sample: left is a `KasaneMeshView` fed directly from
 memory; right is a `Document` updated through stable vertex IDs and synchronized
-through `KasaneDocumentBridge`. Both animate with fixed topology and reuse their
-render resources. The four-color texture is generated in memory; a matching
+through `KasaneDocumentBridge`. The left view animates; the right is edited by in-process scripts. Fixed-topology
+updates reuse render resources. The four-color texture is generated in memory; a matching
 resource-backed texture supports the checked-in save/reopen sample.
 
 No Cubism SDK, moc3 model, external image, file export, or manual editing tools
@@ -21,8 +21,7 @@ submodule, and Godot 4.3 or later. Use `--scons-python`/`SCONS_PYTHON` and
 `--godot`/`GODOT_BIN` for custom installations. macOS arm64 is the verified host;
 other platform mappings are not yet validated.
 
-The default run builds both modules and runs core, Godot, and external Python
-session integration checks. `--render` additionally opens a temporary GPU-rendered window, checks
+The default run builds both modules and runs core, Godot, and in-process GDScript and native action checks. `--render` additionally opens a temporary GPU-rendered window, checks
 UV orientation and before/after geometry, and captures the animated demo.
 `--skip-build` assumes a previous successful build, including CMake tests.
 
@@ -32,7 +31,9 @@ UV orientation and before/after geometry, and captures the animated demo.
 - [Architecture and API](../../docs/editor/ARCHITECTURE.md).
 - [Document specification](../../docs/editor/DOCUMENT_SPEC.md).
 - [Project format v1](../../docs/editor/PROJECT_FORMAT.md).
-- [Python session guide](../../docs/editor/PYTHON_SESSION.md).
+- [In-process scripting guide](../../docs/editor/SCRIPTING.md).
 
 The `get_mesh_view()` accessor is diagnostic: the bridge owns those child nodes.
 Do not free or edit them directly. Use Document mutations and `rebuild_preview()`.
+
+Current editing architecture: direct data writes do not create history. Optional actions use Godot UndoRedo; the C++ core has no undo stack. See [architecture](../../docs/editor/ARCHITECTURE.md).

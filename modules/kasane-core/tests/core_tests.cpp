@@ -59,12 +59,6 @@ int main() {
     edit = doc.set_vertex_positions(MESH, ids, values);
     CHECK(edit.status.ok() && edit.changes.kind == ChangeKind::positions);
     CHECK(doc.get_mesh(MESH)->base_positions[0] == values[0]);
-    CHECK(doc.can_undo() && !doc.can_redo());
-    CHECK(doc.undo().status.ok());
-    CHECK(doc.get_mesh(MESH)->base_positions[0] == before.base_positions[0]);
-    CHECK(!doc.can_undo() && doc.can_redo());
-    CHECK(doc.redo().status.ok());
-    CHECK(doc.get_mesh(MESH)->base_positions[0] == values[0]);
     CHECK(doc.get_mesh(MESH)->base_positions[1] == before.base_positions[1]);
     revision = doc.revision();
     CHECK(doc.set_vertex_positions(MESH, ids, values).changes.kind == ChangeKind::none);
@@ -92,14 +86,6 @@ int main() {
     CHECK(doc.revision() == transaction_revision + 1 && doc.modified());
     CHECK(doc.get_mesh(MESH)->base_positions[0] == Vec2({-20, 25}));
     CHECK(doc.get_mesh(MESH)->base_positions[3] == Vec2({20, 25}));
-    CHECK(doc.undo().status.ok());
-    CHECK(!doc.modified());
-    CHECK(doc.get_mesh(MESH)->base_positions[0] == values[0]);
-    CHECK(doc.get_mesh(MESH)->base_positions[3] == before.base_positions[3]);
-    CHECK(doc.redo().status.ok() && doc.modified());
-    CHECK(doc.get_mesh(MESH)->base_positions[0] == Vec2({-20, 25}));
-    CHECK(doc.get_mesh(MESH)->base_positions[3] == Vec2({20, 25}));
-
     // Validation happens before any source write, even across staged commands.
     CHECK(doc.begin_transaction().ok());
     CHECK(doc.stage_vertex_positions({MESH, {40}, {{1, 2}}}).ok());
@@ -117,12 +103,20 @@ int main() {
     CHECK(doc.get_mesh(MESH)->base_positions == atomic_before && doc.revision() == transaction_revision);
     CHECK(doc.cancel_transaction().code == "NO_TRANSACTION");
 
-    // A new edit after undo invalidates redo without affecting committed source.
-    CHECK(doc.undo().status.ok());
-    CHECK(doc.can_redo());
+    // Source restoration is explicit; the core owns no undo/redo stack.
+    auto checkpoint = doc;
     CHECK(doc.set_vertex_positions(MESH, std::vector<VertexId>{10}, std::vector<Vec2>{{-11, -12}}).status.ok());
-    CHECK(!doc.can_redo());
-    CHECK(doc.redo().status.code == "NOTHING_TO_REDO");
+    auto restore_revision = doc.revision();
+    doc.restore_from(checkpoint);
+    CHECK(doc.revision() == restore_revision + 1);
+    CHECK(doc.get_mesh(MESH)->base_positions == checkpoint.get_mesh(MESH)->base_positions);
+    auto replacement = *doc.get_mesh(MESH);
+    replacement.uvs[0] = {0.25, 0.5};
+    CHECK(doc.replace_mesh(replacement).status.ok());
+    CHECK(doc.get_mesh(MESH)->uvs[0] == Vec2({0.25, 0.5}));
+    replacement.triangles[0][0] = 999;
+    CHECK(!doc.replace_mesh(replacement).status.ok());
+    CHECK(doc.get_mesh(MESH)->triangles == checkpoint.get_mesh(MESH)->triangles);
     auto stale_revision = doc.revision() - 1;
     std::vector<VertexPositionUpdate> stale_batch = {{MESH, {40}, {{5, 6}}}};
     auto stale_before = doc.get_mesh(MESH)->base_positions;
@@ -130,5 +124,5 @@ int main() {
     CHECK(doc.get_mesh(MESH)->base_positions == stale_before);
     CHECK(doc.apply_vertex_position_updates_at_revision(stale_batch, doc.revision()).status.ok());
     CHECK(doc.get_mesh(MESH)->base_positions[0] == Vec2({5, 6}));
-    std::cout << "KASANE_CORE_TESTS_OK: identity, atomic transactions, cancel, undo/redo, dirty state\n";
+    std::cout << "KASANE_CORE_TESTS_OK: identity, direct data, atomic batches, cancel, restore, topology\n";
 }

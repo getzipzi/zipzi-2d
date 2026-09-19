@@ -50,8 +50,6 @@ public:
     uint64_t revision() const { return revision_; }
     bool modified() const { return current_state_id_ != saved_state_id_; }
     bool transaction_active() const { return transaction_active_; }
-    bool can_undo() const { return !undo_.empty(); }
-    bool can_redo() const { return !redo_.empty(); }
     void mark_saved() { saved_state_id_ = current_state_id_; }
     const std::vector<std::string> &asset_order() const { return asset_order_; }
     const std::vector<std::string> &mesh_order() const { return mesh_order_; }
@@ -71,8 +69,9 @@ public:
     Status stage_vertex_positions(VertexPositionUpdate update);
     EditResult commit_transaction();
     Status cancel_transaction();
-    EditResult undo();
-    EditResult redo();
+    // Restore source data while keeping the live revision monotonic.
+    void restore_from(const Document &source);
+    EditResult replace_mesh(Mesh mesh);
     // Derived dense topology. Does not mutate Document.
     Status render_indices(const std::string &id, std::vector<uint32_t> &out) const;
 private:
@@ -85,19 +84,6 @@ private:
     std::unordered_map<std::string, std::unordered_map<VertexId, uint32_t>> vertex_slots_;
     std::vector<std::string> asset_order_;
     std::vector<std::string> mesh_order_;
-    struct PositionDelta {
-        std::string mesh_id;
-        std::vector<uint32_t> slots;
-        std::vector<Vec2> before;
-        std::vector<Vec2> after;
-    };
-    struct HistoryEntry {
-        std::vector<PositionDelta> deltas;
-        uint64_t before_state_id = 0;
-        uint64_t after_state_id = 0;
-    };
-    std::vector<HistoryEntry> undo_;
-    std::vector<HistoryEntry> redo_;
     bool transaction_active_ = false;
     std::vector<VertexPositionUpdate> staged_updates_;
     uint64_t next_state_id_ = 1;
@@ -106,9 +92,8 @@ private:
     bool contains_id(const std::string &id) const;
     bool mutation_blocked() const { return transaction_active_; }
     void advance_state();
-    void clear_history();
     EditResult failed(Status status) const;
-    EditResult changed(ChangeKind kind, std::vector<std::string> ids = {}, bool clear_history = true);
+    EditResult changed(ChangeKind kind, std::vector<std::string> ids = {});
 };
 bool valid_uuid(const std::string &id);
 }

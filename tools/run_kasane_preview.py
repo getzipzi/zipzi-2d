@@ -16,14 +16,17 @@ BUILD = ROOT / "target/kasane"
 
 
 def run(args: list[str], *, cwd: Path = ROOT, marker: str | None = None,
-        log: str | None = None, timeout: int = 180) -> None:
+        log: str | None = None, timeout: int = 180,
+        expected_errors: tuple[str, ...] = ()) -> None:
     print("Running:", " ".join(map(str, args)), flush=True)
     process = subprocess.run(args, cwd=cwd, text=True, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, timeout=timeout)
     if log:
         (BUILD / log).write_text(process.stdout)
     failed = process.returncode != 0 or (marker is not None and marker not in process.stdout)
-    if "SCRIPT ERROR:" in process.stdout or "ERROR:" in process.stdout:
+    error_lines = tuple(line for line in process.stdout.splitlines()
+                        if line.startswith(("SCRIPT ERROR:", "ERROR:")))
+    if error_lines != expected_errors or "ObjectDB instance" in process.stdout:
         failed = True
     if failed or not log or marker:
         print(process.stdout, end="")
@@ -63,17 +66,12 @@ def main() -> None:
     run([godot, "--headless", "--editor", "--path", str(DEMO), "--quit-after", "3"], log="import.log")
     run([godot, "--headless", "--path", str(DEMO), "--script", "res://tests/integration_test.gd"],
         marker="KASANE_INTEGRATION_TEST_OK", log="integration.log")
-    sdk_env = os.environ.copy()
-    sdk_env["PYTHONPATH"] = str(ROOT / "python")
-    sdk_env["GODOT_BIN"] = godot
-    print("Running: Python external-session integration", flush=True)
-    sdk_test = subprocess.run([sys.executable, str(ROOT / "python/tests/session_integration.py")],
-                              cwd=ROOT, env=sdk_env, text=True, stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT, timeout=90)
-    (BUILD / "python-session.log").write_text(sdk_test.stdout)
-    print(sdk_test.stdout, end="")
-    if sdk_test.returncode != 0 or "KASANE_PYTHON_SESSION_TEST_OK" not in sdk_test.stdout:
-        raise SystemExit("Python external-session integration failed")
+    run([godot, "--headless", "--path", str(DEMO), "--script", "res://tests/script_test.gd"],
+        marker="KASANE_SCRIPT_TEST_OK", log="script-tests.log")
+    expected_runtime_error = "SCRIPT ERROR: Invalid call. Nonexistent function 'deliberate_runtime_error' in base 'Nil'."
+    run([godot, "--headless", "--path", str(DEMO), "--script", "res://tests/script_error_test.gd"],
+        marker="KASANE_SCRIPT_ERROR_TEST_OK", log="script-errors.log",
+        expected_errors=(expected_runtime_error, expected_runtime_error))
     if args.render:
         run([godot, "--path", str(DEMO), "--script", "res://tests/render_test.gd"],
             marker="KASANE_RENDER_TEST_OK", log="render.log")

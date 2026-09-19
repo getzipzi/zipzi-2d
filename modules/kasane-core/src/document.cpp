@@ -39,10 +39,8 @@ const Mesh *Document::get_mesh(const std::string &id) const {
 }
 EditResult Document::failed(Status status) const { return {std::move(status), {ChangeKind::none, {}, revision_}}; }
 void Document::advance_state() { current_state_id_ = next_state_id_++; }
-void Document::clear_history() { undo_.clear(); redo_.clear(); }
-EditResult Document::changed(ChangeKind kind, std::vector<std::string> ids, bool should_clear_history) {
+EditResult Document::changed(ChangeKind kind, std::vector<std::string> ids) {
     advance_state();
-    if (should_clear_history) clear_history();
     return {{}, {kind, std::move(ids), ++revision_}};
 }
 EditResult Document::add_asset(ImageAsset asset) {
@@ -101,8 +99,12 @@ EditResult Document::set_vertex_positions(const std::string &id,
 }
 EditResult Document::apply_vertex_position_updates(std::span<const VertexPositionUpdate> updates) {
     if (mutation_blocked()) return failed(Status::error("TRANSACTION_ACTIVE", "Use commit_transaction for staged edits."));
-    HistoryEntry entry;
-    entry.before_state_id = current_state_id_;
+    struct PositionDelta {
+        std::string mesh_id;
+        std::vector<uint32_t> slots;
+        std::vector<Vec2> after;
+    };
+    std::vector<PositionDelta> deltas;
     std::unordered_map<std::string, std::unordered_set<VertexId>> seen;
     std::vector<std::string> changed_meshes;
     std::unordered_set<std::string> changed_mesh_set;
@@ -124,26 +126,19 @@ EditResult Document::apply_vertex_position_updates(std::span<const VertexPositio
             const auto old = mesh_it->second.base_positions[slot->second];
             if (old == update.positions[i]) continue;
             delta.slots.push_back(slot->second);
-            delta.before.push_back(old);
             delta.after.push_back(update.positions[i]);
         }
         if (!delta.slots.empty()) {
             if (changed_mesh_set.insert(update.mesh_id).second) changed_meshes.push_back(update.mesh_id);
-            entry.deltas.push_back(std::move(delta));
+            deltas.push_back(std::move(delta));
         }
     }
-    if (entry.deltas.empty()) return {{}, {ChangeKind::none, {}, revision_}};
-    for (const auto &delta : entry.deltas) {
+    if (deltas.empty()) return {{}, {ChangeKind::none, {}, revision_}};
+    for (const auto &delta : deltas) {
         auto &positions = meshes_.at(delta.mesh_id).base_positions;
         for (size_t i = 0; i < delta.slots.size(); ++i) positions[delta.slots[i]] = delta.after[i];
     }
-    auto result = changed(ChangeKind::positions, std::move(changed_meshes), false);
-    entry.after_state_id = current_state_id_;
-    undo_.push_back(std::move(entry));
-    constexpr size_t history_limit = 128;
-    if (undo_.size() > history_limit) undo_.erase(undo_.begin());
-    redo_.clear();
-    return result;
+    return changed(ChangeKind::positions, std::move(changed_meshes));
 }
 EditResult Document::apply_vertex_position_updates_at_revision(std::span<const VertexPositionUpdate> updates,
                                                                uint64_t expected_revision) {
@@ -180,37 +175,29 @@ Status Document::cancel_transaction() {
     transaction_active_ = false;
     return {};
 }
-EditResult Document::undo() {
-    if (mutation_blocked()) return failed(Status::error("TRANSACTION_ACTIVE", "Commit or cancel the active transaction first."));
-    if (undo_.empty()) return failed(Status::error("NOTHING_TO_UNDO", "There is no committed edit to undo."));
-    auto entry = std::move(undo_.back());
-    undo_.pop_back();
-    std::vector<std::string> ids;
-    std::unordered_set<std::string> unique;
-    for (const auto &delta : entry.deltas) {
-        auto &positions = meshes_.at(delta.mesh_id).base_positions;
-        for (size_t i = 0; i < delta.slots.size(); ++i) positions[delta.slots[i]] = delta.before[i];
-        if (unique.insert(delta.mesh_id).second) ids.push_back(delta.mesh_id);
-    }
-    current_state_id_ = entry.before_state_id;
-    redo_.push_back(std::move(entry));
-    return {{}, {ChangeKind::positions, std::move(ids), ++revision_}};
+void Document::restore_from(const Document &source) {
+    const auto next_revision = revision_ + 1;
+    const auto next_state = next_state_id_;
+    *this = source;
+    revision_ = next_revision;
+    next_state_id_ = next_state;
+    advance_state();
+    transaction_active_ = false;
+    staged_updates_.clear();
 }
-EditResult Document::redo() {
+EditResult Document::replace_mesh(Mesh mesh) {
     if (mutation_blocked()) return failed(Status::error("TRANSACTION_ACTIVE", "Commit or cancel the active transaction first."));
-    if (redo_.empty()) return failed(Status::error("NOTHING_TO_REDO", "There is no undone edit to redo."));
-    auto entry = std::move(redo_.back());
-    redo_.pop_back();
-    std::vector<std::string> ids;
-    std::unordered_set<std::string> unique;
-    for (const auto &delta : entry.deltas) {
-        auto &positions = meshes_.at(delta.mesh_id).base_positions;
-        for (size_t i = 0; i < delta.slots.size(); ++i) positions[delta.slots[i]] = delta.after[i];
-        if (unique.insert(delta.mesh_id).second) ids.push_back(delta.mesh_id);
-    }
-    current_state_id_ = entry.after_state_id;
-    undo_.push_back(std::move(entry));
-    return {{}, {ChangeKind::positions, std::move(ids), ++revision_}};
+    if (!get_mesh(mesh.id)) return failed(Status::error("MISSING_MESH", "Mesh does not exist."));
+    // Validate through the same creation path before replacing any live arrays.
+    Document candidate = *this;
+    candidate.meshes_.erase(mesh.id);
+    candidate.vertex_slots_.erase(mesh.id);
+    const auto key = mesh.id;
+    auto edit = candidate.create_mesh(std::move(mesh));
+    if (!edit.status.ok()) return failed(edit.status);
+    meshes_.at(key) = std::move(candidate.meshes_.at(key));
+    vertex_slots_.at(key) = std::move(candidate.vertex_slots_.at(key));
+    return changed(ChangeKind::structure, {key});
 }
 Status Document::render_indices(const std::string &id, std::vector<uint32_t> &out) const {
     const auto *mesh = get_mesh(id);

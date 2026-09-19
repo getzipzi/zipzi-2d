@@ -9,3 +9,5 @@ build, import, and verify. The SCons target places its library in the sample's
 
 See [architecture and API](../../docs/editor/ARCHITECTURE.md) and
 [runnable sample](../../demos/kasane-preview/README.md).
+
+Current editing architecture: direct data writes do not create history. Optional actions use Godot UndoRedo; the C++ core has no undo stack. See [architecture](../../docs/editor/ARCHITECTURE.md).

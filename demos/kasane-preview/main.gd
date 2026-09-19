@@ -5,7 +5,8 @@ var direct: KasaneMeshView
 var document: KasaneDocumentBridge
 var elapsed := 0.0
 var stats: Label
-var session_server: Node
+var script_host: RefCounted
+var script_path: LineEdit
 
 func label_at(text: String, at: Vector2, size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -31,22 +32,39 @@ func _ready() -> void:
 	var populated := Fixture.populate(document, tex)
 	if not populated.ok:
 		push_error(str(populated))
-	session_server = preload("res://session_server.gd").new()
-	add_child(session_server)
-	var port := int(OS.get_environment("KASANE_EDIT_PORT")) if OS.has_environment("KASANE_EDIT_PORT") else 43884
-	var connection: Dictionary = session_server.start(document, port)
-	if not connection.ok:
-		push_error(str(connection))
-	else:
-		print("KASANE_SESSION_READY: ", connection)
+	script_host = preload("res://script_host.gd").new(document)
+	script_path = LineEdit.new()
+	script_path.position = Vector2(36, 510)
+	script_path.size = Vector2(540, 30)
+	script_path.text = "res://scripts/edit_document.gd"
+	add_child(script_path)
+	var run_button := Button.new()
+	run_button.position = Vector2(590, 510)
+	run_button.text = "Run script (F5)"
+	run_button.pressed.connect(_run_script)
+	add_child(run_button)
+	var undo_button := Button.new()
+	undo_button.position = Vector2(745, 510)
+	undo_button.text = "Undo action"
+	undo_button.pressed.connect(func(): print(script_host.actions.undo()))
+	add_child(undo_button)
+	var redo_button := Button.new()
+	redo_button.position = Vector2(850, 510)
+	redo_button.text = "Redo"
+	redo_button.pressed.connect(func(): print(script_host.actions.redo()))
+	add_child(redo_button)
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--edit-script="):
+			script_path.text = argument.trim_prefix("--edit-script=")
+			_run_script.call_deferred()
 	label_at("KASANE / MEMORY PREVIEW", Vector2(36, 28), 14, Color("7c91aa"))
 	label_at("One mesh. Two paths. No model files.", Vector2(36, 57), 28, Color("eaf1fa"))
 	label_at("STAGE 00", Vector2(66, 142), 13, Color("69baff"))
 	label_at("Direct memory interface", Vector2(66, 166), 21, Color("eaf1fa"))
 	label_at("STAGE 04", Vector2(526, 142), 13, Color("70dbc0"))
-	label_at("Python → Document → preview", Vector2(526, 166), 20, Color("eaf1fa"))
+	label_at("GDScript → Document → preview", Vector2(526, 166), 20, Color("eaf1fa"))
 	label_at("Fixed topology · shared texture · Y-up source data", Vector2(66, 466), 14, Color("9bacbf"))
-	label_at("Stable IDs · revision checks · live edit", Vector2(526, 466), 14, Color("9bacbf"))
+	label_at("Direct data access · optional native actions", Vector2(526, 466), 14, Color("9bacbf"))
 	stats = label_at("", Vector2(36, 544), 14, Color("9bacbf"))
 	print("KASANE_PREVIEW_READY: ", document.get_document_summary())
 
@@ -59,8 +77,11 @@ func _process(delta: float) -> void:
 	points[0] += Vector2(-offset * 0.25, offset)
 	points[3] += Vector2(offset, offset * 0.5)
 	direct.update_positions(points)
-	var render := document.get_mesh_view(Fixture.MESH).get_render_stats()
-	stats.text = "PYTHON SESSION   /   revision %d      vertex uploads %d      surface creations %d" % [document.get_document_summary().revision, render.position_uploads, render.surface_creations]
+	var mesh_view := document.get_mesh_view(Fixture.MESH)
+	if mesh_view == null:
+		return
+	var render := mesh_view.get_render_stats()
+	stats.text = "IN-PROCESS SCRIPT   /   revision %d      vertex uploads %d      surface creations %d" % [document.get_document_summary().revision, render.position_uploads, render.surface_creations]
 
 func _draw() -> void:
 	for x in [46, 506]:
@@ -77,3 +98,15 @@ func panel_style() -> StyleBoxFlat:
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(12)
 	return style
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F5:
+		_run_script()
+
+func _run_script() -> void:
+	print("KASANE_SCRIPT_RESULT: ", script_host.run_script(script_path.text))
+	var captured: Dictionary = await script_host.capture(get_viewport())
+	if captured.ok:
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts"))
+		captured.image.save_png("res://artifacts/script-preview.png")
+		print("KASANE_SCRIPT_PREVIEW: revision ", captured.revision, " res://artifacts/script-preview.png")

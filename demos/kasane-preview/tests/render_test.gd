@@ -56,6 +56,14 @@ func _run() -> void:
 	for y in range(50, 275, 5):
 		for x in range(45, 265, 5):
 			check(near_color(after.get_pixel(x, y), after.get_pixel(x + 300, y)), "Direct and Document rendering differ")
+	var host = preload("res://script_host.gd").new(bridge)
+	check(host.run_script("res://tests/recipes/render_shift.gd").ok, "Run script against rendered Document")
+	var scripted: Dictionary = await host.capture(root)
+	check(scripted.ok and scripted.revision == bridge.get_document_summary().revision, "Script capture corresponds to source revision")
+	if scripted.ok:
+		check(near_color(scripted.image.get_pixel(440, 60), Fixture.RED), "Script property write reaches actual GPU pixels")
+		check(not near_color(scripted.image.get_pixel(440, 200), Fixture.GREEN), "Script moved old pixels")
+		check(scripted.image.save_png("res://artifacts/script-preview.png") == OK, "Save script render evidence")
 	direct.free()
 	bridge.free()
 	await process_frame

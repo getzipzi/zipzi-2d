@@ -7,6 +7,8 @@ using namespace kasane_gd;
 static void initialize(ModuleInitializationLevel level) {
     if (level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
     GDREGISTER_CLASS(KasaneMeshView);
+    GDREGISTER_CLASS(KasaneDocumentState);
+    GDREGISTER_CLASS(KasaneMeshData);
     GDREGISTER_CLASS(KasaneDocumentBridge);
 }
 static void terminate(ModuleInitializationLevel) {}

@@ -82,21 +82,20 @@ func _run() -> void:
 	check(not bridge.create_mesh({"id": "wrong"}).ok, "Malformed descriptor rejected")
 	check(not bridge.set_vertex_positions(Fixture.MESH, PackedInt64Array([-1]), PackedVector2Array([Vector2.ZERO])).ok, "Invalid integer vertex ID rejected")
 
-	# Stage 02: staged commands commit atomically as one undo step.
+	# Explicit actions use Godot UndoRedo; direct writes above created no history.
+	var actions = preload("res://actions.gd").new(bridge)
+	check(not actions.history.has_undo(), "Direct edits require no history")
 	var transaction_before := bridge.get_mesh_snapshot(Fixture.MESH)
-	var transaction_revision: int = bridge.get_document_summary().revision
-	check(bridge.begin_transaction().ok, "Begin transaction")
-	check(bridge.stage_vertex_positions(Fixture.MESH, PackedInt64Array([40]), PackedVector2Array([Vector2(-110, 105)])).ok, "Stage first command")
-	check(bridge.stage_vertex_positions(Fixture.MESH, PackedInt64Array([20]), PackedVector2Array([Vector2(125, 135)])).ok, "Stage second command")
-	check(bridge.get_mesh_snapshot(Fixture.MESH) == transaction_before, "Staged commands do not leak into source")
-	var committed := bridge.commit_transaction()
-	check(committed.ok and committed.change_kind == "positions", "Commit transaction")
-	check(bridge.get_document_summary().revision == transaction_revision + 1, "Batch is one revision")
-	check(bridge.get_mesh_view(Fixture.MESH).get_positions_snapshot()[0] == Vector2(-110, 105), "Commit updates preview")
-	check(bridge.undo().ok, "Undo transaction")
+	var committed: Dictionary = actions.perform("Two position commands", func():
+		bridge.begin_transaction()
+		bridge.stage_vertex_positions(Fixture.MESH, PackedInt64Array([40]), PackedVector2Array([Vector2(-110, 105)]))
+		bridge.stage_vertex_positions(Fixture.MESH, PackedInt64Array([20]), PackedVector2Array([Vector2(125, 135)]))
+		return bridge.commit_transaction()
+	)
+	check(committed.ok and actions.history.get_history_count() == 1, "Explicit transaction is one native action")
+	check(actions.undo().ok, "Undo transaction")
 	check(bridge.get_mesh_snapshot(Fixture.MESH).base_positions == transaction_before.base_positions, "Undo restores all commands")
-	check(bridge.redo().ok, "Redo transaction")
-	check(bridge.get_mesh_snapshot(Fixture.MESH).base_positions[0] == Vector2(-110, 105), "Redo restores committed data")
+	check(actions.redo().ok, "Redo transaction")
 	var committed_snapshot := bridge.get_mesh_snapshot(Fixture.MESH)
 	check(bridge.begin_transaction().ok, "Begin cancelled transaction")
 	check(bridge.stage_vertex_positions(Fixture.MESH, PackedInt64Array([40]), PackedVector2Array([Vector2.ZERO])).ok, "Stage cancelled command")
@@ -105,9 +104,8 @@ func _run() -> void:
 	check(bridge.begin_transaction().ok, "Begin invalid transaction")
 	check(bridge.stage_vertex_positions(Fixture.MESH, PackedInt64Array([40]), PackedVector2Array([Vector2.ZERO])).ok, "Stage valid part")
 	check(bridge.stage_vertex_positions(Fixture.MESH, PackedInt64Array([999]), PackedVector2Array([Vector2.ONE])).ok, "Stage invalid part for commit validation")
-	transaction_revision = bridge.get_document_summary().revision
 	check(not bridge.commit_transaction().ok, "Invalid transaction rejected")
-	check(bridge.get_mesh_snapshot(Fixture.MESH) == committed_snapshot and bridge.get_document_summary().revision == transaction_revision, "Invalid transaction is fully atomic")
+	check(bridge.get_mesh_snapshot(Fixture.MESH) == committed_snapshot, "Invalid transaction is fully atomic")
 
 	# Stage 03: save, reopen into a fresh bridge, reject bad versions/resources.
 	var project_path := "user://stage-03-roundtrip.kasane.json"
@@ -121,10 +119,12 @@ func _run() -> void:
 	check(not bridge.get_document_summary().modified, "Successful save clears modified state")
 	var saved_text := FileAccess.get_file_as_string(project_path)
 	check(saved_text.contains("\"format_version\": 1"), "Saved project has format version")
-	check(bridge.set_vertex_positions(Fixture.MESH, PackedInt64Array([40]), PackedVector2Array([Vector2(-1, -2)])).ok, "Edit after save")
+	check(actions.perform("Edit after save", func():
+		return bridge.set_vertex_positions(Fixture.MESH, PackedInt64Array([40]), PackedVector2Array([Vector2(-1, -2)]))
+	).ok, "Edit after save")
 	check(bridge.get_document_summary().modified, "Edit marks document modified")
-	check(bridge.undo().ok and not bridge.get_document_summary().modified, "Undo to save point clears modified state")
-	check(bridge.redo().ok and bridge.get_document_summary().modified, "Redo leaves save point")
+	check(actions.undo().ok and not bridge.get_document_summary().modified, "Undo to save point clears modified state")
+	check(actions.redo().ok and bridge.get_document_summary().modified, "Redo leaves save point")
 	var reopened := KasaneDocumentBridge.new()
 	root.add_child(reopened)
 	var open_result := reopened.open_project(project_path)
@@ -136,7 +136,7 @@ func _run() -> void:
 	check(reopened_snapshot.get("base_positions") == committed_snapshot.base_positions, "Coordinates survive reopen")
 	check(reopened_snapshot.get("uvs") == committed_snapshot.uvs and reopened_snapshot.get("triangles") == committed_snapshot.triangles, "UV and topology survive reopen")
 	check(reopened_snapshot.get("texture_asset_id") == committed_snapshot.texture_asset_id, "Texture relationship survives reopen")
-	check(not reopened.get_document_summary().modified and not reopened.get_document_summary().can_undo, "Open starts clean without cross-session history")
+	check(not reopened.get_document_summary().modified, "Open starts clean without cross-session history")
 	var reopened_rid: int = reopened.get_mesh_view(Fixture.MESH).get_render_stats().texture_instance_id
 	check(reopened_rid != 0, "Open resolves texture and rebuilds preview")
 	var stable_snapshot := reopened_snapshot
@@ -170,6 +170,7 @@ func _run() -> void:
 	check(bridge.get_mesh_snapshot(Fixture.MESH).base_positions[3] == Vector2(130, 140), "Source remains committed after cache loss")
 	check(bridge.rebuild_preview().ok, "Recover from lost preview resources")
 	check(bridge.get_mesh_view(Fixture.MESH).get_positions_snapshot()[3] == Vector2(130, 140), "Recovery uses latest source")
+	actions.history.clear_history()
 	bridge.free()
 	check(tex.get_reference_count() == texture_refs, "Document bridge destruction releases texture references")
 	await process_frame

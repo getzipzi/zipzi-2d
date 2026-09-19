@@ -11,3 +11,5 @@ ctest --test-dir target/kasane/core --output-on-failure
 
 Run from the repository root. See the [Document specification](../../docs/editor/DOCUMENT_SPEC.md)
 for identity, coordinates, ownership, mutation semantics, and stage limits.
+
+Current editing architecture: direct data writes do not create history. Optional actions use Godot UndoRedo; the C++ core has no undo stack. See [architecture](../../docs/editor/ARCHITECTURE.md).
