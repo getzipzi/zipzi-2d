@@ -30,6 +30,8 @@ public:
     godot::Dictionary cancel_transaction();
     godot::Dictionary undo();
     godot::Dictionary redo();
+    godot::Dictionary commit_vertex_updates(const godot::Array &updates, int64_t expected_revision);
+    godot::Dictionary get_asset_snapshot(const godot::String &id) const;
     godot::Dictionary save_project(const godot::String &path);
     godot::Dictionary open_project(const godot::String &path);
     godot::Dictionary get_mesh_snapshot(const godot::String &id) const;

@@ -123,5 +123,12 @@ int main() {
     CHECK(doc.set_vertex_positions(MESH, std::vector<VertexId>{10}, std::vector<Vec2>{{-11, -12}}).status.ok());
     CHECK(!doc.can_redo());
     CHECK(doc.redo().status.code == "NOTHING_TO_REDO");
+    auto stale_revision = doc.revision() - 1;
+    std::vector<VertexPositionUpdate> stale_batch = {{MESH, {40}, {{5, 6}}}};
+    auto stale_before = doc.get_mesh(MESH)->base_positions;
+    CHECK(doc.apply_vertex_position_updates_at_revision(stale_batch, stale_revision).status.code == "STALE_REVISION");
+    CHECK(doc.get_mesh(MESH)->base_positions == stale_before);
+    CHECK(doc.apply_vertex_position_updates_at_revision(stale_batch, doc.revision()).status.ok());
+    CHECK(doc.get_mesh(MESH)->base_positions[0] == Vec2({5, 6}));
     std::cout << "KASANE_CORE_TESTS_OK: identity, atomic transactions, cancel, undo/redo, dirty state\n";
 }

@@ -23,6 +23,8 @@ void KasaneDocumentBridge::_bind_methods() {
     ClassDB::bind_method(D_METHOD("cancel_transaction"), &KasaneDocumentBridge::cancel_transaction);
     ClassDB::bind_method(D_METHOD("undo"), &KasaneDocumentBridge::undo);
     ClassDB::bind_method(D_METHOD("redo"), &KasaneDocumentBridge::redo);
+    ClassDB::bind_method(D_METHOD("commit_vertex_updates", "updates", "expected_revision"), &KasaneDocumentBridge::commit_vertex_updates);
+    ClassDB::bind_method(D_METHOD("get_asset_snapshot", "id"), &KasaneDocumentBridge::get_asset_snapshot);
     ClassDB::bind_method(D_METHOD("save_project", "path"), &KasaneDocumentBridge::save_project);
     ClassDB::bind_method(D_METHOD("open_project", "path"), &KasaneDocumentBridge::open_project);
     ClassDB::bind_method(D_METHOD("get_mesh_snapshot", "id"), &KasaneDocumentBridge::get_mesh_snapshot);
@@ -101,6 +103,36 @@ Dictionary KasaneDocumentBridge::undo() {
 Dictionary KasaneDocumentBridge::redo() {
     if (!(OS::get_singleton()->get_thread_caller_id() == OS::get_singleton()->get_main_thread_id())) return error("WRONG_THREAD", "Document bridge requires the main thread.");
     return apply(document_.redo());
+}
+Dictionary KasaneDocumentBridge::commit_vertex_updates(const Array &updates, int64_t expected_revision) {
+    if (!(OS::get_singleton()->get_thread_caller_id() == OS::get_singleton()->get_main_thread_id())) return error("WRONG_THREAD", "Document bridge requires the main thread.");
+    if (expected_revision < 0) return error("INVALID_REVISION", "Expected revision must be nonnegative.");
+    std::vector<kasane::VertexPositionUpdate> batch;
+    batch.reserve(updates.size());
+    for (int64_t i = 0; i < updates.size(); ++i) {
+        if (updates[i].get_type() != Variant::DICTIONARY) return error("INVALID_FIELD", "Each update must be a Dictionary.");
+        Dictionary item = updates[i];
+        if (!item.has("mesh_id") || item["mesh_id"].get_type() != Variant::STRING ||
+            !item.has("vertex_ids") || item["vertex_ids"].get_type() != Variant::PACKED_INT64_ARRAY ||
+            !item.has("positions") || item["positions"].get_type() != Variant::PACKED_VECTOR2_ARRAY)
+            return error("INVALID_FIELD", "Update requires mesh_id, vertex_ids and positions.");
+        kasane::VertexPositionUpdate update;
+        update.mesh_id = utf8(item["mesh_id"]);
+        if (auto status = ids(item["vertex_ids"], update.vertex_ids); !status.ok()) return result(status);
+        update.positions = vectors(PackedVector2Array(item["positions"]));
+        batch.push_back(std::move(update));
+    }
+    return apply(document_.apply_vertex_position_updates_at_revision(batch, static_cast<uint64_t>(expected_revision)));
+}
+Dictionary KasaneDocumentBridge::get_asset_snapshot(const String &id) const {
+    if (!(OS::get_singleton()->get_thread_caller_id() == OS::get_singleton()->get_main_thread_id())) return error("WRONG_THREAD", "Document bridge requires the main thread.");
+    const auto *asset = document_.get_asset(utf8(id));
+    if (!asset) return error("MISSING_ASSET", "Asset does not exist.");
+    auto out = result({});
+    out["id"] = string(asset->id); out["name"] = string(asset->name); out["source"] = string(asset->source);
+    out["width"] = static_cast<int64_t>(asset->width); out["height"] = static_cast<int64_t>(asset->height);
+    out["revision"] = document_.revision();
+    return out;
 }
 
 namespace {

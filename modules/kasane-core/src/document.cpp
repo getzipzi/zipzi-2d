@@ -145,6 +145,12 @@ EditResult Document::apply_vertex_position_updates(std::span<const VertexPositio
     redo_.clear();
     return result;
 }
+EditResult Document::apply_vertex_position_updates_at_revision(std::span<const VertexPositionUpdate> updates,
+                                                               uint64_t expected_revision) {
+    if (revision_ != expected_revision)
+        return failed(Status::error("STALE_REVISION", "Document changed since this transaction began."));
+    return apply_vertex_position_updates(updates);
+}
 Status Document::begin_transaction() {
     if (!initialized()) return Status::error("NOT_INITIALIZED", "Initialize Document first.");
     if (transaction_active_) return Status::error("TRANSACTION_ACTIVE", "A transaction is already active.");

@@ -65,6 +65,8 @@ public:
                                    std::span<const VertexId> vertices,
                                    std::span<const Vec2> positions);
     EditResult apply_vertex_position_updates(std::span<const VertexPositionUpdate> updates);
+    EditResult apply_vertex_position_updates_at_revision(std::span<const VertexPositionUpdate> updates,
+                                                        uint64_t expected_revision);
     Status begin_transaction();
     Status stage_vertex_positions(VertexPositionUpdate update);
     EditResult commit_transaction();

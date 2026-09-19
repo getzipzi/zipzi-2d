@@ -5,6 +5,7 @@ var direct: KasaneMeshView
 var document: KasaneDocumentBridge
 var elapsed := 0.0
 var stats: Label
+var session_server: Node
 
 func label_at(text: String, at: Vector2, size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -30,14 +31,22 @@ func _ready() -> void:
 	var populated := Fixture.populate(document, tex)
 	if not populated.ok:
 		push_error(str(populated))
+	session_server = preload("res://session_server.gd").new()
+	add_child(session_server)
+	var port := int(OS.get_environment("KASANE_EDIT_PORT")) if OS.has_environment("KASANE_EDIT_PORT") else 43884
+	var connection: Dictionary = session_server.start(document, port)
+	if not connection.ok:
+		push_error(str(connection))
+	else:
+		print("KASANE_SESSION_READY: ", connection)
 	label_at("KASANE / MEMORY PREVIEW", Vector2(36, 28), 14, Color("7c91aa"))
 	label_at("One mesh. Two paths. No model files.", Vector2(36, 57), 28, Color("eaf1fa"))
 	label_at("STAGE 00", Vector2(66, 142), 13, Color("69baff"))
 	label_at("Direct memory interface", Vector2(66, 166), 21, Color("eaf1fa"))
-	label_at("STAGE 01", Vector2(526, 142), 13, Color("70dbc0"))
-	label_at("Document → change set → preview", Vector2(526, 166), 20, Color("eaf1fa"))
+	label_at("STAGE 04", Vector2(526, 142), 13, Color("70dbc0"))
+	label_at("Python → Document → preview", Vector2(526, 166), 20, Color("eaf1fa"))
 	label_at("Fixed topology · shared texture · Y-up source data", Vector2(66, 466), 14, Color("9bacbf"))
-	label_at("Stable vertex IDs · batch writes · read-only view", Vector2(526, 466), 14, Color("9bacbf"))
+	label_at("Stable IDs · revision checks · live edit", Vector2(526, 466), 14, Color("9bacbf"))
 	stats = label_at("", Vector2(36, 544), 14, Color("9bacbf"))
 	print("KASANE_PREVIEW_READY: ", document.get_document_summary())
 
@@ -50,9 +59,8 @@ func _process(delta: float) -> void:
 	points[0] += Vector2(-offset * 0.25, offset)
 	points[3] += Vector2(offset, offset * 0.5)
 	direct.update_positions(points)
-	document.set_vertex_positions(Fixture.MESH, PackedInt64Array([40, 20]), PackedVector2Array([points[0], points[3]]))
 	var render := document.get_mesh_view(Fixture.MESH).get_render_stats()
-	stats.text = "LIVE   /   revision %d      vertex uploads %d      surface creations %d      no file I/O" % [document.get_document_summary().revision, render.position_uploads, render.surface_creations]
+	stats.text = "PYTHON SESSION   /   revision %d      vertex uploads %d      surface creations %d" % [document.get_document_summary().revision, render.position_uploads, render.surface_creations]
 
 func _draw() -> void:
 	for x in [46, 506]:

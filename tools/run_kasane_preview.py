@@ -63,6 +63,17 @@ def main() -> None:
     run([godot, "--headless", "--editor", "--path", str(DEMO), "--quit-after", "3"], log="import.log")
     run([godot, "--headless", "--path", str(DEMO), "--script", "res://tests/integration_test.gd"],
         marker="KASANE_INTEGRATION_TEST_OK", log="integration.log")
+    sdk_env = os.environ.copy()
+    sdk_env["PYTHONPATH"] = str(ROOT / "python")
+    sdk_env["GODOT_BIN"] = godot
+    print("Running: Python external-session integration", flush=True)
+    sdk_test = subprocess.run([sys.executable, str(ROOT / "python/tests/session_integration.py")],
+                              cwd=ROOT, env=sdk_env, text=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT, timeout=90)
+    (BUILD / "python-session.log").write_text(sdk_test.stdout)
+    print(sdk_test.stdout, end="")
+    if sdk_test.returncode != 0 or "KASANE_PYTHON_SESSION_TEST_OK" not in sdk_test.stdout:
+        raise SystemExit("Python external-session integration failed")
     if args.render:
         run([godot, "--path", str(DEMO), "--script", "res://tests/render_test.gd"],
             marker="KASANE_RENDER_TEST_OK", log="render.log")
