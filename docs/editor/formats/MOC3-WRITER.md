@@ -1,29 +1,18 @@
-# MOC3 v5 写出映射（M1 静态与参数增量）
+# MOC3 v5 写出映射（M1）
 
-状态：已实现静态网格、普通参数与 Mesh 位置 Keyform 数据链路，**M1 未验收**。正式变形器、Part、绘制属性与遮罩、通用资源包发布器、GPU 对照仍待实施。架构及编辑契约见 [核心重构说明](../M1-CORE-REFACTOR.md)。
+从 Document 重新构建小端 `csmMocVersion_50`（文件头值 5）。不读取输入 MOC3，不保存 revive 后的指针或运行模型。覆盖普通参数、完整 Keyform、Part、Mesh、嵌套 Rotation/Warp、绘制属性及遮罩。验收入口与证据见 [M1 验收说明](../M1-ACCEPTANCE.md)。
 
-## 正式代码与复现
+## 代码与边界
 
-- `modules/kasane-core/include/kasane/evaluation.hpp`：`evaluate_frame` 输出统一 DrawableFrame；`moc3.hpp` 的 `encode_moc3` 输出文件字节/资源描述/纹理槽。求值属于核心，不调用编码器、不加载纹理、不操作文件。
-- `modules/kasane-core/src/moc3.cpp`：独立 `kasane_moc3` 库目标，依赖 `kasane_core`，不依赖 Godot 或 Core ABI。
-- `modules/kasane-core/src/moc3_sections.inc`：完整 v5 的 152 个 section 的索引、显式元素宽度、count 索引。依据 PurismCore 的 `moc3.h`，保留来源说明。
-- `modules/kasane-core/tests/moc3_tests.cpp`：同一构造程序分别链接 PurismCore 和官方 Core。新文件未借用或修改任何输入 MOC3。
-
-从仓库根目录运行：
-
-```sh
-python3 tools/validate_m1_core.py
-```
-
-官方 SDK 默认位于 `third_party/CubismSdkForNative-5-r.5`，也可用 `--sdk /absolute/path` 指定。支持当前 macOS/Linux SDK 常规静态库目录；缺 SDK 时返回非零且报告 `not_run`，不跳过官方 Core 验证。
-
-产物位于 `target/kasane/m1-core/`：两个 Core 的数据比较、构建和 CTest 日志、`field-layout.json`（每个 section 的实际 offset/count/size）、`report.json`、带两张程序构造 PNG 的 `package/`。报告记录工作区状态、Git/子模块 revision、平台、Core ABI 版本、采样、SHA-256、数值 expected/actual 和误差。`check_line` 对应测试源码中的断言位置；`object` 包含采样和对象 ID。
-
-入口成功只表示静态和参数增量的数据检查通过。报告中完整 M1 和 GPU 项保持 `not_run`。纹理为无外部素材依赖的非对称 8×8 RGBA 用例。此入口发布的是验证用资源包，尚不是接受任意素材的产品导出接口。只在整个增量检查成功后替换上次报告与资源包；失败保留上次产物和本次失败证据。
+- `evaluation.hpp` / `evaluate_frame`：纯内存求值，输出 renderer 与数据检查共用的 DrawableFrame，不调用编码器。
+- `moc3.hpp` / `kasane_moc3`：编码字节、model3.json、纹理槽描述；不访问文件或 Core ABI。
+- `package.hpp` / `kasane_package`：独立文件适配器，使用 libpng 解码校验素材，调用必需的 ArtifactValidator，再发布完整目录。
+- `moc3_sections.inc`：v5 的完整 152 个 section、显式字段宽度与 count 索引，来源为 Purism `moc3.h`。验收脚本自动核对字段表。
+- `moc3_tests.cpp`：同一构造/编辑程序分别链接官方 Core、Purism；不复用已有 MOC3 字节。
 
 ## 坐标与身份
 
-Document 位置单位为原画像素，X 向右、Y 向下；画布原点从左上角计量。`pixels_per_unit` 必须有限且大于零，默认 1；原点默认 `(0,0)`。
+根对象位置使用原画像素，X 向右、Y 向下，画布原点从左上角计量：
 
 ```text
 runtime.x = (source.x - origin.x) / pixels_per_unit
@@ -31,49 +20,52 @@ runtime.y = (origin.y - source.y) / pixels_per_unit
 runtime.uv = (source.u, 1 - source.v)
 ```
 
-源 UV 的 `(0,0)` 为图片左上角，运行 UV 的 `(0,0)` 为左下角。转换 Y 方向时交换每个三角形的第二、第三个索引。MOC3 canvas flag 写 1，声明位置与索引已经按运行 Y 方向处理，避免 Core 再次翻转。canvas.origin_y 写 `height - source.origin.y`，其他画布数值保持像素单位。两个 Core 对实际返回结果进行检查。
+**父级改变坐标域**：Rotation 的子对象位置是局部运行单位；Warp 的子对象位置是无界归一化网格坐标，`[0,1]²` 是内部网格。嵌套变形器的原点/控制点也遵守父级坐标域。设置父级不会隐式保姿势或转换源数组，调用方显式提交所需局部坐标。Rotation 角度以运行坐标的逆时针度数表示，base_angle 与形态 angle 相加；scale 为非负值，反射为独立标志。
 
-Mesh 的 `runtime_id` 独立于内部 UUID 和显示名称；创建时为空则取内部 UUID。重命名不修改运行 ID。第一增量仅编码 1–63 字节的可打印 ASCII ID，剩余字节补零；超长、控制字符或未验证编码明确失败，不截断。Document 内拒绝重复的 Mesh 运行 ID。未来支持其他对象类型时需要扩展各 ID 命名空间的规则。
+只有根位置转换像素单位；局部坐标不重复乘除 ppu。源 UV 左上角为 `(0,0)`；运行 UV 左下角为 `(0,0)`。三角形第二、第三索引交换；canvas flag 写 1，避免 Core 再次翻转。canvas.origin_y 写 `height - source.origin.y`。
 
-`gd-kasane` 原型快照更新为 format_version 4，保存原点、单位、运行 ID、参数、绑定和位置 Keyform。原型版本 1/2/3 没有提供迁移，现明确拒绝；这不构成 M2 工程持久化验收。旧原型 Rotation/Warp 仍在原接口中保留，但当前编码器拒绝任何 deformer 或父子关系，绝不烘焙为静态姿势后宣称支持。
+对象 UUID、runtime_id、显示名称独立。内部 ID 全局唯一，运行 ID 在对应对象类型内唯一。写出接受 1–63 字节可打印 ASCII；其他编码/长度明确拒绝，不截断。重命名不改变引用或运行 ID。
 
-## 布局、容量与默认值
+## 布局与容量
 
-头部 64 字节，magic `MOC3`，版本字节 5，endian 字节 0；随后 160 个小端 uint32 offset。offset 表之后预留零填充的 loader scratch，count_info 从 1984 开始。section 起始统一 64 字节对齐（同时满足 Purism 的 8 字节对齐）；152–159 为保留 offset，写零。不能 dump 原生结构体或 revive 后的运行内存。
+头部 64 字节，随后 160 个小端 uint32 offset；loader scratch 零填充至 count_info 起点 1984。每段按 64 字节对齐，保留 offset 152–159 为零。count_info 为 64 个非负 int32。只有 loader 指针槽允许按 schema 自动补零，其他段长度必须精确匹配。
 
-count_info 为 64 个小端非负 int32。offset 在磁盘上是 uint32，但本实现限制在 Core 接受的 `INT32_MAX` 以内。位置/UV 为 IEEE float32，三角形索引 uint16；单 Mesh 最多 65536 个顶点。顶点稳定 ID 经过稠密索引映射后才写出。绘制顺序第一增量取 Mesh 遍历顺序，并限制数量保证整数能精确表示为 float32。容量与 ID 错误包含对象或字段，不静默截断。
+offset/count 限制在有符号 32 位可表示范围；位置、UV、形态值为 IEEE float32；拓扑索引为 uint16，每 Mesh 至多 65536 顶点。稳定顶点 ID 编译为稠密索引。当前编辑容量：每 Binding 1–3 个普通非循环参数轴、Warp 每轴 1–1024 单元、显式 draw_order 为 `[-32768,32767]`；越界拒绝，不能截断。未指定 Mesh 顺序时使用创建序号。
 
-下表中的索引为零基 section 索引；完整映射见 `.inc`，实际偏移由验收入口输出。
-
-| 数据 | section | count 与默认值 |
+| 内容 | section | 编码规则 |
 |---|---|---|
-| count_info / canvas | 0 / 1 | 固定 256 / 24 字节；canvas 末尾 3 字节零填充 |
-| Mesh loader 指针槽 | 29–32 | 每 Mesh 各 8 字节零值，留给 Core revive；与本机指针大小无关 |
-| Mesh 运行 ID | 33 | 每 Mesh 64 字节 |
-| 绑定、形态起点/数量 | 34–36 | 无参数时绑定 0；有参数时按 binding_order 分配；指向全部组合形态 |
-| 可见/启用、Part/变形父级 | 37–40 | 1 / 1 / -1 / -1 |
-| 纹理槽、标志 | 41–42 | 按 asset_order 稠密分配；4（双面、normal） |
-| 顶点、UV、索引窗口 | 43–46 | UV offset/count 以 float 为单位；索引以 uint16 为单位 |
-| 遮罩窗口 | 47–48 | offset=0，length=0 |
-| Mesh Keyform | 68–70 | opacity=1；draw_order=Mesh 索引；position offset 以 float 为单位 |
-| 位置池 | 71 | 每顶点两个 float，count 是 float 总数 |
-| 绑定 | 73–74 | 绑定 0 为零轴；后续按轴顺序引用 key_table_idx |
-| UV / 索引池 | 78–79 | 每顶点两个 float / 三角形三个 uint16 |
-| 根绘制组 | 81–85 | 一个组，覆盖所有 Mesh；min=0，max=N-1 |
-| 绘制项 | 86–88 | type=0（Mesh）、idx=Mesh 索引、self_group=-1 |
-| Mesh 颜色起点 | 107 | 每 Mesh 对应连续的形态颜色范围 |
-| multiply / screen RGB | 108–113 | 分别 `(1,1,1)` / `(0,0,0)` |
-| v5 Mesh Keyform 颜色 offset | 141–142 | 分别引用对应颜色池 |
-| 其余动态段 | 见 `.inc` | 对应 count=0，section offset 指向当前对齐游标，长度为零 |
+| count_info / canvas | 0 / 1 | 固定 256 / 24 字节，canvas 尾部零填充 |
+| Part | 2–9 | ID、绑定、形态窗口、启用、Part 父级；父级先于子级 |
+| 通用变形器 | 10–18 | 父级先于子级；type 0=Warp、1=Rotation；local_idx 指向对应类型表 |
+| Warp | 19–24、101、105 | 绑定/形态窗口、控制点数、单元行列数、quad 标志、颜色窗口 |
+| Rotation | 25–28、106 | 绑定/形态窗口、base_angle、颜色窗口 |
+| Mesh 指针与 ID | 29–33 | 指针槽为 8 字节零值；ID 为 64 字节 |
+| Mesh 绑定/层级 | 34–40 | 绑定、完整形态窗口、可见/启用、Part 和变形器稠密索引；无父级 -1 |
+| 纹理与标志 | 41–42 | asset_order 对应纹理槽；bit 0 additive、1 multiplicative、2 double-sided、3 inverted mask |
+| 几何窗口 | 43–46 | UV offset 以 float 为单位，拓扑 offset/length 以 uint16 为单位 |
+| 遮罩窗口与池 | 47–48、80 | 连续的 Mesh 稠密索引，不是 renderer 临时纹理索引 |
+| 普通参数 | 49–57、102–104、114–116 | 范围/默认值/decimal_places；repeat=0、type=0，BlendShape 窗口为空 |
+| Part Keyform | 58 | draw_order |
+| Warp Keyform | 59–60、137–138 | opacity、位置池 offset、multiply/screen offset |
+| Rotation Keyform | 61–67、139–140 | opacity、angle、origin、scale、reflect_x/y、颜色 offset |
+| Mesh Keyform | 68–70、141–142 | opacity、draw_order、位置和颜色 offset |
+| 位置池 | 71 | 每点两个 float，count 是 float 总数 |
+| 轴索引/绑定/关键值表 | 72–77 | table 按参数分组，Binding 显式保留轴顺序；静态绑定 0 为零轴 |
+| UV / 索引池 | 78–79 | 每顶点两 float，每三角形三 uint16 |
+| 绘制组 | 81–85 | 根组 + 每 Part 一组；min/max 覆盖所有 Keyform，total_count 为后代 Mesh 数 |
+| 绘制项 | 86–88 | Mesh type=0、self_group=-1；Part type=1、self_group 指向自己的子组 |
+| Mesh 颜色窗口 | 107 | 对象在统一颜色池中的完整形态窗口 |
+| 颜色池 | 108–113 | RGB float；默认 multiply=(1,1,1)、screen=(0,0,0) |
+| 范围外可选段 | 其余 | 对应 count=0，offset 为当前对齐游标；不声明支持 Glue/BlendShape/Offscreen |
 
-测试会根据固定 Purism revision 的宏定义核对 schema，避免新增/调整格式字段后导出器继续静默使用旧映射。每个非空字段的实际字节数必须与 schema/count 完全匹配；只有 loader 指针槽允许编码器自动补零。
+Keyform 轴 0 最快变化；每个明确关键值组合必须恰好出现一次。参数键值枚举是所引用轴关键值的去重并集。单关键值轴可产生额外的不可达重复形态以满足 Core gather scratch 窗口，实际 key_len 仍为真实组合数，不补造缺失组合。
 
-## 已覆盖的行为与待补项
+Reflection 按 Core 取当前组合中第一个形态的离散值，其他 Rotation 属性线性插值。Warp 三角、quad 内插以及近/远边界外推、嵌套 Rotation 方向计算都调用提取的 Purism 原算法。
 
-静态用例包含两个纹理槽、不对称四边形与三角形、非连续顶点 ID、非零原点和非 1 的单位换算。两个 Core 检查画布、ID、拓扑、UV、纹理索引、位置、绘制/渲染顺序、透明度、颜色、可见性与空遮罩。
+## 输出与失败原子性
 
-编辑回归覆盖重命名不改变 MOC3、修改顶点改变导出结果且另一 Mesh 不变、替换静态拓扑后再次导出。失败回归覆盖不可表示 ID、重复运行 ID、未提交事务、未支持的父子/变形数据、无效画布，以及 Core 对截断头部、未知版本和越界 offset 的拒绝。
+`publish_package` 先编码全部源形态、读入并完整解码 PNG、检查尺寸，再执行调用方提供的运行时验证。没有验证器则拒绝发布。随后在同级临时目录写 `model.moc3`、`model.model3.json`、`textures/*.png`、`export-report.json`，完成后替换目标；失败恢复旧目录。若系统同时阻止回滚，错误会明确给出仍保存旧产物的备份目录，不报告成功。
 
-普通参数、完整组合位置形态和共享 Purism 插值已实现。参数字段为 section 49–57、102–104、114–116；key_table_idx 为 72，key_table 为 75–76，keys 为 77。Key table 按 parameter_order 分组，Binding 通过索引表保留自己的轴顺序；形态轴 0 最快变化。参数键值枚举为各绑定关键值的去重并集。decimal_places 控制共享关键值搜索的吸附阈值。
+源数据编辑不读取图片。PNG 丢失、损坏、尺寸不符、运行时验证拒绝、写入失败均在发布边界报告。PNG 解码上限为 1 GiB RGBA。工程快照和运行包是不同用途：Godot 源快照 format_version=5，完整保存本轮字段；旧版本 1–4 明确拒绝。
 
-每对象实际 key_len 等于组合数；单关键值轴时可能另附不可达的重复形态，满足 Core 的最大 gather span 校验，但不伪造缺失组合。新的构造和编辑用例及剩余范围见核心重构说明。
+运行时禁用对象可能保留历史的顶点、顺序、颜色和透明度缓存；无状态 DrawableFrame 明确报告 enabled/visible，并清空禁用几何。对照不比较禁用对象未定义的历史通道，但仍验证对象身份、拓扑、UV、关系、遮罩、可见性、最终 render_order，以及所有启用对象的全部数值。透明度为零但仍 enabled 的对象保留有效几何供遮罩使用。

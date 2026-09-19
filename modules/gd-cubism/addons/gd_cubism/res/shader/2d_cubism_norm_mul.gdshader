@@ -5,7 +5,7 @@ shader_type canvas_item;
 uniform sampler2D position_texture : filter_nearest, repeat_disable;
 uniform bool use_position_texture = false;
 uniform sampler2D parameter_texture : filter_nearest, repeat_disable;
-render_mode blend_premul_alpha, unshaded;
+render_mode blend_mul, unshaded;
 
 varying vec4 color_base;
 varying vec4 color_screen;
@@ -36,5 +36,5 @@ void fragment() {
     // premul alpha
     color_tex.rgb = (color_tex.rgb + color_screen.rgb) - (color_tex.rgb * color_screen.rgb);
     vec4 color = color_tex * color_base * modulate;
-    COLOR = vec4(color.rgb * color.a, color.a);
+    COLOR = vec4(color.rgb * color.a + vec3(1.0 - color.a), 1.0);
 }

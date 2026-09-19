@@ -26,8 +26,8 @@ struct VertexPositionUpdate {
 // Source data only. No Godot, textures, render handles, or evaluation outputs.
 // Single-threaded ownership. Const references are scoped to the next mutation.
 class Document {
-public:
-    static constexpr uint32_t schema_version = 2;
+  public:
+    static constexpr uint32_t schema_version = 3;
     Status initialize(std::string id, Canvas canvas);
     bool initialized() const { return !id_.empty(); }
     const std::string &id() const { return id_; }
@@ -54,12 +54,11 @@ public:
     EditResult add_asset(ImageAsset asset);
     EditResult create_mesh(Mesh mesh);
     EditResult rename_mesh(const std::string &id, std::string name);
-    EditResult set_vertex_positions(const std::string &id,
-                                   std::span<const VertexId> vertices,
-                                   std::span<const Vec2> positions);
+    EditResult set_vertex_positions(const std::string &id, std::span<const VertexId> vertices,
+                                    std::span<const Vec2> positions);
     EditResult apply_vertex_position_updates(std::span<const VertexPositionUpdate> updates);
     EditResult apply_vertex_position_updates_at_revision(std::span<const VertexPositionUpdate> updates,
-                                                        uint64_t expected_revision);
+                                                         uint64_t expected_revision);
     Status begin_transaction();
     Status stage_vertex_positions(VertexPositionUpdate update);
     EditResult commit_transaction();
@@ -80,9 +79,37 @@ public:
     EditResult replace_mesh_with_keyforms(Mesh, std::span<const VertexMapping>, std::vector<MeshKeyform>);
     std::vector<std::string> references_to(const std::string &) const;
     EditResult erase_object(const std::string &);
+    const std::vector<std::string> &transform_order() const { return transform_order_; }
+    const std::vector<std::string> &part_order() const { return part_order_; }
+    const std::vector<std::string> &scene_binding_order() const { return scene_binding_order_; }
+    const Transform *get_transform(const std::string &) const;
+    const Part *get_part(const std::string &) const;
+    const SceneBinding *get_scene_binding(const std::string &) const;
+    const SceneBinding *binding_for_scene(const std::string &) const;
+    EditResult create_transform(Transform);
+    EditResult replace_transform(Transform);
+    EditResult create_part(Part);
+    EditResult replace_part(Part);
+    EditResult create_scene_binding(SceneBinding);
+    EditResult replace_scene_binding(SceneBinding);
+    EditResult set_scene_keyform(const std::string &, SceneKeyform);
+    EditResult replace_asset(ImageAsset);
+    EditResult replace_canvas(Canvas);
+    // Parent-first order is derived, independent of creation order.
+    std::vector<std::string> sorted_transforms() const;
+    std::vector<std::string> sorted_parts() const;
     // Derived dense topology. Does not mutate Document.
     Status render_indices(const std::string &id, std::vector<uint32_t> &out) const;
-private:
+
+  private:
+    std::unordered_map<std::string, Transform> transforms_;
+    std::unordered_map<std::string, Part> parts_;
+    std::unordered_map<std::string, SceneBinding> scene_bindings_;
+    std::vector<std::string> transform_order_, part_order_, scene_binding_order_;
+    Status validate_transform(const Transform &) const;
+    Status validate_part(const Part &) const;
+    Status validate_mesh_properties(const Mesh &) const;
+    Status canonicalize_scene_binding(SceneBinding &) const;
     std::string id_;
     Canvas canvas_;
     uint64_t revision_ = 0;
@@ -107,9 +134,12 @@ private:
     bool mutation_blocked() const { return transaction_active_; }
     void advance_state();
     EditResult failed(Status status) const;
-    EditResult changed(ChangeKind kind, std::vector<std::string> ids = {}, std::vector<std::string> objects = {});
+    EditResult changed(ChangeKind kind, std::vector<std::string> ids = {},
+                       std::vector<std::string> objects = {});
     Status validate_parameter(const Parameter &) const;
     Status canonicalize_binding(MeshBinding &) const;
 };
+Status validate_appearance(const Appearance &, const std::string &);
+Status validate_draw_order(float, const std::string &);
 bool valid_uuid(const std::string &id);
-}
+} // namespace kasane

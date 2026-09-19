@@ -13,7 +13,8 @@ class KasaneDocumentState : public godot::RefCounted {
     kasane::Document document;
     uint64_t owner = 0;
     uint64_t generation = 0;
-protected:
+
+  protected:
     static void _bind_methods() {}
 };
 class KasaneDocumentBridge : public godot::RefCounted {
@@ -24,11 +25,15 @@ class KasaneDocumentBridge : public godot::RefCounted {
     kasane::PreviewValues preview_values_;
     godot::Dictionary write_mesh(const godot::Dictionary &description, bool replace);
     godot::Dictionary apply(const kasane::EditResult &edit);
-protected:
+
+  protected:
     static void _bind_methods();
-public:
-    godot::Dictionary create_rotation(const godot::String &id, const godot::String &name, godot::Vector2 center, double angle);
-    godot::Dictionary create_warp(const godot::String &id, const godot::String &name, godot::Vector2 origin, godot::Vector2 size, int64_t columns, int64_t rows);
+
+  public:
+    godot::Dictionary create_rotation(const godot::String &id, const godot::String &name,
+                                      godot::Vector2 center, double angle);
+    godot::Dictionary create_warp(const godot::String &id, const godot::String &name, godot::Vector2 origin,
+                                  godot::Vector2 size, int64_t columns, int64_t rows);
     godot::Dictionary set_rotation(const godot::String &id, godot::Vector2 center, double angle);
     godot::Dictionary set_warp_points(const godot::String &id, const godot::PackedVector2Array &points);
     godot::Dictionary set_deform_parent(const godot::String &id, const godot::String &parent);
@@ -36,9 +41,10 @@ public:
     godot::Dictionary get_deformer_snapshot(const godot::String &id) const;
     godot::Ref<KasaneDeformerData> get_deformer(const godot::String &id) const;
     godot::Dictionary evaluate_mesh(const godot::String &id) const;
-    godot::Dictionary initialize(const godot::String &id, godot::Vector2 canvas_size, godot::Vector2 origin = {}, double pixels_per_unit = 1);
+    godot::Dictionary initialize(const godot::String &id, godot::Vector2 canvas_size,
+                                 godot::Vector2 origin = {}, double pixels_per_unit = 1);
     godot::Dictionary add_image_asset(const godot::String &id, const godot::String &name,
-                                     const godot::String &source, int64_t width, int64_t height);
+                                      const godot::String &source, int64_t width, int64_t height);
     godot::Dictionary create_mesh(const godot::Dictionary &description);
     godot::Dictionary replace_mesh(const godot::Dictionary &description);
     godot::Ref<KasaneMeshData> get_mesh(const godot::String &id) const;
@@ -50,13 +56,18 @@ public:
     void replace_source(const kasane::Document &);
     godot::Dictionary get_frame() const;
     godot::Dictionary set_preview_values(const godot::Dictionary &values);
+    godot::Dictionary write_part(const godot::Dictionary &, bool replace = false);
+    godot::Dictionary write_transform(const godot::Dictionary &, bool replace = false);
+    godot::Dictionary write_scene_binding(const godot::Dictionary &, bool replace = false);
+    godot::Dictionary set_mesh_properties(const godot::String &, const godot::Dictionary &);
     godot::Dictionary create_parameter(const godot::Dictionary &description);
     godot::Dictionary write_binding(const godot::Dictionary &description, bool replace = false);
-    godot::Dictionary set_mesh_keyform(const godot::String &binding_id, const godot::PackedFloat32Array &keys, const godot::PackedVector2Array &positions);
+    godot::Dictionary set_mesh_keyform(const godot::String &binding_id, const godot::PackedFloat32Array &keys,
+                                       const godot::PackedVector2Array &positions);
     godot::Dictionary erase_object(const godot::String &id);
     godot::Dictionary set_vertex_positions(const godot::String &mesh_id,
-                                          const godot::PackedInt64Array &vertex_ids,
-                                          const godot::PackedVector2Array &positions);
+                                           const godot::PackedInt64Array &vertex_ids,
+                                           const godot::PackedVector2Array &positions);
     godot::Dictionary rename_mesh(const godot::String &id, const godot::String &name);
     godot::Dictionary begin_transaction();
     godot::Dictionary stage_vertex_positions(const godot::String &mesh_id,
@@ -70,4 +81,4 @@ public:
     godot::Dictionary get_mesh_snapshot(const godot::String &id) const;
     godot::Dictionary get_document_summary() const;
 };
-}
+} // namespace kasane_gd

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reproduce M1's static and parameter/keyform increment. Does not certify the whole milestone."""
+"""Reproduce all M1 source/codec/dual-Core checks; GPU and Godot run in validate_m1.py."""
 import argparse
 import hashlib
 import json
@@ -90,14 +90,14 @@ def main():
     parent = ROOT/'target/kasane'
     parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix='m1-core-', dir=parent))
-    report = dict(scope='M1 data refactor and parameter/keyform increment', status='failed', milestone_status='not_run',
+    report = dict(scope='M1 source model, editing, nested transforms, drawing and package publication', status='failed', milestone_status='not_run',
                   git_revision=git('rev-parse', 'HEAD'), working_tree=git('status', '--short'),
                   submodules=git('submodule', 'status'), purism_working_tree=git('-C', 'modules/purism-core', 'status', '--short'), platform=platform.platform(),
                   architecture=platform.machine(), build_configuration='Debug', moc_version=5,
                   coordinate_units='runtime model units; source pixels; pixels_per_unit=100',
                   canvas=dict(width=640, height=480, origin=[271, 193]),
                   parameter_samples=[{}], checks=[], gpu=dict(status='not_run',
-                  reason='GPU image comparison is not implemented in this core increment'))
+                  reason='Run tools/validate_m1.py for the complete GPU and Godot gate'))
     try:
         fields = schema()
         if not (args.sdk/'Core/include/Live2DCubismCore.h').is_file():
@@ -115,6 +115,17 @@ def main():
             summary = json.loads(next(line for line in text.splitlines() if line.startswith('{"status"')))
             report['checks'].append(dict(provider=provider, **summary))
         report['parameter_samples'] = json.loads((stage/'purism/samples.json').read_text())
+        for name in sorted(p.name for p in (stage/'purism').glob('nested-*.moc3')):
+            data=(stage/'purism'/name).read_bytes()
+            if data!=(stage/'official'/name).read_bytes():
+                raise RuntimeError(f'Providers evaluated different files: {name}')
+            output=stage/('package-'+Path(name).stem)
+            (output/'textures').mkdir(parents=True)
+            (output/'model.moc3').write_bytes(data)
+            shutil.copyfile(stage/'purism/model.model3.json',output/'model.model3.json')
+            for slot in range(2):
+                (output/f'textures/{slot}.png').write_bytes(png(slot))
+            (stage/(Path(name).stem+'-layout.json')).write_text(json.dumps(inspect_layout(output/'model.moc3',fields),indent=2)+'\n')
         for dimension in (1, 2, 3):
             name = f'parameter-{dimension}d.moc3'
             data = (stage/'purism'/name).read_bytes()
@@ -145,9 +156,7 @@ def main():
                            for p in sorted(stage.rglob('*')) if p.is_file()]
         report['checks'].append(dict(name='schema_layout_resource_references', status='passed'))
         report['status'] = 'passed'
-        report['remaining_m1'] = ['nested Rotation/Warp and their Keyforms',
-                                  'Part and drawing properties/masks', 'complete editing API',
-                                  'general package publisher', 'GPU evidence']
+        report['remaining_m1'] = ['Godot integration and GPU image gate (tools/validate_m1.py)']
         (stage/'report.json').write_text(json.dumps(report, indent=2)+'\n')
         # Publish only after all required checks of this increment have passed.
         # The previous verified run survives all build/validation/write failures.
@@ -163,7 +172,7 @@ def main():
             raise
         if backup.exists():
             shutil.rmtree(backup)
-        print(f'M1 core increment passed; full M1 remains unaccepted. Report: {destination / "report.json"}')
+        print(f'M1 core checks passed; use validate_m1.py for complete milestone acceptance. Report: {destination / "report.json"}')
         return 0
     except Exception as exc:
         report['error'] = str(exc)

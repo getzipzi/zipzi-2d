@@ -103,6 +103,48 @@ func run():
     check(doc.begin_transaction().ok, "Begin transaction")
     check(not io.open_project(doc, path).ok, "Open must not replace an active transaction")
     check(doc.cancel_transaction().ok, "Cancel transaction")
+    # Formal scene source roundtrip, including all appearance and pose channels.
+    var part_id = "66666666-6666-4666-8666-666666666666"
+    var warp_id = "77777777-7777-4777-8777-777777777777"
+    var rotation_id = "88888888-8888-4888-8888-888888888888"
+    var scene_binding_id = "99999999-9999-4999-8999-999999999999"
+    check(clone.write_part({"id":part_id,"runtime_id":"Part","name":"part","parent_id":"","enabled":true,"draw_order":3}).ok, "create formal Part")
+    var appearance = {"opacity":0.8,"multiply":[0.8,0.9,1.0],"screen":[0.1,0.2,0.05]}
+    var pose = {"origin":[0.4,0.6],"angle":17,"scale":0.9,"reflect_x":true,"reflect_y":false}
+    var warp = {"id":warp_id,"runtime_id":"Warp","name":"warp","part_id":part_id,"parent_id":"","kind":0,"base_angle":0,"rotation":pose,"rows":1,"columns":1,"quad":false,"enabled":true,"points":[[10,90],[90,85],[15,10],[95,15]],"appearance":appearance}
+    check(clone.write_transform(warp).ok, "create formal Warp")
+    var rotation = warp.duplicate(true)
+    rotation.id = rotation_id
+    rotation.runtime_id = "Rotation"
+    rotation.parent_id = warp_id
+    rotation.kind = 1
+    rotation.points = []
+    check(clone.write_transform(rotation).ok, "create nested Rotation")
+    var properties = {"part_id":part_id,"deformer_id":rotation_id,"appearance":appearance,"draw_order":9,"blend_mode":2,"enabled":true,"double_sided":true,"inverted_mask":true,"masks":[]}
+    check(clone.set_mesh_properties(MESH, properties).ok, "mesh drawing properties and formal parent")
+    check(clone.create_parameter(param).ok, "formal binding parameter")
+    var form_a = {"keys":[-1],"positions":[],"rotation":pose,"appearance":appearance,"draw_order":0}
+    var form_b = form_a.duplicate(true)
+    form_b.keys = [1]
+    form_b.rotation.angle = -23
+    check(clone.write_scene_binding({"id":scene_binding_id,"target_id":rotation_id,"axes":[{"parameter_id":PARAM,"keys":[-1,1]}],"keyforms":[form_a,form_b]}).ok, "formal scene keyforms")
+    var mesh_snapshot = clone.get_mesh_snapshot(MESH)
+    check(mesh_snapshot.properties.part_id == part_id and mesh_snapshot.properties.deformer_id == rotation_id and mesh_snapshot.properties.blend_mode == 2 and is_equal_approx(mesh_snapshot.properties.appearance.opacity, 0.8), "mesh snapshot exposes drawing properties")
+    check(clone.replace_mesh(mesh_snapshot).ok and clone.get_mesh_snapshot(MESH).properties == mesh_snapshot.properties, "geometry replacement preserves formal properties")
+    check(clone.get_document_summary().transforms.size() == 2 and clone.get_document_summary().scene_bindings.size() == 1, "formal source traversal")
+    check(io.save_project(clone, "user://formal.json").ok, "save formal source")
+    var formal = ClassDB.instantiate("KasaneDocumentBridge")
+    check(io.open_project(formal, "user://formal.json").ok, "reopen formal source")
+    for value in [-1, 0, 1]:
+        var before = clone.set_preview_values({PARAM:value})
+        var after = formal.set_preview_values({PARAM:value})
+        check(before.ok and after.ok and before.drawables == after.drawables, "formal pose/color roundtrip sample " + str(value))
+    var cycle = warp.duplicate(true)
+    cycle.parent_id = rotation_id
+    revision = clone.get_document_summary().revision
+    check(not clone.write_transform(cycle, true).ok, "reject formal transform cycle")
+    check(clone.get_document_summary().revision == revision, "rejected cycle is atomic")
+    check(not clone.erase_object(warp_id).ok, "formal reference-aware deletion")
     preview_b.free()
     print(JSON.stringify({"status": "passed" if failures.is_empty() else "failed", "checks": checks, "failures": failures, "gpu": "not_run"}))
     quit(0 if failures.is_empty() else 1)
