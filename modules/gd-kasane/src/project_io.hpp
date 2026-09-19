@@ -6,10 +6,11 @@ namespace kasane_gd {
 // nodes. This prototype format is not the M2 packaged-project implementation.
 class KasaneProjectIO : public godot::RefCounted {
     GDCLASS(KasaneProjectIO, godot::RefCounted)
-protected:
+  protected:
     static void _bind_methods();
-public:
+
+  public:
     godot::Dictionary save_project(const godot::Ref<KasaneDocumentBridge> &, const godot::String &);
     godot::Dictionary open_project(const godot::Ref<KasaneDocumentBridge> &, const godot::String &);
 };
-}
+} // namespace kasane_gd

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""Pinned clang-format debt ratchet and selected clang-tidy checks for owned code."""
+"""Pinned clang-format and selected clang-tidy checks for owned code."""
 import argparse
-import json
 import os
 from pathlib import Path
 import shutil
@@ -11,7 +10,6 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = "22.1.8"
-BASELINE = ROOT / "tools/quality_format_baseline.json"
 
 
 def executable(name, override):
@@ -49,21 +47,17 @@ def owned_sources():
 
 
 def check_format(clang_format, files):
-    baseline = json.loads(BASELINE.read_text())
     failed = []
-    debt = 0
     for path in files:
         relative = path.relative_to(ROOT).as_posix()
         result = subprocess.run([str(clang_format), "-style=file", "-output-replacements-xml", str(path)],
                                 text=True, capture_output=True, check=True)
         count = len(ET.fromstring(result.stdout).findall("replacement"))
-        allowed = baseline.get(relative, 0)
-        debt += count
-        if count > allowed:
-            failed.append(f"{relative}: {count} format edits, baseline {allowed}")
+        if count:
+            failed.append(f"{relative}: {count} format edits required")
     if failed:
-        raise RuntimeError("Formatting debt increased:\n" + "\n".join(failed))
-    print(f"format: {len(files)} owned files checked; {debt} existing edits (baseline cap {sum(baseline.values())})")
+        raise RuntimeError("Formatting required:\n" + "\n".join(failed))
+    print(f"format: {len(files)} owned files checked; no formatting edits required")
 
 
 def check_tidy(clang_tidy, build_dir, godot_build_dir):

@@ -9,9 +9,11 @@ class KasaneDeformerData : public godot::RefCounted {
     uint64_t owner_ = 0, generation_ = 0;
     godot::String id_;
     KasaneDocumentBridge *owner() const;
-protected:
+
+  protected:
     static void _bind_methods();
-public:
+
+  public:
     void attach(uint64_t owner, uint64_t generation, const godot::String &id);
     bool is_valid() const;
     godot::Dictionary snapshot() const;
@@ -26,4 +28,4 @@ public:
     godot::Dictionary update_control_points(const godot::PackedVector2Array &points);
     godot::Dictionary bind_to(const godot::String &parent);
 };
-}
+} // namespace kasane_gd

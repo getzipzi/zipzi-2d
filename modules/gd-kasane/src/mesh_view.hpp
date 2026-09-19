@@ -13,16 +13,17 @@ class KasaneMeshView : public godot::MeshInstance2D {
     uint64_t uploads_ = 0;
     uint64_t creations_ = 0;
     void update_bounds();
-protected:
+
+  protected:
     static void _bind_methods();
-public:
+
+  public:
     godot::Dictionary initialize(const godot::PackedVector2Array &positions,
-                                 const godot::PackedVector2Array &uvs,
-                                 const godot::PackedInt32Array &indices,
+                                 const godot::PackedVector2Array &uvs, const godot::PackedInt32Array &indices,
                                  const godot::Ref<godot::Texture2D> &texture);
     godot::Dictionary update_positions(const godot::PackedVector2Array &positions);
     void clear();
     godot::Dictionary get_render_stats() const;
     godot::PackedVector2Array get_positions_snapshot() const { return vectors(positions_); }
 };
-}
+} // namespace kasane_gd

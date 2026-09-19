@@ -15,4 +15,4 @@ struct Deformer {
     uint32_t columns = 1, rows = 1;
     std::vector<Vec2> control_points;
 };
-}
+} // namespace kasane

@@ -117,11 +117,15 @@ Dictionary KasaneDocumentBridge::write_mesh(const Dictionary &d, bool replace) {
         if (const auto *old = document_.get_mesh(mesh.id))
             mesh.runtime_id = old->runtime_id;
     }
-    if(d.has("properties")) {
-        if(d["properties"].get_type()!=Variant::DICTIONARY)return error("INVALID_FIELD","properties must be a dictionary");
-        if(auto s=mesh_properties_from_dictionary(d["properties"],mesh);!s.ok())return result(s);
-    } else if(replace) {
-        if(auto old=document_.get_mesh(mesh.id))if(auto s=mesh_properties_from_dictionary(mesh_properties_dictionary(*old),mesh);!s.ok())return result(s);
+    if (d.has("properties")) {
+        if (d["properties"].get_type() != Variant::DICTIONARY)
+            return error("INVALID_FIELD", "properties must be a dictionary");
+        if (auto s = mesh_properties_from_dictionary(d["properties"], mesh); !s.ok())
+            return result(s);
+    } else if (replace) {
+        if (auto old = document_.get_mesh(mesh.id))
+            if (auto s = mesh_properties_from_dictionary(mesh_properties_dictionary(*old), mesh); !s.ok())
+                return result(s);
     }
     if (auto s = ids(d["vertex_ids"], mesh.vertex_ids); !s.ok())
         return result(s);
@@ -341,11 +345,16 @@ Dictionary KasaneDocumentBridge::get_document_summary() const {
         parameters.push_back(parameter_dictionary(*document_.get_parameter(id)));
     for (const auto &id : document_.binding_order())
         bindings.push_back(binding_dictionary(*document_.get_binding(id)));
-    Array parts,transforms,scene_bindings;
-    for(auto &id:document_.part_order())parts.push_back(part_dictionary(*document_.get_part(id)));
-    for(auto &id:document_.transform_order())transforms.push_back(transform_dictionary(*document_.get_transform(id)));
-    for(auto &id:document_.scene_binding_order())scene_bindings.push_back(scene_binding_dictionary(*document_.get_scene_binding(id)));
-    out["parts"]=parts;out["transforms"]=transforms;out["scene_bindings"]=scene_bindings;
+    Array parts, transforms, scene_bindings;
+    for (auto &id : document_.part_order())
+        parts.push_back(part_dictionary(*document_.get_part(id)));
+    for (auto &id : document_.transform_order())
+        transforms.push_back(transform_dictionary(*document_.get_transform(id)));
+    for (auto &id : document_.scene_binding_order())
+        scene_bindings.push_back(scene_binding_dictionary(*document_.get_scene_binding(id)));
+    out["parts"] = parts;
+    out["transforms"] = transforms;
+    out["scene_bindings"] = scene_bindings;
     out["parameters"] = parameters;
     out["bindings"] = bindings;
     out["canvas_origin"] = Vector2(document_.canvas().origin.x, document_.canvas().origin.y);

@@ -24,7 +24,6 @@ using VertexId = uint32_t;
 
 // Borrowed views are used only for the duration of a synchronous call.
 Status validate_positions(std::span<const Vec2> positions);
-Status validate_render_mesh(std::span<const Vec2> positions,
-                            std::span<const Vec2> uvs,
+Status validate_render_mesh(std::span<const Vec2> positions, std::span<const Vec2> uvs,
                             std::span<const uint32_t> indices);
-}
+} // namespace kasane

@@ -5,14 +5,24 @@
 #include <cstdlib>
 
 using namespace kasane;
-#define CHECK(...) do { if (!(__VA_ARGS__)) { std::cerr << "FAIL line " << __LINE__ << ": " << #__VA_ARGS__ << '\n'; std::exit(1); } } while (0)
+#define CHECK(...)                                                                                           \
+    do {                                                                                                     \
+        if (!(__VA_ARGS__)) {                                                                                \
+            std::cerr << "FAIL line " << __LINE__ << ": " << #__VA_ARGS__ << '\n';                           \
+            std::exit(1);                                                                                    \
+        }                                                                                                    \
+    } while (0)
 static const std::string DOC = "11111111-1111-4111-8111-111111111111";
 static const std::string ASSET = "22222222-2222-4222-8222-222222222222";
 static const std::string MESH = "33333333-3333-4333-8333-333333333333";
 Mesh sample() {
-    return {MESH, "quad", ASSET, {40, 10, 90, 20},
-        {{-10, 10}, {-10, -10}, {10, -10}, {10, 10}},
-        {{0, 0}, {0, 1}, {1, 1}, {1, 0}}, {{{40, 10, 90}}, {{40, 90, 20}}}};
+    return {MESH,
+            "quad",
+            ASSET,
+            {40, 10, 90, 20},
+            {{-10, 10}, {-10, -10}, {10, -10}, {10, 10}},
+            {{0, 0}, {0, 1}, {1, 1}, {1, 0}},
+            {{{40, 10, 90}}, {{40, 90, 20}}}};
 }
 int main() {
     Document doc;
@@ -27,11 +37,14 @@ int main() {
     auto invalid = sample();
     invalid.vertex_ids[1] = 40;
     CHECK(doc.create_mesh(invalid).status.code == "DUPLICATE_VERTEX");
-    invalid = sample(); invalid.triangles[0][0] = 99;
+    invalid = sample();
+    invalid.triangles[0][0] = 99;
     CHECK(doc.create_mesh(invalid).status.code == "MISSING_VERTEX");
-    invalid = sample(); invalid.triangles[0][0] = 10;
+    invalid = sample();
+    invalid.triangles[0][0] = 10;
     CHECK(doc.create_mesh(invalid).status.code == "REPEATED_VERTEX");
-    invalid = sample(); invalid.base_positions[0].x = std::numeric_limits<float>::infinity();
+    invalid = sample();
+    invalid.base_positions[0].x = std::numeric_limits<float>::infinity();
     CHECK(doc.create_mesh(invalid).status.code == "NON_FINITE");
     CHECK(doc.mesh_order().empty());
     auto source = sample();
@@ -66,8 +79,10 @@ int main() {
     CHECK(doc.rename_mesh(MESH, "renamed").changes.kind == ChangeKind::metadata);
     CHECK(doc.get_mesh(MESH)->id == MESH && doc.get_mesh(MESH)->vertex_ids == before.vertex_ids);
     // Coincident vertices and UVs outside [0,1] are allowed, not topology corruption.
-    auto collapsed = sample(); collapsed.id = "44444444-4444-4444-8444-444444444444";
-    collapsed.base_positions.assign(4, {0, 0}); collapsed.uvs[0] = {-1, 2};
+    auto collapsed = sample();
+    collapsed.id = "44444444-4444-4444-8444-444444444444";
+    collapsed.base_positions.assign(4, {0, 0});
+    collapsed.uvs[0] = {-1, 2};
     CHECK(doc.create_mesh(collapsed).status.ok());
     CHECK(doc.mesh_order() == std::vector<std::string>({MESH, collapsed.id}));
     indices = {123};
@@ -105,7 +120,8 @@ int main() {
 
     // Source restoration is explicit; the core owns no undo/redo stack.
     auto checkpoint = doc;
-    CHECK(doc.set_vertex_positions(MESH, std::vector<VertexId>{10}, std::vector<Vec2>{{-11, -12}}).status.ok());
+    CHECK(
+        doc.set_vertex_positions(MESH, std::vector<VertexId>{10}, std::vector<Vec2>{{-11, -12}}).status.ok());
     auto restore_revision = doc.revision();
     doc.restore_from(checkpoint);
     CHECK(doc.revision() == restore_revision + 1);
@@ -120,7 +136,8 @@ int main() {
     auto stale_revision = doc.revision() - 1;
     std::vector<VertexPositionUpdate> stale_batch = {{MESH, {40}, {{5, 6}}}};
     auto stale_before = doc.get_mesh(MESH)->base_positions;
-    CHECK(doc.apply_vertex_position_updates_at_revision(stale_batch, stale_revision).status.code == "STALE_REVISION");
+    CHECK(doc.apply_vertex_position_updates_at_revision(stale_batch, stale_revision).status.code ==
+          "STALE_REVISION");
     CHECK(doc.get_mesh(MESH)->base_positions == stale_before);
     CHECK(doc.apply_vertex_position_updates_at_revision(stale_batch, doc.revision()).status.ok());
     CHECK(doc.get_mesh(MESH)->base_positions[0] == Vec2({5, 6}));

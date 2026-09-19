@@ -7,7 +7,8 @@
 using namespace godot;
 using namespace kasane_gd;
 static void initialize(ModuleInitializationLevel level) {
-    if (level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
+    if (level != MODULE_INITIALIZATION_LEVEL_SCENE)
+        return;
     GDREGISTER_CLASS(KasaneMeshView);
     GDREGISTER_CLASS(KasaneDocumentState);
     GDREGISTER_CLASS(KasaneMeshData);
@@ -17,11 +18,12 @@ static void initialize(ModuleInitializationLevel level) {
     GDREGISTER_CLASS(KasaneTextureStore);
     GDREGISTER_CLASS(KasaneDocumentPreview);
 }
-static void terminate(ModuleInitializationLevel) {}
+static void terminate(ModuleInitializationLevel) {
+}
 extern "C" {
 GDExtensionBool GDE_EXPORT gd_kasane_library_init(GDExtensionInterfaceGetProcAddress get_proc_address,
-                                                GDExtensionClassLibraryPtr library,
-                                                GDExtensionInitialization *initialization) {
+                                                  GDExtensionClassLibraryPtr library,
+                                                  GDExtensionInitialization *initialization) {
     GDExtensionBinding::InitObject init(get_proc_address, library, initialization);
     init.register_initializer(initialize);
     init.register_terminator(terminate);

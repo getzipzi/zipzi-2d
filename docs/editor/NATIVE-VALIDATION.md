@@ -31,11 +31,9 @@ python3 tools/check_cpp_quality.py
 
 Use `--compile-commands target/cmake/core-make` when using the Makefiles preset.
 The format gate checks 109 owned C/C++ files, excluding generated and vendor
-sources. `tools/quality_format_baseline.json` records pre-existing formatting
-edits; the gate rejects any increase, and new files have a zero allowance.
+sources. Any formatting edit required by clang-format fails the gate.
 The selected tidy defect checks cover 23 Kasane and Godot translation units.
-Its two compilation databases come from CMake and SCons. Reduce baseline
-allowances as older files are reformatted; do not raise them for new edits.
+Its two compilation databases come from CMake and SCons.
 
 `validation_negative_controls` is part of CTest. It requires zero cases,
 missing references, nonfinite numbers, wrong values and failed children to
