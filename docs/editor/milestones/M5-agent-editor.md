@@ -1,6 +1,6 @@
 # M5：Godot Agent-first editor
 
-状态：待实施，未验收。依赖：M1–M4。返回 [总路线图](../ROADMAP.md)。
+状态：应用壳已建立，功能待实施、未验收（见 [应用说明](../../../apps/README.md)）。依赖：M1–M4。返回 [总路线图](../ROADMAP.md)。
 
 ## 1. 交付结果
 

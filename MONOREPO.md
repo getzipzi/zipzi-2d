@@ -2,6 +2,9 @@
 
 ## Layout
 
+- `apps/editor/` — standalone Godot Editor shell; modeling backends pending.
+- `apps/viewer/` — independent Godot Viewer shell; runtime integration pending.
+
 - `modules/purism-core/` — forked PurismCore provider, pinned as a Git
   submodule.
 - `modules/gd-cubism/` — `gd_cubism` Godot GDExtension, imported from

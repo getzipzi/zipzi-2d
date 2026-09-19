@@ -6,6 +6,12 @@ The repository already includes a PurismCore + gd-cubism runtime for loading,
 deforming, and displaying models. Editor delivery is tracked in the
 [engineering roadmap](docs/editor/ROADMAP.md) and its separate milestones.
 
+## Desktop application shells
+
+Standalone Editor and Viewer entry points are available under `apps/`.
+See [startup, checks and export instructions](apps/README.md). Model editing and
+runtime loading are not connected yet; these shells do not complete M5/M6.
+
 ## Acknowledgements
 
 This project builds on the work of upstream open-source projects:
