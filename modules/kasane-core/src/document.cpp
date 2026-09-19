@@ -27,7 +27,7 @@ Status Document::initialize(std::string id, Canvas canvas) {
     return {};
 }
 bool Document::contains_id(const std::string &id) const {
-    return id == id_ || assets_.contains(id) || meshes_.contains(id);
+    return id == id_ || assets_.contains(id) || meshes_.contains(id) || deformers_.contains(id);
 }
 const ImageAsset *Document::get_asset(const std::string &id) const {
     auto it = assets_.find(id);

@@ -68,6 +68,8 @@ def main() -> None:
         marker="KASANE_INTEGRATION_TEST_OK", log="integration.log")
     run([godot, "--headless", "--path", str(DEMO), "--script", "res://tests/script_test.gd"],
         marker="KASANE_SCRIPT_TEST_OK", log="script-tests.log")
+    run([godot, "--headless", "--path", str(DEMO), "--script", "res://tests/deformer_test.gd"],
+        marker="KASANE_DEFORMER_TEST_OK", log="deformer-tests.log")
     expected_runtime_error = "SCRIPT ERROR: Invalid call. Nonexistent function 'deliberate_runtime_error' in base 'Nil'."
     run([godot, "--headless", "--path", str(DEMO), "--script", "res://tests/script_error_test.gd"],
         marker="KASANE_SCRIPT_ERROR_TEST_OK", log="script-errors.log",
@@ -75,6 +77,8 @@ def main() -> None:
     if args.render:
         run([godot, "--path", str(DEMO), "--script", "res://tests/render_test.gd"],
             marker="KASANE_RENDER_TEST_OK", log="render.log")
+        run([godot, "--path", str(DEMO), "--script", "res://tests/deformer_render_test.gd"],
+            marker="KASANE_DEFORMER_RENDER_TEST_OK", log="deformer-render.log")
     if args.demo:
         subprocess.Popen([godot, "--path", str(DEMO)], cwd=ROOT)
 

@@ -13,6 +13,7 @@
 - `kasane-core::Document` 保存源数据和稳定 ID，不依赖 Godot。它不再维护 Undo/Redo 栈。普通写入直接生效，不要求事务，不自动记录或清空历史。
 - `KasaneDocumentBridge` 管理当前 Document、纹理与派生预览，提供保存、重开和数据访问。它目前仍是 Node2D；Document 本身不是场景树。
 - `KasaneMeshData` 是 RefCounted 对象句柄，绑定拥有者实例 ID、文档代次和 Mesh ID。属性 `name`、`positions` 可以直接写；`set_vertex_positions` 支持稳定 ID 批量更新，`replace_geometry` 支持替换顶点 ID、位置、UV 和拓扑。它不持有另一份权威数据。
+- `KasaneDeformerData` 提供 Rotation 的中心/角度与 Warp 控制点属性。源数据经最近变形父节点到祖先逐级求值，只有求值输出送到渲染器。组织关系不参与求值，详见 [Stage 05](stages/05-deformers.md)。
 - `script_host.gd` 在当前 Godot 进程加载并执行 GDScript。脚本接收当前 `document` 和可选 `actions`；执行本身不隐式创建事务，也不自动回滚。
 - `actions.gd` 提供显式的 `perform(label, callable)`，使用 Godot 核心 `UndoRedo` 存放调用。也可直接使用 `UndoRedo.add_do_property` 等原生能力，无须经过辅助类。
 
@@ -36,7 +37,7 @@
 
 ## 保存、重开与生命周期
 
-项目 JSON v1 不变，仍安全替换保存。Bridge 根据当前持久化内容与最后成功保存内容比较 `modified`，因此 Action 撤销回保存内容后变为未修改。
+Stage 05 将项目格式升级为 JSON v2，保存变形器和父链接；兼容读取 v1，仍安全替换保存。Bridge 根据当前持久化内容与最后成功保存内容比较 `modified`，因此 Action 撤销回保存内容后变为未修改。
 
 同一 Bridge 的 revision 在重开、恢复时也保持递增。成功重开推进文档代次；旧网格句柄和旧快照均不能修改新文档。Action 服务下次调用时清理上一会话历史。拥有者销毁后的句柄也安全失效。
 

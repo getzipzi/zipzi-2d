@@ -9,6 +9,7 @@ static void initialize(ModuleInitializationLevel level) {
     GDREGISTER_CLASS(KasaneMeshView);
     GDREGISTER_CLASS(KasaneDocumentState);
     GDREGISTER_CLASS(KasaneMeshData);
+    GDREGISTER_CLASS(KasaneDeformerData);
     GDREGISTER_CLASS(KasaneDocumentBridge);
 }
 static void terminate(ModuleInitializationLevel) {}

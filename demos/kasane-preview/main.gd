@@ -61,7 +61,7 @@ func _ready() -> void:
 	label_at("One mesh. Two paths. No model files.", Vector2(36, 57), 28, Color("eaf1fa"))
 	label_at("STAGE 00", Vector2(66, 142), 13, Color("69baff"))
 	label_at("Direct memory interface", Vector2(66, 166), 21, Color("eaf1fa"))
-	label_at("STAGE 04", Vector2(526, 142), 13, Color("70dbc0"))
+	label_at("STAGE 04 / 05", Vector2(526, 142), 13, Color("70dbc0"))
 	label_at("GDScript → Document → preview", Vector2(526, 166), 20, Color("eaf1fa"))
 	label_at("Fixed topology · shared texture · Y-up source data", Vector2(66, 466), 14, Color("9bacbf"))
 	label_at("Direct data access · optional native actions", Vector2(526, 466), 14, Color("9bacbf"))

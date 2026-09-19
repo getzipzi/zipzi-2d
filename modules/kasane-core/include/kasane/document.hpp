@@ -22,6 +22,16 @@ struct Mesh {
     std::vector<Vec2> uvs;
     std::vector<std::array<VertexId, 3>> triangles;
 };
+enum class DeformerKind { rotation, warp };
+struct Deformer {
+    std::string id, name;
+    DeformerKind kind = DeformerKind::rotation;
+    Vec2 center{};
+    float angle_degrees = 0;
+    Vec2 origin{}, size{1, 1};
+    uint32_t columns = 1, rows = 1;
+    std::vector<Vec2> control_points;
+};
 enum class ChangeKind { none, metadata, positions, structure };
 struct ChangeSet {
     ChangeKind kind = ChangeKind::none;
@@ -56,6 +66,15 @@ public:
     size_t asset_count() const { return assets_.size(); }
     const ImageAsset *get_asset(const std::string &id) const;
     const Mesh *get_mesh(const std::string &id) const;
+    const Deformer *get_deformer(const std::string &id) const;
+    const std::vector<std::string> &deformer_order() const { return deformer_order_; }
+    EditResult create_deformer(Deformer deformer);
+    EditResult set_rotation(const std::string &id, Vec2 center, float angle_degrees);
+    EditResult set_warp_points(const std::string &id, std::span<const Vec2> points);
+    EditResult set_parent(const std::string &id, const std::string &parent, bool organization = false);
+    std::string parent_of(const std::string &id, bool organization = false) const;
+    Status evaluate_mesh(const std::string &id, std::vector<Vec2> &out) const;
+    std::vector<std::string> affected_meshes(const std::string &id) const;
     EditResult add_asset(ImageAsset asset);
     EditResult create_mesh(Mesh mesh);
     EditResult rename_mesh(const std::string &id, std::string name);
@@ -84,6 +103,9 @@ private:
     std::unordered_map<std::string, std::unordered_map<VertexId, uint32_t>> vertex_slots_;
     std::vector<std::string> asset_order_;
     std::vector<std::string> mesh_order_;
+    std::unordered_map<std::string, Deformer> deformers_;
+    std::vector<std::string> deformer_order_;
+    std::unordered_map<std::string, std::string> deformation_parents_, organization_parents_;
     bool transaction_active_ = false;
     std::vector<VertexPositionUpdate> staged_updates_;
     uint64_t next_state_id_ = 1;

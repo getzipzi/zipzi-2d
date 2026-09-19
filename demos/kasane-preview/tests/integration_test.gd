@@ -118,7 +118,7 @@ func _run() -> void:
 	check(bridge.save_project(project_path).ok, "Safely replace existing project")
 	check(not bridge.get_document_summary().modified, "Successful save clears modified state")
 	var saved_text := FileAccess.get_file_as_string(project_path)
-	check(saved_text.contains("\"format_version\": 1"), "Saved project has format version")
+	check(saved_text.contains("\"format_version\": 2"), "Saved project has format version")
 	check(actions.perform("Edit after save", func():
 		return bridge.set_vertex_positions(Fixture.MESH, PackedInt64Array([40]), PackedVector2Array([Vector2(-1, -2)]))
 	).ok, "Edit after save")
@@ -142,7 +142,7 @@ func _run() -> void:
 	var stable_snapshot := reopened_snapshot
 	var unsupported_path := "user://stage-03-unsupported.kasane.json"
 	var unsupported := FileAccess.open(unsupported_path, FileAccess.WRITE)
-	unsupported.store_string(saved_text.replace("\"format_version\": 1", "\"format_version\": 999"))
+	unsupported.store_string(saved_text.replace("\"format_version\": 2", "\"format_version\": 999"))
 	unsupported.close()
 	var unsupported_result := reopened.open_project(unsupported_path)
 	check(not unsupported_result.ok and unsupported_result.code == "UNSUPPORTED_VERSION", "Unsupported project version is explicit")

@@ -33,7 +33,16 @@ func run_script(path: String) -> Dictionary:
 func capture(viewport: Viewport) -> Dictionary:
 	if DisplayServer.get_name() == "headless":
 		return {"ok": false, "code": "RENDERER_REQUIRED"}
-	var revision: int = document.get_document_summary().revision
+	var summary := document.get_document_summary()
+	var revision: int = summary.revision
+	# Refuse an old frame when valid source edits could not be evaluated/uploaded.
+	for mesh in summary.meshes:
+		var evaluated := document.evaluate_mesh(mesh.id)
+		if not evaluated.ok:
+			return evaluated
+		var view := document.get_mesh_view(mesh.id)
+		if view == null or view.get_positions_snapshot() != evaluated.positions:
+			return {"ok": false, "code": "PREVIEW_STALE"}
 	await RenderingServer.frame_post_draw
 	if document.get_document_summary().revision != revision:
 		return {"ok": false, "code": "PREVIEW_CHANGED"}

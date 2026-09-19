@@ -2,6 +2,7 @@
 #pragma once
 #include "mesh_view.hpp"
 #include "mesh_data.hpp"
+#include "deformer_data.hpp"
 #include <godot_cpp/classes/node2d.hpp>
 
 namespace kasane_gd {
@@ -29,6 +30,15 @@ class KasaneDocumentBridge : public godot::Node2D {
 protected:
     static void _bind_methods();
 public:
+    godot::Dictionary create_rotation(const godot::String &id, const godot::String &name, godot::Vector2 center, double angle);
+    godot::Dictionary create_warp(const godot::String &id, const godot::String &name, godot::Vector2 origin, godot::Vector2 size, int64_t columns, int64_t rows);
+    godot::Dictionary set_rotation(const godot::String &id, godot::Vector2 center, double angle);
+    godot::Dictionary set_warp_points(const godot::String &id, const godot::PackedVector2Array &points);
+    godot::Dictionary set_deform_parent(const godot::String &id, const godot::String &parent);
+    godot::Dictionary set_organization_parent(const godot::String &id, const godot::String &parent);
+    godot::Dictionary get_deformer_snapshot(const godot::String &id) const;
+    godot::Ref<KasaneDeformerData> get_deformer(const godot::String &id) const;
+    godot::Dictionary evaluate_mesh(const godot::String &id) const;
     godot::Dictionary initialize(const godot::String &id, godot::Vector2 canvas_size);
     godot::Dictionary add_image_asset(const godot::String &id, const godot::String &name,
                                      const godot::String &source, const godot::Ref<godot::Texture2D> &texture);

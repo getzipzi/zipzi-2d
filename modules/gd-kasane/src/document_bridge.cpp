@@ -8,10 +8,20 @@
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <cmath>
+#include <unordered_set>
 
 using namespace godot;
 namespace kasane_gd {
 void KasaneDocumentBridge::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("create_rotation", "id", "name", "center", "angle"), &KasaneDocumentBridge::create_rotation);
+    ClassDB::bind_method(D_METHOD("create_warp", "id", "name", "origin", "size", "columns", "rows"), &KasaneDocumentBridge::create_warp);
+    ClassDB::bind_method(D_METHOD("set_rotation", "id", "center", "angle"), &KasaneDocumentBridge::set_rotation);
+    ClassDB::bind_method(D_METHOD("set_warp_points", "id", "points"), &KasaneDocumentBridge::set_warp_points);
+    ClassDB::bind_method(D_METHOD("set_deform_parent", "id", "parent"), &KasaneDocumentBridge::set_deform_parent);
+    ClassDB::bind_method(D_METHOD("set_organization_parent", "id", "parent"), &KasaneDocumentBridge::set_organization_parent);
+    ClassDB::bind_method(D_METHOD("get_deformer_snapshot", "id"), &KasaneDocumentBridge::get_deformer_snapshot);
+    ClassDB::bind_method(D_METHOD("get_deformer", "id"), &KasaneDocumentBridge::get_deformer);
+    ClassDB::bind_method(D_METHOD("evaluate_mesh", "id"), &KasaneDocumentBridge::evaluate_mesh);
     ClassDB::bind_method(D_METHOD("initialize", "id", "canvas_size"), &KasaneDocumentBridge::initialize);
     ClassDB::bind_method(D_METHOD("add_image_asset", "id", "name", "source", "texture"), &KasaneDocumentBridge::add_image_asset);
     ClassDB::bind_method(D_METHOD("create_mesh", "description"), &KasaneDocumentBridge::create_mesh);
@@ -132,7 +142,8 @@ Dictionary KasaneDocumentBridge::get_asset_snapshot(const String &id) const {
 }
 
 namespace {
-constexpr int64_t PROJECT_FORMAT_VERSION = 1;
+constexpr int64_t PROJECT_FORMAT_VERSION = 2;
+Array pair_array(kasane::Vec2 p) { Array a; a.push_back(p.x); a.push_back(p.y); return a; }
 Dictionary project_dictionary(const kasane::Document &document) {
     Dictionary root;
     root["format"] = "kasane-project";
@@ -169,6 +180,34 @@ Dictionary project_dictionary(const kasane::Document &document) {
         meshes.push_back(item);
     }
     doc["meshes"] = meshes;
+    Array deformers, deformation_links, organization_links;
+    for (const auto &id : document.deformer_order()) {
+        const auto &d = *document.get_deformer(id);
+        Dictionary item; item["id"] = string(id); item["name"] = string(d.name);
+        item["kind"] = d.kind == kasane::DeformerKind::rotation ? "rotation" : "warp";
+        if (d.kind == kasane::DeformerKind::rotation) {
+            item["center"] = pair_array(d.center); item["angle_degrees"] = d.angle_degrees;
+        } else {
+            item["origin"] = pair_array(d.origin); item["size"] = pair_array(d.size);
+            item["columns"] = d.columns; item["rows"] = d.rows;
+            Array points; for (auto p : d.control_points) points.push_back(pair_array(p));
+            item["control_points"] = points;
+        }
+        deformers.push_back(item);
+    }
+    auto append_links = [&](const std::string &id) {
+        for (bool organization : {false, true}) {
+            auto parent = document.parent_of(id, organization);
+            if (parent.empty()) continue;
+            Dictionary link; link["child"] = string(id); link["parent"] = string(parent);
+            if (organization) organization_links.push_back(link); else deformation_links.push_back(link);
+        }
+    };
+    for (const auto &id : document.mesh_order()) append_links(id);
+    for (const auto &id : document.deformer_order()) append_links(id);
+    doc["deformers"] = deformers;
+    doc["deformation_links"] = deformation_links;
+    doc["organization_links"] = organization_links;
     root["document"] = doc;
     return root;
 }
@@ -206,6 +245,60 @@ kasane::Status parse_vertex_ids(const Variant &value, std::vector<uint32_t> &out
     }
     return {};
 }
+kasane::Status parse_pair(const Dictionary &d, const char *key, kasane::Vec2 &out) {
+    if (auto s = require(d, key, Variant::ARRAY); !s.ok()) return s;
+    Array pair = d[key];
+    if (pair.size() != 2 || !number(pair[0]) || !number(pair[1])) return kasane::Status::error("INVALID_PROJECT", "Expected a numeric pair.");
+    out = {static_cast<float>(pair[0]), static_cast<float>(pair[1])}; return {};
+}
+kasane::Status parse_deformers(const Dictionary &doc, kasane::Document &document) {
+    if (auto s = require(doc, "deformers", Variant::ARRAY); !s.ok()) return s;
+    Array list = doc["deformers"];
+    for (int64_t i = 0; i < list.size(); ++i) {
+        if (list[i].get_type() != Variant::DICTIONARY) return kasane::Status::error("INVALID_PROJECT", "Deformer must be an object.");
+        Dictionary item = list[i];
+        for (auto key : {"id", "name", "kind"}) if (auto s = require(item, key, Variant::STRING); !s.ok()) return s;
+        kasane::Deformer d; d.id = utf8(item["id"]); d.name = utf8(item["name"]);
+        const String kind = item["kind"];
+        if (kind == "rotation") {
+            if (auto s = parse_pair(item, "center", d.center); !s.ok()) return s;
+            if (!item.has("angle_degrees") || !number(item["angle_degrees"])) return kasane::Status::error("INVALID_PROJECT", "Rotation requires numeric angle.");
+            d.angle_degrees = static_cast<float>(item["angle_degrees"]);
+        } else if (kind == "warp") {
+            d.kind = kasane::DeformerKind::warp;
+            if (auto s = parse_pair(item, "origin", d.origin); !s.ok()) return s;
+            if (auto s = parse_pair(item, "size", d.size); !s.ok()) return s;
+            uint64_t columns = 0, rows = 0;
+            if (!item.has("columns") || !item.has("rows") || !unsigned_integer(item["columns"], 16, columns) ||
+                !unsigned_integer(item["rows"], 16, rows) || !columns || !rows)
+                return kasane::Status::error("INVALID_WARP", "Warp cell counts must be integers from 1 to 16.");
+            d.columns = uint32_t(columns); d.rows = uint32_t(rows);
+            if (!item.has("control_points")) return kasane::Status::error("INVALID_PROJECT", "Warp control_points are required.");
+            if (auto s = parse_vectors(item["control_points"], d.control_points); !s.ok()) return s;
+            if (d.control_points.size() != (columns + 1) * (rows + 1)) return kasane::Status::error("INVALID_LENGTH", "Warp control point count does not match grid.");
+        } else return kasane::Status::error("INVALID_PROJECT", "Unknown deformer kind.");
+        auto edit = document.create_deformer(std::move(d)); if (!edit.status.ok()) return edit.status;
+    }
+    for (bool organization : {false, true}) {
+        const char *key = organization ? "organization_links" : "deformation_links";
+        if (auto s = require(doc, key, Variant::ARRAY); !s.ok()) return s;
+        Array links = doc[key];
+        std::unordered_set<std::string> children;
+        for (int64_t i = 0; i < links.size(); ++i) {
+            if (links[i].get_type() != Variant::DICTIONARY) return kasane::Status::error("INVALID_PROJECT", "Parent link must be an object.");
+            Dictionary link = links[i];
+            for (auto field : {"child", "parent"}) if (auto s = require(link, field, Variant::STRING); !s.ok()) return s;
+            auto child = utf8(link["child"]), parent = utf8(link["parent"]);
+            if (!children.insert(child).second || parent.empty()) return kasane::Status::error("INVALID_PROJECT", "Duplicate child or empty parent link.");
+            auto edit = document.set_parent(child, parent, organization); if (!edit.status.ok()) return edit.status;
+        }
+    }
+    for (const auto &id : document.mesh_order()) {
+        std::vector<kasane::Vec2> evaluated;
+        if (auto status = document.evaluate_mesh(id, evaluated); !status.ok()) return status;
+    }
+    return {};
+}
 kasane::Status parse_project(const Dictionary &root, kasane::Document &document,
                              std::unordered_map<std::string, Ref<Texture2D>> &textures) {
     if (auto s = require(root, "format", Variant::STRING); !s.ok()) return s;
@@ -213,7 +306,7 @@ kasane::Status parse_project(const Dictionary &root, kasane::Document &document,
     uint64_t format_version = 0;
     if (!root.has("format_version") || !unsigned_integer(root["format_version"], UINT32_MAX, format_version))
         return kasane::Status::error("INVALID_PROJECT", "Missing integer format_version.");
-    if (format_version != PROJECT_FORMAT_VERSION)
+    if (format_version != 1 && format_version != PROJECT_FORMAT_VERSION)
         return kasane::Status::error("UNSUPPORTED_VERSION", "This project format version is not supported.");
     if (auto s = require(root, "document", Variant::DICTIONARY); !s.ok()) return s;
     Dictionary doc = root["document"];
@@ -268,6 +361,7 @@ kasane::Status parse_project(const Dictionary &root, kasane::Document &document,
         auto edit = document.create_mesh(std::move(mesh));
         if (!edit.status.ok()) return edit.status;
     }
+    if (format_version == 2) { if (auto status = parse_deformers(doc, document); !status.ok()) return status; }
     document.mark_saved();
     return {};
 }
@@ -364,7 +458,9 @@ kasane::Status KasaneDocumentBridge::create_view(const std::string &id) {
     }
     PackedInt32Array indices;
     for (auto slot : dense) indices.push_back(static_cast<int32_t>(slot));
-    auto rendered = view->initialize(vectors(mesh->base_positions), vectors(mesh->uvs), indices, textures_.at(mesh->texture_asset_id));
+    std::vector<kasane::Vec2> evaluated;
+    if (auto status = document_.evaluate_mesh(id, evaluated); !status.ok()) { memdelete(view); return status; }
+    auto rendered = view->initialize(vectors(evaluated), vectors(mesh->uvs), indices, textures_.at(mesh->texture_asset_id));
     if (!bool(rendered["ok"])) {
         memdelete(view);
         return {utf8(rendered["code"]), utf8(rendered["message"])};
@@ -394,8 +490,12 @@ Dictionary KasaneDocumentBridge::apply(const kasane::EditResult &edit) {
             status = create_view(id);
         }
         else if (kind == kasane::ChangeKind::positions) {
-            auto rendered = views_.at(id)->update_positions(vectors(document_.get_mesh(id)->base_positions));
-            if (!bool(rendered["ok"])) status = {utf8(rendered["code"]), utf8(rendered["message"])};
+            std::vector<kasane::Vec2> evaluated;
+            status = document_.evaluate_mesh(id, evaluated);
+            if (status.ok()) {
+                auto rendered = views_.at(id)->update_positions(vectors(evaluated));
+                if (!bool(rendered["ok"])) status = {utf8(rendered["code"]), utf8(rendered["message"])};
+            }
         }
         if (!status.ok()) {
             out["preview_ok"] = false;
@@ -411,6 +511,8 @@ Dictionary KasaneDocumentBridge::get_mesh_snapshot(const String &id) const {
     auto out = result({});
     out["id"] = string(mesh->id); out["name"] = string(mesh->name);
     out["texture_asset_id"] = string(mesh->texture_asset_id);
+    out["deform_parent"] = string(document_.parent_of(utf8(id)));
+    out["organization_parent"] = string(document_.parent_of(utf8(id), true));
     out["vertex_ids"] = ids(mesh->vertex_ids);
     out["base_positions"] = vectors(mesh->base_positions); out["uvs"] = vectors(mesh->uvs);
     std::vector<uint32_t> triangles;
@@ -438,6 +540,9 @@ Dictionary KasaneDocumentBridge::get_document_summary() const {
         meshes.push_back(item);
     }
     out["meshes"] = meshes;
+    Array deformers;
+    for (const auto &id : document_.deformer_order()) deformers.push_back(get_deformer_snapshot(string(id)));
+    out["deformers"] = deformers;
     return out;
 }
 KasaneMeshView *KasaneDocumentBridge::get_mesh_view(const String &id) const {
