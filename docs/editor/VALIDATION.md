@@ -55,6 +55,4 @@
 
 检查失败后当前 Document 未被部分替换，既有工程和导出产物完整。直接脚本错误前已完成的写入按脚本契约保留，与文件操作的原子性分别测试。
 
-复用 [原生检查工具](../../tools/run_kasane_preview.py)、[Godot 运行时检查](../../demos/godot/tests) 和 [对照矩阵](../../benchmarks/cubism-matrix/README.md)。重构时更新入口，不丢弃对应行为检查。
-
 MOC3 导出兼容验收同时要求 PurismCore 与官方 Core 加载、驱动通过。外部资产按现有方式在本地提供，报告记录校验和，不提交不可分发素材。缺少 SDK、外部模型或 GPU 时保留未验收项，不能把跳过当作通过。

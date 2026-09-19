@@ -1,13 +1,27 @@
 # gd-kasane
 
-Standalone Godot GDExtension with `KasaneMeshView` and `KasaneDocumentBridge`.
-Uses the existing pinned godot-cpp dependency but does not load/link Cubism.
+Internal C++ Godot bindings for Kasane Editor. This module is not a user-facing
+addon or a standalone product. The desktop Editor will bundle its native
+bindings; users will not create a Godot project or install this module.
 
-Use `python3 tools/run_kasane_preview.py --render` from the repository root to
-build, import, and verify. The SCons target places its library in the sample's
-`addons/gd_kasane/bin/` directory. No third-party SDK discovery runs in this build.
+The current `src/` contains prototype Document handles, `KasaneDocumentBridge`
+and mesh preview code. These can be reworked for the new Document and shared
+renderer. The old demo, script host, Action helper and prototype tests have
+been removed.
 
-See [architecture and API](../../docs/editor/ARCHITECTURE.md) and
-[runnable sample](../../demos/kasane-preview/README.md).
+For development, build the current native library (macOS arm64 example):
 
-Current editing architecture: direct data writes do not create history. Optional actions use Godot UndoRedo; the C++ core has no undo stack. See [architecture](../../docs/editor/ARCHITECTURE.md).
+```sh
+cd modules/gd-kasane
+python3 -m SCons platform=macos arch=arm64 target=template_debug -j8
+```
+
+Select platform and arch for your host. The pinned godot-cpp and Python SCons
+are required; this module does not link Cubism. Output goes to `build/bin/`
+and is an internal build artifact, not a runnable Editor or installable addon.
+
+The Editor project, GDExtension loading configuration and application packaging
+will be implemented together in [M5](../../docs/editor/milestones/M5-agent-editor.md).
+No generic addon staging tool or distribution package is maintained here.
+See [current implementation](../../docs/editor/ARCHITECTURE.md) and
+[engineering targets](../../docs/editor/ROADMAP.md).
