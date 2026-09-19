@@ -5,6 +5,7 @@ Document, project persistence, GDScript authoring, and MOC3 import and export.
 The repository already includes a PurismCore + gd-cubism runtime for loading,
 deforming, and displaying models. Editor delivery is tracked in the
 [engineering roadmap](docs/editor/ROADMAP.md) and its separate milestones.
+Native build and test commands are in [native validation](docs/editor/NATIVE-VALIDATION.md).
 
 ## Desktop application shells
 

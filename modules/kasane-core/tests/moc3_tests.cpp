@@ -20,6 +20,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <random>
 #include <stdexcept>
 #include <source_location>
 #include <sstream>
@@ -644,9 +645,20 @@ static void verify_package(const std::filesystem::path &output) {
     auto artifact = encode(doc);
     for (float p : {-1.f, 0.f, 1.f})
         verify(doc, artifact, {{id(6), p}});
-    auto base = output.empty() ? std::filesystem::temp_directory_path() /
-                                     ("kasane-package-" + std::to_string(std::rand()))
-                               : output / "publication";
+    auto base = output / "publication";
+    if (output.empty()) {
+        std::random_device random;
+        bool claimed = false;
+        for (unsigned attempt = 0; attempt < 100; ++attempt) {
+            base = std::filesystem::temp_directory_path() /
+                   ("kasane-package-" + std::to_string(random()) + "-" + std::to_string(attempt));
+            if (std::filesystem::create_directory(base)) {
+                claimed = true;
+                break;
+            }
+        }
+        CHECK(claimed);
+    }
     std::filesystem::create_directories(base / "assets/textures");
     for (int i = 0; i < 2; ++i)
         write_fixture_png(base / "assets/textures" / (std::to_string(i) + ".png"), i);

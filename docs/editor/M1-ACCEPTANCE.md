@@ -1,6 +1,6 @@
 # M1 验收与复现
 
-2026-09-19：本机 M1 统一验收通过。代码创建、编辑、内存求值、MOC3 导出及运行包路径已贯通。后续运行通过与否以 `target/kasane/m1-acceptance/report.json` 的整体状态为准；任何必需项失败或未执行都不通过。
+2026-09-19：本机 M1 统一验收通过。代码创建、编辑、内存求值、MOC3 导出及运行包路径已贯通。后续运行通过与否以本次 `target/kasane/runs/<run-id>/report.json` 的整体状态为准；任何必需项失败或未执行都不通过。
 
 本次结果：7 项 CTest、59 项 Godot 集成检查、84 项 GPU 检查与 C99 bundle 均通过。两个 Core 各比较 7712 项数值；Purism 最大误差 0，官方 Core 最大误差 `7.15256e-7` 运行单位，最大位置误差 `0.000071526` 原画像素。三个状态的图像及局部裁剪逐像素一致；独立解析像素预期最大通道误差 `0.002048`，低于 `2/255`。
 
@@ -19,7 +19,7 @@ target/kasane/buildenv/bin/python tools/validate_m1.py
 
 入口依次执行：
 
-1. 构建 kasane-core、编码器和通用发布器；运行 7 项 CTest（包含两个 Core 和 Purism 原有 unit/conformance）。
+1. 构建 kasane-core、编码器和通用发布器；运行 7 项 CTest（包含两个 Core、Purism unit 和验证器负例）。Purism 外部模型 conformance 需另外提供模型与参考数据。
 2. 重建官方 Core 的 gd-cubism 参考播放器及 gd-kasane。
 3. Godot headless 源数据、预览生命周期、工程快照和失效原子性检查。
 4. 启动真实 GPU 窗口，比较现有 gd-cubism 官方 Core 播放与直接消费 Document 的 KasaneDocumentPreview。
@@ -44,12 +44,12 @@ GPU 使用统一的线性/mipmap 过滤、透明背景、画布和相机。生�
 
 ## 产物位置
 
-- `target/kasane/m1-acceptance/report.json`：整体状态、所有门禁、环境与 SHA-256。
-- `target/kasane/m1-core/report.json`：数值/编码/编辑/发布验证。Core 子报告不单独代表 GPU 验收。
-- `target/kasane/m1-core/package*/`：静态、1D/2D/3D 参数和四种嵌套构造模型包。
-- `target/kasane/m1-core/{official,purism}/publication/gpu-package/`：由正式发布器生成的多层/遮罩运行包。
-- `target/kasane/godot-boundary/report.json`：源/预览/持久化集成检查。
-- `target/kasane/m1-gpu/`：参考、实际、差异及裁剪 PNG，参数/相机采样与像素明细。
+- `target/kasane/runs/<run-id>/report.json`：整体状态、所有门禁、源码指纹、环境与 SHA-256。
+- `target/kasane/runs/<run-id>/core/report.json`：数值/编码/编辑/发布验证。Core 子报告不单独代表 GPU 验收。
+- `target/kasane/runs/<run-id>/core/package*/`：静态、1D/2D/3D 参数和四种嵌套构造模型包。
+- `target/kasane/runs/<run-id>/core/{official,purism}/publication/gpu-package/`：由正式发布器生成的多层/遮罩运行包。
+- `target/kasane/runs/<run-id>/godot/report.json`：源/预览/持久化集成检查。
+- `target/kasane/runs/<run-id>/gpu/`：参考、实际、差异及裁剪 PNG，参数/相机采样与像素明细。
 
 构造模型是由源码 API 新建的合成测试资产，纹理由程序生成，不冒称来自 Cubism Editor 的外部模型。官方 Core 加载、驱动和 Godot 播放证据不等于测试了 Cubism 官方 Viewer 应用。
 

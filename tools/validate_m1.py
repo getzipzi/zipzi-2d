@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run M1 acceptance, retaining a report for every required gate (macOS arm64)."""
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -8,6 +9,9 @@ from pathlib import Path
 import platform
 import subprocess
 import sys
+import uuid
+
+from validate_m1_core import source_fingerprint
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,12 +20,15 @@ def main():
     parser.add_argument('--godot',type=Path,default=Path('/Applications/Godot_mono.app/Contents/MacOS/Godot'))
     parser.add_argument('--sdk',type=Path,default=ROOT/'third_party/CubismSdkForNative-5-r.5')
     args=parser.parse_args()
-    output=ROOT/'target/kasane/m1-acceptance'
+    output=ROOT/'target/kasane/runs'/uuid.uuid4().hex
     output.mkdir(parents=True,exist_ok=True)
+    core_output=output/'core'
+    godot_output=output/'godot'
+    gpu_output=output/'gpu'
     names=['core','gd_cubism_build','gd_kasane_build','godot','gpu','purism_c99_bundle']
     checks=[dict(name=name,status='not_run') for name in names]
     def git(*cmd):return subprocess.check_output(['git',*cmd],cwd=ROOT,text=True).strip()
-    report=dict(milestone='M1',status='failed',git_revision=git('rev-parse','HEAD'),working_tree=git('status','--short'),
+    report=dict(milestone='M1',status='failed',run_id=output.name,source_sha256=source_fingerprint(),git_revision=git('rev-parse','HEAD'),working_tree=git('status','--short'),
                 submodules=git('submodule','status'),purism_working_tree=git('-C','modules/purism-core','status','--short'),
                 platform=platform.platform(),architecture=platform.machine(),checks=checks)
     def run(name,command):
@@ -37,19 +44,19 @@ def main():
     try:
         if platform.system()!='Darwin' or platform.machine()!='arm64':
             raise RuntimeError('This acceptance driver requires macOS arm64; core CMake remains portable')
-        run('core',[sys.executable,ROOT/'tools/validate_m1_core.py','--sdk',args.sdk])
+        run('core',[sys.executable,ROOT/'tools/validate_m1_core.py','--sdk',args.sdk,'--output-dir',core_output])
         run('gd_cubism_build',[sys.executable,'-m','SCons','-C',ROOT/'modules/gd-cubism','platform=macos','arch=arm64','target=template_release','CUBISM_SDK_ROOT='+str(args.sdk.resolve()),'-j8'])
         run('gd_kasane_build',[sys.executable,'-m','SCons','-C',ROOT/'modules/gd-kasane','platform=macos','arch=arm64','target=template_debug','-j8'])
-        run('godot',[sys.executable,ROOT/'tools/validate_m1_godot.py','--godot',args.godot])
-        run('gpu',[sys.executable,ROOT/'tools/validate_m1_gpu.py','--godot',args.godot])
+        run('godot',[sys.executable,ROOT/'tools/validate_m1_godot.py','--godot',args.godot,'--output-dir',godot_output])
+        run('gpu',[sys.executable,ROOT/'tools/validate_m1_gpu.py','--godot',args.godot,'--output-dir',gpu_output,'--core-build',core_output/'build'])
         bundle=subprocess.run(['sh',str(ROOT/'modules/purism-core/scripts/bundle.sh')],cwd=ROOT,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True).stdout
         (output/'PurismCoreBundle.h').write_text(bundle)
         (output/'bundle.c').write_text('#define PURISM_CORE_IMPLEMENTATION\n#include "PurismCoreBundle.h"\nint main(void){return csmGetVersion()==0;}\n')
         run('purism_c99_bundle',['cc','-std=c99',output/'bundle.c','-lm','-o',output/'bundle'])
         subprocess.run([str(output/'bundle')],check=True,stdout=subprocess.PIPE)
-        report['core']=json.loads((ROOT/'target/kasane/m1-core/report.json').read_text())
-        report['godot']=json.loads((ROOT/'target/kasane/godot-boundary/report.json').read_text())
-        report['gpu']=json.loads((ROOT/'target/kasane/m1-gpu/report.json').read_text())
+        report['core']=json.loads((core_output/'report.json').read_text())
+        report['godot']=json.loads((godot_output/'report.json').read_text())
+        report['gpu']=json.loads((gpu_output/'report.json').read_text())
         if any(report[name]['status']!='passed' for name in ('core','godot','gpu')):raise RuntimeError('Child report did not pass')
         report['status']='passed'
         report['known_limitations']=['Godot 4.7.2 mono first dynamic editor import can crash at exit; also reproduced on pre-refactor HEAD. Tests preregister extensions.',
@@ -58,7 +65,7 @@ def main():
         report['error']=str(exc)
         print(exc)
     files=[]
-    for root in (ROOT/'target/kasane/m1-core',ROOT/'target/kasane/m1-gpu',ROOT/'target/kasane/godot-boundary'):
+    for root in (core_output,gpu_output,godot_output):
         for p in sorted(root.rglob('*')):
             if p.is_file() and '.godot' not in p.parts and p.suffix in ('.png','.moc3','.json','.log','.gdshader','.dylib'):
                 files.append(dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest()))
@@ -69,4 +76,13 @@ def main():
     print(f'M1 {report["status"]}: {output / "report.json"}')
     return 0 if report['status']=='passed' else 1
 
-if __name__=='__main__':raise SystemExit(main())
+def locked_main():
+    # SCons still writes its extension objects to fixed module build directories.
+    # Serialize complete acceptance runs while keeping reports and fixtures isolated.
+    lock_path=ROOT/'target/kasane/.m1-acceptance.lock'
+    lock_path.parent.mkdir(parents=True,exist_ok=True)
+    with lock_path.open('w') as lock:
+        fcntl.flock(lock,fcntl.LOCK_EX)
+        return main()
+
+if __name__=='__main__':raise SystemExit(locked_main())

@@ -47,7 +47,7 @@ const Mesh *Document::get_mesh(const std::string &id) const {
     return it == meshes_.end() ? nullptr : &it->second;
 }
 EditResult Document::failed(Status status) const {
-    return {std::move(status), {ChangeKind::none, {}, revision_}};
+    return {std::move(status), {ChangeKind::none, {}, revision_, {}}, {}};
 }
 void Document::advance_state() {
     current_state_id_ = next_state_id_++;
@@ -57,7 +57,7 @@ EditResult Document::changed(ChangeKind kind, std::vector<std::string> ids,
     if (objects.empty())
         objects = ids;
     advance_state();
-    return {{}, {kind, std::move(ids), ++revision_, std::move(objects)}};
+    return {{}, {kind, std::move(ids), ++revision_, std::move(objects)}, {}};
 }
 EditResult Document::add_asset(ImageAsset asset) {
     if (mutation_blocked())
@@ -124,7 +124,7 @@ EditResult Document::rename_mesh(const std::string &id, std::string name) {
     if (it == meshes_.end())
         return failed(Status::error("MISSING_MESH", "Mesh does not exist."));
     if (it->second.name == name)
-        return {{}, {ChangeKind::none, {}, revision_}};
+        return {{}, {ChangeKind::none, {}, revision_, {}}, {}};
     it->second.name = std::move(name);
     return changed(ChangeKind::metadata, {id});
 }
@@ -177,7 +177,7 @@ EditResult Document::apply_vertex_position_updates(std::span<const VertexPositio
         }
     }
     if (deltas.empty())
-        return {{}, {ChangeKind::none, {}, revision_}};
+        return {{}, {ChangeKind::none, {}, revision_, {}}, {}};
     for (const auto &delta : deltas) {
         auto &positions = meshes_.at(delta.mesh_id).base_positions;
         for (size_t i = 0; i < delta.slots.size(); ++i)

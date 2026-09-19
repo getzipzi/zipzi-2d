@@ -16,8 +16,9 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--godot', type=Path, default=Path('/Applications/Godot_mono.app/Contents/MacOS/Godot'))
     p.add_argument('--library', type=Path, default=ROOT/'modules/gd-kasane/build/bin/libgd_kasane.macos.template_debug.arm64.dylib')
+    p.add_argument('--output-dir', type=Path, default=ROOT/'target/kasane/godot-boundary')
     args = p.parse_args()
-    project = ROOT/'target/kasane/godot-boundary'
+    project = args.output_dir.resolve()
     project.mkdir(parents=True, exist_ok=True)
     if not args.godot.is_file() or not args.library.is_file():
         print('Missing Godot executable or built gd-kasane library', file=sys.stderr)

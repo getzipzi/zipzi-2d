@@ -19,11 +19,13 @@ def run(command, log):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--godot', type=Path, default=Path('/Applications/Godot_mono.app/Contents/MacOS/Godot'))
+    parser.add_argument('--core-build', type=Path, default=ROOT/'target/kasane/m1-core/build')
+    parser.add_argument('--output-dir', type=Path, default=ROOT/'target/kasane/m1-gpu')
     args = parser.parse_args()
-    project = ROOT/'target/kasane/m1-gpu'
+    project = args.output_dir.resolve()
     project.mkdir(parents=True, exist_ok=True)
     try:
-        run([ROOT/'target/kasane/m1/kasane_moc3_official_tests', project/'fixtures'], project/'fixtures.log')
+        run([args.core_build.resolve()/'kasane_moc3_official_tests', project/'fixtures'], project/'fixtures.log')
         shutil.copytree(project/'fixtures/publication/gpu-package', project/'package', dirs_exist_ok=True)
         shutil.copyfile(project/'fixtures/publication/gpu-source.json', project/'gpu-source.json')
         shutil.copyfile(ROOT/'modules/gd-kasane/tests/m1_gpu.gd', project/'test.gd')

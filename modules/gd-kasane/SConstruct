@@ -1,13 +1,26 @@
 # SPDX-License-Identifier: MIT
+from pathlib import Path
+
 # Reuse the pinned bindings without pulling in Cubism SDK or Framework.
 env = SConscript('../gd-cubism/godot-cpp/SConstruct')
-env.Append(CXXFLAGS=['/std:c++20'] if env.get('is_msvc', False) else ['-std=c++20'])
-env.Append(CPPPATH=['src', '../kasane-core/include', '../purism-core/include'])
+owned = env.Clone()
+godot_cpp = Path('../gd-cubism/godot-cpp').resolve()
+vendor_headers = [godot_cpp / 'gdextension', godot_cpp / 'include',
+                  godot_cpp / 'gen/include', Path('../purism-core/include').resolve()]
+owned['CPPPATH'] = [path for path in owned['CPPPATH'] if 'godot-cpp' not in str(path)]
+if owned.get('is_msvc', False):
+    owned.Append(CXXFLAGS=['/std:c++20', '/W4', '/WX'])
+    owned.Append(CXXFLAGS=['/external:I' + str(path) for path in vendor_headers])
+else:
+    owned.Append(CXXFLAGS=['-std=c++20', '-Wall', '-Wextra', '-Wpedantic', '-Werror'])
+    owned.Append(CXXFLAGS=['-isystem' + str(path) for path in vendor_headers])
+owned.Append(CPPPATH=['src', '../kasane-core/include'])
 sources = Glob('src/*.cpp')
 # Keep core object files in this module: avoid mixing flags with other builds.
-for name in ['geometry', 'document', 'legacy_deformers', 'keyforms', 'scene', 'evaluation']:
-    sources += env.SharedObject('build/' + name, '../kasane-core/src/' + name + '.cpp')
+for filename in Path('../kasane-core/core_sources.txt').read_text().splitlines():
+    name = Path(filename).stem
+    sources += owned.SharedObject('build/' + name, '../kasane-core/src/' + filename)
 # Internal build artifact. Editor packaging belongs to apps/editor (M5).
-target = 'build/bin/libgd_kasane' + env['suffix'] + env['SHLIBSUFFIX']
-library = env.SharedLibrary(target=target, source=sources)
+target = 'build/bin/libgd_kasane' + owned['suffix'] + owned['SHLIBSUFFIX']
+library = owned.SharedLibrary(target=target, source=sources)
 Default(library)

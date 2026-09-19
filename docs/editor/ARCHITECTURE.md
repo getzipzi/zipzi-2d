@@ -5,7 +5,7 @@
 ## 当前实现
 
 - `kasane-core::Document` 保存源几何、稳定 ID、素材描述及变形关系，提供批量修改和现有 Rotation / 简单 Warp 求值，不依赖 Godot。
-- `gd-kasane` 是 Editor 的内部 C++ 绑定代码。当前 `KasaneDocumentBridge` 仍继承 Node2D，并集中持有 Document、纹理、视图与工程读写；这不是目标架构。
+- `gd-kasane` 是 Editor 的内部 C++ 绑定代码。`KasaneDocumentBridge` 是 RefCounted 文档对象；预览节点、纹理存储和工程读写由独立对象负责。
 - `KasaneMeshData` / `KasaneDeformerData` 是源对象句柄，校验拥有者、文档代次和对象 ID。Packed 数组为副本，修改后显式写回。
 - 当前数据操作在 Godot 主线程进行。直接写入不创建历史；源数据快照和可选位置批次仍在 C++ 中，但不构成完整编辑器历史服务。
 - 当前工程读写支持实验 JSON v1/v2。它不是新工程格式，也不是 MOC3 导出器。

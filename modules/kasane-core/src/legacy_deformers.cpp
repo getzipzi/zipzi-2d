@@ -59,7 +59,7 @@ EditResult Document::set_parent(const std::string &id, const std::string &parent
     if (!get_mesh(id) && !get_deformer(id)) return failed(Status::error("MISSING_OBJECT", "Child object does not exist."));
     if (!parent.empty() && !get_deformer(parent) && !(organization && get_mesh(parent)))
         return failed(Status::error("INVALID_PARENT", "Parent must exist and have the required type."));
-    if (parent_of(id, organization) == parent) return {{}, {ChangeKind::none, {}, revision_}};
+    if (parent_of(id, organization) == parent) return {{}, {ChangeKind::none, {}, revision_, {}}, {}};
     auto &links = organization ? organization_parents_ : deformation_parents_;
     auto candidate = links;
     if (parent.empty()) candidate.erase(id); else candidate[id] = parent;
@@ -88,7 +88,7 @@ EditResult Document::set_rotation(const std::string &id, Vec2 center, float angl
     if (!std::isfinite(center.x) || !std::isfinite(center.y) || !std::isfinite(angle))
         return failed(Status::error("NON_FINITE", "Rotation values must be finite."));
     auto &d = it->second;
-    if (d.center == center && d.angle_degrees == angle) return {{}, {ChangeKind::none, {}, revision_}};
+    if (d.center == center && d.angle_degrees == angle) return {{}, {ChangeKind::none, {}, revision_, {}}, {}};
     d.center = center; d.angle_degrees = angle;
     return changed(ChangeKind::positions, affected_meshes(id), {id});
 }
@@ -100,7 +100,7 @@ EditResult Document::set_warp_points(const std::string &id, std::span<const Vec2
     auto &d = it->second;
     if (points.size() != d.control_points.size()) return failed(Status::error("INVALID_LENGTH", "Warp grid topology is fixed."));
     if (auto s = validate_positions(points); !s.ok()) return failed(s);
-    if (std::equal(points.begin(), points.end(), d.control_points.begin())) return {{}, {ChangeKind::none, {}, revision_}};
+    if (std::equal(points.begin(), points.end(), d.control_points.begin())) return {{}, {ChangeKind::none, {}, revision_, {}}, {}};
     d.control_points.assign(points.begin(), points.end());
     return changed(ChangeKind::positions, affected_meshes(id), {id});
 }

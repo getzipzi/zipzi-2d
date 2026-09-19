@@ -29,6 +29,21 @@ def git(*args):
     return subprocess.check_output(['git', *args], cwd=ROOT, text=True).strip()
 
 
+def source_fingerprint():
+    digest = hashlib.sha256()
+    for repository, paths in ((ROOT, ('CMakeLists.txt', 'CMakePresets.json', '.github/workflows',
+                                      'modules/kasane-core', 'modules/gd-kasane', 'tools')),
+                              (ROOT/'modules/purism-core', ('.',))):
+        names = subprocess.check_output(['git', 'ls-files', '-co', '--exclude-standard', '-z', '--', *paths],
+                                        cwd=repository).split(b'\0')
+        for raw in sorted(name for name in names if name):
+            path = repository / raw.decode()
+            if path.is_file():
+                digest.update(str(path.relative_to(ROOT)).encode() + b'\0')
+                digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
+
+
 def schema():
     source = (ROOT/'modules/purism-core/src/moc3.h').read_text()
     fields = re.search(r'struct psm__count_info \{(.*?)\n\};', source, re.S)[1]
@@ -86,12 +101,13 @@ def png(slot):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sdk', type=Path, default=ROOT/'third_party/CubismSdkForNative-5-r.5')
+    parser.add_argument('--output-dir', type=Path, default=ROOT/'target/kasane/m1-core')
     args = parser.parse_args()
     parent = ROOT/'target/kasane'
     parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix='m1-core-', dir=parent))
     report = dict(scope='M1 source model, editing, nested transforms, drawing and package publication', status='failed', milestone_status='not_run',
-                  git_revision=git('rev-parse', 'HEAD'), working_tree=git('status', '--short'),
+                  git_revision=git('rev-parse', 'HEAD'), source_sha256=source_fingerprint(), working_tree=git('status', '--short'),
                   submodules=git('submodule', 'status'), purism_working_tree=git('-C', 'modules/purism-core', 'status', '--short'), platform=platform.platform(),
                   architecture=platform.machine(), build_configuration='Debug', moc_version=5,
                   coordinate_units='runtime model units; source pixels; pixels_per_unit=100',
@@ -103,7 +119,8 @@ def main():
         if not (args.sdk/'Core/include/Live2DCubismCore.h').is_file():
             report['checks'].append(dict(name='official_core', status='not_run', reason='SDK missing'))
             raise RuntimeError('Official Core SDK missing; existing output is preserved')
-        build = parent/'m1'
+        # Each invocation owns its build tree, including the generated provider binaries.
+        build = stage/'build'
         run(['cmake', '-S', ROOT/'modules/kasane-core', '-B', build,
              '-DCMAKE_BUILD_TYPE=Debug', '-DKASANE_MOC3_CONFORMANCE=ON',
              '-DPURISM_CORE_BUILD_TESTS=ON', '-DPURISM_CORE_ABI=v6', '-DKASANE_CUBISM_ROOT='+str(args.sdk.resolve())], stage/'configure.log')
@@ -160,7 +177,8 @@ def main():
         (stage/'report.json').write_text(json.dumps(report, indent=2)+'\n')
         # Publish only after all required checks of this increment have passed.
         # The previous verified run survives all build/validation/write failures.
-        destination = parent/'m1-core'
+        destination = args.output_dir.resolve()
+        destination.parent.mkdir(parents=True, exist_ok=True)
         backup = stage.with_name(stage.name+'-previous')
         if destination.exists():
             destination.rename(backup)

@@ -5,10 +5,15 @@ Document has no Godot, runtime model, texture resource or filesystem dependency.
 Purism supplies shared keyform, Rotation/Warp and nested-direction algorithms.
 
 ```sh
-# CMake, C++20 compiler and libpng development files are needed for all targets.
-cmake -S modules/kasane-core -B target/kasane/core -DCMAKE_BUILD_TYPE=Debug
-cmake --build target/kasane/core -j8
-ctest --test-dir target/kasane/core --output-on-failure
+# Full native suite: CMake, Ninja, C++20, libpng and Python are needed.
+cmake --preset core-debug
+cmake --build --preset core-debug
+ctest --preset core-debug
+
+# In-memory core only, when libpng is unavailable:
+cmake --preset memory-core
+cmake --build --preset memory-core
+ctest --preset memory-core
 ```
 
 - `model.hpp`: Canvas, ImageAsset, Part, Mesh, Transform (Rotation/Warp), Parameter,
@@ -31,6 +36,8 @@ Warp children use normalized grid coordinates, including extrapolation outside
 The core does not own an undo stack. See [coordinate/format mapping](../../docs/editor/formats/MOC3-WRITER.md),
 [API boundaries](../../docs/editor/M1-CORE-REFACTOR.md) and
 [M1 acceptance](../../docs/editor/M1-ACCEPTANCE.md) for reproducible tests and limits.
+The full native suite uses Purism for MOC3 evaluation and does not need the proprietary SDK.
+An official Core comparison remains a separate acceptance gate.
 
 ```sh
 python3 tools/validate_m1_core.py
