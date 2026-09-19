@@ -1,6 +1,8 @@
 # M1：Document 核心模型与 MOC3 导出
 
-状态：待实施，未验收。依赖：现有 kasane-core、PurismCore 与 gd-cubism。返回 [总路线图](../ROADMAP.md)。
+状态：实施中，未验收。依赖：现有 kasane-core、PurismCore 与 gd-cubism。返回 [总路线图](../ROADMAP.md)。
+
+当前进度：已完成数据/预览边界拆分，静态网格和普通参数驱动的 Mesh 位置 Keyform 已通过双 Core 对照。见 [核心重构说明](../M1-CORE-REFACTOR.md) 与 [写出映射](../formats/MOC3-WRITER.md)。正式变形器、Part/绘制属性与 GPU 等仍未完成，不代表本里程碑验收通过。
 
 ## 1. 交付结果
 

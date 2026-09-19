@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: MIT
+#include "document_bridge.hpp"
+#include "model_conversion.hpp"
+#include <godot_cpp/classes/os.hpp>
+using namespace godot;
+namespace kasane_gd {
+#define MAIN_THREAD() if (OS::get_singleton()->get_thread_caller_id()!=OS::get_singleton()->get_main_thread_id()) return error("WRONG_THREAD","Document requires the main thread.")
+kasane::Status KasaneDocumentBridge::evaluate(kasane::DrawableFrame &out) const {
+    return kasane::evaluate_frame(document_,preview_values_,out);
+}
+void KasaneDocumentBridge::replace_source(const kasane::Document &source) {
+    document_.restore_from(source); ++generation_; preview_values_.clear();
+    auto change=result({}); change["revision"]=document_.revision(); emit_signal("changed",change);
+}
+Dictionary KasaneDocumentBridge::get_frame() const {
+    MAIN_THREAD(); kasane::DrawableFrame frame; auto out=result(evaluate(frame));
+    if(!bool(out["ok"])) return out;
+    out["revision"]=frame.source_revision; out["coordinate_units"]="runtime";
+    Array drawables,parameters;
+    for(const auto &d:frame.drawables) {
+        Dictionary item; item["id"]=string(d.id); item["runtime_id"]=string(d.runtime_id);
+        item["positions"]=vectors(d.positions); item["uvs"]=vectors(d.uvs); item["indices"]=ids(d.indices);
+        item["texture_asset_id"]=string(d.texture_asset_id); item["texture_slot"]=d.texture_slot;
+        item["draw_order"]=d.draw_order; item["render_order"]=d.render_order; item["opacity"]=d.opacity;
+        item["visible"]=d.visible; item["double_sided"]=d.double_sided; item["inverted_mask"]=d.inverted_mask;
+        item["blend_mode"]=int(d.blend_mode); PackedStringArray masks; for(const auto &id:d.masks) masks.push_back(string(id)); item["masks"]=masks;
+        item["multiply_color"]=Color(d.multiply_color[0],d.multiply_color[1],d.multiply_color[2],d.multiply_color[3]);
+        item["screen_color"]=Color(d.screen_color[0],d.screen_color[1],d.screen_color[2],d.screen_color[3]);
+        drawables.push_back(item);
+    }
+    for(const auto &p:frame.parameters) {
+        Dictionary value; value["id"]=string(p.id); value["requested"]=p.requested; value["value"]=p.value; value["clamped"]=p.clamped; parameters.push_back(value);
+    }
+    out["drawables"]=drawables; out["parameters"]=parameters; return out;
+}
+Dictionary KasaneDocumentBridge::set_preview_values(const Dictionary &values) {
+    MAIN_THREAD(); kasane::PreviewValues next; Array keys=values.keys();
+    for(int64_t i=0;i<keys.size();++i) {
+        const auto value=values[keys[i]];
+        if(keys[i].get_type()!=Variant::STRING || (value.get_type()!=Variant::INT && value.get_type()!=Variant::FLOAT))
+            return error("INVALID_FIELD","Preview requires parameter IDs and numeric values.");
+        next[utf8(keys[i])]=float(value);
+    }
+    kasane::DrawableFrame frame; auto status=kasane::evaluate_frame(document_,next,frame);
+    if(!status.ok()) return result(status);
+    preview_values_=std::move(next); emit_signal("preview_changed"); return get_frame();
+}
+Dictionary KasaneDocumentBridge::create_parameter(const Dictionary &d) {
+    MAIN_THREAD(); kasane::Parameter p;
+    if(auto s=parameter_from_dictionary(d,p);!s.ok()) return result(s);
+    return apply(document_.create_parameter(std::move(p)));
+}
+Dictionary KasaneDocumentBridge::write_binding(const Dictionary &d,bool replace) {
+    MAIN_THREAD(); kasane::MeshBinding b;
+    if(auto s=binding_from_dictionary(d,b);!s.ok()) return result(s);
+    return apply(replace ? document_.replace_binding(std::move(b)) : document_.create_binding(std::move(b)));
+}
+Dictionary KasaneDocumentBridge::set_mesh_keyform(const String &id,const PackedFloat32Array &keys,const PackedVector2Array &positions) {
+    MAIN_THREAD(); kasane::MeshKeyform form; form.positions=vectors(positions);
+    for(int64_t i=0;i<keys.size();++i) form.keys.push_back(keys[i]);
+    return apply(document_.set_mesh_keyform(utf8(id),std::move(form)));
+}
+Dictionary KasaneDocumentBridge::erase_object(const String &id) { MAIN_THREAD(); return apply(document_.erase_object(utf8(id))); }
+#undef MAIN_THREAD
+}

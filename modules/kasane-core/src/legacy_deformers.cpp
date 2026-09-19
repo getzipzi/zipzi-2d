@@ -36,7 +36,7 @@ EditResult Document::create_deformer(Deformer d) {
     }
     auto id = d.id;
     deformers_.emplace(id, std::move(d)); deformer_order_.push_back(id);
-    return changed(ChangeKind::metadata);
+    return changed(ChangeKind::metadata, {}, {id});
 }
 std::string Document::parent_of(const std::string &id, bool organization) const {
     const auto &links = organization ? organization_parents_ : deformation_parents_;
@@ -78,7 +78,7 @@ EditResult Document::set_parent(const std::string &id, const std::string &parent
     }
     links = std::move(candidate);
     return changed(organization ? ChangeKind::metadata : ChangeKind::positions,
-                   organization ? std::vector<std::string>{} : affected_meshes(id));
+                   organization ? std::vector<std::string>{} : affected_meshes(id), {id});
 }
 EditResult Document::set_rotation(const std::string &id, Vec2 center, float angle) {
     if (mutation_blocked()) return failed(Status::error("TRANSACTION_ACTIVE", "Finish the position transaction first."));
@@ -90,7 +90,7 @@ EditResult Document::set_rotation(const std::string &id, Vec2 center, float angl
     auto &d = it->second;
     if (d.center == center && d.angle_degrees == angle) return {{}, {ChangeKind::none, {}, revision_}};
     d.center = center; d.angle_degrees = angle;
-    return changed(ChangeKind::positions, affected_meshes(id));
+    return changed(ChangeKind::positions, affected_meshes(id), {id});
 }
 EditResult Document::set_warp_points(const std::string &id, std::span<const Vec2> points) {
     if (mutation_blocked()) return failed(Status::error("TRANSACTION_ACTIVE", "Finish the position transaction first."));
@@ -102,9 +102,9 @@ EditResult Document::set_warp_points(const std::string &id, std::span<const Vec2
     if (auto s = validate_positions(points); !s.ok()) return failed(s);
     if (std::equal(points.begin(), points.end(), d.control_points.begin())) return {{}, {ChangeKind::none, {}, revision_}};
     d.control_points.assign(points.begin(), points.end());
-    return changed(ChangeKind::positions, affected_meshes(id));
+    return changed(ChangeKind::positions, affected_meshes(id), {id});
 }
-Status Document::evaluate_mesh(const std::string &id, std::vector<Vec2> &out) const {
+Status Document::evaluate_legacy_mesh(const std::string &id, std::vector<Vec2> &out) const {
     const auto *mesh = get_mesh(id);
     if (!mesh) return Status::error("MISSING_MESH", "Mesh does not exist.");
     auto next = mesh->base_positions;

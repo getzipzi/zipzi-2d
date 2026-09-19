@@ -1,27 +1,33 @@
 # gd-kasane
 
-Internal C++ Godot bindings for Kasane Editor. This module is not a user-facing
-addon or a standalone product. The desktop Editor will bundle its native
-bindings; users will not create a Godot project or install this module.
+Internal Godot bindings for Kasane Editor, not a user-installed addon.
 
-The current `src/` contains prototype Document handles, `KasaneDocumentBridge`
-and mesh preview code. These can be reworked for the new Document and shared
-renderer. The old demo, script host, Action helper and prototype tests have
-been removed.
+- `KasaneDocumentBridge` is a `RefCounted` source-data owner, independent of the
+  scene tree. Mesh/Deformer handles reference its stable IDs and generation.
+- `KasaneDocumentPreview` is a separate Node2D consuming `DrawableFrame`.
+- `KasaneTextureStore` owns loaded Texture2D resources.
+- `KasaneProjectIO` handles source snapshot persistence, without texture loading
+  or node creation. The current prototype file format is version 4; versions
+  1–3 are explicitly rejected. This is not M2 packaged-project acceptance.
 
-For development, build the current native library (macOS arm64 example):
+Source edits emit object changes. Temporary parameter overrides emit a separate
+preview signal, never modify Document revision, and are not persisted. Preview
+failures do not roll back or fail successful source edits. The current MeshView
+adapter will be replaced by the shared renderer in M4.
+
+Build with the pinned godot-cpp and a Python environment containing SCons:
 
 ```sh
-cd modules/gd-kasane
-python3 -m SCons platform=macos arch=arm64 target=template_debug -j8
+python3 -m SCons -C modules/gd-kasane platform=macos arch=arm64 target=template_debug -j8
+python3 tools/validate_m1_godot.py
 ```
 
-Select platform and arch for your host. The pinned godot-cpp and Python SCons
-are required; this module does not link Cubism. Output goes to `build/bin/`
-and is an internal build artifact, not a runnable Editor or installable addon.
+The test stages a disposable project under `target/kasane/godot-boundary`, using
+only in-memory image fixtures. It checks source/preview ownership and file
+boundaries headlessly, not GPU image equivalence. Override `--godot` or
+`--library` for other installed macOS arm64 binaries.
 
-The Editor project, GDExtension loading configuration and application packaging
-will be implemented together in [M5](../../docs/editor/milestones/M5-agent-editor.md).
-No generic addon staging tool or distribution package is maintained here.
-See [current implementation](../../docs/editor/ARCHITECTURE.md) and
-[engineering targets](../../docs/editor/ROADMAP.md).
+The source module includes Purism's shared keyform helper header but does not
+link a Core runtime library. Editor packaging and full script-interface
+acceptance remain in M5. See [refactor and API migration](../../docs/editor/M1-CORE-REFACTOR.md)
+and [engineering roadmap](../../docs/editor/ROADMAP.md).

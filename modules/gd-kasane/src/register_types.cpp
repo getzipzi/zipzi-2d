@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "document_bridge.hpp"
+#include "project_io.hpp"
+#include "document_preview.hpp"
 #include <godot_cpp/godot.hpp>
 
 using namespace godot;
@@ -11,6 +13,9 @@ static void initialize(ModuleInitializationLevel level) {
     GDREGISTER_CLASS(KasaneMeshData);
     GDREGISTER_CLASS(KasaneDeformerData);
     GDREGISTER_CLASS(KasaneDocumentBridge);
+    GDREGISTER_CLASS(KasaneProjectIO);
+    GDREGISTER_CLASS(KasaneTextureStore);
+    GDREGISTER_CLASS(KasaneDocumentPreview);
 }
 static void terminate(ModuleInitializationLevel) {}
 extern "C" {

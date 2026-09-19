@@ -16,29 +16,29 @@ int main() {
     Deformer r; r.id=ROT; r.name="rotation"; r.angle_degrees=90;
     CHECK(doc.create_deformer(r).status.ok()); CHECK(!doc.create_deformer(r).status.ok());
     CHECK(doc.set_parent(MESH,ROT).status.ok());
-    std::vector<Vec2> out; CHECK(doc.evaluate_mesh(MESH,out).ok());
+    std::vector<Vec2> out; CHECK(doc.evaluate_legacy_mesh(MESH,out).ok());
     CHECK(near(out[1],{0,10}) && near(out[2],{-10,10}));
     CHECK(doc.get_mesh(MESH)->base_positions == mesh.base_positions);
     CHECK(doc.set_rotation(ROT,{5,5},180).changes.mesh_ids == std::vector<std::string>{MESH});
-    CHECK(doc.evaluate_mesh(MESH,out).ok() && near(out[0],{10,10}));
+    CHECK(doc.evaluate_legacy_mesh(MESH,out).ok() && near(out[0],{10,10}));
     CHECK(doc.set_rotation(ROT,{0,0},90).status.ok());
     Deformer w; w.id=WARP; w.name="warp"; w.kind=DeformerKind::warp; w.size={10,10};
     CHECK(doc.create_deformer(w).status.ok());
     CHECK(doc.set_parent(MESH,WARP).status.ok());
-    CHECK(doc.evaluate_mesh(MESH,out).ok() && out == mesh.base_positions);
+    CHECK(doc.evaluate_legacy_mesh(MESH,out).ok() && out == mesh.base_positions);
     auto points=doc.get_deformer(WARP)->control_points;
     points[3]={20,20}; CHECK(doc.set_warp_points(WARP,points).status.ok());
-    CHECK(doc.evaluate_mesh(MESH,out).ok()); CHECK(near(out[2],{20,20}) && near(out[3],{7.5,7.5}));
+    CHECK(doc.evaluate_legacy_mesh(MESH,out).ok()); CHECK(near(out[2],{20,20}) && near(out[3],{7.5,7.5}));
     CHECK(doc.set_parent(WARP,ROT).status.ok());
-    CHECK(doc.evaluate_mesh(MESH,out).ok() && near(out[3],{-7.5,7.5}));
+    CHECK(doc.evaluate_legacy_mesh(MESH,out).ok() && near(out[3],{-7.5,7.5}));
     CHECK(doc.affected_meshes(ROT) == std::vector<std::string>{MESH});
     CHECK(doc.set_parent(OTHER,ROT,true).changes.mesh_ids.empty());
-    CHECK(doc.evaluate_mesh(OTHER,out).ok() && out == mesh.base_positions);
+    CHECK(doc.evaluate_legacy_mesh(OTHER,out).ok() && out == mesh.base_positions);
     auto rev=doc.revision(); CHECK(doc.set_parent(ROT,WARP).status.code=="PARENT_CYCLE" && doc.revision()==rev);
     CHECK(doc.set_parent(ROT,ROT).status.code=="PARENT_CYCLE");
     CHECK(doc.set_parent(ROT,OTHER).status.code=="INVALID_PARENT");
     CHECK(doc.set_parent(ROT,OTHER,true).status.code=="PARENT_CYCLE");
-    CHECK(doc.set_parent(MESH,"").status.ok()); CHECK(doc.evaluate_mesh(MESH,out).ok() && out==mesh.base_positions);
+    CHECK(doc.set_parent(MESH,"").status.ok()); CHECK(doc.evaluate_legacy_mesh(MESH,out).ok() && out==mesh.base_positions);
     CHECK(!doc.set_warp_points(WARP,std::vector<Vec2>{{0,0}}).status.ok());
     points[0].x=std::numeric_limits<float>::infinity(); CHECK(!doc.set_warp_points(WARP,points).status.ok());
     CHECK(!doc.set_rotation(ROT,{0,0},std::numeric_limits<float>::quiet_NaN()).status.ok());
@@ -46,12 +46,12 @@ int main() {
     points={{3,4},{13,4},{3,14},{13,14}}; CHECK(doc.set_warp_points(WARP,points).status.ok());
     CHECK(doc.set_parent(WARP,"").status.ok()); CHECK(doc.set_parent(MESH,WARP).status.ok());
     CHECK(doc.set_vertex_positions(MESH,std::vector<VertexId>{0},std::vector<Vec2>{{-5,20}}).status.ok());
-    CHECK(doc.evaluate_mesh(MESH,out).ok() && near(out[0],{-2,24}));
+    CHECK(doc.evaluate_legacy_mesh(MESH,out).ok() && near(out[0],{-2,24}));
     // Multi-cell center and shared-boundary continuity.
     Document grid=doc; Deformer multi=w; multi.id="77777777-7777-4777-8777-777777777777"; multi.columns=2; multi.rows=2;
     CHECK(grid.create_deformer(multi).status.ok()); CHECK(grid.set_parent(MESH,multi.id).status.ok());
     auto cp=grid.get_deformer(multi.id)->control_points; cp[4]={6,7}; CHECK(grid.set_warp_points(multi.id,cp).status.ok());
-    CHECK(grid.evaluate_mesh(MESH,out).ok() && near(out[3],{6,7}));
+    CHECK(grid.evaluate_legacy_mesh(MESH,out).ok() && near(out[3],{6,7}));
     // Whole subtree depth is checked, not only the reparented node.
     Document deep; CHECK(deep.initialize(DOC,{100,100}).ok());
     std::string previous;
@@ -70,7 +70,7 @@ int main() {
     CHECK(doc.set_warp_points(WARP, enormous).status.ok());
     CHECK(doc.set_vertex_positions(MESH, std::vector<VertexId>{0}, std::vector<Vec2>{{20,20}}).status.ok());
     out = {{123, 456}};
-    CHECK(doc.evaluate_mesh(MESH, out).code == "EVALUATION_OVERFLOW");
+    CHECK(doc.evaluate_legacy_mesh(MESH, out).code == "EVALUATION_OVERFLOW");
     CHECK(out == std::vector<Vec2>{{123,456}});
     std::cout<<"KASANE_DEFORMER_TESTS_OK\n";
 }

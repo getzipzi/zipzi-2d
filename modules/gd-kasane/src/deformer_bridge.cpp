@@ -51,10 +51,13 @@ Ref<KasaneDeformerData> KasaneDocumentBridge::get_deformer(const String &id) con
     Ref<KasaneDeformerData> handle; handle.instantiate(); handle->attach(get_instance_id(), generation_, id); return handle;
 }
 Dictionary KasaneDocumentBridge::evaluate_mesh(const String &id) const {
-    MAIN_THREAD(); std::vector<kasane::Vec2> evaluated;
-    auto out = result(document_.evaluate_mesh(utf8(id), evaluated));
-    if (bool(out["ok"])) out["positions"] = vectors(evaluated);
-    out["revision"] = document_.revision(); return out;
+    MAIN_THREAD(); kasane::DrawableFrame frame;
+    auto status=evaluate(frame); if(!status.ok()) return result(status);
+    for(const auto &drawable:frame.drawables) if(drawable.id==utf8(id)) {
+        auto out=result({}); out["positions"]=vectors(drawable.positions);
+        out["coordinate_units"]="runtime"; out["revision"]=frame.source_revision; return out;
+    }
+    return error("MISSING_MESH", "Mesh does not exist.");
 }
 #undef MAIN_THREAD
 }

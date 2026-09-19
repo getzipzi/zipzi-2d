@@ -1,0 +1,108 @@
+extends SceneTree
+
+const DOC = "11111111-1111-4111-8111-111111111111"
+const ASSET = "22222222-2222-4222-8222-222222222222"
+const MESH = "33333333-3333-4333-8333-333333333333"
+const PARAM = "44444444-4444-4444-8444-444444444444"
+const BINDING = "55555555-5555-4555-8555-555555555555"
+var failures = []
+var checks = 0
+
+func check(condition, message):
+    checks += 1
+    if not condition:
+        failures.append(message)
+        push_error(message)
+
+func _initialize():
+    call_deferred("run")
+
+func shifted(points, offset):
+    var output = PackedVector2Array()
+    for p in points:
+        output.append(p + Vector2(offset, 0))
+    return output
+
+func run():
+    var doc = ClassDB.instantiate("KasaneDocumentBridge")
+    check(doc is RefCounted and not doc is Node, "Document must exist without a scene node")
+    check(not doc.has_method("open_project") and not doc.has_method("rebuild_preview"), "Document must not own I/O or preview")
+    check(doc.initialize(DOC, Vector2(100, 100), Vector2(50, 50), 100).ok, "initialize")
+    check(doc.add_image_asset(ASSET, "texture", "res://does-not-exist.png", 8, 8).ok, "Source metadata must not load texture")
+    var positions = PackedVector2Array([Vector2(10, 10), Vector2(40, 12), Vector2(30, 40)])
+    var mesh = {"id": MESH, "runtime_id": "ArtMesh", "name": "mesh", "texture_asset_id": ASSET,
+        "vertex_ids": PackedInt64Array([71, 4, 91]), "base_positions": positions,
+        "uvs": PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(0.4, 1)]),
+        "triangles": PackedInt64Array([71, 4, 91])}
+    check(doc.create_mesh(mesh).ok, "Mesh edits without resources or scene")
+    var handle = doc.get_mesh(MESH)
+    check(handle.is_valid(), "Data handle owns no scene node")
+    var param = {"id": PARAM, "runtime_id": "ParamX", "name": "x", "minimum": -1, "maximum": 1, "default_value": 0}
+    check(doc.create_parameter(param).ok, "create parameter")
+    var binding = {"id": BINDING, "mesh_id": MESH, "axes": [{"parameter_id": PARAM, "keys": [-1, 0, 1]}],
+        "keyforms": [{"keys": [-1], "positions": shifted(positions, -10)},
+                     {"keys": [0], "positions": positions}, {"keys": [1], "positions": shifted(positions, 20)}]}
+    check(doc.write_binding(binding).ok, "create keyforms")
+    var io = ClassDB.instantiate("KasaneProjectIO")
+    var path = "user://boundary-project.json"
+    check(io.save_project(doc, path).ok, "Source persistence does not load texture")
+    check(not doc.get_document_summary().modified, "saved state")
+    var revision = doc.get_document_summary().revision
+    var frame = doc.set_preview_values({PARAM: 0.5})
+    check(frame.ok and is_equal_approx(frame.drawables[0].positions[0].x, -0.3), "Shared evaluator midpoint")
+    check(doc.get_document_summary().revision == revision and not doc.get_document_summary().modified, "Preview must not persist or dirty document")
+    var clamped = doc.set_preview_values({PARAM: 10})
+    check(clamped.ok and clamped.parameters[0].clamped and clamped.parameters[0].value == 1, "Preview reports clamped actual value")
+    check(not doc.set_preview_values({PARAM: NAN}).ok, "Reject non-finite preview")
+    check(doc.get_frame().parameters[0].value == 1, "Rejected preview preserves previous state")
+    doc.set_preview_values({PARAM: 0.5})
+
+    var textures = ClassDB.instantiate("KasaneTextureStore")
+    var preview_a = ClassDB.instantiate("KasaneDocumentPreview")
+    var preview_b = ClassDB.instantiate("KasaneDocumentPreview")
+    root.add_child(preview_a)
+    root.add_child(preview_b)
+    for preview in [preview_a, preview_b]:
+        preview.set_texture_store(textures)
+        preview.set_document(doc)
+        check(not preview.get_last_result().ok, "Missing preview texture is reported independently")
+    check(doc.rename_mesh(MESH, "renamed while texture missing").ok, "Preview failure cannot fail a committed source edit")
+    var image = Image.create(8, 8, false, Image.FORMAT_RGBA8)
+    image.fill(Color(1, 0, 0, 1))
+    check(textures.set_texture(ASSET, ImageTexture.create_from_image(image)).ok, "Supply external resource")
+    for preview in [preview_a, preview_b]:
+        check(preview.get_last_result().ok, "Two independent previews consume same document")
+        check(is_equal_approx(preview.get_mesh_view(MESH).get_positions_snapshot()[0].x, 20), "Preview converts runtime coordinates at presentation boundary")
+    check(doc.set_mesh_keyform(BINDING, PackedFloat32Array([0]), shifted(positions, 8)).ok, "Edit specified keyform")
+    check(is_equal_approx(preview_b.get_mesh_view(MESH).get_positions_snapshot()[0].x, 24), "Keyform edit updates preview without file export")
+    preview_a.free()
+    check(handle.is_valid() and doc.rename_mesh(MESH, "still editable").ok, "Destroying preview does not destroy Document or handles")
+    check(preview_b.get_last_result().ok, "Remaining preview keeps working")
+    check(io.save_project(doc, path).ok, "Persist parameter and keyform data")
+    var clone = ClassDB.instantiate("KasaneDocumentBridge")
+    check(io.open_project(clone, path).ok, "Open source with unavailable images and no preview")
+    check(clone.get_document_summary().bindings.size() == 1, "Binding survives source round trip")
+    check(clone.get_frame().parameters[0].value == 0, "Preview values are not persisted")
+    check(is_equal_approx(clone.get_frame().drawables[0].positions[0].x, -0.32), "Edited keyform survives source round trip")
+    check(not clone.get_document_summary().modified, "Opened source is clean")
+    var old_handle = clone.get_mesh(MESH)
+    check(io.open_project(clone, path).ok and not old_handle.is_valid(), "Replacing source invalidates old handles")
+    var valid_handle = clone.get_mesh(MESH)
+    var invalid = JSON.parse_string(FileAccess.get_file_as_string(path))
+    invalid.document.bindings[0].keyforms.pop_back()
+    var file = FileAccess.open("user://invalid.json", FileAccess.WRITE)
+    file.store_string(JSON.stringify(invalid))
+    file.close()
+    revision = clone.get_document_summary().revision
+    check(not io.open_project(clone, "user://invalid.json").ok, "Reject incomplete keyforms on open")
+    check(clone.get_document_summary().revision == revision and valid_handle.is_valid(), "Failed open preserves live source and handles")
+    var deletion = clone.erase_object(PARAM)
+    check(not deletion.ok and BINDING in deletion.referrers, "Reference-aware deletion")
+    check(clone.erase_object(BINDING).ok and clone.erase_object(PARAM).ok, "Explicit unbind allows deletion")
+    check(clone.get_frame().parameters.is_empty(), "Evaluation rebuilt after deletion")
+    check(doc.begin_transaction().ok, "Begin transaction")
+    check(not io.open_project(doc, path).ok, "Open must not replace an active transaction")
+    check(doc.cancel_transaction().ok, "Cancel transaction")
+    preview_b.free()
+    print(JSON.stringify({"status": "passed" if failures.is_empty() else "failed", "checks": checks, "failures": failures, "gpu": "not_run"}))
+    quit(0 if failures.is_empty() else 1)

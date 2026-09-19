@@ -1,46 +1,21 @@
 // SPDX-License-Identifier: MIT
 #pragma once
-#include <kasane/geometry.hpp>
-#include <array>
+#include <kasane/model.hpp>
+#include <kasane/legacy_deformer.hpp>
 #include <unordered_map>
 
 namespace kasane {
-struct Canvas { float width = 0; float height = 0; };
-struct ImageAsset {
-    std::string id;
-    std::string name;
-    std::string source;
-    uint32_t width = 0;
-    uint32_t height = 0;
-};
-struct Mesh {
-    std::string id;
-    std::string name;
-    std::string texture_asset_id;
-    std::vector<VertexId> vertex_ids;
-    std::vector<Vec2> base_positions;
-    std::vector<Vec2> uvs;
-    std::vector<std::array<VertexId, 3>> triangles;
-};
-enum class DeformerKind { rotation, warp };
-struct Deformer {
-    std::string id, name;
-    DeformerKind kind = DeformerKind::rotation;
-    Vec2 center{};
-    float angle_degrees = 0;
-    Vec2 origin{}, size{1, 1};
-    uint32_t columns = 1, rows = 1;
-    std::vector<Vec2> control_points;
-};
 enum class ChangeKind { none, metadata, positions, structure };
 struct ChangeSet {
     ChangeKind kind = ChangeKind::none;
     std::vector<std::string> mesh_ids;
     uint64_t revision = 0;
+    std::vector<std::string> object_ids;
 };
 struct EditResult {
     Status status;
     ChangeSet changes;
+    std::vector<std::string> referrers;
 };
 struct VertexPositionUpdate {
     std::string mesh_id;
@@ -52,7 +27,7 @@ struct VertexPositionUpdate {
 // Single-threaded ownership. Const references are scoped to the next mutation.
 class Document {
 public:
-    static constexpr uint32_t schema_version = 1;
+    static constexpr uint32_t schema_version = 2;
     Status initialize(std::string id, Canvas canvas);
     bool initialized() const { return !id_.empty(); }
     const std::string &id() const { return id_; }
@@ -73,7 +48,8 @@ public:
     EditResult set_warp_points(const std::string &id, std::span<const Vec2> points);
     EditResult set_parent(const std::string &id, const std::string &parent, bool organization = false);
     std::string parent_of(const std::string &id, bool organization = false) const;
-    Status evaluate_mesh(const std::string &id, std::vector<Vec2> &out) const;
+    // Isolated prototype behavior, never used by the formal evaluator/exporter.
+    Status evaluate_legacy_mesh(const std::string &id, std::vector<Vec2> &out) const;
     std::vector<std::string> affected_meshes(const std::string &id) const;
     EditResult add_asset(ImageAsset asset);
     EditResult create_mesh(Mesh mesh);
@@ -91,6 +67,19 @@ public:
     // Restore source data while keeping the live revision monotonic.
     void restore_from(const Document &source);
     EditResult replace_mesh(Mesh mesh);
+    const std::vector<std::string> &parameter_order() const { return parameter_order_; }
+    const std::vector<std::string> &binding_order() const { return binding_order_; }
+    const Parameter *get_parameter(const std::string &) const;
+    const MeshBinding *get_binding(const std::string &) const;
+    const MeshBinding *binding_for_mesh(const std::string &) const;
+    EditResult create_parameter(Parameter);
+    EditResult replace_parameter(Parameter);
+    EditResult create_binding(MeshBinding);
+    EditResult replace_binding(MeshBinding);
+    EditResult set_mesh_keyform(const std::string &binding_id, MeshKeyform);
+    EditResult replace_mesh_with_keyforms(Mesh, std::span<const VertexMapping>, std::vector<MeshKeyform>);
+    std::vector<std::string> references_to(const std::string &) const;
+    EditResult erase_object(const std::string &);
     // Derived dense topology. Does not mutate Document.
     Status render_indices(const std::string &id, std::vector<uint32_t> &out) const;
 private:
@@ -105,6 +94,9 @@ private:
     std::vector<std::string> mesh_order_;
     std::unordered_map<std::string, Deformer> deformers_;
     std::vector<std::string> deformer_order_;
+    std::unordered_map<std::string, Parameter> parameters_;
+    std::unordered_map<std::string, MeshBinding> bindings_;
+    std::vector<std::string> parameter_order_, binding_order_;
     std::unordered_map<std::string, std::string> deformation_parents_, organization_parents_;
     bool transaction_active_ = false;
     std::vector<VertexPositionUpdate> staged_updates_;
@@ -115,7 +107,9 @@ private:
     bool mutation_blocked() const { return transaction_active_; }
     void advance_state();
     EditResult failed(Status status) const;
-    EditResult changed(ChangeKind kind, std::vector<std::string> ids = {});
+    EditResult changed(ChangeKind kind, std::vector<std::string> ids = {}, std::vector<std::string> objects = {});
+    Status validate_parameter(const Parameter &) const;
+    Status canonicalize_binding(MeshBinding &) const;
 };
 bool valid_uuid(const std::string &id);
 }

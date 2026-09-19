@@ -20,14 +20,16 @@ bool valid_uuid(const std::string &id) {
 Status Document::initialize(std::string id, Canvas canvas) {
     if (initialized()) return Status::error("ALREADY_INITIALIZED", "Create a new Document to open another model.");
     if (!valid_uuid(id)) return Status::error("INVALID_ID", "Use a nonzero canonical lowercase UUID.");
-    if (!std::isfinite(canvas.width) || !std::isfinite(canvas.height) || canvas.width <= 0 || canvas.height <= 0)
+    if (!std::isfinite(canvas.width) || !std::isfinite(canvas.height) || canvas.width <= 0 || canvas.height <= 0 ||
+        !std::isfinite(canvas.origin.x) || !std::isfinite(canvas.origin.y) ||
+        !std::isfinite(canvas.pixels_per_unit) || canvas.pixels_per_unit <= 0)
         return Status::error("INVALID_CANVAS", "Canvas dimensions must be finite and positive.");
     id_ = std::move(id);
     canvas_ = canvas;
     return {};
 }
 bool Document::contains_id(const std::string &id) const {
-    return id == id_ || assets_.contains(id) || meshes_.contains(id) || deformers_.contains(id);
+    return id == id_ || assets_.contains(id) || meshes_.contains(id) || deformers_.contains(id) || parameters_.contains(id) || bindings_.contains(id);
 }
 const ImageAsset *Document::get_asset(const std::string &id) const {
     auto it = assets_.find(id);
@@ -39,9 +41,10 @@ const Mesh *Document::get_mesh(const std::string &id) const {
 }
 EditResult Document::failed(Status status) const { return {std::move(status), {ChangeKind::none, {}, revision_}}; }
 void Document::advance_state() { current_state_id_ = next_state_id_++; }
-EditResult Document::changed(ChangeKind kind, std::vector<std::string> ids) {
+EditResult Document::changed(ChangeKind kind, std::vector<std::string> ids, std::vector<std::string> objects) {
+    if (objects.empty()) objects = ids;
     advance_state();
-    return {{}, {kind, std::move(ids), ++revision_}};
+    return {{}, {kind, std::move(ids), ++revision_, std::move(objects)}};
 }
 EditResult Document::add_asset(ImageAsset asset) {
     if (mutation_blocked()) return failed(Status::error("TRANSACTION_ACTIVE", "Commit or cancel the active transaction first."));
@@ -53,7 +56,7 @@ EditResult Document::add_asset(ImageAsset asset) {
     const auto key = asset.id;
     assets_.emplace(key, std::move(asset));
     asset_order_.push_back(key);
-    return changed(ChangeKind::metadata);
+    return changed(ChangeKind::metadata, {}, {key});
 }
 EditResult Document::create_mesh(Mesh mesh) {
     if (mutation_blocked()) return failed(Status::error("TRANSACTION_ACTIVE", "Commit or cancel the active transaction first."));
@@ -61,6 +64,10 @@ EditResult Document::create_mesh(Mesh mesh) {
     if (!valid_uuid(mesh.id)) return failed(Status::error("INVALID_ID", "Mesh ID must be a canonical UUID."));
     if (contains_id(mesh.id)) return failed(Status::error("DUPLICATE_ID", "Object ID already exists."));
     if (!get_asset(mesh.texture_asset_id)) return failed(Status::error("MISSING_ASSET", "Texture asset does not exist."));
+    if (mesh.runtime_id.empty()) mesh.runtime_id = mesh.id;
+    for (const auto &[id, other] : meshes_)
+        if (other.runtime_id == mesh.runtime_id)
+            return failed(Status::error("DUPLICATE_RUNTIME_ID", mesh.id + ".runtime_id duplicates " + id));
     if (mesh.vertex_ids.size() != mesh.base_positions.size())
         return failed(Status::error("INVALID_LENGTH", "Vertex IDs must match positions."));
     std::unordered_map<VertexId, uint32_t> slots;
@@ -188,6 +195,10 @@ void Document::restore_from(const Document &source) {
 EditResult Document::replace_mesh(Mesh mesh) {
     if (mutation_blocked()) return failed(Status::error("TRANSACTION_ACTIVE", "Commit or cancel the active transaction first."));
     if (!get_mesh(mesh.id)) return failed(Status::error("MISSING_MESH", "Mesh does not exist."));
+    const auto *previous = get_mesh(mesh.id);
+    if (binding_for_mesh(mesh.id) &&
+        (previous->vertex_ids != mesh.vertex_ids || previous->triangles != mesh.triangles))
+        return failed(Status::error("KEYFORMS_REQUIRED", mesh.id + ": topology replacement requires every keyform and vertex mapping"));
     // Validate through the same creation path before replacing any live arrays.
     Document candidate = *this;
     candidate.meshes_.erase(mesh.id);
