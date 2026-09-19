@@ -29,21 +29,3 @@ the license distributed within that submodule.
 Copyright (c) 2026 Sakura Motion Project.
 
 PurismCore is distributed under the MIT License included in that submodule.
-
-## Live2D materials
-
-Files under `benchmarks/cubism-matrix/runners/native` that carry a Live2D
-notice are derived from Live2D Cubism SDK sample or component sources. They
-remain subject to the
-[Live2D Open Software License Agreement](https://www.live2d.com/eula/live2d-open-software-license-agreement_en.html)
-and are not relicensed by the repository-level MIT License.
-
-The proprietary Cubism Core binary, Cubism SDK packages, and Live2D sample
-model assets are not distributed by this repository. Locally supplied copies
-remain subject to the applicable
-[Live2D Proprietary Software License Agreement](https://www.live2d.com/eula/live2d-proprietary-software-license-agreement_en.html),
-[SDK publication terms](https://www.live2d.com/en/sdk/license/), and
-[sample data terms](https://www.live2d.com/eula/live2d-sample-model-terms_en.html).
-
-Live2D and Cubism are used only to describe interoperability. This project is
-not affiliated with, authorized by, endorsed by, or sponsored by Live2D Inc.
