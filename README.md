@@ -1,7 +1,10 @@
 # Kasane 2D
 
-Kasane 2D is an experimental, open-source runtime for loading, deforming, and
-rendering real-time 2D puppet models.
+Kasane 2D is building a Godot-based, agent-first Live2D editor with an editable
+Document, project persistence, GDScript authoring, and MOC3 import and export.
+The repository already includes a PurismCore + gd-cubism runtime for loading,
+deforming, and displaying models. Editor delivery is tracked in the
+[engineering roadmap](docs/editor/ROADMAP.md) and its separate milestones.
 
 ## Acknowledgements
 

@@ -47,10 +47,13 @@ and test commands.
 
 ## Editor planning
 
-Stage 00–01 provide a reusable in-memory mesh API and a minimal source Document.
-Run `python3 tools/run_kasane_preview.py --render` to build and verify them without
-Cubism model files. See [Editor design and milestones](docs/editor/README.md)
-for implemented contracts, acceptance evidence, and later planned stages.
+The editor target is a Godot-based, GDScript-programmable Live2D authoring
+application with an editable Document, project persistence, and MOC3 import
+and export. See the [engineering roadmap](docs/editor/ROADMAP.md) for the
+scope, separate milestone documents, and acceptance requirements.
+The existing native prototype can be checked with
+`python3 tools/run_kasane_preview.py --render`; this is prototype regression,
+not evidence that the new editor milestones are complete.
 
 ## Imported sources
 
