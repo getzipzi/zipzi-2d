@@ -1,17 +1,33 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
-cargo build -p kasane-editor
-app="$PWD/target/Kasane Editor.app"
+case "${1:-editor}" in
+  editor)
+    package="kasane-editor"
+    name="Kasane Editor"
+    bundle_id="dev.kasane.editor"
+    ;;
+  playground)
+    package="component-playground"
+    name="Kasane Component Playground"
+    bundle_id="dev.kasane.component-playground"
+    ;;
+  *)
+    printf 'usage: %s [editor|playground]\n' "$0" >&2
+    exit 2
+    ;;
+esac
+cargo build -p "$package"
+app="$PWD/target/$name.app"
 mkdir -p "$app/Contents/MacOS"
-cp target/debug/kasane-editor "$app/Contents/MacOS/kasane-editor"
-cat > "$app/Contents/Info.plist" <<'PLIST'
+cp "target/debug/$package" "$app/Contents/MacOS/$package"
+cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleIdentifier</key><string>dev.kasane.editor</string>
-<key>CFBundleName</key><string>Kasane Editor</string>
-<key>CFBundleExecutable</key><string>kasane-editor</string>
+<key>CFBundleIdentifier</key><string>$bundle_id</string>
+<key>CFBundleName</key><string>$name</string>
+<key>CFBundleExecutable</key><string>$package</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>0.1.0</string>
 <key>NSHighResolutionCapable</key><true/>

@@ -6,6 +6,8 @@
 ```text
 crates/editor        GPUI 窗口、工具栏、场景列表、检查器、画布宿主
 crates/editor-scene  Kasane DrawableFrame 与 wgpu 渲染，独立于 UI
+crates/ui            可复用的 GPUI 组件；src/components 中每个组件独立成文件
+crates/component-playground  独立运行的组件文档与交互验证程序
 ```
 
 ## 运行
@@ -22,11 +24,13 @@ web/
 
 ```sh
 cargo run -p kasane-editor
+cargo run -p component-playground
 cargo test --workspace
 cargo fmt --all -- --check
 
 # 可选：生成可双击打开的 macOS 应用
 ./scripts/build-app.sh
+./scripts/build-app.sh playground
 ```
 
 依赖使用 workspace path，方便同时修改三个仓库。`Cargo.lock` 锁定 registry 依赖；相邻仓库版本见 `DEPENDENCIES.md`。外部库和输入组件均直接使用相邻 checkout，没有复制输入框实现。
@@ -40,10 +44,6 @@ cargo fmt --all -- --check
 - 窗口尺寸和 Retina 比例决定实际纹理尺寸。
 - GPU 测试检查中心颜色、透明背景、透明度、隐藏、缩放和 resize。
 
-## Fork 改动与边界
-
-`gpui_ce_platform/wgpu` 是新增的可选 feature；默认的原生 Metal 后端仍然保留。Fork 增加 CAMetalLayer 上的 wgpu renderer、macOS typed GPU context、custom texture Surface，并保留 CoreVideo surface 合成。
-
 这是最小验证：没有模型导入、文件保存、撤销、时间轴、拖拽顶点或 GPU device-loss 自动恢复。AppKit wgpu 的 `render_to_image` 测试接口暂不支持。Linux / Windows / Web 未在此项目验证。
 
 ## 验证记录
@@ -52,6 +52,8 @@ cargo fmt --all -- --check
 
 ## 常用组件验证页
 
-点击工具栏 **Components** 可测试按钮、输入框、复选框、滑块、下拉菜单、标签页、树列表、滚动裁剪和弹窗。Typography 页检查多语言字体和长文字截断；Compact / Full size 切换窗口尺寸。
+运行 `cargo run -p component-playground` 打开组件文档。左侧按 Button、Checkbox、Text field、Slider、Tabs 分页；每页都有实时示例、状态展示、可复制的 Rust 用法、API 和交互说明。Patterns 页保留下拉菜单、树列表与弹窗的组合实验，Typography 页检查字体回退与截断。Compact / Full size 切换窗口尺寸。文档页面位于 `crates/component-playground/src/playground/pages`，editor 仅依赖 `ui`。
+
+新增组件时，在 `crates/ui/src/components/` 增加独立模块并从 `mod.rs` 导出；在 playground 的 `pages/` 增加对应文档页及侧栏入口，展示实际组件、状态、用法和 API。editor 通过 `ui` 的公开入口使用组件。
 
 实测结果与未覆盖范围见 [组件检查记录](docs/component-checks.md)。输入框直接使用 `gpui_ce_elements::editable_text`，与上游 `editable_text` 案例一致。

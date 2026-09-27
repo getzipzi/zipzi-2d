@@ -1,4 +1,3 @@
-mod components;
 use editor_scene::{Document, SceneRenderer, TargetConfig};
 use gpui::{prelude::*, *};
 use gpui_wgpu::{WgpuContextHandle, WgpuRenderTarget};
@@ -9,8 +8,6 @@ struct GpuCanvas {
     scene: SceneRenderer,
 }
 struct Editor {
-    show_components: bool,
-    components: Entity<components::ComponentLab>,
     document: Document,
     gpu: Option<GpuCanvas>,
     error: Option<String>,
@@ -86,26 +83,15 @@ impl Editor {
         cx: &Context<Self>,
         action: fn(&mut Document),
     ) -> impl IntoElement {
-        div()
-            .id(label)
-            .px_3()
-            .py_2()
-            .rounded_md()
-            .bg(rgb(0x303847))
-            .cursor_pointer()
-            .hover(|s| s.bg(rgb(0x46536a)))
-            .child(label)
-            .on_click(cx.listener(move |this, _, _, cx| {
-                action(&mut this.document);
-                cx.notify();
-            }))
+        ui::button(label, label).on_click(cx.listener(move |this, _, _, cx| {
+            action(&mut this.document);
+            cx.notify();
+        }))
     }
 }
 impl Render for Editor {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        if !self.show_components {
-            self.draw_canvas(window);
-        }
+        self.draw_canvas(window);
         let mut canvas = div().flex_1().h_full().min_w_0().bg(rgb(0x111722));
         if let Some(error) = &self.error {
             canvas = canvas.child(error.clone());
@@ -130,33 +116,9 @@ impl Render for Editor {
                     .child(self.button("−", cx, |d| d.zoom = (d.zoom - 0.1).max(0.2)))
                     .child(format!("{:.0}%", self.document.zoom * 100.0))
                     .child(self.button("+", cx, |d| d.zoom = (d.zoom + 0.1).min(3.0)))
-                    .child(self.button("Reset", cx, |d| *d = Document::default()))
-                    .child(
-                        div()
-                            .id("components-tab")
-                            .px_3()
-                            .py_2()
-                            .rounded_md()
-                            .bg(rgb(0x365b75))
-                            .cursor_pointer()
-                            .child(if self.show_components {
-                                "← Canvas"
-                            } else {
-                                "Components"
-                            })
-                            .on_click(cx.listener(|this, _, _, cx| {
-                                this.show_components = !this.show_components;
-                                cx.notify();
-                            })),
-                    ),
+                    .child(self.button("Reset", cx, |d| *d = Document::default())),
             )
-            .child(if self.show_components {
-                div()
-                    .flex_1()
-                    .min_h_0()
-                    .child(self.components.clone())
-                    .into_any_element()
-            } else {
+            .child(
                 div()
                     .flex()
                     .flex_1()
@@ -195,9 +157,8 @@ impl Render for Editor {
                             .child(self.button("Opacity +", cx, |d| {
                                 d.opacity = (d.opacity + 0.1).min(1.0)
                             })),
-                    )
-                    .into_any_element()
-            })
+                    ),
+            )
             .child(
                 div()
                     .h(px(44.0))
@@ -210,7 +171,6 @@ impl Render for Editor {
 }
 fn main() {
     gpui_platform::application().run(|cx: &mut App| {
-        components::bind_keys(cx);
         cx.on_window_closed(|cx, _| {
             if cx.windows().is_empty() {
                 cx.quit();
@@ -231,11 +191,8 @@ fn main() {
                 window_min_size: Some(size(px(720.0), px(480.0))),
                 ..Default::default()
             },
-            |window, cx| {
-                let components = cx.new(|cx| components::ComponentLab::new(window, cx));
+            |_, cx| {
                 cx.new(|_| Editor {
-                    show_components: false,
-                    components,
                     document: Document::default(),
                     gpu: None,
                     error: None,

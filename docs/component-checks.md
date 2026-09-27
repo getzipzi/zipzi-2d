@@ -2,7 +2,7 @@
 
 日期：2026-09-27。环境：Apple M4、macOS、Retina 2×、gpui-ce fork 的 wgpu → Metal 后端。
 
-运行 `cargo run -p kasane-editor`，点击工具栏 **Components**。组件页提供 Controls / Typography 标签，以及 Compact（760×540）/ Full size（1100×740）窗口尺寸预设。
+当前运行方式为 `cargo run -p component-playground`。文档浏览器提供组件分页、Patterns、Typography，以及 Compact（800×600）/ Full size（1180×800）窗口尺寸预设。下面的完整表格是在拆分前、通过 editor 工具栏 **Components** 打开的旧验证页完成的；旧验证页使用 760×540 / 1100×740 预设。新文档浏览器已实机复查侧栏导航、Button 计数、Text field 编辑、Slider 拖动、Dropdown 浮层和 Compact 布局，尚未重新执行整个表格的每一项。
 
 以下是通过原生窗口实际点击、键盘输入、拖动、滚动和截图观察得到的结果，不是自动化截图快照测试。
 
@@ -25,10 +25,10 @@
 
 ## 验证边界
 
-- 这些是用 GPUI 元素组装的验证控件，不是完整的生产组件库。滑块和混合模式用于组件状态展示，不改变 Kasane 场景。
+- `ui` 已提供可复用的按钮、标签、复选框、输入框和滑块；下拉菜单、树列表、弹窗和排版展示仍是 playground 场景代码。各公开组件的文档页说明 API 和交互边界。滑块和混合模式用于组件状态展示，不改变 Kasane 场景。
 - 输入框现已直接使用 `gpui_ce_elements::editable_text`。IME 回调序列由回归测试覆盖；真实系统中文候选面板的完整流程尚未通过自动 UI 操作复现。选区/复制粘贴、撤销、长文本滚动尚未完整验证。
 - 没有补齐完整的键盘导航、Tab 焦点陷阱或无障碍语义。系统 AX 树目前只有原生窗口，组件交互检查使用截图坐标完成。
-- 弹窗遮罩只覆盖组件页内容区；不是整个应用级模态。下拉菜单没有自动检测屏幕边缘并翻转方向。
+- 当前弹窗遮罩覆盖 playground 窗口，但没有焦点陷阱；下拉菜单没有自动检测屏幕边缘并翻转方向。
 - 未验证 SVG、图片资源、停靠面板、可拖动分隔条、时间轴、其他操作系统或 GPU。
 
 `cargo test --workspace` 继续覆盖现有 Kasane GPU 像素测试；组件交互由本次实机检查覆盖。`cargo fmt --all -- --check` 用于格式检查。
