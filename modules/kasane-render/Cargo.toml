@@ -8,6 +8,7 @@ authors.workspace = true
 description = "Backend-neutral frame validation and render planning for Kasane 2D"
 
 [dependencies]
+bytemuck = { workspace = true }
 kasane-core = { path = "../kasane-core" }
 
 [[bench]]
