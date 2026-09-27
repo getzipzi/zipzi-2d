@@ -9,16 +9,17 @@ use gpui_kit::component::{
     slider::{Slider, SliderEvent, SliderState, SliderValue},
 };
 use gpui_kit::{prelude::*, *};
-use std::sync::{Arc, mpsc};
+use std::sync::mpsc;
 
 struct Editor {
     document: Document,
     name: Entity<InputState>,
     opacity: Entity<SliderState>,
-    frame: Option<Arc<RenderImage>>,
+    frame: Option<preview::Image>,
     error: Option<String>,
-    requests: mpsc::Sender<Document>,
-    _frames: Task<()>,
+    requests: Option<mpsc::Sender<Document>>,
+    gpu_device: Option<metal::Device>,
+    _frames: Option<Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
 impl Editor {
@@ -48,8 +49,35 @@ impl Editor {
                 }
             }),
         ];
-        let (requests, frames) = preview::start();
-        let task = cx.spawn(async move |this, cx| {
+        let mut editor = Self {
+            document: Document::default(),
+            name,
+            opacity,
+            frame: None,
+            error: None,
+            requests: None,
+            gpu_device: None,
+            _frames: None,
+            _subscriptions: subscriptions,
+        };
+        editor.connect_preview(window, cx);
+        editor
+    }
+    fn connect_preview(&mut self, window: &Window, cx: &mut Context<Self>) {
+        // Drop the old receiver before replacing a lost GPU's producer.
+        self._frames = None;
+        self.requests = None;
+        self.frame = None;
+        let (requests, frames, device) = match preview::start(window) {
+            Ok(connection) => connection,
+            Err(error) => {
+                self.error = Some(error.to_string());
+                return;
+            }
+        };
+        self.gpu_device = device;
+        self.error = None;
+        self._frames = Some(cx.spawn(async move |this, cx| {
             while let Ok(frame) = frames.recv().await {
                 if this
                     .update(cx, |this, cx| {
@@ -69,29 +97,26 @@ impl Editor {
                     break;
                 }
             }
-        });
-        let editor = Self {
-            document: Document::default(),
-            name,
-            opacity,
-            frame: None,
-            error: None,
-            requests,
-            _frames: task,
-            _subscriptions: subscriptions,
-        };
-        let _ = editor.requests.send(editor.document);
-        editor
+        }));
+        let _ = requests.send(self.document);
+        self.requests = Some(requests);
     }
     fn redraw(&mut self, cx: &mut Context<Self>) {
-        if self.requests.send(self.document).is_err() {
+        if self
+            .requests
+            .as_ref()
+            .is_none_or(|requests| requests.send(self.document).is_err())
+        {
             self.error = Some("预览渲染器已停止，请重新打开窗口".into());
         }
         cx.notify();
     }
 }
 impl Render for Editor {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if preview::device_changed(window, self.gpu_device.as_ref()) {
+            self.connect_preview(window, cx);
+        }
         let theme = cx.theme();
         let name = self.name.read(cx).value();
         let layer_name = if name.is_empty() {
@@ -111,11 +136,7 @@ impl Render for Editor {
         if let Some(error) = &self.error {
             preview = preview.child(div().text_color(theme.danger).child(error.clone()));
         } else if let Some(frame) = &self.frame {
-            preview = preview.child(
-                img(frame.clone())
-                    .size_full()
-                    .object_fit(ObjectFit::Contain),
-            );
+            preview = preview.child(preview::element(frame.clone()));
         } else {
             preview = preview.child("正在初始化预览…");
         }
@@ -140,7 +161,7 @@ impl Render for Editor {
                     Theme::change(mode, Some(window), cx);
                 }))
                 .child(Button::new("about").label("关于…").ghost().small().on_click(|_, window, cx| {
-                    window.open_dialog(cx, |dialog, _, _| dialog.title("Kasane 组件原型").child("使用 GPUI Kit 组装界面。场景由 Kasane 绘制，通过图像回读显示；当前原型不保存文档。"));
+                    window.open_dialog(cx, |dialog, _, _| dialog.title("Kasane 组件原型").child("使用 GPUI Kit 组装界面。场景由 Kasane 绘制；当前原型不保存文档。"));
                 })))
             .child(div().flex().flex_1().min_h_0()
                 .child(div().w_48().flex_shrink_0().h_full().p_4().flex().flex_col().gap_3().border_r_1().border_color(theme.border).bg(theme.sidebar)

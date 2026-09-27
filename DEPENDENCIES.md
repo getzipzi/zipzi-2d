@@ -1,10 +1,14 @@
 # Dependency revisions
 
 - GPUI Kit 0.6.5: official `https://github.com/longbridge/gpui-kit`, pinned to `5059de47a6560fdbe24e32cd91b45d6aa6849695`.
-- GPUI family: `gpui-pre 0.3.6`, selected by Kit; no local compatibility patches.
-- kasane-2d: local `../kesane-2d`, validated revision `b7aab701b977ce85febeab9d313f463e5ef7b344`.
-- Kasane renderer: wgpu 29, independent device; CPU readback bridge into GPUI images.
+- GPUI 0.3.6: three crates patched through root `[patch.crates-io]`: `gpui-pre`, `gpui-pre-macos`, `gpui-pre-apple`. Snapshot: Zed `bcf6582ce3500df93a8a39366640173e6786cea6`.
+- Kasane: local `../kesane-2d`, including `kasane-render-metal` and its backend-neutral changes. These changes were uncommitted when integrated; the earlier revision `b7aab701b977ce85febeab9d313f463e5ef7b344` alone does not contain the required backend.
+- Rendering: native Metal via `metal 0.33`, with GPUI's device and command queue shared by Kasane.
 
-All three workspace crates use the root `Cargo.lock`. Use `--locked` when building and testing. No gpui-ce dependency or sibling GPUI checkout is required.
+All workspace crates use the root `Cargo.lock`. Build and test with `--locked`.
+The editor supports macOS. There are no application backend switches or CPU
+readback fallback. No sibling GPUI checkout is required.
 
-The former gpui-ce shared-texture experiment is preserved in Git history through `3d1ef63`; its separate fork is no longer part of this workspace's build.
+GPUI Kit has dependencies for other target platforms, which Cargo may retain in
+the cross-platform lockfile. This does not make them active macOS dependencies.
+See `vendor/README.md` for the exact local patch scope.

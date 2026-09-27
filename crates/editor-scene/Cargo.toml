@@ -6,10 +6,6 @@ license.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-wgpu.workspace = true
 kasane-core.workspace = true
 kasane-render.workspace = true
-kasane-render-wgpu.workspace = true
-
-[dev-dependencies]
-pollster = "0.4"
+kasane-render-metal.workspace = true

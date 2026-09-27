@@ -1,0 +1,307 @@
+--- a/vendor/gpui-pre/Cargo.toml
++++ b/vendor/gpui-pre/Cargo.toml
+@@ -667,3 +667,6 @@
+ [lints.rust.unexpected_cfgs]
+ level = "allow"
+ priority = 0
++
++[target.'cfg(target_os = "macos")'.dependencies.metal]
++version = "0.33"
+--- a/vendor/gpui-pre/src/elements/surface.rs
++++ b/vendor/gpui-pre/src/elements/surface.rs
+@@ -7,12 +7,30 @@
+ use refineable::Refineable;
+ 
+ /// A source of a surface's content.
+-#[derive(Clone, Debug, PartialEq, Eq)]
++#[derive(Clone, Debug)]
+ pub enum SurfaceSource {
+     /// A macOS image buffer from CoreVideo
+     #[cfg(target_os = "macos")]
+     Surface(CVPixelBuffer),
++    /// Premultiplied RGBA/BGRA texture from the window's native Metal device.
++    /// Submit producer work to `Window::metal_context().queue` before publishing.
++    #[cfg(target_os = "macos")]
++    MetalTexture(metal::Texture),
+ }
++
++impl PartialEq for SurfaceSource {
++    fn eq(&self, other: &Self) -> bool {
++        match (self, other) {
++            #[cfg(target_os = "macos")]
++            (Self::Surface(a), Self::Surface(b)) => a == b,
++            #[cfg(target_os = "macos")]
++            (Self::MetalTexture(a), Self::MetalTexture(b)) => std::ptr::eq(a.as_ref(), b.as_ref()),
++            #[allow(unreachable_patterns)]
++            _ => false,
++        }
++    }
++}
++impl Eq for SurfaceSource {}
+ 
+ #[cfg(target_os = "macos")]
+ impl From<CVPixelBuffer> for SurfaceSource {
+@@ -100,6 +118,17 @@
+                 // TODO: Add support for corner_radii
+                 window.paint_surface(new_bounds, surface.clone());
+             }
++            #[cfg(target_os = "macos")]
++            SurfaceSource::MetalTexture(texture) => {
++                let size = crate::size(
++                    crate::DevicePixels(texture.width() as i32),
++                    crate::DevicePixels(texture.height() as i32),
++                );
++                window.paint_surface(
++                    self.object_fit.get_bounds(bounds, size),
++                    self.source.clone(),
++                );
++            }
+             #[allow(unreachable_patterns)]
+             _ => {}
+         }
+--- a/vendor/gpui-pre/src/platform.rs
++++ b/vendor/gpui-pre/src/platform.rs
+@@ -798,6 +798,16 @@
+     pub deactivation: Box<dyn Fn() + Send + 'static>,
+ }
+ 
++/// Native Metal handles for producers composited by the native macOS renderer.
++#[cfg(target_os = "macos")]
++#[derive(Clone)]
++pub struct SharedMetalContext {
++    /// Create shared textures on this device.
++    pub device: metal::Device,
++    /// Commit producer commands here before publishing textures to the UI.
++    pub queue: metal::CommandQueue,
++}
++
+ #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
+ #[expect(missing_docs)]
+ pub struct RequestFrameOptions {
+@@ -878,6 +888,12 @@
+ 
+ #[expect(missing_docs)]
+ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
++    /// Native Metal renderer handles, if available.
++    #[cfg(target_os = "macos")]
++    fn metal_context(&self) -> Option<SharedMetalContext> {
++        None
++    }
++
+     fn bounds(&self) -> Bounds<Pixels>;
+     fn is_maximized(&self) -> bool;
+     fn window_bounds(&self) -> WindowBounds;
+--- a/vendor/gpui-pre/src/scene.rs
++++ b/vendor/gpui-pre/src/scene.rs
+@@ -769,8 +769,8 @@
+     pub order: DrawOrder,
+     pub bounds: Bounds<ScaledPixels>,
+     pub content_mask: ContentMask<ScaledPixels>,
+-    #[cfg(target_os = "macos")]
+-    pub image_buffer: core_video::pixel_buffer::CVPixelBuffer,
++    pub source: crate::SurfaceSource,
++    pub opacity: f32,
+ }
+ 
+ impl From<PaintSurface> for Primitive {
+--- a/vendor/gpui-pre/src/window.rs
++++ b/vendor/gpui-pre/src/window.rs
+@@ -29,8 +29,6 @@
+ use crate::interactive::TouchEvent;
+ use anyhow::{Context as _, Result, anyhow};
+ use collections::{FxHashMap, FxHashSet};
+-#[cfg(target_os = "macos")]
+-use core_video::pixel_buffer::CVPixelBuffer;
+ use derive_more::{Deref, DerefMut};
+ use futures::channel::oneshot;
+ use gpui_util::post_inc;
+@@ -4978,7 +4976,11 @@
+     ///
+     /// This method should only be called as part of the paint phase of element drawing.
+     #[cfg(target_os = "macos")]
+-    pub fn paint_surface(&mut self, bounds: Bounds<Pixels>, image_buffer: CVPixelBuffer) {
++    pub fn paint_surface(
++        &mut self,
++        bounds: Bounds<Pixels>,
++        source: impl Into<crate::SurfaceSource>,
++    ) {
+         use crate::PaintSurface;
+ 
+         self.invalidator.debug_assert_paint();
+@@ -4989,8 +4991,15 @@
+             order: 0,
+             bounds,
+             content_mask,
+-            image_buffer,
++            source: source.into(),
++            opacity: self.element_opacity(),
+         });
++    }
++
++    /// Native Metal device and queue used by this window.
++    #[cfg(target_os = "macos")]
++    pub fn metal_context(&self) -> Option<crate::SharedMetalContext> {
++        self.platform_window.metal_context()
+     }
+ 
+     /// Removes an image from the sprite atlas.
+--- a/vendor/gpui-pre-apple/src/metal_renderer.rs
++++ b/vendor/gpui-pre-apple/src/metal_renderer.rs
+@@ -126,6 +126,7 @@
+     monochrome_sprites_pipeline_state: metal::RenderPipelineState,
+     polychrome_sprites_pipeline_state: metal::RenderPipelineState,
+     surfaces_pipeline_state: metal::RenderPipelineState,
++    rgba_surfaces_pipeline_state: metal::RenderPipelineState,
+     unit_vertices: metal::Buffer,
+     #[allow(clippy::arc_with_non_send_sync)]
+     instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>,
+@@ -324,6 +325,14 @@
+             MTLPixelFormat::BGRA8Unorm,
+         );
+ 
++        let rgba_surfaces_pipeline_state = build_pipeline_state(
++            &device,
++            &library,
++            "rgba_surfaces",
++            "surface_vertex",
++            "rgba_surface_fragment",
++            MTLPixelFormat::BGRA8Unorm,
++        );
+         let command_queue = device.new_command_queue();
+         let sprite_atlas = Arc::new(MetalAtlas::new(device.clone(), is_apple_gpu));
+         let core_video_texture_cache =
+@@ -345,6 +354,7 @@
+             monochrome_sprites_pipeline_state,
+             polychrome_sprites_pipeline_state,
+             surfaces_pipeline_state,
++            rgba_surfaces_pipeline_state,
+             unit_vertices,
+             instance_buffer_pool,
+             sprite_atlas,
+@@ -354,6 +364,14 @@
+             path_sample_count: PATH_SAMPLE_COUNT,
+             #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
+             headless_render_target: None,
++        }
++    }
++
++    /// Handles for native texture producers. Commit before handing frames to GPUI.
++    pub fn shared_metal_context(&self) -> gpui::SharedMetalContext {
++        gpui::SharedMetalContext {
++            device: self.device.clone(),
++            queue: self.command_queue.clone(),
+         }
+     }
+ 
+@@ -1152,35 +1170,62 @@
+         );
+ 
+         for (index, surface) in surfaces.iter().enumerate() {
++            if let gpui::SurfaceSource::MetalTexture(texture) = &surface.source {
++                assert!(
++                    std::ptr::eq(texture.device(), self.device.as_ref()),
++                    "Metal surface device mismatch"
++                );
++                assert!(texture.usage().contains(metal::MTLTextureUsage::ShaderRead));
++                command_encoder.set_render_pipeline_state(&self.rgba_surfaces_pipeline_state);
++                command_encoder
++                    .set_fragment_texture(SurfaceInputIndex::YTexture as u64, Some(texture));
++                command_encoder.set_fragment_bytes(
++                    0,
++                    mem::size_of::<f32>() as u64,
++                    &surface.opacity as *const f32 as *const _,
++                );
++                command_encoder.draw_primitives_instanced_base_instance(
++                    metal::MTLPrimitiveType::Triangle,
++                    0,
++                    6,
++                    1,
++                    (first_surface + index) as u64,
++                );
++                continue;
++            }
++            command_encoder.set_render_pipeline_state(&self.surfaces_pipeline_state);
++            let gpui::SurfaceSource::Surface(image_buffer) = &surface.source else {
++                unreachable!("MetalTexture was handled above");
++            };
+             let texture_size = size(
+-                DevicePixels::from(surface.image_buffer.get_width() as i32),
+-                DevicePixels::from(surface.image_buffer.get_height() as i32),
++                DevicePixels::from(image_buffer.get_width() as i32),
++                DevicePixels::from(image_buffer.get_height() as i32),
+             );
+ 
+             assert_eq!(
+-                surface.image_buffer.get_pixel_format(),
++                image_buffer.get_pixel_format(),
+                 kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+             );
+ 
+             let y_texture = self
+                 .core_video_texture_cache
+                 .create_texture_from_image(
+-                    surface.image_buffer.as_concrete_TypeRef(),
++                    image_buffer.as_concrete_TypeRef(),
+                     None,
+                     MTLPixelFormat::R8Unorm,
+-                    surface.image_buffer.get_width_of_plane(0),
+-                    surface.image_buffer.get_height_of_plane(0),
++                    image_buffer.get_width_of_plane(0),
++                    image_buffer.get_height_of_plane(0),
+                     0,
+                 )
+                 .unwrap();
+             let cb_cr_texture = self
+                 .core_video_texture_cache
+                 .create_texture_from_image(
+-                    surface.image_buffer.as_concrete_TypeRef(),
++                    image_buffer.as_concrete_TypeRef(),
+                     None,
+                     MTLPixelFormat::RG8Unorm,
+-                    surface.image_buffer.get_width_of_plane(1),
+-                    surface.image_buffer.get_height_of_plane(1),
++                    image_buffer.get_width_of_plane(1),
++                    image_buffer.get_height_of_plane(1),
+                     1,
+                 )
+                 .unwrap();
+@@ -1302,6 +1347,12 @@
+     color_attachment.set_destination_rgb_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
+     color_attachment.set_destination_alpha_blend_factor(metal::MTLBlendFactor::One);
+ 
++    if fragment_fn_name == "rgba_surface_fragment" {
++        color_attachment.set_source_rgb_blend_factor(metal::MTLBlendFactor::One);
++        color_attachment
++            .set_destination_alpha_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
++    }
++
+     device
+         .new_render_pipeline_state(&descriptor)
+         .expect("could not create render pipeline state")
+--- a/vendor/gpui-pre-apple/src/shaders.metal
++++ b/vendor/gpui-pre-apple/src/shaders.metal
+@@ -1277,3 +1277,11 @@
+ 
+   return color;
+ }
++
++// Kasane supplies premultiplied color; do not multiply its alpha a second time.
++fragment float4 rgba_surface_fragment(SurfaceFragmentInput input [[stage_in]],
++    texture2d<float> source [[texture(SurfaceInputIndex_YTexture)]],
++    constant float &opacity [[buffer(0)]]) {
++  constexpr sampler s(mag_filter::linear, min_filter::linear);
++  return source.sample(s, input.texture_position) * opacity;
++}
+--- a/vendor/gpui-pre-macos/src/window.rs
++++ b/vendor/gpui-pre-macos/src/window.rs
+@@ -2119,6 +2119,10 @@
+         self.0.lock().renderer.sprite_atlas().clone()
+     }
+ 
++    fn metal_context(&self) -> Option<gpui::SharedMetalContext> {
++        Some(self.0.lock().renderer.shared_metal_context())
++    }
++
+     fn gpu_specs(&self) -> Option<gpui::GpuSpecs> {
+         None
+     }

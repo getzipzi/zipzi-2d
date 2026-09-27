@@ -9,7 +9,7 @@
 - Button 缩放与重置预览，Slider 点击轨道更新透明度。
 - 浅/深主题显示正常，约 800×480 与 1100×740 内容尺寸保持控件可见。
 - 关于 Dialog 打开，Escape 关闭。
-- GPU 桥接测试检查 BGRA 通道、半透明颜色和 alpha，以及隐藏后全透明；Kasane 场景测试覆盖缩放与 resize。
+- 原生 Metal 合成测试覆盖 RGBA/BGRA、透明度、裁剪、叠放、隐藏、旧帧保留和尺寸变化。用户已确认原生 Metal editor 运行正常。
 
 ## Playground
 
