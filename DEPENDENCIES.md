@@ -1,9 +1,10 @@
-# Local dependency revisions
+# Dependency revisions
 
-- kasane-2d: `b7aab701b977ce85febeab9d313f463e5ef7b344`
-- gpui-ce upstream base: `17d9c8e8fdb30a329d817ca06bff424e8e848f1a`
-- gpui-ce fork: https://github.com/pakholeung37/gpui-ce/tree/kasane/wgpu-macos
+- GPUI Kit 0.6.5: official `https://github.com/longbridge/gpui-kit`, pinned to `5059de47a6560fdbe24e32cd91b45d6aa6849695`.
+- GPUI family: `gpui-pre 0.3.6`, selected by Kit; no local compatibility patches.
+- kasane-2d: local `../kesane-2d`, validated revision `b7aab701b977ce85febeab9d313f463e5ef7b344`.
+- Kasane renderer: wgpu 29, independent device; CPU readback bridge into GPUI images.
 
-Use the fork branch above, not upstream main: the editor enables its opt-in macOS wgpu feature.
+All three workspace crates use the root `Cargo.lock`. Use `--locked` when building and testing. No gpui-ce dependency or sibling GPUI checkout is required.
 
-Validated fork commit: `02d89b2f97fbd526b10d20bd7689bbd9f1408393`.
+The former gpui-ce shared-texture experiment is preserved in Git history through `3d1ef63`; its separate fork is no longer part of this workspace's build.

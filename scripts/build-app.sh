@@ -17,10 +17,11 @@ case "${1:-editor}" in
     exit 2
     ;;
 esac
-cargo build -p "$package"
+cargo build --locked -p "$package"
+binary="target/debug/$package"
 app="$PWD/target/$name.app"
 mkdir -p "$app/Contents/MacOS"
-cp "target/debug/$package" "$app/Contents/MacOS/$package"
+cp "$binary" "$app/Contents/MacOS/$package"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

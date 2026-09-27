@@ -5,9 +5,4 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-gpui.workspace = true
-gpui-platform.workspace = true
-ui.workspace = true
-
-[dev-dependencies]
-gpui = { workspace = true, features = ["test-support"] }
+gpui-kit.workspace = true

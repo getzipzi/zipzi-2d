@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/editor", "crates/editor-scene", "crates/ui", "crates/component-playground"]
+members = ["crates/editor", "crates/editor-scene", "crates/component-playground"]
 resolver = "3"
 
 [workspace.package]
@@ -9,16 +9,16 @@ license = "MIT"
 
 [workspace.dependencies]
 anyhow = "1"
+gpui-kit = { git = "https://github.com/longbridge/gpui-kit", rev = "5059de47a6560fdbe24e32cd91b45d6aa6849695" }
+async-channel = "2"
+image = { version = "0.25", default-features = false }
+pollster = "0.4"
 wgpu = "29"
-gpui = { package = "gpui-ce", path = "../gpui-ce/crates/gpui" }
-gpui-elements = { package = "gpui_ce_elements", path = "../gpui-ce/crates/gpui_elements" }
-gpui-platform = { package = "gpui_ce_platform", path = "../gpui-ce/crates/gpui_platform", features = ["wgpu", "font-kit"] }
-gpui-wgpu = { package = "gpui_ce_wgpu", path = "../gpui-ce/crates/gpui_wgpu", features = ["custom-gpu"] }
 kasane-core = { path = "../kesane-2d/modules/kasane-core" }
 kasane-render = { path = "../kesane-2d/modules/kasane-render" }
 kasane-render-wgpu = { path = "../kesane-2d/modules/kasane-render-wgpu" }
 editor-scene = { path = "crates/editor-scene" }
-ui = { path = "crates/ui" }
 
 [profile.dev]
-debug = 1
+debug = 0
+incremental = false
