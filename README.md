@@ -1,10 +1,11 @@
 # Kasane Editor
 
-最小 Rust monorepo，验证 **GPUI Kit + kasane-render-metal** 的 macOS editor 组装。
+基于 **GPUI Kit + kasane-sdk + kasane-render-metal** 的 macOS 编辑器。
 
 ```text
-crates/editor                Kit 工具栏、名称输入、属性栏与 Kasane 预览
-crates/editor-scene          独立于 UI 的 Kasane 场景与原生 Metal 渲染
+crates/editor                Kit 界面、文件对话框与 GPUI 预览合成
+crates/editor-scene          SDK 文档会话、编辑事务、CPU 场景快照与视口状态
+crates/editor-render         原生 Metal 渲染与纹理缓存，不包含文档编辑和项目 IO
 crates/component-playground  Kit 组件示例、状态反馈与 Rust 用法
 ```
 
@@ -23,6 +24,8 @@ Kasane checkout 必须包含 `modules/kasane-render-metal` 及对应的公共渲
 ```sh
 cargo run --locked -p kasane-editor
 cargo run --locked -p component-playground
+./scripts/dev.sh                 # 保存后编译成功即在后台重启编辑器
+./scripts/dev.sh playground      # 同样方式运行组件 Playground
 cargo test --locked --workspace
 cargo fmt --all -- --check
 
@@ -32,11 +35,24 @@ cargo fmt --all -- --check
 
 应用输出为 `target/Kasane Editor.app` 和 `target/Kasane Component Playground.app`。无需后端 feature 参数。
 
+监听编译需要先安装 `watchexec`（macOS 可运行 `brew install watchexec`）。脚本监听本仓库及相邻 Kasane 模块中的 Rust 源码和 Cargo 清单，保存后编译；只有编译成功才在后台启动新版并关闭旧版，避免新窗口抢走当前应用的焦点。编译失败时旧版继续运行。完整编译输出写入 `target/dev-build-*.log`，应用输出写入 `target/dev-run-*.log`。这是进程重启，编辑器中尚未保存的文档更改会丢失；改 UI 前先保存文档。脚本仅在本次开发会话开启增量编译，不改动项目的 Cargo profile。
+
 ## 渲染与交互
 
-GPUI 使用原生 Metal；Kasane 共享 GPUI 的 device/queue，后台绘制不可变 RGBA 纹理，由 GPUI 按正常场景顺序直接合成。显示路径没有 CPU 图像回读。预览固定为 768×768，放大窗口时可能变软。
+GPUI 使用原生 Metal；Kasane 共享 GPUI 的 device/queue，后台绘制不可变 RGBA 纹理，由 GPUI 按正常场景顺序直接合成。显示路径没有 CPU 图像回读。预览分辨率随画布区域和显示缩放倍率调整；导入纹理使用线性过滤和 mipmap。
 
-Input、Checkbox、Slider、Button、Dialog、主题和 Root 都使用 Kit 原有实现。名称输入同步图层列表；缩放、透明度和可见性更新场景。所有更改仅保留在当前窗口，尚无保存、导入、撤销、时间轴或停靠布局。
+编辑器启动时显示空白项目，不预置图层或纹理。打开或导入项目后，图层列表来自 SDK 文档，支持选择网格并编辑名称、透明度和可见性。
+
+- 名称输入实时预览，Enter 或移开焦点提交，Esc 取消；一次输入会话形成一条历史记录。
+- 透明度拖动实时预览，释放鼠标后提交为一次编辑。撤销与重做同时恢复属性和画布。
+- 打开 Kasane 项目目录或 `project.kasane.json`；保存/另存为通过 SDK 发布项目目录和纹理资源，保留当前撤销历史。
+- 从原生“文件”菜单导入 `model3.json` 或分层 PSD。model3 成为待保存的文档；PSD 导入时选择新项目目录，由 SDK 写入图层和纹理。
+- 缩放和重置视图只影响视口，不修改模型，也不进入撤销历史。
+- macOS 原生菜单栏提供文件、编辑、视图和窗口菜单。支持 ⌘O 打开、⌘S 保存、⇧⌘S 另存为、⌘Z 撤销、⇧⌘Z 重做，以及 ⌘+/⌘−/⌘0 缩放和重置视图。
+- 名称输入框获得焦点时，编辑菜单操作文本（包括剪切、拷贝、粘贴、全选）；点击画布后，撤销/重做操作文档。⌘W 关闭、⌘Q 退出沿用未保存提示。
+- 打开、导入其他项目或关闭窗口时提示未保存的更改。打开或导入失败保留当前文档；当前版本要求项目纹理完整可读。
+
+Input、Checkbox、Slider、Button、主题和 Root 使用 Kit 原有实现。尚无网格绘制工具、时间轴或停靠布局。项目打开和导入在后台执行；保存目前同步执行，大项目可能短暂阻塞界面。详细分层见 [文档编辑架构](docs/document-editing.md)。
 
 Playground 提供 Button、Checkbox、Input、Slider、Tabs、Dialog、Typography 七页。UI 交互与视觉验证由用户手动完成，不使用 computer-use。
 

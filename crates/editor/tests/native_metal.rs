@@ -1,13 +1,23 @@
 //! Real native Metal composition without opening a window or automating UI.
 #![cfg(target_os = "macos")]
-use editor_scene::MetalTargetConfig;
-use editor_scene::{Document, MetalSceneRenderer};
+use editor_render::{MetalSceneRenderer, MetalTargetConfig};
+use editor_scene::{Document, SceneSnapshot, ViewState};
 use gpui_apple::metal_renderer::MetalRenderer;
 use gpui_kit::{
     Bounds, ContentMask, DevicePixels, PaintSurface, Quad, ScaledPixels, Scene, SurfaceSource,
     point, size,
 };
 use metal::MTLPixelFormat;
+#[path = "../../editor-scene/tests/support/mod.rs"]
+mod support;
+
+fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {
+    let (mut document, _source) = support::sample_document()?;
+    document.preview_opacity(opacity)?;
+    document.finish_edit()?;
+    document.set_visible(visible)?;
+    document.snapshot()
+}
 
 fn bounds(x: f32, y: f32, w: f32, h: f32) -> Bounds<ScaledPixels> {
     Bounds::new(
@@ -60,13 +70,16 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
             format: MTLPixelFormat::RGBA8Unorm,
         };
         let mut kasane = MetalSceneRenderer::new(gpu.device.clone(), config)?;
+        let mut blank = Document::new_blank()?;
+        kasane.draw(&gpu.queue, config, &blank.snapshot()?, ViewState::default())?;
+        let (mut document, _source) = support::sample_document()?;
+        document.preview_opacity(0.5)?;
+        document.finish_edit()?;
         let frame = kasane.draw(
             &gpu.queue,
             config,
-            Document {
-                opacity: 0.5,
-                ..Default::default()
-            },
+            &document.snapshot()?,
+            ViewState::default(),
         )?;
         assert!(std::ptr::eq(frame.device(), gpu.device.as_ref()));
         // No producer wait: GPUI uses the same queue and samples the published texture.
@@ -95,13 +108,12 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
                 image.get_pixel(112, 128)
             );
         }
+        document.set_visible(false)?;
         let hidden = kasane.draw(
             &gpu.queue,
             config,
-            Document {
-                visible: false,
-                ..Default::default()
-            },
+            &document.snapshot()?,
+            ViewState::default(),
         )?;
         let image = gpui.render_scene_to_image(
             &scene(hidden, 256., false),
@@ -124,7 +136,14 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
         }
         config.width = 128;
         config.height = 128;
-        let resized = kasane.draw(&gpu.queue, config, Document::default())?;
+        document.undo()?; // Undo visibility, then undo opacity using the same mesh/resource IDs.
+        document.undo()?;
+        let resized = kasane.draw(
+            &gpu.queue,
+            config,
+            &document.snapshot()?,
+            ViewState::default(),
+        )?;
         let image = gpui.render_scene_to_image(
             &scene(resized, 128., false),
             size(DevicePixels(128), DevicePixels(128)),
@@ -145,10 +164,8 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
         let smaller = kasane.draw(
             &gpu.queue,
             config,
-            Document {
-                zoom: 0.5,
-                ..Default::default()
-            },
+            &document.snapshot()?,
+            ViewState { zoom: 0.5 },
         )?;
         let image = gpui.render_scene_to_image(
             &scene(smaller, 128., false),
@@ -159,6 +176,14 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
             small_coverage < full_coverage / 2,
             "zoom must reduce rendered area"
         );
+        config.width = 192;
+        let wide = kasane.draw(
+            &gpu.queue,
+            config,
+            &document.snapshot()?,
+            ViewState::default(),
+        )?;
+        assert_eq!((wide.width(), wide.height()), (192, 128));
         Ok(())
     })
 }
@@ -176,14 +201,8 @@ fn native_metal_preserves_premultiplied_alpha_for_transparent_targets() -> anyho
                 format,
             };
             let mut kasane = MetalSceneRenderer::new(gpu.device.clone(), config)?;
-            let texture = kasane.draw(
-                &gpu.queue,
-                config,
-                Document {
-                    opacity: 0.5,
-                    ..Default::default()
-                },
-            )?;
+            let texture =
+                kasane.draw(&gpu.queue, config, &input(0.5, true)?, ViewState::default())?;
             let mut scene = Scene::default();
             scene.insert_primitive(PaintSurface {
                 order: 0,

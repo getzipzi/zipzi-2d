@@ -202,9 +202,10 @@ impl Render for Playground {
     }
 }
 fn main() {
+    let background_launch = std::env::var_os("KASANE_DEV_BACKGROUND").is_some();
     gpui_kit::application()
         .with_assets(gpui_kit::assets::Assets)
-        .run(|cx| {
+        .run(move |cx| {
             gpui_kit::init(cx);
             Theme::change(ThemeMode::Dark, None, cx);
             cx.on_window_closed(|cx, _| {
@@ -231,6 +232,11 @@ fn main() {
                 |window, cx| cx.new(|cx| Playground::new(window, cx)),
             )
             .expect("open playground");
-            cx.activate(true);
+            if let Some(pid_file) = std::env::var_os("KASANE_DEV_PID_FILE") {
+                let _ = std::fs::write(pid_file, std::process::id().to_string());
+            }
+            if !background_launch {
+                cx.activate(true);
+            }
         });
 }

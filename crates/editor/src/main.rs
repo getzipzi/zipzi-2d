@@ -1,93 +1,178 @@
+mod menus;
 mod preview;
+mod project;
+mod ui;
 
-use editor_scene::Document;
+use editor_scene::{Document, ViewState};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable, Theme, ThemeMode, WindowExt,
-    button::{Button, ButtonVariants},
-    checkbox::Checkbox,
-    input::{Input, InputEvent, InputState},
-    slider::{Slider, SliderEvent, SliderState, SliderValue},
+    Theme, ThemeMode,
+    input::{InputEvent, InputState},
+    slider::{SliderEvent, SliderState, SliderValue},
 };
 use gpui_kit::{prelude::*, *};
 use std::sync::mpsc;
 
 struct Editor {
+    focus: FocusHandle,
     document: Document,
+    view: ViewState,
     name: Entity<InputState>,
     opacity: Entity<SliderState>,
     frame: Option<preview::Image>,
-    error: Option<String>,
-    requests: Option<mpsc::Sender<Document>>,
+    edit_error: Option<String>,
+    render_error: Option<String>,
+    message: String,
+    busy: bool,
+    revision: u64,
+    preview_target: editor_render::MetalTargetConfig,
+    requests: Option<mpsc::Sender<preview::Request>>,
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
 impl Editor {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let name = cx.new(|cx| {
-            InputState::new(window, cx)
-                .default_value("Diamond")
-                .placeholder("图层名称")
-        });
+        let document = Document::new_blank().expect("create blank document");
+        let name = cx.new(|cx| InputState::new(window, cx).placeholder("Layer name"));
         let opacity = cx.new(|_| {
             SliderState::new()
                 .min(0.)
                 .max(100.)
                 .step(1.)
-                .default_value(100.)
+                .default_value(0.)
         });
         let subscriptions = vec![
-            cx.subscribe(&name, |_, _, event: &InputEvent, cx| {
-                if matches!(event, InputEvent::Change) {
-                    cx.notify();
-                }
-            }),
-            cx.subscribe(&opacity, |this: &mut Self, _, event: &SliderEvent, cx| {
-                if let SliderEvent::Change(SliderValue::Single(value)) = event {
-                    this.document.opacity = value / 100.;
-                    this.redraw(cx);
-                }
-            }),
+            cx.subscribe_in(
+                &name,
+                window,
+                |this: &mut Self, input, event: &InputEvent, window, cx| {
+                    if this.busy {
+                        return;
+                    }
+                    let result = match event {
+                        InputEvent::Change => {
+                            this.document.preview_name(input.read(cx).value().as_ref())
+                        }
+                        InputEvent::PressEnter { .. } | InputEvent::Blur => {
+                            this.document.finish_edit()
+                        }
+                        _ => return,
+                    };
+                    this.complete_edit(result, window, cx, false);
+                },
+            ),
+            cx.subscribe_in(
+                &opacity,
+                window,
+                |this: &mut Self, _, event: &SliderEvent, window, cx| {
+                    if this.busy {
+                        return;
+                    }
+                    let result = match event {
+                        SliderEvent::Change(SliderValue::Single(value)) => {
+                            this.document.preview_opacity(value / 100.)
+                        }
+                        SliderEvent::Release(_) => this.document.finish_edit(),
+                        _ => return,
+                    };
+                    this.complete_edit(result, window, cx, false);
+                },
+            ),
         ];
+        let focus = cx.focus_handle();
+        window.focus(&focus, cx);
         let mut editor = Self {
-            document: Document::default(),
+            focus,
+            document,
+            view: ViewState::default(),
             name,
             opacity,
             frame: None,
-            error: None,
+            edit_error: None,
+            render_error: None,
+            message: "Open or import a project to get started.".into(),
+            busy: false,
+            revision: 0,
+            preview_target: preview::target_config(window),
             requests: None,
             gpu_device: None,
             _frames: None,
             _subscriptions: subscriptions,
         };
+        let entity = cx.weak_entity();
+        window.on_window_should_close(cx, move |window, cx| {
+            entity
+                .update(cx, |this, cx| {
+                    if this.busy {
+                        return false;
+                    }
+                    if !this.document.modified() {
+                        return true;
+                    }
+                    this.confirm_close(window, cx);
+                    false
+                })
+                .unwrap_or(true)
+        });
         editor.connect_preview(window, cx);
         editor
     }
+
+    fn sync_controls(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let layer = self.document.selected_layer();
+        let name = layer.as_ref().map_or("", |layer| layer.name.as_str());
+        if self.name.read(cx).value().as_ref() != name {
+            self.name
+                .update(cx, |state, cx| state.set_value(name.to_owned(), window, cx));
+        }
+        let opacity = layer.as_ref().map_or(0., |layer| layer.opacity * 100.);
+        self.opacity
+            .update(cx, |state, cx| state.set_value(opacity, window, cx));
+    }
+
+    fn complete_edit(
+        &mut self,
+        result: anyhow::Result<()>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        sync: bool,
+    ) {
+        let failed = result.is_err();
+        self.edit_error = result.err().map(|error| error.to_string());
+        if sync || failed {
+            self.sync_controls(window, cx);
+        }
+        self.redraw(cx);
+    }
+
     fn connect_preview(&mut self, window: &Window, cx: &mut Context<Self>) {
-        // Drop the old receiver before replacing a lost GPU's producer.
         self._frames = None;
         self.requests = None;
         self.frame = None;
         let (requests, frames, device) = match preview::start(window) {
             Ok(connection) => connection,
             Err(error) => {
-                self.error = Some(error.to_string());
+                self.render_error = Some(error.to_string());
                 return;
             }
         };
         self.gpu_device = device;
-        self.error = None;
+        self.render_error = None;
         self._frames = Some(cx.spawn(async move |this, cx| {
             while let Ok(frame) = frames.recv().await {
                 if this
                     .update(cx, |this, cx| {
-                        match frame {
-                            Ok(frame) => {
-                                this.frame = Some(frame);
-                                this.error = None;
+                        // Ignore old frames, including frames from a document replaced by Open.
+                        if frame.revision != 0 && frame.revision != this.revision {
+                            return;
+                        }
+                        match frame.image {
+                            Ok(image) => {
+                                this.frame = Some(image);
+                                this.render_error = None;
                             }
                             Err(error) => {
-                                this.error = Some(error);
+                                this.render_error = Some(error);
                             }
                         }
                         cx.notify();
@@ -98,97 +183,41 @@ impl Editor {
                 }
             }
         }));
-        let _ = requests.send(self.document);
         self.requests = Some(requests);
+        self.redraw(cx);
     }
+
     fn redraw(&mut self, cx: &mut Context<Self>) {
-        if self
-            .requests
-            .as_ref()
-            .is_none_or(|requests| requests.send(self.document).is_err())
-        {
-            self.error = Some("预览渲染器已停止，请重新打开窗口".into());
+        self.revision += 1;
+        match self.document.snapshot() {
+            Ok(scene) => {
+                let request = preview::Request {
+                    revision: self.revision,
+                    scene,
+                    view: self.view,
+                    target: self.preview_target,
+                };
+                if self
+                    .requests
+                    .as_ref()
+                    .is_none_or(|requests| requests.send(request).is_err())
+                {
+                    self.render_error = Some("Preview renderer stopped. Reopen the window.".into());
+                }
+            }
+            Err(error) => self.render_error = Some(error.to_string()),
         }
         cx.notify();
     }
 }
-impl Render for Editor {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        if preview::device_changed(window, self.gpu_device.as_ref()) {
-            self.connect_preview(window, cx);
-        }
-        let theme = cx.theme();
-        let name = self.name.read(cx).value();
-        let layer_name = if name.is_empty() {
-            SharedString::from("未命名图层")
-        } else {
-            name
-        };
-        let mut preview = div()
-            .flex_1()
-            .min_w_0()
-            .h_full()
-            .p_6()
-            .bg(theme.muted)
-            .flex()
-            .items_center()
-            .justify_center();
-        if let Some(error) = &self.error {
-            preview = preview.child(div().text_color(theme.danger).child(error.clone()));
-        } else if let Some(frame) = &self.frame {
-            preview = preview.child(preview::element(frame.clone()));
-        } else {
-            preview = preview.child("正在初始化预览…");
-        }
-        div().size_full().flex().flex_col().bg(theme.background).text_color(theme.foreground).text_sm()
-            .child(div().h_16().flex_shrink_0().px_4().flex().items_center().gap_2().border_b_1().border_color(theme.border)
-                .child(div().font_weight(FontWeight::SEMIBOLD).mr_4().child("Kasane"))
-                .child(Button::new("zoom-out").label("缩小").small().disabled(self.document.zoom <= 0.25).on_click(cx.listener(|this, _, _, cx| {
-                    this.document.zoom = (this.document.zoom - 0.25).max(0.25); this.redraw(cx);
-                })))
-                .child(div().w_12().text_center().child(format!("{:.0}%", self.document.zoom * 100.)))
-                .child(Button::new("zoom-in").label("放大").small().disabled(self.document.zoom >= 3.).on_click(cx.listener(|this, _, _, cx| {
-                    this.document.zoom = (this.document.zoom + 0.25).min(3.); this.redraw(cx);
-                })))
-                .child(Button::new("reset").label("重置预览").small().on_click(cx.listener(|this, _, window, cx| {
-                    this.document = Document::default();
-                    this.opacity.update(cx, |state, cx| state.set_value(100., window, cx));
-                    this.redraw(cx);
-                })))
-                .child(div().flex_1())
-                .child(Button::new("theme").label("切换主题").ghost().small().on_click(|_, window, cx| {
-                    let mode = if cx.theme().is_dark() { ThemeMode::Light } else { ThemeMode::Dark };
-                    Theme::change(mode, Some(window), cx);
-                }))
-                .child(Button::new("about").label("关于…").ghost().small().on_click(|_, window, cx| {
-                    window.open_dialog(cx, |dialog, _, _| dialog.title("Kasane 组件原型").child("使用 GPUI Kit 组装界面。场景由 Kasane 绘制；当前原型不保存文档。"));
-                })))
-            .child(div().flex().flex_1().min_h_0()
-                .child(div().w_48().flex_shrink_0().h_full().p_4().flex().flex_col().gap_3().border_r_1().border_color(theme.border).bg(theme.sidebar)
-                    .child(div().font_weight(FontWeight::SEMIBOLD).child("图层"))
-                    .child(div().text_color(theme.muted_foreground).text_xs().child("当前图层"))
-                    .child(div().truncate().child(layer_name))
-                    .child(div().text_color(theme.muted_foreground).text_xs().child(if self.document.visible { "可见" } else { "已隐藏" })))
-                .child(preview)
-                .child(div().w_64().flex_shrink_0().h_full().p_4().flex().flex_col().gap_4().border_l_1().border_color(theme.border)
-                    .child(div().font_weight(FontWeight::SEMIBOLD).child("属性"))
-                    .child(div().flex().flex_col().gap_2().child("名称").child(Input::new(&self.name)))
-                    .child(Checkbox::new("visible").label("显示图层").checked(self.document.visible).on_change(cx.listener(|this, checked, _, cx| {
-                        this.document.visible = *checked; this.redraw(cx);
-                    })))
-                    .child(div().flex().flex_col().gap_3()
-                        .child(format!("不透明度  {:.0}%", self.document.opacity * 100.))
-                        .child(Slider::new(&self.opacity)))
-                    .child(div().text_xs().text_color(theme.muted_foreground).child("网格 · 4 个顶点 · 2 个三角形"))))
-            .child(div().h_8().flex_shrink_0().px_4().flex().items_center().border_t_1().border_color(theme.border).text_xs().text_color(theme.muted_foreground)
-                .child("组件原型 · 更改仅保留在当前窗口"))
-    }
-}
+
 fn main() {
+    let background_launch = std::env::var_os("KASANE_DEV_BACKGROUND").is_some();
     gpui_kit::application()
         .with_assets(gpui_kit::assets::Assets)
-        .run(|cx| {
+        .run(move |cx| {
             gpui_kit::init(cx);
+            menus::init(cx);
             Theme::change(ThemeMode::Dark, None, cx);
             cx.on_window_closed(|cx, _| {
                 if cx.windows().is_empty() {
@@ -214,6 +243,11 @@ fn main() {
                 |window, cx| cx.new(|cx| Editor::new(window, cx)),
             )
             .expect("open kit editor");
-            cx.activate(true);
+            if let Some(pid_file) = std::env::var_os("KASANE_DEV_PID_FILE") {
+                let _ = std::fs::write(pid_file, std::process::id().to_string());
+            }
+            if !background_launch {
+                cx.activate(true);
+            }
         });
 }

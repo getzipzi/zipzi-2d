@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/editor", "crates/editor-scene", "crates/component-playground"]
+members = ["crates/editor", "crates/editor-scene", "crates/editor-render", "crates/component-playground"]
 resolver = "3"
 exclude = ["vendor/gpui-pre", "vendor/gpui-pre-macos", "vendor/gpui-pre-apple"]
 
@@ -12,16 +12,21 @@ license = "MIT"
 anyhow = "1"
 metal = "0.33"
 objc2 = "0.6"
-kasane-render-metal = { path = "../kesane-2d/modules/kasane-render-metal" }
+kasane-render-metal = { path = "../kasane-2d/modules/kasane-render-metal" }
 gpui-kit = { git = "https://github.com/longbridge/gpui-kit", rev = "5059de47a6560fdbe24e32cd91b45d6aa6849695" }
 async-channel = "2"
-kasane-core = { path = "../kesane-2d/modules/kasane-core" }
-kasane-render = { path = "../kesane-2d/modules/kasane-render" }
+kasane-core = { path = "../kasane-2d/modules/kasane-core" }
+kasane-sdk = { path = "../kasane-2d/modules/kasane-sdk" }
+kasane-project = { path = "../kasane-2d/modules/kasane-project" }
+kasane-render = { path = "../kasane-2d/modules/kasane-render" }
 editor-scene = { path = "crates/editor-scene" }
+editor-render = { path = "crates/editor-render" }
+tempfile = "3"
+uuid = { version = "1", features = ["v4"] }
 
 [profile.dev]
 debug = 0
-incremental = false
+incremental = true
 
 [patch.crates-io]
 gpui-pre = { path = "vendor/gpui-pre" }

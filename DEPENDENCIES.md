@@ -4,6 +4,7 @@
 - GPUI 0.3.6: three crates patched through root `[patch.crates-io]`: `gpui-pre`, `gpui-pre-macos`, `gpui-pre-apple`. Snapshot: Zed `bcf6582ce3500df93a8a39366640173e6786cea6`.
 - Kasane: local `../kesane-2d`, including `kasane-render-metal` and its backend-neutral changes. These changes were uncommitted when integrated; the earlier revision `b7aab701b977ce85febeab9d313f463e5ef7b344` alone does not contain the required backend.
 - Rendering: native Metal via `metal 0.33`, with GPUI's device and command queue shared by Kasane.
+- Authoring: `editor-scene` depends on the local `kasane-sdk` for document transactions, history and project IO, and `kasane-project` for decoding validated assets. It has no GPU dependency. `editor-render` owns the direct `kasane-render` / `kasane-render-metal` dependencies.
 
 All workspace crates use the root `Cargo.lock`. Build and test with `--locked`.
 The editor supports macOS. There are no application backend switches or CPU
