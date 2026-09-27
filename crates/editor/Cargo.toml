@@ -11,3 +11,4 @@ gpui-platform.workspace = true
 gpui-wgpu.workspace = true
 editor-scene.workspace = true
 wgpu.workspace = true
+unicode-segmentation = "1.12"

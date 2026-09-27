@@ -2783,6 +2783,7 @@ dependencies = [
  "gpui-ce",
  "gpui_ce_platform",
  "gpui_ce_wgpu",
+ "unicode-segmentation",
  "wgpu",
 ]
 

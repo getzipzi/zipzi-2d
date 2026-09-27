@@ -29,7 +29,7 @@ cargo fmt --all -- --check
 ./scripts/build-app.sh
 ```
 
-依赖使用 workspace path，方便同时修改三个仓库。`Cargo.lock` 锁定 registry 依赖；相邻仓库版本见 `DEPENDENCIES.md`。本仓库没有复制外部项目源码。
+依赖使用 workspace path，方便同时修改三个仓库。`Cargo.lock` 锁定 registry 依赖；相邻仓库版本见 `DEPENDENCIES.md`。外部库仍使用相邻 checkout；组件实验页另保留了一份带许可的上游输入框示例。
 
 ## 验证内容
 
@@ -49,3 +49,9 @@ cargo fmt --all -- --check
 ## 验证记录
 
 2026-09-27，Apple M4 / macOS：`cargo test --workspace`、格式检查通过；原生窗口实测首帧、文字、纹理合成、缩放、透明度、隐藏和重置正常。默认非 wgpu 的 gpui-ce macOS 路径也通过 `cargo check`。
+
+## 常用组件验证页
+
+点击工具栏 **Components** 可测试按钮、输入框、复选框、滑块、下拉菜单、标签页、树列表、滚动裁剪和弹窗。Typography 页检查多语言字体和长文字截断；Compact / Full size 切换窗口尺寸。
+
+实测结果与未覆盖范围见 [组件检查记录](docs/component-checks.md)。文本编辑内核取自 gpui-ce 的 Apache-2.0 示例，许可保留在 `crates/editor/src/vendor`。
