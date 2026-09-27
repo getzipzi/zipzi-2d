@@ -27,10 +27,10 @@ impl Render for Editor {
             .and_then(|path| path.file_name())
             .map(|name| name.to_string_lossy().into_owned())
             .or_else(|| self.document.import_name().map(str::to_owned))
-            .unwrap_or_else(|| "Untitled Project".into());
+            .unwrap_or_else(|| t!("editor.untitled_project").into_owned());
         let status = self.edit_error.clone().unwrap_or_else(|| {
             if self.busy {
-                "Processing project…".into()
+                t!("editor.processing").into_owned()
             } else {
                 self.message.clone()
             }
@@ -54,7 +54,7 @@ impl Render for Editor {
         } else if let Some(frame) = &self.frame {
             canvas = canvas.child(preview::element(frame.clone()));
         } else {
-            canvas = canvas.child("Starting preview…");
+            canvas = canvas.child(t!("editor.starting_preview"));
         }
         let layers = self.document.layers();
         self.menu_actions(cx)
@@ -88,9 +88,9 @@ impl Render for Editor {
                         "{}{}",
                         title,
                         if self.document.modified() {
-                            " · Unsaved"
+                            t!("editor.unsaved")
                         } else {
-                            ""
+                            "".into()
                         }
                     )))
                     .child(
@@ -119,7 +119,7 @@ impl Render for Editor {
                     )
                     .child(
                         Button::new("reset-view")
-                            .label("Reset View")
+                            .label(t!("menu.reset_view"))
                             .small()
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.reset_view(cx);
@@ -145,16 +145,20 @@ impl Render for Editor {
                             .border_r_1()
                             .border_color(theme.border)
                             .bg(theme.sidebar)
-                            .child(div().font_weight(FontWeight::SEMIBOLD).child("Layers"))
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .child(t!("editor.layers")),
+                            )
                             .children(layers.into_iter().map(|layer| {
                                 let selected =
                                     self.document.selected_id() == Some(layer.id.as_str());
                                 let id = layer.id.clone();
                                 Button::new(SharedString::from(layer.id))
                                     .label(if layer.name.is_empty() {
-                                        "Untitled Layer".into()
+                                        t!("editor.untitled_layer")
                                     } else {
-                                        layer.name
+                                        layer.name.into()
                                     })
                                     .small()
                                     .w_full()
@@ -178,18 +182,22 @@ impl Render for Editor {
                             .gap_4()
                             .border_l_1()
                             .border_color(theme.border)
-                            .child(div().font_weight(FontWeight::SEMIBOLD).child("Properties"))
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .child(t!("editor.properties")),
+                            )
                             .child(
                                 div()
                                     .flex()
                                     .flex_col()
                                     .gap_2()
-                                    .child("Name")
+                                    .child(t!("editor.name"))
                                     .child(Input::new(&self.name).disabled(disabled)),
                             )
                             .child(
                                 Checkbox::new("visible")
-                                    .label("Visible")
+                                    .label(SharedString::from(t!("editor.visible")))
                                     .checked(selected.as_ref().is_some_and(|layer| layer.visible))
                                     .disabled(disabled)
                                     .on_change(cx.listener(|this, checked, window, cx| {
@@ -202,9 +210,14 @@ impl Render for Editor {
                                     .flex()
                                     .flex_col()
                                     .gap_3()
-                                    .child(format!(
-                                        "Opacity  {:.0}%",
-                                        selected.as_ref().map_or(0., |layer| layer.opacity * 100.)
+                                    .child(t!(
+                                        "editor.opacity",
+                                        percent = format!(
+                                            "{:.0}",
+                                            selected
+                                                .as_ref()
+                                                .map_or(0., |layer| layer.opacity * 100.)
+                                        )
                                     ))
                                     .child(Slider::new(&self.opacity).disabled(disabled)),
                             )
@@ -212,15 +225,16 @@ impl Render for Editor {
                                 div()
                                     .text_xs()
                                     .text_color(theme.muted_foreground)
-                                    .child("Name: Enter to apply, Esc to cancel"),
+                                    .child(t!("editor.name_help")),
                             )
                             .child(div().text_xs().text_color(theme.muted_foreground).child(
                                 selected.as_ref().map_or_else(
-                                    || "No layer selected".into(),
+                                    || t!("editor.no_layer"),
                                     |layer| {
-                                        format!(
-                                            "Mesh · {} vertices · {} triangles",
-                                            layer.vertices, layer.triangles
+                                        t!(
+                                            "editor.mesh_info",
+                                            vertices = layer.vertices,
+                                            triangles = layer.triangles
                                         )
                                     },
                                 ),

@@ -3612,7 +3612,10 @@ dependencies = [
  "kasane-sdk",
  "metal",
  "objc2 0.6.4",
+ "rust-i18n",
+ "sys-locale",
  "tempfile",
+ "toml 0.8.23",
  "uuid",
 ]
 

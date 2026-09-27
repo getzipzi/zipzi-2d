@@ -48,47 +48,47 @@ pub(super) fn init(cx: &mut App) {
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());
     cx.on_action(|_: &ShowAll, cx| cx.unhide_other_apps());
     cx.set_menus([
-        Menu::new("Kasane Editor").items([
-            MenuItem::action("About Kasane Editor", About),
+        Menu::new(t!("app.title")).items([
+            MenuItem::action(t!("app.about"), About),
             MenuItem::separator(),
-            MenuItem::os_submenu("Services", SystemMenuType::Services),
+            MenuItem::os_submenu(t!("menu.services"), SystemMenuType::Services),
             MenuItem::separator(),
-            MenuItem::action("Hide Kasane Editor", Hide),
-            MenuItem::action("Hide Others", HideOthers),
-            MenuItem::action("Show All", ShowAll),
+            MenuItem::action(t!("app.hide"), Hide),
+            MenuItem::action(t!("app.hide_others"), HideOthers),
+            MenuItem::action(t!("app.show_all"), ShowAll),
             MenuItem::separator(),
-            MenuItem::action("Quit Kasane Editor", Quit),
+            MenuItem::action(t!("app.quit"), Quit),
         ]),
-        Menu::new("File").items([
-            MenuItem::action("Open…", OpenProject),
+        Menu::new(t!("menu.file")).items([
+            MenuItem::action(t!("menu.open"), OpenProject),
             MenuItem::separator(),
-            MenuItem::action("Import model3…", ImportModel3),
-            MenuItem::action("Import PSD…", ImportPsd),
+            MenuItem::action(t!("menu.import_model3"), ImportModel3),
+            MenuItem::action(t!("menu.import_psd"), ImportPsd),
             MenuItem::separator(),
-            MenuItem::action("Save", SaveProject),
-            MenuItem::action("Save As…", SaveProjectAs),
+            MenuItem::action(t!("menu.save"), SaveProject),
+            MenuItem::action(t!("menu.save_as"), SaveProjectAs),
             MenuItem::separator(),
-            MenuItem::action("Close Window", CloseWindow),
+            MenuItem::action(t!("menu.close_window"), CloseWindow),
         ]),
-        Menu::new("Edit").items([
-            MenuItem::os_action("Undo", input::Undo, OsAction::Undo),
-            MenuItem::os_action("Redo", input::Redo, OsAction::Redo),
+        Menu::new(t!("menu.edit")).items([
+            MenuItem::os_action(t!("menu.undo"), input::Undo, OsAction::Undo),
+            MenuItem::os_action(t!("menu.redo"), input::Redo, OsAction::Redo),
             MenuItem::separator(),
-            MenuItem::os_action("Cut", input::Cut, OsAction::Cut),
-            MenuItem::os_action("Copy", input::Copy, OsAction::Copy),
-            MenuItem::os_action("Paste", input::Paste, OsAction::Paste),
-            MenuItem::os_action("Select All", input::SelectAll, OsAction::SelectAll),
+            MenuItem::os_action(t!("menu.cut"), input::Cut, OsAction::Cut),
+            MenuItem::os_action(t!("menu.copy"), input::Copy, OsAction::Copy),
+            MenuItem::os_action(t!("menu.paste"), input::Paste, OsAction::Paste),
+            MenuItem::os_action(t!("menu.select_all"), input::SelectAll, OsAction::SelectAll),
         ]),
-        Menu::new("View").items([
-            MenuItem::action("Zoom In", ZoomIn),
-            MenuItem::action("Zoom Out", ZoomOut),
-            MenuItem::action("Reset View", ResetView),
+        Menu::new(t!("menu.view")).items([
+            MenuItem::action(t!("menu.zoom_in"), ZoomIn),
+            MenuItem::action(t!("menu.zoom_out"), ZoomOut),
+            MenuItem::action(t!("menu.reset_view"), ResetView),
             MenuItem::separator(),
-            MenuItem::action("Toggle Theme", ToggleTheme),
+            MenuItem::action(t!("menu.toggle_theme"), ToggleTheme),
         ]),
-        Menu::new("Window").items([
-            MenuItem::action("Minimize", Minimize),
-            MenuItem::action("Zoom Window", ZoomWindow),
+        Menu::new(t!("menu.window")).items([
+            MenuItem::action(t!("menu.minimize"), Minimize),
+            MenuItem::action(t!("menu.zoom_window"), ZoomWindow),
         ]),
     ]);
 }
@@ -127,9 +127,7 @@ impl Editor {
                     .on_action(cx.listener(|this, _: &Quit, window, cx| this.close(window, cx)))
                     .on_action(|_: &About, window, cx| {
                         window.open_dialog(cx, |dialog, _, _| {
-                            dialog
-                                .title("Kasane Editor")
-                                .child("A 2D model editor built with the Kasane SDK.")
+                            dialog.title(t!("app.title")).child(t!("app.description"))
                         });
                     })
             })

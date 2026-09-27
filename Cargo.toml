@@ -21,6 +21,8 @@ kasane-project = { path = "../kasane-2d/modules/kasane-project" }
 kasane-render = { path = "../kasane-2d/modules/kasane-render" }
 editor-scene = { path = "crates/editor-scene" }
 editor-render = { path = "crates/editor-render" }
+rust-i18n = "4.2"
+sys-locale = "0.3"
 tempfile = "3"
 uuid = { version = "1", features = ["v4"] }
 

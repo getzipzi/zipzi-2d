@@ -35,7 +35,10 @@ impl Editor {
         // The SDK publishes a directory containing the manifest and its assets.
         let suggested = format!(
             "{}.kasane",
-            self.document.import_name().unwrap_or("Untitled")
+            self.document
+                .import_name()
+                .map(str::to_owned)
+                .unwrap_or_else(|| t!("project.untitled").into_owned())
         );
         let picker = cx.prompt_for_new_path(&directory, Some(&suggested));
         self.busy = true;
@@ -63,13 +66,12 @@ impl Editor {
                 let mut notices = receipt.warnings;
                 notices.extend(receipt.history_warnings);
                 if !receipt.durable {
-                    notices
-                        .push("The project was published, but durability was not confirmed".into());
+                    notices.push(t!("project.durability_warning").into_owned());
                 }
                 self.message = if notices.is_empty() {
-                    format!("Saved {}", receipt.manifest.display())
+                    t!("project.saved", path = receipt.manifest.display()).into_owned()
                 } else {
-                    format!("Saved · {}", notices.join("; "))
+                    t!("project.saved_with_warnings", warnings = notices.join("; ")).into_owned()
                 };
             }
             Err(error) => self.edit_error = Some(error.to_string()),
@@ -89,9 +91,12 @@ impl Editor {
         let confirmation = self.document.modified().then(|| {
             window.prompt(
                 PromptLevel::Warning,
-                "Open another project and discard unsaved changes?",
-                Some("Cancel and save the current project to keep your changes."),
-                &["Cancel", "Discard and Open"],
+                &t!("project.discard_open"),
+                Some(&t!("project.discard_help")),
+                &[
+                    PromptButton::Cancel(t!("project.cancel").into()),
+                    PromptButton::Other(t!("project.discard_and_open").into()),
+                ],
                 cx,
             )
         });
@@ -112,7 +117,7 @@ impl Editor {
                     files: true,
                     directories: true,
                     multiple: false,
-                    prompt: Some("Open".into()),
+                    prompt: Some(t!("project.open").into()),
                 })
             }) {
                 Ok(picker) => picker,
@@ -124,7 +129,10 @@ impl Editor {
                 other => {
                     let _ = this.update(cx, |this, cx| {
                         this.busy = false;
-                        this.edit_error = Some(format!("Could not select a project: {other:?}"));
+                        this.edit_error = Some(
+                            t!("project.select_project_error", error = format!("{other:?}"))
+                                .into_owned(),
+                        );
                         cx.notify();
                     });
                     return;
@@ -149,7 +157,7 @@ impl Editor {
                         this.view = ViewState::default();
                         this.frame = None;
                         this.edit_error = None;
-                        this.message = "Project opened".into();
+                        this.message = t!("project.opened").into_owned();
                         this.sync_controls(window, cx);
                         this.redraw(cx);
                     }
@@ -173,9 +181,12 @@ impl Editor {
         let confirmation = self.document.modified().then(|| {
             window.prompt(
                 PromptLevel::Warning,
-                "Import another project and discard unsaved changes?",
-                Some("Cancel and save the current project to keep your changes."),
-                &["Cancel", "Discard and Import"],
+                &t!("project.discard_import"),
+                Some(&t!("project.discard_help")),
+                &[
+                    PromptButton::Cancel(t!("project.cancel").into()),
+                    PromptButton::Other(t!("project.discard_and_import").into()),
+                ],
                 cx,
             )
         });
@@ -196,7 +207,7 @@ impl Editor {
                     files: true,
                     directories: false,
                     multiple: false,
-                    prompt: Some("Import".into()),
+                    prompt: Some(t!("project.import").into()),
                 })
             }) {
                 Ok(picker) => picker,
@@ -208,8 +219,10 @@ impl Editor {
                 other => {
                     let _ = this.update(cx, |this, cx| {
                         this.busy = false;
-                        this.edit_error =
-                            Some(format!("Could not select an import file: {other:?}"));
+                        this.edit_error = Some(
+                            t!("project.select_import_error", error = format!("{other:?}"))
+                                .into_owned(),
+                        );
                         cx.notify();
                     });
                     return;
@@ -227,7 +240,8 @@ impl Editor {
                 let name = source
                     .file_stem()
                     .and_then(|name| name.to_str())
-                    .unwrap_or("Untitled");
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| t!("project.untitled").into_owned());
                 let suggested = format!("{name}.kasane");
                 let directory = source.parent().unwrap_or_else(|| std::path::Path::new("/"));
                 let picker = match this.update(cx, |_, cx| {
@@ -241,8 +255,13 @@ impl Editor {
                     other => {
                         let _ = this.update(cx, |this, cx| {
                             this.busy = false;
-                            this.edit_error =
-                                Some(format!("Could not select a project location: {other:?}"));
+                            this.edit_error = Some(
+                                t!(
+                                    "project.select_location_error",
+                                    error = format!("{other:?}")
+                                )
+                                .into_owned(),
+                            );
                             cx.notify();
                         });
                         return;
@@ -279,15 +298,15 @@ impl Editor {
                         this.frame = None;
                         this.edit_error = None;
                         this.message = if warnings.is_empty() {
-                            "Import complete".into()
+                            t!("project.import_complete").into_owned()
                         } else {
                             let details = warnings.join("\n");
                             window.open_dialog(cx, move |dialog, _, _| {
                                 dialog
-                                    .title("Import completed with warnings")
+                                    .title(t!("project.import_warnings_title"))
                                     .child(details.clone())
                             });
-                            format!("Import complete · {} warning(s)", warnings.len())
+                            t!("project.import_warning_count", count = warnings.len()).into_owned()
                         };
                         this.sync_controls(window, cx);
                         this.redraw(cx);
@@ -304,9 +323,12 @@ impl Editor {
         self.busy = true;
         let confirmation = window.prompt(
             PromptLevel::Warning,
-            "Close and discard unsaved changes?",
-            Some("Cancel and save the current project to keep your changes."),
-            &["Cancel", "Discard and Close"],
+            &t!("project.discard_close"),
+            Some(&t!("project.discard_help")),
+            &[
+                PromptButton::Cancel(t!("project.cancel").into()),
+                PromptButton::Other(t!("project.discard_and_close").into()),
+            ],
             cx,
         );
         cx.spawn_in(window, async move |this, cx| {

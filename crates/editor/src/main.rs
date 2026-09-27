@@ -1,3 +1,6 @@
+rust_i18n::i18n!("locales", fallback = "en");
+
+mod i18n;
 mod menus;
 mod preview;
 mod project;
@@ -10,6 +13,7 @@ use gpui_kit::component::{
     slider::{SliderEvent, SliderState, SliderValue},
 };
 use gpui_kit::{prelude::*, *};
+use rust_i18n::t;
 use std::sync::mpsc;
 
 struct Editor {
@@ -33,7 +37,8 @@ struct Editor {
 impl Editor {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let document = Document::new_blank().expect("create blank document");
-        let name = cx.new(|cx| InputState::new(window, cx).placeholder("Layer name"));
+        let name = cx
+            .new(|cx| InputState::new(window, cx).placeholder(t!("editor.layer_name_placeholder")));
         let opacity = cx.new(|_| {
             SliderState::new()
                 .min(0.)
@@ -90,7 +95,7 @@ impl Editor {
             frame: None,
             edit_error: None,
             render_error: None,
-            message: "Open or import a project to get started.".into(),
+            message: t!("editor.welcome").into_owned(),
             busy: false,
             revision: 0,
             preview_target: preview::target_config(window),
@@ -202,7 +207,7 @@ impl Editor {
                     .as_ref()
                     .is_none_or(|requests| requests.send(request).is_err())
                 {
-                    self.render_error = Some("Preview renderer stopped. Reopen the window.".into());
+                    self.render_error = Some(t!("editor.preview_stopped").into_owned());
                 }
             }
             Err(error) => self.render_error = Some(error.to_string()),
@@ -212,6 +217,7 @@ impl Editor {
 }
 
 fn main() {
+    i18n::activate(None);
     let background_launch = std::env::var_os("KASANE_DEV_BACKGROUND").is_some();
     gpui_kit::application()
         .with_assets(gpui_kit::assets::Assets)
@@ -228,7 +234,7 @@ fn main() {
             gpui_kit::open_window(
                 WindowOptions {
                     titlebar: Some(TitlebarOptions {
-                        title: Some("Kasane — GPUI Kit".into()),
+                        title: Some(t!("app.title").into()),
                         ..Default::default()
                     }),
                     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
@@ -250,4 +256,19 @@ fn main() {
                 cx.activate(true);
             }
         });
+}
+
+#[cfg(test)]
+mod i18n_tests {
+    use super::t;
+
+    #[test]
+    fn editor_catalog_is_wired_up() {
+        assert_eq!(t!("editor.layers", locale = "en"), "Layers");
+        assert_eq!(t!("editor.layers", locale = "zh-CN"), "图层");
+        assert_eq!(
+            t!("project.saved", locale = "zh-CN", path = "test.kasane"),
+            "已保存 test.kasane"
+        );
+    }
 }
