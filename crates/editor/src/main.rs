@@ -6,7 +6,7 @@ mod preview;
 mod project;
 mod ui;
 
-use editor_scene::{Document, ViewState};
+use editor_core::{Document, ViewState};
 use gpui_kit::component::{
     Theme, ThemeMode,
     input::{InputEvent, InputState},

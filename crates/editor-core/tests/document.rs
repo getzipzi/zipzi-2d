@@ -1,4 +1,4 @@
-use editor_scene::Document;
+use editor_core::Document;
 mod support;
 use support::sample_document;
 

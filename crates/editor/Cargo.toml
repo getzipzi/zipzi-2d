@@ -6,7 +6,7 @@ license.workspace = true
 
 [dependencies]
 gpui-kit.workspace = true
-editor-scene.workspace = true
+editor-core.workspace = true
 editor-render.workspace = true
 rust-i18n.workspace = true
 sys-locale.workspace = true

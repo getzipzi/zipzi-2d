@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/editor", "crates/editor-scene", "crates/editor-render", "crates/component-playground"]
+members = ["crates/editor", "crates/editor-core", "crates/editor-render", "crates/component-playground"]
 resolver = "3"
 exclude = ["vendor/gpui-pre", "vendor/gpui-pre-macos", "vendor/gpui-pre-apple"]
 
@@ -19,7 +19,7 @@ kasane-core = { path = "../kasane-2d/modules/kasane-core" }
 kasane-sdk = { path = "../kasane-2d/modules/kasane-sdk" }
 kasane-project = { path = "../kasane-2d/modules/kasane-project" }
 kasane-render = { path = "../kasane-2d/modules/kasane-render" }
-editor-scene = { path = "crates/editor-scene" }
+editor-core = { path = "crates/editor-core" }
 editor-render = { path = "crates/editor-render" }
 rust-i18n = "4.2"
 sys-locale = "0.3"

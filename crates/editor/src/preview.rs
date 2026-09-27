@@ -1,6 +1,6 @@
 //! Immutable Metal frames produced on GPUI's device and command queue.
+use editor_core::{SceneSnapshot, ViewState};
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
-use editor_scene::{SceneSnapshot, ViewState};
 use gpui_kit::{IntoElement, Styled, Window};
 use metal::MTLPixelFormat;
 use std::sync::mpsc;

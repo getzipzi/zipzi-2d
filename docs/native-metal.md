@@ -1,7 +1,7 @@
 # Native Metal integration
 
 Native Metal is the sole editor rendering path. No backend flags are needed.
-`editor-render` owns this adapter; `editor-scene` supplies SDK-evaluated frames
+`editor-render` owns this adapter; `editor-core` supplies SDK-evaluated frames
 and immutable decoded source textures without depending on Metal or GPUI.
 
 ```sh

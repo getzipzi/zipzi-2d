@@ -1,7 +1,7 @@
 //! Native Metal preview adapter. No document editing or project IO lives here.
 mod mipmaps;
 use anyhow::{Result, anyhow, ensure};
-use editor_scene::{SceneSnapshot, ViewState};
+use editor_core::{SceneSnapshot, ViewState};
 use kasane_core::Vec2;
 use kasane_render::{Affine2, ViewportConfig};
 use kasane_render_metal::{

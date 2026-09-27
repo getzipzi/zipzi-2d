@@ -4,7 +4,7 @@
 
 ```text
 crates/editor                Kit 界面、文件对话框与 GPUI 预览合成
-crates/editor-scene          SDK 文档会话、编辑事务、CPU 场景快照与视口状态
+crates/editor-core           SDK 文档会话、编辑事务、CPU 场景快照与视口状态
 crates/editor-render         原生 Metal 渲染与纹理缓存，不包含文档编辑和项目 IO
 crates/component-playground  Kit 组件示例、状态反馈与 Rust 用法
 ```

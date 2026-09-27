@@ -6,14 +6,14 @@ No `kasane-sdk-observe`, Python, WGPU or backend selection is needed for this pa
 
 ```text
 editor (GPUI controls and project dialogs)
-  ├── editor-scene
+  ├── editor-core
   │     ├── Document → kasane-sdk::AuthoringSession
   │     └── SceneSnapshot → evaluated frame + shared decoded textures
   └── editor-render → kasane-render + kasane-render-metal
           └── immutable Metal texture → GPUI composition
 ```
 
-`editor-scene/src/document.rs` creates and opens documents, selects meshes,
+`editor-core/src/document.rs` creates and opens documents, selects meshes,
 and translates UI editing gestures into SDK transactions. A persistent
 `EditSession` previews a candidate document while the committed session remains
 unchanged. Enter/blur commits a name; slider release commits opacity. Switching
@@ -21,7 +21,7 @@ properties or selection also finishes the current gesture. Cancel drops the
 candidate. Gestures that return to their original value do not consume an undo
 step or discard redo. Visibility changes are immediate SDK transactions.
 
-`editor-scene/src/scene.rs` defines CPU-only render inputs and independent
+`editor-core/src/scene.rs` defines CPU-only render inputs and independent
 viewport state. The document evaluates committed previews through the SDK's
 preview cache and candidates through the core evaluator. Decoded texture bytes
 are loaded when the document opens and retained with `Arc`, so a queued snapshot

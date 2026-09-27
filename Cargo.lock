@@ -1541,18 +1541,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
-name = "editor-render"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "editor-scene",
- "kasane-core",
- "kasane-render",
- "kasane-render-metal",
-]
-
-[[package]]
-name = "editor-scene"
+name = "editor-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1561,6 +1550,17 @@ dependencies = [
  "kasane-sdk",
  "tempfile",
  "uuid",
+]
+
+[[package]]
+name = "editor-render"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "editor-core",
+ "kasane-core",
+ "kasane-render",
+ "kasane-render-metal",
 ]
 
 [[package]]
@@ -3604,8 +3604,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
+ "editor-core",
  "editor-render",
- "editor-scene",
  "gpui-kit",
  "gpui-pre-apple",
  "kasane-core",

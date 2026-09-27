@@ -1,14 +1,14 @@
 //! Real native Metal composition without opening a window or automating UI.
 #![cfg(target_os = "macos")]
+use editor_core::{Document, SceneSnapshot, ViewState};
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
-use editor_scene::{Document, SceneSnapshot, ViewState};
 use gpui_apple::metal_renderer::MetalRenderer;
 use gpui_kit::{
     Bounds, ContentMask, DevicePixels, PaintSurface, Quad, ScaledPixels, Scene, SurfaceSource,
     point, size,
 };
 use metal::MTLPixelFormat;
-#[path = "../../editor-scene/tests/support/mod.rs"]
+#[path = "../../editor-core/tests/support/mod.rs"]
 mod support;
 
 fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {

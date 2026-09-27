@@ -1,4 +1,4 @@
-use editor_scene::Document;
+use editor_core::Document;
 use kasane_core::{Canvas, Mesh, Vec2};
 use kasane_sdk::{AuthoringSession, prepare_png_asset};
 use tempfile::TempDir;
