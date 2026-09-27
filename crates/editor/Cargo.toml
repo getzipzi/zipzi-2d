@@ -1,0 +1,13 @@
+[package]
+name = "kasane-editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+gpui.workspace = true
+gpui-platform.workspace = true
+gpui-wgpu.workspace = true
+editor-scene.workspace = true
+wgpu.workspace = true

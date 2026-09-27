@@ -1,0 +1,22 @@
+[workspace]
+members = ["crates/editor", "crates/editor-scene"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+anyhow = "1"
+wgpu = "29"
+gpui = { package = "gpui-ce", path = "../gpui-ce/crates/gpui" }
+gpui-platform = { package = "gpui_ce_platform", path = "../gpui-ce/crates/gpui_platform", features = ["wgpu", "font-kit"] }
+gpui-wgpu = { package = "gpui_ce_wgpu", path = "../gpui-ce/crates/gpui_wgpu", features = ["custom-gpu"] }
+kasane-core = { path = "../kesane-2d/modules/kasane-core" }
+kasane-render = { path = "../kesane-2d/modules/kasane-render" }
+kasane-render-wgpu = { path = "../kesane-2d/modules/kasane-render-wgpu" }
+editor-scene = { path = "crates/editor-scene" }
+
+[profile.dev]
+debug = 1
