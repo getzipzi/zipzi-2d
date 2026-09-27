@@ -11,6 +11,7 @@ license = "MIT"
 anyhow = "1"
 wgpu = "29"
 gpui = { package = "gpui-ce", path = "../gpui-ce/crates/gpui" }
+gpui-elements = { package = "gpui_ce_elements", path = "../gpui-ce/crates/gpui_elements" }
 gpui-platform = { package = "gpui_ce_platform", path = "../gpui-ce/crates/gpui_platform", features = ["wgpu", "font-kit"] }
 gpui-wgpu = { package = "gpui_ce_wgpu", path = "../gpui-ce/crates/gpui_wgpu", features = ["custom-gpu"] }
 kasane-core = { path = "../kesane-2d/modules/kasane-core" }

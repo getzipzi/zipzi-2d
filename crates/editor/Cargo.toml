@@ -11,4 +11,7 @@ gpui-platform.workspace = true
 gpui-wgpu.workspace = true
 editor-scene.workspace = true
 wgpu.workspace = true
-unicode-segmentation = "1.12"
+gpui-elements.workspace = true
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }

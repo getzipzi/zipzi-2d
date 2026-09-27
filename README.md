@@ -29,7 +29,7 @@ cargo fmt --all -- --check
 ./scripts/build-app.sh
 ```
 
-依赖使用 workspace path，方便同时修改三个仓库。`Cargo.lock` 锁定 registry 依赖；相邻仓库版本见 `DEPENDENCIES.md`。外部库仍使用相邻 checkout；组件实验页另保留了一份带许可的上游输入框示例。
+依赖使用 workspace path，方便同时修改三个仓库。`Cargo.lock` 锁定 registry 依赖；相邻仓库版本见 `DEPENDENCIES.md`。外部库和输入组件均直接使用相邻 checkout，没有复制输入框实现。
 
 ## 验证内容
 
@@ -54,4 +54,4 @@ cargo fmt --all -- --check
 
 点击工具栏 **Components** 可测试按钮、输入框、复选框、滑块、下拉菜单、标签页、树列表、滚动裁剪和弹窗。Typography 页检查多语言字体和长文字截断；Compact / Full size 切换窗口尺寸。
 
-实测结果与未覆盖范围见 [组件检查记录](docs/component-checks.md)。文本编辑内核取自 gpui-ce 的 Apache-2.0 示例，许可保留在 `crates/editor/src/vendor`。
+实测结果与未覆盖范围见 [组件检查记录](docs/component-checks.md)。输入框直接使用 `gpui_ce_elements::editable_text`，与上游 `editable_text` 案例一致。

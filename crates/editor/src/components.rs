@@ -1,23 +1,17 @@
 //! Interactive rendering checks for common editor controls.
 use gpui::{prelude::*, *};
-#[path = "vendor/text_editor.rs"]
-mod text_editor;
-
-actions!(component_lab, [Backspace, Delete, End, Home, Left, Right]);
+use gpui_elements::editable_text::{
+    EditableTextState, StringStorage,
+    actions::{DEFAULT_INPUT_CONTEXT, default_bindings},
+    text_input,
+};
 
 pub fn bind_keys(cx: &mut App) {
-    cx.bind_keys([
-        KeyBinding::new("backspace", Backspace, Some("LabInput")),
-        KeyBinding::new("delete", Delete, Some("LabInput")),
-        KeyBinding::new("left", Left, Some("LabInput")),
-        KeyBinding::new("right", Right, Some("LabInput")),
-        KeyBinding::new("home", Home, Some("LabInput")),
-        KeyBinding::new("end", End, Some("LabInput")),
-    ]);
+    cx.bind_keys(default_bindings().as_keybindings(Some(DEFAULT_INPUT_CONTEXT)));
 }
 
 pub struct ComponentLab {
-    input: Entity<text_editor::Editor>,
+    input: Entity<EditableTextState>,
     checked: bool,
     expanded: bool,
     selected: usize,
@@ -32,9 +26,9 @@ pub struct ComponentLab {
     status: String,
 }
 impl ComponentLab {
-    pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(_window: &mut Window, cx: &mut Context<Self>) -> Self {
         Self {
-            input: cx.new(|cx| text_editor::Editor::new("Layer 01 · 图层", window, cx)),
+            input: cx.new(|cx| EditableTextState::new(StringStorage::from("Layer 01 · 图层"), cx)),
             checked: true,
             expanded: true,
             selected: 0,
@@ -96,22 +90,17 @@ fn section(title: &'static str) -> Div {
 }
 impl Render for ComponentLab {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let focus = self.input.read(cx).focus_handle.clone();
+        let focus = self.input.read(cx).focus_handle(cx);
+        // Center a single line, rather than stretching its paint bounds to the field height.
         let input = div()
             .id("name-input")
-            .key_context("LabInput")
-            .track_focus(&focus)
-            .map(text_editor::standard_actions(self.input.clone()))
-            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                window.focus(&focus, cx)
-            })
             .h(px(38.0))
             .px_2()
             .flex()
             .items_center()
             .bg(rgb(0x111b29))
             .border_1()
-            .border_color(if self.input.read(cx).focus_handle.is_focused(window) {
+            .border_color(if focus.is_focused(window) {
                 rgb(0x62cde6)
             } else {
                 rgb(0x506078)
@@ -119,10 +108,19 @@ impl Render for ComponentLab {
             .rounded_md()
             .overflow_hidden()
             .cursor(CursorStyle::IBeam)
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                window.focus(&focus, cx)
+            })
             .child(
-                self.input
-                    .clone()
-                    .cached(StyleRefinement::default().size_full()),
+                text_input("layer-name")
+                    .state(self.input.downgrade())
+                    .caret_blink_interval_500ms()
+                    .placeholder("Layer name / 图层名称")
+                    .w_full()
+                    .h(px(20.0))
+                    .line_height(px(20.0))
+                    .whitespace_nowrap()
+                    .overflow_x_scroll(),
             );
         let entity = cx.entity().downgrade();
         let slider = div()
@@ -300,7 +298,7 @@ impl Render for ComponentLab {
                     .child("Symbols: ← → ↔ ✓ ✕ ◇ ▾  •  fi fl ffi  0123456789")
                     .child(div().text_size(px(12.0)).child("Small text / 小字号 — 12 px"))
                     .child(div().w(px(260.0)).truncate().child("Long layer name / 很长的图层名称 / should truncate at the boundary")))))
-            .child(div().h(px(24.0)).flex_shrink_0().text_color(rgb(0xa5c5e3)).child(if self.status == "Input read" { format!("Input: {}", self.input.read(cx).text(cx)) } else { self.status.clone() }));
+            .child(div().h(px(24.0)).flex_shrink_0().text_color(rgb(0xa5c5e3)).child(if self.status == "Input read" { format!("Input: {}", self.input.read(cx).as_str()) } else { self.status.clone() }));
         if self.modal {
             root = root.child(
                 deferred(
@@ -356,5 +354,59 @@ impl Render for ComponentLab {
             );
         }
         root
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::prelude::v1::test;
+
+    /// Exercise the same state mounted by ComponentLab, using macOS IME callbacks.
+    #[gpui::test]
+    fn ime_updates_replace_composition_instead_of_appending(cx: &mut TestAppContext) {
+        let view = cx.add_window(|window, cx| ComponentLab::new(window, cx));
+        view.update(cx, |view, window, cx| {
+            view.input.update(cx, |input, cx| {
+                input.emplace("", cx);
+                for text in ["n", "ni", "你"] {
+                    let end = text.encode_utf16().count();
+                    input.replace_and_mark_text_in_range(None, text, Some(end..end), window, cx);
+                    assert_eq!(input.as_str(), text);
+                    assert_eq!(input.marked_text_range(window, cx), Some(0..end));
+                }
+                input.replace_text_in_range(None, "你", window, cx);
+                assert_eq!(input.as_str(), "你");
+                assert_eq!(input.marked_text_range(window, cx), None);
+                for text in ["h", "hao", "好"] {
+                    let end = text.encode_utf16().count();
+                    input.replace_and_mark_text_in_range(None, text, Some(end..end), window, cx);
+                    assert_eq!(input.as_str(), format!("你{text}"));
+                }
+                input.replace_text_in_range(None, "好", window, cx);
+                assert_eq!(input.as_str(), "你好");
+                assert_eq!(input.marked_text_range(window, cx), None);
+            });
+        })
+        .unwrap();
+    }
+
+    #[gpui::test]
+    fn ime_replacement_uses_utf16_ranges_after_emoji(cx: &mut TestAppContext) {
+        let view = cx.add_window(|window, cx| ComponentLab::new(window, cx));
+        view.update(cx, |view, window, cx| {
+            view.input.update(cx, |input, cx| {
+                input.emplace("😀旧文", cx);
+                input.replace_and_mark_text_in_range(Some(2..4), "zhong", Some(5..5), window, cx);
+                assert_eq!(input.as_str(), "😀zhong");
+                assert_eq!(input.marked_text_range(window, cx), Some(2..7));
+                input.replace_and_mark_text_in_range(None, "中文", Some(2..2), window, cx);
+                assert_eq!(input.as_str(), "😀中文");
+                input.replace_text_in_range(None, "中文", window, cx);
+                assert_eq!(input.as_str(), "😀中文");
+                assert_eq!(input.marked_text_range(window, cx), None);
+            });
+        })
+        .unwrap();
     }
 }
