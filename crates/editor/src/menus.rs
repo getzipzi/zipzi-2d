@@ -19,6 +19,12 @@ pub struct OpenRecent {
     pub path: PathBuf,
 }
 
+#[derive(Action, Clone, PartialEq, Deserialize)]
+#[action(namespace=kasane_editor,no_json)]
+pub struct SetLanguage {
+    pub language: Option<String>,
+}
+
 actions!(
     kasane_editor,
     [
@@ -40,6 +46,7 @@ pub struct MenuState {
     pub text: bool,
     pub modal: bool,
     pub recent_files: Vec<PathBuf>,
+    pub language: Option<String>,
 }
 
 pub fn path_title(path: &Path) -> String {
@@ -154,6 +161,33 @@ impl EditorView {
                     cx.listener(|this, _: &ClearRecent, window, cx| this.clear_recent(window, cx)),
                 )
                 .on_action(cx.listener(|this, _: &CloseWindow, window, cx| this.close(window, cx)))
+                .on_action(cx.listener(|this, action: &SetLanguage, window, cx| {
+                    let mut settings = cx.global::<settings::Settings>().clone();
+                    if settings.language == action.language {
+                        return;
+                    }
+                    match settings.set_language(action.language.clone()) {
+                        Ok(()) => {
+                            let welcome_message = this.message == t!("editor.welcome");
+                            i18n::activate(settings.language.as_deref());
+                            cx.set_global(settings);
+                            if welcome_message {
+                                this.message = t!("editor.welcome").into_owned();
+                            }
+                            if let Some(dock) = &this.dock {
+                                dock.properties
+                                    .update(cx, |panel, cx| panel.refresh_locale(window, cx));
+                            }
+                            window.set_window_title(&t!("app.title"));
+                            this.menu_state = MenuState::default();
+                            cx.refresh_windows();
+                        }
+                        Err(error) => {
+                            this.edit_error = Some(error.to_string());
+                            cx.notify();
+                        }
+                    }
+                }))
                 .on_action(|_: &About, window, cx| {
                     window.open_dialog(cx, |dialog, _, _| {
                         dialog.title(t!("app.title")).child(t!("app.description"))
@@ -197,6 +231,7 @@ impl EditorView {
             text,
             modal,
             recent_files: settings.recent_files.paths.clone(),
+            language: settings.language.clone(),
         };
         if self.menu_state == state {
             return;
@@ -236,6 +271,26 @@ impl EditorView {
         cx.set_menus([
             Menu::new(t!("app.title")).items([
                 MenuItem::action(t!("app.about"), About),
+                MenuItem::submenu(
+                    Menu::new(t!("menu.language")).items([
+                        MenuItem::action(t!("menu.follow_system"), SetLanguage { language: None })
+                            .checked(settings.language.is_none()),
+                        MenuItem::action(
+                            t!("menu.english"),
+                            SetLanguage {
+                                language: Some("en".into()),
+                            },
+                        )
+                        .checked(settings.language.as_deref() == Some("en")),
+                        MenuItem::action(
+                            t!("menu.simplified_chinese"),
+                            SetLanguage {
+                                language: Some("zh-CN".into()),
+                            },
+                        )
+                        .checked(settings.language.as_deref() == Some("zh-CN")),
+                    ]),
+                ),
                 MenuItem::separator(),
                 MenuItem::os_submenu(t!("menu.services"), SystemMenuType::Services),
                 MenuItem::action(t!("app.hide"), Hide),

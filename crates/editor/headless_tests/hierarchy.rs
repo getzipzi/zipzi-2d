@@ -65,3 +65,30 @@ fn default_layout_stacks_trees_left_and_inspectors_right(cx: &mut TestAppContext
         assert_eq!(columns[2].children[1].children[0].panel_name, "Parameters");
     });
 }
+
+#[gpui_kit::test]
+fn reset_layout_saves_measured_center_size(cx: &mut TestAppContext) {
+    use crate::docking::LayoutConfig;
+    use editor_core::ConfigStore;
+    use gpui_kit::component::dock::PanelInfo;
+
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.reset_layout(window, cx));
+        gpui_kit::test::TestWindowExt::render_frame(window, cx);
+        assert!(window.simulate_next_frame(cx) > 0);
+    })
+    .unwrap();
+    let saved = ConfigStore::new(harness._config_dir.path())
+        .read::<LayoutConfig>("layout.json")
+        .unwrap()
+        .unwrap()
+        .layout;
+    let PanelInfo::Stack { sizes, .. } = saved.center.info else {
+        panic!("default center should be a split");
+    };
+    assert!(sizes[1].as_f32() > sizes[0].as_f32());
+    assert!(sizes[1].as_f32() > sizes[2].as_f32());
+}

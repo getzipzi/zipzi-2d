@@ -1,12 +1,19 @@
 use editor_core::{ConfigStore, EffectiveBinding, RecentFiles, ShortcutOverrides};
 use gpui_kit::{App, Global, KeybindingKeystroke, Keystroke, PlatformKeyboardMapper};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
+
+#[derive(Clone, Default, Deserialize, Serialize)]
+struct LanguagePreference {
+    language: Option<String>,
+}
 
 #[derive(Clone)]
 pub struct Settings {
     pub store: ConfigStore,
     pub bindings: Vec<EffectiveBinding>,
     pub recent_files: RecentFiles,
+    pub language: Option<String>,
     pub notices: Vec<String>,
 }
 impl Global for Settings {}
@@ -56,12 +63,31 @@ impl Settings {
             .ok()
             .flatten()
             .unwrap_or_default();
+        let language = match store.read::<LanguagePreference>("language.json") {
+            Ok(preference) => preference.and_then(|preference| preference.language),
+            Err(error) => {
+                notices.push(error.to_string());
+                None
+            }
+        };
         Self {
             store,
             bindings,
             recent_files,
+            language,
             notices,
         }
+    }
+
+    pub fn set_language(&mut self, language: Option<String>) -> anyhow::Result<()> {
+        self.store.write(
+            "language.json",
+            &LanguagePreference {
+                language: language.clone(),
+            },
+        )?;
+        self.language = language;
+        Ok(())
     }
 
     pub fn push_recent_file(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
@@ -118,6 +144,26 @@ mod tests {
     use super::{Settings, normalize_key};
     use editor_core::{CommandId, ConfigStore, ShortcutOverride, ShortcutOverrides};
     use gpui_kit::DummyKeyboardMapper;
+    #[test]
+    fn language_preference_survives_reload() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let store = ConfigStore::new(dir.path());
+        let mut settings = Settings::from_store(store.clone(), &DummyKeyboardMapper);
+        assert_eq!(settings.language, None);
+        settings.set_language(Some("zh-CN".into()))?;
+        assert_eq!(
+            Settings::from_store(store.clone(), &DummyKeyboardMapper)
+                .language
+                .as_deref(),
+            Some("zh-CN")
+        );
+        settings.set_language(None)?;
+        assert_eq!(
+            Settings::from_store(store, &DummyKeyboardMapper).language,
+            None
+        );
+        Ok(())
+    }
     #[test]
     fn failed_config_keeps_previous_valid_bindings_and_defaults_can_be_restored()
     -> anyhow::Result<()> {

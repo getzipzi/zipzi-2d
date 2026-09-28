@@ -24,6 +24,13 @@ pub struct PropertiesPanel {
 }
 
 impl PropertiesPanel {
+    pub fn refresh_locale(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.name.update(cx, |input, cx| {
+            input.set_placeholder(t!("editor.layer_name_placeholder"), window, cx);
+        });
+        cx.notify();
+    }
+
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
         let (name, opacity) = Self::build_states(window, cx);
         let entity = cx.new(|cx| {

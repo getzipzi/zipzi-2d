@@ -109,6 +109,19 @@ impl CanvasView {
     pub fn hand_tool(&self) -> bool {
         self.hand_tool
     }
+    pub(crate) fn set_temporary_hand(
+        &mut self,
+        held: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.space_held == held {
+            return;
+        }
+        self.space_held = held;
+        window.suppress_key_repeats("space", held);
+        cx.notify();
+    }
     pub fn set_hand_tool(&mut self, enabled: bool, cx: &mut Context<Self>) {
         self.hand_tool = enabled;
         self.pan = None;
@@ -283,6 +296,11 @@ impl Render for CanvasView {
             .w_full()
             .overflow_hidden()
             .bg(cx.theme().muted)
+            .when(!modal && self.pan.is_some(), |e| e.cursor_grabbing())
+            .when(
+                !modal && self.pan.is_none() && (self.space_held || self.hand_tool),
+                |e| e.cursor_grab(),
+            )
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, event: &MouseDownEvent, window, cx| {
@@ -542,12 +560,8 @@ impl Render for CanvasView {
             } else {
                 "KasaneCanvas"
             })
-            .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
-                if event.keystroke.key == "space" && !event.is_held {
-                    this.space_held = true;
-                    window.suppress_key_repeats("space", true);
-                    cx.notify();
-                } else if event.keystroke.key == "h" && !event.is_held {
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
+                if event.keystroke.key == "h" && !event.is_held {
                     this.hand_tool = true;
                     this.pan = None;
                     let _ = this.owner.update(cx, |owner, cx| {
@@ -562,13 +576,6 @@ impl Render for CanvasView {
                         owner.editor.cancel_gesture();
                         owner.redraw(cx);
                     });
-                    cx.notify();
-                }
-            }))
-            .on_key_up(cx.listener(|this, event: &KeyUpEvent, window, cx| {
-                if event.keystroke.key == "space" {
-                    this.space_held = false;
-                    window.suppress_key_repeats("space", false);
                     cx.notify();
                 }
             }))

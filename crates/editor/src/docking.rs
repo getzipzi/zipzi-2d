@@ -92,6 +92,7 @@ pub struct DockWorkspace {
     pub deformer_tree: Entity<crate::panels::DeformerTreePanel>,
     pub parameters: Entity<crate::panels::ParametersPanel>,
     pub last_valid: DockAreaState,
+    pending_layout_measurement: bool,
     writer: LayoutWriter,
     errors: Option<async_channel::Receiver<String>>,
 }
@@ -136,6 +137,7 @@ impl DockWorkspace {
             deformer_tree,
             parameters,
             last_valid,
+            pending_layout_measurement: false,
             writer,
             errors: Some(errors),
         };
@@ -349,13 +351,18 @@ impl EditorView {
         })
         .detach();
         let store = cx.global::<settings::Settings>().store.clone();
+        let mut save_measured_default = false;
         match store.read::<LayoutConfig>("layout.json") {
             // Version 1 includes the retired Layers panel and tabbed sidebars.
-            // Replace it once with the new split layout and persist the upgrade.
+            // Replace it once with the new split layout after its first frame
+            // has measured the flexible center pane.
             Ok(Some(saved)) if saved.layout.version == Some(1) => {
-                if let Err(error) = dock.writer.save(dock.last_valid.clone()) {
-                    self.edit_error = Some(error.to_string());
-                }
+                save_measured_default = true;
+            }
+            // An older build saved the default before layout, when every
+            // unconstrained pane still had the 100px placeholder size.
+            Ok(Some(saved)) if saved.layout == dock.last_valid => {
+                save_measured_default = true;
             }
             Ok(Some(saved)) => {
                 match validate_layout(&saved.layout).and_then(|_| {
@@ -366,6 +373,7 @@ impl EditorView {
                     Err(e) => {
                         self.message = e.to_string();
                         dock.reset(window, cx);
+                        save_measured_default = true;
                     }
                 }
             }
@@ -383,6 +391,9 @@ impl EditorView {
                 let Some(dock) = &mut this.dock else {
                     return;
                 };
+                if dock.pending_layout_measurement {
+                    return;
+                }
                 if state == dock.last_valid {
                     return;
                 }
@@ -398,14 +409,32 @@ impl EditorView {
                 cx.notify();
             },
         ));
+        dock.pending_layout_measurement = save_measured_default;
         self.dock = Some(dock);
+        if save_measured_default {
+            self.save_layout_after_frame(window, cx);
+        }
+    }
+    fn save_layout_after_frame(&self, window: &Window, cx: &Context<Self>) {
+        let owner = cx.weak_entity();
+        window.on_next_frame(move |_, cx| {
+            let _ = owner.update(cx, |view, cx| {
+                let Some(dock) = &mut view.dock else { return };
+                let state = dock.area.read(cx).dump(cx);
+                dock.last_valid = state.clone();
+                dock.pending_layout_measurement = false;
+                if let Err(error) = dock.writer.save(state) {
+                    view.edit_error = Some(error.to_string());
+                    cx.notify();
+                }
+            });
+        });
     }
     pub(super) fn reset_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(dock) = &mut self.dock {
+            dock.pending_layout_measurement = true;
             dock.reset(window, cx);
-            if let Err(e) = dock.writer.save(dock.last_valid.clone()) {
-                self.edit_error = Some(e.to_string());
-            }
+            self.save_layout_after_frame(window, cx);
         }
         cx.notify();
     }

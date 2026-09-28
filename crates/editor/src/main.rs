@@ -2,6 +2,7 @@ rust_i18n::i18n!("locales", fallback = "en");
 
 mod benchmark;
 mod canvas;
+mod dev_session;
 mod docking;
 #[cfg(test)]
 #[path = "../headless_tests/mod.rs"]
@@ -38,6 +39,7 @@ struct EditorView {
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
+    dev_session: Option<dev_session::DevSession>,
 }
 impl EditorView {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
@@ -65,6 +67,7 @@ impl EditorView {
             gpu_device: None,
             _frames: None,
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
+            dev_session: dev_session::DevSession::from_env(),
         };
         let entity = cx.weak_entity();
         window.on_window_should_close(cx, move |window, cx| {
@@ -76,6 +79,11 @@ impl EditorView {
                 .unwrap_or(true)
         });
         editor.init_dock(window, cx);
+        if let Some(session) = &mut editor.dev_session {
+            if let Err(error) = session.restore(&mut editor.editor) {
+                editor.edit_error = Some(error.to_string());
+            }
+        }
         editor.connect_preview(window, cx);
         benchmark::start(&mut editor, window, cx);
         editor
@@ -234,6 +242,7 @@ fn main() {
             })
             .detach();
             let settings = settings::Settings::load(cx);
+            i18n::activate(settings.language.as_deref());
             cx.set_global(settings);
             menus::init(cx);
             Theme::change(ThemeMode::Dark, None, cx);

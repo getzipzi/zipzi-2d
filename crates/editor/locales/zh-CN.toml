@@ -8,6 +8,10 @@ show_all = "显示全部"
 quit = "退出 Kasane 编辑器"
 
 [menu]
+language = "语言"
+follow_system = "跟随系统"
+english = "English"
+simplified_chinese = "简体中文"
 commit_property = "提交属性编辑"
 cancel_property = "取消属性编辑"
 vertices = "顶点工具"

@@ -116,6 +116,83 @@ fn space_pan_ignores_key_repeats_until_release(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
+fn space_after_document_switch_enters_temporary_hand_mode(cx: &mut TestAppContext) {
+    use gpui_kit::{KeyDownEvent, Keystroke, MouseButton, MouseDownEvent, MouseMoveEvent};
+
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let first_id = harness
+            .view
+            .read_with(cx, |view, _| view.editor.active_id().unwrap());
+        window.press("cmd-n", cx);
+        window.render_frame(cx);
+        window.click(format!("tab-item-{first_id:?}"), cx);
+        let editor_focus = harness.view.read_with(cx, |view, _| view.focus.clone());
+        assert!(editor_focus.is_focused(window));
+
+        window.dispatch_event(
+            KeyDownEvent {
+                keystroke: Keystroke::parse("space").unwrap(),
+                is_held: false,
+                prefer_character_input: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+
+        let from = window.find("canvas-body").bounds().center();
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: from + point(px(20.), px(0.)),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert_eq!(
+            harness
+                .view
+                .read_with(cx, |view, _| view.editor.view().pan.x),
+            20.
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn space_in_property_input_keeps_input_focus(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("property-name", cx);
+        window.press("space", cx);
+        harness.view.read_with(cx, |view, cx| {
+            assert!(
+                view.dock
+                    .as_ref()
+                    .unwrap()
+                    .properties
+                    .read(cx)
+                    .is_focused(window, cx)
+            );
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {

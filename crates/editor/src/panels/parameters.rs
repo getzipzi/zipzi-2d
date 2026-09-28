@@ -51,17 +51,6 @@ impl Render for ParametersPanel {
             .track_focus(&self.focus)
             .child(
                 div()
-                    .px_3()
-                    .py_2()
-                    .border_b_1()
-                    .border_color(theme.border)
-                    .text_xs()
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .text_color(theme.muted_foreground)
-                    .child(t!("editor.parameters")),
-            )
-            .child(
-                div()
                     .p_4()
                     .text_xs()
                     .text_color(theme.muted_foreground)

@@ -148,6 +148,7 @@ PLIST
     : > "$pid_file"
     if ! open -g -n \
       --env KASANE_DEV_BACKGROUND=1 \
+      --env "KASANE_DEV_SESSION_DIR=$PWD/target/dev-session-$package" \
       --env MTL_HUD_ENABLED=1 \
       --env MTL_HUD_ALIGNMENT=bottomleft \
       --env MTL_HUD_SCALE=0.16 \

@@ -188,18 +188,6 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             .text_color(theme.foreground)
             .text_sm()
             .track_focus(&self.focus)
-            .child(
-                div()
-                    .flex_shrink_0()
-                    .px_3()
-                    .py_2()
-                    .border_b_1()
-                    .border_color(theme.border)
-                    .text_xs()
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .text_color(theme.muted_foreground)
-                    .child(format!("{} ({count})", title)),
-            )
             .child(if rows.is_empty() {
                 div()
                     .p_4()

@@ -11,6 +11,11 @@ impl EditorView {
 
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if let Some(session) = &mut self.dev_session {
+            if let Err(error) = session.sync(&self.editor) {
+                self.edit_error = Some(error.to_string());
+            }
+        }
         if preview::device_changed(window, self.gpu_device.as_ref()) {
             self.connect_preview(window, cx);
         }
@@ -30,7 +35,30 @@ impl Render for EditorView {
             .text_color(theme.foreground)
             .text_sm()
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
+                if event.keystroke.key == "space"
+                    && event.keystroke.modifiers == Modifiers::default()
+                    && !event.is_held
+                    && !this.modal
+                    && !window.has_active_dialog(cx)
+                    && !this.has_focused_input(window, cx)
+                {
+                    if let Some(dock) = &this.dock {
+                        dock.canvas
+                            .update(cx, |canvas, cx| canvas.set_temporary_hand(true, window, cx));
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
                 this.filter_repeat(event, window, cx)
+            }))
+            .capture_key_up(cx.listener(|this, event: &KeyUpEvent, window, cx| {
+                if event.keystroke.key == "space" {
+                    if let Some(dock) = &this.dock {
+                        dock.canvas.update(cx, |canvas, cx| {
+                            canvas.set_temporary_hand(false, window, cx)
+                        });
+                    }
+                }
             }))
             // 1. Global Document TabBar
             .child(workspace::render_tab_bar(self, modal, window, cx))
