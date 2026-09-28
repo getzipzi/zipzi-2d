@@ -9,6 +9,7 @@ use gpui_kit::component::{
 pub struct CanvasView {
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
+    pub(crate) toolbar: workspace::toolbar::ToolbarRegistry,
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
     space_held: bool,
@@ -54,6 +55,7 @@ impl CanvasView {
             Self {
                 owner,
                 focus,
+                toolbar: workspace::toolbar::ToolbarRegistry::with_defaults(),
                 bounds: Bounds::default(),
                 pan: None,
                 space_held: false,
@@ -383,12 +385,8 @@ impl Render for CanvasView {
                 .absolute()
                 .size_full(),
             )
-            .child(workspace::render_floating_toolbar(
-                self, &owner, modal, window, cx,
-            ))
-            .child(workspace::render_floating_zoom_bar(
-                self, &owner, modal, window, cx,
-            ))
+            .child(workspace::render_floating_toolbar(self, modal, cx))
+            .child(workspace::render_floating_zoom_bar(&owner, modal, cx))
             .children(overlay.unavailable.map(|reason| {
                 div()
                     .absolute()

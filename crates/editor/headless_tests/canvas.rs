@@ -1,4 +1,6 @@
 use super::setup;
+use crate::workspace::toolbar::ToolbarItemConfig;
+use gpui_kit::assets::IconName;
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, point, px};
 
@@ -48,6 +50,24 @@ fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
         assert!(window.try_find("tool_deformer").is_some());
         assert!(window.try_find("tool_hand").is_some());
 
+        // A configured button becomes visible through registration.
+        let canvas = harness
+            .view
+            .read_with(cx, |view, _| view.dock.as_ref().unwrap().canvas.clone());
+        canvas.update(cx, |canvas, cx| {
+            let item = ToolbarItemConfig {
+                id: "registered-toolbar-item",
+                icon: IconName::Hand,
+                tooltip_key: "editor.tool_hand",
+                selected: |_| false,
+                enabled: |_, modal| !modal,
+                action: None,
+            };
+            assert!(canvas.toolbar.register(item).is_ok());
+            assert!(canvas.toolbar.register(item).is_err());
+            cx.notify();
+        });
+
         // Verify floating zoom bar exists on canvas
         assert!(
             window.try_find("canvas-floating-zoom").is_some(),
@@ -72,6 +92,11 @@ fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
             .view
             .read_with(cx, |view, _| view.editor.view().zoom);
         assert!(zoomed_out < zoomed_in);
+    })
+    .unwrap();
+
+    cx.update_window(harness.window, |_, window, _| {
+        assert!(window.try_find("registered-toolbar-item").is_some());
     })
     .unwrap();
 }
