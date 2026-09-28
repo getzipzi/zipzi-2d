@@ -109,6 +109,18 @@ impl MetalSceneRenderer {
         scene: &SceneSnapshot,
         transform: ViewportTransform,
     ) -> Result<SubmittedFrame> {
+        self.submit_transformed_traced(queue, config, scene, transform, |_| {})
+    }
+
+    /// Optional CPU boundary observer; the normal path monomorphizes to a no-op.
+    pub fn submit_transformed_traced(
+        &mut self,
+        queue: &metal::CommandQueueRef,
+        config: MetalTargetConfig,
+        scene: &SceneSnapshot,
+        transform: ViewportTransform,
+        mut boundary: impl FnMut(&'static str),
+    ) -> Result<SubmittedFrame> {
         ensure!(transform.metrics.visible(), "Hidden canvas");
         self.draws += 1;
         let key = |source: &editor_core::SceneTexture| {
@@ -177,6 +189,7 @@ impl MetalSceneRenderer {
             textures.set_revision(source.asset_id.clone(), texture.revision);
             textures.set_repeat(source.asset_id.clone(), true);
         }
+        boundary("textures_ready");
         let output = self.context.output_texture(config).map_err(status)?;
         self.renderer.resize(config).map_err(status)?;
         if !self.synced_scene.as_ref().is_some_and(|last| {
@@ -187,6 +200,7 @@ impl MetalSceneRenderer {
                 .map_err(status)?;
             self.synced_scene = Some(scene.clone());
         }
+        boundary("model_synced");
         let scale = transform.scale * transform.metrics.scale_factor;
         self.renderer
             .update_view(ViewportConfig {
@@ -204,11 +218,14 @@ impl MetalSceneRenderer {
             .map_err(status)?;
         // Use GPUI's queue, not MetalContext's convenience queue, to preserve ordering.
         let command = queue.new_command_buffer();
+        boundary("encode_begin");
         self.last_stats = self
             .renderer
             .encode(command, &output, MetalOutputMode::Replace, &textures)
             .map_err(status)?;
+        boundary("preview_commit_begin");
         command.commit();
+        boundary("preview_submitted");
         Ok(SubmittedFrame {
             image: output,
             command: command.to_owned(),

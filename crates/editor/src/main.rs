@@ -1,5 +1,6 @@
 rust_i18n::i18n!("locales", fallback = "en");
 
+mod benchmark;
 mod canvas;
 mod docking;
 #[cfg(test)]
@@ -7,6 +8,7 @@ mod docking;
 mod headless_tests;
 mod i18n;
 mod menus;
+mod mesh_edges;
 mod panels;
 mod preview;
 mod project;
@@ -91,6 +93,7 @@ impl EditorView {
                 }
             }));
         }
+        benchmark::start(&mut editor, window, cx);
         editor
     }
 
@@ -123,14 +126,17 @@ impl EditorView {
             while let Ok(frame) = frames.recv().await {
                 if this
                     .update(cx, |this, cx| {
+                        frame_trace::emit(frame.trace_id, "ui_received", &[]);
                         match frame.image {
                             Ok(image) => {
                                 let Some(canvas) = frame.canvas else {
                                     return;
                                 };
                                 if !this.editor.present_frame(canvas.clone()) {
+                                    frame_trace::emit(frame.trace_id, "rejected", &[]);
                                     return;
                                 }
+                                frame_trace::emit(frame.trace_id, "accepted", &[]);
                                 this.render_stats = frame.stats;
                                 this.frame = Some(preview::Presented { image, canvas });
                                 if this.render_error.take().is_some() {
@@ -180,7 +186,15 @@ impl EditorView {
         if self.editor.is_busy() {
             return;
         }
-        match self.editor.preview_if_needed() {
+        let trace_id = frame_trace::next_id();
+        frame_trace::emit(
+            trace_id,
+            "scene_begin",
+            &[("input", frame_trace::current_input())],
+        );
+        let preview = self.editor.preview_if_needed();
+        frame_trace::emit(trace_id, "scene_end", &[]);
+        match preview {
             Ok(Some(preview)) => {
                 let Some(canvas) = preview.canvas else {
                     return;
@@ -188,7 +202,17 @@ impl EditorView {
                 let Some((width, height)) = canvas.transform.metrics.physical_size() else {
                     return;
                 };
+                frame_trace::emit(
+                    trace_id,
+                    "request",
+                    &[
+                        ("revision", preview.revision),
+                        ("width", width as u64),
+                        ("height", height as u64),
+                    ],
+                );
                 let request = preview::Request {
+                    trace_id,
                     revision: preview.revision,
                     canvas,
                     scene: preview.scene,
@@ -203,6 +227,7 @@ impl EditorView {
                     .as_ref()
                     .is_none_or(|requests| requests.send(request).is_err())
                 {
+                    frame_trace::emit(trace_id, "send_error", &[]);
                     self.render_error = Some(t!("editor.preview_stopped").into_owned());
                 }
             }
@@ -213,12 +238,17 @@ impl EditorView {
 }
 
 fn main() {
+    benchmark::init().expect("initialize benchmark trace");
     i18n::activate(None);
     let background_launch = std::env::var_os("KASANE_DEV_BACKGROUND").is_some();
     gpui_kit::application()
         .with_assets(gpui_kit::assets::AllAssets)
         .run(move |cx| {
             gpui_kit::init(cx);
+            cx.on_app_quit(|_| async {
+                benchmark::finish();
+            })
+            .detach();
             let settings = settings::Settings::load(cx);
             cx.set_global(settings);
             menus::init(cx);
@@ -254,6 +284,7 @@ fn main() {
                 cx.activate(true);
             }
         });
+    benchmark::finish();
 }
 
 #[cfg(test)]

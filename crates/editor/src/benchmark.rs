@@ -1,0 +1,406 @@
+//! Opt-in window benchmark and nonblocking JSONL trace writer.
+//! Synthetic events enter GPUI dispatch; they do not measure OS input delivery.
+use super::*;
+use anyhow::{Context as _, ensure};
+use std::{
+    cell::Cell,
+    fs::File,
+    io::{BufWriter, Write},
+    path::PathBuf,
+    sync::{
+        Mutex, OnceLock,
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        mpsc,
+    },
+    time::{Duration, Instant},
+};
+
+struct Writer {
+    sender: mpsc::SyncSender<Option<frame_trace::Event>>,
+    thread: Mutex<Option<std::thread::JoinHandle<std::io::Result<()>>>>,
+}
+static WRITER: OnceLock<Writer> = OnceLock::new();
+static STOPPED: AtomicBool = AtomicBool::new(false);
+static LOST: AtomicU64 = AtomicU64::new(0);
+static IN_SINK: AtomicU64 = AtomicU64::new(0);
+// Production default; only an explicit trace-mode override restores the baseline.
+static BATCH_MESH_EDGES: AtomicBool = AtomicBool::new(true);
+static HIDE_MESH_EDGES: AtomicBool = AtomicBool::new(false);
+static CONFIG: OnceLock<Config> = OnceLock::new();
+thread_local! { static INJECTING_POINTER: Cell<bool> = const { Cell::new(false) }; }
+struct Config {
+    model: PathBuf,
+    samples: usize,
+    warmup: usize,
+    hz: u32,
+}
+
+pub fn init() -> anyhow::Result<()> {
+    let automatic = std::env::var("KASANE_WINDOW_BENCH").is_ok_and(|s| s == "1");
+    let Some(path) = std::env::var_os("KASANE_FRAME_TRACE") else {
+        ensure!(
+            !automatic,
+            "KASANE_WINDOW_BENCH requires KASANE_FRAME_TRACE"
+        );
+        return Ok(());
+    };
+    for (name, valid) in [
+        ("KASANE_TRACE_HIDE_MESH_EDGES", ["0", "1"]),
+        ("KASANE_TRACE_BATCH_MESH_EDGES", ["0", "1"]),
+    ] {
+        if let Ok(value) = std::env::var(name) {
+            ensure!(valid.contains(&value.as_str()), "invalid {name}");
+        }
+    }
+    HIDE_MESH_EDGES.store(
+        std::env::var("KASANE_TRACE_HIDE_MESH_EDGES").is_ok_and(|v| v == "1"),
+        Ordering::Relaxed,
+    );
+    BATCH_MESH_EDGES.store(
+        !std::env::var("KASANE_TRACE_BATCH_MESH_EDGES").is_ok_and(|v| v == "0"),
+        Ordering::Relaxed,
+    );
+    if automatic {
+        let number = |name: &str, fallback: usize| -> anyhow::Result<usize> {
+            Ok(std::env::var(name)
+                .map(|s| s.parse())
+                .unwrap_or(Ok(fallback))?)
+        };
+        let samples = number("KASANE_BENCH_SAMPLES", 300)?;
+        let warmup = number("KASANE_BENCH_WARMUP", 30)?;
+        let hz = number("KASANE_BENCH_HZ", 120)?;
+        ensure!(
+            (1..=100_000).contains(&samples) && warmup <= 10_000,
+            "invalid sample count"
+        );
+        ensure!((1..=1000).contains(&hz), "invalid benchmark frequency");
+        let model = PathBuf::from(
+            std::env::var_os("KASANE_BENCH_MODEL").context("KASANE_BENCH_MODEL is required")?,
+        )
+        .canonicalize()?;
+        CONFIG
+            .set(Config {
+                model,
+                samples,
+                warmup,
+                hz: hz as u32,
+            })
+            .ok();
+    }
+    // Refuse to overwrite an earlier run's measurements.
+    let file = File::options().write(true).create_new(true).open(path)?;
+    let (sender, receiver) = mpsc::sync_channel::<Option<frame_trace::Event>>(65_536);
+    let thread = std::thread::spawn(move || -> std::io::Result<()> {
+        let mut out = BufWriter::new(file);
+        let config = CONFIG.get();
+        writeln!(
+            out,
+            "{}",
+            serde_json::json!({
+                "type": "metadata", "schema": 1, "clock": "mach_host_nanoseconds",
+                "debug_assertions": cfg!(debug_assertions), "automatic": automatic,
+                "model": config.map(|c| c.model.display().to_string()),
+                "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
+                "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
+                "diagnostics": {
+                    "hide_mesh_edges": HIDE_MESH_EDGES.load(Ordering::Relaxed),
+                    "batch_mesh_edges": BATCH_MESH_EDGES.load(Ordering::Relaxed),
+                },
+            })
+        )?;
+        loop {
+            match receiver.recv_timeout(Duration::from_millis(250)) {
+                Ok(Some(event)) => {
+                    let fields: serde_json::Map<_, _> = event
+                        .fields
+                        .into_iter()
+                        .map(|(key, value)| (key.to_owned(), value.into()))
+                        .collect();
+                    writeln!(
+                        out,
+                        "{}",
+                        serde_json::json!({
+                            "type": "event", "at_ns": event.at_ns, "id": event.id,
+                            "stage": event.stage, "fields": fields,
+                        })
+                    )?;
+                }
+                Ok(None) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                Err(mpsc::RecvTimeoutError::Timeout) => out.flush()?,
+            }
+        }
+        writeln!(
+            out,
+            "{}",
+            serde_json::json!({"type": "end", "lost_events": LOST.load(Ordering::Relaxed)})
+        )?;
+        out.flush()
+    });
+    WRITER
+        .set(Writer {
+            sender,
+            thread: Mutex::new(Some(thread)),
+        })
+        .ok();
+    ensure!(
+        frame_trace::install(|event| {
+            IN_SINK.fetch_add(1, Ordering::SeqCst);
+            if !STOPPED.load(Ordering::SeqCst) {
+                if let Some(writer) = WRITER.get() {
+                    if writer.sender.try_send(Some(event)).is_err() {
+                        LOST.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+            }
+            IN_SINK.fetch_sub(1, Ordering::SeqCst);
+        }),
+        "frame trace sink already installed"
+    );
+    Ok(())
+}
+
+pub fn batch_mesh_edges() -> bool {
+    BATCH_MESH_EDGES.load(Ordering::Relaxed)
+}
+
+pub fn hide_mesh_edges() -> bool {
+    HIDE_MESH_EDGES.load(Ordering::Relaxed)
+}
+
+// AppKit may deliver an unpressed hover move between synthetic drag samples.
+// Let scripted pointer events own the canvas during an automatic benchmark.
+// Manual tracing and ordinary editor sessions keep all native mouse behavior.
+pub fn ignore_native_mouse_move() -> bool {
+    CONFIG.get().is_some() && !INJECTING_POINTER.get()
+}
+
+fn dispatch_pointer(
+    window: &mut Window,
+    event: PlatformInput,
+    cx: &mut App,
+) -> DispatchEventResult {
+    struct Restore(bool);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            INJECTING_POINTER.set(self.0);
+        }
+    }
+    let _restore = Restore(INJECTING_POINTER.replace(true));
+    window.dispatch_event(event, cx)
+}
+
+pub fn finish() {
+    if STOPPED.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    if let Some(writer) = WRITER.get() {
+        // Finish only after callbacks that observed the open sink have enqueued.
+        while IN_SINK.load(Ordering::SeqCst) != 0 {
+            std::thread::yield_now();
+        }
+        let _ = writer.sender.send(None);
+        if let Some(thread) = writer.thread.lock().unwrap().take() {
+            match thread.join() {
+                Ok(Ok(())) => {}
+                error => eprintln!("frame trace writer failed: {error:?}"),
+            }
+        }
+    }
+}
+
+pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<EditorView>) {
+    let Some(config) = CONFIG.get() else {
+        return;
+    };
+    let request = if config.model.to_string_lossy().ends_with(".model3.json") {
+        LoadRequest::Model3(config.model.clone())
+    } else {
+        LoadRequest::Open(config.model.clone())
+    };
+    let task = match view.editor.prepare_load(request) {
+        Ok(Some(task)) => task,
+        other => {
+            eprintln!(
+                "benchmark could not prepare model: {}",
+                other
+                    .err()
+                    .map_or_else(|| "no load task".into(), |e| e.to_string())
+            );
+            frame_trace::emit(frame_trace::next_id(), "benchmark_failed", &[]);
+            cx.defer(|cx| {
+                finish();
+                cx.quit();
+            });
+            return;
+        }
+    };
+    cx.spawn_in(window, async move |view, cx| {
+        let result: anyhow::Result<()> = async {
+            let executor = cx.background_executor().clone();
+            let completion = executor.spawn(async move { task.run() }).await;
+            view.update_in(cx, |view, window, cx| -> anyhow::Result<()> {
+                view.editor.finish_load(completion)?;
+                if let Some(layer) = view
+                    .editor
+                    .layers()
+                    .into_iter()
+                    .find(|l| l.visible && l.vertices > 0)
+                {
+                    view.editor.execute(EditorCommand::Select(layer.id))?;
+                }
+                view.refresh_document(window, cx);
+                Ok(())
+            })??;
+            // Await a usable frame, not just import completion. First uploads are cold work.
+            let ready_deadline = Instant::now() + Duration::from_secs(30);
+            loop {
+                executor.timer(Duration::from_millis(25)).await;
+                if view.update_in(cx, |v, _, _| v.frame.is_some())? {
+                    break;
+                }
+                ensure!(
+                    Instant::now() < ready_deadline,
+                    "timed out waiting for first preview"
+                );
+            }
+            executor.timer(Duration::from_millis(500)).await;
+            for mode in 1..=3u64 {
+                let center = view
+                    .update_in(cx, |view, window, cx| {
+                        view.editor.cancel_gesture();
+                        view.editor.reset_view();
+                        view.redraw(cx);
+                        view.dock
+                            .as_ref()
+                            .unwrap()
+                            .canvas
+                            .read(cx)
+                            .benchmark_center()
+                            .map(|center| (center, window.is_visible()))
+                    })?
+                    .context("canvas has no measured bounds")?;
+                ensure!(center.1, "benchmark window is hidden");
+                let center = center.0;
+                executor.timer(Duration::from_millis(250)).await;
+                if mode == 1 {
+                    cx.update(|window, cx| {
+                        dispatch_pointer(
+                            window,
+                            MouseDownEvent {
+                                button: MouseButton::Middle,
+                                position: center,
+                                click_count: 1,
+                                modifiers: Default::default(),
+                                first_mouse: false,
+                            }
+                            .to_platform_input(),
+                            cx,
+                        )
+                    })?;
+                }
+                let interval = Duration::from_secs_f64(1. / config.hz as f64);
+                let mut deadline = Instant::now() + interval;
+                for sample in 0..config.samples + config.warmup {
+                    executor
+                        .timer(deadline.saturating_duration_since(Instant::now()))
+                        .await;
+                    let late_ns = Instant::now()
+                        .saturating_duration_since(deadline)
+                        .as_nanos() as u64;
+                    cx.update(|window, cx| -> anyhow::Result<()> {
+                        let input = frame_trace::InputScope::begin(100 + mode);
+                        frame_trace::emit(
+                            input.id(),
+                            "benchmark_tick",
+                            &[
+                                ("mode", mode),
+                                ("sample", sample as u64),
+                                ("warmup", u64::from(sample < config.warmup)),
+                                ("timer_late_ns", late_ns),
+                            ],
+                        );
+                        ensure!(
+                            window.is_visible() && window.is_window_active(),
+                            "benchmark window lost visibility or focus"
+                        );
+                        match mode {
+                            1 => {
+                                dispatch_pointer(
+                                    window,
+                                    MouseMoveEvent {
+                                        position: center
+                                            + point(
+                                                px((sample as f32 * 0.13).sin() * 60.),
+                                                px((sample as f32 * 0.07).cos() * 30.),
+                                            ),
+                                        pressed_button: Some(MouseButton::Middle),
+                                        modifiers: Default::default(),
+                                    }
+                                    .to_platform_input(),
+                                    cx,
+                                );
+                            }
+                            2 => {
+                                dispatch_pointer(
+                                    window,
+                                    ScrollWheelEvent {
+                                        position: center,
+                                        delta: ScrollDelta::Lines(point(
+                                            0.,
+                                            if sample % 40 < 20 { 1. } else { -1. },
+                                        )),
+                                        ..Default::default()
+                                    }
+                                    .to_platform_input(),
+                                    cx,
+                                );
+                            }
+                            _ => {
+                                view.update(cx, |view, cx| -> anyhow::Result<()> {
+                                    // Real SDK edit/evaluation; bypasses only the slider widget.
+                                    view.editor.execute(EditorCommand::PreviewOpacity(
+                                        0.5 + (sample % 50) as f32 * 0.01,
+                                    ))?;
+                                    view.redraw_canvas(cx);
+                                    Ok(())
+                                })??;
+                            }
+                        }
+                        Ok(())
+                    })??;
+                    // Never inject a burst of catch-up events after a late wake-up.
+                    deadline += interval;
+                    if deadline < Instant::now() {
+                        deadline = Instant::now() + interval;
+                    }
+                }
+                if mode == 1 {
+                    cx.update(|window, cx| {
+                        dispatch_pointer(
+                            window,
+                            MouseUpEvent {
+                                button: MouseButton::Middle,
+                                position: center,
+                                ..Default::default()
+                            }
+                            .to_platform_input(),
+                            cx,
+                        )
+                    })?;
+                }
+                executor.timer(Duration::from_millis(500)).await;
+            }
+            executor.timer(Duration::from_secs(2)).await;
+            frame_trace::emit(frame_trace::next_id(), "benchmark_done", &[]);
+            Ok(())
+        }
+        .await;
+        if let Err(error) = result {
+            eprintln!("window benchmark failed: {error:#}");
+            frame_trace::emit(frame_trace::next_id(), "benchmark_failed", &[]);
+        }
+        finish();
+        let _ = cx.update(|_, cx| cx.quit());
+    })
+    .detach();
+}

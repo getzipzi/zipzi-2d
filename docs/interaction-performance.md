@@ -95,3 +95,9 @@ KASANE_BENCH_MODEL="$PWD/models/local/mao/runtime/mao_pro.model3.json" \
 ## 尚待完成的 120 fps 验收
 
 在主屏的 Release 应用中测量持续输入到显示提交的完整链路，并继续追踪超预算长尾。GPU 输出/offscreen 纹理仍逐帧分配；复杂嵌套混合、更多模型、长期动画与全量 SDK 变形求值需要各自工作负载的采样。本次结果确认热路径大幅缩短，尚不构成所有场景稳定 120 fps 的保证。
+
+## 实际窗口链路 benchmark
+
+现已补充可重放平移、缩放、SDK 透明度编辑的实际窗口测试，以及手动输入追踪。它以同一次请求关联 GPUI 输入、场景求值、worker 排队、Metal GPU 时间、GPUI CPU/合成和 drawable 显示时间，并保留被合并及未显示请求。运行方式、统计口径和覆盖限制见 [窗口 benchmark](window-benchmark.md)。上文的无窗口数据不因此变成屏幕端验收结果。
+
+选中网格边线已默认按独立子路径合并，每 4,096 条分块，保留画布裁剪与顶点覆盖顺序。原生 Metal 像素测试覆盖透明交点、缩放、像素比和大网格。

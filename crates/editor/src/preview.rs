@@ -1,7 +1,7 @@
 //! Immutable Metal frames produced on GPUI's device and command queue.
 use editor_core::SceneSnapshot;
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
-use gpui_kit::{IntoElement, Styled, Window};
+use gpui_kit::{IntoElement, Styled, Window, frame_trace};
 use metal::MTLPixelFormat;
 use std::sync::{Arc, Condvar, Mutex};
 
@@ -13,6 +13,7 @@ pub struct Presented {
 }
 
 pub struct Request {
+    pub trace_id: u64,
     pub revision: u64,
     pub canvas: editor_core::CanvasFrame,
     pub scene: SceneSnapshot,
@@ -20,6 +21,7 @@ pub struct Request {
 }
 
 pub struct Frame {
+    pub trace_id: u64,
     pub revision: u64,
     pub canvas: Option<editor_core::CanvasFrame>,
     pub stats: (u64, u64, u64),
@@ -46,7 +48,10 @@ impl RequestSender {
         if inbox.closed {
             return Err(());
         }
-        inbox.latest = Some(request);
+        frame_trace::emit(request.trace_id, "enqueued", &[]);
+        if let Some(old) = inbox.latest.replace(request) {
+            frame_trace::emit(old.trace_id, "coalesced", &[]);
+        }
         ready.notify_one();
         Ok(())
     }
@@ -56,7 +61,9 @@ impl Drop for RequestSender {
         let (lock, ready) = &*self.shared;
         if let Ok(mut inbox) = lock.lock() {
             inbox.closed = true;
-            inbox.latest = None;
+            if let Some(old) = inbox.latest.take() {
+                frame_trace::emit(old.trace_id, "cancelled", &[]);
+            }
             ready.notify_one();
         }
     }
@@ -84,6 +91,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
             Ok(renderer) => renderer,
             Err(error) => {
                 let _ = frames.send_blocking(Frame {
+                    trace_id: 0,
                     revision: 0,
                     canvas: None,
                     stats: (0, 0, 0),
@@ -104,24 +112,49 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 }
                 inbox.latest.take().unwrap()
             };
+            let trace_id = request.trace_id;
+            frame_trace::emit(trace_id, "worker_begin", &[]);
             // Background Metal calls need a pool per frame; NSApplication's pool
             // does not drain autoreleased objects created on this thread.
             let frame = objc2::rc::autoreleasepool(|_| {
                 renderer
-                    .submit_transformed(
+                    .submit_transformed_traced(
                         &gpu.queue,
                         request.target,
                         &request.scene,
                         request.canvas.transform,
+                        |stage| frame_trace::emit(trace_id, stage, &[]),
                     )
                     .map_err(|e| e.to_string())
             });
             let (image, completion) = match frame {
-                Ok(submitted) => (Ok(submitted.image), Some(submitted.command)),
-                Err(error) => (Err(error), None),
+                Ok(submitted) => {
+                    let stats = renderer.last_frame_stats();
+                    frame_trace::emit(
+                        trace_id,
+                        "published",
+                        &[
+                            (
+                                "texture",
+                                submitted.image.as_ref() as *const metal::TextureRef as u64,
+                            ),
+                            ("draw_calls", stats.draw_calls as u64),
+                            ("render_passes", stats.render_passes as u64),
+                            ("mask_redraws", stats.masks as u64),
+                            ("mask_hits", stats.mask_cache_hits as u64),
+                            ("buffer_uploads", stats.buffer_uploads as u64),
+                        ],
+                    );
+                    (Ok(submitted.image), Some(submitted.command))
+                }
+                Err(error) => {
+                    frame_trace::emit(trace_id, "render_error", &[]);
+                    (Err(error), None)
+                }
             };
             if frames
                 .send_blocking(Frame {
+                    trace_id,
                     revision: request.revision,
                     canvas: Some(request.canvas),
                     stats: renderer.stats(),
@@ -131,12 +164,35 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
             {
                 break;
             }
+            frame_trace::emit(trace_id, "delivery_sent", &[]);
             // One producer command in flight. Requests arriving while the GPU
             // works collapse into Inbox::latest; discarded images no longer
             // leave an unbounded queue of obsolete GPU work ahead of the UI.
             // Publish before waiting: GPUI can sample on this same queue.
             if let Some(command) = completion {
                 command.wait_until_completed();
+                if trace_id != 0 {
+                    frame_trace::emit(
+                        trace_id,
+                        "preview_complete",
+                        &[("status", command.status() as u64)],
+                    );
+                    let object = unsafe {
+                        &*(command.as_ref() as *const metal::CommandBufferRef
+                            as *const objc2::runtime::AnyObject)
+                    };
+                    let start: f64 = unsafe { objc2::msg_send![object, GPUStartTime] };
+                    let end: f64 = unsafe { objc2::msg_send![object, GPUEndTime] };
+                    if start > 0. && end >= start {
+                        frame_trace::emit_at(
+                            trace_id,
+                            "preview_gpu_start",
+                            (start * 1e9) as u64,
+                            &[],
+                        );
+                        frame_trace::emit_at(trace_id, "preview_gpu_end", (end * 1e9) as u64, &[]);
+                    }
+                }
             }
         }
     });

@@ -3261,6 +3261,8 @@ impl Window {
     /// the contents of the new [`Scene`], use [`Self::present`].
     #[profiling::function]
     pub fn draw(&mut self, cx: &mut App) -> ArenaClearNeeded {
+        let trace_id = crate::frame_trace::next_id();
+        crate::frame_trace::emit(trace_id, "ui_draw_begin", &[]);
         // Drain every draw in profiler builds so a previous frame's
         // first-invalidation timestamp can't be attributed to this one.
         #[cfg(feature = "profiler")]
@@ -3402,6 +3404,8 @@ impl Window {
             self.refresh();
         }
         self.needs_present.set(true);
+        self.rendered_frame.scene.frame_trace_id = trace_id;
+        crate::frame_trace::emit(trace_id, "ui_draw_end", &[]);
 
         #[cfg(feature = "profiler")]
         {
@@ -5422,6 +5426,13 @@ impl Window {
     /// Dispatch a mouse, keyboard, or touch event on the window.
     #[profiling::function]
     pub fn dispatch_event(&mut self, event: PlatformInput, cx: &mut App) -> DispatchEventResult {
+        let _trace_input = crate::frame_trace::InputScope::begin(match &event {
+            PlatformInput::MouseMove(_) => 1,
+            PlatformInput::MouseDown(_) => 2,
+            PlatformInput::MouseUp(_) => 3,
+            PlatformInput::ScrollWheel(_) => 4,
+            _ => 5,
+        });
         #[cfg(feature = "profiler")]
         self.window_profiler.begin_input(event.kind_name());
         let update_count_before = self.invalidator.update_count();

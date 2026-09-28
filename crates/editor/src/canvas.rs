@@ -64,6 +64,10 @@ impl CanvasView {
             }
         })
     }
+    pub(crate) fn benchmark_center(&self) -> Option<Point<Pixels>> {
+        (self.bounds.size.width > px(0.) && self.bounds.size.height > px(0.))
+            .then(|| self.bounds.center())
+    }
     pub fn hand_tool(&self) -> bool {
         self.hand_tool
     }
@@ -129,6 +133,9 @@ impl CanvasView {
         });
     }
     fn moved(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {
+        if benchmark::ignore_native_mouse_move() {
+            return;
+        }
         if let Some(PanGesture { position, button }) = self.pan {
             if event.pressed_button != Some(button) {
                 self.pan = None;
@@ -208,9 +215,12 @@ impl Render for CanvasView {
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
         let frame = state.frame.clone();
-        let overlay = state
+        let mut overlay = state
             .editor
             .overlay_for_frame(frame.as_ref().map(|f| f.canvas.version));
+        if benchmark::hide_mesh_edges() {
+            overlay.lines.clear();
+        }
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
         let error = state.render_error.clone();
@@ -351,12 +361,18 @@ impl Render for CanvasView {
                     },
                     move |bounds, _, window, _cx| {
                         let to_window = |p: CanvasPoint| bounds.origin + point(px(p.x), px(p.y));
-                        for (a, b) in &overlay.lines {
-                            let mut path = PathBuilder::stroke(px(1.));
-                            path.move_to(to_window(*a));
-                            path.line_to(to_window(*b));
-                            if let Ok(path) = path.build() {
+                        if benchmark::batch_mesh_edges() {
+                            mesh_edges::paint_edges(&overlay.lines, bounds.origin, |path| {
                                 window.paint_path(path, muted);
+                            });
+                        } else {
+                            for (a, b) in &overlay.lines {
+                                let mut path = PathBuilder::stroke(px(1.));
+                                path.move_to(to_window(*a));
+                                path.line_to(to_window(*b));
+                                if let Ok(path) = path.build() {
+                                    window.paint_path(path, muted);
+                                }
                             }
                         }
                         for vertex in &overlay.vertices {

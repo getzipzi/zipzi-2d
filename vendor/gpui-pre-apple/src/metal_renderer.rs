@@ -161,6 +161,18 @@ impl MetalRenderer {
         // https://developer.apple.com/documentation/metal/managing-your-game-window-for-metal-in-macos
         layer.set_opaque(!transparent);
         layer.set_maximum_drawable_count(3);
+        // Trace the actual layer configuration without changing presentation.
+        if gpui::frame_trace::enabled() {
+            gpui::frame_trace::emit(
+                gpui::frame_trace::next_id(),
+                "layer_config",
+                &[
+                    ("drawables", layer.maximum_drawable_count()),
+                    ("display_sync", u64::from(layer.display_sync_enabled())),
+                    ("offscreen", 0),
+                ],
+            );
+        }
         // Allow texture reading for visual tests (captures screenshots without ScreenCaptureKit)
         #[cfg(any(test, feature = "test-support"))]
         layer.set_framebuffer_only(false);
@@ -463,6 +475,40 @@ impl MetalRenderer {
     }
 
     pub fn draw(&mut self, scene: &Scene) {
+        let trace_id = gpui::frame_trace::next_id();
+        gpui::frame_trace::emit(
+            trace_id,
+            "compose_begin",
+            &[
+                ("cpu_frame", scene.frame_trace_id),
+                ("quads", scene.quads.len() as u64),
+                ("shadows", scene.shadows.len() as u64),
+                ("paths", scene.paths.len() as u64),
+                (
+                    "path_batches",
+                    if trace_id != 0 {
+                        scene
+                            .batches()
+                            .filter(|batch| matches!(batch, PrimitiveBatch::Paths(_)))
+                            .count() as u64
+                    } else {
+                        0
+                    },
+                ),
+                ("surfaces", scene.surfaces.len() as u64),
+            ],
+        );
+        if trace_id != 0 {
+            for surface in &scene.surfaces {
+                if let gpui::SurfaceSource::MetalTexture(texture) = &surface.source {
+                    gpui::frame_trace::emit(
+                        trace_id,
+                        "compose_surface",
+                        &[("texture", texture.as_ptr() as u64)],
+                    );
+                }
+            }
+        }
         let layer = match &self.layer {
             Some(l) => l.clone(),
             None => {
@@ -477,6 +523,7 @@ impl MetalRenderer {
             (viewport_size.width.ceil() as i32).into(),
             (viewport_size.height.ceil() as i32).into(),
         );
+        gpui::frame_trace::emit(trace_id, "drawable_wait_begin", &[]);
         let drawable = if let Some(drawable) = layer.next_drawable() {
             drawable
         } else {
@@ -487,6 +534,7 @@ impl MetalRenderer {
             return;
         };
 
+        gpui::frame_trace::emit(trace_id, "drawable_acquired", &[]);
         let command_buffer = match self.render_frame(scene, drawable.texture(), viewport_size) {
             Ok(command_buffer) => command_buffer,
             Err(error) => {
@@ -495,6 +543,49 @@ impl MetalRenderer {
             }
         };
 
+        if trace_id != 0 {
+            let scheduled = ConcreteBlock::new(move |_: &metal::CommandBufferRef| {
+                gpui::frame_trace::emit(trace_id, "compose_scheduled", &[]);
+            })
+            .copy();
+            command_buffer.add_scheduled_handler(&scheduled);
+            let completed = ConcreteBlock::new(move |command: &metal::CommandBufferRef| {
+                gpui::frame_trace::emit(
+                    trace_id,
+                    "compose_complete",
+                    &[("status", command.status() as u64)],
+                );
+                let start: f64 = unsafe { msg_send![command, GPUStartTime] };
+                let end: f64 = unsafe { msg_send![command, GPUEndTime] };
+                if start > 0. && end >= start {
+                    gpui::frame_trace::emit_at(
+                        trace_id,
+                        "compose_gpu_start",
+                        (start * 1e9) as u64,
+                        &[],
+                    );
+                    gpui::frame_trace::emit_at(
+                        trace_id,
+                        "compose_gpu_end",
+                        (end * 1e9) as u64,
+                        &[],
+                    );
+                }
+            })
+            .copy();
+            command_buffer.add_completed_handler(&completed);
+            let presented = ConcreteBlock::new(move |drawable: &metal::DrawableRef| {
+                let time = drawable.presented_time();
+                if time > 0. {
+                    gpui::frame_trace::emit_at(trace_id, "presented", (time * 1e9) as u64, &[]);
+                } else {
+                    gpui::frame_trace::emit(trace_id, "present_dropped", &[]);
+                }
+            })
+            .copy();
+            drawable.add_presented_handler(&presented);
+        }
+        gpui::frame_trace::emit(trace_id, "compose_commit_begin", &[]);
         if self.presents_with_transaction {
             command_buffer.commit();
             command_buffer.wait_until_scheduled();
@@ -503,6 +594,7 @@ impl MetalRenderer {
             command_buffer.present_drawable(drawable);
             command_buffer.commit();
         }
+        gpui::frame_trace::emit(trace_id, "compose_submitted", &[]);
     }
 
     fn render_frame(
