@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Kasane Editor</title>
+  <desc id="desc">A simplified anime portrait built from flowing hair layers and four mesh handles.</desc>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0.35" y2="1">
+      <stop stop-color="#103b74"/>
+      <stop offset="1" stop-color="#082653"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0.7" y2="1">
+      <stop stop-color="#57bfca"/>
+      <stop offset="1" stop-color="#75d2d2"/>
+    </linearGradient>
+    <linearGradient id="hair-shadow" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#23778b"/>
+      <stop offset="1" stop-color="#3190a0"/>
+    </linearGradient>
+    <linearGradient id="ivory" x1="0" y1="0" x2="0.85" y2="1">
+      <stop stop-color="#fff6e9"/>
+      <stop offset="0.55" stop-color="#fae7db"/>
+      <stop offset="1" stop-color="#edcfd0"/>
+    </linearGradient>
+    <linearGradient id="peach" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ecc9bc"/>
+      <stop offset="1" stop-color="#ffdfc9"/>
+    </linearGradient>
+    <linearGradient id="curl" x1="0" y1="0" x2="0.1" y2="1">
+      <stop stop-color="#92c3c8"/>
+      <stop offset="1" stop-color="#d6e4dc"/>
+    </linearGradient>
+    <clipPath id="iris-clip">
+      <path d="M391 542C410 544 433 553 443 562C451 592 447 619 432 632C412 641 396 606 391 542Z"/>
+    </clipPath>
+  </defs>
+
+  <rect id="app-tile" x="48" y="48" width="928" height="928" rx="208" fill="url(#tile)"/>
+
+  <g id="rear-hair">
+    <!-- One detached side lock, with a deliberate tapered tip. -->
+    <path fill="#409cae" d="M302 400C265 485 213 526 192 568S187 647 220 668C201 628 215 588 240 553S292 464 302 400Z"/>
+    <!-- Smooth joins use reflected handles; sharp joins are reserved for hair tips. -->
+    <path fill="url(#teal)" d="M288 263C310 352 281 461 250 548S219 704 263 731S358 721 418 738S518 826 576 842S664 850 695 806S716 734 666 699C612 665 571 655 529 601L348 329Z"/>
+    <path fill="url(#hair-shadow)" d="M315 336C331 419 291 492 294 546S326 585 345 602C355 619 345 633 329 644C356 691 394 719 442 740C380 714 333 732 294 707S257 622 275 552S307 410 315 336Z"/>
+    <path fill="#277e91" d="M520 585C558 645 617 675 663 700S710 775 666 825C602 819 557 773 534 720S523 631 520 585Z"/>
+  </g>
+
+  <g id="face">
+    <path fill="#ffefe2" d="M357 390C333 442 316 497 322 545S344 590 349 606C351 623 340 635 326 642C353 693 414 722 475 756C514 744 546 726 567 708C545 656 535 620 504 572S394 452 357 390Z"/>
+    <path id="brow" fill="#15536a" d="M339 487C376 475 424 492 463 514C418 498 378 490 339 487Z"/>
+    <path id="eye-white" fill="#fffaf1" d="M376 549C410 543 455 564 484 584C477 617 454 638 428 632S390 592 376 549Z"/>
+    <g clip-path="url(#iris-clip)">
+      <path fill="#0c415e" d="M387 540H451V641H387Z"/>
+      <path id="iris-crescent" fill="#79d6d8" d="M403 582C396 604 410 632 427 633C443 632 448 615 444 600C441 614 427 617 417 606C410 599 406 590 403 582Z"/>
+      <ellipse cx="428" cy="579" rx="6" ry="9" fill="#fffdf8"/>
+    </g>
+    <path id="upper-lash" fill="#0b3453" d="M354 534C387 520 438 542 495 576L486 601C487 586 473 578 458 570C427 554 401 547 382 550L365 562L374 548L354 557L372 540Z"/>
+    <g id="cheek" fill="#f5bca3">
+      <ellipse cx="466" cy="647" rx="15" ry="4" transform="rotate(-47 466 647)"/>
+      <ellipse cx="484" cy="646" rx="13" ry="3.8" transform="rotate(-47 484 646)"/>
+    </g>
+  </g>
+
+  <g id="front-hair">
+    <!-- The lower lock and its inner turn are separate, broad shapes. -->
+    <path id="lower-lock" fill="#fff4e7" d="M412 425C475 461 613 492 700 532S808 609 811 666S761 783 653 842C700 803 707 759 676 724S585 684 548 647S454 530 412 425Z"/>
+    <path id="lower-lock-shade" fill="url(#peach)" d="M511 476C614 510 720 552 758 615S783 747 724 803C753 758 753 716 720 675S567 570 511 476Z"/>
+    <path id="inner-turn" fill="url(#curl)" d="M665 694C719 710 752 744 741 777S697 832 653 842C681 818 695 790 692 759S681 711 665 694Z"/>
+
+    <!-- A single sweeping front plate, with tangent-continuous C/S joins. -->
+    <path id="upper-lock" fill="url(#ivory)" d="M254 206C260 164 299 143 350 147S494 211 574 273S712 360 780 380S878 435 868 505S840 618 811 674C809 620 767 564 700 532S548 493 477 460S321 380 285 323S248 248 254 206Z"/>
+    <path id="upper-lock-inset" fill="#e5d3d8" d="M290 193C324 196 367 240 396 286S456 386 502 418C427 379 354 350 312 298S268 191 290 193Z"/>
+    <path id="ivory-edge" fill="#fff7e9" d="M254 206C256 277 300 338 361 385S477 461 541 482S668 513 717 542S813 627 811 674C808 606 767 565 700 532S562 459 502 418C427 379 354 350 312 298S268 191 290 193C275 189 260 196 254 206Z"/>
+    <path id="right-fold-shade" fill="#bfbacd" d="M695 522C744 517 778 495 813 504S869 559 850 604C840 630 826 655 811 674C808 614 763 558 695 522Z"/>
+  </g>
+
+  <g id="mesh" fill="none" stroke="#fffdf6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M517 270L598 403L780 391L696 515L598 403M517 270L780 391"/>
+  </g>
+  <g id="mesh-handles" fill="#8be7ed" stroke="#fffdf6" stroke-width="4">
+    <circle cx="517" cy="270" r="13"/>
+    <circle cx="780" cy="391" r="13"/>
+    <circle cx="696" cy="515" r="13"/>
+    <circle cx="598" cy="403" r="13" fill="#ff896e"/>
+  </g>
+</svg>

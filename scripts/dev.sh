@@ -8,11 +8,13 @@ case "${1:-editor}" in
     package=kasane-editor
     name='Kasane Editor'
     bundle_id=dev.kasane.editor.watch
+    icon_asset=assets/kasane-editor-icon-vector.icns
     ;;
   playground)
     package=component-playground
     name='Kasane Component Playground'
     bundle_id=dev.kasane.component-playground.watch
+    icon_asset=assets/AppIcon.icns
     ;;
   *)
     printf 'usage: %s [editor|playground] [watch|run]\n' "$0" >&2
@@ -116,9 +118,12 @@ case "${2:-watch}" in
     fi
 
     run_log="$PWD/target/dev-run-$package.log"
-    mkdir -p "$app/Contents/MacOS"
+    mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
     cp "target/debug/$package" "$executable.new.$$"
     mv "$executable.new.$$" "$executable"
+    if [ -f "$icon_asset" ]; then
+      cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
+    fi
     cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -128,6 +133,7 @@ case "${2:-watch}" in
 <key>CFBundleExecutable</key><string>$package</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>0.1.0</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
