@@ -224,10 +224,12 @@ impl Document {
             ));
         }
         for id in self.session.mesh_ids() {
-            if let Some(mesh) = self.mesh(id) {
+            if let Some(mesh) = self.model().get_mesh(id) {
                 parents.push(part_indices.get(mesh.part_id.as_str()).copied());
-                let mut node = TreeNode::new(mesh.id, mesh.name, TreeNodeKind::Mesh);
+                let mut node =
+                    TreeNode::new(mesh.id.clone(), mesh.name.clone(), TreeNodeKind::Mesh);
                 node.triangles = Some(mesh.triangles.len());
+                node.visible = Some(mesh.enabled);
                 nodes.push(node);
             }
         }
@@ -261,10 +263,12 @@ impl Document {
             ));
         }
         for id in self.session.mesh_ids() {
-            if let Some(mesh) = self.mesh(id) {
+            if let Some(mesh) = self.model().get_mesh(id) {
                 parents.push(transform_indices.get(mesh.deformer_id.as_str()).copied());
-                let mut node = TreeNode::new(mesh.id, mesh.name, TreeNodeKind::Mesh);
+                let mut node =
+                    TreeNode::new(mesh.id.clone(), mesh.name.clone(), TreeNodeKind::Mesh);
                 node.triangles = Some(mesh.triangles.len());
+                node.visible = Some(mesh.enabled);
                 nodes.push(node);
             }
         }

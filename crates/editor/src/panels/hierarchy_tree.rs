@@ -6,7 +6,9 @@ use gpui_kit::component::{
     dock::{BasePanel, Panel, PanelEvent},
 };
 use gpui_kit::{prelude::*, *};
-use std::collections::HashSet;
+use std::{collections::HashSet, rc::Rc};
+
+#[derive(Clone)]
 
 struct VisibleRow {
     node: TreeNode,
@@ -18,23 +20,30 @@ fn node_key(node: &TreeNode) -> String {
     format!("{:?}:{}", node.kind, node.id)
 }
 
-fn visible_rows(nodes: Vec<TreeNode>, collapsed: &HashSet<String>) -> Vec<VisibleRow> {
+fn visible_rows(nodes: &[TreeNode], collapsed: &HashSet<String>) -> Vec<VisibleRow> {
     fn visit(
-        mut node: TreeNode,
+        node: &TreeNode,
         depth: usize,
         collapsed: &HashSet<String>,
         rows: &mut Vec<VisibleRow>,
     ) {
-        let children = std::mem::take(&mut node.children);
-        let has_children = !children.is_empty();
-        let expanded = !collapsed.contains(&node_key(&node));
+        let has_children = !node.children.is_empty();
+        let expanded = !collapsed.contains(&node_key(node));
+        // Copy only row metadata; collapsed descendants never enter the row cache.
         rows.push(VisibleRow {
-            node,
+            node: TreeNode {
+                id: node.id.clone(),
+                name: node.name.clone(),
+                kind: node.kind,
+                triangles: node.triangles,
+                visible: node.visible,
+                children: Vec::new(),
+            },
             depth,
             has_children,
         });
         if expanded {
-            for child in children {
+            for child in &node.children {
                 visit(child, depth + 1, collapsed, rows);
             }
         }
@@ -59,6 +68,12 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
     _observe: Subscription,
     collapsed: HashSet<String>,
     document_id: Option<DocumentId>,
+    revision: Option<u64>,
+    nodes: Vec<TreeNode>,
+    rows: Rc<Vec<VisibleRow>>,
+    rows_dirty: bool,
+    count: usize,
+    scroll: UniformListScrollHandle,
 }
 
 impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
@@ -74,6 +89,12 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
                 _observe: observe,
                 collapsed: HashSet::new(),
                 document_id: None,
+                revision: None,
+                nodes: Vec::new(),
+                rows: Rc::new(Vec::new()),
+                rows_dirty: true,
+                count: 0,
+                scroll: UniformListScrollHandle::new(),
             }
         })
     }
@@ -110,28 +131,41 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
         };
         let state = owner.read(cx);
         let target = state.editor.active_id();
-        if self.document_id != target {
+        let revision = state.editor.tree_revision();
+        let document_changed = self.document_id != target;
+        if document_changed {
             self.collapsed.clear();
             self.document_id = target;
+            self.scroll = UniformListScrollHandle::new();
         }
-        let nodes = if DEFORMER {
-            state.editor.deformer_tree()
-        } else {
-            state.editor.mesh_tree()
-        };
-        let count = count_kind(&nodes, |kind| {
-            if DEFORMER {
-                matches!(
-                    kind,
-                    TreeNodeKind::WarpDeformer | TreeNodeKind::RotationDeformer
-                )
+        if document_changed || self.revision != revision {
+            self.revision = revision;
+            self.nodes = if DEFORMER {
+                state.editor.deformer_tree()
             } else {
-                kind == TreeNodeKind::Mesh
-            }
-        });
-        let selected = state.editor.selected_layer().map(|layer| layer.id);
+                state.editor.mesh_tree()
+            };
+            self.count = count_kind(&self.nodes, |kind| {
+                if DEFORMER {
+                    matches!(
+                        kind,
+                        TreeNodeKind::WarpDeformer | TreeNodeKind::RotationDeformer
+                    )
+                } else {
+                    kind == TreeNodeKind::Mesh
+                }
+            });
+            self.rows_dirty = true;
+        }
+        if self.rows_dirty {
+            self.rows = Rc::new(visible_rows(&self.nodes, &self.collapsed));
+            self.rows_dirty = false;
+        }
+        let count = self.count;
+        let selected = state.editor.selected_layer_id().map(str::to_owned);
         let disabled = state.modal || state.editor.is_busy();
-        let rows = visible_rows(nodes, &self.collapsed);
+        let rows = self.rows.clone();
+        let panel = cx.entity();
         let theme = cx.theme();
         let title = if DEFORMER {
             t!("editor.deformer_tree")
@@ -146,6 +180,8 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 "mesh-tree-panel"
             })
             .size_full()
+            .min_h_0()
+            .overflow_hidden()
             .flex()
             .flex_col()
             .bg(theme.background)
@@ -154,6 +190,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             .track_focus(&self.focus)
             .child(
                 div()
+                    .flex_shrink_0()
                     .px_3()
                     .py_2()
                     .border_b_1()
@@ -175,26 +212,22 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                     })
                     .into_any_element()
             } else {
-                div()
-                    .id(if DEFORMER {
-                        "deformer-tree-scroll-area"
-                    } else {
-                        "mesh-tree-scroll-area"
-                    })
-                    .flex_1()
-                    .overflow_y_scroll()
-                    .p_1p5()
-                    .flex()
-                    .flex_col()
-                    .gap_1()
-                    .children(rows.into_iter().map(|row| {
+                uniform_list(
+                    if DEFORMER { "deformer-tree-scroll-area" } else { "mesh-tree-scroll-area" },
+                    rows.len(),
+                    move |range, _, cx| panel.update(cx, |this, cx| {
+                        let theme = cx.theme().clone();
+                        range.map(|index| {
+                        let row = rows[index].clone();
                         let node = row.node;
                         let is_mesh = node.kind == TreeNodeKind::Mesh;
                         let is_selected = is_mesh && selected.as_ref() == Some(&node.id);
                         let key = node_key(&node);
-                        let is_collapsed = self.collapsed.contains(&key);
+                        let is_collapsed = this.collapsed.contains(&key);
                         let id = node.id.clone();
-                        let owner = self.owner.clone();
+                        let owner = this.owner.clone();
+                        let owner_for_vis = owner.clone();
+                        let id_for_vis = id.clone();
                         let icon = match node.kind {
                             TreeNodeKind::Part => IconName::Folder,
                             TreeNodeKind::Mesh => IconName::Grid2x2,
@@ -217,9 +250,11 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                 if DEFORMER { "deformer" } else { "mesh" }
                             )))
                             .flex()
+                            .w_full()
+                            .min_w_0()
                             .items_center()
                             .h(px(26.))
-                            .pl(px(6. + row.depth as f32 * 16.))
+                            .pl(px(4. + row.depth as f32 * 10.))
                             .pr_2()
                             .rounded_md()
                             .bg(if is_selected {
@@ -257,6 +292,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     if !this.collapsed.insert(key.clone()) {
                                         this.collapsed.remove(&key);
                                     }
+                                    this.rows_dirty = true;
                                     cx.notify();
                                 }
                             }))
@@ -282,6 +318,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             .child(
                                 div()
                                     .flex_1()
+                                    .min_w_0()
                                     .text_xs()
                                     .text_ellipsis()
                                     .overflow_hidden()
@@ -292,15 +329,44 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     })
                                     .child(label),
                             )
-                            .when_some(node.triangles, |element, triangles| {
+                            .when_some(node.visible, |element, visible| {
                                 element.child(
                                     div()
-                                        .text_xs()
-                                        .text_color(theme.muted_foreground.opacity(0.7))
-                                        .child(format!("{triangles} tris")),
+                                        .id(SharedString::from(format!("{}-vis-{id_for_vis}", if DEFORMER { "deformer" } else { "mesh" })))
+                                        .test_support()
+                                        .ml_auto()
+                                        .w(px(24.))
+                                        .h_full()
+                                        .flex()
+                                        .flex_shrink_0()
+                                        .items_center()
+                                        .justify_center()
+                                        .text_color(if visible { theme.muted_foreground } else { theme.muted_foreground.opacity(0.4) })
+                                        .hover(|style| style.text_color(theme.foreground))
+                                        .on_click(cx.listener(move |_, _, window, cx| {
+                                            cx.stop_propagation();
+                                            if disabled { return; }
+                                            let (Some(owner), Some(target)) = (owner_for_vis.upgrade(), target) else { return; };
+                                            owner.update(cx, |owner, cx| {
+                                                if owner.modal || window.has_active_dialog(cx) || owner.editor.is_busy() || owner.editor.active_id() != Some(target) {
+                                                    return;
+                                                }
+                                                let result = owner.editor.execute_for(target, EditorCommand::SetLayerVisible {
+                                                    layer_id: id_for_vis.clone(),
+                                                    visible: !visible,
+                                                });
+                                                owner.complete_edit(result, cx);
+                                            });
+                                        }))
+                                        .child(Icon::new(if visible { IconName::Eye } else { IconName::EyeOff }).small()),
                                 )
                             })
-                    }))
+                        }).collect()
+                    }),
+                )
+                    .flex_1()
+                    .min_h_0()
+                    .track_scroll(&self.scroll)
                     .into_any_element()
             })
             .into_any_element()

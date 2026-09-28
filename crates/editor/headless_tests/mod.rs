@@ -1,7 +1,7 @@
 //! Editor UI integration tests using GPUI's headless window.
 
 mod canvas;
-mod layers;
+mod hierarchy;
 mod properties;
 mod recent_files;
 

@@ -272,8 +272,10 @@ impl EditorView {
                 item(CommandId::Vertices),
                 item(CommandId::CancelGesture),
                 MenuItem::separator(),
-                item(CommandId::Layers),
+                item(CommandId::MeshTree),
+                item(CommandId::Deformers),
                 item(CommandId::Properties),
+                item(CommandId::Parameters),
                 item(CommandId::ResetLayout),
                 MenuItem::action(t!("menu.toggle_theme"), ToggleTheme),
                 item(CommandId::ShowShortcuts),
@@ -326,13 +328,17 @@ impl EditorView {
                 CommandId::SaveAs => self.save(true, window, cx),
                 CommandId::Close => self.close_active(window, cx),
                 CommandId::Quit => self.close(window, cx),
-                CommandId::Layers | CommandId::Properties => {
+                CommandId::MeshTree
+                | CommandId::Deformers
+                | CommandId::Properties
+                | CommandId::Parameters => {
                     if let Some(dock) = &mut self.dock {
                         dock.toggle(
-                            if id == CommandId::Layers {
-                                docking::PanelKind::Layers
-                            } else {
-                                docking::PanelKind::Properties
+                            match id {
+                                CommandId::MeshTree => docking::PanelKind::MeshTree,
+                                CommandId::Deformers => docking::PanelKind::Deformers,
+                                CommandId::Parameters => docking::PanelKind::Parameters,
+                                _ => docking::PanelKind::Properties,
                             },
                             window,
                             cx,

@@ -14,6 +14,7 @@ pub struct TreeNode {
     pub name: String,
     pub kind: TreeNodeKind,
     pub triangles: Option<usize>,
+    pub visible: Option<bool>,
     pub children: Vec<TreeNode>,
 }
 
@@ -24,6 +25,7 @@ impl TreeNode {
             name,
             kind,
             triangles: None,
+            visible: None,
             children: Vec::new(),
         }
     }

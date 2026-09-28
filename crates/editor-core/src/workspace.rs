@@ -212,6 +212,14 @@ impl Editor {
                     .map_or_else(|| entry.frozen_layers.clone(), |s| s.document().layers())
             })
     }
+    /// Changes only with document edits, not selection or viewport movement.
+    pub fn tree_revision(&self) -> Option<u64> {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .and_then(|entry| entry.session.as_ref())
+            .map(|session| session.scene_revision)
+    }
+
     pub fn mesh_tree(&self) -> Vec<TreeNode> {
         self.active
             .and_then(|id| self.entry(id).ok())
@@ -232,6 +240,17 @@ impl Editor {
                 )
             })
     }
+    pub fn selected_layer_id(&self) -> Option<&str> {
+        let entry = self.entry(self.active?).ok()?;
+        match &entry.session {
+            Some(session) => session.document().selected_id(),
+            None => entry
+                .frozen_selected
+                .as_ref()
+                .map(|layer| layer.id.as_str()),
+        }
+    }
+
     pub fn selected_layer(&self) -> Option<Layer> {
         self.active
             .and_then(|id| self.entry(id).ok())

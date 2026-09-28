@@ -33,7 +33,6 @@ fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
         .or_else(|| view.render_error.clone());
     let message = error.clone().unwrap_or_else(|| view.message.clone());
     let is_error = error.is_some();
-    let zoom_pct = (view.editor.view().zoom * 100.0).round() as i32;
     let selected_layer = view.editor.selected_layer();
 
     div()
@@ -83,11 +82,6 @@ fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
                         "{}: {}v / {}t",
                         layer.name, layer.vertices, layer.triangles
                     )))
-                })
-                .child(
-                    div()
-                        .font_family(".AppleSystemUIFontMonospaced")
-                        .child(format!("{}%", zoom_pct)),
-                ),
+                }),
         )
 }

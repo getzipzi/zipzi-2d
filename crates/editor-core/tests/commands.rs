@@ -166,3 +166,49 @@ fn versioned_preferences_roundtrip_reject_corruption_and_unknown_commands() -> a
     assert_eq!(std::fs::read_dir(dir.path())?.count(), 1);
     Ok(())
 }
+
+#[test]
+fn tree_cache_revision_and_visibility_follow_edits_not_navigation() -> anyhow::Result<()> {
+    fn visibility(nodes: &[TreeNode], id: &str) -> Option<bool> {
+        nodes.iter().find_map(|node| {
+            if node.id == id && node.kind == TreeNodeKind::Mesh {
+                node.visible
+            } else {
+                visibility(&node.children, id)
+            }
+        })
+    }
+    let (doc, _dir) = support::sample_document_with_two_layers()?;
+    let mut editor = Editor::from_document(doc);
+    let id = editor
+        .layers()
+        .into_iter()
+        .find(|layer| layer.name == "Second")
+        .unwrap()
+        .id;
+    let revision = editor.tree_revision();
+    editor.execute(EditorCommand::Select(id.clone()))?;
+    editor.zoom_by(0.1);
+    editor.pan_by(CanvasPoint { x: 10., y: 10. });
+    assert_eq!(editor.tree_revision(), revision);
+    assert_eq!(editor.selected_layer_id(), Some(id.as_str()));
+    editor.execute(EditorCommand::SetLayerVisible {
+        layer_id: id.clone(),
+        visible: false,
+    })?;
+    assert_ne!(editor.tree_revision(), revision);
+    for tree in [editor.mesh_tree(), editor.deformer_tree()] {
+        assert_eq!(visibility(&tree, &id), Some(false));
+    }
+    let hidden_revision = editor.tree_revision();
+    editor.execute(EditorCommand::Undo)?;
+    assert_ne!(editor.tree_revision(), hidden_revision);
+    for tree in [editor.mesh_tree(), editor.deformer_tree()] {
+        assert_eq!(visibility(&tree, &id), Some(true));
+    }
+    editor.execute(EditorCommand::Redo)?;
+    for tree in [editor.mesh_tree(), editor.deformer_tree()] {
+        assert_eq!(visibility(&tree, &id), Some(false));
+    }
+    Ok(())
+}

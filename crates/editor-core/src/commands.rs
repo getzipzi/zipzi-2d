@@ -44,8 +44,12 @@ pub enum CommandId {
     Vertices,
     #[serde(rename = "tool.cancel")]
     CancelGesture,
-    #[serde(rename = "panel.layers")]
-    Layers,
+    #[serde(rename = "panel.mesh-tree", alias = "panel.layers")]
+    MeshTree,
+    #[serde(rename = "panel.deformers")]
+    Deformers,
+    #[serde(rename = "panel.parameters")]
+    Parameters,
     #[serde(rename = "panel.properties")]
     Properties,
     #[serde(rename = "layout.reset")]
@@ -117,7 +121,9 @@ specs![
         false,
         ["escape"]
     ),
-    (Layers, "editor.layers", Workspace, false, []),
+    (MeshTree, "editor.mesh_tree", Workspace, false, []),
+    (Deformers, "editor.deformer_tree", Workspace, false, []),
+    (Parameters, "editor.parameters", Workspace, false, []),
     (Properties, "editor.properties", Workspace, false, []),
     (ResetLayout, "menu.reset_layout", Workspace, false, []),
     (ResetShortcuts, "menu.reset_shortcuts", Workspace, false, []),
@@ -152,7 +158,8 @@ impl Editor {
             New | Open | ImportModel3 | ImportPsd => !self.exiting(),
             Quit => true,
             Previous | Next => self.document_count() > 1,
-            Layers | Properties | ResetLayout | ResetShortcuts | ShowShortcuts => true,
+            MeshTree | Deformers | Parameters | Properties | ResetLayout | ResetShortcuts
+            | ShowShortcuts => true,
             Close => target,
             Undo => target && self.can_undo(),
             Redo => target && self.can_redo(),

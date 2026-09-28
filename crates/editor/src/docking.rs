@@ -78,7 +78,6 @@ impl Drop for LayoutWriter {
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PanelKind {
-    Layers,
     Properties,
     MeshTree,
     Deformers,
@@ -88,7 +87,6 @@ pub enum PanelKind {
 pub struct DockWorkspace {
     pub area: Entity<DockArea>,
     pub canvas: Entity<crate::canvas::CanvasView>,
-    pub layers: Entity<crate::panels::LayersPanel>,
     pub properties: Entity<crate::panels::PropertiesPanel>,
     pub mesh_tree: Entity<crate::panels::MeshTreePanel>,
     pub deformer_tree: Entity<crate::panels::DeformerTreePanel>,
@@ -106,7 +104,6 @@ pub struct LayoutConfig {
 impl DockWorkspace {
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Self {
         let canvas = crate::canvas::CanvasView::new(owner.clone(), window, cx);
-        let layers = crate::panels::LayersPanel::new(owner.clone(), cx);
         let properties = crate::panels::PropertiesPanel::new(owner.clone(), window, cx);
         let mesh_tree = crate::panels::MeshTreePanel::new(owner.clone(), cx);
         let deformer_tree = crate::panels::DeformerTreePanel::new(owner.clone(), cx);
@@ -114,7 +111,6 @@ impl DockWorkspace {
 
         for (name, handle) in [
             ("Canvas", panel_handle(canvas.clone())),
-            ("Layers", panel_handle(layers.clone())),
             ("Properties", panel_handle(properties.clone())),
             ("MeshTree", panel_handle(mesh_tree.clone())),
             ("Deformers", panel_handle(deformer_tree.clone())),
@@ -123,7 +119,7 @@ impl DockWorkspace {
             register_panel(cx, name, move |_, _, _| handle.clone());
         }
 
-        let (area, skin) = DockSkin::dock_area("kasane-workspace", Some(1), window, cx);
+        let (area, skin) = DockSkin::dock_area("kasane-workspace", Some(2), window, cx);
         skin.set_close_button_visible(true, cx);
         let last_valid = area.read(cx).dump(cx);
         #[cfg(test)]
@@ -135,7 +131,6 @@ impl DockWorkspace {
         let mut result = Self {
             area,
             canvas,
-            layers,
             properties,
             mesh_tree,
             deformer_tree,
@@ -160,21 +155,36 @@ impl DockWorkspace {
             area.set_center(
                 DockLayout::h_split()
                     .child(
-                        DockLayout::tabs()
-                            .panel_view(panel_handle(self.layers.clone()), cx)
-                            .panel_view(panel_handle(self.mesh_tree.clone()), cx),
-                        Some(px(220.)),
+                        DockLayout::v_split()
+                            .child(
+                                DockLayout::tabs()
+                                    .panel_view(panel_handle(self.mesh_tree.clone()), cx),
+                                None,
+                            )
+                            .child(
+                                DockLayout::tabs()
+                                    .panel_view(panel_handle(self.deformer_tree.clone()), cx),
+                                None,
+                            ),
+                        Some(px(240.)),
                     )
                     .child(
                         DockLayout::tabs().panel_view(panel_handle(self.canvas.clone()), cx),
                         None,
                     )
                     .child(
-                        DockLayout::tabs()
-                            .panel_view(panel_handle(self.properties.clone()), cx)
-                            .panel_view(panel_handle(self.parameters.clone()), cx)
-                            .panel_view(panel_handle(self.deformer_tree.clone()), cx),
-                        Some(px(280.)),
+                        DockLayout::v_split()
+                            .child(
+                                DockLayout::tabs()
+                                    .panel_view(panel_handle(self.properties.clone()), cx),
+                                None,
+                            )
+                            .child(
+                                DockLayout::tabs()
+                                    .panel_view(panel_handle(self.parameters.clone()), cx),
+                                None,
+                            ),
+                        Some(px(240.)),
                     ),
                 window,
                 cx,
@@ -189,13 +199,6 @@ impl DockWorkspace {
 
     pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
         match kind {
-            PanelKind::Layers => toggle_panel(
-                &self.area,
-                self.layers.clone(),
-                DockPlacement::Left,
-                window,
-                cx,
-            ),
             PanelKind::Properties => toggle_panel(
                 &self.area,
                 self.properties.clone(),
@@ -213,7 +216,7 @@ impl DockWorkspace {
             PanelKind::Deformers => toggle_panel(
                 &self.area,
                 self.deformer_tree.clone(),
-                DockPlacement::Right,
+                DockPlacement::Left,
                 window,
                 cx,
             ),
@@ -268,7 +271,6 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
                 ensure!(
                     [
                         "Canvas",
-                        "Layers",
                         "Properties",
                         "MeshTree",
                         "Deformers",
@@ -307,7 +309,7 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
             }
         }
     }
-    ensure!(state.version == Some(1), "Unsupported layout version");
+    ensure!(state.version == Some(2), "Unsupported layout version");
     let mut seen = std::collections::HashSet::new();
     ensure!(
         walk(&state.center, &mut seen, 0)? == 1,
@@ -348,6 +350,13 @@ impl EditorView {
         .detach();
         let store = cx.global::<settings::Settings>().store.clone();
         match store.read::<LayoutConfig>("layout.json") {
+            // Version 1 includes the retired Layers panel and tabbed sidebars.
+            // Replace it once with the new split layout and persist the upgrade.
+            Ok(Some(saved)) if saved.layout.version == Some(1) => {
+                if let Err(error) = dock.writer.save(dock.last_valid.clone()) {
+                    self.edit_error = Some(error.to_string());
+                }
+            }
             Ok(Some(saved)) => {
                 match validate_layout(&saved.layout).and_then(|_| {
                     dock.area
@@ -409,11 +418,11 @@ mod tests {
     use gpui_kit::component::dock::{DockAreaState, PanelInfo, PanelState};
     fn layout() -> DockAreaState {
         DockAreaState {
-            version: Some(1),
+            version: Some(2),
             center: PanelState {
                 panel_name: "StackPanel".into(),
                 children: vec![
-                    PanelState::new("Layers"),
+                    PanelState::new("MeshTree"),
                     PanelState::new("Canvas"),
                     PanelState::new("Properties"),
                 ],
@@ -453,6 +462,12 @@ mod tests {
         );
         let mut invalid = default.clone();
         invalid.center.info = PanelInfo::tabs(0);
+        assert!(validate_layout(&invalid).is_err());
+        invalid = default.clone();
+        invalid.version = Some(1);
+        assert!(validate_layout(&invalid).is_err());
+        invalid = default.clone();
+        invalid.center.children.push(PanelState::new("Layers"));
         assert!(validate_layout(&invalid).is_err());
         invalid = default.clone();
         invalid.center.children.push(PanelState::new("unknown"));
