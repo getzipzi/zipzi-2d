@@ -28,6 +28,21 @@ fi
 # The workspace disables incremental builds; enable them for this dev session.
 export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-1}"
 
+app="$PWD/target/$name Dev.app"
+executable="$app/Contents/MacOS/$package"
+pid_file="$PWD/target/dev-$package.pid"
+
+is_dev_process() {
+  case "$1" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  command_line=$(ps -p "$1" -o command= 2>/dev/null) || return 1
+  case "$command_line" in
+    "$executable"|"$executable "*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 case "${2:-watch}" in
   watch)
     if ! command -v watchexec >/dev/null 2>&1; then
@@ -35,22 +50,71 @@ case "${2:-watch}" in
       exit 1
     fi
     printf 'Watching %s; successful builds relaunch the app in the background.\n' "$package"
-    exec watchexec --on-busy-update=queue --exts rs,toml \
+    initial_pid=
+    if [ -s "$pid_file" ]; then
+      initial_pid=$(cat "$pid_file")
+    fi
+    watched_pid=
+    if is_dev_process "$initial_pid"; then
+      watched_pid=$initial_pid
+    fi
+    watchexec --on-busy-update=queue --exts rs,toml \
       --watch . --watch ../kasane-2d/modules \
-      -- ./scripts/dev.sh "${1:-editor}" reload
+      -- ./scripts/dev.sh "${1:-editor}" reload &
+    watcher_pid=$!
+    stop_watcher() {
+      kill -TERM "$watcher_pid" 2>/dev/null || :
+      wait "$watcher_pid" 2>/dev/null || :
+    }
+    trap stop_watcher 0
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    trap 'exit 129' HUP
+
+    while :; do
+      if [ -s "$pid_file" ]; then
+        current_pid=$(cat "$pid_file")
+        case "$current_pid" in
+          ''|*[!0-9]*) ;;
+          *)
+            if [ "$current_pid" != "$initial_pid" ]; then
+              watched_pid=$current_pid
+            fi
+            ;;
+        esac
+      fi
+      if [ -n "$watched_pid" ] && ! is_dev_process "$watched_pid"; then
+        # Reload writes the next PID before terminating the previous app.
+        if [ -s "$pid_file" ]; then
+          current_pid=$(cat "$pid_file")
+          if [ "$current_pid" != "$watched_pid" ] && is_dev_process "$current_pid"; then
+            watched_pid=$current_pid
+            continue
+          fi
+        fi
+        printf '%s closed; stopping the file watcher.\n' "$name"
+        exit 0
+      fi
+      watcher_state=$(ps -p "$watcher_pid" -o stat= 2>/dev/null || :)
+      case "$watcher_state" in
+        ''|Z*)
+          wait "$watcher_pid"
+          exit $?
+          ;;
+      esac
+      sleep 0.5
+    done
     ;;
   reload)
     mkdir -p target
     log="target/dev-build-$package.log"
+    # GPUI FPS is temporarily disabled; omit the optional debug-tools feature.
     if ! cargo build --locked -p "$package" >"$log" 2>&1; then
       printf 'Build failed; full output: %s\n' "$log" >&2
       tail -n 80 "$log" >&2
       exit 1
     fi
 
-    app="$PWD/target/$name Dev.app"
-    executable="$app/Contents/MacOS/$package"
-    pid_file="$PWD/target/dev-$package.pid"
     run_log="$PWD/target/dev-run-$package.log"
     mkdir -p "$app/Contents/MacOS"
     cp "target/debug/$package" "$executable.new.$$"
@@ -68,17 +132,6 @@ case "${2:-watch}" in
 </dict></plist>
 PLIST
 
-    is_dev_process() {
-      case "$1" in
-        ''|*[!0-9]*) return 1 ;;
-      esac
-      command_line=$(ps -p "$1" -o command= 2>/dev/null) || return 1
-      case "$command_line" in
-        "$executable"|"$executable "*) return 0 ;;
-        *) return 1 ;;
-      esac
-    }
-
     old_pid=
     if [ -f "$pid_file" ]; then
       old_pid=$(cat "$pid_file")
@@ -89,6 +142,9 @@ PLIST
     : > "$pid_file"
     if ! open -g -n \
       --env KASANE_DEV_BACKGROUND=1 \
+      --env MTL_HUD_ENABLED=1 \
+      --env MTL_HUD_ALIGNMENT=bottomleft \
+      --env MTL_HUD_SCALE=0.16 \
       --env "KASANE_DEV_PID_FILE=$pid_file" \
       --stdout "$run_log" --stderr "$run_log" "$app" >>"$log" 2>&1; then
       printf '%s' "$old_pid" > "$pid_file"
@@ -118,7 +174,8 @@ PLIST
     printf 'Updated %s in the background.\n' "$package"
     ;;
   run)
-    exec cargo run --locked -p "$package"
+    exec env MTL_HUD_ENABLED=1 MTL_HUD_ALIGNMENT=bottomleft MTL_HUD_SCALE=0.16 \
+      cargo run --locked -p "$package"
     ;;
   *)
     printf 'usage: %s [editor|playground] [watch|run]\n' "$0" >&2

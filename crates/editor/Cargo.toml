@@ -4,8 +4,12 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[features]
+debug-tools = ["dep:gpui-fps"]
+
 [dependencies]
 gpui-kit.workspace = true
+gpui-fps = { workspace = true, optional = true }
 editor-core.workspace = true
 editor-render.workspace = true
 rust-i18n.workspace = true

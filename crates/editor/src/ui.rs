@@ -57,7 +57,8 @@ impl Render for Editor {
             canvas = canvas.child(t!("editor.starting_preview"));
         }
         let layers = self.document.layers();
-        self.menu_actions(cx)
+        let content = self
+            .menu_actions(cx)
             .size_full()
             .flex()
             .flex_col()
@@ -257,6 +258,20 @@ impl Render for Editor {
                         theme.muted_foreground
                     })
                     .child(div().truncate().child(status)),
-            )
+            );
+
+        #[cfg(all(debug_assertions, feature = "debug-tools"))]
+        {
+            div()
+                .relative()
+                .size_full()
+                .child(content)
+                .child(gpui_fps::fps_monitor(window, cx))
+                .into_any_element()
+        }
+        #[cfg(not(all(debug_assertions, feature = "debug-tools")))]
+        {
+            content.into_any_element()
+        }
     }
 }

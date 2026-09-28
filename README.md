@@ -22,7 +22,7 @@ web/
 Kasane checkout 必须包含 `modules/kasane-render-metal` 及对应的公共渲染模块修改。GPUI Kit 使用官方固定 commit，不需要本地 gpui-ce 或 gpui-kit checkout。
 
 ```sh
-cargo run --locked -p kasane-editor
+MTL_HUD_ENABLED=1 MTL_HUD_ALIGNMENT=bottomleft MTL_HUD_SCALE=0.16 cargo run --locked -p kasane-editor
 cargo run --locked -p component-playground
 ./scripts/dev.sh                 # 保存后编译成功即在后台重启编辑器
 ./scripts/dev.sh playground      # 同样方式运行组件 Playground
@@ -35,7 +35,13 @@ cargo fmt --all -- --check
 
 应用输出为 `target/Kasane Editor.app` 和 `target/Kasane Component Playground.app`。无需后端 feature 参数。
 
-监听编译需要先安装 `watchexec`（macOS 可运行 `brew install watchexec`）。脚本监听本仓库及相邻 Kasane 模块中的 Rust 源码和 Cargo 清单，保存后编译；只有编译成功才在后台启动新版并关闭旧版，避免新窗口抢走当前应用的焦点。编译失败时旧版继续运行。完整编译输出写入 `target/dev-build-*.log`，应用输出写入 `target/dev-run-*.log`。这是进程重启，编辑器中尚未保存的文档更改会丢失；改 UI 前先保存文档。脚本仅在本次开发会话开启增量编译，不改动项目的 Cargo profile。
+监听编译需要先安装 `watchexec`（macOS 可运行 `brew install watchexec`）。脚本监听本仓库及相邻 Kasane 模块中的 Rust 源码和 Cargo 清单，保存后编译；只有编译成功才在后台启动新版并关闭旧版，避免新窗口抢走当前应用的焦点。编译失败时旧版继续运行。关闭当前编辑器或 Playground 窗口后，脚本会停止监听并退出；源码更新导致的正常重启会继续监听。完整编译输出写入 `target/dev-build-*.log`，应用输出写入 `target/dev-run-*.log`。这是进程重启，编辑器中尚未保存的文档更改会丢失；改 UI 前先保存文档。脚本仅在本次开发会话开启增量编译，不改动项目的 Cargo profile。
+
+## 调试界面与性能
+
+编辑器的上述 debug 启动命令和 `./scripts/dev.sh` 会启用 macOS Metal HUD，放在左下角，宽度为默认值的 80%。按 **⌘⌥I** 打开 GPUI Kit Inspector，点选元素查看布局、样式和源码位置。GPUI FPS 面板暂时停用；需要时可给编辑器单独加 `--features debug-tools` 重新开启。
+
+Apple 的 `MTL_HUD_SCALE` 表示 HUD 宽度占窗口宽度的比例，默认值为 `0.2`，因此 `0.16` 对应默认宽度的 80%。Metal HUD 分别显示应用内存与 Metal 资源分配量。debug 版在启用 Metal HUD 时每秒请求一帧，让空闲窗口的读数继续更新；因此空闲 FPS 不为零，也不代表持续动画的性能。
 
 ## 渲染与交互
 
