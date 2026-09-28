@@ -2,9 +2,11 @@
 
 基于 **GPUI Kit + kasane-sdk + kasane-render-metal** 的 macOS 编辑器。
 
+下一阶段的已确认设计见 [编辑器基础架构](docs/editor-foundation.md)，性能输入见 [基准模型](models/README.md)。下文描述当前实现。
+
 ```text
-crates/editor                Kit 界面、文件对话框与 GPUI 预览合成
-crates/editor-core           SDK 文档会话、编辑事务、CPU 场景快照与视口状态
+crates/editor                EditorView、Kit 界面、文件对话框与 GPUI 预览合成
+crates/editor-core           Editor 状态协调、SDK 文档会话、编辑命令、CPU 场景快照与视口状态
 crates/editor-render         原生 Metal 渲染与纹理缓存，不包含文档编辑和项目 IO
 crates/component-playground  Kit 组件示例、状态反馈与 Rust 用法
 ```

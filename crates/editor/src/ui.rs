@@ -7,7 +7,7 @@ use gpui_kit::component::{
     slider::Slider,
 };
 
-impl Render for Editor {
+impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let target = preview::target_config(window);
         let target_changed = target != self.preview_target;
@@ -18,18 +18,19 @@ impl Render for Editor {
             self.redraw(cx);
         }
         let theme = cx.theme();
-        let selected = self.document.selected_layer();
-        let disabled = self.busy || selected.is_none();
+        let selected = self.editor.document().selected_layer();
+        let disabled = self.editor.is_busy() || selected.is_none();
         let title = self
-            .document
+            .editor
+            .document()
             .path()
             .and_then(|path| path.parent())
             .and_then(|path| path.file_name())
             .map(|name| name.to_string_lossy().into_owned())
-            .or_else(|| self.document.import_name().map(str::to_owned))
+            .or_else(|| self.editor.document().import_name().map(str::to_owned))
             .unwrap_or_else(|| t!("editor.untitled_project").into_owned());
         let status = self.edit_error.clone().unwrap_or_else(|| {
-            if self.busy {
+            if self.editor.is_busy() {
                 t!("editor.processing").into_owned()
             } else {
                 self.message.clone()
@@ -56,7 +57,7 @@ impl Render for Editor {
         } else {
             canvas = canvas.child(t!("editor.starting_preview"));
         }
-        let layers = self.document.layers();
+        let layers = self.editor.document().layers();
         let content = self
             .menu_actions(cx)
             .size_full()
@@ -67,11 +68,11 @@ impl Render for Editor {
             .text_sm()
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 if event.keystroke.key == "escape"
-                    && !this.busy
+                    && !this.editor.is_busy()
                     && this.name.focus_handle(cx).is_focused(window)
                 {
-                    this.document.cancel_edit();
-                    this.complete_edit(Ok(()), window, cx, true);
+                    let result = this.editor.execute(EditorCommand::CancelEdit);
+                    this.complete_edit(result, window, cx, true);
                     cx.stop_propagation();
                 }
             }))
@@ -88,7 +89,7 @@ impl Render for Editor {
                     .child(div().flex_1().truncate().child(format!(
                         "{}{}",
                         title,
-                        if self.document.modified() {
+                        if self.editor.document().modified() {
                             t!("editor.unsaved")
                         } else {
                             "".into()
@@ -98,7 +99,7 @@ impl Render for Editor {
                         Button::new("zoom-out")
                             .label("−")
                             .small()
-                            .disabled(self.view.zoom <= 0.25)
+                            .disabled(self.editor.view().zoom <= 0.25)
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.zoom_by(-0.25, cx);
                             })),
@@ -107,13 +108,13 @@ impl Render for Editor {
                         div()
                             .w_12()
                             .text_center()
-                            .child(format!("{:.0}%", self.view.zoom * 100.)),
+                            .child(format!("{:.0}%", self.editor.view().zoom * 100.)),
                     )
                     .child(
                         Button::new("zoom-in")
                             .label("＋")
                             .small()
-                            .disabled(self.view.zoom >= 3.)
+                            .disabled(self.editor.view().zoom >= 3.)
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.zoom_by(0.25, cx);
                             })),
@@ -153,7 +154,7 @@ impl Render for Editor {
                             )
                             .children(layers.into_iter().map(|layer| {
                                 let selected =
-                                    self.document.selected_id() == Some(layer.id.as_str());
+                                    self.editor.document().selected_id() == Some(layer.id.as_str());
                                 let id = layer.id.clone();
                                 Button::new(SharedString::from(layer.id))
                                     .label(if layer.name.is_empty() {
@@ -163,10 +164,11 @@ impl Render for Editor {
                                     })
                                     .small()
                                     .w_full()
-                                    .disabled(self.busy)
+                                    .disabled(self.editor.is_busy())
                                     .when(selected, |button| button.primary())
                                     .on_click(cx.listener(move |this, _, window, cx| {
-                                        let result = this.document.select(&id);
+                                        let result =
+                                            this.editor.execute(EditorCommand::Select(id.clone()));
                                         this.complete_edit(result, window, cx, true);
                                     }))
                             })),
@@ -202,7 +204,9 @@ impl Render for Editor {
                                     .checked(selected.as_ref().is_some_and(|layer| layer.visible))
                                     .disabled(disabled)
                                     .on_change(cx.listener(|this, checked, window, cx| {
-                                        let result = this.document.set_visible(*checked);
+                                        let result = this
+                                            .editor
+                                            .execute(EditorCommand::SetVisible(*checked));
                                         this.complete_edit(result, window, cx, true);
                                     })),
                             )

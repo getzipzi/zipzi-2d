@@ -1,4 +1,4 @@
-//! Native file dialogs and SDK project lifecycle.
+//! Native dialogs and host task scheduling for the core editor's project operations.
 use super::*;
 use gpui_kit::component::WindowExt;
 use std::path::PathBuf;
@@ -9,24 +9,25 @@ pub(super) enum ImportKind {
     Psd,
 }
 
-impl Editor {
+impl EditorView {
     pub(super) fn save(&mut self, save_as: bool, window: &mut Window, cx: &mut Context<Self>) {
-        if self.busy {
+        if self.editor.is_busy() {
             return;
         }
-        if let Err(error) = self.document.finish_edit() {
+        if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
             self.edit_error = Some(error.to_string());
             cx.notify();
             return;
         }
         if !save_as {
-            if let Some(path) = self.document.path().map(PathBuf::from) {
+            if let Some(path) = self.editor.document().path().map(PathBuf::from) {
                 self.save_to(path, cx);
                 return;
             }
         }
         let directory = self
-            .document
+            .editor
+            .document()
             .path()
             .and_then(|path| path.parent())
             .map(PathBuf::from)
@@ -35,18 +36,23 @@ impl Editor {
         // The SDK publishes a directory containing the manifest and its assets.
         let suggested = format!(
             "{}.kasane",
-            self.document
+            self.editor
+                .document()
                 .import_name()
                 .map(str::to_owned)
                 .unwrap_or_else(|| t!("project.untitled").into_owned())
         );
         let picker = cx.prompt_for_new_path(&directory, Some(&suggested));
-        self.busy = true;
+        if let Err(error) = self.editor.begin_operation() {
+            self.edit_error = Some(error.to_string());
+            cx.notify();
+            return;
+        }
         cx.notify();
         cx.spawn_in(window, async move |this, cx| {
             let result = picker.await;
             let _ = this.update_in(cx, |this, _, cx| {
-                this.busy = false;
+                this.editor.end_operation();
                 match result {
                     Ok(Ok(Some(path))) => this.save_to(path, cx),
                     Ok(Ok(None)) => {}
@@ -60,7 +66,7 @@ impl Editor {
     }
 
     fn save_to(&mut self, path: PathBuf, cx: &mut Context<Self>) {
-        match self.document.save(&path) {
+        match self.editor.save(&path) {
             Ok(receipt) => {
                 self.edit_error = None;
                 let mut notices = receipt.warnings;
@@ -80,15 +86,15 @@ impl Editor {
     }
 
     pub(super) fn open(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.busy {
+        if self.editor.is_busy() {
             return;
         }
-        if let Err(error) = self.document.finish_edit() {
+        if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
             self.edit_error = Some(error.to_string());
             cx.notify();
             return;
         }
-        let confirmation = self.document.modified().then(|| {
+        let confirmation = self.editor.document().modified().then(|| {
             window.prompt(
                 PromptLevel::Warning,
                 &t!("project.discard_open"),
@@ -100,13 +106,17 @@ impl Editor {
                 cx,
             )
         });
-        self.busy = true;
+        if let Err(error) = self.editor.begin_operation() {
+            self.edit_error = Some(error.to_string());
+            cx.notify();
+            return;
+        }
         cx.notify();
         cx.spawn_in(window, async move |this, cx| {
             if let Some(confirmation) = confirmation {
                 if confirmation.await.ok() != Some(1) {
                     let _ = this.update(cx, |this, cx| {
-                        this.busy = false;
+                        this.editor.end_operation();
                         cx.notify();
                     });
                     return;
@@ -128,7 +138,7 @@ impl Editor {
                 Ok(Ok(None)) => None,
                 other => {
                     let _ = this.update(cx, |this, cx| {
-                        this.busy = false;
+                        this.editor.end_operation();
                         this.edit_error = Some(
                             t!("project.select_project_error", error = format!("{other:?}"))
                                 .into_owned(),
@@ -140,21 +150,18 @@ impl Editor {
             };
             let Some(path) = path else {
                 let _ = this.update(cx, |this, cx| {
-                    this.busy = false;
+                    this.editor.end_operation();
                     cx.notify();
                 });
                 return;
             };
             let result = cx
                 .background_executor()
-                .spawn(async move { Document::open(&path) })
+                .spawn(async move { LoadRequest::Open(path).load() })
                 .await;
             let _ = this.update_in(cx, |this, window, cx| {
-                this.busy = false;
-                match result {
-                    Ok(document) => {
-                        this.document = document;
-                        this.view = ViewState::default();
+                match this.editor.finish_load(result) {
+                    Ok(_) => {
                         this.frame = None;
                         this.edit_error = None;
                         this.message = t!("project.opened").into_owned();
@@ -170,15 +177,15 @@ impl Editor {
     }
 
     pub(super) fn import(&mut self, kind: ImportKind, window: &mut Window, cx: &mut Context<Self>) {
-        if self.busy {
+        if self.editor.is_busy() {
             return;
         }
-        if let Err(error) = self.document.finish_edit() {
+        if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
             self.edit_error = Some(error.to_string());
             cx.notify();
             return;
         }
-        let confirmation = self.document.modified().then(|| {
+        let confirmation = self.editor.document().modified().then(|| {
             window.prompt(
                 PromptLevel::Warning,
                 &t!("project.discard_import"),
@@ -190,13 +197,17 @@ impl Editor {
                 cx,
             )
         });
-        self.busy = true;
+        if let Err(error) = self.editor.begin_operation() {
+            self.edit_error = Some(error.to_string());
+            cx.notify();
+            return;
+        }
         cx.notify();
         cx.spawn_in(window, async move |this, cx| {
             if let Some(confirmation) = confirmation {
                 if confirmation.await.ok() != Some(1) {
                     let _ = this.update(cx, |this, cx| {
-                        this.busy = false;
+                        this.editor.end_operation();
                         cx.notify();
                     });
                     return;
@@ -218,7 +229,7 @@ impl Editor {
                 Ok(Ok(None)) => None,
                 other => {
                     let _ = this.update(cx, |this, cx| {
-                        this.busy = false;
+                        this.editor.end_operation();
                         this.edit_error = Some(
                             t!("project.select_import_error", error = format!("{other:?}"))
                                 .into_owned(),
@@ -230,7 +241,7 @@ impl Editor {
             };
             let Some(source) = source else {
                 let _ = this.update(cx, |this, cx| {
-                    this.busy = false;
+                    this.editor.end_operation();
                     cx.notify();
                 });
                 return;
@@ -254,7 +265,7 @@ impl Editor {
                     Ok(Ok(path)) => path,
                     other => {
                         let _ = this.update(cx, |this, cx| {
-                            this.busy = false;
+                            this.editor.end_operation();
                             this.edit_error = Some(
                                 t!(
                                     "project.select_location_error",
@@ -272,7 +283,7 @@ impl Editor {
             };
             if kind == ImportKind::Psd && destination.is_none() {
                 let _ = this.update(cx, |this, cx| {
-                    this.busy = false;
+                    this.editor.end_operation();
                     cx.notify();
                 });
                 return;
@@ -281,20 +292,19 @@ impl Editor {
             let result = cx
                 .background_executor()
                 .spawn(async move {
-                    match kind {
-                        ImportKind::Model3 => Document::import_model3(&source),
-                        ImportKind::Psd => {
-                            Document::import_psd(&source, destination.as_deref().unwrap())
-                        }
-                    }
+                    let request = match kind {
+                        ImportKind::Model3 => LoadRequest::Model3(source),
+                        ImportKind::Psd => LoadRequest::Psd {
+                            source,
+                            destination: destination.expect("PSD destination was selected"),
+                        },
+                    };
+                    request.load()
                 })
                 .await;
             let _ = this.update_in(cx, |this, window, cx| {
-                this.busy = false;
-                match result {
-                    Ok((document, warnings)) => {
-                        this.document = document;
-                        this.view = ViewState::default();
+                match this.editor.finish_load(result) {
+                    Ok(warnings) => {
                         this.frame = None;
                         this.edit_error = None;
                         this.message = if warnings.is_empty() {
@@ -320,7 +330,11 @@ impl Editor {
     }
 
     pub(super) fn confirm_close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.busy = true;
+        if let Err(error) = self.editor.begin_operation() {
+            self.edit_error = Some(error.to_string());
+            cx.notify();
+            return;
+        }
         let confirmation = window.prompt(
             PromptLevel::Warning,
             &t!("project.discard_close"),
@@ -334,7 +348,7 @@ impl Editor {
         cx.spawn_in(window, async move |this, cx| {
             let discard = confirmation.await.ok() == Some(1);
             let _ = this.update_in(cx, |this, window, cx| {
-                this.busy = false;
+                this.editor.end_operation();
                 if discard {
                     window.remove_window();
                 }

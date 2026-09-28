@@ -93,15 +93,14 @@ pub(super) fn init(cx: &mut App) {
     ]);
 }
 
-impl Editor {
+impl EditorView {
     /// Only register enabled document commands; AppKit validates menu items from
     /// the active action path. The input's own text handlers take precedence.
     pub(super) fn menu_actions(&self, cx: &Context<Self>) -> Div {
-        let (undo, redo) = self.document.history_lengths();
         div()
             .key_context("KasaneEditor")
             .track_focus(&self.focus)
-            .when(!self.busy, |element| {
+            .when(!self.editor.is_busy(), |element| {
                 element
                     .on_action(
                         cx.listener(|this, _: &OpenProject, window, cx| this.open(window, cx)),
@@ -131,26 +130,20 @@ impl Editor {
                         });
                     })
             })
-            .when(
-                !self.busy && (undo > 0 || self.document.has_pending_edit()),
-                |element| {
-                    element.on_action(
-                        cx.listener(|this, _: &input::Undo, window, cx| this.undo(window, cx)),
-                    )
-                },
-            )
-            .when(
-                !self.busy && redo > 0 && !self.document.has_pending_edit(),
-                |element| {
-                    element.on_action(
-                        cx.listener(|this, _: &input::Redo, window, cx| this.redo(window, cx)),
-                    )
-                },
-            )
-            .when(self.view.zoom < 3., |element| {
+            .when(self.editor.can_undo(), |element| {
+                element.on_action(
+                    cx.listener(|this, _: &input::Undo, window, cx| this.undo(window, cx)),
+                )
+            })
+            .when(self.editor.can_redo(), |element| {
+                element.on_action(
+                    cx.listener(|this, _: &input::Redo, window, cx| this.redo(window, cx)),
+                )
+            })
+            .when(self.editor.view().zoom < 3., |element| {
                 element.on_action(cx.listener(|this, _: &ZoomIn, _, cx| this.zoom_by(0.25, cx)))
             })
-            .when(self.view.zoom > 0.25, |element| {
+            .when(self.editor.view().zoom > 0.25, |element| {
                 element.on_action(cx.listener(|this, _: &ZoomOut, _, cx| this.zoom_by(-0.25, cx)))
             })
             .on_action(cx.listener(|this, _: &ResetView, _, cx| this.reset_view(cx)))
@@ -160,28 +153,28 @@ impl Editor {
     }
 
     pub(super) fn undo(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.busy {
+        if self.editor.is_busy() {
             return;
         }
-        let result = self.document.undo();
+        let result = self.editor.execute(EditorCommand::Undo);
         self.complete_edit(result, window, cx, true);
     }
 
     pub(super) fn redo(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.busy {
+        if self.editor.is_busy() {
             return;
         }
-        let result = self.document.redo();
+        let result = self.editor.execute(EditorCommand::Redo);
         self.complete_edit(result, window, cx, true);
     }
 
     pub(super) fn zoom_by(&mut self, delta: f32, cx: &mut Context<Self>) {
-        self.view.zoom = (self.view.zoom + delta).clamp(0.25, 3.);
+        self.editor.zoom_by(delta);
         self.redraw(cx);
     }
 
     pub(super) fn reset_view(&mut self, cx: &mut Context<Self>) {
-        self.view = ViewState::default();
+        self.editor.reset_view();
         self.redraw(cx);
     }
 
@@ -195,13 +188,10 @@ impl Editor {
     }
 
     pub(super) fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.busy {
-            return;
-        }
-        if self.document.modified() {
-            self.confirm_close(window, cx);
-        } else {
-            window.remove_window();
+        match self.editor.close_disposition() {
+            CloseDisposition::Busy => {}
+            CloseDisposition::NeedsConfirmation => self.confirm_close(window, cx),
+            CloseDisposition::Ready => window.remove_window(),
         }
     }
 }

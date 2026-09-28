@@ -6,7 +6,7 @@ mod preview;
 mod project;
 mod ui;
 
-use editor_core::{Document, ViewState};
+use editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
 use gpui_kit::component::{
     Theme, ThemeMode,
     input::{InputEvent, InputState},
@@ -16,18 +16,15 @@ use gpui_kit::{prelude::*, *};
 use rust_i18n::t;
 use std::sync::mpsc;
 
-struct Editor {
+struct EditorView {
     focus: FocusHandle,
-    document: Document,
-    view: ViewState,
+    editor: Editor,
     name: Entity<InputState>,
     opacity: Entity<SliderState>,
     frame: Option<preview::Image>,
     edit_error: Option<String>,
     render_error: Option<String>,
     message: String,
-    busy: bool,
-    revision: u64,
     preview_target: editor_render::MetalTargetConfig,
     requests: Option<mpsc::Sender<preview::Request>>,
     gpu_device: Option<metal::Device>,
@@ -36,9 +33,9 @@ struct Editor {
     _metal_hud_refresh: Option<Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
-impl Editor {
+impl EditorView {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let document = Document::new_blank().expect("create blank document");
+        let editor = Editor::new().expect("create blank document");
         let name = cx
             .new(|cx| InputState::new(window, cx).placeholder(t!("editor.layer_name_placeholder")));
         let opacity = cx.new(|_| {
@@ -53,15 +50,15 @@ impl Editor {
                 &name,
                 window,
                 |this: &mut Self, input, event: &InputEvent, window, cx| {
-                    if this.busy {
+                    if this.editor.is_busy() {
                         return;
                     }
                     let result = match event {
-                        InputEvent::Change => {
-                            this.document.preview_name(input.read(cx).value().as_ref())
-                        }
+                        InputEvent::Change => this.editor.execute(EditorCommand::PreviewName(
+                            input.read(cx).value().to_string(),
+                        )),
                         InputEvent::PressEnter { .. } | InputEvent::Blur => {
-                            this.document.finish_edit()
+                            this.editor.execute(EditorCommand::FinishEdit)
                         }
                         _ => return,
                     };
@@ -72,14 +69,14 @@ impl Editor {
                 &opacity,
                 window,
                 |this: &mut Self, _, event: &SliderEvent, window, cx| {
-                    if this.busy {
+                    if this.editor.is_busy() {
                         return;
                     }
                     let result = match event {
-                        SliderEvent::Change(SliderValue::Single(value)) => {
-                            this.document.preview_opacity(value / 100.)
-                        }
-                        SliderEvent::Release(_) => this.document.finish_edit(),
+                        SliderEvent::Change(SliderValue::Single(value)) => this
+                            .editor
+                            .execute(EditorCommand::PreviewOpacity(value / 100.)),
+                        SliderEvent::Release(_) => this.editor.execute(EditorCommand::FinishEdit),
                         _ => return,
                     };
                     this.complete_edit(result, window, cx, false);
@@ -90,16 +87,13 @@ impl Editor {
         window.focus(&focus, cx);
         let mut editor = Self {
             focus,
-            document,
-            view: ViewState::default(),
+            editor,
             name,
             opacity,
             frame: None,
             edit_error: None,
             render_error: None,
             message: t!("editor.welcome").into_owned(),
-            busy: false,
-            revision: 0,
             preview_target: preview::target_config(window),
             requests: None,
             gpu_device: None,
@@ -111,15 +105,13 @@ impl Editor {
         let entity = cx.weak_entity();
         window.on_window_should_close(cx, move |window, cx| {
             entity
-                .update(cx, |this, cx| {
-                    if this.busy {
-                        return false;
+                .update(cx, |this, cx| match this.editor.close_disposition() {
+                    CloseDisposition::Busy => false,
+                    CloseDisposition::Ready => true,
+                    CloseDisposition::NeedsConfirmation => {
+                        this.confirm_close(window, cx);
+                        false
                     }
-                    if !this.document.modified() {
-                        return true;
-                    }
-                    this.confirm_close(window, cx);
-                    false
                 })
                 .unwrap_or(true)
         });
@@ -140,7 +132,7 @@ impl Editor {
     }
 
     fn sync_controls(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let layer = self.document.selected_layer();
+        let layer = self.editor.document().selected_layer();
         let name = layer.as_ref().map_or("", |layer| layer.name.as_str());
         if self.name.read(cx).value().as_ref() != name {
             self.name
@@ -184,7 +176,7 @@ impl Editor {
                 if this
                     .update(cx, |this, cx| {
                         // Ignore old frames, including frames from a document replaced by Open.
-                        if frame.revision != 0 && frame.revision != this.revision {
+                        if frame.revision != 0 && !this.editor.accepts_preview(frame.revision) {
                             return;
                         }
                         match frame.image {
@@ -209,13 +201,12 @@ impl Editor {
     }
 
     fn redraw(&mut self, cx: &mut Context<Self>) {
-        self.revision += 1;
-        match self.document.snapshot() {
-            Ok(scene) => {
+        match self.editor.preview() {
+            Ok(preview) => {
                 let request = preview::Request {
-                    revision: self.revision,
-                    scene,
-                    view: self.view,
+                    revision: preview.revision,
+                    scene: preview.scene,
+                    view: preview.view,
                     target: self.preview_target,
                 };
                 if self
@@ -262,7 +253,7 @@ fn main() {
                     ..Default::default()
                 },
                 cx,
-                |window, cx| cx.new(|cx| Editor::new(window, cx)),
+                |window, cx| cx.new(|cx| EditorView::new(window, cx)),
             )
             .expect("open kit editor");
             if let Some(pid_file) = std::env::var_os("KASANE_DEV_PID_FILE") {

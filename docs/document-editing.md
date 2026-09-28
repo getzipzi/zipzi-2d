@@ -5,13 +5,29 @@ project publication, undo and redo; editor code owns selection and viewport stat
 No `kasane-sdk-observe`, Python, WGPU or backend selection is needed for this path.
 
 ```text
-editor (GPUI controls and project dialogs)
+editor (EditorView: GPUI controls, project dialogs and host task scheduling)
   ├── editor-core
-  │     ├── Document → kasane-sdk::AuthoringSession
+  │     ├── Editor → Document → kasane-sdk::AuthoringSession
   │     └── SceneSnapshot → evaluated frame + shared decoded textures
   └── editor-render → kasane-render + kasane-render-metal
           └── immutable Metal texture → GPUI composition
 ```
+
+`editor-core/src/editor.rs` owns the UI-independent `Editor`: its document,
+viewport, busy state, command availability, close disposition and preview request
+revision. The UI has read-only access to the document and sends `EditorCommand`
+values for edits. Busy checks are enforced in core as well as reflected in the
+controls. `LoadRequest` performs open/import work on the host's background
+executor; `Editor::finish_load` replaces the document and resets the viewport
+only on success, preserving the existing state on failure. Core creates preview
+inputs and rejects stale preview revisions. It has no GPUI or Metal dependency.
+
+`editor/src/main.rs` owns `EditorView`, the GPUI adapter. It translates input
+events to core commands, synchronizes controls, formats localized errors and
+notices, and connects preview inputs to the native renderer. Dialog presentation,
+focus, window lifecycle and executor integration remain in this UI crate.
+This separation retains the current single-document behavior; multi-document
+workspace support is a subsequent step.
 
 `editor-core/src/document.rs` creates and opens documents, selects meshes,
 and translates UI editing gestures into SDK transactions. A persistent
@@ -59,3 +75,6 @@ tests render SDK-backed inputs with GPUI and verify composition, opacity,
 visibility, resizing and retained frames. File dialogs, IME, focus transitions
 window-close interactions and native menu/focus routing still require manual
 verification; no computer-use tests run.
+
+Core editor tests additionally cover busy-operation guards, failed-load state
+retention, preview invalidation, and save/reopen through the editor controller.
