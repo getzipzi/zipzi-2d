@@ -10,11 +10,45 @@ pub struct CanvasView {
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
     pub(crate) toolbar: workspace::toolbar::ToolbarRegistry,
+    overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
     space_held: bool,
     hand_tool: bool,
     _subscriptions: Vec<Subscription>,
+}
+
+#[derive(Default)]
+struct CanvasOverlay {
+    device: Option<metal::Device>,
+    renderer: Option<editor_render::MetalOverlayRenderer>,
+    error: Option<String>,
+}
+impl CanvasOverlay {
+    fn renderer(
+        &mut self,
+        device: &metal::Device,
+    ) -> anyhow::Result<&mut editor_render::MetalOverlayRenderer> {
+        if self
+            .device
+            .as_ref()
+            .is_none_or(|old| !std::ptr::eq(old.as_ref(), device.as_ref()))
+        {
+            self.device = Some(device.clone());
+            self.renderer = None;
+            self.error = None;
+            match editor_render::MetalOverlayRenderer::new(device.clone()) {
+                Ok(renderer) => self.renderer = Some(renderer),
+                Err(error) => {
+                    eprintln!("Mesh overlay initialization failed; using GPUI: {error}");
+                    self.error = Some(error.to_string());
+                }
+            }
+        }
+        self.renderer.as_mut().ok_or_else(|| {
+            anyhow::anyhow!("{}", self.error.as_deref().unwrap_or("Overlay unavailable"))
+        })
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -59,6 +93,7 @@ impl CanvasView {
                 owner,
                 focus,
                 toolbar: workspace::toolbar::ToolbarRegistry::with_defaults(),
+                overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 pan: None,
                 space_held: false,
@@ -227,6 +262,7 @@ impl Render for CanvasView {
         if benchmark::hide_mesh_edges() {
             overlay.lines.clear();
         }
+        let unavailable = overlay.unavailable.take();
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
         let error = state.render_error.clone();
@@ -237,6 +273,7 @@ impl Render for CanvasView {
         let view = cx.entity();
         let measure = view.clone();
         let mouse = view.clone();
+        let overlay_renderer = self.overlay_renderer.clone();
         let body = div()
             .id("canvas-body")
             .test_support()
@@ -368,28 +405,88 @@ impl Render for CanvasView {
                         });
                     },
                     move |bounds, _, window, _cx| {
-                        let to_window = |p: CanvasPoint| bounds.origin + point(px(p.x), px(p.y));
-                        if benchmark::batch_mesh_edges() {
-                            mesh_edges::paint_edges(&overlay.lines, bounds.origin, |path| {
-                                window.paint_path(path, muted);
-                            });
-                        } else {
-                            for (a, b) in &overlay.lines {
-                                let mut path = PathBuilder::stroke(px(1.));
-                                path.move_to(to_window(*a));
-                                path.line_to(to_window(*b));
-                                if let Ok(path) = path.build() {
+                        let result = (|| -> anyhow::Result<()> {
+                            anyhow::ensure!(
+                                benchmark::metal_mesh_overlay(),
+                                "GPUI diagnostic override"
+                            );
+                            let gpu = window
+                                .metal_context()
+                                .ok_or_else(|| anyhow::anyhow!("Metal context unavailable"))?;
+                            let scale = window.scale_factor();
+                            if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+                                return Ok(());
+                            }
+                            let origin = [bounds.origin.x.as_f32(), bounds.origin.y.as_f32()];
+                            let texture_origin = origin.map(|v| (v * scale).floor());
+                            let extent = [
+                                ((bounds.right().as_f32() * scale).ceil() - texture_origin[0])
+                                    as u32,
+                                ((bounds.bottom().as_f32() * scale).ceil() - texture_origin[1])
+                                    as u32,
+                            ];
+                            let viewport = editor_render::OverlayViewport {
+                                extent,
+                                scale,
+                                origin,
+                            };
+                            let mut renderer = overlay_renderer.borrow_mut();
+                            let renderer = renderer.renderer(&gpu.device)?;
+                            let color = |color: Hsla| {
+                                let c: Rgba = color.into();
+                                [c.r, c.g, c.b, c.a]
+                            };
+                            let style = editor_render::OverlayStyle {
+                                edge: color(muted),
+                                vertex: color(foreground),
+                                selected: color(primary),
+                            };
+                            if let Some(image) =
+                                renderer.draw(&gpu.queue, viewport, &overlay, style)?
+                            {
+                                // Preserve physical pixel size when logical bounds are fractional.
+                                window.paint_surface(
+                                    Bounds::new(
+                                        point(
+                                            px(texture_origin[0] / scale),
+                                            px(texture_origin[1] / scale),
+                                        ),
+                                        size(
+                                            px(extent[0] as f32 / scale),
+                                            px(extent[1] as f32 / scale),
+                                        ),
+                                    ),
+                                    SurfaceSource::MetalTexture(image),
+                                );
+                            }
+                            Ok(())
+                        })();
+                        // Preserve editing visibility if shader/device setup is unavailable.
+                        if result.is_err() {
+                            let to_window =
+                                |p: CanvasPoint| bounds.origin + point(px(p.x), px(p.y));
+                            if benchmark::batch_mesh_edges() {
+                                mesh_edges::paint_edges(&overlay.lines, bounds.origin, |path| {
                                     window.paint_path(path, muted);
+                                });
+                            } else {
+                                for (a, b) in &overlay.lines {
+                                    let mut path = PathBuilder::stroke(px(1.));
+                                    path.move_to(to_window(*a));
+                                    path.line_to(to_window(*b));
+                                    if let Ok(path) = path.build() {
+                                        window.paint_path(path, muted);
+                                    }
                                 }
                             }
-                        }
-                        for vertex in &overlay.vertices {
-                            let center = to_window(vertex.position);
-                            let r = if vertex.hovered { px(4.) } else { px(3.) };
-                            window.paint_quad(fill(
-                                Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
-                                if vertex.selected { primary } else { foreground },
-                            ));
+                            for vertex in &overlay.vertices {
+                                let center = to_window(vertex.position);
+                                let r = if vertex.hovered { px(4.) } else { px(3.) };
+                                window.paint_quad(fill(
+                                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
+                                    if vertex.selected { primary } else { foreground },
+                                ));
+                            }
                         }
                         if capture {
                             let mouse = mouse.clone();
@@ -420,7 +517,7 @@ impl Render for CanvasView {
             )
             .child(workspace::render_floating_toolbar(self, modal, cx))
             .child(workspace::render_floating_zoom_bar(&owner, modal, cx))
-            .children(overlay.unavailable.map(|reason| {
+            .children(unavailable.map(|reason| {
                 div()
                     .absolute()
                     .left_3()

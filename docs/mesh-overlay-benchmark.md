@@ -1,6 +1,6 @@
 # 大网格覆盖层：GPUI Path 与专用 Metal 纹理
 
-本 benchmark 比较三种覆盖层绘制：当前编辑器已合批的 GPUI Path；Metal 边线纹理＋GPUI 顶点标记；Metal 边线与顶点标记的完整纹理。两种纹理方案均交给 GPUI 合成。实验实现位于独立 example，尚未替换正式编辑器。
+本 benchmark 比较三种覆盖层绘制：当前编辑器已合批的 GPUI Path；Metal 边线纹理＋GPUI 顶点标记；Metal 边线与顶点标记的完整纹理。两种纹理方案均交给 GPUI 合成。实验实现位于独立 example；后续正式 editor 已接入完整 Metal 覆盖层，见 [重构说明](mesh-overlay-rendering.md)。正式方案的不可变资源管理与本 benchmark 不同，性能数字不能直接套用。
 
 ## 运行
 

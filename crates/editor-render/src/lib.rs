@@ -1,5 +1,6 @@
 //! Native Metal preview adapter. No document editing or project IO lives here.
 mod mipmaps;
+mod overlay;
 use anyhow::{Result, anyhow, ensure};
 use editor_core::{CanvasMetrics, SceneSnapshot, ViewState, ViewportTransform};
 use kasane_core::Vec2;
@@ -8,6 +9,7 @@ use kasane_render_metal::{
     MetalContext, MetalOutputMode, MetalRenderer, MetalTexture, MetalTextureCatalog, metal,
 };
 use mipmaps::straight_rgba_mipmaps;
+pub use overlay::{MetalOverlayRenderer, OverlayStyle, OverlayViewport};
 use std::collections::HashMap;
 use std::sync::Arc;
 

@@ -23,7 +23,8 @@ static WRITER: OnceLock<Writer> = OnceLock::new();
 static STOPPED: AtomicBool = AtomicBool::new(false);
 static LOST: AtomicU64 = AtomicU64::new(0);
 static IN_SINK: AtomicU64 = AtomicU64::new(0);
-// Production default; only an explicit trace-mode override restores the baseline.
+// Explicit trace-mode path switches retain the historical GPUI baselines.
+static METAL_MESH_OVERLAY: AtomicBool = AtomicBool::new(true);
 static BATCH_MESH_EDGES: AtomicBool = AtomicBool::new(true);
 static HIDE_MESH_EDGES: AtomicBool = AtomicBool::new(false);
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -55,6 +56,10 @@ pub fn init() -> anyhow::Result<()> {
             ensure!(valid.contains(&value.as_str()), "invalid {name}");
         }
     }
+    METAL_MESH_OVERLAY.store(
+        std::env::var_os("KASANE_TRACE_BATCH_MESH_EDGES").is_none(),
+        Ordering::Relaxed,
+    );
     HIDE_MESH_EDGES.store(
         std::env::var("KASANE_TRACE_HIDE_MESH_EDGES").is_ok_and(|v| v == "1"),
         Ordering::Relaxed,
@@ -111,6 +116,7 @@ pub fn init() -> anyhow::Result<()> {
                     "offscreen": std::env::var("GPUI_TRACE_OFFSCREEN").ok(),
                     "hide_mesh_edges": HIDE_MESH_EDGES.load(Ordering::Relaxed),
                     "batch_mesh_edges": BATCH_MESH_EDGES.load(Ordering::Relaxed),
+                    "metal_mesh_overlay": METAL_MESH_OVERLAY.load(Ordering::Relaxed),
                 },
             })
         )?;
@@ -163,6 +169,10 @@ pub fn init() -> anyhow::Result<()> {
         "frame trace sink already installed"
     );
     Ok(())
+}
+
+pub fn metal_mesh_overlay() -> bool {
+    METAL_MESH_OVERLAY.load(Ordering::Relaxed)
 }
 
 pub fn batch_mesh_edges() -> bool {

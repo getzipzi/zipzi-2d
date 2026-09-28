@@ -1,13 +1,13 @@
 # 网格边线批量绘制
 
-日期：2026-09-28。根据 [帧延迟排查](frame-latency-diagnosis.md) 的结果，边线合并现已成为默认绘制路径，不需要开启追踪或设置环境变量。
+日期：2026-09-28。本页记录根据 [帧延迟排查](frame-latency-diagnosis.md) 完成的 GPUI 边线合批优化及当时的结果。正式 editor 后续已迁移到 [完整 Metal 覆盖层](mesh-overlay-rendering.md)；此处的 Path 实现保留为回退与诊断基线。
 
 ## 实现
 
 - 同色、同线宽的网格边线合为具有独立子路径的 Path，每条边仍单独 `move_to`，不会连接原本分离的线段。顶点和选中/悬浮标记仍最后绘制。
 - 每 4,096 条边分块，避开 GPUI PathBuilder 的 `u16` tessellation 索引上限；单批构建失败时退回逐边构建，避免整批有效边线丢失。
 - 路径包围盒增加 1 个逻辑像素的余量，防止复制 MSAA 中间纹理时裁掉亚像素边缘；线宽仍为 1 个逻辑像素，画布 content mask 保持生效。
-- `KASANE_TRACE_BATCH_MESH_EDGES=0` 仅在追踪时恢复旧路径，方便后续 A/B；普通启动始终使用新路径。
+- 追踪时显式设置 `KASANE_TRACE_BATCH_MESH_EDGES=1` 使用此处的合批实现，`=0` 使用逐边实现；普通启动使用完整 Metal 覆盖层。
 
 ## 正确性检查
 

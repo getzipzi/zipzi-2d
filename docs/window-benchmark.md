@@ -96,6 +96,8 @@ KASANE_FRAME_TRACE="$PWD/target/manual-frame-trace.jsonl" \
 
 ## 帧延迟定位与诊断开关
 
-现支持精确 drawable 等待、提交到显示时间、区间重叠统计，以及缓冲数、同步、离屏分段和网格边线对照。八组实机排查确认逐边路径产生 49–56 批路径绘制，是本轮主要 GPU 瓶颈；合并路径现已默认启用，`KASANE_TRACE_BATCH_MESH_EDGES=0` 可在追踪时恢复旧路径作对照。默认路径复测和正确性验证见 [边线优化](mesh-edge-optimization.md)。见 [帧延迟排查](frame-latency-diagnosis.md)。
+现支持精确 drawable 等待、提交到显示时间、区间重叠统计，以及缓冲数、同步、离屏分段和网格边线对照。八组实机排查确认逐边路径产生 49–56 批路径绘制，是本轮主要 GPU 瓶颈；该阶段的合并路径复测和正确性验证见 [边线优化](mesh-edge-optimization.md)。见 [帧延迟排查](frame-latency-diagnosis.md)。
 
 自动采样时，画布忽略非注入的鼠标移动，避免原生悬浮事件取消模拟中键拖动。手动追踪与普通编辑器不受影响；两次因此未产生平移请求的旧采样保留为不完整记录，未用于性能对比。
+
+当前 editor 默认使用完整 Metal 网格覆盖层。追踪时显式设置 `KASANE_TRACE_BATCH_MESH_EDGES=1` 使用 GPUI 合批基线，`=0` 使用 GPUI 逐边基线；不设置则使用 Metal，元数据记录 `metal_mesh_overlay`。以上历史结果保持原始含义，详见 [覆盖层重构](mesh-overlay-rendering.md)。

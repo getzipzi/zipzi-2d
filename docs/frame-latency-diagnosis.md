@@ -91,7 +91,7 @@
 | `GPUI_TRACE_DISPLAY_SYNC` | 默认 1，可选 0/1 | 显示同步 |
 | `GPUI_TRACE_OFFSCREEN` | 默认 0，可选 0/1 | UI 离屏与复制分段探针 |
 | `KASANE_TRACE_HIDE_MESH_EDGES` | 默认 0，可选 0/1 | 隐藏边线作排除实验 |
-| `KASANE_TRACE_BATCH_MESH_EDGES` | 当前默认 1，可选 0/1 | 1 为正式批量绘制；0 恢复旧逐边路径作对照 |
+| `KASANE_TRACE_BATCH_MESH_EDGES` | 默认不设置，可选 0/1 | 不设置走完整 Metal 覆盖层；显式 1/0 分别使用 GPUI 合批/逐边基线 |
 
 例如：
 
