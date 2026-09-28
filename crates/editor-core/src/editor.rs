@@ -8,6 +8,7 @@ pub enum EditorCommand {
     PreviewName(String),
     PreviewOpacity(f32),
     SetVisible(bool),
+    SetLayerVisible { layer_id: String, visible: bool },
     FinishEdit,
     CancelEdit,
     Undo,

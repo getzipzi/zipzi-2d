@@ -94,14 +94,14 @@ impl EditorView {
             // Fallback native text actions only at non-input focus; Kit always owns input history.
             .when(!modal && self.editor.can_undo(), |e| {
                 e.on_action(cx.listener(|this, _: &input::Undo, window, cx| {
-                    if !this.name.focus_handle(cx).is_focused(window) {
+                    if !this.has_focused_input(window, cx) {
                         this.run_command(CommandId::Undo, window, cx);
                     }
                 }))
             })
             .when(!modal && self.editor.can_redo(), |e| {
                 e.on_action(cx.listener(|this, _: &input::Redo, window, cx| {
-                    if !this.name.focus_handle(cx).is_focused(window) {
+                    if !this.has_focused_input(window, cx) {
                         this.run_command(CommandId::Redo, window, cx);
                     }
                 }))
@@ -118,7 +118,7 @@ impl EditorView {
             .on_action(|_: &ZoomWindow, window, _| window.zoom_window())
     }
     pub(super) fn refresh_menus(&mut self, modal: bool, window: &Window, cx: &mut Context<Self>) {
-        let text = self.name.focus_handle(cx).is_focused(window);
+        let text = self.has_focused_input(window, cx);
         let mut state = COMMANDS
             .iter()
             .map(|s| !modal && self.editor.command_available(self.editor.command(s.id)))
@@ -211,6 +211,9 @@ impl EditorView {
             Ok(CommandEffect::Done) => {
                 if id == CommandId::Vertices {
                     if let Some(dock) = &self.dock {
+                        self.editor.cancel_gesture();
+                        dock.canvas
+                            .update(cx, |canvas, cx| canvas.set_hand_tool(false, cx));
                         window.focus(&dock.canvas.read(cx).focus_handle(cx), cx);
                     }
                 }
@@ -218,15 +221,6 @@ impl EditorView {
                     window.focus(&self.focus, cx);
                     self.refresh_document(window, cx);
                 } else {
-                    if matches!(
-                        id,
-                        CommandId::Undo
-                            | CommandId::Redo
-                            | CommandId::CancelProperty
-                            | CommandId::CommitProperty
-                    ) {
-                        self.sync_controls(window, cx);
-                    }
                     self.redraw(cx);
                 }
             }
@@ -321,7 +315,7 @@ impl EditorView {
         if !event.is_held || self.modal || window.has_active_dialog(cx) {
             return;
         }
-        let text = self.name.focus_handle(cx).is_focused(window);
+        let text = self.has_focused_input(window, cx);
         let canvas = self
             .dock
             .as_ref()

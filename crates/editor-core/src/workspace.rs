@@ -222,7 +222,7 @@ impl Editor {
     }
     pub fn is_busy(&self) -> bool {
         self.active
-            .is_none_or(|id| self.entry(id).is_ok_and(|e| e.saving.is_some()))
+            .is_some_and(|id| self.entry(id).is_ok_and(|e| e.saving.is_some()))
     }
     pub fn can_undo(&self) -> bool {
         self.document()
@@ -601,10 +601,12 @@ impl Editor {
         }
     }
     pub fn preview_if_needed(&mut self) -> Result<Option<EditorPreview>> {
+        let Some(id) = self.active else {
+            return Ok(None);
+        };
         if !self.metrics.visible() || self.is_busy() {
             return Ok(None);
         }
-        let id = self.active.unwrap();
         let s = self.entry(id)?.session.as_ref().unwrap();
         if self.requested_scene == Some((id, s.scene_revision, s.viewport_revision)) {
             return Ok(None);

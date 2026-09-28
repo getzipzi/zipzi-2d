@@ -30,7 +30,7 @@ impl EditorView {
             }
         }
     }
-    pub(super) fn refresh_document(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn refresh_document(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
         let active = self.editor.active_id();
         // A repeated tab click or save completion may reuse the same scene.
         // Keep that document's last image while its replacement is pending.
@@ -40,7 +40,6 @@ impl EditorView {
             .filter(|frame| Some(frame.canvas.version.document) == active)
             .or_else(|| active.and_then(|id| self.frozen_frames.get(&id).cloned()));
         self.render_error = None;
-        self.sync_controls(window, cx);
         self.redraw(cx);
     }
     pub(super) fn save(&mut self, save_as: bool, window: &mut Window, cx: &mut Context<Self>) {
@@ -338,7 +337,12 @@ impl EditorView {
             window.remove_window();
         }
     }
-    fn close_document(&mut self, id: DocumentId, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn close_document(
+        &mut self,
+        id: DocumentId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         match self.editor.prepare_close(id) {
             Ok(CloseDisposition::Busy) => {
                 let _ = self.editor.close_document(id, false);

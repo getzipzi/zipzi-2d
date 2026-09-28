@@ -2,32 +2,29 @@ rust_i18n::i18n!("locales", fallback = "en");
 
 mod canvas;
 mod docking;
+#[cfg(test)]
+mod headless_tests;
 mod i18n;
 mod menus;
+mod panels;
 mod preview;
 mod project;
 mod settings;
 mod ui;
+mod workspace;
 
 use editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
-use gpui_kit::component::{
-    Theme, ThemeMode,
-    input::{InputEvent, InputState},
-    slider::{SliderEvent, SliderState, SliderValue},
-};
+use gpui_kit::component::{Theme, ThemeMode};
 use gpui_kit::{prelude::*, *};
 use rust_i18n::t;
 
 struct EditorView {
     focus: FocusHandle,
     modal: bool,
-    control_target: Option<(editor_core::DocumentId, Option<String>)>,
     frozen_frames: std::collections::HashMap<editor_core::DocumentId, preview::Presented>,
     editor: Editor,
     dock: Option<docking::DockWorkspace>,
     ui_subscriptions: Vec<Subscription>,
-    name: Entity<InputState>,
-    opacity: Entity<SliderState>,
     frame: Option<preview::Presented>,
     render_stats: (u64, u64, u64),
     menu_state: Vec<bool>,
@@ -39,25 +36,19 @@ struct EditorView {
     _frames: Option<Task<()>>,
     #[cfg(debug_assertions)]
     _metal_hud_refresh: Option<Task<()>>,
-    _subscriptions: Vec<Subscription>,
 }
 impl EditorView {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let editor = Editor::new().expect("create blank document");
-        let target = Self::property_target(&editor);
-        let (name, opacity, subscriptions) = Self::create_controls(window, cx);
+        let editor = Editor::empty();
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut editor = Self {
             focus,
             modal: false,
-            control_target: target,
             frozen_frames: Default::default(),
             editor,
             dock: None,
             ui_subscriptions: Vec::new(),
-            name,
-            opacity,
             frame: None,
             render_stats: (0, 0, 0),
             menu_state: Vec::new(),
@@ -73,7 +64,6 @@ impl EditorView {
             _frames: None,
             #[cfg(debug_assertions)]
             _metal_hud_refresh: None,
-            _subscriptions: subscriptions,
         };
         let entity = cx.weak_entity();
         window.on_window_should_close(cx, move |window, cx| {
@@ -101,119 +91,8 @@ impl EditorView {
         editor
     }
 
-    fn create_controls(
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> (Entity<InputState>, Entity<SliderState>, Vec<Subscription>) {
-        let name = cx
-            .new(|cx| InputState::new(window, cx).placeholder(t!("editor.layer_name_placeholder")));
-        let opacity = cx.new(|_| {
-            SliderState::new()
-                .min(0.)
-                .max(100.)
-                .step(1.)
-                .default_value(0.)
-        });
-        let subscriptions = vec![
-            cx.subscribe_in(
-                &name,
-                window,
-                move |this: &mut Self, input, event: &InputEvent, window, cx| {
-                    if this.modal || this.editor.is_busy() || input != &this.name {
-                        return;
-                    }
-                    let Some((id, _)) = this.control_target.as_ref() else {
-                        return;
-                    };
-                    if this.control_target != Self::property_target(&this.editor) {
-                        return;
-                    }
-                    let id = *id;
-                    let result = match event {
-                        InputEvent::Change => this.editor.execute_for(
-                            id,
-                            EditorCommand::PreviewName(input.read(cx).value().to_string()),
-                        ),
-                        InputEvent::PressEnter { .. } => return, // Commit is owned by the configured command.
-                        InputEvent::Blur => this.editor.execute_for(id, EditorCommand::FinishEdit),
-                        InputEvent::Focus => {
-                            cx.notify();
-                            return;
-                        }
-                    };
-                    this.complete_edit(result, window, cx, false);
-                },
-            ),
-            cx.subscribe_in(
-                &opacity,
-                window,
-                move |this: &mut Self, slider, event: &SliderEvent, window, cx| {
-                    if this.modal || this.editor.is_busy() || slider != &this.opacity {
-                        return;
-                    }
-                    let Some((id, _)) = this.control_target.as_ref() else {
-                        return;
-                    };
-                    if this.control_target != Self::property_target(&this.editor) {
-                        return;
-                    }
-                    let id = *id;
-                    let result = match event {
-                        SliderEvent::Change(SliderValue::Single(value)) => this
-                            .editor
-                            .execute_for(id, EditorCommand::PreviewOpacity(value / 100.)),
-                        SliderEvent::Release(_) => {
-                            this.editor.execute_for(id, EditorCommand::FinishEdit)
-                        }
-                        _ => return,
-                    };
-                    this.complete_edit(result, window, cx, false);
-                },
-            ),
-        ];
-        (name, opacity, subscriptions)
-    }
-
-    fn property_target(editor: &Editor) -> Option<(editor_core::DocumentId, Option<String>)> {
-        editor
-            .active_id()
-            .map(|id| (id, editor.selected_layer().map(|layer| layer.id)))
-    }
-
-    fn sync_controls(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let target = Self::property_target(&self.editor);
-        if self.control_target != target {
-            // InputState owns text undo history, so even identically named layers
-            // need separate controls. Entity checks also discard queued old events.
-            let (name, opacity, subscriptions) = Self::create_controls(window, cx);
-            self.name = name;
-            self.opacity = opacity;
-            self._subscriptions = subscriptions;
-        }
-        let layer = self.editor.selected_layer();
-        let name = layer.as_ref().map_or("", |layer| layer.name.as_str());
-        if self.name.read(cx).value().as_ref() != name {
-            self.name
-                .update(cx, |state, cx| state.set_value(name.to_owned(), window, cx));
-        }
-        let opacity = layer.as_ref().map_or(0., |layer| layer.opacity * 100.);
-        self.opacity
-            .update(cx, |state, cx| state.set_value(opacity, window, cx));
-        self.control_target = target;
-    }
-
-    fn complete_edit(
-        &mut self,
-        result: anyhow::Result<()>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-        sync: bool,
-    ) {
-        let failed = result.is_err();
+    fn complete_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
         self.edit_error = result.err().map(|error| error.to_string());
-        if sync || failed {
-            self.sync_controls(window, cx);
-        }
         self.redraw(cx);
     }
 
@@ -310,7 +189,7 @@ fn main() {
     i18n::activate(None);
     let background_launch = std::env::var_os("KASANE_DEV_BACKGROUND").is_some();
     gpui_kit::application()
-        .with_assets(gpui_kit::assets::Assets)
+        .with_assets(gpui_kit::assets::AllAssets)
         .run(move |cx| {
             gpui_kit::init(cx);
             let settings = settings::Settings::load(cx);

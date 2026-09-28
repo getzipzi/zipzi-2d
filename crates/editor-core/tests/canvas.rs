@@ -20,6 +20,27 @@ fn down(editor: &mut Editor, p: CanvasPoint, shift: bool) -> anyhow::Result<()> 
     editor.canvas_input(CanvasInput::Down { point: p, shift })?;
     Ok(())
 }
+#[test]
+fn unavailable_vertex_mesh_ignores_clicks_away_from_vertices() -> anyhow::Result<()> {
+    let (doc, _dir) = support::sample_document_with_binding(true)?;
+    let mut editor = Editor::from_document(doc);
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    present(&mut editor)?;
+    let vertex = editor.overlay().vertices[0].position;
+    down(&mut editor, CanvasPoint { x: 0., y: 0. }, false)?;
+    let error = editor
+        .canvas_input(CanvasInput::Down {
+            point: vertex,
+            shift: false,
+        })
+        .unwrap_err();
+    assert!(error.to_string().contains("parameter keyforms"));
+    Ok(())
+}
 fn up(editor: &mut Editor, p: CanvasPoint) -> anyhow::Result<()> {
     editor.canvas_input(CanvasInput::Up { point: p })?;
     Ok(())

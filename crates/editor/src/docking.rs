@@ -8,8 +8,22 @@ use std::{sync::mpsc, thread, time::Duration};
 struct LayoutWriter {
     sender: Option<mpsc::Sender<LayoutConfig>>,
     worker: Option<thread::JoinHandle<()>>,
+    #[cfg(test)]
+    test_store: Option<editor_core::ConfigStore>,
 }
 impl LayoutWriter {
+    #[cfg(test)]
+    fn new_sync(store: editor_core::ConfigStore) -> (Self, async_channel::Receiver<String>) {
+        let (_, errors) = async_channel::unbounded();
+        (
+            Self {
+                sender: None,
+                worker: None,
+                test_store: Some(store),
+            },
+            errors,
+        )
+    }
     fn new(store: editor_core::ConfigStore) -> (Self, async_channel::Receiver<String>) {
         let (sender, receiver) = mpsc::channel::<LayoutConfig>();
         let (errors, error_receiver) = async_channel::unbounded();
@@ -34,11 +48,17 @@ impl LayoutWriter {
             Self {
                 sender: Some(sender),
                 worker: Some(worker),
+                #[cfg(test)]
+                test_store: None,
             },
             error_receiver,
         )
     }
     fn save(&self, layout: DockAreaState) -> anyhow::Result<()> {
+        #[cfg(test)]
+        if let Some(store) = &self.test_store {
+            return store.write("layout.json", &LayoutConfig { layout });
+        }
         self.sender
             .as_ref()
             .unwrap()
@@ -55,96 +75,71 @@ impl Drop for LayoutWriter {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PanelKind {
     Layers,
     Properties,
-}
-pub struct ToolPanel {
-    owner: WeakEntity<EditorView>,
-    kind: PanelKind,
-    focus: FocusHandle,
-    _observe: Subscription,
-}
-impl ToolPanel {
-    fn new(owner: WeakEntity<EditorView>, kind: PanelKind, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self {
-            _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
-            owner,
-            kind,
-            focus: cx.focus_handle(),
-        })
-    }
-}
-impl EventEmitter<PanelEvent> for ToolPanel {}
-impl Focusable for ToolPanel {
-    fn focus_handle(&self, _: &App) -> FocusHandle {
-        self.focus.clone()
-    }
-}
-impl BasePanel for ToolPanel {
-    fn panel_name(&self) -> &'static str {
-        match self.kind {
-            PanelKind::Layers => "Layers",
-            PanelKind::Properties => "Properties",
-        }
-    }
-    fn zoomable(&self, _: &App) -> bool {
-        false
-    }
-}
-impl Panel for ToolPanel {
-    fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        match self.kind {
-            PanelKind::Layers => t!("editor.layers"),
-            PanelKind::Properties => t!("editor.properties"),
-        }
-    }
-}
-impl Render for ToolPanel {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.owner
-            .update(cx, |owner, cx| {
-                owner.render_tool_panel(self.kind, window, cx)
-            })
-            .unwrap_or_else(|_| div().into_any_element())
-    }
+    MeshTree,
+    Deformers,
+    Parameters,
 }
 
 pub struct DockWorkspace {
     pub area: Entity<DockArea>,
     pub canvas: Entity<crate::canvas::CanvasView>,
-    layers: Entity<ToolPanel>,
-    properties: Entity<ToolPanel>,
+    pub layers: Entity<crate::panels::LayersPanel>,
+    pub properties: Entity<crate::panels::PropertiesPanel>,
+    pub mesh_tree: Entity<crate::panels::MeshTreePanel>,
+    pub deformer_tree: Entity<crate::panels::DeformerTreePanel>,
+    pub parameters: Entity<crate::panels::ParametersPanel>,
     pub last_valid: DockAreaState,
     writer: LayoutWriter,
     errors: Option<async_channel::Receiver<String>>,
 }
+
 #[derive(Serialize, Deserialize)]
 pub struct LayoutConfig {
     pub layout: DockAreaState,
 }
+
 impl DockWorkspace {
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Self {
         let canvas = crate::canvas::CanvasView::new(owner.clone(), window, cx);
-        let layers = ToolPanel::new(owner.clone(), PanelKind::Layers, cx);
-        let properties = ToolPanel::new(owner, PanelKind::Properties, cx);
+        let layers = crate::panels::LayersPanel::new(owner.clone(), cx);
+        let properties = crate::panels::PropertiesPanel::new(owner.clone(), window, cx);
+        let mesh_tree = crate::panels::MeshTreePanel::new(owner.clone(), cx);
+        let deformer_tree = crate::panels::DeformerTreePanel::new(owner.clone(), cx);
+        let parameters = crate::panels::ParametersPanel::new(cx);
+
         for (name, handle) in [
             ("Canvas", panel_handle(canvas.clone())),
             ("Layers", panel_handle(layers.clone())),
             ("Properties", panel_handle(properties.clone())),
+            ("MeshTree", panel_handle(mesh_tree.clone())),
+            ("Deformers", panel_handle(deformer_tree.clone())),
+            ("Parameters", panel_handle(parameters.clone())),
         ] {
             register_panel(cx, name, move |_, _, _| handle.clone());
         }
+
         let (area, skin) = DockSkin::dock_area("kasane-workspace", Some(1), window, cx);
         skin.set_close_button_visible(true, cx);
         let last_valid = area.read(cx).dump(cx);
+        #[cfg(test)]
+        let (writer, errors) =
+            LayoutWriter::new_sync(cx.global::<settings::Settings>().store.clone());
+        #[cfg(not(test))]
         let (writer, errors) = LayoutWriter::new(cx.global::<settings::Settings>().store.clone());
+
         let mut result = Self {
             area,
             canvas,
             layers,
             properties,
+            mesh_tree,
+            deformer_tree,
+            parameters,
             last_valid,
             writer,
             errors: Some(errors),
@@ -152,6 +147,7 @@ impl DockWorkspace {
         result.reset(window, cx);
         result
     }
+
     pub fn reset(&mut self, window: &mut Window, cx: &mut App) {
         self.area.update(cx, |area, cx| {
             for placement in [
@@ -164,16 +160,21 @@ impl DockWorkspace {
             area.set_center(
                 DockLayout::h_split()
                     .child(
-                        DockLayout::tabs().panel_view(panel_handle(self.layers.clone()), cx),
-                        Some(px(192.)),
+                        DockLayout::tabs()
+                            .panel_view(panel_handle(self.layers.clone()), cx)
+                            .panel_view(panel_handle(self.mesh_tree.clone()), cx),
+                        Some(px(220.)),
                     )
                     .child(
                         DockLayout::tabs().panel_view(panel_handle(self.canvas.clone()), cx),
                         None,
                     )
                     .child(
-                        DockLayout::tabs().panel_view(panel_handle(self.properties.clone()), cx),
-                        Some(px(256.)),
+                        DockLayout::tabs()
+                            .panel_view(panel_handle(self.properties.clone()), cx)
+                            .panel_view(panel_handle(self.parameters.clone()), cx)
+                            .panel_view(panel_handle(self.deformer_tree.clone()), cx),
+                        Some(px(280.)),
                     ),
                 window,
                 cx,
@@ -181,24 +182,70 @@ impl DockWorkspace {
         });
         self.last_valid = self.area.read(cx).dump(cx);
     }
-    pub fn toggle(&mut self, kind: PanelKind, window: &mut Window, cx: &mut App) {
-        let panel = match kind {
-            PanelKind::Layers => self.layers.clone(),
-            PanelKind::Properties => self.properties.clone(),
-        };
-        let exists = self
-            .area
-            .read(cx)
-            .panel(PanelId::from(panel.entity_id()))
-            .is_some();
-        self.area.update(cx, |area, cx| {
-            if exists {
-                area.remove_panel(panel, window, cx);
-            } else {
-                area.add_panel_view(panel_handle(panel), DockPlacement::Right, None, window, cx);
-            }
-        });
+
+    pub fn has_focused_input(&self, window: &Window, cx: &App) -> bool {
+        self.properties.read(cx).is_focused(window, cx)
     }
+
+    pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
+        match kind {
+            PanelKind::Layers => toggle_panel(
+                &self.area,
+                self.layers.clone(),
+                DockPlacement::Left,
+                window,
+                cx,
+            ),
+            PanelKind::Properties => toggle_panel(
+                &self.area,
+                self.properties.clone(),
+                DockPlacement::Right,
+                window,
+                cx,
+            ),
+            PanelKind::MeshTree => toggle_panel(
+                &self.area,
+                self.mesh_tree.clone(),
+                DockPlacement::Left,
+                window,
+                cx,
+            ),
+            PanelKind::Deformers => toggle_panel(
+                &self.area,
+                self.deformer_tree.clone(),
+                DockPlacement::Right,
+                window,
+                cx,
+            ),
+            PanelKind::Parameters => toggle_panel(
+                &self.area,
+                self.parameters.clone(),
+                DockPlacement::Right,
+                window,
+                cx,
+            ),
+        }
+    }
+}
+
+fn toggle_panel<P: Panel>(
+    area: &Entity<DockArea>,
+    panel: Entity<P>,
+    placement: DockPlacement,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let exists = area
+        .read(cx)
+        .panel(PanelId::from(panel.entity_id()))
+        .is_some();
+    area.update(cx, |area, cx| {
+        if exists {
+            area.remove_panel(panel, window, cx);
+        } else {
+            area.add_panel_view(panel_handle(panel), placement, None, window, cx);
+        }
+    });
 }
 
 pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
@@ -219,7 +266,15 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
                     "Leaf panel cannot contain children"
                 );
                 ensure!(
-                    ["Canvas", "Layers", "Properties"].contains(&node.panel_name.as_str()),
+                    [
+                        "Canvas",
+                        "Layers",
+                        "Properties",
+                        "MeshTree",
+                        "Deformers",
+                        "Parameters"
+                    ]
+                    .contains(&node.panel_name.as_str()),
                     "Unknown panel"
                 );
                 ensure!(seen.insert(node.panel_name.clone()), "Duplicate panel");

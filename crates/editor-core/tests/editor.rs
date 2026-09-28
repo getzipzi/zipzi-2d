@@ -340,3 +340,15 @@ fn cancelling_exit_revokes_only_exit_owned_deferred_closes() -> anyhow::Result<(
     }
     Ok(())
 }
+
+#[test]
+fn empty_workspace_starts_without_documents_and_is_not_busy() -> anyhow::Result<()> {
+    let mut editor = Editor::empty();
+    assert!(editor.documents().is_empty());
+    assert!(editor.active_id().is_none());
+    assert!(!editor.is_busy());
+    assert!(editor.preview_if_needed()?.is_none());
+    assert!(!editor.can_undo());
+    assert!(!editor.can_redo());
+    Ok(())
+}

@@ -58,6 +58,9 @@ impl DocumentSession {
             EditorCommand::PreviewName(name) => self.document.preview_name(&name),
             EditorCommand::PreviewOpacity(v) => self.document.preview_opacity(v),
             EditorCommand::SetVisible(v) => self.document.set_visible(v),
+            EditorCommand::SetLayerVisible { layer_id, visible } => {
+                self.document.set_layer_visible(&layer_id, visible)
+            }
             EditorCommand::FinishEdit => self.document.finish_edit(),
             EditorCommand::CancelEdit => {
                 self.document.cancel_edit();

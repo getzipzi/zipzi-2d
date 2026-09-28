@@ -5,11 +5,23 @@ use tempfile::TempDir;
 use uuid::Uuid;
 
 pub fn sample_document() -> anyhow::Result<(Document, TempDir)> {
-    sample_document_with_binding(false)
+    sample_document_with_options(false, false)
 }
 
 #[allow(dead_code)]
 pub fn sample_document_with_binding(bound: bool) -> anyhow::Result<(Document, TempDir)> {
+    sample_document_with_options(bound, false)
+}
+
+#[allow(dead_code)]
+pub fn sample_document_with_two_layers() -> anyhow::Result<(Document, TempDir)> {
+    sample_document_with_options(false, true)
+}
+
+fn sample_document_with_options(
+    bound: bool,
+    two_layers: bool,
+) -> anyhow::Result<(Document, TempDir)> {
     let directory = tempfile::tempdir()?;
     let texture_path = directory.path().join("accent.png");
     std::fs::write(&texture_path, include_bytes!("../fixtures/accent.png"))?;
@@ -43,6 +55,12 @@ pub fn sample_document_with_binding(bound: bool) -> anyhow::Result<(Document, Te
     session.edit("Create test layer", None, |edit| {
         edit.create_asset(asset)?;
         edit.create_mesh(mesh.clone())?;
+        if two_layers {
+            let mut second = mesh.clone();
+            second.id = Uuid::new_v4().to_string();
+            second.name = "Second".into();
+            edit.create_mesh(second)?;
+        }
         if bound {
             use kasane_core::{BindingAxis, MeshBinding, MeshKeyform, Parameter};
             let parameter_id = Uuid::new_v4().to_string();

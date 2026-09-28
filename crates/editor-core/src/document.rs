@@ -389,12 +389,19 @@ impl Document {
     }
 
     pub fn set_visible(&mut self, visible: bool) -> Result<()> {
+        let id = self
+            .selected
+            .clone()
+            .ok_or_else(|| anyhow!("Select a layer first"))?;
+        self.set_layer_visible(&id, visible)
+    }
+
+    pub fn set_layer_visible(&mut self, id: &str, visible: bool) -> Result<()> {
         self.finish_edit()?;
         let mesh = self
-            .selected
-            .as_deref()
-            .and_then(|id| self.session.mesh(id))
-            .ok_or_else(|| anyhow!("Select a layer first"))?;
+            .session
+            .mesh(id)
+            .ok_or_else(|| anyhow!("Layer not found: {id}"))?;
         if mesh.enabled == visible {
             return Ok(());
         }

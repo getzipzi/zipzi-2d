@@ -27,6 +27,47 @@ fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Res
     editor.finish_save(&mut task.run())?;
     Ok(())
 }
+
+#[test]
+fn visibility_targets_the_clicked_layer_without_changing_selection() -> anyhow::Result<()> {
+    let (doc, _dir) = support::sample_document_with_two_layers()?;
+    let mut editor = Editor::from_document(doc);
+    let selected = editor.document().unwrap().selected_id().unwrap().to_owned();
+    let second = editor
+        .layers()
+        .into_iter()
+        .find(|layer| layer.name == "Second")
+        .unwrap();
+
+    editor.execute(EditorCommand::SetLayerVisible {
+        layer_id: second.id.clone(),
+        visible: false,
+    })?;
+    assert_eq!(
+        editor.document().unwrap().selected_id(),
+        Some(selected.as_str())
+    );
+    assert!(editor.selected_layer().unwrap().visible);
+    assert!(
+        !editor
+            .layers()
+            .into_iter()
+            .find(|l| l.id == second.id)
+            .unwrap()
+            .visible
+    );
+
+    editor.execute(EditorCommand::Undo)?;
+    assert!(
+        editor
+            .layers()
+            .into_iter()
+            .find(|l| l.id == second.id)
+            .unwrap()
+            .visible
+    );
+    Ok(())
+}
 #[test]
 fn shortcut_override_is_atomic_and_allows_disjoint_contexts() -> anyhow::Result<()> {
     let normalize = |s: &str| Ok(s.to_lowercase());

@@ -121,16 +121,16 @@ impl ToolController {
         point: CanvasPoint,
         shift: bool,
     ) -> Result<()> {
-        ensure!(
-            geometry.unavailable.is_none(),
-            "{}",
-            geometry.unavailable.as_deref().unwrap_or("")
-        );
         self.cancel(document);
         let Some(id) = Self::hit(geometry, transform, point) else {
             self.clear();
             return Ok(());
         };
+        ensure!(
+            geometry.unavailable.is_none(),
+            "{}",
+            geometry.unavailable.as_deref().unwrap_or("")
+        );
         if shift && self.selected.remove(&id) {
             return Ok(());
         }

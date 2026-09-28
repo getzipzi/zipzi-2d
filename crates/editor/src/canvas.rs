@@ -2,8 +2,7 @@
 use super::*;
 use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable, WindowExt,
-    button::{Button, ButtonVariants},
+    ActiveTheme, WindowExt,
     dock::{BasePanel, Panel, PanelEvent},
 };
 
@@ -11,18 +10,31 @@ pub struct CanvasView {
     owner: WeakEntity<EditorView>,
     focus: FocusHandle,
     bounds: Bounds<Pixels>,
-    pan: Option<Point<Pixels>>,
+    pan: Option<PanGesture>,
+    space_held: bool,
+    hand_tool: bool,
     _subscriptions: Vec<Subscription>,
 }
+
+#[derive(Clone, Copy)]
+struct PanGesture {
+    position: Point<Pixels>,
+    button: MouseButton,
+}
+
 impl CanvasView {
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
             let focus = cx.focus_handle();
             let subscriptions = vec![
                 cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
-                cx.on_focus_out(&focus, window, |this, _, _, cx| this.cancel(cx)),
+                cx.on_focus_out(&focus, window, |this, _, _, cx| {
+                    this.space_held = false;
+                    this.cancel(cx);
+                }),
                 cx.observe_window_visibility(window, |this, _, window, cx| {
                     if !window.is_visible() {
+                        this.space_held = false;
                         this.cancel(cx);
                         let _ = this.owner.update(cx, |owner, cx| {
                             owner.editor.set_canvas_metrics(CanvasMetrics::default());
@@ -34,6 +46,7 @@ impl CanvasView {
                 }),
                 cx.observe_window_activation(window, |this, window, cx| {
                     if !window.is_window_active() {
+                        this.space_held = false;
                         this.cancel(cx);
                     }
                 }),
@@ -43,9 +56,19 @@ impl CanvasView {
                 focus,
                 bounds: Bounds::default(),
                 pan: None,
+                space_held: false,
+                hand_tool: false,
                 _subscriptions: subscriptions,
             }
         })
+    }
+    pub fn hand_tool(&self) -> bool {
+        self.hand_tool
+    }
+    pub fn set_hand_tool(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        self.hand_tool = enabled;
+        self.pan = None;
+        cx.notify();
     }
     fn cancel(&mut self, cx: &mut Context<Self>) {
         self.pan = None;
@@ -95,16 +118,20 @@ impl CanvasView {
         });
     }
     fn moved(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {
-        if let Some(previous) = self.pan {
-            if event.pressed_button != Some(MouseButton::Middle) {
+        if let Some(PanGesture { position, button }) = self.pan {
+            if event.pressed_button != Some(button) {
                 self.pan = None;
+                cx.notify();
                 return;
             }
             let delta = CanvasPoint {
-                x: (event.position.x - previous.x).as_f32(),
-                y: (event.position.y - previous.y).as_f32(),
+                x: (event.position.x - position.x).as_f32(),
+                y: (event.position.y - position.y).as_f32(),
             };
-            self.pan = Some(event.position);
+            self.pan = Some(PanGesture {
+                position: event.position,
+                button,
+            });
             let _ = self.owner.update(cx, |owner, cx| {
                 if !owner.modal {
                     owner.editor.pan_by(delta);
@@ -116,6 +143,20 @@ impl CanvasView {
                 CanvasInput::Move {
                     point: self.local(event.position),
                     left_down: event.pressed_button == Some(MouseButton::Left),
+                },
+                window,
+                cx,
+            );
+        }
+    }
+    fn pointer_up(&mut self, event: &MouseUpEvent, window: &mut Window, cx: &mut Context<Self>) {
+        if self.pan.is_some_and(|pan| pan.button == event.button) {
+            self.pan = None;
+            cx.notify();
+        } else if self.pan.is_none() && event.button == MouseButton::Left {
+            self.input(
+                CanvasInput::Up {
+                    point: self.local(event.position),
                 },
                 window,
                 cx,
@@ -161,7 +202,6 @@ impl Render for CanvasView {
             .overlay_for_frame(frame.as_ref().map(|f| f.canvas.version));
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
-        let tabs = state.editor.documents();
         let error = state.render_error.clone();
         let capture = self.pan.is_some() || state.editor.gesture_active();
         let primary = cx.theme().primary;
@@ -171,6 +211,8 @@ impl Render for CanvasView {
         let measure = view.clone();
         let mouse = view.clone();
         let body = div()
+            .id("canvas-body")
+            .test_support()
             .relative()
             .flex_1()
             .min_h_0()
@@ -181,6 +223,15 @@ impl Render for CanvasView {
                 MouseButton::Left,
                 cx.listener(|this, event: &MouseDownEvent, window, cx| {
                     window.focus(&this.focus, cx);
+                    if this.space_held || this.hand_tool {
+                        this.cancel(cx);
+                        this.pan = Some(PanGesture {
+                            position: event.position,
+                            button: MouseButton::Left,
+                        });
+                        cx.notify();
+                        return;
+                    }
                     this.input(
                         CanvasInput::Down {
                             point: this.local(event.position),
@@ -196,29 +247,42 @@ impl Render for CanvasView {
                 cx.listener(|this, event: &MouseDownEvent, window, cx| {
                     window.focus(&this.focus, cx);
                     this.cancel(cx);
-                    this.pan = Some(event.position);
+                    this.pan = Some(PanGesture {
+                        position: event.position,
+                        button: MouseButton::Middle,
+                    });
                     cx.notify();
                 }),
             )
             .on_mouse_up(
                 MouseButton::Left,
                 cx.listener(|this, event: &MouseUpEvent, window, cx| {
-                    this.input(
-                        CanvasInput::Up {
-                            point: this.local(event.position),
-                        },
-                        window,
-                        cx,
-                    )
+                    this.pointer_up(event, window, cx);
                 }),
             )
             .on_mouse_up(
                 MouseButton::Middle,
-                cx.listener(|this, _, _, cx| {
-                    this.pan = None;
-                    cx.notify();
+                cx.listener(|this, event: &MouseUpEvent, window, cx| {
+                    this.pointer_up(event, window, cx);
                 }),
             )
+            .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, _, cx| {
+                let delta_y = match event.delta {
+                    ScrollDelta::Pixels(p) => p.y.as_f32(),
+                    ScrollDelta::Lines(p) => p.y * 16.0,
+                };
+                if delta_y.abs() < 0.1 {
+                    return;
+                }
+                let step = if delta_y > 0.0 { 0.1 } else { -0.1 };
+                let _ = this.owner.update(cx, |owner, cx| {
+                    if owner.modal || owner.editor.is_busy() {
+                        return;
+                    }
+                    owner.editor.zoom_by(step);
+                    owner.redraw(cx);
+                });
+            }))
             .on_mouse_move(
                 cx.listener(move |this, event: &MouseMoveEvent, window, cx| {
                     if !capture {
@@ -295,18 +359,7 @@ impl Render for CanvasView {
                                 move |event: &MouseUpEvent, phase, window, cx| {
                                     if phase == DispatchPhase::Capture {
                                         view.update(cx, |this, cx| {
-                                            if event.button == MouseButton::Middle {
-                                                this.pan = None;
-                                                cx.notify();
-                                            } else if event.button == MouseButton::Left {
-                                                this.input(
-                                                    CanvasInput::Up {
-                                                        point: this.local(event.position),
-                                                    },
-                                                    window,
-                                                    cx,
-                                                );
-                                            }
+                                            this.pointer_up(event, window, cx);
                                         });
                                         cx.stop_propagation();
                                     }
@@ -317,7 +370,39 @@ impl Render for CanvasView {
                 )
                 .absolute()
                 .size_full(),
-            );
+            )
+            .child(
+                div()
+                    .absolute()
+                    .right_3()
+                    .bottom_3()
+                    .px_2()
+                    .py_1()
+                    .rounded_md()
+                    .bg(cx.theme().background.opacity(0.85))
+                    .border_1()
+                    .border_color(cx.theme().border)
+                    .shadow_sm()
+                    .text_xs()
+                    .font_family(".AppleSystemUIFontMonospaced")
+                    .text_color(cx.theme().foreground)
+                    .child(format!("{:.0}%", state.editor.view().zoom * 100.0)),
+            )
+            .children(overlay.unavailable.map(|reason| {
+                div()
+                    .absolute()
+                    .left_3()
+                    .bottom_3()
+                    .px_2p5()
+                    .py_1()
+                    .rounded_md()
+                    .bg(cx.theme().warning.opacity(0.15))
+                    .border_1()
+                    .border_color(cx.theme().warning.opacity(0.4))
+                    .text_xs()
+                    .text_color(cx.theme().warning)
+                    .child(reason)
+            }));
         div()
             .size_full()
             .flex()
@@ -328,39 +413,27 @@ impl Render for CanvasView {
             } else {
                 "KasaneCanvas"
             })
-            .child(
-                div()
-                    .id("document-tabs")
-                    .h(px(32.))
-                    .flex_shrink_0()
-                    .flex()
-                    .gap_1()
-                    .overflow_x_scroll()
-                    .children(tabs.into_iter().map(|document| {
-                        let id = document.id;
-                        let owner = owner.clone();
-                        Button::new(SharedString::from(format!("tab-{id:?}")))
-                            .small()
-                            .disabled(modal)
-                            .label(format!(
-                                "{}{}",
-                                document
-                                    .title
-                                    .unwrap_or_else(|| t!("editor.untitled_project").into_owned()),
-                                if document.modified { " •" } else { "" }
-                            ))
-                            .when(active == Some(id), |b| b.primary())
-                            .on_click(move |_, window, cx| {
-                                owner.update(cx, |this, cx| this.activate_document(id, window, cx))
-                            })
-                    })),
-            )
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
+                if event.keystroke.key == "space" && !event.is_held {
+                    this.space_held = true;
+                    cx.notify();
+                } else if event.keystroke.key == "h" && !event.is_held {
+                    this.hand_tool = true;
+                    this.pan = None;
+                    let _ = this.owner.update(cx, |owner, cx| {
+                        owner.editor.cancel_gesture();
+                        owner.redraw(cx);
+                    });
+                    cx.notify();
+                }
+            }))
+            .on_key_up(cx.listener(|this, event: &KeyUpEvent, _, cx| {
+                if event.keystroke.key == "space" {
+                    this.space_held = false;
+                    cx.notify();
+                }
+            }))
             .child(body)
-            .children(
-                overlay
-                    .unavailable
-                    .map(|reason| div().text_xs().p_1().child(reason)),
-            )
             .into_any_element()
     }
 }
