@@ -42,7 +42,7 @@ fn opacity_and_name_edits_survive_document_switch(cx: &mut TestAppContext) {
             assert_eq!(layer.name, "Renamed");
             assert!((0.4..0.7).contains(&layer.opacity));
         });
-        window.click("tab-new-button", cx);
+        window.press("cmd-n", cx);
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.documents().len(), 2);
             assert_ne!(view.editor.active_id(), Some(original_id));

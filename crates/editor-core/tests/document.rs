@@ -1,5 +1,54 @@
 use editor_core::{Document, TreeNodeKind};
 mod support;
+
+#[test]
+fn cached_dirty_state_tracks_preview_revert_save_and_history() -> anyhow::Result<()> {
+    let (mut document, _source) = sample_document()?;
+    let destination = tempfile::tempdir()?;
+    let path = destination.path().join("model");
+    document.save(&path)?;
+    let name = document.selected_layer().unwrap().name;
+    for _ in 0..2 {
+        assert!(!document.modified());
+        document.preview_name("Changed")?;
+        assert!(document.modified());
+        document.preview_name(&name)?;
+        assert!(!document.modified());
+        document.finish_edit()?;
+        assert!(!document.modified());
+    }
+    document.preview_opacity(0.5)?;
+    assert!(document.modified());
+    document.preview_opacity(1.)?;
+    assert!(!document.modified());
+    document.preview_opacity(0.5)?;
+    assert!(document.modified());
+    document.cancel_edit();
+    assert!(!document.modified());
+
+    document.begin_vertices()?;
+    let (id, before) = document.selected_vertex_positions()[0];
+    let after = editor_core::ModelPoint {
+        x: before.x + 1.,
+        y: before.y,
+    };
+    document.preview_vertices(&[id], &[after])?;
+    assert!(document.modified());
+    document.preview_vertices(&[id], &[before])?;
+    assert!(!document.modified());
+    document.cancel_edit();
+
+    document.preview_name("Saved revision")?;
+    document.finish_edit()?;
+    assert!(document.modified());
+    document.save(&path)?;
+    assert!(!document.modified());
+    document.undo()?;
+    assert!(document.modified());
+    document.redo()?;
+    assert!(!document.modified());
+    Ok(())
+}
 use support::sample_document;
 
 #[test]

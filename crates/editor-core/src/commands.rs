@@ -150,7 +150,7 @@ impl Editor {
         match command.id {
             New | Open | ImportModel3 | ImportPsd => !self.exiting(),
             Quit => true,
-            Previous | Next => self.documents().len() > 1,
+            Previous | Next => self.document_count() > 1,
             Layers | Properties | ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
             Undo => target && self.can_undo(),

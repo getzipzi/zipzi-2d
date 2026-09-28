@@ -11,7 +11,8 @@ pub struct DocumentSession {
     view: ViewState,
     pub scene_revision: u64,
     pub viewport_revision: u64,
-    cache: Option<(SceneSnapshot, Arc<[MeshGeometry]>)>,
+    cache: Option<SceneSnapshot>,
+    geometry: Option<Arc<[MeshGeometry]>>,
     pub displayed: Option<CanvasFrame>,
     pub tools: ToolController,
     pub evaluations: u64,
@@ -24,6 +25,7 @@ impl DocumentSession {
             scene_revision: 1,
             viewport_revision: 1,
             cache: None,
+            geometry: None,
             displayed: None,
             tools: ToolController::default(),
             evaluations: 0,
@@ -38,6 +40,7 @@ impl DocumentSession {
     fn invalidate_scene(&mut self) {
         self.scene_revision += 1;
         self.cache = None;
+        self.geometry = None;
         self.tools.reconcile(&self.document);
     }
     pub fn cancel_gesture(&mut self) {
@@ -47,6 +50,14 @@ impl DocumentSession {
     }
     pub fn execute(&mut self, command: EditorCommand) -> Result<()> {
         self.cancel_gesture();
+        let unchanged_geometry = if matches!(
+            &command,
+            EditorCommand::PreviewOpacity(_) | EditorCommand::PreviewName(_)
+        ) {
+            self.geometry.clone()
+        } else {
+            None
+        };
         let had_pending = self.document.has_pending_edit();
         let selection = matches!(&command, EditorCommand::Select(_));
         let invalidate = !matches!(
@@ -74,6 +85,9 @@ impl DocumentSession {
         }
         if invalidate {
             self.invalidate_scene();
+            if result.is_ok() {
+                self.geometry = unchanged_geometry;
+            }
         }
         result
     }
@@ -82,12 +96,19 @@ impl DocumentSession {
     }
     pub fn zoom_by(&mut self, delta: f32) {
         if !self.tools.dragging() && delta.is_finite() {
-            self.view.zoom = (self.view.zoom + delta).clamp(0.25, 3.);
-            self.viewport_revision += 1;
+            let zoom = (self.view.zoom + delta).clamp(0.25, 3.);
+            if zoom != self.view.zoom {
+                self.view.zoom = zoom;
+                self.viewport_revision += 1;
+            }
         }
     }
     pub fn pan_by(&mut self, delta: CanvasPoint) {
-        if !self.tools.dragging() && delta.x.is_finite() && delta.y.is_finite() {
+        if !self.tools.dragging()
+            && delta.x.is_finite()
+            && delta.y.is_finite()
+            && (delta.x != 0. || delta.y != 0.)
+        {
             self.view.pan.x += delta.x;
             self.view.pan.y += delta.y;
             self.viewport_revision += 1;
@@ -102,11 +123,16 @@ impl DocumentSession {
     pub fn scene(&mut self) -> Result<(SceneSnapshot, Arc<[MeshGeometry]>)> {
         if self.cache.is_none() {
             let scene = self.document.snapshot()?;
-            let geometry = self.document.geometry(&scene);
-            self.cache = Some((scene, geometry));
+            if self.geometry.is_none() {
+                self.geometry = Some(self.document.geometry(&scene));
+            }
+            self.cache = Some(scene);
             self.evaluations += 1;
         }
-        Ok(self.cache.as_ref().unwrap().clone())
+        Ok((
+            self.cache.as_ref().unwrap().clone(),
+            self.geometry.as_ref().unwrap().clone(),
+        ))
     }
     pub fn overlay(&self) -> OverlaySnapshot {
         let Some(frame) = &self.displayed else {

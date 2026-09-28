@@ -108,7 +108,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
             // does not drain autoreleased objects created on this thread.
             let frame = objc2::rc::autoreleasepool(|_| {
                 renderer
-                    .draw_transformed(
+                    .submit_transformed(
                         &gpu.queue,
                         request.target,
                         &request.scene,
@@ -116,16 +116,27 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                     )
                     .map_err(|e| e.to_string())
             });
+            let (image, completion) = match frame {
+                Ok(submitted) => (Ok(submitted.image), Some(submitted.command)),
+                Err(error) => (Err(error), None),
+            };
             if frames
                 .send_blocking(Frame {
                     revision: request.revision,
                     canvas: Some(request.canvas),
                     stats: renderer.stats(),
-                    image: frame,
+                    image,
                 })
                 .is_err()
             {
                 break;
+            }
+            // One producer command in flight. Requests arriving while the GPU
+            // works collapse into Inbox::latest; discarded images no longer
+            // leave an unbounded queue of obsolete GPU work ahead of the UI.
+            // Publish before waiting: GPUI can sample on this same queue.
+            if let Some(command) = completion {
+                command.wait_until_completed();
             }
         }
     });

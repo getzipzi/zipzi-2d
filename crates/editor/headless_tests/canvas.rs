@@ -2,7 +2,7 @@ use super::setup;
 use crate::workspace::toolbar::ToolbarItemConfig;
 use gpui_kit::assets::IconName;
 use gpui_kit::test::TestWindowExt;
-use gpui_kit::{AppContext as _, TestAppContext, point, px};
+use gpui_kit::{AppContext as _, InputEvent as _, TestAppContext, point, px};
 
 #[gpui_kit::test]
 fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext) {
@@ -122,4 +122,165 @@ fn welcome_text_centered_when_no_active_document(cx: &mut TestAppContext) {
         assert_eq!(welcome.size, canvas_body.size);
     })
     .unwrap();
+}
+
+#[gpui_kit::test]
+fn continuous_pan_does_not_notify_document_panels(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent};
+    use std::{cell::Cell, rc::Rc};
+    let harness = setup(cx);
+    let from = cx
+        .update_window(harness.window, |_, window, cx| {
+            window.click("tool_hand", cx);
+            let from = window.find("canvas-body").bounds().center();
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position: from,
+                    modifiers: Default::default(),
+                    click_count: 1,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            from
+        })
+        .unwrap();
+    let notifications = Rc::new(Cell::new(0));
+    let observer_count = notifications.clone();
+    let _observe = cx.update(|cx| {
+        cx.observe(&harness.view, move |_, _| {
+            observer_count.set(observer_count.get() + 1);
+        })
+    });
+    for index in 1..=32 {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: from + point(px(index as f32), px(0.)),
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.draw(cx).clear(cx);
+        })
+        .unwrap();
+    }
+    assert_eq!(
+        notifications.get(),
+        0,
+        "pan must leave document observers idle"
+    );
+    assert_eq!(
+        harness.view.read_with(cx, |v, _| v.editor.view().pan.x),
+        32.
+    );
+}
+
+/// CPU input dispatch + GPUI layout/paint only. Run explicitly with a local
+/// model; GPU production/composition is measured by the Metal benchmark.
+#[gpui_kit::test]
+#[ignore]
+fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent};
+    use std::time::Instant;
+    let harness = setup(cx);
+    let path = std::env::var("KASANE_BENCH_MODEL").expect("KASANE_BENCH_MODEL=model3 path");
+    let mut editor = editor_core::Editor::empty();
+    let task = editor
+        .prepare_load(editor_core::LoadRequest::Model3(path.into()))
+        .unwrap()
+        .unwrap();
+    editor.finish_load(task.run()).unwrap();
+    let from = cx
+        .update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.editor = editor;
+                cx.notify();
+            });
+            window.render_frame(cx);
+            // Prime a real image/geometry pair so timed paints include the
+            // surface and editable overlay, as well as the surrounding UI.
+            harness.view.update(cx, |view, cx| {
+                objc2::rc::autoreleasepool(|_| {
+                    let preview = view.editor.preview().unwrap();
+                    let canvas = preview.canvas.unwrap();
+                    let (width, height) = canvas.transform.metrics.physical_size().unwrap();
+                    let config = editor_render::MetalTargetConfig {
+                        width,
+                        height,
+                        format: metal::MTLPixelFormat::RGBA8Unorm,
+                    };
+                    let device = metal::Device::system_default().unwrap();
+                    let queue = device.new_command_queue();
+                    let mut renderer =
+                        editor_render::MetalSceneRenderer::new(device, config).unwrap();
+                    let submitted = renderer
+                        .submit_transformed(&queue, config, &preview.scene, canvas.transform)
+                        .unwrap();
+                    submitted.command.wait_until_completed();
+                    assert!(view.editor.present_frame(canvas.clone()));
+                    view.frame = Some(crate::preview::Presented {
+                        image: submitted.image,
+                        canvas,
+                    });
+                    cx.notify();
+                });
+            });
+            window.render_frame(cx);
+            window.click("tool_hand", cx);
+            let from = window.find("canvas-body").bounds().center();
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position: from,
+                    modifiers: Default::default(),
+                    click_count: 1,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            from
+        })
+        .unwrap();
+    let mut samples = Vec::new();
+    let mut dispatch_samples = Vec::new();
+    for index in 0..110 {
+        let start = Instant::now();
+        let mut dispatch_ms = 0.;
+        cx.update_window(harness.window, |_, window, cx| {
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: from + point(px((index as f32 * 0.1).sin() * 80.), px(0.)),
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            dispatch_ms = start.elapsed().as_secs_f64() * 1000.;
+            window.draw(cx).clear(cx);
+        })
+        .unwrap();
+        if index >= 10 {
+            samples.push(start.elapsed().as_secs_f64() * 1000.);
+            dispatch_samples.push(dispatch_ms);
+        }
+    }
+    samples.sort_by(f64::total_cmp);
+    dispatch_samples.sort_by(f64::total_cmp);
+    println!(
+        "GPUI CPU pan / 100 samples: p50={:.3}ms p95={:.3}ms p99={:.3}ms",
+        samples[49], samples[94], samples[98]
+    );
+    println!(
+        "GPUI CPU dispatch / 100 samples: p50={:.3}ms p95={:.3}ms p99={:.3}ms",
+        dispatch_samples[49], dispatch_samples[94], dispatch_samples[98]
+    );
 }

@@ -35,6 +35,7 @@ struct EditorView {
     requests: Option<preview::RequestSender>,
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
+    status_bar: Entity<workspace::status_bar::StatusBar>,
     #[cfg(debug_assertions)]
     _metal_hud_refresh: Option<Task<()>>,
 }
@@ -63,6 +64,7 @@ impl EditorView {
             requests: None,
             gpu_device: None,
             _frames: None,
+            status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
             #[cfg(debug_assertions)]
             _metal_hud_refresh: None,
         };
@@ -97,6 +99,11 @@ impl EditorView {
         self.redraw(cx);
     }
 
+    fn complete_preview_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
+        self.edit_error = result.err().map(|error| error.to_string());
+        self.redraw_canvas(cx);
+    }
+
     fn connect_preview(&mut self, window: &Window, cx: &mut Context<Self>) {
         self._frames = None;
         self.requests = None;
@@ -116,10 +123,6 @@ impl EditorView {
             while let Ok(frame) = frames.recv().await {
                 if this
                     .update(cx, |this, cx| {
-                        // The core pairs each request with the document active at submission.
-                        if frame.revision != 0 && !this.editor.accepts_preview(frame.revision) {
-                            return;
-                        }
                         match frame.image {
                             Ok(image) => {
                                 let Some(canvas) = frame.canvas else {
@@ -130,13 +133,21 @@ impl EditorView {
                                 }
                                 this.render_stats = frame.stats;
                                 this.frame = Some(preview::Presented { image, canvas });
-                                this.render_error = None;
+                                if this.render_error.take().is_some() {
+                                    cx.notify();
+                                }
                             }
                             Err(error) => {
+                                if frame.revision != 0
+                                    && !this.editor.accepts_preview(frame.revision)
+                                {
+                                    return;
+                                }
                                 this.render_error = Some(error);
+                                cx.notify();
                             }
                         }
-                        cx.notify();
+                        this.notify_canvas(cx);
                     })
                     .is_err()
                 {
@@ -149,8 +160,24 @@ impl EditorView {
     }
 
     fn redraw(&mut self, cx: &mut Context<Self>) {
+        self.request_preview();
+        cx.notify();
+    }
+
+    fn notify_canvas(&self, cx: &mut Context<Self>) {
+        if let Some(dock) = &self.dock {
+            App::notify(cx, dock.canvas.entity_id());
+        }
+    }
+
+    fn redraw_canvas(&mut self, cx: &mut Context<Self>) {
+        self.request_preview();
+        self.notify_canvas(cx);
+        App::notify(cx, self.status_bar.entity_id());
+    }
+
+    fn request_preview(&mut self) {
         if self.editor.is_busy() {
-            cx.notify();
             return;
         }
         match self.editor.preview_if_needed() {
@@ -182,7 +209,6 @@ impl EditorView {
             Ok(None) => {}
             Err(error) => self.render_error = Some(error.to_string()),
         }
-        cx.notify();
     }
 }
 

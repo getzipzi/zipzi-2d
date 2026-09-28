@@ -33,13 +33,16 @@ cargo fmt --all -- --check
 
 ./scripts/build-app.sh
 ./scripts/build-app.sh playground
+./scripts/build-app.sh editor debug  # 显式打包未优化的调试版
 ```
 
-应用输出为 `target/Kasane Editor.app` 和 `target/Kasane Component Playground.app`。无需后端 feature 参数。
+应用输出为 `target/Kasane Editor.app` 和 `target/Kasane Component Playground.app`，默认使用 Release 优化。无需后端 feature 参数。
 
 监听编译需要先安装 `watchexec`（macOS 可运行 `brew install watchexec`）。脚本监听本仓库及相邻 Kasane 模块中的 Rust 源码和 Cargo 清单，保存后编译；只有编译成功才在后台启动新版并关闭旧版，避免新窗口抢走当前应用的焦点。编译失败时旧版继续运行。关闭当前编辑器或 Playground 窗口后，脚本会停止监听并退出；源码更新导致的正常重启会继续监听。完整编译输出写入 `target/dev-build-*.log`，应用输出写入 `target/dev-run-*.log`。这是进程重启，编辑器中尚未保存的文档更改会丢失；改 UI 前先保存文档。脚本仅在本次开发会话开启增量编译，不改动项目的 Cargo profile。
 
 ## 调试界面与性能
+
+120 fps 的帧预算为 8.33 ms。性能验证使用 `cargo run --locked --release -p kasane-editor` 或默认打包的 Release 应用；开发构建保留快速编译和调试能力。基准方法和测量结果见 [交互性能](docs/interaction-performance.md)。
 
 编辑器的上述 debug 启动命令和 `./scripts/dev.sh` 会启用 macOS Metal HUD，放在左下角，宽度为默认值的 80%。按 **⌘⌥I** 打开 GPUI Kit Inspector，点选元素查看布局、样式和源码位置。GPUI FPS 面板暂时停用；需要时可给编辑器单独加 `--features debug-tools` 重新开启。
 

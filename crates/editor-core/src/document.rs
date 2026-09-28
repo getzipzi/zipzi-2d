@@ -1,10 +1,13 @@
 use crate::{SceneSnapshot, SceneTexture, TreeNode, TreeNodeKind, tree::nest_nodes};
 use anyhow::{Result, anyhow, ensure};
-use kasane_core::{Canvas, DrawableFrame, Mesh, PreviewValues, Vec2, evaluation::evaluate_frame};
+use kasane_core::{Canvas, Mesh, Vec2, preview::PreviewState};
 use kasane_project::read_project_asset;
 use kasane_sdk::{AuthoringSession, EditSession, MeshProperties, SaveReceipt};
 use std::collections::HashMap;
-use std::{path::Path, sync::Arc};
+use std::{
+    path::Path,
+    sync::{Arc, OnceLock},
+};
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -41,6 +44,8 @@ struct PendingEdit {
     kind: Gesture,
     original: Mesh,
     edit: EditSession<'static>,
+    preview: PreviewState,
+    changed: OnceLock<bool>,
 }
 
 /// The SDK owns all persistent model state and history. Selection is editor state.
@@ -181,6 +186,12 @@ impl Document {
         }
     }
 
+    fn model(&self) -> &kasane_core::Document {
+        self.pending
+            .as_ref()
+            .map_or_else(|| self.session.document(), |p| p.edit.candidate_document())
+    }
+
     pub fn layers(&self) -> Vec<Layer> {
         self.session
             .mesh_ids()
@@ -297,6 +308,8 @@ impl Document {
             kind,
             original,
             edit: self.session.begin_owned_edit(label, None)?,
+            preview: PreviewState::default(),
+            changed: OnceLock::new(),
         });
         Ok(())
     }
@@ -325,28 +338,17 @@ impl Document {
             .unwrap_or_default()
     }
     pub fn vertex_unavailable(&self, mesh: &Mesh) -> Option<String> {
-        if self.session.binding_for_mesh(&mesh.id).is_some() {
+        let model = self.model();
+        if model.binding_for_mesh(&mesh.id).is_some() {
             return Some("This mesh has parameter keyforms".into());
         }
         if !mesh.deformer_id.is_empty() {
             return Some("This mesh depends on a deformer".into());
         }
-        if self
-            .session
-            .blend_binding_ids()
-            .iter()
-            .filter_map(|id| self.session.blend_binding(id))
-            .any(|b| b.target_id == mesh.id)
-        {
+        if !model.blend_bindings_for_target(&mesh.id).is_empty() {
             return Some("This mesh has BlendShape dependencies".into());
         }
-        if self
-            .session
-            .glue_ids()
-            .iter()
-            .filter_map(|id| self.session.glue(id))
-            .any(|g| g.mesh_a_id == mesh.id || g.mesh_b_id == mesh.id)
-        {
+        if !model.glues_for_mesh(&mesh.id).is_empty() {
             return Some("This mesh has Glue dependencies".into());
         }
         None
@@ -373,6 +375,7 @@ impl Document {
             .as_mut()
             .ok_or_else(|| anyhow!("No vertex gesture"))?;
         ensure!(pending.kind == Gesture::Vertices, "Another edit is active");
+        pending.changed.take();
         let positions = positions
             .iter()
             .map(|p| Vec2::new(p.x, p.y))
@@ -387,7 +390,7 @@ impl Document {
             .drawables
             .iter()
             .filter_map(|drawable| {
-                let mesh = self.mesh(&drawable.id)?;
+                let mesh = self.model().get_mesh(&drawable.id)?;
                 Some(crate::MeshGeometry {
                     id: mesh.id.clone(),
                     unavailable: self.vertex_unavailable(&mesh),
@@ -399,7 +402,7 @@ impl Document {
                             crate::ViewportTransform::evaluated_to_source(scene.frame.canvas, *p)
                         }))
                         .collect(),
-                    triangles: mesh.triangles,
+                    triangles: mesh.triangles.clone(),
                 })
             })
             .collect::<Vec<_>>()
@@ -409,6 +412,7 @@ impl Document {
     pub fn preview_name(&mut self, name: &str) -> Result<()> {
         self.begin_gesture(Gesture::Rename)?;
         let pending = self.pending.as_mut().unwrap();
+        pending.changed.take();
         let result = pending.edit.rename_mesh(&pending.original.id, name);
         if result.is_err() {
             self.pending = None;
@@ -423,11 +427,8 @@ impl Document {
         );
         self.begin_gesture(Gesture::Opacity)?;
         let pending = self.pending.as_mut().unwrap();
-        let mut properties = MeshProperties::from(&pending.original);
-        properties.appearance.opacity = opacity;
-        let result = pending
-            .edit
-            .update_mesh_properties(&pending.original.id, properties);
+        pending.changed.take();
+        let result = pending.edit.set_mesh_opacity(&pending.original.id, opacity);
         if result.is_err() {
             self.pending = None;
         }
@@ -436,11 +437,13 @@ impl Document {
 
     fn pending_changed(&self) -> bool {
         self.pending.as_ref().is_some_and(|pending| {
-            pending
-                .edit
-                .candidate_document()
-                .get_mesh(&pending.original.id)
-                != Some(&pending.original)
+            *pending.changed.get_or_init(|| {
+                pending
+                    .edit
+                    .candidate_document()
+                    .get_mesh(&pending.original.id)
+                    != Some(&pending.original)
+            })
         })
     }
 
@@ -513,15 +516,11 @@ impl Document {
     }
 
     pub fn snapshot(&mut self) -> Result<SceneSnapshot> {
-        let frame = if let Some(pending) = &self.pending {
-            let mut frame = DrawableFrame::default();
-            let status = evaluate_frame(
-                pending.edit.candidate_document(),
-                &PreviewValues::default(),
-                &mut frame,
-            );
-            ensure!(status.is_ok(), "{}: {}", status.code, status.message);
-            Arc::new(frame)
+        let frame = if let Some(pending) = &mut self.pending {
+            pending
+                .preview
+                .frame(pending.edit.candidate_document(), 0)
+                .map_err(|status| anyhow!("{}: {}", status.code, status.message))?
         } else {
             self.session.preview_frame()?
         };

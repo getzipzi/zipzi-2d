@@ -2,7 +2,30 @@ use crate::EditorView;
 use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable};
 use gpui_kit::{prelude::*, *};
 
-pub fn render_status_bar(view: &EditorView, cx: &mut Context<EditorView>) -> impl IntoElement {
+pub struct StatusBar {
+    owner: WeakEntity<EditorView>,
+    _observe: Subscription,
+}
+
+impl StatusBar {
+    pub fn new(owner: WeakEntity<EditorView>, cx: &mut App) -> Entity<Self> {
+        cx.new(|cx| Self {
+            _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
+            owner,
+        })
+    }
+}
+
+impl Render for StatusBar {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let Some(owner) = self.owner.upgrade() else {
+            return div().into_any_element();
+        };
+        render_status_bar(owner.read(cx), cx).into_any_element()
+    }
+}
+
+fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
     let theme = cx.theme();
     let error = view
         .edit_error

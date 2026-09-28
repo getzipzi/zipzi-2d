@@ -9,8 +9,16 @@ use kasane_render_metal::{
 };
 use mipmaps::straight_rgba_mipmaps;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub use kasane_render_metal::MetalTargetConfig;
+
+/// The image is ordered on the consumer queue. Retain the command to bound
+/// producer work by GPU completion without ever waiting on the UI thread.
+pub struct SubmittedFrame {
+    pub image: metal::Texture,
+    pub command: metal::CommandBuffer,
+}
 
 struct UploadedTexture {
     texture: metal::Texture,
@@ -29,6 +37,8 @@ pub struct MetalSceneRenderer {
     draws: u64,
     uploads: u64,
     cache_budget: u64,
+    synced_scene: Option<SceneSnapshot>,
+    last_stats: kasane_render_metal::MetalRenderStats,
 }
 
 fn status(error: kasane_core::Status) -> anyhow::Error {
@@ -47,6 +57,8 @@ impl MetalSceneRenderer {
             draws: 0,
             uploads: 0,
             cache_budget: 128 * 1024 * 1024,
+            synced_scene: None,
+            last_stats: Default::default(),
         })
     }
 
@@ -75,6 +87,9 @@ impl MetalSceneRenderer {
             self.textures.values().map(|t| t.bytes).sum(),
         )
     }
+    pub fn last_frame_stats(&self) -> kasane_render_metal::MetalRenderStats {
+        self.last_stats
+    }
     pub fn draw_transformed(
         &mut self,
         queue: &metal::CommandQueueRef,
@@ -82,6 +97,18 @@ impl MetalSceneRenderer {
         scene: &SceneSnapshot,
         transform: ViewportTransform,
     ) -> Result<metal::Texture> {
+        Ok(self
+            .submit_transformed(queue, config, scene, transform)?
+            .image)
+    }
+
+    pub fn submit_transformed(
+        &mut self,
+        queue: &metal::CommandQueueRef,
+        config: MetalTargetConfig,
+        scene: &SceneSnapshot,
+        transform: ViewportTransform,
+    ) -> Result<SubmittedFrame> {
         ensure!(transform.metrics.visible(), "Hidden canvas");
         self.draws += 1;
         let key = |source: &editor_core::SceneTexture| {
@@ -152,9 +179,14 @@ impl MetalSceneRenderer {
         }
         let output = self.context.output_texture(config).map_err(status)?;
         self.renderer.resize(config).map_err(status)?;
-        self.renderer
-            .sync_model(&scene.frame, &textures)
-            .map_err(status)?;
+        if !self.synced_scene.as_ref().is_some_and(|last| {
+            Arc::ptr_eq(&last.frame, &scene.frame) && Arc::ptr_eq(&last.textures, &scene.textures)
+        }) {
+            self.renderer
+                .sync_model_shared(scene.frame.clone(), &textures)
+                .map_err(status)?;
+            self.synced_scene = Some(scene.clone());
+        }
         let scale = transform.scale * transform.metrics.scale_factor;
         self.renderer
             .update_view(ViewportConfig {
@@ -172,10 +204,14 @@ impl MetalSceneRenderer {
             .map_err(status)?;
         // Use GPUI's queue, not MetalContext's convenience queue, to preserve ordering.
         let command = queue.new_command_buffer();
-        self.renderer
+        self.last_stats = self
+            .renderer
             .encode(command, &output, MetalOutputMode::Replace, &textures)
             .map_err(status)?;
         command.commit();
-        Ok(output)
+        Ok(SubmittedFrame {
+            image: output,
+            command: command.to_owned(),
+        })
     }
 }

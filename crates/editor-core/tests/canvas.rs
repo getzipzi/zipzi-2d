@@ -239,13 +239,20 @@ fn switch_save_close_and_tool_commands_cancel_canvas_candidates() -> anyhow::Res
     Ok(())
 }
 #[test]
-fn delayed_frames_cannot_mix_documents_geometry_or_viewports() -> anyhow::Result<()> {
+fn completed_views_progress_monotonically_with_matching_geometry() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
     let old = editor.preview()?.canvas.unwrap();
     editor.zoom_by(0.25);
     let latest = editor.preview()?.canvas.unwrap();
-    assert!(!editor.present_frame(old.clone()));
+    assert!(
+        editor.present_frame(old.clone()),
+        "continuous input must not starve presentation"
+    );
     assert!(editor.present_frame(latest.clone()));
+    assert!(
+        !editor.present_frame(old.clone()),
+        "completed frames cannot move backwards"
+    );
     let shown = editor.overlay().vertices[0].position;
     editor.pan_by(CanvasPoint { x: 30., y: 0. });
     let pending = editor.preview()?.canvas.unwrap();
@@ -438,5 +445,52 @@ fn click_without_moving_is_overlay_only() -> anyhow::Result<()> {
     assert!(editor.preview_if_needed()?.is_none());
     assert_eq!(editor.evaluation_count(), before);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn delayed_views_cannot_cross_edits_resizes_or_activation_epochs() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let original_id = editor.active_id().unwrap();
+    let before_edit = editor.preview()?.canvas.unwrap();
+    editor.execute(EditorCommand::PreviewOpacity(0.4))?;
+    let edited = editor.preview()?.canvas.unwrap();
+    assert!(!editor.present_frame(before_edit));
+    assert!(editor.present_frame(edited));
+    let before_resize = editor.preview()?.canvas.unwrap();
+    let mut metrics = editor.canvas_metrics();
+    metrics.width += 10.;
+    editor.set_canvas_metrics(metrics);
+    let _resized = editor.preview()?;
+    assert!(!editor.present_frame(before_resize));
+    let previous_visit = editor.preview()?.canvas.unwrap();
+    editor.new_document()?;
+    editor.activate(original_id)?;
+    let current_visit = editor.preview()?.canvas.unwrap();
+    assert!(!editor.present_frame(previous_visit));
+    assert!(editor.present_frame(current_visit));
+    Ok(())
+}
+
+#[test]
+fn opacity_preview_reuses_geometry_but_preserves_evaluation_and_undo() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let original = editor.preview()?;
+    editor.execute(EditorCommand::PreviewOpacity(0.))?;
+    let hidden = editor.preview()?;
+    assert!(std::sync::Arc::ptr_eq(
+        &original.canvas.unwrap().geometry,
+        &hidden.canvas.unwrap().geometry
+    ));
+    assert_eq!(hidden.scene.frame.drawables[0].opacity, 0.);
+    editor.execute(EditorCommand::PreviewOpacity(0.5))?;
+    let half = editor.preview()?;
+    assert_eq!(half.scene.frame.drawables[0].opacity, 0.5);
+    editor.execute(EditorCommand::FinishEdit)?;
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(
+        editor.preview()?.scene.frame.drawables[0].opacity,
+        original.scene.frame.drawables[0].opacity
+    );
     Ok(())
 }

@@ -114,6 +114,7 @@ pub struct Editor {
     loads: HashMap<OperationId, (DocumentId, Option<PathBuf>)>,
     revision: u64,
     displayed_request: Option<(DocumentId, u64)>,
+    presentation_floor: u64,
     exiting: bool,
     metrics: crate::CanvasMetrics,
     requested_scene: Option<(DocumentId, u64, u64)>,
@@ -129,6 +130,7 @@ impl Editor {
             loads: HashMap::new(),
             revision: 0,
             displayed_request: None,
+            presentation_floor: 0,
             exiting: false,
             metrics: crate::CanvasMetrics::default(),
             requested_scene: None,
@@ -185,6 +187,9 @@ impl Editor {
     }
     pub fn documents(&self) -> Vec<DocumentSummary> {
         self.documents.iter().map(Entry::summary).collect()
+    }
+    pub fn document_count(&self) -> usize {
+        self.documents.len()
     }
     pub fn summary(&self) -> Option<DocumentSummary> {
         self.active
@@ -668,6 +673,9 @@ impl Editor {
                 }
             });
         self.requested_scene = Some(versions);
+        if self.displayed_request.is_none() {
+            self.presentation_floor = revision;
+        }
         self.displayed_request = Some((id, revision));
         Ok(EditorPreview {
             revision,
@@ -690,7 +698,11 @@ impl Editor {
     }
     pub fn present_frame(&mut self, frame: crate::CanvasFrame) -> bool {
         if self.active != Some(frame.version.document)
-            || !self.accepts_preview(frame.version.request)
+            || frame.version.request < self.presentation_floor
+            || !self.displayed_request.is_some_and(|(id, latest)| {
+                id == frame.version.document && frame.version.request <= latest
+            })
+            || frame.transform.metrics != self.metrics
         {
             return false;
         }
@@ -700,7 +712,14 @@ impl Editor {
         let Some(s) = &mut entry.session else {
             return false;
         };
-        if s.scene_revision != frame.version.scene || s.viewport_revision != frame.version.viewport
+        // A completed view may lag the pointer. Present it with its own matching
+        // geometry/transform, then advance monotonically. Requiring the newest
+        // viewport starves presentation during continuous input.
+        if s.scene_revision != frame.version.scene
+            || s.viewport_revision < frame.version.viewport
+            || s.displayed
+                .as_ref()
+                .is_some_and(|shown| shown.version.request >= frame.version.request)
         {
             return false;
         }

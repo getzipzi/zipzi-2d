@@ -104,12 +104,21 @@ impl CanvasView {
                 owner.redraw(cx);
                 return;
             }
+            let moving = matches!(input, CanvasInput::Move { .. });
             match owner.editor.canvas_input(input) {
                 Ok(changed) => {
                     if changed {
-                        owner.redraw(cx);
+                        if moving {
+                            owner.redraw_canvas(cx);
+                        } else {
+                            owner.redraw(cx);
+                        }
                     } else {
-                        cx.notify();
+                        if moving {
+                            owner.notify_canvas(cx);
+                        } else {
+                            cx.notify();
+                        }
                     }
                 }
                 Err(e) => {
@@ -137,7 +146,7 @@ impl CanvasView {
             let _ = self.owner.update(cx, |owner, cx| {
                 if !owner.modal {
                     owner.editor.pan_by(delta);
-                    owner.redraw(cx);
+                    owner.redraw_canvas(cx);
                 }
             });
         } else {
@@ -282,7 +291,7 @@ impl Render for CanvasView {
                         return;
                     }
                     owner.editor.zoom_by(step);
-                    owner.redraw(cx);
+                    owner.redraw_canvas(cx);
                 });
             }))
             .on_mouse_move(

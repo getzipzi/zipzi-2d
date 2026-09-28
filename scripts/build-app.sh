@@ -13,12 +13,21 @@ case "${1:-editor}" in
     bundle_id="dev.kasane.component-playground"
     ;;
   *)
-    printf 'usage: %s [editor|playground]\n' "$0" >&2
+    printf 'usage: %s [editor|playground] [release|debug]\n' "$0" >&2
     exit 2
     ;;
 esac
-cargo build --locked -p "$package"
-binary="target/debug/$package"
+profile="${2:-release}"
+case "$profile" in
+  release) cargo_profile="release" ;;
+  debug) cargo_profile="dev" ;;
+  *)
+    printf 'usage: %s [editor|playground] [release|debug]\n' "$0" >&2
+    exit 2
+    ;;
+esac
+cargo build --locked --profile "$cargo_profile" -p "$package"
+binary="target/$profile/$package"
 app="$PWD/target/$name.app"
 mkdir -p "$app/Contents/MacOS"
 cp "$binary" "$app/Contents/MacOS/$package"

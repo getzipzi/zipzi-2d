@@ -151,6 +151,7 @@ impl PropertiesPanel {
 
                     match event {
                         SliderEvent::Change(SliderValue::Single(val)) => {
+                            let starting = this.transient_opacity.is_none();
                             let normalized = (*val / 100.0).clamp(0.0, 1.0);
                             this.transient_opacity = Some(*val);
                             this.pending_preview_opacity = Some(normalized);
@@ -164,14 +165,18 @@ impl PropertiesPanel {
                                         id,
                                         EditorCommand::PreviewOpacity(val_to_dispatch),
                                     );
-                                    owner.complete_edit(result, cx);
+                                    if starting {
+                                        owner.complete_edit(result, cx);
+                                    } else {
+                                        owner.complete_preview_edit(result, cx);
+                                    }
                                 });
 
                                 let target = this.target.clone();
                                 this.throttle_timer =
                                     Some(cx.spawn_in(window, async move |this, cx| {
                                         cx.background_executor()
-                                            .timer(Duration::from_millis(16))
+                                            .timer(Duration::from_secs_f64(1. / 120.))
                                             .await;
                                         let _ =
                                             this.update_in(cx, |this, window, cx| {
@@ -191,7 +196,7 @@ impl PropertiesPanel {
                                                             id,
                                                             EditorCommand::PreviewOpacity(next_val),
                                                         );
-                                                        owner.complete_edit(result, cx);
+                                                        owner.complete_preview_edit(result, cx);
                                                     }
                                                 });
                                                         }

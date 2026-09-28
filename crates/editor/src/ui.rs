@@ -41,7 +41,7 @@ impl Render for EditorView {
                     .map(|dock| div().flex_1().min_h_0().child(dock.area.clone())),
             )
             // 4. Figma-style Status Bar
-            .child(workspace::render_status_bar(self, cx))
+            .child(self.status_bar.clone())
             .into_any_element()
     }
 }

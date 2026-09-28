@@ -5,7 +5,7 @@ Native Metal is the sole editor rendering path. No backend flags are needed.
 and immutable decoded source textures without depending on Metal or GPUI.
 
 ```sh
-cargo run --locked -p kasane-editor
+cargo run --locked --release -p kasane-editor
 cargo test --locked --workspace
 ./scripts/build-app.sh
 ```
@@ -20,15 +20,24 @@ editor deliberately does not submit to it.
 
 Each update publishes an immutable texture after command submission. A later GPUI
 submission on the same queue samples it. No CPU readback or GPU completion wait is
-performed in preview production. Scene ownership retains old textures for replay.
+performed on the UI thread. Scene ownership retains old textures for replay.
 Each worker frame drains a Metal autorelease pool.
 
-Source textures come from the document's validated PNG assets, not a renderer-owned
-placeholder. Decoded pixels are shared across snapshots; the Metal adapter caches
-uploads by asset ID, content hash and dimensions. It uploads a straight-RGBA mip chain
+The worker publishes the submitted image, then waits for that command's GPU
+completion before consuming the latest pending request. This bounds producer
+work to one in-flight command without delaying GPUI's same-queue sampling.
+Completed views of the current scene can be presented monotonically even if
+the pointer has moved again; geometry and image retain the same transform.
+Scene edits, resize, document activation and renderer replacement still reject
+incompatible frames. View updates and frame arrivals notify only the canvas;
+the status bar has its own entity and document panels retain their cached UI.
+
+Source textures come from the document's validated PNG assets. Decoded pixels are
+shared across snapshots; the Metal adapter caches uploads by content hash and
+dimensions, with scene-local asset aliases. It uploads a straight-RGBA mip chain
 for each texture; the Metal sampler uses linear minification, magnification and mip
 filtering. A monotonically increasing preview request revision prevents old frames
-from replacing a newer edit or opened project. The viewport fits the document's
+from replacing a newer presented frame or opened project. The viewport fits the document's
 actual canvas dimensions.
 
 `SurfaceSource::MetalTexture` uses GPUI's existing Surface vertex/clip path with a
@@ -48,8 +57,11 @@ there is no intermediate readback between renderers.
 The user has confirmed that the native Metal editor works. Detailed UI/IME and
 window lifecycle verification remain manual; no computer-use testing is performed.
 
-The preview resolution follows the canvas area and display scale. Output frame textures
-and Kasane's internal geometry/attachments are not pooled. Frame-rate and memory
-performance have not been benchmarked. The
+The preview resolution follows the canvas area and display scale. The adapter
+retains immutable scene snapshots, skipping model sync on view-only changes.
+Kasane caches mesh buffers and versioned raw masks, batches draws within a pass,
+and renders Replace directly into the output. Output/offscreen textures are not pooled.
+See [the 120 Hz interaction measurements](interaction-performance.md) for the
+measured budget, workloads, commands and remaining display validation. The
 local Kasane checkout must include the new native backend and accompanying changes;
 the earlier pinned revision alone is insufficient.
