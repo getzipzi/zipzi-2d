@@ -1,0 +1,64 @@
+{
+  "pan": {
+    "inputs": 600,
+    "outcomes": {
+      "presented": 600
+    },
+    "input_to_present_ms": {
+      "p50": 48.072167,
+      "p95": 56.521666,
+      "p99": 56.731708,
+      "max": 62.356166,
+      "count": 600
+    },
+    "input_to_submit_ms": {
+      "p50": 16.632666,
+      "p95": 24.740875,
+      "p99": 25.619583,
+      "max": 31.841334,
+      "count": 600
+    }
+  },
+  "zoom": {
+    "inputs": 600,
+    "outcomes": {
+      "presented": 600
+    },
+    "input_to_present_ms": {
+      "p50": 48.146,
+      "p95": 56.302291,
+      "p99": 56.671333,
+      "max": 56.802042,
+      "count": 600
+    },
+    "input_to_submit_ms": {
+      "p50": 16.628666,
+      "p95": 22.504958,
+      "p99": 25.211625,
+      "max": 25.569333,
+      "count": 600
+    }
+  },
+  "opacity": {
+    "inputs": 600,
+    "outcomes": {
+      "presented": 575,
+      "rejected": 23,
+      "submitted_not_presented": 2
+    },
+    "input_to_present_ms": {
+      "p50": 48.098542,
+      "p95": 56.360792,
+      "p99": 56.693,
+      "max": 63.354,
+      "count": 575
+    },
+    "input_to_submit_ms": {
+      "p50": 16.6245,
+      "p95": 24.277958,
+      "p99": 25.398292,
+      "max": 32.279375,
+      "count": 577
+    }
+  }
+}

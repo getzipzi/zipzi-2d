@@ -45,6 +45,9 @@ pub fn init() -> anyhow::Result<()> {
         return Ok(());
     };
     for (name, valid) in [
+        ("GPUI_TRACE_DRAWABLES", ["2", "3"]),
+        ("GPUI_TRACE_DISPLAY_SYNC", ["0", "1"]),
+        ("GPUI_TRACE_OFFSCREEN", ["0", "1"]),
         ("KASANE_TRACE_HIDE_MESH_EDGES", ["0", "1"]),
         ("KASANE_TRACE_BATCH_MESH_EDGES", ["0", "1"]),
     ] {
@@ -103,6 +106,9 @@ pub fn init() -> anyhow::Result<()> {
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
                 "diagnostics": {
+                    "drawables": std::env::var("GPUI_TRACE_DRAWABLES").ok(),
+                    "display_sync": std::env::var("GPUI_TRACE_DISPLAY_SYNC").ok(),
+                    "offscreen": std::env::var("GPUI_TRACE_OFFSCREEN").ok(),
                     "hide_mesh_edges": HIDE_MESH_EDGES.load(Ordering::Relaxed),
                     "batch_mesh_edges": BATCH_MESH_EDGES.load(Ordering::Relaxed),
                 },

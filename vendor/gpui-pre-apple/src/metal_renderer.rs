@@ -118,6 +118,7 @@ pub struct MetalRenderer {
     /// For headless rendering, tracks whether output should be opaque
     opaque: bool,
     command_queue: CommandQueue,
+    diagnostic_offscreen_enabled: bool,
     paths_rasterization_pipeline_state: metal::RenderPipelineState,
     path_sprites_pipeline_state: metal::RenderPipelineState,
     shadows_pipeline_state: metal::RenderPipelineState,
@@ -149,6 +150,10 @@ pub struct PathRasterizationVertex {
     pub bounds: Bounds<ScaledPixels>,
 }
 
+fn diagnostic_offscreen_enabled() -> bool {
+    gpui::frame_trace::enabled() && std::env::var("GPUI_TRACE_OFFSCREEN").is_ok_and(|v| v == "1")
+}
+
 impl MetalRenderer {
     /// Creates a new MetalRenderer with a CAMetalLayer for window-based rendering.
     pub fn new(instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>, transparent: bool) -> Self {
@@ -161,15 +166,25 @@ impl MetalRenderer {
         // https://developer.apple.com/documentation/metal/managing-your-game-window-for-metal-in-macos
         layer.set_opaque(!transparent);
         layer.set_maximum_drawable_count(3);
-        // Trace the actual layer configuration without changing presentation.
+        // Diagnostic controls are inert unless an application installs a trace sink.
+        // Keep production presentation behavior unchanged.
         if gpui::frame_trace::enabled() {
+            if std::env::var("GPUI_TRACE_DRAWABLES").is_ok_and(|v| v == "2") {
+                layer.set_maximum_drawable_count(2);
+            }
+            if std::env::var("GPUI_TRACE_DISPLAY_SYNC").is_ok_and(|v| v == "0") {
+                layer.set_display_sync_enabled(false);
+            }
+            if diagnostic_offscreen_enabled() {
+                layer.set_framebuffer_only(false);
+            }
             gpui::frame_trace::emit(
                 gpui::frame_trace::next_id(),
                 "layer_config",
                 &[
                     ("drawables", layer.maximum_drawable_count()),
                     ("display_sync", u64::from(layer.display_sync_enabled())),
-                    ("offscreen", 0),
+                    ("offscreen", u64::from(diagnostic_offscreen_enabled())),
                 ],
             );
         }
@@ -358,6 +373,7 @@ impl MetalRenderer {
             is_unified_memory,
             opaque,
             command_queue,
+            diagnostic_offscreen_enabled: diagnostic_offscreen_enabled(),
             paths_rasterization_pipeline_state,
             path_sprites_pipeline_state,
             shadows_pipeline_state,
@@ -535,12 +551,81 @@ impl MetalRenderer {
         };
 
         gpui::frame_trace::emit(trace_id, "drawable_acquired", &[]);
-        let command_buffer = match self.render_frame(scene, drawable.texture(), viewport_size) {
+        // Diagnostic split: render the identical scene into a private texture,
+        // then copy it into the drawable on the same queue. This isolates the UI
+        // render command from drawable attachment/presentation dependencies.
+        let offscreen = if self.diagnostic_offscreen_enabled {
+            // Fresh per frame: no previous presentation read can delay this
+            // probe's render pass through a reused intermediate texture.
+            let descriptor = metal::TextureDescriptor::new();
+            descriptor.set_width(drawable.texture().width());
+            descriptor.set_height(drawable.texture().height());
+            descriptor.set_pixel_format(MTLPixelFormat::BGRA8Unorm);
+            descriptor.set_storage_mode(metal::MTLStorageMode::Private);
+            descriptor.set_usage(
+                metal::MTLTextureUsage::RenderTarget | metal::MTLTextureUsage::ShaderRead,
+            );
+            Some(self.device.new_texture(&descriptor))
+        } else {
+            None
+        };
+        let target = offscreen.as_deref().unwrap_or(drawable.texture());
+        let rendered = match self.render_frame(scene, target, viewport_size) {
             Ok(command_buffer) => command_buffer,
             Err(error) => {
                 log::error!("failed to render: {error:#}");
                 return;
             }
+        };
+        let command_buffer = if let Some(offscreen) = offscreen {
+            let completed = ConcreteBlock::new(move |command: &metal::CommandBufferRef| {
+                gpui::frame_trace::emit(
+                    trace_id,
+                    "offscreen_complete",
+                    &[("status", command.status() as u64)],
+                );
+                let start: f64 = unsafe { msg_send![command, GPUStartTime] };
+                let end: f64 = unsafe { msg_send![command, GPUEndTime] };
+                if start > 0. && end >= start {
+                    gpui::frame_trace::emit_at(
+                        trace_id,
+                        "offscreen_gpu_start",
+                        (start * 1e9) as u64,
+                        &[],
+                    );
+                    gpui::frame_trace::emit_at(
+                        trace_id,
+                        "offscreen_gpu_end",
+                        (end * 1e9) as u64,
+                        &[],
+                    );
+                }
+            })
+            .copy();
+            rendered.add_completed_handler(&completed);
+            gpui::frame_trace::emit(trace_id, "offscreen_commit_begin", &[]);
+            rendered.commit();
+            let command = self.command_queue.new_command_buffer();
+            let blit = command.new_blit_command_encoder();
+            blit.copy_from_texture(
+                &offscreen,
+                0,
+                0,
+                metal::MTLOrigin { x: 0, y: 0, z: 0 },
+                metal::MTLSize {
+                    width: offscreen.width(),
+                    height: offscreen.height(),
+                    depth: 1,
+                },
+                drawable.texture(),
+                0,
+                0,
+                metal::MTLOrigin { x: 0, y: 0, z: 0 },
+            );
+            blit.end_encoding();
+            command.to_owned()
+        } else {
+            rendered
         };
 
         if trace_id != 0 {

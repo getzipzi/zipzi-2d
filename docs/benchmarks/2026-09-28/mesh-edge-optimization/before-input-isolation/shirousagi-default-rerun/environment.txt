@@ -1,0 +1,58 @@
+ProductName:		macOS
+ProductVersion:		27.0
+BuildVersion:		26A428
+hw.model: Mac16,10
+machdep.cpu.brand_string: Apple M4
+hw.memsize: 17179869184
+Graphics/Displays:
+
+    Apple M4:
+
+      Chipset Model: Apple M4
+      Type: GPU
+      Bus: Built-In
+      Total Number of Cores: 10
+      Vendor: Apple (0x106b)
+      Metal Support: Metal 4
+      Displays:
+        CB27U1:
+          Resolution: 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition)
+          UI Looks like: 1920 x 1080 @ 120.00Hz
+          Main Display: Yes
+          Mirror: Off
+          Online: Yes
+          Rotation: Supported
+          Automatically Adjust Brightness: No
+        Redmi 27 NQS:
+          Resolution: 3360 x 1890
+          UI Looks like: 1680 x 945 @ 60.00Hz
+          Mirror: Off
+          Online: Yes
+          Rotation: Supported
+
+8c21558c0cacba08884d3177fa4b3ac3a5cae54b
+ M .gitignore
+ M README.md
+ M crates/editor-render/src/lib.rs
+ M crates/editor/src/canvas.rs
+ M crates/editor/src/main.rs
+ M crates/editor/src/preview.rs
+ M docs/interaction-performance.md
+ M vendor/README.md
+ M vendor/gpui-pre-apple/src/metal_renderer.rs
+ M vendor/gpui-pre/src/gpui.rs
+ M vendor/gpui-pre/src/scene.rs
+ M vendor/gpui-pre/src/window.rs
+ M vendor/native-metal.patch
+?? crates/editor/src/benchmark.rs
+?? crates/editor/src/mesh_edges.rs
+?? crates/editor/tests/mesh_edges.rs
+?? docs/benchmarks/2026-09-28/window-diagnosis/
+?? docs/benchmarks/2026-09-28/window-mao/
+?? docs/frame-latency-diagnosis.md
+?? docs/window-benchmark.md
+?? scripts/frame-trace-report.py
+?? scripts/test_frame_trace_report.py
+?? scripts/window-benchmark.sh
+?? vendor/gpui-pre/src/frame_trace.rs
+06e7f03c2f140a74346b788d27f821b25d97004e

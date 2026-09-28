@@ -32,6 +32,8 @@ PAIRS = {
     "drawable_wait_ms": ("compose_begin", "drawable_acquired"),
     "compose_encode_ms": ("drawable_acquired", "compose_commit_begin"),
     "compose_queue_ms": ("compose_commit_begin", "compose_gpu_start"),
+    "offscreen_gpu_ms": ("offscreen_gpu_start", "offscreen_gpu_end"),
+    "offscreen_queue_ms": ("offscreen_commit_begin", "offscreen_gpu_start"),
     "compose_gpu_ms": ("compose_gpu_start", "compose_gpu_end"),
     "compose_scheduled_callback_ms": ("compose_commit_begin", "compose_scheduled"),
     "submit_to_present_ms": ("compose_submitted", "presented"),
@@ -90,7 +92,7 @@ def analyze(records, budget_ms=1000 / 120):
     if metadata.get("debug_assertions"):
         issues.append("debug build: do not use these numbers for release acceptance")
     for event in events:
-        if event["stage"] in ("preview_complete", "compose_complete") and event["fields"].get("status") != 4:
+        if event["stage"] in ("preview_complete", "compose_complete", "offscreen_complete") and event["fields"].get("status") != 4:
             issues.append(f"GPU failure on {event['stage']} ID {event['id']}")
 
     drawable_waits = merge_intervals(
@@ -100,7 +102,7 @@ def analyze(records, budget_ms=1000 / 120):
     compose_intervals = merge_intervals(
         (g[start]["at_ns"], g[end]["at_ns"])
         for g in groups.values()
-        for start, end in [("compose_gpu_start", "compose_gpu_end")]
+        for start, end in [("compose_gpu_start", "compose_gpu_end"), ("offscreen_gpu_start", "offscreen_gpu_end")]
         if start in g and end in g
     )
 
