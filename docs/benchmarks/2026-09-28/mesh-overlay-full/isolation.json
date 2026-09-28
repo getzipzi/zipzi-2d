@@ -1,0 +1,13 @@
+{
+  "start_unix": 1790600514.626267,
+  "end_unix": 1790600800.701227,
+  "poll_seconds": 1,
+  "checks": 276,
+  "interference": [],
+  "paused_pids": [
+    45104,
+    63303
+  ],
+  "exit_code": 0,
+  "scope": "cargo/rustc process checks during sampling; Dev/watch suspended and resumed; other system activity not excluded"
+}

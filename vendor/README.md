@@ -4,7 +4,7 @@
 
 仅保留 crates.io 发布的 `gpui-pre`、`gpui-pre-macos`、`gpui-pre-apple` **0.3.6**，对应 Zed commit `bcf6582ce3500df93a8a39366640173e6786cea6`。根目录 `Cargo.toml` 的 `[patch.crates-io]` 选择这些本地包；Kit 本身仍使用官方固定 commit。
 
-已逐文件与这三个发布包核对：**实际修改/新增 10 个文件（9 个源码文件 + 1 个依赖清单），新增 467 行、删除 18 行**。其他包内文件保持发布版本原样。完整差异见 [native-metal.patch](native-metal.patch)，不必从整个 vendor 目录中寻找改动。
+已逐文件与这三个发布包核对：**实际修改/新增 10 个文件（9 个源码文件 + 1 个依赖清单），新增 490 行、删除 20 行**。其他包内文件保持发布版本原样。完整差异见 [native-metal.patch](native-metal.patch)，不必从整个 vendor 目录中寻找改动。
 
 `Cargo.toml.orig` 保留发布包附带的原始工作区清单，并非本地实际构建清单；构建使用标准化的 `Cargo.toml`。Apache-2.0 许可文件保留。
 
@@ -49,3 +49,5 @@ git apply --reverse --check vendor/native-metal.patch
 实际窗口 benchmark 的计时约定、命令和限制见 [窗口 benchmark](../docs/window-benchmark.md)。
 
 帧延迟排查新增 trace-only drawable 数、显示同步和离屏分段探针；只在应用已安装 timing sink 时读取诊断选项。常规呈现默认值保持三缓冲、显示同步开启和直接绘制。具体对照见 [帧延迟排查](../docs/frame-latency-diagnosis.md)。
+
+大网格覆盖层 benchmark 增加 `submit_scene_for_benchmark()`，仅在 test/bench-support/test-support 构建中提供：返回已提交的 command buffer 供读取 GPU 时间，并按尺寸复用 headless 路径中间纹理。已有 `render_scene()` 转发到该入口。正式窗口绘制路径不受影响。

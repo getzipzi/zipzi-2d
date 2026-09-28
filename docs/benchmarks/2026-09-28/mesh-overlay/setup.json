@@ -1,0 +1,92 @@
+[
+  {
+    "width": 1280,
+    "height": 800,
+    "grid": 8,
+    "candidate_setup_ms": 2.649334,
+    "candidate_position_bytes": 648,
+    "candidate_index_bytes": 1664,
+    "candidate_resolve_bytes": 4096000
+  },
+  {
+    "width": 1280,
+    "height": 800,
+    "grid": 32,
+    "candidate_setup_ms": 0.221125,
+    "candidate_position_bytes": 8712,
+    "candidate_index_bytes": 25088,
+    "candidate_resolve_bytes": 4096000
+  },
+  {
+    "width": 1280,
+    "height": 800,
+    "grid": 64,
+    "candidate_setup_ms": 0.269458,
+    "candidate_position_bytes": 33800,
+    "candidate_index_bytes": 99328,
+    "candidate_resolve_bytes": 4096000
+  },
+  {
+    "width": 1280,
+    "height": 800,
+    "grid": 128,
+    "candidate_setup_ms": 0.293416,
+    "candidate_position_bytes": 133128,
+    "candidate_index_bytes": 395264,
+    "candidate_resolve_bytes": 4096000
+  },
+  {
+    "width": 1280,
+    "height": 800,
+    "grid": 256,
+    "candidate_setup_ms": 0.394584,
+    "candidate_position_bytes": 528392,
+    "candidate_index_bytes": 1576960,
+    "candidate_resolve_bytes": 4096000
+  },
+  {
+    "width": 2560,
+    "height": 1600,
+    "grid": 8,
+    "candidate_setup_ms": 0.39275,
+    "candidate_position_bytes": 648,
+    "candidate_index_bytes": 1664,
+    "candidate_resolve_bytes": 16384000
+  },
+  {
+    "width": 2560,
+    "height": 1600,
+    "grid": 32,
+    "candidate_setup_ms": 0.257416,
+    "candidate_position_bytes": 8712,
+    "candidate_index_bytes": 25088,
+    "candidate_resolve_bytes": 16384000
+  },
+  {
+    "width": 2560,
+    "height": 1600,
+    "grid": 64,
+    "candidate_setup_ms": 0.232666,
+    "candidate_position_bytes": 33800,
+    "candidate_index_bytes": 99328,
+    "candidate_resolve_bytes": 16384000
+  },
+  {
+    "width": 2560,
+    "height": 1600,
+    "grid": 128,
+    "candidate_setup_ms": 0.272,
+    "candidate_position_bytes": 133128,
+    "candidate_index_bytes": 395264,
+    "candidate_resolve_bytes": 16384000
+  },
+  {
+    "width": 2560,
+    "height": 1600,
+    "grid": 256,
+    "candidate_setup_ms": 0.39804100000000003,
+    "candidate_position_bytes": 528392,
+    "candidate_index_bytes": 1576960,
+    "candidate_resolve_bytes": 16384000
+  }
+]

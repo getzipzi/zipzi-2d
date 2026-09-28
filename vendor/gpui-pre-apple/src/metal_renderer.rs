@@ -815,12 +815,33 @@ impl MetalRenderer {
     /// inspected.
     #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
     pub fn render_scene(&mut self, scene: &Scene, size: Size<DevicePixels>) -> Result<()> {
+        self.submit_scene_for_benchmark(scene, size).map(|_| ())
+    }
+
+    /// Submit a headless frame and return its command for GPU timing/completion.
+    /// Reuse targets at the same size, as a window does between resize events.
+    /// The caller must wait before reusing mutable producer textures or buffers.
+    #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
+    pub fn submit_scene_for_benchmark(
+        &mut self,
+        scene: &Scene,
+        size: Size<DevicePixels>,
+    ) -> Result<metal::CommandBuffer> {
         if size.width.0 <= 0 || size.height.0 <= 0 {
             anyhow::bail!("Invalid size for render_scene: {:?}", size);
         }
 
         objc2::rc::autoreleasepool(|_| {
-            self.update_path_intermediate_textures(size);
+            if self
+                .path_intermediate_texture
+                .as_ref()
+                .is_none_or(|texture| {
+                    texture.width() != size.width.0 as u64
+                        || texture.height() != size.height.0 as u64
+                })
+            {
+                self.update_path_intermediate_textures(size);
+            }
 
             let needs_new_target = self.headless_render_target.as_ref().is_none_or(|texture| {
                 texture.width() != size.width.0 as u64 || texture.height() != size.height.0 as u64
@@ -846,7 +867,7 @@ impl MetalRenderer {
             // Commit without waiting, mirroring presentation to a real window where
             // the CPU doesn't block on the GPU.
             command_buffer.commit();
-            Ok(())
+            Ok(command_buffer)
         })
     }
 
