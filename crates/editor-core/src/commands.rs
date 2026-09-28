@@ -1,4 +1,5 @@
 //! Stable business commands. Platform input, dialogs and focus do not enter core.
+use crate::scene::{MAX_ZOOM, MIN_ZOOM};
 use crate::{DocumentId, Editor, EditorCommand};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -161,9 +162,11 @@ impl Editor {
                     && !self.gesture_active()
                     && self.document().is_some_and(|d| d.has_pending_edit())
             }
-            ZoomIn => target && !self.is_busy() && !self.gesture_active() && self.view().zoom < 3.,
+            ZoomIn => {
+                target && !self.is_busy() && !self.gesture_active() && self.view().zoom < MAX_ZOOM
+            }
             ZoomOut => {
-                target && !self.is_busy() && !self.gesture_active() && self.view().zoom > 0.25
+                target && !self.is_busy() && !self.gesture_active() && self.view().zoom > MIN_ZOOM
             }
             ResetView => target && !self.is_busy() && !self.gesture_active(),
             CancelGesture => target && !self.is_busy(),

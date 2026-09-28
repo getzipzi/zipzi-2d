@@ -1,3 +1,4 @@
+use crate::scene::{MAX_ZOOM, MIN_ZOOM};
 use crate::{
     CanvasFrame, CanvasMetrics, CanvasPoint, Document, EditorCommand, MeshGeometry,
     OverlaySnapshot, SceneSnapshot, ToolController, ViewState, ViewportTransform,
@@ -96,7 +97,7 @@ impl DocumentSession {
     }
     pub fn zoom_by(&mut self, delta: f32) {
         if !self.tools.dragging() && delta.is_finite() {
-            let zoom = (self.view.zoom + delta).clamp(0.25, 3.);
+            let zoom = (self.view.zoom + delta).clamp(MIN_ZOOM, MAX_ZOOM);
             if zoom != self.view.zoom {
                 self.view.zoom = zoom;
                 self.viewport_revision += 1;

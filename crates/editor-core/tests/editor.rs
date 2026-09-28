@@ -1,4 +1,4 @@
-use editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
+use editor_core::{CloseDisposition, CommandId, Editor, EditorCommand, LoadRequest};
 mod support;
 use support::sample_document;
 
@@ -6,6 +6,23 @@ fn load(editor: &mut Editor, path: &std::path::Path) -> anyhow::Result<()> {
     if let Some(task) = editor.prepare_load(LoadRequest::Open(path.to_owned()))? {
         editor.finish_load(task.run())?;
     }
+    Ok(())
+}
+
+#[test]
+fn zoom_stays_within_four_to_eight_hundred_percent() -> anyhow::Result<()> {
+    let (document, _source) = sample_document()?;
+    let mut editor = Editor::from_document(document);
+
+    editor.zoom_by(-100.0);
+    assert_eq!(editor.view().zoom, 0.04);
+    assert!(!editor.command_available(editor.command(CommandId::ZoomOut)));
+    assert!(editor.command_available(editor.command(CommandId::ZoomIn)));
+
+    editor.zoom_by(100.0);
+    assert_eq!(editor.view().zoom, 8.0);
+    assert!(!editor.command_available(editor.command(CommandId::ZoomIn)));
+    assert!(editor.command_available(editor.command(CommandId::ZoomOut)));
     Ok(())
 }
 
