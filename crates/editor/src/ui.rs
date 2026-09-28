@@ -32,9 +32,7 @@ impl Render for EditorView {
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 this.filter_repeat(event, window, cx)
             }))
-            // 1. Production Toolbar (Figma-style)
-            .child(workspace::render_toolbar(self, modal, window, cx))
-            // 2. Global Document TabBar
+            // 1. Global Document TabBar
             .child(workspace::render_tab_bar(self, modal, window, cx))
             // 3. Central Dock Area
             .children(

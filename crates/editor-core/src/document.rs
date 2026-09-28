@@ -1,8 +1,9 @@
-use crate::{SceneSnapshot, SceneTexture};
+use crate::{SceneSnapshot, SceneTexture, TreeNode, TreeNodeKind, tree::nest_nodes};
 use anyhow::{Result, anyhow, ensure};
 use kasane_core::{Canvas, DrawableFrame, Mesh, PreviewValues, Vec2, evaluation::evaluate_frame};
 use kasane_project::read_project_asset;
 use kasane_sdk::{AuthoringSession, EditSession, MeshProperties, SaveReceipt};
+use std::collections::HashMap;
 use std::{path::Path, sync::Arc};
 use uuid::Uuid;
 
@@ -186,6 +187,77 @@ impl Document {
             .iter()
             .filter_map(|id| self.mesh(id).map(Into::into))
             .collect()
+    }
+
+    /// Cubism's Parts-style hierarchy: nested parts with their art meshes.
+    pub fn mesh_tree(&self) -> Vec<TreeNode> {
+        let parts: Vec<_> = self
+            .session
+            .part_ids()
+            .iter()
+            .filter_map(|id| self.session.part(id))
+            .collect();
+        let part_indices: HashMap<_, _> = parts
+            .iter()
+            .enumerate()
+            .map(|(index, part)| (part.id.as_str(), index))
+            .collect();
+        let mut nodes = Vec::new();
+        let mut parents = Vec::new();
+        for part in &parts {
+            parents.push(part_indices.get(part.parent_id.as_str()).copied());
+            nodes.push(TreeNode::new(
+                part.id.clone(),
+                part.name.clone(),
+                TreeNodeKind::Part,
+            ));
+        }
+        for id in self.session.mesh_ids() {
+            if let Some(mesh) = self.mesh(id) {
+                parents.push(part_indices.get(mesh.part_id.as_str()).copied());
+                let mut node = TreeNode::new(mesh.id, mesh.name, TreeNodeKind::Mesh);
+                node.triangles = Some(mesh.triangles.len());
+                nodes.push(node);
+            }
+        }
+        nest_nodes(nodes, parents)
+    }
+
+    /// Cubism's Deformer hierarchy: transform parents with art mesh leaves.
+    pub fn deformer_tree(&self) -> Vec<TreeNode> {
+        let transforms: Vec<_> = self
+            .session
+            .transform_ids()
+            .iter()
+            .filter_map(|id| self.session.transform(id))
+            .collect();
+        let transform_indices: HashMap<_, _> = transforms
+            .iter()
+            .enumerate()
+            .map(|(index, transform)| (transform.id.as_str(), index))
+            .collect();
+        let mut nodes = Vec::new();
+        let mut parents = Vec::new();
+        for transform in &transforms {
+            parents.push(transform_indices.get(transform.parent()).copied());
+            nodes.push(TreeNode::new(
+                transform.id.clone(),
+                transform.name.clone(),
+                match transform.kind() {
+                    kasane_core::TransformKind::Warp => TreeNodeKind::WarpDeformer,
+                    kasane_core::TransformKind::Rotation => TreeNodeKind::RotationDeformer,
+                },
+            ));
+        }
+        for id in self.session.mesh_ids() {
+            if let Some(mesh) = self.mesh(id) {
+                parents.push(transform_indices.get(mesh.deformer_id.as_str()).copied());
+                let mut node = TreeNode::new(mesh.id, mesh.name, TreeNodeKind::Mesh);
+                node.triangles = Some(mesh.triangles.len());
+                nodes.push(node);
+            }
+        }
+        nest_nodes(nodes, parents)
     }
 
     pub fn selected_layer(&self) -> Option<Layer> {

@@ -28,7 +28,7 @@ struct EditorView {
     ui_subscriptions: Vec<Subscription>,
     frame: Option<preview::Presented>,
     render_stats: (u64, u64, u64),
-    menu_state: Vec<bool>,
+    menu_state: menus::MenuState,
     edit_error: Option<String>,
     render_error: Option<String>,
     message: String,
@@ -52,7 +52,7 @@ impl EditorView {
             ui_subscriptions: Vec::new(),
             frame: None,
             render_stats: (0, 0, 0),
-            menu_state: Vec::new(),
+            menu_state: menus::MenuState::default(),
             edit_error: None,
             render_error: None,
             message: if cx.global::<settings::Settings>().notices.is_empty() {

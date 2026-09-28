@@ -7,8 +7,8 @@ use gpui_kit::component::{
 };
 
 pub struct CanvasView {
-    owner: WeakEntity<EditorView>,
-    focus: FocusHandle,
+    pub(crate) owner: WeakEntity<EditorView>,
+    pub(crate) focus: FocusHandle,
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
     space_held: bool,
@@ -301,7 +301,19 @@ impl Render for CanvasView {
                     .child(preview::element(frame.image))
             }))
             .when(active.is_none(), |e| {
-                e.child(div().p_4().child(t!("editor.welcome")))
+                e.child(
+                    div()
+                        .id("canvas-welcome")
+                        .test_support()
+                        .absolute()
+                        .size_full()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .text_sm()
+                        .text_color(muted)
+                        .child(t!("editor.welcome")),
+                )
             })
             .children(error.map(|e| div().absolute().p_4().child(e)))
             .child(
@@ -371,23 +383,12 @@ impl Render for CanvasView {
                 .absolute()
                 .size_full(),
             )
-            .child(
-                div()
-                    .absolute()
-                    .right_3()
-                    .bottom_3()
-                    .px_2()
-                    .py_1()
-                    .rounded_md()
-                    .bg(cx.theme().background.opacity(0.85))
-                    .border_1()
-                    .border_color(cx.theme().border)
-                    .shadow_sm()
-                    .text_xs()
-                    .font_family(".AppleSystemUIFontMonospaced")
-                    .text_color(cx.theme().foreground)
-                    .child(format!("{:.0}%", state.editor.view().zoom * 100.0)),
-            )
+            .child(workspace::render_floating_toolbar(
+                self, &owner, modal, window, cx,
+            ))
+            .child(workspace::render_floating_zoom_bar(
+                self, &owner, modal, window, cx,
+            ))
             .children(overlay.unavailable.map(|reason| {
                 div()
                     .absolute()
@@ -419,6 +420,14 @@ impl Render for CanvasView {
                     cx.notify();
                 } else if event.keystroke.key == "h" && !event.is_held {
                     this.hand_tool = true;
+                    this.pan = None;
+                    let _ = this.owner.update(cx, |owner, cx| {
+                        owner.editor.cancel_gesture();
+                        owner.redraw(cx);
+                    });
+                    cx.notify();
+                } else if event.keystroke.key == "v" && !event.is_held {
+                    this.hand_tool = false;
                     this.pan = None;
                     let _ = this.owner.update(cx, |owner, cx| {
                         owner.editor.cancel_gesture();

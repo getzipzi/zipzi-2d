@@ -5,11 +5,20 @@ use editor_core::{COMMANDS, CommandEffect, CommandId, CommandScope};
 use gpui_kit::component::{ActiveTheme, WindowExt, input};
 use serde::Deserialize;
 
+use std::path::{Path, PathBuf};
+
 #[derive(Action, Clone, PartialEq, Deserialize)]
 #[action(namespace=kasane_editor,no_json)]
 pub struct RunCommand {
     pub id: CommandId,
 }
+
+#[derive(Action, Clone, PartialEq, Deserialize)]
+#[action(namespace=kasane_editor,no_json)]
+pub struct OpenRecent {
+    pub path: PathBuf,
+}
+
 actions!(
     kasane_editor,
     [
@@ -20,9 +29,63 @@ actions!(
         ShowAll,
         ToggleTheme,
         Minimize,
-        ZoomWindow
+        ZoomWindow,
+        ClearRecent
     ]
 );
+
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct MenuState {
+    pub commands: Vec<bool>,
+    pub text: bool,
+    pub modal: bool,
+    pub recent_files: Vec<PathBuf>,
+}
+
+pub fn path_title(path: &Path) -> String {
+    if path.file_name().and_then(|s| s.to_str()) == Some("project.kasane.json") {
+        if let Some(parent) = path.parent().and_then(|p| p.file_name()) {
+            return parent.to_string_lossy().into_owned();
+        }
+    }
+    path.file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.display().to_string())
+}
+
+pub fn format_parent_path(path: &Path) -> String {
+    let parent = if path.file_name().and_then(|s| s.to_str()) == Some("project.kasane.json") {
+        path.parent().and_then(|p| p.parent())
+    } else {
+        path.parent()
+    };
+    let Some(parent) = parent else {
+        return String::new();
+    };
+    let parent_str = parent.to_string_lossy();
+    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+        let home_str = home.to_string_lossy();
+        if parent_str.starts_with(&*home_str) {
+            return format!("~{}", &parent_str[home_str.len()..]);
+        }
+    }
+    parent_str.into_owned()
+}
+
+pub fn recent_file_label(path: &Path, all_paths: &[PathBuf]) -> String {
+    let title = path_title(path);
+    let duplicates = all_paths.iter().filter(|p| path_title(p) == title).count();
+    if duplicates > 1 {
+        let parent_display = format_parent_path(path);
+        if !parent_display.is_empty() {
+            format!("{title} — {parent_display}")
+        } else {
+            title
+        }
+    } else {
+        title
+    }
+}
 struct KitBindings(Vec<KeyBinding>);
 impl Global for KitBindings {}
 fn scope(scope: CommandScope) -> &'static str {
@@ -84,6 +147,12 @@ impl EditorView {
                 e.on_action(cx.listener(|this, action: &RunCommand, window, cx| {
                     this.run_command(action.id, window, cx)
                 }))
+                .on_action(cx.listener(|this, action: &OpenRecent, window, cx| {
+                    this.open_recent(&action.path, window, cx)
+                }))
+                .on_action(
+                    cx.listener(|this, _: &ClearRecent, window, cx| this.clear_recent(window, cx)),
+                )
                 .on_action(cx.listener(|this, _: &CloseWindow, window, cx| this.close(window, cx)))
                 .on_action(|_: &About, window, cx| {
                     window.open_dialog(cx, |dialog, _, _| {
@@ -119,15 +188,39 @@ impl EditorView {
     }
     pub(super) fn refresh_menus(&mut self, modal: bool, window: &Window, cx: &mut Context<Self>) {
         let text = self.has_focused_input(window, cx);
-        let mut state = COMMANDS
-            .iter()
-            .map(|s| !modal && self.editor.command_available(self.editor.command(s.id)))
-            .collect::<Vec<_>>();
-        state.push(text);
+        let settings = cx.global::<settings::Settings>();
+        let state = MenuState {
+            commands: COMMANDS
+                .iter()
+                .map(|s| !modal && self.editor.command_available(self.editor.command(s.id)))
+                .collect(),
+            text,
+            modal,
+            recent_files: settings.recent_files.paths.clone(),
+        };
         if self.menu_state == state {
             return;
         }
         self.menu_state = state;
+        let recent_files = &settings.recent_files.paths;
+        let recent_menu = if recent_files.is_empty() {
+            Menu::new(t!("menu.open_recent"))
+                .disabled(true)
+                .items([MenuItem::action(t!("menu.no_recent_files"), ClearRecent).disabled(true)])
+        } else {
+            let mut items: Vec<MenuItem> = recent_files
+                .iter()
+                .map(|path| {
+                    let label = recent_file_label(path, recent_files);
+                    MenuItem::action(label, OpenRecent { path: path.clone() }).disabled(modal)
+                })
+                .collect();
+            items.push(MenuItem::separator());
+            items.push(MenuItem::action(t!("menu.clear_recent"), ClearRecent).disabled(modal));
+            Menu::new(t!("menu.open_recent"))
+                .disabled(modal)
+                .items(items)
+        };
         let item = |id: CommandId| {
             MenuItem::action(t!(id.spec().label).into_owned(), RunCommand { id })
                 .disabled(modal || !self.editor.command_available(self.editor.command(id)))
@@ -154,6 +247,7 @@ impl EditorView {
             Menu::new(t!("menu.file")).items([
                 item(CommandId::New),
                 item(CommandId::Open),
+                MenuItem::submenu(recent_menu),
                 item(CommandId::ImportModel3),
                 item(CommandId::ImportPsd),
                 MenuItem::separator(),
@@ -263,7 +357,7 @@ impl EditorView {
                             cx.clear_key_bindings();
                             cx.bind_keys(base);
                             install(cx);
-                            self.menu_state.clear();
+                            self.menu_state = Default::default();
                         }
                         Err(e) => self.edit_error = Some(e.to_string()),
                     }
@@ -427,5 +521,29 @@ mod tests {
             1
         );
         Ok(())
+    }
+
+    #[test]
+    fn recent_file_label_formatting() {
+        use super::{path_title, recent_file_label};
+        use std::path::PathBuf;
+
+        let p1 = PathBuf::from("/models/mao/project.kasane.json");
+        let p2 = PathBuf::from("/models/shirousagi.kasane");
+        let all = vec![p1.clone(), p2.clone()];
+
+        assert_eq!(path_title(&p1), "mao");
+        assert_eq!(path_title(&p2), "shirousagi.kasane");
+
+        assert_eq!(recent_file_label(&p1, &all), "mao");
+        assert_eq!(recent_file_label(&p2, &all), "shirousagi.kasane");
+
+        // Disambiguate duplicates with parent path
+        let dup1 = PathBuf::from("/work/mao/project.kasane.json");
+        let dup2 = PathBuf::from("/backup/mao/project.kasane.json");
+        let dups = vec![dup1.clone(), dup2.clone()];
+
+        assert_eq!(recent_file_label(&dup1, &dups), "mao — /work");
+        assert_eq!(recent_file_label(&dup2, &dups), "mao — /backup");
     }
 }

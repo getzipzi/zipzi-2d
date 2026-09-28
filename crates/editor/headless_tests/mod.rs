@@ -3,6 +3,7 @@
 mod canvas;
 mod layers;
 mod properties;
+mod recent_files;
 
 use crate::{EditorView, i18n, menus, settings};
 use editor_core::{ConfigStore, Editor};

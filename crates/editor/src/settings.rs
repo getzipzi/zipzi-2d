@@ -1,10 +1,12 @@
-use editor_core::{ConfigStore, EffectiveBinding, ShortcutOverrides};
+use editor_core::{ConfigStore, EffectiveBinding, RecentFiles, ShortcutOverrides};
 use gpui_kit::{App, Global, KeybindingKeystroke, Keystroke, PlatformKeyboardMapper};
+use std::path::Path;
 
 #[derive(Clone)]
 pub struct Settings {
     pub store: ConfigStore,
     pub bindings: Vec<EffectiveBinding>,
+    pub recent_files: RecentFiles,
     pub notices: Vec<String>,
 }
 impl Global for Settings {}
@@ -49,11 +51,32 @@ impl Settings {
                     })
             }
         };
+        let recent_files = store
+            .read::<RecentFiles>("recent-files.json")
+            .ok()
+            .flatten()
+            .unwrap_or_default();
         Self {
             store,
             bindings,
+            recent_files,
             notices,
         }
+    }
+
+    pub fn push_recent_file(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
+        self.recent_files.push(path.as_ref());
+        self.store.write("recent-files.json", &self.recent_files)
+    }
+
+    pub fn remove_recent_file(&mut self, path: &Path) -> anyhow::Result<()> {
+        self.recent_files.remove(path);
+        self.store.write("recent-files.json", &self.recent_files)
+    }
+
+    pub fn clear_recent_files(&mut self) -> anyhow::Result<()> {
+        self.recent_files.clear();
+        self.store.write("recent-files.json", &self.recent_files)
     }
 }
 

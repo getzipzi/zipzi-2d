@@ -1,4 +1,4 @@
-use editor_core::Document;
+use editor_core::{Document, TreeNodeKind};
 mod support;
 use support::sample_document;
 
@@ -221,5 +221,90 @@ fn opening_multiple_layers_edits_only_the_selected_mesh() -> anyhow::Result<()> 
     reopened.select(&second)?;
     assert_eq!(reopened.selected_layer().unwrap().name, "Edited second");
     assert_eq!(reopened.selected_layer().unwrap().opacity, 0.2);
+    Ok(())
+}
+
+#[test]
+fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Result<()> {
+    use kasane_core::{
+        Canvas, Part, RotationTransform, Transform, TransformData, Vec2, WarpTransform,
+    };
+    use kasane_sdk::AuthoringSession;
+    use uuid::Uuid;
+
+    let output = tempfile::tempdir()?;
+    let (mut source, _texture) = support::sample_document_with_two_layers()?;
+    let receipt = source.save(&output.path().join("trees"))?;
+    let mut session = AuthoringSession::new(
+        &Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
+    )?;
+    session.open_project(&receipt.manifest, None)?;
+    let mesh = session.mesh_ids()[0].clone();
+    let unassigned_mesh = session.mesh_ids()[1].clone();
+    let root_part = Uuid::new_v4().to_string();
+    let child_part = Uuid::new_v4().to_string();
+    let rotation = Uuid::new_v4().to_string();
+    let warp = Uuid::new_v4().to_string();
+    session.edit("tree relationships", None, |edit| {
+        edit.create_part(Part {
+            id: root_part.clone(),
+            name: "Head".into(),
+            ..Default::default()
+        })?;
+        edit.create_part(Part {
+            id: child_part.clone(),
+            name: "Eye".into(),
+            ..Default::default()
+        })?;
+        edit.set_organization_parent(&child_part, &root_part)?;
+        edit.create_transform(Transform {
+            id: rotation.clone(),
+            name: "Head turn".into(),
+            part_id: Some(root_part.clone().into()),
+            data: TransformData::Rotation(RotationTransform::default()),
+            ..Default::default()
+        })?;
+        edit.create_transform(Transform {
+            id: warp.clone(),
+            name: "Eye bend".into(),
+            part_id: Some(child_part.clone().into()),
+            parent_id: Some(rotation.clone().into()),
+            data: TransformData::Warp(WarpTransform {
+                rows: 1,
+                columns: 1,
+                quad: true,
+                points: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(1., 0.),
+                    Vec2::new(0., 1.),
+                    Vec2::new(1., 1.),
+                ],
+            }),
+            ..Default::default()
+        })?;
+        edit.set_mesh_part(&mesh, &child_part)?;
+        edit.set_deform_parent(&mesh, &warp)?;
+        Ok(())
+    })?;
+    session.save_project(&receipt.manifest, None)?;
+
+    let document = Document::open(&receipt.manifest)?;
+    let parts = document.mesh_tree();
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[0].id, root_part);
+    assert_eq!(parts[0].kind, TreeNodeKind::Part);
+    assert_eq!(parts[0].children[0].id, child_part);
+    assert_eq!(parts[0].children[0].children[0].id, mesh);
+    assert_eq!(parts[1].id, unassigned_mesh);
+
+    let deformers = document.deformer_tree();
+    assert_eq!(deformers.len(), 2);
+    assert_eq!(deformers[0].id, rotation);
+    assert_eq!(deformers[0].kind, TreeNodeKind::RotationDeformer);
+    assert_eq!(deformers[0].children[0].id, warp);
+    assert_eq!(deformers[0].children[0].kind, TreeNodeKind::WarpDeformer);
+    assert_eq!(deformers[0].children[0].children[0].id, mesh);
+    assert_eq!(deformers[1].id, unassigned_mesh);
     Ok(())
 }

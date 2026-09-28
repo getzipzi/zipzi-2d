@@ -1,238 +1,182 @@
-use crate::{EditorView, t};
+use crate::{EditorView, canvas::CanvasView, t};
 use editor_core::CommandId;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable, Theme, ThemeMode, WindowExt,
+    ActiveTheme, Disableable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
 };
 use gpui_kit::{prelude::*, *};
 
-impl EditorView {
-    pub(crate) fn set_hand_tool(&mut self, enabled: bool, cx: &mut Context<Self>) {
-        self.editor.cancel_gesture();
-        if let Some(dock) = &self.dock {
-            dock.canvas
-                .update(cx, |canvas, cx| canvas.set_hand_tool(enabled, cx));
-        }
-        self.redraw(cx);
-    }
-}
-
-pub fn render_toolbar(
-    view: &EditorView,
+pub fn render_floating_toolbar(
+    canvas: &CanvasView,
+    _owner: &Entity<EditorView>,
     modal: bool,
     _window: &mut Window,
-    cx: &mut Context<EditorView>,
+    cx: &mut Context<CanvasView>,
 ) -> impl IntoElement {
     let theme = cx.theme();
-    let zoom_pct = (view.editor.view().zoom * 100.0).round() as i32;
-    let hand_tool = view
-        .dock
-        .as_ref()
-        .is_some_and(|dock| dock.canvas.read(cx).hand_tool());
+    let hand_tool = canvas.hand_tool();
 
     div()
-        .id("app-toolbar")
-        .h(px(40.))
-        .w_full()
-        .flex_shrink_0()
-        .bg(theme.background)
-        .border_b_1()
+        .id("canvas-floating-toolbar")
+        .test_support()
+        .absolute()
+        .top_2()
+        .left_2()
+        .flex()
+        .flex_col()
+        .items_center()
+        .gap_1()
+        .p_1()
+        .rounded_md()
+        .bg(theme.background.opacity(0.85))
+        .border_1()
         .border_color(theme.border)
+        .shadow_md()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
+        .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
+        .child(
+            Button::new("tool_select")
+                .small()
+                .ghost()
+                .when(!hand_tool, |button| button.primary())
+                .icon(IconName::MousePointer)
+                .tooltip(t!("editor.tool_select"))
+                .disabled(modal)
+                .on_click(cx.listener(|this, _, window, cx| {
+                    if let Some(owner) = this.owner.upgrade() {
+                        let is_modal = owner.read(cx).modal || window.has_active_dialog(cx);
+                        if !is_modal {
+                            this.set_hand_tool(false, cx);
+                            window.focus(&this.focus, cx);
+                            owner.update(cx, |owner, cx| {
+                                owner.editor.cancel_gesture();
+                                owner.redraw(cx);
+                            });
+                        }
+                    }
+                })),
+        )
+        .child(
+            Button::new("tool_mesh")
+                .small()
+                .ghost()
+                .icon(IconName::Grid2x2)
+                .tooltip(t!("editor.tool_mesh"))
+                .disabled(true),
+        )
+        .child(
+            Button::new("tool_deformer")
+                .small()
+                .ghost()
+                .icon(IconName::Sparkles)
+                .tooltip(t!("editor.tool_deformer"))
+                .disabled(true),
+        )
+        .child(
+            Button::new("tool_hand")
+                .small()
+                .ghost()
+                .when(hand_tool, |button| button.primary())
+                .icon(IconName::Hand)
+                .tooltip(t!("editor.tool_hand"))
+                .disabled(modal)
+                .on_click(cx.listener(|this, _, window, cx| {
+                    if let Some(owner) = this.owner.upgrade() {
+                        let is_modal = owner.read(cx).modal || window.has_active_dialog(cx);
+                        if !is_modal {
+                            this.set_hand_tool(true, cx);
+                            window.focus(&this.focus, cx);
+                            owner.update(cx, |owner, cx| {
+                                owner.editor.cancel_gesture();
+                                owner.redraw(cx);
+                            });
+                        }
+                    }
+                })),
+        )
+}
+
+pub fn render_floating_zoom_bar(
+    _canvas: &CanvasView,
+    owner: &Entity<EditorView>,
+    modal: bool,
+    _window: &mut Window,
+    cx: &mut Context<CanvasView>,
+) -> impl IntoElement {
+    let theme = cx.theme();
+    let state = owner.read(cx);
+    let zoom_pct = (state.editor.view().zoom * 100.0).round() as i32;
+    let can_zoom_out = !modal
+        && state
+            .editor
+            .command_available(state.editor.command(CommandId::ZoomOut));
+    let can_zoom_in = !modal
+        && state
+            .editor
+            .command_available(state.editor.command(CommandId::ZoomIn));
+
+    div()
+        .id("canvas-floating-zoom")
+        .test_support()
+        .absolute()
+        .bottom_2()
+        .right_2()
         .flex()
         .items_center()
-        .px_3()
-        .gap_2()
-        // App Title or Brand
+        .gap_1()
+        .p_1()
+        .rounded_md()
+        .bg(theme.background.opacity(0.85))
+        .border_1()
+        .border_color(theme.border)
+        .shadow_md()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
+        .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
         .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_2()
-                .mr_2()
-                .child(
-                    div()
-                        .w(px(20.))
-                        .h(px(20.))
-                        .rounded(px(5.))
-                        .bg(theme.primary)
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .text_color(theme.primary_foreground)
-                        .font_weight(FontWeight::BOLD)
-                        .text_xs()
-                        .child("K"),
-                )
-                .child(
-                    div()
-                        .text_xs()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(theme.foreground)
-                        .child(t!("app.title")),
-                ),
+            Button::new("btn_zoom_out")
+                .small()
+                .ghost()
+                .icon(IconName::ZoomOut)
+                .tooltip(t!("menu.zoom_out"))
+                .disabled(!can_zoom_out)
+                .on_click(cx.listener(|this, _, window, cx| {
+                    if let Some(owner) = this.owner.upgrade() {
+                        owner.update(cx, |owner, cx| {
+                            owner.run_command(CommandId::ZoomOut, window, cx);
+                        });
+                    }
+                })),
         )
-        // Divider
-        .child(div().w(px(1.)).h(px(16.)).bg(theme.border))
-        // Tool group (Select, Mesh, Deformer, Hand)
         .child(
             div()
-                .flex()
-                .items_center()
-                .gap_1()
-                .child(
-                    Button::new("tool_select")
-                        .small()
-                        .icon(IconName::MousePointer)
-                        .label(t!("editor.tool_select").into_owned())
-                        .when(!hand_tool, |button| button.primary())
-                        .disabled(modal)
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            if !this.modal && !window.has_active_dialog(cx) {
-                                this.set_hand_tool(false, cx);
-                            }
-                        })),
-                )
-                .child(
-                    Button::new("tool_mesh")
-                        .small()
-                        .icon(IconName::Grid2x2)
-                        .label(t!("editor.tool_mesh").into_owned())
-                        .disabled(true),
-                )
-                .child(
-                    Button::new("tool_deformer")
-                        .small()
-                        .icon(IconName::Sparkles)
-                        .label(t!("editor.tool_deformer").into_owned())
-                        .disabled(true),
-                )
-                .child(
-                    Button::new("tool_hand")
-                        .small()
-                        .icon(IconName::Hand)
-                        .label(t!("editor.tool_hand").into_owned())
-                        .when(hand_tool, |button| button.primary())
-                        .disabled(modal)
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            if !this.modal && !window.has_active_dialog(cx) {
-                                this.set_hand_tool(true, cx);
-                                if let Some(dock) = &this.dock {
-                                    window.focus(&dock.canvas.read(cx).focus_handle(cx), cx);
-                                }
-                            }
-                        })),
-                ),
+                .id("zoom-percentage")
+                .test_support()
+                .px_2()
+                .py_0p5()
+                .rounded(px(4.))
+                .bg(theme.muted)
+                .text_xs()
+                .font_family(".AppleSystemUIFontMonospaced")
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(theme.foreground)
+                .child(format!("{}%", zoom_pct)),
         )
-        // Divider
-        .child(div().w(px(1.)).h(px(16.)).bg(theme.border))
-        // View Actions (Vertices, Reset View)
         .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_1()
-                .child(
-                    Button::new("btn_vertices")
-                        .small()
-                        .icon(IconName::Eye)
-                        .label(t!("menu.vertices").into_owned())
-                        .disabled(
-                            modal
-                                || !view
-                                    .editor
-                                    .command_available(view.editor.command(CommandId::Vertices)),
-                        )
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.run_command(CommandId::Vertices, window, cx);
-                        })),
-                )
-                .child(
-                    Button::new("btn_reset_view")
-                        .small()
-                        .icon(IconName::RotateCcw)
-                        .label(t!("menu.reset_view").into_owned())
-                        .disabled(
-                            modal
-                                || !view
-                                    .editor
-                                    .command_available(view.editor.command(CommandId::ResetView)),
-                        )
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.run_command(CommandId::ResetView, window, cx);
-                        })),
-                ),
-        )
-        // Flexible spacer
-        .child(div().flex_1())
-        // Right side: Zoom percentage & controls, Theme Toggle
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_1p5()
-                // Zoom Out
-                .child(
-                    Button::new("btn_zoom_out")
-                        .small()
-                        .icon(IconName::ZoomOut)
-                        .disabled(
-                            modal
-                                || !view
-                                    .editor
-                                    .command_available(view.editor.command(CommandId::ZoomOut)),
-                        )
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.run_command(CommandId::ZoomOut, window, cx);
-                        })),
-                )
-                // Zoom Percentage Pill
-                .child(
-                    div()
-                        .px_2()
-                        .py_0p5()
-                        .rounded(px(4.))
-                        .bg(theme.muted)
-                        .text_xs()
-                        .font_family(".AppleSystemUIFontMonospaced")
-                        .font_weight(FontWeight::MEDIUM)
-                        .text_color(theme.foreground)
-                        .child(format!("{}%", zoom_pct)),
-                )
-                // Zoom In
-                .child(
-                    Button::new("btn_zoom_in")
-                        .small()
-                        .icon(IconName::ZoomIn)
-                        .disabled(
-                            modal
-                                || !view
-                                    .editor
-                                    .command_available(view.editor.command(CommandId::ZoomIn)),
-                        )
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.run_command(CommandId::ZoomIn, window, cx);
-                        })),
-                )
-                // Divider
-                .child(div().w(px(1.)).h(px(16.)).bg(theme.border).mx_1())
-                // Theme Toggle
-                .child(
-                    Button::new("btn_theme")
-                        .small()
-                        .icon(if theme.is_dark() {
-                            IconName::Sun
-                        } else {
-                            IconName::Moon
-                        })
-                        .on_click(|_, window, cx| {
-                            let mode = if cx.theme().is_dark() {
-                                ThemeMode::Light
-                            } else {
-                                ThemeMode::Dark
-                            };
-                            Theme::change(mode, Some(window), cx);
-                        }),
-                ),
+            Button::new("btn_zoom_in")
+                .small()
+                .ghost()
+                .icon(IconName::ZoomIn)
+                .tooltip(t!("menu.zoom_in"))
+                .disabled(!can_zoom_in)
+                .on_click(cx.listener(|this, _, window, cx| {
+                    if let Some(owner) = this.owner.upgrade() {
+                        owner.update(cx, |owner, cx| {
+                            owner.run_command(CommandId::ZoomIn, window, cx);
+                        });
+                    }
+                })),
         )
 }

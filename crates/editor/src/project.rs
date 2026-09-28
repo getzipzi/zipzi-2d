@@ -2,7 +2,7 @@
 use super::*;
 use editor_core::DocumentId;
 use gpui_kit::component::WindowExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum ImportKind {
@@ -153,6 +153,7 @@ impl EditorView {
                             t!("project.saved_with_warnings", warnings = notices.join("; "))
                                 .into_owned()
                         };
+                        this.record_recent_file(path.clone(), cx);
                     }
                     Err(error) => this.edit_error = Some(error.to_string()),
                 }
@@ -171,6 +172,57 @@ impl EditorView {
     }
     pub(super) fn import(&mut self, kind: ImportKind, window: &mut Window, cx: &mut Context<Self>) {
         self.pick_load(Some(kind), window, cx);
+    }
+    pub(super) fn open_recent(&mut self, path: &Path, window: &mut Window, cx: &mut Context<Self>) {
+        if self.modal || self.editor.exiting() {
+            return;
+        }
+        window.focus(&self.focus, cx);
+        if self.editor.active_id().is_some() && !self.editor.is_busy() {
+            if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
+                self.edit_error = Some(error.to_string());
+                cx.notify();
+                return;
+            }
+        }
+        if !path.exists() {
+            let error = t!("project.file_not_found", path = path.display()).into_owned();
+            self.remove_recent_file(path, cx);
+            self.edit_error = Some(error);
+            cx.notify();
+            return;
+        }
+        self.execute_load(LoadRequest::Open(path.to_path_buf()), None, window, cx);
+    }
+    pub(super) fn record_recent_file(&mut self, path: PathBuf, cx: &mut Context<Self>) {
+        let mut settings = cx.global::<settings::Settings>().clone();
+        if let Err(e) = settings.push_recent_file(path) {
+            self.edit_error = Some(e.to_string());
+        }
+        cx.set_global(settings);
+        self.menu_state = Default::default();
+        cx.notify();
+    }
+    pub(super) fn clear_recent(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.modal || window.has_active_dialog(cx) {
+            return;
+        }
+        let mut settings = cx.global::<settings::Settings>().clone();
+        if let Err(e) = settings.clear_recent_files() {
+            self.edit_error = Some(e.to_string());
+        }
+        cx.set_global(settings);
+        self.menu_state = Default::default();
+        cx.notify();
+    }
+    pub(super) fn remove_recent_file(&mut self, path: &Path, cx: &mut Context<Self>) {
+        let mut settings = cx.global::<settings::Settings>().clone();
+        if let Err(e) = settings.remove_recent_file(path) {
+            self.edit_error = Some(e.to_string());
+        }
+        cx.set_global(settings);
+        self.menu_state = Default::default();
+        cx.notify();
     }
     fn pick_load(&mut self, kind: Option<ImportKind>, window: &mut Window, cx: &mut Context<Self>) {
         if self.modal || self.editor.exiting() {
@@ -253,28 +305,44 @@ impl EditorView {
             } else {
                 LoadRequest::Open(source)
             };
-            let task = match this.update_in(cx, |this, window, cx| {
+            let _ = this.update_in(cx, |this, window, cx| {
                 this.modal = false;
-                let task = this.editor.prepare_load(request);
-                match task {
-                    Ok(None) => {
-                        this.refresh_document(window, cx);
-                        None
-                    }
-                    Ok(task) => {
-                        this.redraw(cx);
-                        task
-                    }
-                    Err(error) => {
-                        this.edit_error = Some(error.to_string());
-                        cx.notify();
-                        None
-                    }
+                this.execute_load(request, kind, window, cx);
+            });
+        })
+        .detach();
+    }
+    fn execute_load(
+        &mut self,
+        request: LoadRequest,
+        kind: Option<ImportKind>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let task = match self.editor.prepare_load(request) {
+            Ok(None) => {
+                if let Some(path) = self
+                    .editor
+                    .document()
+                    .and_then(|d| d.path())
+                    .map(PathBuf::from)
+                {
+                    self.record_recent_file(path, cx);
                 }
-            }) {
-                Ok(Some(task)) => task,
-                _ => return,
-            };
+                self.refresh_document(window, cx);
+                return;
+            }
+            Ok(Some(task)) => {
+                self.redraw(cx);
+                task
+            }
+            Err(error) => {
+                self.edit_error = Some(error.to_string());
+                cx.notify();
+                return;
+            }
+        };
+        cx.spawn_in(window, async move |this, cx| {
             let completion = cx
                 .background_executor()
                 .spawn(async move { task.run() })
@@ -298,6 +366,14 @@ impl EditorView {
                             });
                             t!("project.import_warning_count", count = warnings.len()).into_owned()
                         };
+                        if let Some(path) = this
+                            .editor
+                            .document()
+                            .and_then(|d| d.path())
+                            .map(PathBuf::from)
+                        {
+                            this.record_recent_file(path, cx);
+                        }
                         this.refresh_document(window, cx);
                     }
                     Err(error) => this.edit_error = Some(error.to_string()),

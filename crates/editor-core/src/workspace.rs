@@ -1,7 +1,7 @@
 //! Window workspace. Documents, tasks and previews are addressed by runtime identity.
 use crate::{
     CloseDisposition, Document, DocumentSession, EditorCommand, EditorPreview, Layer, LoadRequest,
-    ViewState,
+    TreeNode, ViewState,
 };
 use anyhow::{Result, anyhow, ensure};
 use kasane_sdk::SaveReceipt;
@@ -45,6 +45,8 @@ struct Entry {
     frozen: DocumentSummary,
     frozen_layers: Vec<Layer>,
     frozen_selected: Option<Layer>,
+    frozen_mesh_tree: Vec<TreeNode>,
+    frozen_deformer_tree: Vec<TreeNode>,
     view: ViewState,
     saving: Option<(OperationId, PathBuf)>,
     close_after_save: Option<DeferredClose>,
@@ -154,6 +156,8 @@ impl Editor {
             frozen: DocumentSummary::read(id, &session),
             frozen_layers: Vec::new(),
             frozen_selected: None,
+            frozen_mesh_tree: Vec::new(),
+            frozen_deformer_tree: Vec::new(),
             view: session.view(),
             session: Some(session),
             saving: None,
@@ -201,6 +205,26 @@ impl Editor {
                     .session
                     .as_ref()
                     .map_or_else(|| entry.frozen_layers.clone(), |s| s.document().layers())
+            })
+    }
+    pub fn mesh_tree(&self) -> Vec<TreeNode> {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .map_or_else(Vec::new, |entry| {
+                entry.session.as_ref().map_or_else(
+                    || entry.frozen_mesh_tree.clone(),
+                    |session| session.document().mesh_tree(),
+                )
+            })
+    }
+    pub fn deformer_tree(&self) -> Vec<TreeNode> {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .map_or_else(Vec::new, |entry| {
+                entry.session.as_ref().map_or_else(
+                    || entry.frozen_deformer_tree.clone(),
+                    |session| session.document().deformer_tree(),
+                )
             })
     }
     pub fn selected_layer(&self) -> Option<Layer> {
@@ -383,6 +407,8 @@ impl Editor {
         entry.view = entry.session.as_ref().unwrap().view();
         entry.frozen_layers = entry.session.as_ref().unwrap().document().layers();
         entry.frozen_selected = entry.session.as_ref().unwrap().document().selected_layer();
+        entry.frozen_mesh_tree = entry.session.as_ref().unwrap().document().mesh_tree();
+        entry.frozen_deformer_tree = entry.session.as_ref().unwrap().document().deformer_tree();
         let session = entry.session.take().unwrap();
         entry.saving = Some((operation, identity));
         entry.close_after_save = close_after.then_some(close_reason);
@@ -413,6 +439,8 @@ impl Editor {
         entry.session = Some(session);
         entry.frozen_layers.clear();
         entry.frozen_selected = None;
+        entry.frozen_mesh_tree.clear();
+        entry.frozen_deformer_tree.clear();
         entry.saving = None;
         let close = std::mem::take(&mut entry.close_after_save);
         match result {

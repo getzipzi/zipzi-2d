@@ -1,5 +1,4 @@
 use crate::{EditorView, t};
-use editor_core::CommandId;
 use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable};
 use gpui_kit::{prelude::*, *};
 
@@ -22,17 +21,12 @@ pub fn render_tab_bar(
         .border_b_1()
         .border_color(theme.border)
         .flex()
-        .items_center()
-        .px_2()
-        .gap_1()
         .child(
             div()
                 .id("document-tabs-scroll")
                 .min_w_0()
                 .h_full()
                 .flex()
-                .items_center()
-                .gap_1()
                 .overflow_x_scroll()
                 .children(documents.into_iter().map(|doc| {
                     let id = doc.id;
@@ -59,19 +53,12 @@ pub fn render_tab_bar(
                         .flex()
                         .flex_shrink_0()
                         .items_center()
-                        .h(px(26.))
-                        .px_2p5()
+                        .h_full()
+                        .px_3()
                         .gap_1p5()
-                        .rounded_t_md()
                         .bg(bg)
-                        .border_t_1()
-                        .border_l_1()
                         .border_r_1()
-                        .border_color(if is_active {
-                            theme.border
-                        } else {
-                            gpui::transparent_black()
-                        })
+                        .border_color(theme.border)
                         .hover(|s| {
                             if !is_active {
                                 s.bg(theme.muted.opacity(0.3)).text_color(theme.foreground)
@@ -134,24 +121,5 @@ pub fn render_tab_bar(
                                 .child(Icon::new(IconName::Close).small()),
                         )
                 })),
-        )
-        // Plus button to open/new
-        .child(
-            div()
-                .id("tab-new-button")
-                .test_support()
-                .flex_shrink_0()
-                .p_1()
-                .rounded(px(4.))
-                .text_color(theme.muted_foreground)
-                .hover(|s| s.bg(theme.muted).text_color(theme.foreground))
-                .cursor_pointer()
-                .on_click(cx.listener(move |this, _, window, cx| {
-                    if modal {
-                        return;
-                    }
-                    this.run_command(CommandId::New, window, cx);
-                }))
-                .child(Icon::new(IconName::Plus).small()),
         )
 }
