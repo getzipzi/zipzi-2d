@@ -8,6 +8,8 @@ license.workspace = true
 debug-tools = ["dep:gpui-fps"]
 
 [dependencies]
+serde.workspace = true
+serde_json.workspace = true
 gpui-kit.workspace = true
 gpui-fps = { workspace = true, optional = true }
 editor-core.workspace = true

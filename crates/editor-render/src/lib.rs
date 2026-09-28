@@ -1,7 +1,7 @@
 //! Native Metal preview adapter. No document editing or project IO lives here.
 mod mipmaps;
 use anyhow::{Result, anyhow, ensure};
-use editor_core::{SceneSnapshot, ViewState};
+use editor_core::{CanvasMetrics, SceneSnapshot, ViewState, ViewportTransform};
 use kasane_core::Vec2;
 use kasane_render::{Affine2, ViewportConfig};
 use kasane_render_metal::{
@@ -13,11 +13,12 @@ use std::collections::HashMap;
 pub use kasane_render_metal::MetalTargetConfig;
 
 struct UploadedTexture {
-    hash: String,
     texture: metal::Texture,
     width: u32,
     height: u32,
     revision: u64,
+    used: u64,
+    bytes: u64,
 }
 
 pub struct MetalSceneRenderer {
@@ -25,6 +26,9 @@ pub struct MetalSceneRenderer {
     renderer: MetalRenderer,
     textures: HashMap<String, UploadedTexture>,
     next_revision: u64,
+    draws: u64,
+    uploads: u64,
+    cache_budget: u64,
 }
 
 fn status(error: kasane_core::Status) -> anyhow::Error {
@@ -40,6 +44,9 @@ impl MetalSceneRenderer {
             renderer,
             textures: HashMap::new(),
             next_revision: 1,
+            draws: 0,
+            uploads: 0,
+            cache_budget: 128 * 1024 * 1024,
         })
     }
 
@@ -51,46 +58,84 @@ impl MetalSceneRenderer {
         scene: &SceneSnapshot,
         view: ViewState,
     ) -> Result<metal::Texture> {
-        ensure!(
-            view.zoom.is_finite() && view.zoom > 0.,
-            "Invalid viewport zoom"
-        );
-        self.textures
-            .retain(|id, _| scene.textures.iter().any(|source| source.asset_id == *id));
+        let metrics = CanvasMetrics {
+            width: config.width as f32,
+            height: config.height as f32,
+            scale_factor: 1.,
+        };
+        let transform = ViewportTransform::new(scene.frame.canvas, metrics, view)
+            .ok_or_else(|| anyhow!("Invalid viewport"))?;
+        self.draw_transformed(queue, config, scene, transform)
+    }
+
+    pub fn stats(&self) -> (u64, u64, u64) {
+        (
+            self.draws,
+            self.uploads,
+            self.textures.values().map(|t| t.bytes).sum(),
+        )
+    }
+    pub fn draw_transformed(
+        &mut self,
+        queue: &metal::CommandQueueRef,
+        config: MetalTargetConfig,
+        scene: &SceneSnapshot,
+        transform: ViewportTransform,
+    ) -> Result<metal::Texture> {
+        ensure!(transform.metrics.visible(), "Hidden canvas");
+        self.draws += 1;
+        let key = |source: &editor_core::SceneTexture| {
+            format!("{}:{}:{}", source.sha256, source.width, source.height)
+        };
         for source in scene.textures.iter() {
-            if self.textures.get(&source.asset_id).is_some_and(|cached| {
-                cached.hash == source.sha256
-                    && cached.width == source.width
-                    && cached.height == source.height
-            }) {
+            let key = key(source);
+            if let Some(cached) = self.textures.get_mut(&key) {
+                cached.used = self.draws;
                 continue;
             }
             let mipmaps = straight_rgba_mipmaps(source.width, source.height, &source.rgba);
+            let bytes =
+                source.rgba.len() as u64 + mipmaps.iter().map(|m| m.2.len() as u64).sum::<u64>();
             let texture = self
                 .context
                 .upload_rgba8(source.width, source.height, &source.rgba, &mipmaps)
                 .map_err(status)?;
             self.textures.insert(
-                source.asset_id.clone(),
+                key,
                 UploadedTexture {
-                    hash: source.sha256.clone(),
                     texture,
                     width: source.width,
                     height: source.height,
                     revision: self.next_revision,
+                    used: self.draws,
+                    bytes,
                 },
             );
-            self.next_revision = self
-                .next_revision
-                .checked_add(1)
-                .ok_or_else(|| anyhow!("Texture revision exhausted"))?;
+            self.next_revision += 1;
+            self.uploads += 1;
         }
-        let mut textures = MetalTextureCatalog::new(
-            self.textures
+        while self.textures.values().map(|t| t.bytes).sum::<u64>() > self.cache_budget {
+            let old = self
+                .textures
                 .iter()
-                .map(|(id, texture)| {
+                .filter(|(_, t)| t.used != self.draws)
+                .min_by_key(|(_, t)| t.used)
+                .map(|(k, _)| k.clone());
+            if let Some(old) = old {
+                self.textures.remove(&old);
+            } else {
+                break;
+            }
+        }
+        // Asset ids are local aliases for this scene; cache identity is immutable content.
+        let mut textures = MetalTextureCatalog::new(
+            scene
+                .textures
+                .iter()
+                .map(|source| {
+                    let texture = &self.textures[&key(source)];
                     (
-                        id.clone(),
+                        source.asset_id.clone(),
                         MetalTexture {
                             view: &texture.texture,
                             width: texture.width,
@@ -100,26 +145,25 @@ impl MetalSceneRenderer {
                 })
                 .collect(),
         );
-        for (id, texture) in &self.textures {
-            textures.set_revision(id.clone(), texture.revision);
-            textures.set_repeat(id.clone(), true);
+        for source in scene.textures.iter() {
+            let texture = &self.textures[&key(source)];
+            textures.set_revision(source.asset_id.clone(), texture.revision);
+            textures.set_repeat(source.asset_id.clone(), true);
         }
         let output = self.context.output_texture(config).map_err(status)?;
         self.renderer.resize(config).map_err(status)?;
         self.renderer
             .sync_model(&scene.frame, &textures)
             .map_err(status)?;
-        let canvas = scene.frame.canvas;
-        let scale = (config.width as f32 / canvas.width).min(config.height as f32 / canvas.height)
-            * view.zoom;
+        let scale = transform.scale * transform.metrics.scale_factor;
         self.renderer
             .update_view(ViewportConfig {
                 transform: Affine2 {
                     a: Vec2::new(scale, 0.),
                     b: Vec2::new(0., scale),
                     origin: Vec2::new(
-                        (config.width as f32 - canvas.width * scale) / 2.,
-                        (config.height as f32 - canvas.height * scale) / 2.,
+                        transform.offset.x * transform.metrics.scale_factor,
+                        transform.offset.y * transform.metrics.scale_factor,
                     ),
                 },
                 target_extent: Vec2::new(config.width as f32, config.height as f32),

@@ -5,6 +5,11 @@ use tempfile::TempDir;
 use uuid::Uuid;
 
 pub fn sample_document() -> anyhow::Result<(Document, TempDir)> {
+    sample_document_with_binding(false)
+}
+
+#[allow(dead_code)]
+pub fn sample_document_with_binding(bound: bool) -> anyhow::Result<(Document, TempDir)> {
     let directory = tempfile::tempdir()?;
     let texture_path = directory.path().join("accent.png");
     std::fs::write(&texture_path, include_bytes!("../fixtures/accent.png"))?;
@@ -37,7 +42,37 @@ pub fn sample_document() -> anyhow::Result<(Document, TempDir)> {
     )?;
     session.edit("Create test layer", None, |edit| {
         edit.create_asset(asset)?;
-        edit.create_mesh(mesh)
+        edit.create_mesh(mesh.clone())?;
+        if bound {
+            use kasane_core::{BindingAxis, MeshBinding, MeshKeyform, Parameter};
+            let parameter_id = Uuid::new_v4().to_string();
+            edit.create_parameter(Parameter {
+                id: parameter_id.clone(),
+                name: "Pose".into(),
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.,
+                ..Default::default()
+            })?;
+            edit.create_binding(MeshBinding {
+                id: Uuid::new_v4().to_string(),
+                mesh_id: mesh.id.clone(),
+                axes: vec![BindingAxis {
+                    parameter_id,
+                    keys: vec![0., 1.],
+                }],
+                keyforms: vec![0., 1.]
+                    .into_iter()
+                    .map(|key| MeshKeyform {
+                        keys: vec![key],
+                        positions: mesh.base_positions.clone(),
+                        ..Default::default()
+                    })
+                    .collect(),
+                ..Default::default()
+            })?;
+        }
+        Ok(())
     })?;
     let receipt = session.save_project(&directory.path().join("fixture.kasane"), None)?;
     Ok((Document::open(&receipt.manifest)?, directory))

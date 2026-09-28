@@ -28,4 +28,6 @@ Shirousagi 同时保留 `local/Shirousagi/Shirousagi.psd`，可用于 PSD 导入
 顶点拖动另用 SDK 生成的基础网格夹具，或经检查满足条件的 PSD 导入结果验证。
 
 测量时记录机器、显示缩放、画布尺寸、构建模式与 Metal HUD 状态；不同配置的数据不直接比较。
-当前尚未采集运行性能基线，也未确定性能阈值。
+已采集 [CPU 与原生 Metal 基线](../docs/editor-foundation-baseline.md)，包含导入、场景求值、
+单/双模型原生渲染与切换的分位数、RSS 和 GPU 分配；据此设置 128 MiB 近期纹理缓存预算。
+无窗口测量不包含 AppKit/GPUI 输入到屏幕显示的端到端延迟，该项仍未验证。

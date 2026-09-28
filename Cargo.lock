@@ -1548,6 +1548,8 @@ dependencies = [
  "kasane-core",
  "kasane-project",
  "kasane-sdk",
+ "serde",
+ "serde_json",
  "tempfile",
  "uuid",
 ]
@@ -1561,6 +1563,7 @@ dependencies = [
  "kasane-core",
  "kasane-render",
  "kasane-render-metal",
+ "objc2 0.6.4",
 ]
 
 [[package]]
@@ -3642,6 +3645,8 @@ dependencies = [
  "metal",
  "objc2 0.6.4",
  "rust-i18n",
+ "serde",
+ "serde_json",
  "sys-locale",
  "tempfile",
  "toml 0.8.23",

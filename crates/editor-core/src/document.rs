@@ -33,6 +33,7 @@ impl From<Mesh> for Layer {
 enum Gesture {
     Rename,
     Opacity,
+    Vertices,
 }
 
 struct PendingEdit {
@@ -149,6 +150,10 @@ impl Document {
         Ok(receipt)
     }
 
+    pub fn canvas(&self) -> Canvas {
+        self.session.canvas()
+    }
+
     pub fn path(&self) -> Option<&Path> {
         self.session.project_path()
     }
@@ -214,6 +219,7 @@ impl Document {
         let label = match kind {
             Gesture::Rename => "Rename layer",
             Gesture::Opacity => "Change opacity",
+            Gesture::Vertices => "Move vertices",
         };
         self.pending = Some(PendingEdit {
             kind,
@@ -221,6 +227,111 @@ impl Document {
             edit: self.session.begin_owned_edit(label, None)?,
         });
         Ok(())
+    }
+
+    pub fn selected_vertex_ids(&self) -> Vec<kasane_core::VertexId> {
+        self.selected
+            .as_deref()
+            .and_then(|id| self.mesh(id))
+            .map(|m| m.vertex_ids)
+            .unwrap_or_default()
+    }
+    pub fn selected_vertex_positions(&self) -> Vec<(kasane_core::VertexId, crate::ModelPoint)> {
+        self.selected
+            .as_deref()
+            .and_then(|id| self.mesh(id))
+            .map(|m| {
+                m.vertex_ids
+                    .into_iter()
+                    .zip(
+                        m.base_positions
+                            .into_iter()
+                            .map(|p| crate::ModelPoint { x: p.x, y: p.y }),
+                    )
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+    pub fn vertex_unavailable(&self, mesh: &Mesh) -> Option<String> {
+        if self.session.binding_for_mesh(&mesh.id).is_some() {
+            return Some("This mesh has parameter keyforms".into());
+        }
+        if !mesh.deformer_id.is_empty() {
+            return Some("This mesh depends on a deformer".into());
+        }
+        if self
+            .session
+            .blend_binding_ids()
+            .iter()
+            .filter_map(|id| self.session.blend_binding(id))
+            .any(|b| b.target_id == mesh.id)
+        {
+            return Some("This mesh has BlendShape dependencies".into());
+        }
+        if self
+            .session
+            .glue_ids()
+            .iter()
+            .filter_map(|id| self.session.glue(id))
+            .any(|g| g.mesh_a_id == mesh.id || g.mesh_b_id == mesh.id)
+        {
+            return Some("This mesh has Glue dependencies".into());
+        }
+        None
+    }
+    pub fn begin_vertices(&mut self) -> Result<()> {
+        let mesh = self
+            .selected
+            .as_deref()
+            .and_then(|id| self.mesh(id))
+            .ok_or_else(|| anyhow!("Select a mesh"))?;
+        ensure!(
+            self.vertex_unavailable(&mesh).is_none(),
+            "Mesh is not available for base vertex editing"
+        );
+        self.begin_gesture(Gesture::Vertices)
+    }
+    pub fn preview_vertices(
+        &mut self,
+        ids: &[kasane_core::VertexId],
+        positions: &[crate::ModelPoint],
+    ) -> Result<()> {
+        let pending = self
+            .pending
+            .as_mut()
+            .ok_or_else(|| anyhow!("No vertex gesture"))?;
+        ensure!(pending.kind == Gesture::Vertices, "Another edit is active");
+        let positions = positions
+            .iter()
+            .map(|p| Vec2::new(p.x, p.y))
+            .collect::<Vec<_>>();
+        Ok(pending
+            .edit
+            .update_positions(&pending.original.id, ids, &positions)?)
+    }
+    pub fn geometry(&self, scene: &SceneSnapshot) -> std::sync::Arc<[crate::MeshGeometry]> {
+        scene
+            .frame
+            .drawables
+            .iter()
+            .filter_map(|drawable| {
+                let mesh = self.mesh(&drawable.id)?;
+                Some(crate::MeshGeometry {
+                    id: mesh.id.clone(),
+                    unavailable: self.vertex_unavailable(&mesh),
+                    vertices: mesh
+                        .vertex_ids
+                        .iter()
+                        .copied()
+                        .zip(drawable.positions.iter().map(|p| {
+                            crate::ViewportTransform::evaluated_to_source(scene.frame.canvas, *p)
+                        }))
+                        .collect(),
+                    triangles: mesh.triangles,
+                })
+            })
+            .collect::<Vec<_>>()
+            .into()
     }
 
     pub fn preview_name(&mut self, name: &str) -> Result<()> {

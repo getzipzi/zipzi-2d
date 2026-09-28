@@ -1,9 +1,12 @@
 rust_i18n::i18n!("locales", fallback = "en");
 
+mod canvas;
+mod docking;
 mod i18n;
 mod menus;
 mod preview;
 mod project;
+mod settings;
 mod ui;
 
 use editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
@@ -14,19 +17,24 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 use rust_i18n::t;
-use std::sync::mpsc;
 
 struct EditorView {
     focus: FocusHandle,
+    modal: bool,
+    control_target: Option<(editor_core::DocumentId, Option<String>)>,
+    frozen_frames: std::collections::HashMap<editor_core::DocumentId, preview::Presented>,
     editor: Editor,
+    dock: Option<docking::DockWorkspace>,
+    ui_subscriptions: Vec<Subscription>,
     name: Entity<InputState>,
     opacity: Entity<SliderState>,
-    frame: Option<preview::Image>,
+    frame: Option<preview::Presented>,
+    render_stats: (u64, u64, u64),
+    menu_state: Vec<bool>,
     edit_error: Option<String>,
     render_error: Option<String>,
     message: String,
-    preview_target: editor_render::MetalTargetConfig,
-    requests: Option<mpsc::Sender<preview::Request>>,
+    requests: Option<preview::RequestSender>,
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
     #[cfg(debug_assertions)]
@@ -36,65 +44,30 @@ struct EditorView {
 impl EditorView {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let editor = Editor::new().expect("create blank document");
-        let name = cx
-            .new(|cx| InputState::new(window, cx).placeholder(t!("editor.layer_name_placeholder")));
-        let opacity = cx.new(|_| {
-            SliderState::new()
-                .min(0.)
-                .max(100.)
-                .step(1.)
-                .default_value(0.)
-        });
-        let subscriptions = vec![
-            cx.subscribe_in(
-                &name,
-                window,
-                |this: &mut Self, input, event: &InputEvent, window, cx| {
-                    if this.editor.is_busy() {
-                        return;
-                    }
-                    let result = match event {
-                        InputEvent::Change => this.editor.execute(EditorCommand::PreviewName(
-                            input.read(cx).value().to_string(),
-                        )),
-                        InputEvent::PressEnter { .. } | InputEvent::Blur => {
-                            this.editor.execute(EditorCommand::FinishEdit)
-                        }
-                        _ => return,
-                    };
-                    this.complete_edit(result, window, cx, false);
-                },
-            ),
-            cx.subscribe_in(
-                &opacity,
-                window,
-                |this: &mut Self, _, event: &SliderEvent, window, cx| {
-                    if this.editor.is_busy() {
-                        return;
-                    }
-                    let result = match event {
-                        SliderEvent::Change(SliderValue::Single(value)) => this
-                            .editor
-                            .execute(EditorCommand::PreviewOpacity(value / 100.)),
-                        SliderEvent::Release(_) => this.editor.execute(EditorCommand::FinishEdit),
-                        _ => return,
-                    };
-                    this.complete_edit(result, window, cx, false);
-                },
-            ),
-        ];
+        let target = Self::property_target(&editor);
+        let (name, opacity, subscriptions) = Self::create_controls(window, cx);
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut editor = Self {
             focus,
+            modal: false,
+            control_target: target,
+            frozen_frames: Default::default(),
             editor,
+            dock: None,
+            ui_subscriptions: Vec::new(),
             name,
             opacity,
             frame: None,
+            render_stats: (0, 0, 0),
+            menu_state: Vec::new(),
             edit_error: None,
             render_error: None,
-            message: t!("editor.welcome").into_owned(),
-            preview_target: preview::target_config(window),
+            message: if cx.global::<settings::Settings>().notices.is_empty() {
+                t!("editor.welcome").into_owned()
+            } else {
+                cx.global::<settings::Settings>().notices.join("; ")
+            },
             requests: None,
             gpu_device: None,
             _frames: None,
@@ -105,16 +78,13 @@ impl EditorView {
         let entity = cx.weak_entity();
         window.on_window_should_close(cx, move |window, cx| {
             entity
-                .update(cx, |this, cx| match this.editor.close_disposition() {
-                    CloseDisposition::Busy => false,
-                    CloseDisposition::Ready => true,
-                    CloseDisposition::NeedsConfirmation => {
-                        this.confirm_close(window, cx);
-                        false
-                    }
+                .update(cx, |this, cx| {
+                    this.close(window, cx);
+                    false
                 })
                 .unwrap_or(true)
         });
+        editor.init_dock(window, cx);
         editor.connect_preview(window, cx);
         #[cfg(debug_assertions)]
         if std::env::var("MTL_HUD_ENABLED").is_ok_and(|enabled| enabled == "1") {
@@ -131,8 +101,96 @@ impl EditorView {
         editor
     }
 
+    fn create_controls(
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (Entity<InputState>, Entity<SliderState>, Vec<Subscription>) {
+        let name = cx
+            .new(|cx| InputState::new(window, cx).placeholder(t!("editor.layer_name_placeholder")));
+        let opacity = cx.new(|_| {
+            SliderState::new()
+                .min(0.)
+                .max(100.)
+                .step(1.)
+                .default_value(0.)
+        });
+        let subscriptions = vec![
+            cx.subscribe_in(
+                &name,
+                window,
+                move |this: &mut Self, input, event: &InputEvent, window, cx| {
+                    if this.modal || this.editor.is_busy() || input != &this.name {
+                        return;
+                    }
+                    let Some((id, _)) = this.control_target.as_ref() else {
+                        return;
+                    };
+                    if this.control_target != Self::property_target(&this.editor) {
+                        return;
+                    }
+                    let id = *id;
+                    let result = match event {
+                        InputEvent::Change => this.editor.execute_for(
+                            id,
+                            EditorCommand::PreviewName(input.read(cx).value().to_string()),
+                        ),
+                        InputEvent::PressEnter { .. } => return, // Commit is owned by the configured command.
+                        InputEvent::Blur => this.editor.execute_for(id, EditorCommand::FinishEdit),
+                        InputEvent::Focus => {
+                            cx.notify();
+                            return;
+                        }
+                    };
+                    this.complete_edit(result, window, cx, false);
+                },
+            ),
+            cx.subscribe_in(
+                &opacity,
+                window,
+                move |this: &mut Self, slider, event: &SliderEvent, window, cx| {
+                    if this.modal || this.editor.is_busy() || slider != &this.opacity {
+                        return;
+                    }
+                    let Some((id, _)) = this.control_target.as_ref() else {
+                        return;
+                    };
+                    if this.control_target != Self::property_target(&this.editor) {
+                        return;
+                    }
+                    let id = *id;
+                    let result = match event {
+                        SliderEvent::Change(SliderValue::Single(value)) => this
+                            .editor
+                            .execute_for(id, EditorCommand::PreviewOpacity(value / 100.)),
+                        SliderEvent::Release(_) => {
+                            this.editor.execute_for(id, EditorCommand::FinishEdit)
+                        }
+                        _ => return,
+                    };
+                    this.complete_edit(result, window, cx, false);
+                },
+            ),
+        ];
+        (name, opacity, subscriptions)
+    }
+
+    fn property_target(editor: &Editor) -> Option<(editor_core::DocumentId, Option<String>)> {
+        editor
+            .active_id()
+            .map(|id| (id, editor.selected_layer().map(|layer| layer.id)))
+    }
+
     fn sync_controls(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let layer = self.editor.document().selected_layer();
+        let target = Self::property_target(&self.editor);
+        if self.control_target != target {
+            // InputState owns text undo history, so even identically named layers
+            // need separate controls. Entity checks also discard queued old events.
+            let (name, opacity, subscriptions) = Self::create_controls(window, cx);
+            self.name = name;
+            self.opacity = opacity;
+            self._subscriptions = subscriptions;
+        }
+        let layer = self.editor.selected_layer();
         let name = layer.as_ref().map_or("", |layer| layer.name.as_str());
         if self.name.read(cx).value().as_ref() != name {
             self.name
@@ -141,6 +199,7 @@ impl EditorView {
         let opacity = layer.as_ref().map_or(0., |layer| layer.opacity * 100.);
         self.opacity
             .update(cx, |state, cx| state.set_value(opacity, window, cx));
+        self.control_target = target;
     }
 
     fn complete_edit(
@@ -162,6 +221,8 @@ impl EditorView {
         self._frames = None;
         self.requests = None;
         self.frame = None;
+        self.frozen_frames.clear();
+        self.editor.invalidate_preview();
         let (requests, frames, device) = match preview::start(window) {
             Ok(connection) => connection,
             Err(error) => {
@@ -175,13 +236,20 @@ impl EditorView {
             while let Ok(frame) = frames.recv().await {
                 if this
                     .update(cx, |this, cx| {
-                        // Ignore old frames, including frames from a document replaced by Open.
+                        // The core pairs each request with the document active at submission.
                         if frame.revision != 0 && !this.editor.accepts_preview(frame.revision) {
                             return;
                         }
                         match frame.image {
                             Ok(image) => {
-                                this.frame = Some(image);
+                                let Some(canvas) = frame.canvas else {
+                                    return;
+                                };
+                                if !this.editor.present_frame(canvas.clone()) {
+                                    return;
+                                }
+                                this.render_stats = frame.stats;
+                                this.frame = Some(preview::Presented { image, canvas });
                                 this.render_error = None;
                             }
                             Err(error) => {
@@ -201,13 +269,27 @@ impl EditorView {
     }
 
     fn redraw(&mut self, cx: &mut Context<Self>) {
-        match self.editor.preview() {
-            Ok(preview) => {
+        if self.editor.is_busy() {
+            cx.notify();
+            return;
+        }
+        match self.editor.preview_if_needed() {
+            Ok(Some(preview)) => {
+                let Some(canvas) = preview.canvas else {
+                    return;
+                };
+                let Some((width, height)) = canvas.transform.metrics.physical_size() else {
+                    return;
+                };
                 let request = preview::Request {
                     revision: preview.revision,
+                    canvas,
                     scene: preview.scene,
-                    view: preview.view,
-                    target: self.preview_target,
+                    target: editor_render::MetalTargetConfig {
+                        width,
+                        height,
+                        format: metal::MTLPixelFormat::RGBA8Unorm,
+                    },
                 };
                 if self
                     .requests
@@ -217,6 +299,7 @@ impl EditorView {
                     self.render_error = Some(t!("editor.preview_stopped").into_owned());
                 }
             }
+            Ok(None) => {}
             Err(error) => self.render_error = Some(error.to_string()),
         }
         cx.notify();
@@ -230,6 +313,8 @@ fn main() {
         .with_assets(gpui_kit::assets::Assets)
         .run(move |cx| {
             gpui_kit::init(cx);
+            let settings = settings::Settings::load(cx);
+            cx.set_global(settings);
             menus::init(cx);
             Theme::change(ThemeMode::Dark, None, cx);
             cx.on_window_closed(|cx, _| {

@@ -2,7 +2,7 @@
 
 基于 **GPUI Kit + kasane-sdk + kasane-render-metal** 的 macOS 编辑器。
 
-下一阶段的已确认设计见 [编辑器基础架构](docs/editor-foundation.md)，性能输入见 [基准模型](models/README.md)。下文描述当前实现。
+已确认的目标设计见 [编辑器基础架构](docs/editor-foundation.md)，性能输入见 [基准模型](models/README.md)。下文描述当前实现。
 
 ```text
 crates/editor                EditorView、Kit 界面、文件对话框与 GPUI 预览合成
@@ -18,7 +18,7 @@ crates/component-playground  Kit 组件示例、状态反馈与 Rust 用法
 ```text
 web/
 ├── kasane-editor/
-└── kesane-2d/       https://github.com/pakholeung37/kasane-2d
+└── kasane-2d/       https://github.com/pakholeung37/kasane-2d
 ```
 
 Kasane checkout 必须包含 `modules/kasane-render-metal` 及对应的公共渲染模块修改。GPUI Kit 使用官方固定 commit，不需要本地 gpui-ce 或 gpui-kit checkout。
@@ -57,10 +57,15 @@ GPUI 使用原生 Metal；Kasane 共享 GPUI 的 device/queue，后台绘制不�
 - 从原生“文件”菜单导入 `model3.json` 或分层 PSD。model3 成为待保存的文档；PSD 导入时选择新项目目录，由 SDK 写入图层和纹理。
 - 缩放和重置视图只影响视口，不修改模型，也不进入撤销历史。
 - macOS 原生菜单栏提供文件、编辑、视图和窗口菜单。支持 ⌘O 打开、⌘S 保存、⇧⌘S 另存为、⌘Z 撤销、⇧⌘Z 重做，以及 ⌘+/⌘−/⌘0 缩放和重置视图。
-- 名称输入框获得焦点时，编辑菜单操作文本（包括剪切、拷贝、粘贴、全选）；点击画布后，撤销/重做操作文档。⌘W 关闭、⌘Q 退出沿用未保存提示。
-- 打开、导入其他项目或关闭窗口时提示未保存的更改。打开或导入失败保留当前文档；当前版本要求项目纹理完整可读。
+- 名称输入框获得焦点时，编辑菜单操作文本（包括剪切、拷贝、粘贴、全选）；点击画布后，撤销/重做操作文档。⌘W 关闭活动模型，Ctrl-Tab / Ctrl-Shift-Tab 切换模型；⌘Q 按文档处理未保存状态后退出。
+- 新建、打开、导入成功后新增模型标签页；重复打开同一项目激活已有标签页，失败保留当前文档。关闭脏文档提供保存、放弃、取消，关闭最后标签后保留空工作区；当前版本要求项目纹理完整可读。
 
-Input、Checkbox、Slider、Button、主题和 Root 使用 Kit 原有实现。尚无网格绘制工具、时间轴或停靠布局。项目打开和导入在后台执行；保存目前同步执行，大项目可能短暂阻塞界面。详细分层见 [文档编辑架构](docs/document-editing.md)。
+- 中央模型标签页固定，图层与属性面板使用 Kit Dock，可拖拽、分组、拆分、折叠；布局自动保存，窗口菜单可显示/隐藏面板和重置布局。
+- 画布中按 V 激活基础顶点工具；点击选择、Shift 点击切换多选、拖动后一次提交，Esc 或失焦取消。仅允许无参数、变形器、BlendShape、Glue 依赖的基础网格编辑。
+- 中键拖动平移，缩放/重置与模型、控制点、命中共用实测画布坐标。顶点拖动期间禁用缩放；中键导航先取消拖动。
+- 快捷键可通过应用配置覆盖或取消绑定；编辑菜单提供快捷键清单及恢复默认。格式与失败回退见 [实施记录](docs/editor-foundation-implementation.md)。
+
+Input、Checkbox、Slider、Button、Dock、主题和 Root 使用 Kit 原有实现。项目打开、导入和保存均在后台执行；保存期间只冻结对应文档，其他标签页仍可操作。详细分层见 [文档编辑架构](docs/document-editing.md)，实现记录与未验证交互见 [实施记录](docs/editor-foundation-implementation.md)。
 
 Playground 提供 Button、Checkbox、Input、Slider、Tabs、Dialog、Typography 七页。UI 交互与视觉验证由用户手动完成，不使用 computer-use。
 

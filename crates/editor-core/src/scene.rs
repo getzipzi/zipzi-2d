@@ -22,10 +22,14 @@ pub struct SceneSnapshot {
 #[derive(Clone, Copy, Debug)]
 pub struct ViewState {
     pub zoom: f32,
+    pub pan: crate::CanvasPoint,
 }
 
 impl Default for ViewState {
     fn default() -> Self {
-        Self { zoom: 1.0 }
+        Self {
+            zoom: 1.0,
+            pan: crate::CanvasPoint::default(),
+        }
     }
 }

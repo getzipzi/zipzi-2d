@@ -1,8 +1,11 @@
 # 编辑器基础架构：第一阶段
 
-状态：2026-09-28 讨论确认的目标设计。Editor 已迁入 editor-core，UI 层改为
-EditorView；已有固定快捷键和基础焦点路由，多文档、Dock、完整快捷键架构、顶点工具和后台保存尚未实现。当前实现见
-[document-editing.md](document-editing.md)。
+状态：2026-09-28。五个实施步骤的代码已落地：多文档、后台保存、统一命令与快捷键配置、
+Kit Dock 与布局持久化、CanvasView 与基础顶点工具；自动化回归与无窗口原生 Metal 基线已完成。
+原生焦点、输入法、Dock 拖拽及视觉表现尚未经人工验收，不以此阻塞实现交付。
+当前边界和验证结果见 [实施记录](editor-foundation-implementation.md)、
+[文档编辑架构](document-editing.md) 与 [性能记录](editor-foundation-baseline.md)。
+下文保留目标约束，涉及原“当前实现”的描述为开工基线。
 
 ## 产品范围
 

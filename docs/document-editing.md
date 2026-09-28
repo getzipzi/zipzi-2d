@@ -1,80 +1,98 @@
 # Document editing
 
-The editor is a Rust client of `kasane-sdk`. The SDK owns the model, validation,
-project publication, undo and redo; editor code owns selection and viewport state.
-No `kasane-sdk-observe`, Python, WGPU or backend selection is needed for this path.
+The editor is a Rust client of `kasane-sdk`. SDK owns model semantics, transactions,
+validation, publication and undo/redo. No Python runtime, IPC, second history stack
+or event bus is introduced.
 
 ```text
-editor (EditorView: GPUI controls, project dialogs and host task scheduling)
+editor (EditorView: GPUI, controls, native dialogs, executor and preview composition)
   ├── editor-core
-  │     ├── Editor → Document → kasane-sdk::AuthoringSession
-  │     └── SceneSnapshot → evaluated frame + shared decoded textures
+  │     ├── Editor (window workspace, document identities, tasks and close/exit)
+  │     │     └── DocumentSession (viewport, scene cache/revisions and ToolController)
+  │     │           └── Document → kasane-sdk::AuthoringSession
+  │     └── SceneSnapshot (evaluated frame and shared decoded textures)
   └── editor-render → kasane-render + kasane-render-metal
-          └── immutable Metal texture → GPUI composition
+        └── immutable Metal texture → GPUI composition
 ```
 
-`editor-core/src/editor.rs` owns the UI-independent `Editor`: its document,
-viewport, busy state, command availability, close disposition and preview request
-revision. The UI has read-only access to the document and sends `EditorCommand`
-values for edits. Busy checks are enforced in core as well as reflected in the
-controls. `LoadRequest` performs open/import work on the host's background
-executor; `Editor::finish_load` replaces the document and resets the viewport
-only on success, preserving the existing state on failure. Core creates preview
-inputs and rejects stale preview revisions. It has no GPUI or Metal dependency.
+`editor-core/src/workspace.rs` implements the public `Editor`. Each model has a
+runtime `DocumentId`, independent of model UUID and project path. `session.rs`
+owns each tab's model/view/tool state as a private `DocumentSession`. No new crate is needed: these modules have the same dependency
+boundary and neither depends on GPUI or GPU types. `editor.rs` declares editing
+intents, file requests and preview inputs.
 
-`editor/src/main.rs` owns `EditorView`, the GPUI adapter. It translates input
-events to core commands, synchronizes controls, formats localized errors and
-notices, and connects preview inputs to the native renderer. Dialog presentation,
-focus, window lifecycle and executor integration remain in this UI crate.
-This separation retains the current single-document behavior; multi-document
-workspace support is a subsequent step.
+Opening/importing adds a tab only after success. The existing document and view
+survive failure. Opening a project directory, its manifest or an existing symlink
+alias activates the same tab without replacing unsaved edits. Save As rejects
+another open document's location, including a destination reserved by a pending
+save/load. A duplicate model UUID in two files remains two independent sessions.
+PSD publication still uses SDK rules: an existing destination is rejected.
 
-`editor-core/src/document.rs` creates and opens documents, selects meshes,
-and translates UI editing gestures into SDK transactions. A persistent
-`EditSession` previews a candidate document while the committed session remains
-unchanged. Enter/blur commits a name; slider release commits opacity. Switching
-properties or selection also finishes the current gesture. Cancel drops the
-candidate. Gestures that return to their original value do not consume an undo
-step or discard redo. Visibility changes are immediate SDK transactions.
+`LoadTask` and `SaveTask` are non-cloneable ownership envelopes containing document
+and operation identities. Hosts run them on a background executor and return the
+completion to core. Completion never resolves its target from the active tab.
+`SaveTask` owns the original document session; the tab holds only a read-only
+summary, property presentation and viewport while it saves. SDK errors return the
+same session and history. A save delivered to the wrong workspace is rejected
+without consuming the completion, allowing delivery to the owner. No UI-blocking
+write lock, disk reopen or alternate project writer is used.
 
-`editor-core/src/scene.rs` defines CPU-only render inputs and independent
-viewport state. The document evaluates committed previews through the SDK's
-preview cache and candidates through the core evaluator. Decoded texture bytes
-are loaded when the document opens and retained with `Arc`, so a queued snapshot
-does not depend on files or the live editing session remaining alive. External
-asset changes require reopening the project. Future texture editing must refresh
-these resources as part of the document operation.
+Save freezes only its document. Other tabs can edit, open and save. A close during
+save waits for the result, closes only after success and leaves the tab open on
+failure. Dirty close offers Save/Discard/Cancel. Cancelling a picker aborts the
+close/exit. Closing the last document leaves an empty workspace; New/Open/Import
+still work. Window close and Quit process documents in order; cancellation stops
+that process (documents already closed stay closed). Exiting while a load is
+pending reports that loading must finish before exit.
 
-`editor-render` receives those values and owns GPU resources. It uploads actual
-document textures, submits on GPUI's queue and returns a new immutable output
-texture. It does not know about selection, history or project paths. The GPUI
-worker/Surface integration remains in `editor/src/preview.rs`; project dialogs
-live in `project.rs`, and layout in `ui.rs`.
+`Document` owns editor selection and a persistent SDK candidate for name/opacity
+editing. Enter/blur and slider release commit; Esc cancels name editing. Switching
+tabs commits property editing and restores that tab's selection and viewport.
+An unchanged candidate does not consume history or discard redo. The SDK remains
+the sole owner of model history. Save/close/tool coordination cancels canvas candidates before moving or closing a session.
+Vertex drags use a fixed target and original positions, update SDK candidates, and
+commit the final release position once; cancellation, no-op and invalid updates
+preserve model history and redo. Only base meshes without parameter, deformer,
+BlendShape or Glue dependencies are editable.
 
-`editor/src/menus.rs` installs the native application menu and keyboard bindings.
-The editor root has a focus handle and command context; clicking the canvas moves
-focus out of the name input. Native menu commands invoke the editor operations.
-Kit's Undo/Redo action types are reused so the focused text input handles its own
-history before the editor's document handlers. Document handlers are registered
-only when available, allowing AppKit to validate their menu items. Close and Quit
-use the same unsaved-document prompt as closing the single editor window.
+The UI creates property controls with a captured document identity. Switching tabs
+replaces their entities/subscriptions, preventing late old-control events and text
+undo history from crossing documents. File dialogs are modal in the UI adapter;
+background IO is not. Canvas tabs are central and the layers/properties panels
+follow the active document. Cmd-W closes the active model, window close is a
+separate menu action, and Ctrl-Tab/Ctrl-Shift-Tab navigate models.
 
-The editor starts with an empty SDK document, with no layer or texture. Tests
-create a separate fixture through the SDK. Opening a project creates and
-validates a replacement document in a background task before replacing the
-current one. Missing/corrupt resources fail
-the open operation in this version; a resource-repair UI is not yet implemented.
-The File menu imports model3 as an unsaved document or PSD into a new project
-directory through the SDK. Import also runs in the background and keeps the
-current document if loading fails. Saving runs synchronously and surfaces SDK
-errors and publication warnings.
+`commands.rs` owns stable command IDs, localized label keys, availability and repeat
+policy; `settings.rs` validates whole shortcut configurations and atomically writes
+versioned preferences. The host normalizes keys using GPUI's platform mapper,
+installs only effective bindings, and rebuilds native menus from the same catalog.
+Text, canvas and modal contexts remain GPUI contexts; there is no second dispatcher.
+Layout uses the locked Kit DockArea/DockSkin. Canvas is permanent in the center;
+shared Layers/Properties panels are independent of document lifetimes. Invalid
+persisted layouts reset; invalid Canvas regrouping reverts the previous valid layout.
 
-Tests cover gesture grouping/cancellation, selection, undo/redo, immutable
-snapshots, project/texture round trips and failed publication. The native Metal
-tests render SDK-backed inputs with GPUI and verify composition, opacity,
-visibility, resizing and retained frames. File dialogs, IME, focus transitions
-window-close interactions and native menu/focus routing still require manual
-verification; no computer-use tests run.
+Only the active document submits previews. Every frame carries document, scene, viewport and request identities. Scene revisions
+include uncommitted candidates. Hover and selection only rebuild overlays; viewport
+changes reuse the evaluated scene. CanvasView measures actual logical bounds and
+DPI, and core provides the shared source/logical/physical transform. A new frame
+replaces the image and its geometry together; hit tests use the displayed geometry,
+and active gestures keep their original targets. Hidden/zero canvases do not submit.
+The worker has one current request and one replaceable latest request, with a bounded
+completed-frame channel. During save the adapter retains that document's last image.
 
-Core editor tests additionally cover busy-operation guards, failed-load state
-retention, preview invalidation, and save/reopen through the editor controller.
+GPU resources are keyed by immutable content hash and dimensions; per-scene asset IDs
+are aliases, so equal IDs in different documents cannot cross-contaminate textures.
+The recent texture cache has a 128 MiB budget based on the measured two-model working
+set. Least-recently-used inactive textures are evicted when over budget; an active
+working set may exceed it. Closing a document does not immediately flush the recent
+cache. Production rendering uses the shared GPUI Metal queue without waits/readback.
+
+Tests cover document isolation, directory/manifest/symlink deduplication, save
+conflicts and reservations, failed opens/saves, close-after-save, cancellation,
+wrong-workspace completions, stale preview rejection and real thread ownership
+transfer with history preservation. SDK document and native Metal regression
+tests remain in place. Native focus, IME, dialogs, tabs and window close require
+manual verification; no computer-use tests are run.
+
+The completed steps, configuration format, limitations and manual checklist are recorded in
+[foundation implementation](editor-foundation-implementation.md).

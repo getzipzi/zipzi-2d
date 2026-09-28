@@ -165,7 +165,10 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
             &gpu.queue,
             config,
             &document.snapshot()?,
-            ViewState { zoom: 0.5 },
+            ViewState {
+                zoom: 0.5,
+                ..Default::default()
+            },
         )?;
         let image = gpui.render_scene_to_image(
             &scene(smaller, 128., false),
@@ -225,6 +228,76 @@ fn native_metal_preserves_premultiplied_alpha_for_transparent_targets() -> anyho
                 );
             }
         }
+        Ok(())
+    })
+}
+
+#[test]
+fn content_cache_isolates_same_asset_ids_and_reuses_textures_across_views() -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| {
+        let mut gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let config = MetalTargetConfig {
+            width: 256,
+            height: 256,
+            format: MTLPixelFormat::RGBA8Unorm,
+        };
+        let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
+        let a = input(1., true)?;
+        let mut b = a.clone();
+        let mut textures = b.textures.to_vec();
+        textures[0].sha256 = "blue-fixture".into();
+        textures[0].rgba = vec![0, 0, 255, 255]
+            .repeat((textures[0].width * textures[0].height) as usize)
+            .into();
+        b.textures = textures.into();
+        let draw = |renderer: &mut MetalSceneRenderer,
+                    gpui: &mut MetalRenderer,
+                    frame: &SceneSnapshot|
+         -> anyhow::Result<[u8; 4]> {
+            let image = renderer.draw(&gpu.queue, config, frame, ViewState::default())?;
+            Ok(gpui
+                .render_scene_to_image(
+                    &scene(image, 256., false),
+                    size(DevicePixels(256), DevicePixels(256)),
+                )?
+                .get_pixel(128, 128)
+                .0)
+        };
+        let original = draw(&mut renderer, &mut gpui, &a)?;
+        assert_eq!(renderer.stats().1, 1);
+        let blue = draw(&mut renderer, &mut gpui, &b)?;
+        assert_ne!(original, blue);
+        assert_eq!(renderer.stats().1, 2);
+        assert_eq!(draw(&mut renderer, &mut gpui, &a)?, original);
+        assert_eq!(renderer.stats().1, 2);
+        renderer.draw(
+            &gpu.queue,
+            config,
+            &a,
+            ViewState {
+                zoom: 1.5,
+                ..Default::default()
+            },
+        )?;
+        assert_eq!(
+            renderer.stats().1,
+            2,
+            "viewport changes do not upload textures"
+        );
+        let mut alias = a.clone();
+        let mut frame = (*alias.frame).clone();
+        frame.drawables[0].texture_asset_id = "other-document-asset".into();
+        alias.frame = std::sync::Arc::new(frame);
+        let mut textures = alias.textures.to_vec();
+        textures[0].asset_id = "other-document-asset".into();
+        alias.textures = textures.into();
+        assert_eq!(draw(&mut renderer, &mut gpui, &alias)?, original);
+        assert_eq!(
+            renderer.stats().1,
+            2,
+            "identical content shares immutable texture storage"
+        );
         Ok(())
     })
 }
