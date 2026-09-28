@@ -3,6 +3,7 @@ rust_i18n::i18n!("locales", fallback = "en");
 mod canvas;
 mod docking;
 #[cfg(test)]
+#[path = "../headless_tests/mod.rs"]
 mod headless_tests;
 mod i18n;
 mod menus;
