@@ -29,13 +29,15 @@ impl CanvasView {
             let focus = cx.focus_handle();
             let subscriptions = vec![
                 cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
-                cx.on_focus_out(&focus, window, |this, _, _, cx| {
+                cx.on_focus_out(&focus, window, |this, _, window, cx| {
                     this.space_held = false;
+                    window.suppress_key_repeats("space", false);
                     this.cancel(cx);
                 }),
                 cx.observe_window_visibility(window, |this, _, window, cx| {
                     if !window.is_visible() {
                         this.space_held = false;
+                        window.suppress_key_repeats("space", false);
                         this.cancel(cx);
                         let _ = this.owner.update(cx, |owner, cx| {
                             owner.editor.set_canvas_metrics(CanvasMetrics::default());
@@ -48,6 +50,7 @@ impl CanvasView {
                 cx.observe_window_activation(window, |this, window, cx| {
                     if !window.is_window_active() {
                         this.space_held = false;
+                        window.suppress_key_repeats("space", false);
                         this.cancel(cx);
                     }
                 }),
@@ -146,6 +149,9 @@ impl CanvasView {
                 x: (event.position.x - position.x).as_f32(),
                 y: (event.position.y - position.y).as_f32(),
             };
+            if delta.x == 0. && delta.y == 0. {
+                return;
+            }
             self.pan = Some(PanGesture {
                 position: event.position,
                 button,
@@ -295,7 +301,9 @@ impl Render for CanvasView {
                 if delta_y.abs() < 0.1 {
                     return;
                 }
-                let step = if delta_y > 0.0 { 0.1 } else { -0.1 };
+                // One wheel line keeps the previous 10% step, while precise
+                // trackpad deltas contribute proportionally instead of jumping.
+                let step = delta_y * (0.1 / 16.0);
                 let _ = this.owner.update(cx, |owner, cx| {
                     if owner.modal || owner.editor.is_busy() {
                         return;
@@ -437,9 +445,10 @@ impl Render for CanvasView {
             } else {
                 "KasaneCanvas"
             })
-            .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 if event.keystroke.key == "space" && !event.is_held {
                     this.space_held = true;
+                    window.suppress_key_repeats("space", true);
                     cx.notify();
                 } else if event.keystroke.key == "h" && !event.is_held {
                     this.hand_tool = true;
@@ -459,9 +468,10 @@ impl Render for CanvasView {
                     cx.notify();
                 }
             }))
-            .on_key_up(cx.listener(|this, event: &KeyUpEvent, _, cx| {
+            .on_key_up(cx.listener(|this, event: &KeyUpEvent, window, cx| {
                 if event.keystroke.key == "space" {
                     this.space_held = false;
+                    window.suppress_key_repeats("space", false);
                     cx.notify();
                 }
             }))

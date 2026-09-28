@@ -652,7 +652,28 @@
  use derive_more::{Deref, DerefMut};
  use futures::channel::oneshot;
  use gpui_util::post_inc;
-@@ -3263,6 +3261,8 @@
+@@ -1221,2 +1219,3 @@
+     last_input_modality: InputModality,
++    suppressed_key_repeats: FxHashSet<String>,
+     touch_gestures: TouchGestureRecognizer,
+@@ -2074,2 +2073,3 @@
+             last_input_modality: InputModality::Mouse,
++            suppressed_key_repeats: FxHashSet::default(),
+             touch_gestures: TouchGestureRecognizer::new(
+@@ -2275,2 +2275,12 @@
+             self.invalidator.set_dirty(true);
++        }
++    }
++
++    /// Suppress repeated key-down events for a key temporarily owned by a gesture.
++    /// The initial key-down and key-up events are still dispatched normally.
++    pub fn suppress_key_repeats(&mut self, key: &str, suppress: bool) {
++        if suppress {
++            self.suppressed_key_repeats.insert(key.to_owned());
++        } else {
++            self.suppressed_key_repeats.remove(key);
+         }
+@@ -3263,6 +3273,8 @@
      /// the contents of the new [`Scene`], use [`Self::present`].
      #[profiling::function]
      pub fn draw(&mut self, cx: &mut App) -> ArenaClearNeeded {
@@ -661,7 +682,7 @@
          // Drain every draw in profiler builds so a previous frame's
          // first-invalidation timestamp can't be attributed to this one.
          #[cfg(feature = "profiler")]
-@@ -3404,6 +3404,8 @@
+@@ -3404,6 +3416,8 @@
              self.refresh();
          }
          self.needs_present.set(true);
@@ -670,7 +691,7 @@
 
          #[cfg(feature = "profiler")]
          {
-@@ -4978,7 +4980,11 @@
+@@ -4978,7 +4992,11 @@
      ///
      /// This method should only be called as part of the paint phase of element drawing.
      #[cfg(target_os = "macos")]
@@ -683,7 +704,7 @@
          use crate::PaintSurface;
 
          self.invalidator.debug_assert_paint();
-@@ -4989,8 +4995,15 @@
+@@ -4989,8 +5007,15 @@
              order: 0,
              bounds,
              content_mask,
@@ -700,10 +721,22 @@
      }
 
      /// Removes an image from the sprite atlas.
-@@ -5413,6 +5426,13 @@
-     /// Dispatch a mouse, keyboard, or touch event on the window.
-     #[profiling::function]
+@@ -5415,2 +5440,23 @@
      pub fn dispatch_event(&mut self, event: PlatformInput, cx: &mut App) -> DispatchEventResult {
++        match &event {
++            PlatformInput::KeyDown(key)
++                if key.is_held && self.suppressed_key_repeats.contains(&key.keystroke.key) =>
++            {
++                return DispatchEventResult {
++                    propagate: false,
++                    default_prevented: true,
++                };
++            }
++            PlatformInput::KeyUp(key) => {
++                self.suppressed_key_repeats.remove(&key.keystroke.key);
++            }
++            _ => {}
++        }
 +        let _trace_input = crate::frame_trace::InputScope::begin(match &event {
 +            PlatformInput::MouseMove(_) => 1,
 +            PlatformInput::MouseDown(_) => 2,
@@ -712,5 +745,3 @@
 +            _ => 5,
 +        });
          #[cfg(feature = "profiler")]
-         self.window_profiler.begin_input(event.kind_name());
-         let update_count_before = self.invalidator.update_count();

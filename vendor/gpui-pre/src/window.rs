@@ -1217,6 +1217,7 @@ pub struct Window {
     #[cfg(feature = "profiler")]
     window_profiler: profiler::WindowProfiler,
     last_input_modality: InputModality,
+    suppressed_key_repeats: FxHashSet<String>,
     touch_gestures: TouchGestureRecognizer,
     touch_prediction_enabled: bool,
     long_press_timer: Option<Task<()>>,
@@ -2070,6 +2071,7 @@ impl Window {
             #[cfg(feature = "profiler")]
             window_profiler: profiler::WindowProfiler::new(handle.window_id())?,
             last_input_modality: InputModality::Mouse,
+            suppressed_key_repeats: FxHashSet::default(),
             touch_gestures: TouchGestureRecognizer::new(
                 cx.platform
                     .gestures()
@@ -2271,6 +2273,16 @@ impl Window {
         if self.invalidator.not_drawing() {
             self.refreshing = true;
             self.invalidator.set_dirty(true);
+        }
+    }
+
+    /// Suppress repeated key-down events for a key temporarily owned by a gesture.
+    /// The initial key-down and key-up events are still dispatched normally.
+    pub fn suppress_key_repeats(&mut self, key: &str, suppress: bool) {
+        if suppress {
+            self.suppressed_key_repeats.insert(key.to_owned());
+        } else {
+            self.suppressed_key_repeats.remove(key);
         }
     }
 
@@ -5426,6 +5438,20 @@ impl Window {
     /// Dispatch a mouse, keyboard, or touch event on the window.
     #[profiling::function]
     pub fn dispatch_event(&mut self, event: PlatformInput, cx: &mut App) -> DispatchEventResult {
+        match &event {
+            PlatformInput::KeyDown(key)
+                if key.is_held && self.suppressed_key_repeats.contains(&key.keystroke.key) =>
+            {
+                return DispatchEventResult {
+                    propagate: false,
+                    default_prevented: true,
+                };
+            }
+            PlatformInput::KeyUp(key) => {
+                self.suppressed_key_repeats.remove(&key.keystroke.key);
+            }
+            _ => {}
+        }
         let _trace_input = crate::frame_trace::InputScope::begin(match &event {
             PlatformInput::MouseMove(_) => 1,
             PlatformInput::MouseDown(_) => 2,

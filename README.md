@@ -46,7 +46,7 @@ cargo fmt --all -- --check
 
 编辑器的上述 debug 启动命令和 `./scripts/dev.sh` 会启用 macOS Metal HUD，放在左下角，宽度为默认值的 80%。按 **⌘⌥I** 打开 GPUI Kit Inspector，点选元素查看布局、样式和源码位置。GPUI FPS 面板暂时停用；需要时可给编辑器单独加 `--features debug-tools` 重新开启。
 
-Apple 的 `MTL_HUD_SCALE` 表示 HUD 宽度占窗口宽度的比例，默认值为 `0.2`，因此 `0.16` 对应默认宽度的 80%。Metal HUD 分别显示应用内存与 Metal 资源分配量。debug 版在启用 Metal HUD 时每秒请求一帧，让空闲窗口的读数继续更新；因此空闲 FPS 不为零，也不代表持续动画的性能。
+Apple 的 `MTL_HUD_SCALE` 表示 HUD 宽度占窗口宽度的比例，默认值为 `0.2`，因此 `0.16` 对应默认宽度的 80%。Metal HUD 分别显示应用内存与 Metal 资源分配量。空闲窗口不会仅为更新 HUD 而定时重绘；拖动画布时 HUD 会随正常帧更新。
 
 ## 渲染与交互
 

@@ -38,8 +38,6 @@ struct EditorView {
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
-    #[cfg(debug_assertions)]
-    _metal_hud_refresh: Option<Task<()>>,
 }
 impl EditorView {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
@@ -67,8 +65,6 @@ impl EditorView {
             gpu_device: None,
             _frames: None,
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
-            #[cfg(debug_assertions)]
-            _metal_hud_refresh: None,
         };
         let entity = cx.weak_entity();
         window.on_window_should_close(cx, move |window, cx| {
@@ -81,18 +77,6 @@ impl EditorView {
         });
         editor.init_dock(window, cx);
         editor.connect_preview(window, cx);
-        #[cfg(debug_assertions)]
-        if std::env::var("MTL_HUD_ENABLED").is_ok_and(|enabled| enabled == "1") {
-            editor._metal_hud_refresh = Some(cx.spawn_in(window, async move |_, cx| {
-                let executor = cx.background_executor().clone();
-                loop {
-                    executor.timer(std::time::Duration::from_secs(1)).await;
-                    if cx.update(|window, _| window.refresh()).is_err() {
-                        break;
-                    }
-                }
-            }));
-        }
         benchmark::start(&mut editor, window, cx);
         editor
     }
