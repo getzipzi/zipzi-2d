@@ -2,6 +2,50 @@ use editor_core::{CloseDisposition, CommandId, Editor, EditorCommand, LoadReques
 mod support;
 use support::sample_document;
 
+#[test]
+fn parameter_preview_is_transient_and_survives_document_switch() -> anyhow::Result<()> {
+    let (document, _source) = support::sample_document_with_binding(true)?;
+    let mut editor = Editor::from_document(document);
+    let first = editor.active_id().unwrap();
+    let parameter = editor.document().unwrap().parameters().remove(0);
+    let history = editor.document().unwrap().history_lengths();
+
+    editor.execute(EditorCommand::SetPreviewParameter {
+        parameter_id: parameter.id.clone(),
+        value: 0.75,
+    })?;
+    assert_eq!(editor.document().unwrap().parameters()[0].value, 0.75);
+    assert!(!editor.document().unwrap().modified());
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+
+    assert!(
+        editor
+            .execute(EditorCommand::SetPreviewParameter {
+                parameter_id: parameter.id.clone(),
+                value: 2.0,
+            })
+            .is_err()
+    );
+    assert_eq!(editor.document().unwrap().parameters()[0].value, 0.75);
+
+    editor.execute(EditorCommand::PreviewName("Renamed".into()))?;
+    editor.preview()?;
+    editor.execute(EditorCommand::FinishEdit)?;
+    editor.new_document()?;
+    editor.activate(first)?;
+    assert_eq!(editor.document().unwrap().parameters()[0].value, 0.75);
+
+    editor.execute(EditorCommand::SetPreviewParameter {
+        parameter_id: parameter.id.clone(),
+        value: parameter.default_value,
+    })?;
+    assert_eq!(
+        editor.document().unwrap().parameters()[0].value,
+        parameter.default_value
+    );
+    Ok(())
+}
+
 fn load(editor: &mut Editor, path: &std::path::Path) -> anyhow::Result<()> {
     if let Some(task) = editor.prepare_load(LoadRequest::Open(path.to_owned()))? {
         editor.finish_load(task.run())?;

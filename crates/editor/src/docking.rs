@@ -108,7 +108,7 @@ impl DockWorkspace {
         let properties = crate::panels::PropertiesPanel::new(owner.clone(), window, cx);
         let mesh_tree = crate::panels::MeshTreePanel::new(owner.clone(), cx);
         let deformer_tree = crate::panels::DeformerTreePanel::new(owner.clone(), cx);
-        let parameters = crate::panels::ParametersPanel::new(cx);
+        let parameters = crate::panels::ParametersPanel::new(owner.clone(), window, cx);
 
         for (name, handle) in [
             ("Canvas", panel_handle(canvas.clone())),

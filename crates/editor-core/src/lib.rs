@@ -6,7 +6,7 @@ mod session;
 mod tree;
 mod workspace;
 
-pub use document::{Document, Layer};
+pub use document::{Document, Layer, ParameterValue};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};
 pub use scene::{SceneSnapshot, SceneTexture, ViewState};
 pub use tree::{TreeNode, TreeNodeKind};

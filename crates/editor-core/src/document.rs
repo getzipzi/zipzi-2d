@@ -20,6 +20,17 @@ pub struct Layer {
     pub triangles: usize,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct ParameterValue {
+    pub id: String,
+    pub name: String,
+    pub minimum: f32,
+    pub maximum: f32,
+    pub default_value: f32,
+    pub value: f32,
+    pub decimal_places: usize,
+}
+
 impl From<Mesh> for Layer {
     fn from(mesh: Mesh) -> Self {
         Self {
@@ -198,6 +209,48 @@ impl Document {
             .iter()
             .filter_map(|id| self.mesh(id).map(Into::into))
             .collect()
+    }
+
+    pub fn parameters(&self) -> Vec<ParameterValue> {
+        self.session
+            .parameter_ids()
+            .iter()
+            .filter_map(|id| {
+                let parameter = self.session.parameter(id)?;
+                Some(ParameterValue {
+                    id: id.clone(),
+                    name: if parameter.name.is_empty() {
+                        parameter.runtime_id
+                    } else {
+                        parameter.name
+                    },
+                    minimum: parameter.minimum,
+                    maximum: parameter.maximum,
+                    default_value: parameter.default_value,
+                    value: self
+                        .session
+                        .preview_values()
+                        .get(id)
+                        .copied()
+                        .unwrap_or(parameter.default_value),
+                    decimal_places: parameter.decimal_places.clamp(0, 9) as usize,
+                })
+            })
+            .collect()
+    }
+
+    pub fn set_preview_parameter(&mut self, id: &str, value: f32) -> Result<()> {
+        let parameter = self
+            .session
+            .parameter(id)
+            .ok_or_else(|| anyhow!("Parameter not found: {id}"))?;
+        ensure!(
+            value.is_finite() && (parameter.minimum..=parameter.maximum).contains(&value),
+            "Parameter value is out of range"
+        );
+        self.finish_edit()?;
+        self.session.set_preview_parameter(id, value)?;
+        Ok(())
     }
 
     /// Cubism's Parts-style hierarchy: nested parts with their art meshes.
@@ -521,6 +574,14 @@ impl Document {
 
     pub fn snapshot(&mut self) -> Result<SceneSnapshot> {
         let frame = if let Some(pending) = &mut self.pending {
+            pending
+                .preview
+                .replace(
+                    pending.edit.candidate_document(),
+                    0,
+                    self.session.preview_values().clone(),
+                )
+                .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
             pending
                 .preview
                 .frame(pending.edit.candidate_document(), 0)

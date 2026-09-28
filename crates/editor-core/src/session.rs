@@ -69,6 +69,10 @@ impl DocumentSession {
             EditorCommand::Select(id) => self.document.select(&id),
             EditorCommand::PreviewName(name) => self.document.preview_name(&name),
             EditorCommand::PreviewOpacity(v) => self.document.preview_opacity(v),
+            EditorCommand::SetPreviewParameter {
+                parameter_id,
+                value,
+            } => self.document.set_preview_parameter(&parameter_id, value),
             EditorCommand::SetVisible(v) => self.document.set_visible(v),
             EditorCommand::SetLayerVisible { layer_id, visible } => {
                 self.document.set_layer_visible(&layer_id, visible)

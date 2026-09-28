@@ -2,11 +2,12 @@
 
 mod canvas;
 mod hierarchy;
+mod parameters;
 mod properties;
 mod recent_files;
 
 use crate::{EditorView, i18n, menus, settings};
-use editor_core::{ConfigStore, Editor};
+use editor_core::{ConfigStore, Document, Editor};
 use gpui_kit::component::{Theme, ThemeMode};
 use gpui_kit::{
     AnyWindowHandle, AppContext as _, Bounds, Entity, TestAppContext, WindowBounds, WindowOptions,
@@ -25,6 +26,15 @@ struct Harness {
 }
 
 fn setup(cx: &mut TestAppContext) -> Harness {
+    let (document, assets) = document_fixture::sample_document_with_two_layers().unwrap();
+    setup_with_document(cx, document, assets)
+}
+
+fn setup_with_document(
+    cx: &mut TestAppContext,
+    document: Document,
+    assets: tempfile::TempDir,
+) -> Harness {
     i18n::activate(Some("en"));
     let config_dir = tempfile::tempdir().unwrap();
     cx.update(|cx| {
@@ -37,7 +47,6 @@ fn setup(cx: &mut TestAppContext) -> Harness {
         Theme::change(ThemeMode::Dark, None, cx);
     });
 
-    let (document, assets) = document_fixture::sample_document_with_two_layers().unwrap();
     let (window, view) = cx.update(|cx| {
         gpui_kit::open_window(
             WindowOptions {

@@ -10,8 +10,9 @@ fn opacity_and_name_edits_survive_document_switch(cx: &mut TestAppContext) {
         .read_with(cx, |view, _| view.editor.active_id().unwrap());
 
     cx.update_window(harness.window, |_, window, cx| {
-        let opacity_track = window.find("slider-bar-container").bounds();
-        window.click_at(
+        let mut properties = window.within("properties-panel");
+        let opacity_track = properties.find("slider-bar-container").bounds();
+        properties.click_at(
             "slider-bar-container",
             point(
                 opacity_track.size.width * 0.55,

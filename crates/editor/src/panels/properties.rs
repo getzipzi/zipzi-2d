@@ -1,7 +1,7 @@
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, WindowExt,
+    ActiveTheme, Disableable, Sizable, WindowExt,
     checkbox::Checkbox,
     dock::{BasePanel, Panel, PanelEvent},
     input::{Input, InputEvent, InputState},
@@ -340,113 +340,115 @@ impl Render for PropertiesPanel {
             .unwrap_or_else(|| selected.as_ref().map_or(0., |s| s.opacity * 100.));
 
         div()
+            .id("properties-panel")
             .size_full()
-            .p_3()
+            .p_2()
             .flex()
             .flex_col()
-            .gap_4()
+            .gap_2()
             .bg(theme.background)
             .text_color(theme.foreground)
             .text_sm()
             .track_focus(&self.focus)
-            // Layer Name Section
             .child(
                 div()
                     .flex()
-                    .flex_col()
-                    .gap_1()
+                    .items_center()
+                    .gap_2()
                     .child(
                         div()
+                            .w(px(56.))
+                            .flex_shrink_0()
                             .text_xs()
-                            .font_weight(FontWeight::MEDIUM)
                             .text_color(theme.muted_foreground)
                             .child(t!("editor.name")),
                     )
                     .child(
                         Input::new(&self.name)
                             .id("property-name")
+                            .aria_label(t!("editor.name"))
+                            .small()
+                            .flex_1()
+                            .min_w_0()
                             .disabled(disabled),
-                    )
-                    .child(
-                        div()
-                            .text_xs()
-                            .text_color(theme.muted_foreground)
-                            .child(t!("editor.name_help")),
                     ),
             )
-            // Appearance Section
             .child(
                 div()
                     .flex()
-                    .flex_col()
-                    .gap_3()
-                    .p_2()
-                    .rounded_md()
-                    .border_1()
-                    .border_color(theme.border)
-                    .bg(theme.background)
+                    .items_center()
+                    .gap_2()
                     .child(
                         div()
-                            .flex()
-                            .items_center()
-                            .justify_between()
-                            .child(
-                                Checkbox::new("visible")
-                                    .label(SharedString::from(t!("editor.visible")))
-                                    .checked(selected.as_ref().is_some_and(|s| s.visible))
-                                    .disabled(disabled)
-                                    .on_change(cx.listener(move |this, value, window, cx| {
-                                        let Some(owner) = this.owner.upgrade() else {
-                                            return;
-                                        };
-                                        let Some(target) = target else {
-                                            return;
-                                        };
-                                        let dialog_active = window.has_active_dialog(cx);
-                                        owner.update(cx, |owner, cx| {
-                                            if this.target != render_target
-                                                || this.editable_target(owner, dialog_active)
-                                                    != Some(target)
-                                            {
-                                                return;
-                                            }
-                                            let result = owner.editor.execute_for(
-                                                target,
-                                                EditorCommand::SetVisible(*value),
-                                            );
-                                            owner.complete_edit(result, cx);
-                                        });
-                                    })),
-                            )
-                            .child(
-                                div()
-                                    .px_2()
-                                    .py_0p5()
-                                    .rounded(px(4.))
-                                    .bg(theme.muted)
-                                    .text_xs()
-                                    .font_weight(FontWeight::SEMIBOLD)
-                                    .child(format!("{:.0}%", display_opacity)),
-                            ),
+                            .w(px(56.))
+                            .flex_shrink_0()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .child(t!("editor.visible")),
+                    )
+                    .child(
+                        Checkbox::new("visible")
+                            .accessibility_label(SharedString::from(t!("editor.visible")))
+                            .small()
+                            .checked(selected.as_ref().is_some_and(|s| s.visible))
+                            .disabled(disabled)
+                            .on_change(cx.listener(move |this, value, window, cx| {
+                                let Some(owner) = this.owner.upgrade() else {
+                                    return;
+                                };
+                                let Some(target) = target else {
+                                    return;
+                                };
+                                let dialog_active = window.has_active_dialog(cx);
+                                owner.update(cx, |owner, cx| {
+                                    if this.target != render_target
+                                        || this.editable_target(owner, dialog_active)
+                                            != Some(target)
+                                    {
+                                        return;
+                                    }
+                                    let result = owner
+                                        .editor
+                                        .execute_for(target, EditorCommand::SetVisible(*value));
+                                    owner.complete_edit(result, cx);
+                                });
+                            })),
+                    ),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .child(
+                        div()
+                            .w(px(56.))
+                            .flex_shrink_0()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .child(t!("editor.opacity_label")),
                     )
                     .child(
                         div()
-                            .flex()
-                            .flex_col()
-                            .gap_1()
-                            .child(div().text_xs().text_color(theme.muted_foreground).child(t!(
-                                "editor.opacity",
-                                percent = format!("{:.0}", display_opacity)
-                            )))
+                            .flex_1()
+                            .min_w_0()
                             .child(Slider::new(&self.opacity).disabled(disabled)),
+                    )
+                    .child(
+                        div()
+                            .w(px(34.))
+                            .text_right()
+                            .text_xs()
+                            .font_family(".AppleSystemUIFontMonospaced")
+                            .text_color(theme.muted_foreground)
+                            .child(format!("{:.0}%", display_opacity)),
                     ),
             )
-            // Mesh Stats Section
             .child(
                 div()
-                    .p_2()
-                    .rounded_md()
-                    .bg(theme.muted)
+                    .pt_2()
+                    .border_t_1()
+                    .border_color(theme.border)
                     .text_xs()
                     .text_color(theme.muted_foreground)
                     .child(selected.map_or_else(
