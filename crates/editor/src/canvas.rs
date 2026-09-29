@@ -1,10 +1,11 @@
 //! Measured canvas, pointer ownership and overlay painting. Tool semantics live in core.
 use super::*;
-use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint};
+use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint, DocumentId, VertexEditUnavailable};
 use gpui_kit::component::{
     ActiveTheme, WindowExt,
     dock::{BasePanel, Panel, PanelEvent},
 };
+use std::time::Duration;
 
 pub struct CanvasView {
     pub(crate) owner: WeakEntity<EditorView>,
@@ -15,6 +16,8 @@ pub struct CanvasView {
     pan: Option<PanGesture>,
     space_held: bool,
     hand_tool: bool,
+    vertex_notice: Option<(DocumentId, String, String)>,
+    vertex_notice_timer: Option<Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -98,6 +101,8 @@ impl CanvasView {
                 pan: None,
                 space_held: false,
                 hand_tool: false,
+                vertex_notice: None,
+                vertex_notice_timer: None,
                 _subscriptions: subscriptions,
             }
         })
@@ -140,11 +145,26 @@ impl CanvasView {
             y: (p.y - self.bounds.origin.y).as_f32(),
         }
     }
+    fn show_vertex_notice(&mut self, notice: (DocumentId, String, String), cx: &mut Context<Self>) {
+        if self.vertex_notice.as_ref() == Some(&notice) {
+            return;
+        }
+        self.vertex_notice = Some(notice);
+        self.vertex_notice_timer = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(Duration::from_secs(3)).await;
+            let _ = this.update(cx, |this, cx| {
+                this.vertex_notice = None;
+                cx.notify();
+            });
+        }));
+        cx.notify();
+    }
     fn input(&mut self, input: CanvasInput, window: &mut Window, cx: &mut Context<Self>) {
         if window.has_active_dialog(cx) {
             self.cancel(cx);
             return;
         }
+        let mut vertex_notice = None;
         let _ = self.owner.update(cx, |owner, cx| {
             if owner.modal || owner.editor.is_busy() {
                 return;
@@ -177,11 +197,24 @@ impl CanvasView {
                     }
                 }
                 Err(e) => {
-                    owner.edit_error = Some(e.to_string());
+                    if let Some(reason) = e.downcast_ref::<VertexEditUnavailable>() {
+                        vertex_notice = owner.editor.active_id().and_then(|id| {
+                            owner
+                                .editor
+                                .document()
+                                .and_then(|document| document.selected_id())
+                                .map(|mesh_id| (id, mesh_id.to_owned(), reason.0.clone()))
+                        });
+                    } else {
+                        owner.edit_error = Some(e.to_string());
+                    }
                     owner.redraw(cx);
                 }
             }
         });
+        if let Some(notice) = vertex_notice {
+            self.show_vertex_notice(notice, cx);
+        }
     }
     fn moved(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {
         if benchmark::ignore_native_mouse_move() {
@@ -275,7 +308,18 @@ impl Render for CanvasView {
         if benchmark::hide_mesh_edges() {
             overlay.lines.clear();
         }
-        let unavailable = overlay.unavailable.take();
+        let vertex_notice = self
+            .vertex_notice
+            .as_ref()
+            .and_then(|(id, mesh_id, reason)| {
+                (Some(*id) == state.editor.active_id()
+                    && state
+                        .editor
+                        .document()
+                        .and_then(|document| document.selected_id())
+                        == Some(mesh_id.as_str()))
+                .then(|| reason.clone())
+            });
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
         let error = state.render_error.clone();
@@ -359,11 +403,12 @@ impl Render for CanvasView {
                 // One wheel line keeps the previous 10% step, while precise
                 // trackpad deltas contribute proportionally instead of jumping.
                 let step = delta_y * (0.1 / 16.0);
+                let point = this.local(event.position);
                 let _ = this.owner.update(cx, |owner, cx| {
                     if owner.modal || owner.editor.is_busy() {
                         return;
                     }
-                    owner.editor.zoom_by(step);
+                    owner.editor.zoom_at(step, Some(point));
                     owner.redraw_canvas(cx);
                 });
             }))
@@ -535,11 +580,14 @@ impl Render for CanvasView {
             )
             .child(workspace::render_floating_toolbar(self, modal, cx))
             .child(workspace::render_floating_zoom_bar(&owner, modal, cx))
-            .children(unavailable.map(|reason| {
+            .children(vertex_notice.map(|reason| {
                 div()
+                    .id("canvas-vertex-notice")
+                    .test_support()
                     .absolute()
-                    .left_3()
-                    .bottom_3()
+                    .right_3()
+                    .bottom(px(56.))
+                    .max_w(px(360.))
                     .px_2p5()
                     .py_1()
                     .rounded_md()
@@ -548,6 +596,7 @@ impl Render for CanvasView {
                     .border_color(cx.theme().warning.opacity(0.4))
                     .text_xs()
                     .text_color(cx.theme().warning)
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                     .child(reason)
             }));
         div()

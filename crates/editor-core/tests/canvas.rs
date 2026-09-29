@@ -38,6 +38,7 @@ fn unavailable_vertex_mesh_ignores_clicks_away_from_vertices() -> anyhow::Result
             shift: false,
         })
         .unwrap_err();
+    assert!(error.downcast_ref::<VertexEditUnavailable>().is_some());
     assert!(error.to_string().contains("parameter keyforms"));
     Ok(())
 }
@@ -492,5 +493,83 @@ fn opacity_preview_reuses_geometry_but_preserves_evaluation_and_undo() -> anyhow
         editor.preview()?.scene.frame.drawables[0].opacity,
         original.scene.frame.drawables[0].opacity
     );
+    Ok(())
+}
+
+#[test]
+fn zoom_at_preserves_model_point_under_mouse() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let t1 = editor.preview()?.canvas.unwrap().transform;
+    let mouse = CanvasPoint { x: 380., y: 190. };
+    let model_point = t1.to_model(mouse);
+
+    // Zoom in at mouse
+    editor.zoom_at(0.5, Some(mouse));
+    let t2 = editor.preview()?.canvas.unwrap().transform;
+    let mouse_after = t2.to_canvas(model_point);
+    assert!(
+        (mouse_after.x - mouse.x).abs() < 1e-3,
+        "x drifted: {} vs {}",
+        mouse_after.x,
+        mouse.x
+    );
+    assert!(
+        (mouse_after.y - mouse.y).abs() < 1e-3,
+        "y drifted: {} vs {}",
+        mouse_after.y,
+        mouse.y
+    );
+
+    // Zoom out at another mouse position
+    let mouse2 = CanvasPoint { x: 120., y: 450. };
+    let model_point2 = t2.to_model(mouse2);
+    editor.zoom_at(-0.75, Some(mouse2));
+    let t3 = editor.preview()?.canvas.unwrap().transform;
+    let mouse2_after = t3.to_canvas(model_point2);
+    assert!(
+        (mouse2_after.x - mouse2.x).abs() < 1e-3,
+        "x drifted: {} vs {}",
+        mouse2_after.x,
+        mouse2.x
+    );
+    assert!(
+        (mouse2_after.y - mouse2.y).abs() < 1e-3,
+        "y drifted: {} vs {}",
+        mouse2_after.y,
+        mouse2.y
+    );
+
+    Ok(())
+}
+
+#[test]
+fn zoom_by_preserves_viewport_center() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    // Pan first so pan != 0
+    editor.pan_by(CanvasPoint { x: 50., y: -30. });
+    let t1 = editor.preview()?.canvas.unwrap().transform;
+    let metrics = editor.canvas_metrics();
+    let center = CanvasPoint {
+        x: metrics.width / 2.,
+        y: metrics.height / 2.,
+    };
+    let model_center = t1.to_model(center);
+
+    editor.zoom_by(0.4);
+    let t2 = editor.preview()?.canvas.unwrap().transform;
+    let center_after = t2.to_canvas(model_center);
+    assert!(
+        (center_after.x - center.x).abs() < 1e-3,
+        "center x drifted: {} vs {}",
+        center_after.x,
+        center.x
+    );
+    assert!(
+        (center_after.y - center.y).abs() < 1e-3,
+        "center y drifted: {} vs {}",
+        center_after.y,
+        center.y
+    );
+
     Ok(())
 }

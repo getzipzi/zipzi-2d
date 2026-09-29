@@ -1,8 +1,20 @@
 //! Tool state is independent of GPUI and uses fixed source-space transaction targets.
 use crate::{CanvasPoint, Document, ModelPoint, ViewportTransform};
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_core::VertexId;
-use std::{collections::BTreeSet, sync::Arc};
+use std::{collections::BTreeSet, fmt, sync::Arc};
+
+/// A canvas hit reached a mesh the current vertex tool cannot edit.
+#[derive(Debug)]
+pub struct VertexEditUnavailable(pub String);
+
+impl fmt::Display for VertexEditUnavailable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for VertexEditUnavailable {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EditMode {
@@ -126,11 +138,9 @@ impl ToolController {
             self.clear();
             return Ok(());
         };
-        ensure!(
-            geometry.unavailable.is_none(),
-            "{}",
-            geometry.unavailable.as_deref().unwrap_or("")
-        );
+        if let Some(reason) = &geometry.unavailable {
+            return Err(VertexEditUnavailable(reason.clone()).into());
+        }
         if shift && self.selected.remove(&id) {
             return Ok(());
         }

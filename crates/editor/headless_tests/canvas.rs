@@ -2,7 +2,9 @@ use super::setup;
 use crate::workspace::toolbar::ToolbarItemConfig;
 use gpui_kit::assets::IconName;
 use gpui_kit::test::TestWindowExt;
-use gpui_kit::{AppContext as _, InputEvent as _, TestAppContext, point, px};
+use gpui_kit::{
+    AppContext as _, InputEvent as _, ScrollDelta, ScrollWheelEvent, TestAppContext, point, px,
+};
 
 #[gpui_kit::test]
 fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext) {
@@ -254,6 +256,26 @@ fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
             .view
             .read_with(cx, |view, _| view.editor.view().zoom);
         assert!(zoomed_out < zoomed_in);
+
+        // Test scroll wheel zooming centered at mouse cursor
+        let before_scroll_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
+        let canvas_bounds = window.find("canvas-body").bounds();
+        let mouse_pos = canvas_bounds.origin + point(px(100.), px(50.));
+        window.dispatch_event(
+            ScrollWheelEvent {
+                position: mouse_pos,
+                delta: ScrollDelta::Lines(point(0., 1.)),
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        let after_scroll_zoom = harness
+            .view
+            .read_with(cx, |view, _| view.editor.view().zoom);
+        let after_scroll_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
+        assert!(after_scroll_zoom > zoomed_out);
+        assert_ne!(after_scroll_pan, before_scroll_pan);
     })
     .unwrap();
 

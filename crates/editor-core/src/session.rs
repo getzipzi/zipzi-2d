@@ -99,11 +99,25 @@ impl DocumentSession {
     pub fn save(&mut self, path: &Path) -> Result<SaveReceipt> {
         self.document.save(path)
     }
-    pub fn zoom_by(&mut self, delta: f32) {
+    pub fn zoom_at(&mut self, delta: f32, focus: Option<CanvasPoint>, metrics: CanvasMetrics) {
         if !self.tools.dragging() && delta.is_finite() {
-            let zoom = (self.view.zoom + delta).clamp(MIN_ZOOM, MAX_ZOOM);
-            if zoom != self.view.zoom {
-                self.view.zoom = zoom;
+            let old_zoom = self.view.zoom;
+            let new_zoom = (old_zoom + delta).clamp(MIN_ZOOM, MAX_ZOOM);
+            if new_zoom != old_zoom {
+                if metrics.visible() && old_zoom > 0. {
+                    let k = new_zoom / old_zoom;
+                    let anchor = focus.unwrap_or(CanvasPoint {
+                        x: metrics.width / 2.0,
+                        y: metrics.height / 2.0,
+                    });
+                    if anchor.x.is_finite() && anchor.y.is_finite() {
+                        let vx = anchor.x - metrics.width / 2.0;
+                        let vy = anchor.y - metrics.height / 2.0;
+                        self.view.pan.x += (1.0 - k) * (vx - self.view.pan.x);
+                        self.view.pan.y += (1.0 - k) * (vy - self.view.pan.y);
+                    }
+                }
+                self.view.zoom = new_zoom;
                 self.viewport_revision += 1;
             }
         }

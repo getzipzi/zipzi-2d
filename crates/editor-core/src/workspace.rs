@@ -78,10 +78,29 @@ pub struct LoadCompletion {
 }
 impl LoadTask {
     pub fn run(self) -> LoadCompletion {
+        let Self {
+            id,
+            operation,
+            request,
+        } = self;
+        // GPUI's background executor uses libdispatch workers with small stacks.
+        // MOC3 validation and decoding can exceed that stack for real models.
+        // Keep the whole load off the executor worker to avoid the observed
+        // stack overflow during import.
+        let result = std::thread::Builder::new()
+            .name("kasane-document-load".into())
+            .stack_size(8 * 1024 * 1024)
+            .spawn(move || request.load())
+            .map_err(anyhow::Error::from)
+            .and_then(|worker| {
+                worker
+                    .join()
+                    .map_err(|_| anyhow!("Document load worker panicked"))?
+            });
         LoadCompletion {
-            id: self.id,
-            operation: self.operation,
-            result: self.request.load(),
+            id,
+            operation,
+            result,
         }
     }
 }
@@ -539,14 +558,17 @@ impl Editor {
     pub fn next_close(&self) -> Option<DocumentId> {
         self.documents.first().map(|e| e.id)
     }
-    pub fn zoom_by(&mut self, delta: f32) {
-        if let Some(id) = self.active {
-            if let Ok(entry) = self.entry_mut(id) {
-                if let Some(session) = &mut entry.session {
-                    session.zoom_by(delta);
-                }
-            }
+    pub fn zoom_at(&mut self, delta: f32, focus: Option<crate::CanvasPoint>) {
+        let metrics = self.metrics;
+        if let Some(id) = self.active
+            && let Ok(entry) = self.entry_mut(id)
+            && let Some(session) = &mut entry.session
+        {
+            session.zoom_at(delta, focus, metrics);
         }
+    }
+    pub fn zoom_by(&mut self, delta: f32) {
+        self.zoom_at(delta, None);
     }
     pub fn reset_view(&mut self) {
         if let Some(id) = self.active {
