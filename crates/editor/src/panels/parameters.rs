@@ -13,6 +13,7 @@ struct ParameterRow {
     parameter: ParameterValue,
     slider: Entity<SliderState>,
     dragging: bool,
+    view: Entity<ParameterRowView>,
 }
 
 fn format_value(value: f32, places: usize) -> String {
@@ -39,6 +40,7 @@ pub struct ParametersPanel {
     focus: FocusHandle,
     document_id: Option<DocumentId>,
     rows: Vec<ParameterRow>,
+    scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
     _observe: Subscription,
 }
@@ -58,7 +60,16 @@ impl ParametersPanel {
             owner,
             document_id: None,
             rows: Vec::new(),
+            scroll: UniformListScrollHandle::new(),
             subscriptions: Vec::new(),
+        })
+    }
+
+    pub(crate) fn benchmark_slider_bounds(&self, cx: &App) -> Option<Bounds<Pixels>> {
+        self.rows.iter().find_map(|row| {
+            let bounds = row.slider.read(cx).bounds();
+            (row.parameter.minimum < row.parameter.maximum && bounds.size.width > px(0.))
+                .then_some(bounds)
         })
     }
 
@@ -90,7 +101,9 @@ impl ParametersPanel {
 
         if structure_changed {
             self.document_id = document_id;
+            self.scroll = UniformListScrollHandle::new();
             self.subscriptions.clear();
+            let panel = cx.weak_entity();
             self.rows = parameters
                 .into_iter()
                 .map(|parameter| {
@@ -107,7 +120,16 @@ impl ParametersPanel {
                             )
                             .default_value(parameter.value)
                     });
+                    let view = cx.new(|cx| ParameterRowView {
+                        panel: panel.clone(),
+                        document_id,
+                        parameter: parameter.clone(),
+                        slider: slider.clone(),
+                        disabled: false,
+                        _observe: cx.observe(&slider, |_, _, cx| cx.notify()),
+                    });
                     ParameterRow {
+                        view,
                         parameter,
                         slider,
                         dragging: false,
@@ -156,7 +178,11 @@ impl ParametersPanel {
                         if matches!(event, SliderEvent::Change(_)) {
                             this.rows[index].dragging = true;
                         }
-                        owner.update(cx, |owner, cx| {
+                        // Release and repeated quantized steps must not evaluate again.
+                        if this.rows[index].parameter.value == *value {
+                            return;
+                        }
+                        let applied = owner.update(cx, |owner, cx| {
                             let result = owner.editor.execute_for(
                                 document_id,
                                 EditorCommand::SetPreviewParameter {
@@ -164,9 +190,13 @@ impl ParametersPanel {
                                     value: *value,
                                 },
                             );
+                            let applied = result.is_ok();
                             owner.complete_preview_edit(result, cx);
+                            applied
                         });
-                        cx.notify();
+                        if applied {
+                            this.rows[index].parameter.value = *value;
+                        }
                     },
                 );
                 self.subscriptions.push(subscription);
@@ -184,6 +214,10 @@ impl ParametersPanel {
                         });
                     }
                 }
+                row.view.update(cx, |view, cx| {
+                    view.parameter = parameter.clone();
+                    cx.notify();
+                });
                 row.parameter = parameter;
             }
         }
@@ -250,8 +284,18 @@ impl Render for ParametersPanel {
         let dialog_active = window.has_active_dialog(cx);
         let state = owner.read(cx);
         let disabled = state.modal || dialog_active || state.editor.is_busy();
-        let document_id = self.document_id;
+        // Disabled state changes invalidate the row cache; ordinary drags do not.
+        for row in &self.rows {
+            if row.view.read(cx).disabled != disabled {
+                row.view.update(cx, |view, cx| {
+                    view.disabled = disabled;
+                    cx.notify();
+                });
+            }
+        }
         let theme = cx.theme();
+        let row_count = self.rows.len();
+        let panel = cx.entity();
 
         div()
             .id("parameters-panel")
@@ -264,7 +308,7 @@ impl Render for ParametersPanel {
             .text_color(theme.foreground)
             .text_sm()
             .track_focus(&self.focus)
-            .child(if self.rows.is_empty() {
+            .child(if row_count == 0 {
                 div()
                     .p_3()
                     .text_xs()
@@ -272,128 +316,150 @@ impl Render for ParametersPanel {
                     .child(t!("editor.no_parameters"))
                     .into_any_element()
             } else {
+                // A drag repaints this panel; keep work proportional to visible rows.
+                uniform_list("parameters-scroll-area", row_count, move |range, _, cx| {
+                    panel.update(cx, |this, _| {
+                        range
+                            .map(|index| {
+                                this.rows[index]
+                                    .view
+                                    .clone()
+                                    .cached(StyleRefinement::default().w_full().h(rems(3.5)))
+                            })
+                            .collect()
+                    })
+                })
+                .flex_1()
+                .min_h_0()
+                .track_scroll(&self.scroll)
+                .into_any_element()
+            })
+            .into_any_element()
+    }
+}
+
+// Each row owns its slider dependency so changing one thumb does not rebuild
+// the other visible sliders (including their labels, tooltips and hover rings).
+struct ParameterRowView {
+    panel: WeakEntity<ParametersPanel>,
+    document_id: Option<DocumentId>,
+    parameter: ParameterValue,
+    slider: Entity<SliderState>,
+    disabled: bool,
+    _observe: Subscription,
+}
+
+impl Render for ParameterRowView {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let parameter = &self.parameter;
+        let slider = &self.slider;
+        let disabled = self.disabled;
+        let document_id = self.document_id;
+        let theme = cx.theme();
+        let value = match slider.read(cx).value() {
+            SliderValue::Single(value) => value,
+            _ => parameter.value,
+        };
+        let value_text = format_value(value, parameter.decimal_places);
+        let minimum_text = format_value(parameter.minimum, parameter.decimal_places);
+        let maximum_text = format_value(parameter.maximum, parameter.decimal_places);
+        let parameter_id = parameter.id.clone();
+        let default_value = parameter.default_value;
+        div()
+            .id(SharedString::from(format!("parameter-row-{parameter_id}")))
+            .flex()
+            .flex_col()
+            .w_full()
+            .h(rems(3.5))
+            .min_w_0()
+            .gap_0p5()
+            .px_3()
+            .py_1()
+            .border_b_1()
+            .border_color(theme.border)
+            .child(
                 div()
-                    .id("parameters-scroll-area")
-                    .test_support()
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_y_scroll()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .text_xs()
+                            .text_ellipsis()
+                            .overflow_hidden()
+                            .child(parameter.name.clone()),
+                    )
+                    .child(
+                        div()
+                            .text_xs()
+                            .font_family(".AppleSystemUIFontMonospaced")
+                            .text_color(theme.muted_foreground)
+                            .child(value_text),
+                    )
+                    .child(
+                        Button::new(SharedString::from(format!(
+                            "parameter-reset-{parameter_id}"
+                        )))
+                        .xsmall()
+                        .ghost()
+                        .icon(IconName::RotateCcw)
+                        .tooltip(t!("editor.parameter_reset"))
+                        .disabled(disabled || value == default_value)
+                        .on_click(cx.listener(
+                            move |this, _, window, cx| {
+                                let Some(document_id) = document_id else {
+                                    return;
+                                };
+                                let _ = this.panel.update(cx, |panel, cx| {
+                                    panel.reset_parameter(
+                                        document_id,
+                                        &parameter_id,
+                                        default_value,
+                                        window,
+                                        cx,
+                                    );
+                                });
+                            },
+                        )),
+                    ),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .child(
+                        div()
+                            .w(px(42.))
+                            .flex_shrink_0()
+                            .text_xs()
+                            .text_ellipsis()
+                            .overflow_hidden()
+                            .text_color(theme.muted_foreground)
+                            .child(minimum_text),
+                    )
                     .child(
                         div()
                             .flex()
-                            .flex_col()
-                            .px_2()
-                            .py_1()
-                            .children(self.rows.iter().map(|row| {
-                                let parameter = &row.parameter;
-                                let value = match row.slider.read(cx).value() {
-                                    SliderValue::Single(value) => value,
-                                    _ => parameter.value,
-                                };
-                                let value_text = format_value(value, parameter.decimal_places);
-                                let minimum_text =
-                                    format_value(parameter.minimum, parameter.decimal_places);
-                                let maximum_text =
-                                    format_value(parameter.maximum, parameter.decimal_places);
-                                let parameter_id = parameter.id.clone();
-                                let default_value = parameter.default_value;
-                                div()
-                                    .id(SharedString::from(format!("parameter-row-{parameter_id}")))
-                                    .flex()
-                                    .flex_col()
-                                    .gap_0p5()
-                                    .px_1()
-                                    .py_1()
-                                    .border_b_1()
-                                    .border_color(theme.border)
-                                    .child(
-                                        div()
-                                            .flex()
-                                            .items_center()
-                                            .gap_1()
-                                            .child(
-                                                div()
-                                                    .flex_1()
-                                                    .min_w_0()
-                                                    .text_xs()
-                                                    .text_ellipsis()
-                                                    .overflow_hidden()
-                                                    .child(parameter.name.clone()),
-                                            )
-                                            .child(
-                                                div()
-                                                    .text_xs()
-                                                    .font_family(".AppleSystemUIFontMonospaced")
-                                                    .text_color(theme.muted_foreground)
-                                                    .child(value_text),
-                                            )
-                                            .child(
-                                                Button::new(SharedString::from(format!(
-                                                    "parameter-reset-{parameter_id}"
-                                                )))
-                                                .xsmall()
-                                                .ghost()
-                                                .icon(IconName::RotateCcw)
-                                                .tooltip(t!("editor.parameter_reset"))
-                                                .disabled(disabled || value == default_value)
-                                                .on_click(cx.listener(
-                                                    move |this, _, window, cx| {
-                                                        let Some(document_id) = document_id else {
-                                                            return;
-                                                        };
-                                                        this.reset_parameter(
-                                                            document_id,
-                                                            &parameter_id,
-                                                            default_value,
-                                                            window,
-                                                            cx,
-                                                        );
-                                                    },
-                                                )),
-                                            ),
-                                    )
-                                    .child(
-                                        div()
-                                            .flex()
-                                            .items_center()
-                                            .gap_1()
-                                            .child(
-                                                div()
-                                                    .w(px(42.))
-                                                    .flex_shrink_0()
-                                                    .text_xs()
-                                                    .text_ellipsis()
-                                                    .overflow_hidden()
-                                                    .text_color(theme.muted_foreground)
-                                                    .child(minimum_text),
-                                            )
-                                            .child(
-                                                div()
-                                                    .flex()
-                                                    .items_center()
-                                                    .flex_1()
-                                                    .min_w_0()
-                                                    .h_6()
-                                                    .child(
-                                                        Slider::new(&row.slider).disabled(disabled),
-                                                    ),
-                                            )
-                                            .child(
-                                                div()
-                                                    .w(px(42.))
-                                                    .flex_shrink_0()
-                                                    .text_right()
-                                                    .text_xs()
-                                                    .text_ellipsis()
-                                                    .overflow_hidden()
-                                                    .text_color(theme.muted_foreground)
-                                                    .child(maximum_text),
-                                            ),
-                                    )
-                            })),
+                            .items_center()
+                            .flex_1()
+                            .min_w_0()
+                            .h_6()
+                            .child(Slider::new(slider).disabled(disabled)),
                     )
-                    .into_any_element()
-            })
-            .into_any_element()
+                    .child(
+                        div()
+                            .w(px(42.))
+                            .flex_shrink_0()
+                            .text_right()
+                            .text_xs()
+                            .text_ellipsis()
+                            .overflow_hidden()
+                            .text_color(theme.muted_foreground)
+                            .child(maximum_text),
+                    ),
+            )
     }
 }

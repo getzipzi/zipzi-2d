@@ -102,6 +102,15 @@ class TraceReportTest(unittest.TestCase):
         self.assertEqual(rows[0]["drawable_wait_ms"], .5)
         self.assertEqual(summary["modes"]["manual"]["delivery_drawable_overlap_fraction"], .5)
 
+    def test_parameter_only_capture_requires_only_the_slider_workload(self):
+        raw = capture(*request(10, 1, 0),
+                      event(1, "benchmark_tick", 0, mode=4, sample=0, warmup=0, timer_late_ns=0),
+                      *composition(100, 4, present=10), event(200, "benchmark_done", 20))
+        raw[0].update(automatic=True, parameters_only=True, samples=1)
+        _, summary = report.analyze(raw)
+        self.assertFalse(summary["issues"])
+        self.assertEqual(summary["modes"]["parameter_slider"]["outcomes"], {"presented": 1})
+
     def test_quantiles_keep_outliers(self):
         self.assertEqual(report.quantiles([1] * 99 + [40])["max"], 40)
         self.assertEqual(report.quantiles([1] * 99 + [40])["p99"], 1)

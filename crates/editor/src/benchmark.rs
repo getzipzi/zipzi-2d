@@ -34,6 +34,7 @@ struct Config {
     samples: usize,
     warmup: usize,
     hz: u32,
+    parameters_only: bool,
 }
 
 pub fn init() -> anyhow::Result<()> {
@@ -92,6 +93,7 @@ pub fn init() -> anyhow::Result<()> {
                 samples,
                 warmup,
                 hz: hz as u32,
+                parameters_only: std::env::var("KASANE_BENCH_PARAMETERS").is_ok_and(|s| s == "1"),
             })
             .ok();
     }
@@ -109,6 +111,7 @@ pub fn init() -> anyhow::Result<()> {
                 "debug_assertions": cfg!(debug_assertions), "automatic": automatic,
                 "model": config.map(|c| c.model.display().to_string()),
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
+                "parameters_only": config.map(|c| c.parameters_only),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
                 "diagnostics": {
                     "drawables": std::env::var("GPUI_TRACE_DRAWABLES").ok(),
@@ -265,6 +268,8 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                     view.editor.execute(EditorCommand::Select(layer.id))?;
                 }
                 view.refresh_document(window, cx);
+                window.activate_window();
+                cx.activate(true);
                 Ok(())
             })??;
             // Await a usable frame, not just import completion. First uploads are cold work.
@@ -280,7 +285,12 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 );
             }
             executor.timer(Duration::from_millis(500)).await;
-            for mode in 1..=3u64 {
+            let modes = if config.parameters_only {
+                4..=4u64
+            } else {
+                1..=3u64
+            };
+            for mode in modes {
                 let center = view
                     .update_in(cx, |view, window, cx| {
                         view.editor.cancel_gesture();
@@ -296,14 +306,35 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                     })?
                     .context("canvas has no measured bounds")?;
                 ensure!(center.1, "benchmark window is hidden");
-                let center = center.0;
+                let slider_bounds = if mode == 4 {
+                    Some(
+                        view.update_in(cx, |view, _, cx| {
+                            view.dock
+                                .as_ref()
+                                .unwrap()
+                                .parameters
+                                .read(cx)
+                                .benchmark_slider_bounds(cx)
+                        })?
+                        .context("parameters panel has no visible slider")?,
+                    )
+                } else {
+                    None
+                };
+                let center = slider_bounds.map_or(center.0, |bounds| {
+                    point(bounds.left() + bounds.size.width * 0.25, bounds.center().y)
+                });
                 executor.timer(Duration::from_millis(250)).await;
-                if mode == 1 {
+                if mode == 1 || mode == 4 {
                     cx.update(|window, cx| {
                         dispatch_pointer(
                             window,
                             MouseDownEvent {
-                                button: MouseButton::Middle,
+                                button: if mode == 4 {
+                                    MouseButton::Left
+                                } else {
+                                    MouseButton::Middle
+                                },
                                 position: center,
                                 click_count: 1,
                                 modifiers: Default::default(),
@@ -323,8 +354,10 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                     let late_ns = Instant::now()
                         .saturating_duration_since(deadline)
                         .as_nanos() as u64;
+                    // Slider subscriptions run when App::update flushes effects, after
+                    // dispatch_event returns. Keep attribution alive through that flush.
+                    let input = frame_trace::InputScope::begin(100 + mode);
                     cx.update(|window, cx| -> anyhow::Result<()> {
-                        let input = frame_trace::InputScope::begin(100 + mode);
                         frame_trace::emit(
                             input.id(),
                             "benchmark_tick",
@@ -371,6 +404,24 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                     cx,
                                 );
                             }
+                            4 => {
+                                let bounds = slider_bounds.unwrap();
+                                dispatch_pointer(
+                                    window,
+                                    MouseMoveEvent {
+                                        position: point(
+                                            bounds.left()
+                                                + bounds.size.width
+                                                    * (0.5 + (sample as f32 * 0.13).sin() * 0.35),
+                                            center.y,
+                                        ),
+                                        pressed_button: Some(MouseButton::Left),
+                                        modifiers: Default::default(),
+                                    }
+                                    .to_platform_input(),
+                                    cx,
+                                );
+                            }
                             _ => {
                                 view.update(cx, |view, cx| -> anyhow::Result<()> {
                                     // Real SDK edit/evaluation; bypasses only the slider widget.
@@ -384,18 +435,23 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         }
                         Ok(())
                     })??;
+                    drop(input);
                     // Never inject a burst of catch-up events after a late wake-up.
                     deadline += interval;
                     if deadline < Instant::now() {
                         deadline = Instant::now() + interval;
                     }
                 }
-                if mode == 1 {
+                if mode == 1 || mode == 4 {
                     cx.update(|window, cx| {
                         dispatch_pointer(
                             window,
                             MouseUpEvent {
-                                button: MouseButton::Middle,
+                                button: if mode == 4 {
+                                    MouseButton::Left
+                                } else {
+                                    MouseButton::Middle
+                                },
                                 position: center,
                                 ..Default::default()
                             }

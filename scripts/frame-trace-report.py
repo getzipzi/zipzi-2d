@@ -12,7 +12,7 @@ import json
 import math
 from pathlib import Path
 
-MODES = {1: "pan", 2: "zoom", 3: "opacity"}
+MODES = {1: "pan", 2: "zoom", 3: "opacity", 4: "parameter_slider"}
 # Each metric is a difference on ONE correlated request, never a sum of percentiles.
 PAIRS = {
     "input_handler_ms": ("input_begin", "input_end"),
@@ -201,8 +201,16 @@ def analyze(records, budget_ms=1000 / 120):
         timestamps = sorted({r["presented_ns"] for r in selected if "presented_ns" in r})
         ticks = {r["tick_id"] for r in selected if r["tick_id"]}
         tick_times = sorted(groups[t]["benchmark_tick"]["at_ns"] for t in ticks)
+        window_timestamps = sorted({e["at_ns"] for e in events
+                                    if e["stage"] == "presented" and tick_times
+                                    and tick_times[0] <= e["at_ns"] <= tick_times[-1]})
+        def fps(times):
+            return (len(times) - 1) * 1e9 / (times[-1] - times[0]) if len(times) > 1 else None
         summary["modes"][mode] = {
             "rows": len(selected), "inputs": len(ticks),
+            "window_present_fps": fps(window_timestamps),
+            "new_preview_present_fps": fps(timestamps),
+            "window_present_interval_ms": quantiles([(b - a) / 1e6 for a, b in zip(window_timestamps, window_timestamps[1:])]),
             "outcomes": dict(collections.Counter(r["outcome"] for r in selected)),
             "metrics_ms": {name: quantiles([r[name] for r in selected if name in r])
                            for name in (*PAIRS, "timer_late_ms", "delivery_drawable_overlap_ms", "preview_queue_compose_overlap_ms")},
@@ -225,7 +233,8 @@ def analyze(records, budget_ms=1000 / 120):
                 issues.append(f"{mode}: expected {metadata['samples']} measured inputs, got {len(ticks)}")
             if not latencies:
                 issues.append(f"{mode}: no correlated presentation timestamps")
-    if metadata.get("automatic") and not set(MODES.values()).issubset(summary["modes"]):
+    expected_modes = {MODES[4]} if metadata.get("parameters_only") else {MODES[i] for i in (1, 2, 3)}
+    if metadata.get("automatic") and not expected_modes.issubset(summary["modes"]):
         issues.append("one or more workloads are missing")
     return rows, summary
 
