@@ -35,6 +35,7 @@ fn visible_rows(nodes: &[TreeNode], collapsed: &HashSet<String>) -> Vec<VisibleR
                 id: node.id.clone(),
                 name: node.name.clone(),
                 kind: node.kind,
+                diagnostic: node.diagnostic.clone(),
                 triangles: node.triangles,
                 visible: node.visible,
                 children: Vec::new(),
@@ -67,8 +68,10 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
     focus: FocusHandle,
     _observe: Subscription,
     collapsed: HashSet<String>,
+    document_collapsed: std::collections::HashMap<DocumentId, HashSet<String>>,
     document_id: Option<DocumentId>,
     revision: Option<u64>,
+    last_selection: Option<editor_core::ObjectRef>,
     nodes: Vec<TreeNode>,
     rows: Rc<Vec<VisibleRow>>,
     rows_dirty: bool,
@@ -88,8 +91,10 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
                 focus,
                 _observe: observe,
                 collapsed: HashSet::new(),
+                document_collapsed: Default::default(),
                 document_id: None,
                 revision: None,
+                last_selection: None,
                 nodes: Vec::new(),
                 rows: Rc::new(Vec::new()),
                 rows_dirty: true,
@@ -134,7 +139,13 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
         let revision = state.editor.tree_revision();
         let document_changed = self.document_id != target;
         if document_changed {
-            self.collapsed.clear();
+            if let Some(previous) = self.document_id {
+                self.document_collapsed
+                    .insert(previous, self.collapsed.clone());
+            }
+            self.collapsed = target
+                .and_then(|id| self.document_collapsed.get(&id).cloned())
+                .unwrap_or_default();
             self.document_id = target;
             self.scroll = UniformListScrollHandle::new();
         }
@@ -157,21 +168,49 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             });
             self.rows_dirty = true;
         }
+        let selected = state
+            .editor
+            .document()
+            .and_then(|d| d.context().selection.clone());
+        let selection_changed = self.last_selection != selected || document_changed;
+        if selection_changed {
+            fn reveal(
+                nodes: &[TreeNode],
+                target: &editor_core::ObjectRef,
+                collapsed: &mut HashSet<String>,
+            ) -> bool {
+                for node in nodes {
+                    if node.reference().as_ref() == Some(target) {
+                        return true;
+                    }
+                    if reveal(&node.children, target, collapsed) {
+                        collapsed.remove(&node_key(node));
+                        return true;
+                    }
+                }
+                false
+            }
+            if let Some(r) = &selected {
+                reveal(&self.nodes, r, &mut self.collapsed);
+            }
+            self.last_selection = selected.clone();
+            self.rows_dirty = true;
+        }
         if self.rows_dirty {
             self.rows = Rc::new(visible_rows(&self.nodes, &self.collapsed));
             self.rows_dirty = false;
         }
-        let count = self.count;
-        let selected = state.editor.selected_layer_id().map(str::to_owned);
+        if selection_changed {
+            if let Some(i) = self.rows.iter().position(|r| {
+                r.node.reference().as_ref() == selected.as_ref() && selected.is_some()
+            }) {
+                self.scroll.scroll_to_item(i, ScrollStrategy::Center);
+            }
+        }
         let disabled = state.modal || state.editor.is_busy();
         let rows = self.rows.clone();
         let panel = cx.entity();
         let theme = cx.theme();
-        let title = if DEFORMER {
-            t!("editor.deformer_tree")
-        } else {
-            t!("editor.mesh_tree")
-        };
 
         div()
             .id(if DEFORMER {
@@ -209,7 +248,8 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                         let row = rows[index].clone();
                         let node = row.node;
                         let is_mesh = node.kind == TreeNodeKind::Mesh;
-                        let is_selected = is_mesh && selected.as_ref() == Some(&node.id);
+                        let reference = node.reference();
+                        let is_selected = reference.is_some() && selected.as_ref() == reference.as_ref();
                         let key = node_key(&node);
                         let is_collapsed = this.collapsed.contains(&key);
                         let id = node.id.clone();
@@ -217,7 +257,8 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                         let owner_for_vis = owner.clone();
                         let id_for_vis = id.clone();
                         let icon = match node.kind {
-                            TreeNodeKind::Part => IconName::Folder,
+                            TreeNodeKind::Group | TreeNodeKind::Part => IconName::Folder,
+                            TreeNodeKind::Offscreen => IconName::Layers,
                             TreeNodeKind::Mesh => IconName::Grid2x2,
                             TreeNodeKind::WarpDeformer => IconName::Grid3x3,
                             TreeNodeKind::RotationDeformer => IconName::RotateCw,
@@ -252,39 +293,19 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             })
                             .hover(|style| style.bg(theme.muted.opacity(0.5)))
                             .cursor_pointer()
-                            .on_click(cx.listener(move |this, _, window, cx| {
-                                if is_mesh {
-                                    if disabled {
-                                        return;
-                                    }
-                                    let Some(owner) = owner.upgrade() else {
-                                        return;
-                                    };
-                                    let Some(target) = target else {
-                                        return;
-                                    };
-                                    owner.update(cx, |owner, cx| {
-                                        if owner.modal
-                                            || window.has_active_dialog(cx)
-                                            || owner.editor.is_busy()
-                                            || owner.editor.active_id() != Some(target)
-                                        {
-                                            return;
-                                        }
-                                        let result = owner
-                                            .editor
-                                            .execute_for(target, EditorCommand::Select(id.clone()));
-                                        owner.complete_edit(result, cx);
-                                    });
-                                } else if row.has_children {
-                                    if !this.collapsed.insert(key.clone()) {
-                                        this.collapsed.remove(&key);
-                                    }
-                                    this.rows_dirty = true;
-                                    cx.notify();
-                                }
+                            .on_click(cx.listener(move |_, _, window, cx| {
+                                if disabled { return; }
+                                let (Some(owner), Some(target), Some(reference)) = (owner.upgrade(), target, reference.clone()) else { return; };
+                                owner.update(cx, |owner, cx| {
+                                    if owner.modal || window.has_active_dialog(cx) || owner.editor.is_busy() || owner.editor.active_id() != Some(target) { return; }
+                                    let result = owner.editor.execute_for(target, EditorCommand::SelectObject(reference));
+                                    owner.complete_edit(result, cx);
+                                });
                             }))
-                            .child(div().w(px(16.)).text_color(theme.muted_foreground).when(
+                            .child(div().id(SharedString::from(format!("tree-expand-{key}"))).w(px(16.)).on_click(cx.listener(move |this, _, _, cx| {
+                                cx.stop_propagation();
+                                if row.has_children { if !this.collapsed.insert(key.clone()) { this.collapsed.remove(&key); } this.rows_dirty = true; cx.notify(); }
+                            })).text_color(theme.muted_foreground).when(
                                 row.has_children,
                                 |element| {
                                     element.child(
@@ -315,7 +336,8 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     } else {
                                         theme.foreground
                                     })
-                                    .child(label),
+                                    .child(label)
+                                    .when_some(node.diagnostic,|this,d|this.child(format!(" ⚠ {d}"))),
                             )
                             .when_some(node.visible, |element, visible| {
                                 element.child(

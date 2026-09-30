@@ -85,6 +85,10 @@ pub struct Document {
     session: AuthoringSession,
     import_name: Option<String>,
     selected: Option<String>,
+    context: crate::PanelContext,
+    projection_revision: u64,
+    preview_revision: u64,
+    object_index: std::sync::Mutex<Option<(u64, Arc<crate::ObjectIndex>)>>,
     pending: Option<PendingEdit>,
     textures: Arc<[SceneTexture]>,
     pristine_blank: bool,
@@ -144,9 +148,22 @@ impl Document {
     fn from_session(session: AuthoringSession) -> Result<Self> {
         let textures = Self::load_textures(&session)?;
         let selected = session.mesh_ids().first().cloned();
+        let projection = Arc::new(crate::ObjectIndex::build(session.document()));
         Ok(Self {
             session,
             import_name: None,
+            context: crate::PanelContext {
+                selection: selected
+                    .as_ref()
+                    .map(|id| crate::ObjectRef::new(crate::ObjectKind::Mesh, id)),
+                inspected: selected
+                    .as_ref()
+                    .map(|id| crate::ObjectRef::new(crate::ObjectKind::Mesh, id)),
+                ..Default::default()
+            },
+            projection_revision: 1,
+            preview_revision: 0,
+            object_index: std::sync::Mutex::new(Some((1, projection))),
             selected,
             pending: None,
             textures,
@@ -260,11 +277,41 @@ impl Document {
     }
 
     pub fn parameter_model_revision(&self) -> u64 {
-        self.model().revision()
+        self.projection_revision
     }
 
     pub fn parameter_visuals(&self) -> HashMap<String, ParameterVisual> {
-        self.parameter_visuals_for_targets(&self.selected.iter().cloned().collect::<Vec<_>>())
+        let mut visuals = self.parameter_visuals_for_targets(
+            &self
+                .context
+                .selection
+                .iter()
+                .map(|r| r.id.clone())
+                .collect::<Vec<_>>(),
+        );
+        if let Some(b) = self
+            .context
+            .active_binding
+            .as_ref()
+            .and_then(|r| self.object_index().binding(r).cloned())
+        {
+            for axis in &b.axes {
+                if let Some(v) = visuals.get_mut(&axis.parameter_id) {
+                    v.keys = axis
+                        .keys
+                        .iter()
+                        .map(|&value| ParameterKey {
+                            value,
+                            selected: true,
+                            partial: false,
+                            targets: vec![b.target.id.clone()],
+                            base: false,
+                        })
+                        .collect();
+                }
+            }
+        }
+        visuals
     }
 
     /// Aggregate keys for an explicit selection without losing target coverage.
@@ -360,22 +407,16 @@ impl Document {
         visuals
     }
 
+    pub fn preview_revision(&self) -> u64 {
+        self.preview_revision
+    }
     pub fn set_preview_parameter(&mut self, id: &str, value: f32) -> Result<()> {
-        let parameter = self
-            .session
-            .parameter(id)
-            .ok_or_else(|| anyhow!("Parameter not found: {id}"))?;
-        ensure!(
-            value.is_finite() && (parameter.minimum..=parameter.maximum).contains(&value),
-            "Parameter value is out of range"
-        );
-        self.finish_edit()?;
-        self.session.set_preview_parameter(id, value)?;
-        Ok(())
+        self.set_preview_parameters(&[(id.to_owned(), value)])
     }
 
     pub fn set_preview_parameters(&mut self, values: &[(String, f32)]) -> Result<()> {
         let mut next = self.session.preview_values().clone();
+        let mut changed = false;
         for (id, value) in values {
             let parameter = self
                 .session
@@ -385,85 +426,122 @@ impl Document {
                 value.is_finite() && (parameter.minimum..=parameter.maximum).contains(value),
                 "Parameter value is out of range: {id}"
             );
+            changed |= self
+                .session
+                .preview_values()
+                .get(id)
+                .copied()
+                .unwrap_or(parameter.default_value)
+                != *value;
             next.insert(id.clone(), *value);
         }
         self.finish_edit()?;
-        self.session.set_preview_values(next)?;
+        if changed {
+            self.session.set_preview_values(next)?;
+            self.preview_revision += 1;
+        }
         Ok(())
     }
 
-    /// Cubism's Parts-style hierarchy: nested parts with their art meshes.
     pub fn mesh_tree(&self) -> Vec<TreeNode> {
-        let parts: Vec<_> = self
-            .session
-            .part_ids()
-            .iter()
-            .filter_map(|id| self.session.part(id))
-            .collect();
-        let part_indices: HashMap<_, _> = parts
-            .iter()
-            .enumerate()
-            .map(|(index, part)| (part.id.as_str(), index))
-            .collect();
-        let mut nodes = Vec::new();
-        let mut parents = Vec::new();
-        for part in &parts {
-            parents.push(part_indices.get(part.parent_id.as_str()).copied());
-            nodes.push(TreeNode::new(
-                part.id.clone(),
-                part.name.clone(),
-                TreeNodeKind::Part,
-            ));
-        }
-        for id in self.session.mesh_ids() {
-            if let Some(mesh) = self.model().get_mesh(id) {
-                parents.push(part_indices.get(mesh.part_id.as_str()).copied());
-                let mut node =
-                    TreeNode::new(mesh.id.clone(), mesh.name.clone(), TreeNodeKind::Mesh);
-                node.triangles = Some(mesh.triangles.len());
-                node.visible = Some(mesh.enabled);
-                nodes.push(node);
-            }
-        }
-        nest_nodes(nodes, parents)
+        self.structure_tree(false)
     }
-
-    /// Cubism's Deformer hierarchy: transform parents with art mesh leaves.
     pub fn deformer_tree(&self) -> Vec<TreeNode> {
-        let transforms: Vec<_> = self
-            .session
-            .transform_ids()
-            .iter()
-            .filter_map(|id| self.session.transform(id))
-            .collect();
-        let transform_indices: HashMap<_, _> = transforms
-            .iter()
-            .enumerate()
-            .map(|(index, transform)| (transform.id.as_str(), index))
-            .collect();
+        self.structure_tree(true)
+    }
+    fn structure_tree(&self, deformer: bool) -> Vec<TreeNode> {
+        use crate::{ObjectKind as K, RelationKind as R};
+        let index = self.object_index();
         let mut nodes = Vec::new();
-        let mut parents = Vec::new();
-        for transform in &transforms {
-            parents.push(transform_indices.get(transform.parent()).copied());
-            nodes.push(TreeNode::new(
-                transform.id.clone(),
-                transform.name.clone(),
-                match transform.kind() {
-                    kasane_core::TransformKind::Warp => TreeNodeKind::WarpDeformer,
-                    kasane_core::TransformKind::Rotation => TreeNodeKind::RotationDeformer,
+        let mut references = Vec::new();
+        for x in &index.objects {
+            if x.diagnostic.is_some() {
+                continue;
+            }
+            let kind = match x.reference.kind {
+                K::Part if !deformer => TreeNodeKind::Part,
+                K::Mesh => TreeNodeKind::Mesh,
+                K::Deformer => match self
+                    .model()
+                    .get_transform(&x.reference.id)
+                    .map(|t| t.kind())
+                {
+                    Some(kasane_core::TransformKind::Rotation) => TreeNodeKind::RotationDeformer,
+                    _ => TreeNodeKind::WarpDeformer,
                 },
-            ));
+                K::Offscreen if !deformer => TreeNodeKind::Offscreen,
+                _ => continue,
+            };
+            let mut node = TreeNode::new(x.reference.id.clone(), x.name.clone(), kind);
+            if kind == TreeNodeKind::Mesh {
+                node.triangles = self.model().get_mesh(&node.id).map(|m| m.triangles.len());
+                node.visible = x.enabled;
+            }
+            references.push(x.reference.clone());
+            nodes.push(node);
         }
-        for id in self.session.mesh_ids() {
-            if let Some(mesh) = self.model().get_mesh(id) {
-                parents.push(transform_indices.get(mesh.deformer_id.as_str()).copied());
-                let mut node =
-                    TreeNode::new(mesh.id.clone(), mesh.name.clone(), TreeNodeKind::Mesh);
-                node.triangles = Some(mesh.triangles.len());
-                node.visible = Some(mesh.enabled);
-                nodes.push(node);
+        let slots: HashMap<_, _> = references.iter().enumerate().map(|(i, r)| (r, i)).collect();
+        let relation = if deformer {
+            R::DeformParent
+        } else {
+            R::PartOwner
+        };
+        let mut parents = Vec::new();
+        let mut unowned = Vec::new();
+        let mut broken = Vec::new();
+        for (i, r) in references.iter().enumerate() {
+            let edge = index.outgoing(r).find(|e| e.kind == relation);
+            let parent = edge.and_then(|e| slots.get(&e.target)).copied();
+            if let Some(e) = edge.filter(|_| parent.is_none()) {
+                nodes[i].diagnostic = Some(format!("Missing parent: {}", e.target.id));
+                broken.push(i);
+            } else if parent.is_none()
+                && (r.kind == K::Mesh
+                    || (!deformer && matches!(r.kind, K::Deformer | K::Offscreen)))
+            {
+                unowned.push(i);
+            }
+            parents.push(parent);
+        }
+        for i in 0..nodes.len() {
+            let mut visited = std::collections::HashSet::new();
+            let mut cursor = Some(i);
+            while let Some(j) = cursor {
+                if !visited.insert(j) {
+                    nodes[i].diagnostic = Some("Parent cycle".into());
+                    broken.push(i);
+                    break;
+                }
+                cursor = parents[j];
             }
         }
+        let mut add_group = |id: &str, name: &str, items: &[usize], nodes: &mut Vec<TreeNode>| {
+            if !items.is_empty() {
+                let slot = nodes.len();
+                nodes.push(TreeNode::new(id.into(), name.into(), TreeNodeKind::Group));
+                for &i in items {
+                    parents[i] = Some(slot);
+                }
+                parents.push(None);
+            }
+        };
+        unowned.retain(|i| !broken.contains(i));
+        add_group(
+            "unowned",
+            if deformer {
+                "No deformer parent"
+            } else {
+                "Unassigned to Part"
+            },
+            &unowned,
+            &mut nodes,
+        );
+        add_group(
+            "invalid",
+            "Missing references / cycles",
+            &broken,
+            &mut nodes,
+        );
         nest_nodes(nodes, parents)
     }
 
@@ -474,11 +552,190 @@ impl Document {
             .map(Into::into)
     }
 
-    pub fn select(&mut self, id: &str) -> Result<()> {
-        ensure!(self.session.mesh(id).is_some(), "Layer not found");
+    /// Shared scalar inspector edits remain SDK transactions and history entries.
+    pub fn set_object_property(
+        &mut self,
+        object: &crate::ObjectRef,
+        field: &str,
+        value: serde_json::Value,
+    ) -> Result<()> {
+        use crate::ObjectKind as K;
+        ensure!(
+            crate::editable_property(object.kind, field),
+            "This property is read only"
+        );
         self.finish_edit()?;
-        self.selected = Some(id.into());
+        let model = self.model();
+        macro_rules! update {
+            ($get:ident, $ty:ty, $replace:ident) => {{
+                let old = model
+                    .$get(&object.id)
+                    .ok_or_else(|| anyhow!("Object no longer exists"))?;
+                let mut properties = serde_json::to_value(old)?;
+                properties[field] = value;
+                let next: $ty = serde_json::from_value(properties)?;
+                self.session
+                    .edit("Edit object property", None, |edit| edit.$replace(next))?
+                    .1
+                    .changed
+            }};
+        }
+        let changed = match object.kind {
+            K::Part => update!(get_part, kasane_core::Part, replace_part),
+            K::Deformer => update!(get_transform, kasane_core::Transform, replace_transform),
+            K::Parameter => update!(get_parameter, kasane_core::Parameter, replace_parameter),
+            K::Glue => update!(get_glue, kasane_core::Glue, replace_glue),
+            K::Offscreen => update!(get_offscreen, kasane_core::Offscreen, replace_offscreen),
+            K::Texture => update!(get_asset, kasane_core::ImageAsset, replace_asset),
+            K::Expression => update!(
+                get_expression,
+                kasane_core::document::ExpressionAsset,
+                replace_expression
+            ),
+            K::Motion => update!(
+                get_motion,
+                kasane_core::document::MotionClip,
+                replace_motion
+            ),
+            K::Document => {
+                let mut fields = serde_json::to_value(model.canvas())?;
+                fields[field
+                    .strip_prefix("canvas.")
+                    .ok_or_else(|| anyhow!("Invalid canvas property"))?] = value;
+                let canvas = serde_json::from_value(fields)?;
+                self.session
+                    .edit("Edit canvas property", None, |edit| {
+                        edit.replace_canvas(canvas)
+                    })?
+                    .1
+                    .changed
+            }
+            _ => return Err(anyhow!("This property is read only")),
+        };
+        self.session.drain_events();
+        if changed {
+            self.pristine_blank = false;
+            self.projection_revision += 1;
+        }
+        let index = self.object_index();
+        self.context.reconcile(&index);
         Ok(())
+    }
+    pub fn context(&self) -> &crate::PanelContext {
+        &self.context
+    }
+    pub fn object_index(&self) -> Arc<crate::ObjectIndex> {
+        let model = self.model();
+        let mut cache = self.object_index.lock().unwrap();
+        if cache
+            .as_ref()
+            .is_none_or(|(revision, _)| *revision != self.projection_revision)
+        {
+            *cache = Some((
+                self.projection_revision,
+                Arc::new(crate::ObjectIndex::build(model)),
+            ));
+        }
+        cache.as_ref().unwrap().1.clone()
+    }
+    pub fn select(&mut self, id: &str) -> Result<()> {
+        self.select_object(crate::ObjectRef::new(crate::ObjectKind::Mesh, id))
+    }
+    pub fn select_object(&mut self, object: crate::ObjectRef) -> Result<()> {
+        let index = self.object_index();
+        ensure!(index.get(&object).is_some(), "Object no longer exists");
+        self.finish_edit()?;
+        self.context.inspected = Some(object.clone());
+        self.context.selection = Some(object.clone());
+        self.selected = (object.kind == crate::ObjectKind::Mesh).then(|| object.id.clone());
+        if self
+            .context
+            .active_binding
+            .as_ref()
+            .is_some_and(|r| index.binding(r).is_none_or(|b| b.target != object))
+        {
+            self.context.active_binding = None;
+        }
+        Ok(())
+    }
+    pub fn focus_parameter(&mut self, id: &str) -> Result<()> {
+        ensure!(
+            self.model().get_parameter(id).is_some(),
+            "Parameter not found"
+        );
+        self.finish_edit()?;
+        let r = crate::ObjectRef::new(crate::ObjectKind::Parameter, id);
+        self.context.parameter_focus = Some(r.clone());
+        self.context.inspected = Some(r);
+        Ok(())
+    }
+    pub fn open_binding(&mut self, binding: crate::ObjectRef) -> Result<()> {
+        let index = self.object_index();
+        let b = index
+            .binding(&binding)
+            .ok_or_else(|| anyhow!("Binding no longer exists"))?;
+        self.select_object(b.target.clone())?;
+        self.context.active_binding = Some(binding.clone());
+        self.context.inspected = Some(binding);
+        Ok(())
+    }
+    pub fn navigate(&mut self, object: crate::ObjectRef) -> Result<()> {
+        ensure!(
+            self.object_index().get(&object).is_some(),
+            "Object no longer exists"
+        );
+        self.context.remember();
+        if object.kind.is_binding() {
+            self.open_binding(object)
+        } else if object.kind == crate::ObjectKind::Parameter {
+            self.focus_parameter(&object.id)
+        } else if object.kind.is_edit_target() {
+            self.select_object(object)
+        } else {
+            self.finish_edit()?;
+            self.context.inspected = Some(object);
+            Ok(())
+        }
+    }
+    pub fn navigate_back(&mut self) -> Result<()> {
+        self.finish_edit()?;
+        if let Some(n) = self.context.back.pop() {
+            self.context.selection = n.selection;
+            self.context.parameter_focus = n.parameter_focus;
+            self.context.active_binding = n.active_binding;
+            self.context.inspected = n.inspected;
+            let index = self.object_index();
+            self.context.reconcile(&index);
+            self.selected = self
+                .context
+                .selection
+                .as_ref()
+                .filter(|r| r.kind == crate::ObjectKind::Mesh)
+                .map(|r| r.id.clone());
+        }
+        Ok(())
+    }
+    pub fn preview_keyform(&mut self, binding: &crate::ObjectRef, point: usize) -> Result<()> {
+        ensure!(
+            self.context.active_binding.as_ref() == Some(binding),
+            "Binding is no longer active"
+        );
+        let index = self.object_index();
+        let b = index
+            .binding(binding)
+            .ok_or_else(|| anyhow!("Binding not found"))?;
+        let keys = b
+            .points
+            .get(point)
+            .ok_or_else(|| anyhow!("Keyform not found"))?;
+        ensure!(keys.len() == b.axes.len(), "Invalid stored keyform");
+        let values = b
+            .axes
+            .iter()
+            .zip(keys)
+            .map(|(a, &v)| (a.parameter_id.clone(), v))
+            .collect::<Vec<_>>();
+        self.set_preview_parameters(&values)
     }
 
     fn begin_gesture(&mut self, kind: Gesture) -> Result<()> {
@@ -572,6 +829,7 @@ impl Document {
             .ok_or_else(|| anyhow!("No vertex gesture"))?;
         ensure!(pending.kind == Gesture::Vertices, "Another edit is active");
         pending.changed.take();
+        self.projection_revision += 1;
         let positions = positions
             .iter()
             .map(|p| Vec2::new(p.x, p.y))
@@ -609,6 +867,7 @@ impl Document {
         self.begin_gesture(Gesture::Rename)?;
         let pending = self.pending.as_mut().unwrap();
         pending.changed.take();
+        self.projection_revision += 1;
         let result = pending.edit.rename_mesh(&pending.original.id, name);
         if result.is_err() {
             self.pending = None;
@@ -624,6 +883,7 @@ impl Document {
         self.begin_gesture(Gesture::Opacity)?;
         let pending = self.pending.as_mut().unwrap();
         pending.changed.take();
+        self.projection_revision += 1;
         let result = pending.edit.set_mesh_opacity(&pending.original.id, opacity);
         if result.is_err() {
             self.pending = None;
@@ -646,6 +906,7 @@ impl Document {
     pub fn finish_edit(&mut self) -> Result<()> {
         let changed = self.pending_changed();
         if let Some(pending) = self.pending.take() {
+            self.projection_revision += 1;
             if changed {
                 pending.edit.commit_to(&mut self.session)?;
                 self.session.drain_events();
@@ -656,7 +917,9 @@ impl Document {
     }
 
     pub fn cancel_edit(&mut self) {
-        self.pending = None;
+        if self.pending.take().is_some() {
+            self.projection_revision += 1;
+        }
     }
 
     pub fn set_visible(&mut self, visible: bool) -> Result<()> {
@@ -683,6 +946,7 @@ impl Document {
         })?;
         self.session.drain_events();
         self.pristine_blank = false;
+        self.projection_revision += 1;
         Ok(())
     }
 
@@ -701,14 +965,16 @@ impl Document {
     }
 
     fn after_history(&mut self) {
+        self.projection_revision += 1;
         self.session.drain_events();
-        if self
-            .selected
-            .as_deref()
-            .is_none_or(|id| self.session.mesh(id).is_none())
-        {
-            self.selected = self.session.mesh_ids().first().cloned();
-        }
+        let index = self.object_index();
+        self.context.reconcile(&index);
+        self.selected = self
+            .context
+            .selection
+            .as_ref()
+            .filter(|r| r.kind == crate::ObjectKind::Mesh)
+            .map(|r| r.id.clone());
     }
 
     pub fn snapshot(&mut self) -> Result<SceneSnapshot> {

@@ -1,18 +1,15 @@
-mod linked;
 mod track;
-use linked::linked_pad;
 use track::parameter_track;
 
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
-use gpui_kit::assets::IconName;
-use gpui_kit::base::{ElementExt as _, Slider as BaseSlider, SliderIndicator};
+use gpui_kit::base::{NumberInput, Slider as BaseSlider, SliderIndicator};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable, WindowExt,
-    button::{Button, ButtonVariants},
+    ActiveTheme, Sizable, WindowExt,
     dock::{BasePanel, Panel, PanelEvent},
     input::{Input, InputEvent, InputState},
     slider::{SliderEvent, SliderState, SliderValue},
+    tooltip::Tooltip,
 };
 use gpui_kit::{prelude::*, *};
 use std::collections::HashMap;
@@ -26,23 +23,17 @@ struct ParameterRow {
     view: Entity<ParameterRowView>,
 }
 
-fn format_value(value: f32, places: usize) -> String {
-    if value == 0. {
-        return "0".into();
+fn format_value(value: f32) -> String {
+    // Truncate the shortest decimal representation, avoiding binary float
+    // artifacts (for example, 0.7 must stay 0.7). Preview values keep their precision.
+    let text = value.to_string();
+    let (whole, fraction) = text.split_once('.').unwrap_or((&text, "0"));
+    let decimal = fraction.chars().next().unwrap_or('0');
+    if whole == "-0" && decimal == '0' {
+        "0.0".into()
+    } else {
+        format!("{whole}.{decimal}")
     }
-    if places > 6 {
-        return value.to_string();
-    }
-    let mut text = format!("{value:.places$}");
-    if text.contains('.') {
-        while text.ends_with('0') {
-            text.pop();
-        }
-        if text.ends_with('.') {
-            text.pop();
-        }
-    }
-    text
 }
 
 pub struct ParametersPanel {
@@ -51,9 +42,8 @@ pub struct ParametersPanel {
     document_id: Option<DocumentId>,
     visual_revision: Option<u64>,
     visual_selection: Option<String>,
-    linked: Option<(String, String)>,
-    linked_bounds: Bounds<Pixels>,
-    document_links: HashMap<DocumentId, (String, String)>,
+    show_indirect: bool,
+    show_groups: bool,
     rows: Vec<ParameterRow>,
     scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
@@ -83,9 +73,8 @@ impl ParametersPanel {
             document_id: None,
             visual_revision: None,
             visual_selection: None,
-            linked: None,
-            linked_bounds: Bounds::default(),
-            document_links: HashMap::new(),
+            show_indirect: false,
+            show_groups: false,
             rows: Vec::new(),
             scroll: UniformListScrollHandle::new(),
             subscriptions: Vec::new(),
@@ -115,7 +104,13 @@ impl ParametersPanel {
                 owner.editor.active_id(),
                 doc.map_or_else(Vec::new, |doc| doc.parameters()),
                 doc.map(|doc| doc.parameter_model_revision()),
-                doc.and_then(|doc| doc.selected_id().map(str::to_owned)),
+                doc.map(|doc| {
+                    format!(
+                        "{:?}/{:?}",
+                        doc.context().selection,
+                        doc.context().active_binding
+                    )
+                }),
             )
         };
         let structure_changed = self.document_id != document_id
@@ -141,28 +136,7 @@ impl ParametersPanel {
 
         if structure_changed {
             self.finish_slider_drag(cx);
-            if let Some(id) = self.document_id {
-                if let Some(link) = &self.linked {
-                    self.document_links.insert(id, link.clone());
-                } else {
-                    self.document_links.remove(&id);
-                }
-            }
-            let open_ids: Vec<_> = owner
-                .read(cx)
-                .editor
-                .documents()
-                .iter()
-                .map(|d| d.id)
-                .collect();
-            self.document_links.retain(|id, _| open_ids.contains(id));
             self.document_id = document_id;
-            self.linked = document_id
-                .and_then(|id| self.document_links.get(&id).cloned())
-                .filter(|(a, b)| {
-                    parameters.iter().any(|p| &p.id == a) && parameters.iter().any(|p| &p.id == b)
-                });
-            self.linked_bounds = Bounds::default();
             self.scroll = UniformListScrollHandle::new();
             self.subscriptions.clear();
             let panel = cx.weak_entity();
@@ -194,7 +168,8 @@ impl ParametersPanel {
                     });
                     let input = cx.new(|cx| {
                         InputState::new(window, cx)
-                            .default_value(format_value(parameter.value, parameter.decimal_places))
+                            .step(0.1)
+                            .default_value(format_value(parameter.value))
                     });
                     let view = cx.new(|cx| ParameterRowView {
                         panel: panel.clone(),
@@ -204,8 +179,8 @@ impl ParametersPanel {
                         slider: slider.clone(),
                         input: input.clone(),
                         disabled: false,
-                        link_available: false,
-                        link_active: false,
+                        summary: String::new(),
+                        related: false,
                         _observe: cx.observe(&slider, |_, _, cx| cx.notify()),
                     });
                     ParameterRow {
@@ -298,7 +273,7 @@ impl ParametersPanel {
                     }
                 }
                 if !row.input_dirty && !row.input.read(cx).focus_handle(cx).is_focused(window) {
-                    let desired = format_value(parameter.value, parameter.decimal_places);
+                    let desired = format_value(parameter.value);
                     if row.input.read(cx).value().as_ref() != desired {
                         row.input.update(cx, |input, cx| {
                             input.set_value(desired, window, cx);
@@ -321,6 +296,38 @@ impl ParametersPanel {
                     }
                 });
                 row.parameter = parameter;
+            }
+        }
+        if visuals_changed {
+            if let Some(doc) = owner.read(cx).editor.document() {
+                let index = doc.object_index();
+                let selection = doc.context().selection.clone();
+                for row in &self.rows {
+                    let bindings = index.parameter(&row.parameter.id);
+                    let summary = format!(
+                        "· {} {} · {} {} · B{}",
+                        t!("editor.direct_bindings"),
+                        bindings.direct_count(&index),
+                        t!("editor.indirect_influences"),
+                        bindings.indirect_count(),
+                        bindings.blend.len()
+                    );
+                    let related = selection.as_ref().is_some_and(|r| {
+                        bindings
+                            .regular
+                            .iter()
+                            .chain(&bindings.blend)
+                            .any(|reference| {
+                                index.binding(reference).is_some_and(|b| &b.target == r)
+                            })
+                            || bindings.indirect.iter().any(|path| &path.target == r)
+                    });
+                    row.view.update(cx, |v, cx| {
+                        v.related = related;
+                        v.summary = summary;
+                        cx.notify();
+                    });
+                }
             }
         }
     }
@@ -406,11 +413,7 @@ impl ParametersPanel {
         {
             row.input_dirty = false;
             row.input.update(cx, |input, cx| {
-                input.set_value(
-                    format_value(row.parameter.value, row.parameter.decimal_places),
-                    window,
-                    cx,
-                )
+                input.set_value(format_value(row.parameter.value), window, cx)
             });
         }
     }
@@ -432,10 +435,8 @@ impl ParametersPanel {
         else {
             return;
         };
-        if row.input.read(cx).value().as_ref()
-            == format_value(row.parameter.value, row.parameter.decimal_places)
-        {
-            row.input_dirty = false;
+        // Focusing and blurring a truncated display must not quantize the preview.
+        if !row.input_dirty {
             return;
         }
         let value = row.input.read(cx).value().trim().parse::<f32>().ok();
@@ -443,7 +444,6 @@ impl ParametersPanel {
             value.is_finite() && (row.parameter.minimum..=row.parameter.maximum).contains(value)
         });
         let original = row.parameter.value;
-        let places = row.parameter.decimal_places;
         let input = row.input.clone();
         if let Some(value) = valid.filter(|value| *value != original) {
             self.apply_values(document_id, &[(parameter_id.to_owned(), value)], window, cx);
@@ -454,7 +454,7 @@ impl ParametersPanel {
             .find(|row| row.parameter.id == parameter_id)
             .map_or(original, |row| row.parameter.value);
         input.update(cx, |input, cx| {
-            input.set_value(format_value(displayed, places), window, cx);
+            input.set_value(format_value(displayed), window, cx);
         });
         if let Some(row) = self
             .rows
@@ -520,11 +520,7 @@ impl ParametersPanel {
                     });
                     if !row.input_dirty {
                         row.input.update(cx, |input, cx| {
-                            input.set_value(
-                                format_value(*value, row.parameter.decimal_places),
-                                window,
-                                cx,
-                            )
+                            input.set_value(format_value(*value), window, cx)
                         });
                     }
                     row.slider.update(cx, |slider, cx| {
@@ -532,94 +528,252 @@ impl ParametersPanel {
                     });
                 }
             }
-            if self.linked.is_some() && changed {
-                cx.notify();
-            }
         }
     }
 
-    fn toggle_link(&mut self, document_id: DocumentId, upper: &str, cx: &mut Context<Self>) {
-        if self.document_id != Some(document_id) {
-            return;
-        }
-        let Some(index) = self.rows.iter().position(|row| row.parameter.id == upper) else {
-            return;
-        };
-        let Some(lower) = self.rows.get(index + 1).map(|row| row.parameter.id.clone()) else {
-            return;
-        };
-        if self
-            .linked
-            .as_ref()
-            .is_some_and(|(a, b)| a == upper && b == &lower)
-        {
-            self.linked = None;
-        } else {
-            self.linked = Some((upper.to_owned(), lower));
-        }
-        cx.notify();
-    }
-
-    fn move_linked(&mut self, point: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
-        let Some((x_id, y_id)) = self.linked.clone() else {
-            return;
-        };
-        let bounds = self.linked_bounds;
-        if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
-            return;
-        }
-        let value_for = |id: &str, fraction: f32, rows: &[ParameterRow]| {
-            rows.iter().find(|row| row.parameter.id == id).map(|row| {
-                let p = &row.parameter;
-                let step = 10_f32
-                    .powi(-(p.decimal_places as i32))
-                    .max((p.maximum - p.minimum) / 1000.);
-                if fraction <= 0. {
-                    return p.minimum;
-                }
-                if fraction >= 1. {
-                    return p.maximum;
-                }
-                let raw = p.minimum + (p.maximum - p.minimum) * fraction;
-                (raw / step)
-                    .round()
-                    .mul_add(step, 0.)
-                    .clamp(p.minimum, p.maximum)
-            })
-        };
-        let x_fraction = (point.x - bounds.left()).as_f32() / bounds.size.width.as_f32();
-        let y_fraction = (bounds.bottom() - point.y).as_f32() / bounds.size.height.as_f32();
-        let (Some(x), Some(y)) = (
-            value_for(&x_id, x_fraction, &self.rows),
-            value_for(&y_id, y_fraction, &self.rows),
-        ) else {
-            return;
-        };
-        let changed = self.rows.iter().any(|row| {
-            (row.parameter.id == x_id && row.parameter.value != x)
-                || (row.parameter.id == y_id && row.parameter.value != y)
-        });
-        if changed {
-            if let Some(id) = self.document_id {
-                self.apply_values(id, &[(x_id, x), (y_id, y)], window, cx);
-            }
-        }
-    }
-
-    fn reset_parameter(
+    fn focus_parameter(
         &mut self,
         document_id: DocumentId,
-        parameter_id: &str,
-        default_value: f32,
+        parameter: &str,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.apply_values(
-            document_id,
-            &[(parameter_id.to_owned(), default_value)],
-            window,
-            cx,
+        if window.has_active_dialog(cx) {
+            return;
+        }
+        if let Some(owner) = self.owner.upgrade() {
+            owner.update(cx, |owner, cx| {
+                if owner.modal
+                    || owner.editor.is_busy()
+                    || owner.editor.active_id() != Some(document_id)
+                {
+                    return;
+                }
+                let result = owner
+                    .editor
+                    .execute_for(document_id, EditorCommand::FocusParameter(parameter.into()));
+                owner.complete_edit(result, cx);
+            });
+        }
+    }
+    fn group_browser(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let Some(owner) = self.owner.upgrade() else {
+            return div().into_any_element();
+        };
+        let state = owner.read(cx);
+        let (Some(doc), Some(id)) = (state.editor.document(), state.editor.active_id()) else {
+            return div().into_any_element();
+        };
+        let index = doc.object_index();
+        let groups: Vec<_> = index
+            .objects
+            .iter()
+            .filter(|i| i.reference.kind == editor_core::ObjectKind::ParameterGroup)
+            .collect();
+        let mut body = div()
+            .flex_shrink_0()
+            .text_xs()
+            .px_2()
+            .py_1()
+            .child(
+                div()
+                    .id("parameter-groups-toggle")
+                    .cursor_pointer()
+                    .child(format!(
+                        "{} · {}",
+                        t!("editor.parameter_groups"),
+                        groups.len()
+                    ))
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.show_groups = !this.show_groups;
+                        cx.notify();
+                    })),
+            )
+            .child(div().text_color(cx.theme().muted_foreground).child(
+                if doc.context().active_binding.is_some() {
+                    t!("editor.binding_key_marks")
+                } else {
+                    t!("editor.aggregate_key_marks")
+                },
+            ));
+        if self.show_groups {
+            let mut list = div()
+                .id("parameter-groups-list")
+                .max_h(px(120.))
+                .overflow_y_scroll();
+            for group in groups {
+                let r = group.reference.clone();
+                let owner = self.owner.clone();
+                list = list.child(
+                    div()
+                        .id(SharedString::from(format!("parameter-group-{}", r.id)))
+                        .py_1()
+                        .cursor_pointer()
+                        .child(index.name(&r).to_owned())
+                        .on_click(cx.listener(move |_, _, window, cx| {
+                            if window.has_active_dialog(cx) {
+                                return;
+                            }
+                            if let Some(owner) = owner.upgrade() {
+                                owner.update(cx, |owner, cx| {
+                                    if owner.modal
+                                        || owner.editor.is_busy()
+                                        || owner.editor.active_id() != Some(id)
+                                    {
+                                        return;
+                                    }
+                                    let result = owner
+                                        .editor
+                                        .execute_for(id, EditorCommand::Navigate(r.clone()));
+                                    owner.complete_edit(result, cx);
+                                });
+                            }
+                        })),
+                );
+            }
+            body = body.child(list);
+        }
+        body.into_any_element()
+    }
+    fn binding_summary(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let Some(owner) = self.owner.upgrade() else {
+            return div().into_any_element();
+        };
+        let state = owner.read(cx);
+        let (Some(doc), Some(id)) = (state.editor.document(), state.editor.active_id()) else {
+            return div().into_any_element();
+        };
+        let Some(focus) = doc.context().parameter_focus.as_ref() else {
+            return div().into_any_element();
+        };
+        let index = doc.object_index();
+        let bindings = index.parameter(&focus.id);
+        let mut body = div()
+            .id("parameter-binding-summary")
+            .max_h(px(150.))
+            .overflow_y_scroll()
+            .flex_shrink_0()
+            .text_xs()
+            .p_2()
+            .border_b_1()
+            .border_color(cx.theme().border)
+            .child(format!(
+                "{} · {} {} · {} {} · BlendShape {}",
+                index.name(focus),
+                t!("editor.direct_bindings"),
+                bindings.direct_count(&index),
+                t!("editor.indirect_influences"),
+                bindings.indirect_count(),
+                bindings.blend.len()
+            ));
+        for reference in bindings.regular.iter().chain(&bindings.blend) {
+            if let Some(b) = index.binding(reference) {
+                let label = format!(
+                    "{} · {:?} · {} · {}",
+                    index.name(&b.target),
+                    b.target.kind,
+                    b.axes
+                        .iter()
+                        .map(|a| index
+                            .name(&editor_core::ObjectRef::new(
+                                editor_core::ObjectKind::Parameter,
+                                &a.parameter_id
+                            ))
+                            .to_owned())
+                        .collect::<Vec<_>>()
+                        .join(" × "),
+                    b.layout()
+                );
+                let reference = reference.clone();
+                let owner = self.owner.clone();
+                body = body.child(
+                    div()
+                        .id(SharedString::from(format!(
+                            "parameter-binding-{:?}-{}",
+                            reference.kind, reference.id
+                        )))
+                        .test_support()
+                        .py_1()
+                        .cursor_pointer()
+                        .hover(|s| s.bg(cx.theme().muted))
+                        .child(label)
+                        .on_click(cx.listener(move |_, _, window, cx| {
+                            if window.has_active_dialog(cx) {
+                                return;
+                            }
+                            if let Some(owner) = owner.upgrade() {
+                                owner.update(cx, |owner, cx| {
+                                    if owner.modal
+                                        || owner.editor.is_busy()
+                                        || owner.editor.active_id() != Some(id)
+                                    {
+                                        return;
+                                    }
+                                    let result = owner.editor.execute_for(
+                                        id,
+                                        EditorCommand::OpenBinding(reference.clone()),
+                                    );
+                                    if result.is_ok() {
+                                        owner.reveal_keyforms(window, cx);
+                                    }
+                                    owner.complete_edit(result, cx);
+                                });
+                            }
+                        })),
+                );
+            }
+        }
+        body = body.child(
+            div()
+                .id("parameter-indirect-toggle")
+                .py_1()
+                .cursor_pointer()
+                .child(t!("editor.indirect_influences"))
+                .on_click(cx.listener(|this, _, _, cx| {
+                    this.show_indirect = !this.show_indirect;
+                    cx.notify();
+                })),
         );
+        if self.show_indirect {
+            for path in &bindings.indirect {
+                let reference = path.target.clone();
+                let label = path
+                    .path
+                    .iter()
+                    .map(|r| index.name(r).to_owned())
+                    .collect::<Vec<_>>()
+                    .join(" → ");
+                let owner = self.owner.clone();
+                body = body.child(
+                    div()
+                        .id(SharedString::from(format!("indirect-path-{label}")))
+                        .py_1()
+                        .cursor_pointer()
+                        .child(label)
+                        .on_click(cx.listener(move |_, _, window, cx| {
+                            if window.has_active_dialog(cx) {
+                                return;
+                            }
+                            if let Some(owner) = owner.upgrade() {
+                                owner.update(cx, |owner, cx| {
+                                    if owner.modal
+                                        || owner.editor.is_busy()
+                                        || owner.editor.active_id() != Some(id)
+                                    {
+                                        return;
+                                    }
+                                    let result = owner.editor.execute_for(
+                                        id,
+                                        EditorCommand::Navigate(reference.clone()),
+                                    );
+                                    owner.complete_edit(result, cx);
+                                });
+                            }
+                        })),
+                );
+            }
+        }
+        body.into_any_element()
     }
 }
 
@@ -665,23 +819,7 @@ impl Render for ParametersPanel {
         }
         let row_count = self.rows.len();
         let panel = cx.entity();
-        for (index, row) in self.rows.iter().enumerate() {
-            let available = index + 1 < row_count;
-            let active = self
-                .linked
-                .as_ref()
-                .is_some_and(|(id, _)| id == &row.parameter.id);
-            if row.view.read(cx).link_available != available
-                || row.view.read(cx).link_active != active
-            {
-                row.view.update(cx, |view, cx| {
-                    view.link_available = available;
-                    view.link_active = active;
-                    cx.notify();
-                });
-            }
-        }
-        let theme = cx.theme();
+        let theme = cx.theme().clone();
 
         div()
             .id("parameters-panel")
@@ -726,22 +864,8 @@ impl Render for ParametersPanel {
                 .absolute()
                 .size_full(),
             )
-            .when_some(self.linked.clone(), |this, (x, y)| {
-                let x_row = self.rows.iter().find(|row| row.parameter.id == x);
-                let y_row = self.rows.iter().find(|row| row.parameter.id == y);
-                this.when_some(x_row.zip(y_row), |this, (x_row, y_row)| {
-                    this.child(linked_pad(
-                        &x_row.parameter,
-                        &y_row.parameter,
-                        &x_row.visual,
-                        &y_row.visual,
-                        &panel,
-                        self.document_id.unwrap(),
-                        disabled,
-                        theme,
-                    ))
-                })
-            })
+            .child(self.group_browser(cx))
+            .child(self.binding_summary(cx))
             .child(if row_count == 0 {
                 div()
                     .p_3()
@@ -758,7 +882,7 @@ impl Render for ParametersPanel {
                                 this.rows[index]
                                     .view
                                     .clone()
-                                    .cached(StyleRefinement::default().w_full().h(rems(3.5)))
+                                    .cached(StyleRefinement::default().w_full().h(rems(2.)))
                             })
                             .collect()
                     })
@@ -782,8 +906,8 @@ struct ParameterRowView {
     slider: Entity<SliderState>,
     input: Entity<InputState>,
     disabled: bool,
-    link_available: bool,
-    link_active: bool,
+    summary: String,
+    related: bool,
     _observe: Subscription,
 }
 
@@ -798,12 +922,12 @@ impl Render for ParameterRowView {
             SliderValue::Single(value) => value,
             _ => parameter.value,
         };
-        let minimum_text = format_value(parameter.minimum, parameter.decimal_places);
-        let maximum_text = format_value(parameter.maximum, parameter.decimal_places);
         let parameter_id = parameter.id.clone();
-        let default_value = parameter.default_value;
-        let link_parameter_id = parameter_id.clone();
-        let apply_parameter_id = parameter_id.clone();
+        let focus_parameter_id = parameter_id.clone();
+        let tooltip = format!(
+            "{} {}\n{} – {}",
+            parameter.name, self.summary, parameter.minimum, parameter.maximum
+        );
         div()
             .id(SharedString::from(format!("parameter-row-{parameter_id}")))
             .capture_action(
@@ -841,152 +965,109 @@ impl Render for ParameterRowView {
                 }),
             )
             .flex()
-            .flex_col()
+            .items_center()
             .w_full()
-            .h(rems(3.5))
+            .h(rems(2.))
             .min_w_0()
-            .gap_0p5()
+            .gap_2()
             .px_3()
-            .py_1()
             .border_b_1()
             .border_color(theme.border)
             .child(
                 div()
-                    .flex()
-                    .items_center()
-                    .gap_1()
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w_0()
-                            .text_xs()
-                            .text_ellipsis()
-                            .overflow_hidden()
-                            .child(parameter.name.clone()),
-                    )
-                    .child(
-                        Input::new(&self.input)
-                            .id(SharedString::from(format!(
-                                "parameter-value-{parameter_id}"
-                            )))
-                            .aria_label(parameter.name.clone())
-                            .small()
-                            .w(px(65.))
-                            .disabled(disabled),
-                    )
-                    .child(
-                        Button::new(SharedString::from(format!(
-                            "parameter-apply-{parameter_id}"
-                        )))
-                        .xsmall()
-                        .ghost()
-                        .icon(IconName::Check)
-                        .tooltip(t!("editor.parameter_apply"))
-                        .disabled(disabled)
-                        .on_click(cx.listener(
-                            move |this, _, window, cx| {
-                                let _ = this.panel.update(cx, |panel, cx| {
-                                    if let Some(id) = document_id {
-                                        panel.commit_input(id, &apply_parameter_id, window, cx);
-                                    }
-                                });
-                            },
-                        )),
-                    )
-                    .when(self.link_available, |this| {
-                        this.child(
-                            Button::new(SharedString::from(format!(
-                                "parameter-link-{parameter_id}"
-                            )))
-                            .xsmall()
-                            .ghost()
-                            .icon(if self.link_active {
-                                IconName::Unlink
-                            } else {
-                                IconName::Link2
-                            })
-                            .tooltip(if self.link_active {
-                                t!("editor.parameter_unlink")
-                            } else {
-                                t!("editor.parameter_link")
-                            })
-                            .disabled(disabled)
-                            .on_click(cx.listener(
-                                move |this, _, _, cx| {
-                                    let _ = this.panel.update(cx, |panel, cx| {
-                                        if let Some(id) = document_id {
-                                            panel.toggle_link(id, &link_parameter_id, cx);
-                                        }
-                                    });
-                                },
-                            )),
-                        )
+                    .w(relative(0.3))
+                    .max_w(px(160.))
+                    .flex_shrink_0()
+                    .min_w_0()
+                    .text_xs()
+                    .text_ellipsis()
+                    .overflow_hidden()
+                    .id(SharedString::from(format!("parameter-name-{parameter_id}")))
+                    .test_support()
+                    .cursor_pointer()
+                    .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        let _ = this.panel.update(cx, |panel, cx| {
+                            if let Some(id) = document_id {
+                                panel.focus_parameter(id, &focus_parameter_id, window, cx);
+                            }
+                        });
+                    }))
+                    .text_color(if self.related {
+                        theme.primary
+                    } else {
+                        theme.foreground
                     })
-                    .child(
-                        Button::new(SharedString::from(format!(
-                            "parameter-reset-{parameter_id}"
-                        )))
-                        .xsmall()
-                        .ghost()
-                        .icon(IconName::RotateCcw)
-                        .tooltip(t!("editor.parameter_reset"))
-                        .disabled(disabled || value == default_value)
-                        .on_click(cx.listener(
-                            move |this, _, window, cx| {
-                                let Some(document_id) = document_id else {
-                                    return;
-                                };
-                                let _ = this.panel.update(cx, |panel, cx| {
-                                    panel.reset_parameter(
-                                        document_id,
-                                        &parameter_id,
-                                        default_value,
-                                        window,
-                                        cx,
-                                    );
-                                });
-                            },
-                        )),
-                    ),
+                    .child(parameter.name.clone()),
             )
             .child(
                 div()
                     .flex()
                     .items_center()
-                    .gap_1()
+                    .flex_1()
+                    .min_w_0()
+                    .px_2()
+                    .h_6()
+                    .child(parameter_track(
+                        slider,
+                        parameter,
+                        &self.visual,
+                        value,
+                        disabled,
+                        theme,
+                        self.panel.clone(),
+                        document_id,
+                    )),
+            )
+            .child(
+                div()
+                    .id(SharedString::from(format!(
+                        "parameter-value-{parameter_id}"
+                    )))
+                    .test_support()
+                    .aria_label(parameter.name.clone())
+                    .flex()
+                    .w(px(52.))
+                    .flex_shrink_0()
                     .child(
-                        div()
-                            .w(px(42.))
-                            .flex_shrink_0()
-                            .text_xs()
-                            .text_ellipsis()
-                            .overflow_hidden()
-                            .text_color(theme.muted_foreground)
-                            .child(minimum_text),
-                    )
-                    .child(div().flex().items_center().flex_1().min_w_0().h_6().child(
-                        parameter_track(
-                            slider,
-                            parameter,
-                            &self.visual,
-                            value,
-                            disabled,
-                            theme,
-                            self.panel.clone(),
-                            document_id,
-                        ),
-                    ))
-                    .child(
-                        div()
-                            .w(px(42.))
-                            .flex_shrink_0()
-                            .text_right()
-                            .text_xs()
-                            .text_ellipsis()
-                            .overflow_hidden()
-                            .text_color(theme.muted_foreground)
-                            .child(maximum_text),
+                        NumberInput::new(&self.input)
+                            .w_full()
+                            .disabled(disabled)
+                            .decrement_button(|button| button.hidden())
+                            .increment_button(|button| button.hidden())
+                            .input(
+                                Input::new(&self.input)
+                                    .aria_label(parameter.name.clone())
+                                    .small()
+                                    .w_full()
+                                    .text_right()
+                                    .disabled(disabled),
+                            ),
                     ),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_value;
+
+    #[test]
+    fn parameter_display_truncates_to_one_decimal_without_rounding() {
+        for (value, expected) in [
+            (0., "0.0"),
+            (-0., "0.0"),
+            (30., "30.0"),
+            (-30., "-30.0"),
+            (0.375, "0.3"),
+            (0.7, "0.7"),
+            (1.59, "1.5"),
+            (-1.59, "-1.5"),
+            (0.099, "0.0"),
+            (-0.099, "0.0"),
+            (f32::MAX, "340282350000000000000000000000000000000.0"),
+        ] {
+            assert_eq!(format_value(value), expected, "value = {value}");
+        }
     }
 }

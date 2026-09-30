@@ -1,9 +1,11 @@
 //! UI-independent editor coordination, SDK-backed document editing and CPU-only previews.
 mod document;
 mod editor;
+mod objects;
 mod scene;
 mod session;
 mod tree;
+pub use objects::*;
 mod workspace;
 
 pub use document::{Document, Layer, ParameterKey, ParameterValue, ParameterVisual};

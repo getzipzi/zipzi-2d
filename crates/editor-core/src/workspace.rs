@@ -236,7 +236,7 @@ impl Editor {
         self.active
             .and_then(|id| self.entry(id).ok())
             .and_then(|entry| entry.session.as_ref())
-            .map(|session| session.scene_revision)
+            .map(|session| session.document().parameter_model_revision())
     }
 
     pub fn mesh_tree(&self) -> Vec<TreeNode> {
@@ -279,6 +279,12 @@ impl Editor {
                     |s| s.document().selected_layer(),
                 )
             })
+    }
+    pub fn evaluated_frame(&self) -> Option<std::sync::Arc<kasane_core::DrawableFrame>> {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .and_then(|e| e.session.as_ref())
+            .and_then(DocumentSession::evaluated_frame)
     }
     pub fn view(&self) -> ViewState {
         self.active

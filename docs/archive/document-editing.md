@@ -45,9 +45,11 @@ still work. Window close and Quit process documents in order; cancellation stops
 that process (documents already closed stay closed). Exiting while a load is
 pending reports that loading must finish before exit.
 
-`Document` owns editor selection and a persistent SDK candidate for name/opacity
-editing. Enter/blur and slider release commit; Esc cancels name editing. Switching
-tabs commits property editing and restores that tab's selection and viewport.
+`Document` owns editor selection and SDK candidates for core preview intents and
+canvas gestures. All objects, including Mesh, use the same read-only property
+inspector backed by the shared object projection. The panel owns no input, draft
+or model edit state. Inspection and navigation preserve history; switching tabs
+restores the target tab's selection and viewport.
 An unchanged candidate does not consume history or discard redo. The SDK remains
 the sole owner of model history. Save/close/tool coordination cancels canvas candidates before moving or closing a session.
 Vertex drags use a fixed target and original positions, update SDK candidates, and
@@ -55,9 +57,18 @@ commit the final release position once; cancellation, no-op and invalid updates
 preserve model history and redo. Only base meshes without parameter, deformer,
 BlendShape or Glue dependencies are editable.
 
-The UI creates property controls with a captured document identity. Switching tabs
-replaces their entities/subscriptions, preventing late old-control events and text
-undo history from crossing documents. File dialogs are modal in the UI adapter;
+Document panels share typed `ObjectRef` identities and a `PanelContext` containing
+object selection, parameter focus, active binding and inspection/navigation history.
+`ObjectIndex` projects SDK objects, semantic forward/reverse references, binding axes
+and inherited influence paths. Its immutable snapshot is cached by an editor-owned
+projection epoch: SDK candidate revisions can repeat after cancellation, while the
+projection epoch cannot. Preview-only parameter changes reuse that snapshot and
+invalidate the evaluated scene only when effective values change. See
+[document panel implementation](document-panels-implementation.md).
+
+Editable parameter controls capture a document identity. Switching tabs replaces
+their entities/subscriptions, preventing late old-control events and text undo
+history from crossing documents. Property inspection is read-only. File dialogs are modal in the UI adapter;
 background IO is not. Canvas tabs are central and the layers/properties panels
 follow the active document. Cmd-W closes the active model, window close is a
 separate menu action, and Ctrl-Tab/Ctrl-Shift-Tab navigate models.
@@ -68,7 +79,9 @@ versioned preferences. The host normalizes keys using GPUI's platform mapper,
 installs only effective bindings, and rebuilds native menus from the same catalog.
 Text, canvas and modal contexts remain GPUI contexts; there is no second dispatcher.
 Layout uses the locked Kit DockArea/DockSkin. Canvas is permanent in the center;
-shared Layers/Properties panels are independent of document lifetimes. Invalid
+all fourteen tool panels have independent Dock identities and are independent of
+document lifetimes. Layout v3 introduces the new default groups; v1/v2 layouts reset
+once when loaded. Invalid
 persisted layouts reset; invalid Canvas regrouping reverts the previous valid layout.
 
 Only the active document submits previews. Every frame carries document, scene, viewport and request identities. Scene revisions

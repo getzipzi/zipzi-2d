@@ -2,8 +2,6 @@
 
 基于 **GPUI Kit + kasane-sdk + kasane-render-metal** 的 macOS 编辑器。
 
-已确认的目标设计见 [编辑器基础架构](docs/archive/editor-foundation.md) 和 [Document 面板与参数绑定设计](docs/document-panels-design.md)，性能输入见 [基准模型](models/README.md)。面板与参数绑定设计尚未实现，下文描述当前实现。
-
 ```text
 crates/editor                EditorView、Kit 界面、文件对话框与 GPUI 预览合成
 crates/editor-core           Editor 状态协调、SDK 文档会话、编辑命令、CPU 场景快照与视口状态
@@ -21,7 +19,7 @@ web/
 └── kasane-2d/       https://github.com/pakholeung37/kasane-2d
 ```
 
-Kasane checkout 必须包含 `modules/kasane-render-metal` 及对应的公共渲染模块修改。GPUI Kit 使用官方固定 commit，不需要本地 gpui-ce 或 gpui-kit checkout。
+Kasane checkout 必须包含 `modules/kasane-render-metal`、对应的公共渲染模块修改，以及 SDK 的常规绑定两轴写入限制。GPUI Kit 使用官方固定 commit，不需要本地 gpui-ce 或 gpui-kit checkout。
 
 ```sh
 MTL_HUD_ENABLED=1 MTL_HUD_ALIGNMENT=bottomleft MTL_HUD_SCALE=0.16 cargo run --locked -p kasane-editor
@@ -56,18 +54,20 @@ GPUI 使用原生 Metal；Kasane 共享 GPUI 的 device/queue，后台绘制不�
 
 选中网格的边线和顶点标记默认由专用 Metal 覆盖层绘制为透明纹理，再交给 GPUI 合成；保留选中、悬停、裁剪和像素对齐。内容未变时复用纹理，变化时发布独立资源，不在 UI 线程等待 GPU。设备初始化失败时回退到 GPUI。实现和回归检查见 [覆盖层重构](docs/mesh-overlay-rendering.md)，方案对照见 [覆盖层 benchmark](docs/mesh-overlay-benchmark.md)。
 
-编辑器启动时显示空白项目，不预置图层或纹理。打开或导入项目后，图层列表来自 SDK 文档，支持选择网格并编辑名称、透明度和可见性。
+编辑器启动时显示空白项目，不预置图层或纹理。打开或导入项目后，图层列表来自 SDK 文档，支持选择网格并检查名称、透明度和可见性等属性。
 
-- 名称输入实时预览，Enter 或移开焦点提交，Esc 取消；一次输入会话形成一条历史记录。
-- 透明度拖动实时预览，释放鼠标后提交为一次编辑。撤销与重做同时恢复属性和画布。
+- Mesh 与其他对象使用同一只读属性字段列表。属性面板跟随共享检查对象，不维护编辑状态；文档入口可检查画布与元数据。
 - 打开 Kasane 项目目录或 `project.kasane.json`；保存/另存为通过 SDK 发布项目目录和纹理资源，保留当前撤销历史。
 - 从原生“文件”菜单导入 `model3.json` 或分层 PSD。model3 成为待保存的文档；PSD 导入时选择新项目目录，由 SDK 写入图层和纹理。
 - 缩放和重置视图只影响视口，不修改模型，也不进入撤销历史。
 - macOS 原生菜单栏提供文件、编辑、视图和窗口菜单。支持 ⌘O 打开、⌘S 保存、⇧⌘S 另存为、⌘Z 撤销、⇧⌘Z 重做，以及 ⌘+/⌘−/⌘0 缩放和重置视图。
-- 名称输入框获得焦点时，编辑菜单操作文本（包括剪切、拷贝、粘贴、全选）；点击画布后，撤销/重做操作文档。⌘W 关闭活动模型，Ctrl-Tab / Ctrl-Shift-Tab 切换模型；⌘Q 按文档处理未保存状态后退出。
+- 参数数值输入框获得焦点时，编辑菜单操作文本（包括剪切、拷贝、粘贴、全选）；点击画布后，撤销/重做操作文档。⌘W 关闭活动模型，Ctrl-Tab / Ctrl-Shift-Tab 切换模型；⌘Q 按文档处理未保存状态后退出。
 - 新建、打开、导入成功后新增模型标签页；重复打开同一项目激活已有标签页，失败保留当前文档。关闭脏文档提供保存、放弃、取消，关闭最后标签后保留空工作区；当前版本要求项目纹理完整可读。
 
 - 中央模型标签页固定，图层与属性面板使用 Kit Dock，可拖拽、分组、拆分、折叠；布局自动保存，窗口菜单可显示/隐藏面板和重置布局。
+- 部件树、变形树、绘制顺序、参数、关键形、BlendShapes、Glue、Motions、Expressions、Physics、Pose、资源、属性、关系共 14 个独立工具面板，共享文档级对象、参数焦点、活动绑定与导航上下文。布局升级至 v3，旧布局首次加载时重置。
+- 参数面板展示真实直接绑定与继承影响；关键形面板只展示具体绑定的轴和存储组合，点选同步全部轴，参数拖动同步插值位置。常规绑定最多两轴；旧高维绑定保留数据并允许预览、保存，绑定本身只读。
+- 属性面板以只读方式检查全部对象和文档元数据。行为配置、资源和未解析引用都有浏览与关系导航入口。
 - 画布中按 V 激活基础顶点工具；点击选择、Shift 点击切换多选、拖动后一次提交，Esc 或失焦取消。仅允许无参数、变形器、BlendShape、Glue 依赖的基础网格编辑。
 - 中键拖动平移，缩放/重置与模型、控制点、命中共用实测画布坐标。顶点拖动期间禁用缩放；中键导航先取消拖动。
 - 快捷键可通过应用配置覆盖或取消绑定；编辑菜单提供快捷键清单及恢复默认。格式与失败回退见 [实施记录](docs/editor-foundation-implementation.md)。

@@ -2,6 +2,8 @@
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TreeNodeKind {
+    Group,
+    Offscreen,
     Part,
     Mesh,
     WarpDeformer,
@@ -13,6 +15,7 @@ pub struct TreeNode {
     pub id: String,
     pub name: String,
     pub kind: TreeNodeKind,
+    pub diagnostic: Option<String>,
     pub triangles: Option<usize>,
     pub visible: Option<bool>,
     pub children: Vec<TreeNode>,
@@ -24,10 +27,25 @@ impl TreeNode {
             id,
             name,
             kind,
+            diagnostic: None,
             triangles: None,
             visible: None,
             children: Vec::new(),
         }
+    }
+}
+
+impl TreeNode {
+    pub fn reference(&self) -> Option<crate::ObjectRef> {
+        use crate::ObjectKind as K;
+        let kind = match self.kind {
+            TreeNodeKind::Group => return None,
+            TreeNodeKind::Part => K::Part,
+            TreeNodeKind::Offscreen => K::Offscreen,
+            TreeNodeKind::Mesh => K::Mesh,
+            _ => K::Deformer,
+        };
+        Some(crate::ObjectRef::new(kind, &self.id))
     }
 }
 

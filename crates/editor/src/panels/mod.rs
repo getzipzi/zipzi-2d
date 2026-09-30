@@ -8,3 +8,6 @@ pub use deformer_tree::DeformerTreePanel;
 pub use mesh_tree::MeshTreePanel;
 pub use parameters::ParametersPanel;
 pub use properties::PropertiesPanel;
+
+pub mod document_panel;
+pub use document_panel::{DocumentPanel, DocumentPanelKind};

@@ -1,59 +1,49 @@
-use super::setup;
+use super::{document_fixture, setup, setup_with_document};
 use gpui_kit::test::TestWindowExt;
-use gpui_kit::{AppContext as _, TestAppContext, point};
+use gpui_kit::{AppContext as _, TestAppContext};
 
 #[gpui_kit::test]
-fn opacity_and_name_edits_survive_document_switch(cx: &mut TestAppContext) {
+fn mesh_properties_are_read_only_and_document_navigation_preserves_history(
+    cx: &mut TestAppContext,
+) {
     let harness = setup(cx);
-    let original_id = harness
-        .view
-        .read_with(cx, |view, _| view.editor.active_id().unwrap());
-
     cx.update_window(harness.window, |_, window, cx| {
-        let mut properties = window.within("properties-panel");
-        let opacity_track = properties.find("slider-bar-container").bounds();
-        properties.click_at(
-            "slider-bar-container",
-            point(
-                opacity_track.size.width * 0.55,
-                opacity_track.size.height / 2.,
-            ),
-            cx,
+        window.click("object-property-name", cx);
+        assert!(window.try_find("object-property-input").is_none());
+        assert!(window.try_find("apply-object-property").is_none());
+        assert!(window.try_find("cancel-object-property").is_none());
+        window.click("inspect-document", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.context().inspected.as_ref().unwrap().kind,
+            editor_core::ObjectKind::Document
         );
-        window.click("property-name", cx);
-        harness.view.read_with(cx, |view, cx| {
-            assert!(
-                view.dock
-                    .as_ref()
-                    .unwrap()
-                    .properties
-                    .read(cx)
-                    .is_focused(window, cx)
-            );
-        });
-        window.press("cmd-a", cx);
-        window.input("Renamed", cx);
-    })
-    .unwrap();
+        assert_eq!(view.editor.selected_layer().unwrap().name, "Diamond");
+        assert_eq!(doc.history_lengths(), (0, 0));
+        assert!(!doc.modified());
+    });
+}
 
+#[gpui_kit::test]
+fn part_properties_use_the_same_read_only_inspector(cx: &mut TestAppContext) {
+    let (mut document, assets) =
+        document_fixture::sample_document_with_nonuniform_parameter_keys().unwrap();
+    let part = document.object_index().bindings[0].target.clone();
+    document.select_object(part.clone()).unwrap();
+    let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
-        window.render_frame(cx);
-        harness.view.read_with(cx, |view, _| {
-            let layer = view.editor.selected_layer().unwrap();
-            assert_eq!(layer.name, "Renamed");
-            assert!((0.4..0.7).contains(&layer.opacity));
-        });
-        window.press("cmd-n", cx);
-        harness.view.read_with(cx, |view, _| {
-            assert_eq!(view.editor.documents().len(), 2);
-            assert_ne!(view.editor.active_id(), Some(original_id));
-        });
-        window.click(format!("tab-item-{original_id:?}"), cx);
-        harness.view.read_with(cx, |view, _| {
-            let layer = view.editor.selected_layer().unwrap();
-            assert_eq!(layer.name, "Renamed");
-            assert!((0.4..0.7).contains(&layer.opacity));
-        });
+        window.click("object-property-name", cx);
+        assert!(window.try_find("object-property-input").is_none());
+        assert!(window.try_find("apply-object-property").is_none());
     })
     .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(doc.context().inspected.as_ref(), Some(&part));
+        assert_eq!(doc.history_lengths(), (0, 0));
+        assert!(!doc.modified());
+    });
 }

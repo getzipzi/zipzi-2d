@@ -97,6 +97,14 @@ impl EditorView {
     fn complete_preview_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
         self.edit_error = result.err().map(|error| error.to_string());
         self.redraw_canvas(cx);
+        if let Some(dock) = &self.dock {
+            for kind in [
+                panels::DocumentPanelKind::Keyforms,
+                panels::DocumentPanelKind::DrawOrder,
+            ] {
+                App::notify(cx, dock.document_panels[&kind].entity_id());
+            }
+        }
     }
 
     fn connect_preview(&mut self, window: &Window, cx: &mut Context<Self>) {

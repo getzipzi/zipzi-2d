@@ -185,7 +185,7 @@ fn parameter_drag_is_cancelled_when_the_window_loses_focus(cx: &mut TestAppConte
 }
 
 #[gpui_kit::test]
-fn parameter_slider_and_reset_update_the_live_preview(cx: &mut TestAppContext) {
+fn parameter_slider_and_input_update_the_live_preview(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
     let parameter = document.parameters().remove(0);
     let id = parameter.id.clone();
@@ -209,7 +209,7 @@ fn parameter_slider_and_reset_update_the_live_preview(cx: &mut TestAppContext) {
     harness.view.read_with(cx, |view, _| {
         assert_eq!(
             view.editor.tree_revision(),
-            Some(revision + 1),
+            Some(revision),
             "mouse-up must not evaluate the same parameter value again"
         );
         let value = view.editor.document().unwrap().parameters()[0].value;
@@ -228,11 +228,17 @@ fn parameter_slider_and_reset_update_the_live_preview(cx: &mut TestAppContext) {
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.tree_revision(), Some(revision + 1));
+        assert_eq!(view.editor.tree_revision(), Some(revision));
     });
 
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-reset-{id}"), cx);
+        window.click(format!("parameter-value-{id}"), cx);
+        window.press("cmd-a", cx);
+        window.input("0", cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
     })
     .unwrap();
 
@@ -280,7 +286,7 @@ fn parameter_slider_remains_editable_after_scrolling_cached_rows(cx: &mut TestAp
     let harness = setup_with_document(cx, Document::open(&receipt.manifest).unwrap(), assets);
     let last = ids.last().unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        assert!(window.try_find(format!("parameter-reset-{last}")).is_none());
+        assert!(window.try_find(format!("parameter-value-{last}")).is_none());
         window.scroll(
             "parameters-panel",
             ScrollDelta::Pixels(point(px(0.), px(-10000.))),
@@ -301,7 +307,13 @@ fn parameter_slider_remains_editable_after_scrolling_cached_rows(cx: &mut TestAp
         assert!(parameters[..127].iter().all(|p| p.value == 0.));
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-reset-{last}"), cx);
+        window.click(format!("parameter-value-{last}"), cx);
+        window.press("cmd-a", cx);
+        window.input("0", cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
         window.scroll(
             "parameters-panel",
             ScrollDelta::Pixels(point(px(0.), px(10000.))),
@@ -324,88 +336,133 @@ fn parameter_slider_remains_editable_after_scrolling_cached_rows(cx: &mut TestAp
 }
 
 #[gpui_kit::test]
-fn linked_parameters_move_together_and_can_be_unlinked(cx: &mut TestAppContext) {
+fn unrelated_parameters_never_create_a_shared_keyform_grid(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_parameters(2).unwrap();
     let first_id = document.parameters()[0].id.clone();
     let harness = setup_with_document(cx, document, assets);
-
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-link-{first_id}"), cx);
-        let pad = window.find("linked-parameter-pad").bounds();
-        window.click_at(
-            "linked-parameter-pad",
-            point(pad.size.width * 0.8, pad.size.height * 0.2),
-            cx,
+        window.click(format!("parameter-name-{first_id}"), cx);
+        assert!(
+            window
+                .try_find(format!("parameter-link-{first_id}"))
+                .is_none()
         );
+        assert!(window.try_find("binding-keyform-pad").is_none());
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        let parameters = view.editor.document().unwrap().parameters();
-        assert!(parameters[0].value > 0.6, "x = {}", parameters[0].value);
-        assert!(parameters[1].value > 0.6, "y = {}", parameters[1].value);
+        let d = view.editor.document().unwrap();
+        assert_eq!(d.context().parameter_focus.as_ref().unwrap().id, first_id);
+        assert!(d.context().active_binding.is_none());
+        assert!(d.parameters().iter().all(|p| p.value == 0.));
     });
-    cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-link-{first_id}"), cx);
-        assert!(window.try_find("linked-parameter-pad").is_none());
-    })
-    .unwrap();
 }
 
 #[gpui_kit::test]
-fn parameter_value_input_commits_exact_values_and_rejects_out_of_range(cx: &mut TestAppContext) {
+fn parameter_blur_applies_exact_values_and_invalid_drafts_restore_display(cx: &mut TestAppContext) {
+    use gpui_kit::component::{WindowExt, input::AnyInputState};
     let (document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
     let id = document.parameters()[0].id.clone();
     let harness = setup_with_document(cx, document, assets);
 
     cx.update_window(harness.window, |_, window, cx| {
+        window.activate_window();
         window.click(format!("parameter-value-{id}"), cx);
         window.press("cmd-a", cx);
         window.input("0.375", cx);
-        window.click(format!("parameter-apply-{id}"), cx);
     })
     .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.blur(cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
     harness.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.375);
     });
 
+    // An unedited, truncated value must not overwrite the exact preview on blur.
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-value-{id}"), cx);
-        window.press("cmd-a", cx);
-        window.input("1.25", cx);
-        window.click(format!("parameter-apply-{id}"), cx);
-    })
-    .unwrap();
-    harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.375);
-    });
-}
-
-#[gpui_kit::test]
-fn key_click_updates_model_and_reset_keeps_input_synchronized(cx: &mut TestAppContext) {
-    use gpui_kit::component::{WindowExt, input::AnyInputState};
-    let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
-    let id = document.parameters()[0].id.clone();
-    let harness = setup_with_document(cx, document, assets);
-    cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-key-{id}-1"), cx);
-    })
-    .unwrap();
-    harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 1.);
-    });
-    cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-reset-{id}"), cx);
         window.click(format!("parameter-value-{id}"), cx);
         let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
             panic!("numeric input not focused")
         };
-        assert_eq!(input.read(cx).value().as_ref(), "0");
-        window.click(format!("parameter-apply-{id}"), cx);
+        assert_eq!(input.read(cx).value().as_ref(), "0.3");
+        window.blur(cx);
+        window.render_frame(cx);
     })
     .unwrap();
+    cx.run_until_parked();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.);
+        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.375);
     });
+
+    for (index, draft) in ["1.25", "-0.25", "NaN", "inf", "-inf", "bad", ""]
+        .into_iter()
+        .enumerate()
+    {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click(format!("parameter-value-{id}"), cx);
+            window.press("cmd-a", cx);
+            window.press("backspace", cx);
+            if !draft.is_empty() {
+                window.input(draft, cx);
+            }
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
+            if index % 2 == 0 {
+                window.press("enter", cx);
+            } else {
+                window.blur(cx);
+                window.render_frame(cx);
+            }
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click(format!("parameter-value-{id}"), cx);
+            let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
+                panic!("numeric input not focused")
+            };
+            assert_eq!(input.read(cx).value().as_ref(), "0.3", "draft = {draft}");
+        })
+        .unwrap();
+        cx.run_until_parked();
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.375);
+            assert!(!view.editor.document().unwrap().modified());
+        });
+    }
+}
+
+#[gpui_kit::test]
+fn key_click_keeps_numeric_input_synchronized(cx: &mut TestAppContext) {
+    use gpui_kit::component::{WindowExt, input::AnyInputState};
+    let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let id = document.parameters()[0].id.clone();
+    let harness = setup_with_document(cx, document, assets);
+    for (key, expected) in [(1, "1.0"), (0, "0.0")] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click(format!("parameter-key-{id}-{key}"), cx);
+            window.click(format!("parameter-value-{id}"), cx);
+            let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
+                panic!("numeric input not focused")
+            };
+            assert_eq!(input.read(cx).value().as_ref(), expected);
+            window.press("enter", cx);
+        })
+        .unwrap();
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor.document().unwrap().parameters()[0].value,
+                key as f32
+            );
+        });
+    }
 }
 
 #[gpui_kit::test]
@@ -418,7 +475,8 @@ fn parameter_escape_discards_draft_before_blur(cx: &mut TestAppContext) {
         window.press("cmd-a", cx);
         window.input("0.75", cx);
         window.press("escape", cx);
-        window.click(format!("parameter-apply-{id}"), cx);
+        window.blur(cx);
+        window.render_frame(cx);
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
@@ -427,133 +485,207 @@ fn parameter_escape_discards_draft_before_blur(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn parameter_link_survives_document_switch_and_does_not_change_other_document(
+fn active_binding_survives_document_switch_without_changing_other_document(
     cx: &mut TestAppContext,
 ) {
-    let (document, assets) = document_fixture::sample_document_with_parameters(2).unwrap();
-    let id = document.parameters()[0].id.clone();
+    let (mut document, assets) =
+        document_fixture::sample_document_with_nonuniform_parameter_keys().unwrap();
+    let binding = document.object_index().bindings[0].reference.clone();
+    document.open_binding(binding.clone()).unwrap();
     let harness = setup_with_document(cx, document, assets);
     let original = harness
         .view
-        .read_with(cx, |view, _| view.editor.active_id().unwrap());
+        .read_with(cx, |v, _| v.editor.active_id().unwrap());
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-link-{id}"), cx);
-        harness.view.update(cx, |view, cx| {
-            view.editor.new_document().unwrap();
+        assert!(window.try_find("binding-keyform-pad").is_some());
+        harness.view.update(cx, |v, cx| {
+            v.editor.new_document().unwrap();
             cx.notify();
         });
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(window.try_find("linked-parameter-pad").is_none());
-        harness.view.update(cx, |view, cx| {
-            view.editor.activate(original).unwrap();
+        assert!(window.try_find("binding-keyform-pad").is_none());
+        harness.view.update(cx, |v, cx| {
+            assert!(
+                v.editor
+                    .document()
+                    .unwrap()
+                    .context()
+                    .active_binding
+                    .is_none()
+            );
+            v.editor.activate(original).unwrap();
             cx.notify();
         });
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(window.try_find("linked-parameter-pad").is_some());
+        assert!(window.try_find("binding-keyform-pad").is_some());
     })
     .unwrap();
+    harness.view.read_with(cx, |v, _| {
+        assert_eq!(
+            v.editor.document().unwrap().context().active_binding,
+            Some(binding)
+        )
+    });
 }
 
 #[gpui_kit::test]
-fn linked_key_click_preserves_authored_precision_and_evaluates_once(cx: &mut TestAppContext) {
-    let (document, assets) =
+fn binding_key_click_preserves_authored_precision_and_evaluates_once(cx: &mut TestAppContext) {
+    let (mut document, assets) =
         document_fixture::sample_document_with_nonuniform_parameter_keys().unwrap();
+    let binding = document.object_index().bindings[0].reference.clone();
+    document.open_binding(binding).unwrap();
     let id = document.parameters()[0].id.clone();
     let harness = setup_with_document(cx, document, assets);
-    let revision = harness
-        .view
-        .read_with(cx, |view, _| view.editor.tree_revision().unwrap());
+    let revision = harness.view.read_with(cx, |v, _| v.editor.tree_revision());
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-link-{id}"), cx);
-        window.click("linked-key-0.375-0.375", cx);
+        window.click("keyform-4", cx);
     })
     .unwrap();
-    harness.view.read_with(cx, |view, _| {
+    harness.view.read_with(cx, |v, _| {
         assert!(
-            view.editor
+            v.editor
                 .document()
                 .unwrap()
                 .parameters()
                 .iter()
                 .all(|p| p.value == 0.375)
         );
-        assert_eq!(view.editor.tree_revision(), Some(revision + 1));
-        assert!(!view.editor.document().unwrap().modified());
+        assert_eq!(v.editor.tree_revision(), revision);
+        assert!(!v.editor.document().unwrap().modified());
     });
     cx.update_window(harness.window, |_, window, cx| {
-        // Displayed precision is 0.38; focusing and leaving must not rewrite the key value.
         window.click(format!("parameter-value-{id}"), cx);
         window.press("enter", cx);
-        window.click("linked-key-0.375-0.375", cx);
+        window.click("keyform-4", cx);
     })
     .unwrap();
-    harness.view.read_with(cx, |view, _| {
+    harness.view.read_with(cx, |v, _| {
         assert!(
-            view.editor
+            v.editor
                 .document()
                 .unwrap()
                 .parameters()
                 .iter()
                 .all(|p| p.value == 0.375)
         );
-        assert_eq!(view.editor.tree_revision(), Some(revision + 1));
+        assert_eq!(v.editor.tree_revision(), revision);
     });
 }
 
 #[gpui_kit::test]
-fn parameter_enter_commits_without_apply_button(cx: &mut TestAppContext) {
+fn parameter_enter_applies_drafts_and_preserves_unedited_precision(cx: &mut TestAppContext) {
+    use gpui_kit::component::{WindowExt, input::AnyInputState};
     let (document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
     let id = document.parameters()[0].id.clone();
     let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.try_find(format!("parameter-reset-{id}")).is_none());
+        assert!(window.try_find(format!("parameter-apply-{id}")).is_none());
         window.click(format!("parameter-value-{id}"), cx);
         window.press("cmd-a", cx);
         window.input("0.625", cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
+        let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
+            panic!("numeric input not focused")
+        };
+        assert_eq!(input.read(cx).value().as_ref(), "0.6");
         window.press("enter", cx);
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.625)
     });
+    // Explicitly typing the same text as the truncated display still applies it.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("cmd-a", cx);
+        window.input("0.6", cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.6)
+    });
 }
 
 #[gpui_kit::test]
-fn modal_blocks_linked_parameter_changes(cx: &mut TestAppContext) {
-    let (document, assets) = document_fixture::sample_document_with_parameters(2).unwrap();
+fn parameter_number_input_steps_then_commits_on_enter_or_blur(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
     let id = document.parameters()[0].id.clone();
     let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("parameter-link-{id}"), cx);
-        harness.view.update(cx, |view, cx| {
-            view.modal = true;
+        window.activate_window();
+        window.click(format!("parameter-value-{id}"), cx);
+        let input = window.within(format!("parameter-value-{id}"));
+        for button in ["increment", "decrement"] {
+            assert!(
+                input
+                    .try_find(button)
+                    .is_none_or(|element| element.bounds().size.width == gpui_kit::px(0.))
+            );
+        }
+        window.press("up", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.);
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.1);
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("down", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.blur(cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.);
+        assert!(!view.editor.document().unwrap().modified());
+    });
+}
+
+#[gpui_kit::test]
+fn modal_blocks_binding_keyform_changes(cx: &mut TestAppContext) {
+    let (mut document, assets) =
+        document_fixture::sample_document_with_nonuniform_parameter_keys().unwrap();
+    let binding = document.object_index().bindings[0].reference.clone();
+    document.open_binding(binding).unwrap();
+    let before = document.parameters();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, _, cx| {
+        harness.view.update(cx, |v, cx| {
+            v.modal = true;
             cx.notify();
         });
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        let pad = window.find("linked-parameter-pad").bounds();
-        window.click_at(
-            "linked-parameter-pad",
-            point(pad.size.width * 0.75, pad.size.height * 0.25),
-            cx,
-        );
+        window.click("keyform-4", cx);
     })
     .unwrap();
-    harness.view.read_with(cx, |view, _| {
-        assert!(
-            view.editor
-                .document()
-                .unwrap()
-                .parameters()
-                .iter()
-                .all(|p| p.value == 0.)
-        )
+    harness.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().parameters(), before)
     });
 }
 
@@ -571,4 +703,88 @@ fn single_key_click_preserves_authored_precision(cx: &mut TestAppContext) {
     harness.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.375)
     });
+}
+
+#[gpui_kit::test]
+fn parameter_binding_navigation_reveals_hidden_keyforms_without_losing_selection(
+    cx: &mut TestAppContext,
+) {
+    use crate::docking::PanelKind;
+    use crate::panels::DocumentPanelKind;
+    let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let binding = document.object_index().bindings[0].clone();
+    let selected = document.context().selection.clone();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.dock.as_ref().unwrap().toggle(
+                PanelKind::Document(DocumentPanelKind::Keyforms),
+                window,
+                cx,
+            )
+        });
+        window.render_frame(cx);
+        assert!(window.try_find("binding-keyform-pad").is_none());
+        window.click(format!("parameter-name-{parameter}"), cx);
+        harness.view.read_with(cx, |v, _| {
+            assert_eq!(v.editor.document().unwrap().context().selection, selected)
+        });
+        window.click(
+            format!(
+                "parameter-binding-{:?}-{}",
+                binding.reference.kind, binding.reference.id
+            ),
+            cx,
+        );
+    })
+    .unwrap();
+    harness.view.read_with(cx, |v, cx| {
+        let d = v.editor.document().unwrap();
+        assert_eq!(d.context().active_binding, Some(binding.reference));
+        assert_eq!(d.context().selection, selected);
+        let dock = v.dock.as_ref().unwrap();
+        assert!(
+            dock.area
+                .read(cx)
+                .panel(gpui_kit::component::dock::PanelId::from(
+                    dock.document_panels[&DocumentPanelKind::Keyforms].entity_id()
+                ))
+                .is_some()
+        );
+    });
+}
+
+#[gpui_kit::test]
+fn parameter_slider_refreshes_the_active_keyform_coordinate(cx: &mut TestAppContext) {
+    let (mut document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let binding = document.object_index().bindings[0].reference.clone();
+    document.open_binding(binding).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    let before = cx
+        .update_window(harness.window, |_, window, _| {
+            window.find("keyform-preview-coordinate").bounds().center()
+        })
+        .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        let mut row = window.within(format!("parameter-row-{parameter}"));
+        let track = row.find("slider-bar-container").bounds();
+        row.click_at(
+            "slider-bar-container",
+            point(track.size.width * 0.7, track.size.height / 2.),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let after = window.find("keyform-preview-coordinate").bounds().center();
+        assert!(after.x > before.x, "before {before:?}, after {after:?}");
+        assert_eq!(after.y, before.y);
+        harness.view.read_with(cx, |view, _| {
+            assert!(!view.editor.document().unwrap().modified());
+        });
+    })
+    .unwrap();
 }

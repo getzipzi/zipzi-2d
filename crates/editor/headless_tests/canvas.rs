@@ -175,20 +175,17 @@ fn space_after_document_switch_enters_temporary_hand_mode(cx: &mut TestAppContex
 }
 
 #[gpui_kit::test]
-fn space_in_property_input_keeps_input_focus(cx: &mut TestAppContext) {
-    let harness = setup(cx);
+fn space_in_parameter_input_keeps_input_focus(cx: &mut TestAppContext) {
+    use gpui_kit::component::WindowExt as _;
+    let (document, assets) = super::document_fixture::sample_document_with_parameters(1).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let harness = super::setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("property-name", cx);
+        window.click(format!("parameter-value-{parameter}"), cx);
         window.press("space", cx);
+        assert!(window.has_focused_input(cx));
         harness.view.read_with(cx, |view, cx| {
-            assert!(
-                view.dock
-                    .as_ref()
-                    .unwrap()
-                    .properties
-                    .read(cx)
-                    .is_focused(window, cx)
-            );
+            assert!(!view.dock.as_ref().unwrap().canvas.read(cx).hand_tool());
         });
     })
     .unwrap();

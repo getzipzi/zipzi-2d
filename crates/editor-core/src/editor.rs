@@ -4,13 +4,35 @@ use std::path::PathBuf;
 
 /// UI-independent editing intent. Model changes always go through Document and the SDK.
 pub enum EditorCommand {
+    SetObjectProperty {
+        object: crate::ObjectRef,
+        field: String,
+        value: serde_json::Value,
+    },
     Select(String),
+    SelectObject(crate::ObjectRef),
+    FocusParameter(String),
+    OpenBinding(crate::ObjectRef),
+    Navigate(crate::ObjectRef),
+    NavigateBack,
+    PreviewKeyform {
+        binding: crate::ObjectRef,
+        point: usize,
+    },
     PreviewName(String),
     PreviewOpacity(f32),
-    SetPreviewParameter { parameter_id: String, value: f32 },
-    SetPreviewParameters { values: Vec<(String, f32)> },
+    SetPreviewParameter {
+        parameter_id: String,
+        value: f32,
+    },
+    SetPreviewParameters {
+        values: Vec<(String, f32)>,
+    },
     SetVisible(bool),
-    SetLayerVisible { layer_id: String, visible: bool },
+    SetLayerVisible {
+        layer_id: String,
+        visible: bool,
+    },
     FinishEdit,
     CancelEdit,
     Undo,

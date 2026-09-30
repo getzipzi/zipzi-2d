@@ -141,6 +141,24 @@ pub(super) fn init(cx: &mut App) {
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());
     cx.on_action(|_: &ShowAll, cx| cx.unhide_other_apps());
 }
+
+/// View controls the canvas and presentation; Window owns panels and layout.
+fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
+    Menu::new(t!("menu.view")).items([
+        item(CommandId::ZoomIn),
+        item(CommandId::ZoomOut),
+        item(CommandId::ResetView),
+        MenuItem::separator(),
+        item(CommandId::Vertices),
+        item(CommandId::CancelGesture),
+        MenuItem::separator(),
+        MenuItem::action(t!("menu.toggle_theme"), ToggleTheme),
+        MenuItem::separator(),
+        item(CommandId::ShowShortcuts),
+        item(CommandId::ResetShortcuts),
+    ])
+}
+
 impl EditorView {
     pub(super) fn menu_actions(&self, modal: bool, cx: &Context<Self>) -> Div {
         div()
@@ -173,10 +191,6 @@ impl EditorView {
                             cx.set_global(settings);
                             if welcome_message {
                                 this.message = t!("editor.welcome").into_owned();
-                            }
-                            if let Some(dock) = &this.dock {
-                                dock.properties
-                                    .update(cx, |panel, cx| panel.refresh_locale(window, cx));
                             }
                             window.set_window_title(&t!("app.title"));
                             this.menu_state = MenuState::default();
@@ -220,7 +234,12 @@ impl EditorView {
             .on_action(|_: &Minimize, window, _| window.minimize_window())
             .on_action(|_: &ZoomWindow, window, _| window.zoom_window())
     }
-    pub(super) fn refresh_menus(&mut self, modal: bool, window: &Window, cx: &mut Context<Self>) {
+    pub(super) fn refresh_menus(
+        &mut self,
+        modal: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let text = self.has_focused_input(window, cx);
         let settings = cx.global::<settings::Settings>();
         let state = MenuState {
@@ -320,23 +339,23 @@ impl EditorView {
                 item(CommandId::CommitProperty),
                 item(CommandId::CancelProperty),
             ])),
-            Menu::new(t!("menu.view")).items([
-                item(CommandId::ZoomIn),
-                item(CommandId::ZoomOut),
-                item(CommandId::ResetView),
-                item(CommandId::Vertices),
-                item(CommandId::CancelGesture),
-                MenuItem::separator(),
+            view_menu(item),
+            Menu::new(t!("menu.window")).items([
                 item(CommandId::MeshTree),
                 item(CommandId::Deformers),
+                item(CommandId::DrawOrder),
                 item(CommandId::Properties),
+                item(CommandId::Relations),
                 item(CommandId::Parameters),
+                item(CommandId::Keyforms),
+                item(CommandId::BlendShapes),
+                item(CommandId::Glue),
+                item(CommandId::Motions),
+                item(CommandId::Expressions),
+                item(CommandId::Physics),
+                item(CommandId::Pose),
+                item(CommandId::Resources),
                 item(CommandId::ResetLayout),
-                MenuItem::action(t!("menu.toggle_theme"), ToggleTheme),
-                item(CommandId::ShowShortcuts),
-                item(CommandId::ResetShortcuts),
-            ]),
-            Menu::new(t!("menu.window")).items([
                 item(CommandId::Previous),
                 item(CommandId::Next),
                 MenuItem::action(t!("menu.minimize"), Minimize),
@@ -386,14 +405,46 @@ impl EditorView {
                 CommandId::MeshTree
                 | CommandId::Deformers
                 | CommandId::Properties
-                | CommandId::Parameters => {
+                | CommandId::Parameters
+                | CommandId::DrawOrder
+                | CommandId::Relations
+                | CommandId::Keyforms
+                | CommandId::BlendShapes
+                | CommandId::Glue
+                | CommandId::Motions
+                | CommandId::Expressions
+                | CommandId::Physics
+                | CommandId::Pose
+                | CommandId::Resources => {
                     if let Some(dock) = &mut self.dock {
                         dock.toggle(
                             match id {
                                 CommandId::MeshTree => docking::PanelKind::MeshTree,
                                 CommandId::Deformers => docking::PanelKind::Deformers,
                                 CommandId::Parameters => docking::PanelKind::Parameters,
-                                _ => docking::PanelKind::Properties,
+                                CommandId::Properties => docking::PanelKind::Properties,
+                                _ => docking::PanelKind::Document(match id {
+                                    CommandId::DrawOrder => {
+                                        crate::panels::DocumentPanelKind::DrawOrder
+                                    }
+                                    CommandId::Relations => {
+                                        crate::panels::DocumentPanelKind::Relations
+                                    }
+                                    CommandId::Keyforms => {
+                                        crate::panels::DocumentPanelKind::Keyforms
+                                    }
+                                    CommandId::BlendShapes => {
+                                        crate::panels::DocumentPanelKind::BlendShapes
+                                    }
+                                    CommandId::Glue => crate::panels::DocumentPanelKind::Glue,
+                                    CommandId::Motions => crate::panels::DocumentPanelKind::Motions,
+                                    CommandId::Expressions => {
+                                        crate::panels::DocumentPanelKind::Expressions
+                                    }
+                                    CommandId::Physics => crate::panels::DocumentPanelKind::Physics,
+                                    CommandId::Pose => crate::panels::DocumentPanelKind::Pose,
+                                    _ => crate::panels::DocumentPanelKind::Resources,
+                                }),
                             },
                             window,
                             cx,

@@ -443,8 +443,11 @@ fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Resu
     assert_eq!(parts[0].id, root_part);
     assert_eq!(parts[0].kind, TreeNodeKind::Part);
     assert_eq!(parts[0].children[0].id, child_part);
-    assert_eq!(parts[0].children[0].children[0].id, mesh);
-    assert_eq!(parts[1].id, unassigned_mesh);
+    assert_eq!(parts[0].children[0].children[0].id, warp);
+    assert_eq!(parts[0].children[0].children[1].id, mesh);
+    assert_eq!(parts[0].children[1].id, rotation);
+    assert_eq!(parts[1].kind, TreeNodeKind::Group);
+    assert_eq!(parts[1].children[0].id, unassigned_mesh);
 
     let deformers = document.deformer_tree();
     assert_eq!(deformers.len(), 2);
@@ -453,7 +456,8 @@ fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Resu
     assert_eq!(deformers[0].children[0].id, warp);
     assert_eq!(deformers[0].children[0].kind, TreeNodeKind::WarpDeformer);
     assert_eq!(deformers[0].children[0].children[0].id, mesh);
-    assert_eq!(deformers[1].id, unassigned_mesh);
+    assert_eq!(deformers[1].kind, TreeNodeKind::Group);
+    assert_eq!(deformers[1].children[0].id, unassigned_mesh);
     Ok(())
 }
 

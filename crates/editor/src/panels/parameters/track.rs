@@ -1,5 +1,9 @@
 use super::*;
 
+const TRACK_HEIGHT: f32 = 2.;
+const MARKER_SIZE: f32 = 10.;
+const HANDLE_HIT_SIZE: f32 = 16.;
+
 pub(super) fn parameter_track(
     slider: &Entity<SliderState>,
     parameter: &ParameterValue,
@@ -51,9 +55,9 @@ pub(super) fn parameter_track(
                 .test_support()
                 .absolute()
                 .left(relative(position))
-                .top(px(-4.))
-                .ml(-px(5.))
-                .size(px(10.))
+                .top(px((TRACK_HEIGHT - MARKER_SIZE) / 2.))
+                .ml(-px(MARKER_SIZE / 2.))
+                .size(px(MARKER_SIZE))
                 .border_1()
                 .border_color(color)
                 .when(
@@ -103,15 +107,15 @@ pub(super) fn parameter_track(
             })
             .absolute()
             .left(relative(fraction))
-            .top(-px(7.))
-            .ml(-px(7.))
-            .size(px(16.))
+            .top(px((TRACK_HEIGHT - HANDLE_HIT_SIZE) / 2.))
+            .ml(-px(HANDLE_HIT_SIZE / 2.))
+            .size(px(HANDLE_HIT_SIZE))
             .flex()
             .items_center()
             .justify_center()
             .child(
                 div()
-                    .size(px(9.))
+                    .size(px(MARKER_SIZE))
                     .rounded_full()
                     .border_1()
                     .border_color(cursor_color)
@@ -192,7 +196,7 @@ pub(super) fn parameter_track(
                             SliderIndicator::new(slider)
                                 .relative()
                                 .w_full()
-                                .h(px(2.))
+                                .h(px(TRACK_HEIGHT))
                                 .bg(theme.muted_foreground.opacity(0.55))
                                 .children(marks),
                         ),

@@ -50,6 +50,26 @@ pub enum CommandId {
     Deformers,
     #[serde(rename = "panel.parameters")]
     Parameters,
+    #[serde(rename = "panel.draw-order")]
+    DrawOrder,
+    #[serde(rename = "panel.relations")]
+    Relations,
+    #[serde(rename = "panel.keyforms")]
+    Keyforms,
+    #[serde(rename = "panel.blend-shapes")]
+    BlendShapes,
+    #[serde(rename = "panel.glue")]
+    Glue,
+    #[serde(rename = "panel.motions")]
+    Motions,
+    #[serde(rename = "panel.expressions")]
+    Expressions,
+    #[serde(rename = "panel.physics")]
+    Physics,
+    #[serde(rename = "panel.pose")]
+    Pose,
+    #[serde(rename = "panel.resources")]
+    Resources,
     #[serde(rename = "panel.properties")]
     Properties,
     #[serde(rename = "layout.reset")]
@@ -125,6 +145,16 @@ specs![
     (Deformers, "editor.deformer_tree", Workspace, false, []),
     (Parameters, "editor.parameters", Workspace, false, []),
     (Properties, "editor.properties", Workspace, false, []),
+    (DrawOrder, "editor.draw_order", Workspace, false, []),
+    (Relations, "editor.relations", Workspace, false, []),
+    (Keyforms, "editor.keyforms", Workspace, false, []),
+    (BlendShapes, "editor.blend_shapes", Workspace, false, []),
+    (Glue, "editor.glue", Workspace, false, []),
+    (Motions, "editor.motions", Workspace, false, []),
+    (Expressions, "editor.expressions", Workspace, false, []),
+    (Physics, "editor.physics", Workspace, false, []),
+    (Pose, "editor.pose", Workspace, false, []),
+    (Resources, "editor.resources", Workspace, false, []),
     (ResetLayout, "menu.reset_layout", Workspace, false, []),
     (ResetShortcuts, "menu.reset_shortcuts", Workspace, false, []),
     (ShowShortcuts, "menu.shortcuts", Workspace, false, []),
@@ -158,8 +188,9 @@ impl Editor {
             New | Open | ImportModel3 | ImportPsd => !self.exiting(),
             Quit => true,
             Previous | Next => self.document_count() > 1,
-            MeshTree | Deformers | Parameters | Properties | ResetLayout | ResetShortcuts
-            | ShowShortcuts => true,
+            MeshTree | Deformers | Parameters | Properties | DrawOrder | Relations | Keyforms
+            | BlendShapes | Glue | Motions | Expressions | Physics | Pose | Resources
+            | ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
             Undo => target && self.can_undo(),
             Redo => target && self.can_redo(),

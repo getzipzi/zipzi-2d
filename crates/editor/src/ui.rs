@@ -2,10 +2,8 @@ use super::*;
 use gpui_kit::component::{ActiveTheme, WindowExt};
 
 impl EditorView {
-    pub fn has_focused_input(&self, window: &Window, cx: &App) -> bool {
-        self.dock
-            .as_ref()
-            .is_some_and(|dock| dock.has_focused_input(window, cx))
+    pub fn has_focused_input(&self, window: &mut Window, cx: &mut App) -> bool {
+        window.has_focused_input(cx)
     }
 }
 

@@ -35,6 +35,9 @@ impl DocumentSession {
     pub fn document(&self) -> &Document {
         &self.document
     }
+    pub fn evaluated_frame(&self) -> Option<Arc<kasane_core::DrawableFrame>> {
+        self.cache.as_ref().map(|scene| scene.frame.clone())
+    }
     pub fn view(&self) -> ViewState {
         self.view
     }
@@ -60,13 +63,47 @@ impl DocumentSession {
             None
         };
         let had_pending = self.document.has_pending_edit();
-        let selection = matches!(&command, EditorCommand::Select(_));
-        let invalidate = !matches!(
+        let preview_before = self.document.preview_revision();
+        let is_preview = matches!(
             &command,
-            EditorCommand::Select(_) | EditorCommand::FinishEdit
-        ) || had_pending;
+            EditorCommand::SetPreviewParameter { .. }
+                | EditorCommand::SetPreviewParameters { .. }
+                | EditorCommand::PreviewKeyform { .. }
+        );
+        let selection = matches!(
+            &command,
+            EditorCommand::Select(_)
+                | EditorCommand::SelectObject(_)
+                | EditorCommand::OpenBinding(_)
+                | EditorCommand::Navigate(_)
+                | EditorCommand::NavigateBack
+        );
+        let context_only = matches!(
+            &command,
+            EditorCommand::Select(_)
+                | EditorCommand::SelectObject(_)
+                | EditorCommand::OpenBinding(_)
+                | EditorCommand::Navigate(_)
+                | EditorCommand::NavigateBack
+                | EditorCommand::FocusParameter(_)
+        );
+        let invalidate =
+            !(context_only || matches!(&command, EditorCommand::FinishEdit)) || had_pending;
         let result = match command {
+            EditorCommand::SetObjectProperty {
+                object,
+                field,
+                value,
+            } => self.document.set_object_property(&object, &field, value),
             EditorCommand::Select(id) => self.document.select(&id),
+            EditorCommand::SelectObject(r) => self.document.select_object(r),
+            EditorCommand::FocusParameter(id) => self.document.focus_parameter(&id),
+            EditorCommand::OpenBinding(r) => self.document.open_binding(r),
+            EditorCommand::Navigate(r) => self.document.navigate(r),
+            EditorCommand::NavigateBack => self.document.navigate_back(),
+            EditorCommand::PreviewKeyform { binding, point } => {
+                self.document.preview_keyform(&binding, point)
+            }
             EditorCommand::PreviewName(name) => self.document.preview_name(&name),
             EditorCommand::PreviewOpacity(v) => self.document.preview_opacity(v),
             EditorCommand::SetPreviewParameter {
@@ -91,7 +128,9 @@ impl DocumentSession {
         if selection {
             self.tools.clear();
         }
-        if invalidate {
+        if invalidate
+            && (!is_preview || had_pending || self.document.preview_revision() != preview_before)
+        {
             self.invalidate_scene();
             if result.is_ok() {
                 self.geometry = unchanged_geometry;

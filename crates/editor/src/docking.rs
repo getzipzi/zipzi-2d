@@ -84,6 +84,7 @@ pub enum PanelKind {
     MeshTree,
     Deformers,
     Parameters,
+    Document(crate::panels::DocumentPanelKind),
 }
 
 pub struct DockWorkspace {
@@ -93,6 +94,10 @@ pub struct DockWorkspace {
     pub mesh_tree: Entity<crate::panels::MeshTreePanel>,
     pub deformer_tree: Entity<crate::panels::DeformerTreePanel>,
     pub parameters: Entity<crate::panels::ParametersPanel>,
+    pub document_panels: std::collections::HashMap<
+        crate::panels::DocumentPanelKind,
+        Entity<crate::panels::DocumentPanel>,
+    >,
     pub last_valid: DockAreaState,
     pending_layout_measurement: bool,
     writer: LayoutWriter,
@@ -122,11 +127,18 @@ impl DockWorkspace {
             register_panel(cx, name, move |_, _, _| handle.clone());
         }
 
+        let mut document_panels = std::collections::HashMap::new();
+        for kind in crate::panels::DocumentPanelKind::ALL {
+            let panel = crate::panels::DocumentPanel::new(owner.clone(), kind, window, cx);
+            let handle = panel_handle(panel.clone());
+            register_panel(cx, kind.name(), move |_, _, _| handle.clone());
+            document_panels.insert(kind, panel);
+        }
         let mut component_skin = None;
         let area = cx.new(|cx| {
             let skin = DockSkin::new(cx);
             component_skin = Some(skin.clone());
-            DockArea::new("kasane-workspace", Some(2), window, cx)
+            DockArea::new("kasane-workspace", Some(3), window, cx)
                 .with_renderer(skin::EditorDockSkin::new(skin, parameters.entity_id()))
         });
         component_skin.unwrap().set_close_button_visible(true, cx);
@@ -144,6 +156,7 @@ impl DockWorkspace {
             mesh_tree,
             deformer_tree,
             parameters,
+            document_panels,
             last_valid,
             pending_layout_measurement: false,
             writer,
@@ -163,38 +176,62 @@ impl DockWorkspace {
                 area.remove_dock(placement, window, cx);
             }
             area.set_center(
-                DockLayout::h_split()
+                DockLayout::v_split()
                     .child(
-                        DockLayout::v_split()
+                        DockLayout::h_split()
                             .child(
                                 DockLayout::tabs()
-                                    .panel_view(panel_handle(self.mesh_tree.clone()), cx),
+                                    .panel_view(panel_handle(self.mesh_tree.clone()), cx)
+                                    .panel_view(panel_handle(self.deformer_tree.clone()), cx)
+                                    .panel_view(
+                                        panel_handle(
+                                            self.document_panels
+                                                [&crate::panels::DocumentPanelKind::DrawOrder]
+                                                .clone(),
+                                        ),
+                                        cx,
+                                    ),
+                                Some(px(250.)),
+                            )
+                            .child(
+                                DockLayout::tabs()
+                                    .panel_view(panel_handle(self.canvas.clone()), cx),
                                 None,
                             )
                             .child(
                                 DockLayout::tabs()
-                                    .panel_view(panel_handle(self.deformer_tree.clone()), cx),
-                                None,
+                                    .panel_view(panel_handle(self.properties.clone()), cx)
+                                    .panel_view(
+                                        panel_handle(
+                                            self.document_panels
+                                                [&crate::panels::DocumentPanelKind::Relations]
+                                                .clone(),
+                                        ),
+                                        cx,
+                                    ),
+                                Some(px(280.)),
                             ),
-                        Some(px(240.)),
-                    )
-                    .child(
-                        DockLayout::tabs().panel_view(panel_handle(self.canvas.clone()), cx),
                         None,
                     )
                     .child(
                         DockLayout::v_split()
                             .child(
                                 DockLayout::tabs()
-                                    .panel_view(panel_handle(self.properties.clone()), cx),
+                                    .panel_view(panel_handle(self.parameters.clone()), cx),
                                 None,
                             )
                             .child(
-                                DockLayout::tabs()
-                                    .panel_view(panel_handle(self.parameters.clone()), cx),
+                                DockLayout::tabs().panel_view(
+                                    panel_handle(
+                                        self.document_panels
+                                            [&crate::panels::DocumentPanelKind::Keyforms]
+                                            .clone(),
+                                    ),
+                                    cx,
+                                ),
                                 None,
                             ),
-                        Some(px(240.)),
+                        Some(px(360.)),
                     ),
                 window,
                 cx,
@@ -203,12 +240,15 @@ impl DockWorkspace {
         self.last_valid = self.area.read(cx).dump(cx);
     }
 
-    pub fn has_focused_input(&self, window: &Window, cx: &App) -> bool {
-        self.properties.read(cx).is_focused(window, cx)
-    }
-
     pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
         match kind {
+            PanelKind::Document(kind) => toggle_panel(
+                &self.area,
+                self.document_panels[&kind].clone(),
+                DockPlacement::Right,
+                window,
+                cx,
+            ),
             PanelKind::Properties => toggle_panel(
                 &self.area,
                 self.properties.clone(),
@@ -284,7 +324,17 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
                         "Properties",
                         "MeshTree",
                         "Deformers",
-                        "Parameters"
+                        "Parameters",
+                        "DrawOrder",
+                        "Relations",
+                        "Keyforms",
+                        "BlendShapes",
+                        "Glue",
+                        "Motions",
+                        "Expressions",
+                        "Physics",
+                        "Pose",
+                        "Resources"
                     ]
                     .contains(&node.panel_name.as_str()),
                     "Unknown panel"
@@ -319,7 +369,7 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
             }
         }
     }
-    ensure!(state.version == Some(2), "Unsupported layout version");
+    ensure!(state.version == Some(3), "Unsupported layout version");
     let mut seen = std::collections::HashSet::new();
     ensure!(
         walk(&state.center, &mut seen, 0)? == 1,
@@ -341,6 +391,25 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
     Ok(())
 }
 impl EditorView {
+    pub(super) fn reveal_keyforms(&mut self, window: &mut Window, cx: &mut App) {
+        if let Some(dock) = &self.dock {
+            let panel = dock.document_panels[&crate::panels::DocumentPanelKind::Keyforms].clone();
+            let id = PanelId::from(panel.entity_id());
+            let exists = dock.area.read(cx).panel(id).is_some();
+            dock.area.update(cx, |area, cx| {
+                if !exists {
+                    area.add_panel_view(
+                        panel_handle(panel),
+                        DockPlacement::Bottom,
+                        None,
+                        window,
+                        cx,
+                    );
+                }
+                area.select_panel(id, window, cx);
+            });
+        }
+    }
     pub(super) fn init_dock(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let mut dock = DockWorkspace::new(cx.weak_entity(), window, cx);
         let errors = dock.errors.take().unwrap();
@@ -364,7 +433,7 @@ impl EditorView {
             // Version 1 includes the retired Layers panel and tabbed sidebars.
             // Replace it once with the new split layout after its first frame
             // has measured the flexible center pane.
-            Ok(Some(saved)) if saved.layout.version == Some(1) => {
+            Ok(Some(saved)) if matches!(saved.layout.version, Some(1 | 2)) => {
                 save_measured_default = true;
             }
             // An older build saved the default before layout, when every
@@ -399,6 +468,10 @@ impl EditorView {
                 let Some(dock) = &mut this.dock else {
                     return;
                 };
+                for panel in dock.document_panels.values() {
+                    panel.update(cx, |panel, _| panel.cancel_drag());
+                }
+
                 if dock.pending_layout_measurement {
                     return;
                 }
@@ -455,7 +528,7 @@ mod tests {
     use gpui_kit::component::dock::{DockAreaState, PanelInfo, PanelState};
     fn layout() -> DockAreaState {
         DockAreaState {
-            version: Some(2),
+            version: Some(3),
             center: PanelState {
                 panel_name: "StackPanel".into(),
                 children: vec![
