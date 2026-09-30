@@ -134,14 +134,12 @@ impl DockWorkspace {
             register_panel(cx, kind.name(), move |_, _, _| handle.clone());
             document_panels.insert(kind, panel);
         }
-        let mut component_skin = None;
         let area = cx.new(|cx| {
             let skin = DockSkin::new(cx);
-            component_skin = Some(skin.clone());
-            DockArea::new("kasane-workspace", Some(3), window, cx)
-                .with_renderer(skin::EditorDockSkin::new(skin, parameters.entity_id()))
+            DockArea::new("kasane-workspace", Some(3), window, cx).with_renderer(
+                skin::EditorDockSkin::new(skin, parameters.entity_id(), cx.weak_entity()),
+            )
         });
-        component_skin.unwrap().set_close_button_visible(true, cx);
         let last_valid = area.read(cx).dump(cx);
         #[cfg(test)]
         let (writer, errors) =
@@ -176,13 +174,12 @@ impl DockWorkspace {
                 area.remove_dock(placement, window, cx);
             }
             area.set_center(
-                DockLayout::v_split()
+                DockLayout::h_split()
                     .child(
-                        DockLayout::h_split()
+                        DockLayout::v_split()
                             .child(
                                 DockLayout::tabs()
                                     .panel_view(panel_handle(self.mesh_tree.clone()), cx)
-                                    .panel_view(panel_handle(self.deformer_tree.clone()), cx)
                                     .panel_view(
                                         panel_handle(
                                             self.document_panels
@@ -191,13 +188,21 @@ impl DockWorkspace {
                                         ),
                                         cx,
                                     ),
-                                Some(px(250.)),
+                                None,
                             )
                             .child(
                                 DockLayout::tabs()
-                                    .panel_view(panel_handle(self.canvas.clone()), cx),
+                                    .panel_view(panel_handle(self.deformer_tree.clone()), cx),
                                 None,
-                            )
+                            ),
+                        Some(px(360.)),
+                    )
+                    .child(
+                        DockLayout::tabs().panel_view(panel_handle(self.canvas.clone()), cx),
+                        None,
+                    )
+                    .child(
+                        DockLayout::v_split()
                             .child(
                                 DockLayout::tabs()
                                     .panel_view(panel_handle(self.properties.clone()), cx)
@@ -209,26 +214,11 @@ impl DockWorkspace {
                                         ),
                                         cx,
                                     ),
-                                Some(px(280.)),
-                            ),
-                        None,
-                    )
-                    .child(
-                        DockLayout::v_split()
-                            .child(
-                                DockLayout::tabs()
-                                    .panel_view(panel_handle(self.parameters.clone()), cx),
                                 None,
                             )
                             .child(
-                                DockLayout::tabs().panel_view(
-                                    panel_handle(
-                                        self.document_panels
-                                            [&crate::panels::DocumentPanelKind::Keyforms]
-                                            .clone(),
-                                    ),
-                                    cx,
-                                ),
+                                DockLayout::tabs()
+                                    .panel_view(panel_handle(self.parameters.clone()), cx),
                                 None,
                             ),
                         Some(px(360.)),

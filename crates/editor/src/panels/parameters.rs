@@ -1027,7 +1027,7 @@ impl Render for ParameterRowView {
                     .test_support()
                     .aria_label(parameter.name.clone())
                     .flex()
-                    .w(px(52.))
+                    .w(px(48.))
                     .flex_shrink_0()
                     .child(
                         NumberInput::new(&self.input)
@@ -1038,10 +1038,7 @@ impl Render for ParameterRowView {
                             .input(
                                 Input::new(&self.input)
                                     .aria_label(parameter.name.clone())
-                                    .small()
-                                    .w_full()
-                                    .text_right()
-                                    .disabled(disabled),
+                                    .
                             ),
                     ),
             )

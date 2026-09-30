@@ -1,6 +1,7 @@
 //! Editor UI integration tests using GPUI's headless window.
 
 mod canvas;
+mod docking_tabs;
 mod hierarchy;
 mod parameters;
 mod properties;
