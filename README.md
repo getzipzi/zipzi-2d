@@ -2,7 +2,7 @@
 
 基于 **GPUI Kit + kasane-sdk + kasane-render-metal** 的 macOS 编辑器。
 
-已确认的目标设计见 [编辑器基础架构](docs/editor-foundation.md)，性能输入见 [基准模型](models/README.md)。下文描述当前实现。
+已确认的目标设计见 [编辑器基础架构](docs/archive/editor-foundation.md) 和 [Document 面板与参数绑定设计](docs/document-panels-design.md)，性能输入见 [基准模型](models/README.md)。面板与参数绑定设计尚未实现，下文描述当前实现。
 
 ```text
 crates/editor                EditorView、Kit 界面、文件对话框与 GPUI 预览合成
