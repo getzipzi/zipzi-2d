@@ -3,6 +3,8 @@ use gpui_kit::component::dock::*;
 use serde::{Deserialize, Serialize};
 use std::{sync::mpsc, thread, time::Duration};
 
+mod skin;
+
 /// Serialize persistence off the UI thread and coalesce a resize/drag burst.
 /// Dropping the writer flushes the last layout before joining its worker.
 struct LayoutWriter {
@@ -120,8 +122,14 @@ impl DockWorkspace {
             register_panel(cx, name, move |_, _, _| handle.clone());
         }
 
-        let (area, skin) = DockSkin::dock_area("kasane-workspace", Some(2), window, cx);
-        skin.set_close_button_visible(true, cx);
+        let mut component_skin = None;
+        let area = cx.new(|cx| {
+            let skin = DockSkin::new(cx);
+            component_skin = Some(skin.clone());
+            DockArea::new("kasane-workspace", Some(2), window, cx)
+                .with_renderer(skin::EditorDockSkin::new(skin, parameters.entity_id()))
+        });
+        component_skin.unwrap().set_close_button_visible(true, cx);
         let last_valid = area.read(cx).dump(cx);
         #[cfg(test)]
         let (writer, errors) =

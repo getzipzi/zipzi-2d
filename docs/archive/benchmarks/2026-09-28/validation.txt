@@ -1,8 +1,0 @@
-editor workspace: 68 passed, 0 failed, 1 ignored
-core/sdk/metal before final renderer changes: 121 passed, 0 failed, 0 ignored
-final Metal pixel tests: 12 passed, 0 failed, 0 ignored
-final SDK Observe: 13 passed, 0 failed, 0 ignored
-GPUI CPU benchmark: explicitly run and passed in debug and release.
-Release app: ./scripts/build-app.sh succeeded.
-git diff --check: passed in both repositories.
-Shell syntax: sh -n scripts/build-app.sh passed.

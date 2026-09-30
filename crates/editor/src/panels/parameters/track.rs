@@ -86,8 +86,21 @@ pub(super) fn parameter_track(
         })
         .collect();
     marks.push(
-        SliderThumb::new(slider)
-            .disabled(disabled)
+        div()
+            .id(("slider-thumb", 0_u32))
+            .test_support()
+            .when(!disabled, |this| {
+                let panel = panel.clone();
+                let slider = slider.clone();
+                this.on_mouse_down(MouseButton::Left, move |event, window, cx| {
+                    cx.stop_propagation();
+                    if let Some(id) = document_id {
+                        let _ = panel.update(cx, |panel, cx| {
+                            panel.begin_slider_drag(id, &slider, event.position, false, window, cx);
+                        });
+                    }
+                })
+            })
             .absolute()
             .left(relative(fraction))
             .top(-px(7.))
@@ -109,6 +122,7 @@ pub(super) fn parameter_track(
             .into_any_element(),
     );
     let snap_slider = slider.clone();
+    let snap_panel = panel.clone();
     let snap_keys = visual.keys.clone();
     let snap_parameter = parameter.clone();
     div()
@@ -131,7 +145,7 @@ pub(super) fn parameter_track(
                         .min_by(|a, b| (a.value - value).abs().total_cmp(&(b.value - value).abs())),
                 ) {
                     cx.stop_propagation();
-                    let _ = panel.update(cx, |panel, cx| {
+                    let _ = snap_panel.update(cx, |panel, cx| {
                         panel.apply_values(
                             id,
                             &[(snap_parameter.id.clone(), key.value)],
@@ -148,8 +162,28 @@ pub(super) fn parameter_track(
                 .w_full()
                 .h_6()
                 .child(
-                    SliderTrack::new(slider)
-                        .disabled(disabled)
+                    div()
+                        .id("slider-bar-container")
+                        .test_support()
+                        .when(!disabled, |this| {
+                            let panel = panel.clone();
+                            let slider = slider.clone();
+                            this.on_mouse_down(MouseButton::Left, move |event, window, cx| {
+                                cx.stop_propagation();
+                                if let Some(id) = document_id {
+                                    let _ = panel.update(cx, |panel, cx| {
+                                        panel.begin_slider_drag(
+                                            id,
+                                            &slider,
+                                            event.position,
+                                            true,
+                                            window,
+                                            cx,
+                                        );
+                                    });
+                                }
+                            })
+                        })
                         .w_full()
                         .h_6()
                         .flex()

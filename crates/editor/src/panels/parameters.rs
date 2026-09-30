@@ -6,9 +6,7 @@ use track::parameter_track;
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
 use gpui_kit::assets::IconName;
-use gpui_kit::base::{
-    ElementExt as _, Slider as BaseSlider, SliderIndicator, SliderThumb, SliderTrack,
-};
+use gpui_kit::base::{ElementExt as _, Slider as BaseSlider, SliderIndicator};
 use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
@@ -59,7 +57,9 @@ pub struct ParametersPanel {
     rows: Vec<ParameterRow>,
     scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
+    slider_drag: Option<Entity<SliderState>>,
     _observe: Subscription,
+    _activation: Subscription,
 }
 
 impl ParametersPanel {
@@ -74,6 +74,11 @@ impl ParametersPanel {
                     cx.notify();
                 },
             ),
+            _activation: cx.observe_window_activation(window, |this: &mut Self, window, cx| {
+                if !window.is_window_active() {
+                    this.finish_slider_drag(cx);
+                }
+            }),
             owner,
             document_id: None,
             visual_revision: None,
@@ -84,6 +89,7 @@ impl ParametersPanel {
             rows: Vec::new(),
             scroll: UniformListScrollHandle::new(),
             subscriptions: Vec::new(),
+            slider_drag: None,
         })
     }
 
@@ -134,6 +140,7 @@ impl ParametersPanel {
         self.visual_selection = selection;
 
         if structure_changed {
+            self.finish_slider_drag(cx);
             if let Some(id) = self.document_id {
                 if let Some(link) = &self.linked {
                     self.document_links.insert(id, link.clone());
@@ -316,6 +323,70 @@ impl ParametersPanel {
                 row.parameter = parameter;
             }
         }
+    }
+
+    fn begin_slider_drag(
+        &mut self,
+        document_id: DocumentId,
+        slider: &Entity<SliderState>,
+        position: Point<Pixels>,
+        move_thumb: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.document_id != Some(document_id)
+            || !self.rows.iter().any(|row| &row.slider == slider)
+            || !self.slider_interaction_allowed(window, cx)
+            || slider.read(cx).bounds().size.width <= px(0.)
+        {
+            return;
+        }
+        self.finish_slider_drag(cx);
+        self.slider_drag = Some(slider.clone());
+        if move_thumb {
+            slider.update(cx, |slider, cx| {
+                slider.update_value_by_position(Axis::Horizontal, position, false, window, cx);
+            });
+        }
+    }
+
+    fn slider_interaction_allowed(&self, window: &mut Window, cx: &mut App) -> bool {
+        if window.has_active_dialog(cx) {
+            return false;
+        }
+        self.owner.upgrade().is_some_and(|owner| {
+            let owner = owner.read(cx);
+            !owner.modal && !owner.editor.is_busy() && owner.editor.active_id() == self.document_id
+        })
+    }
+
+    fn move_slider_drag(
+        &mut self,
+        event: &MouseMoveEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(slider) = self.slider_drag.clone() else {
+            return false;
+        };
+        if event.pressed_button != Some(MouseButton::Left)
+            || !self.slider_interaction_allowed(window, cx)
+        {
+            self.finish_slider_drag(cx);
+            return false;
+        }
+        slider.update(cx, |slider, cx| {
+            slider.update_value_by_position(Axis::Horizontal, event.position, false, window, cx);
+        });
+        true
+    }
+
+    fn finish_slider_drag(&mut self, cx: &mut Context<Self>) -> bool {
+        let Some(slider) = self.slider_drag.take() else {
+            return false;
+        };
+        slider.update(cx, |slider, cx| slider.handle_release(cx));
+        true
     }
 
     fn cancel_input(
@@ -580,6 +651,9 @@ impl Render for ParametersPanel {
         let dialog_active = window.has_active_dialog(cx);
         let state = owner.read(cx);
         let disabled = state.modal || dialog_active || state.editor.is_busy();
+        if disabled {
+            self.finish_slider_drag(cx);
+        }
         // Disabled state changes invalidate the row cache; ordinary drags do not.
         for row in &self.rows {
             if row.view.read(cx).disabled != disabled {
@@ -620,6 +694,38 @@ impl Render for ParametersPanel {
             .text_color(theme.foreground)
             .text_sm()
             .track_focus(&self.focus)
+            .child(
+                canvas(|_, _, _| (), {
+                    let panel = panel.downgrade();
+                    move |_, _, window, _| {
+                        let moving = panel.clone();
+                        window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
+                            if phase == DispatchPhase::Capture
+                                && moving
+                                    .update(cx, |panel, cx| {
+                                        panel.move_slider_drag(event, window, cx)
+                                    })
+                                    .unwrap_or(false)
+                            {
+                                cx.stop_propagation();
+                            }
+                        });
+                        let releasing = panel.clone();
+                        window.on_mouse_event(move |event: &MouseUpEvent, phase, _, cx| {
+                            if phase == DispatchPhase::Capture
+                                && event.button == MouseButton::Left
+                                && releasing
+                                    .update(cx, |panel, cx| panel.finish_slider_drag(cx))
+                                    .unwrap_or(false)
+                            {
+                                cx.stop_propagation();
+                            }
+                        });
+                    }
+                })
+                .absolute()
+                .size_full(),
+            )
             .when_some(self.linked.clone(), |this, (x, y)| {
                 let x_row = self.rows.iter().find(|row| row.parameter.id == x);
                 let y_row = self.rows.iter().find(|row| row.parameter.id == y);

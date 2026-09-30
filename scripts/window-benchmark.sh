@@ -6,6 +6,12 @@ model="${1:?usage: scripts/window-benchmark.sh MODEL [OUTPUT_DIR] [SAMPLES] [HZ]
 output="${2:-target/window-benchmark-$(date +%Y%m%d-%H%M%S)}"
 samples="${3:-300}"
 hz="${4:-120}"
+profile="${KASANE_BENCH_PROFILE:-release}"
+case "$profile" in
+    release) cargo_profile=release ;;
+    debug) cargo_profile=dev ;;
+    *) echo "KASANE_BENCH_PROFILE must be release or debug" >&2; exit 2 ;;
+esac
 mkdir -p "$output"
 output="$(cd "$output" && pwd)"
 if [[ -e "$output/trace.jsonl" ]]; then
@@ -16,7 +22,7 @@ if ioreg -n Root -d1 | rg '"IOConsoleLocked" = Yes' > /dev/null; then
     echo "Unlock the Mac before running the window benchmark." >&2
     exit 2
 fi
-cargo build --locked --release -p kasane-editor > "$output/build.log" 2>&1
+cargo build --locked --profile "$cargo_profile" -p kasane-editor > "$output/build.log" 2>&1
 {
     sw_vers
     sysctl hw.model machdep.cpu.brand_string hw.memsize
@@ -32,5 +38,5 @@ export KASANE_CONFIG_DIR="$output/config"
 export KASANE_FRAME_TRACE="$output/trace.jsonl"
 export KASANE_WINDOW_BENCH=1 KASANE_BENCH_MODEL="$model"
 export KASANE_BENCH_SAMPLES="$samples" KASANE_BENCH_HZ="$hz"
-caffeinate -d -i ./target/release/kasane-editor > "$output/application.log" 2>&1
+caffeinate -d -i "./target/$profile/kasane-editor" > "$output/application.log" 2>&1
 python3 scripts/frame-trace-report.py "$output/trace.jsonl" --output "$output"

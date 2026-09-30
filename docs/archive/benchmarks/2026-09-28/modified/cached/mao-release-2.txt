@@ -1,2 +1,0 @@
-debug_assertions=false, meshes=260, vertices=6012, triangles=7939, samples=1000
-saved_manifest_bytes=3094579

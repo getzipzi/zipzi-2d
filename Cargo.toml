@@ -33,6 +33,9 @@ uuid = { version = "1", features = ["v4"] }
 debug = 0
 incremental = true
 
+[profile.dev.package.gpui-pre]
+opt-level = 2
+
 [patch.crates-io]
 gpui-pre = { path = "vendor/gpui-pre" }
 gpui-pre-macos = { path = "vendor/gpui-pre-macos" }

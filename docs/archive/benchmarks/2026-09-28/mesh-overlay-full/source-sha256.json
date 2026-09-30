@@ -1,7 +1,0 @@
-{
-  "crates/editor/examples/mesh_overlay_benchmark.rs": "673a70da4f646e3fd0f7eede09e57b9acf1b4afadb69cffc5b0ef00620b38b6d",
-  "crates/editor/examples/mesh_overlay/edges.metal": "e0f0cbedbbc1645c87c14eae27473fd04fe8fa27e3927df65a25c2d345e10b98",
-  "crates/editor/src/mesh_edges.rs": "0eed5091a2a76bface4dd624fcfcdf44cda976899858bb3b09d613a766e29ae7",
-  "vendor/gpui-pre-apple/src/metal_renderer.rs": "701fbaa203f365d5be189040a294e7ec297168cc2a39f8a1faf8b9465789c8b9",
-  "scripts/mesh-overlay-benchmark.sh": "310910aa0583b7d0d775cda717781f83b92c80920b8125681e3461191598df9d"
-}

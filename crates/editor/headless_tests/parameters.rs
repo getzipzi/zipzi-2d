@@ -3,6 +3,188 @@ use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, point};
 
 #[gpui_kit::test]
+fn parameter_drag_tracks_outside_the_row_without_a_window_drag(cx: &mut TestAppContext) {
+    use gpui_kit::{
+        InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, px,
+    };
+
+    let (document, assets) = document_fixture::sample_document_with_parameters(2).unwrap();
+    let id = document.parameters()[0].id.clone();
+    let harness = setup_with_document(cx, document, assets);
+    let track = cx
+        .update_window(harness.window, |_, window, _| {
+            window
+                .within(format!("parameter-row-{id}"))
+                .find("slider-bar-container")
+                .bounds()
+        })
+        .unwrap();
+    let revision = harness
+        .view
+        .read_with(cx, |view, _| view.editor.tree_revision());
+    cx.update_window(harness.window, |_, window, cx| {
+        // Press the thumb at its default value. Pressing alone must not jump it.
+        let position = point(track.left() + px(1.), track.center().y);
+        window.dispatch_event(
+            MouseMoveEvent {
+                position,
+                pressed_button: None,
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(!cx.has_active_drag());
+    })
+    .unwrap();
+    assert_eq!(
+        harness
+            .view
+            .read_with(cx, |view, _| view.editor.tree_revision()),
+        revision
+    );
+
+    // Move beyond both the row and the track; the value must clamp to max.
+    let outside = point(track.right() + px(40.), track.bottom() + px(100.));
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: outside,
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(!cx.has_active_drag());
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let parameters = view.editor.document().unwrap().parameters();
+        assert_eq!(parameters[0].value, 1.);
+        assert_eq!(parameters[1].value, 0.);
+    });
+    let revision = harness
+        .view
+        .read_with(cx, |view, _| view.editor.tree_revision());
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: outside,
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })
+    .unwrap();
+    assert_eq!(
+        harness
+            .view
+            .read_with(cx, |view, _| view.editor.tree_revision()),
+        revision
+    );
+
+    // A move with a pressed button cannot resume a released slider.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: point(track.left() - px(20.), track.center().y),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })
+    .unwrap();
+    assert_eq!(
+        harness
+            .view
+            .read_with(cx, |view, _| view.editor.tree_revision()),
+        revision
+    );
+}
+
+#[gpui_kit::test]
+fn parameter_drag_is_cancelled_when_the_window_loses_focus(cx: &mut TestAppContext) {
+    use gpui_kit::{
+        InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent, VisualTestContext, px,
+    };
+    let (document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
+    let id = document.parameters()[0].id.clone();
+    let harness = setup_with_document(cx, document, assets);
+    let mut visual = VisualTestContext::from_window(harness.window, cx);
+    let track = visual.update(|window, cx| {
+        window.activate_window();
+        let track = window
+            .within(format!("parameter-row-{id}"))
+            .find("slider-bar-container")
+            .bounds();
+        let position = point(track.left() + track.size.width * 0.55, track.center().y);
+        window.dispatch_event(
+            MouseMoveEvent {
+                position,
+                pressed_button: None,
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        track
+    });
+    let revision = harness
+        .view
+        .read_with(cx, |view, _| view.editor.tree_revision());
+    harness.view.read_with(cx, |view, _| {
+        assert!(view.editor.document().unwrap().parameters()[0].value > 0.4);
+    });
+    visual.deactivate_window();
+    visual.update(|window, cx| {
+        window.activate_window();
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: point(track.left() - px(20.), track.center().y),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+    });
+    assert_eq!(
+        harness
+            .view
+            .read_with(cx, |view, _| view.editor.tree_revision()),
+        revision
+    );
+}
+
+#[gpui_kit::test]
 fn parameter_slider_and_reset_update_the_live_preview(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
     let parameter = document.parameters().remove(0);

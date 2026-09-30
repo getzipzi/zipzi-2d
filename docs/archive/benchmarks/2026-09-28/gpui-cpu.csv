@@ -1,5 +1,0 @@
-build,workload,samples,p50_ms,p95_ms,p99_ms
-debug,pan_dispatch_layout_paint,100,13.012,15.382,17.899
-release,pan_dispatch_layout_paint,100,1.041,1.155,1.207
-debug,pan_dispatch,100,0.132,0.202,0.359
-release,pan_dispatch,100,0.009,0.012,0.012
