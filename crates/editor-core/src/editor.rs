@@ -8,6 +8,7 @@ pub enum EditorCommand {
     PreviewName(String),
     PreviewOpacity(f32),
     SetPreviewParameter { parameter_id: String, value: f32 },
+    SetPreviewParameters { values: Vec<(String, f32)> },
     SetVisible(bool),
     SetLayerVisible { layer_id: String, visible: bool },
     FinishEdit,

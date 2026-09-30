@@ -73,6 +73,9 @@ impl DocumentSession {
                 parameter_id,
                 value,
             } => self.document.set_preview_parameter(&parameter_id, value),
+            EditorCommand::SetPreviewParameters { values } => {
+                self.document.set_preview_parameters(&values)
+            }
             EditorCommand::SetVisible(v) => self.document.set_visible(v),
             EditorCommand::SetLayerVisible { layer_id, visible } => {
                 self.document.set_layer_visible(&layer_id, visible)

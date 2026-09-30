@@ -1,6 +1,6 @@
 use crate::{SceneSnapshot, SceneTexture, TreeNode, TreeNodeKind, tree::nest_nodes};
 use anyhow::{Result, anyhow, ensure};
-use kasane_core::{Canvas, Mesh, Vec2, preview::PreviewState};
+use kasane_core::{Canvas, Mesh, ParameterKind, Vec2, preview::PreviewState};
 use kasane_project::read_project_asset;
 use kasane_sdk::{AuthoringSession, EditSession, MeshProperties, SaveReceipt};
 use std::collections::HashMap;
@@ -29,6 +29,26 @@ pub struct ParameterValue {
     pub default_value: f32,
     pub value: f32,
     pub decimal_places: usize,
+}
+
+/// Presentation data derived from the bindings, rather than persisted on a parameter.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ParameterVisual {
+    pub kind: ParameterKind,
+    pub repeat: bool,
+    pub keys: Vec<ParameterKey>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ParameterKey {
+    pub value: f32,
+    /// At least one selected target has this key.
+    pub selected: bool,
+    /// Some, but not all, selected targets have this key.
+    pub partial: bool,
+    /// Direct binding targets; inherited deformer effects are not direct bindings.
+    pub targets: Vec<String>,
+    pub base: bool,
 }
 
 impl From<Mesh> for Layer {
@@ -239,6 +259,107 @@ impl Document {
             .collect()
     }
 
+    pub fn parameter_model_revision(&self) -> u64 {
+        self.model().revision()
+    }
+
+    pub fn parameter_visuals(&self) -> HashMap<String, ParameterVisual> {
+        self.parameter_visuals_for_targets(&self.selected.iter().cloned().collect::<Vec<_>>())
+    }
+
+    /// Aggregate keys for an explicit selection without losing target coverage.
+    pub fn parameter_visuals_for_targets(
+        &self,
+        selected_targets: &[String],
+    ) -> HashMap<String, ParameterVisual> {
+        let selected_targets: std::collections::HashSet<_> = selected_targets.iter().collect();
+        let model = self.model();
+        let mut visuals: HashMap<_, _> = self
+            .session
+            .parameter_ids()
+            .iter()
+            .filter_map(|id| {
+                let p = model.get_parameter(id)?;
+                Some((
+                    id.clone(),
+                    ParameterVisual {
+                        kind: p.kind,
+                        repeat: p.repeat,
+                        keys: Vec::new(),
+                    },
+                ))
+            })
+            .collect();
+        let mut add_axis = |parameter_id: &str, values: &[f32], target: &str, base: Option<f32>| {
+            if let Some(visual) = visuals.get_mut(parameter_id) {
+                for &value in values {
+                    if let Some(key) = visual.keys.iter_mut().find(|key| key.value == value) {
+                        if !key.targets.iter().any(|id| id == target) {
+                            key.targets.push(target.to_owned());
+                        }
+                        key.base |= base == Some(value);
+                    } else {
+                        visual.keys.push(ParameterKey {
+                            value,
+                            selected: false,
+                            partial: false,
+                            targets: vec![target.to_owned()],
+                            base: base == Some(value),
+                        });
+                    }
+                }
+            }
+        };
+        for id in model.binding_order() {
+            if let Some(binding) = model.get_binding(id) {
+                for axis in &binding.axes {
+                    add_axis(&axis.parameter_id, &axis.keys, &binding.mesh_id, None);
+                }
+            }
+        }
+        for id in model.scene_binding_order() {
+            if let Some(binding) = model.get_scene_binding(id) {
+                for axis in &binding.axes {
+                    add_axis(&axis.parameter_id, &axis.keys, binding.target_id(), None);
+                }
+            }
+        }
+        for id in model.glue_order() {
+            if let Some(binding) = model.get_glue(id).and_then(|glue| glue.binding.as_ref()) {
+                for axis in &binding.axes {
+                    add_axis(&axis.parameter_id, &axis.keys, id, None);
+                }
+            }
+        }
+        // A key table alone is not an object binding (it can exist unused).
+        for id in model.blend_binding_order() {
+            if let Some(binding) = model.get_blend_binding(id) {
+                if let Some(table) = model.get_blend_key_table(&binding.key_table_id) {
+                    add_axis(
+                        &table.parameter_id,
+                        &table.keys,
+                        &binding.target_id,
+                        table.keys.get(table.base_key_idx).copied(),
+                    );
+                }
+            }
+        }
+        for visual in visuals.values_mut() {
+            for key in &mut visual.keys {
+                key.targets.sort();
+                let count = key
+                    .targets
+                    .iter()
+                    .filter(|id| selected_targets.contains(id))
+                    .count();
+                key.selected = count > 0;
+                key.partial = count > 0 && count < selected_targets.len();
+            }
+            visual.keys.sort_by(|a, b| a.value.total_cmp(&b.value));
+        }
+        visuals
+    }
+
     pub fn set_preview_parameter(&mut self, id: &str, value: f32) -> Result<()> {
         let parameter = self
             .session
@@ -250,6 +371,24 @@ impl Document {
         );
         self.finish_edit()?;
         self.session.set_preview_parameter(id, value)?;
+        Ok(())
+    }
+
+    pub fn set_preview_parameters(&mut self, values: &[(String, f32)]) -> Result<()> {
+        let mut next = self.session.preview_values().clone();
+        for (id, value) in values {
+            let parameter = self
+                .session
+                .parameter(id)
+                .ok_or_else(|| anyhow!("Parameter not found: {id}"))?;
+            ensure!(
+                value.is_finite() && (parameter.minimum..=parameter.maximum).contains(value),
+                "Parameter value is out of range: {id}"
+            );
+            next.insert(id.clone(), *value);
+        }
+        self.finish_edit()?;
+        self.session.set_preview_values(next)?;
         Ok(())
     }
 

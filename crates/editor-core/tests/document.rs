@@ -52,6 +52,105 @@ fn cached_dirty_state_tracks_preview_revert_save_and_history() -> anyhow::Result
 use support::sample_document;
 
 #[test]
+fn parameter_visuals_derive_keys_from_binding_and_selection() -> anyhow::Result<()> {
+    let (document, _source) = support::sample_document_with_binding(true)?;
+    let parameter = document.parameters().remove(0);
+    let visual = &document.parameter_visuals()[&parameter.id];
+    assert_eq!(visual.keys.len(), 2);
+    assert_eq!(
+        visual.keys.iter().map(|key| key.value).collect::<Vec<_>>(),
+        vec![0., 1.]
+    );
+    assert!(visual.keys.iter().all(|key| key.selected));
+    assert!(visual.keys.iter().all(|key| !key.base));
+    Ok(())
+}
+
+#[test]
+fn parameter_visuals_include_scene_binding_keyforms() -> anyhow::Result<()> {
+    use kasane_core::{
+        BindingAxis, Canvas, Parameter, Part, PartKeyform, SceneBinding, SceneTrack, Vec2,
+    };
+    use kasane_sdk::AuthoringSession;
+    use uuid::Uuid;
+
+    let directory = tempfile::tempdir()?;
+    let parameter_id = Uuid::new_v4().to_string();
+    let part_id = Uuid::new_v4().to_string();
+    let mut session = AuthoringSession::new(
+        &Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
+    )?;
+    session.edit("Scene keys", None, |edit| {
+        edit.create_parameter(Parameter {
+            id: parameter_id.clone(),
+            minimum: 0.,
+            maximum: 1.,
+            ..Default::default()
+        })?;
+        edit.create_part(Part {
+            id: part_id.clone(),
+            ..Default::default()
+        })?;
+        edit.create_scene_binding(SceneBinding {
+            id: Uuid::new_v4().to_string(),
+            axes: vec![BindingAxis {
+                parameter_id: parameter_id.clone(),
+                keys: vec![0., 1.],
+            }],
+            track: SceneTrack::Part {
+                target_id: part_id.clone().into(),
+                keyforms: vec![
+                    PartKeyform {
+                        keys: vec![0.],
+                        draw_order: 0.,
+                    },
+                    PartKeyform {
+                        keys: vec![1.],
+                        draw_order: 1.,
+                    },
+                ],
+            },
+        })?;
+        Ok(())
+    })?;
+    let receipt = session.save_project(&directory.path().join("scene.kasane"), None)?;
+    let document = Document::open(&receipt.manifest)?;
+    let visual = &document.parameter_visuals()[&parameter_id];
+    assert_eq!(
+        visual.keys.iter().map(|key| key.value).collect::<Vec<_>>(),
+        vec![0., 1.]
+    );
+    assert!(visual.keys.iter().all(|key| !key.selected));
+    let selected = document.parameter_visuals_for_targets(&[part_id.clone()]);
+    assert!(
+        selected[&parameter_id]
+            .keys
+            .iter()
+            .all(|key| key.selected && !key.partial && key.targets == vec![part_id.clone()])
+    );
+    Ok(())
+}
+
+#[test]
+fn batch_parameter_preview_is_atomic_and_updates_both_values() -> anyhow::Result<()> {
+    let (mut document, _source) = support::sample_document_with_parameters(2)?;
+    let before = document.parameters();
+    assert!(
+        document
+            .set_preview_parameters(&[(before[0].id.clone(), 0.3), (before[1].id.clone(), 1.3)])
+            .is_err()
+    );
+    assert_eq!(document.parameters(), before);
+
+    document.set_preview_parameters(&[(before[0].id.clone(), 0.3), (before[1].id.clone(), 0.7)])?;
+    let after = document.parameters();
+    assert_eq!(after[0].value, 0.3);
+    assert_eq!(after[1].value, 0.7);
+    Ok(())
+}
+
+#[test]
 fn blank_document_starts_clean_and_can_be_saved() -> anyhow::Result<()> {
     let mut document = Document::new_blank()?;
     assert!(document.path().is_none());
@@ -355,5 +454,73 @@ fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Resu
     assert_eq!(deformers[0].children[0].kind, TreeNodeKind::WarpDeformer);
     assert_eq!(deformers[0].children[0].children[0].id, mesh);
     assert_eq!(deformers[1].id, unassigned_mesh);
+    Ok(())
+}
+
+#[test]
+fn key_coverage_distinguishes_partial_selection_from_unselected_targets() -> anyhow::Result<()> {
+    let (document, _assets) = support::sample_document_with_bound_and_unbound_layers()?;
+    let ids: Vec<_> = document
+        .layers()
+        .iter()
+        .map(|layer| layer.id.clone())
+        .collect();
+    let parameter = document.parameters().remove(0);
+    let visuals = document.parameter_visuals_for_targets(&ids);
+    for key in &visuals[&parameter.id].keys {
+        assert!(key.selected && key.partial);
+        assert_eq!(key.targets.len(), 1);
+    }
+    let bound = visuals[&parameter.id].keys[0].targets[0].clone();
+    let unbound = ids.into_iter().find(|id| id != &bound).unwrap();
+    let visuals = document.parameter_visuals_for_targets(&[unbound]);
+    assert!(
+        visuals[&parameter.id]
+            .keys
+            .iter()
+            .all(|key| !key.selected && !key.partial)
+    );
+    // Duplicate IDs in a selection must not incorrectly create partial coverage.
+    let visuals = document.parameter_visuals_for_targets(&[bound.clone(), bound]);
+    assert!(
+        visuals[&parameter.id]
+            .keys
+            .iter()
+            .all(|key| key.selected && !key.partial)
+    );
+    Ok(())
+}
+
+#[test]
+fn unused_blend_key_table_does_not_claim_bound_keyforms() -> anyhow::Result<()> {
+    use kasane_core::{BlendShapeKeyTable, Canvas, Parameter, ParameterKind, Vec2};
+    use kasane_sdk::AuthoringSession;
+    use uuid::Uuid;
+    let assets = tempfile::tempdir()?;
+    let parameter_id = Uuid::new_v4().to_string();
+    let mut session = AuthoringSession::new(
+        &Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
+    )?;
+    session.edit("Unused blend table", None, |edit| {
+        edit.create_parameter(Parameter {
+            id: parameter_id.clone(),
+            kind: ParameterKind::BlendShape,
+            minimum: 0.,
+            maximum: 1.,
+            default_value: 0.,
+            ..Default::default()
+        })?;
+        edit.create_blend_key_table(BlendShapeKeyTable {
+            id: Uuid::new_v4().to_string(),
+            parameter_id: parameter_id.clone(),
+            keys: vec![0., 1.],
+            base_key_idx: 0,
+        })?;
+        Ok(())
+    })?;
+    let saved = session.save_project(&assets.path().join("unused.kasane"), None)?;
+    let doc = Document::open(&saved.manifest)?;
+    assert!(doc.parameter_visuals()[&parameter_id].keys.is_empty());
     Ok(())
 }
