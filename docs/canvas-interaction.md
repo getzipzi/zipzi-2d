@@ -41,7 +41,9 @@ hierarchy or the ancestor candidates in the canvas context menu.
 
 ### Deformer manipulators
 
-Selected Warps have a padded outer frame. Drag a frame edge to translate all
+Selected Warps have a padded outer frame. Its padding and rotation-handle distance
+follow the viewport's fit scale and zoom, like the Rotation manipulator.
+Drag a frame edge to translate all
 points; its eight square handles scale around the opposite corner or edge. Hold
 Shift before dragging a corner for uniform scaling. The round handle above the
 frame rotates around the displayed control-point bounds center. Scaling stops

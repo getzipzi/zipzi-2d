@@ -5,6 +5,8 @@ use crate::{CanvasPoint, CanvasScene, ControlGeometry, ControlKind, ViewportTran
 pub(crate) const ROTATION_AXIS_LENGTH: f32 = 54.;
 const ROTATION_RING_RADIUS: f32 = 28.;
 const ROTATION_SCALE_DISTANCE: f32 = 40.;
+const WARP_FRAME_PADDING: f32 = 12.;
+const WARP_ROTATE_DISTANCE: f32 = 26.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DeformerHandle {
@@ -65,7 +67,13 @@ impl CanvasScene {
             });
         }
         let center = p((b[0] + b[2]) / 2., (b[1] + b[3]) / 2.);
-        let [x0, y0, x1, y1] = [b[0] - 12., b[1] - 12., b[2] + 12., b[3] + 12.];
+        let padding = WARP_FRAME_PADDING * t.scale;
+        let [x0, y0, x1, y1] = [
+            b[0] - padding,
+            b[1] - padding,
+            b[2] + padding,
+            b[3] + padding,
+        ];
         let perimeter = [
             p(x0, y0),
             p(center.x, y0),
@@ -76,7 +84,7 @@ impl CanvasScene {
             p(x0, y1),
             p(x0, center.y),
         ];
-        let rotate = p(center.x, y0 - 26.);
+        let rotate = p(center.x, y0 - WARP_ROTATE_DISTANCE * t.scale);
         let mut outline: Vec<_> = (0..8)
             .map(|i| (perimeter[i], perimeter[(i + 1) % 8]))
             .collect();
