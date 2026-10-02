@@ -5,7 +5,7 @@ use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
 use gpui_kit::base::{NumberInput, Slider as BaseSlider, SliderIndicator};
 use gpui_kit::component::{
-    ActiveTheme, Sizable, WindowExt,
+    ActiveTheme, WindowExt,
     dock::{BasePanel, Panel, PanelEvent},
     input::{Input, InputEvent, InputState},
     slider::{SliderEvent, SliderState, SliderValue},
@@ -1038,7 +1038,6 @@ impl Render for ParameterRowView {
                             .input(
                                 Input::new(&self.input)
                                     .aria_label(parameter.name.clone())
-                                    .
                             ),
                     ),
             )
