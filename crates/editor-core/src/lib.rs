@@ -4,8 +4,10 @@ mod editor;
 mod objects;
 mod scene;
 mod session;
+mod thumbnail;
 mod tree;
 pub use objects::*;
+pub use thumbnail::{MESH_THUMBNAIL_SIZE, MeshTextureRegion};
 mod workspace;
 
 pub use document::{Document, Layer, ParameterKey, ParameterValue, ParameterVisual};

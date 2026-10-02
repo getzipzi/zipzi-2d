@@ -3640,6 +3640,7 @@ dependencies = [
  "gpui-fps",
  "gpui-kit",
  "gpui-pre-apple",
+ "image",
  "kasane-core",
  "kasane-sdk",
  "metal",

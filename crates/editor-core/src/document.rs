@@ -93,6 +93,7 @@ pub struct Document {
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
     pending: Option<PendingEdit>,
     textures: Arc<[SceneTexture]>,
+    texture_slots: HashMap<String, usize>,
     pristine_blank: bool,
 }
 
@@ -173,6 +174,11 @@ impl Document {
             canvas_topology: std::sync::Mutex::new(None),
             selected,
             pending: None,
+            texture_slots: textures
+                .iter()
+                .enumerate()
+                .map(|(i, t)| (t.asset_id.clone(), i))
+                .collect(),
             textures,
             pristine_blank: false,
         })
@@ -448,6 +454,18 @@ impl Document {
             self.preview_revision += 1;
         }
         Ok(())
+    }
+
+    /// Source-art metadata follows committed edits, never interactive pose previews.
+    pub fn mesh_texture_revision(&self) -> u64 {
+        self.session.document().revision()
+    }
+
+    /// Static source-art crop and UV footprint; never evaluates posed geometry.
+    pub fn mesh_texture_region(&self, id: &str) -> Option<crate::MeshTextureRegion> {
+        let mesh = self.session.document().get_mesh(id)?;
+        let texture = &self.textures[*self.texture_slots.get(&mesh.texture_asset_id)?];
+        crate::MeshTextureRegion::new(texture, mesh)
     }
 
     pub fn mesh_tree(&self) -> Vec<TreeNode> {

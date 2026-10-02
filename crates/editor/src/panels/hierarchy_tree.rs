@@ -67,6 +67,7 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
     owner: WeakEntity<EditorView>,
     focus: FocusHandle,
     _observe: Subscription,
+    _thumbnails_observe: Subscription,
     collapsed: HashSet<String>,
     document_collapsed: std::collections::HashMap<DocumentId, HashSet<String>>,
     document_id: Option<DocumentId>,
@@ -80,16 +81,22 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
 }
 
 impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
-    pub fn new(owner: WeakEntity<EditorView>, cx: &mut App) -> Entity<Self> {
+    pub fn new(
+        owner: WeakEntity<EditorView>,
+        thumbnails: Entity<crate::mesh_thumbnails::MeshThumbnails>,
+        cx: &mut App,
+    ) -> Entity<Self> {
         cx.new(|cx| {
             let focus = cx.focus_handle();
             let observe = cx.observe(&owner.upgrade().unwrap(), |_, _, cx| {
                 cx.notify();
             });
+            let thumbnails_observe = cx.observe(&thumbnails, |_, _, cx| cx.notify());
             Self {
                 owner,
                 focus,
                 _observe: observe,
+                _thumbnails_observe: thumbnails_observe,
                 collapsed: HashSet::new(),
                 document_collapsed: Default::default(),
                 document_id: None,
@@ -130,7 +137,7 @@ impl<const DEFORMER: bool> Panel for HierarchyTreePanel<DEFORMER> {
 }
 
 impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
@@ -215,6 +222,8 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
         let disabled = state.modal || state.editor.is_busy();
         let rows = self.rows.clone();
         let panel = cx.entity();
+        let thumbnails = state.mesh_thumbnails.clone();
+        thumbnails.update(cx, |cache, cx| cache.sync_document(target, window, cx));
         let theme = cx.theme();
 
         div()
@@ -247,12 +256,17 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 uniform_list(
                     if DEFORMER { "deformer-tree-scroll-area" } else { "mesh-tree-scroll-area" },
                     rows.len(),
-                    move |range, _, cx| panel.update(cx, |this, cx| {
+                    move |range, window, cx| panel.update(cx, |this, cx| {
+                        let mesh_ids: Vec<_> = rows[range.clone()].iter()
+                            .filter(|row| row.node.kind == TreeNodeKind::Mesh)
+                            .map(|row| row.node.id.as_str()).collect();
+                        let mut images = thumbnails.update(cx, |cache, cx| cache.request(&owner, &mesh_ids, window, cx)).into_iter();
                         let theme = cx.theme().clone();
                         range.map(|index| {
                         let row = rows[index].clone();
                         let node = row.node;
                         let is_mesh = node.kind == TreeNodeKind::Mesh;
+                        let thumbnail = if is_mesh { images.next().flatten() } else { None };
                         let reference = node.reference();
                         let is_selected = reference.as_ref().is_some_and(|r| selections.contains(r));
                         let key = node_key(&node);
@@ -335,8 +349,17 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             .child(
                                 div()
                                     .mr_1p5()
+                                    .size(px(20.))
+                                    .flex_shrink_0()
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
                                     .text_color(crate::theme::object_icon(node.kind, &theme))
-                                    .child(Icon::new(icon).small()),
+                                    .child(if let Some(image) = thumbnail {
+                                        img(image).size_full().into_any_element()
+                                    } else {
+                                        Icon::new(icon).small().into_any_element()
+                                    }),
                             )
                             .child(
                                 div()

@@ -19,6 +19,7 @@ rust-i18n.workspace = true
 sys-locale.workspace = true
 anyhow.workspace = true
 async-channel.workspace = true
+image = { version = "0.25.10", default-features = false }
 metal.workspace = true
 objc2.workspace = true
 

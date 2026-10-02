@@ -114,3 +114,146 @@ fn reset_layout_saves_measured_center_size(cx: &mut TestAppContext) {
     assert!(sizes[1].as_f32() > sizes[0].as_f32());
     assert!(sizes[1].as_f32() > sizes[2].as_f32());
 }
+
+#[gpui_kit::test]
+fn mesh_thumbnails_share_images_and_reuse_them_after_selection_and_edits(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.run_until_parked();
+    let (cache, id, original) = harness.view.read_with(cx, |view, cx| {
+        let id = view.editor.selected_layer().unwrap().id;
+        let cache = view.mesh_thumbnails.clone();
+        let image = cache
+            .read(cx)
+            .cached_image(&id)
+            .expect("visible row thumbnail completed");
+        (cache, id, image)
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        // Same image is shared by both trees and repeated visible-range requests.
+        cache.update(cx, |cache, cx| {
+            let images = cache.request(&harness.view, &[&id], window, cx);
+            assert!(std::sync::Arc::ptr_eq(
+                images[0].as_ref().unwrap(),
+                &original
+            ));
+            assert!(!cache.cache_state().1);
+        });
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(editor_core::EditorCommand::SetLayerVisible {
+                    layer_id: id.clone(),
+                    visible: false,
+                })
+                .unwrap();
+            view.editor
+                .execute(editor_core::EditorCommand::Select(id.clone()))
+                .unwrap();
+            cx.notify();
+        });
+        window.render_frame(cx);
+        cache.update(cx, |cache, cx| {
+            let images = cache.request(&harness.view, &[&id], window, cx);
+            assert!(std::sync::Arc::ptr_eq(
+                images[0].as_ref().unwrap(),
+                &original
+            ));
+            assert!(
+                !cache.cache_state().1,
+                "appearance edits must not rasterize again"
+            );
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn mesh_thumbnail_cache_is_bounded_and_releases_evicted_atlas_entries(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.run_until_parked();
+    let (cache, id) = harness.view.read_with(cx, |view, _| {
+        (
+            view.mesh_thumbnails.clone(),
+            view.editor.selected_layer().unwrap().id,
+        )
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let image = cache.read(cx).cached_image(&id).unwrap();
+        assert!(window.has_image_atlas_entry(&image));
+        for i in 0..600 {
+            cache.update(cx, |cache, cx| {
+                cache.request(&harness.view, &[&format!("untextured-{i}")], window, cx);
+            });
+        }
+        assert_eq!(cache.read(cx).cache_state(), (512, false));
+        assert!(cache.read(cx).cached_image(&id).is_none());
+        assert!(
+            !window.has_image_atlas_entry(&image),
+            "eviction must free the GPU atlas entry too"
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn switching_documents_cancels_pending_mesh_thumbnails(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let cache = harness
+        .view
+        .read_with(cx, |view, _| view.mesh_thumbnails.clone());
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(
+            cache.read(cx).cache_state().1,
+            "first batch is still pending"
+        );
+        harness.view.update(cx, |view, cx| {
+            view.editor.new_document().unwrap();
+            // Clear even when neither tree renders (e.g. both panels are hidden).
+            view.refresh_document(window, cx);
+        });
+        assert_eq!(cache.read(cx).cache_state(), (0, false));
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cache.read_with(cx, |cache, _| assert_eq!(cache.cache_state(), (0, false)));
+}
+
+#[gpui_kit::test]
+fn mesh_thumbnails_only_generate_for_virtualized_rows(cx: &mut TestAppContext) {
+    let (document, assets) = super::document_fixture::sample_document().unwrap();
+    let mut session =
+        kasane_sdk::AuthoringSession::new(&uuid::Uuid::new_v4().to_string(), document.canvas())
+            .unwrap();
+    session
+        .open_project(document.path().unwrap(), None)
+        .unwrap();
+    let template = session.mesh(document.selected_id().unwrap()).unwrap();
+    session
+        .edit("Many meshes", None, |edit| {
+            for i in 0..200 {
+                let mut mesh = template.clone();
+                mesh.id = uuid::Uuid::new_v4().to_string();
+                mesh.runtime_id = mesh.id.clone();
+                mesh.name = format!("Mesh {i}");
+                edit.create_mesh(mesh)?;
+            }
+            Ok(())
+        })
+        .unwrap();
+    let saved = session
+        .save_project(document.path().unwrap(), None)
+        .unwrap();
+    let harness = super::setup_with_document(
+        cx,
+        editor_core::Document::open(&saved.manifest).unwrap(),
+        assets,
+    );
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, cx| {
+        let (entries, _) = view.mesh_thumbnails.read(cx).cache_state();
+        assert!(
+            entries > 0 && entries < 60,
+            "only visible rows should enter the cache, got {entries} out of 201 meshes"
+        );
+    });
+}

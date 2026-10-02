@@ -30,8 +30,10 @@ impl EditorView {
             }
         }
     }
-    pub(super) fn refresh_document(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn refresh_document(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let active = self.editor.active_id();
+        self.mesh_thumbnails
+            .update(cx, |cache, cx| cache.sync_document(active, window, cx));
         // A repeated tab click or save completion may reuse the same scene.
         // Keep that document's last image while its replacement is pending.
         self.frame = self

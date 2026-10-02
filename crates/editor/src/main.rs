@@ -10,6 +10,7 @@ mod headless_tests;
 mod i18n;
 mod menus;
 mod mesh_edges;
+mod mesh_thumbnails;
 mod panels;
 mod preview;
 mod project;
@@ -27,6 +28,7 @@ struct EditorView {
     modal: bool,
     frozen_frames: std::collections::HashMap<editor_core::DocumentId, preview::Presented>,
     editor: Editor,
+    mesh_thumbnails: Entity<mesh_thumbnails::MeshThumbnails>,
     dock: Option<docking::DockWorkspace>,
     ui_subscriptions: Vec<Subscription>,
     frame: Option<preview::Presented>,
@@ -51,6 +53,7 @@ impl EditorView {
             modal: false,
             frozen_frames: Default::default(),
             editor,
+            mesh_thumbnails: mesh_thumbnails::MeshThumbnails::new(cx),
             dock: None,
             ui_subscriptions: Vec::new(),
             frame: None,

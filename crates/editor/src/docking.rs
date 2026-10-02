@@ -110,11 +110,16 @@ pub struct LayoutConfig {
 }
 
 impl DockWorkspace {
-    pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Self {
+    pub fn new(
+        owner: WeakEntity<EditorView>,
+        thumbnails: Entity<crate::mesh_thumbnails::MeshThumbnails>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Self {
         let canvas = crate::canvas::CanvasView::new(owner.clone(), window, cx);
         let properties = crate::panels::PropertiesPanel::new(owner.clone(), window, cx);
-        let mesh_tree = crate::panels::MeshTreePanel::new(owner.clone(), cx);
-        let deformer_tree = crate::panels::DeformerTreePanel::new(owner.clone(), cx);
+        let mesh_tree = crate::panels::MeshTreePanel::new(owner.clone(), thumbnails.clone(), cx);
+        let deformer_tree = crate::panels::DeformerTreePanel::new(owner.clone(), thumbnails, cx);
         let parameters = crate::panels::ParametersPanel::new(owner.clone(), window, cx);
 
         for (name, handle) in [
@@ -401,7 +406,8 @@ impl EditorView {
         }
     }
     pub(super) fn init_dock(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let mut dock = DockWorkspace::new(cx.weak_entity(), window, cx);
+        let mut dock =
+            DockWorkspace::new(cx.weak_entity(), self.mesh_thumbnails.clone(), window, cx);
         let errors = dock.errors.take().unwrap();
         cx.spawn(async move |this, cx| {
             while let Ok(error) = errors.recv().await {
