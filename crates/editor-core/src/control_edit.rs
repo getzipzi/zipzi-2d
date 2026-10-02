@@ -68,7 +68,7 @@ pub(crate) struct WarpEdit {
     binding: Option<SceneBinding>,
     controller: kasane_core::WarpBezier,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct ControlSpace {
     pub parent: Option<ControlGeometry>,
     pub parent_shape: Option<(usize, usize, bool)>,

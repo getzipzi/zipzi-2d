@@ -295,11 +295,9 @@ impl ToolController {
                                 {
                                     continue;
                                 }
-                                let points: Vec<_> = if let Some(bezier) = press
-                                    .scene
-                                    .beziers
-                                    .get(&c.object.id)
-                                    .filter(|_| !self.warp_fine)
+                                let points: Vec<_> = if let Some(bezier) = (!self.warp_fine)
+                                    .then(|| press.scene.bezier(&c.object.id))
+                                    .flatten()
                                 {
                                     bezier
                                         .anchors
@@ -623,10 +621,9 @@ impl ToolController {
                 selected,
                 hovered,
             };
-            if let Some(bezier) = scene
-                .beziers
-                .get(&control.object.id)
-                .filter(|_| selected && !self.warp_fine)
+            if let Some(bezier) = (selected && !self.warp_fine)
+                .then(|| scene.bezier(&control.object.id))
+                .flatten()
             {
                 deformer.lines.extend(
                     bezier

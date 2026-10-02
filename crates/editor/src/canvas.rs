@@ -149,6 +149,9 @@ impl CanvasView {
         (self.bounds.size.width > px(0.) && self.bounds.size.height > px(0.))
             .then(|| self.bounds.center())
     }
+    pub(crate) fn benchmark_bounds(&self) -> Option<Bounds<Pixels>> {
+        self.benchmark_center().map(|_| self.bounds)
+    }
     pub fn active_tool(&self, cx: &App) -> ToolId {
         self.owner
             .upgrade()

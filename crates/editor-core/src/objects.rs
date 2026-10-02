@@ -395,6 +395,16 @@ impl ObjectIndex {
             .insert(info.reference.clone(), self.bindings.len());
         self.bindings.push(info);
     }
+    /// Control drags only change pose data, never bindings or relationships.
+    /// Refresh the inspector payload without rebuilding the influence graph.
+    pub(crate) fn refresh_deformer(&mut self, model: &Model, object: &ObjectRef) {
+        if let Some(transform) = model.get_transform(&object.id) {
+            if let Some(&slot) = self.slots.get(object) {
+                self.objects[slot].properties = deformer_properties(transform);
+            }
+        }
+    }
+
     pub fn build(m: &Model) -> Self {
         use ObjectKind as K;
         use RelationKind as R;
@@ -414,7 +424,7 @@ impl ObjectIndex {
         for id in m.transform_order() {
             if let Some(x) = m.get_transform(id) {
                 let r = ObjectRef::new(K::Deformer, id);
-                s.add(r.clone(),&x.name,json!({"name":x.name,"runtime_id":x.runtime_id,"kind":x.kind(),"part_id":x.part(),"parent_id":x.parent(),"appearance":x.appearance,"enabled":x.enabled,"warp":x.warp(),"rotation":x.rotation()}),Some(x.enabled));
+                s.add(r.clone(), &x.name, deformer_properties(x), Some(x.enabled));
                 s.ref_edge(&r, R::PartOwner, K::Part, x.part());
                 s.ref_edge(&r, R::DeformParent, K::Deformer, x.parent());
             }
@@ -903,4 +913,8 @@ pub fn editable_property(kind: ObjectKind, field: &str) -> bool {
         K::Expression => matches!(field, "name" | "fade_in" | "fade_out"),
         _ => false,
     }
+}
+
+fn deformer_properties(x: &kasane_core::Transform) -> Value {
+    json!({"name":x.name,"runtime_id":x.runtime_id,"kind":x.kind(),"part_id":x.part(),"parent_id":x.parent(),"appearance":x.appearance,"enabled":x.enabled,"warp":x.warp(),"rotation":x.rotation()})
 }

@@ -69,7 +69,7 @@ pub struct CanvasScene {
     pub controls: Vec<ControlGeometry>,
     pub index: Arc<crate::CanvasObjectIndex>,
     pub source: SceneSnapshot,
-    pub(crate) beziers: HashMap<String, crate::warp_bezier::BezierGeometry>,
+    beziers: HashMap<String, Arc<crate::warp_bezier::LazyBezierGeometry>>,
     mesh_slots: Arc<HashMap<String, usize>>,
     texture_slots: HashMap<String, usize>,
     visible_meshes: HashSet<String>,
@@ -176,7 +176,9 @@ impl CanvasScene {
                 {
                     scene.beziers.insert(
                         c.object.id.clone(),
-                        crate::warp_bezier::BezierGeometry::new(&controller, &space),
+                        Arc::new(crate::warp_bezier::LazyBezierGeometry::new(
+                            controller, space,
+                        )),
                     );
                 }
             }
@@ -217,6 +219,9 @@ impl CanvasScene {
             visible_meshes,
             topology,
         }
+    }
+    pub(crate) fn bezier(&self, id: &str) -> Option<&crate::warp_bezier::BezierGeometry> {
+        self.beziers.get(id).map(|b| b.get())
     }
     pub fn mesh(&self, id: &str) -> Option<&MeshGeometry> {
         self.mesh_slots.get(id).map(|&i| &self.meshes[i])
@@ -349,7 +354,7 @@ impl CanvasScene {
             let points = self.control_points(c, t);
             let editing = c.kind != ControlKind::Glue && selection.contains(&c.object);
             if editing && c.kind == ControlKind::Warp {
-                let bezier = self.beziers.get(&c.object.id).filter(|_| !fine);
+                let bezier = (!fine).then(|| self.bezier(&c.object.id)).flatten();
                 let candidates: Vec<_> = if let Some(b) = bezier {
                     b.points().map(|(id, p)| (id, t.to_canvas(p))).collect()
                 } else {

@@ -12,7 +12,9 @@ import json
 import math
 from pathlib import Path
 
-MODES = {1: "pan", 2: "zoom", 3: "opacity", 4: "parameter_slider"}
+MODES = {1: "pan", 2: "zoom", 3: "opacity", 4: "parameter_slider",
+         5: "mesh_single_vertex", 6: "mesh_multi_vertex",
+         7: "warp_deformer", 8: "rotation_deformer"}
 # Each metric is a difference on ONE correlated request, never a sum of percentiles.
 PAIRS = {
     "input_handler_ms": ("input_begin", "input_end"),
@@ -233,7 +235,12 @@ def analyze(records, budget_ms=1000 / 120):
                 issues.append(f"{mode}: expected {metadata['samples']} measured inputs, got {len(ticks)}")
             if not latencies:
                 issues.append(f"{mode}: no correlated presentation timestamps")
-    expected_modes = {MODES[4]} if metadata.get("parameters_only") else {MODES[i] for i in (1, 2, 3)}
+    workload_ids = metadata.get("workloads")
+    if workload_ids is None:  # Historical schema-1 captures predate explicit workloads.
+        workload_ids = [4] if metadata.get("parameters_only") else [1, 2, 3]
+    if not workload_ids or any(i not in MODES for i in workload_ids):
+        issues.append("invalid workload list in metadata")
+    expected_modes = {MODES[i] for i in workload_ids if i in MODES}
     if metadata.get("automatic") and not expected_modes.issubset(summary["modes"]):
         issues.append("one or more workloads are missing")
     return rows, summary

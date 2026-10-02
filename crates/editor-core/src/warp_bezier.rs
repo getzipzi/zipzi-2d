@@ -20,6 +20,28 @@ pub(crate) struct BezierGeometry {
     pub curves: Vec<(ModelPoint, ModelPoint)>,
 }
 
+/// Each canvas frame owns its authoring and parent-space snapshot. Most Warp
+/// controls are never selected, so only sample their curves when queried.
+#[derive(Debug)]
+pub(crate) struct LazyBezierGeometry {
+    controller: WarpBezier,
+    space: ControlSpace,
+    geometry: std::sync::OnceLock<BezierGeometry>,
+}
+impl LazyBezierGeometry {
+    pub fn new(controller: WarpBezier, space: ControlSpace) -> Self {
+        Self {
+            controller,
+            space,
+            geometry: std::sync::OnceLock::new(),
+        }
+    }
+    pub fn get(&self) -> &BezierGeometry {
+        self.geometry
+            .get_or_init(|| BezierGeometry::new(&self.controller, &self.space))
+    }
+}
+
 pub(crate) fn authored(
     document: &Document,
     scene: &CanvasScene,
@@ -108,5 +130,39 @@ impl BezierGeometry {
             .enumerate()
             .map(|(i, p)| (component_id(i, 0), *p))
             .chain(self.handles.iter().map(|(id, _, p)| (*id, *p)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn curve_sampling_is_lazy_and_uses_an_owned_authoring_snapshot() -> anyhow::Result<()> {
+        let mut doc = Document::new_blank()?;
+        let snapshot = doc.snapshot()?;
+        let scene = CanvasScene::new(&doc, snapshot);
+        let mut controller = WarpBezier::from_lattice(
+            1,
+            1,
+            true,
+            &[
+                kasane_core::Vec2::new(0., 0.),
+                kasane_core::Vec2::new(100., 0.),
+                kasane_core::Vec2::new(0., 100.),
+                kasane_core::Vec2::new(100., 100.),
+            ],
+        );
+        let space = ControlSpace::new(&doc, &scene, "")?;
+        let expected = BezierGeometry::new(&controller, &space);
+        let cache = LazyBezierGeometry::new(controller.clone(), space);
+        assert!(cache.geometry.get().is_none());
+        controller.nodes[0].position.x += 50.;
+        let actual = cache.get();
+        assert_eq!(actual.anchors, expected.anchors);
+        assert_eq!(actual.handles, expected.handles);
+        assert_eq!(actual.curves, expected.curves);
+        assert!(std::ptr::eq(actual, cache.get()));
+        Ok(())
     }
 }

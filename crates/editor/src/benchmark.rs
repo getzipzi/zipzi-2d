@@ -1,6 +1,7 @@
 //! Opt-in window benchmark and nonblocking JSONL trace writer.
 //! Synthetic events enter GPUI dispatch; they do not measure OS input delivery.
 use super::*;
+mod deformation;
 use anyhow::{Context as _, ensure};
 use std::{
     cell::Cell,
@@ -35,6 +36,11 @@ struct Config {
     warmup: usize,
     hz: u32,
     parameters_only: bool,
+    deformations: bool,
+    vertices: usize,
+    mesh: Option<String>,
+    warp: Option<String>,
+    rotation: Option<String>,
 }
 
 pub fn init() -> anyhow::Result<()> {
@@ -87,13 +93,29 @@ pub fn init() -> anyhow::Result<()> {
             std::env::var_os("KASANE_BENCH_MODEL").context("KASANE_BENCH_MODEL is required")?,
         )
         .canonicalize()?;
+        let parameters_only = std::env::var("KASANE_BENCH_PARAMETERS").is_ok_and(|s| s == "1");
+        let deformations = std::env::var("KASANE_BENCH_DEFORMATIONS").is_ok_and(|s| s == "1");
+        ensure!(
+            !(parameters_only && deformations),
+            "choose parameters OR deformations"
+        );
+        let vertices = number("KASANE_BENCH_VERTICES", 8)?;
+        ensure!(
+            (2..=10_000).contains(&vertices),
+            "invalid multi-vertex count"
+        );
         CONFIG
             .set(Config {
                 model,
                 samples,
                 warmup,
                 hz: hz as u32,
-                parameters_only: std::env::var("KASANE_BENCH_PARAMETERS").is_ok_and(|s| s == "1"),
+                parameters_only,
+                deformations,
+                vertices,
+                mesh: std::env::var("KASANE_BENCH_MESH").ok(),
+                warp: std::env::var("KASANE_BENCH_WARP").ok(),
+                rotation: std::env::var("KASANE_BENCH_ROTATION").ok(),
             })
             .ok();
     }
@@ -112,6 +134,9 @@ pub fn init() -> anyhow::Result<()> {
                 "model": config.map(|c| c.model.display().to_string()),
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
                 "parameters_only": config.map(|c| c.parameters_only),
+                "workloads": config.map(|c| if c.deformations { vec![5, 6, 7, 8] }
+                    else if c.parameters_only { vec![4] } else { vec![1, 2, 3] }),
+                "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
                 "diagnostics": {
                     "drawables": std::env::var("GPUI_TRACE_DRAWABLES").ok(),
@@ -285,7 +310,9 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 );
             }
             executor.timer(Duration::from_millis(500)).await;
-            let modes = if config.parameters_only {
+            let modes = if config.deformations {
+                5..=8u64
+            } else if config.parameters_only {
                 4..=4u64
             } else {
                 1..=3u64
@@ -306,6 +333,20 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                     })?
                     .context("canvas has no measured bounds")?;
                 ensure!(center.1, "benchmark window is hidden");
+                let drag = if mode >= 5 {
+                    // Pick from the restored model and viewport actually displayed.
+                    let deadline = Instant::now() + Duration::from_secs(30);
+                    while !view.update_in(cx, |view, _, _| deformation::frame_ready(view))? {
+                        ensure!(
+                            Instant::now() < deadline,
+                            "timed out waiting for deformation fixture"
+                        );
+                        executor.timer(Duration::from_millis(25)).await;
+                    }
+                    Some(view.update_in(cx, |view, _, cx| deformation::prepare(view, mode, cx))??)
+                } else {
+                    None
+                };
                 let slider_bounds = if mode == 4 {
                     Some(
                         view.update_in(cx, |view, _, cx| {
@@ -324,13 +365,19 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 let center = slider_bounds.map_or(center.0, |bounds| {
                     point(bounds.left() + bounds.size.width * 0.25, bounds.center().y)
                 });
+                let center = drag.as_ref().map_or(center, |drag| drag.start);
                 executor.timer(Duration::from_millis(250)).await;
-                if mode == 1 || mode == 4 {
+                if let Some(drag) = &drag {
+                    cx.update(|window, cx| {
+                        deformation::select_components(&view, drag, window, cx)
+                    })??;
+                }
+                if mode == 1 || mode == 4 || mode >= 5 {
                     cx.update(|window, cx| {
                         dispatch_pointer(
                             window,
                             MouseDownEvent {
-                                button: if mode == 4 {
+                                button: if mode >= 4 {
                                     MouseButton::Left
                                 } else {
                                     MouseButton::Middle
@@ -347,6 +394,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 }
                 let interval = Duration::from_secs_f64(1. / config.hz as f64);
                 let mut deadline = Instant::now() + interval;
+                let mut last_position = center;
                 for sample in 0..config.samples + config.warmup {
                     executor
                         .timer(deadline.saturating_duration_since(Instant::now()))
@@ -356,6 +404,11 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         .as_nanos() as u64;
                     // Slider subscriptions run when App::update flushes effects, after
                     // dispatch_event returns. Keep attribution alive through that flush.
+                    let evaluations = if drag.is_some() {
+                        view.update_in(cx, |view, _, _| view.editor.evaluation_count())?
+                    } else {
+                        0
+                    };
                     let input = frame_trace::InputScope::begin(100 + mode);
                     cx.update(|window, cx| -> anyhow::Result<()> {
                         frame_trace::emit(
@@ -422,6 +475,19 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                     cx,
                                 );
                             }
+                            5..=8 => {
+                                last_position = drag.as_ref().unwrap().position(sample);
+                                dispatch_pointer(
+                                    window,
+                                    MouseMoveEvent {
+                                        position: last_position,
+                                        pressed_button: Some(MouseButton::Left),
+                                        modifiers: Default::default(),
+                                    }
+                                    .to_platform_input(),
+                                    cx,
+                                );
+                            }
                             _ => {
                                 view.update(cx, |view, cx| -> anyhow::Result<()> {
                                     // Real SDK edit/evaluation; bypasses only the slider widget.
@@ -436,23 +502,39 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         Ok(())
                     })??;
                     drop(input);
+                    if drag.is_some() {
+                        view.update_in(cx, |view, _, _| -> anyhow::Result<()> {
+                            ensure!(
+                                view.edit_error.is_none(),
+                                "canvas edit failed: {:?}",
+                                view.edit_error
+                            );
+                            ensure!(
+                                view.editor.gesture_active()
+                                    && view.editor.document().is_some_and(|d| d.has_pending_edit())
+                                    && view.editor.evaluation_count() > evaluations,
+                                "mode {mode} sample {sample}: drag produced no model evaluation"
+                            );
+                            Ok(())
+                        })??;
+                    }
                     // Never inject a burst of catch-up events after a late wake-up.
                     deadline += interval;
                     if deadline < Instant::now() {
                         deadline = Instant::now() + interval;
                     }
                 }
-                if mode == 1 || mode == 4 {
+                if mode == 1 || mode == 4 || mode >= 5 {
                     cx.update(|window, cx| {
                         dispatch_pointer(
                             window,
                             MouseUpEvent {
-                                button: if mode == 4 {
+                                button: if mode >= 4 {
                                     MouseButton::Left
                                 } else {
                                     MouseButton::Middle
                                 },
-                                position: center,
+                                position: last_position,
                                 ..Default::default()
                             }
                             .to_platform_input(),
@@ -461,6 +543,14 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                     })?;
                 }
                 executor.timer(Duration::from_millis(500)).await;
+                if drag.is_some() {
+                    view.update_in(cx, |view, _, cx| -> anyhow::Result<()> {
+                        ensure!(view.edit_error.is_none(), "could not commit canvas gesture");
+                        view.editor.execute(EditorCommand::Undo)?;
+                        view.redraw(cx);
+                        Ok(())
+                    })??;
+                }
             }
             executor.timer(Duration::from_secs(2)).await;
             frame_trace::emit(frame_trace::next_id(), "benchmark_done", &[]);

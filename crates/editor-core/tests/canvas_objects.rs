@@ -2133,3 +2133,96 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
     }
     Ok(())
 }
+
+#[test]
+fn mesh_drag_reuses_binding_index_without_mutating_retained_snapshots() -> anyhow::Result<()> {
+    let (doc, _dir) = support::sample_document_with_binding(true)?;
+    let mut editor = Editor::from_document(doc);
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    shown(&mut editor)?;
+    let index = editor.document().unwrap().object_index();
+    let point = editor.overlay().vertices[0].position;
+    let before = shown(&mut editor)?.geometry.meshes[0].vertices.clone();
+    editor.canvas_input(CanvasInput::Down {
+        point,
+        shift: false,
+    })?;
+    for distance in [10., 20., 30.] {
+        editor.canvas_input(CanvasInput::Move {
+            point: CanvasPoint {
+                x: point.x + distance,
+                y: point.y,
+            },
+            left_down: true,
+        })?;
+        assert!(Arc::ptr_eq(
+            &index,
+            &editor.document().unwrap().object_index()
+        ));
+        assert_ne!(shown(&mut editor)?.geometry.meshes[0].vertices, before);
+    }
+    editor.cancel_gesture();
+    assert_eq!(shown(&mut editor)?.geometry.meshes[0].vertices, before);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -> anyhow::Result<()>
+{
+    for rotation in [false, true] {
+        let (mut editor, _dir, object) = deformer_editor(rotation)?;
+        let original = editor.document().unwrap().object_index();
+        let original_properties = original.get(&object).unwrap().properties.clone();
+        let start = editor.overlay().vertices[0].position;
+        editor.canvas_input(CanvasInput::Down {
+            point: start,
+            shift: false,
+        })?;
+        let mut previous = original.clone();
+        for distance in [10., 20.] {
+            let retained_properties = previous.get(&object).unwrap().properties.clone();
+            editor.canvas_input(CanvasInput::Move {
+                point: CanvasPoint {
+                    x: start.x + distance,
+                    y: start.y,
+                },
+                left_down: true,
+            })?;
+            let current = editor.document().unwrap().object_index();
+            assert_ne!(
+                current.get(&object).unwrap().properties,
+                retained_properties
+            );
+            assert_eq!(
+                previous.get(&object).unwrap().properties,
+                retained_properties
+            );
+            assert_eq!(
+                original.get(&object).unwrap().properties,
+                original_properties
+            );
+            assert_eq!(current.objects.len(), original.objects.len());
+            assert_eq!(current.relations.len(), original.relations.len());
+            shown(&mut editor)?;
+            previous = current;
+        }
+        editor.cancel_gesture();
+        assert_eq!(
+            editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&object)
+                .unwrap()
+                .properties,
+            original_properties
+        );
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
+    Ok(())
+}

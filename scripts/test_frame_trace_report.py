@@ -111,6 +111,33 @@ class TraceReportTest(unittest.TestCase):
         self.assertFalse(summary["issues"])
         self.assertEqual(summary["modes"]["parameter_slider"]["outcomes"], {"presented": 1})
 
+    def deformation_capture(self, modes=(5, 6, 7, 8)):
+        events = []
+        for mode in modes:
+            for sample, warmup in [(0, 1), (1, 0)]:
+                id = mode * 1000 + sample * 100
+                start = mode * 100 + sample * 20
+                events.extend(request(id + 10, id, start, texture=id))
+                events.append(event(id, "benchmark_tick", start, mode=mode,
+                                    sample=sample, warmup=warmup, timer_late_ns=0))
+                events.extend(composition(id + 20, start + 4, texture=id, present=start + 10))
+        raw = capture(*events, event(99999, "benchmark_done", 1000))
+        raw[0].update(automatic=True, workloads=[5, 6, 7, 8], samples=1, warmup=1)
+        return raw
+
+    def test_deformation_workloads_are_separate_and_exclude_warmup(self):
+        rows, summary = report.analyze(self.deformation_capture())
+        self.assertFalse(summary["issues"])
+        self.assertEqual(len(rows), 8)
+        self.assertEqual(set(summary["modes"]),
+                         {"mesh_single_vertex", "mesh_multi_vertex", "warp_deformer", "rotation_deformer"})
+        for mode in summary["modes"].values():
+            self.assertEqual(mode["outcomes"], {"presented": 1})
+
+    def test_missing_deformation_workload_is_not_a_success(self):
+        _, summary = report.analyze(self.deformation_capture(modes=(5, 6, 7)))
+        self.assertIn("one or more workloads are missing", summary["issues"])
+
     def test_quantiles_keep_outliers(self):
         self.assertEqual(report.quantiles([1] * 99 + [40])["max"], 40)
         self.assertEqual(report.quantiles([1] * 99 + [40])["p99"], 1)

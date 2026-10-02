@@ -858,6 +858,7 @@ impl Document {
             .ok_or_else(|| anyhow!("No canvas edit"))?;
         ensure!(pending.kind == Gesture::Controls, "Another edit is active");
         pending.changed.take();
+        let previous_revision = self.projection_revision;
         self.projection_revision += 1;
         for target in targets {
             let ids = selected
@@ -884,6 +885,19 @@ impl Document {
             if before != after {
                 pending.topology_changed = true;
                 self.canvas_topology.get_mut().unwrap().take();
+            }
+        }
+        if let Some((revision, index)) = self.object_index.get_mut().unwrap() {
+            if *revision == previous_revision {
+                for target in targets {
+                    if target.object.kind == crate::ObjectKind::Deformer {
+                        Arc::make_mut(index)
+                            .refresh_deformer(pending.edit.candidate_document(), &target.object);
+                    }
+                }
+                // Mesh positions and keyform poses are not index properties;
+                // axes, keys, topology IDs and relation edges remain unchanged.
+                *revision = self.projection_revision;
             }
         }
         Ok(())
