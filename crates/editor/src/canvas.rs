@@ -25,6 +25,49 @@ struct CanvasOverlay {
     error: Option<String>,
 }
 impl CanvasOverlay {
+    fn paint(
+        &mut self,
+        bounds: Bounds<Pixels>,
+        overlay: &editor_core::OverlaySnapshot,
+        style: editor_render::OverlayStyle,
+        pass: editor_render::OverlayPass,
+        window: &mut Window,
+    ) -> anyhow::Result<()> {
+        anyhow::ensure!(benchmark::metal_mesh_overlay(), "GPUI diagnostic override");
+        let gpu = window
+            .metal_context()
+            .ok_or_else(|| anyhow::anyhow!("Metal context unavailable"))?;
+        let scale = window.scale_factor();
+        if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+            return Ok(());
+        }
+        let origin = [bounds.origin.x.as_f32(), bounds.origin.y.as_f32()];
+        let texture_origin = origin.map(|v| (v * scale).floor());
+        let extent = [
+            ((bounds.right().as_f32() * scale).ceil() - texture_origin[0]) as u32,
+            ((bounds.bottom().as_f32() * scale).ceil() - texture_origin[1]) as u32,
+        ];
+        let viewport = editor_render::OverlayViewport {
+            extent,
+            scale,
+            origin,
+        };
+        if let Some(image) = self
+            .renderer(&gpu.device)?
+            .draw_pass(&gpu.queue, viewport, overlay, style, pass)?
+        {
+            // Preserve physical pixel size when logical bounds are fractional.
+            window.paint_surface(
+                Bounds::new(
+                    point(px(texture_origin[0] / scale), px(texture_origin[1] / scale)),
+                    size(px(extent[0] as f32 / scale), px(extent[1] as f32 / scale)),
+                ),
+                SurfaceSource::MetalTexture(image),
+            );
+        }
+        Ok(())
+    }
+
     fn renderer(
         &mut self,
         device: &metal::Device,
@@ -323,7 +366,8 @@ impl Render for CanvasView {
         let modal = state.modal || dialog;
         let error = state.render_error.clone();
         let capture = self.pan.is_some() || state.editor.gesture_active();
-        let primary = cx.theme().primary;
+        let palette = crate::canvas_overlay::Palette::new(cx.theme().is_dark());
+        let primary = palette.selected;
         let muted = cx.theme().muted_foreground;
         let foreground = cx.theme().foreground;
         let background = cx.theme().background;
@@ -515,69 +559,20 @@ impl Render for CanvasView {
                         });
                     },
                     move |bounds, _, window, _cx| {
-                        let result = (|| -> anyhow::Result<()> {
-                            anyhow::ensure!(
-                                benchmark::metal_mesh_overlay(),
-                                "GPUI diagnostic override"
-                            );
-                            let gpu = window
-                                .metal_context()
-                                .ok_or_else(|| anyhow::anyhow!("Metal context unavailable"))?;
-                            let scale = window.scale_factor();
-                            if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
-                                return Ok(());
-                            }
-                            let origin = [bounds.origin.x.as_f32(), bounds.origin.y.as_f32()];
-                            let texture_origin = origin.map(|v| (v * scale).floor());
-                            let extent = [
-                                ((bounds.right().as_f32() * scale).ceil() - texture_origin[0])
-                                    as u32,
-                                ((bounds.bottom().as_f32() * scale).ceil() - texture_origin[1])
-                                    as u32,
-                            ];
-                            let viewport = editor_render::OverlayViewport {
-                                extent,
-                                scale,
-                                origin,
-                            };
-                            let mut renderer = overlay_renderer.borrow_mut();
-                            let renderer = renderer.renderer(&gpu.device)?;
-                            let color = |color: Hsla| {
-                                let c: Rgba = color.into();
-                                [c.r, c.g, c.b, c.a]
-                            };
-                            let style = editor_render::OverlayStyle {
-                                edge: color(muted),
-                                vertex: color(foreground),
-                                selected: color(primary),
-                            };
-                            if let Some(image) =
-                                renderer.draw(&gpu.queue, viewport, &overlay, style)?
-                            {
-                                // Preserve physical pixel size when logical bounds are fractional.
-                                window.paint_surface(
-                                    Bounds::new(
-                                        point(
-                                            px(texture_origin[0] / scale),
-                                            px(texture_origin[1] / scale),
-                                        ),
-                                        size(
-                                            px(extent[0] as f32 / scale),
-                                            px(extent[1] as f32 / scale),
-                                        ),
-                                    ),
-                                    SurfaceSource::MetalTexture(image),
-                                );
-                            }
-                            Ok(())
-                        })();
+                        let result = overlay_renderer.borrow_mut().paint(
+                            bounds,
+                            &overlay,
+                            palette.metal(),
+                            editor_render::OverlayPass::Edges,
+                            window,
+                        );
                         // Preserve editing visibility if shader/device setup is unavailable.
                         if result.is_err() {
                             let to_window =
                                 |p: CanvasPoint| bounds.origin + point(px(p.x), px(p.y));
                             if benchmark::batch_mesh_edges() {
                                 mesh_edges::paint_edges(&overlay.lines, bounds.origin, |path| {
-                                    window.paint_path(path, muted);
+                                    window.paint_path(path, palette.mesh.opacity(0.45));
                                 });
                             } else {
                                 for (a, b) in &overlay.lines {
@@ -585,45 +580,26 @@ impl Render for CanvasView {
                                     path.move_to(to_window(*a));
                                     path.line_to(to_window(*b));
                                     if let Ok(path) = path.build() {
-                                        window.paint_path(path, muted);
+                                        window.paint_path(path, palette.mesh.opacity(0.45));
                                     }
                                 }
                             }
-                            for vertex in &overlay.vertices {
-                                let center = to_window(vertex.position);
-                                let r = if vertex.hovered { px(4.) } else { px(3.) };
-                                window.paint_quad(fill(
-                                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
-                                    if vertex.selected { primary } else { foreground },
-                                ));
-                            }
                         }
-                        mesh_edges::paint_edges(&overlay.guide_lines, bounds.origin, |path| {
-                            window.paint_path(path, muted.opacity(0.22))
-                        });
-                        mesh_edges::paint_edges(&overlay.accent_lines, bounds.origin, |path| {
-                            window.paint_path(path, primary)
-                        });
-                        mesh_edges::paint_edges(&overlay.hover_lines, bounds.origin, |path| {
-                            window.paint_path(path, foreground)
-                        });
-                        mesh_edges::paint_edges(&overlay.gizmo_lines, bounds.origin, |path| {
-                            window.paint_path(path, primary.opacity(0.55))
-                        });
-                        for handle in &overlay.handles {
-                            let r = px(if handle.hovered { 5. } else { 4. });
-                            let center =
-                                bounds.origin + point(px(handle.position.x), px(handle.position.y));
-                            window.paint_quad(
-                                fill(
-                                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
-                                    if handle.hovered { primary } else { background },
-                                )
-                                .corner_radii(if handle.round { r } else { px(1.) })
-                                .border_widths(px(1.))
-                                .border_color(primary),
-                            );
-                        }
+                        crate::canvas_overlay::paint_lines(&overlay, bounds, palette, window);
+                        let marker_result = overlay_renderer.borrow_mut().paint(
+                            bounds,
+                            &overlay,
+                            palette.metal(),
+                            editor_render::OverlayPass::Vertices,
+                            window,
+                        );
+                        crate::canvas_overlay::paint_markers(
+                            &overlay,
+                            bounds.origin,
+                            palette,
+                            marker_result.is_err(),
+                            window,
+                        );
                         if let Some((a, b)) = overlay.marquee {
                             let rect = Bounds::new(
                                 bounds.origin + point(px(a.x.min(b.x)), px(a.y.min(b.y))),

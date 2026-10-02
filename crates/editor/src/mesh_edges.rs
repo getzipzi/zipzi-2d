@@ -9,10 +9,19 @@ const EDGES_PER_PATH: usize = 4096;
 pub fn paint_edges(
     edges: &[(CanvasPoint, CanvasPoint)],
     origin: Point<Pixels>,
+    paint: impl FnMut(Path<Pixels>),
+) {
+    paint_edges_with_width(edges, origin, 1., paint);
+}
+
+pub fn paint_edges_with_width(
+    edges: &[(CanvasPoint, CanvasPoint)],
+    origin: Point<Pixels>,
+    width: f32,
     mut paint: impl FnMut(Path<Pixels>),
 ) {
     let build = |edges: &[(CanvasPoint, CanvasPoint)]| {
-        let mut path = PathBuilder::stroke(px(1.));
+        let mut path = PathBuilder::stroke(px(width));
         for (a, b) in edges {
             path.move_to(origin + point(px(a.x), px(a.y)));
             path.line_to(origin + point(px(b.x), px(b.y)));
@@ -20,7 +29,7 @@ pub fn paint_edges(
         path.build().map(|mut path| {
             // GPUI copies the MSAA result through the path's bounds. Include
             // fractional edge coverage beyond the geometric bounds at 1x/2x.
-            path.bounds = path.bounds.dilate(px(1.));
+            path.bounds = path.bounds.dilate(px(width.max(1.)));
             path
         })
     };

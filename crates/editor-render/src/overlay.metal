@@ -18,17 +18,45 @@ vertex Out edge_vertex(uint v [[vertex_id]], uint id [[instance_id]],
     const float side[6] = {1,-1,1,1,-1,-1};
     return output((endpoint[v] ? b : a) + side[v]*n, u.edge, u);
 }
-vertex Out marker_vertex(uint v [[vertex_id]], uint id [[instance_id]],
+struct MarkerOut {
+    float4 position [[position]];
+    float4 color [[flat]];
+    float2 local;
+    float radius [[flat]];
+    float scale [[flat]];
+    float hovered [[flat]];
+    float selected [[flat]];
+};
+vertex MarkerOut marker_vertex(uint v [[vertex_id]], uint id [[instance_id]],
     const device float4 *markers [[buffer(0)]], constant Uniforms &u [[buffer(1)]]) {
     float4 marker = markers[id];
-    const float2 corner[6] = {float2(0,0),float2(1,0),float2(0,1),float2(0,1),float2(1,0),float2(1,1)};
-    float2 center = marker.xy + u.origin;
-    float2 lo = (center - marker.z) * u.scale;
-    float2 hi = (center + marker.z) * u.scale;
-    // Match Window::paint_quad snapping, including half-pixel ties toward zero.
-    lo = copysign(ceil(abs(lo) - 0.5), lo);
-    hi = copysign(ceil(abs(hi) - 0.5), hi);
-    float2 p = lo + corner[v] * (hi-lo) - u.texture_origin;
-    return output(p, marker.w > 0 ? u.selected : u.vertex_color, u);
+    const float2 corner[6] = {float2(-1,-1),float2(1,-1),float2(-1,1),float2(-1,1),float2(1,-1),float2(1,1)};
+    bool hovered = marker.w >= 2;
+    bool selected = (uint(marker.w) & 1) != 0;
+    float radius = marker.z * u.scale;
+    float extent = radius + (hovered ? 2.0 * u.scale : 0.0) + 1.0;
+    float2 local = corner[v] * extent;
+    float2 center = (marker.xy + u.origin) * u.scale - u.texture_origin;
+    Out base = output(center + local, selected ? u.selected : u.vertex_color, u);
+    return {base.position, base.color, local, radius, u.scale, hovered ? 1.0 : 0.0, selected ? 1.0 : 0.0};
+}
+fragment float4 marker_fragment(MarkerOut input [[stage_in]]) {
+    float d = length(input.local);
+    float coverage = clamp(input.radius - d + 0.5, 0.0, 1.0);
+    float4 color = input.color * coverage;
+    if (input.selected == 0) {
+        // Unselected mesh points have a 1 logical pixel black border inside
+        // the same silhouette as the solid selected point.
+        float inner = clamp(input.radius - input.scale - d + 0.5, 0.0, 1.0);
+        color = input.color * inner + float4(0.0, 0.0, 0.0, coverage - inner);
+    }
+    if (input.hovered > 0) {
+        float outer = input.radius + 2.0 * input.scale;
+        float ring = clamp(outer - d + 0.5, 0.0, 1.0)
+            * clamp(d - (outer - input.scale) + 0.5, 0.0, 1.0);
+        // Hollow hover rings are always white, independent of selection color.
+        color += float4(1.0) * ring * (1.0 - coverage);
+    }
+    return color;
 }
 fragment float4 solid_fragment(Out input [[stage_in]]) { return input.color; }

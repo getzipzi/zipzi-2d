@@ -584,7 +584,11 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
         let overlay = editor.overlay();
         assert!(overlay.lines.is_empty(), "unselected deformers stay hidden");
         assert_eq!(
-            overlay.accent_lines.len(),
+            overlay
+                .deformers
+                .iter()
+                .map(|d| d.lines.len())
+                .sum::<usize>(),
             64,
             "the selected warp Bezier curves remain visible"
         );
@@ -761,6 +765,14 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
         point: start,
         shift: false,
     })?;
+    assert!(
+        editor
+            .overlay()
+            .vertices
+            .iter()
+            .any(|v| v.kind == OverlayVertexKind::RotationTip && v.selected),
+        "pressed rotation tip is visually active"
+    );
     editor.canvas_input(CanvasInput::Move {
         point: end,
         left_down: true,
@@ -770,6 +782,10 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
     assert!(!editor.document().unwrap().has_pending_edit());
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     shown(&mut editor)?;
+    assert!(
+        editor.overlay().vertices.iter().all(|v| !v.selected),
+        "cancel clears the active rotation tip"
+    );
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift: false,
@@ -1980,6 +1996,140 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
             .unwrap()
             .position;
         assert!((handle.x - saved_handle.x).hypot(handle.y - saved_handle.y) < 0.001);
+    }
+    Ok(())
+}
+
+#[test]
+fn overlay_keeps_control_identity_and_reference_deformers_quiet() -> anyhow::Result<()> {
+    let (doc, _dir, warp, rotation, _) = rich_document()?;
+    let mut editor = Editor::from_document(doc);
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    shown(&mut editor)?;
+    editor.dispatch(editor.command(CommandId::ToggleDeformers))?;
+    let overlay = editor.overlay();
+    assert!(
+        overlay
+            .vertices
+            .iter()
+            .all(|v| v.kind == OverlayVertexKind::Mesh)
+    );
+    assert_eq!(overlay.deformers.len(), 2);
+    assert!(overlay.deformers.iter().all(|d| !d.selected));
+    for (id, expected) in [
+        (warp, OverlayVertexKind::Warp),
+        (rotation, OverlayVertexKind::RotationCenter),
+    ] {
+        editor.execute(EditorCommand::SelectObject(ObjectRef::new(
+            ObjectKind::Deformer,
+            id,
+        )))?;
+        let overlay = editor.overlay();
+        assert_eq!(overlay.vertices[0].kind, expected);
+        assert!(
+            overlay.accent_lines.is_empty(),
+            "deformers must not inherit mesh styling"
+        );
+        assert_eq!(overlay.deformers.iter().filter(|d| d.selected).count(), 1);
+        let point = overlay.vertices[0].position;
+        click(&mut editor, point, false)?;
+        assert!(editor.overlay().vertices.iter().any(|v| v.selected));
+    }
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> anyhow::Result<()> {
+    use kasane_core::{Canvas, Glue, GlueVertexPair};
+    use kasane_sdk::AuthoringSession;
+    for intensity in [0., 1.] {
+        let (mut source, dir) = support::sample_document_with_two_layers()?;
+        let receipt = source.save(&dir.path().join("glue-source"))?;
+        let id = uuid::Uuid::new_v4().to_string();
+        let mut sdk = AuthoringSession::new(&id, Canvas::new(256., 256., Vec2::new(0., 0.), 1.))?;
+        sdk.open_project(&receipt.manifest, None)?;
+        let meshes = sdk.mesh_ids().to_vec();
+        sdk.edit("Glue fixture", None, |edit| {
+            edit.create_glue(Glue {
+                id: id.clone(),
+                runtime_id: id.clone(),
+                name: "Seam".into(),
+                mesh_a_id: meshes[0].clone(),
+                mesh_b_id: meshes[1].clone(),
+                intensity,
+                pairs: vec![
+                    GlueVertexPair {
+                        vertex_a: 0,
+                        vertex_b: 0,
+                        weight_a: 0.5,
+                        weight_b: 0.5,
+                    },
+                    GlueVertexPair {
+                        vertex_a: 1,
+                        vertex_b: 2,
+                        weight_a: 0.5,
+                        weight_b: 0.5,
+                    },
+                ],
+                binding: None,
+            })
+        })?;
+        sdk.save_project(&receipt.manifest, None)?;
+        let mut editor = Editor::from_document(Document::open(&receipt.manifest)?);
+        editor.set_canvas_metrics(CanvasMetrics {
+            width: 512.,
+            height: 512.,
+            scale_factor: 2.,
+        });
+        let frame = shown(&mut editor)?;
+        editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+        assert!(editor.overlay().glues.is_empty());
+        editor.execute(EditorCommand::SetTool(ToolId::Glue))?;
+        let overlay = editor.overlay();
+        assert_eq!(overlay.glues.len(), 1);
+        assert!(!overlay.glues[0].selected);
+        let object = ObjectRef::new(ObjectKind::Glue, &id);
+        editor.execute(EditorCommand::SelectObject(object.clone()))?;
+        let overlay = editor.overlay();
+        assert!(overlay.vertices.is_empty() && overlay.handles.is_empty());
+        assert_eq!(
+            overlay.reference_lines.len(),
+            8,
+            "both connected mesh outlines are visible"
+        );
+        assert!(overlay.glues[0].selected);
+        let pairs = &overlay.glues[0].pairs;
+        assert_eq!(pairs.len(), 2);
+        assert_eq!(
+            pairs[0].0, pairs[0].1,
+            "coincident endpoints must not be discarded"
+        );
+        let (a, b) = pairs[1];
+        assert_eq!((a.x - b.x).hypot(a.y - b.y) < 0.01, intensity == 1.);
+        let point = pairs[0].0;
+        assert_eq!(
+            frame.geometry.hit(
+                point,
+                frame.transform,
+                &[object.clone()],
+                ToolId::Glue,
+                DeformerVisibility::default()
+            ),
+            Some(HitTarget::Object(object))
+        );
+        editor.canvas_input(CanvasInput::Move {
+            point,
+            left_down: false,
+        })?;
+        assert!(editor.overlay().glues[0].hovered);
+        click(&mut editor, point, false)?;
+        assert!(editor.overlay().vertices.is_empty());
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     }
     Ok(())
 }

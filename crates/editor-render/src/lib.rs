@@ -9,7 +9,9 @@ use kasane_render_metal::{
     MetalContext, MetalOutputMode, MetalRenderer, MetalTexture, MetalTextureCatalog, metal,
 };
 use mipmaps::straight_rgba_mipmaps;
-pub use overlay::{MetalOverlayRenderer, OverlayStyle, OverlayViewport};
+pub use overlay::{
+    MetalOverlayRenderer, OVERLAY_MARKER_RADIUS, OverlayPass, OverlayStyle, OverlayViewport,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 

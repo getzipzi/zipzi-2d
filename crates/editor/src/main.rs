@@ -2,6 +2,7 @@ rust_i18n::i18n!("locales", fallback = "en");
 
 mod benchmark;
 mod canvas;
+mod canvas_overlay;
 mod dev_session;
 mod docking;
 #[cfg(test)]

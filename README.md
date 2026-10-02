@@ -52,7 +52,7 @@ Apple 的 `MTL_HUD_SCALE` 表示 HUD 宽度占窗口宽度的比例，默认值�
 
 GPUI 使用原生 Metal；Kasane 共享 GPUI 的 device/queue，后台绘制不可变 RGBA 纹理，由 GPUI 按正常场景顺序直接合成。显示路径没有 CPU 图像回读。预览分辨率随画布区域和显示缩放倍率调整；导入纹理使用线性过滤和 mipmap。
 
-选中网格的边线和顶点标记默认由专用 Metal 覆盖层绘制为透明纹理，再交给 GPUI 合成；保留选中、悬停、裁剪和像素对齐。内容未变时复用纹理，变化时发布独立资源，不在 UI 线程等待 GPU。设备初始化失败时回退到 GPUI。实现和回归检查见 [覆盖层重构](docs/mesh-overlay-rendering.md)，方案对照见 [覆盖层 benchmark](docs/mesh-overlay-benchmark.md)。
+选中网格的边线和顶点标记默认由专用 Metal 覆盖层绘制为透明纹理，再交给 GPUI 合成；保留选中、悬停、裁剪和像素对齐。内容未变时复用纹理，变化时发布独立资源，不在 UI 线程等待 GPU。边线与顶点分层缓存，控制线始终位于标记下方。设备初始化失败时回退到 GPUI。实现和回归检查见 [覆盖层重构](docs/mesh-overlay-rendering.md)，方案对照见 [覆盖层 benchmark](docs/mesh-overlay-benchmark.md)。
 
 编辑器启动时显示空白项目，不预置图层或纹理。打开或导入项目后，图层列表来自 SDK 文档，支持选择网格并检查名称、透明度和可见性等属性。
 

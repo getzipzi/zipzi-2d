@@ -73,7 +73,7 @@ pub struct CanvasScene {
     mesh_slots: Arc<HashMap<String, usize>>,
     texture_slots: HashMap<String, usize>,
     visible_meshes: HashSet<String>,
-    topology: Arc<crate::canvas_topology::CanvasTopology>,
+    pub(crate) topology: Arc<crate::canvas_topology::CanvasTopology>,
 }
 impl CanvasScene {
     pub fn new(document: &Document, source: SceneSnapshot) -> Self {

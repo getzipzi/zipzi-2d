@@ -6,7 +6,7 @@ use crate::{
     ObjectKind, ObjectRef, ViewportTransform,
 };
 use anyhow::{Result, ensure};
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ToolId {
@@ -39,13 +39,40 @@ pub struct OverlayVertex {
     pub position: CanvasPoint,
     pub selected: bool,
     pub hovered: bool,
+    pub kind: OverlayVertexKind,
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum OverlayVertexKind {
+    #[default]
+    Mesh,
+    Warp,
+    RotationCenter,
+    RotationTip,
+}
+#[derive(Clone, Debug)]
+pub struct OverlayDeformer {
+    pub lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub selected: bool,
+    pub hovered: bool,
+}
+/// Glue endpoints describe a relationship, not draggable components.
+#[derive(Clone, Debug)]
+pub struct OverlayGlue {
+    pub pairs: Vec<(CanvasPoint, CanvasPoint)>,
+    pub selected: bool,
+    pub hovered: bool,
 }
 #[derive(Clone, Debug, Default)]
 pub struct OverlaySnapshot {
     pub vertices: Vec<OverlayVertex>,
+    /// Mesh topology; controls retain their own semantic line groups below.
     pub lines: Vec<(CanvasPoint, CanvasPoint)>,
+    /// Selected mesh and group boundaries.
     pub accent_lines: Vec<(CanvasPoint, CanvasPoint)>,
     pub hover_lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub reference_lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub deformers: Vec<OverlayDeformer>,
+    pub glues: Vec<OverlayGlue>,
     pub marquee: Option<(CanvasPoint, CanvasPoint)>,
     pub unavailable: Option<String>,
     pub target_label: Option<String>,
@@ -60,6 +87,7 @@ pub struct OverlayHandle {
     pub position: CanvasPoint,
     pub round: bool,
     pub hovered: bool,
+    pub selected: bool,
 }
 struct Press {
     point: CanvasPoint,
@@ -515,6 +543,7 @@ impl ToolController {
                             position: t.to_canvas(*p),
                             selected: self.components.contains(&c),
                             hovered: self.hovered == Some(HitTarget::Component(c)),
+                            kind: OverlayVertexKind::Mesh,
                         });
                     }
                     describe_edit(&mut out, document, scene, r);
@@ -541,18 +570,65 @@ impl ToolController {
                 }
             }
         }
+        let mut outlined_meshes: HashSet<&str> = selection
+            .iter()
+            .filter(|r| r.kind == ObjectKind::Mesh)
+            .map(|r| r.id.as_str())
+            .collect();
         for control in &scene.controls {
             if !scene.control_visible(control, selection, self.active, self.deformer_visibility) {
                 continue;
             }
             let points = scene.control_points(control, t);
             let selected = selection.contains(&control.object);
+            let hovered = self
+                .hovered
+                .as_ref()
+                .is_some_and(|h| h.object() == &control.object);
+            if control.kind == ControlKind::Glue {
+                out.glues.push(OverlayGlue {
+                    pairs: control
+                        .edges
+                        .iter()
+                        .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?)))
+                        .collect(),
+                    selected,
+                    hovered,
+                });
+                if selected || hovered {
+                    if let Some(glue) = scene
+                        .topology
+                        .glues
+                        .iter()
+                        .find(|g| g.object == control.object)
+                    {
+                        for id in [&glue.mesh_a, &glue.mesh_b] {
+                            // An explicitly selected mesh already has its own outline.
+                            if outlined_meshes.insert(id.as_str()) {
+                                if let Some(mesh) = scene.mesh(id) {
+                                    out.reference_lines.extend(
+                                        mesh.boundary
+                                            .iter()
+                                            .map(|(a, b)| (t.to_canvas(*a), t.to_canvas(*b))),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+                continue;
+            }
+            let mut deformer = OverlayDeformer {
+                lines: Vec::new(),
+                selected,
+                hovered,
+            };
             if let Some(bezier) = scene
                 .beziers
                 .get(&control.object.id)
                 .filter(|_| selected && !self.warp_fine)
             {
-                out.accent_lines.extend(
+                deformer.lines.extend(
                     bezier
                         .curves
                         .iter()
@@ -569,6 +645,7 @@ impl ToolController {
                         position: t.to_canvas(*p),
                         selected: self.components.contains(&c),
                         hovered: self.hovered == Some(HitTarget::Component(c)),
+                        kind: OverlayVertexKind::Warp,
                     });
                 }
                 for (id, a, b) in &bezier.handles {
@@ -580,8 +657,8 @@ impl ToolController {
                     out.handles.push(OverlayHandle {
                         position: t.to_canvas(*b),
                         round: true,
-                        hovered: self.components.contains(&c)
-                            || self.hovered == Some(HitTarget::Component(c)),
+                        selected: self.components.contains(&c),
+                        hovered: self.hovered == Some(HitTarget::Component(c)),
                     });
                 }
                 if self.deformer_grid {
@@ -594,18 +671,13 @@ impl ToolController {
                         }));
                 }
             } else {
-                let lines = if selected {
-                    &mut out.accent_lines
-                } else {
-                    &mut out.lines
-                };
-                lines.extend(
+                deformer.lines.extend(
                     control
                         .edges
                         .iter()
                         .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?))),
                 );
-                if selected || matches!(control.kind, ControlKind::Rotation | ControlKind::Glue) {
+                if selected {
                     for (i, p) in points.iter().enumerate() {
                         let c = ComponentRef {
                             object: control.object.clone(),
@@ -613,8 +685,21 @@ impl ToolController {
                         };
                         out.vertices.push(OverlayVertex {
                             id: i as u32,
+                            kind: match (control.kind, i) {
+                                (ControlKind::Rotation, 0) => OverlayVertexKind::RotationCenter,
+                                (ControlKind::Rotation, _) => OverlayVertexKind::RotationTip,
+                                _ => OverlayVertexKind::Warp,
+                            },
                             position: *p,
-                            selected: self.components.contains(&c),
+                            selected: self.components.contains(&c)
+                                || (control.kind == ControlKind::Rotation
+                                    && i == 1
+                                    && self.press.as_ref().is_some_and(|p| {
+                                        p.target
+                                            == Some(HitTarget::RotationHandle(
+                                                control.object.clone(),
+                                            ))
+                                    })),
                             hovered: self.hovered == Some(HitTarget::Component(c))
                                 || (i == 1
                                     && self.hovered
@@ -623,19 +708,8 @@ impl ToolController {
                     }
                 }
             }
-            if self
-                .hovered
-                .as_ref()
-                .is_some_and(|h| h.object() == &control.object)
-            {
-                out.hover_lines.extend(
-                    control
-                        .edges
-                        .iter()
-                        .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?))),
-                );
-            }
-            if selected && control.kind != ControlKind::Glue {
+            out.deformers.push(deformer);
+            if selected {
                 describe_edit(&mut out, document, scene, &control.object);
                 if self.deformer_grid && control.kind == ControlKind::Warp {
                     if let Some(warp) = document
@@ -657,6 +731,13 @@ impl ToolController {
                                 .map(|(kind, position)| OverlayHandle {
                                     position,
                                     round: matches!(kind, crate::DeformerHandle::Rotate),
+                                    selected: self.press.as_ref().is_some_and(|p| {
+                                        p.target
+                                            == Some(HitTarget::DeformerHandle(
+                                                control.object.clone(),
+                                                kind,
+                                            ))
+                                    }),
                                     hovered: self.hovered
                                         == Some(HitTarget::DeformerHandle(
                                             control.object.clone(),

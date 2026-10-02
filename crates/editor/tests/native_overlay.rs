@@ -4,8 +4,8 @@ use editor_core::{CanvasPoint, OverlaySnapshot, OverlayVertex};
 use editor_render::{MetalOverlayRenderer, OverlayStyle, OverlayViewport};
 use gpui_apple::metal_renderer::MetalRenderer;
 use gpui_kit::{
-    Bounds, ContentMask, DevicePixels, PaintSurface, Quad, Scene, SurfaceSource, point, px, rgba,
-    size,
+    Bounds, ContentMask, DevicePixels, PaintSurface, Pixels, Quad, Scene, SurfaceSource, point, px,
+    rgba, size,
 };
 #[path = "../src/mesh_edges.rs"]
 mod mesh_edges;
@@ -22,18 +22,21 @@ fn geometry() -> OverlaySnapshot {
         ],
         vertices: vec![
             OverlayVertex {
+                kind: editor_core::OverlayVertexKind::Mesh,
                 id: 3,
                 position: pt(20.25, 20.5),
                 selected: true,
                 hovered: true,
             },
             OverlayVertex {
+                kind: editor_core::OverlayVertexKind::Mesh,
                 id: 9,
                 position: pt(24.25, 22.5),
                 selected: false,
                 hovered: false,
             },
             OverlayVertex {
+                kind: editor_core::OverlayVertexKind::Mesh,
                 id: 11,
                 position: pt(64., 32.),
                 selected: false,
@@ -114,8 +117,13 @@ fn make_scene(
                 scene.insert_primitive(path.scale(viewport.scale));
             },
         );
-        for v in &overlay.vertices {
-            let r = if v.hovered { 4. } else { 3. };
+        for v in [false, true].into_iter().flat_map(|emphasized| {
+            overlay
+                .vertices
+                .iter()
+                .filter(move |v| (v.selected || v.hovered) == emphasized)
+        }) {
+            let r = 3.;
             let x = v.position.x + viewport.origin[0];
             let y = v.position.y + viewport.origin[1];
             let b = Bounds::from_corners(
@@ -128,11 +136,30 @@ fn make_scene(
                     px(snap((y + r) * viewport.scale)),
                 ),
             );
-            scene.insert_primitive(quad(
+            let mut marker = quad(
                 b.scale(1.),
                 if v.selected { 0xff4060c0 } else { 0xf0f0f0b0 },
                 mask.scale(1.),
-            ));
+            );
+            marker.corner_radii = gpui_kit::Corners::all(px(r * viewport.scale)).scale(1.);
+            if !v.selected {
+                marker.border_widths = gpui_kit::Edges::all(px(viewport.scale)).scale(1.);
+                marker.border_color = rgba(0x000000ff).into();
+            }
+            scene.insert_primitive(marker);
+            if v.hovered {
+                let radius = (r + 2.) * viewport.scale;
+                let center = point(px(x * viewport.scale), px(y * viewport.scale));
+                let bounds = Bounds::new(
+                    center - point(px(radius), px(radius)),
+                    size(px(radius * 2.), px(radius * 2.)),
+                );
+                let mut ring = quad(bounds.scale(1.), 0, mask.scale(1.));
+                ring.corner_radii = gpui_kit::Corners::all(px(radius)).scale(1.);
+                ring.border_widths = gpui_kit::Edges::all(px(viewport.scale)).scale(1.);
+                ring.border_color = rgba(0xffffffff).into();
+                scene.insert_primitive(ring);
+            }
         }
     }
     scene.finish();
@@ -230,6 +257,301 @@ fn overlay_matches_paths_markers_and_retains_old_frames() -> anyhow::Result<()> 
                     .is_none()
             );
         }
+        Ok(())
+    })
+}
+
+#[path = "../src/canvas_overlay.rs"]
+mod canvas_overlay;
+
+struct ScenePainter {
+    scene: Scene,
+    scale: f32,
+    mask: ContentMask<Pixels>,
+}
+impl canvas_overlay::Painter for ScenePainter {
+    fn paint_quad(&mut self, q: gpui_kit::PaintQuad) {
+        self.scene.insert_primitive(Quad {
+            order: 0,
+            border_style: q.border_style,
+            bounds: q.bounds.scale(self.scale),
+            content_mask: self.mask.scale(self.scale),
+            background: q.background,
+            border_color: q.border_color,
+            corner_radii: q.corner_radii.scale(self.scale),
+            border_widths: q.border_widths.scale(self.scale),
+        });
+    }
+    fn paint_path(&mut self, mut path: gpui_kit::Path<Pixels>, color: gpui_kit::Hsla) {
+        path.color = color.into();
+        path.content_mask = self.mask;
+        self.scene.insert_primitive(path.scale(self.scale));
+    }
+}
+
+#[test]
+fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Result<()> {
+    use canvas_overlay::Painter;
+    use editor_core::{OverlayDeformer, OverlayGlue, OverlayVertexKind as K};
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        let mut gpui = MetalRenderer::new_headless(Default::default());
+        for dark in [false, true] {
+            let palette = canvas_overlay::Palette::new(dark);
+            let mut painter = ScenePainter {
+                scene: Scene::default(),
+                scale: 2.,
+                mask: ContentMask {
+                    bounds: Bounds::new(point(px(0.), px(0.)), size(px(220.), px(100.))),
+                },
+            };
+            painter.paint_quad(gpui_kit::fill(
+                painter.mask.bounds,
+                if dark {
+                    rgba(0x18202cff)
+                } else {
+                    rgba(0xe5d5c5ff)
+                },
+            ));
+            let overlay = OverlaySnapshot {
+                vertices: [
+                    (20., K::Mesh),
+                    (40., K::Mesh),
+                    (60., K::Warp),
+                    (100., K::RotationCenter),
+                ]
+                .into_iter()
+                .enumerate()
+                .map(|(i, (x, kind))| OverlayVertex {
+                    id: i as u32,
+                    position: pt(x, 50.),
+                    selected: i == 1,
+                    hovered: true,
+                    kind,
+                })
+                .collect(),
+                deformers: vec![OverlayDeformer {
+                    lines: vec![(pt(8., 50.), pt(210., 50.))],
+                    selected: true,
+                    hovered: false,
+                }],
+                glues: vec![OverlayGlue {
+                    pairs: vec![
+                        (pt(130., 50.), pt(150., 50.)),
+                        (pt(180., 50.), pt(180., 50.)),
+                    ],
+                    selected: true,
+                    hovered: false,
+                }],
+                handles: std::iter::once(editor_core::OverlayHandle {
+                    position: pt(80., 50.),
+                    round: true,
+                    hovered: false,
+                    selected: true,
+                })
+                .chain([false, true].into_iter().flat_map(|round| {
+                    [false, true].into_iter().flat_map(move |selected| {
+                        [false, true]
+                            .into_iter()
+                            .map(move |hovered| editor_core::OverlayHandle {
+                                position: pt(
+                                    20. + 30. * (u8::from(round) * 2 + u8::from(hovered)) as f32,
+                                    if selected { 88. } else { 72. },
+                                ),
+                                round,
+                                selected,
+                                hovered,
+                            })
+                    })
+                }))
+                .collect(),
+                ..Default::default()
+            };
+            canvas_overlay::paint_lines(&overlay, painter.mask.bounds, palette, &mut painter);
+            canvas_overlay::paint_markers(
+                &overlay,
+                point(px(0.), px(0.)),
+                palette,
+                true,
+                &mut painter,
+            );
+            painter.scene.finish();
+            let image = gpui.render_scene_to_image(
+                &painter.scene,
+                size(DevicePixels(440), DevicePixels(200)),
+            )?;
+            let rgb = |c: gpui_kit::Hsla| {
+                let c: gpui_kit::Rgba = c.into();
+                [
+                    (c.r * 255.).round() as u8,
+                    (c.g * 255.).round() as u8,
+                    (c.b * 255.).round() as u8,
+                    255,
+                ]
+            };
+            assert_eq!(
+                image.get_pixel(40, 100).0,
+                rgb(palette.hollow),
+                "mesh stays above the line"
+            );
+            assert_eq!(
+                image.get_pixel(44, 100).0,
+                [0, 0, 0, 255],
+                "mesh border is black"
+            );
+            for x in [80, 84] {
+                assert_eq!(
+                    image.get_pixel(x, 100).0,
+                    [255, 0, 0, 255],
+                    "selected mesh center and border are red"
+                );
+            }
+            assert_eq!(
+                image.get_pixel(160, 100).0,
+                rgb(palette.deformer),
+                "selected Bezier handle shares the deformer green"
+            );
+            assert_eq!(
+                image.get_pixel(120, 100).0,
+                [255, 255, 255, 255],
+                "warp control has a white center even on a dark canvas"
+            );
+            assert_eq!(
+                image.get_pixel(120, 94).0,
+                [0, 0, 0, 255],
+                "the 6px warp marker has a black border in either theme"
+            );
+            for x in [40, 100, 160, 220] {
+                assert_eq!(
+                    image.get_pixel(x, 144).0,
+                    [255, 255, 255, 255],
+                    "idle/hovered circular and square handles have white centers"
+                );
+                assert_eq!(
+                    image.get_pixel(x + 4, 144).0,
+                    [0, 0, 0, 255],
+                    "idle/hovered deformer handles have black borders"
+                );
+                assert_eq!(
+                    image.get_pixel(x, 176).0,
+                    rgb(palette.deformer),
+                    "active circular and square handles have green centers"
+                );
+                assert_eq!(
+                    image.get_pixel(x + 4, 176).0,
+                    rgb(palette.deformer),
+                    "active circular and square handles have matching fill and border"
+                );
+            }
+            assert_eq!(
+                image.get_pixel(260, 95).0,
+                [255, 255, 255, 255],
+                "the hollow Glue endpoint stays white even when selected"
+            );
+            assert_eq!(
+                image.get_pixel(260, 100).0,
+                rgb(palette.surface),
+                "A endpoint is hollow"
+            );
+            assert_eq!(
+                image.get_pixel(300, 100).0,
+                rgb(palette.selected),
+                "B endpoint is solid"
+            );
+            assert_eq!(
+                image.get_pixel(358, 100).0,
+                rgb(palette.surface),
+                "coincident A half remains hollow"
+            );
+            assert_eq!(
+                image.get_pixel(362, 100).0,
+                rgb(palette.selected),
+                "coincident B half remains filled"
+            );
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
+                "../../target/overlay-style-{}.png",
+                if dark { "dark" } else { "light" }
+            ));
+            image.save(path)?;
+            // The production Metal mesh pass must match the GPUI fallback's
+            // white center, black border and solid red selection.
+            let gpu = gpui.shared_metal_context();
+            let mut renderer = MetalOverlayRenderer::new(gpu.device.clone())?;
+            let viewport = OverlayViewport {
+                extent: [192, 192],
+                scale: 2.,
+                origin: [0., 0.],
+            };
+            let texture = renderer
+                .draw_pass(
+                    &gpu.queue,
+                    viewport,
+                    &overlay,
+                    palette.metal(),
+                    editor_render::OverlayPass::Vertices,
+                )?
+                .unwrap();
+            let metal_image = gpui.render_scene_to_image(
+                &make_scene(&overlay, viewport, Some(texture)),
+                size(DevicePixels(192), DevicePixels(192)),
+            )?;
+            for (x, color) in [
+                (40, [255, 255, 255, 255]),
+                (44, [0, 0, 0, 255]),
+                (80, [255, 0, 0, 255]),
+                (84, [255, 0, 0, 255]),
+            ] {
+                assert_eq!(
+                    metal_image.get_pixel(x, 100).0,
+                    color,
+                    "Metal mesh marker at {x}"
+                );
+            }
+        }
+        Ok(())
+    })
+}
+
+#[test]
+fn mesh_passes_cache_independently_and_exclude_control_points() -> anyhow::Result<()> {
+    use editor_render::OverlayPass as P;
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        let gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let mut renderer = MetalOverlayRenderer::new(gpu.device.clone())?;
+        let viewport = OverlayViewport {
+            extent: [160, 160],
+            scale: 2.,
+            origin: [0., 0.],
+        };
+        let mut overlay = geometry();
+        let edges = renderer
+            .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Edges)?
+            .unwrap();
+        let vertices = renderer
+            .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Vertices)?
+            .unwrap();
+        overlay.vertices[0].hovered = false;
+        let same_edges = renderer
+            .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Edges)?
+            .unwrap();
+        assert!(std::ptr::eq(edges.as_ref(), same_edges.as_ref()));
+        let new_vertices = renderer
+            .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Vertices)?
+            .unwrap();
+        assert!(!std::ptr::eq(vertices.as_ref(), new_vertices.as_ref()));
+        for v in &mut overlay.vertices {
+            v.kind = editor_core::OverlayVertexKind::Warp;
+        }
+        assert!(
+            renderer
+                .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Vertices)?
+                .is_none()
+        );
+        assert!(
+            renderer
+                .draw_pass(&gpu.queue, viewport, &overlay, style(), P::Edges)?
+                .is_some()
+        );
         Ok(())
     })
 }

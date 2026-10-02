@@ -1,7 +1,18 @@
 //! Immutable mesh-overlay textures on the consumer's Metal queue.
 use anyhow::{Result, ensure};
-use editor_core::OverlaySnapshot;
+use editor_core::{OverlaySnapshot, OverlayVertexKind};
 use kasane_render_metal::metal::*;
+
+/// Shared screen-space radius for filled and hollow editing markers.
+pub const OVERLAY_MARKER_RADIUS: f32 = 3.;
+
+/// Separate textures let the canvas insert control lines beneath all markers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OverlayPass {
+    All,
+    Edges,
+    Vertices,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OverlayStyle {
@@ -41,7 +52,7 @@ pub struct MetalOverlayRenderer {
     queue: Option<CommandQueue>,
     edges: RenderPipelineState,
     markers: RenderPipelineState,
-    cached: Option<(Key, Texture)>,
+    cached: [Option<(Key, Texture)>; 3],
 }
 impl MetalOverlayRenderer {
     pub fn new(device: Device) -> Result<Self> {
@@ -73,13 +84,13 @@ impl MetalOverlayRenderer {
                 .map_err(anyhow::Error::msg)
         };
         let edges = pipeline("edge_vertex", "solid_fragment", 4)?;
-        let markers = pipeline("marker_vertex", "solid_fragment", 1)?;
+        let markers = pipeline("marker_vertex", "marker_fragment", 1)?;
         Ok(Self {
             device,
             queue: None,
             edges,
             markers,
-            cached: None,
+            cached: [None, None, None],
         })
     }
     pub fn uses_device(&self, device: &DeviceRef) -> bool {
@@ -94,6 +105,16 @@ impl MetalOverlayRenderer {
         viewport: OverlayViewport,
         overlay: &OverlaySnapshot,
         style: OverlayStyle,
+    ) -> Result<Option<Texture>> {
+        self.draw_pass(queue, viewport, overlay, style, OverlayPass::All)
+    }
+    pub fn draw_pass(
+        &mut self,
+        queue: &CommandQueueRef,
+        viewport: OverlayViewport,
+        overlay: &OverlaySnapshot,
+        style: OverlayStyle,
+        pass: OverlayPass,
     ) -> Result<Option<Texture>> {
         let OverlayViewport {
             extent,
@@ -118,37 +139,56 @@ impl MetalOverlayRenderer {
             .as_ref()
             .is_none_or(|old| !std::ptr::eq(old.as_ref(), queue))
         {
-            self.cached = None;
+            self.cached = [None, None, None];
             self.queue = Some(queue.to_owned());
         }
-        if overlay.lines.is_empty() && overlay.vertices.is_empty() {
-            self.cached = None;
-            return Ok(None);
-        }
+        let slot = match pass {
+            OverlayPass::All => 0,
+            OverlayPass::Edges => 1,
+            OverlayPass::Vertices => 2,
+        };
+        let lines = if pass == OverlayPass::Vertices {
+            &[][..]
+        } else {
+            &overlay.lines
+        };
+        let vertices = if pass == OverlayPass::Edges {
+            &[][..]
+        } else {
+            &overlay.vertices
+        };
         let key = Key {
             viewport,
             style,
-            edges: overlay
-                .lines
+            edges: lines
                 .iter()
                 .filter(|(a, b)| [a.x, a.y, b.x, b.y].iter().all(|v| v.is_finite()))
                 .map(|(a, b)| [a.x, a.y, b.x, b.y])
                 .collect(),
-            markers: overlay
-                .vertices
-                .iter()
+            markers: [false, true]
+                .into_iter()
+                .flat_map(|emphasized| {
+                    vertices
+                        .iter()
+                        .filter(move |v| (v.selected || v.hovered) == emphasized)
+                })
+                .filter(|v| v.kind == OverlayVertexKind::Mesh)
                 .filter(|v| v.position.x.is_finite() && v.position.y.is_finite())
                 .map(|v| {
                     [
                         v.position.x,
                         v.position.y,
-                        if v.hovered { 4. } else { 3. },
-                        if v.selected { 1. } else { 0. },
+                        OVERLAY_MARKER_RADIUS,
+                        (u8::from(v.selected) + 2 * u8::from(v.hovered)) as f32,
                     ]
                 })
                 .collect(),
         };
-        if let Some((old, image)) = &self.cached {
+        if key.edges.is_empty() && key.markers.is_empty() {
+            self.cached[slot] = None;
+            return Ok(None);
+        }
+        if let Some((old, image)) = &self.cached[slot] {
             if old == &key {
                 return Ok(Some(image.clone()));
             }
@@ -178,11 +218,11 @@ impl MetalOverlayRenderer {
             MTLStorageMode::Private
         });
         td.set_usage(MTLTextureUsage::RenderTarget);
-        let msaa = self.device.new_texture(&td);
+        let msaa = (!key.edges.is_empty()).then(|| self.device.new_texture(&td));
         let command = queue.new_command_buffer();
         let pass = RenderPassDescriptor::new();
         let color = pass.color_attachments().object_at(0).unwrap();
-        color.set_texture(Some(&msaa));
+        color.set_texture(msaa.as_deref());
         color.set_resolve_texture(Some(&image));
         color.set_load_action(MTLLoadAction::Clear);
         color.set_clear_color(MTLClearColor::new(0., 0., 0., 0.));
@@ -213,17 +253,24 @@ impl MetalOverlayRenderer {
             }
             encoder.end_encoding();
         };
-        encode(pass, &self.edges, &key.edges);
+        if msaa.is_some() {
+            encode(pass, &self.edges, &key.edges);
+        }
         if !key.markers.is_empty() {
             let pass = RenderPassDescriptor::new();
             let color = pass.color_attachments().object_at(0).unwrap();
             color.set_texture(Some(&image));
-            color.set_load_action(MTLLoadAction::Load);
+            color.set_load_action(if msaa.is_some() {
+                MTLLoadAction::Load
+            } else {
+                MTLLoadAction::Clear
+            });
+            color.set_clear_color(MTLClearColor::new(0., 0., 0., 0.));
             color.set_store_action(MTLStoreAction::Store);
             encode(pass, &self.markers, &key.markers);
         }
         command.commit();
-        self.cached = Some((key, image.clone()));
+        self.cached[slot] = Some((key, image.clone()));
         Ok(Some(image))
     }
 }
