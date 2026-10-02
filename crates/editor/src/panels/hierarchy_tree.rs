@@ -296,7 +296,11 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             } else {
                                 gpui::transparent_black()
                             })
-                            .hover(|style| style.bg(theme.muted.opacity(0.5)))
+                            .hover(|style| style.bg(if is_selected {
+                                theme.primary.opacity(0.22)
+                            } else {
+                                theme.muted.opacity(0.5)
+                            }))
                             .cursor_pointer()
                             .on_click(cx.listener(move |_, event: &ClickEvent, window, cx| {
                                 if disabled { return; }
@@ -331,7 +335,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             .child(
                                 div()
                                     .mr_1p5()
-                                    .text_color(theme.muted_foreground)
+                                    .text_color(crate::theme::object_icon(node.kind, &theme))
                                     .child(Icon::new(icon).small()),
                             )
                             .child(
@@ -341,11 +345,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     .text_xs()
                                     .text_ellipsis()
                                     .overflow_hidden()
-                                    .text_color(if is_selected {
-                                        theme.primary
-                                    } else {
-                                        theme.foreground
-                                    })
+                                    .text_color(theme.foreground)
                                     .child(label)
                                     .when_some(node.diagnostic,|this,d|this.child(format!(" ⚠ {d}"))),
                             )

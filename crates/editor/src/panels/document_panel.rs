@@ -182,7 +182,13 @@ impl DocumentPanel {
             } else {
                 gpui::transparent_black()
             })
-            .hover(|s| s.bg(theme.muted))
+            .hover(|s| {
+                s.bg(if selected {
+                    theme.primary.opacity(0.22)
+                } else {
+                    theme.muted
+                })
+            })
             .cursor_pointer()
             .child(format!("{name} · {:?}", r.kind))
             .when(!detail.is_empty(), |s| {

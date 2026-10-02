@@ -9,7 +9,6 @@ mod recent_files;
 
 use crate::{EditorView, i18n, menus, settings};
 use editor_core::{ConfigStore, Document, Editor};
-use gpui_kit::component::{Theme, ThemeMode};
 use gpui_kit::{
     AnyWindowHandle, AppContext as _, Bounds, Entity, TestAppContext, WindowBounds, WindowOptions,
     point, px, size,
@@ -45,7 +44,7 @@ fn setup_with_document(
             cx.keyboard_mapper().as_ref(),
         ));
         menus::init(cx);
-        Theme::change(ThemeMode::Dark, None, cx);
+        crate::theme::init(cx);
     });
 
     let (window, view) = cx.update(|cx| {

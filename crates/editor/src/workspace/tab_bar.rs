@@ -100,7 +100,13 @@ pub fn render_tab_bar(
                         )
                         // Modified Dot
                         .when(doc.modified, |e| {
-                            e.child(div().w(px(6.)).h(px(6.)).rounded_full().bg(theme.primary))
+                            e.child(
+                                div()
+                                    .w(px(6.))
+                                    .h(px(6.))
+                                    .rounded_full()
+                                    .bg(crate::theme::modified(theme)),
+                            )
                         })
                         // Close button (x)
                         .child(

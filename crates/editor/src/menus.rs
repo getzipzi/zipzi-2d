@@ -2,7 +2,7 @@
 use super::*;
 use crate::project::ImportKind;
 use editor_core::{COMMANDS, CommandEffect, CommandId, CommandScope};
-use gpui_kit::component::{ActiveTheme, WindowExt, input};
+use gpui_kit::component::{ActiveTheme, ThemeMode, WindowExt, input};
 use serde::Deserialize;
 
 use std::path::{Path, PathBuf};
@@ -229,13 +229,13 @@ impl EditorView {
                     }
                 }))
             })
-            .on_action(|_: &ToggleTheme, window, cx| {
+            .on_action(|_: &ToggleTheme, _, cx| {
                 let mode = if cx.theme().is_dark() {
                     ThemeMode::Light
                 } else {
                     ThemeMode::Dark
                 };
-                Theme::change(mode, Some(window), cx);
+                theme::change(mode, cx);
             })
             .on_action(|_: &Minimize, window, _| window.minimize_window())
             .on_action(|_: &ZoomWindow, window, _| window.zoom_window())

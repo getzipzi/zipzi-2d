@@ -14,11 +14,11 @@ mod panels;
 mod preview;
 mod project;
 mod settings;
+mod theme;
 mod ui;
 mod workspace;
 
 use editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
-use gpui_kit::component::{Theme, ThemeMode};
 use gpui_kit::{prelude::*, *};
 use rust_i18n::t;
 
@@ -253,7 +253,7 @@ fn main() {
             i18n::activate(settings.language.as_deref());
             cx.set_global(settings);
             menus::init(cx);
-            Theme::change(ThemeMode::Dark, None, cx);
+            theme::init(cx);
             cx.on_window_closed(|cx, _| {
                 if cx.windows().is_empty() {
                     cx.quit();
