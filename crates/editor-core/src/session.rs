@@ -111,6 +111,11 @@ impl DocumentSession {
                 return Ok(());
             }
             EditorCommand::SelectObjects(objects) => self.document.select_objects(objects),
+            EditorCommand::ToggleWarpFine => {
+                self.tools.warp_fine = !self.tools.warp_fine;
+                self.tools.clear();
+                return Ok(());
+            }
             EditorCommand::ToggleDeformerGrid => {
                 self.tools.deformer_grid = !self.tools.deformer_grid;
                 return Ok(());

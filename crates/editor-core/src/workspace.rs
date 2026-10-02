@@ -641,6 +641,12 @@ impl Editor {
             .and_then(|e| e.session.as_ref())
             .is_some_and(|s| s.tools.deformer_grid)
     }
+    pub fn warp_fine(&self) -> bool {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .and_then(|e| e.session.as_ref())
+            .is_some_and(|s| s.tools.warp_fine)
+    }
     pub fn pick_candidates(
         &self,
         point: crate::CanvasPoint,

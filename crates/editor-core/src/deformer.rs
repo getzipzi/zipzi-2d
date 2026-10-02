@@ -2,11 +2,11 @@
 use crate::{CanvasPoint, CanvasScene, ControlGeometry, ControlKind, ViewportTransform};
 
 // Model-space dimensions; the viewport supplies fit-to-canvas scale and zoom.
-pub(crate) const ROTATION_AXIS_LENGTH: f32 = 54.;
-const ROTATION_RING_RADIUS: f32 = 28.;
-const ROTATION_SCALE_DISTANCE: f32 = 40.;
-const WARP_FRAME_PADDING: f32 = 12.;
-const WARP_ROTATE_DISTANCE: f32 = 26.;
+pub(crate) const ROTATION_AXIS_LENGTH: f32 = 540.;
+const ROTATION_RING_RADIUS: f32 = 280.;
+const ROTATION_SCALE_DISTANCE: f32 = 400.;
+// Fixed logical-pixel gap between the Warp control grid and its outer frame.
+const WARP_FRAME_PADDING: f32 = 4.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DeformerHandle {
@@ -67,7 +67,7 @@ impl CanvasScene {
             });
         }
         let center = p((b[0] + b[2]) / 2., (b[1] + b[3]) / 2.);
-        let padding = WARP_FRAME_PADDING * t.scale;
+        let padding = WARP_FRAME_PADDING;
         let [x0, y0, x1, y1] = [
             b[0] - padding,
             b[1] - padding,
@@ -84,17 +84,14 @@ impl CanvasScene {
             p(x0, y1),
             p(x0, center.y),
         ];
-        let rotate = p(center.x, y0 - WARP_ROTATE_DISTANCE * t.scale);
-        let mut outline: Vec<_> = (0..8)
+        let outline: Vec<_> = (0..8)
             .map(|i| (perimeter[i], perimeter[(i + 1) % 8]))
             .collect();
-        outline.push((perimeter[1], rotate));
-        let mut handles: Vec<_> = perimeter
+        let handles: Vec<_> = perimeter
             .into_iter()
             .enumerate()
             .map(|(i, p)| (DeformerHandle::Scale(i as u8), p))
             .collect();
-        handles.push((DeformerHandle::Rotate, rotate));
         Some(DeformerGizmo {
             center,
             bounds: b,

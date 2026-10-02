@@ -26,6 +26,15 @@ pub fn render_deformer_bar(
     }
     let visibility = state.editor.deformer_visibility();
     let grid = state.editor.deformer_grid();
+    let fine = state.editor.warp_fine();
+    let has_warp = state.editor.document().is_some_and(|d| {
+        state.frame.as_ref().is_some_and(|f| {
+            f.canvas.geometry.controls.iter().any(|c| {
+                c.kind == editor_core::ControlKind::Warp
+                    && d.context().selections.contains(&c.object)
+            })
+        })
+    });
     div()
         .id("deformer-actions")
         .absolute()
@@ -62,6 +71,28 @@ pub fn render_deformer_bar(
                     }
                 })),
         )
+        .when(has_warp, |bar| {
+            bar.child(
+                Button::new("deformer-warp-mode")
+                    .small()
+                    .ghost()
+                    .label(if fine {
+                        t!("editor.warp_fine")
+                    } else {
+                        t!("editor.warp_bezier")
+                    })
+                    .tooltip(t!("editor.warp_mode_hint"))
+                    .disabled(modal)
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        if let Some(owner) = this.owner.upgrade() {
+                            owner.update(cx, |owner, cx| {
+                                let result = owner.editor.execute(EditorCommand::ToggleWarpFine);
+                                owner.complete_edit(result, cx);
+                            });
+                        }
+                    })),
+            )
+        })
         .child(
             Button::new("deformer-grid")
                 .small()

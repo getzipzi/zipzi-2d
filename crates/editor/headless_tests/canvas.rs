@@ -851,6 +851,7 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
                 id: id.clone(),
                 name: "Warp".into(),
                 data: TransformData::Warp(WarpTransform {
+                    bezier: None,
                     rows: 1,
                     columns: 1,
                     quad: true,
@@ -890,17 +891,46 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.active_tool(), ToolId::Select);
             assert_eq!(view.editor.overlay().vertices.len(), 4);
-            assert_eq!(view.editor.overlay().handles.len(), 9);
+            assert_eq!(
+                view.editor
+                    .overlay()
+                    .handles
+                    .iter()
+                    .filter(|h| !h.round)
+                    .count(),
+                8
+            );
+            assert_eq!(
+                view.editor
+                    .overlay()
+                    .handles
+                    .iter()
+                    .filter(|h| h.round)
+                    .count(),
+                8
+            );
         });
+        window.click("deformer-warp-mode", cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.warp_fine());
+            assert!(view.editor.overlay().handles.iter().all(|h| !h.round));
+        });
+        window.click("deformer-warp-mode", cx);
         window.click("deformer-grid", cx);
         assert!(
             harness
                 .view
                 .read_with(cx, |view, _| view.editor.deformer_grid())
         );
-        let start = harness
-            .view
-            .read_with(cx, |view, _| view.editor.overlay().vertices[3].position);
+        let start = harness.view.read_with(cx, |view, _| {
+            view.editor
+                .overlay()
+                .handles
+                .iter()
+                .find(|h| h.round)
+                .unwrap()
+                .position
+        });
         let bounds = window.find("canvas-body").bounds();
         let start = bounds.origin + point(px(start.x), px(start.y));
         window.drag(start, start + point(px(20.), px(0.)), cx);

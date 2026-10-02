@@ -41,12 +41,38 @@ hierarchy or the ancestor candidates in the canvas context menu.
 
 ### Deformer manipulators
 
-Selected Warps have a padded outer frame. Its padding and rotation-handle distance
-follow the viewport's fit scale and zoom, like the Rotation manipulator.
+Warp editing defaults to **Bezier**: sparse anchors and round tangent handles
+shape a piecewise bicubic controller surface. Dragging an anchor moves its attached
+handles; dragging a tangent changes that handle independently. Shift supports
+component selection. The toolbar's **Bezier / Division points** switch exposes
+the actual conversion lattice for fine edits. Mode changes cancel active gestures.
+
+Authoring controllers are optional, serialized with the Warp base shape or its
+individual keyform, and included in SDK undo/redo. Legacy projects initialize
+controllers from their existing lattice without writing or changing the model on
+selection. Edits apply the controller surface's displacement to the original
+lattice, preserving detail that the fitted controller does not represent. Fine
+point edits invalidate that form's controllers so they can be fitted again.
+
+Tangent edits refine grids with fewer than four divisions using a uniform integer
+factor. Base and ordinary keyform lattices migrate atomically; only the active
+form receives the Bezier displacement. Cancel, undo and dragging back restore the
+original grid size and controller metadata. Parent-local mapping and reversed
+canvas coordinates apply to anchors and handles alike.
+
+This is an authoring implementation inspired by the official Cubism separation of
+[Bezier and conversion divisions](https://docs.live2d.com/en/cubism-editor-manual/making-and-placement-of-warp-deformer/).
+It does not claim numerical parity with Cubism's proprietary Smooth 1–3 / Smooth
+All or 5.2/5.3 Bezier algorithms. Controller divisions currently initialize at
+2×2 when the conversion lattice permits it, otherwise 1×1; configurable counts,
+linked-tangent modes and the one-shot automatic-shaping command remain future work.
+The runtime Warp evaluator remains unchanged and consumes the baked grid.
+
+Selected Warps have an outer frame with a fixed 4-logical-pixel gap from the
+control grid.
 Drag a frame edge to translate all
 points; its eight square handles scale around the opposite corner or edge. Hold
-Shift before dragging a corner for uniform scaling. The round handle above the
-frame rotates around the displayed control-point bounds center. Scaling stops
+Shift before dragging a corner for uniform scaling. Scaling stops
 short of zero; crossing a handle does not introduce a reflection.
 
 Selected Rotations show a compact ring, a direction axis and a separate square
@@ -58,7 +84,7 @@ fit scale and zoom. Handle markers and pointer tolerance retain logical-pixel
 sizes for picking; display DPI does not change their logical geometry.
 
 The contextual toolbar follows deformer selection and contains ancestor display,
-subdivision preview and gesture help. There is no Transform dialog. Rotation
+Bezier/fine editing, subdivision preview and gesture help. There is no Transform dialog. Rotation
 scale is restricted to the evaluator's 0.0001–100 range and authored angles to
 −3600–3600 degrees.
 

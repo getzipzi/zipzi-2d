@@ -77,6 +77,7 @@ struct PendingEdit {
     edit: EditSession<'static>,
     preview: PreviewState,
     changed: OnceLock<bool>,
+    topology_changed: bool,
 }
 
 /// The SDK owns all persistent model state and history. Selection is editor state.
@@ -787,6 +788,7 @@ impl Document {
             edit: self.session.begin_owned_edit(label, None)?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
+            topology_changed: false,
         });
         Ok(())
     }
@@ -822,6 +824,7 @@ impl Document {
                 .begin_owned_edit("Edit canvas controls", None)?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
+            topology_changed: false,
         });
         Ok(())
     }
@@ -844,7 +847,26 @@ impl Document {
                 .filter(|c| c.object == target.object)
                 .map(|c| c.id)
                 .collect::<Vec<_>>();
+            let shape = || {
+                pending
+                    .edit
+                    .candidate_document()
+                    .get_transform(&target.object.id)
+                    .and_then(|t| t.warp())
+                    .map(|w| (w.rows, w.columns))
+            };
+            let before = shape();
             target.preview(&mut pending.edit, &ids, change)?;
+            let after = pending
+                .edit
+                .candidate_document()
+                .get_transform(&target.object.id)
+                .and_then(|t| t.warp())
+                .map(|w| (w.rows, w.columns));
+            if before != after {
+                pending.topology_changed = true;
+                self.canvas_topology.get_mut().unwrap().take();
+            }
         }
         Ok(())
     }
@@ -907,7 +929,7 @@ impl Document {
         let changed = self.pending_changed();
         if let Some(pending) = self.pending.take() {
             self.projection_revision += 1;
-            if pending.kind == Gesture::Rename {
+            if pending.kind == Gesture::Rename || pending.topology_changed {
                 self.canvas_topology.get_mut().unwrap().take();
             }
             if changed {
@@ -922,7 +944,7 @@ impl Document {
     pub fn cancel_edit(&mut self) {
         if let Some(pending) = self.pending.take() {
             self.projection_revision += 1;
-            if pending.kind == Gesture::Rename {
+            if pending.kind == Gesture::Rename || pending.topology_changed {
                 self.canvas_topology.get_mut().unwrap().take();
             }
         }

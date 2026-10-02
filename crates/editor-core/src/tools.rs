@@ -78,6 +78,7 @@ pub struct ToolController {
     pub active: ToolId,
     pub deformer_visibility: DeformerVisibility,
     pub deformer_grid: bool,
+    pub warp_fine: bool,
     components: Vec<ComponentRef>,
     hovered: Option<HitTarget>,
     press: Option<Press>,
@@ -151,7 +152,14 @@ impl ToolController {
                 );
                 self.cancel(document);
                 let selection = document.context().selections.clone();
-                let hit = scene.hit(point, t, &selection, self.active, self.deformer_visibility);
+                let hit = scene.hit_with_mode(
+                    point,
+                    t,
+                    &selection,
+                    self.active,
+                    self.deformer_visibility,
+                    self.warp_fine,
+                );
                 self.hovered = hit.clone();
                 let component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
                     (selected.kind == ObjectKind::Mesh && selected == r)
@@ -211,12 +219,13 @@ impl ToolController {
                     }
                     self.update(document, point)
                 } else {
-                    self.hovered = scene.hit(
+                    self.hovered = scene.hit_with_mode(
                         point,
                         t,
                         &document.context().selections,
                         self.active,
                         self.deformer_visibility,
+                        self.warp_fine,
                     );
                     Ok(false)
                 }
@@ -258,11 +267,30 @@ impl ToolController {
                                 {
                                     continue;
                                 }
-                                for (id, p) in c.points.iter().enumerate() {
-                                    if in_rect(press.transform.to_canvas(*p), press.point, point) {
+                                let points: Vec<_> = if let Some(bezier) = press
+                                    .scene
+                                    .beziers
+                                    .get(&c.object.id)
+                                    .filter(|_| !self.warp_fine)
+                                {
+                                    bezier
+                                        .anchors
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(i, p)| (crate::warp_bezier::component_id(i, 0), *p))
+                                        .collect()
+                                } else {
+                                    c.points
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(i, p)| (i as u32, *p))
+                                        .collect()
+                                };
+                                for (id, p) in points {
+                                    if in_rect(press.transform.to_canvas(p), press.point, point) {
                                         let component = ComponentRef {
                                             object: c.object.clone(),
-                                            id: id as u32,
+                                            id,
                                         };
                                         if !self.components.contains(&component) {
                                             self.components.push(component);
@@ -393,22 +421,11 @@ impl ToolController {
                     .unwrap();
                 match handle {
                     H::Move => ControlChange::MoveAll(delta),
-                    H::Rotate if control.kind == ControlKind::Rotation => ControlChange::Rotation {
+                    H::Rotate => ControlChange::Rotation {
                         translation: ModelPoint::default(),
                         angle: edits[0].rotation_delta(start, end)?,
                         scale: 1.,
                     },
-                    H::Rotate => {
-                        let pivot = press.transform.to_model(gizmo.center);
-                        let radians = (end.y - pivot.y).atan2(end.x - pivot.x)
-                            - (start.y - pivot.y).atan2(start.x - pivot.x);
-                        ControlChange::Transform {
-                            translation: ModelPoint::default(),
-                            pivot,
-                            scale: [1., 1.],
-                            radians,
-                        }
-                    }
                     H::RotationScale => {
                         let center = press.transform.to_model(gizmo.center);
                         let before = (start.x - center.x).hypot(start.y - center.y);
@@ -530,32 +547,80 @@ impl ToolController {
             }
             let points = scene.control_points(control, t);
             let selected = selection.contains(&control.object);
-            let lines = if selected {
-                &mut out.accent_lines
-            } else {
-                &mut out.lines
-            };
-            lines.extend(
-                control
-                    .edges
-                    .iter()
-                    .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?))),
-            );
-            if selected || matches!(control.kind, ControlKind::Rotation | ControlKind::Glue) {
-                for (i, p) in points.iter().enumerate() {
+            if let Some(bezier) = scene
+                .beziers
+                .get(&control.object.id)
+                .filter(|_| selected && !self.warp_fine)
+            {
+                out.accent_lines.extend(
+                    bezier
+                        .curves
+                        .iter()
+                        .map(|(a, b)| (t.to_canvas(*a), t.to_canvas(*b))),
+                );
+                for (i, p) in bezier.anchors.iter().enumerate() {
+                    let id = crate::warp_bezier::component_id(i, 0);
                     let c = ComponentRef {
                         object: control.object.clone(),
-                        id: i as u32,
+                        id,
                     };
                     out.vertices.push(OverlayVertex {
-                        id: i as u32,
-                        position: *p,
+                        id,
+                        position: t.to_canvas(*p),
                         selected: self.components.contains(&c),
-                        hovered: self.hovered == Some(HitTarget::Component(c))
-                            || (i == 1
-                                && self.hovered
-                                    == Some(HitTarget::RotationHandle(control.object.clone()))),
+                        hovered: self.hovered == Some(HitTarget::Component(c)),
                     });
+                }
+                for (id, a, b) in &bezier.handles {
+                    let c = ComponentRef {
+                        object: control.object.clone(),
+                        id: *id,
+                    };
+                    out.gizmo_lines.push((t.to_canvas(*a), t.to_canvas(*b)));
+                    out.handles.push(OverlayHandle {
+                        position: t.to_canvas(*b),
+                        round: true,
+                        hovered: self.components.contains(&c)
+                            || self.hovered == Some(HitTarget::Component(c)),
+                    });
+                }
+                if self.deformer_grid {
+                    out.guide_lines
+                        .extend(control.edges.iter().filter_map(|&(a, b)| {
+                            Some((
+                                t.to_canvas(*control.points.get(a)?),
+                                t.to_canvas(*control.points.get(b)?),
+                            ))
+                        }));
+                }
+            } else {
+                let lines = if selected {
+                    &mut out.accent_lines
+                } else {
+                    &mut out.lines
+                };
+                lines.extend(
+                    control
+                        .edges
+                        .iter()
+                        .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?))),
+                );
+                if selected || matches!(control.kind, ControlKind::Rotation | ControlKind::Glue) {
+                    for (i, p) in points.iter().enumerate() {
+                        let c = ComponentRef {
+                            object: control.object.clone(),
+                            id: i as u32,
+                        };
+                        out.vertices.push(OverlayVertex {
+                            id: i as u32,
+                            position: *p,
+                            selected: self.components.contains(&c),
+                            hovered: self.hovered == Some(HitTarget::Component(c))
+                                || (i == 1
+                                    && self.hovered
+                                        == Some(HitTarget::RotationHandle(control.object.clone()))),
+                        });
+                    }
                 }
             }
             if self

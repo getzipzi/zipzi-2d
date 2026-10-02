@@ -38,3 +38,5 @@ pub use canvas_topology::{CanvasObject, CanvasObjectIndex};
 mod control_edit;
 mod deformer;
 pub use deformer::*;
+
+mod warp_bezier;

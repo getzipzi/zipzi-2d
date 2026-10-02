@@ -118,6 +118,55 @@ fn main() -> anyhow::Result<()> {
         println!(
             "  eligible mesh drag/cancel: {editable} accepted, {rejected} rejected; history unchanged"
         );
+        let mut beziers = 0;
+        editor.execute(EditorCommand::SetTool(ToolId::Select))?;
+        for control in frame
+            .geometry
+            .controls
+            .iter()
+            .filter(|c| c.kind == ControlKind::Warp)
+            .take(24)
+        {
+            editor.execute(EditorCommand::SelectObject(control.object.clone()))?;
+            let before = editor.preview()?.canvas.unwrap();
+            assert!(editor.present_frame(before.clone()));
+            let overlay = editor.overlay();
+            if overlay.unavailable.is_some() {
+                continue;
+            }
+            let Some(handle) = overlay.handles.iter().find(|h| h.round) else {
+                continue;
+            };
+            let point = handle.position;
+            editor.canvas_input(CanvasInput::Down {
+                point,
+                shift: false,
+            })?;
+            let changed = editor.canvas_input(CanvasInput::Move {
+                point: CanvasPoint {
+                    x: point.x + 4.,
+                    y: point.y - 4.,
+                },
+                left_down: true,
+            })?;
+            assert!(changed, "Bezier tangent must edit its lattice");
+            editor.canvas_input(CanvasInput::Cancel)?;
+            let after = editor.preview()?.canvas.unwrap();
+            for (a, b) in before
+                .geometry
+                .meshes
+                .iter()
+                .zip(after.geometry.meshes.iter())
+            {
+                assert_eq!(a.vertices, b.vertices);
+            }
+            assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+            assert!(editor.present_frame(after));
+            beziers += 1;
+        }
+        println!(
+            "  Bezier tangent drag/cancel: {beziers} accepted; original mesh geometry and history preserved"
+        );
     }
     Ok(())
 }

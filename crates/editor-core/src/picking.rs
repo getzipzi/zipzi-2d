@@ -69,6 +69,7 @@ pub struct CanvasScene {
     pub controls: Vec<ControlGeometry>,
     pub index: Arc<crate::CanvasObjectIndex>,
     pub source: SceneSnapshot,
+    pub(crate) beziers: HashMap<String, crate::warp_bezier::BezierGeometry>,
     mesh_slots: Arc<HashMap<String, usize>>,
     texture_slots: HashMap<String, usize>,
     visible_meshes: HashSet<String>,
@@ -157,7 +158,8 @@ impl CanvasScene {
             .enumerate()
             .map(|(i, t)| (t.asset_id.clone(), i))
             .collect();
-        Self {
+        let mut scene = Self {
+            beziers: HashMap::new(),
             meshes,
             controls,
             index,
@@ -166,7 +168,20 @@ impl CanvasScene {
             texture_slots,
             visible_meshes,
             topology,
+        };
+        for c in &scene.controls {
+            if c.kind == ControlKind::Warp {
+                if let Some((controller, space)) =
+                    crate::warp_bezier::authored(document, &scene, &c.object)
+                {
+                    scene.beziers.insert(
+                        c.object.id.clone(),
+                        crate::warp_bezier::BezierGeometry::new(&controller, &space),
+                    );
+                }
+            }
         }
+        scene
     }
     /// Reuse immutable positions while publishing the new opacity, masks and
     /// render plan for picking. Older presented frames retain their own source.
@@ -192,6 +207,7 @@ impl CanvasScene {
             .map(|(i, t)| (t.asset_id.clone(), i))
             .collect();
         Self {
+            beziers: self.beziers.clone(),
             meshes: self.meshes.clone(),
             controls,
             index: topology.index.clone(),
@@ -285,6 +301,17 @@ impl CanvasScene {
         tool: ToolId,
         visibility: DeformerVisibility,
     ) -> Option<HitTarget> {
+        self.hit_with_mode(point, t, selection, tool, visibility, false)
+    }
+    pub(crate) fn hit_with_mode(
+        &self,
+        point: CanvasPoint,
+        t: ViewportTransform,
+        selection: &[ObjectRef],
+        tool: ToolId,
+        visibility: DeformerVisibility,
+        fine: bool,
+    ) -> Option<HitTarget> {
         if tool == ToolId::Hand {
             return None;
         }
@@ -321,6 +348,49 @@ impl CanvasScene {
         for c in controls {
             let points = self.control_points(c, t);
             let editing = c.kind != ControlKind::Glue && selection.contains(&c.object);
+            if editing && c.kind == ControlKind::Warp {
+                let bezier = self.beziers.get(&c.object.id).filter(|_| !fine);
+                let candidates: Vec<_> = if let Some(b) = bezier {
+                    b.points().map(|(id, p)| (id, t.to_canvas(p))).collect()
+                } else {
+                    points
+                        .iter()
+                        .enumerate()
+                        .map(|(i, p)| (i as u32, *p))
+                        .collect()
+                };
+                let nearest = candidates
+                    .into_iter()
+                    .map(|(id, p)| (id, distance2(point, p)))
+                    .filter(|(_, d)| *d <= CONTROL_RADIUS * CONTROL_RADIUS)
+                    .min_by(|a, b| a.1.total_cmp(&b.1));
+                let handle = self.deformer_gizmo(c, t).and_then(|g| {
+                    g.handles
+                        .into_iter()
+                        .map(|(h, p)| (h, distance2(point, p)))
+                        .filter(|(_, d)| *d <= CONTROL_RADIUS * CONTROL_RADIUS)
+                        .min_by(|a, b| a.1.total_cmp(&b.1))
+                });
+                if let Some((h, d)) = handle {
+                    if nearest.is_none_or(|(_, n)| d < n) {
+                        return Some(HitTarget::DeformerHandle(c.object.clone(), h));
+                    }
+                }
+                if let Some((id, _)) = nearest {
+                    return Some(HitTarget::Component(ComponentRef {
+                        object: c.object.clone(),
+                        id,
+                    }));
+                }
+                if let Some(bezier) = bezier {
+                    if bezier.curves.iter().any(|(a, b)| {
+                        segment_distance2(point, t.to_canvas(*a), t.to_canvas(*b)) <= 25.
+                    }) {
+                        object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
+                    }
+                    continue;
+                }
+            }
             for (i, p) in points.iter().enumerate() {
                 if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
                     if editing {

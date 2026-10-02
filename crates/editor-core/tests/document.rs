@@ -407,6 +407,7 @@ fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Resu
             part_id: Some(child_part.clone().into()),
             parent_id: Some(rotation.clone().into()),
             data: TransformData::Warp(WarpTransform {
+                bezier: None,
                 rows: 1,
                 columns: 1,
                 quad: true,

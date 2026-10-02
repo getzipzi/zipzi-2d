@@ -386,6 +386,7 @@ fn rich_document_with_canvas(
             id: id(4),
             name: "Warp".into(),
             data: TransformData::Warp(WarpTransform {
+                bezier: None,
                 rows: 1,
                 columns: 1,
                 quad: true,
@@ -584,8 +585,8 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
         assert!(overlay.lines.is_empty(), "unselected deformers stay hidden");
         assert_eq!(
             overlay.accent_lines.len(),
-            4,
-            "the selected warp remains visible"
+            64,
+            "the selected warp Bezier curves remain visible"
         );
         assert_eq!(overlay.vertices.len(), 4);
     }
@@ -1007,7 +1008,8 @@ fn warp_controls_align_with_mesh_after_canvas_y_reversal() -> anyhow::Result<()>
         editor.execute(EditorCommand::SetTool(ToolId::Select))?;
         let overlay = editor.overlay();
         for (vertex, expected) in overlay.vertices.iter().zip(&control.points) {
-            assert_eq!(vertex.position, frame.transform.to_canvas(*expected));
+            let expected = frame.transform.to_canvas(*expected);
+            assert!((vertex.position.x - expected.x).hypot(vertex.position.y - expected.y) < 0.001);
         }
     }
     Ok(())
@@ -1486,7 +1488,22 @@ fn subdivisions_are_opt_in_and_never_become_hit_targets() -> anyhow::Result<()> 
     editor.execute(EditorCommand::ToggleDeformerGrid)?;
     assert!(!editor.overlay().guide_lines.is_empty());
     let overlay = editor.overlay();
-    let p = overlay.guide_lines[3].0;
+    let p = overlay
+        .guide_lines
+        .iter()
+        .map(|(a, b)| CanvasPoint {
+            x: (a.x + b.x) / 2.,
+            y: (a.y + b.y) / 2.,
+        })
+        .find(|p| {
+            overlay
+                .vertices
+                .iter()
+                .map(|v| v.position)
+                .chain(overlay.handles.iter().map(|h| h.position))
+                .all(|q| (q.x - p.x).hypot(q.y - p.y) > 8.)
+        })
+        .unwrap();
     let hit = frame.geometry.hit(
         p,
         frame.transform,
@@ -1530,6 +1547,7 @@ fn bound_deformer_editor(
         edit.create_transform(Transform {
             id: id(22),
             data: TransformData::Warp(WarpTransform {
+                bezier: None,
                 rows: 1,
                 columns: 1,
                 quad: true,
@@ -1552,6 +1570,7 @@ fn bound_deformer_editor(
                 })
             } else {
                 TransformData::Warp(WarpTransform {
+                    bezier: None,
                     rows: 1,
                     columns: 1,
                     quad: true,
@@ -1591,6 +1610,7 @@ fn bound_deformer_editor(
                     keyforms: vec![0., 1.]
                         .into_iter()
                         .map(|v| WarpKeyform {
+                            bezier: None,
                             keys: vec![v],
                             positions: positions.clone(),
                             ..Default::default()
@@ -1723,9 +1743,9 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
                 let points = scene.control_points(control, transform);
                 let gizmo = scene.deformer_gizmo(control, transform).unwrap();
                 let radius = |p: CanvasPoint| (p.x - gizmo.center.x).hypot(p.y - gizmo.center.y);
-                assert!((radius(points[1]) - 54. * transform.scale).abs() < 0.001);
-                assert!((radius(gizmo.outline[0].0) - 28. * transform.scale).abs() < 0.001);
-                assert!((radius(gizmo.handles[0].1) - 40. * transform.scale).abs() < 0.001);
+                assert!((radius(points[1]) - 540. * transform.scale).abs() < 0.001);
+                assert!((radius(gizmo.outline[0].0) - 280. * transform.scale).abs() < 0.001);
+                assert!((radius(gizmo.handles[0].1) - 400. * transform.scale).abs() < 0.001);
                 let selection = std::slice::from_ref(&object);
                 let hit = |p| {
                     scene.hit(
@@ -1766,5 +1786,200 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
     editor.zoom_by(1.);
     assert_eq!(control_points(&mut editor, &object)?, original);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> anyhow::Result<()> {
+    let (mut editor, dir, object) = deformer_editor(false)?;
+    let original = control_points(&mut editor, &object)?;
+    let original_mesh = shown(&mut editor)?.geometry.meshes[0].vertices.clone();
+    let overlay = editor.overlay();
+    assert_eq!(overlay.vertices.len(), 4);
+    let handle = overlay.handles.iter().find(|h| h.round).unwrap().position;
+    drag(
+        &mut editor,
+        handle,
+        CanvasPoint {
+            x: handle.x,
+            y: handle.y - 40.,
+        },
+        false,
+    )?;
+    let bent = control_points(&mut editor, &object)?;
+    assert_eq!(
+        bent.len(),
+        25,
+        "a four-corner grid must be refined to express curvature"
+    );
+    for (i, j) in [0, 4, 20, 24].into_iter().enumerate() {
+        assert!(
+            (bent[j].x - original[i].x).hypot(bent[j].y - original[i].y) < 0.001,
+            "tangent drag must keep anchors fixed"
+        );
+    }
+    assert!(bent[1].y < original[0].y - 1.);
+    assert_ne!(
+        shown(&mut editor)?.geometry.meshes[0].vertices,
+        original_mesh
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    let index = editor.document().unwrap().object_index();
+    let stored = index.get(&object).unwrap().properties["warp"]["bezier"].clone();
+    assert!(stored.is_object());
+    let id = editor.active_id().unwrap();
+    let task = editor.prepare_save(id, &dir.path().join("bezier-saved"), false)?;
+    let receipt = editor.finish_save(&mut task.run())?;
+    let reopened = Document::open(&receipt.manifest)?;
+    assert_eq!(
+        reopened.object_index().get(&object).unwrap().properties["warp"]["bezier"],
+        stored
+    );
+    let mut reopened = Editor::from_document(reopened);
+    reopened.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    reopened.execute(EditorCommand::SelectObject(object.clone()))?;
+    assert_eq!(control_points(&mut reopened, &object)?, bent);
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(control_points(&mut editor, &object)?, original);
+    assert!(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(&object)
+            .unwrap()
+            .properties["warp"]
+            .get("bezier")
+            .is_none()
+    );
+    editor.execute(EditorCommand::Redo)?;
+    assert_eq!(control_points(&mut editor, &object)?, bent);
+    editor.execute(EditorCommand::ToggleWarpFine)?;
+    assert_eq!(editor.overlay().vertices.len(), 25);
+    assert_eq!(
+        editor.overlay().handles.iter().filter(|h| h.round).count(),
+        0
+    );
+    let point = editor.overlay().vertices[12].position;
+    editor.canvas_input(CanvasInput::Down {
+        point,
+        shift: false,
+    })?;
+    editor.canvas_input(CanvasInput::Move {
+        point: CanvasPoint {
+            x: point.x + 10.,
+            y: point.y,
+        },
+        left_down: true,
+    })?;
+    editor.canvas_input(CanvasInput::Up { point })?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    assert_eq!(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(&object)
+            .unwrap()
+            .properties["warp"]["bezier"],
+        stored
+    );
+    Ok(())
+}
+
+#[test]
+fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow::Result<()> {
+    for reversed in [false, true] {
+        let (mut editor, dir, object, param) = bound_deformer_editor(false, reversed)?;
+        let original = control_points(&mut editor, &object)?;
+        let handle = editor
+            .overlay()
+            .handles
+            .iter()
+            .find(|h| h.round)
+            .unwrap()
+            .position;
+        let end = CanvasPoint {
+            x: handle.x + 24.,
+            y: handle.y - 20.,
+        };
+        editor.canvas_input(CanvasInput::Down {
+            point: handle,
+            shift: false,
+        })?;
+        editor.canvas_input(CanvasInput::Move {
+            point: end,
+            left_down: true,
+        })?;
+        assert_eq!(control_points(&mut editor, &object)?.len(), 25);
+        editor.canvas_input(CanvasInput::Cancel)?;
+        assert_eq!(control_points(&mut editor, &object)?, original);
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        // Dragging back restores both grid topology and absent controller metadata.
+        editor.canvas_input(CanvasInput::Down {
+            point: handle,
+            shift: false,
+        })?;
+        editor.canvas_input(CanvasInput::Move {
+            point: end,
+            left_down: true,
+        })?;
+        editor.canvas_input(CanvasInput::Up { point: handle })?;
+        assert_eq!(control_points(&mut editor, &object)?, original);
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        drag(&mut editor, handle, end, false)?;
+        let edited = control_points(&mut editor, &object)?;
+        let saved_handle = editor
+            .overlay()
+            .handles
+            .iter()
+            .find(|h| h.round)
+            .unwrap()
+            .position;
+        assert!(
+            (saved_handle.x - end.x).hypot(saved_handle.y - end.y) < 0.01,
+            "handle must follow pointer through parent deformation"
+        );
+        editor.execute(EditorCommand::SetPreviewParameter {
+            parameter_id: param.clone(),
+            value: 1.,
+        })?;
+        let other = control_points(&mut editor, &object)?;
+        for (i, j) in [0, 4, 20, 24].into_iter().enumerate() {
+            assert!((other[j].x - original[i].x).hypot(other[j].y - original[i].y) < 0.001);
+        }
+        editor.execute(EditorCommand::SetPreviewParameter {
+            parameter_id: param.clone(),
+            value: 0.,
+        })?;
+        assert_eq!(control_points(&mut editor, &object)?, edited);
+        let id = editor.active_id().unwrap();
+        let task = editor.prepare_save(id, &dir.path().join("bezier-bound"), false)?;
+        let receipt = editor.finish_save(&mut task.run())?;
+        let mut reopened = Editor::from_document(Document::open(&receipt.manifest)?);
+        reopened.set_canvas_metrics(CanvasMetrics {
+            width: 512.,
+            height: 512.,
+            scale_factor: 2.,
+        });
+        reopened.execute(EditorCommand::SelectObject(object.clone()))?;
+        reopened.execute(EditorCommand::SetPreviewParameter {
+            parameter_id: param,
+            value: 0.,
+        })?;
+        assert_eq!(control_points(&mut reopened, &object)?, edited);
+        let handle = reopened
+            .overlay()
+            .handles
+            .iter()
+            .find(|h| h.round)
+            .unwrap()
+            .position;
+        assert!((handle.x - saved_handle.x).hypot(handle.y - saved_handle.y) < 0.001);
+    }
     Ok(())
 }
