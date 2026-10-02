@@ -1,7 +1,7 @@
 use crate::scene::{MAX_ZOOM, MIN_ZOOM};
 use crate::{
-    CanvasFrame, CanvasMetrics, CanvasPoint, Document, EditorCommand, MeshGeometry,
-    OverlaySnapshot, SceneSnapshot, ToolController, ViewState, ViewportTransform,
+    CanvasFrame, CanvasMetrics, CanvasPoint, CanvasScene, Document, EditorCommand, OverlaySnapshot,
+    SceneSnapshot, ToolController, ViewState,
 };
 use anyhow::{Result, ensure};
 use kasane_sdk::SaveReceipt;
@@ -13,7 +13,8 @@ pub struct DocumentSession {
     pub scene_revision: u64,
     pub viewport_revision: u64,
     cache: Option<SceneSnapshot>,
-    geometry: Option<Arc<[MeshGeometry]>>,
+    geometry: Option<Arc<CanvasScene>>,
+    appearance_geometry: Option<Arc<CanvasScene>>,
     pub displayed: Option<CanvasFrame>,
     pub tools: ToolController,
     pub evaluations: u64,
@@ -27,6 +28,7 @@ impl DocumentSession {
             viewport_revision: 1,
             cache: None,
             geometry: None,
+            appearance_geometry: None,
             displayed: None,
             tools: ToolController::default(),
             evaluations: 0,
@@ -45,6 +47,7 @@ impl DocumentSession {
         self.scene_revision += 1;
         self.cache = None;
         self.geometry = None;
+        self.appearance_geometry = None;
         self.tools.reconcile(&self.document);
     }
     pub fn cancel_gesture(&mut self) {
@@ -54,11 +57,13 @@ impl DocumentSession {
     }
     pub fn execute(&mut self, command: EditorCommand) -> Result<()> {
         self.cancel_gesture();
-        let unchanged_geometry = if matches!(
-            &command,
+        let reusable = if matches!(
+            command,
             EditorCommand::PreviewOpacity(_) | EditorCommand::PreviewName(_)
         ) {
-            self.geometry.clone()
+            self.geometry
+                .clone()
+                .or_else(|| self.appearance_geometry.clone())
         } else {
             None
         };
@@ -73,6 +78,7 @@ impl DocumentSession {
         let selection = matches!(
             &command,
             EditorCommand::Select(_)
+                | EditorCommand::SelectObjects(_)
                 | EditorCommand::SelectObject(_)
                 | EditorCommand::OpenBinding(_)
                 | EditorCommand::Navigate(_)
@@ -81,6 +87,7 @@ impl DocumentSession {
         let context_only = matches!(
             &command,
             EditorCommand::Select(_)
+                | EditorCommand::SelectObjects(_)
                 | EditorCommand::SelectObject(_)
                 | EditorCommand::OpenBinding(_)
                 | EditorCommand::Navigate(_)
@@ -90,6 +97,20 @@ impl DocumentSession {
         let invalidate =
             !(context_only || matches!(&command, EditorCommand::FinishEdit)) || had_pending;
         let result = match command {
+            EditorCommand::SetTool(tool) => {
+                self.tools.set_tool(tool, &mut self.document);
+                return Ok(());
+            }
+            EditorCommand::ToggleDeformers => {
+                self.tools.deformer_visibility.all = !self.tools.deformer_visibility.all;
+                return Ok(());
+            }
+            EditorCommand::ToggleAncestorDeformers => {
+                self.tools.deformer_visibility.ancestors =
+                    !self.tools.deformer_visibility.ancestors;
+                return Ok(());
+            }
+            EditorCommand::SelectObjects(objects) => self.document.select_objects(objects),
             EditorCommand::SetObjectProperty {
                 object,
                 field,
@@ -133,7 +154,7 @@ impl DocumentSession {
         {
             self.invalidate_scene();
             if result.is_ok() {
-                self.geometry = unchanged_geometry;
+                self.appearance_geometry = reusable;
             }
         }
         result
@@ -181,11 +202,15 @@ impl DocumentSession {
             self.viewport_revision += 1;
         }
     }
-    pub fn scene(&mut self) -> Result<(SceneSnapshot, Arc<[MeshGeometry]>)> {
+    pub fn scene(&mut self) -> Result<(SceneSnapshot, Arc<CanvasScene>)> {
         if self.cache.is_none() {
             let scene = self.document.snapshot()?;
             if self.geometry.is_none() {
-                self.geometry = Some(self.document.geometry(&scene));
+                self.geometry = Some(if let Some(previous) = self.appearance_geometry.take() {
+                    Arc::new(previous.with_appearance(&self.document, scene.clone()))
+                } else {
+                    self.document.geometry(&scene)
+                });
             }
             self.cache = Some(scene);
             self.evaluations += 1;
@@ -199,13 +224,9 @@ impl DocumentSession {
         let Some(frame) = &self.displayed else {
             return OverlaySnapshot::default();
         };
-        let geometry = frame
-            .geometry
-            .iter()
-            .find(|g| Some(g.id.as_str()) == self.document.selected_id());
-        self.tools.overlay(geometry, frame.transform)
+        self.tools.overlay(&self.document, frame)
     }
-    pub fn input(&mut self, event: crate::CanvasInput, metrics: CanvasMetrics) -> Result<bool> {
+    pub fn input(&mut self, event: crate::CanvasInput, _metrics: CanvasMetrics) -> Result<bool> {
         if matches!(event, crate::CanvasInput::Cancel) {
             let was = self.tools.dragging();
             self.cancel_gesture();
@@ -214,60 +235,18 @@ impl DocumentSession {
         let Some(frame) = self.displayed.clone() else {
             return Ok(false);
         };
-        let Some(g) = frame
-            .geometry
-            .iter()
-            .find(|g| Some(g.id.as_str()) == self.document.selected_id())
-        else {
-            return Ok(false);
-        };
-        let transform = ViewportTransform::new(self.document_canvas(), metrics, self.view)
-            .unwrap_or(frame.transform);
-        let result = (|| -> Result<bool> {
-            Ok(match event {
-                crate::CanvasInput::Down { point, shift } => {
-                    ensure!(
-                        frame.version.scene == self.scene_revision
-                            && frame.version.viewport == self.viewport_revision,
-                        "Wait for the current model frame"
-                    );
-                    self.document.finish_edit()?;
-                    self.tools
-                        .begin(&mut self.document, g, frame.transform, point, shift)?;
-                    false
-                }
-                crate::CanvasInput::Move { point, left_down } => {
-                    if self.tools.dragging() && !left_down {
-                        self.cancel_gesture();
-                        return Ok(true);
-                    }
-                    if self.tools.dragging() {
-                        self.tools.update(&mut self.document, transform, point)?
-                    } else {
-                        self.tools.hover(g, frame.transform, point);
-                        false
-                    }
-                }
-                crate::CanvasInput::Up { point } => {
-                    self.tools.finish(&mut self.document, transform, point)?
-                }
-                crate::CanvasInput::Cancel => unreachable!(),
-            })
-        })();
-        let changed = match result {
-            Ok(changed) => changed,
-            Err(error) => {
-                self.cancel_gesture();
-                self.invalidate_scene();
-                return Err(error);
-            }
-        };
-        if changed {
+        if matches!(event, crate::CanvasInput::Down { .. }) {
+            ensure!(
+                frame.version.scene == self.scene_revision
+                    && frame.version.viewport == self.viewport_revision,
+                "Wait for the current model frame"
+            );
+            self.document.finish_edit()?;
+        }
+        let result = self.tools.input(&mut self.document, &frame, event);
+        if result.as_ref().is_ok_and(|changed| *changed) || result.is_err() {
             self.invalidate_scene();
         }
-        Ok(changed)
-    }
-    fn document_canvas(&self) -> kasane_core::Canvas {
-        self.document.canvas()
+        result
     }
 }

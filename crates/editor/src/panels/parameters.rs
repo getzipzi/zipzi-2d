@@ -107,7 +107,7 @@ impl ParametersPanel {
                 doc.map(|doc| {
                     format!(
                         "{:?}/{:?}",
-                        doc.context().selection,
+                        doc.context().selections,
                         doc.context().active_binding
                     )
                 }),
@@ -301,7 +301,7 @@ impl ParametersPanel {
         if visuals_changed {
             if let Some(doc) = owner.read(cx).editor.document() {
                 let index = doc.object_index();
-                let selection = doc.context().selection.clone();
+                let selection = doc.context().selections.clone();
                 for row in &self.rows {
                     let bindings = index.parameter(&row.parameter.id);
                     let summary = format!(
@@ -312,7 +312,7 @@ impl ParametersPanel {
                         bindings.indirect_count(),
                         bindings.blend.len()
                     );
-                    let related = selection.as_ref().is_some_and(|r| {
+                    let related = selection.iter().any(|r| {
                         bindings
                             .regular
                             .iter()
@@ -1035,10 +1035,7 @@ impl Render for ParameterRowView {
                             .disabled(disabled)
                             .decrement_button(|button| button.hidden())
                             .increment_button(|button| button.hidden())
-                            .input(
-                                Input::new(&self.input)
-                                    .aria_label(parameter.name.clone())
-                            ),
+                            .input(Input::new(&self.input).aria_label(parameter.name.clone())),
                     ),
             )
     }

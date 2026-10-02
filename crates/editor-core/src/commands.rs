@@ -40,6 +40,18 @@ pub enum CommandId {
     ZoomOut,
     #[serde(rename = "view.reset")]
     ResetView,
+    #[serde(rename = "tool.select")]
+    SelectTool,
+    #[serde(rename = "tool.hand")]
+    HandTool,
+    #[serde(rename = "tool.deformers")]
+    DeformerTool,
+    #[serde(rename = "tool.glue")]
+    GlueTool,
+    #[serde(rename = "view.deformers")]
+    ToggleDeformers,
+    #[serde(rename = "view.ancestor-deformers")]
+    ToggleAncestorDeformers,
     #[serde(rename = "tool.vertices")]
     Vertices,
     #[serde(rename = "tool.cancel")]
@@ -133,7 +145,19 @@ specs![
     (ZoomIn, "menu.zoom_in", Document, true, ["cmd-=", "cmd-+"]),
     (ZoomOut, "menu.zoom_out", Document, true, ["cmd--"]),
     (ResetView, "menu.reset_view", Document, false, ["cmd-0"]),
-    (Vertices, "menu.vertices", Canvas, false, ["v"]),
+    (SelectTool, "editor.tool_select", Canvas, false, ["v"]),
+    (Vertices, "menu.vertices", Canvas, false, ["e"]),
+    (DeformerTool, "editor.tool_deformer", Canvas, false, ["d"]),
+    (GlueTool, "editor.tool_glue", Canvas, false, ["g"]),
+    (HandTool, "editor.tool_hand", Canvas, false, ["h"]),
+    (ToggleDeformers, "editor.show_deformers", Canvas, false, []),
+    (
+        ToggleAncestorDeformers,
+        "editor.show_ancestor_deformers",
+        Canvas,
+        false,
+        []
+    ),
     (
         CancelGesture,
         "menu.cancel_gesture",
@@ -235,7 +259,23 @@ impl Editor {
             ZoomIn => self.zoom_by(0.25),
             ZoomOut => self.zoom_by(-0.25),
             ResetView => self.reset_view(),
-            Vertices => self.execute_for(command.document.unwrap(), EditorCommand::FinishEdit)?,
+            SelectTool | Vertices | DeformerTool | GlueTool | HandTool => {
+                let tool = match command.id {
+                    SelectTool => crate::ToolId::Select,
+                    Vertices => crate::ToolId::Vertices,
+                    DeformerTool => crate::ToolId::Deformers,
+                    GlueTool => crate::ToolId::Glue,
+                    _ => crate::ToolId::Hand,
+                };
+                self.execute_for(command.document.unwrap(), EditorCommand::SetTool(tool))?;
+            }
+            ToggleDeformers => {
+                self.execute_for(command.document.unwrap(), EditorCommand::ToggleDeformers)?
+            }
+            ToggleAncestorDeformers => self.execute_for(
+                command.document.unwrap(),
+                EditorCommand::ToggleAncestorDeformers,
+            )?,
             CancelGesture => self.cancel_gesture(),
             _ => return Ok(CommandEffect::Host(command)),
         }

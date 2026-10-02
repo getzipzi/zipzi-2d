@@ -26,18 +26,6 @@ fn cached_dirty_state_tracks_preview_revert_save_and_history() -> anyhow::Result
     document.cancel_edit();
     assert!(!document.modified());
 
-    document.begin_vertices()?;
-    let (id, before) = document.selected_vertex_positions()[0];
-    let after = editor_core::ModelPoint {
-        x: before.x + 1.,
-        y: before.y,
-    };
-    document.preview_vertices(&[id], &[after])?;
-    assert!(document.modified());
-    document.preview_vertices(&[id], &[before])?;
-    assert!(!document.modified());
-    document.cancel_edit();
-
     document.preview_name("Saved revision")?;
     document.finish_edit()?;
     assert!(document.modified());

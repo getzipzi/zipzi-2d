@@ -621,6 +621,46 @@ impl Editor {
             }
         }
     }
+    pub fn active_tool(&self) -> crate::ToolId {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .and_then(|e| e.session.as_ref())
+            .map_or(crate::ToolId::Select, |s| s.tools.active)
+    }
+    pub fn deformer_visibility(&self) -> crate::DeformerVisibility {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .and_then(|e| e.session.as_ref())
+            .map_or(crate::DeformerVisibility::default(), |s| {
+                s.tools.deformer_visibility
+            })
+    }
+    pub fn pick_candidates(
+        &self,
+        point: crate::CanvasPoint,
+        image: Option<crate::FrameVersion>,
+    ) -> Vec<crate::PickCandidate> {
+        if !self.has_presented_frame(image) {
+            return Vec::new();
+        }
+        let Some(s) = self
+            .active
+            .and_then(|id| self.entry(id).ok())
+            .and_then(|e| e.session.as_ref())
+        else {
+            return Vec::new();
+        };
+        let Some(frame) = &s.displayed else {
+            return Vec::new();
+        };
+        frame.geometry.candidates(
+            point,
+            frame.transform,
+            &s.document().context().selections,
+            s.tools.active,
+            s.tools.deformer_visibility,
+        )
+    }
     pub fn canvas_input(&mut self, input: crate::CanvasInput) -> Result<bool> {
         let metrics = self.metrics;
         let id = self.active.ok_or_else(|| anyhow!("No active document"))?;

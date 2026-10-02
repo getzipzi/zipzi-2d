@@ -1,0 +1,646 @@
+//! Immutable canvas objects and pixel-aware picking, paired with the displayed frame.
+use crate::{
+    CanvasPoint, DeformerVisibility, Document, ModelPoint, ObjectKind as K, ObjectRef,
+    SceneSnapshot, ToolId, ViewportTransform,
+};
+use kasane_core::{Vec2, evaluation::RenderCommand};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
+
+pub const PICK_ALPHA: f32 = 1. / 255.;
+pub const CONTROL_RADIUS: f32 = 7.;
+
+#[derive(Clone, Debug)]
+pub struct MeshGeometry {
+    pub id: String,
+    pub vertices: Vec<(u32, ModelPoint)>,
+    pub triangles: Arc<[[u32; 3]]>,
+    /// Stable vertex slots, shared with all frames using the same topology.
+    pub edges: Arc<[(usize, usize)]>,
+    pub bounds: Option<[f32; 4]>,
+    pub boundary: Vec<(ModelPoint, ModelPoint)>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ControlKind {
+    Warp,
+    Rotation,
+    Glue,
+}
+#[derive(Clone, Debug)]
+pub struct ControlGeometry {
+    pub object: ObjectRef,
+    pub kind: ControlKind,
+    pub points: Vec<ModelPoint>,
+    pub edges: Arc<[(usize, usize)]>,
+    pub enabled: bool,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ComponentRef {
+    pub object: ObjectRef,
+    /// Stable VertexId for meshes, point index for deformer controls.
+    pub id: u32,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum HitTarget {
+    Object(ObjectRef),
+    Component(ComponentRef),
+    RotationHandle(ObjectRef),
+}
+impl HitTarget {
+    pub fn object(&self) -> &ObjectRef {
+        match self {
+            Self::Object(r) | Self::RotationHandle(r) => r,
+            Self::Component(c) => &c.object,
+        }
+    }
+}
+#[derive(Clone, Debug)]
+pub struct PickCandidate {
+    pub object: ObjectRef,
+    pub label: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct CanvasScene {
+    pub meshes: Arc<[MeshGeometry]>,
+    pub controls: Vec<ControlGeometry>,
+    pub index: Arc<crate::CanvasObjectIndex>,
+    pub source: SceneSnapshot,
+    mesh_slots: Arc<HashMap<String, usize>>,
+    texture_slots: HashMap<String, usize>,
+    visible_meshes: HashSet<String>,
+    topology: Arc<crate::canvas_topology::CanvasTopology>,
+}
+impl CanvasScene {
+    pub fn new(document: &Document, source: SceneSnapshot) -> Self {
+        let topology = document.canvas_topology();
+        let index = topology.index.clone();
+        let canvas = source.frame.canvas;
+        let visible_meshes = visible_meshes(&source.frame);
+        let to_model = |p| ViewportTransform::evaluated_to_source(canvas, p);
+        let meshes: Arc<[MeshGeometry]> = source
+            .frame
+            .drawables
+            .iter()
+            .filter_map(|d| {
+                let m = topology.meshes.get(&d.id)?;
+                let vertices: Vec<_> = m
+                    .vertex_ids
+                    .iter()
+                    .copied()
+                    .zip(d.positions.iter().copied().map(to_model))
+                    .collect();
+                let boundary = m
+                    .boundary
+                    .iter()
+                    .filter_map(|&(a, b)| Some((vertices.get(a)?.1, vertices.get(b)?.1)))
+                    .collect();
+                Some(MeshGeometry {
+                    id: d.id.clone(),
+                    bounds: bounds(vertices.iter().map(|(_, p)| *p)),
+                    vertices,
+                    triangles: m.triangles.clone(),
+                    edges: m.edges.clone(),
+                    boundary,
+                })
+            })
+            .collect();
+        let mut controls = Vec::new();
+        for evaluated in &source.frame.deformers {
+            let Some(t) = topology.controls.get(&evaluated.id) else {
+                continue;
+            };
+            controls.push(ControlGeometry {
+                object: ObjectRef::new(K::Deformer, &evaluated.id),
+                kind: t.kind,
+                points: evaluated.points.iter().copied().map(to_model).collect(),
+                edges: t.edges.clone(),
+                enabled: evaluated.enabled,
+            });
+        }
+        let mesh_slots: HashMap<_, _> = meshes
+            .iter()
+            .enumerate()
+            .map(|(i, m)| (m.id.clone(), i))
+            .collect();
+        for g in &topology.glues {
+            let (Some(&a), Some(&b)) = (mesh_slots.get(&g.mesh_a), mesh_slots.get(&g.mesh_b))
+            else {
+                continue;
+            };
+            let mut points = Vec::new();
+            let mut edges = Vec::new();
+            for &(a_slot, b_slot) in &g.pairs {
+                if let (Some((_, a)), Some((_, b))) = (
+                    meshes[a].vertices.get(a_slot),
+                    meshes[b].vertices.get(b_slot),
+                ) {
+                    let i = points.len();
+                    points.extend([*a, *b]);
+                    edges.push((i, i + 1));
+                }
+            }
+            controls.push(ControlGeometry {
+                object: g.object.clone(),
+                kind: ControlKind::Glue,
+                points,
+                edges: edges.into(),
+                enabled: visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b),
+            });
+        }
+        let texture_slots = source
+            .textures
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (t.asset_id.clone(), i))
+            .collect();
+        Self {
+            meshes,
+            controls,
+            index,
+            source,
+            mesh_slots: Arc::new(mesh_slots),
+            texture_slots,
+            visible_meshes,
+            topology,
+        }
+    }
+    /// Reuse immutable positions while publishing the new opacity, masks and
+    /// render plan for picking. Older presented frames retain their own source.
+    pub(crate) fn with_appearance(&self, document: &Document, source: SceneSnapshot) -> Self {
+        let topology = document.canvas_topology();
+        if !Arc::ptr_eq(&self.topology, &topology) {
+            return Self::new(document, source);
+        }
+        let visible_meshes = visible_meshes(&source.frame);
+        let mut controls = self.controls.clone();
+        for control in &mut controls {
+            if control.kind == ControlKind::Glue {
+                if let Some(g) = topology.glues.iter().find(|g| g.object == control.object) {
+                    control.enabled =
+                        visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b);
+                }
+            }
+        }
+        let texture_slots = source
+            .textures
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (t.asset_id.clone(), i))
+            .collect();
+        Self {
+            meshes: self.meshes.clone(),
+            controls,
+            index: topology.index.clone(),
+            source,
+            mesh_slots: self.mesh_slots.clone(),
+            texture_slots,
+            visible_meshes,
+            topology,
+        }
+    }
+    pub fn mesh(&self, id: &str) -> Option<&MeshGeometry> {
+        self.mesh_slots.get(id).map(|&i| &self.meshes[i])
+    }
+    pub fn mesh_visible(&self, id: &str) -> bool {
+        self.visible_meshes.contains(id)
+    }
+    pub fn ancestors(&self, object: &ObjectRef) -> &[ObjectRef] {
+        self.index.ancestors.get(object).map_or(&[], Vec::as_slice)
+    }
+    pub fn member_meshes(&self, object: &ObjectRef) -> Vec<&MeshGeometry> {
+        if object.kind == K::Mesh {
+            return self
+                .mesh(&object.id)
+                .filter(|_| self.mesh_visible(&object.id))
+                .into_iter()
+                .collect();
+        }
+        let target = if object.kind == K::Offscreen {
+            self.index
+                .get(object)
+                .map(|info| info.part_id.as_str())
+                .map(|id| ObjectRef::new(K::Part, id))
+        } else {
+            Some(object.clone())
+        };
+        self.meshes
+            .iter()
+            .filter(|m| {
+                self.mesh_visible(&m.id)
+                    && target.as_ref().is_some_and(|r| {
+                        self.ancestors(&ObjectRef::new(K::Mesh, &m.id)).contains(r)
+                    })
+            })
+            .collect()
+    }
+    pub fn control_visible(
+        &self,
+        c: &ControlGeometry,
+        selection: &[ObjectRef],
+        tool: ToolId,
+        visibility: DeformerVisibility,
+    ) -> bool {
+        c.enabled
+            && (selection.contains(&c.object)
+                || match c.kind {
+                    ControlKind::Glue => tool == ToolId::Glue,
+                    _ => {
+                        visibility.all
+                            || visibility.ancestors
+                                && selection
+                                    .iter()
+                                    .any(|r| self.ancestors(r).contains(&c.object))
+                    }
+                })
+    }
+    /// Rotation handles have a fixed logical-pixel length, independent of model units/DPI.
+    pub fn control_points(&self, c: &ControlGeometry, t: ViewportTransform) -> Vec<CanvasPoint> {
+        let mut points: Vec<_> = c.points.iter().map(|p| t.to_canvas(*p)).collect();
+        if c.kind == ControlKind::Rotation && points.len() >= 2 {
+            let d = CanvasPoint {
+                x: points[1].x - points[0].x,
+                y: points[1].y - points[0].y,
+            };
+            let length = d.x.hypot(d.y);
+            if length > 1e-6 {
+                points[1] = CanvasPoint {
+                    x: points[0].x + d.x / length * 54.,
+                    y: points[0].y + d.y / length * 54.,
+                };
+            }
+            points.truncate(2);
+        }
+        points
+    }
+    pub fn hit(
+        &self,
+        point: CanvasPoint,
+        t: ViewportTransform,
+        selection: &[ObjectRef],
+        tool: ToolId,
+        visibility: DeformerVisibility,
+    ) -> Option<HitTarget> {
+        if tool == ToolId::Hand {
+            return None;
+        }
+        if tool == ToolId::Vertices {
+            let mut hits = Vec::new();
+            for r in selection {
+                if r.kind == K::Mesh {
+                    if let Some(mesh) = self.mesh(&r.id).filter(|_| self.mesh_visible(&r.id)) {
+                        for (id, p) in &mesh.vertices {
+                            let distance = distance2(point, t.to_canvas(*p));
+                            if distance <= CONTROL_RADIUS * CONTROL_RADIUS {
+                                hits.push((distance, r.clone(), *id));
+                            }
+                        }
+                    }
+                }
+            }
+            hits.sort_by(|a, b| {
+                a.0.total_cmp(&b.0)
+                    .then(a.1.id.cmp(&b.1.id))
+                    .then(a.2.cmp(&b.2))
+            });
+            if let Some((_, object, id)) = hits.into_iter().next() {
+                return Some(HitTarget::Component(ComponentRef { object, id }));
+            }
+        }
+        let mut controls: Vec<_> = self
+            .controls
+            .iter()
+            .filter(|c| self.control_visible(c, selection, tool, visibility))
+            .collect();
+        controls.sort_by_key(|c| !selection.contains(&c.object));
+        let mut object_hit = None;
+        for c in controls {
+            let points = self.control_points(c, t);
+            let editing = c.kind != ControlKind::Glue
+                && selection.contains(&c.object)
+                && tool == ToolId::Deformers;
+            for (i, p) in points.iter().enumerate() {
+                if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
+                    if editing {
+                        return Some(if c.kind == ControlKind::Rotation && i == 1 {
+                            HitTarget::RotationHandle(c.object.clone())
+                        } else {
+                            HitTarget::Component(ComponentRef {
+                                object: c.object.clone(),
+                                id: i as u32,
+                            })
+                        });
+                    }
+                    object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
+                }
+            }
+            if c.edges.iter().any(|&(a, b)| {
+                points
+                    .get(a)
+                    .zip(points.get(b))
+                    .is_some_and(|(a, b)| segment_distance2(point, *a, *b) <= 25.)
+            }) {
+                object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
+            }
+        }
+        if object_hit.is_some() {
+            return object_hit;
+        }
+        self.mesh_hits(t.to_model(point))
+            .into_iter()
+            .next()
+            .map(|id| HitTarget::Object(ObjectRef::new(K::Mesh, id)))
+    }
+    pub fn candidates(
+        &self,
+        point: CanvasPoint,
+        t: ViewportTransform,
+        selection: &[ObjectRef],
+        tool: ToolId,
+        visibility: DeformerVisibility,
+    ) -> Vec<PickCandidate> {
+        let mut objects = Vec::new();
+        if let Some(hit) = self.hit(point, t, selection, tool, visibility) {
+            objects.push(hit.object().clone());
+        }
+        for id in self.mesh_hits(t.to_model(point)) {
+            let mesh = ObjectRef::new(K::Mesh, id);
+            objects.push(mesh.clone());
+            let ancestors = self.ancestors(&mesh);
+            objects.extend(ancestors.iter().cloned());
+            for info in &self.index.objects {
+                if info.reference.kind == K::Offscreen
+                    && ancestors.contains(&ObjectRef::new(K::Part, &info.part_id))
+                {
+                    objects.push(info.reference.clone());
+                }
+            }
+        }
+        let mut seen = HashSet::new();
+        objects
+            .into_iter()
+            .filter(|r| seen.insert(r.clone()))
+            .map(|object| PickCandidate {
+                label: format!("{} · {:?}", self.index.name(&object), object.kind),
+                object,
+            })
+            .collect()
+    }
+    fn raw_alpha(&self, slot: usize, p: ModelPoint) -> f32 {
+        let d = &self.source.frame.drawables[slot];
+        let Some(mesh) = self.mesh(&d.id) else {
+            return 0.;
+        };
+        if mesh
+            .bounds
+            .is_none_or(|b| p.x < b[0] || p.y < b[1] || p.x > b[2] || p.y > b[3])
+        {
+            return 0.;
+        }
+        let Some(texture) = self
+            .texture_slots
+            .get(&d.texture_asset_id)
+            .map(|&i| &self.source.textures[i])
+        else {
+            return 0.;
+        };
+        let canvas = self.source.frame.canvas;
+        let mut alpha: f32 = 0.;
+        for indices in d.indices.chunks_exact(3) {
+            let [a, b, c] = [
+                indices[0] as usize,
+                indices[1] as usize,
+                indices[2] as usize,
+            ];
+            let Some((&pa, &pb, &pc)) = d
+                .positions
+                .get(a)
+                .zip(d.positions.get(b))
+                .zip(d.positions.get(c))
+                .map(|((a, b), c)| (a, b, c))
+            else {
+                continue;
+            };
+            let Some(w) = barycentric(
+                p,
+                [pa, pb, pc].map(|p| ViewportTransform::evaluated_to_source(canvas, p)),
+            ) else {
+                continue;
+            };
+            if let (Some(a), Some(b), Some(c)) = (d.uvs.get(a), d.uvs.get(b), d.uvs.get(c)) {
+                alpha = alpha.max(texture_alpha(
+                    texture,
+                    Vec2::new(
+                        a.x * w[0] + b.x * w[1] + c.x * w[2],
+                        a.y * w[0] + b.y * w[1] + c.y * w[2],
+                    ),
+                ));
+            }
+        }
+        alpha
+    }
+    /// Follow the actual compositing plan. Flattening render_order loses group ordering.
+    pub fn mesh_hits(&self, p: ModelPoint) -> Vec<String> {
+        if !p.x.is_finite() || !p.y.is_finite() {
+            return Vec::new();
+        }
+        let frame = &self.source.frame;
+        let raw: HashMap<_, _> = frame
+            .drawables
+            .iter()
+            .enumerate()
+            .map(|(i, d)| (d.id.as_str(), self.raw_alpha(i, p)))
+            .collect();
+        let mask = |ids: &[String], inverted: bool| {
+            if ids.is_empty() {
+                return 1.;
+            }
+            let coverage = 1.
+                - ids.iter().fold(1., |a, id| {
+                    a * (1. - raw.get(id.as_str()).copied().unwrap_or(0.))
+                });
+            if inverted { 1. - coverage } else { coverage }
+        };
+        let by_id: HashMap<_, _> = frame.drawables.iter().map(|d| (d.id.as_str(), d)).collect();
+        let offscreens: HashMap<_, _> = frame
+            .offscreens
+            .iter()
+            .map(|d| (d.id.as_str(), d))
+            .collect();
+        let mut stack = vec![Vec::<(String, f32)>::new()];
+        let fallback;
+        let plan = if frame.render_plan.is_empty() {
+            let mut draws: Vec<_> = frame.drawables.iter().enumerate().collect();
+            draws.sort_by_key(|(i, d)| (d.render_order, *i));
+            fallback = draws
+                .into_iter()
+                .map(|(_, d)| RenderCommand::DrawMesh {
+                    mesh_id: d.id.clone(),
+                })
+                .collect::<Vec<_>>();
+            &fallback
+        } else {
+            &frame.render_plan
+        };
+        for command in plan {
+            match command {
+                RenderCommand::BeginOffscreen { .. } => stack.push(Vec::new()),
+                RenderCommand::DrawMesh { mesh_id } => {
+                    if let Some(d) = by_id
+                        .get(mesh_id.as_str())
+                        .filter(|d| d.enabled && d.visible)
+                    {
+                        let a = raw.get(mesh_id.as_str()).copied().unwrap_or(0.)
+                            * d.opacity.clamp(0., 1.)
+                            * mask(&d.masks, d.inverted_mask);
+                        if a > PICK_ALPHA {
+                            stack.last_mut().unwrap().push((mesh_id.clone(), a));
+                        }
+                    }
+                }
+                RenderCommand::EndOffscreen { offscreen_id } => {
+                    if stack.len() == 1 {
+                        continue;
+                    }
+                    let group = stack.pop().unwrap();
+                    if let Some(os) = offscreens
+                        .get(offscreen_id.as_str())
+                        .filter(|os| os.enabled)
+                    {
+                        let factor = os.opacity.clamp(0., 1.) * mask(&os.masks, os.flags & 8 != 0);
+                        stack
+                            .last_mut()
+                            .unwrap()
+                            .extend(group.into_iter().filter_map(|(id, a)| {
+                                (a * factor > PICK_ALPHA).then_some((id, a * factor))
+                            }));
+                    }
+                }
+            }
+        }
+        stack
+            .into_iter()
+            .next()
+            .unwrap_or_default()
+            .into_iter()
+            .rev()
+            .map(|(id, _)| id)
+            .collect()
+    }
+}
+/// Structural visibility for component overlays and rectangle selection. Texture
+/// holes and masks still allow editing the selected mesh's complete topology.
+fn visible_meshes(frame: &kasane_core::DrawableFrame) -> HashSet<String> {
+    let eligible = |d: &kasane_core::Drawable, opacity: f32| {
+        d.enabled && d.visible && d.opacity.clamp(0., 1.) * opacity > PICK_ALPHA
+    };
+    if frame.render_plan.is_empty() {
+        return frame
+            .drawables
+            .iter()
+            .filter(|d| eligible(d, 1.))
+            .map(|d| d.id.clone())
+            .collect();
+    }
+    let meshes: HashMap<_, _> = frame.drawables.iter().map(|d| (d.id.as_str(), d)).collect();
+    let offscreens: HashMap<_, _> = frame
+        .offscreens
+        .iter()
+        .map(|o| (o.id.as_str(), o))
+        .collect();
+    let mut opacity = vec![1.];
+    let mut result = HashSet::new();
+    for command in &frame.render_plan {
+        match command {
+            RenderCommand::BeginOffscreen { offscreen_id } => {
+                let group = offscreens
+                    .get(offscreen_id.as_str())
+                    .filter(|o| o.enabled)
+                    .map_or(0., |o| o.opacity.clamp(0., 1.));
+                opacity.push(opacity.last().unwrap() * group);
+            }
+            RenderCommand::DrawMesh { mesh_id } => {
+                if meshes
+                    .get(mesh_id.as_str())
+                    .is_some_and(|d| eligible(d, *opacity.last().unwrap()))
+                {
+                    result.insert(mesh_id.clone());
+                }
+            }
+            RenderCommand::EndOffscreen { .. } => {
+                if opacity.len() > 1 {
+                    opacity.pop();
+                }
+            }
+        }
+    }
+    result
+}
+pub fn bounds(points: impl IntoIterator<Item = ModelPoint>) -> Option<[f32; 4]> {
+    points
+        .into_iter()
+        .filter(|p| p.x.is_finite() && p.y.is_finite())
+        .fold(None, |b, p| {
+            Some(match b {
+                None => [p.x, p.y, p.x, p.y],
+                Some([x0, y0, x1, y1]) => [x0.min(p.x), y0.min(p.y), x1.max(p.x), y1.max(p.y)],
+            })
+        })
+}
+pub fn distance2(a: CanvasPoint, b: CanvasPoint) -> f32 {
+    (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
+}
+pub fn segment_distance2(p: CanvasPoint, a: CanvasPoint, b: CanvasPoint) -> f32 {
+    let length = distance2(a, b);
+    let k = if length > 0. {
+        ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / length
+    } else {
+        0.
+    }
+    .clamp(0., 1.);
+    distance2(
+        p,
+        CanvasPoint {
+            x: a.x + k * (b.x - a.x),
+            y: a.y + k * (b.y - a.y),
+        },
+    )
+}
+fn barycentric(p: ModelPoint, [a, b, c]: [ModelPoint; 3]) -> Option<[f32; 3]> {
+    let cross = |x: ModelPoint, y: ModelPoint, z: ModelPoint| {
+        (y.x - x.x) as f64 * (z.y - x.y) as f64 - (y.y - x.y) as f64 * (z.x - x.x) as f64
+    };
+    let area = cross(a, b, c);
+    if area.abs() < 1e-12 {
+        return None;
+    }
+    let weights = [
+        cross(p, b, c) / area,
+        cross(a, p, c) / area,
+        cross(a, b, p) / area,
+    ];
+    weights
+        .iter()
+        .all(|w| *w >= -1e-7 && *w <= 1. + 1e-7)
+        .then(|| weights.map(|w| w as f32))
+}
+fn texture_alpha(t: &crate::SceneTexture, uv: Vec2) -> f32 {
+    if t.width == 0 || t.height == 0 || !uv.x.is_finite() || !uv.y.is_finite() {
+        return 0.;
+    }
+    let x = uv.x.clamp(0., 1.) * t.width as f32 - 0.5;
+    let y = uv.y.clamp(0., 1.) * t.height as f32 - 0.5;
+    let sample = |x: i32, y: i32| {
+        let i = ((y.clamp(0, t.height as i32 - 1) as u32 * t.width
+            + x.clamp(0, t.width as i32 - 1) as u32)
+            * 4
+            + 3) as usize;
+        t.rgba.get(i).copied().unwrap_or(0) as f32 / 255.
+    };
+    let (ix, iy) = (x.floor() as i32, y.floor() as i32);
+    let (fx, fy) = (x - x.floor(), y - y.floor());
+    (sample(ix, iy) * (1. - fx) + sample(ix + 1, iy) * fx) * (1. - fy)
+        + (sample(ix, iy + 1) * (1. - fx) + sample(ix + 1, iy + 1) * fx) * fy
+}

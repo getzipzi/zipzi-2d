@@ -12,7 +12,7 @@ fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext)
     cx.update_window(harness.window, |_, window, cx| {
         window.click("tool_hand", cx);
         harness.view.read_with(cx, |view, cx| {
-            assert!(view.dock.as_ref().unwrap().canvas.read(cx).hand_tool());
+            assert!(view.dock.as_ref().unwrap().canvas.read(cx).hand_tool(cx));
         });
 
         let canvas = window.find("canvas-body").bounds();
@@ -26,7 +26,7 @@ fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext)
 
         window.click("tool_select", cx);
         harness.view.read_with(cx, |view, cx| {
-            assert!(!view.dock.as_ref().unwrap().canvas.read(cx).hand_tool());
+            assert!(!view.dock.as_ref().unwrap().canvas.read(cx).hand_tool(cx));
         });
     })
     .unwrap();
@@ -185,7 +185,7 @@ fn space_in_parameter_input_keeps_input_focus(cx: &mut TestAppContext) {
         window.press("space", cx);
         assert!(window.has_focused_input(cx));
         harness.view.read_with(cx, |view, cx| {
-            assert!(!view.dock.as_ref().unwrap().canvas.read(cx).hand_tool());
+            assert!(!view.dock.as_ref().unwrap().canvas.read(cx).hand_tool(cx));
         });
     })
     .unwrap();
@@ -220,7 +220,7 @@ fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
                 id: "registered-toolbar-item",
                 icon: IconName::Hand,
                 tooltip_key: "editor.tool_hand",
-                selected: |_| false,
+                selected: |_, _| false,
                 enabled: |_, modal| !modal,
                 action: None,
             };
@@ -464,4 +464,373 @@ fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {
         "GPUI CPU dispatch / 100 samples: p50={:.3}ms p95={:.3}ms p99={:.3}ms",
         dispatch_samples[49], dispatch_samples[94], dispatch_samples[98]
     );
+}
+
+/// Present a tiny immutable texture with the real CPU frame, so UI picking is
+/// exercised through the same image/geometry gate as production.
+fn present_canvas(harness: &super::Harness, cx: &mut TestAppContext) {
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            let frame = view.editor.preview().unwrap().canvas.unwrap();
+            let device = metal::Device::system_default().unwrap();
+            let descriptor = metal::TextureDescriptor::new();
+            descriptor.set_width(1);
+            descriptor.set_height(1);
+            descriptor.set_pixel_format(metal::MTLPixelFormat::RGBA8Unorm);
+            let image = device.new_texture(&descriptor);
+            assert!(view.editor.present_frame(frame.clone()));
+            view.frame = Some(crate::preview::Presented {
+                image,
+                canvas: frame,
+            });
+            cx.notify();
+        });
+        window.render_frame(cx);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let (top, point) = harness.view.read_with(cx, |view, _| {
+            (
+                view.editor
+                    .layers()
+                    .into_iter()
+                    .find(|l| l.name == "Second")
+                    .unwrap()
+                    .id,
+                view.frame
+                    .as_ref()
+                    .unwrap()
+                    .canvas
+                    .transform
+                    .to_canvas(editor_core::ModelPoint { x: 128., y: 128. }),
+            )
+        });
+        window.click_at("canvas-body", gpui_kit::point(px(point.x), px(point.y)), cx);
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor.document().unwrap().selected_id(),
+                Some(top.as_str())
+            );
+            assert_eq!(view.editor.active_tool(), editor_core::ToolId::Select);
+            assert!(view.editor.overlay().vertices.is_empty());
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+        window.press("e", cx);
+        assert_eq!(
+            harness
+                .view
+                .read_with(cx, |view, _| view.editor.active_tool()),
+            editor_core::ToolId::Vertices
+        );
+        window.press("v", cx);
+        assert_eq!(
+            harness
+                .view
+                .read_with(cx, |view, _| view.editor.active_tool()),
+            editor_core::ToolId::Select
+        );
+        window.click("tool_deformer", cx);
+        assert_eq!(
+            harness
+                .view
+                .read_with(cx, |view, _| view.editor.active_tool()),
+            editor_core::ToolId::Deformers
+        );
+        window.click("tool_glue", cx);
+        assert_eq!(
+            harness
+                .view
+                .read_with(cx, |view, _| view.editor.active_tool()),
+            editor_core::ToolId::Glue
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn overlap_menu_selects_a_candidate_and_keeps_history(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    let original = harness.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().context().selection.clone()
+    });
+    let top = harness.view.read_with(cx, |view, _| {
+        view.editor
+            .layers()
+            .into_iter()
+            .find(|l| l.name == "Second")
+            .unwrap()
+            .id
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.right_click("canvas-body", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("popup-menu").is_some());
+        assert_eq!(
+            harness.view.read_with(cx, |view, _| view
+                .editor
+                .document()
+                .unwrap()
+                .context()
+                .selection
+                .clone()),
+            original
+        );
+        window.click_at("popup-menu", point(px(20.), px(18.)), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("popup-menu").is_none());
+        harness.view.read_with(cx, |view, cx| {
+            assert!(
+                view.dock
+                    .as_ref()
+                    .unwrap()
+                    .canvas
+                    .read(cx)
+                    .focus
+                    .is_focused(window)
+            );
+            assert_eq!(
+                view.editor.document().unwrap().selected_id(),
+                Some(top.as_str())
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn helper_menu_toggles_preserve_selection_history_and_canvas_focus(cx: &mut TestAppContext) {
+    use editor_core::{CommandId, DeformerVisibility};
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    let original = harness.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().context().selections.clone()
+    });
+    for (index, expected) in [
+        (
+            3usize,
+            DeformerVisibility {
+                ancestors: true,
+                all: false,
+            },
+        ),
+        (
+            4usize,
+            DeformerVisibility {
+                ancestors: true,
+                all: true,
+            },
+        ),
+        (
+            3usize,
+            DeformerVisibility {
+                ancestors: false,
+                all: true,
+            },
+        ),
+        (4usize, DeformerVisibility::default()),
+    ] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.right_click("canvas-body", cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            // Two overlapping mesh candidates, a separator, then the two switches.
+            let mut menu = window.within("popup-menu");
+            for (row, command) in [
+                (3usize, CommandId::ToggleAncestorDeformers),
+                (4usize, CommandId::ToggleDeformers),
+            ] {
+                assert_eq!(
+                    menu.find(row).label(),
+                    Some(rust_i18n::t!(command.spec().label).as_ref())
+                );
+            }
+            menu.click(index, cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            assert!(window.try_find("popup-menu").is_none());
+            harness.view.read_with(cx, |view, cx| {
+                assert_eq!(view.editor.deformer_visibility(), expected);
+                assert_eq!(view.menu_state.deformer_visibility, expected);
+                assert_eq!(
+                    view.editor.document().unwrap().context().selections,
+                    original
+                );
+                assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+                assert!(
+                    view.dock
+                        .as_ref()
+                        .unwrap()
+                        .canvas
+                        .read(cx)
+                        .focus
+                        .is_focused(window)
+                );
+            });
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
+fn vertex_drag_commits_once_and_shortcut_undo_redo_restores_geometry(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    let original = harness.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().selected_vertex_positions()
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("tool_mesh", cx);
+        let start = harness
+            .view
+            .read_with(cx, |view, _| view.editor.overlay().vertices[1].position);
+        let origin = window.find("canvas-body").bounds().origin;
+        let from = origin + point(px(start.x), px(start.y));
+        window.drag(from, from + point(px(-24.), px(12.)), cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+            let positions = view.editor.document().unwrap().selected_vertex_positions();
+            assert_ne!(positions[1], original[1]);
+            for i in [0, 2, 3] {
+                assert_eq!(positions[i], original[i]);
+            }
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+            assert!(!view.editor.gesture_active());
+        });
+        window.press("cmd-z", cx);
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor.document().unwrap().selected_vertex_positions(),
+                original
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 1));
+        });
+        window.press("cmd-shift-z", cx);
+        harness.view.read_with(cx, |view, _| {
+            assert_ne!(
+                view.editor.document().unwrap().selected_vertex_positions(),
+                original
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn escape_tool_switch_and_focus_loss_cancel_a_live_vertex_drag(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, _| window.activate_window())
+        .unwrap();
+    cx.run_until_parked();
+    let original = harness.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().selected_vertex_positions()
+    });
+    for cancel in 0..3 {
+        present_canvas(&harness, cx);
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click("tool_mesh", cx);
+            let start = harness
+                .view
+                .read_with(cx, |view, _| view.editor.overlay().vertices[1].position);
+            let from = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
+            let to = from + point(px(-24.), px(12.));
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position: from,
+                    modifiers: Default::default(),
+                    click_count: 1,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: to,
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            harness.view.read_with(cx, |view, _| {
+                assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+                assert!(view.editor.document().unwrap().has_pending_edit());
+                assert_ne!(
+                    view.editor.document().unwrap().selected_vertex_positions(),
+                    original
+                );
+            });
+            match cancel {
+                0 => window.press("escape", cx),
+                1 => window.press("v", cx),
+                _ => {
+                    let focus = harness.view.read_with(cx, |view, _| view.focus.clone());
+                    window.focus(&focus, cx);
+                }
+            }
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            harness.view.read_with(cx, |view, _| {
+                assert!(
+                    !view.editor.gesture_active(),
+                    "cancel path {cancel} left a gesture active"
+                );
+                assert_eq!(
+                    view.editor.document().unwrap().selected_vertex_positions(),
+                    original,
+                    "cancel path {cancel} must roll back before mouse release"
+                );
+            });
+            window.dispatch_event(
+                MouseUpEvent {
+                    button: MouseButton::Left,
+                    position: window.find("canvas-body").bounds().center(),
+                    modifiers: Default::default(),
+                    click_count: 1,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            harness.view.read_with(cx, |view, _| {
+                assert_eq!(
+                    view.editor.document().unwrap().selected_vertex_positions(),
+                    original
+                );
+                assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+                assert!(!view.editor.gesture_active());
+                assert!(!view.editor.document().unwrap().has_pending_edit());
+            });
+        })
+        .unwrap();
+    }
 }

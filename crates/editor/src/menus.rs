@@ -47,6 +47,7 @@ pub struct MenuState {
     pub modal: bool,
     pub recent_files: Vec<PathBuf>,
     pub language: Option<String>,
+    pub deformer_visibility: editor_core::DeformerVisibility,
 }
 
 pub fn path_title(path: &Path) -> String {
@@ -149,7 +150,14 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
         item(CommandId::ZoomOut),
         item(CommandId::ResetView),
         MenuItem::separator(),
+        item(CommandId::SelectTool),
         item(CommandId::Vertices),
+        item(CommandId::DeformerTool),
+        item(CommandId::GlueTool),
+        item(CommandId::HandTool),
+        MenuItem::separator(),
+        item(CommandId::ToggleAncestorDeformers),
+        item(CommandId::ToggleDeformers),
         item(CommandId::CancelGesture),
         MenuItem::separator(),
         MenuItem::action(t!("menu.toggle_theme"), ToggleTheme),
@@ -243,6 +251,7 @@ impl EditorView {
         let text = self.has_focused_input(window, cx);
         let settings = cx.global::<settings::Settings>();
         let state = MenuState {
+            deformer_visibility: self.editor.deformer_visibility(),
             commands: COMMANDS
                 .iter()
                 .map(|s| !modal && self.editor.command_available(self.editor.command(s.id)))
@@ -278,6 +287,13 @@ impl EditorView {
         let item = |id: CommandId| {
             MenuItem::action(t!(id.spec().label).into_owned(), RunCommand { id })
                 .disabled(modal || !self.editor.command_available(self.editor.command(id)))
+                .checked(match id {
+                    CommandId::ToggleAncestorDeformers => {
+                        self.editor.deformer_visibility().ancestors
+                    }
+                    CommandId::ToggleDeformers => self.editor.deformer_visibility().all,
+                    _ => false,
+                })
         };
         let edit = if text {
             vec![
@@ -379,11 +395,18 @@ impl EditorView {
         let previous = self.editor.active_id();
         match self.editor.dispatch(command) {
             Ok(CommandEffect::Done) => {
-                if id == CommandId::Vertices {
+                if matches!(
+                    id,
+                    CommandId::SelectTool
+                        | CommandId::Vertices
+                        | CommandId::DeformerTool
+                        | CommandId::GlueTool
+                        | CommandId::HandTool
+                        | CommandId::CancelGesture
+                ) {
                     if let Some(dock) = &self.dock {
                         self.editor.cancel_gesture();
-                        dock.canvas
-                            .update(cx, |canvas, cx| canvas.set_hand_tool(false, cx));
+                        dock.canvas.update(cx, |canvas, _| canvas.cancel_pointer());
                         window.focus(&dock.canvas.read(cx).focus_handle(cx), cx);
                     }
                 }

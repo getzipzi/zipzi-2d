@@ -68,12 +68,12 @@ impl From<Mesh> for Layer {
 enum Gesture {
     Rename,
     Opacity,
-    Vertices,
+    Controls,
 }
 
 struct PendingEdit {
     kind: Gesture,
-    original: Mesh,
+    original: crate::control_edit::EditOriginal,
     edit: EditSession<'static>,
     preview: PreviewState,
     changed: OnceLock<bool>,
@@ -89,6 +89,7 @@ pub struct Document {
     projection_revision: u64,
     preview_revision: u64,
     object_index: std::sync::Mutex<Option<(u64, Arc<crate::ObjectIndex>)>>,
+    canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
     pending: Option<PendingEdit>,
     textures: Arc<[SceneTexture]>,
     pristine_blank: bool,
@@ -153,6 +154,10 @@ impl Document {
             session,
             import_name: None,
             context: crate::PanelContext {
+                selections: selected
+                    .iter()
+                    .map(|id| crate::ObjectRef::new(crate::ObjectKind::Mesh, id))
+                    .collect(),
                 selection: selected
                     .as_ref()
                     .map(|id| crate::ObjectRef::new(crate::ObjectKind::Mesh, id)),
@@ -164,6 +169,7 @@ impl Document {
             projection_revision: 1,
             preview_revision: 0,
             object_index: std::sync::Mutex::new(Some((1, projection))),
+            canvas_topology: std::sync::Mutex::new(None),
             selected,
             pending: None,
             textures,
@@ -234,7 +240,7 @@ impl Document {
         }
     }
 
-    fn model(&self) -> &kasane_core::Document {
+    pub(crate) fn model(&self) -> &kasane_core::Document {
         self.pending
             .as_ref()
             .map_or_else(|| self.session.document(), |p| p.edit.candidate_document())
@@ -284,7 +290,7 @@ impl Document {
         let mut visuals = self.parameter_visuals_for_targets(
             &self
                 .context
-                .selection
+                .selections
                 .iter()
                 .map(|r| r.id.clone())
                 .collect::<Vec<_>>(),
@@ -616,6 +622,7 @@ impl Document {
         if changed {
             self.pristine_blank = false;
             self.projection_revision += 1;
+            self.canvas_topology.get_mut().unwrap().take();
         }
         let index = self.object_index();
         self.context.reconcile(&index);
@@ -642,18 +649,34 @@ impl Document {
         self.select_object(crate::ObjectRef::new(crate::ObjectKind::Mesh, id))
     }
     pub fn select_object(&mut self, object: crate::ObjectRef) -> Result<()> {
+        self.select_objects(vec![object])
+    }
+    pub fn select_objects(&mut self, objects: Vec<crate::ObjectRef>) -> Result<()> {
         let index = self.object_index();
-        ensure!(index.get(&object).is_some(), "Object no longer exists");
+        ensure!(
+            objects.iter().all(|r| index.get(r).is_some()),
+            "Object no longer exists"
+        );
         self.finish_edit()?;
-        self.context.inspected = Some(object.clone());
-        self.context.selection = Some(object.clone());
-        self.selected = (object.kind == crate::ObjectKind::Mesh).then(|| object.id.clone());
-        if self
-            .context
-            .active_binding
+        let mut unique = Vec::new();
+        for object in objects {
+            if !unique.contains(&object) {
+                unique.push(object);
+            }
+        }
+        let primary = unique.last().cloned();
+        self.context.selections = unique;
+        self.context.inspected = primary.clone();
+        self.context.selection = primary.clone();
+        self.selected = primary
             .as_ref()
-            .is_some_and(|r| index.binding(r).is_none_or(|b| b.target != object))
-        {
+            .filter(|r| r.kind == crate::ObjectKind::Mesh)
+            .map(|r| r.id.clone());
+        if self.context.active_binding.as_ref().is_some_and(|r| {
+            index
+                .binding(r)
+                .is_none_or(|b| Some(&b.target) != primary.as_ref())
+        }) {
             self.context.active_binding = None;
         }
         Ok(())
@@ -700,6 +723,7 @@ impl Document {
     pub fn navigate_back(&mut self) -> Result<()> {
         self.finish_edit()?;
         if let Some(n) = self.context.back.pop() {
+            self.context.selections = n.selections;
             self.context.selection = n.selection;
             self.context.parameter_focus = n.parameter_focus;
             self.context.active_binding = n.active_binding;
@@ -755,11 +779,11 @@ impl Document {
         let label = match kind {
             Gesture::Rename => "Rename layer",
             Gesture::Opacity => "Change opacity",
-            Gesture::Vertices => "Move vertices",
+            Gesture::Controls => "Edit canvas controls",
         };
         self.pending = Some(PendingEdit {
             kind,
-            original,
+            original: crate::control_edit::EditOriginal::Mesh(original),
             edit: self.session.begin_owned_edit(label, None)?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -767,13 +791,6 @@ impl Document {
         Ok(())
     }
 
-    pub fn selected_vertex_ids(&self) -> Vec<kasane_core::VertexId> {
-        self.selected
-            .as_deref()
-            .and_then(|id| self.mesh(id))
-            .map(|m| m.vertex_ids)
-            .unwrap_or_default()
-    }
     pub fn selected_vertex_positions(&self) -> Vec<(kasane_core::VertexId, crate::ModelPoint)> {
         self.selected
             .as_deref()
@@ -790,85 +807,69 @@ impl Document {
             })
             .unwrap_or_default()
     }
-    pub fn vertex_unavailable(&self, mesh: &Mesh) -> Option<String> {
-        let model = self.model();
-        if model.binding_for_mesh(&mesh.id).is_some() {
-            return Some("This mesh has parameter keyforms".into());
-        }
-        if !mesh.deformer_id.is_empty() {
-            return Some("This mesh depends on a deformer".into());
-        }
-        if !model.blend_bindings_for_target(&mesh.id).is_empty() {
-            return Some("This mesh has BlendShape dependencies".into());
-        }
-        if !model.glues_for_mesh(&mesh.id).is_empty() {
-            return Some("This mesh has Glue dependencies".into());
-        }
-        None
-    }
-    pub fn begin_vertices(&mut self) -> Result<()> {
-        let mesh = self
-            .selected
-            .as_deref()
-            .and_then(|id| self.mesh(id))
-            .ok_or_else(|| anyhow!("Select a mesh"))?;
-        ensure!(
-            self.vertex_unavailable(&mesh).is_none(),
-            "Mesh is not available for base vertex editing"
-        );
-        self.begin_gesture(Gesture::Vertices)
-    }
-    pub fn preview_vertices(
+    pub(crate) fn begin_control_edit(
         &mut self,
-        ids: &[kasane_core::VertexId],
-        positions: &[crate::ModelPoint],
+        targets: &[crate::control_edit::ControlEdit],
+    ) -> Result<()> {
+        self.finish_edit()?;
+        self.pending = Some(PendingEdit {
+            kind: Gesture::Controls,
+            original: crate::control_edit::EditOriginal::Batch(
+                targets.iter().map(|t| t.original.clone()).collect(),
+            ),
+            edit: self
+                .session
+                .begin_owned_edit("Edit canvas controls", None)?,
+            preview: PreviewState::default(),
+            changed: OnceLock::new(),
+        });
+        Ok(())
+    }
+    pub(crate) fn preview_control_edit(
+        &mut self,
+        targets: &[crate::control_edit::ControlEdit],
+        selected: &[crate::ComponentRef],
+        delta: crate::ModelPoint,
+        angle: Option<f32>,
     ) -> Result<()> {
         let pending = self
             .pending
             .as_mut()
-            .ok_or_else(|| anyhow!("No vertex gesture"))?;
-        ensure!(pending.kind == Gesture::Vertices, "Another edit is active");
+            .ok_or_else(|| anyhow!("No canvas edit"))?;
+        ensure!(pending.kind == Gesture::Controls, "Another edit is active");
         pending.changed.take();
         self.projection_revision += 1;
-        let positions = positions
-            .iter()
-            .map(|p| Vec2::new(p.x, p.y))
-            .collect::<Vec<_>>();
-        Ok(pending
-            .edit
-            .update_positions(&pending.original.id, ids, &positions)?)
+        for target in targets {
+            let ids = selected
+                .iter()
+                .filter(|c| c.object == target.object)
+                .map(|c| c.id)
+                .collect::<Vec<_>>();
+            target.preview(&mut pending.edit, &ids, delta, angle)?;
+        }
+        Ok(())
     }
-    pub fn geometry(&self, scene: &SceneSnapshot) -> std::sync::Arc<[crate::MeshGeometry]> {
-        scene
-            .frame
-            .drawables
-            .iter()
-            .filter_map(|drawable| {
-                let mesh = self.model().get_mesh(&drawable.id)?;
-                Some(crate::MeshGeometry {
-                    id: mesh.id.clone(),
-                    unavailable: self.vertex_unavailable(&mesh),
-                    vertices: mesh
-                        .vertex_ids
-                        .iter()
-                        .copied()
-                        .zip(drawable.positions.iter().map(|p| {
-                            crate::ViewportTransform::evaluated_to_source(scene.frame.canvas, *p)
-                        }))
-                        .collect(),
-                    triangles: mesh.triangles.clone(),
-                })
+    pub fn geometry(&self, scene: &SceneSnapshot) -> Arc<crate::CanvasScene> {
+        Arc::new(crate::CanvasScene::new(self, scene.clone()))
+    }
+
+    pub(crate) fn canvas_topology(&self) -> Arc<crate::canvas_topology::CanvasTopology> {
+        self.canvas_topology
+            .lock()
+            .unwrap()
+            .get_or_insert_with(|| {
+                Arc::new(crate::canvas_topology::CanvasTopology::new(self.model()))
             })
-            .collect::<Vec<_>>()
-            .into()
+            .clone()
     }
 
     pub fn preview_name(&mut self, name: &str) -> Result<()> {
         self.begin_gesture(Gesture::Rename)?;
+        self.canvas_topology.get_mut().unwrap().take();
         let pending = self.pending.as_mut().unwrap();
         pending.changed.take();
         self.projection_revision += 1;
-        let result = pending.edit.rename_mesh(&pending.original.id, name);
+        let result = pending.edit.rename_mesh(pending.original.id(), name);
         if result.is_err() {
             self.pending = None;
         }
@@ -884,7 +885,9 @@ impl Document {
         let pending = self.pending.as_mut().unwrap();
         pending.changed.take();
         self.projection_revision += 1;
-        let result = pending.edit.set_mesh_opacity(&pending.original.id, opacity);
+        let result = pending
+            .edit
+            .set_mesh_opacity(pending.original.id(), opacity);
         if result.is_err() {
             self.pending = None;
         }
@@ -894,11 +897,9 @@ impl Document {
     fn pending_changed(&self) -> bool {
         self.pending.as_ref().is_some_and(|pending| {
             *pending.changed.get_or_init(|| {
-                pending
-                    .edit
-                    .candidate_document()
-                    .get_mesh(&pending.original.id)
-                    != Some(&pending.original)
+                !pending
+                    .original
+                    .unchanged(pending.edit.candidate_document())
             })
         })
     }
@@ -907,6 +908,9 @@ impl Document {
         let changed = self.pending_changed();
         if let Some(pending) = self.pending.take() {
             self.projection_revision += 1;
+            if pending.kind == Gesture::Rename {
+                self.canvas_topology.get_mut().unwrap().take();
+            }
             if changed {
                 pending.edit.commit_to(&mut self.session)?;
                 self.session.drain_events();
@@ -917,8 +921,11 @@ impl Document {
     }
 
     pub fn cancel_edit(&mut self) {
-        if self.pending.take().is_some() {
+        if let Some(pending) = self.pending.take() {
             self.projection_revision += 1;
+            if pending.kind == Gesture::Rename {
+                self.canvas_topology.get_mut().unwrap().take();
+            }
         }
     }
 
@@ -966,6 +973,7 @@ impl Document {
 
     fn after_history(&mut self) {
         self.projection_revision += 1;
+        self.canvas_topology.get_mut().unwrap().take();
         self.session.drain_events();
         let index = self.object_index();
         self.context.reconcile(&index);

@@ -40,7 +40,7 @@ fn geometry() -> OverlaySnapshot {
                 hovered: true,
             },
         ],
-        unavailable: None,
+        ..Default::default()
     }
 }
 fn color(value: u32) -> [f32; 4] {

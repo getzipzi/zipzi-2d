@@ -8,6 +8,7 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
         height: 512.,
         scale_factor: 2.,
     });
+    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     present(&mut editor)?;
     Ok((editor, dir))
 }
@@ -18,28 +19,6 @@ fn present(editor: &mut Editor) -> anyhow::Result<()> {
 }
 fn down(editor: &mut Editor, p: CanvasPoint, shift: bool) -> anyhow::Result<()> {
     editor.canvas_input(CanvasInput::Down { point: p, shift })?;
-    Ok(())
-}
-#[test]
-fn unavailable_vertex_mesh_ignores_clicks_away_from_vertices() -> anyhow::Result<()> {
-    let (doc, _dir) = support::sample_document_with_binding(true)?;
-    let mut editor = Editor::from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
-        width: 512.,
-        height: 512.,
-        scale_factor: 2.,
-    });
-    present(&mut editor)?;
-    let vertex = editor.overlay().vertices[0].position;
-    down(&mut editor, CanvasPoint { x: 0., y: 0. }, false)?;
-    let error = editor
-        .canvas_input(CanvasInput::Down {
-            point: vertex,
-            shift: false,
-        })
-        .unwrap_err();
-    assert!(error.downcast_ref::<VertexEditUnavailable>().is_some());
-    assert!(error.to_string().contains("parameter keyforms"));
     Ok(())
 }
 fn up(editor: &mut Editor, p: CanvasPoint) -> anyhow::Result<()> {
@@ -273,11 +252,12 @@ fn completed_views_progress_monotonically_with_matching_geometry() -> anyhow::Re
 fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
     let mut frame = editor.preview()?.canvas.unwrap();
-    let mut geometry = frame.geometry.to_vec();
-    let p = geometry[0].vertices[0].1;
-    geometry[0].vertices[1].1 = p;
-    geometry[0].vertices.reverse();
-    frame.geometry = geometry.into();
+    let mut geometry = (*frame.geometry).clone();
+    let p = geometry.meshes[0].vertices[0].1;
+    let meshes = std::sync::Arc::make_mut(&mut geometry.meshes);
+    meshes[0].vertices[1].1 = p;
+    meshes[0].vertices.reverse();
+    frame.geometry = std::sync::Arc::new(geometry);
     let hit = frame.transform.to_canvas(p);
     assert!(editor.present_frame(frame));
     down(
@@ -307,6 +287,13 @@ fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<(
             y: hit.y,
         },
         false,
+    )?;
+    up(
+        &mut editor,
+        CanvasPoint {
+            x: hit.x + 9.,
+            y: hit.y,
+        },
     )?;
     assert_eq!(
         editor
@@ -355,26 +342,6 @@ fn invalid_drag_rolls_back_candidate_without_losing_redo() -> anyhow::Result<()>
         assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
         present(&mut editor)?;
     }
-    Ok(())
-}
-
-#[test]
-fn bound_mesh_stays_visible_but_cannot_start_base_vertex_edit() -> anyhow::Result<()> {
-    let (document, _dir) = support::sample_document_with_binding(true)?;
-    let mut editor = Editor::from_document(document);
-    editor.set_canvas_metrics(CanvasMetrics {
-        width: 512.,
-        height: 512.,
-        scale_factor: 1.,
-    });
-    present(&mut editor)?;
-    let overlay = editor.overlay();
-    assert!(!overlay.vertices.is_empty());
-    assert!(overlay.unavailable.unwrap().contains("parameter"));
-    assert!(down(&mut editor, overlay.vertices[0].position, false).is_err());
-    assert!(!editor.gesture_active());
-    assert!(!editor.document().unwrap().has_pending_edit());
-    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
 
@@ -474,12 +441,12 @@ fn delayed_views_cannot_cross_edits_resizes_or_activation_epochs() -> anyhow::Re
 }
 
 #[test]
-fn opacity_preview_reuses_geometry_but_preserves_evaluation_and_undo() -> anyhow::Result<()> {
+fn opacity_preview_refreshes_picking_and_preserves_undo() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
     let original = editor.preview()?;
     editor.execute(EditorCommand::PreviewOpacity(0.))?;
     let hidden = editor.preview()?;
-    assert!(std::sync::Arc::ptr_eq(
+    assert!(!std::sync::Arc::ptr_eq(
         &original.canvas.unwrap().geometry,
         &hidden.canvas.unwrap().geometry
     ));

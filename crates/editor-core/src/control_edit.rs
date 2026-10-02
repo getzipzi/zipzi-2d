@@ -1,0 +1,435 @@
+//! Fixed authoring target for one pointer gesture. Selection and evaluated pixels
+//! never become implicit write destinations during a drag.
+use crate::{
+    CanvasScene, ControlGeometry, ControlKind, Document, ModelPoint, ObjectKind, ObjectRef,
+};
+use anyhow::{Result, bail, ensure};
+use kasane_core::{Mesh, MeshBinding, SceneBinding, SceneTrack, Transform, Vec2};
+
+#[derive(Clone)]
+pub(crate) enum EditOriginal {
+    Mesh(Mesh),
+    Transform(Transform),
+    MeshBinding(MeshBinding),
+    SceneBinding(SceneBinding),
+    Batch(Vec<EditOriginal>),
+}
+impl EditOriginal {
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Mesh(m) => &m.id,
+            Self::Transform(t) => &t.id,
+            Self::MeshBinding(b) => &b.id,
+            Self::SceneBinding(b) => &b.id,
+            Self::Batch(v) => v[0].id(),
+        }
+    }
+    pub fn unchanged(&self, doc: &kasane_core::Document) -> bool {
+        match self {
+            Self::Mesh(v) => doc.get_mesh(&v.id) == Some(v),
+            Self::Transform(v) => doc.get_transform(&v.id) == Some(v),
+            Self::MeshBinding(v) => doc.get_binding(&v.id) == Some(v),
+            Self::SceneBinding(v) => doc.get_scene_binding(&v.id) == Some(v),
+            Self::Batch(v) => v.iter().all(|b| b.unchanged(doc)),
+        }
+    }
+}
+#[derive(Clone)]
+pub(crate) struct ControlEdit {
+    pub object: ObjectRef,
+    pub original: EditOriginal,
+    pub ids: Vec<u32>,
+    pub positions: Vec<Vec2>,
+    pub slot: Option<usize>,
+    pub parent: Option<ControlGeometry>,
+    pub parent_shape: Option<(usize, usize, bool)>,
+    pub rotation: bool,
+    canvas: kasane_core::Canvas,
+}
+impl ControlEdit {
+    /// Read-only capability query for the overlay. Never clones authoring
+    /// meshes or entire keyform tables on pointer/hover redraws.
+    pub fn describe(
+        document: &Document,
+        scene: &CanvasScene,
+        object: &ObjectRef,
+    ) -> Result<String> {
+        let doc = document.model();
+        ensure!(
+            doc.blend_bindings_for_target(&object.id).is_empty(),
+            "BlendShape editing requires an explicit blend target"
+        );
+        let describe_binding =
+            |axes: &[kasane_core::BindingAxis], matches: bool| -> Result<String> {
+                ensure!(axes.len() <= 2, "This legacy binding is read-only");
+                ensure!(
+                    matches,
+                    "Select a stored keyform before editing this object"
+                );
+                Ok(format!(
+                    "Keyform · {}",
+                    axes.iter()
+                        .map(|axis| {
+                            let value = scene
+                                .source
+                                .frame
+                                .parameters
+                                .iter()
+                                .find(|p| p.id == axis.parameter_id)
+                                .map_or(0., |p| p.value);
+                            let name = doc
+                                .get_parameter(&axis.parameter_id)
+                                .map_or(axis.parameter_id.as_str(), |p| p.name.as_str());
+                            format!("{name} = {value}")
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))
+            };
+        let at_keys = |axes: &[kasane_core::BindingAxis], keys: &[f32]| {
+            axes.len() == keys.len()
+                && axes.iter().zip(keys).all(|(axis, key)| {
+                    scene
+                        .source
+                        .frame
+                        .parameters
+                        .iter()
+                        .find(|p| p.id == axis.parameter_id)
+                        .is_some_and(|p| (p.value - key).abs() < 1e-6)
+                })
+        };
+        match object.kind {
+            ObjectKind::Mesh => {
+                ensure!(doc.get_mesh(&object.id).is_some(), "Mesh no longer exists");
+                ensure!(
+                    doc.glues_for_mesh(&object.id).is_empty(),
+                    "Meshes connected by Glue are read-only in the vertex tool"
+                );
+                if let Some(b) = doc.binding_for_mesh(&object.id) {
+                    return describe_binding(
+                        &b.axes,
+                        b.keyforms.iter().any(|f| at_keys(&b.axes, &f.keys)),
+                    );
+                }
+            }
+            ObjectKind::Deformer => {
+                ensure!(
+                    doc.get_transform(&object.id).is_some(),
+                    "Deformer no longer exists"
+                );
+                if let Some(b) = doc.binding_for_scene(&object.id) {
+                    return describe_binding(
+                        &b.axes,
+                        b.track.samples().any(|f| at_keys(&b.axes, f.keys)),
+                    );
+                }
+            }
+            _ => bail!("This canvas object has no editable control points"),
+        }
+        Ok("Base shape".into())
+    }
+    pub fn prepare(document: &Document, scene: &CanvasScene, object: &ObjectRef) -> Result<Self> {
+        let doc = document.model();
+        ensure!(
+            doc.blend_bindings_for_target(&object.id).is_empty(),
+            "BlendShape editing requires an explicit blend target"
+        );
+        let slot_for =
+            |axes: &[kasane_core::BindingAxis], points: Vec<Vec<f32>>| -> Result<usize> {
+                ensure!(axes.len() <= 2, "This legacy binding is read-only");
+                points
+                    .iter()
+                    .position(|keys| {
+                        keys.len() == axes.len()
+                            && axes.iter().zip(keys).all(|(a, k)| {
+                                scene
+                                    .source
+                                    .frame
+                                    .parameters
+                                    .iter()
+                                    .find(|p| p.id == a.parameter_id)
+                                    .is_some_and(|p| (p.value - k).abs() < 1e-6)
+                            })
+                    })
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Select a stored keyform before editing this object")
+                    })
+            };
+        let (original, ids, positions, slot, parent_id, rotation) = match object.kind {
+            ObjectKind::Mesh => {
+                let mesh = doc
+                    .get_mesh(&object.id)
+                    .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
+                ensure!(
+                    doc.glues_for_mesh(&object.id).is_empty(),
+                    "Meshes connected by Glue are read-only in the vertex tool"
+                );
+                if let Some(binding) = doc.binding_for_mesh(&object.id) {
+                    let slot = slot_for(
+                        &binding.axes,
+                        binding.keyforms.iter().map(|f| f.keys.clone()).collect(),
+                    )?;
+                    (
+                        EditOriginal::MeshBinding(binding.clone()),
+                        mesh.vertex_ids.clone(),
+                        binding.keyforms[slot].positions.clone(),
+                        Some(slot),
+                        mesh.deformer_id.clone(),
+                        false,
+                    )
+                } else {
+                    (
+                        EditOriginal::Mesh(mesh.clone()),
+                        mesh.vertex_ids.clone(),
+                        mesh.base_positions.clone(),
+                        None,
+                        mesh.deformer_id.clone(),
+                        false,
+                    )
+                }
+            }
+            ObjectKind::Deformer => {
+                let t = doc
+                    .get_transform(&object.id)
+                    .ok_or_else(|| anyhow::anyhow!("Deformer no longer exists"))?;
+                let (original, slot, positions, rotation) =
+                    if let Some(binding) = doc.binding_for_scene(&object.id) {
+                        let slot = slot_for(
+                            &binding.axes,
+                            binding.track.samples().map(|s| s.keys.to_vec()).collect(),
+                        )?;
+                        let sample = binding.track.sample(slot);
+                        let rotation = t.rotation().is_some();
+                        let positions = if rotation {
+                            vec![Vec2::new(
+                                sample.rotation.origin.x as f32,
+                                sample.rotation.origin.y as f32,
+                            )]
+                        } else {
+                            sample.positions.to_vec()
+                        };
+                        (
+                            EditOriginal::SceneBinding(binding.clone()),
+                            Some(slot),
+                            positions,
+                            rotation,
+                        )
+                    } else if let Some(w) = t.warp() {
+                        (
+                            EditOriginal::Transform(t.clone()),
+                            None,
+                            w.points.clone(),
+                            false,
+                        )
+                    } else {
+                        let p = t.rotation().unwrap().pose.origin;
+                        (
+                            EditOriginal::Transform(t.clone()),
+                            None,
+                            vec![Vec2::new(p.x as f32, p.y as f32)],
+                            true,
+                        )
+                    };
+                let ids = (0..positions.len() as u32).collect();
+                (
+                    original,
+                    ids,
+                    positions,
+                    slot,
+                    t.parent().to_owned(),
+                    rotation,
+                )
+            }
+            _ => bail!("This canvas object has no editable control points"),
+        };
+        let parent = if parent_id.is_empty() {
+            None
+        } else {
+            Some(
+                scene
+                    .controls
+                    .iter()
+                    .find(|c| c.object.id == parent_id && c.enabled)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("Parent deformer is unavailable"))?,
+            )
+        };
+        let parent_shape = doc
+            .get_transform(&parent_id)
+            .and_then(|t| t.warp())
+            .map(|w| (w.rows as usize, w.columns as usize, w.quad));
+        Ok(Self {
+            object: object.clone(),
+            original,
+            ids,
+            positions,
+            slot,
+            parent,
+            parent_shape,
+            rotation,
+            canvas: scene.source.frame.canvas,
+        })
+    }
+    pub fn to_model(&self, p: Vec2) -> ModelPoint {
+        let Some(parent) = &self.parent else {
+            return ModelPoint {
+                x: p.x,
+                y: if self.canvas.flag & 1 == 0 {
+                    2. * self.canvas.origin.y - p.y
+                } else {
+                    p.y
+                },
+            };
+        };
+        if parent.kind == ControlKind::Rotation {
+            let [o, x, y, ..] = parent.points.as_slice() else {
+                return ModelPoint {
+                    x: f32::NAN,
+                    y: f32::NAN,
+                };
+            };
+            ModelPoint {
+                x: o.x + p.x * (x.x - o.x) + p.y * (y.x - o.x),
+                y: o.y + p.x * (x.y - o.y) + p.y * (y.y - o.y),
+            }
+        } else {
+            let (rows, columns, quad) = self.parent_shape.unwrap();
+            let points: Vec<_> = parent.points.iter().flat_map(|p| [p.x, p.y]).collect();
+            let mut p = [p];
+            let input = [p[0].x, p[0].y];
+            let mut output = [0., 0.];
+            kasane_core::deformers::warp_points(
+                rows as i32,
+                columns as i32,
+                quad,
+                &points,
+                &input,
+                &mut output,
+                1,
+            );
+            p[0] = Vec2::new(output[0], output[1]);
+            ModelPoint {
+                x: p[0].x,
+                y: p[0].y,
+            }
+        }
+    }
+    fn from_model(&self, desired: ModelPoint, initial: Vec2) -> Result<Vec2> {
+        if self.parent.is_none() {
+            // Canvas Y reversal is its own inverse for root authored positions.
+            let source = self.to_model(Vec2::new(desired.x, desired.y));
+            return Ok(Vec2::new(source.x, source.y));
+        }
+        let mut p = initial;
+        for _ in 0..24 {
+            let a = self.to_model(p);
+            let (dx, dy) = (desired.x - a.x, desired.y - a.y);
+            if dx.hypot(dy) < 0.001 {
+                return Ok(p);
+            }
+            let h = 0.001;
+            let x = self.to_model(Vec2::new(p.x + h, p.y));
+            let y = self.to_model(Vec2::new(p.x, p.y + h));
+            let (xx, xy, yx, yy) = (
+                (x.x - a.x) / h,
+                (x.y - a.y) / h,
+                (y.x - a.x) / h,
+                (y.y - a.y) / h,
+            );
+            let det = xx * yy - xy * yx;
+            ensure!(
+                det.is_finite() && det.abs() > 1e-8,
+                "The parent deformation is singular at this point"
+            );
+            p.x += (dx * yy - dy * yx) / det;
+            p.y += (dy * xx - dx * xy) / det;
+            ensure!(p.x.is_finite() && p.y.is_finite(), "Invalid local position");
+        }
+        bail!("Cannot map this drag through the parent deformation")
+    }
+    pub fn preview(
+        &self,
+        edit: &mut kasane_sdk::EditSession<'_>,
+        selected: &[u32],
+        delta: ModelPoint,
+        angle: Option<f32>,
+    ) -> Result<()> {
+        let mut positions = self.positions.clone();
+        for (id, p) in self.ids.iter().zip(&mut positions) {
+            if selected.contains(id) {
+                let before = self.to_model(*p);
+                *p = self.from_model(
+                    ModelPoint {
+                        x: before.x + delta.x,
+                        y: before.y + delta.y,
+                    },
+                    *p,
+                )?;
+            }
+        }
+        let update_rotation = |pose: &mut kasane_core::RotationPose| {
+            pose.origin.x += (positions[0].x - self.positions[0].x) as f64;
+            pose.origin.y += (positions[0].y - self.positions[0].y) as f64;
+            if let Some(angle) = angle {
+                pose.angle += angle;
+            }
+        };
+        match &self.original {
+            EditOriginal::Batch(_) => unreachable!("a control target has a single baseline"),
+            EditOriginal::Mesh(m) => {
+                edit.update_positions(&m.id, &self.ids, &positions)?;
+            }
+            EditOriginal::MeshBinding(b) => {
+                let mut form = b.keyforms[self.slot.unwrap()].clone();
+                form.positions = positions;
+                edit.set_mesh_keyform(&b.id, form)?;
+            }
+            EditOriginal::Transform(t) => {
+                if self.rotation {
+                    let mut r = t.rotation().unwrap().clone();
+                    update_rotation(&mut r.pose);
+                    edit.update_rotation(&t.id, r)?;
+                } else {
+                    edit.update_warp_points(&t.id, positions)?;
+                }
+            }
+            EditOriginal::SceneBinding(b) => {
+                let form = match &b.track {
+                    SceneTrack::Warp { keyforms, .. } => {
+                        let mut f = keyforms[self.slot.unwrap()].clone();
+                        f.positions = positions;
+                        kasane_core::SceneKeyform::Warp(f)
+                    }
+                    SceneTrack::Rotation { keyforms, .. } => {
+                        let mut f = keyforms[self.slot.unwrap()].clone();
+                        update_rotation(&mut f.rotation);
+                        kasane_core::SceneKeyform::Rotation(f)
+                    }
+                    _ => unreachable!(),
+                };
+                edit.set_scene_keyform(&b.id, form)?;
+            }
+        }
+        Ok(())
+    }
+    pub fn rotation_delta(&self, start: ModelPoint, end: ModelPoint) -> Result<f32> {
+        let origin = self.to_model(self.positions[0]);
+        let a = (start.y - origin.y).atan2(start.x - origin.x);
+        let b = (end.y - origin.y).atan2(end.x - origin.x);
+        let mut delta = (b - a).to_degrees();
+        if delta > 180. {
+            delta -= 360.
+        }
+        if delta < -180. {
+            delta += 360.
+        }
+        // The evaluated rotation adds the parent angle; changing its authored
+        // angle changes the displayed angle by the same amount, even under warp.
+        // Its screen-space sign also includes the final canvas Y reversal.
+        Ok(if self.canvas.flag & 1 == 0 {
+            delta
+        } else {
+            -delta
+        })
+    }
+}

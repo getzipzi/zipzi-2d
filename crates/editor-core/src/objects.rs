@@ -205,6 +205,8 @@ impl ParameterBindings {
 }
 #[derive(Clone, Debug, Default)]
 pub struct PanelContext {
+    /// Ordered object selection; `selection` is the primary (last) object.
+    pub selections: Vec<ObjectRef>,
     pub selection: Option<ObjectRef>,
     pub parameter_focus: Option<ObjectRef>,
     pub active_binding: Option<ObjectRef>,
@@ -213,6 +215,7 @@ pub struct PanelContext {
 }
 #[derive(Clone, Debug)]
 pub struct NavigationContext {
+    pub selections: Vec<ObjectRef>,
     pub selection: Option<ObjectRef>,
     pub parameter_focus: Option<ObjectRef>,
     pub active_binding: Option<ObjectRef>,
@@ -221,6 +224,7 @@ pub struct NavigationContext {
 impl PanelContext {
     pub fn remember(&mut self) {
         self.back.push(NavigationContext {
+            selections: self.selections.clone(),
             selection: self.selection.clone(),
             parameter_focus: self.parameter_focus.clone(),
             active_binding: self.active_binding.clone(),
@@ -231,6 +235,7 @@ impl PanelContext {
         }
     }
     pub fn reconcile(&mut self, index: &ObjectIndex) {
+        self.selections.retain(|r| index.get(r).is_some());
         for r in [
             &mut self.selection,
             &mut self.parameter_focus,
@@ -239,6 +244,9 @@ impl PanelContext {
             if r.as_ref().is_some_and(|r| index.get(r).is_none()) {
                 *r = None;
             }
+        }
+        if self.selection.is_none() {
+            self.selection = self.selections.last().cloned();
         }
         if self.active_binding.as_ref().is_some_and(|r| {
             index

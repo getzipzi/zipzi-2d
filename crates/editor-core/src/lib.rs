@@ -30,3 +30,9 @@ mod tools;
 mod viewport;
 pub use tools::*;
 pub use viewport::*;
+
+mod picking;
+pub use picking::*;
+mod canvas_topology;
+pub use canvas_topology::{CanvasObject, CanvasObjectIndex};
+mod control_edit;

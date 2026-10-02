@@ -172,6 +172,11 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             .editor
             .document()
             .and_then(|d| d.context().selection.clone());
+        let selections = state
+            .editor
+            .document()
+            .map(|d| d.context().selections.clone())
+            .unwrap_or_default();
         let selection_changed = self.last_selection != selected || document_changed;
         if selection_changed {
             fn reveal(
@@ -249,7 +254,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                         let node = row.node;
                         let is_mesh = node.kind == TreeNodeKind::Mesh;
                         let reference = node.reference();
-                        let is_selected = reference.is_some() && selected.as_ref() == reference.as_ref();
+                        let is_selected = reference.as_ref().is_some_and(|r| selections.contains(r));
                         let key = node_key(&node);
                         let is_collapsed = this.collapsed.contains(&key);
                         let id = node.id.clone();
@@ -293,12 +298,17 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             })
                             .hover(|style| style.bg(theme.muted.opacity(0.5)))
                             .cursor_pointer()
-                            .on_click(cx.listener(move |_, _, window, cx| {
+                            .on_click(cx.listener(move |_, event: &ClickEvent, window, cx| {
                                 if disabled { return; }
                                 let (Some(owner), Some(target), Some(reference)) = (owner.upgrade(), target, reference.clone()) else { return; };
                                 owner.update(cx, |owner, cx| {
                                     if owner.modal || window.has_active_dialog(cx) || owner.editor.is_busy() || owner.editor.active_id() != Some(target) { return; }
-                                    let result = owner.editor.execute_for(target, EditorCommand::SelectObject(reference));
+                                    let command = if event.modifiers().shift {
+                                        let mut objects = owner.editor.document().map(|d|d.context().selections.clone()).unwrap_or_default();
+                                        if objects.contains(&reference) {objects.retain(|r|r!=&reference);} else {objects.push(reference);}
+                                        EditorCommand::SelectObjects(objects)
+                                    } else {EditorCommand::SelectObject(reference)};
+                                    let result = owner.editor.execute_for(target, command);
                                     owner.complete_edit(result, cx);
                                 });
                             }))

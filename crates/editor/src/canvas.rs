@@ -1,11 +1,11 @@
 //! Measured canvas, pointer ownership and overlay painting. Tool semantics live in core.
 use super::*;
-use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint, DocumentId, VertexEditUnavailable};
+use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint, CommandId, EditorCommand, ToolId};
 use gpui_kit::component::{
     ActiveTheme, WindowExt,
     dock::{BasePanel, Panel, PanelEvent},
+    menu::{ContextMenuExt, PopupMenuItem},
 };
-use std::time::Duration;
 
 pub struct CanvasView {
     pub(crate) owner: WeakEntity<EditorView>,
@@ -15,9 +15,6 @@ pub struct CanvasView {
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
     space_held: bool,
-    hand_tool: bool,
-    vertex_notice: Option<(DocumentId, String, String)>,
-    vertex_notice_timer: Option<Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -58,6 +55,7 @@ impl CanvasOverlay {
 struct PanGesture {
     position: Point<Pixels>,
     button: MouseButton,
+    document: Option<editor_core::DocumentId>,
 }
 
 impl CanvasView {
@@ -100,9 +98,6 @@ impl CanvasView {
                 bounds: Bounds::default(),
                 pan: None,
                 space_held: false,
-                hand_tool: false,
-                vertex_notice: None,
-                vertex_notice_timer: None,
                 _subscriptions: subscriptions,
             }
         })
@@ -111,8 +106,16 @@ impl CanvasView {
         (self.bounds.size.width > px(0.) && self.bounds.size.height > px(0.))
             .then(|| self.bounds.center())
     }
-    pub fn hand_tool(&self) -> bool {
-        self.hand_tool
+    pub fn active_tool(&self, cx: &App) -> ToolId {
+        self.owner
+            .upgrade()
+            .map_or(ToolId::Select, |owner| owner.read(cx).editor.active_tool())
+    }
+    pub fn hand_tool(&self, cx: &App) -> bool {
+        self.active_tool(cx) == ToolId::Hand
+    }
+    pub fn cancel_pointer(&mut self) {
+        self.pan = None;
     }
     pub(crate) fn set_temporary_hand(
         &mut self,
@@ -125,11 +128,6 @@ impl CanvasView {
         }
         self.space_held = held;
         window.suppress_key_repeats("space", held);
-        cx.notify();
-    }
-    pub fn set_hand_tool(&mut self, enabled: bool, cx: &mut Context<Self>) {
-        self.hand_tool = enabled;
-        self.pan = None;
         cx.notify();
     }
     fn cancel(&mut self, cx: &mut Context<Self>) {
@@ -145,26 +143,11 @@ impl CanvasView {
             y: (p.y - self.bounds.origin.y).as_f32(),
         }
     }
-    fn show_vertex_notice(&mut self, notice: (DocumentId, String, String), cx: &mut Context<Self>) {
-        if self.vertex_notice.as_ref() == Some(&notice) {
-            return;
-        }
-        self.vertex_notice = Some(notice);
-        self.vertex_notice_timer = Some(cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(Duration::from_secs(3)).await;
-            let _ = this.update(cx, |this, cx| {
-                this.vertex_notice = None;
-                cx.notify();
-            });
-        }));
-        cx.notify();
-    }
     fn input(&mut self, input: CanvasInput, window: &mut Window, cx: &mut Context<Self>) {
         if window.has_active_dialog(cx) {
             self.cancel(cx);
             return;
         }
-        let mut vertex_notice = None;
         let _ = self.owner.update(cx, |owner, cx| {
             if owner.modal || owner.editor.is_busy() {
                 return;
@@ -179,9 +162,12 @@ impl CanvasView {
                 owner.redraw(cx);
                 return;
             }
-            let moving = matches!(input, CanvasInput::Move { .. });
+            let moving = matches!(input, CanvasInput::Move { .. } | CanvasInput::Leave);
             match owner.editor.canvas_input(input) {
                 Ok(changed) => {
+                    if matches!(input, CanvasInput::Down { .. }) {
+                        owner.edit_error = None;
+                    }
                     if changed {
                         if moving {
                             owner.redraw_canvas(cx);
@@ -197,30 +183,31 @@ impl CanvasView {
                     }
                 }
                 Err(e) => {
-                    if let Some(reason) = e.downcast_ref::<VertexEditUnavailable>() {
-                        vertex_notice = owner.editor.active_id().and_then(|id| {
-                            owner
-                                .editor
-                                .document()
-                                .and_then(|document| document.selected_id())
-                                .map(|mesh_id| (id, mesh_id.to_owned(), reason.0.clone()))
-                        });
-                    } else {
-                        owner.edit_error = Some(e.to_string());
-                    }
+                    owner.edit_error = Some(e.to_string());
                     owner.redraw(cx);
                 }
             }
         });
-        if let Some(notice) = vertex_notice {
-            self.show_vertex_notice(notice, cx);
-        }
     }
     fn moved(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {
         if benchmark::ignore_native_mouse_move() {
             return;
         }
-        if let Some(PanGesture { position, button }) = self.pan {
+        if let Some(PanGesture {
+            position,
+            button,
+            document,
+        }) = self.pan
+        {
+            if self
+                .owner
+                .upgrade()
+                .is_none_or(|o| o.read(cx).editor.active_id() != document)
+            {
+                self.pan = None;
+                cx.notify();
+                return;
+            }
             if event.pressed_button != Some(button) {
                 self.pan = None;
                 cx.notify();
@@ -236,6 +223,7 @@ impl CanvasView {
             self.pan = Some(PanGesture {
                 position: event.position,
                 button,
+                document,
             });
             let _ = self.owner.update(cx, |owner, cx| {
                 if !owner.modal {
@@ -308,18 +296,17 @@ impl Render for CanvasView {
         if benchmark::hide_mesh_edges() {
             overlay.lines.clear();
         }
-        let vertex_notice = self
-            .vertex_notice
-            .as_ref()
-            .and_then(|(id, mesh_id, reason)| {
-                (Some(*id) == state.editor.active_id()
-                    && state
-                        .editor
-                        .document()
-                        .and_then(|document| document.selected_id())
-                        == Some(mesh_id.as_str()))
-                .then(|| reason.clone())
-            });
+        let vertex_notice = overlay.unavailable.clone();
+        let target_label = overlay.target_label.as_ref().map(|label| {
+            if label == "Base shape" {
+                t!("editor.edit_base").into_owned()
+            } else if let Some(keys) = label.strip_prefix("Keyform · ") {
+                format!("{} · {}", t!("editor.edit_keyform"), keys)
+            } else {
+                label.clone()
+            }
+        });
+        let hand_tool = state.editor.active_tool() == ToolId::Hand;
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
         let error = state.render_error.clone();
@@ -331,6 +318,8 @@ impl Render for CanvasView {
         let measure = view.clone();
         let mouse = view.clone();
         let overlay_renderer = self.overlay_renderer.clone();
+        let menu_owner = owner.downgrade();
+        let menu_canvas = cx.weak_entity();
         let body = div()
             .id("canvas-body")
             .test_support()
@@ -342,18 +331,30 @@ impl Render for CanvasView {
             .bg(cx.theme().muted)
             .when(!modal && self.pan.is_some(), |e| e.cursor_grabbing())
             .when(
-                !modal && self.pan.is_none() && (self.space_held || self.hand_tool),
+                !modal && self.pan.is_none() && (self.space_held || hand_tool),
                 |e| e.cursor_grab(),
             )
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, event: &MouseDownEvent, window, cx| {
+                    if window.has_active_dialog(cx)
+                        || this
+                            .owner
+                            .upgrade()
+                            .is_none_or(|o| o.read(cx).modal || o.read(cx).editor.is_busy())
+                    {
+                        return;
+                    }
                     window.focus(&this.focus, cx);
-                    if this.space_held || this.hand_tool {
+                    if this.space_held || this.hand_tool(cx) {
                         this.cancel(cx);
                         this.pan = Some(PanGesture {
                             position: event.position,
                             button: MouseButton::Left,
+                            document: this
+                                .owner
+                                .upgrade()
+                                .and_then(|o| o.read(cx).editor.active_id()),
                         });
                         cx.notify();
                         return;
@@ -371,11 +372,23 @@ impl Render for CanvasView {
             .on_mouse_down(
                 MouseButton::Middle,
                 cx.listener(|this, event: &MouseDownEvent, window, cx| {
+                    if window.has_active_dialog(cx)
+                        || this
+                            .owner
+                            .upgrade()
+                            .is_none_or(|o| o.read(cx).modal || o.read(cx).editor.is_busy())
+                    {
+                        return;
+                    }
                     window.focus(&this.focus, cx);
                     this.cancel(cx);
                     this.pan = Some(PanGesture {
                         position: event.position,
                         button: MouseButton::Middle,
+                        document: this
+                            .owner
+                            .upgrade()
+                            .and_then(|o| o.read(cx).editor.active_id()),
                     });
                     cx.notify();
                 }),
@@ -392,7 +405,10 @@ impl Render for CanvasView {
                     this.pointer_up(event, window, cx);
                 }),
             )
-            .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, _, cx| {
+            .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, window, cx| {
+                if window.has_active_dialog(cx) {
+                    return;
+                }
                 let delta_y = match event.delta {
                     ScrollDelta::Pixels(p) => p.y.as_f32(),
                     ScrollDelta::Lines(p) => p.y * 16.0,
@@ -411,6 +427,11 @@ impl Render for CanvasView {
                     owner.editor.zoom_at(step, Some(point));
                     owner.redraw_canvas(cx);
                 });
+            }))
+            .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
+                if !hovered && this.pan.is_none() {
+                    this.input(CanvasInput::Leave, window, cx);
+                }
             }))
             .on_mouse_move(
                 cx.listener(move |this, event: &MouseMoveEvent, window, cx| {
@@ -551,6 +572,30 @@ impl Render for CanvasView {
                                 ));
                             }
                         }
+                        mesh_edges::paint_edges(&overlay.accent_lines, bounds.origin, |path| {
+                            window.paint_path(path, primary)
+                        });
+                        mesh_edges::paint_edges(&overlay.hover_lines, bounds.origin, |path| {
+                            window.paint_path(path, foreground)
+                        });
+                        if let Some((a, b)) = overlay.marquee {
+                            let rect = Bounds::new(
+                                bounds.origin + point(px(a.x.min(b.x)), px(a.y.min(b.y))),
+                                size(px((b.x - a.x).abs()), px((b.y - a.y).abs())),
+                            );
+                            window.paint_quad(fill(rect, primary.opacity(0.12)));
+                            let p = |x, y| CanvasPoint { x, y };
+                            mesh_edges::paint_edges(
+                                &[
+                                    (a, p(b.x, a.y)),
+                                    (p(b.x, a.y), b),
+                                    (b, p(a.x, b.y)),
+                                    (p(a.x, b.y), a),
+                                ],
+                                bounds.origin,
+                                |path| window.paint_path(path, primary),
+                            );
+                        }
                         if capture {
                             let mouse = mouse.clone();
                             window.on_mouse_event(
@@ -598,7 +643,95 @@ impl Render for CanvasView {
                     .text_color(cx.theme().warning)
                     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                     .child(reason)
-            }));
+            }))
+            .children(target_label.map(|label| {
+                div()
+                    .absolute()
+                    .left_2()
+                    .bottom_2()
+                    .text_xs()
+                    .text_color(muted)
+                    .child(label)
+            }))
+            .context_menu(move |mut menu, window, cx| {
+                let Some(owner) = menu_owner.upgrade() else {
+                    return menu;
+                };
+                let Some(canvas) = menu_canvas.upgrade() else {
+                    return menu;
+                };
+                if window.has_active_dialog(cx) {
+                    return menu;
+                }
+                let state = owner.read(cx);
+                if state.modal || state.editor.is_busy() {
+                    return menu;
+                }
+                let point = canvas.read(cx).local(window.mouse_position());
+                let candidates = state
+                    .editor
+                    .pick_candidates(point, state.frame.as_ref().map(|f| f.canvas.version));
+                let document = state.editor.active_id();
+                let visibility = state.editor.deformer_visibility();
+                if candidates.is_empty() {
+                    menu = menu
+                        .item(PopupMenuItem::new(t!("editor.no_canvas_objects")).disabled(true));
+                }
+                for candidate in candidates {
+                    let owner = owner.downgrade();
+                    let canvas = canvas.downgrade();
+                    menu = menu.item(PopupMenuItem::new(candidate.label).on_click(
+                        move |_, window, cx| {
+                            let Some(owner) = owner.upgrade() else {
+                                return;
+                            };
+                            owner.update(cx, |owner, cx| {
+                                if owner.editor.active_id() != document
+                                    || owner.modal
+                                    || owner.editor.is_busy()
+                                {
+                                    return;
+                                }
+                                let result = owner
+                                    .editor
+                                    .execute(EditorCommand::SelectObject(candidate.object.clone()));
+                                owner.complete_edit(result, cx);
+                            });
+                            if let Some(canvas) = canvas.upgrade() {
+                                let focus = canvas.read(cx).focus.clone();
+                                // Let menu dismissal finish before returning keyboard input.
+                                window.defer(cx, move |window, cx| window.focus(&focus, cx));
+                            }
+                        },
+                    ));
+                }
+                menu = menu.separator();
+                for (command, checked) in [
+                    (CommandId::ToggleAncestorDeformers, visibility.ancestors),
+                    (CommandId::ToggleDeformers, visibility.all),
+                ] {
+                    let owner = owner.downgrade();
+                    let canvas = canvas.downgrade();
+                    menu = menu.item(
+                        PopupMenuItem::new(t!(command.spec().label).into_owned())
+                            .checked(checked)
+                            .on_click(move |_, window, cx| {
+                                if let Some(owner) = owner.upgrade() {
+                                    owner.update(cx, |owner, cx| {
+                                        if owner.editor.active_id() == document {
+                                            owner.run_command(command, window, cx);
+                                        }
+                                    });
+                                }
+                                if let Some(canvas) = canvas.upgrade() {
+                                    let focus = canvas.read(cx).focus.clone();
+                                    window.defer(cx, move |window, cx| window.focus(&focus, cx));
+                                }
+                            }),
+                    );
+                }
+                menu
+            });
         div()
             .size_full()
             .flex()
@@ -609,25 +742,6 @@ impl Render for CanvasView {
             } else {
                 "KasaneCanvas"
             })
-            .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
-                if event.keystroke.key == "h" && !event.is_held {
-                    this.hand_tool = true;
-                    this.pan = None;
-                    let _ = this.owner.update(cx, |owner, cx| {
-                        owner.editor.cancel_gesture();
-                        owner.redraw(cx);
-                    });
-                    cx.notify();
-                } else if event.keystroke.key == "v" && !event.is_held {
-                    this.hand_tool = false;
-                    this.pan = None;
-                    let _ = this.owner.update(cx, |owner, cx| {
-                        owner.editor.cancel_gesture();
-                        owner.redraw(cx);
-                    });
-                    cx.notify();
-                }
-            }))
             .child(body)
             .into_any_element()
     }
