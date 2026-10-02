@@ -635,6 +635,12 @@ impl Editor {
                 s.tools.deformer_visibility
             })
     }
+    pub fn deformer_grid(&self) -> bool {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .and_then(|e| e.session.as_ref())
+            .is_some_and(|s| s.tools.deformer_grid)
+    }
     pub fn pick_candidates(
         &self,
         point: crate::CanvasPoint,

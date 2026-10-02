@@ -8,28 +8,68 @@ selection supports Shift toggling and rectangle selection.
 ## Tools and selection
 
 - **V — Select:** pick a visible mesh surface or a visible deformer marker.
-  Blank click clears selection; blank drag selects fully enclosed visible meshes.
-  Shift adds/removes objects. Selection is editor state and does not change history.
-- **E — Mesh controls:** selected meshes expose their vertices and triangle edges.
+  Selecting a Mesh immediately exposes its vertices and triangle edges; selecting
+  a Warp or Rotation exposes its controls and transform handles. There are no
+  separate Mesh Edit / Deformer Edit tools or E / D shortcuts.
+  A click that hits no target clears object and component selection, including
+  Shift-click. With no editable objects selected, blank drag
+  selects fully enclosed visible meshes. Shift adds objects. Selection is editor
+  state and does not change history.
+- **Selected meshes:** show their vertices and triangle edges immediately.
   Click/Shift-click select vertices; drag away from controls (including inside an
   already selected mesh) selects enclosed vertices across the selected meshes.
+  Clicking a selected surface clears component selection and retains the object.
   Components carry both object identity and stable VertexId.
-- **D — Deformer controls:** edits selected Warp grids and Rotation pivots/axes.
-  Selected points and rotation handles can be dragged. Switching to D does not
-  reveal other deformers. Visible framework lines can select their deformer;
-  framework interiors are not object hit regions.
+- **Selected deformers:** click or Shift-click selects Warp points; dragging a
+  rectangle selects points across selected Warps, including when the press falls
+  on a descendant mesh. Clicking a selected framework or its contents clears
+  component selection while retaining the selected deformer. Clicking empty
+  canvas in V deselects objects; clicking another object's marker selects it.
+  Unselected ancestor helpers remain opt-in. Framework interiors are not object
+  hit regions. Hand/Space navigation never writes control points.
 - **G — Glue:** shows selectable connection segments and endpoints. Selection
   opens the shared inspector; this tool does not modify Glue weights or pairings.
 - **H / held Space / middle mouse:** navigation. The selected tool is per document;
   held keys and native pointer capture belong to the window adapter.
 
-Selecting a mesh in V shows only its own outline; E adds its vertices and triangle
-edges. A selected deformer shows its own framework. The canvas context menu and
+Selecting a mesh shows its own outline, vertices and triangle edges. A selected deformer shows its own framework. The canvas context menu and
 View menu offer independent, checked switches for ancestor deformers and all
 deformers. Both default to off, and each document retains its own settings.
 Hidden controls do not keep an invisible hit region. Active tool handles precede
 object surfaces. Deformers whose helpers are hidden remain selectable from the
 hierarchy or the ancestor candidates in the canvas context menu.
+
+### Deformer manipulators
+
+Selected Warps have a padded outer frame. Drag a frame edge to translate all
+points; its eight square handles scale around the opposite corner or edge. Hold
+Shift before dragging a corner for uniform scaling. The round handle above the
+frame rotates around the displayed control-point bounds center. Scaling stops
+short of zero; crossing a handle does not introduce a reflection.
+
+Selected Rotations show a compact ring, a direction axis and a separate square
+scale handle. Drag the ring or direction endpoint to change angle, the square to
+scale, and the center to translate the deformer **and its contents**. Center-only
+relocation with descendant compensation is not implemented in this iteration.
+Rotation rings, direction axes and scale-handle distances follow the viewport's
+fit scale and zoom. Handle markers and pointer tolerance retain logical-pixel
+sizes for picking; display DPI does not change their logical geometry.
+
+The contextual toolbar follows deformer selection and contains ancestor display,
+subdivision preview and gesture help. There is no Transform dialog. Rotation
+scale is restricted to the evaluator's 0.0001–100 range and authored angles to
+−3600–3600 degrees.
+
+Optional subdivision preview samples the Warp interpolation using evaluated
+control positions, capped at 48 subdivisions per axis. These faint lines are
+visual guides only and never become selectable control points. The toggle is
+per document and defaults to off. Geometry for outer-frame drawing and picking
+comes from the same screen-space gizmo; hover changes cursor/handle feedback and
+dragging displays the current delta, scale or angle.
+
+This iteration edits existing deformers. Creating deformers, changing their
+parents and relocating a rotation center while preserving its contents still
+require a separate authoring workflow.
 
 Right-click lists the objects at the pointer and their organizational/deformation
 ancestors, including Part and Offscreen. These containers show member outlines and
@@ -45,7 +85,9 @@ geometry and viewport, including its evaluated deformer controls. An edit can st
 only when the displayed scene and viewport versions are current.
 
 Mesh picking rejects degenerate triangles and tests barycentrically interpolated
-UVs against bilinearly sampled source alpha. Masks combine source coverage,
+UVs against bilinearly sampled source alpha. Drawable UVs use bottom-up V;
+picking converts V to top-down decoded texture rows, matching the GPU vertex
+conversion for both surfaces and mask sources. Masks combine source coverage,
 including inverted masks. Offscreen opacity/masks and the nested render plan
 control candidate order and eligibility. A candidate must exceed alpha 1/255.
 Overlapped eligible meshes remain available in the context menu.
@@ -134,7 +176,7 @@ is intentional; this implementation does not add GPU pixel-ID picking.
 
 Native-window captures compare committed editor `397f4f4` / SDK `97de656`, the
 interaction rewrite before this fix, and the cached implementation. All use Mao,
-the Vertices tool, a 960 × 1364 physical render target, 30 warmup and 360 measured
+the former Vertices tool, a 960 × 1364 physical render target, 30 warmup and 360 measured
 inputs per workload. The machine is an Apple M4 with 16 GB RAM and a 75 Hz display.
 FPS below counts newly presented model previews, excluding repeated window images.
 

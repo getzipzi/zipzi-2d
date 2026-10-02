@@ -56,7 +56,7 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
         .unwrap()
         .id;
     assert_eq!(editor.active_tool(), ToolId::Select);
-    assert!(editor.overlay().vertices.is_empty());
+    assert_eq!(editor.overlay().vertices.len(), 4);
     click(&mut editor, CanvasPoint { x: 256., y: 256. }, false)?;
     assert_eq!(editor.document().unwrap().selected_id(), Some(top.as_str()));
     assert_eq!(
@@ -76,6 +76,104 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
     assert_eq!(editor.evaluation_count(), before);
     click(&mut editor, CanvasPoint { x: 2., y: 2. }, false)?;
     assert!(editor.document().unwrap().context().selections.is_empty());
+    Ok(())
+}
+#[test]
+fn hit_test_miss_clears_objects_and_components_even_with_shift() -> anyhow::Result<()> {
+    let (doc, _dir, warp, rotation, _) = rich_document()?;
+    let mesh = doc.context().selection.clone().unwrap();
+    let mut editor = Editor::from_document(doc);
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let frame = shown(&mut editor)?;
+    let miss = CanvasPoint { x: -100., y: -100. };
+    for object in [
+        mesh,
+        ObjectRef::new(ObjectKind::Deformer, warp),
+        ObjectRef::new(ObjectKind::Deformer, rotation),
+    ] {
+        for shift in [false, true] {
+            editor.execute(EditorCommand::SelectObject(object.clone()))?;
+            let point = editor.overlay().vertices[0].position;
+            click(&mut editor, point, false)?;
+            assert!(editor.overlay().vertices.iter().any(|v| v.selected));
+            assert!(
+                frame
+                    .geometry
+                    .hit(
+                        miss,
+                        frame.transform,
+                        &[object.clone()],
+                        ToolId::Select,
+                        DeformerVisibility::default(),
+                    )
+                    .is_none()
+            );
+            click(&mut editor, miss, shift)?;
+            let doc = editor.document().unwrap();
+            assert!(doc.context().selections.is_empty());
+            assert!(doc.context().selection.is_none());
+            assert!(doc.context().inspected.is_none());
+            assert_eq!(doc.history_lengths(), (0, 0));
+            assert!(editor.overlay().vertices.is_empty());
+            editor.execute(EditorCommand::SelectObject(object.clone()))?;
+            assert!(editor.overlay().vertices.iter().all(|v| !v.selected));
+        }
+    }
+    Ok(())
+}
+#[test]
+fn texture_alpha_picking_matches_renderer_v_orientation_for_surfaces_and_masks()
+-> anyhow::Result<()> {
+    let (mut doc, _dir) = support::sample_document_with_two_layers()?;
+    let mut source = pixel_scene(&mut doc)?;
+    // Decoded pixels are top-down; Drawable UVs are bottom-up. A horizontally
+    // asymmetric texture alone cannot expose a missing V conversion.
+    let mut textures = source.textures.to_vec();
+    textures.push(SceneTexture {
+        asset_id: "vertical-cutout".into(),
+        sha256: "vertical-cutout".into(),
+        width: 1,
+        height: 2,
+        rgba: vec![255, 255, 255, 255, 255, 255, 255, 0].into(),
+    });
+    source.textures = textures.into();
+    let bottom = source.frame.drawables[0].id.clone();
+    let top = source.frame.drawables[1].id.clone();
+    let frame = Arc::make_mut(&mut source.frame);
+    // Set UVs explicitly in the renderer's convention for this diamond fixture.
+    for d in &mut frame.drawables {
+        d.uvs = d
+            .positions
+            .iter()
+            .map(|p| {
+                let p = ViewportTransform::evaluated_to_source(frame.canvas, *p);
+                Vec2::new((p.x - 24.) / 208., 1. - (p.y - 24.) / 208.)
+            })
+            .collect();
+    }
+    frame.drawables[1].texture_asset_id = "vertical-cutout".into();
+    let upper = ModelPoint { x: 128., y: 64. };
+    let lower = ModelPoint { x: 128., y: 192. };
+    let scene = CanvasScene::new(&doc, source.clone());
+    assert_eq!(scene.mesh_hits(upper), [top.clone(), bottom.clone()]);
+    assert_eq!(scene.mesh_hits(lower), [bottom.clone()]);
+
+    // The same conversion must apply to mask sources, including inverted masks.
+    let frame = Arc::make_mut(&mut source.frame);
+    frame.drawables[0].texture_asset_id = "vertical-cutout".into();
+    frame.drawables[1].texture_asset_id = "solid".into();
+    frame.drawables[1].masks = vec![bottom.clone()];
+    let scene = CanvasScene::new(&doc, source.clone());
+    assert_eq!(scene.mesh_hits(upper), [top.clone(), bottom.clone()]);
+    assert!(scene.mesh_hits(lower).is_empty());
+    Arc::make_mut(&mut source.frame).drawables[1].inverted_mask = true;
+    let scene = CanvasScene::new(&doc, source);
+    assert_eq!(scene.mesh_hits(upper), [bottom]);
+    assert_eq!(scene.mesh_hits(lower), [top]);
     Ok(())
 }
 #[test]
@@ -150,17 +248,11 @@ fn offscreen_plan_overrides_flat_rank_and_applies_group_alpha() -> anyhow::Resul
 #[test]
 fn shift_selection_and_marquee_share_document_selection_without_history() -> anyhow::Result<()> {
     let (mut editor, _) = setup()?;
-    let first = editor
-        .document()
-        .unwrap()
-        .context()
-        .selection
-        .clone()
-        .unwrap();
     click(&mut editor, CanvasPoint { x: 256., y: 256. }, true)?;
     assert_eq!(editor.document().unwrap().context().selections.len(), 2);
     click(&mut editor, CanvasPoint { x: 256., y: 256. }, true)?;
-    assert_eq!(editor.document().unwrap().context().selections, [first]);
+    assert_eq!(editor.document().unwrap().context().selections.len(), 2);
+    click(&mut editor, CanvasPoint { x: 2., y: 2. }, false)?;
     let a = CanvasPoint { x: 5., y: 5. };
     let b = CanvasPoint { x: 505., y: 505. };
     editor.canvas_input(CanvasInput::Down {
@@ -182,7 +274,7 @@ fn shift_selection_and_marquee_share_document_selection_without_history() -> any
 fn tool_state_is_per_document_and_vertex_click_opens_no_candidate() -> anyhow::Result<()> {
     let (mut editor, _) = setup()?;
     let first = editor.active_id().unwrap();
-    editor.dispatch(editor.command(CommandId::Vertices))?;
+    editor.dispatch(editor.command(CommandId::GlueTool))?;
     let p = editor.overlay().vertices[0].position;
     editor.canvas_input(CanvasInput::Down {
         point: p,
@@ -200,7 +292,7 @@ fn tool_state_is_per_document_and_vertex_click_opens_no_candidate() -> anyhow::R
     editor.new_document()?;
     assert_eq!(editor.active_tool(), ToolId::Select);
     editor.activate(first)?;
-    assert_eq!(editor.active_tool(), ToolId::Vertices);
+    assert_eq!(editor.active_tool(), ToolId::Glue);
     assert!(!editor.gesture_active());
     Ok(())
 }
@@ -217,7 +309,6 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     });
     shown(&mut editor)?;
     click(&mut editor, CanvasPoint { x: 256., y: 256. }, false)?;
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     let p = editor.overlay().vertices[0].position;
     editor.canvas_input(CanvasInput::Down {
         point: p,
@@ -444,7 +535,7 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
             p(10., 10.),
             f.transform,
             std::slice::from_ref(&glue),
-            ToolId::Deformers,
+            ToolId::Select,
             DeformerVisibility::default(),
         ),
         Some(HitTarget::Object(glue))
@@ -461,18 +552,15 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
         scale_factor: 1.,
     });
     let frame = shown(&mut editor)?;
-    for tool in [ToolId::Select, ToolId::Vertices, ToolId::Deformers] {
+    for tool in [ToolId::Select, ToolId::Glue, ToolId::Hand] {
         editor.execute(EditorCommand::SetTool(tool))?;
         let overlay = editor.overlay();
         assert_eq!(
             overlay.lines.len(),
-            if tool == ToolId::Vertices { 5 } else { 0 },
+            5,
             "only the mesh's own edges should be shown"
         );
-        assert_eq!(
-            overlay.vertices.len(),
-            if tool == ToolId::Vertices { 4 } else { 0 }
-        );
+        assert_eq!(overlay.vertices.len(), 4);
         assert_eq!(
             overlay.accent_lines.len(),
             4,
@@ -490,7 +578,7 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
         ObjectKind::Deformer,
         warp,
     )))?;
-    for tool in [ToolId::Select, ToolId::Deformers] {
+    for tool in [ToolId::Select, ToolId::Glue, ToolId::Hand] {
         editor.execute(EditorCommand::SetTool(tool))?;
         let overlay = editor.overlay();
         assert!(overlay.lines.is_empty(), "unselected deformers stay hidden");
@@ -499,10 +587,7 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
             4,
             "the selected warp remains visible"
         );
-        assert_eq!(
-            overlay.vertices.len(),
-            if tool == ToolId::Deformers { 4 } else { 0 }
-        );
+        assert_eq!(overlay.vertices.len(), 4);
     }
     editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
     let overlay = editor.overlay();
@@ -595,7 +680,6 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
         scale_factor: 1.,
     });
     shown(&mut editor)?;
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     let p = editor.overlay().vertices[0].position;
     editor.canvas_input(CanvasInput::Down {
         point: p,
@@ -615,7 +699,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
         ObjectKind::Deformer,
         warp,
     )))?;
-    editor.execute(EditorCommand::SetTool(ToolId::Deformers))?;
+    editor.execute(EditorCommand::SetTool(ToolId::Select))?;
     let p = editor.overlay().vertices[0].position;
     editor.canvas_input(CanvasInput::Down {
         point: p,
@@ -656,7 +740,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
         ObjectKind::Deformer,
         &rotation,
     )))?;
-    editor.execute(EditorCommand::SetTool(ToolId::Deformers))?;
+    editor.execute(EditorCommand::SetTool(ToolId::Select))?;
     let frame = editor.preview()?.canvas.unwrap();
     let c = frame
         .geometry
@@ -669,7 +753,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
     let start = points[1];
     let end = CanvasPoint {
         x: center.x,
-        y: center.y - 54.,
+        y: center.y - (start.x - center.x).hypot(start.y - center.y),
     };
     assert!(editor.present_frame(frame));
     editor.canvas_input(CanvasInput::Down {
@@ -708,7 +792,6 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
         .map(|m| ObjectRef::new(ObjectKind::Mesh, &m.id))
         .collect();
     editor.execute(EditorCommand::SelectObjects(selected))?;
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     editor.canvas_input(CanvasInput::Down {
         point: CanvasPoint { x: 1., y: 1. },
         shift: false,
@@ -756,7 +839,6 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
 #[test]
 fn hidden_meshes_have_no_invisible_component_hit_targets() -> anyhow::Result<()> {
     let (mut editor, _) = setup()?;
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     editor.execute(EditorCommand::SetVisible(false))?;
     let frame = shown(&mut editor)?;
     assert!(editor.overlay().vertices.is_empty());
@@ -766,7 +848,7 @@ fn hidden_meshes_have_no_invisible_component_hit_targets() -> anyhow::Result<()>
             CanvasPoint { x: 0., y: 0. },
             frame.transform,
             &editor.document().unwrap().context().selections,
-            ToolId::Vertices,
+            ToolId::Select,
             DeformerVisibility::default()
         ),
         Some(HitTarget::Component(_))
@@ -784,7 +866,6 @@ fn vertex_marquee_can_start_inside_selected_meshes_without_changing_objects() ->
         .map(|m| ObjectRef::new(ObjectKind::Mesh, &m.id))
         .collect();
     editor.execute(EditorCommand::SelectObjects(objects.clone()))?;
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     let frame = shown(&mut editor)?;
     let start = frame.transform.to_canvas(ModelPoint { x: 120., y: 120. });
     let end = frame.transform.to_canvas(ModelPoint { x: 240., y: 240. });
@@ -850,7 +931,6 @@ fn invisible_offscreen_members_have_no_handles_and_are_excluded_from_marquee() -
         ObjectKind::Mesh,
         hidden,
     )))?;
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     assert!(
         editor.overlay().vertices.is_empty(),
         "zero-opacity groups must not leave ghost controls"
@@ -924,7 +1004,7 @@ fn warp_controls_align_with_mesh_after_canvas_y_reversal() -> anyhow::Result<()>
             );
         }
         editor.execute(EditorCommand::SelectObject(control.object.clone()))?;
-        editor.execute(EditorCommand::SetTool(ToolId::Deformers))?;
+        editor.execute(EditorCommand::SetTool(ToolId::Select))?;
         let overlay = editor.overlay();
         for (vertex, expected) in overlay.vertices.iter().zip(&control.points) {
             assert_eq!(vertex.position, frame.transform.to_canvas(*expected));
@@ -951,11 +1031,6 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         ObjectRef::new(ObjectKind::Deformer, &rotation),
     ] {
         editor.execute(EditorCommand::SelectObject(object.clone()))?;
-        editor.execute(EditorCommand::SetTool(if object.kind == ObjectKind::Mesh {
-            ToolId::Vertices
-        } else {
-            ToolId::Deformers
-        }))?;
         let position = |f: &CanvasFrame| {
             if object.kind == ObjectKind::Mesh {
                 f.transform
@@ -1003,7 +1078,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
     let points = frame.geometry.control_points(c, frame.transform);
     let end = CanvasPoint {
         x: points[0].x,
-        y: points[0].y + 54.,
+        y: points[0].y + (points[1].x - points[0].x).hypot(points[1].y - points[0].y),
     };
     editor.canvas_input(CanvasInput::Down {
         point: points[1],
@@ -1035,7 +1110,6 @@ fn pose_updates_share_topology_but_publish_independent_positions() -> anyhow::Re
         height: 512.,
         scale_factor: 1.,
     });
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     let original = shown(&mut editor)?;
     let positions = original.geometry.meshes[0].vertices.clone();
     let point = editor.overlay().vertices[0].position;
@@ -1089,7 +1163,6 @@ fn opacity_reuses_positions_with_fresh_picking_visibility_and_history() -> anyho
         .unwrap()
         .id;
     editor.execute(EditorCommand::Select(top.clone()))?;
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     let original = shown(&mut editor)?;
     let point = ModelPoint { x: 128., y: 128. };
     assert_eq!(original.geometry.mesh_hits(point)[0], top);
@@ -1154,5 +1227,544 @@ fn canvas_metadata_refreshes_on_rename_cancel_property_edit_and_history() -> any
         "Updated Warp"
     );
     assert_eq!(renamed.geometry.index.name(&mesh), "Renamed");
+    Ok(())
+}
+
+fn deformer_editor(rotation: bool) -> anyhow::Result<(Editor, tempfile::TempDir, ObjectRef)> {
+    let (doc, dir, warp, rotate, _) = rich_document()?;
+    let object = ObjectRef::new(ObjectKind::Deformer, if rotation { rotate } else { warp });
+    let mut editor = Editor::from_document(doc);
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    editor.execute(EditorCommand::SelectObject(object.clone()))?;
+    editor.execute(EditorCommand::SetTool(ToolId::Select))?;
+    shown(&mut editor)?;
+    Ok((editor, dir, object))
+}
+fn drag(
+    editor: &mut Editor,
+    start: CanvasPoint,
+    end: CanvasPoint,
+    shift: bool,
+) -> anyhow::Result<()> {
+    editor.canvas_input(CanvasInput::Down {
+        point: start,
+        shift,
+    })?;
+    editor.canvas_input(CanvasInput::Up { point: end })?;
+    Ok(())
+}
+fn control_points(editor: &mut Editor, object: &ObjectRef) -> anyhow::Result<Vec<ModelPoint>> {
+    Ok(shown(editor)?
+        .geometry
+        .controls
+        .iter()
+        .find(|c| &c.object == object)
+        .unwrap()
+        .points
+        .clone())
+}
+#[test]
+fn warp_marquee_preserves_object_and_moves_selected_controls_only() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    let before = control_points(&mut editor, &object)?;
+    let p = editor.overlay().vertices[0].position;
+    // Cross the grid's first row, starting outside the gizmo.
+    drag(
+        &mut editor,
+        CanvasPoint {
+            x: p.x - 35.,
+            y: p.y - 10.,
+        },
+        CanvasPoint {
+            x: p.x + 400.,
+            y: p.y + 10.,
+        },
+        false,
+    )?;
+    assert_eq!(
+        editor.document().unwrap().context().selections,
+        [object.clone()]
+    );
+    assert_eq!(
+        editor
+            .overlay()
+            .vertices
+            .iter()
+            .filter(|v| v.selected)
+            .count(),
+        2
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    drag(
+        &mut editor,
+        p,
+        CanvasPoint {
+            x: p.x + 20.,
+            y: p.y + 10.,
+        },
+        false,
+    )?;
+    let after = control_points(&mut editor, &object)?;
+    for i in 0..2 {
+        assert!((after[i].x - before[i].x - 10.).abs() < 0.001);
+    }
+    assert_eq!(&after[2..], &before[2..]);
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(control_points(&mut editor, &object)?, before);
+    Ok(())
+}
+#[test]
+fn warp_gizmo_scales_all_points_and_cancels_as_one_edit() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    let before = control_points(&mut editor, &object)?;
+    let frame = shown(&mut editor)?;
+    let c = frame
+        .geometry
+        .controls
+        .iter()
+        .find(|c| c.object == object)
+        .unwrap();
+    let gizmo = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
+    let start = gizmo
+        .handles
+        .iter()
+        .find(|(h, _)| *h == DeformerHandle::Scale(4))
+        .unwrap()
+        .1;
+    let end = CanvasPoint {
+        x: start.x + 96.,
+        y: start.y + 40.,
+    };
+    assert_eq!(
+        frame.geometry.hit(
+            start,
+            frame.transform,
+            &[object.clone()],
+            ToolId::Select,
+            DeformerVisibility::default()
+        ),
+        Some(HitTarget::DeformerHandle(
+            object.clone(),
+            DeformerHandle::Scale(4)
+        ))
+    );
+    drag(&mut editor, start, end, true)?;
+    let after = control_points(&mut editor, &object)?;
+    assert_eq!(after[0], before[0]);
+    assert!((after[3].x - before[0].x - 240.).abs() < 0.001);
+    assert!((after[3].y - before[0].y - 240.).abs() < 0.001);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    shown(&mut editor)?;
+    editor.canvas_input(CanvasInput::Down {
+        point: start,
+        shift: false,
+    })?;
+    editor.canvas_input(CanvasInput::Move {
+        point: end,
+        left_down: true,
+    })?;
+    assert!(editor.overlay().interaction_label.is_some());
+    editor.canvas_input(CanvasInput::Cancel)?;
+    assert_eq!(control_points(&mut editor, &object)?, before);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
+    Ok(())
+}
+#[test]
+fn warp_outer_edge_moves_without_selecting_descendant_mesh() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    let before = control_points(&mut editor, &object)?;
+    let frame = shown(&mut editor)?;
+    let c = frame
+        .geometry
+        .controls
+        .iter()
+        .find(|c| c.object == object)
+        .unwrap();
+    let gizmo = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
+    let (a, b) = gizmo.outline[0];
+    let start = CanvasPoint {
+        x: (a.x + b.x) / 2.,
+        y: a.y,
+    };
+    drag(
+        &mut editor,
+        start,
+        CanvasPoint {
+            x: start.x + 20.,
+            y: start.y - 16.,
+        },
+        false,
+    )?;
+    let after = control_points(&mut editor, &object)?;
+    for (a, b) in before.iter().zip(&after) {
+        assert!((b.x - a.x - 10.).abs() < 0.001);
+        assert!((b.y - a.y + 8.).abs() < 0.001);
+    }
+    assert_eq!(editor.document().unwrap().context().selections, [object]);
+    Ok(())
+}
+#[test]
+fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(true)?;
+    let before = control_points(&mut editor, &object)?;
+    let frame = shown(&mut editor)?;
+    let c = frame
+        .geometry
+        .controls
+        .iter()
+        .find(|c| c.object == object)
+        .unwrap();
+    let gizmo = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
+    let start = gizmo.handles[0].1;
+    let end = CanvasPoint {
+        x: gizmo.center.x + 2. * (start.x - gizmo.center.x),
+        y: gizmo.center.y + 2. * (start.y - gizmo.center.y),
+    };
+    drag(&mut editor, start, end, false)?;
+    let after = control_points(&mut editor, &object)?;
+    assert_eq!(before[0], after[0]);
+    let index = editor.document().unwrap().object_index();
+    assert_eq!(
+        index.get(&object).unwrap().properties["rotation"]["pose"]["scale"],
+        2.
+    );
+    editor.execute(EditorCommand::Undo)?;
+    shown(&mut editor)?;
+    editor.execute(EditorCommand::AdjustDeformer {
+        object: object.clone(),
+        adjustment: DeformerAdjustment {
+            translation: ModelPoint { x: 10., y: 20. },
+            angle: 90.,
+            scale: 1.5,
+        },
+    })?;
+    let after = control_points(&mut editor, &object)?;
+    assert!((after[0].x - before[0].x - 10.).abs() < 0.001);
+    assert!((after[0].y - before[0].y - 20.).abs() < 0.001);
+    assert!(
+        after[1].y < after[0].y,
+        "positive numeric angle turns counterclockwise"
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(control_points(&mut editor, &object)?, before);
+    editor.execute(EditorCommand::AdjustDeformer {
+        object: object.clone(),
+        adjustment: DeformerAdjustment {
+            translation: ModelPoint::default(),
+            angle: 0.,
+            scale: 1.,
+        },
+    })?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
+    assert!(
+        editor
+            .execute(EditorCommand::AdjustDeformer {
+                object: object.clone(),
+                adjustment: DeformerAdjustment {
+                    translation: ModelPoint { x: 10., y: 0. },
+                    angle: 0.,
+                    scale: 101.
+                }
+            })
+            .is_err()
+    );
+    assert_eq!(control_points(&mut editor, &object)?, before);
+    assert!(!editor.document().unwrap().has_pending_edit());
+    Ok(())
+}
+#[test]
+fn subdivisions_are_opt_in_and_never_become_hit_targets() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    let frame = shown(&mut editor)?;
+    assert!(editor.overlay().guide_lines.is_empty());
+    editor.execute(EditorCommand::ToggleDeformerGrid)?;
+    assert!(!editor.overlay().guide_lines.is_empty());
+    let overlay = editor.overlay();
+    let p = overlay.guide_lines[3].0;
+    let hit = frame.geometry.hit(
+        p,
+        frame.transform,
+        &[object],
+        ToolId::Select,
+        DeformerVisibility::default(),
+    );
+    assert!(!matches!(hit, Some(HitTarget::Component(_))));
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+fn bound_deformer_editor(
+    rotation: bool,
+    reversed: bool,
+) -> anyhow::Result<(Editor, tempfile::TempDir, ObjectRef, String)> {
+    use kasane_core::{
+        BindingAxis, Parameter, RotationKeyform, RotationPose, RotationTransform, SceneBinding,
+        SceneTrack, Transform, TransformData, WarpKeyform, WarpTransform,
+    };
+    let id = |n| uuid::Uuid::from_u128(n).to_string();
+    let dir = tempfile::tempdir()?;
+    let mut canvas = kasane_core::Canvas::new(256., 256., Vec2::new(0., 0.), 1.);
+    if reversed {
+        canvas.flag = 0;
+    } else {
+        canvas.flag = 1;
+    }
+    let mut session = kasane_sdk::AuthoringSession::new(&id(21), canvas)?;
+    let positions = vec![
+        Vec2::new(0.1, 0.1),
+        Vec2::new(0.9, 0.1),
+        Vec2::new(0.1, 0.9),
+        Vec2::new(0.9, 0.9),
+    ];
+    let pose = RotationPose {
+        origin: kasane_core::PreciseVec2::new(0.5123456789, 0.4123456789),
+        ..Default::default()
+    };
+    session.edit("fixture", None, |edit| {
+        edit.create_transform(Transform {
+            id: id(22),
+            data: TransformData::Warp(WarpTransform {
+                rows: 1,
+                columns: 1,
+                quad: true,
+                points: vec![
+                    Vec2::new(20., 30.),
+                    Vec2::new(220., 30.),
+                    Vec2::new(20., 230.),
+                    Vec2::new(220., 230.),
+                ],
+            }),
+            ..Default::default()
+        })?;
+        edit.create_transform(Transform {
+            id: id(23),
+            parent_id: Some(id(22).into()),
+            data: if rotation {
+                TransformData::Rotation(RotationTransform {
+                    pose,
+                    ..Default::default()
+                })
+            } else {
+                TransformData::Warp(WarpTransform {
+                    rows: 1,
+                    columns: 1,
+                    quad: true,
+                    points: positions.clone(),
+                })
+            },
+            ..Default::default()
+        })?;
+        edit.create_parameter(Parameter {
+            id: id(24),
+            minimum: 0.,
+            maximum: 1.,
+            default_value: 0.,
+            ..Default::default()
+        })?;
+        edit.create_scene_binding(SceneBinding {
+            id: id(25),
+            axes: vec![BindingAxis {
+                parameter_id: id(24),
+                keys: vec![0., 1.],
+            }],
+            track: if rotation {
+                SceneTrack::Rotation {
+                    target_id: id(23).into(),
+                    keyforms: vec![0., 1.]
+                        .into_iter()
+                        .map(|v| RotationKeyform {
+                            keys: vec![v],
+                            rotation: pose,
+                            ..Default::default()
+                        })
+                        .collect(),
+                }
+            } else {
+                SceneTrack::Warp {
+                    target_id: id(23).into(),
+                    keyforms: vec![0., 1.]
+                        .into_iter()
+                        .map(|v| WarpKeyform {
+                            keys: vec![v],
+                            positions: positions.clone(),
+                            ..Default::default()
+                        })
+                        .collect(),
+                }
+            },
+        })?;
+        Ok(())
+    })?;
+    let saved = session.save_project(&dir.path().join("bound"), None)?;
+    let mut editor = Editor::from_document(Document::open(&saved.manifest)?);
+    let object = ObjectRef::new(ObjectKind::Deformer, id(23));
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    editor.execute(EditorCommand::SelectObject(object.clone()))?;
+    editor.execute(EditorCommand::SetTool(ToolId::Select))?;
+    shown(&mut editor)?;
+    Ok((editor, dir, object, id(24)))
+}
+#[test]
+fn nested_deformer_adjustments_write_only_the_exact_keyform_in_both_canvas_directions()
+-> anyhow::Result<()> {
+    for rotation in [false, true] {
+        for reversed in [false, true] {
+            let (mut editor, _dir, object, parameter_id) =
+                bound_deformer_editor(rotation, reversed)?;
+            let original = control_points(&mut editor, &object)?;
+            editor.execute(EditorCommand::AdjustDeformer {
+                object: object.clone(),
+                adjustment: DeformerAdjustment {
+                    translation: ModelPoint { x: 12., y: 8. },
+                    angle: 0.,
+                    scale: 1.,
+                },
+            })?;
+            let changed = control_points(&mut editor, &object)?;
+            for (a, b) in original.iter().zip(&changed) {
+                assert!((b.x - a.x - 12.).abs() < 0.01);
+                assert!((b.y - a.y - 8.).abs() < 0.01);
+            }
+            editor.execute(EditorCommand::SetPreviewParameter {
+                parameter_id: parameter_id.clone(),
+                value: 1.,
+            })?;
+            assert_eq!(control_points(&mut editor, &object)?, original);
+            editor.execute(EditorCommand::SetPreviewParameter {
+                parameter_id: parameter_id.clone(),
+                value: 0.5,
+            })?;
+            let interpolation = control_points(&mut editor, &object)?;
+            assert!(editor.overlay().unavailable.is_some());
+            assert!(
+                editor
+                    .execute(EditorCommand::AdjustDeformer {
+                        object: object.clone(),
+                        adjustment: DeformerAdjustment {
+                            translation: ModelPoint::default(),
+                            angle: 25.,
+                            scale: 1.2
+                        }
+                    })
+                    .is_err()
+            );
+            assert_eq!(control_points(&mut editor, &object)?, interpolation);
+            assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+            assert!(!editor.document().unwrap().has_pending_edit());
+            editor.execute(EditorCommand::SetPreviewParameter {
+                parameter_id,
+                value: 0.,
+            })?;
+            shown(&mut editor)?;
+            editor.execute(EditorCommand::Undo)?;
+            assert_eq!(control_points(&mut editor, &object)?, original);
+        }
+    }
+    Ok(())
+}
+#[test]
+fn numeric_warp_rotation_and_scale_use_displayed_center_under_parent() -> anyhow::Result<()> {
+    let (mut editor, _dir, object, _) = bound_deformer_editor(false, true)?;
+    let before = control_points(&mut editor, &object)?;
+    let center = ModelPoint {
+        x: (before[0].x + before[3].x) / 2.,
+        y: (before[0].y + before[3].y) / 2.,
+    };
+    editor.execute(EditorCommand::AdjustDeformer {
+        object: object.clone(),
+        adjustment: DeformerAdjustment {
+            translation: ModelPoint::default(),
+            angle: 90.,
+            scale: 0.5,
+        },
+    })?;
+    let after = control_points(&mut editor, &object)?;
+    for (a, b) in before.iter().zip(&after) {
+        assert!((b.x - (center.x + (a.y - center.y) * 0.5)).abs() < 0.01);
+        assert!((b.y - (center.y - (a.x - center.x) * 0.5)).abs() < 0.01);
+    }
+    Ok(())
+}
+
+#[test]
+fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(true)?;
+    let original = control_points(&mut editor, &object)?;
+    let frame = shown(&mut editor)?;
+    let scene = &frame.geometry;
+    let control = scene.controls.iter().find(|c| c.object == object).unwrap();
+    for width in [256., 512.] {
+        for zoom in [0.5, 1., 2.] {
+            let mut logical_positions = None;
+            for dpi in [1., 2.] {
+                let transform = ViewportTransform::new(
+                    scene.source.frame.canvas,
+                    CanvasMetrics {
+                        width,
+                        height: width,
+                        scale_factor: dpi,
+                    },
+                    ViewState {
+                        zoom,
+                        pan: CanvasPoint { x: 31., y: -19. },
+                    },
+                )
+                .unwrap();
+                let points = scene.control_points(control, transform);
+                let gizmo = scene.deformer_gizmo(control, transform).unwrap();
+                let radius = |p: CanvasPoint| (p.x - gizmo.center.x).hypot(p.y - gizmo.center.y);
+                assert!((radius(points[1]) - 54. * transform.scale).abs() < 0.001);
+                assert!((radius(gizmo.outline[0].0) - 28. * transform.scale).abs() < 0.001);
+                assert!((radius(gizmo.handles[0].1) - 40. * transform.scale).abs() < 0.001);
+                let selection = std::slice::from_ref(&object);
+                let hit = |p| {
+                    scene.hit(
+                        p,
+                        transform,
+                        selection,
+                        ToolId::Select,
+                        DeformerVisibility::default(),
+                    )
+                };
+                assert_eq!(
+                    hit(points[1]),
+                    Some(HitTarget::RotationHandle(object.clone()))
+                );
+                assert_eq!(
+                    hit(gizmo.handles[0].1),
+                    Some(HitTarget::DeformerHandle(
+                        object.clone(),
+                        DeformerHandle::RotationScale
+                    ))
+                );
+                // The opposite quadrant of the scaled ring is clear of the axes.
+                assert_eq!(
+                    hit(gizmo.outline[30].0),
+                    Some(HitTarget::DeformerHandle(
+                        object.clone(),
+                        DeformerHandle::Rotate
+                    ))
+                );
+                let positions = (points, gizmo.outline, gizmo.handles);
+                if let Some(previous) = logical_positions {
+                    assert_eq!(positions, previous, "DPI must not apply the zoom twice");
+                }
+                logical_positions = Some(positions);
+            }
+        }
+    }
+    editor.zoom_by(1.);
+    assert_eq!(control_points(&mut editor, &object)?, original);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }

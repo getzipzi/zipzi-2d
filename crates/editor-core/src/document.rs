@@ -829,8 +829,7 @@ impl Document {
         &mut self,
         targets: &[crate::control_edit::ControlEdit],
         selected: &[crate::ComponentRef],
-        delta: crate::ModelPoint,
-        angle: Option<f32>,
+        change: crate::control_edit::ControlChange,
     ) -> Result<()> {
         let pending = self
             .pending
@@ -845,7 +844,7 @@ impl Document {
                 .filter(|c| c.object == target.object)
                 .map(|c| c.id)
                 .collect::<Vec<_>>();
-            target.preview(&mut pending.edit, &ids, delta, angle)?;
+            target.preview(&mut pending.edit, &ids, change)?;
         }
         Ok(())
     }

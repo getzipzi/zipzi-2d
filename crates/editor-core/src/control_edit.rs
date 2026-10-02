@@ -6,6 +6,23 @@ use crate::{
 use anyhow::{Result, bail, ensure};
 use kasane_core::{Mesh, MeshBinding, SceneBinding, SceneTrack, Transform, Vec2};
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum ControlChange {
+    Translate(ModelPoint),
+    Transform {
+        pivot: ModelPoint,
+        scale: [f32; 2],
+        radians: f32,
+        translation: ModelPoint,
+    },
+    Rotation {
+        angle: f32,
+        scale: f32,
+        translation: ModelPoint,
+    },
+    MoveAll(ModelPoint),
+}
+
 #[derive(Clone)]
 pub(crate) enum EditOriginal {
     Mesh(Mesh),
@@ -351,29 +368,76 @@ impl ControlEdit {
         &self,
         edit: &mut kasane_sdk::EditSession<'_>,
         selected: &[u32],
-        delta: ModelPoint,
-        angle: Option<f32>,
+        change: ControlChange,
     ) -> Result<()> {
         let mut positions = self.positions.clone();
         for (id, p) in self.ids.iter().zip(&mut positions) {
-            if selected.contains(id) {
+            if selected.contains(id)
+                || matches!(
+                    change,
+                    ControlChange::Transform { .. }
+                        | ControlChange::Rotation { .. }
+                        | ControlChange::MoveAll(_)
+                )
+            {
                 let before = self.to_model(*p);
-                *p = self.from_model(
-                    ModelPoint {
+                let desired = match change {
+                    ControlChange::Translate(delta) | ControlChange::MoveAll(delta) => ModelPoint {
                         x: before.x + delta.x,
                         y: before.y + delta.y,
                     },
-                    *p,
-                )?;
+                    ControlChange::Transform {
+                        pivot,
+                        scale,
+                        radians,
+                        translation,
+                    } => {
+                        let (sin, cos) = radians.sin_cos();
+                        let x = (before.x - pivot.x) * scale[0];
+                        let y = (before.y - pivot.y) * scale[1];
+                        ModelPoint {
+                            x: pivot.x + x * cos - y * sin + translation.x,
+                            y: pivot.y + x * sin + y * cos + translation.y,
+                        }
+                    }
+                    ControlChange::Rotation { translation, .. } => ModelPoint {
+                        x: before.x + translation.x,
+                        y: before.y + translation.y,
+                    },
+                };
+                // Preserve f64 origins and no-op history when no translation is requested.
+                if desired != before {
+                    *p = self.from_model(desired, *p)?;
+                }
             }
         }
         let update_rotation = |pose: &mut kasane_core::RotationPose| {
             pose.origin.x += (positions[0].x - self.positions[0].x) as f64;
             pose.origin.y += (positions[0].y - self.positions[0].y) as f64;
-            if let Some(angle) = angle {
+            if let ControlChange::Rotation { angle, scale, .. } = change {
                 pose.angle += angle;
+                pose.scale *= scale;
             }
         };
+        if let ControlChange::Rotation { angle, scale, .. } = change {
+            ensure!(
+                angle.is_finite() && scale.is_finite() && scale > 0.,
+                "Invalid rotation or scale"
+            );
+            let pose = match &self.original {
+                EditOriginal::Transform(t) => t.rotation().unwrap().pose,
+                EditOriginal::SceneBinding(b) => b.track.sample(self.slot.unwrap()).rotation,
+                _ => bail!("Not a rotation deformer"),
+            };
+            ensure!(
+                (0.0001..=100.).contains(&(pose.scale * scale)),
+                "Rotation scale must be between 0.0001 and 100"
+            );
+            ensure!(
+                (-3600. ..=3600.).contains(&(pose.angle + angle)),
+                "Rotation angle must be between -3600 and 3600 degrees"
+            );
+        }
         match &self.original {
             EditOriginal::Batch(_) => unreachable!("a control target has a single baseline"),
             EditOriginal::Mesh(m) => {

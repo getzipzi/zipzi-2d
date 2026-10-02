@@ -297,6 +297,18 @@ impl Render for CanvasView {
             overlay.lines.clear();
         }
         let vertex_notice = overlay.unavailable.clone();
+        let active_handle = overlay.active_handle;
+        let interaction_label = overlay.interaction_label.clone().or_else(|| {
+            active_handle.map(|handle| {
+                use editor_core::DeformerHandle as H;
+                t!(match handle {
+                    H::Move => "editor.deformer_move_hint",
+                    H::Rotate => "editor.deformer_rotate_hint",
+                    H::Scale(_) | H::RotationScale => "editor.deformer_scale_hint",
+                })
+                .into_owned()
+            })
+        });
         let target_label = overlay.target_label.as_ref().map(|label| {
             if label == "Base shape" {
                 t!("editor.edit_base").into_owned()
@@ -314,6 +326,7 @@ impl Render for CanvasView {
         let primary = cx.theme().primary;
         let muted = cx.theme().muted_foreground;
         let foreground = cx.theme().foreground;
+        let background = cx.theme().background;
         let view = cx.entity();
         let measure = view.clone();
         let mouse = view.clone();
@@ -323,6 +336,19 @@ impl Render for CanvasView {
         let body = div()
             .id("canvas-body")
             .test_support()
+            .when(!modal && !hand_tool && active_handle.is_some(), |e| {
+                use editor_core::DeformerHandle as H;
+                let cursor = match active_handle.unwrap() {
+                    H::Move => CursorStyle::OpenHand,
+                    H::Rotate => CursorStyle::Crosshair,
+                    H::Scale(1 | 5) => CursorStyle::ResizeUpDown,
+                    H::Scale(3 | 7) => CursorStyle::ResizeLeftRight,
+                    H::Scale(0 | 4) => CursorStyle::ResizeUpLeftDownRight,
+                    H::Scale(_) => CursorStyle::ResizeUpRightDownLeft,
+                    H::RotationScale => CursorStyle::Crosshair,
+                };
+                e.cursor(cursor)
+            })
             .relative()
             .flex_1()
             .min_h_0()
@@ -572,12 +598,32 @@ impl Render for CanvasView {
                                 ));
                             }
                         }
+                        mesh_edges::paint_edges(&overlay.guide_lines, bounds.origin, |path| {
+                            window.paint_path(path, muted.opacity(0.22))
+                        });
                         mesh_edges::paint_edges(&overlay.accent_lines, bounds.origin, |path| {
                             window.paint_path(path, primary)
                         });
                         mesh_edges::paint_edges(&overlay.hover_lines, bounds.origin, |path| {
                             window.paint_path(path, foreground)
                         });
+                        mesh_edges::paint_edges(&overlay.gizmo_lines, bounds.origin, |path| {
+                            window.paint_path(path, primary.opacity(0.55))
+                        });
+                        for handle in &overlay.handles {
+                            let r = px(if handle.hovered { 5. } else { 4. });
+                            let center =
+                                bounds.origin + point(px(handle.position.x), px(handle.position.y));
+                            window.paint_quad(
+                                fill(
+                                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
+                                    if handle.hovered { primary } else { background },
+                                )
+                                .corner_radii(if handle.round { r } else { px(1.) })
+                                .border_widths(px(1.))
+                                .border_color(primary),
+                            );
+                        }
                         if let Some((a, b)) = overlay.marquee {
                             let rect = Bounds::new(
                                 bounds.origin + point(px(a.x.min(b.x)), px(a.y.min(b.y))),
@@ -625,6 +671,22 @@ impl Render for CanvasView {
             )
             .child(workspace::render_floating_toolbar(self, modal, cx))
             .child(workspace::render_floating_zoom_bar(&owner, modal, cx))
+            .child(workspace::deformer_bar::render_deformer_bar(
+                self, modal, cx,
+            ))
+            .children(interaction_label.map(|label| {
+                div()
+                    .absolute()
+                    .left(px(52.))
+                    .top(px(48.))
+                    .px_2()
+                    .py_1()
+                    .rounded_md()
+                    .bg(background)
+                    .text_color(foreground)
+                    .text_xs()
+                    .child(label)
+            }))
             .children(vertex_notice.map(|reason| {
                 div()
                     .id("canvas-vertex-notice")

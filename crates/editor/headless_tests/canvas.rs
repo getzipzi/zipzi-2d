@@ -207,8 +207,8 @@ fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
             "canvas-floating-toolbar should exist"
         );
         assert!(window.try_find("tool_select").is_some());
-        assert!(window.try_find("tool_mesh").is_some());
-        assert!(window.try_find("tool_deformer").is_some());
+        assert!(window.try_find("tool_mesh").is_none());
+        assert!(window.try_find("tool_deformer").is_none());
         assert!(window.try_find("tool_hand").is_some());
 
         // A configured button becomes visible through registration.
@@ -518,7 +518,7 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
                 Some(top.as_str())
             );
             assert_eq!(view.editor.active_tool(), editor_core::ToolId::Select);
-            assert!(view.editor.overlay().vertices.is_empty());
+            assert_eq!(view.editor.overlay().vertices.len(), 4);
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         });
         window.press("e", cx);
@@ -526,7 +526,7 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
             harness
                 .view
                 .read_with(cx, |view, _| view.editor.active_tool()),
-            editor_core::ToolId::Vertices
+            editor_core::ToolId::Select
         );
         window.press("v", cx);
         assert_eq!(
@@ -535,12 +535,12 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
                 .read_with(cx, |view, _| view.editor.active_tool()),
             editor_core::ToolId::Select
         );
-        window.click("tool_deformer", cx);
+        window.press("d", cx);
         assert_eq!(
             harness
                 .view
                 .read_with(cx, |view, _| view.editor.active_tool()),
-            editor_core::ToolId::Deformers
+            editor_core::ToolId::Select
         );
         window.click("tool_glue", cx);
         assert_eq!(
@@ -701,7 +701,6 @@ fn vertex_drag_commits_once_and_shortcut_undo_redo_restores_geometry(cx: &mut Te
         view.editor.document().unwrap().selected_vertex_positions()
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("tool_mesh", cx);
         let start = harness
             .view
             .read_with(cx, |view, _| view.editor.overlay().vertices[1].position);
@@ -751,7 +750,7 @@ fn escape_tool_switch_and_focus_loss_cancel_a_live_vertex_drag(cx: &mut TestAppC
     for cancel in 0..3 {
         present_canvas(&harness, cx);
         cx.update_window(harness.window, |_, window, cx| {
-            window.click("tool_mesh", cx);
+            window.click("tool_select", cx);
             let start = harness
                 .view
                 .read_with(cx, |view, _| view.editor.overlay().vertices[1].position);
@@ -789,7 +788,7 @@ fn escape_tool_switch_and_focus_loss_cancel_a_live_vertex_drag(cx: &mut TestAppC
             });
             match cancel {
                 0 => window.press("escape", cx),
-                1 => window.press("v", cx),
+                1 => window.press("h", cx),
                 _ => {
                     let focus = harness.view.read_with(cx, |view, _| view.focus.clone());
                     window.focus(&focus, cx);
@@ -833,4 +832,111 @@ fn escape_tool_switch_and_focus_loss_cancel_a_live_vertex_drag(cx: &mut TestAppC
         })
         .unwrap();
     }
+}
+
+#[gpui_kit::test]
+fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &mut TestAppContext) {
+    use editor_core::{Document, EditorCommand, ObjectKind, ObjectRef, ToolId};
+    use kasane_core::{Canvas, Transform, TransformData, Vec2, WarpTransform};
+    let assets = tempfile::tempdir().unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let mut session = kasane_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
+    )
+    .unwrap();
+    session
+        .edit("fixture", None, |edit| {
+            edit.create_transform(Transform {
+                id: id.clone(),
+                name: "Warp".into(),
+                data: TransformData::Warp(WarpTransform {
+                    rows: 1,
+                    columns: 1,
+                    quad: true,
+                    points: vec![
+                        Vec2::new(32., 32.),
+                        Vec2::new(224., 32.),
+                        Vec2::new(32., 224.),
+                        Vec2::new(224., 224.),
+                    ],
+                }),
+                ..Default::default()
+            })
+        })
+        .unwrap();
+    let saved = session
+        .save_project(&assets.path().join("model"), None)
+        .unwrap();
+    let harness = super::setup_with_document(cx, Document::open(&saved.manifest).unwrap(), assets);
+    harness.view.update(cx, |view, cx| {
+        view.editor
+            .execute(EditorCommand::SelectObject(ObjectRef::new(
+                ObjectKind::Deformer,
+                &id,
+            )))
+            .unwrap();
+        cx.notify();
+    });
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.try_find("tool_deformer").is_none());
+        assert!(window.try_find("deformer-adjust").is_none());
+        assert!(
+            window
+                .try_find("deformer-input-editor.deformer_angle")
+                .is_none()
+        );
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.active_tool(), ToolId::Select);
+            assert_eq!(view.editor.overlay().vertices.len(), 4);
+            assert_eq!(view.editor.overlay().handles.len(), 9);
+        });
+        window.click("deformer-grid", cx);
+        assert!(
+            harness
+                .view
+                .read_with(cx, |view, _| view.editor.deformer_grid())
+        );
+        let start = harness
+            .view
+            .read_with(cx, |view, _| view.editor.overlay().vertices[3].position);
+        let bounds = window.find("canvas-body").bounds();
+        let start = bounds.origin + point(px(start.x), px(start.y));
+        window.drag(start, start + point(px(20.), px(0.)), cx);
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.active_tool(), ToolId::Select);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+        });
+    })
+    .unwrap();
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let original = harness.view.read_with(cx, |view, _| {
+            view.frame.as_ref().unwrap().canvas.geometry.controls[0]
+                .points
+                .clone()
+        });
+        window.click("tool_hand", cx);
+        let bounds = window.find("canvas-body").bounds();
+        let start = bounds.center();
+        window.drag(start, start + point(px(20.), px(0.)), cx);
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+            assert_eq!(
+                view.frame.as_ref().unwrap().canvas.geometry.controls[0].points,
+                original
+            );
+        });
+        window.click("tool_select", cx);
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SelectObjects(Vec::new()))
+                .unwrap();
+            cx.notify();
+        });
+        window.render_frame(cx);
+        assert!(window.try_find("deformer-actions").is_none());
+    })
+    .unwrap();
 }

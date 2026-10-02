@@ -47,11 +47,12 @@ pub enum HitTarget {
     Object(ObjectRef),
     Component(ComponentRef),
     RotationHandle(ObjectRef),
+    DeformerHandle(ObjectRef, crate::DeformerHandle),
 }
 impl HitTarget {
     pub fn object(&self) -> &ObjectRef {
         match self {
-            Self::Object(r) | Self::RotationHandle(r) => r,
+            Self::Object(r) | Self::RotationHandle(r) | Self::DeformerHandle(r, _) => r,
             Self::Component(c) => &c.object,
         }
     }
@@ -256,7 +257,7 @@ impl CanvasScene {
                     }
                 })
     }
-    /// Rotation handles have a fixed logical-pixel length, independent of model units/DPI.
+    /// Rotation axes scale with the viewport, independently of the authored pose scale.
     pub fn control_points(&self, c: &ControlGeometry, t: ViewportTransform) -> Vec<CanvasPoint> {
         let mut points: Vec<_> = c.points.iter().map(|p| t.to_canvas(*p)).collect();
         if c.kind == ControlKind::Rotation && points.len() >= 2 {
@@ -266,9 +267,10 @@ impl CanvasScene {
             };
             let length = d.x.hypot(d.y);
             if length > 1e-6 {
+                let axis_length = crate::deformer::ROTATION_AXIS_LENGTH * t.scale;
                 points[1] = CanvasPoint {
-                    x: points[0].x + d.x / length * 54.,
-                    y: points[0].y + d.y / length * 54.,
+                    x: points[0].x + d.x / length * axis_length,
+                    y: points[0].y + d.y / length * axis_length,
                 };
             }
             points.truncate(2);
@@ -286,7 +288,7 @@ impl CanvasScene {
         if tool == ToolId::Hand {
             return None;
         }
-        if tool == ToolId::Vertices {
+        {
             let mut hits = Vec::new();
             for r in selection {
                 if r.kind == K::Mesh {
@@ -318,9 +320,7 @@ impl CanvasScene {
         let mut object_hit = None;
         for c in controls {
             let points = self.control_points(c, t);
-            let editing = c.kind != ControlKind::Glue
-                && selection.contains(&c.object)
-                && tool == ToolId::Deformers;
+            let editing = c.kind != ControlKind::Glue && selection.contains(&c.object);
             for (i, p) in points.iter().enumerate() {
                 if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
                     if editing {
@@ -343,6 +343,36 @@ impl CanvasScene {
                     .is_some_and(|(a, b)| segment_distance2(point, *a, *b) <= 25.)
             }) {
                 object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
+            }
+        }
+        if tool != ToolId::Hand {
+            for c in self
+                .controls
+                .iter()
+                .filter(|c| selection.contains(&c.object))
+            {
+                let Some(gizmo) = self.deformer_gizmo(c, t) else {
+                    continue;
+                };
+                for (handle, p) in &gizmo.handles {
+                    if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
+                        return Some(HitTarget::DeformerHandle(c.object.clone(), *handle));
+                    }
+                }
+                if gizmo
+                    .outline
+                    .iter()
+                    .any(|&(a, b)| segment_distance2(point, a, b) <= 16.)
+                {
+                    return Some(HitTarget::DeformerHandle(
+                        c.object.clone(),
+                        if c.kind == ControlKind::Rotation {
+                            crate::DeformerHandle::Rotate
+                        } else {
+                            crate::DeformerHandle::Move
+                        },
+                    ));
+                }
             }
         }
         if object_hit.is_some() {
@@ -631,7 +661,9 @@ fn texture_alpha(t: &crate::SceneTexture, uv: Vec2) -> f32 {
         return 0.;
     }
     let x = uv.x.clamp(0., 1.) * t.width as f32 - 0.5;
-    let y = uv.y.clamp(0., 1.) * t.height as f32 - 0.5;
+    // Drawable UVs are bottom-up; decoded RGBA rows are top-down. Match the
+    // conversion in kasane_render::gpu::append_vertices_for for draws and masks.
+    let y = (1. - uv.y).clamp(0., 1.) * t.height as f32 - 0.5;
     let sample = |x: i32, y: i32| {
         let i = ((y.clamp(0, t.height as i32 - 1) as u32 * t.width
             + x.clamp(0, t.width as i32 - 1) as u32)

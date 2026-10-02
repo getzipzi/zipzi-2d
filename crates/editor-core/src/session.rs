@@ -111,6 +111,13 @@ impl DocumentSession {
                 return Ok(());
             }
             EditorCommand::SelectObjects(objects) => self.document.select_objects(objects),
+            EditorCommand::ToggleDeformerGrid => {
+                self.tools.deformer_grid = !self.tools.deformer_grid;
+                return Ok(());
+            }
+            EditorCommand::AdjustDeformer { object, adjustment } => {
+                self.document.adjust_deformer(&object, adjustment)
+            }
             EditorCommand::SetObjectProperty {
                 object,
                 field,

@@ -16,7 +16,7 @@ fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Res
     for id in [
         CommandId::Undo,
         CommandId::Save,
-        CommandId::Vertices,
+        CommandId::GlueTool,
         CommandId::ZoomIn,
     ] {
         assert!(!editor.command_available(editor.command(id)));

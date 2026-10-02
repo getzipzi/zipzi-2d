@@ -8,6 +8,11 @@ pub enum EditorCommand {
     SetTool(crate::ToolId),
     ToggleDeformers,
     ToggleAncestorDeformers,
+    ToggleDeformerGrid,
+    AdjustDeformer {
+        object: crate::ObjectRef,
+        adjustment: crate::DeformerAdjustment,
+    },
     SetObjectProperty {
         object: crate::ObjectRef,
         field: String,

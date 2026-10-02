@@ -1,3 +1,4 @@
+pub mod deformer_bar;
 pub mod status_bar;
 pub mod tab_bar;
 pub mod toolbar;

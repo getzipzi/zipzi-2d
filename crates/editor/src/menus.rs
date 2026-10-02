@@ -151,8 +151,6 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
         item(CommandId::ResetView),
         MenuItem::separator(),
         item(CommandId::SelectTool),
-        item(CommandId::Vertices),
-        item(CommandId::DeformerTool),
         item(CommandId::GlueTool),
         item(CommandId::HandTool),
         MenuItem::separator(),
@@ -398,8 +396,6 @@ impl EditorView {
                 if matches!(
                     id,
                     CommandId::SelectTool
-                        | CommandId::Vertices
-                        | CommandId::DeformerTool
                         | CommandId::GlueTool
                         | CommandId::HandTool
                         | CommandId::CancelGesture

@@ -40,22 +40,6 @@ impl ToolbarRegistry {
                 action: Some(select_tool),
             },
             ToolbarItemConfig {
-                id: "tool_mesh",
-                icon: IconName::Grid2x2,
-                tooltip_key: "editor.tool_mesh",
-                selected: mesh_selected,
-                enabled: not_modal,
-                action: Some(mesh_tool),
-            },
-            ToolbarItemConfig {
-                id: "tool_deformer",
-                icon: IconName::Sparkles,
-                tooltip_key: "editor.tool_deformer",
-                selected: deformer_selected,
-                enabled: not_modal,
-                action: Some(deformer_tool),
-            },
-            ToolbarItemConfig {
                 id: "tool_glue",
                 icon: IconName::Link,
                 tooltip_key: "editor.tool_glue",
@@ -138,12 +122,6 @@ pub fn render_floating_toolbar(
 fn select_selected(canvas: &CanvasView, cx: &App) -> bool {
     canvas.active_tool(cx) == ToolId::Select
 }
-fn mesh_selected(canvas: &CanvasView, cx: &App) -> bool {
-    canvas.active_tool(cx) == ToolId::Vertices
-}
-fn deformer_selected(canvas: &CanvasView, cx: &App) -> bool {
-    canvas.active_tool(cx) == ToolId::Deformers
-}
 fn glue_selected(canvas: &CanvasView, cx: &App) -> bool {
     canvas.active_tool(cx) == ToolId::Glue
 }
@@ -155,12 +133,6 @@ fn not_modal(_: &CanvasView, modal: bool) -> bool {
 }
 fn select_tool(canvas: &mut CanvasView, window: &mut Window, cx: &mut Context<CanvasView>) {
     set_tool(canvas, CommandId::SelectTool, window, cx);
-}
-fn mesh_tool(canvas: &mut CanvasView, window: &mut Window, cx: &mut Context<CanvasView>) {
-    set_tool(canvas, CommandId::Vertices, window, cx);
-}
-fn deformer_tool(canvas: &mut CanvasView, window: &mut Window, cx: &mut Context<CanvasView>) {
-    set_tool(canvas, CommandId::DeformerTool, window, cx);
 }
 fn glue_tool(canvas: &mut CanvasView, window: &mut Window, cx: &mut Context<CanvasView>) {
     set_tool(canvas, CommandId::GlueTool, window, cx);

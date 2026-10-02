@@ -8,7 +8,6 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
         height: 512.,
         scale_factor: 2.,
     });
-    editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
     present(&mut editor)?;
     Ok((editor, dir))
 }
@@ -206,7 +205,7 @@ fn switch_save_close_and_tool_commands_cancel_canvas_candidates() -> anyhow::Res
                 assert_eq!(editor.prepare_close(id)?, CloseDisposition::Ready);
             }
             _ => {
-                editor.dispatch(editor.command(CommandId::Vertices))?;
+                editor.dispatch(editor.command(CommandId::GlueTool))?;
             }
         }
         assert!(!editor.gesture_active());

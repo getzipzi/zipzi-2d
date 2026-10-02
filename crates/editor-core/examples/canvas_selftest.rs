@@ -19,12 +19,7 @@ fn main() -> anyhow::Result<()> {
             frame.geometry.meshes.len(),
             frame.geometry.controls.len()
         );
-        for tool in [
-            ToolId::Select,
-            ToolId::Vertices,
-            ToolId::Deformers,
-            ToolId::Glue,
-        ] {
+        for tool in [ToolId::Select, ToolId::Glue] {
             editor.execute(EditorCommand::SetTool(tool))?;
             let mut times = Vec::new();
             let mut candidate_count = 0;
@@ -82,7 +77,6 @@ fn main() -> anyhow::Result<()> {
                 ObjectKind::Mesh,
                 &mesh.id,
             )))?;
-            editor.execute(EditorCommand::SetTool(ToolId::Vertices))?;
             let overlay = editor.overlay();
             if overlay.unavailable.is_some() || !frame.geometry.mesh_visible(&mesh.id) {
                 continue;
@@ -93,7 +87,7 @@ fn main() -> anyhow::Result<()> {
             };
             let start = frame.transform.to_canvas(*vertex);
             assert!(matches!(frame.geometry.hit(start, frame.transform,
-                &editor.document().unwrap().context().selections, ToolId::Vertices, DeformerVisibility::default()),
+                &editor.document().unwrap().context().selections, ToolId::Select, DeformerVisibility::default()),
                 Some(HitTarget::Component(ComponentRef { object, .. })) if object.id == mesh.id));
             editor.canvas_input(CanvasInput::Down {
                 point: start,

@@ -1,6 +1,6 @@
 //! Canvas interaction state machine. Object selection, component selection and
 //! write targets are independent; a click never opens a model transaction.
-use crate::control_edit::ControlEdit;
+use crate::control_edit::{ControlChange, ControlEdit};
 use crate::{
     CanvasPoint, CanvasScene, ComponentRef, ControlKind, Document, HitTarget, ModelPoint,
     ObjectKind, ObjectRef, ViewportTransform,
@@ -12,8 +12,6 @@ use std::sync::Arc;
 pub enum ToolId {
     #[default]
     Select,
-    Vertices,
-    Deformers,
     Glue,
     Hand,
 }
@@ -51,22 +49,35 @@ pub struct OverlaySnapshot {
     pub marquee: Option<(CanvasPoint, CanvasPoint)>,
     pub unavailable: Option<String>,
     pub target_label: Option<String>,
+    pub gizmo_lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub guide_lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub handles: Vec<OverlayHandle>,
+    pub interaction_label: Option<String>,
+    pub active_handle: Option<crate::DeformerHandle>,
+}
+#[derive(Clone, Debug)]
+pub struct OverlayHandle {
+    pub position: CanvasPoint,
+    pub round: bool,
+    pub hovered: bool,
 }
 struct Press {
     point: CanvasPoint,
     transform: ViewportTransform,
     scene: Arc<CanvasScene>,
     target: Option<HitTarget>,
+    component_surface: bool,
     shift: bool,
     selection: Vec<ObjectRef>,
     current: CanvasPoint,
     edit: Option<Vec<ControlEdit>>,
-    last: Option<(ModelPoint, Option<f32>)>,
+    last: Option<ControlChange>,
 }
 #[derive(Default)]
 pub struct ToolController {
     pub active: ToolId,
     pub deformer_visibility: DeformerVisibility,
+    pub deformer_grid: bool,
     components: Vec<ComponentRef>,
     hovered: Option<HitTarget>,
     press: Option<Press>,
@@ -142,16 +153,14 @@ impl ToolController {
                 let selection = document.context().selections.clone();
                 let hit = scene.hit(point, t, &selection, self.active, self.deformer_visibility);
                 self.hovered = hit.clone();
-                // An already selected surface is empty space in component mode:
-                // its interior must permit a marquee without replacing the object set.
+                let component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
+                    (selected.kind == ObjectKind::Mesh && selected == r)
+                    || (selected.kind == ObjectKind::Deformer
+                        && (selected == r || (r.kind == ObjectKind::Mesh && scene.ancestors(r).contains(selected))))));
+                // A selected surface permits component marquee selection without
+                // replacing the shared object selection.
                 let hit = match hit {
-                    Some(HitTarget::Object(ref r))
-                        if self.active == ToolId::Vertices
-                            && r.kind == ObjectKind::Mesh
-                            && selection.contains(r) =>
-                    {
-                        None
-                    }
+                    Some(HitTarget::Object(_)) if component_surface => None,
                     hit => hit,
                 };
                 match &hit {
@@ -185,6 +194,7 @@ impl ToolController {
                         transform: t,
                         scene: scene.clone(),
                         target: hit,
+                        component_surface,
                         shift,
                         selection,
                         current: point,
@@ -221,31 +231,68 @@ impl ToolController {
                     document.finish_edit()?;
                 } else if press.target.is_none() {
                     let rectangle = crate::picking::distance2(press.point, point) >= 9.;
-                    if self.active == ToolId::Vertices && rectangle {
+                    if !rectangle && !press.component_surface {
+                        // A true hit-test miss clears selection, even with Shift.
+                        // Selected surfaces are retained for component selection.
+                        document.select_objects(Vec::new())?;
+                        self.clear();
+                    } else if (rectangle || press.component_surface)
+                        && press.selection.iter().any(|r| match r.kind {
+                            ObjectKind::Mesh => press.scene.mesh_visible(&r.id),
+                            ObjectKind::Deformer => press
+                                .scene
+                                .controls
+                                .iter()
+                                .any(|c| c.object == *r && c.enabled),
+                            _ => false,
+                        })
+                    {
                         if !press.shift {
                             self.components.clear();
                         }
-                        for r in &press.selection {
-                            if let Some(m) = press.scene.mesh(&r.id).filter(|_| {
-                                r.kind == ObjectKind::Mesh && press.scene.mesh_visible(&r.id)
-                            }) {
-                                for (id, p) in &m.vertices {
+                        if rectangle {
+                            for c in &press.scene.controls {
+                                if c.kind != ControlKind::Warp
+                                    || !c.enabled
+                                    || !press.selection.contains(&c.object)
+                                {
+                                    continue;
+                                }
+                                for (id, p) in c.points.iter().enumerate() {
                                     if in_rect(press.transform.to_canvas(*p), press.point, point) {
-                                        let c = ComponentRef {
-                                            object: r.clone(),
-                                            id: *id,
+                                        let component = ComponentRef {
+                                            object: c.object.clone(),
+                                            id: id as u32,
                                         };
-                                        if !self.components.contains(&c) {
-                                            self.components.push(c);
+                                        if !self.components.contains(&component) {
+                                            self.components.push(component);
+                                        }
+                                    }
+                                }
+                            }
+                            for r in &press.selection {
+                                if let Some(m) = press.scene.mesh(&r.id).filter(|_| {
+                                    r.kind == ObjectKind::Mesh && press.scene.mesh_visible(&r.id)
+                                }) {
+                                    for (id, p) in &m.vertices {
+                                        if in_rect(
+                                            press.transform.to_canvas(*p),
+                                            press.point,
+                                            point,
+                                        ) {
+                                            let c = ComponentRef {
+                                                object: r.clone(),
+                                                id: *id,
+                                            };
+                                            if !self.components.contains(&c) {
+                                                self.components.push(c);
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    } else if self.active == ToolId::Select
-                        || self.active == ToolId::Deformers
-                        || self.active == ToolId::Glue
-                    {
+                    } else if self.active == ToolId::Select || self.active == ToolId::Glue {
                         let mut selection = if press.shift {
                             press.selection.clone()
                         } else {
@@ -322,25 +369,94 @@ impl ToolController {
         let edits = press.edit.as_ref().unwrap();
         let start = press.transform.to_model(press.point);
         let end = press.transform.to_model(point);
-        let rotate = matches!(target, HitTarget::RotationHandle(_));
-        let delta = if rotate {
-            ModelPoint::default()
-        } else {
-            ModelPoint {
-                x: end.x - start.x,
-                y: end.y - start.y,
+        let delta = ModelPoint {
+            x: end.x - start.x,
+            y: end.y - start.y,
+        };
+        let change = match target {
+            HitTarget::RotationHandle(_) => ControlChange::Rotation {
+                translation: ModelPoint::default(),
+                angle: edits[0].rotation_delta(start, end)?,
+                scale: 1.,
+            },
+            HitTarget::DeformerHandle(object, handle) => {
+                use crate::DeformerHandle as H;
+                let control = press
+                    .scene
+                    .controls
+                    .iter()
+                    .find(|c| &c.object == object)
+                    .unwrap();
+                let gizmo = press
+                    .scene
+                    .deformer_gizmo(control, press.transform)
+                    .unwrap();
+                match handle {
+                    H::Move => ControlChange::MoveAll(delta),
+                    H::Rotate if control.kind == ControlKind::Rotation => ControlChange::Rotation {
+                        translation: ModelPoint::default(),
+                        angle: edits[0].rotation_delta(start, end)?,
+                        scale: 1.,
+                    },
+                    H::Rotate => {
+                        let pivot = press.transform.to_model(gizmo.center);
+                        let radians = (end.y - pivot.y).atan2(end.x - pivot.x)
+                            - (start.y - pivot.y).atan2(start.x - pivot.x);
+                        ControlChange::Transform {
+                            translation: ModelPoint::default(),
+                            pivot,
+                            scale: [1., 1.],
+                            radians,
+                        }
+                    }
+                    H::RotationScale => {
+                        let center = press.transform.to_model(gizmo.center);
+                        let before = (start.x - center.x).hypot(start.y - center.y);
+                        let after = (end.x - center.x).hypot(end.y - center.y);
+                        ensure!(before > 1e-6, "Rotation scale handle is unavailable");
+                        ControlChange::Rotation {
+                            translation: ModelPoint::default(),
+                            angle: 0.,
+                            scale: (after / before).max(0.0001),
+                        }
+                    }
+                    H::Scale(index) => {
+                        let (corner, anchor) = gizmo.scale_anchor(*index);
+                        let ratio = |d: f32, span: f32| {
+                            if span.abs() < 1e-5 {
+                                1.
+                            } else {
+                                (1. + d / span).max(0.001)
+                            }
+                        };
+                        let sx = ratio(point.x - press.point.x, corner.x - anchor.x);
+                        let sy = ratio(point.y - press.point.y, corner.y - anchor.y);
+                        let scale = if press.shift && index % 2 == 0 {
+                            let s = if (sx - 1.).abs() > (sy - 1.).abs() {
+                                sx
+                            } else {
+                                sy
+                            };
+                            [s, s]
+                        } else {
+                            [sx, sy]
+                        };
+                        ControlChange::Transform {
+                            translation: ModelPoint::default(),
+                            pivot: press.transform.to_model(anchor),
+                            scale,
+                            radians: 0.,
+                        }
+                    }
+                }
             }
+            _ => ControlChange::Translate(delta),
         };
-        let angle = if rotate {
-            Some(edits[0].rotation_delta(start, end)?)
-        } else {
-            None
-        };
-        if press.last == Some((delta, angle)) {
+        if press.last == Some(change) {
             return Ok(false);
         }
-        document.preview_control_edit(edits, &self.components, delta, angle)?;
-        press.last = Some((delta, angle));
+        document.preview_control_edit(edits, &self.components, change)?;
+        press.last = Some(change);
         Ok(true)
     }
     pub fn overlay(&self, document: &Document, frame: &CanvasFrame) -> OverlaySnapshot {
@@ -348,6 +464,16 @@ impl ToolController {
         let t = frame.transform;
         let selection = &document.context().selections;
         let mut out = OverlaySnapshot::default();
+        out.active_handle = self
+            .press
+            .as_ref()
+            .and_then(|p| p.target.as_ref())
+            .or(self.hovered.as_ref())
+            .and_then(|hit| match hit {
+                HitTarget::DeformerHandle(_, handle) => Some(*handle),
+                HitTarget::RotationHandle(_) => Some(crate::DeformerHandle::Rotate),
+                _ => None,
+            });
         for r in selection {
             if r.kind == ObjectKind::Mesh {
                 if let Some(m) = scene.mesh(&r.id).filter(|_| scene.mesh_visible(&r.id)) {
@@ -356,27 +482,25 @@ impl ToolController {
                             .iter()
                             .map(|(a, b)| (t.to_canvas(*a), t.to_canvas(*b))),
                     );
-                    if self.active == ToolId::Vertices {
-                        out.lines.extend(m.edges.iter().filter_map(|&(a, b)| {
-                            Some((
-                                t.to_canvas(m.vertices.get(a)?.1),
-                                t.to_canvas(m.vertices.get(b)?.1),
-                            ))
-                        }));
-                        for (id, p) in &m.vertices {
-                            let c = ComponentRef {
-                                object: r.clone(),
-                                id: *id,
-                            };
-                            out.vertices.push(OverlayVertex {
-                                id: *id,
-                                position: t.to_canvas(*p),
-                                selected: self.components.contains(&c),
-                                hovered: self.hovered == Some(HitTarget::Component(c)),
-                            });
-                        }
-                        describe_edit(&mut out, document, scene, r);
+                    out.lines.extend(m.edges.iter().filter_map(|&(a, b)| {
+                        Some((
+                            t.to_canvas(m.vertices.get(a)?.1),
+                            t.to_canvas(m.vertices.get(b)?.1),
+                        ))
+                    }));
+                    for (id, p) in &m.vertices {
+                        let c = ComponentRef {
+                            object: r.clone(),
+                            id: *id,
+                        };
+                        out.vertices.push(OverlayVertex {
+                            id: *id,
+                            position: t.to_canvas(*p),
+                            selected: self.components.contains(&c),
+                            hovered: self.hovered == Some(HitTarget::Component(c)),
+                        });
                     }
+                    describe_edit(&mut out, document, scene, r);
                 }
             } else if matches!(r.kind, ObjectKind::Part | ObjectKind::Offscreen) {
                 let members = scene.member_meshes(r);
@@ -417,9 +541,7 @@ impl ToolController {
                     .iter()
                     .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?))),
             );
-            if selected && self.active == ToolId::Deformers
-                || matches!(control.kind, ControlKind::Rotation | ControlKind::Glue)
-            {
+            if selected || matches!(control.kind, ControlKind::Rotation | ControlKind::Glue) {
                 for (i, p) in points.iter().enumerate() {
                     let c = ComponentRef {
                         object: control.object.clone(),
@@ -429,10 +551,10 @@ impl ToolController {
                         id: i as u32,
                         position: *p,
                         selected: self.components.contains(&c),
-                        hovered: self
-                            .hovered
-                            .as_ref()
-                            .is_some_and(|h| h.object() == &control.object),
+                        hovered: self.hovered == Some(HitTarget::Component(c))
+                            || (i == 1
+                                && self.hovered
+                                    == Some(HitTarget::RotationHandle(control.object.clone()))),
                     });
                 }
             }
@@ -448,8 +570,36 @@ impl ToolController {
                         .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?))),
                 );
             }
-            if selected && self.active == ToolId::Deformers && control.kind != ControlKind::Glue {
+            if selected && control.kind != ControlKind::Glue {
                 describe_edit(&mut out, document, scene, &control.object);
+                if self.deformer_grid && control.kind == ControlKind::Warp {
+                    if let Some(warp) = document
+                        .model()
+                        .get_transform(&control.object.id)
+                        .and_then(|t| t.warp())
+                    {
+                        out.guide_lines
+                            .extend(crate::deformer::sample_grid(control, warp, t));
+                    }
+                }
+                if let Some(gizmo) = scene.deformer_gizmo(control, t) {
+                    out.gizmo_lines.extend(gizmo.outline);
+                    out.handles
+                        .extend(
+                            gizmo
+                                .handles
+                                .into_iter()
+                                .map(|(kind, position)| OverlayHandle {
+                                    position,
+                                    round: matches!(kind, crate::DeformerHandle::Rotate),
+                                    hovered: self.hovered
+                                        == Some(HitTarget::DeformerHandle(
+                                            control.object.clone(),
+                                            kind,
+                                        )),
+                                }),
+                        );
+                }
             }
         }
         if let Some(hit) = &self.hovered {
@@ -468,6 +618,25 @@ impl ToolController {
             if p.target.is_none() && crate::picking::distance2(p.point, p.current) >= 9. {
                 out.marquee = Some((p.point, p.current));
             }
+            out.interaction_label = p.last.map(|change| match change {
+                ControlChange::Translate(d) | ControlChange::MoveAll(d) => {
+                    format!("ΔX {:.2}  ΔY {:.2}", d.x, d.y)
+                }
+                ControlChange::Transform { scale, radians, .. } if radians == 0. => {
+                    format!("X {:.1}%  Y {:.1}%", scale[0] * 100., scale[1] * 100.)
+                }
+                ControlChange::Transform { radians, .. } => {
+                    format!("{:.1}°", -radians.to_degrees())
+                }
+                ControlChange::Rotation { angle, scale, .. } => {
+                    let angle = if p.scene.source.frame.canvas.flag & 1 == 0 {
+                        -angle
+                    } else {
+                        angle
+                    };
+                    format!("Δ {:.1}°  × {:.3}", angle, scale)
+                }
+            });
         }
         out
     }
