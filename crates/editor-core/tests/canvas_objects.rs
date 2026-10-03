@@ -1172,6 +1172,85 @@ fn pose_updates_share_topology_but_publish_independent_positions() -> anyhow::Re
 }
 
 #[test]
+fn mesh_drag_reuses_unchanged_meshes_without_changing_old_frames() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let original = shown(&mut editor)?;
+    let selected = editor
+        .document()
+        .unwrap()
+        .context()
+        .selection
+        .clone()
+        .unwrap();
+    let unchanged = original
+        .geometry
+        .meshes
+        .iter()
+        .find(|mesh| mesh.id != selected.id)
+        .unwrap();
+    let positions = original
+        .geometry
+        .mesh(&selected.id)
+        .unwrap()
+        .vertices
+        .clone();
+    let point = editor.overlay().vertices[0].position;
+    editor.canvas_input(CanvasInput::Down {
+        point,
+        shift: false,
+    })?;
+    for dx in [20., 40.] {
+        editor.canvas_input(CanvasInput::Move {
+            point: CanvasPoint {
+                x: point.x + dx,
+                y: point.y,
+            },
+            left_down: true,
+        })?;
+        let edited = shown(&mut editor)?;
+        let same = edited
+            .geometry
+            .meshes
+            .iter()
+            .find(|mesh| mesh.id == unchanged.id)
+            .unwrap();
+        assert!(Arc::ptr_eq(unchanged, same));
+        assert_ne!(
+            edited.geometry.mesh(&selected.id).unwrap().vertices,
+            positions
+        );
+        assert_eq!(
+            original.geometry.mesh(&selected.id).unwrap().vertices,
+            positions
+        );
+        let current = &edited.geometry.mesh(&selected.id).unwrap().vertices[0];
+        assert_eq!(
+            edited.geometry.hit(
+                edited.transform.to_canvas(current.1),
+                edited.transform,
+                std::slice::from_ref(&selected),
+                ToolId::Select,
+                DeformerVisibility::default(),
+            ),
+            Some(HitTarget::Component(ComponentRef {
+                object: selected.clone(),
+                id: current.0
+            })),
+        );
+    }
+    editor.canvas_input(CanvasInput::Cancel)?;
+    assert_eq!(
+        shown(&mut editor)?
+            .geometry
+            .mesh(&selected.id)
+            .unwrap()
+            .vertices,
+        positions
+    );
+    Ok(())
+}
+
+#[test]
 fn opacity_reuses_positions_with_fresh_picking_visibility_and_history() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
     let top = editor

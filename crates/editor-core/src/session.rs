@@ -14,6 +14,7 @@ pub struct DocumentSession {
     pub viewport_revision: u64,
     cache: Option<SceneSnapshot>,
     geometry: Option<Arc<CanvasScene>>,
+    previous_geometry: Option<Arc<CanvasScene>>,
     appearance_geometry: Option<Arc<CanvasScene>>,
     pub displayed: Option<CanvasFrame>,
     pub tools: ToolController,
@@ -28,6 +29,7 @@ impl DocumentSession {
             viewport_revision: 1,
             cache: None,
             geometry: None,
+            previous_geometry: None,
             appearance_geometry: None,
             displayed: None,
             tools: ToolController::default(),
@@ -46,7 +48,10 @@ impl DocumentSession {
     fn invalidate_scene(&mut self) {
         self.scene_revision += 1;
         self.cache = None;
-        self.geometry = None;
+        self.previous_geometry = self
+            .geometry
+            .take()
+            .or_else(|| self.previous_geometry.take());
         self.appearance_geometry = None;
         self.tools.reconcile(&self.document);
     }
@@ -218,8 +223,11 @@ impl DocumentSession {
         if self.cache.is_none() {
             let scene = self.document.snapshot()?;
             if self.geometry.is_none() {
+                let previous = self.previous_geometry.take();
                 self.geometry = Some(if let Some(previous) = self.appearance_geometry.take() {
                     Arc::new(previous.with_appearance(&self.document, scene.clone()))
+                } else if let Some(previous) = previous {
+                    Arc::new(previous.with_positions(&self.document, scene.clone()))
                 } else {
                     self.document.geometry(&scene)
                 });

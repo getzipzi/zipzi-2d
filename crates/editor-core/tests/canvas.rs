@@ -373,8 +373,9 @@ fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<(
     let mut geometry = (*frame.geometry).clone();
     let p = geometry.meshes[0].vertices[0].1;
     let meshes = std::sync::Arc::make_mut(&mut geometry.meshes);
-    meshes[0].vertices[1].1 = p;
-    meshes[0].vertices.reverse();
+    let mesh = std::sync::Arc::make_mut(&mut meshes[0]);
+    mesh.vertices[1].1 = p;
+    mesh.vertices.reverse();
     frame.geometry = std::sync::Arc::new(geometry);
     let hit = frame.transform.to_canvas(p);
     assert!(editor.present_frame(frame));

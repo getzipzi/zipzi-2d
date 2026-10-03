@@ -9,6 +9,9 @@ use std::{
     sync::Arc,
 };
 
+#[cfg(test)]
+mod tests;
+
 pub const PICK_ALPHA: f32 = 1. / 255.;
 pub const CONTROL_RADIUS: f32 = 7.;
 
@@ -65,7 +68,8 @@ pub struct PickCandidate {
 
 #[derive(Clone, Debug)]
 pub struct CanvasScene {
-    pub meshes: Arc<[MeshGeometry]>,
+    /// Unchanged meshes can be shared without rewriting an older frame's pose.
+    pub meshes: Arc<[Arc<MeshGeometry>]>,
     pub controls: Vec<ControlGeometry>,
     pub index: Arc<crate::CanvasObjectIndex>,
     pub source: SceneSnapshot,
@@ -78,17 +82,39 @@ pub struct CanvasScene {
 }
 impl CanvasScene {
     pub fn new(document: &Document, source: SceneSnapshot) -> Self {
+        Self::build(document, source, None)
+    }
+    /// Controls and authoring handles are captured anew even when meshes are reused.
+    pub(crate) fn with_positions(&self, document: &Document, source: SceneSnapshot) -> Self {
+        Self::build(document, source, Some(self))
+    }
+    fn build(document: &Document, source: SceneSnapshot, previous: Option<&Self>) -> Self {
         let topology = document.canvas_topology();
         let index = topology.index.clone();
         let canvas = source.frame.canvas;
+        let previous = previous.filter(|previous| {
+            Arc::ptr_eq(&previous.topology, &topology) && previous.source.frame.canvas == canvas
+        });
         let visible_meshes = visible_meshes(&source.frame);
         let to_model = |p| ViewportTransform::evaluated_to_source(canvas, p);
-        let meshes: Arc<[MeshGeometry]> = source
+        let meshes: Arc<[Arc<MeshGeometry>]> = source
             .frame
             .drawables
             .iter()
-            .filter_map(|d| {
+            .enumerate()
+            .filter_map(|(slot, d)| {
                 let m = topology.meshes.get(&d.id)?;
+                if let Some(previous) = previous
+                    && previous
+                        .source
+                        .frame
+                        .drawables
+                        .get(slot)
+                        .is_some_and(|old| old.id == d.id && old.positions == d.positions)
+                    && let Some(&mesh_slot) = previous.mesh_slots.get(&d.id)
+                {
+                    return Some(previous.meshes[mesh_slot].clone());
+                }
                 let vertices: Vec<_> = m
                     .vertex_ids
                     .iter()
@@ -100,14 +126,14 @@ impl CanvasScene {
                     .iter()
                     .filter_map(|&(a, b)| Some((vertices.get(a)?.1, vertices.get(b)?.1)))
                     .collect();
-                Some(MeshGeometry {
+                Some(Arc::new(MeshGeometry {
                     id: d.id.clone(),
                     bounds: bounds(vertices.iter().map(|(_, p)| *p)),
                     vertices,
                     triangles: m.triangles.clone(),
                     edges: m.edges.clone(),
                     boundary,
-                })
+                }))
             })
             .collect();
         let mut controls = Vec::new();
@@ -123,11 +149,25 @@ impl CanvasScene {
                 enabled: evaluated.enabled,
             });
         }
-        let mesh_slots: HashMap<_, _> = meshes
-            .iter()
-            .enumerate()
-            .map(|(i, m)| (m.id.clone(), i))
-            .collect();
+        let mesh_slots = previous
+            .filter(|previous| {
+                previous.meshes.len() == meshes.len()
+                    && previous
+                        .meshes
+                        .iter()
+                        .zip(meshes.iter())
+                        .all(|(a, b)| a.id == b.id)
+            })
+            .map(|previous| previous.mesh_slots.clone())
+            .unwrap_or_else(|| {
+                Arc::new(
+                    meshes
+                        .iter()
+                        .enumerate()
+                        .map(|(i, m)| (m.id.clone(), i))
+                        .collect(),
+                )
+            });
         for g in &topology.glues {
             let (Some(&a), Some(&b)) = (mesh_slots.get(&g.mesh_a), mesh_slots.get(&g.mesh_b))
             else {
@@ -159,19 +199,33 @@ impl CanvasScene {
             .enumerate()
             .map(|(i, t)| (t.asset_id.clone(), i))
             .collect();
-        let control_slots = controls
-            .iter()
-            .enumerate()
-            .map(|(i, c)| (c.object.id.clone(), i))
-            .collect();
+        let control_slots = previous
+            .filter(|previous| {
+                previous.controls.len() == controls.len()
+                    && previous
+                        .controls
+                        .iter()
+                        .zip(&controls)
+                        .all(|(a, b)| a.object == b.object)
+            })
+            .map(|previous| previous.control_slots.clone())
+            .unwrap_or_else(|| {
+                Arc::new(
+                    controls
+                        .iter()
+                        .enumerate()
+                        .map(|(i, c)| (c.object.id.clone(), i))
+                        .collect(),
+                )
+            });
         let mut scene = Self {
             beziers: HashMap::new(),
             meshes,
             controls,
             index,
             source,
-            mesh_slots: Arc::new(mesh_slots),
-            control_slots: Arc::new(control_slots),
+            mesh_slots,
+            control_slots,
             texture_slots,
             visible_meshes,
             topology,
@@ -239,7 +293,7 @@ impl CanvasScene {
         self.control_slots.get(id).map(|&i| &self.controls[i])
     }
     pub fn mesh(&self, id: &str) -> Option<&MeshGeometry> {
-        self.mesh_slots.get(id).map(|&i| &self.meshes[i])
+        self.mesh_slots.get(id).map(|&i| self.meshes[i].as_ref())
     }
     pub fn mesh_visible(&self, id: &str) -> bool {
         self.visible_meshes.contains(id)
@@ -271,6 +325,7 @@ impl CanvasScene {
                         self.ancestors(&ObjectRef::new(K::Mesh, &m.id)).contains(r)
                     })
             })
+            .map(Arc::as_ref)
             .collect()
     }
     pub fn control_visible(

@@ -143,3 +143,35 @@ Mao 实际窗口 Release：每项预热 30 次、正式输入 300 次、目标 1
 最终 115 项 editor-core 测试及 11 项报告脚本测试通过，Release 构建、格式和 diff 检查通过。新回归验证多次输入未呈现时仍能连续显示完成姿态、后续移动不发生目标漂移、图像与 overlay 使用同一几何，以及手势结束和上下文改变后拒绝旧帧；原有跨编辑、尺寸变化和文档激活保护也继续通过。编辑器完整测试仍为 51 通过、6 项同名既有失败、1 忽略。
 
 随后修正上述 6 项测试：`dcc58b7` 更改默认布局后，2 项布局测试仍读取旧面板层级，4 项参数测试未显式打开默认隐藏的 Keyforms 面板。布局测试现检查当前三列结构和根节点保存的实测尺寸，参数测试先显示 Keyforms，保留原有业务断言；导航测试也确认面板确实关闭后能重新显示。`cargo test -p kasane-editor` 通过：主测试 57 通过、0 失败、1 忽略，另有 10 项原生渲染集成测试通过。记录位于 `target/editor-tests-layout-fixed.log`。
+
+## 连续姿态的增量几何与呈现复测（2026-10-03）
+
+`e0e0d8f` 之后，每次姿态更新仍重建所有网格的顶点、边界和包围盒。现在 `CanvasScene` 按网格持有不可变 `Arc<MeshGeometry>`，会话保留最近一次几何供下一次场景构建比较：只有 topology 和 Canvas 坐标约定相同、drawable 同一槽位的 ID 与 evaluated positions 全部相等时，才共享该网格。位置变化的网格重新构建；网格和控制对象索引也仅在 ID 顺序相同时复用。控制点、authoring handles、可见性和 source 始终使用当前快照，旧图像的几何不会被后续编辑改写。
+
+独立 CPU 探针执行实际的单点、8 点、Warp 和 Rotation 拖动，每项预热 30 次、测量 300 次，使用与窗口相同的 Mao fixture。`scene_ms` 包含 SDK 求值及画布几何构建；另用同一个 evaluated source 独立测量几何构建，优化版使用上一个姿态的几何。两轮 Release 分别按前→后和后→前运行，以下是各轮 P95 的范围，并非把样本混合后的分位数：
+
+| 负载 | 几何构建 P95：`e0e0d8f` → 增量版本 | 场景生成 P95：`e0e0d8f` → 增量版本 |
+| --- | ---: | ---: |
+| 单顶点 | 0.189–0.197 → 0.113–0.114 ms | 0.575–0.579 → 0.453–0.489 ms |
+| 8 顶点 | 0.183–0.190 → 0.113–0.120 ms | 0.533–0.592 → 0.469–0.516 ms |
+| Warp | 0.190–0.209 → 0.163–0.165 ms | 0.571–0.593 → 0.551–0.587 ms |
+| Rotation | 0.192–0.210 → 0.157–0.158 ms | 0.556–0.597 → 0.520–0.540 ms |
+
+单点 / 8 点的几何开销减少约 34–42%；变形器修改的网格更多，收益较小。各负载最后一帧的完整 mesh/control 几何与选中项 overlay 输出均与基线逐字一致。这些 CPU 指标不含 GPUI、GPU 和系统显示，不能直接换算为 FPS。
+
+真实窗口继续使用 Apple M1 Pro、内建 Color LCD（3024×1964 physical）、Release、120 Hz 输入以及相同预热和样本数。基线与增量版本各运行两次，保留默认三缓冲，以下也是两轮结果的范围：
+
+| 负载 | 新预览 fps：`e0e0d8f` → 增量版本 | 输入到显示 P95：`e0e0d8f` → 增量版本 |
+| --- | ---: | ---: |
+| 单顶点 | 119.20–119.60 → 118.81–119.20 | 39.78–40.58 → 34.59–40.48 ms |
+| 8 顶点 | 117.64–119.20 → 113.22–119.20 | 45.04–48.63 → 36.57–40.70 ms |
+| Warp | 118.80 → 118.80–119.20 | 32.78–34.53 → 34.28–34.29 ms |
+| Rotation | 119.20–119.60 → 118.80–119.20 | 34.36–40.14 → 34.41–37.16 ms |
+
+Release 本来已接近显示器上限，本轮没有证据表明窗口 FPS 稳定提高，主要收益是减少 CPU 开销。各轮报告均为 `issues=[]`、trace 丢失为 0；正式请求没有版本拒绝。最新一轮增量版本有 1199 / 1200 个请求关联到显示，另 1 个为 `accepted_not_composed`。关联到显示的请求数可能大于不同显示时间戳的数量，因此仍用不同显示时间戳计算新预览 fps。
+
+另外复测了 trace-only 双缓冲：首轮相同基线二进制的 8 点 / Rotation 输入到显示 P95 分别从 45.04 / 40.14 ms 降至 36.82 / 32.06 ms，保持约 119 fps；但换顺序复测后，8 点只有 98.54 个不同显示帧/秒，单点 / Warp 延迟又到约 40 ms。增量版本的双缓冲 Warp 也有 13 个 `accepted_not_composed`，新预览为 114.02 fps。由于吞吐和延迟收益不稳定，生产配置继续使用三缓冲，本轮没有修改 GPUI 呈现配置。
+
+CPU 源码副本、探针、两轮 CSV 和输出位于 `target/fps-incremental-before/`、`target/fps-incremental-after/`；`target/fps-incremental-source-verification.json` 核对基线与当前生产源码。窗口记录位于 `target/fps-present-before-{2,3}/`、`target/fps-present-before-repeat-{2,3}/`、`target/fps-present-incremental-{2,3}/`、`target/fps-present-incremental-repeat-3/`。`target/fps-incremental-comparison.json` 汇总指标、fixture、源码及二进制 SHA-256。
+
+验证：`cargo test --locked --workspace` 共 187 通过、0 失败、1 忽略（editor-core 118，editor-render 2，editor 67）；Release 构建、格式与 diff 检查通过。新增回归覆盖连续拖动共享未变网格、旧帧位置保持、取消恢复、包围盒 / 边界与命中更新，以及 drawable 重排、Canvas 坐标变化和 topology 更新时的重建。完整测试日志在 `target/fps-incremental-workspace-tests-final.log`。
