@@ -722,13 +722,16 @@ impl ToolController {
             if selected {
                 describe_edit(&mut out, document, scene, &control.object);
                 if self.deformer_grid && control.kind == ControlKind::Warp {
-                    if let Some(warp) = document
-                        .model()
-                        .get_transform(&control.object.id)
-                        .and_then(|t| t.warp())
+                    // Completed drag frames can retain a different lattice size.
+                    // Sample their points using their own captured topology.
+                    if let Some(shape) = scene
+                        .topology
+                        .controls
+                        .get(&control.object.id)
+                        .and_then(|t| t.warp_shape)
                     {
                         out.guide_lines
-                            .extend(crate::deformer::sample_grid(control, warp, t));
+                            .extend(crate::deformer::sample_grid(control, shape, t));
                     }
                 }
                 if let Some(gizmo) = scene.deformer_gizmo(control, t) {

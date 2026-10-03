@@ -1625,6 +1625,75 @@ fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> 
     Ok(())
 }
 #[test]
+fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    editor.execute(EditorCommand::ToggleDeformerGrid)?;
+    shown(&mut editor)?;
+    let original_grid = editor.overlay().guide_lines;
+    assert!(!original_grid.is_empty());
+    let start = editor
+        .overlay()
+        .handles
+        .iter()
+        .find(|h| h.round)
+        .unwrap()
+        .position;
+    let bent = CanvasPoint {
+        x: start.x,
+        y: start.y - 40.,
+    };
+    editor.canvas_input(CanvasInput::Down {
+        point: start,
+        shift: false,
+    })?;
+    editor.canvas_input(CanvasInput::Move {
+        point: bent,
+        left_down: true,
+    })?;
+    let refined = shown(&mut editor)?;
+    assert_eq!(
+        refined
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap()
+            .points
+            .len(),
+        25
+    );
+    let refined_grid = editor.overlay().guide_lines;
+    assert!(refined_grid.len() > original_grid.len());
+
+    // Queue another refined pose, then restore the legacy lattice before it arrives.
+    let delayed = editor.preview()?.canvas.unwrap();
+    editor.canvas_input(CanvasInput::Move {
+        point: start,
+        left_down: true,
+    })?;
+    let restored = editor.preview()?.canvas.unwrap();
+    assert_eq!(
+        restored
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap()
+            .points
+            .len(),
+        4
+    );
+    assert!(editor.overlay().guide_lines == refined_grid);
+    assert!(editor.present_frame(delayed));
+    assert!(editor.overlay().guide_lines == refined_grid);
+    assert!(editor.present_frame(restored));
+    assert!(editor.overlay().guide_lines == original_grid);
+    editor.canvas_input(CanvasInput::Up { point: start })?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
 fn subdivisions_are_opt_in_and_never_become_hit_targets() -> anyhow::Result<()> {
     let (mut editor, _dir, object) = deformer_editor(false)?;
     let frame = shown(&mut editor)?;

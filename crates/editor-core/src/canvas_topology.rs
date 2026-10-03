@@ -75,6 +75,7 @@ pub(crate) struct MeshTopology {
 pub(crate) struct ControlTopology {
     pub kind: ControlKind,
     pub edges: Arc<[(usize, usize)]>,
+    pub warp_shape: Option<(u32, u32, bool)>,
 }
 #[derive(Debug)]
 pub(crate) struct GlueTopology {
@@ -168,6 +169,7 @@ impl CanvasTopology {
                 ControlTopology {
                     kind,
                     edges: edges.into(),
+                    warp_shape: t.warp().map(|w| (w.rows, w.columns, w.quad)),
                 },
             );
         }

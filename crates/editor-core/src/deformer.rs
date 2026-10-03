@@ -121,17 +121,17 @@ impl DeformerGizmo {
 
 pub(crate) fn sample_grid(
     control: &ControlGeometry,
-    warp: &kasane_core::WarpTransform,
+    (warp_rows, warp_columns, quad): (u32, u32, bool),
     transform: ViewportTransform,
 ) -> Vec<(CanvasPoint, CanvasPoint)> {
-    if warp.rows == 0
-        || warp.columns == 0
-        || control.points.len() != (warp.rows as usize + 1) * (warp.columns as usize + 1)
+    if warp_rows == 0
+        || warp_columns == 0
+        || control.points.len() != (warp_rows as usize + 1) * (warp_columns as usize + 1)
     {
         return Vec::new();
     }
-    let rows = (warp.rows.saturating_mul(4)).min(48) as usize;
-    let columns = (warp.columns.saturating_mul(4)).min(48) as usize;
+    let rows = (warp_rows.saturating_mul(4)).min(48) as usize;
+    let columns = (warp_columns.saturating_mul(4)).min(48) as usize;
     let points: Vec<f32> = control.points.iter().flat_map(|p| [p.x, p.y]).collect();
     let input: Vec<f32> = (0..=rows)
         .flat_map(|r| {
@@ -140,9 +140,9 @@ pub(crate) fn sample_grid(
         .collect();
     let mut output = vec![0.; input.len()];
     kasane_core::deformers::warp_points(
-        warp.rows as i32,
-        warp.columns as i32,
-        warp.quad,
+        warp_rows as i32,
+        warp_columns as i32,
+        quad,
         &points,
         &input,
         &mut output,
