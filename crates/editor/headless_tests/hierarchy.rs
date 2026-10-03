@@ -61,29 +61,31 @@ fn default_layout_has_independent_document_panels(cx: &mut TestAppContext) {
         let dock = view.dock.as_ref().unwrap();
         let layout = dock.area.read(cx).dump(cx);
         assert_eq!(layout.version, Some(3));
-        let columns = &layout.center.children[0].children;
+        let columns = &layout.center.children;
+        assert_eq!(columns.len(), 3);
         assert_eq!(
-            columns[0]
+            columns[0].children[0]
                 .children
                 .iter()
                 .map(|p| p.panel_name.as_str())
                 .collect::<Vec<_>>(),
-            ["MeshTree", "Deformers", "DrawOrder"]
+            ["MeshTree", "DrawOrder"]
         );
+        assert_eq!(columns[0].children[1].children[0].panel_name, "Deformers");
         assert_eq!(columns[1].children[0].panel_name, "Canvas");
         assert_eq!(
-            columns[2]
+            columns[2].children[0]
                 .children
                 .iter()
                 .map(|p| p.panel_name.as_str())
                 .collect::<Vec<_>>(),
             ["Properties", "Relations"]
         );
-        assert_eq!(
-            layout.center.children[1].children[0].panel_name,
-            "Parameters"
+        assert_eq!(columns[2].children[1].children[0].panel_name, "Parameters");
+        let keyforms = gpui_kit::component::dock::PanelId::from(
+            dock.document_panels[&crate::panels::DocumentPanelKind::Keyforms].entity_id(),
         );
-        assert_eq!(layout.center.children[2].children[0].panel_name, "Keyforms");
+        assert!(dock.area.read(cx).panel(keyforms).is_none());
         assert_eq!(dock.document_panels.len(), 10);
     });
 }
@@ -108,9 +110,12 @@ fn reset_layout_saves_measured_center_size(cx: &mut TestAppContext) {
         .unwrap()
         .unwrap()
         .layout;
-    let PanelInfo::Stack { sizes, .. } = saved.center.children[0].info.clone() else {
+    let PanelInfo::Stack { sizes, .. } = &saved.center.info else {
         panic!("default center should be a split");
     };
+    assert_eq!(saved.center.info.axis(), Some(gpui_kit::Axis::Horizontal));
+    assert_eq!(sizes.len(), 3);
+    assert!(sizes.iter().all(|size| size.as_f32() > 0.));
     assert!(sizes[1].as_f32() > sizes[0].as_f32());
     assert!(sizes[1].as_f32() > sizes[2].as_f32());
 }

@@ -247,6 +247,125 @@ fn completed_views_progress_monotonically_with_matching_geometry() -> anyhow::Re
     assert!(!editor.present_frame(old));
     Ok(())
 }
+
+#[test]
+fn continuous_control_drag_presents_completed_poses_without_changing_its_target()
+-> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let before_drag = editor.preview()?.canvas.unwrap();
+    let start = editor.overlay().vertices[0].position;
+    let at = |x| CanvasPoint {
+        x: start.x + x,
+        y: start.y,
+    };
+    down(&mut editor, start, false)?;
+    let mut completed = Vec::new();
+    for x in [10., 20., 30.] {
+        assert!(editor.canvas_input(CanvasInput::Move {
+            point: at(x),
+            left_down: true,
+        })?);
+        completed.push(editor.preview()?.canvas.unwrap());
+    }
+    assert!(
+        !editor.present_frame(before_drag),
+        "a frame requested before this control edit must not be admitted"
+    );
+    let mut future = completed[0].clone();
+    future.version.scene = completed[2].version.scene + 1;
+    assert!(!editor.present_frame(future));
+    assert!(editor.present_frame(completed[0].clone()));
+    assert_eq!(editor.overlay().vertices[0].position, at(10.));
+    assert!(
+        down(&mut editor, at(10.), false).is_err(),
+        "new pointer presses still require the current model frame"
+    );
+    assert!(editor.present_frame(completed[1].clone()));
+    assert_eq!(editor.overlay().vertices[0].position, at(20.));
+    assert!(!editor.present_frame(completed[0].clone()));
+    // Continue from the original press, even though the displayed pose is behind.
+    assert!(editor.canvas_input(CanvasInput::Move {
+        point: at(40.),
+        left_down: true,
+    })?);
+    let current = editor.preview()?.canvas.unwrap();
+    assert!(editor.present_frame(completed[2].clone()));
+    assert_eq!(editor.overlay().vertices[0].position, at(30.));
+    up(&mut editor, at(40.))?;
+    assert!(!editor.present_frame(completed[2].clone()));
+    assert!(editor.present_frame(current));
+    assert_eq!(editor.overlay().vertices[0].position, at(40.));
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    present(&mut editor)?;
+    assert_eq!(editor.overlay().vertices[0].position, start);
+    Ok(())
+}
+
+#[test]
+fn delayed_control_poses_are_rejected_when_the_gesture_ends_or_is_replaced() -> anyhow::Result<()> {
+    for finish in 0..6 {
+        let (mut editor, dir) = setup()?;
+        let start = editor.overlay().vertices[0].position;
+        down(&mut editor, start, false)?;
+        let mut frames = Vec::new();
+        for x in [10., 20.] {
+            editor.canvas_input(CanvasInput::Move {
+                point: CanvasPoint {
+                    x: start.x + x,
+                    y: start.y,
+                },
+                left_down: true,
+            })?;
+            frames.push(editor.preview()?.canvas.unwrap());
+        }
+        assert!(editor.present_frame(frames[0].clone()));
+        match finish {
+            0 => editor.cancel_gesture(),
+            1 => up(
+                &mut editor,
+                CanvasPoint {
+                    x: start.x + 30.,
+                    y: start.y,
+                },
+            )?,
+            2 => editor.execute(EditorCommand::SetTool(ToolId::Hand))?,
+            3 => {
+                let id = editor.active_id().unwrap();
+                editor.new_document()?;
+                editor.activate(id)?;
+            }
+            4 => {
+                let mut metrics = editor.canvas_metrics();
+                metrics.width += 10.;
+                editor.set_canvas_metrics(metrics);
+            }
+            _ => {
+                let id = editor.active_id().unwrap();
+                let task = editor.prepare_save(id, &dir.path().join("saved"), false)?;
+                editor.finish_save(&mut task.run())?;
+            }
+        }
+        assert!(!editor.gesture_active());
+        assert!(!editor.present_frame(frames[1].clone()));
+        present(&mut editor)?;
+        if finish == 0 {
+            // A later control gesture must not reopen the previous pose's lifetime.
+            down(&mut editor, start, false)?;
+            editor.canvas_input(CanvasInput::Move {
+                point: CanvasPoint {
+                    x: start.x + 5.,
+                    y: start.y,
+                },
+                left_down: true,
+            })?;
+            editor.preview()?;
+            assert!(!editor.present_frame(frames[1].clone()));
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;

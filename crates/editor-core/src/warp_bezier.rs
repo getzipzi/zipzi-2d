@@ -1,7 +1,8 @@
 //! Bezier authoring controls are independent of the evaluated conversion lattice.
 use crate::control_edit::ControlSpace;
 use crate::{CanvasScene, Document, ModelPoint, ObjectRef};
-use kasane_core::{SceneTrack, WarpBezier};
+use kasane_core::{SceneTrack, Vec2, WarpBezier};
+use std::{collections::HashMap, sync::OnceLock};
 
 pub(crate) const BEZIER_ID: u32 = 1 << 31;
 pub(crate) fn component_id(node: usize, part: usize) -> u32 {
@@ -20,58 +21,94 @@ pub(crate) struct BezierGeometry {
     pub curves: Vec<(ModelPoint, ModelPoint)>,
 }
 
-/// Each canvas frame owns its authoring and parent-space snapshot. Most Warp
-/// controls are never selected, so only sample their curves when queried.
+#[derive(Debug)]
+enum WarpAuthoring {
+    Controller(WarpBezier),
+    Lattice {
+        rows: u32,
+        columns: u32,
+        quad: bool,
+        points: Vec<Vec2>,
+    },
+}
+
+/// Own only the authoring inputs at publication. Controller synthesis, parent
+/// space preparation and curve sampling wait until this Warp is queried.
+/// Parent positions come from the same immutable canvas scene, never the live document.
 #[derive(Debug)]
 pub(crate) struct LazyBezierGeometry {
-    controller: WarpBezier,
-    space: ControlSpace,
-    geometry: std::sync::OnceLock<BezierGeometry>,
+    authoring: WarpAuthoring,
+    parent_id: String,
+    parent_shape: Option<(usize, usize, bool)>,
+    geometry: OnceLock<Option<BezierGeometry>>,
 }
 impl LazyBezierGeometry {
-    pub fn new(controller: WarpBezier, space: ControlSpace) -> Self {
-        Self {
-            controller,
-            space,
-            geometry: std::sync::OnceLock::new(),
-        }
-    }
-    pub fn get(&self) -> &BezierGeometry {
+    pub fn get(&self, scene: &CanvasScene) -> Option<&BezierGeometry> {
         self.geometry
-            .get_or_init(|| BezierGeometry::new(&self.controller, &self.space))
+            .get_or_init(|| {
+                let space =
+                    ControlSpace::from_scene(scene, &self.parent_id, self.parent_shape).ok()?;
+                let controller;
+                let controller = match &self.authoring {
+                    WarpAuthoring::Controller(stored) => stored,
+                    WarpAuthoring::Lattice {
+                        rows,
+                        columns,
+                        quad,
+                        points,
+                    } => {
+                        controller = WarpBezier::from_lattice(*rows, *columns, *quad, points);
+                        &controller
+                    }
+                };
+                Some(BezierGeometry::new(controller, &space))
+            })
+            .as_ref()
     }
 }
 
 pub(crate) fn authored(
     document: &Document,
-    scene: &CanvasScene,
     object: &ObjectRef,
-) -> Option<(WarpBezier, ControlSpace)> {
-    let transform = document.model().get_transform(&object.id)?;
+    parameters: &HashMap<&str, f32>,
+) -> Option<LazyBezierGeometry> {
+    let model = document.model();
+    let transform = model.get_transform(&object.id)?;
     let warp = transform.warp()?;
-    let (stored, positions) = if let Some(b) = document.model().binding_for_scene(&object.id) {
+    let (stored, positions) = if let Some(b) = model.binding_for_scene(&object.id) {
         let SceneTrack::Warp { keyforms, .. } = &b.track else {
             return None;
         };
         let form = keyforms.iter().find(|f| {
             b.axes.iter().zip(&f.keys).all(|(a, k)| {
-                scene
-                    .source
-                    .frame
-                    .parameters
-                    .iter()
-                    .any(|p| p.id == a.parameter_id && (p.value - k).abs() < 1e-6)
+                parameters
+                    .get(a.parameter_id.as_str())
+                    .is_some_and(|value| (value - k).abs() < 1e-6)
             })
         })?;
         (&form.bezier, &form.positions)
     } else {
         (&warp.bezier, &warp.points)
     };
-    let controller = stored
-        .clone()
-        .unwrap_or_else(|| WarpBezier::from_lattice(warp.rows, warp.columns, warp.quad, positions));
-    let space = ControlSpace::new(document, scene, transform.parent()).ok()?;
-    Some((controller, space))
+    let authoring = if let Some(controller) = stored {
+        WarpAuthoring::Controller(controller.clone())
+    } else {
+        WarpAuthoring::Lattice {
+            rows: warp.rows,
+            columns: warp.columns,
+            quad: warp.quad,
+            points: positions.clone(),
+        }
+    };
+    Some(LazyBezierGeometry {
+        authoring,
+        parent_id: transform.parent().into(),
+        parent_shape: model
+            .get_transform(transform.parent())
+            .and_then(|t| t.warp())
+            .map(|w| (w.rows as usize, w.columns as usize, w.quad)),
+        geometry: OnceLock::new(),
+    })
 }
 impl BezierGeometry {
     pub fn new(controller: &WarpBezier, space: &ControlSpace) -> Self {
@@ -92,29 +129,33 @@ impl BezierGeometry {
                 }
             }
         }
-        let mut curves = Vec::new();
         let steps = 16;
+        let mut curves = Vec::with_capacity(
+            ((controller.rows + 1) * controller.columns
+                + (controller.columns + 1) * controller.rows) as usize
+                * steps,
+        );
         for y in 0..=controller.rows {
+            let v = y as f32 / controller.rows as f32;
+            let mut previous = space.to_model(controller.sample(0., v));
             for x in 0..controller.columns {
-                for i in 0..steps {
-                    let v = y as f32 / controller.rows as f32;
-                    let u = |i| (x as f32 + i as f32 / steps as f32) / controller.columns as f32;
-                    curves.push((
-                        space.to_model(controller.sample(u(i), v)),
-                        space.to_model(controller.sample(u(i + 1), v)),
-                    ));
+                for i in 1..=steps {
+                    let u = (x as f32 + i as f32 / steps as f32) / controller.columns as f32;
+                    let next = space.to_model(controller.sample(u, v));
+                    curves.push((previous, next));
+                    previous = next;
                 }
             }
         }
         for x in 0..=controller.columns {
+            let u = x as f32 / controller.columns as f32;
+            let mut previous = space.to_model(controller.sample(u, 0.));
             for y in 0..controller.rows {
-                for i in 0..steps {
-                    let u = x as f32 / controller.columns as f32;
-                    let v = |i| (y as f32 + i as f32 / steps as f32) / controller.rows as f32;
-                    curves.push((
-                        space.to_model(controller.sample(u, v(i))),
-                        space.to_model(controller.sample(u, v(i + 1))),
-                    ));
+                for i in 1..=steps {
+                    let v = (y as f32 + i as f32 / steps as f32) / controller.rows as f32;
+                    let next = space.to_model(controller.sample(u, v));
+                    curves.push((previous, next));
+                    previous = next;
                 }
             }
         }
@@ -155,14 +196,32 @@ mod tests {
         );
         let space = ControlSpace::new(&doc, &scene, "")?;
         let expected = BezierGeometry::new(&controller, &space);
-        let cache = LazyBezierGeometry::new(controller.clone(), space);
-        assert!(cache.geometry.get().is_none());
+        let lattice = LazyBezierGeometry {
+            authoring: WarpAuthoring::Lattice {
+                rows: 1,
+                columns: 1,
+                quad: true,
+                points: controller.nodes.iter().map(|n| n.position).collect(),
+            },
+            parent_id: String::new(),
+            parent_shape: None,
+            geometry: OnceLock::new(),
+        };
+        let stored = LazyBezierGeometry {
+            authoring: WarpAuthoring::Controller(controller.clone()),
+            parent_id: String::new(),
+            parent_shape: None,
+            geometry: OnceLock::new(),
+        };
         controller.nodes[0].position.x += 50.;
-        let actual = cache.get();
-        assert_eq!(actual.anchors, expected.anchors);
-        assert_eq!(actual.handles, expected.handles);
-        assert_eq!(actual.curves, expected.curves);
-        assert!(std::ptr::eq(actual, cache.get()));
+        for cache in [lattice, stored] {
+            assert!(cache.geometry.get().is_none());
+            let actual = cache.get(&scene).unwrap();
+            assert_eq!(actual.anchors, expected.anchors);
+            assert_eq!(actual.handles, expected.handles);
+            assert_eq!(actual.curves, expected.curves);
+            assert!(std::ptr::eq(actual, cache.get(&scene).unwrap()));
+        }
         Ok(())
     }
 }

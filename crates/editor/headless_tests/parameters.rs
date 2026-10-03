@@ -2,6 +2,16 @@ use super::{document_fixture, setup_with_document};
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, point};
 
+fn show_keyforms(harness: &super::Harness, cx: &mut TestAppContext) {
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.reveal_keyforms(window, cx));
+        window.render_frame(cx);
+    })
+    .unwrap();
+}
+
 #[gpui_kit::test]
 fn parameter_drag_tracks_outside_the_row_without_a_window_drag(cx: &mut TestAppContext) {
     use gpui_kit::{
@@ -493,6 +503,7 @@ fn active_binding_survives_document_switch_without_changing_other_document(
     let binding = document.object_index().bindings[0].reference.clone();
     document.open_binding(binding.clone()).unwrap();
     let harness = setup_with_document(cx, document, assets);
+    show_keyforms(&harness, cx);
     let original = harness
         .view
         .read_with(cx, |v, _| v.editor.active_id().unwrap());
@@ -542,6 +553,7 @@ fn binding_key_click_preserves_authored_precision_and_evaluates_once(cx: &mut Te
     document.open_binding(binding).unwrap();
     let id = document.parameters()[0].id.clone();
     let harness = setup_with_document(cx, document, assets);
+    show_keyforms(&harness, cx);
     let revision = harness.view.read_with(cx, |v, _| v.editor.tree_revision());
     cx.update_window(harness.window, |_, window, cx| {
         window.click("keyform-4", cx);
@@ -673,6 +685,7 @@ fn modal_blocks_binding_keyform_changes(cx: &mut TestAppContext) {
     document.open_binding(binding).unwrap();
     let before = document.parameters();
     let harness = setup_with_document(cx, document, assets);
+    show_keyforms(&harness, cx);
     cx.update_window(harness.window, |_, _, cx| {
         harness.view.update(cx, |v, cx| {
             v.modal = true;
@@ -716,6 +729,7 @@ fn parameter_binding_navigation_reveals_hidden_keyforms_without_losing_selection
     let binding = document.object_index().bindings[0].clone();
     let selected = document.context().selection.clone();
     let harness = setup_with_document(cx, document, assets);
+    show_keyforms(&harness, cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.dock.as_ref().unwrap().toggle(
@@ -725,6 +739,13 @@ fn parameter_binding_navigation_reveals_hidden_keyforms_without_losing_selection
             )
         });
         window.render_frame(cx);
+        harness.view.read_with(cx, |view, cx| {
+            let dock = view.dock.as_ref().unwrap();
+            let keyforms = gpui_kit::component::dock::PanelId::from(
+                dock.document_panels[&DocumentPanelKind::Keyforms].entity_id(),
+            );
+            assert!(dock.area.read(cx).panel(keyforms).is_none());
+        });
         assert!(window.try_find("binding-keyform-pad").is_none());
         window.click(format!("parameter-name-{parameter}"), cx);
         harness.view.read_with(cx, |v, _| {
@@ -737,6 +758,8 @@ fn parameter_binding_navigation_reveals_hidden_keyforms_without_losing_selection
             ),
             cx,
         );
+        window.render_frame(cx);
+        assert!(window.try_find("binding-keyform-pad").is_some());
     })
     .unwrap();
     harness.view.read_with(cx, |v, cx| {
@@ -762,6 +785,7 @@ fn parameter_slider_refreshes_the_active_keyform_coordinate(cx: &mut TestAppCont
     let binding = document.object_index().bindings[0].reference.clone();
     document.open_binding(binding).unwrap();
     let harness = setup_with_document(cx, document, assets);
+    show_keyforms(&harness, cx);
     let before = cx
         .update_window(harness.window, |_, window, _| {
             window.find("keyform-preview-coordinate").bounds().center()

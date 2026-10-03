@@ -90,6 +90,7 @@ pub struct OverlayHandle {
     pub selected: bool,
 }
 struct Press {
+    version: FrameVersion,
     point: CanvasPoint,
     transform: ViewportTransform,
     scene: Arc<CanvasScene>,
@@ -114,6 +115,17 @@ pub struct ToolController {
 impl ToolController {
     pub fn dragging(&self) -> bool {
         self.press.is_some()
+    }
+    /// Completed poses from this control edit can lag subsequent pointer moves.
+    /// The press fixes the authoring target; new gestures still require a current frame.
+    pub(crate) fn accepts_drag_frame(&self, version: FrameVersion) -> bool {
+        self.press.as_ref().is_some_and(|press| {
+            press.edit.is_some()
+                && version.document == press.version.document
+                && version.scene > press.version.scene
+                && version.viewport == press.version.viewport
+                && version.request > press.version.request
+        })
     }
     pub fn clear(&mut self) {
         self.components.clear();
@@ -226,6 +238,7 @@ impl ToolController {
                 }
                 if self.active != ToolId::Hand {
                     self.press = Some(Press {
+                        version: frame.version,
                         point,
                         transform: t,
                         scene: scene.clone(),

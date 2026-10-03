@@ -811,10 +811,12 @@ impl Editor {
         let Some(s) = &mut entry.session else {
             return false;
         };
-        // A completed view may lag the pointer. Present it with its own matching
-        // geometry/transform, then advance monotonically. Requiring the newest
-        // viewport starves presentation during continuous input.
-        if s.scene_revision != frame.version.scene
+        // Completed views and control-edit poses may lag the pointer. Their
+        // images retain matching geometry; advance monotonically within the
+        // same drag, but reject poses from before it or after it is cancelled.
+        if frame.version.scene > s.scene_revision
+            || (s.scene_revision != frame.version.scene
+                && !s.tools.accepts_drag_frame(frame.version))
             || s.viewport_revision < frame.version.viewport
             || s.displayed
                 .as_ref()

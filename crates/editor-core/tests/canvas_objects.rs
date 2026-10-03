@@ -1275,6 +1275,55 @@ fn drag(
     editor.canvas_input(CanvasInput::Up { point: end })?;
     Ok(())
 }
+#[test]
+fn warp_and_rotation_drags_present_intermediate_geometry_before_the_latest_pose()
+-> anyhow::Result<()> {
+    for rotation in [false, true] {
+        let (mut editor, _dir, object) = deformer_editor(rotation)?;
+        let start = editor.overlay().vertices[0].position;
+        editor.canvas_input(CanvasInput::Down {
+            point: start,
+            shift: false,
+        })?;
+        let mut frames = Vec::new();
+        for x in [10., 20., 30.] {
+            editor.canvas_input(CanvasInput::Move {
+                point: CanvasPoint {
+                    x: start.x + x,
+                    y: start.y,
+                },
+                left_down: true,
+            })?;
+            frames.push(editor.preview()?.canvas.unwrap());
+        }
+        assert!(editor.present_frame(frames[0].clone()));
+        assert!(editor.has_presented_frame(Some(frames[0].version)));
+        let displayed = frames[0]
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap();
+        let anchor = frames[0].transform.to_canvas(displayed.points[0]);
+        assert_eq!(editor.overlay().vertices[0].position, anchor);
+        assert!((anchor.x - start.x - 10.).abs() < 0.01);
+        assert!(editor.present_frame(frames[1].clone()));
+        assert!(!editor.present_frame(frames[0].clone()));
+        editor.canvas_input(CanvasInput::Up {
+            point: CanvasPoint {
+                x: start.x + 30.,
+                y: start.y,
+            },
+        })?;
+        assert!(editor.present_frame(frames[2].clone()));
+        assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+        editor.execute(EditorCommand::Undo)?;
+        shown(&mut editor)?;
+        assert!((editor.overlay().vertices[0].position.x - start.x).abs() < 0.01);
+    }
+    Ok(())
+}
+
 fn control_points(editor: &mut Editor, object: &ObjectRef) -> anyhow::Result<Vec<ModelPoint>> {
     Ok(shown(editor)?
         .geometry
@@ -1650,6 +1699,67 @@ fn bound_deformer_editor(
     shown(&mut editor)?;
     Ok((editor, dir, object, id(24)))
 }
+
+#[test]
+fn unqueried_warp_snapshot_retains_keyform_and_parent_space_after_edits() -> anyhow::Result<()> {
+    for reversed in [false, true] {
+        let (mut editor, _dir, object, parameter_id) = bound_deformer_editor(false, reversed)?;
+        // No overlay or hit query has synthesized the old frame's controller yet.
+        let old = shown(&mut editor)?;
+        let parent = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(22).to_string());
+        let before = old
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap()
+            .points[0];
+        for target in [&parent, &object] {
+            editor.execute(EditorCommand::AdjustDeformer {
+                object: target.clone(),
+                adjustment: DeformerAdjustment {
+                    translation: ModelPoint { x: 12., y: 8. },
+                    angle: 0.,
+                    scale: 1.,
+                },
+            })?;
+        }
+        editor.execute(EditorCommand::SetPreviewParameter {
+            parameter_id,
+            value: 0.5,
+        })?;
+        let current = shown(&mut editor)?;
+        assert_ne!(
+            current
+                .geometry
+                .controls
+                .iter()
+                .find(|c| c.object == object)
+                .unwrap()
+                .points[0],
+            before
+        );
+        // Late selection of the retained frame must still hit its original anchor.
+        assert_eq!(
+            old.geometry.hit(
+                old.transform.to_canvas(before),
+                old.transform,
+                std::slice::from_ref(&object),
+                ToolId::Select,
+                DeformerVisibility::default(),
+            ),
+            Some(HitTarget::Component(ComponentRef {
+                object: object.clone(),
+                id: 1 << 31,
+            }))
+        );
+        // At an interpolated parameter value the current frame uses lattice controls.
+        let first = editor.overlay().vertices[0].clone();
+        assert_eq!(first.id, 0);
+    }
+    Ok(())
+}
+
 #[test]
 fn nested_deformer_adjustments_write_only_the_exact_keyform_in_both_canvas_directions()
 -> anyhow::Result<()> {

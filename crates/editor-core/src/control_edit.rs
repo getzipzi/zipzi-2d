@@ -275,9 +275,21 @@ impl ControlEdit {
         let warp = if object.kind == ObjectKind::Deformer && !rotation {
             let transform = doc.get_transform(&object.id).unwrap().clone();
             let binding = doc.binding_for_scene(&object.id).cloned();
-            let controller = crate::warp_bezier::authored(document, scene, object)
-                .unwrap()
-                .0;
+            let warp = transform.warp().unwrap();
+            let stored = binding.as_ref().map_or(&warp.bezier, |b| {
+                let SceneTrack::Warp { keyforms, .. } = &b.track else {
+                    unreachable!("a Warp edit has Warp keyforms")
+                };
+                &keyforms[slot.unwrap()].bezier
+            });
+            let controller = stored.clone().unwrap_or_else(|| {
+                kasane_core::WarpBezier::from_lattice(
+                    warp.rows,
+                    warp.columns,
+                    warp.quad,
+                    &positions,
+                )
+            });
             Some(WarpEdit {
                 transform,
                 binding,
@@ -451,23 +463,29 @@ impl ControlEdit {
 
 impl ControlSpace {
     pub fn new(document: &Document, scene: &CanvasScene, parent_id: &str) -> Result<Self> {
-        let doc = document.model();
+        let parent_shape = document
+            .model()
+            .get_transform(parent_id)
+            .and_then(|t| t.warp())
+            .map(|w| (w.rows as usize, w.columns as usize, w.quad));
+        Self::from_scene(scene, parent_id, parent_shape)
+    }
+    pub(crate) fn from_scene(
+        scene: &CanvasScene,
+        parent_id: &str,
+        parent_shape: Option<(usize, usize, bool)>,
+    ) -> Result<Self> {
         let parent = if parent_id.is_empty() {
             None
         } else {
             Some(
                 scene
-                    .controls
-                    .iter()
-                    .find(|c| c.object.id == parent_id && c.enabled)
+                    .control(parent_id)
+                    .filter(|c| c.enabled)
                     .cloned()
                     .ok_or_else(|| anyhow::anyhow!("Parent deformer is unavailable"))?,
             )
         };
-        let parent_shape = doc
-            .get_transform(parent_id)
-            .and_then(|t| t.warp())
-            .map(|w| (w.rows as usize, w.columns as usize, w.quad));
         let parent_points = parent.as_ref().map_or_else(Vec::new, |p| {
             p.points.iter().flat_map(|p| [p.x, p.y]).collect()
         });

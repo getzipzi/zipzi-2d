@@ -71,6 +71,7 @@ pub struct CanvasScene {
     pub source: SceneSnapshot,
     beziers: HashMap<String, Arc<crate::warp_bezier::LazyBezierGeometry>>,
     mesh_slots: Arc<HashMap<String, usize>>,
+    control_slots: Arc<HashMap<String, usize>>,
     texture_slots: HashMap<String, usize>,
     visible_meshes: HashSet<String>,
     pub(crate) topology: Arc<crate::canvas_topology::CanvasTopology>,
@@ -158,6 +159,11 @@ impl CanvasScene {
             .enumerate()
             .map(|(i, t)| (t.asset_id.clone(), i))
             .collect();
+        let control_slots = controls
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (c.object.id.clone(), i))
+            .collect();
         let mut scene = Self {
             beziers: HashMap::new(),
             meshes,
@@ -165,21 +171,26 @@ impl CanvasScene {
             index,
             source,
             mesh_slots: Arc::new(mesh_slots),
+            control_slots: Arc::new(control_slots),
             texture_slots,
             visible_meshes,
             topology,
         };
+        let parameters = scene
+            .source
+            .frame
+            .parameters
+            .iter()
+            .map(|p| (p.id.as_str(), p.value))
+            .collect();
         for c in &scene.controls {
             if c.kind == ControlKind::Warp {
-                if let Some((controller, space)) =
-                    crate::warp_bezier::authored(document, &scene, &c.object)
+                if let Some(authoring) =
+                    crate::warp_bezier::authored(document, &c.object, &parameters)
                 {
-                    scene.beziers.insert(
-                        c.object.id.clone(),
-                        Arc::new(crate::warp_bezier::LazyBezierGeometry::new(
-                            controller, space,
-                        )),
-                    );
+                    scene
+                        .beziers
+                        .insert(c.object.id.clone(), Arc::new(authoring));
                 }
             }
         }
@@ -215,13 +226,17 @@ impl CanvasScene {
             index: topology.index.clone(),
             source,
             mesh_slots: self.mesh_slots.clone(),
+            control_slots: self.control_slots.clone(),
             texture_slots,
             visible_meshes,
             topology,
         }
     }
     pub(crate) fn bezier(&self, id: &str) -> Option<&crate::warp_bezier::BezierGeometry> {
-        self.beziers.get(id).map(|b| b.get())
+        self.beziers.get(id).and_then(|b| b.get(self))
+    }
+    pub(crate) fn control(&self, id: &str) -> Option<&ControlGeometry> {
+        self.control_slots.get(id).map(|&i| &self.controls[i])
     }
     pub fn mesh(&self, id: &str) -> Option<&MeshGeometry> {
         self.mesh_slots.get(id).map(|&i| &self.meshes[i])
