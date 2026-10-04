@@ -3,6 +3,165 @@ use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 
 #[gpui_kit::test]
+fn tree_search_reveals_collapsed_matches_and_clear_restores_expansion(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let (diamond, second, selection, revision) = harness.view.read_with(cx, |view, _| {
+        let layers = view.editor.layers();
+        (
+            layers
+                .iter()
+                .find(|layer| layer.name == "Diamond")
+                .unwrap()
+                .id
+                .clone(),
+            layers
+                .iter()
+                .find(|layer| layer.name == "Second")
+                .unwrap()
+                .id
+                .clone(),
+            view.editor.document().unwrap().context().selections.clone(),
+            view.editor.tree_revision(),
+        )
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window
+            .within("mesh-tree-panel")
+            .click("tree-expand-Group:unowned", cx);
+        assert!(
+            window
+                .try_find(format!("mesh-item-Mesh:{second}"))
+                .is_none()
+        );
+        window.click("mesh-tree-search", cx);
+        window.input("sEcOnD", cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.find(format!("mesh-item-Mesh:{second}")).visible());
+        assert!(
+            window
+                .try_find(format!("mesh-item-Mesh:{diamond}"))
+                .is_none()
+        );
+        assert!(window.find("mesh-tree-search").focused().unwrap());
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor.document().unwrap().context().selections,
+                selection
+            );
+            assert_eq!(view.editor.tree_revision(), revision);
+        });
+        window.click("mesh-tree-clear", cx);
+        assert_eq!(window.find("mesh-tree-search").value(), Some(""));
+        assert!(
+            window
+                .try_find(format!("mesh-item-Mesh:{second}"))
+                .is_none()
+        );
+        window
+            .within("mesh-tree-panel")
+            .click("tree-expand-Group:unowned", cx);
+        assert!(window.find(format!("mesh-item-Mesh:{diamond}")).visible());
+        assert!(window.find(format!("mesh-item-Mesh:{second}")).visible());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn tree_type_filter_keeps_popover_open_and_empty_results_keep_selection(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let selection = harness.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().context().selections.clone()
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-tree-search", cx);
+        window.input("second", cx);
+        window.click("mesh-tree-filter", cx);
+        assert_eq!(window.find("tree-kind-Mesh").checked(), Some(true));
+        window.click("tree-kind-Mesh", cx);
+        assert_eq!(window.find("tree-kind-Mesh").checked(), Some(false));
+        assert!(window.find("mesh-tree-empty").visible());
+        // Continuous multi-select updates in place instead of closing the popup.
+        window.click("tree-kind-Part", cx);
+        assert_eq!(window.find("tree-kind-Part").checked(), Some(false));
+        window.click("tree-all-types", cx);
+        assert_eq!(window.find("tree-kind-Mesh").checked(), Some(true));
+        assert_eq!(window.find("tree-kind-Part").checked(), Some(true));
+        assert!(window.try_find("mesh-tree-empty").is_none());
+        assert_eq!(window.find("mesh-tree-search").value(), Some("second"));
+        window.press("escape", cx);
+        assert!(window.try_find("tree-kind-Mesh").is_none());
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor.document().unwrap().context().selections,
+                selection
+            );
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn tree_conditions_are_independent_between_panels_and_restored_per_document(
+    cx: &mut TestAppContext,
+) {
+    let harness = setup(cx);
+    let original = harness
+        .view
+        .read_with(cx, |view, _| view.editor.active_id().unwrap());
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-tree-search", cx);
+        window.input("second", cx);
+        window.click("mesh-tree-filter", cx);
+        window.click("tree-kind-Part", cx);
+        window.press("escape", cx);
+        harness.view.update(cx, |view, cx| {
+            let dock = view.dock.as_ref().unwrap();
+            let panel = gpui_kit::component::dock::PanelId::from(dock.deformer_tree.entity_id());
+            dock.area
+                .update(cx, |area, cx| area.select_panel(panel, window, cx));
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("deformer-tree-search").value(), Some(""));
+        window.click("deformer-tree-search", cx);
+        window.input("diamond", cx);
+        assert_eq!(window.find("mesh-tree-search").value(), Some("second"));
+        window.click("mesh-tree-filter", cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor.new_document().unwrap();
+            cx.notify();
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("mesh-tree-search").value(), Some(""));
+        assert_eq!(window.find("deformer-tree-search").value(), Some(""));
+        assert!(window.try_find("tree-kind-Mesh").is_none());
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor.activate(original).unwrap();
+            cx.notify();
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("mesh-tree-search").value(), Some("second"));
+        assert_eq!(window.find("deformer-tree-search").value(), Some("diamond"));
+        window.click("mesh-tree-filter", cx);
+        assert_eq!(window.find("tree-kind-Part").checked(), Some(false));
+        assert_eq!(window.find("tree-kind-Mesh").checked(), Some(true));
+        window.press("escape", cx);
+        window.click("mesh-tree-clear", cx);
+        assert_eq!(window.find("deformer-tree-search").value(), Some("diamond"));
+        window.click("mesh-tree-filter", cx);
+        assert_eq!(window.find("tree-kind-Part").checked(), Some(true));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn visibility_eye_updates_its_row_without_changing_selection(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let (selected_id, second_id) = harness.view.read_with(cx, |view, _| {
