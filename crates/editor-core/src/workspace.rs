@@ -312,6 +312,12 @@ impl Editor {
         )
     }
     pub fn execute_for(&mut self, id: DocumentId, command: EditorCommand) -> Result<()> {
+        if matches!(&command, EditorCommand::CreateParameter(_)) {
+            ensure!(
+                self.active == Some(id) && !self.exiting(),
+                "Document has changed"
+            );
+        }
         let result = self
             .entry_mut(id)?
             .session

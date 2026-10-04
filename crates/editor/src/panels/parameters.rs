@@ -1,3 +1,4 @@
+mod create;
 mod track;
 use track::parameter_track;
 
@@ -5,7 +6,8 @@ use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
 use gpui_kit::base::{NumberInput, Slider as BaseSlider, SliderIndicator};
 use gpui_kit::component::{
-    ActiveTheme, WindowExt,
+    ActiveTheme, Disableable, WindowExt,
+    button::Button,
     dock::{BasePanel, Panel, PanelEvent},
     input::{Input, InputEvent, InputState},
     slider::{SliderEvent, SliderState, SliderValue},
@@ -805,6 +807,12 @@ impl Render for ParametersPanel {
         let dialog_active = window.has_active_dialog(cx);
         let state = owner.read(cx);
         let disabled = state.modal || dialog_active || state.editor.is_busy();
+        let create_disabled = disabled
+            || !state.editor.command_available(
+                state
+                    .editor
+                    .command(editor_core::CommandId::CreateParameter),
+            );
         if disabled {
             self.finish_slider_drag(cx);
         }
@@ -863,6 +871,16 @@ impl Render for ParametersPanel {
                 })
                 .absolute()
                 .size_full(),
+            )
+            .child(
+                div().px_2().py_1().flex_shrink_0().child(
+                    Button::new("new-parameter")
+                        .label(format!("＋ {}", t!("parameter.new")))
+                        .disabled(create_disabled)
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.open_create_dialog(window, cx)),
+                        ),
+                ),
             )
             .child(self.group_browser(cx))
             .child(self.binding_summary(cx))

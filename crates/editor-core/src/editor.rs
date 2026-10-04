@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 /// UI-independent editing intent. Model changes always go through Document and the SDK.
 pub enum EditorCommand {
+    CreateParameter(crate::NewParameter),
     SelectObjects(Vec<crate::ObjectRef>),
     SetTool(crate::ToolId),
     ToggleDeformers,

@@ -102,6 +102,9 @@ impl DocumentSession {
         let invalidate =
             !(context_only || matches!(&command, EditorCommand::FinishEdit)) || had_pending;
         let result = match command {
+            EditorCommand::CreateParameter(draft) => {
+                self.document.create_parameter(draft).map(|_| ())
+            }
             EditorCommand::SetTool(tool) => {
                 self.tools.set_tool(tool, &mut self.document);
                 return Ok(());

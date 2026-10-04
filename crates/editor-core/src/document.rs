@@ -10,6 +10,10 @@ use std::{
 };
 use uuid::Uuid;
 
+#[path = "parameter.rs"]
+mod parameter;
+pub use parameter::{NewParameter, ParameterCreateError, ParameterGroupOption};
+
 #[derive(Clone, Debug)]
 pub struct Layer {
     pub id: String,

@@ -421,6 +421,18 @@ impl EditorView {
                 CommandId::SaveAs => self.save(true, window, cx),
                 CommandId::Close => self.close_active(window, cx),
                 CommandId::Quit => self.close(window, cx),
+                CommandId::CreateParameter => {
+                    if let Some(panel) = self.dock.as_ref().map(|dock| dock.parameters.clone()) {
+                        let owner = cx.entity().downgrade();
+                        window.defer(cx, move |window, cx| {
+                            if owner.upgrade().is_some_and(|owner| {
+                                owner.read(cx).editor.active_id() == command.document
+                            }) {
+                                panel.update(cx, |panel, cx| panel.open_create_dialog(window, cx));
+                            }
+                        });
+                    }
+                }
                 CommandId::MeshTree
                 | CommandId::Deformers
                 | CommandId::Properties

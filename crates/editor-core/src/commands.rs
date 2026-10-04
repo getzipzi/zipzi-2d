@@ -30,6 +30,8 @@ pub enum CommandId {
     Undo,
     #[serde(rename = "edit.redo")]
     Redo,
+    #[serde(rename = "parameter.create")]
+    CreateParameter,
     #[serde(rename = "property.commit")]
     CommitProperty,
     #[serde(rename = "property.cancel")]
@@ -124,6 +126,7 @@ specs![
     (Next, "menu.next_document", Workspace, false, ["ctrl-tab"]),
     (Undo, "menu.undo", Document, false, ["cmd-z"]),
     (Redo, "menu.redo", Document, false, ["cmd-shift-z"]),
+    (CreateParameter, "parameter.new", Document, false, []),
     (
         CommitProperty,
         "menu.commit_property",
@@ -210,6 +213,7 @@ impl Editor {
             | BlendShapes | Glue | Motions | Expressions | Physics | Pose | Resources
             | ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
+            CreateParameter => target && !self.is_busy() && !self.exiting(),
             Undo => target && self.can_undo(),
             Redo => target && self.can_redo(),
             CommitProperty | CancelProperty => {
