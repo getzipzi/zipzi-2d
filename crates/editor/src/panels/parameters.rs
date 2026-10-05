@@ -2,11 +2,13 @@ mod create;
 mod track;
 use track::parameter_track;
 
+use super::toolbar::PanelToolbar;
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
+use gpui_kit::assets::IconName;
 use gpui_kit::base::{NumberInput, Slider as BaseSlider, SliderIndicator};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, WindowExt,
+    ActiveTheme, Disableable, Selectable, WindowExt,
     button::Button,
     dock::{BasePanel, Panel, PanelEvent},
     input::{Input, InputEvent, InputState},
@@ -558,6 +560,62 @@ impl ParametersPanel {
             });
         }
     }
+    fn toolbar(
+        &self,
+        create_disabled: bool,
+        groups_disabled: bool,
+        cx: &mut Context<Self>,
+    ) -> PanelToolbar {
+        let group_count = self.owner.upgrade().map_or(0, |owner| {
+            owner.read(cx).editor.document().map_or(0, |doc| {
+                doc.object_index()
+                    .objects
+                    .iter()
+                    .filter(|item| item.reference.kind == editor_core::ObjectKind::ParameterGroup)
+                    .count()
+            })
+        });
+        let new_label = t!("parameter.new").into_owned();
+        let show_groups = self.show_groups;
+        let groups_help = if show_groups {
+            t!("editor.parameter_groups_hide", count = group_count).into_owned()
+        } else {
+            t!("editor.parameter_groups_show", count = group_count).into_owned()
+        };
+        let on_create = cx.listener(|this, _, window, cx| this.open_create_dialog(window, cx));
+        let on_groups = cx.listener(|this, _, window, cx| {
+            if window.has_active_dialog(cx)
+                || this.owner.upgrade().is_none_or(|owner| {
+                    let state = owner.read(cx);
+                    state.modal || state.editor.document().is_none()
+                })
+            {
+                return;
+            }
+            this.show_groups = !this.show_groups;
+            cx.notify();
+        });
+        PanelToolbar::new("parameters-panel-toolbar")
+            .action(move |_| {
+                Button::new("new-parameter")
+                    .icon(IconName::Plus)
+                    .accessibility_label(new_label.clone())
+                    .tooltip(new_label)
+                    .disabled(create_disabled)
+                    .on_click(on_create)
+            })
+            .action(move |_| {
+                Button::new("parameter-groups-toggle")
+                    .icon(IconName::FolderTree)
+                    .accessibility_label(groups_help.clone())
+                    .tooltip(groups_help)
+                    .selected(show_groups)
+                    .toggled(show_groups)
+                    .disabled(groups_disabled)
+                    .on_click(on_groups)
+            })
+    }
+
     fn group_browser(&mut self, cx: &mut Context<Self>) -> AnyElement {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
@@ -572,35 +630,19 @@ impl ParametersPanel {
             .iter()
             .filter(|i| i.reference.kind == editor_core::ObjectKind::ParameterGroup)
             .collect();
-        let mut body = div()
-            .flex_shrink_0()
-            .text_xs()
-            .px_2()
-            .py_1()
-            .child(
-                div()
-                    .id("parameter-groups-toggle")
-                    .cursor_pointer()
-                    .child(format!(
-                        "{} · {}",
-                        t!("editor.parameter_groups"),
-                        groups.len()
-                    ))
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.show_groups = !this.show_groups;
-                        cx.notify();
-                    })),
-            )
-            .child(div().text_color(cx.theme().muted_foreground).child(
+        let mut body = div().flex_shrink_0().text_xs().px_2().py_1().child(
+            div().text_color(cx.theme().muted_foreground).child(
                 if doc.context().active_binding.is_some() {
                     t!("editor.binding_key_marks")
                 } else {
                     t!("editor.aggregate_key_marks")
                 },
-            ));
+            ),
+        );
         if self.show_groups {
             let mut list = div()
                 .id("parameter-groups-list")
+                .test_support()
                 .max_h(px(120.))
                 .overflow_y_scroll();
             for group in groups {
@@ -794,6 +836,10 @@ impl BasePanel for ParametersPanel {
     }
 }
 impl Panel for ParametersPanel {
+    fn inner_padding(&self, _: &App) -> bool {
+        false
+    }
+
     fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         t!("editor.parameters")
     }
@@ -813,6 +859,7 @@ impl Render for ParametersPanel {
                     .editor
                     .command(editor_core::CommandId::CreateParameter),
             );
+        let groups_disabled = state.modal || dialog_active || state.editor.document().is_none();
         if disabled {
             self.finish_slider_drag(cx);
         }
@@ -872,16 +919,7 @@ impl Render for ParametersPanel {
                 .absolute()
                 .size_full(),
             )
-            .child(
-                div().px_2().py_1().flex_shrink_0().child(
-                    Button::new("new-parameter")
-                        .label(format!("＋ {}", t!("parameter.new")))
-                        .disabled(create_disabled)
-                        .on_click(
-                            cx.listener(|this, _, window, cx| this.open_create_dialog(window, cx)),
-                        ),
-                ),
-            )
+            .child(self.toolbar(create_disabled, groups_disabled, cx))
             .child(self.group_browser(cx))
             .child(self.binding_summary(cx))
             .child(if row_count == 0 {

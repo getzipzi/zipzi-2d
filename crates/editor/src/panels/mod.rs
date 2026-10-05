@@ -3,6 +3,7 @@ mod hierarchy_tree;
 pub mod mesh_tree;
 pub mod parameters;
 pub mod properties;
+pub(crate) mod toolbar;
 
 pub use deformer_tree::DeformerTreePanel;
 pub use mesh_tree::MeshTreePanel;

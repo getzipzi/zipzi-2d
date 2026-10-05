@@ -1,5 +1,6 @@
 mod filter;
 
+use super::toolbar::{PanelToolbar, PanelToolbarPopover, PanelToolbarSearch};
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, TreeNode, TreeNodeKind};
 use filter::{TreeFilter, VisibleRow, highlight_ranges, node_key, visible_rows};
@@ -9,8 +10,7 @@ use gpui_kit::component::{
     button::{Button, ButtonVariants},
     checkbox::Checkbox,
     dock::{BasePanel, Panel, PanelEvent},
-    input::{Input, InputEvent, InputState},
-    popover::Popover,
+    input::{InputEvent, InputState},
 };
 use gpui_kit::{prelude::*, *};
 use std::{
@@ -151,134 +151,110 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         let prefix = Self::prefix();
         let active = self.view.filter.is_active();
         let type_active = !self.view.filter.excluded.is_empty();
+        let included = Self::object_types().len() - self.view.filter.excluded.len();
+        let filter_label = if type_active {
+            t!("editor.tree_visible_types", count = included).into_owned()
+        } else {
+            t!("editor.tree_filter_types").into_owned()
+        };
         let target = self.document_id;
         let panel = cx.weak_entity();
-        div()
-            .flex()
-            .items_center()
-            .gap_1()
-            .p_1()
-            .flex_shrink_0()
-            .child(
-                Input::new(&self.search)
-                    .id(SharedString::from(format!("{prefix}-tree-search")))
-                    .aria_label(t!("editor.tree_search"))
-                    .small()
-                    .h(px(26.))
-                    .flex_1()
-                    .min_w_0()
-                    .prefix(
-                        Icon::new(IconName::Search)
-                            .xsmall()
-                            .text_color(cx.theme().muted_foreground),
-                    )
-                    .when(active, |input| {
-                        input.suffix(
-                            Button::new(SharedString::from(format!("{prefix}-tree-clear")))
-                                .icon(IconName::Close)
-                                .ghost()
-                                .xsmall()
-                                .tooltip(t!("editor.tree_clear"))
-                                .on_click(
-                                    cx.listener(|this, _, window, cx| {
-                                        this.clear_filter(window, cx)
-                                    }),
+        PanelToolbar::new(SharedString::from(format!("{prefix}-panel-toolbar")))
+            .control(
+                PanelToolbarPopover::new(
+                    SharedString::from(format!("{prefix}-tree-filter-popover")),
+                    Button::new(SharedString::from(format!("{prefix}-tree-filter")))
+                        .icon(IconName::ListFilter)
+                        .selected(type_active)
+                        .when(type_active, |button| button.label(included.to_string()))
+                        .accessibility_label(filter_label.clone())
+                        .tooltip(filter_label),
+                )
+                .open(self.filter_open)
+                .on_open_change(cx.listener(|this, open, _, cx| {
+                    this.filter_open = *open;
+                    cx.notify();
+                }))
+                .content(move |_, _, cx| {
+                    let Some(panel) = panel.upgrade() else {
+                        return div();
+                    };
+                    let filter = panel.read(cx).view.filter.clone();
+                    let popover = cx.weak_entity();
+                    let reset_panel = panel.downgrade();
+                    let reset_popover = popover.clone();
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_1()
+                        .w(px(172.))
+                        .text_xs()
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .child(t!("editor.tree_filter_types"))
+                                .child(
+                                    Button::new("tree-all-types")
+                                        .label(t!("editor.tree_all_types"))
+                                        .ghost()
+                                        .xsmall()
+                                        .disabled(filter.excluded.is_empty())
+                                        .on_click(move |_, _, cx| {
+                                            _ = reset_panel.update(cx, |this, cx| {
+                                                if this.document_id != target {
+                                                    return;
+                                                }
+                                                this.view.filter.excluded.clear();
+                                                this.filter_changed(cx);
+                                            });
+                                            _ = reset_popover.update(cx, |_, cx| cx.notify());
+                                        }),
                                 ),
                         )
-                    }),
+                        .children(Self::object_types().iter().map(|&kind| {
+                            let panel = panel.downgrade();
+                            let popover = popover.clone();
+                            let label = match kind {
+                                TreeNodeKind::Part => t!("editor.tree_type_part"),
+                                TreeNodeKind::Mesh => t!("editor.tree_type_mesh"),
+                                TreeNodeKind::WarpDeformer => t!("editor.tree_type_warp"),
+                                TreeNodeKind::RotationDeformer => {
+                                    t!("editor.tree_type_rotation")
+                                }
+                                TreeNodeKind::Offscreen => t!("editor.tree_type_offscreen"),
+                                TreeNodeKind::Group => unreachable!(),
+                            };
+                            Checkbox::new(SharedString::from(format!("tree-kind-{kind:?}")))
+                                .label(label.into_owned())
+                                .small()
+                                .h(px(24.))
+                                .w_full()
+                                .checked(filter.includes(kind))
+                                .on_change(move |checked, _, cx| {
+                                    _ = panel.update(cx, |this, cx| {
+                                        if this.document_id != target {
+                                            return;
+                                        }
+                                        this.view.filter.set_included(kind, *checked);
+                                        this.filter_changed(cx);
+                                    });
+                                    _ = popover.update(cx, |_, cx| cx.notify());
+                                })
+                        }))
+                }),
             )
-            .child(
-                Popover::new(SharedString::from(format!("{prefix}-tree-filter-popover")))
-                    .p_2()
-                    .open(self.filter_open)
-                    .on_open_change(cx.listener(|this, open, _, cx| {
-                        this.filter_open = *open;
-                        cx.notify();
-                    }))
-                    .trigger(
-                        Button::new(SharedString::from(format!("{prefix}-tree-filter")))
-                            .icon(IconName::ListFilter)
-                            .ghost()
-                            .small()
-                            .h(px(26.))
-                            .selected(type_active)
-                            .when(type_active, |button| {
-                                button.label(
-                                    (Self::object_types().len() - self.view.filter.excluded.len())
-                                        .to_string(),
-                                )
-                            })
-                            .tooltip(t!("editor.tree_filter_types")),
-                    )
-                    .content(move |_, _, cx| {
-                        let Some(panel) = panel.upgrade() else {
-                            return div();
-                        };
-                        let filter = panel.read(cx).view.filter.clone();
-                        let popover = cx.weak_entity();
-                        let reset_panel = panel.downgrade();
-                        let reset_popover = popover.clone();
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap_1()
-                            .w(px(172.))
-                            .text_xs()
-                            .child(
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .justify_between()
-                                    .child(t!("editor.tree_filter_types"))
-                                    .child(
-                                        Button::new("tree-all-types")
-                                            .label(t!("editor.tree_all_types"))
-                                            .ghost()
-                                            .xsmall()
-                                            .disabled(filter.excluded.is_empty())
-                                            .on_click(move |_, _, cx| {
-                                                _ = reset_panel.update(cx, |this, cx| {
-                                                    if this.document_id != target {
-                                                        return;
-                                                    }
-                                                    this.view.filter.excluded.clear();
-                                                    this.filter_changed(cx);
-                                                });
-                                                _ = reset_popover.update(cx, |_, cx| cx.notify());
-                                            }),
-                                    ),
-                            )
-                            .children(Self::object_types().iter().map(|&kind| {
-                                let panel = panel.downgrade();
-                                let popover = popover.clone();
-                                let label = match kind {
-                                    TreeNodeKind::Part => t!("editor.tree_type_part"),
-                                    TreeNodeKind::Mesh => t!("editor.tree_type_mesh"),
-                                    TreeNodeKind::WarpDeformer => t!("editor.tree_type_warp"),
-                                    TreeNodeKind::RotationDeformer => {
-                                        t!("editor.tree_type_rotation")
-                                    }
-                                    TreeNodeKind::Offscreen => t!("editor.tree_type_offscreen"),
-                                    TreeNodeKind::Group => unreachable!(),
-                                };
-                                Checkbox::new(SharedString::from(format!("tree-kind-{kind:?}")))
-                                    .label(label.into_owned())
-                                    .small()
-                                    .h(px(24.))
-                                    .w_full()
-                                    .checked(filter.includes(kind))
-                                    .on_change(move |checked, _, cx| {
-                                        _ = panel.update(cx, |this, cx| {
-                                            if this.document_id != target {
-                                                return;
-                                            }
-                                            this.view.filter.set_included(kind, *checked);
-                                            this.filter_changed(cx);
-                                        });
-                                        _ = popover.update(cx, |_, cx| cx.notify());
-                                    })
-                            }))
-                    }),
+            .search(
+                PanelToolbarSearch::new(&self.search)
+                    .id(SharedString::from(format!("{prefix}-tree-search")))
+                    .label(t!("editor.tree_search"))
+                    .reset_action(
+                        SharedString::from(format!("{prefix}-tree-clear")),
+                        t!("editor.tree_clear"),
+                        active,
+                        cx.listener(|this, _, window, cx| this.clear_filter(window, cx)),
+                    ),
             )
     }
 }
@@ -298,6 +274,11 @@ impl<const DEFORMER: bool> BasePanel for HierarchyTreePanel<DEFORMER> {
     }
 }
 impl<const DEFORMER: bool> Panel for HierarchyTreePanel<DEFORMER> {
+    fn inner_padding(&self, _: &App) -> bool {
+        // The toolbar owns spacing below both single and grouped dock titles.
+        false
+    }
+
     fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         if DEFORMER {
             t!("editor.deformer_tree")
