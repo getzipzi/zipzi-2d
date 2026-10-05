@@ -200,7 +200,7 @@ fn new_parameter_creation_reveals_last_row_of_a_long_list(cx: &mut TestAppContex
 }
 
 #[gpui_kit::test]
-fn new_parameter_advanced_options_use_native_controls_without_submitting_the_dialog(
+fn new_parameter_all_options_are_visible_and_native_controls_preserve_the_draft(
     cx: &mut TestAppContext,
 ) {
     use kasane_core::{Canvas, Vec2, document::CdiParameterGroup};
@@ -229,7 +229,51 @@ fn new_parameter_advanced_options_use_native_controls_without_submitting_the_dia
     let harness = setup_with_document(cx, Document::open(&saved.manifest).unwrap(), assets);
     open(&harness, cx);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("new-parameter-advanced", cx);
+        assert!(window.try_find("new-parameter-advanced").is_none());
+        for field in [
+            "new-parameter-name",
+            "new-parameter-id",
+            "new-parameter-minimum",
+            "new-parameter-maximum",
+            "new-parameter-default",
+            "new-parameter-precision",
+            "new-parameter-kind",
+            "new-parameter-group",
+            "new-parameter-repeat",
+        ] {
+            assert!(
+                window.find(field).visible(),
+                "{field} must be visible on open"
+            );
+        }
+        assert_eq!(
+            window.find("new-parameter-name").bounds().top(),
+            window.find("new-parameter-id").bounds().top()
+        );
+        assert_eq!(
+            window.find("new-parameter-minimum").bounds().top(),
+            window.find("new-parameter-precision").bounds().top()
+        );
+        assert_eq!(
+            window.find("new-parameter-kind").bounds().top(),
+            window.find("new-parameter-group").bounds().top()
+        );
+        assert!(
+            window
+                .within("new-parameter-form")
+                .try_find("new-parameter-create")
+                .is_none()
+        );
+        let create = window
+            .within("new-parameter-footer")
+            .find("new-parameter-create")
+            .bounds();
+        let cancel = window
+            .within("new-parameter-footer")
+            .find("new-parameter-cancel")
+            .bounds();
+        assert_eq!(create.top(), cancel.top());
+        assert!(create.top() > window.find("new-parameter-repeat").bounds().bottom());
         window.click("new-parameter-kind", cx);
         window.press("down", cx);
         window.press("enter", cx);

@@ -12,7 +12,9 @@ use uuid::Uuid;
 
 #[path = "parameter.rs"]
 mod parameter;
-pub use parameter::{NewParameter, ParameterCreateError, ParameterGroupOption};
+pub use parameter::{
+    NewParameter, ParameterCreateError, ParameterGroupOption, ParameterGroupValue,
+};
 
 #[derive(Clone, Debug)]
 pub struct Layer {
@@ -28,6 +30,7 @@ pub struct Layer {
 pub struct ParameterValue {
     pub id: String,
     pub name: String,
+    pub group_id: Option<String>,
     pub minimum: f32,
     pub maximum: f32,
     pub default_value: f32,
@@ -266,6 +269,21 @@ impl Document {
     }
 
     pub fn parameters(&self) -> Vec<ParameterValue> {
+        let groups: HashMap<_, _> = self
+            .model()
+            .display_info()
+            .parameters
+            .iter()
+            .flatten()
+            .filter_map(|entry| match entry {
+                kasane_core::document::CdiParameterEntry::Resolved {
+                    parameter_id,
+                    group_id,
+                    ..
+                } => Some((parameter_id.as_str(), group_id.clone())),
+                _ => None,
+            })
+            .collect();
         self.session
             .parameter_ids()
             .iter()
@@ -273,6 +291,7 @@ impl Document {
                 let parameter = self.session.parameter(id)?;
                 Some(ParameterValue {
                     id: id.clone(),
+                    group_id: groups.get(id.as_str()).cloned().flatten(),
                     name: if parameter.name.is_empty() {
                         parameter.runtime_id
                     } else {

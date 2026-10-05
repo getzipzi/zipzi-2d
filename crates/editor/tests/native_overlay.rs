@@ -443,9 +443,9 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 );
             }
             assert_eq!(
-                image.get_pixel(260, 95).0,
+                image.get_pixel(260, 91).0,
                 [255, 255, 255, 255],
-                "the hollow Glue endpoint stays white even when selected"
+                "the 10px hollow Glue endpoint stays white even when selected"
             );
             assert_eq!(
                 image.get_pixel(260, 100).0,

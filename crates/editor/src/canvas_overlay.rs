@@ -5,6 +5,8 @@ use gpui_kit::{
     Bounds, Hsla, PathBuilder, Pixels, Point, Window, fill, point, px, rgb, rgba, size,
 };
 
+const GLUE_MARKER_RADIUS: f32 = 5.;
+
 /// The native regression tests paint these same primitives into a headless scene.
 pub(crate) trait Painter {
     fn paint_quad(&mut self, quad: gpui_kit::PaintQuad);
@@ -219,12 +221,12 @@ fn diamond(
         })
     };
     // Both states use the same outer silhouette; the hollow border stays inside it.
-    let outer = points(editor_render::OVERLAY_MARKER_RADIUS);
+    let outer = points(GLUE_MARKER_RADIUS);
     if let Some(path) = polygon(&outer) {
         window.paint_path(path, if solid { color } else { p.hollow });
     }
     if !solid {
-        let inner = points(editor_render::OVERLAY_MARKER_RADIUS - std::f32::consts::SQRT_2);
+        let inner = points(GLUE_MARKER_RADIUS - std::f32::consts::SQRT_2);
         if let Some(path) = polygon(&inner) {
             window.paint_path(path, p.surface);
         }
@@ -334,14 +336,14 @@ pub(crate) fn paint_markers(
                     let center = origin + point(px((a.x + b.x) * 0.5), px((a.y + b.y) * 0.5));
                     diamond(center, false, true, color, p, window);
                     if glue.hovered {
-                        ring(center, editor_render::OVERLAY_MARKER_RADIUS + 2., window);
+                        ring(center, GLUE_MARKER_RADIUS + 2., window);
                     }
                 } else {
                     for (pos, solid) in [(a, false), (b, true)] {
                         let center = origin + point(px(pos.x), px(pos.y));
                         diamond(center, solid, false, color, p, window);
                         if glue.hovered {
-                            ring(center, editor_render::OVERLAY_MARKER_RADIUS + 2., window);
+                            ring(center, GLUE_MARKER_RADIUS + 2., window);
                         }
                     }
                 }

@@ -54,7 +54,7 @@ fn load(editor: &mut Editor, path: &std::path::Path) -> anyhow::Result<()> {
 }
 
 #[test]
-fn zoom_stays_within_four_to_eight_hundred_percent() -> anyhow::Result<()> {
+fn zoom_stays_within_four_to_twenty_four_hundred_percent() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
     let mut editor = Editor::from_document(document);
 
@@ -64,7 +64,7 @@ fn zoom_stays_within_four_to_eight_hundred_percent() -> anyhow::Result<()> {
     assert!(editor.command_available(editor.command(CommandId::ZoomIn)));
 
     editor.zoom_by(100.0);
-    assert_eq!(editor.view().zoom, 8.0);
+    assert_eq!(editor.view().zoom, 24.0);
     assert!(!editor.command_available(editor.command(CommandId::ZoomIn)));
     assert!(editor.command_available(editor.command(CommandId::ZoomOut)));
     Ok(())

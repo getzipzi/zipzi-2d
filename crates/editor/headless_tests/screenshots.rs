@@ -125,8 +125,34 @@ impl Harness {
     }
 
     fn canvas_image(&mut self, image: &RgbaImage) -> anyhow::Result<RgbaImage> {
+        self.element_image(image, "canvas-body")
+    }
+
+    fn element_image(&mut self, image: &RgbaImage, id: &str) -> anyhow::Result<RgbaImage> {
         let (bounds, scale) = self.cx.update_window(self.window, |_, window, _| {
-            (window.find("canvas-body").bounds(), window.scale_factor())
+            (
+                window
+                    .find(gpui_kit::SharedString::from(id.to_owned()))
+                    .bounds(),
+                window.scale_factor(),
+            )
+        })?;
+        Ok(image::imageops::crop_imm(
+            image,
+            (bounds.origin.x.as_f32() * scale).ceil() as u32,
+            (bounds.origin.y.as_f32() * scale).ceil() as u32,
+            (bounds.size.width.as_f32() * scale).floor() as u32,
+            (bounds.size.height.as_f32() * scale).floor() as u32,
+        )
+        .to_image())
+    }
+
+    fn dialog_image(&mut self, image: &RgbaImage) -> anyhow::Result<RgbaImage> {
+        let (bounds, scale) = self.cx.update_window(self.window, |_, window, _| {
+            (
+                window.within("dialog").find(0_usize).bounds(),
+                window.scale_factor(),
+            )
         })?;
         Ok(image::imageops::crop_imm(
             image,
@@ -226,6 +252,112 @@ pub(super) fn run() -> anyhow::Result<()> {
         "Hiding the model must remove its filled pixels, not just the overlay"
     );
     save(&hidden, &directory, "editor-hidden.png")?;
+
+    let (document, assets) = fixture::sample_document_with_parameter_groups()?;
+    harness._assets = assets;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor = Editor::from_document(document);
+            let dock = view.dock.as_ref().unwrap();
+            // Give the grouped list a full-height, standard-width panel for visual QA.
+            use gpui_kit::component::dock::{DockLayout, panel_handle};
+            dock.area.update(cx, |area, cx| {
+                area.set_center(
+                    DockLayout::h_split()
+                        .child(
+                            DockLayout::tabs().panel_view(panel_handle(dock.canvas.clone()), cx),
+                            None,
+                        )
+                        .child(
+                            DockLayout::tabs()
+                                .panel_view(panel_handle(dock.parameters.clone()), cx),
+                            Some(px(360.)),
+                        ),
+                    window,
+                    cx,
+                );
+            });
+            view.redraw(cx);
+        });
+    })?;
+    let grouped = harness.capture()?;
+    save(
+        &harness.element_image(&grouped, "parameters-panel")?,
+        &directory,
+        "parameters-grouped.png",
+    )?;
+    let face = uuid::Uuid::from_u128(101).to_string();
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-group-toggle-{face}"), cx);
+        assert!(
+            !window
+                .find(format!("parameter-group-{face}"))
+                .expanded()
+                .unwrap()
+        );
+        assert!(
+            window
+                .try_find(format!("parameter-name-{}", uuid::Uuid::from_u128(3)))
+                .is_none()
+        );
+    })?;
+    let collapsed = harness.capture()?;
+    let collapsed_panel = harness.element_image(&collapsed, "parameters-panel")?;
+    anyhow::ensure!(
+        collapsed != grouped,
+        "Collapsing a parameter group must change its rendered rows"
+    );
+    save(&collapsed_panel, &directory, "parameters-collapsed.png")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("parameter-group-toggle-{face}"), cx);
+        theme::change(gpui_kit::component::ThemeMode::Light, cx);
+    })?;
+    let light = harness.capture()?;
+    save(
+        &harness.element_image(&light, "parameters-panel")?,
+        &directory,
+        "parameters-grouped-light.png",
+    )?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        cx.set_reduce_motion(true);
+        theme::change(gpui_kit::component::ThemeMode::Dark, cx);
+        window.click("new-parameter", cx);
+    })?;
+    let popup = harness.capture()?;
+    harness.cx.update_window(harness.window, |_, window, _| {
+        assert!(window.try_find("new-parameter-advanced").is_none());
+        for field in [
+            "new-parameter-precision",
+            "new-parameter-kind",
+            "new-parameter-group",
+            "new-parameter-repeat",
+        ] {
+            assert!(
+                window.find(field).visible(),
+                "{field} must be visible on open"
+            );
+        }
+    })?;
+    save(
+        &harness.dialog_image(&popup)?,
+        &directory,
+        "new-parameter.png",
+    )?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("new-parameter-cancel", cx);
+        i18n::activate(Some("zh-CN"));
+        theme::change(gpui_kit::component::ThemeMode::Light, cx);
+        window.click("new-parameter", cx);
+    })?;
+    let popup_zh = harness.capture()?;
+    save(
+        &harness.dialog_image(&popup_zh)?,
+        &directory,
+        "new-parameter-zh-light.png",
+    )?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("new-parameter-cancel", cx);
+    })?;
     println!("Headless editor screenshots passed (real Metal, no native window).");
     Ok(())
 }

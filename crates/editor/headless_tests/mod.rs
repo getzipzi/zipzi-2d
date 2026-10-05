@@ -5,6 +5,7 @@ mod docking_tabs;
 mod hierarchy;
 mod panel_toolbar;
 mod parameter_creation;
+mod parameter_groups;
 mod parameters;
 mod properties;
 mod recent_files;

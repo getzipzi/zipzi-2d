@@ -72,7 +72,32 @@ pub struct ParameterGroupOption {
     pub path: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ParameterGroupValue {
+    pub id: String,
+    pub name: String,
+    pub parent_id: Option<String>,
+}
+
 impl Document {
+    pub fn parameter_groups(&self) -> Vec<ParameterGroupValue> {
+        self.model()
+            .display_info()
+            .parameter_groups
+            .iter()
+            .flatten()
+            .map(|group| ParameterGroupValue {
+                id: group.id.clone(),
+                name: if group.name.is_empty() {
+                    group.runtime_id.clone()
+                } else {
+                    group.name.clone()
+                },
+                parent_id: group.parent_id.clone(),
+            })
+            .collect()
+    }
+
     fn parameter_runtime_ids(&self) -> HashSet<&str> {
         let model = self.model();
         let mut ids: HashSet<_> = model

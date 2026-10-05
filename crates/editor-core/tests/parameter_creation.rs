@@ -259,6 +259,11 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
         Err(Error::DuplicateId)
     );
     assert_eq!(document.parameter_group_options()[1].path, "Face / Eyes");
+    assert_eq!(
+        document.parameter_groups()[1].parent_id.as_ref(),
+        Some(&parent)
+    );
+    assert_eq!(document.parameters()[0].group_id.as_ref(), Some(&parent));
     let history = document.history_lengths();
     let id = document.create_parameter(NewParameter {
         runtime_id: "ParamNew3".into(),
@@ -293,6 +298,12 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
     );
     assert!(
         matches!(&final_info.parameters.as_ref().unwrap()[2], CdiParameterEntry::Resolved { parameter_id, group_id: Some(group_id), .. } if parameter_id == &id && group_id == &child)
+    );
+    let reopened = Document::open(&saved.manifest)?;
+    assert_eq!(reopened.parameter_groups(), document.parameter_groups());
+    assert_eq!(
+        reopened.parameters().last().unwrap().group_id.as_ref(),
+        Some(&child)
     );
     Ok(())
 }

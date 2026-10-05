@@ -225,19 +225,16 @@ fn toolbar_preserves_input_arrows_and_forwards_popover_and_action_events(cx: &mu
 }
 
 #[gpui_kit::test]
-fn parameters_group_toggle_is_in_toolbar_and_modal_disables_it(cx: &mut TestAppContext) {
+fn parameters_toolbar_only_creates_parameters_and_modal_disables_creation(cx: &mut TestAppContext) {
     let harness = super::setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        let toggle = window
-            .within("parameters-panel-toolbar")
-            .find("parameter-groups-toggle");
-        assert_eq!(toggle.checked(), Some(false));
-        assert!(window.try_find("parameter-groups-list").is_none());
-        window.click("parameter-groups-toggle", cx);
-        assert_eq!(window.find("parameter-groups-toggle").checked(), Some(true));
-        assert!(window.try_find("parameter-groups-list").is_some());
-        window.click("parameter-groups-toggle", cx);
-        assert!(window.try_find("parameter-groups-list").is_none());
+        assert!(
+            window
+                .within("parameters-panel-toolbar")
+                .try_find("new-parameter")
+                .is_some()
+        );
+        assert!(window.try_find("parameter-groups-toggle").is_none());
         harness.view.update(cx, |view, cx| {
             view.modal = true;
             cx.notify();
@@ -245,15 +242,13 @@ fn parameters_group_toggle_is_in_toolbar_and_modal_disables_it(cx: &mut TestAppC
         window.render_frame(cx);
         window.click("new-parameter", cx);
         assert!(!window.has_active_dialog(cx));
-        window.click("parameter-groups-toggle", cx);
-        assert!(window.try_find("parameter-groups-list").is_none());
         harness.view.update(cx, |view, cx| {
             view.modal = false;
             cx.notify();
         });
         window.render_frame(cx);
-        window.click("parameter-groups-toggle", cx);
-        assert!(window.try_find("parameter-groups-list").is_some());
+        window.click("new-parameter", cx);
+        assert!(window.has_active_dialog(cx));
     })
     .unwrap();
 }

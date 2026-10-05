@@ -2,7 +2,7 @@ use kasane_core::DrawableFrame;
 use std::sync::Arc;
 
 pub(crate) const MIN_ZOOM: f32 = 0.04;
-pub(crate) const MAX_ZOOM: f32 = 8.0;
+pub(crate) const MAX_ZOOM: f32 = 24.0;
 
 /// Decoded source pixels owned by the document, shared with render workers.
 #[derive(Clone, Debug)]

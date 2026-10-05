@@ -45,6 +45,57 @@ pub fn sample_document_with_parameters(count: usize) -> anyhow::Result<(Document
 }
 
 #[allow(dead_code)]
+pub fn sample_document_with_parameter_groups() -> anyhow::Result<(Document, TempDir)> {
+    use kasane_core::{Parameter, document::CdiParameterGroup};
+
+    let directory = tempfile::tempdir()?;
+    let mut session = AuthoringSession::new(
+        &Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::default(), 1.),
+    )?;
+    session.edit("Grouped parameters", None, |edit| {
+        for (index, name, parent) in [
+            (101, "Face", None),
+            (102, "Eyes", Some(101)),
+            (103, "Body", None),
+            (104, "Expressions", None),
+        ] {
+            edit.create_parameter_group(CdiParameterGroup {
+                id: Uuid::from_u128(index).to_string(),
+                runtime_id: name.into(),
+                name: name.into(),
+                parent_id: parent.map(|id| Uuid::from_u128(id).to_string()),
+                extensions: Default::default(),
+            })?;
+        }
+        // Deliberately interleave memberships to exercise presentation ordering.
+        for (index, name, group) in [
+            (1, "Angle X", Some(101)),
+            (2, "Body Angle", Some(103)),
+            (3, "Eye Open L", Some(102)),
+            (4, "Eye Open R", Some(102)),
+            (5, "Breath", None),
+        ] {
+            let id = Uuid::from_u128(index).to_string();
+            edit.create_parameter(Parameter {
+                id: id.clone(),
+                runtime_id: format!("Param{index}"),
+                name: name.into(),
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.,
+                ..Default::default()
+            })?;
+            let group = group.map(|id| Uuid::from_u128(id).to_string());
+            edit.set_parameter_group(&id, group.as_deref())?;
+        }
+        Ok(())
+    })?;
+    let saved = session.save_project(&directory.path().join("grouped.kasane"), None)?;
+    Ok((Document::open(&saved.manifest)?, directory))
+}
+
+#[allow(dead_code)]
 pub fn sample_document_with_bound_and_unbound_layers() -> anyhow::Result<(Document, TempDir)> {
     sample_document_with_options(true, true)
 }

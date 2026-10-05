@@ -4,7 +4,7 @@ use gpui_kit::component::{
     IndexPath,
     button::{Button, ButtonVariants},
     checkbox::Checkbox,
-    dialog::{Cancel, Confirm},
+    dialog::{Cancel, Confirm, DialogFooter},
     select::{SearchableVec, Select, SelectEvent, SelectItem, SelectState},
 };
 
@@ -39,11 +39,52 @@ pub(crate) struct NewParameterForm {
     kind: Entity<SelectState<Vec<Choice>>>,
     group: Entity<SelectState<SearchableVec<Choice>>>,
     touched: [bool; 6],
-    advanced: bool,
     repeat: bool,
     completed: bool,
     submit_error: Option<String>,
     _subscriptions: Vec<Subscription>,
+}
+
+struct NewParameterFooter {
+    form: Entity<NewParameterForm>,
+    _observe: Subscription,
+}
+
+impl NewParameterFooter {
+    fn new(form: Entity<NewParameterForm>, cx: &mut App) -> Entity<Self> {
+        cx.new(|cx| Self {
+            _observe: cx.observe(&form, |_, _, cx| cx.notify()),
+            form,
+        })
+    }
+}
+
+impl Render for NewParameterFooter {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let form = self.form.read(cx);
+        let disabled = form.completed || form.validated_draft(cx).is_err();
+        let focus_cancel = form.focus.clone();
+        let focus_confirm = form.focus.clone();
+        div().id("new-parameter-footer").test_support().child(
+            DialogFooter::new()
+                .child(
+                    Button::new("new-parameter-cancel")
+                        .label(t!("project.cancel"))
+                        .on_click(move |_, window, cx| {
+                            focus_cancel.dispatch_action(&Cancel, window, cx)
+                        }),
+                )
+                .child(
+                    Button::new("new-parameter-create")
+                        .primary()
+                        .label(t!("parameter.create"))
+                        .disabled(disabled)
+                        .on_click(move |_, window, cx| {
+                            focus_confirm.dispatch_action(&Confirm { secondary: false }, window, cx)
+                        }),
+                ),
+        )
+    }
 }
 
 impl ParametersPanel {
@@ -78,6 +119,7 @@ impl ParametersPanel {
         }
         window.focus(&self.focus, cx);
         let form = NewParameterForm::new(self.owner.clone(), document_id, window, cx);
+        let footer = NewParameterFooter::new(form.clone(), cx);
         let input_focus = form.read(cx).inputs[NAME].read(cx).focus_handle(cx);
         let on_ok = form.clone();
         let on_close = form.clone();
@@ -89,7 +131,7 @@ impl ParametersPanel {
                 .w(px(520.))
                 .overlay_closable(false)
                 .child(form.clone())
-                .footer(div())
+                .footer(footer.clone())
                 .on_ok(move |_, window, cx| on_ok.update(cx, |form, cx| form.submit(window, cx)))
                 .on_close(move |_, _, cx| {
                     on_close.update(cx, |form, _| form.completed = true);
@@ -115,7 +157,13 @@ impl ParametersPanel {
                 .iter()
                 .position(|row| row.parameter.id == focus.id)
         }) {
-            self.scroll.scroll_to_item(index, ScrollStrategy::Center);
+            self.layout.reveal(index, &mut self.collapsed_groups);
+            self.refresh_visible_rows(cx);
+            if let Some(visible_index) = self.visible_rows.iter().position(|row| {
+                matches!(row, ListRow::Parameter { index: row_index, .. } if *row_index == index)
+            }) {
+                self.scroll.scroll_to_item(visible_index, ScrollStrategy::Center);
+            }
         }
         cx.notify();
     }
@@ -226,7 +274,6 @@ impl NewParameterForm {
                 kind,
                 group,
                 touched: [false; 6],
-                advanced: false,
                 repeat: false,
                 completed: false,
                 submit_error: None,
@@ -330,11 +377,6 @@ impl NewParameterForm {
                 true
             }
             Err(error) => {
-                if error.downcast_ref::<Error>().is_some_and(|error| {
-                    matches!(error, Error::PrecisionInvalid | Error::MissingGroup)
-                }) {
-                    self.advanced = true;
-                }
                 self.submit_error = Some(error_text(&error));
                 cx.notify();
                 false
@@ -360,6 +402,7 @@ impl NewParameterForm {
             .child(
                 Input::new(&self.inputs[index])
                     .id(field_id(index))
+                    .small()
                     .aria_label(label),
             )
             .when_some(message, |field, message| {
@@ -447,67 +490,66 @@ impl Render for NewParameterForm {
                 error.downcast_ref::<Error>().is_none() || field_error == Some(Error::MissingGroup)
             })
             .map(error_text);
-        let focus_confirm = self.focus.clone();
-        let focus_cancel = self.focus.clone();
         div()
             .id("new-parameter-form")
             .test_support()
             .track_focus(&self.focus)
             .flex()
             .flex_col()
-            .gap_3()
-            .child(self.field(NAME, field_error, cx))
-            .child(self.field(ID, field_error, cx))
+            .gap_2()
             .child(
                 div()
                     .flex()
-                    .gap_3()
-                    .child(self.field(MIN, field_error, cx))
-                    .child(self.field(MAX, field_error, cx))
-                    .child(self.field(DEFAULT, field_error, cx)),
+                    .gap_2()
+                    .child(self.field(NAME, field_error, cx))
+                    .child(self.field(ID, field_error, cx)),
             )
             .child(
-                Button::new("new-parameter-advanced")
-                    .ghost()
-                    .label(t!("parameter.advanced"))
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.advanced = !this.advanced;
-                        cx.notify();
-                    })),
+                div()
+                    .flex()
+                    .gap_2()
+                    .child(self.field(MIN, field_error, cx))
+                    .child(self.field(MAX, field_error, cx))
+                    .child(self.field(DEFAULT, field_error, cx))
+                    .child(self.field(PRECISION, field_error, cx)),
             )
-            .when(self.advanced, |body| {
-                body.child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap_3()
-                        .child(div().text_xs().child(t!("parameter.kind")))
-                        .child(
-                            Select::new(&self.kind)
-                                .id("new-parameter-kind")
-                                .accessibility_label(t!("parameter.kind"))
-                                .w_full(),
-                        )
-                        .child(
-                            Checkbox::new("new-parameter-repeat")
-                                .label(t!("parameter.repeat").to_string())
-                                .checked(self.repeat)
-                                .on_click(cx.listener(|this, checked: &bool, _, cx| {
-                                    this.repeat = *checked;
-                                    this.submit_error = None;
-                                    cx.notify();
-                                })),
-                        )
-                        .child(self.field(PRECISION, field_error, cx))
-                        .child(div().text_xs().child(t!("parameter.group")))
-                        .child(
-                            Select::new(&self.group)
-                                .id("new-parameter-group")
-                                .accessibility_label(t!("parameter.group"))
-                                .w_full(),
-                        ),
-                )
-            })
+            .child(
+                div()
+                    .flex()
+                    .gap_2()
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .flex_1()
+                            .min_w_0()
+                            .gap_1()
+                            .child(div().text_xs().child(t!("parameter.kind")))
+                            .child(
+                                Select::new(&self.kind)
+                                    .id("new-parameter-kind")
+                                    .accessibility_label(t!("parameter.kind"))
+                                    .small()
+                                    .w_full(),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .flex_1()
+                            .min_w_0()
+                            .gap_1()
+                            .child(div().text_xs().child(t!("parameter.group")))
+                            .child(
+                                Select::new(&self.group)
+                                    .id("new-parameter-group")
+                                    .accessibility_label(t!("parameter.group"))
+                                    .small()
+                                    .w_full(),
+                            ),
+                    ),
+            )
             .when_some(self.submit_error.clone().or(global_error), |body, error| {
                 body.child(
                     div()
@@ -519,31 +561,16 @@ impl Render for NewParameterForm {
                 )
             })
             .child(
-                div()
-                    .flex()
-                    .justify_end()
-                    .gap_2()
-                    .py_2()
-                    .child(
-                        Button::new("new-parameter-cancel")
-                            .label(t!("project.cancel"))
-                            .on_click(move |_, window, cx| {
-                                focus_cancel.dispatch_action(&Cancel, window, cx)
-                            }),
-                    )
-                    .child(
-                        Button::new("new-parameter-create")
-                            .primary()
-                            .label(t!("parameter.create"))
-                            .disabled(self.completed || validation.is_err())
-                            .on_click(move |_, window, cx| {
-                                focus_confirm.dispatch_action(
-                                    &Confirm { secondary: false },
-                                    window,
-                                    cx,
-                                )
-                            }),
-                    ),
+                Checkbox::new("new-parameter-repeat")
+                    .small()
+                    .mt_1()
+                    .label(t!("parameter.repeat").to_string())
+                    .checked(self.repeat)
+                    .on_click(cx.listener(|this, checked: &bool, _, cx| {
+                        this.repeat = *checked;
+                        this.submit_error = None;
+                        cx.notify();
+                    })),
             )
     }
 }

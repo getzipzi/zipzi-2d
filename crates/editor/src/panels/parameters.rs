@@ -1,5 +1,7 @@
 mod create;
+mod grouping;
 mod track;
+use grouping::{ListRow, ParameterLayout};
 use track::parameter_track;
 
 use super::toolbar::PanelToolbar;
@@ -8,15 +10,18 @@ use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
 use gpui_kit::assets::IconName;
 use gpui_kit::base::{NumberInput, Slider as BaseSlider, SliderIndicator};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Selectable, WindowExt,
-    button::Button,
+    ActiveTheme, Disableable, Icon, Sizable, WindowExt,
+    button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
     input::{Input, InputEvent, InputState},
     slider::{SliderEvent, SliderState, SliderValue},
     tooltip::Tooltip,
 };
 use gpui_kit::{prelude::*, *};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+// Group headers and parameter rows share the uniform list's measured height.
+const PARAMETER_ROW_HEIGHT: f32 = 26.;
 
 struct ParameterRow {
     parameter: ParameterValue,
@@ -47,7 +52,9 @@ pub struct ParametersPanel {
     visual_revision: Option<u64>,
     visual_selection: Option<String>,
     show_indirect: bool,
-    show_groups: bool,
+    collapsed_groups: HashSet<Option<String>>,
+    layout: ParameterLayout,
+    visible_rows: Vec<ListRow>,
     rows: Vec<ParameterRow>,
     scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
@@ -78,7 +85,9 @@ impl ParametersPanel {
             visual_revision: None,
             visual_selection: None,
             show_indirect: false,
-            show_groups: false,
+            collapsed_groups: HashSet::new(),
+            layout: ParameterLayout::default(),
+            visible_rows: Vec::new(),
             rows: Vec::new(),
             scroll: UniformListScrollHandle::new(),
             subscriptions: Vec::new(),
@@ -125,6 +134,28 @@ impl ParametersPanel {
                     || row.parameter.maximum != parameter.maximum
                     || row.parameter.decimal_places != parameter.decimal_places
             });
+        let layout_changed = structure_changed
+            || self.visual_revision != revision
+            || self
+                .rows
+                .iter()
+                .zip(&parameters)
+                .any(|(row, parameter)| row.parameter.group_id != parameter.group_id);
+        if layout_changed {
+            if self.document_id != document_id {
+                self.collapsed_groups.clear();
+            }
+            let groups = owner
+                .read(cx)
+                .editor
+                .document()
+                .map_or_else(Vec::new, |doc| doc.parameter_groups());
+            self.collapsed_groups.retain(|id| {
+                id.as_ref()
+                    .is_none_or(|id| groups.iter().any(|group| &group.id == id))
+            });
+            self.layout = ParameterLayout::new(&groups, &parameters);
+        }
         let visuals_changed = structure_changed
             || self.visual_revision != revision
             || self.visual_selection != selection;
@@ -185,6 +216,7 @@ impl ParametersPanel {
                         disabled: false,
                         summary: String::new(),
                         related: false,
+                        depth: 0,
                         _observe: cx.observe(&slider, |_, _, cx| cx.notify()),
                     });
                     ParameterRow {
@@ -301,6 +333,9 @@ impl ParametersPanel {
                 });
                 row.parameter = parameter;
             }
+        }
+        if layout_changed {
+            self.refresh_visible_rows(cx);
         }
         if visuals_changed {
             if let Some(doc) = owner.read(cx).editor.document() {
@@ -560,124 +595,187 @@ impl ParametersPanel {
             });
         }
     }
-    fn toolbar(
-        &self,
-        create_disabled: bool,
-        groups_disabled: bool,
-        cx: &mut Context<Self>,
-    ) -> PanelToolbar {
-        let group_count = self.owner.upgrade().map_or(0, |owner| {
-            owner.read(cx).editor.document().map_or(0, |doc| {
-                doc.object_index()
-                    .objects
-                    .iter()
-                    .filter(|item| item.reference.kind == editor_core::ObjectKind::ParameterGroup)
-                    .count()
-            })
-        });
+    fn toolbar(&self, create_disabled: bool, cx: &mut Context<Self>) -> PanelToolbar {
         let new_label = t!("parameter.new").into_owned();
-        let show_groups = self.show_groups;
-        let groups_help = if show_groups {
-            t!("editor.parameter_groups_hide", count = group_count).into_owned()
-        } else {
-            t!("editor.parameter_groups_show", count = group_count).into_owned()
-        };
         let on_create = cx.listener(|this, _, window, cx| this.open_create_dialog(window, cx));
-        let on_groups = cx.listener(|this, _, window, cx| {
-            if window.has_active_dialog(cx)
-                || this.owner.upgrade().is_none_or(|owner| {
-                    let state = owner.read(cx);
-                    state.modal || state.editor.document().is_none()
-                })
-            {
-                return;
-            }
-            this.show_groups = !this.show_groups;
-            cx.notify();
-        });
-        PanelToolbar::new("parameters-panel-toolbar")
-            .action(move |_| {
-                Button::new("new-parameter")
-                    .icon(IconName::Plus)
-                    .accessibility_label(new_label.clone())
-                    .tooltip(new_label)
-                    .disabled(create_disabled)
-                    .on_click(on_create)
-            })
-            .action(move |_| {
-                Button::new("parameter-groups-toggle")
-                    .icon(IconName::FolderTree)
-                    .accessibility_label(groups_help.clone())
-                    .tooltip(groups_help)
-                    .selected(show_groups)
-                    .toggled(show_groups)
-                    .disabled(groups_disabled)
-                    .on_click(on_groups)
-            })
+        PanelToolbar::new("parameters-panel-toolbar").action(move |_| {
+            Button::new("new-parameter")
+                .icon(IconName::Plus)
+                .accessibility_label(new_label.clone())
+                .tooltip(new_label)
+                .disabled(create_disabled)
+                .on_click(on_create)
+        })
     }
 
-    fn group_browser(&mut self, cx: &mut Context<Self>) -> AnyElement {
+    fn key_marks_help(&self, cx: &App) -> AnyElement {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
         let state = owner.read(cx);
-        let (Some(doc), Some(id)) = (state.editor.document(), state.editor.active_id()) else {
+        let Some(doc) = state.editor.document() else {
             return div().into_any_element();
         };
-        let index = doc.object_index();
-        let groups: Vec<_> = index
-            .objects
-            .iter()
-            .filter(|i| i.reference.kind == editor_core::ObjectKind::ParameterGroup)
-            .collect();
-        let mut body = div().flex_shrink_0().text_xs().px_2().py_1().child(
-            div().text_color(cx.theme().muted_foreground).child(
+        div()
+            .flex_shrink_0()
+            .text_xs()
+            .px_3()
+            .py_1()
+            .child(div().text_color(cx.theme().muted_foreground).child(
                 if doc.context().active_binding.is_some() {
                     t!("editor.binding_key_marks")
                 } else {
                     t!("editor.aggregate_key_marks")
                 },
-            ),
-        );
-        if self.show_groups {
-            let mut list = div()
-                .id("parameter-groups-list")
-                .test_support()
-                .max_h(px(120.))
-                .overflow_y_scroll();
-            for group in groups {
-                let r = group.reference.clone();
-                let owner = self.owner.clone();
-                list = list.child(
-                    div()
-                        .id(SharedString::from(format!("parameter-group-{}", r.id)))
-                        .py_1()
-                        .cursor_pointer()
-                        .child(index.name(&r).to_owned())
-                        .on_click(cx.listener(move |_, _, window, cx| {
+            ))
+            .into_any_element()
+    }
+
+    fn refresh_visible_rows(&mut self, cx: &mut Context<Self>) {
+        self.visible_rows = self.layout.visible(&self.collapsed_groups);
+        for row in &self.visible_rows {
+            if let ListRow::Parameter { index, depth } = row {
+                let view = &self.rows[*index].view;
+                if view.read(cx).depth != *depth {
+                    view.update(cx, |view, cx| {
+                        view.depth = *depth;
+                        cx.notify();
+                    });
+                }
+            }
+        }
+    }
+
+    fn group_header(
+        &self,
+        id: Option<String>,
+        name: String,
+        depth: usize,
+        count: usize,
+        disabled: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let key = id.as_deref().unwrap_or("ungrouped").to_owned();
+        let expanded = !self.collapsed_groups.contains(&id);
+        let group = id.clone();
+        let owner = self.owner.clone();
+        let document_id = self.document_id;
+        let theme = cx.theme();
+        div()
+            .id(SharedString::from(format!("parameter-group-{key}")))
+            .test_support()
+            .role(gpui::Role::Group)
+            .aria_label(name.clone())
+            .aria_expanded(expanded)
+            .flex()
+            .items_center()
+            .w_full()
+            .h(px(PARAMETER_ROW_HEIGHT))
+            .pr_2()
+            .border_b_1()
+            .border_color(theme.border)
+            .bg(theme.muted.opacity(if depth == 0 { 0.6 } else { 0.3 }))
+            .child(
+                Button::new(SharedString::from(format!("parameter-group-toggle-{key}")))
+                    .ghost()
+                    .small()
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
+                    .px_3()
+                    .pl(px(12. + depth.min(6) as f32 * 12.))
+                    .justify_start()
+                    .accessibility_label(name.clone())
+                    .disabled(disabled)
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        if !this.slider_interaction_allowed(window, cx) {
+                            return;
+                        }
+                        this.finish_slider_drag(cx);
+                        if !this.collapsed_groups.remove(&group) {
+                            this.collapsed_groups.insert(group.clone());
+                        }
+                        this.refresh_visible_rows(cx);
+                        cx.notify();
+                    }))
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .w_full()
+                            .min_w_0()
+                            .child(
+                                Icon::new(if expanded {
+                                    IconName::ChevronDown
+                                } else {
+                                    IconName::ChevronRight
+                                })
+                                .small()
+                                .text_color(theme.muted_foreground),
+                            )
+                            .child(
+                                Icon::new(IconName::Folder)
+                                    .small()
+                                    .text_color(theme.muted_foreground),
+                            )
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .text_ellipsis()
+                                    .text_xs()
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .child(name),
+                            )
+                            .child(
+                                div()
+                                    .id(SharedString::from(format!("parameter-group-count-{key}")))
+                                    .test_support()
+                                    .aria_value(count.to_string())
+                                    .text_xs()
+                                    .text_color(theme.muted_foreground)
+                                    .child(count.to_string()),
+                            ),
+                    ),
+            )
+            .when_some(id, |header, id| {
+                header.child(
+                    Button::new(SharedString::from(format!("parameter-group-inspect-{id}")))
+                        .icon(IconName::Info)
+                        .ghost()
+                        .small()
+                        .disabled(disabled)
+                        .accessibility_label(t!("editor.parameter_group_inspect"))
+                        .tooltip(t!("editor.parameter_group_inspect"))
+                        .on_click(move |_, window, cx| {
                             if window.has_active_dialog(cx) {
                                 return;
                             }
-                            if let Some(owner) = owner.upgrade() {
-                                owner.update(cx, |owner, cx| {
-                                    if owner.modal
-                                        || owner.editor.is_busy()
-                                        || owner.editor.active_id() != Some(id)
-                                    {
-                                        return;
-                                    }
-                                    let result = owner
-                                        .editor
-                                        .execute_for(id, EditorCommand::Navigate(r.clone()));
-                                    owner.complete_edit(result, cx);
-                                });
-                            }
-                        })),
-                );
-            }
-            body = body.child(list);
-        }
-        body.into_any_element()
+                            let (Some(owner), Some(document_id)) = (owner.upgrade(), document_id)
+                            else {
+                                return;
+                            };
+                            owner.update(cx, |owner, cx| {
+                                if owner.modal
+                                    || owner.editor.is_busy()
+                                    || owner.editor.active_id() != Some(document_id)
+                                {
+                                    return;
+                                }
+                                let result = owner.editor.execute_for(
+                                    document_id,
+                                    EditorCommand::Navigate(editor_core::ObjectRef::new(
+                                        editor_core::ObjectKind::ParameterGroup,
+                                        &id,
+                                    )),
+                                );
+                                owner.complete_edit(result, cx);
+                            });
+                        }),
+                )
+            })
+            .into_any_element()
     }
     fn binding_summary(&mut self, cx: &mut Context<Self>) -> AnyElement {
         let Some(owner) = self.owner.upgrade() else {
@@ -859,7 +957,6 @@ impl Render for ParametersPanel {
                     .editor
                     .command(editor_core::CommandId::CreateParameter),
             );
-        let groups_disabled = state.modal || dialog_active || state.editor.document().is_none();
         if disabled {
             self.finish_slider_drag(cx);
         }
@@ -872,7 +969,7 @@ impl Render for ParametersPanel {
                 });
             }
         }
-        let row_count = self.rows.len();
+        let row_count = self.visible_rows.len();
         let panel = cx.entity();
         let theme = cx.theme().clone();
 
@@ -919,8 +1016,8 @@ impl Render for ParametersPanel {
                 .absolute()
                 .size_full(),
             )
-            .child(self.toolbar(create_disabled, groups_disabled, cx))
-            .child(self.group_browser(cx))
+            .child(self.toolbar(create_disabled, cx))
+            .child(self.key_marks_help(cx))
             .child(self.binding_summary(cx))
             .child(if row_count == 0 {
                 div()
@@ -932,13 +1029,24 @@ impl Render for ParametersPanel {
             } else {
                 // A drag repaints this panel; keep work proportional to visible rows.
                 uniform_list("parameters-scroll-area", row_count, move |range, _, cx| {
-                    panel.update(cx, |this, _| {
+                    panel.update(cx, |this, cx| {
                         range
-                            .map(|index| {
-                                this.rows[index]
+                            .map(|index| match this.visible_rows[index].clone() {
+                                ListRow::Parameter { index, .. } => this.rows[index]
                                     .view
                                     .clone()
-                                    .cached(StyleRefinement::default().w_full().h(rems(2.)))
+                                    .cached(
+                                        StyleRefinement::default()
+                                            .w_full()
+                                            .h(px(PARAMETER_ROW_HEIGHT)),
+                                    )
+                                    .into_any_element(),
+                                ListRow::Group {
+                                    id,
+                                    name,
+                                    depth,
+                                    count,
+                                } => this.group_header(id, name, depth, count, disabled, cx),
                             })
                             .collect()
                     })
@@ -964,6 +1072,7 @@ struct ParameterRowView {
     disabled: bool,
     summary: String,
     related: bool,
+    depth: usize,
     _observe: Subscription,
 }
 
@@ -1023,7 +1132,7 @@ impl Render for ParameterRowView {
             .flex()
             .items_center()
             .w_full()
-            .h(rems(2.))
+            .h(px(PARAMETER_ROW_HEIGHT))
             .min_w_0()
             .gap_2()
             .px_3()
@@ -1031,11 +1140,12 @@ impl Render for ParameterRowView {
             .border_color(theme.border)
             .child(
                 div()
-                    .w(relative(0.3))
-                    .max_w(px(160.))
-                    .flex_shrink_0()
+                    .flex_1()
+                    .flex_grow(2.)
+                    .max_w(px(200.))
                     .min_w_0()
                     .text_xs()
+                    .pl(px(self.depth.min(6) as f32 * 12.))
                     .text_ellipsis()
                     .overflow_hidden()
                     .id(SharedString::from(format!("parameter-name-{parameter_id}")))
@@ -1061,7 +1171,7 @@ impl Render for ParameterRowView {
                     .flex()
                     .items_center()
                     .flex_1()
-                    .min_w_0()
+                    .min_w(px(100.))
                     .px_2()
                     .h_6()
                     .child(parameter_track(
@@ -1091,7 +1201,12 @@ impl Render for ParameterRowView {
                             .disabled(disabled)
                             .decrement_button(|button| button.hidden())
                             .increment_button(|button| button.hidden())
-                            .input(Input::new(&self.input).aria_label(parameter.name.clone())),
+                            .input(
+                                Input::new(&self.input)
+                                    .small()
+                                    .text_xs()
+                                    .aria_label(parameter.name.clone()),
+                            ),
                     ),
             )
     }

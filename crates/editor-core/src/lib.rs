@@ -11,8 +11,8 @@ pub use thumbnail::{MESH_THUMBNAIL_SIZE, MeshTextureRegion};
 mod workspace;
 
 pub use document::{
-    Document, Layer, NewParameter, ParameterCreateError, ParameterGroupOption, ParameterKey,
-    ParameterValue, ParameterVisual,
+    Document, Layer, NewParameter, ParameterCreateError, ParameterGroupOption, ParameterGroupValue,
+    ParameterKey, ParameterValue, ParameterVisual,
 };
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};
 pub use scene::{SceneSnapshot, SceneTexture, ViewState};
