@@ -1,71 +1,78 @@
 # Kasane Editor
 
-基于 **GPUI Kit + kasane-sdk + kasane-render-metal** 的 macOS 编辑器。
+A native macOS editor for Kasane 2D models, built with Rust, GPUI Kit, the Kasane SDK, and Metal.
 
-```text
-crates/editor                EditorView、Kit 界面、文件对话框与 GPUI 预览合成
-crates/editor-core           Editor 状态协调、SDK 文档会话、编辑命令、CPU 场景快照与视口状态
-crates/editor-render         原生 Metal 渲染与纹理缓存，不包含文档编辑和项目 IO
-crates/component-playground  Kit 组件示例、状态反馈与 Rust 用法
-```
+## Setup
 
-## 运行
+- macOS with a Metal-capable GPU.
+- Rust stable and Xcode Command Line Tools (`xcode-select --install`).
+- A compatible [kasane-2d](https://github.com/pakholeung37/kasane-2d) checkout at `../kasane-2d`, including `modules/kasane-render-metal` and the required SDK/render changes. See [dependency details](DEPENDENCIES.md).
 
-需要 macOS、Rust stable、Xcode Command Line Tools，以及相邻的 Kasane checkout：
+## Run
 
-```text
-web/
-├── kasane-editor/
-└── kasane-2d/       https://github.com/pakholeung37/kasane-2d
-```
-
-Kasane checkout 必须包含 `modules/kasane-render-metal`、对应的公共渲染模块修改，以及 SDK 的常规绑定两轴写入限制。GPUI Kit 使用官方固定 commit，不需要本地 gpui-ce 或 gpui-kit checkout。
+From the repository root:
 
 ```sh
-MTL_HUD_ENABLED=1 MTL_HUD_ALIGNMENT=bottomleft MTL_HUD_SCALE=0.16 cargo run --locked -p kasane-editor
+cargo run --locked -p kasane-editor
+```
+
+To explore the UI components:
+
+```sh
 cargo run --locked -p component-playground
-./scripts/dev.sh                 # 保存后编译成功即在后台重启编辑器
-./scripts/dev.sh playground      # 同样方式运行组件 Playground
+```
+
+## Develop
+
+Install `watchexec`, then rebuild and restart automatically when source files change:
+
+```sh
+brew install watchexec
+./scripts/dev.sh
+./scripts/dev.sh playground  # Watch the component playground
+```
+
+## Tests
+
+Run all tests and check formatting (the full suite requires macOS and Metal):
+
+```sh
 cargo test --locked --workspace
 cargo fmt --all -- --check
-
-./scripts/build-app.sh
-./scripts/build-app.sh playground
-./scripts/build-app.sh editor debug  # 显式打包未优化的调试版
 ```
 
-应用输出为 `target/Kasane Editor.app` 和 `target/Kasane Component Playground.app`，默认使用 Release 优化。无需后端 feature 参数。
+Test locations:
 
-监听编译需要先安装 `watchexec`（macOS 可运行 `brew install watchexec`）。脚本监听本仓库及相邻 Kasane 模块中的 Rust 源码和 Cargo 清单，保存后编译；只有编译成功才在后台启动新版并关闭旧版，避免新窗口抢走当前应用的焦点。编译失败时旧版继续运行。关闭当前编辑器或 Playground 窗口后，脚本会停止监听并退出；源码更新导致的正常重启会继续监听。完整编译输出写入 `target/dev-build-*.log`，应用输出写入 `target/dev-run-*.log`。这是进程重启，编辑器中尚未保存的文档更改会丢失；改 UI 前先保存文档。脚本仅在本次开发会话开启增量编译，不改动项目的 Cargo profile。
+- `crates/editor-core/tests/`: document, command, and editor logic tests.
+- `crates/editor/headless_tests/`: UI interaction tests using GPUI's headless window.
+- `crates/editor/tests/`: native Metal, mesh overlay, and screenshot tests.
 
-## 调试界面与性能
-
-完整编辑器 UI 可使用真实字体、Kit 组件和 Metal 画布预览进行无头截图，不创建 macOS 原生窗口：
+Run a specific test module or target:
 
 ```sh
-cargo test --locked -p kasane-editor --test headless_screenshot
-# 指定输出目录：
-KASANE_SCREENSHOT_DIR=/tmp/kasane-screenshots cargo test --locked -p kasane-editor --test headless_screenshot
+cargo test --locked -p editor-core --test commands
+cargo test --locked -p kasane-editor --bin kasane-editor headless_tests::canvas
+cargo test --locked -p kasane-editor --test native_metal
 ```
 
-默认输出到 `target/headless-screenshots/`：`editor.png`、`editor-selected.png` 和 `editor-hidden.png`。测试使用临时配置和生成的模型 fixture，界面固定为英文、深色主题、1100 × 740 逻辑像素（2× 渲染，PNG 为 2200 × 1480）。测试等待当前预览及缩略图完成，检查重复截图像素一致、点击画布后的选中覆盖层、隐藏模型后的填充区域变化，以及 PNG 编解码像素一致。需要 macOS 和 Metal GPU；缺少渲染能力会失败。运行前应取消 `KASANE_DEV_SESSION_DIR`，避免加载开发会话。这个测试随 `cargo test --locked --workspace` 一起执行。
+Add UI tests with `#[gpui_kit::test]` in `crates/editor/headless_tests/`; register new modules in its `mod.rs` and reuse the shared `setup` harness.
 
-入口见 [headless_screenshot.rs](crates/editor/tests/headless_screenshot.rs)。它在主线程运行，满足 AppKit 字体系统要求。这里的像素检查验证渲染链路与交互变化，不是跨机器字体一致的 golden-image 比较。
+## Headless screenshots
 
-120 fps 的帧预算为 8.33 ms。性能验证使用 `cargo run --locked --release -p kasane-editor` 或默认打包的 Release 应用；开发构建保留快速编译和调试能力。基准方法和测量结果见 [交互性能](docs/interaction-performance.md)。实际窗口的输入、异步预览、GPUI 合成和显示时间关联测试见 [窗口 benchmark](docs/window-benchmark.md)。
+Capture the real editor UI without opening a native window. Requires macOS and a Metal-capable GPU.
 
-Parameters slider 的真实拖动测试和优化结果见 [参数面板性能](docs/parameter-slider-performance.md)；可用 `KASANE_BENCH_PARAMETERS=1 scripts/window-benchmark.sh MODEL OUTPUT_DIR 360 120` 复现。
+```sh
+unset KASANE_DEV_SESSION_DIR
+cargo test --locked -p kasane-editor --test headless_screenshot
+```
 
-Mesh 单/多顶点移动、Warp 和 Rotation 形变测试见 [形变 benchmark](docs/deformation-benchmark.md)；运行 `scripts/deformation-benchmark.sh MODEL OUTPUT_DIR 300 120`，多顶点默认选中 8 个点。
+Outputs `editor.png`, `editor-selected.png`, and `editor-hidden.png` to `target/headless-screenshots/`. Prefix the test command with `KASANE_SCREENSHOT_DIR=/tmp/kasane-screenshots` to change the output directory. This target also runs with the full test suite.
 
-编辑器的上述 debug 启动命令和 `./scripts/dev.sh` 会启用 macOS Metal HUD，放在左下角，宽度为默认值的 80%。按 **⌘⌥I** 打开 GPUI Kit Inspector，点选元素查看布局、样式和源码位置。GPUI FPS 面板暂时停用；需要时可给编辑器单独加 `--features debug-tools` 重新开启。
+## Build apps
 
-Apple 的 `MTL_HUD_SCALE` 表示 HUD 宽度占窗口宽度的比例，默认值为 `0.2`，因此 `0.16` 对应默认宽度的 80%。Metal HUD 分别显示应用内存与 Metal 资源分配量。空闲窗口不会仅为更新 HUD 而定时重绘；拖动画布时 HUD 会随正常帧更新。
+```sh
+./scripts/build-app.sh
+./scripts/build-app.sh playground
+```
 
-## 渲染与交互
-
-GPUI 使用原生 Metal；Kasane 共享 GPUI 的 device/queue，后台绘制不可变 RGBA 纹理，由 GPUI 按正常场景顺序直接合成。显示路径没有 CPU 图像回读。预览分辨率随画布区域和显示缩放倍率调整；导入纹理使用线性过滤和 mipmap。
-
-选中网格的边线和顶点标记默认由专用 Metal 覆盖层绘制为透明纹理，再交给 GPUI 合成；保留选中、悬停、裁剪和像素对齐。内容未变时复用纹理，变化时发布独立资源，不在 UI 线程等待 GPU。边线与顶点分层缓存，控制线始终位于标记下方。设备初始化失败时回退到 GPUI。实现和回归检查见 [覆盖层重构](docs/mesh-overlay-rendering.md)，方案对照见 [覆盖层 benchmark](docs/mesh-overlay-benchmark.md)。
-
-只保留三个必要的 GPUI vendor 包，补丁用于原生 Metal 资源访问和纹理合成；Kit 组件未修改。见 [依赖说明](DEPENDENCIES.md)、[GPUI 补丁范围](vendor/README.md)、[Metal 集成与测试](docs/native-metal.md)。
+Release bundles are saved to `target/Kasane Editor.app` and `target/Kasane Component Playground.app`.
