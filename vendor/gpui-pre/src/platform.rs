@@ -1108,6 +1108,12 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
 /// A renderer for headless windows that can produce real rendered output.
 #[cfg(any(test, feature = "test-support", feature = "bench-support"))]
 pub trait PlatformHeadlessRenderer {
+    /// Native Metal resources used for composing application textures offscreen.
+    #[cfg(target_os = "macos")]
+    fn metal_context(&self) -> Option<SharedMetalContext> {
+        None
+    }
+
     /// Render a scene and return the result as an RGBA image.
     fn render_scene_to_image(
         &mut self,

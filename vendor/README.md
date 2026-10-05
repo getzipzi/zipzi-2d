@@ -4,7 +4,7 @@
 
 仅保留 crates.io 发布的 `gpui-pre`、`gpui-pre-macos`、`gpui-pre-apple` **0.3.6**，对应 Zed commit `bcf6582ce3500df93a8a39366640173e6786cea6`。根目录 `Cargo.toml` 的 `[patch.crates-io]` 选择这些本地包；Kit 本身仍使用官方固定 commit。
 
-已逐文件与这三个发布包核对：**实际修改/新增 10 个文件（9 个源码文件 + 1 个依赖清单），新增 490 行、删除 20 行**。其他包内文件保持发布版本原样。完整差异见 [native-metal.patch](native-metal.patch)，不必从整个 vendor 目录中寻找改动。
+已逐文件与这三个发布包核对：**实际修改/新增 11 个文件（10 个源码文件 + 1 个依赖清单），新增 505 行、删除 20 行**。其他包内文件保持发布版本原样。完整差异见 [native-metal.patch](native-metal.patch)，不必从整个 vendor 目录中寻找改动。
 
 `Cargo.toml.orig` 保留发布包附带的原始工作区清单，并非本地实际构建清单；构建使用标准化的 `Cargo.toml`。Apache-2.0 许可文件保留。
 
@@ -14,6 +14,7 @@
 | --- | --- | --- |
 | [gpui-pre/Cargo.toml](gpui-pre/Cargo.toml) | 仅给 macOS 添加 `metal = "0.33"` 依赖。 | 核心接口需要持有原生 device、queue、texture 类型。 |
 | [gpui-pre/src/platform.rs](gpui-pre/src/platform.rs) | 新增 `SharedMetalContext { device, queue }`；为 `PlatformWindow` 增加 `metal_context()`，默认返回 `None`，均限 macOS。 | 让应用取得渲染器实际使用的资源，避免创建不兼容设备或另一个提交队列。 |
+| [gpui-pre/src/platform/test/window.rs](gpui-pre/src/platform/test/window.rs) | 测试窗口将 `metal_context()` 转发到离屏 renderer；`PlatformHeadlessRenderer` 增加同名默认接口，`MetalHeadlessRenderer` 返回其实际 device/queue。 | 完整编辑器截图复用正式应用的异步预览与 Metal 覆盖层，不创建原生窗口。 |
 | [gpui-pre/src/window.rs](gpui-pre/src/window.rs) | 新增 `Window::metal_context()` 转发；现有 `paint_surface()` 参数由 `CVPixelBuffer` 扩展为 `impl Into<SurfaceSource>`，记录 source 和当前 element opacity；可选记录输入/CPU draw 边界并给场景附加关联 ID；允许画布临时屏蔽 Space 自动重复事件；删除不再使用的直接 CVPixelBuffer import。 | 原有 CoreVideo 调用仍可使用，同时接收原生纹理并继承元素透明度；Space 拖动不会被无效重复键盘事件打断绘制。 |
 | [gpui-pre/src/elements/surface.rs](gpui-pre/src/elements/surface.rs) | 新增 `SurfaceSource::MetalTexture(metal::Texture)`；绘制时读取纹理尺寸，沿用 object-fit 与 `paint_surface()`；将派生的相等判断改为手写实现。Metal 纹理按对象地址判断相等，CoreVideo 保留原有判断。 | 普通 RGBA/BGRA 纹理能成为 Surface 元素；`metal::Texture` 本身没有 Eq 实现。比较的是资源身份，不是像素内容。 |
 | [gpui-pre/src/gpui.rs](gpui-pre/src/gpui.rs)、[frame_trace.rs](gpui-pre/src/frame_trace.rs) | 导出可选 timing sink、统一 host clock、进程内 ID 和嵌套输入 scope；未启用时不分配事件或读取时钟。 | 编辑器与平台 renderer 共用时钟和关联 ID，日志策略仍由编辑器拥有。 |
@@ -44,7 +45,7 @@ cargo test --locked --workspace
 git apply --reverse --check vendor/native-metal.patch
 ```
 
-补丁使用仓库根目录相对路径，可应用到按相同目录布局放置的原始 0.3.6 发布包。更新 GPUI 时，应以新发布包为基线重新核对以上 10 个文件，重新生成补丁并更新统计，运行合成测试和两个应用构建。原生 Metal 集成细节见 [native-metal.md](../docs/native-metal.md)。
+补丁使用仓库根目录相对路径，可应用到按相同目录布局放置的原始 0.3.6 发布包。更新 GPUI 时，应以新发布包为基线重新核对以上 11 个文件，重新生成补丁并更新统计，运行合成测试、完整 UI 截图测试和两个应用构建。原生 Metal 集成细节见 [native-metal.md](../docs/native-metal.md)。
 
 实际窗口 benchmark 的计时约定、命令和限制见 [窗口 benchmark](../docs/window-benchmark.md)。
 

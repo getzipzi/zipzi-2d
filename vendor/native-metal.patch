@@ -418,6 +418,17 @@
      device
          .new_render_pipeline_state(&descriptor)
          .expect("could not create render pipeline state")
+@@ -1615,6 +1864,10 @@
+
+ #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
+ impl gpui::PlatformHeadlessRenderer for MetalHeadlessRenderer {
++    fn metal_context(&self) -> Option<gpui::SharedMetalContext> {
++        Some(self.renderer.shared_metal_context())
++    }
++
+     fn render_scene_to_image(
+         &mut self,
+         scene: &Scene,
 --- a/vendor/gpui-pre-apple/src/shaders.metal
 +++ b/vendor/gpui-pre-apple/src/shaders.metal
 @@ -1277,3 +1277,11 @@
@@ -663,6 +674,33 @@
      fn bounds(&self) -> Bounds<Pixels>;
      fn is_maximized(&self) -> bool;
      fn window_bounds(&self) -> WindowBounds;
+@@ -1092,6 +1108,12 @@
+ /// A renderer for headless windows that can produce real rendered output.
+ #[cfg(any(test, feature = "test-support", feature = "bench-support"))]
+ pub trait PlatformHeadlessRenderer {
++    /// Native Metal resources used for composing application textures offscreen.
++    #[cfg(target_os = "macos")]
++    fn metal_context(&self) -> Option<SharedMetalContext> {
++        None
++    }
++
+     /// Render a scene and return the result as an RGBA image.
+     fn render_scene_to_image(
+         &mut self,
+--- a/vendor/gpui-pre/src/platform/test/window.rs
++++ b/vendor/gpui-pre/src/platform/test/window.rs
+@@ -290,6 +290,11 @@
+ }
+
+ impl PlatformWindow for TestWindow {
++    #[cfg(target_os = "macos")]
++    fn metal_context(&self) -> Option<crate::SharedMetalContext> {
++        self.0.lock().renderer.as_ref()?.metal_context()
++    }
++
+     fn visual_viewport_bounds(&self) -> Bounds<Pixels> {
+         let state = self.0.lock();
+         state
 --- a/vendor/gpui-pre/src/scene.rs
 +++ b/vendor/gpui-pre/src/scene.rs
 @@ -39,6 +39,8 @@
@@ -696,15 +734,25 @@
  use derive_more::{Deref, DerefMut};
  use futures::channel::oneshot;
  use gpui_util::post_inc;
-@@ -1221,2 +1219,3 @@
+@@ -1219,6 +1217,7 @@
+     #[cfg(feature = "profiler")]
+     window_profiler: profiler::WindowProfiler,
      last_input_modality: InputModality,
 +    suppressed_key_repeats: FxHashSet<String>,
      touch_gestures: TouchGestureRecognizer,
-@@ -2074,2 +2073,3 @@
+     touch_prediction_enabled: bool,
+     long_press_timer: Option<Task<()>>,
+@@ -2072,6 +2071,7 @@
+             #[cfg(feature = "profiler")]
+             window_profiler: profiler::WindowProfiler::new(handle.window_id())?,
              last_input_modality: InputModality::Mouse,
 +            suppressed_key_repeats: FxHashSet::default(),
              touch_gestures: TouchGestureRecognizer::new(
-@@ -2275,2 +2275,12 @@
+                 cx.platform
+                     .gestures()
+@@ -2273,6 +2273,16 @@
+         if self.invalidator.not_drawing() {
+             self.refreshing = true;
              self.invalidator.set_dirty(true);
 +        }
 +    }
@@ -717,6 +765,8 @@
 +        } else {
 +            self.suppressed_key_repeats.remove(key);
          }
+     }
+
 @@ -3263,6 +3273,8 @@
      /// the contents of the new [`Scene`], use [`Self::present`].
      #[profiling::function]
@@ -765,7 +815,9 @@
      }
 
      /// Removes an image from the sprite atlas.
-@@ -5415,2 +5440,23 @@
+@@ -5413,6 +5438,27 @@
+     /// Dispatch a mouse, keyboard, or touch event on the window.
+     #[profiling::function]
      pub fn dispatch_event(&mut self, event: PlatformInput, cx: &mut App) -> DispatchEventResult {
 +        match &event {
 +            PlatformInput::KeyDown(key)
@@ -789,3 +841,5 @@
 +            _ => 5,
 +        });
          #[cfg(feature = "profiler")]
+         self.window_profiler.begin_input(event.kind_name());
+         let update_count_before = self.invalidator.update_count();

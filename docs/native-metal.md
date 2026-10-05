@@ -54,6 +54,16 @@ content masks, UI overlay order, hidden content, immutable previous frames, resi
 and transparent RGBA/BGRA targets. Only the final output is read back for assertions;
 there is no intermediate readback between renderers.
 
+`crates/editor/tests/headless_screenshot.rs` also renders the complete editor UI
+through a Metal-backed `HeadlessAppContext`, with no native window. The test
+window forwards the offscreen renderer's actual device/queue to the editor's
+normal preview worker and overlay renderer. This target runs on the main thread
+for AppKit text shaping, waits for the accepted current preview and thumbnails,
+and exports PNGs for the fixture, canvas selection, and hidden model. Pixel
+checks cover repeatability, selection overlay changes, removal of model fill,
+and lossless PNG round trips. Run `cargo test --locked -p kasane-editor --test
+headless_screenshot`; see the README for output directory options.
+
 The user has confirmed that the native Metal editor works. Detailed UI/IME and
 window lifecycle verification remain manual; no computer-use testing is performed.
 

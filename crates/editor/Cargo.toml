@@ -31,3 +31,9 @@ kasane-sdk.workspace = true
 tempfile.workspace = true
 uuid.workspace = true
 toml = "0.8"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+
+[[test]]
+name = "headless_screenshot"
+path = "tests/headless_screenshot.rs"
+harness = false

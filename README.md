@@ -40,6 +40,18 @@ cargo fmt --all -- --check
 
 ## 调试界面与性能
 
+完整编辑器 UI 可使用真实字体、Kit 组件和 Metal 画布预览进行无头截图，不创建 macOS 原生窗口：
+
+```sh
+cargo test --locked -p kasane-editor --test headless_screenshot
+# 指定输出目录：
+KASANE_SCREENSHOT_DIR=/tmp/kasane-screenshots cargo test --locked -p kasane-editor --test headless_screenshot
+```
+
+默认输出到 `target/headless-screenshots/`：`editor.png`、`editor-selected.png` 和 `editor-hidden.png`。测试使用临时配置和生成的模型 fixture，界面固定为英文、深色主题、1100 × 740 逻辑像素（2× 渲染，PNG 为 2200 × 1480）。测试等待当前预览及缩略图完成，检查重复截图像素一致、点击画布后的选中覆盖层、隐藏模型后的填充区域变化，以及 PNG 编解码像素一致。需要 macOS 和 Metal GPU；缺少渲染能力会失败。运行前应取消 `KASANE_DEV_SESSION_DIR`，避免加载开发会话。这个测试随 `cargo test --locked --workspace` 一起执行。
+
+入口见 [headless_screenshot.rs](crates/editor/tests/headless_screenshot.rs)。它在主线程运行，满足 AppKit 字体系统要求。这里的像素检查验证渲染链路与交互变化，不是跨机器字体一致的 golden-image 比较。
+
 120 fps 的帧预算为 8.33 ms。性能验证使用 `cargo run --locked --release -p kasane-editor` 或默认打包的 Release 应用；开发构建保留快速编译和调试能力。基准方法和测量结果见 [交互性能](docs/interaction-performance.md)。实际窗口的输入、异步预览、GPUI 合成和显示时间关联测试见 [窗口 benchmark](docs/window-benchmark.md)。
 
 Parameters slider 的真实拖动测试和优化结果见 [参数面板性能](docs/parameter-slider-performance.md)；可用 `KASANE_BENCH_PARAMETERS=1 scripts/window-benchmark.sh MODEL OUTPUT_DIR 360 120` 复现。
