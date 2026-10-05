@@ -290,6 +290,11 @@ impl TestWindow {
 }
 
 impl PlatformWindow for TestWindow {
+    #[cfg(target_os = "macos")]
+    fn metal_context(&self) -> Option<crate::SharedMetalContext> {
+        self.0.lock().renderer.as_ref()?.metal_context()
+    }
+
     fn visual_viewport_bounds(&self) -> Bounds<Pixels> {
         let state = self.0.lock();
         state

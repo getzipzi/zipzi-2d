@@ -241,6 +241,7 @@ impl EditorView {
     }
 }
 
+#[cfg(not(test))]
 fn main() {
     benchmark::init().expect("initialize benchmark trace");
     i18n::activate(None);

@@ -1864,6 +1864,10 @@ impl MetalHeadlessRenderer {
 
 #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
 impl gpui::PlatformHeadlessRenderer for MetalHeadlessRenderer {
+    fn metal_context(&self) -> Option<gpui::SharedMetalContext> {
+        Some(self.renderer.shared_metal_context())
+    }
+
     fn render_scene_to_image(
         &mut self,
         scene: &Scene,
