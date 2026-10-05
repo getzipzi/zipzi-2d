@@ -22,6 +22,12 @@ To explore the UI components:
 cargo run --locked -p component-playground
 ```
 
+## Canvas navigation
+
+- Trackpad: two-finger scrolling pans in both directions, including momentum; pinch zooms around the pointer.
+- Mouse: the wheel zooms around the pointer; middle-button dragging pans.
+- Ctrl/Cmd + trackpad scrolling also zooms. H or held Space enables left-button panning.
+
 ## Develop
 
 Install `watchexec`, then rebuild and restart automatically when source files change:

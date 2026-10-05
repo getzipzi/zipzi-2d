@@ -3,7 +3,8 @@ use crate::workspace::toolbar::ToolbarItemConfig;
 use gpui_kit::assets::IconName;
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{
-    AppContext as _, InputEvent as _, ScrollDelta, ScrollWheelEvent, TestAppContext, point, px,
+    AppContext as _, InputEvent as _, PinchEvent, ScrollDelta, ScrollWheelEvent, TestAppContext,
+    TouchPhase, point, px,
 };
 
 #[gpui_kit::test]
@@ -301,6 +302,215 @@ fn welcome_text_centered_when_no_active_document(cx: &mut TestAppContext) {
         let welcome = window.find("canvas-welcome").bounds();
         assert_eq!(welcome.origin, canvas_body.origin);
         assert_eq!(welcome.size, canvas_body.size);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn trackpad_scroll_pans_both_axes_without_notifying_document_panels(cx: &mut TestAppContext) {
+    use std::{cell::Cell, rc::Rc};
+
+    let harness = setup(cx);
+    let (position, before, selection) = cx
+        .update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.editor.zoom_by(1.);
+                cx.notify();
+            });
+            window.render_frame(cx);
+            (
+                window.find("canvas-body").bounds().center(),
+                harness.view.read_with(cx, |view, _| view.editor.view()),
+                harness.view.read_with(cx, |view, _| {
+                    view.editor.document().unwrap().context().selections.clone()
+                }),
+            )
+        })
+        .unwrap();
+    let notifications = Rc::new(Cell::new(0));
+    let observer_count = notifications.clone();
+    let _observe = cx.update(|cx| {
+        cx.observe(&harness.view, move |_, _| {
+            observer_count.set(observer_count.get() + 1);
+        })
+    });
+    for (delta, phase) in [
+        ((40.25, -20.5), TouchPhase::Started),
+        ((0.05, 0.), TouchPhase::Moved),
+        ((0., 0.), TouchPhase::Ended),
+        // Native momentum continues to arrive after the fingers are lifted.
+        ((-4., 3.5), TouchPhase::Moved),
+        ((0., 0.), TouchPhase::Ended),
+        ((100., 100.), TouchPhase::Cancelled),
+    ] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.dispatch_event(
+                ScrollWheelEvent {
+                    position,
+                    delta: ScrollDelta::Pixels(point(px(delta.0), px(delta.1))),
+                    touch_phase: phase,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+        })
+        .unwrap();
+    }
+    harness.view.read_with(cx, |view, _| {
+        let after = view.editor.view();
+        assert_eq!(after.zoom, before.zoom);
+        assert!((after.pan.x - before.pan.x - 36.3).abs() < 1e-4);
+        assert_eq!(after.pan.y - before.pan.y, -17.);
+        assert_eq!(
+            view.editor.document().unwrap().context().selections,
+            selection
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+    assert_eq!(
+        notifications.get(),
+        0,
+        "trackpad pan must leave document observers idle"
+    );
+}
+
+#[gpui_kit::test]
+fn trackpad_pinch_scales_relative_to_zoom_and_preserves_pointer_anchor(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor.zoom_by(1.);
+            view.editor
+                .pan_by(editor_core::CanvasPoint { x: 37., y: -12. });
+            cx.notify();
+        });
+        window.render_frame(cx);
+        let bounds = window.find("canvas-body").bounds();
+        let anchor = editor_core::CanvasPoint { x: 100., y: 100. };
+        let position = bounds.origin + point(px(anchor.x), px(anchor.y));
+        let model_point = harness.view.update(cx, |view, _| {
+            view.editor
+                .preview()
+                .unwrap()
+                .canvas
+                .unwrap()
+                .transform
+                .to_model(anchor)
+        });
+        for (delta, phase, expected_zoom) in [
+            (0., TouchPhase::Started, 2.),
+            (0.1, TouchPhase::Moved, 2.2),
+            (-0.25, TouchPhase::Moved, 1.65),
+            (0.2, TouchPhase::Ended, 1.98),
+            (100., TouchPhase::Moved, 24.),
+            (-0.9999, TouchPhase::Moved, 0.04),
+            (0.5, TouchPhase::Cancelled, 0.04),
+            (f32::NAN, TouchPhase::Moved, 0.04),
+            (-1., TouchPhase::Moved, 0.04),
+        ] {
+            window.dispatch_event(
+                PinchEvent {
+                    position,
+                    delta,
+                    phase,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            harness.view.update(cx, |view, _| {
+                assert!((view.editor.view().zoom - expected_zoom).abs() < 1e-5);
+                let after = view
+                    .editor
+                    .preview()
+                    .unwrap()
+                    .canvas
+                    .unwrap()
+                    .transform
+                    .to_canvas(model_point);
+                assert!((after.x - anchor.x).abs() < 1e-3, "x drifted: {after:?}");
+                assert!((after.y - anchor.y).abs() < 1e-3, "y drifted: {after:?}");
+                assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+            });
+        }
+        window.dispatch_event(
+            PinchEvent {
+                position: bounds.origin - point(px(20.), px(20.)),
+                delta: 0.5,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert_eq!(
+            harness
+                .view
+                .read_with(cx, |view, _| view.editor.view().zoom),
+            0.04
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn control_or_command_trackpad_scroll_zooms_at_pointer(cx: &mut TestAppContext) {
+    use gpui_kit::Modifiers;
+
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let anchor = editor_core::CanvasPoint { x: 100., y: 100. };
+        let position =
+            window.find("canvas-body").bounds().origin + point(px(anchor.x), px(anchor.y));
+        for modifiers in [
+            Modifiers {
+                control: true,
+                ..Default::default()
+            },
+            Modifiers {
+                platform: true,
+                ..Default::default()
+            },
+        ] {
+            let (before, model_point) = harness.view.update(cx, |view, _| {
+                (
+                    view.editor.view().zoom,
+                    view.editor
+                        .preview()
+                        .unwrap()
+                        .canvas
+                        .unwrap()
+                        .transform
+                        .to_model(anchor),
+                )
+            });
+            window.dispatch_event(
+                ScrollWheelEvent {
+                    position,
+                    delta: ScrollDelta::Pixels(point(px(80.), px(16.))),
+                    modifiers,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            harness.view.update(cx, |view, _| {
+                assert!((view.editor.view().zoom - before - 0.1).abs() < 1e-5);
+                let after = view
+                    .editor
+                    .preview()
+                    .unwrap()
+                    .canvas
+                    .unwrap()
+                    .transform
+                    .to_canvas(model_point);
+                assert!((after.x - anchor.x).abs() < 1e-3);
+                assert!((after.y - anchor.y).abs() < 1e-3);
+            });
+        }
     })
     .unwrap();
 }
@@ -785,6 +995,38 @@ fn escape_tool_switch_and_focus_loss_cancel_a_live_vertex_drag(cx: &mut TestAppC
                     view.editor.document().unwrap().selected_vertex_positions(),
                     original
                 );
+            });
+            let before_navigation = harness.view.read_with(cx, |view, _| {
+                (
+                    view.editor.view(),
+                    view.editor.document().unwrap().selected_vertex_positions(),
+                )
+            });
+            for event in [
+                ScrollWheelEvent {
+                    position: to,
+                    delta: ScrollDelta::Pixels(point(px(30.), px(20.))),
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                PinchEvent {
+                    position: to,
+                    delta: 0.2,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+            ] {
+                window.dispatch_event(event, cx);
+                window.render_frame(cx);
+            }
+            harness.view.read_with(cx, |view, _| {
+                assert_eq!(view.editor.view().zoom, before_navigation.0.zoom);
+                assert_eq!(view.editor.view().pan, before_navigation.0.pan);
+                assert_eq!(
+                    view.editor.document().unwrap().selected_vertex_positions(),
+                    before_navigation.1
+                );
+                assert!(view.editor.document().unwrap().has_pending_edit());
             });
             match cancel {
                 0 => window.press("escape", cx),

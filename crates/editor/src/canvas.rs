@@ -479,26 +479,69 @@ impl Render for CanvasView {
                 }),
             )
             .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, window, cx| {
-                if window.has_active_dialog(cx) {
+                if window.has_active_dialog(cx)
+                    || this.pan.is_some()
+                    || event.touch_phase == TouchPhase::Cancelled
+                {
                     return;
                 }
-                let delta_y = match event.delta {
-                    ScrollDelta::Pixels(p) => p.y.as_f32(),
-                    ScrollDelta::Lines(p) => p.y * 16.0,
+                let delta = event.delta.pixel_delta(px(16.));
+                let delta = CanvasPoint {
+                    x: delta.x.as_f32(),
+                    y: delta.y.as_f32(),
                 };
-                if delta_y.abs() < 0.1 {
+                if !delta.x.is_finite() || !delta.y.is_finite() || (delta.x == 0. && delta.y == 0.)
+                {
                     return;
                 }
-                // One wheel line keeps the previous 10% step, while precise
-                // trackpad deltas contribute proportionally instead of jumping.
-                let step = delta_y * (0.1 / 16.0);
+                // Precise scrolling follows both trackpad axes, including the
+                // platform's natural-scroll direction and momentum. A mouse
+                // wheel or Ctrl/Cmd-scroll retains cursor-anchored zooming.
+                let pan =
+                    event.delta.precise() && !event.modifiers.control && !event.modifiers.platform;
                 let point = this.local(event.position);
                 let _ = this.owner.update(cx, |owner, cx| {
-                    if owner.modal || owner.editor.is_busy() {
+                    if owner.modal || owner.editor.is_busy() || owner.editor.gesture_active() {
                         return;
                     }
-                    owner.editor.zoom_at(step, Some(point));
-                    owner.redraw_canvas(cx);
+                    let before = owner.editor.view();
+                    if pan {
+                        owner.editor.pan_by(delta);
+                    } else {
+                        owner.editor.zoom_at(delta.y * (0.1 / 16.), Some(point));
+                    }
+                    if owner.editor.view().zoom != before.zoom
+                        || owner.editor.view().pan != before.pan
+                    {
+                        owner.redraw_canvas(cx);
+                    }
+                    cx.stop_propagation();
+                });
+            }))
+            .on_pinch(cx.listener(|this, event: &PinchEvent, window, cx| {
+                if window.has_active_dialog(cx)
+                    || this.pan.is_some()
+                    || event.phase == TouchPhase::Cancelled
+                    || !event.delta.is_finite()
+                    || event.delta == 0.
+                    || event.delta <= -1.
+                {
+                    return;
+                }
+                let point = this.local(event.position);
+                let _ = this.owner.update(cx, |owner, cx| {
+                    if owner.modal || owner.editor.is_busy() || owner.editor.gesture_active() {
+                        return;
+                    }
+                    let before = owner.editor.view();
+                    // Native magnification is relative to the current zoom.
+                    owner.editor.zoom_at(before.zoom * event.delta, Some(point));
+                    if owner.editor.view().zoom != before.zoom
+                        || owner.editor.view().pan != before.pan
+                    {
+                        owner.redraw_canvas(cx);
+                    }
+                    cx.stop_propagation();
                 });
             }))
             .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
