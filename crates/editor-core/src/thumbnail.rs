@@ -204,7 +204,7 @@ mod tests {
     fn texture(width: u32, height: u32, pixels: Vec<u8>) -> SceneTexture {
         SceneTexture {
             asset_id: "atlas".into(),
-            sha256: "test".into(),
+            cache_key: "test".into(),
             width,
             height,
             rgba: pixels.into(),

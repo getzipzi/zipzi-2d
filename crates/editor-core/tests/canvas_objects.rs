@@ -30,7 +30,7 @@ fn click(editor: &mut Editor, p: CanvasPoint, shift: bool) -> anyhow::Result<()>
 fn texture(id: &str, alpha: [u8; 2]) -> SceneTexture {
     SceneTexture {
         asset_id: id.into(),
-        sha256: id.into(),
+        cache_key: id.into(),
         width: 2,
         height: 1,
         rgba: vec![255, 255, 255, alpha[0], 255, 255, 255, alpha[1]].into(),
@@ -135,7 +135,7 @@ fn texture_alpha_picking_matches_renderer_v_orientation_for_surfaces_and_masks()
     let mut textures = source.textures.to_vec();
     textures.push(SceneTexture {
         asset_id: "vertical-cutout".into(),
-        sha256: "vertical-cutout".into(),
+        cache_key: "vertical-cutout".into(),
         width: 1,
         height: 2,
         rgba: vec![255, 255, 255, 255, 255, 255, 255, 0].into(),

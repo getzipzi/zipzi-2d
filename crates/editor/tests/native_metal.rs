@@ -301,7 +301,7 @@ fn content_cache_isolates_same_asset_ids_and_reuses_textures_across_views() -> a
         let a = input(1., true)?;
         let mut b = a.clone();
         let mut textures = b.textures.to_vec();
-        textures[0].sha256 = "blue-fixture".into();
+        textures[0].cache_key = "blue-fixture".into();
         textures[0].rgba = vec![0, 0, 255, 255]
             .repeat((textures[0].width * textures[0].height) as usize)
             .into();

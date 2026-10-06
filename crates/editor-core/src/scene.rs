@@ -8,7 +8,8 @@ pub(crate) const MAX_ZOOM: f32 = 24.0;
 #[derive(Clone, Debug)]
 pub struct SceneTexture {
     pub asset_id: String,
-    pub sha256: String,
+    /// Identifies immutable pixels, including PSD drafts without encoded PNGs.
+    pub cache_key: String,
     pub width: u32,
     pub height: u32,
     pub rgba: Arc<[u8]>,

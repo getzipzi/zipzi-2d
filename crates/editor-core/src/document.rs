@@ -199,13 +199,13 @@ impl Document {
             .asset_ids()
             .iter()
             .map(|id| {
-                let data = session.read_asset(id)?;
+                let data = session.read_texture(id)?;
                 Ok(SceneTexture {
                     asset_id: id.clone(),
-                    sha256: data.sha256,
+                    cache_key: data.cache_key,
                     width: data.width,
                     height: data.height,
-                    rgba: data.rgba.into(),
+                    rgba: data.rgba,
                 })
             })
             .collect::<Result<Vec<_>>>()

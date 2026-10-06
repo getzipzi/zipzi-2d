@@ -128,7 +128,7 @@ impl MetalSceneRenderer {
         ensure!(transform.metrics.visible(), "Hidden canvas");
         self.draws += 1;
         let key = |source: &editor_core::SceneTexture| {
-            format!("{}:{}:{}", source.sha256, source.width, source.height)
+            format!("{}:{}:{}", source.cache_key, source.width, source.height)
         };
         for source in scene.textures.iter() {
             let key = key(source);
