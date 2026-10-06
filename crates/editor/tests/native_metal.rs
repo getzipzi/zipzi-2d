@@ -19,6 +19,61 @@ fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {
     document.snapshot()
 }
 
+#[test]
+#[ignore = "requires models/local/heijao/heijiao.psd"]
+fn imported_heijiao_renders_with_clipping_groups() -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../models/local/heijao/heijiao.psd");
+        let (mut document, _) = Document::import_psd(&source)?;
+        let mut imported = document.snapshot()?;
+        let mut gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let config = MetalTargetConfig {
+            width: 800,
+            height: 1000,
+            format: MTLPixelFormat::RGBA8Unorm,
+        };
+        let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
+        let mut capture = |snapshot: &SceneSnapshot| -> anyhow::Result<image::RgbaImage> {
+            let texture = renderer.draw(&gpu.queue, config, snapshot, ViewState::default())?;
+            let mut output = Scene::default();
+            let bounds = bounds(0., 0., config.width as f32, config.height as f32);
+            output.insert_primitive(quad(bounds, 0xffffff));
+            output.insert_primitive(PaintSurface {
+                order: 0,
+                bounds,
+                content_mask: ContentMask { bounds },
+                source: SurfaceSource::MetalTexture(texture),
+                opacity: 1.0,
+            });
+            output.finish();
+            Ok(gpui.render_scene_to_image(
+                &output,
+                size(
+                    DevicePixels(config.width as i32),
+                    DevicePixels(config.height as i32),
+                ),
+            )?)
+        };
+        let masked = capture(&imported)?;
+        for drawable in &mut std::sync::Arc::make_mut(&mut imported.frame).drawables {
+            drawable.raw_blend_mode = None;
+        }
+        let unmasked = capture(&imported)?;
+        assert_ne!(
+            masked, unmasked,
+            "Imported clipping must affect rendered pixels"
+        );
+        assert!(masked.pixels().any(|pixel| pixel.0 != [255; 4]));
+        let directory =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/psd-import");
+        std::fs::create_dir_all(&directory)?;
+        masked.save(directory.join("heijiao.png"))?;
+        Ok(())
+    })
+}
+
 fn bounds(x: f32, y: f32, w: f32, h: f32) -> Bounds<ScaledPixels> {
     Bounds::new(
         point(ScaledPixels(x), ScaledPixels(y)),

@@ -1,7 +1,6 @@
 use crate::{SceneSnapshot, SceneTexture, TreeNode, TreeNodeKind, tree::nest_nodes};
 use anyhow::{Result, anyhow, ensure};
 use kasane_core::{Canvas, Mesh, ParameterKind, Vec2, preview::PreviewState};
-use kasane_project::read_project_asset;
 use kasane_sdk::{AuthoringSession, EditSession, MeshProperties, SaveReceipt};
 use std::collections::HashMap;
 use std::{
@@ -141,9 +140,9 @@ impl Document {
         Ok((document, notices))
     }
 
-    pub fn import_psd(source: &Path, destination: &Path) -> Result<(Self, Vec<String>)> {
+    pub fn import_psd(source: &Path) -> Result<(Self, Vec<String>)> {
         let mut session = Self::empty_session()?;
-        let receipt = session.import_psd(source, destination, None)?;
+        let receipt = session.import_psd_in_memory(source, None)?;
         let mut notices = receipt.project.warnings;
         notices.extend(
             receipt
@@ -152,7 +151,11 @@ impl Document {
                 .into_iter()
                 .map(|diagnostic| format!("{}: {}", diagnostic.code, diagnostic.message)),
         );
-        Ok((Self::from_session(session)?, notices))
+        let mut document = Self::from_session(session)?;
+        document.import_name = source
+            .file_stem()
+            .map(|name| name.to_string_lossy().into_owned());
+        Ok((document, notices))
     }
 
     fn from_session(session: AuthoringSession) -> Result<Self> {
@@ -192,19 +195,11 @@ impl Document {
     }
 
     fn load_textures(session: &AuthoringSession) -> Result<Arc<[SceneTexture]>> {
-        let root = session
-            .project_path()
-            .and_then(Path::parent)
-            .unwrap_or_else(|| Path::new(""));
         session
             .asset_ids()
             .iter()
             .map(|id| {
-                let asset = session
-                    .asset(id)
-                    .ok_or_else(|| anyhow!("Texture asset not found: {id}"))?;
-                let data = read_project_asset(root, &asset)
-                    .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
+                let data = session.read_asset(id)?;
                 Ok(SceneTexture {
                     asset_id: id.clone(),
                     sha256: data.sha256,

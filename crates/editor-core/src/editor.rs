@@ -54,10 +54,7 @@ pub enum EditorCommand {
 pub enum LoadRequest {
     Open(PathBuf),
     Model3(PathBuf),
-    Psd {
-        source: PathBuf,
-        destination: PathBuf,
-    },
+    Psd(PathBuf),
 }
 
 impl LoadRequest {
@@ -65,10 +62,7 @@ impl LoadRequest {
         match self {
             Self::Open(path) => Ok((Document::open(&path)?, Vec::new())),
             Self::Model3(path) => Document::import_model3(&path),
-            Self::Psd {
-                source,
-                destination,
-            } => Document::import_psd(&source, &destination),
+            Self::Psd(source) => Document::import_psd(&source),
         }
     }
 }

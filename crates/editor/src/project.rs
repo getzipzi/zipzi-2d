@@ -273,35 +273,7 @@ impl EditorView {
                 return;
             };
             let request = if kind == Some(ImportKind::Psd) {
-                let suggested = format!(
-                    "{}.kasane",
-                    source.file_stem().unwrap_or_default().to_string_lossy()
-                );
-                let picker = match this.update(cx, |_, cx| {
-                    cx.prompt_for_new_path(
-                        source.parent().unwrap_or(std::path::Path::new("/")),
-                        Some(&suggested),
-                    )
-                }) {
-                    Ok(picker) => picker,
-                    Err(_) => return,
-                };
-                match picker.await {
-                    Ok(Ok(Some(destination))) => LoadRequest::Psd {
-                        source,
-                        destination,
-                    },
-                    other => {
-                        let _ = this.update(cx, |this, cx| {
-                            this.modal = false;
-                            if !matches!(other, Ok(Ok(None))) {
-                                this.edit_error = Some(format!("{other:?}"));
-                            }
-                            cx.notify();
-                        });
-                        return;
-                    }
-                }
+                LoadRequest::Psd(source)
             } else if kind == Some(ImportKind::Model3) {
                 LoadRequest::Model3(source)
             } else {

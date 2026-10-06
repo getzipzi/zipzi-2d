@@ -355,10 +355,6 @@ impl Editor {
         ensure!(!self.exiting, "Workspace is closing");
         let identity = match &request {
             LoadRequest::Open(path) => Some(project_identity(path)?),
-            LoadRequest::Psd { destination, .. } => {
-                self.ensure_available_path(None, destination)?;
-                Some(project_identity(destination)?)
-            }
             _ => None,
         };
         if matches!(request, LoadRequest::Open(_)) {

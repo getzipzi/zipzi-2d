@@ -174,12 +174,28 @@ fn sdk_imports_create_editable_documents_with_textures() -> anyhow::Result<()> {
     assert!(!model.modified());
 
     let psd = sdk_root.join("modules/kasane-psd/tests/fixtures/layered.psd");
-    let destination = output.path().join("layers.kasane");
-    let (mut psd_document, _) = Document::import_psd(&psd, &destination)?;
+    let (mut psd_document, notices) = Document::import_psd(&psd)?;
     assert!(!psd_document.layers().is_empty());
-    assert!(psd_document.path().is_some());
-    assert!(!psd_document.snapshot()?.textures.is_empty());
-    assert!(destination.join("project.kasane.json").exists());
+    assert!(psd_document.path().is_none());
+    assert!(psd_document.modified());
+    assert_eq!(psd_document.import_name(), Some("layered"));
+    assert!(notices.is_empty());
+    let imported = psd_document.snapshot()?;
+    assert!(!imported.textures.is_empty());
+    psd_document.preview_name("Edited PSD layer")?;
+    let destination = output.path().join("layers.kasane");
+    let receipt = psd_document.save(&destination)?;
+    assert!(!psd_document.modified());
+    assert_eq!(psd_document.history_lengths(), (1, 0));
+    psd_document.undo()?;
+    assert_eq!(psd_document.selected_layer().unwrap().name, "face");
+    psd_document.redo()?;
+    let mut reopened = Document::open(&receipt.manifest)?;
+    assert_eq!(reopened.selected_layer().unwrap().name, "Edited PSD layer");
+    assert_eq!(
+        reopened.snapshot()?.textures[0].rgba,
+        imported.textures[0].rgba
+    );
     Ok(())
 }
 
