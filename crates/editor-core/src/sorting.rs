@@ -82,6 +82,17 @@ impl Document {
                 }
             }
         }
+        self.ensure_tree_editable(source, false)?;
+        let destination_object = match destination {
+            OrganizationDestination::Sibling { ref target, .. } => Some(target.clone()),
+            OrganizationDestination::Part(Some(ref id)) => {
+                Some(ObjectRef::new(ObjectKind::Part, id))
+            }
+            _ => None,
+        };
+        if let Some(target) = &destination_object {
+            self.ensure_editable(std::slice::from_ref(target))?;
+        }
         let tree = self.mesh_tree();
         let mut entries = HashMap::new();
         index(&tree, "", &mut entries);
@@ -205,6 +216,7 @@ impl Document {
         target: &ObjectRef,
         position: ReorderPosition,
     ) -> Result<()> {
+        self.ensure_tree_editable(source, deformer)?;
         let mut tree = if deformer {
             self.deformer_tree()
         } else {

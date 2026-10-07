@@ -2484,3 +2484,93 @@ fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -
     }
     Ok(())
 }
+
+#[test]
+fn locked_deformer_has_only_read_only_lines_and_blocks_control_adjustments() -> anyhow::Result<()> {
+    let (doc, _dir, warp, _, _) = rich_document()?;
+    let mut editor = Editor::from_document(doc);
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let frame = shown(&mut editor)?;
+    let object = ObjectRef::new(ObjectKind::Deformer, warp);
+    editor.execute(EditorCommand::SelectObject(object.clone()))?;
+    let point = editor.overlay().vertices[0].position;
+    editor.execute(EditorCommand::SetObjectsLocked {
+        objects: vec![object.clone()],
+        locked: true,
+    })?;
+    let overlay = editor.overlay();
+    assert!(overlay.vertices.is_empty());
+    assert!(overlay.handles.is_empty());
+    assert!(
+        overlay
+            .deformers
+            .iter()
+            .any(|d| d.selected && !d.lines.is_empty())
+    );
+    assert!(
+        editor
+            .pick_candidates(point, Some(frame.version))
+            .iter()
+            .all(|p| p.object != object)
+    );
+    assert!(
+        editor
+            .execute(EditorCommand::AdjustDeformer {
+                object,
+                adjustment: DeformerAdjustment {
+                    translation: ModelPoint { x: 1., y: 0. },
+                    angle: 0.,
+                    scale: 1.
+                }
+            })
+            .is_err()
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    Ok(())
+}
+
+#[test]
+fn locked_mask_still_clips_unlocked_objects_in_canvas_candidates() -> anyhow::Result<()> {
+    let (mut doc, _dir) = support::sample_document_with_two_layers()?;
+    let mut source = pixel_scene(&mut doc)?;
+    let bottom = source.frame.drawables[0].id.clone();
+    let top = source.frame.drawables[1].id.clone();
+    let f = Arc::make_mut(&mut source.frame);
+    f.drawables[0].texture_asset_id = "cutout".into();
+    f.drawables[1].masks = vec![bottom.clone()];
+    let scene = CanvasScene::new(&doc, source);
+    doc.set_objects_locked(&[ObjectRef::new(ObjectKind::Mesh, bottom)], true)?;
+    let t = ViewportTransform::new(
+        scene.source.frame.canvas,
+        CanvasMetrics {
+            width: 512.,
+            height: 512.,
+            scale_factor: 1.,
+        },
+        ViewState::default(),
+    )
+    .unwrap();
+    let candidates = |x| {
+        scene.candidates_with_locks(
+            t.to_canvas(ModelPoint { x, y: 128. }),
+            t,
+            &[],
+            ToolId::Select,
+            DeformerVisibility::default(),
+            &doc.lock_index(),
+        )
+    };
+    assert!(candidates(70.).is_empty());
+    assert_eq!(
+        candidates(190.)
+            .iter()
+            .map(|p| p.object.id.clone())
+            .collect::<Vec<_>>(),
+        vec![top]
+    );
+    Ok(())
+}

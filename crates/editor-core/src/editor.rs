@@ -25,6 +25,11 @@ pub enum EditorCommand {
         position: crate::ReorderPosition,
     },
     SelectObjects(Vec<crate::ObjectRef>),
+    SelectCanvasObjects(Vec<crate::ObjectRef>),
+    SetObjectsLocked {
+        objects: Vec<crate::ObjectRef>,
+        locked: bool,
+    },
     SetTool(crate::ToolId),
     ToggleDeformers,
     ToggleAncestorDeformers,

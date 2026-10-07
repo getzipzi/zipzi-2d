@@ -764,30 +764,32 @@ impl Render for CanvasView {
                 for candidate in candidates {
                     let owner = owner.downgrade();
                     let canvas = canvas.downgrade();
-                    menu = menu.item(PopupMenuItem::new(candidate.label).on_click(
-                        move |_, window, cx| {
-                            let Some(owner) = owner.upgrade() else {
-                                return;
-                            };
-                            owner.update(cx, |owner, cx| {
-                                if owner.editor.active_id() != document
-                                    || owner.modal
-                                    || owner.editor.is_busy()
-                                {
+                    menu =
+                        menu.item(PopupMenuItem::new(candidate.label).on_click(
+                            move |_, window, cx| {
+                                let Some(owner) = owner.upgrade() else {
                                     return;
+                                };
+                                owner.update(cx, |owner, cx| {
+                                    if owner.editor.active_id() != document
+                                        || owner.modal
+                                        || owner.editor.is_busy()
+                                    {
+                                        return;
+                                    }
+                                    let result =
+                                        owner.editor.execute(EditorCommand::SelectCanvasObjects(
+                                            vec![candidate.object.clone()],
+                                        ));
+                                    owner.complete_edit(result, cx);
+                                });
+                                if let Some(canvas) = canvas.upgrade() {
+                                    let focus = canvas.read(cx).focus.clone();
+                                    // Let menu dismissal finish before returning keyboard input.
+                                    window.defer(cx, move |window, cx| window.focus(&focus, cx));
                                 }
-                                let result = owner
-                                    .editor
-                                    .execute(EditorCommand::SelectObject(candidate.object.clone()));
-                                owner.complete_edit(result, cx);
-                            });
-                            if let Some(canvas) = canvas.upgrade() {
-                                let focus = canvas.read(cx).focus.clone();
-                                // Let menu dismissal finish before returning keyboard input.
-                                window.defer(cx, move |window, cx| window.focus(&focus, cx));
-                            }
-                        },
-                    ));
+                            },
+                        ));
                 }
                 menu = menu.separator();
                 for (command, checked) in [

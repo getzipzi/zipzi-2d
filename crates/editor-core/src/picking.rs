@@ -376,7 +376,15 @@ impl CanvasScene {
         tool: ToolId,
         visibility: DeformerVisibility,
     ) -> Option<HitTarget> {
-        self.hit_with_mode(point, t, selection, tool, visibility, false)
+        self.hit_with_mode(
+            point,
+            t,
+            selection,
+            tool,
+            visibility,
+            false,
+            &crate::LockIndex::default(),
+        )
     }
     pub(crate) fn hit_with_mode(
         &self,
@@ -386,6 +394,7 @@ impl CanvasScene {
         tool: ToolId,
         visibility: DeformerVisibility,
         fine: bool,
+        locks: &crate::LockIndex,
     ) -> Option<HitTarget> {
         if tool == ToolId::Hand {
             return None;
@@ -393,7 +402,7 @@ impl CanvasScene {
         {
             let mut hits = Vec::new();
             for r in selection {
-                if r.kind == K::Mesh {
+                if r.kind == K::Mesh && !locks.is_locked(r) {
                     if let Some(mesh) = self.mesh(&r.id).filter(|_| self.mesh_visible(&r.id)) {
                         for (id, p) in &mesh.vertices {
                             let distance = distance2(point, t.to_canvas(*p));
@@ -416,7 +425,9 @@ impl CanvasScene {
         let mut controls: Vec<_> = self
             .controls
             .iter()
-            .filter(|c| self.control_visible(c, selection, tool, visibility))
+            .filter(|c| {
+                !locks.is_locked(&c.object) && self.control_visible(c, selection, tool, visibility)
+            })
             .collect();
         controls.sort_by_key(|c| !selection.contains(&c.object));
         let mut object_hit = None;
@@ -494,7 +505,7 @@ impl CanvasScene {
             for c in self
                 .controls
                 .iter()
-                .filter(|c| selection.contains(&c.object))
+                .filter(|c| selection.contains(&c.object) && !locks.is_locked(&c.object))
             {
                 let Some(gizmo) = self.deformer_gizmo(c, t) else {
                     continue;
@@ -525,7 +536,7 @@ impl CanvasScene {
         }
         self.mesh_hits(t.to_model(point))
             .into_iter()
-            .next()
+            .find(|id| !locks.is_locked(&ObjectRef::new(K::Mesh, id)))
             .map(|id| HitTarget::Object(ObjectRef::new(K::Mesh, id)))
     }
     pub fn candidates(
@@ -536,8 +547,26 @@ impl CanvasScene {
         tool: ToolId,
         visibility: DeformerVisibility,
     ) -> Vec<PickCandidate> {
+        self.candidates_with_locks(
+            point,
+            t,
+            selection,
+            tool,
+            visibility,
+            &crate::LockIndex::default(),
+        )
+    }
+    pub fn candidates_with_locks(
+        &self,
+        point: CanvasPoint,
+        t: ViewportTransform,
+        selection: &[ObjectRef],
+        tool: ToolId,
+        visibility: DeformerVisibility,
+        locks: &crate::LockIndex,
+    ) -> Vec<PickCandidate> {
         let mut objects = Vec::new();
-        if let Some(hit) = self.hit(point, t, selection, tool, visibility) {
+        if let Some(hit) = self.hit_with_mode(point, t, selection, tool, visibility, false, locks) {
             objects.push(hit.object().clone());
         }
         for id in self.mesh_hits(t.to_model(point)) {
@@ -556,7 +585,7 @@ impl CanvasScene {
         let mut seen = HashSet::new();
         objects
             .into_iter()
-            .filter(|r| seen.insert(r.clone()))
+            .filter(|r| !locks.is_locked(r) && seen.insert(r.clone()))
             .map(|object| PickCandidate {
                 label: format!("{} · {:?}", self.index.name(&object), object.kind),
                 object,

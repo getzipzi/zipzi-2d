@@ -132,9 +132,11 @@ impl ToolController {
         self.hovered = None;
     }
     pub fn reconcile(&mut self, document: &Document) {
+        let locks = document.lock_index();
         let model = document.model();
         self.components.retain(|c| {
-            document.context().selections.contains(&c.object)
+            !locks.is_locked(&c.object)
+                && document.context().selections.contains(&c.object)
                 && match c.object.kind {
                     ObjectKind::Mesh => model.get_mesh(&c.object.id).is_some(),
                     ObjectKind::Deformer => model.get_transform(&c.object.id).is_some(),
@@ -175,6 +177,7 @@ impl ToolController {
         frame: &CanvasFrame,
         event: CanvasInput,
     ) -> Result<bool> {
+        let locks = document.lock_index();
         let scene = &frame.geometry;
         let t = frame.transform;
         match event {
@@ -199,12 +202,13 @@ impl ToolController {
                     self.active,
                     self.deformer_visibility,
                     self.warp_fine,
+                    &locks,
                 );
                 self.hovered = hit.clone();
                 let component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
-                    (selected.kind == ObjectKind::Mesh && selected == r)
+                    !locks.is_locked(selected) && ((selected.kind == ObjectKind::Mesh && selected == r)
                     || (selected.kind == ObjectKind::Deformer
-                        && (selected == r || (r.kind == ObjectKind::Mesh && scene.ancestors(r).contains(selected))))));
+                        && (selected == r || (r.kind == ObjectKind::Mesh && scene.ancestors(r).contains(selected)))))));
                 // A selected surface permits component marquee selection without
                 // replacing the shared object selection.
                 let hit = match hit {
@@ -267,6 +271,7 @@ impl ToolController {
                         self.active,
                         self.deformer_visibility,
                         self.warp_fine,
+                        &locks,
                     );
                     Ok(false)
                 }
@@ -287,14 +292,17 @@ impl ToolController {
                         document.select_objects(Vec::new())?;
                         self.clear();
                     } else if (rectangle || press.component_surface)
-                        && press.selection.iter().any(|r| match r.kind {
-                            ObjectKind::Mesh => press.scene.mesh_visible(&r.id),
-                            ObjectKind::Deformer => press
-                                .scene
-                                .controls
-                                .iter()
-                                .any(|c| c.object == *r && c.enabled),
-                            _ => false,
+                        && press.selection.iter().any(|r| {
+                            !locks.is_locked(r)
+                                && match r.kind {
+                                    ObjectKind::Mesh => press.scene.mesh_visible(&r.id),
+                                    ObjectKind::Deformer => press
+                                        .scene
+                                        .controls
+                                        .iter()
+                                        .any(|c| c.object == *r && c.enabled),
+                                    _ => false,
+                                }
                         })
                     {
                         if !press.shift {
@@ -303,6 +311,7 @@ impl ToolController {
                         if rectangle {
                             for c in &press.scene.controls {
                                 if c.kind != ControlKind::Warp
+                                    || locks.is_locked(&c.object)
                                     || !c.enabled
                                     || !press.selection.contains(&c.object)
                                 {
@@ -339,7 +348,9 @@ impl ToolController {
                             }
                             for r in &press.selection {
                                 if let Some(m) = press.scene.mesh(&r.id).filter(|_| {
-                                    r.kind == ObjectKind::Mesh && press.scene.mesh_visible(&r.id)
+                                    r.kind == ObjectKind::Mesh
+                                        && !locks.is_locked(r)
+                                        && press.scene.mesh_visible(&r.id)
                                 }) {
                                     for (id, p) in &m.vertices {
                                         if in_rect(
@@ -367,7 +378,8 @@ impl ToolController {
                         };
                         if rectangle {
                             for m in press.scene.meshes.iter() {
-                                if press.scene.mesh_visible(&m.id)
+                                if !locks.is_locked(&ObjectRef::new(ObjectKind::Mesh, &m.id))
+                                    && press.scene.mesh_visible(&m.id)
                                     && !m.vertices.is_empty()
                                     && m.vertices.iter().all(|(_, p)| {
                                         in_rect(press.transform.to_canvas(*p), press.point, point)
@@ -410,6 +422,7 @@ impl ToolController {
             return Ok(false);
         }
         if press.edit.is_none() {
+            document.ensure_editable(&document.context().selections)?;
             let mut targets = vec![target.object().clone()];
             if matches!(target, HitTarget::Component(_)) {
                 for c in &self.components {
@@ -516,6 +529,7 @@ impl ToolController {
         Ok(true)
     }
     pub fn overlay(&self, document: &Document, frame: &CanvasFrame) -> OverlaySnapshot {
+        let locks = document.lock_index();
         let scene = &frame.geometry;
         let t = frame.transform;
         let selection = &document.context().selections;
@@ -544,6 +558,10 @@ impl ToolController {
                             t.to_canvas(m.vertices.get(b)?.1),
                         ))
                     }));
+                    if locks.is_locked(r) {
+                        describe_edit(&mut out, document, scene, r);
+                        continue;
+                    }
                     for (id, p) in &m.vertices {
                         let c = ComponentRef {
                             object: r.clone(),
@@ -592,6 +610,21 @@ impl ToolController {
             }
             let points = scene.control_points(control, t);
             let selected = selection.contains(&control.object);
+            if locks.is_locked(&control.object) {
+                out.deformers.push(OverlayDeformer {
+                    lines: control
+                        .edges
+                        .iter()
+                        .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?)))
+                        .collect(),
+                    selected,
+                    hovered: false,
+                });
+                if selected {
+                    describe_edit(&mut out, document, scene, &control.object);
+                }
+                continue;
+            }
             let hovered = self
                 .hovered
                 .as_ref()
@@ -796,6 +829,13 @@ impl ToolController {
                     format!("Δ {:.1}°  × {:.3}", angle, scale)
                 }
             });
+        }
+        if let Err(error) = document.ensure_editable(selection) {
+            out.vertices.clear();
+            out.handles.clear();
+            out.gizmo_lines.clear();
+            out.active_handle = None;
+            out.unavailable = Some(error.to_string());
         }
         out
     }

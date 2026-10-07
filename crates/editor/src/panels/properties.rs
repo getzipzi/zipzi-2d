@@ -112,6 +112,11 @@ impl Render for PropertiesPanel {
                     })),
             )
             .child(format!("{} · {:?}", index.name(&inspected), inspected.kind))
+            .when(
+                doc.ensure_editable(std::slice::from_ref(&inspected))
+                    .is_err(),
+                |body| body.child(t!("editor.object_locked")),
+            )
             .when_some(
                 info.and_then(|info| info.diagnostic.clone()),
                 |this, diagnostic| this.child(diagnostic),

@@ -236,6 +236,35 @@ pub(super) fn run() -> anyhow::Result<()> {
     save(&selected, &directory, "editor-selected.png")?;
 
     harness.cx.update_window(harness.window, |_, window, cx| {
+        window.hover(format!("mesh-item-Mesh:{mesh}"), cx);
+        window
+            .within("mesh-tree-panel")
+            .click(format!("mesh-lock-{mesh}"), cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.overlay().vertices.is_empty());
+            assert!(view.editor.document().unwrap().lock_index().is_locked(
+                &editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, &mesh)
+            ));
+        });
+    })?;
+    let locked = harness.capture()?;
+    let locked_canvas = harness.canvas_image(&locked)?;
+    anyhow::ensure!(
+        image::imageops::crop_imm(&locked_canvas, marker.0 - 8, marker.1 - 8, 16, 16).to_image()
+            != image::imageops::crop_imm(&selected_canvas, marker.0 - 8, marker.1 - 8, 16, 16)
+                .to_image(),
+        "Locking must remove the editable vertex marker"
+    );
+    let (w, h) = locked_canvas.dimensions();
+    anyhow::ensure!(
+        image::imageops::crop_imm(&locked_canvas, w / 2 - 10, h / 2 - 10, 20, 20).to_image()
+            == image::imageops::crop_imm(&selected_canvas, w / 2 - 10, h / 2 - 10, 20, 20)
+                .to_image(),
+        "Locking must preserve the rendered artwork"
+    );
+    save(&locked, &directory, "editor-locked.png")?;
+
+    harness.cx.update_window(harness.window, |_, window, cx| {
         window
             .within("mesh-tree-panel")
             .click(format!("mesh-vis-{mesh}"), cx);

@@ -84,6 +84,7 @@ impl ControlEdit {
         scene: &CanvasScene,
         object: &ObjectRef,
     ) -> Result<String> {
+        document.ensure_editable(std::slice::from_ref(object))?;
         let doc = document.model();
         ensure!(
             doc.blend_bindings_for_target(&object.id).is_empty(),
@@ -159,6 +160,7 @@ impl ControlEdit {
         Ok("Base shape".into())
     }
     pub fn prepare(document: &Document, scene: &CanvasScene, object: &ObjectRef) -> Result<Self> {
+        document.ensure_editable(std::slice::from_ref(object))?;
         let doc = document.model();
         ensure!(
             doc.blend_bindings_for_target(&object.id).is_empty(),

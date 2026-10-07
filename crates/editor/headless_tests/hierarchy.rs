@@ -421,3 +421,90 @@ fn mesh_thumbnails_only_generate_for_virtualized_rows(cx: &mut TestAppContext) {
         );
     });
 }
+
+#[gpui_kit::test]
+fn tree_lock_button_preserves_selection_and_other_tree_can_unlock(cx: &mut TestAppContext) {
+    use editor_core::{EditorCommand, ObjectKind, ObjectRef};
+    let harness = setup(cx);
+    let (target, original) = harness.view.read_with(cx, |view, _| {
+        (
+            ObjectRef::new(
+                ObjectKind::Mesh,
+                view.editor
+                    .layers()
+                    .iter()
+                    .find(|l| l.name == "Second")
+                    .unwrap()
+                    .id
+                    .clone(),
+            ),
+            view.editor.document().unwrap().context().selections.clone(),
+        )
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.hover(format!("mesh-item-Mesh:{}", target.id), cx);
+        window.click(format!("mesh-lock-{}", target.id), cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert!(doc.lock_index().state(&target).explicit);
+        assert_eq!(doc.context().selections, original);
+        assert_eq!(doc.history_lengths(), (1, 0));
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            let dock = view.dock.as_ref().unwrap();
+            let panel = gpui_kit::component::dock::PanelId::from(dock.deformer_tree.entity_id());
+            dock.area
+                .update(cx, |area, cx| area.select_panel(panel, window, cx));
+        });
+        window.render_frame(cx);
+        window.click(format!("deformer-lock-{}", target.id), cx);
+    })
+    .unwrap();
+    harness.view.update(cx, |view, cx| {
+        assert!(
+            !view
+                .editor
+                .document()
+                .unwrap()
+                .lock_index()
+                .is_locked(&target)
+        );
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        assert!(
+            view.editor
+                .document()
+                .unwrap()
+                .lock_index()
+                .is_locked(&target)
+        );
+        cx.notify();
+    });
+}
+
+#[gpui_kit::test]
+fn inherited_lock_button_locates_parent_without_unlocking_it(cx: &mut TestAppContext) {
+    use editor_core::{ObjectKind, ObjectRef};
+    let (mut doc, assets) = super::document_fixture::sample_document_with_parts().unwrap();
+    let parent = ObjectRef::new(ObjectKind::Part, uuid::Uuid::from_u128(101).to_string());
+    let mesh = doc.layers()[0].id.clone();
+    doc.set_objects_locked(&[parent.clone()], true).unwrap();
+    let harness = super::setup_with_document(cx, doc, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("mesh-lock-{mesh}"), cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(doc.context().selection.as_ref(), Some(&parent));
+        assert!(doc.lock_index().state(&parent).explicit);
+        assert!(
+            !doc.lock_index()
+                .state(&ObjectRef::new(ObjectKind::Mesh, mesh))
+                .explicit
+        );
+        assert_eq!(doc.history_lengths(), (1, 0));
+    });
+}

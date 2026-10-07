@@ -9,6 +9,10 @@ use std::{
 };
 use uuid::Uuid;
 
+#[path = "locks.rs"]
+mod locks;
+pub use locks::{LockIndex, LockState};
+
 #[path = "sorting.rs"]
 mod sorting;
 pub use sorting::{OrganizationDestination, ParameterDestination, ReorderPosition};
@@ -99,6 +103,7 @@ pub struct Document {
     context: crate::PanelContext,
     projection_revision: u64,
     preview_revision: u64,
+    lock_index: std::sync::Mutex<Option<(u64, Arc<LockIndex>)>>,
     object_index: std::sync::Mutex<Option<(u64, Arc<crate::ObjectIndex>)>>,
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
     pending: Option<PendingEdit>,
@@ -184,6 +189,7 @@ impl Document {
             },
             projection_revision: 1,
             preview_revision: 0,
+            lock_index: std::sync::Mutex::new(None),
             object_index: std::sync::Mutex::new(Some((1, projection))),
             canvas_topology: std::sync::Mutex::new(None),
             selected,
@@ -625,6 +631,7 @@ impl Document {
         value: serde_json::Value,
     ) -> Result<()> {
         use crate::ObjectKind as K;
+        self.ensure_editable(std::slice::from_ref(object))?;
         ensure!(
             crate::editable_property(object.kind, field),
             "This property is read only"
@@ -822,6 +829,7 @@ impl Document {
     }
 
     fn begin_gesture(&mut self, kind: Gesture) -> Result<()> {
+        self.ensure_editable(&self.context.selections)?;
         if self
             .pending
             .as_ref()
@@ -871,6 +879,8 @@ impl Document {
         &mut self,
         targets: &[crate::control_edit::ControlEdit],
     ) -> Result<()> {
+        self.ensure_editable(&self.context.selections)?;
+        self.ensure_editable(&targets.iter().map(|t| t.object.clone()).collect::<Vec<_>>())?;
         self.finish_edit()?;
         self.pending = Some(PendingEdit {
             kind: Gesture::Controls,
@@ -1052,21 +1062,27 @@ impl Document {
 
     pub fn undo(&mut self) -> Result<()> {
         self.finish_edit()?;
+        let before = self.evaluation_revision();
+        let locks = self.explicit_locks().clone();
         self.session.undo()?;
-        self.after_history();
+        self.after_history(before != self.evaluation_revision() || locks == *self.explicit_locks());
         Ok(())
     }
 
     pub fn redo(&mut self) -> Result<()> {
         self.finish_edit()?;
+        let before = self.evaluation_revision();
+        let locks = self.explicit_locks().clone();
         self.session.redo()?;
-        self.after_history();
+        self.after_history(before != self.evaluation_revision() || locks == *self.explicit_locks());
         Ok(())
     }
 
-    fn after_history(&mut self) {
+    fn after_history(&mut self, topology_changed: bool) {
         self.projection_revision += 1;
-        self.canvas_topology.get_mut().unwrap().take();
+        if topology_changed {
+            self.canvas_topology.get_mut().unwrap().take();
+        }
         self.session.drain_events();
         let index = self.object_index();
         self.context.reconcile(&index);

@@ -1,4 +1,5 @@
 mod filter;
+mod locking;
 
 use super::sorting::{self, SortItem, SortState};
 use super::toolbar::{PanelToolbar, PanelToolbarPopover, PanelToolbarSearch};
@@ -456,6 +457,9 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                         let is_mesh = node.kind == TreeNodeKind::Mesh;
                         let thumbnail = if is_mesh { images.next().flatten() } else { None };
                         let reference = node.reference();
+                        let lock_object = reference.clone();
+                        let lock_owner = this.owner.clone();
+                        let locked = reference.as_ref().is_some_and(|r| owner.read(cx).editor.document().is_some_and(|d| d.lock_index().is_locked(r)));
                         let sort_item = reference.clone().map(|object| SortItem::Tree { deformer: DEFORMER, object });
                         let panel = cx.weak_entity();
                         let expand_key = node_key(&node);
@@ -501,6 +505,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                 "{}-item-{key}",
                                 if DEFORMER { "deformer" } else { "mesh" }
                             )))
+                            .group("layer-row")
                             .flex()
                             .w_full()
                             .min_w_0()
@@ -574,7 +579,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     .h_full()
                                     .flex()
                                     .items_center()
-                                    .when_some(sort_item, |element, source| sorting::drag_source(element, &this.sorting, target.unwrap(), source, label.clone(), !disabled && !filtered && node.diagnostic.is_none()))
+                                    .when_some(sort_item, |element, source| sorting::drag_source(element, &this.sorting, target.unwrap(), source, label.clone(), !disabled && !locked && !filtered && node.diagnostic.is_none()))
                                     .flex_1()
                                     .min_w_0()
                                     .text_xs()
@@ -589,6 +594,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     ))
                                     .when_some(node.diagnostic,|this,d|this.child(format!(" ⚠ {d}"))),
                             )
+                            .child(div().flex_1())
                             .when_some(node.visible, |element, visible| {
                                 element.child(
                                     div()
@@ -620,6 +626,13 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                         }))
                                         .child(Icon::new(if visible { IconName::Eye } else { IconName::EyeOff }).small()),
                                 )
+                            })
+                            .when_some(lock_object.clone(), |element, object| {
+                                element.when_some(target, |element, target| element.child(locking::button(lock_owner.clone(), target, object, SharedString::from(format!("{}-lock-{id}", Self::prefix())), disabled, cx)))
+                            })
+                            .map(|element| match (lock_object, target) {
+                                (Some(object), Some(target)) => locking::menu(element, lock_owner.clone(), target, object).into_any_element(),
+                                _ => element.into_any_element(),
                             })
                         }).collect()
                     }),

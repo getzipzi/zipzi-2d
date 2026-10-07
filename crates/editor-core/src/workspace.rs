@@ -315,6 +315,8 @@ impl Editor {
         if matches!(
             &command,
             EditorCommand::CreateParameter(_)
+                | EditorCommand::SetObjectsLocked { .. }
+                | EditorCommand::SelectCanvasObjects(_)
                 | EditorCommand::ReorderTree { .. }
                 | EditorCommand::MoveOrganization { .. }
                 | EditorCommand::MoveParameter { .. }
@@ -674,12 +676,13 @@ impl Editor {
         let Some(frame) = &s.displayed else {
             return Vec::new();
         };
-        frame.geometry.candidates(
+        frame.geometry.candidates_with_locks(
             point,
             frame.transform,
             &s.document().context().selections,
             s.tools.active,
             s.tools.deformer_visibility,
+            &s.document().lock_index(),
         )
     }
     pub fn canvas_input(&mut self, input: crate::CanvasInput) -> Result<bool> {

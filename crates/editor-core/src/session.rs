@@ -73,6 +73,14 @@ impl DocumentSession {
             None
         };
         let had_pending = self.document.has_pending_edit();
+        let evaluation_before = self.document.evaluation_revision();
+        let history_locks = matches!(&command, EditorCommand::Undo | EditorCommand::Redo)
+            .then(|| self.document.explicit_locks().clone());
+        let is_lock = matches!(&command, EditorCommand::SetObjectsLocked { .. });
+        let lock_or_history = matches!(
+            &command,
+            EditorCommand::SetObjectsLocked { .. } | EditorCommand::Undo | EditorCommand::Redo
+        );
         let preview_before = self.document.preview_revision();
         let is_preview = matches!(
             &command,
@@ -84,6 +92,7 @@ impl DocumentSession {
             &command,
             EditorCommand::Select(_)
                 | EditorCommand::SelectObjects(_)
+                | EditorCommand::SelectCanvasObjects(_)
                 | EditorCommand::SelectObject(_)
                 | EditorCommand::OpenBinding(_)
                 | EditorCommand::Navigate(_)
@@ -93,6 +102,7 @@ impl DocumentSession {
             &command,
             EditorCommand::Select(_)
                 | EditorCommand::SelectObjects(_)
+                | EditorCommand::SelectCanvasObjects(_)
                 | EditorCommand::SelectObject(_)
                 | EditorCommand::OpenBinding(_)
                 | EditorCommand::Navigate(_)
@@ -141,6 +151,12 @@ impl DocumentSession {
                 return Ok(());
             }
             EditorCommand::SelectObjects(objects) => self.document.select_objects(objects),
+            EditorCommand::SelectCanvasObjects(objects) => {
+                self.document.select_canvas_objects(objects)
+            }
+            EditorCommand::SetObjectsLocked { objects, locked } => {
+                self.document.set_objects_locked(&objects, locked)
+            }
             EditorCommand::ToggleWarpFine => {
                 self.tools.warp_fine = !self.tools.warp_fine;
                 self.tools.clear();
@@ -188,10 +204,17 @@ impl DocumentSession {
             EditorCommand::Undo => self.document.undo(),
             EditorCommand::Redo => self.document.redo(),
         };
-        if selection {
+        if selection || lock_or_history {
             self.tools.clear();
         }
+        // Editor lock edits are standalone transactions. Other metadata history
+        // (for example names) must refresh labels captured in canvas topology.
+        let lock_history =
+            history_locks.is_some_and(|before| before != *self.document.explicit_locks());
         if invalidate
+            && (!(is_lock || lock_history)
+                || had_pending
+                || self.document.evaluation_revision() != evaluation_before)
             && (!is_preview || had_pending || self.document.preview_revision() != preview_before)
         {
             self.invalidate_scene();
