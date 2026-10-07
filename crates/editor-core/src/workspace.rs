@@ -312,7 +312,14 @@ impl Editor {
         )
     }
     pub fn execute_for(&mut self, id: DocumentId, command: EditorCommand) -> Result<()> {
-        if matches!(&command, EditorCommand::CreateParameter(_)) {
+        if matches!(
+            &command,
+            EditorCommand::CreateParameter(_)
+                | EditorCommand::ReorderTree { .. }
+                | EditorCommand::MoveOrganization { .. }
+                | EditorCommand::MoveParameter { .. }
+                | EditorCommand::ReorderParameterGroup { .. }
+        ) {
             ensure!(
                 self.active == Some(id) && !self.exiting(),
                 "Document has changed"

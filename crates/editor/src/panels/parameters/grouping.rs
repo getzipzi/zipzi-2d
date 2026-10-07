@@ -59,7 +59,7 @@ impl ParameterLayout {
         for index in roots.into_iter().chain(0..groups.len()) {
             result.append_group(index, 0, groups, &children, &members, &mut visited);
         }
-        if !groups.is_empty() && !ungrouped.is_empty() {
+        if !groups.is_empty() {
             result.rows.push(ListRow::Group {
                 id: None,
                 name: crate::t!("parameter.ungrouped").into_owned(),

@@ -4,6 +4,7 @@ mod track;
 use grouping::{ListRow, ParameterLayout};
 use track::parameter_track;
 
+use super::sorting::{self, SortItem, SortState};
 use super::toolbar::PanelToolbar;
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
@@ -59,39 +60,48 @@ pub struct ParametersPanel {
     scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
     slider_drag: Option<Entity<SliderState>>,
+    sorting: Entity<SortState>,
+    _sorting_observe: Subscription,
     _observe: Subscription,
     _activation: Subscription,
 }
 
 impl ParametersPanel {
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self {
-            focus: cx.focus_handle(),
-            _observe: cx.observe_in(
-                &owner.upgrade().unwrap(),
-                window,
-                |this: &mut Self, _, window, cx| {
-                    this.sync_with_editor(window, cx);
-                    cx.notify();
-                },
-            ),
-            _activation: cx.observe_window_activation(window, |this: &mut Self, window, cx| {
-                if !window.is_window_active() {
-                    this.finish_slider_drag(cx);
-                }
-            }),
-            owner,
-            document_id: None,
-            visual_revision: None,
-            visual_selection: None,
-            show_indirect: false,
-            collapsed_groups: HashSet::new(),
-            layout: ParameterLayout::default(),
-            visible_rows: Vec::new(),
-            rows: Vec::new(),
-            scroll: UniformListScrollHandle::new(),
-            subscriptions: Vec::new(),
-            slider_drag: None,
+        cx.new(|cx| {
+            let focus = cx.focus_handle();
+            let sorting = SortState::new(owner.clone(), focus.clone(), window, cx);
+            let sorting_observe = cx.observe(&sorting, |_, _, cx| cx.notify());
+            Self {
+                focus,
+                _observe: cx.observe_in(
+                    &owner.upgrade().unwrap(),
+                    window,
+                    |this: &mut Self, _, window, cx| {
+                        this.sync_with_editor(window, cx);
+                        cx.notify();
+                    },
+                ),
+                _activation: cx.observe_window_activation(window, |this: &mut Self, window, cx| {
+                    if !window.is_window_active() {
+                        this.finish_slider_drag(cx);
+                    }
+                }),
+                owner,
+                document_id: None,
+                visual_revision: None,
+                visual_selection: None,
+                show_indirect: false,
+                collapsed_groups: HashSet::new(),
+                layout: ParameterLayout::default(),
+                visible_rows: Vec::new(),
+                rows: Vec::new(),
+                scroll: UniformListScrollHandle::new(),
+                subscriptions: Vec::new(),
+                slider_drag: None,
+                sorting,
+                _sorting_observe: sorting_observe,
+            }
         })
     }
 
@@ -101,6 +111,11 @@ impl ParametersPanel {
             (row.parameter.minimum < row.parameter.maximum && bounds.size.width > px(0.))
                 .then_some(bounds)
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn sorting_scroll_handle(&self) -> UniformListScrollHandle {
+        self.scroll.clone()
     }
 
     fn sync_with_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -126,15 +141,27 @@ impl ParametersPanel {
                 }),
             )
         };
+        let by_id: HashMap<_, _> = self
+            .rows
+            .iter()
+            .map(|row| (row.parameter.id.as_str(), &row.parameter))
+            .collect();
         let structure_changed = self.document_id != document_id
             || self.rows.len() != parameters.len()
-            || self.rows.iter().zip(&parameters).any(|(row, parameter)| {
-                row.parameter.id != parameter.id
-                    || row.parameter.minimum != parameter.minimum
-                    || row.parameter.maximum != parameter.maximum
-                    || row.parameter.decimal_places != parameter.decimal_places
+            || parameters.iter().any(|parameter| {
+                by_id.get(parameter.id.as_str()).is_none_or(|old| {
+                    old.minimum != parameter.minimum
+                        || old.maximum != parameter.maximum
+                        || old.decimal_places != parameter.decimal_places
+                })
             });
+        let order_changed = self
+            .rows
+            .iter()
+            .zip(&parameters)
+            .any(|(row, parameter)| row.parameter.id != parameter.id);
         let layout_changed = structure_changed
+            || order_changed
             || self.visual_revision != revision
             || self
                 .rows
@@ -218,6 +245,8 @@ impl ParametersPanel {
                         related: false,
                         depth: 0,
                         _observe: cx.observe(&slider, |_, _, cx| cx.notify()),
+                        sorting: self.sorting.clone(),
+                        _sorting_observe: cx.observe(&self.sorting, |_, _, cx| cx.notify()),
                     });
                     ParameterRow {
                         view,
@@ -296,6 +325,15 @@ impl ParametersPanel {
                 self.subscriptions.push(input_subscription);
             }
         } else {
+            if order_changed {
+                let ranks: HashMap<_, _> = parameters
+                    .iter()
+                    .enumerate()
+                    .map(|(index, parameter)| (parameter.id.as_str(), index))
+                    .collect();
+                self.rows
+                    .sort_by_key(|row| ranks[row.parameter.id.as_str()]);
+            }
             for (row, parameter) in self.rows.iter_mut().zip(parameters) {
                 {
                     let current = match row.slider.read(cx).value() {
@@ -660,9 +698,34 @@ impl ParametersPanel {
         let group = id.clone();
         let owner = self.owner.clone();
         let document_id = self.document_id;
-        let theme = cx.theme();
+        let theme = cx.theme().clone();
+        let panel = cx.weak_entity();
+        let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
+            if let SortItem::Group(group) = item {
+                _ = panel.update(cx, |panel, cx| {
+                    if panel.collapsed_groups.remove(group) {
+                        panel.refresh_visible_rows(cx);
+                        cx.notify();
+                    }
+                });
+            }
+        });
+        let sort_item = SortItem::Group(id.clone());
         div()
             .id(SharedString::from(format!("parameter-group-{key}")))
+            .map(|element| {
+                sorting::drop_target(element, &self.sorting, sort_item.clone(), Some(expand), cx)
+            })
+            .when_some(document_id, |element, document| {
+                sorting::drag_source(
+                    element,
+                    &self.sorting,
+                    document,
+                    sort_item,
+                    name.clone(),
+                    !disabled && id.is_some(),
+                )
+            })
             .test_support()
             .role(gpui::Role::Group)
             .aria_label(name.clone())
@@ -969,12 +1032,14 @@ impl Render for ParametersPanel {
                 });
             }
         }
+        self.sorting.update(cx, |state, cx| {
+            state.reconcile(self.document_id, !disabled, window, cx)
+        });
         let row_count = self.visible_rows.len();
         let panel = cx.entity();
         let theme = cx.theme().clone();
 
-        div()
-            .id("parameters-panel")
+        sorting::panel_actions(div().id("parameters-panel"), &self.sorting)
             .test_support()
             .size_full()
             .min_h_0()
@@ -1028,29 +1093,34 @@ impl Render for ParametersPanel {
                     .into_any_element()
             } else {
                 // A drag repaints this panel; keep work proportional to visible rows.
-                uniform_list("parameters-scroll-area", row_count, move |range, _, cx| {
-                    panel.update(cx, |this, cx| {
-                        range
-                            .map(|index| match this.visible_rows[index].clone() {
-                                ListRow::Parameter { index, .. } => this.rows[index]
-                                    .view
-                                    .clone()
-                                    .cached(
-                                        StyleRefinement::default()
-                                            .w_full()
-                                            .h(px(PARAMETER_ROW_HEIGHT)),
-                                    )
-                                    .into_any_element(),
-                                ListRow::Group {
-                                    id,
-                                    name,
-                                    depth,
-                                    count,
-                                } => this.group_header(id, name, depth, count, disabled, cx),
-                            })
-                            .collect()
-                    })
-                })
+                sorting::scroll_area(
+                    uniform_list("parameters-scroll-area", row_count, move |range, _, cx| {
+                        panel.update(cx, |this, cx| {
+                            range
+                                .map(|index| match this.visible_rows[index].clone() {
+                                    ListRow::Parameter { index, .. } => this.rows[index]
+                                        .view
+                                        .clone()
+                                        .cached(
+                                            StyleRefinement::default()
+                                                .w_full()
+                                                .h(px(PARAMETER_ROW_HEIGHT)),
+                                        )
+                                        .into_any_element(),
+                                    ListRow::Group {
+                                        id,
+                                        name,
+                                        depth,
+                                        count,
+                                    } => this.group_header(id, name, depth, count, disabled, cx),
+                                })
+                                .collect()
+                        })
+                    }),
+                    &self.sorting,
+                    &self.scroll,
+                    row_count,
+                )
                 .flex_1()
                 .min_h_0()
                 .track_scroll(&self.scroll)
@@ -1074,6 +1144,8 @@ struct ParameterRowView {
     related: bool,
     depth: usize,
     _observe: Subscription,
+    sorting: Entity<SortState>,
+    _sorting_observe: Subscription,
 }
 
 impl Render for ParameterRowView {
@@ -1095,6 +1167,15 @@ impl Render for ParameterRowView {
         );
         div()
             .id(SharedString::from(format!("parameter-row-{parameter_id}")))
+            .map(|element| {
+                sorting::drop_target(
+                    element,
+                    &self.sorting,
+                    SortItem::Parameter(parameter_id.clone()),
+                    None,
+                    cx,
+                )
+            })
             .capture_action(
                 cx.listener(|this, action: &crate::menus::RunCommand, window, cx| {
                     use editor_core::CommandId;
@@ -1149,8 +1230,17 @@ impl Render for ParameterRowView {
                     .text_ellipsis()
                     .overflow_hidden()
                     .id(SharedString::from(format!("parameter-name-{parameter_id}")))
+                    .when_some(document_id, |element, document| {
+                        sorting::drag_source(
+                            element,
+                            &self.sorting,
+                            document,
+                            SortItem::Parameter(parameter_id.clone()),
+                            parameter.name.clone(),
+                            !disabled,
+                        )
+                    })
                     .test_support()
-                    .cursor_pointer()
                     .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
                     .on_click(cx.listener(move |this, _, window, cx| {
                         let _ = this.panel.update(cx, |panel, cx| {
@@ -1164,7 +1254,15 @@ impl Render for ParameterRowView {
                     } else {
                         theme.foreground
                     })
-                    .child(parameter.name.clone()),
+                    .flex()
+                    .items_center()
+                    .h_full()
+                    .child(
+                        div()
+                            .min_w_0()
+                            .text_ellipsis()
+                            .child(parameter.name.clone()),
+                    ),
             )
             .child(
                 div()

@@ -5,6 +5,25 @@ use std::path::PathBuf;
 /// UI-independent editing intent. Model changes always go through Document and the SDK.
 pub enum EditorCommand {
     CreateParameter(crate::NewParameter),
+    ReorderTree {
+        deformer: bool,
+        source: crate::ObjectRef,
+        target: crate::ObjectRef,
+        position: crate::ReorderPosition,
+    },
+    MoveOrganization {
+        source: crate::ObjectRef,
+        destination: crate::OrganizationDestination,
+    },
+    MoveParameter {
+        id: String,
+        destination: crate::ParameterDestination,
+    },
+    ReorderParameterGroup {
+        source: String,
+        target: String,
+        position: crate::ReorderPosition,
+    },
     SelectObjects(Vec<crate::ObjectRef>),
     SetTool(crate::ToolId),
     ToggleDeformers,

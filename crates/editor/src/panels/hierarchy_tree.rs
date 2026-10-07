@@ -1,5 +1,6 @@
 mod filter;
 
+use super::sorting::{self, SortItem, SortState};
 use super::toolbar::{PanelToolbar, PanelToolbarPopover, PanelToolbarSearch};
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, TreeNode, TreeNodeKind};
@@ -43,6 +44,8 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
     rows: Rc<Vec<VisibleRow>>,
     rows_dirty: bool,
     scroll: UniformListScrollHandle,
+    sorting: Entity<SortState>,
+    _sorting_observe: Subscription,
 }
 
 impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
@@ -54,6 +57,8 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
     ) -> Entity<Self> {
         cx.new(|cx| {
             let focus = cx.focus_handle();
+            let sorting = SortState::new(owner.clone(), focus.clone(), window, cx);
+            let sorting_observe = cx.observe(&sorting, |_, _, cx| cx.notify());
             let observe = cx.observe(&owner.upgrade().unwrap(), |_, _, cx| {
                 cx.notify();
             });
@@ -79,6 +84,8 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
             Self {
                 owner,
                 focus,
+                sorting,
+                _sorting_observe: sorting_observe,
                 _observe: observe,
                 _thumbnails_observe: thumbnails_observe,
                 view: TreeViewState::default(),
@@ -387,6 +394,14 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 self.scroll.scroll_to_item(i, ScrollStrategy::Center);
             }
         }
+        self.sorting.update(cx, |state, cx| {
+            state.reconcile(
+                target,
+                !disabled && !self.view.filter.is_active(),
+                window,
+                cx,
+            )
+        });
         let rows = self.rows.clone();
         let panel = cx.entity();
         let query = self.view.filter.query();
@@ -394,12 +409,12 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
         thumbnails.update(cx, |cache, cx| cache.sync_document(target, window, cx));
         let theme = cx.theme().clone();
 
-        div()
+        sorting::panel_actions(div()
             .id(if DEFORMER {
                 "deformer-tree-panel"
             } else {
                 "mesh-tree-panel"
-            })
+            }), &self.sorting)
             .size_full()
             .min_h_0()
             .overflow_hidden()
@@ -426,7 +441,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                     })
                     .into_any_element()
             } else {
-                uniform_list(
+                sorting::scroll_area(uniform_list(
                     if DEFORMER { "deformer-tree-scroll-area" } else { "mesh-tree-scroll-area" },
                     rows.len(),
                     move |range, window, cx| panel.update(cx, |this, cx| {
@@ -441,6 +456,17 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                         let is_mesh = node.kind == TreeNodeKind::Mesh;
                         let thumbnail = if is_mesh { images.next().flatten() } else { None };
                         let reference = node.reference();
+                        let sort_item = reference.clone().map(|object| SortItem::Tree { deformer: DEFORMER, object });
+                        let panel = cx.weak_entity();
+                        let expand_key = node_key(&node);
+                        let expand: sorting::ExpandTarget = Rc::new(move |_, _, cx| {
+                            _ = panel.update(cx, |this, cx| {
+                                if this.view.collapsed.remove(&expand_key) {
+                                    this.rows_dirty = true;
+                                    cx.notify();
+                                }
+                            });
+                        });
                         let is_selected = reference.as_ref().is_some_and(|r| selections.contains(r));
                         let key = node_key(&node);
                         let is_collapsed = this.collapsed().contains(&key);
@@ -495,6 +521,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             }))
                             .cursor_pointer()
                             .test_support()
+                            .when_some(sort_item.clone(), |element, target_item| sorting::drop_target(element, &this.sorting, target_item, Some(expand.clone()), cx))
                             .on_click(cx.listener(move |_, event: &ClickEvent, window, cx| {
                                 if disabled { return; }
                                 let (Some(owner), Some(target), Some(reference)) = (owner.upgrade(), target, reference.clone()) else { return; };
@@ -542,6 +569,12 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             )
                             .child(
                                 div()
+                                    .id(SharedString::from(format!("{}-drag-{id}", Self::prefix())))
+                                    .test_support()
+                                    .h_full()
+                                    .flex()
+                                    .items_center()
+                                    .when_some(sort_item, |element, source| sorting::drag_source(element, &this.sorting, target.unwrap(), source, label.clone(), !disabled && !filtered && node.diagnostic.is_none()))
                                     .flex_1()
                                     .min_w_0()
                                     .text_xs()
@@ -590,11 +623,19 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                             })
                         }).collect()
                     }),
-                )
+                ), &self.sorting, &self.scroll, self.rows.len())
                     .flex_1()
                     .min_h_0()
                     .track_scroll(&self.scroll)
                     .into_any_element()
+            })
+            .when(!DEFORMER && target.is_some() && !filtered, |element| {
+                element.child(sorting::drop_target(
+                    div().id("mesh-tree-root-drop").test_support().h(px(26.)).flex_shrink_0()
+                        .px_3().flex().items_center().text_xs().text_color(theme.muted_foreground)
+                        .child(t!("editor.tree_drop_root")),
+                    &self.sorting, SortItem::TreeRoot, None, cx,
+                ))
             })
             .into_any_element()
     }

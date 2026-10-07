@@ -105,6 +105,28 @@ impl DocumentSession {
             EditorCommand::CreateParameter(draft) => {
                 self.document.create_parameter(draft).map(|_| ())
             }
+            EditorCommand::ReorderTree {
+                deformer,
+                source,
+                target,
+                position,
+            } => self
+                .document
+                .reorder_tree(deformer, &source, &target, position),
+            EditorCommand::MoveOrganization {
+                source,
+                destination,
+            } => self.document.move_organization(&source, destination),
+            EditorCommand::MoveParameter { id, destination } => {
+                self.document.move_parameter(&id, destination)
+            }
+            EditorCommand::ReorderParameterGroup {
+                source,
+                target,
+                position,
+            } => self
+                .document
+                .reorder_parameter_group(&source, &target, position),
             EditorCommand::SetTool(tool) => {
                 self.tools.set_tool(tool, &mut self.document);
                 return Ok(());

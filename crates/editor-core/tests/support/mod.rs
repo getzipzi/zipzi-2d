@@ -18,6 +18,40 @@ pub fn sample_document_with_two_layers() -> anyhow::Result<(Document, TempDir)> 
     sample_document_with_options(false, true)
 }
 
+pub fn sample_document_with_parts() -> anyhow::Result<(Document, TempDir)> {
+    let (mut document, assets) = sample_document_with_two_layers()?;
+    let meshes: Vec<_> = document.mesh_tree()[0]
+        .children
+        .iter()
+        .map(|node| node.id.clone())
+        .collect();
+    let saved = document.save(&assets.path().join("parts.kasane"))?;
+    let mut session = AuthoringSession::new(
+        &Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::default(), 1.),
+    )?;
+    session.open_project(&saved.manifest, None)?;
+    let id = |value| Uuid::from_u128(value).to_string();
+    session.edit("Parts fixture", None, |edit| {
+        for (value, name, parent) in [
+            (101, "Face", None),
+            (102, "Body", None),
+            (103, "Eyes", Some(101)),
+        ] {
+            edit.create_part(kasane_core::Part {
+                id: id(value),
+                name: name.into(),
+                parent_id: parent.map(id).unwrap_or_default(),
+                ..Default::default()
+            })?;
+        }
+        edit.set_mesh_part(&meshes[0], &id(101))?;
+        edit.set_mesh_part(&meshes[1], &id(103))
+    })?;
+    let saved = session.save_project(&saved.manifest, None)?;
+    Ok((Document::open(&saved.manifest)?, assets))
+}
+
 #[allow(dead_code)]
 pub fn sample_document_with_parameters(count: usize) -> anyhow::Result<(Document, TempDir)> {
     use kasane_core::Parameter;

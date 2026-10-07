@@ -9,6 +9,10 @@ use std::{
 };
 use uuid::Uuid;
 
+#[path = "sorting.rs"]
+mod sorting;
+pub use sorting::{OrganizationDestination, ParameterDestination, ReorderPosition};
+
 #[path = "parameter.rs"]
 mod parameter;
 pub use parameter::{
@@ -279,8 +283,7 @@ impl Document {
                 _ => None,
             })
             .collect();
-        self.session
-            .parameter_ids()
+        sorting::ordered_parameter_ids(self.model())
             .iter()
             .filter_map(|id| {
                 let parameter = self.session.parameter(id)?;
@@ -585,7 +588,26 @@ impl Document {
             &broken,
             &mut nodes,
         );
-        nest_nodes(nodes, parents)
+        let mut tree = nest_nodes(nodes, parents);
+        let order = self.model().hierarchy_order();
+        let ids = if deformer {
+            &order.deformation
+        } else {
+            &order.organization
+        };
+        let ranks: HashMap<_, _> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| (id.as_str(), i))
+            .collect();
+        fn sort(nodes: &mut [TreeNode], ranks: &HashMap<&str, usize>) {
+            nodes.sort_by_key(|node| ranks.get(node.id.as_str()).copied().unwrap_or(usize::MAX));
+            for node in nodes {
+                sort(&mut node.children, ranks);
+            }
+        }
+        sort(&mut tree, &ranks);
+        tree
     }
 
     pub fn selected_layer(&self) -> Option<Layer> {

@@ -10,6 +10,7 @@ mod parameters;
 mod project_import;
 mod properties;
 mod recent_files;
+mod sorting;
 
 use crate::{EditorView, i18n, menus, settings};
 use editor_core::{ConfigStore, Document, Editor};
