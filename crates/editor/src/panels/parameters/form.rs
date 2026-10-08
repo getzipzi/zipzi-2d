@@ -1,10 +1,11 @@
+use super::dialog_session::ParameterDialogSession;
 use super::*;
+use crate::ui::form_dialog::{self, FormDialogOptions, FormDialogState, FormDialogView};
 use editor_core::{NewParameter, ParameterCreateError as Error};
 use gpui_kit::component::{
     IndexPath,
     button::{Button, ButtonVariants},
     checkbox::Checkbox,
-    dialog::{Cancel, Confirm, DialogFooter},
     select::{SearchableVec, Select, SelectEvent, SelectItem, SelectState},
 };
 
@@ -32,66 +33,18 @@ const DEFAULT: usize = 4;
 const PRECISION: usize = 5;
 
 pub(crate) struct ParameterForm {
-    owner: WeakEntity<EditorView>,
-    document_id: DocumentId,
+    session: ParameterDialogSession,
     target: Option<String>,
     initial: NewParameter,
-    version: u64,
-    focus: FocusHandle,
+    dialog: FormDialogState,
+    validation: anyhow::Result<NewParameter>,
+    diagnostics: Vec<editor_core::ParameterExportDiagnostic>,
     inputs: [Entity<InputState>; 6],
     kind: Entity<SelectState<Vec<Choice>>>,
     group: Entity<SelectState<SearchableVec<Choice>>>,
     touched: [bool; 6],
     repeat: bool,
-    completed: bool,
-    submit_error: Option<String>,
     _subscriptions: Vec<Subscription>,
-}
-
-struct ParameterFooter {
-    form: Entity<ParameterForm>,
-    _observe: Subscription,
-}
-
-impl ParameterFooter {
-    fn new(form: Entity<ParameterForm>, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self {
-            _observe: cx.observe(&form, |_, _, cx| cx.notify()),
-            form,
-        })
-    }
-}
-
-impl Render for ParameterFooter {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let form = self.form.read(cx);
-        let disabled = form.completed || form.validated_draft(cx).is_err() || !form.changed(cx);
-        let focus_cancel = form.focus.clone();
-        let focus_confirm = form.focus.clone();
-        div().id("new-parameter-footer").test_support().child(
-            DialogFooter::new()
-                .child(
-                    Button::new("new-parameter-cancel")
-                        .label(t!("project.cancel"))
-                        .on_click(move |_, window, cx| {
-                            focus_cancel.dispatch_action(&Cancel, window, cx)
-                        }),
-                )
-                .child(
-                    Button::new("new-parameter-create")
-                        .primary()
-                        .label(if form.target.is_some() {
-                            t!("parameter.save")
-                        } else {
-                            t!("parameter.create")
-                        })
-                        .disabled(disabled)
-                        .on_click(move |_, window, cx| {
-                            focus_confirm.dispatch_action(&Confirm { secondary: false }, window, cx)
-                        }),
-                ),
-        )
-    }
 }
 
 impl ParametersPanel {
@@ -106,35 +59,10 @@ impl ParametersPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let Some(owner) = self.owner.upgrade() else {
+        let Some(document_id) = self.prepare_parameter_dialog(window, cx) else {
             return;
         };
-        if window.has_active_dialog(cx) {
-            return;
-        }
-        let document_id = {
-            let state = owner.read(cx);
-            let command = state
-                .editor
-                .command(editor_core::CommandId::CreateParameter);
-            if state.modal || !state.editor.command_available(command) {
-                return;
-            }
-            command.document.unwrap()
-        };
-        self.finish_slider_drag(cx);
-        let result = owner.update(cx, |state, cx| {
-            let result = state
-                .editor
-                .execute_for(document_id, EditorCommand::FinishEdit);
-            let ok = result.is_ok();
-            state.complete_edit(result, cx);
-            ok
-        });
-        if !result {
-            return;
-        }
-        window.focus(&self.focus, cx);
+        let owner = self.owner.upgrade().unwrap();
         let doc = owner.read(cx).editor.document().unwrap();
         let initial = if let Some(id) = &target {
             let Ok(draft) = doc.parameter_draft(id) else {
@@ -151,29 +79,29 @@ impl ParametersPanel {
         };
         let editing = target.is_some();
         let form = ParameterForm::new(self.owner.clone(), document_id, target, initial, window, cx);
-        let footer = ParameterFooter::new(form.clone(), cx);
-        let input_focus = form.read(cx).inputs[NAME].read(cx).focus_handle(cx);
-        let on_ok = form.clone();
-        let on_close = form.clone();
-        window.open_dialog(cx, move |dialog, _, _| {
-            let on_ok = on_ok.clone();
-            let on_close = on_close.clone();
-            dialog
-                .title(if editing {
+        let initial_focus = form.read(cx).inputs[NAME].read(cx).focus_handle(cx);
+        form_dialog::open(
+            form,
+            FormDialogOptions {
+                title: if editing {
                     t!("parameter.edit").trim_end_matches('…').to_owned()
                 } else {
                     t!("parameter.new").into_owned()
-                })
-                .w(px(520.))
-                .overlay_closable(false)
-                .child(form.clone())
-                .footer(footer.clone())
-                .on_ok(move |_, window, cx| on_ok.update(cx, |form, cx| form.submit(window, cx)))
-                .on_close(move |_, _, cx| {
-                    on_close.update(cx, |form, _| form.completed = true);
-                })
-        });
-        cx.defer_in(window, move |_, window, cx| window.focus(&input_focus, cx));
+                },
+                submit_label: if editing {
+                    t!("parameter.save")
+                } else {
+                    t!("parameter.create")
+                }
+                .into(),
+                footer_id: "new-parameter-footer",
+                cancel_id: "new-parameter-cancel",
+                submit_id: "new-parameter-create",
+                initial_focus,
+            },
+            window,
+            cx,
+        );
         cx.notify();
     }
 
@@ -216,7 +144,7 @@ impl ParameterForm {
     ) -> Entity<Self> {
         let state = owner.upgrade().unwrap();
         let doc = state.read(cx).editor.document().unwrap();
-        let version = doc.parameter_model_revision();
+        let session = ParameterDialogSession::new(owner.clone(), document_id, cx);
         let mut groups = vec![Choice {
             label: t!("parameter.ungrouped").into(),
             value: String::new(),
@@ -233,7 +161,7 @@ impl ParameterForm {
             .iter()
             .position(|g| Some(g.value.as_str()) == initial.group_id.as_deref())
             .unwrap_or(0);
-        cx.new(|cx| {
+        let form = cx.new(|cx| {
             let inputs = [
                 initial.name.clone(),
                 initial.runtime_id.clone(),
@@ -279,17 +207,14 @@ impl ParameterForm {
                     move |this: &mut Self, _, event: &InputEvent, window, cx| match event {
                         InputEvent::Change | InputEvent::Blur => {
                             this.touched[index] = true;
-                            this.submit_error = None;
+                            if matches!(event, InputEvent::Change) {
+                                this.dialog.edited();
+                                this.refresh(cx);
+                            }
                             cx.notify();
                         }
-                        InputEvent::PressEnter {
-                            secondary: false,
-                            shift: false,
-                        } => {
-                            let focus = this.focus.clone();
-                            window.defer(cx, move |window, cx| {
-                                focus.dispatch_action(&Confirm { secondary: false }, window, cx)
-                            });
+                        InputEvent::PressEnter { .. } => {
+                            form_dialog::input_enter(event, window, cx)
                         }
                         _ => {}
                     },
@@ -298,22 +223,30 @@ impl ParameterForm {
             subscriptions.push(cx.subscribe(
                 &kind,
                 |this: &mut Self, _, _: &SelectEvent<Vec<Choice>>, cx| {
-                    this.submit_error = None;
+                    this.dialog.edited();
+                    this.refresh(cx);
                     cx.notify();
                 },
             ));
             subscriptions.push(cx.subscribe(
                 &group,
                 |this: &mut Self, _, _: &SelectEvent<SearchableVec<Choice>>, cx| {
-                    this.submit_error = None;
+                    this.dialog.edited();
+                    this.refresh(cx);
                     cx.notify();
                 },
             ));
-            subscriptions.push(cx.observe(&state, |_, _, cx| cx.notify()));
+            subscriptions.push(cx.observe(&state, |this: &mut Self, _, cx| {
+                if !this.dialog.closed() && this.session.source_changed(cx) {
+                    this.refresh(cx);
+                    cx.notify();
+                }
+            }));
             Self {
-                owner,
-                document_id,
-                focus: cx.focus_handle(),
+                session,
+                dialog: FormDialogState::new(cx),
+                validation: Ok(initial.clone()),
+                diagnostics: Vec::new(),
                 inputs,
                 kind,
                 group,
@@ -321,12 +254,11 @@ impl ParameterForm {
                 repeat: initial.repeat,
                 target,
                 initial,
-                version,
-                completed: false,
-                submit_error: None,
                 _subscriptions: subscriptions,
             }
-        })
+        });
+        form.update(cx, |form, cx| form.refresh(cx));
+        form
     }
 
     fn draft(&self, cx: &App) -> Result<NewParameter, Error> {
@@ -370,22 +302,11 @@ impl ParameterForm {
     }
 
     fn validated_draft(&self, cx: &App) -> anyhow::Result<NewParameter> {
-        let owner = self
-            .owner
-            .upgrade()
-            .ok_or_else(|| anyhow::anyhow!(t!("parameter.document_changed")))?;
+        self.session.validate(cx)?;
+        let owner = self.session.owner.upgrade().unwrap();
         let state = owner.read(cx);
-        anyhow::ensure!(
-            state.editor.active_id() == Some(self.document_id),
-            t!("parameter.document_changed")
-        );
-        anyhow::ensure!(
-            !state.modal && !state.editor.is_busy() && !state.editor.exiting(),
-            t!("parameter.unavailable")
-        );
-        let draft = self.draft(cx)?;
         let doc = state.editor.document().unwrap();
-        doc.check_parameter_version(self.version)?;
+        let draft = self.draft(cx)?;
         if let Some(id) = &self.target {
             doc.validate_parameter_update(id, &draft)?;
             return Ok(draft);
@@ -398,60 +319,36 @@ impl ParameterForm {
         Ok(draft)
     }
 
-    fn submit(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
-        if self.completed || !self.changed(cx) {
-            return false;
-        }
-        self.touched = [true; 6];
-        let result = self.validated_draft(cx).and_then(|draft| {
-            let owner = self.owner.upgrade().unwrap();
-            owner.update(cx, |state, cx| {
-                state.editor.execute_for(
-                    self.document_id,
-                    if let Some(id) = &self.target {
-                        EditorCommand::UpdateParameter {
-                            id: id.clone(),
-                            draft,
-                            expected_version: self.version,
-                        }
-                    } else {
-                        EditorCommand::CreateParameterChecked {
-                            draft,
-                            expected_version: self.version,
-                        }
-                    },
-                )?;
-                state.edit_error = None;
-                state.redraw(cx);
-                Ok(())
-            })
-        });
-        match result {
-            Ok(()) => {
-                self.completed = true;
-                if let Some(owner) = self.owner.upgrade() {
-                    let panel = owner
-                        .read(cx)
-                        .dock
-                        .as_ref()
-                        .map(|dock| dock.parameters.clone());
-                    if let Some(panel) = panel {
-                        panel.update(cx, |panel, cx| panel.locate_created_parameter(window, cx));
-                    }
-                }
-                true
+    fn command(&self, draft: NewParameter) -> EditorCommand {
+        if let Some(id) = &self.target {
+            EditorCommand::UpdateParameter {
+                id: id.clone(),
+                draft,
+                expected_version: self.session.version,
             }
-            Err(error) => {
-                self.submit_error = Some(error_text(&error));
-                cx.notify();
-                false
+        } else {
+            EditorCommand::CreateParameterChecked {
+                draft,
+                expected_version: self.session.version,
             }
         }
     }
 
+    fn refresh(&mut self, cx: &App) {
+        self.validation = self.validated_draft(cx);
+        self.diagnostics = self
+            .validation
+            .as_ref()
+            .ok()
+            .map(|draft| self.session.diagnostics(&self.command(draft.clone()), cx))
+            .unwrap_or_default();
+        self.dialog
+            .set_validation(self.validation.is_ok(), self.changed(cx));
+    }
+
     fn changed(&self, cx: &App) -> bool {
         self.target.is_none()
-            || self.draft(cx).is_ok_and(|mut draft| {
+            || self.draft(cx).map_or(true, |mut draft| {
                 draft.name = draft.name.trim().into();
                 draft.runtime_id = draft.runtime_id.trim().into();
                 draft != self.initial
@@ -549,38 +446,59 @@ fn error_text(error: &anyhow::Error) -> String {
         .unwrap_or_else(|| super::management::management_error(error))
 }
 
+impl FormDialogView for ParameterForm {
+    fn dialog(&self) -> &FormDialogState {
+        &self.dialog
+    }
+    fn dialog_mut(&mut self) -> &mut FormDialogState {
+        &mut self.dialog
+    }
+    fn error_message(error: &anyhow::Error) -> String {
+        error_text(error)
+    }
+
+    fn submit(&mut self, window: &mut Window, cx: &mut Context<Self>) -> anyhow::Result<()> {
+        self.touched = [true; 6];
+        self.refresh(cx);
+        let draft = self.validated_draft(cx)?;
+        self.session.execute(self.command(draft), cx)?;
+        if let Some(owner) = self.session.owner.upgrade() {
+            let panel = owner
+                .read(cx)
+                .dock
+                .as_ref()
+                .map(|dock| dock.parameters.clone());
+            if let Some(panel) = panel {
+                panel.update(cx, |panel, cx| panel.locate_created_parameter(window, cx));
+            }
+        }
+        Ok(())
+    }
+
+    fn focus_invalid(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(index) = self
+            .validation
+            .as_ref()
+            .err()
+            .and_then(|e| e.downcast_ref::<Error>())
+            .copied()
+            .and_then(error_field)
+        {
+            window.focus(&self.inputs[index].read(cx).focus_handle(cx), cx);
+        }
+    }
+}
+
 impl Render for ParameterForm {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let validation = self.validated_draft(cx);
-        let mut details = Vec::new();
-        if let Ok(draft) = &validation {
-            if let Some(owner) = self.owner.upgrade() {
-                if let Some(doc) = owner.read(cx).editor.document() {
-                    let command = if let Some(id) = &self.target {
-                        EditorCommand::UpdateParameter {
-                            id: id.clone(),
-                            draft: draft.clone(),
-                            expected_version: self.version,
-                        }
-                    } else {
-                        EditorCommand::CreateParameterChecked {
-                            draft: draft.clone(),
-                            expected_version: self.version,
-                        }
-                    };
-                    details = super::management::export_warning_elements(
-                        doc.parameter_export_diagnostics(&command),
-                        cx,
-                    );
-                }
-            }
-        } else if let Some(editor_core::ParameterManagementError::Dependency {
-            references, ..
-        }) = validation.as_ref().err().and_then(|e| e.downcast_ref())
+        let validation = &self.validation;
+        let mut details = super::management::export_warning_elements(self.diagnostics.clone(), cx);
+        if let Some(editor_core::ParameterManagementError::Dependency { references, .. }) =
+            validation.as_ref().err().and_then(|e| e.downcast_ref())
         {
             details = super::management::reference_elements(
-                self.owner.clone(),
-                self.document_id,
+                self.session.owner.clone(),
+                self.session.document,
                 references,
                 cx,
             );
@@ -604,7 +522,7 @@ impl Render for ParameterForm {
                 "new-parameter-form"
             })
             .test_support()
-            .track_focus(&self.focus)
+            .track_focus(&self.dialog.focus)
             .flex()
             .flex_col()
             .gap_2()
@@ -662,7 +580,7 @@ impl Render for ParameterForm {
                     ),
             )
             .children(details)
-            .when_some(self.submit_error.clone().or(global_error), |body, error| {
+            .when_some(self.dialog.error.clone().or(global_error), |body, error| {
                 body.child(
                     div()
                         .id("new-parameter-error")
@@ -680,38 +598,23 @@ impl Render for ParameterForm {
                         .child(t!("parameter.id_hint")),
                 )
             })
-            .when(
-                super::management::needs_reload(&self.owner, self.document_id, self.version, cx),
-                |body| {
-                    body.child(
-                        Button::new("parameter-reload")
-                            .ghost()
-                            .label(t!("parameter.reload"))
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                let owner = this.owner.clone();
-                                let document = this.document_id;
-                                let target = this.target.clone();
-                                let group = this.initial.group_id.clone();
-                                window.defer(cx, move |window, cx| {
-                                    let Some(owner) = owner.upgrade() else {
-                                        return;
-                                    };
-                                    if owner.read(cx).editor.active_id() != Some(document) {
-                                        return;
-                                    }
-                                    let panel =
-                                        owner.read(cx).dock.as_ref().map(|d| d.parameters.clone());
-                                    if let Some(panel) = panel {
-                                        window.close_dialog(cx);
-                                        panel.update(cx, |p, cx| {
-                                            p.open_parameter_dialog(target, group, window, cx)
-                                        });
-                                    }
+            .when(self.session.needs_reload(cx), |body| {
+                body.child(
+                    Button::new("parameter-reload")
+                        .ghost()
+                        .label(t!("parameter.reload"))
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            let action = this
+                                .target
+                                .clone()
+                                .map(ParameterAction::Edit)
+                                .unwrap_or_else(|| {
+                                    ParameterAction::Create(this.initial.group_id.clone())
                                 });
-                            })),
-                    )
-                },
-            )
+                            this.session.reload(action, window, cx);
+                        })),
+                )
+            })
             .child(
                 Checkbox::new("new-parameter-repeat")
                     .small()
@@ -720,7 +623,8 @@ impl Render for ParameterForm {
                     .checked(self.repeat)
                     .on_click(cx.listener(|this, checked: &bool, _, cx| {
                         this.repeat = *checked;
-                        this.submit_error = None;
+                        this.dialog.edited();
+                        this.refresh(cx);
                         cx.notify();
                     })),
             )

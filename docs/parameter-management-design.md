@@ -148,7 +148,7 @@
 
 ## 实现与验证记录
 
-参数创建与编辑使用 `form.rs`，分组表单、删除预览和行菜单使用 `management.rs`。新增 `parameter_group.rs` 和 `parameter_export.rs` 分别负责组事务和候选导出诊断。`NewParameter` 与既有创建命令保持兼容；界面创建使用携带版本基线的 `CreateParameterChecked`，共享草稿和校验通过 `ParameterDraft`、`ParameterValidationError` 暴露。
+参数创建与编辑使用 `form.rs`，分组表单使用 `group_form.rs`，删除预览使用 `delete_confirmation.rs`，行菜单及操作路由使用 `management.rs`。新增 `parameter_group.rs` 和 `parameter_export.rs` 分别负责组事务和候选导出诊断。`NewParameter` 与既有创建命令保持兼容；界面创建使用携带版本基线的 `CreateParameterChecked`，共享草稿和校验通过 `ParameterDraft`、`ParameterValidationError` 暴露。
 
 范围变动的预览协调在 editor-core 完成，无需改动 SDK。分组解散先迁移成员，再通过 `erase_object` 移除组，保留 SDK 对象生命周期行为。重新载入按钮仅在文档版本变化后出现。导出错误按已有和本次新增区分，原生项目仍可保存。
 
@@ -156,3 +156,19 @@
 
 
 2026-10-08 调整：嵌套限制仅作用于 UI，移除父组选择和新增子组入口；核心继续支持嵌套创建与父组更新。补齐已有子组拖回顶层的排序和“未分组”落点，并验证撤销、保存及核心嵌套能力不受影响。
+
+
+### Editor 内的表单对话框复用
+
+`crates/editor/src/ui/form_dialog.rs` 组合 Kit 的 Dialog、DialogFooter 与按钮，提供 `FormDialogView`、`FormDialogState` 和统一的打开入口。业务表单继续持有强类型草稿和控件，不引入动态字段描述或表单 schema。
+
+- 公共层管理 Editing → Submitting → Closed 生命周期。失败回到 Editing 并保留草稿与错误，成功或取消后拒绝再次提交。按钮与单行输入 Enter 走同一入口；下拉选择和多行输入不接入该 Enter 桥接。
+- 业务表单通过 `set_validation` 提供校验结果与是否允许提交修改。创建和删除确认无需修改草稿，编辑按标准化后的草稿比较。每次执行命令前仍重新校验，不依赖缓存授权修改。
+- 初始输入焦点由调用方指定。删除确认聚焦取消，取消按钮使用 Kit 的 BaseButton 保留调用方焦点句柄。失败由表单定位具体错误字段；Esc 和取消按钮使用 Dialog 的取消流程，遮罩点击不关闭。现阶段沿用直接取消，不额外提示丢弃修改。
+- `ParameterDialogSession` 属于参数管理层，负责文档身份、模型版本、可用状态、命令执行和显式重新加载。公共 UI 模块不依赖 DocumentId、参数模型或 EditorCommand。
+- 校验与导出诊断在输入变化、源文档/模型版本/可用状态变化时更新。正文和 footer 读取同一结果，渲染不执行候选模型导出。普通重绘不触发重复诊断。
+- `ParameterGroupForm` 只处理组的创建和编辑；`DeleteConfirmation` 没有输入实体和 dirty draft，独立展示删除影响和引用。参数删除策略、组嵌套能力及撤销事务保持原有业务规则。
+
+接入其他表单时，实现 `FormDialogView` 的状态访问、提交及错误格式化，在输入/数据源变化后更新校验状态并通知视图，再调用 `form_dialog::open`。当前提交接口同步执行，与 EditorCommand 一致；异步保存应另行设计取消和结果归属协议。
+
+重构验证：新增 4 项 UI 回归，覆盖错误字段焦点与重复 Enter、标准化后无变化的编辑、删除确认的取消焦点与 Enter、源数据变化后的缓存失效和重新加载。完整工作区测试通过 267 项、忽略 3 项；格式与 diff 检查通过，真实 Metal 截图通过，并检查参数编辑、组创建和组删除弹窗。

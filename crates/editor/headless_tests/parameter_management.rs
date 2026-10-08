@@ -184,3 +184,147 @@ fn group_cancel_does_not_create_history(cx: &mut TestAppContext) {
         assert_eq!(d.history_lengths().0, 0);
     });
 }
+
+#[gpui_kit::test]
+fn group_enter_reveals_invalid_field_then_submits_once(cx: &mut TestAppContext) {
+    let h = blank(cx);
+    click(&h, "new-parameter-group-action", cx);
+    fill(&h, "parameter-group-name", "   ", cx);
+    fill(&h, "parameter-group-id", "MyGroup", cx);
+    cx.update_window(h.window, |_, window, cx| window.press("enter", cx))
+        .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.has_active_dialog(cx));
+        assert_eq!(window.find("parameter-group-name").focused(), Some(true));
+        assert_eq!(window.find("parameter-group-id").value(), Some("MyGroup"));
+        window.click("parameter-management-submit", cx);
+    })
+    .unwrap();
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (0, 0))
+    });
+    fill(&h, "parameter-group-name", "Recovered", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.press("enter", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |v, _| {
+        let doc = v.editor.document().unwrap();
+        assert_eq!(doc.parameter_groups()[0].name, "Recovered");
+        assert_eq!(doc.history_lengths(), (1, 0));
+    });
+}
+
+#[gpui_kit::test]
+fn unchanged_parameter_and_group_edits_do_not_submit(cx: &mut TestAppContext) {
+    let mut doc = Document::new_blank().unwrap();
+    doc.create_parameter(NewParameter {
+        name: "Original".into(),
+        ..Default::default()
+    })
+    .unwrap();
+    let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
+    cx.update(|cx| cx.set_reduce_motion(true));
+    click(&h, "property-edit-parameter", cx);
+    fill(&h, "new-parameter-name", "  Original  ", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click("new-parameter-create", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (1, 0))
+    });
+    click(&h, "new-parameter-cancel", cx);
+    click(&h, "new-parameter-group-action", cx);
+    fill(&h, "parameter-group-name", "Group", cx);
+    click(&h, "parameter-management-submit", cx);
+    click(&h, "property-edit-parameter", cx);
+    fill(&h, "parameter-group-name", "  Group  ", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click("parameter-management-submit", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (2, 0))
+    });
+    cx.update_window(h.window, |_, window, cx| window.press("escape", cx))
+        .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        assert!(!window.has_active_dialog(cx))
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn delete_confirmation_focuses_cancel_and_contains_no_form_fields(cx: &mut TestAppContext) {
+    let mut doc = Document::new_blank().unwrap();
+    doc.create_parameter(NewParameter::default()).unwrap();
+    let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
+    cx.update(|cx| cx.set_reduce_motion(true));
+    click(&h, "property-delete-parameter", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("parameter-group-name").is_none());
+        assert_eq!(
+            window.find("parameter-management-cancel").focused(),
+            Some(true)
+        );
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        assert!(!window.has_active_dialog(cx))
+    })
+    .unwrap();
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().parameters().len(), 1);
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (1, 0));
+    });
+}
+
+#[gpui_kit::test]
+fn group_source_change_disables_cached_validation_until_reload(cx: &mut TestAppContext) {
+    let h = blank(cx);
+    click(&h, "new-parameter-group-action", cx);
+    fill(&h, "parameter-group-name", "Preserved draft", cx);
+    cx.update_window(h.window, |_, _, cx| {
+        h.view.update(cx, |v, cx| {
+            v.editor
+                .execute(EditorCommand::CreateParameter(NewParameter::default()))
+                .unwrap();
+            v.redraw(cx);
+        });
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("parameter-group-name").value(),
+            Some("Preserved draft")
+        );
+        window.click("parameter-management-submit", cx);
+        assert!(window.try_find("parameter-management-reload").is_some());
+    })
+    .unwrap();
+    click(&h, "parameter-management-reload", cx);
+    fill(&h, "parameter-group-name", "Reloaded", cx);
+    click(&h, "parameter-management-submit", cx);
+    h.view.read_with(cx, |v, _| {
+        let doc = v.editor.document().unwrap();
+        assert_eq!(doc.parameter_groups()[0].name, "Reloaded");
+        assert_eq!(doc.history_lengths(), (2, 0));
+    });
+}

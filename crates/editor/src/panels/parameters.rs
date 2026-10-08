@@ -1,4 +1,7 @@
+mod delete_confirmation;
+mod dialog_session;
 mod form;
+mod group_form;
 mod management;
 pub(crate) use management::ParameterAction;
 mod grouping;

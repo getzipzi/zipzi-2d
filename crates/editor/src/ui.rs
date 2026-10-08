@@ -1,3 +1,5 @@
+pub(crate) mod form_dialog;
+
 use super::*;
 use gpui_kit::component::{ActiveTheme, WindowExt};
 
