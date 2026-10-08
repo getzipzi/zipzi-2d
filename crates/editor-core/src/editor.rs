@@ -5,6 +5,32 @@ use std::path::PathBuf;
 /// UI-independent editing intent. Model changes always go through Document and the SDK.
 pub enum EditorCommand {
     CreateParameter(crate::NewParameter),
+    CreateParameterChecked {
+        draft: crate::ParameterDraft,
+        expected_version: u64,
+    },
+    UpdateParameter {
+        id: String,
+        draft: crate::ParameterDraft,
+        expected_version: u64,
+    },
+    DeleteParameter {
+        id: String,
+        expected_version: u64,
+    },
+    CreateParameterGroup {
+        draft: crate::ParameterGroupDraft,
+        expected_version: u64,
+    },
+    UpdateParameterGroup {
+        id: String,
+        draft: crate::ParameterGroupDraft,
+        expected_version: u64,
+    },
+    DeleteParameterGroup {
+        id: String,
+        expected_version: u64,
+    },
     ReorderTree {
         deformer: bool,
         source: crate::ObjectRef,
@@ -19,6 +45,7 @@ pub enum EditorCommand {
         id: String,
         destination: crate::ParameterDestination,
     },
+    MoveParameterGroupToRoot(String),
     ReorderParameterGroup {
         source: String,
         target: String,

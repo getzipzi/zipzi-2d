@@ -1,4 +1,6 @@
-mod create;
+mod form;
+mod management;
+pub(crate) use management::ParameterAction;
 mod grouping;
 mod track;
 use grouping::{ListRow, ParameterLayout};
@@ -636,14 +638,26 @@ impl ParametersPanel {
     fn toolbar(&self, create_disabled: bool, cx: &mut Context<Self>) -> PanelToolbar {
         let new_label = t!("parameter.new").into_owned();
         let on_create = cx.listener(|this, _, window, cx| this.open_create_dialog(window, cx));
-        PanelToolbar::new("parameters-panel-toolbar").action(move |_| {
-            Button::new("new-parameter")
-                .icon(IconName::Plus)
-                .accessibility_label(new_label.clone())
-                .tooltip(new_label)
-                .disabled(create_disabled)
-                .on_click(on_create)
-        })
+        let on_group = cx.listener(|this, _, window, cx| {
+            this.open_management(ParameterAction::CreateGroup, window, cx)
+        });
+        PanelToolbar::new("parameters-panel-toolbar")
+            .action(move |_| {
+                Button::new("new-parameter")
+                    .icon(IconName::Plus)
+                    .accessibility_label(new_label.clone())
+                    .tooltip(new_label)
+                    .disabled(create_disabled)
+                    .on_click(on_create)
+            })
+            .action(move |_| {
+                Button::new("new-parameter-group-action")
+                    .icon(IconName::Folder)
+                    .accessibility_label(t!("parameter.new_group"))
+                    .tooltip(t!("parameter.new_group"))
+                    .disabled(create_disabled)
+                    .on_click(on_group)
+            })
     }
 
     fn key_marks_help(&self, cx: &App) -> AnyElement {
@@ -710,6 +724,14 @@ impl ParametersPanel {
                 });
             }
         });
+        let mut menu_actions = vec![ParameterAction::Create(id.clone())];
+        if let Some(id) = &id {
+            menu_actions.extend([
+                ParameterAction::EditGroup(id.clone()),
+                ParameterAction::DeleteGroup(id.clone()),
+            ]);
+        }
+        let menu_panel = cx.weak_entity();
         let sort_item = SortItem::Group(id.clone());
         div()
             .id(SharedString::from(format!("parameter-group-{key}")))
@@ -838,6 +860,7 @@ impl ParametersPanel {
                         }),
                 )
             })
+            .map(|element| management::row_menu(element, menu_panel, document_id, menu_actions))
             .into_any_element()
     }
     fn binding_summary(&mut self, cx: &mut Context<Self>) -> AnyElement {
@@ -1307,6 +1330,17 @@ impl Render for ParameterRowView {
                             ),
                     ),
             )
+            .map(|element| {
+                management::row_menu(
+                    element,
+                    self.panel.clone(),
+                    document_id,
+                    vec![
+                        ParameterAction::Edit(parameter_id.clone()),
+                        ParameterAction::Delete(parameter_id),
+                    ],
+                )
+            })
     }
 }
 

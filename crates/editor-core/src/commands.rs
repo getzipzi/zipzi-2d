@@ -32,6 +32,16 @@ pub enum CommandId {
     Redo,
     #[serde(rename = "parameter.create")]
     CreateParameter,
+    #[serde(rename = "parameter.edit")]
+    EditParameter,
+    #[serde(rename = "parameter.delete")]
+    DeleteParameter,
+    #[serde(rename = "parameter-group.create")]
+    CreateParameterGroup,
+    #[serde(rename = "parameter-group.edit")]
+    EditParameterGroup,
+    #[serde(rename = "parameter-group.delete")]
+    DeleteParameterGroup,
     #[serde(rename = "property.commit")]
     CommitProperty,
     #[serde(rename = "property.cancel")]
@@ -127,6 +137,29 @@ specs![
     (Undo, "menu.undo", Document, false, ["cmd-z"]),
     (Redo, "menu.redo", Document, false, ["cmd-shift-z"]),
     (CreateParameter, "parameter.new", Document, false, []),
+    (EditParameter, "parameter.edit", Document, false, []),
+    (DeleteParameter, "parameter.delete", Document, false, []),
+    (
+        CreateParameterGroup,
+        "parameter.new_group",
+        Document,
+        false,
+        []
+    ),
+    (
+        EditParameterGroup,
+        "parameter.edit_group",
+        Document,
+        false,
+        []
+    ),
+    (
+        DeleteParameterGroup,
+        "parameter.delete_group",
+        Document,
+        false,
+        []
+    ),
     (
         CommitProperty,
         "menu.commit_property",
@@ -213,7 +246,24 @@ impl Editor {
             | BlendShapes | Glue | Motions | Expressions | Physics | Pose | Resources
             | ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
-            CreateParameter => target && !self.is_busy() && !self.exiting(),
+            CreateParameter | CreateParameterGroup => target && !self.is_busy() && !self.exiting(),
+            EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {
+                target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && self.document().is_some_and(|doc| {
+                        doc.context().inspected.as_ref().is_some_and(|object| {
+                            object.kind
+                                == if matches!(command.id, EditParameter | DeleteParameter) {
+                                    crate::ObjectKind::Parameter
+                                } else {
+                                    crate::ObjectKind::ParameterGroup
+                                }
+                                && doc.object_index().get(object).is_some()
+                                && doc.ensure_editable(std::slice::from_ref(object)).is_ok()
+                        })
+                    })
+            }
             Undo => target && self.can_undo(),
             Redo => target && self.can_redo(),
             CommitProperty | CancelProperty => {

@@ -315,12 +315,19 @@ impl Editor {
         if matches!(
             &command,
             EditorCommand::CreateParameter(_)
+                | EditorCommand::CreateParameterChecked { .. }
+                | EditorCommand::UpdateParameter { .. }
+                | EditorCommand::DeleteParameter { .. }
+                | EditorCommand::CreateParameterGroup { .. }
+                | EditorCommand::UpdateParameterGroup { .. }
+                | EditorCommand::DeleteParameterGroup { .. }
                 | EditorCommand::SetObjectsLocked { .. }
                 | EditorCommand::SelectCanvasObjects(_)
                 | EditorCommand::ReorderTree { .. }
                 | EditorCommand::MoveOrganization { .. }
                 | EditorCommand::MoveParameter { .. }
                 | EditorCommand::ReorderParameterGroup { .. }
+                | EditorCommand::MoveParameterGroupToRoot(_)
         ) {
             ensure!(
                 self.active == Some(id) && !self.exiting(),

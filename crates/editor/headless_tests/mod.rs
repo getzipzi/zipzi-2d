@@ -6,6 +6,7 @@ mod hierarchy;
 mod panel_toolbar;
 mod parameter_creation;
 mod parameter_groups;
+mod parameter_management;
 mod parameters;
 mod project_import;
 mod properties;

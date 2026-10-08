@@ -282,11 +282,11 @@ impl Document {
         Ok(())
     }
 
-    pub fn move_parameter(
-        &mut self,
+    pub(super) fn parameter_move_info(
+        &self,
         source: &str,
         destination: ParameterDestination,
-    ) -> Result<()> {
+    ) -> Result<kasane_core::document::DisplayInfo> {
         let parameters = self.parameters();
         let parameter = parameters
             .iter()
@@ -338,7 +338,7 @@ impl Document {
                 })
                 .collect();
             if original_members == next_members {
-                return Ok(());
+                return Ok(self.model().display_info().clone());
             }
         }
         let mut info = self.model().display_info().clone();
@@ -378,6 +378,18 @@ impl Document {
         }
         entries.extend(ordered);
         info.parameters = Some(entries);
+        Ok(info)
+    }
+
+    pub fn move_parameter(
+        &mut self,
+        source: &str,
+        destination: ParameterDestination,
+    ) -> Result<()> {
+        let info = self.parameter_move_info(source, destination)?;
+        if &info == self.model().display_info() {
+            return Ok(());
+        }
         self.finish_edit()?;
         self.session.edit("Move parameter", None, |edit| {
             edit.replace_display_info(info)
@@ -406,21 +418,25 @@ impl Document {
             .find(|group| group.id == target)
             .ok_or_else(|| anyhow!("Target group no longer exists"))?;
         ensure!(
-            from.parent_id == to.parent_id,
-            "Only sibling groups can be reordered"
+            to.parent_id.is_none() || from.parent_id == to.parent_id,
+            "Groups can only be reordered among siblings or moved to the top level"
         );
+        let source_parent = from.parent_id.clone();
+        let destination_parent = to.parent_id.clone();
+        let moving_to_root = source_parent != destination_parent;
         let original: Vec<_> = groups.iter().map(|group| group.id.clone()).collect();
         let mut ids = original.clone();
         relocate(&mut ids, &source.to_owned(), &target.to_owned(), position)?;
         let siblings: HashSet<_> = groups
             .iter()
-            .filter(|group| group.parent_id == from.parent_id)
+            .filter(|group| group.parent_id == source_parent)
             .map(|group| &group.id)
             .collect();
-        if original
-            .iter()
-            .filter(|id| siblings.contains(id))
-            .eq(ids.iter().filter(|id| siblings.contains(id)))
+        if !moving_to_root
+            && original
+                .iter()
+                .filter(|id| siblings.contains(id))
+                .eq(ids.iter().filter(|id| siblings.contains(id)))
         {
             return Ok(());
         }
@@ -430,6 +446,13 @@ impl Document {
             .map(|(i, id)| (id.as_str(), i))
             .collect();
         groups.sort_by_key(|group| ranks[group.id.as_str()]);
+        if moving_to_root {
+            groups
+                .iter_mut()
+                .find(|group| group.id == source)
+                .unwrap()
+                .parent_id = None;
+        }
         self.finish_edit()?;
         self.session
             .edit("Reorder parameter groups", None, |edit| {

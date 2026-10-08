@@ -20,8 +20,16 @@ pub use sorting::{OrganizationDestination, ParameterDestination, ReorderPosition
 #[path = "parameter.rs"]
 mod parameter;
 pub use parameter::{
-    NewParameter, ParameterCreateError, ParameterGroupOption, ParameterGroupValue,
+    NewParameter, ParameterCreateError, ParameterDraft, ParameterGroupOption, ParameterGroupValue,
+    ParameterManagementError, ParameterValidationError,
 };
+
+#[path = "parameter_group.rs"]
+mod parameter_group;
+pub use parameter_group::ParameterGroupDraft;
+#[path = "parameter_export.rs"]
+mod parameter_export;
+pub use parameter_export::ParameterExportDiagnostic;
 
 #[derive(Clone, Debug)]
 pub struct Layer {
@@ -637,6 +645,21 @@ impl Document {
             "This property is read only"
         );
         self.finish_edit()?;
+        if object.kind == K::Parameter {
+            let mut draft = self.parameter_draft(&object.id)?;
+            let mut fields = serde_json::to_value(self.model().get_parameter(&object.id).unwrap())?;
+            fields[field] = value;
+            let p: kasane_core::Parameter = serde_json::from_value(fields)?;
+            draft.name = p.name;
+            draft.runtime_id = p.runtime_id;
+            draft.minimum = p.minimum;
+            draft.maximum = p.maximum;
+            draft.default_value = p.default_value;
+            draft.decimal_places = p.decimal_places;
+            draft.kind = p.kind;
+            draft.repeat = p.repeat;
+            return self.update_parameter(&object.id, draft, self.parameter_model_revision());
+        }
         let model = self.model();
         macro_rules! update {
             ($get:ident, $ty:ty, $replace:ident) => {{
@@ -1065,6 +1088,7 @@ impl Document {
         let before = self.evaluation_revision();
         let locks = self.explicit_locks().clone();
         self.session.undo()?;
+        self.reconcile_parameter_preview()?;
         self.after_history(before != self.evaluation_revision() || locks == *self.explicit_locks());
         Ok(())
     }
@@ -1074,6 +1098,7 @@ impl Document {
         let before = self.evaluation_revision();
         let locks = self.explicit_locks().clone();
         self.session.redo()?;
+        self.reconcile_parameter_preview()?;
         self.after_history(before != self.evaluation_revision() || locks == *self.explicit_locks());
         Ok(())
     }

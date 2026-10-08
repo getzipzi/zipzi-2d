@@ -28,6 +28,14 @@ cargo run --locked -p component-playground
 - Mouse: the wheel zooms around the pointer; middle-button dragging pans.
 - Ctrl/Cmd + trackpad scrolling also zooms. H or held Space enables left-button panning.
 
+## Parameter management
+
+Use the Parameters toolbar to create a parameter or group. Right-click a parameter or group to edit or delete it; group menus also create parameters in place. The Properties panel provides edit and delete actions for the inspected parameter or group.
+
+The UI currently creates only top-level groups and does not expose a parent-group selector. Existing nested groups can be dragged before or after a top-level group, or onto the Ungrouped header to move them to the end of the top level. The core model still supports nested groups.
+
+Parameters with references cannot be deleted until those references are removed. Deleting a group keeps its contents and moves its direct parameters and child groups to the parent. Each operation supports undo and redo. See [parameter management](docs/parameter-management-design.md) for editing and persistence rules.
+
 ## Develop
 
 Install `watchexec`, then rebuild and restart automatically when source files change:

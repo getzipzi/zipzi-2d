@@ -1,7 +1,8 @@
 use crate::{EditorView, t};
 use editor_core::EditorCommand;
 use gpui_kit::component::{
-    ActiveTheme, WindowExt,
+    ActiveTheme, Disableable, WindowExt,
+    button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
 };
 use gpui_kit::{prelude::*, *};
@@ -121,6 +122,54 @@ impl Render for PropertiesPanel {
                 info.and_then(|info| info.diagnostic.clone()),
                 |this, diagnostic| this.child(diagnostic),
             );
+        if matches!(
+            inspected.kind,
+            editor_core::ObjectKind::Parameter | editor_core::ObjectKind::ParameterGroup
+        ) {
+            use super::parameters::ParameterAction;
+            let actions = if inspected.kind == editor_core::ObjectKind::Parameter {
+                [
+                    ParameterAction::Edit(inspected.id.clone()),
+                    ParameterAction::Delete(inspected.id.clone()),
+                ]
+            } else {
+                [
+                    ParameterAction::EditGroup(inspected.id.clone()),
+                    ParameterAction::DeleteGroup(inspected.id.clone()),
+                ]
+            };
+            for (i, action) in actions.into_iter().enumerate() {
+                let owner = self.owner.clone();
+                body = body.child(
+                    Button::new(if i == 0 {
+                        "property-edit-parameter"
+                    } else {
+                        "property-delete-parameter"
+                    })
+                    .ghost()
+                    .label(action.label())
+                    .disabled(
+                        state.modal
+                            || state.editor.is_busy()
+                            || doc
+                                .ensure_editable(std::slice::from_ref(&inspected))
+                                .is_err(),
+                    )
+                    .on_click(move |_, window, cx| {
+                        let Some(owner) = owner.upgrade() else {
+                            return;
+                        };
+                        if owner.read(cx).editor.active_id() != Some(document) {
+                            return;
+                        }
+                        let panel = owner.read(cx).dock.as_ref().map(|d| d.parameters.clone());
+                        if let Some(panel) = panel {
+                            panel.update(cx, |p, cx| p.open_management(action.clone(), window, cx));
+                        }
+                    }),
+                );
+            }
+        }
         for (field, value) in rows {
             body = body.child(
                 div()

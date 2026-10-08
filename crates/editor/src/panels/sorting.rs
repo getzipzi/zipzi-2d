@@ -31,6 +31,12 @@ fn drop_position(
 ) -> DropPosition {
     if matches!(
         (source, target),
+        (SortItem::Group(Some(_)), SortItem::Group(None))
+    ) {
+        return DropPosition::Before;
+    }
+    if matches!(
+        (source, target),
         (SortItem::Parameter(_), SortItem::Group(_))
             | (
                 SortItem::Tree {
@@ -252,8 +258,10 @@ impl SortState {
             ) => true,
             (SortItem::Parameter(_), SortItem::Parameter(_) | SortItem::Group(_)) => true,
             (SortItem::Group(Some(_)), SortItem::Group(Some(_))) => {
-                self.parents.get(&drag.source) == self.parents.get(target)
+                self.parents.get(target).is_some_and(String::is_empty)
+                    || self.parents.get(&drag.source) == self.parents.get(target)
             }
+            (SortItem::Group(Some(_)), SortItem::Group(None)) => true,
             _ => false,
         }
     }
@@ -364,6 +372,9 @@ impl SortState {
                 id: id.clone(),
                 destination: ParameterDestination::Group(group.clone()),
             },
+            (SortItem::Group(Some(source)), SortItem::Group(None)) => {
+                EditorCommand::MoveParameterGroupToRoot(source.clone())
+            }
             (SortItem::Group(Some(source)), SortItem::Group(Some(target))) => {
                 EditorCommand::ReorderParameterGroup {
                     source: source.clone(),

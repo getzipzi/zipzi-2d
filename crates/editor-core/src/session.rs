@@ -115,6 +115,40 @@ impl DocumentSession {
             EditorCommand::CreateParameter(draft) => {
                 self.document.create_parameter(draft).map(|_| ())
             }
+            EditorCommand::CreateParameterChecked {
+                draft,
+                expected_version,
+            } => {
+                self.document.check_parameter_version(expected_version)?;
+                self.document.create_parameter(draft).map(|_| ())
+            }
+            EditorCommand::UpdateParameter {
+                id,
+                draft,
+                expected_version,
+            } => self.document.update_parameter(&id, draft, expected_version),
+            EditorCommand::DeleteParameter {
+                id,
+                expected_version,
+            } => self.document.delete_parameter(&id, expected_version),
+            EditorCommand::CreateParameterGroup {
+                draft,
+                expected_version,
+            } => self
+                .document
+                .create_parameter_group(draft, expected_version)
+                .map(|_| ()),
+            EditorCommand::UpdateParameterGroup {
+                id,
+                draft,
+                expected_version,
+            } => self
+                .document
+                .update_parameter_group(&id, draft, expected_version),
+            EditorCommand::DeleteParameterGroup {
+                id,
+                expected_version,
+            } => self.document.delete_parameter_group(&id, expected_version),
             EditorCommand::ReorderTree {
                 deformer,
                 source,
@@ -129,6 +163,9 @@ impl DocumentSession {
             } => self.document.move_organization(&source, destination),
             EditorCommand::MoveParameter { id, destination } => {
                 self.document.move_parameter(&id, destination)
+            }
+            EditorCommand::MoveParameterGroupToRoot(id) => {
+                self.document.move_parameter_group_to_root(&id)
             }
             EditorCommand::ReorderParameterGroup {
                 source,

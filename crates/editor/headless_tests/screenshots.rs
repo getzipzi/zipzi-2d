@@ -3,6 +3,7 @@
 
 use crate::{EditorView, i18n, menus, settings, theme};
 use editor_core::{ConfigStore, Editor};
+use gpui_kit::component::WindowExt;
 use gpui_kit::{
     AnyWindowHandle, AppContext as _, Bounds, Entity, HeadlessAppContext, WindowBounds,
     WindowOptions, assets::AllAssets, point, px, size, test::TestWindowExt,
@@ -387,6 +388,39 @@ pub(super) fn run() -> anyhow::Result<()> {
     harness.cx.update_window(harness.window, |_, window, cx| {
         window.click("new-parameter-cancel", cx);
     })?;
+    for (action, filename) in [
+        (
+            crate::panels::parameters::ParameterAction::Edit(uuid::Uuid::from_u128(3).to_string()),
+            "edit-parameter-zh-light.png",
+        ),
+        (
+            crate::panels::parameters::ParameterAction::CreateGroup,
+            "new-parameter-group-zh-light.png",
+        ),
+        (
+            crate::panels::parameters::ParameterAction::DeleteGroup(
+                uuid::Uuid::from_u128(101).to_string(),
+            ),
+            "delete-parameter-group-zh-light.png",
+        ),
+    ] {
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            let panel = harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .parameters
+                .clone();
+            panel.update(cx, |panel, cx| panel.open_management(action, window, cx));
+        })?;
+        let popup = harness.capture()?;
+        save(&harness.dialog_image(&popup)?, &directory, filename)?;
+        harness
+            .cx
+            .update_window(harness.window, |_, window, cx| window.close_dialog(cx))?;
+    }
     println!("Headless editor screenshots passed (real Metal, no native window).");
     Ok(())
 }

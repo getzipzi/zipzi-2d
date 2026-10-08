@@ -421,14 +421,39 @@ impl EditorView {
                 CommandId::SaveAs => self.save(true, window, cx),
                 CommandId::Close => self.close_active(window, cx),
                 CommandId::Quit => self.close(window, cx),
-                CommandId::CreateParameter => {
-                    if let Some(panel) = self.dock.as_ref().map(|dock| dock.parameters.clone()) {
+                CommandId::CreateParameter
+                | CommandId::EditParameter
+                | CommandId::DeleteParameter
+                | CommandId::CreateParameterGroup
+                | CommandId::EditParameterGroup
+                | CommandId::DeleteParameterGroup => {
+                    use crate::panels::parameters::ParameterAction;
+                    let target = self
+                        .editor
+                        .document()
+                        .and_then(|d| d.context().inspected.as_ref())
+                        .map(|r| r.id.clone());
+                    let action = match command.id {
+                        CommandId::CreateParameter => Some(ParameterAction::Create(None)),
+                        CommandId::CreateParameterGroup => Some(ParameterAction::CreateGroup),
+                        CommandId::EditParameter => target.map(ParameterAction::Edit),
+                        CommandId::DeleteParameter => target.map(ParameterAction::Delete),
+                        CommandId::EditParameterGroup => target.map(ParameterAction::EditGroup),
+                        CommandId::DeleteParameterGroup => target.map(ParameterAction::DeleteGroup),
+                        _ => None,
+                    };
+                    if let (Some(action), Some(panel)) = (
+                        action,
+                        self.dock.as_ref().map(|dock| dock.parameters.clone()),
+                    ) {
                         let owner = cx.entity().downgrade();
                         window.defer(cx, move |window, cx| {
                             if owner.upgrade().is_some_and(|owner| {
                                 owner.read(cx).editor.active_id() == command.document
                             }) {
-                                panel.update(cx, |panel, cx| panel.open_create_dialog(window, cx));
+                                panel.update(cx, |panel, cx| {
+                                    panel.open_management(action, window, cx)
+                                });
                             }
                         });
                     }

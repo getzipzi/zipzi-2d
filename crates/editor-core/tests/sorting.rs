@@ -138,7 +138,7 @@ fn invalid_moves_and_noops_preserve_redo_and_document_identity() -> anyhow::Resu
     );
     assert!(
         document
-            .reorder_parameter_group(&id(102), &id(103), ReorderPosition::Before)
+            .reorder_parameter_group(&id(103), &id(102), ReorderPosition::Before)
             .is_err()
     );
     document.move_parameter(

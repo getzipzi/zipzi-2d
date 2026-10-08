@@ -675,3 +675,89 @@ fn tree_visibility_controls_do_not_start_sorting(cx: &mut TestAppContext) {
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn legacy_child_groups_can_be_dragged_to_root_without_creating_nesting(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.simulate_window_resize(harness.window, size(px(1100.), px(1400.)));
+    // A top-level group cannot become a sibling inside an existing nested group.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let from = window.find(format!("parameter-group-{}", id(103))).bounds();
+        let to = window.find(format!("parameter-group-{}", id(102))).bounds();
+        window.drag(
+            point(from.left() + px(90.), from.center().y),
+            point(to.left() + px(90.), to.top() + px(2.)),
+            cx,
+        );
+        harness.view.read_with(cx, |v, _| {
+            assert_eq!(v.editor.document().unwrap().history_lengths().0, 0)
+        });
+    })
+    .unwrap();
+    for target in [
+        format!("parameter-group-{}", id(101)),
+        "parameter-group-ungrouped".into(),
+    ] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            let from = window.find(format!("parameter-group-{}", id(102))).bounds();
+            let to = window.find(target.clone()).bounds();
+            window.drag(
+                point(from.left() + px(90.), from.center().y),
+                point(to.left() + px(90.), to.top() + px(2.)),
+                cx,
+            );
+        })
+        .unwrap();
+        harness.view.read_with(cx, |v, _| {
+            assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+            let doc = v.editor.document().unwrap();
+            assert_eq!(doc.parameter_group_draft(&id(102)).unwrap().parent_id, None);
+            assert_eq!(doc.parameter_draft(&id(3)).unwrap().group_id, Some(id(102)));
+            assert_eq!(doc.history_lengths().0, 1);
+        });
+        cx.update_window(harness.window, |_, _, cx| {
+            harness.view.update(cx, |v, cx| {
+                let result = v.editor.execute(editor_core::EditorCommand::Undo);
+                v.complete_edit(result, cx);
+            })
+        })
+        .unwrap();
+        harness.view.read_with(cx, |v, _| {
+            assert_eq!(
+                v.editor
+                    .document()
+                    .unwrap()
+                    .parameter_group_draft(&id(102))
+                    .unwrap()
+                    .parent_id,
+                Some(id(101))
+            )
+        });
+    }
+    // The root drop target also moves an already top-level group to the end.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let from = window.find(format!("parameter-group-{}", id(101))).bounds();
+        let to = window.find("parameter-group-ungrouped").bounds();
+        window.drag(
+            point(from.left() + px(90.), from.center().y),
+            point(to.left() + px(90.), to.top() + px(2.)),
+            cx,
+        );
+    })
+    .unwrap();
+    harness.view.read_with(cx, |v, _| {
+        let groups = v.editor.document().unwrap().parameter_groups();
+        assert_eq!(
+            groups.iter().rfind(|g| g.parent_id.is_none()).unwrap().id,
+            id(101)
+        );
+        assert_eq!(
+            groups.iter().find(|g| g.id == id(102)).unwrap().parent_id,
+            Some(id(101))
+        );
+    });
+}
