@@ -25,7 +25,7 @@ impl Render for EditorView {
         self.refresh_menus(modal, window, cx);
         let theme = cx.theme();
 
-        self.menu_actions(modal, cx)
+        self.action_handlers(modal, cx)
             .size_full()
             .flex()
             .flex_col()

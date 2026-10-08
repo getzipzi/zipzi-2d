@@ -39,6 +39,46 @@ impl ParameterAction {
     }
 }
 
+impl EditorView {
+    /// Resolve the inspected target before deferring the parameter management UI.
+    pub(crate) fn handle_parameter_command(
+        &mut self,
+        command: editor_core::Command,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        use editor_core::CommandId;
+        let target = self
+            .editor
+            .document()
+            .and_then(|d| d.context().inspected.as_ref())
+            .map(|r| r.id.clone());
+        let action = match command.id {
+            CommandId::CreateParameter => Some(ParameterAction::Create(None)),
+            CommandId::CreateParameterGroup => Some(ParameterAction::CreateGroup),
+            CommandId::EditParameter => target.map(ParameterAction::Edit),
+            CommandId::DeleteParameter => target.map(ParameterAction::Delete),
+            CommandId::EditParameterGroup => target.map(ParameterAction::EditGroup),
+            CommandId::DeleteParameterGroup => target.map(ParameterAction::DeleteGroup),
+            _ => None,
+        };
+        if let (Some(action), Some(panel)) = (
+            action,
+            self.dock.as_ref().map(|dock| dock.parameters.clone()),
+        ) {
+            let owner = cx.entity().downgrade();
+            window.defer(cx, move |window, cx| {
+                if owner
+                    .upgrade()
+                    .is_some_and(|owner| owner.read(cx).editor.active_id() == command.document)
+                {
+                    panel.update(cx, |panel, cx| panel.open_management(action, window, cx));
+                }
+            });
+        }
+    }
+}
+
 impl ParametersPanel {
     pub(crate) fn open_management(
         &mut self,

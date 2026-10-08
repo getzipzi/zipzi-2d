@@ -1,5 +1,5 @@
 use super::setup;
-use crate::menus::{ClearRecent, OpenRecent};
+use crate::actions::{ClearRecent, OpenRecent};
 use crate::settings::Settings;
 use editor_core::RecentFiles;
 use gpui_kit::{AppContext as _, TestAppContext};

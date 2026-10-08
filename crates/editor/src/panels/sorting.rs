@@ -607,7 +607,7 @@ pub(super) fn panel_actions(element: Stateful<Div>, state: &Entity<SortState>) -
                 cx.stop_propagation();
             }
         })
-        .capture_action(move |action: &crate::menus::RunCommand, window, cx| {
+        .capture_action(move |action: &crate::actions::RunCommand, window, cx| {
             if action.id == editor_core::CommandId::CancelProperty
                 && state.read(cx).active.is_some()
             {

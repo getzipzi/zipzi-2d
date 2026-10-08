@@ -13,7 +13,7 @@ mod properties;
 mod recent_files;
 mod sorting;
 
-use crate::{EditorView, i18n, menus, settings};
+use crate::{EditorView, actions, i18n, settings};
 use editor_core::{ConfigStore, Document, Editor};
 use gpui_kit::{
     AnyWindowHandle, AppContext as _, Bounds, Entity, TestAppContext, WindowBounds, WindowOptions,
@@ -49,7 +49,7 @@ fn setup_with_document(
             ConfigStore::new(config_dir.path()),
             cx.keyboard_mapper().as_ref(),
         ));
-        menus::init(cx);
+        actions::init(cx);
         crate::theme::init(cx);
     });
 

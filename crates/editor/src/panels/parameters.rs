@@ -1200,7 +1200,7 @@ impl Render for ParameterRowView {
                 )
             })
             .capture_action(
-                cx.listener(|this, action: &crate::menus::RunCommand, window, cx| {
+                cx.listener(|this, action: &crate::actions::RunCommand, window, cx| {
                     use editor_core::CommandId;
                     if this.input.read(cx).focus_handle(cx).is_focused(window)
                         && matches!(

@@ -1,14 +1,17 @@
 rust_i18n::i18n!("locales", fallback = "en");
 
+mod actions;
 mod benchmark;
 mod canvas;
 mod canvas_overlay;
+mod commands;
 mod dev_session;
 mod docking;
 #[cfg(test)]
 #[path = "../headless_tests/mod.rs"]
 mod headless_tests;
 mod i18n;
+mod keybindings;
 mod menus;
 mod mesh_edges;
 mod mesh_thumbnails;
@@ -257,7 +260,7 @@ fn main() {
             let settings = settings::Settings::load(cx);
             i18n::activate(settings.language.as_deref());
             cx.set_global(settings);
-            menus::init(cx);
+            actions::init(cx);
             theme::init(cx);
             cx.on_window_closed(|cx, _| {
                 if cx.windows().is_empty() {

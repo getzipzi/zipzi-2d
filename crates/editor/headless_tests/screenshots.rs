@@ -1,7 +1,7 @@
 //! Pixel sensitivity checks for the real editor, including its asynchronous Metal preview.
 #![cfg(target_os = "macos")]
 
-use crate::{EditorView, i18n, menus, settings, theme};
+use crate::{EditorView, actions, i18n, settings, theme};
 use editor_core::{ConfigStore, Editor};
 use gpui_kit::component::WindowExt;
 use gpui_kit::{
@@ -44,7 +44,7 @@ impl Harness {
                 ConfigStore::new(config.path()),
                 cx.keyboard_mapper().as_ref(),
             ));
-            menus::init(cx);
+            actions::init(cx);
             theme::init(cx);
         });
         let (window, view) = cx.update(|cx| {
