@@ -57,7 +57,18 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
         .id;
     assert_eq!(editor.active_tool(), ToolId::Select);
     assert_eq!(editor.overlay().vertices.len(), 4);
-    click(&mut editor, CanvasPoint { x: 256., y: 256. }, false)?;
+    let point = CanvasPoint { x: 256., y: 256. };
+    let selection = editor.document().unwrap().context().selections.clone();
+    editor.canvas_input(CanvasInput::Down {
+        point,
+        shift: false,
+    })?;
+    assert_eq!(editor.document().unwrap().context().selections, selection);
+    assert!(editor.overlay().marquee.is_none());
+    // A small release displacement is still a click.
+    editor.canvas_input(CanvasInput::Up {
+        point: CanvasPoint { x: 258., y: 256. },
+    })?;
     assert_eq!(editor.document().unwrap().selected_id(), Some(top.as_str()));
     assert_eq!(
         editor
@@ -76,6 +87,106 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
     assert_eq!(editor.evaluation_count(), before);
     click(&mut editor, CanvasPoint { x: 2., y: 2. }, false)?;
     assert!(editor.document().unwrap().context().selections.is_empty());
+    Ok(())
+}
+
+#[test]
+fn surface_press_cancellation_preserves_selection_and_components() -> anyhow::Result<()> {
+    for lost_button in [false, true] {
+        let (mut editor, _dir) = setup()?;
+        let vertex = editor.overlay().vertices[0].position;
+        click(&mut editor, vertex, false)?;
+        let selection = editor.document().unwrap().context().selections.clone();
+        let components = editor.document().unwrap().selected_vertex_positions();
+        assert!(!components.is_empty());
+        let point = CanvasPoint { x: 256., y: 256. };
+        editor.canvas_input(CanvasInput::Down {
+            point,
+            shift: false,
+        })?;
+        if lost_button {
+            editor.canvas_input(CanvasInput::Move {
+                point,
+                left_down: false,
+            })?;
+        } else {
+            editor.canvas_input(CanvasInput::Cancel)?;
+        }
+        editor.canvas_input(CanvasInput::Up { point })?;
+        assert_eq!(editor.document().unwrap().context().selections, selection);
+        assert_eq!(
+            editor.document().unwrap().selected_vertex_positions(),
+            components
+        );
+        assert!(!editor.gesture_active());
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
+    Ok(())
+}
+
+#[test]
+fn object_marquee_can_start_on_an_unselected_surface() -> anyhow::Result<()> {
+    for move_event in [false, true] {
+        let (mut editor, _dir) = setup()?;
+        editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+        let point = CanvasPoint { x: 256., y: 256. };
+        let end = CanvasPoint { x: 505., y: 505. };
+        editor.canvas_input(CanvasInput::Down {
+            point,
+            shift: false,
+        })?;
+        assert!(editor.document().unwrap().context().selections.is_empty());
+        if move_event {
+            editor.canvas_input(CanvasInput::Move {
+                point: end,
+                left_down: true,
+            })?;
+            assert_eq!(editor.overlay().marquee, Some((point, end)));
+            assert!(editor.document().unwrap().context().selections.is_empty());
+        }
+        editor.canvas_input(CanvasInput::Up { point: end })?;
+        // This rectangle contains only part of each mesh, so it selects neither.
+        assert!(editor.document().unwrap().context().selections.is_empty());
+        assert!(editor.overlay().marquee.is_none());
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        assert!(!editor.document().unwrap().has_pending_edit());
+    }
+    Ok(())
+}
+
+#[test]
+fn surface_marquee_uses_original_component_selection_and_shift() -> anyhow::Result<()> {
+    for shift in [false, true] {
+        let (mut editor, _dir) = setup()?;
+        let vertex = editor.overlay().vertices[0].position;
+        click(&mut editor, vertex, false)?;
+        let selection = editor.document().unwrap().context().selections.clone();
+        let point = CanvasPoint { x: 256., y: 256. };
+        editor.canvas_input(CanvasInput::Down { point, shift })?;
+        editor.canvas_input(CanvasInput::Move {
+            point: CanvasPoint { x: 280., y: 280. },
+            left_down: true,
+        })?;
+        assert!(editor.overlay().marquee.is_some());
+        // Returning to the press position cannot turn the gesture into a click.
+        editor.canvas_input(CanvasInput::Move {
+            point,
+            left_down: true,
+        })?;
+        assert_eq!(editor.overlay().marquee, Some((point, point)));
+        editor.canvas_input(CanvasInput::Up { point })?;
+        assert_eq!(editor.document().unwrap().context().selections, selection);
+        assert_eq!(
+            editor
+                .overlay()
+                .vertices
+                .iter()
+                .filter(|v| v.selected)
+                .count(),
+            usize::from(shift)
+        );
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
     Ok(())
 }
 #[test]

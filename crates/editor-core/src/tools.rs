@@ -99,6 +99,7 @@ struct Press {
     shift: bool,
     selection: Vec<ObjectRef>,
     current: CanvasPoint,
+    dragged: bool,
     edit: Option<Vec<ControlEdit>>,
     last: Option<ControlChange>,
 }
@@ -231,16 +232,6 @@ impl ToolController {
                             self.components.push(c.clone());
                         }
                     }
-                    Some(HitTarget::Object(r)) => {
-                        let mut selected = if shift { selection.clone() } else { Vec::new() };
-                        if shift && selected.contains(r) {
-                            selected.retain(|v| v != r);
-                        } else {
-                            selected.push(r.clone());
-                        }
-                        document.select_objects(selected)?;
-                        self.components.clear();
-                    }
                     _ => {}
                 }
                 if self.active != ToolId::Hand {
@@ -254,6 +245,7 @@ impl ToolController {
                         shift,
                         selection,
                         current: point,
+                        dragged: false,
                         edit: None,
                         last: None,
                     });
@@ -287,8 +279,27 @@ impl ToolController {
                 let press = self.press.take().unwrap();
                 if press.edit.is_some() {
                     document.finish_edit()?;
-                } else if press.target.is_none() {
-                    let rectangle = crate::picking::distance2(press.point, point) >= 9.;
+                } else if let Some(HitTarget::Object(object)) = &press.target
+                    && !press.dragged
+                {
+                    // Surface hits are candidates until release: dragging from
+                    // an unselected surface must still allow a marquee.
+                    let mut selection = if press.shift {
+                        press.selection.clone()
+                    } else {
+                        Vec::new()
+                    };
+                    if press.shift && selection.contains(object) {
+                        selection.retain(|r| r != object);
+                    } else {
+                        selection.push(object.clone());
+                    }
+                    document.select_objects(selection)?;
+                    self.components.clear();
+                } else if press.target.is_none()
+                    || matches!(press.target, Some(HitTarget::Object(_)))
+                {
+                    let rectangle = press.dragged;
                     if !rectangle && !press.component_surface {
                         // A true hit-test miss clears selection, even with Shift.
                         // Selected surfaces are retained for component selection.
@@ -415,6 +426,7 @@ impl ToolController {
             return Ok(false);
         };
         press.current = point;
+        press.dragged |= crate::picking::distance2(press.point, point) >= 9.;
         let Some(target) = press
             .target
             .as_ref()
@@ -811,7 +823,7 @@ impl ToolController {
             }
         }
         if let Some(p) = &self.press {
-            if p.target.is_none() && crate::picking::distance2(p.point, p.current) >= 9. {
+            if p.dragged && (p.target.is_none() || matches!(p.target, Some(HitTarget::Object(_)))) {
                 out.marquee = Some((p.point, p.current));
             }
             out.interaction_label = p.last.map(|change| match change {
