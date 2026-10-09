@@ -30,7 +30,7 @@ impl CanvasScene {
         c: &ControlGeometry,
         t: ViewportTransform,
     ) -> Option<DeformerGizmo> {
-        if c.kind == ControlKind::Glue || !c.enabled {
+        if c.kind == ControlKind::Glue || !c.enabled || !c.visible {
             return None;
         }
         let points = self.control_points(c, t);

@@ -36,6 +36,14 @@ The UI currently creates only top-level groups and does not expose a parent-grou
 
 Parameters with references cannot be deleted until those references are removed. Deleting a group keeps its contents and moves its direct parameters and child groups to the parent. Each operation supports undo and redo. See [parameter management](docs/parameter-management-design.md) for editing and persistence rules.
 
+## Tree visibility
+
+Use the eye beside a Mesh, Part, Warp Deformer, Rotation Deformer, or Offscreen, including while locked. A Deformer's eye hides only its own editor controls; its deformation and its children's controls and artwork remain active. Hiding a Part hides its contents; hiding an Offscreen hides its composited group. Child objects keep their own visibility settings.
+
+Part locks are inherited through the organization hierarchy. Deformer locks protect only the Deformer itself, so its child Deformers and Meshes remain editable unless separately locked or protected by their Part. Both trees display the same object state.
+
+These edits support undo, redo, and saving. Hidden Offscreens require project format v8; hidden Deformer controls use separate editor metadata in v9. Runtime `Transform.enabled` remains independent of the eye control, and existing runtime-disabled transforms retain their authored state.
+
 ## Develop
 
 Install `watchexec`, then rebuild and restart automatically when source files change:

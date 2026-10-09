@@ -214,6 +214,112 @@ fn visibility_eye_updates_its_row_without_changing_selection(cx: &mut TestAppCon
 }
 
 #[gpui_kit::test]
+fn visibility_eyes_toggle_all_scene_object_kinds_without_changing_selection(
+    cx: &mut TestAppContext,
+) {
+    use editor_core::{ObjectKind, ObjectRef};
+    let (doc, assets) = super::document_fixture::sample_document_with_scene_objects().unwrap();
+    let mesh = doc.layers()[0].id.clone();
+    let selection = doc.context().selections.clone();
+    let harness = super::setup_with_document(cx, doc, assets);
+    for target in [
+        ObjectRef::new(ObjectKind::Part, uuid::Uuid::from_u128(101).to_string()),
+        ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(501).to_string()),
+        ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(502).to_string()),
+        ObjectRef::new(
+            ObjectKind::Offscreen,
+            uuid::Uuid::from_u128(601).to_string(),
+        ),
+        ObjectRef::new(ObjectKind::Mesh, mesh),
+    ] {
+        cx.update_window(harness.window, |_, window, cx| {
+            for expected in [false, true] {
+                window.click(format!("mesh-vis-{}", target.id), cx);
+                harness.view.read_with(cx, |view, _| {
+                    assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+                    let doc = view.editor.document().unwrap();
+                    if target.kind == ObjectKind::Deformer {
+                        assert_eq!(doc.deformer_controls_visible(&target.id), expected);
+                        assert_eq!(doc.object_index().get(&target).unwrap().enabled, Some(true));
+                    } else {
+                        assert_eq!(
+                            doc.object_index().get(&target).unwrap().enabled,
+                            Some(expected)
+                        );
+                    }
+                    assert_eq!(doc.context().selections, selection);
+                });
+            }
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
+fn deformer_tree_controls_do_not_hide_or_lock_children_and_sync_with_part_tree(
+    cx: &mut TestAppContext,
+) {
+    use editor_core::{EditorCommand, ObjectKind, ObjectRef};
+    let (doc, assets) = super::document_fixture::sample_document_with_scene_objects().unwrap();
+    let parent = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(501).to_string());
+    let child = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(502).to_string());
+    let mesh = ObjectRef::new(ObjectKind::Mesh, doc.layers()[1].id.clone());
+    let harness = super::setup_with_document(cx, doc, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            let dock = view.dock.as_ref().unwrap();
+            let panel = gpui_kit::component::dock::PanelId::from(dock.deformer_tree.entity_id());
+            dock.area
+                .update(cx, |area, cx| area.select_panel(panel, window, cx));
+        });
+        window.render_frame(cx);
+        window.hover(format!("deformer-item-RotationDeformer:{}", parent.id), cx);
+        window.click(format!("deformer-lock-{}", parent.id), cx);
+        window.click(format!("deformer-vis-{}", parent.id), cx);
+        harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert!(doc.lock_index().state(&parent).explicit);
+            assert!(!doc.deformer_controls_visible(&parent.id));
+            assert!(doc.deformer_controls_visible(&child.id));
+            assert!(!doc.lock_index().is_locked(&child));
+            assert!(!doc.lock_index().is_locked(&mesh));
+            assert!(doc.layers().iter().all(|layer| layer.visible));
+        });
+        window.hover(format!("deformer-item-WarpDeformer:{}", child.id), cx);
+        window.click(format!("deformer-lock-{}", child.id), cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(
+                view.editor
+                    .document()
+                    .unwrap()
+                    .lock_index()
+                    .state(&child)
+                    .explicit
+            );
+        });
+        harness.view.update(cx, |view, cx| {
+            view.editor.execute(EditorCommand::Undo).unwrap();
+            let dock = view.dock.as_ref().unwrap();
+            let panel = gpui_kit::component::dock::PanelId::from(dock.mesh_tree.entity_id());
+            dock.area
+                .update(cx, |area, cx| area.select_panel(panel, window, cx));
+            cx.notify();
+        });
+        window.render_frame(cx);
+        window.click(format!("mesh-vis-{}", parent.id), cx);
+        window.click(format!("mesh-lock-{}", parent.id), cx);
+        harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert!(view.edit_error.is_none());
+            assert!(doc.deformer_controls_visible(&parent.id));
+            assert!(!doc.lock_index().is_locked(&parent));
+            assert!(!doc.lock_index().is_locked(&child));
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn default_layout_has_independent_document_panels(cx: &mut TestAppContext) {
     let harness = setup(cx);
     harness.view.read_with(cx, |view, cx| {

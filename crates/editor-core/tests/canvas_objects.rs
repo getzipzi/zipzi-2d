@@ -530,6 +530,7 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
         points: vec![ModelPoint { x: 10., y: 10. }, ModelPoint { x: 20., y: 10. }],
         edges: vec![(0, 1)].into(),
         enabled: true,
+        visible: true,
     });
     assert_eq!(
         scene.hit(

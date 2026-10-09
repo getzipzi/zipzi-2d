@@ -533,9 +533,13 @@ impl Document {
                 _ => continue,
             };
             let mut node = TreeNode::new(x.reference.id.clone(), x.name.clone(), kind);
+            node.visible = if x.reference.kind == K::Deformer {
+                Some(self.deformer_controls_visible(&x.reference.id))
+            } else {
+                x.enabled
+            };
             if kind == TreeNodeKind::Mesh {
                 node.triangles = self.model().get_mesh(&node.id).map(|m| m.triangles.len());
-                node.visible = x.enabled;
             }
             references.push(x.reference.clone());
             nodes.push(node);
@@ -1064,19 +1068,77 @@ impl Document {
     }
 
     pub fn set_layer_visible(&mut self, id: &str, visible: bool) -> Result<()> {
+        self.set_object_visible(&crate::ObjectRef::new(crate::ObjectKind::Mesh, id), visible)
+    }
+
+    /// The eye on a deformer controls its own editor handles, not its runtime effect.
+    pub fn deformer_controls_visible(&self, id: &str) -> bool {
+        !self
+            .model()
+            .deformer_display()
+            .hidden
+            .iter()
+            .any(|hidden| hidden == id)
+    }
+
+    /// Visibility remains editable under a lock and changes only the object's own flag.
+    pub fn set_object_visible(&mut self, object: &crate::ObjectRef, visible: bool) -> Result<()> {
+        use crate::ObjectKind as K;
         self.finish_edit()?;
-        let mesh = self
-            .session
-            .mesh(id)
-            .ok_or_else(|| anyhow!("Layer not found: {id}"))?;
-        if mesh.enabled == visible {
-            return Ok(());
+        macro_rules! update {
+            ($get:ident, $replace:ident) => {{
+                let mut next = self
+                    .model()
+                    .$get(&object.id)
+                    .cloned()
+                    .ok_or_else(|| anyhow!("Object no longer exists: {}", object.id))?;
+                if next.enabled == visible {
+                    return Ok(());
+                }
+                next.enabled = visible;
+                self.session
+                    .edit("Change object visibility", None, |edit| edit.$replace(next))?;
+            }};
         }
-        let mut properties = MeshProperties::from(&mesh);
-        properties.enabled = visible;
-        self.session.edit("Change layer visibility", None, |edit| {
-            edit.update_mesh_properties(&mesh.id, properties)
-        })?;
+        match object.kind {
+            K::Part => update!(get_part, replace_part),
+            K::Deformer => {
+                ensure!(
+                    self.model().get_transform(&object.id).is_some(),
+                    "Deformer no longer exists"
+                );
+                if self.deformer_controls_visible(&object.id) == visible {
+                    return Ok(());
+                }
+                let mut display = self.model().deformer_display().clone();
+                if visible {
+                    display.hidden.retain(|id| id != &object.id);
+                } else {
+                    display.hidden.push(object.id.clone());
+                }
+                self.session
+                    .edit("Change deformer control visibility", None, |edit| {
+                        edit.replace_deformer_display(display)
+                    })?;
+            }
+            K::Offscreen => update!(get_offscreen, replace_offscreen),
+            K::Mesh => {
+                let mesh = self
+                    .session
+                    .mesh(&object.id)
+                    .ok_or_else(|| anyhow!("Layer not found: {}", object.id))?;
+                if mesh.enabled == visible {
+                    return Ok(());
+                }
+                let mut properties = MeshProperties::from(&mesh);
+                properties.enabled = visible;
+                self.session
+                    .edit("Change object visibility", None, |edit| {
+                        edit.update_mesh_properties(&mesh.id, properties)
+                    })?;
+            }
+            _ => anyhow::bail!("Object does not support visibility"),
+        }
         self.session.drain_events();
         self.pristine_blank = false;
         self.projection_revision += 1;

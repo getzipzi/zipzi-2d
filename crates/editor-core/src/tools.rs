@@ -139,7 +139,10 @@ impl ToolController {
                 && document.context().selections.contains(&c.object)
                 && match c.object.kind {
                     ObjectKind::Mesh => model.get_mesh(&c.object.id).is_some(),
-                    ObjectKind::Deformer => model.get_transform(&c.object.id).is_some(),
+                    ObjectKind::Deformer => {
+                        model.get_transform(&c.object.id).is_some()
+                            && document.deformer_controls_visible(&c.object.id)
+                    }
                     _ => false,
                 }
         });
@@ -300,7 +303,7 @@ impl ToolController {
                                         .scene
                                         .controls
                                         .iter()
-                                        .any(|c| c.object == *r && c.enabled),
+                                        .any(|c| c.object == *r && c.enabled && c.visible),
                                     _ => false,
                                 }
                         })
@@ -313,6 +316,7 @@ impl ToolController {
                                 if c.kind != ControlKind::Warp
                                     || locks.is_locked(&c.object)
                                     || !c.enabled
+                                    || !c.visible
                                     || !press.selection.contains(&c.object)
                                 {
                                     continue;

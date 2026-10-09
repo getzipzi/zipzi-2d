@@ -53,9 +53,9 @@ fn explicit_and_inherited_locks_survive_save_and_do_not_cross_hierarchies() -> a
     assert_eq!(doc.history_lengths(), (2, 0));
     let state = doc.lock_index().state(&mesh).clone();
     assert!(state.explicit);
-    assert_eq!(state.inherited, vec![deformer.clone()]);
+    assert!(state.inherited.is_empty());
     doc.set_objects_locked(&[mesh.clone()], false)?;
-    assert!(doc.lock_index().is_locked(&mesh));
+    assert!(!doc.lock_index().is_locked(&mesh));
     doc.set_objects_locked(&[part.clone()], false)?;
     assert!(doc.lock_index().is_locked(&deformer));
     let saved = doc.save(&dir.path().join("locked.kasane"))?;
@@ -68,6 +68,45 @@ fn explicit_and_inherited_locks_survive_save_and_do_not_cross_hierarchies() -> a
     assert!(doc.lock_index().state(&part).explicit);
     Ok(())
 }
+#[test]
+fn deformer_lock_only_protects_itself_but_part_locks_still_protect_members() -> anyhow::Result<()> {
+    let (mut doc, dir) = support::sample_document_with_scene_objects()?;
+    let parent = object(ObjectKind::Deformer, 501);
+    let child = object(ObjectKind::Deformer, 502);
+    let mesh = ObjectRef::new(ObjectKind::Mesh, doc.layers()[1].id.clone());
+    doc.set_objects_locked(&[parent.clone()], true)?;
+    assert!(doc.ensure_editable(&[parent.clone()]).is_err());
+    doc.ensure_editable(&[child.clone(), mesh.clone()])?;
+    let adjustment = DeformerAdjustment {
+        translation: ModelPoint { x: 3., y: 2. },
+        angle: 0.,
+        scale: 1.,
+    };
+    assert!(doc.adjust_deformer(&parent, adjustment).is_err());
+    doc.adjust_deformer(&child, adjustment)?;
+    doc.set_object_property(&child, "name", serde_json::json!("Editable child"))?;
+    doc.select_object(mesh.clone())?;
+    doc.preview_name("Editable mesh")?;
+    doc.finish_edit()?;
+    doc.set_objects_locked(&[child.clone()], true)?;
+    assert!(doc.lock_index().is_locked(&child));
+    assert!(!doc.lock_index().is_locked(&mesh));
+    doc.undo()?;
+    assert!(!doc.lock_index().is_locked(&child));
+    doc.redo()?;
+    assert!(doc.lock_index().state(&child).explicit);
+    let saved = doc.save(&dir.path().join("local-locks.kasane"))?;
+    let reopened = Document::open(&saved.manifest)?;
+    assert!(reopened.lock_index().is_locked(&parent));
+    assert!(reopened.lock_index().is_locked(&child));
+    assert!(!reopened.lock_index().is_locked(&mesh));
+    let part = object(ObjectKind::Part, 101);
+    doc.set_objects_locked(&[part.clone()], true)?;
+    assert!(doc.ensure_editable(&[mesh.clone()]).is_err());
+    assert_eq!(doc.lock_index().state(&mesh).inherited, vec![part]);
+    Ok(())
+}
+
 #[test]
 fn locked_selection_is_inspectable_but_direct_writes_and_structure_moves_fail() -> anyhow::Result<()>
 {

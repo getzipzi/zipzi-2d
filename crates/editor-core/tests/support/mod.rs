@@ -53,6 +53,57 @@ pub fn sample_document_with_parts() -> anyhow::Result<(Document, TempDir)> {
 }
 
 #[allow(dead_code)]
+pub fn sample_document_with_scene_objects() -> anyhow::Result<(Document, TempDir)> {
+    use kasane_core::{Offscreen, Transform, TransformData, WarpTransform};
+    let (mut document, assets) = sample_document_with_parts()?;
+    let saved = document.save(&assets.path().join("scene.kasane"))?;
+    let mut session = AuthoringSession::new(
+        &Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::default(), 1.),
+    )?;
+    session.open_project(&saved.manifest, None)?;
+    let meshes = session.mesh_ids().to_vec();
+    let id = |n| Uuid::from_u128(n).to_string();
+    session.edit("Scene objects fixture", None, |edit| {
+        edit.create_transform(Transform {
+            id: id(501),
+            name: "Rotation".into(),
+            part_id: Some(id(101).into()),
+            ..Default::default()
+        })?;
+        edit.create_transform(Transform {
+            id: id(502),
+            name: "Warp".into(),
+            part_id: Some(id(103).into()),
+            parent_id: Some(id(501).into()),
+            data: TransformData::Warp(WarpTransform {
+                bezier: None,
+                rows: 1,
+                columns: 1,
+                quad: false,
+                points: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(256., 0.),
+                    Vec2::new(0., 256.),
+                    Vec2::new(256., 256.),
+                ],
+            }),
+            ..Default::default()
+        })?;
+        edit.set_deform_parent(&meshes[0], &id(501))?;
+        edit.set_deform_parent(&meshes[1], &id(502))?;
+        edit.create_offscreen(Offscreen {
+            id: id(601),
+            name: "Face composite".into(),
+            part_id: id(101),
+            ..Default::default()
+        })
+    })?;
+    session.save_project(&saved.manifest, None)?;
+    Ok((Document::open(&saved.manifest)?, assets))
+}
+
+#[allow(dead_code)]
 pub fn sample_document_with_parameters(count: usize) -> anyhow::Result<(Document, TempDir)> {
     use kasane_core::Parameter;
 

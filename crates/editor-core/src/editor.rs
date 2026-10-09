@@ -95,6 +95,10 @@ pub enum EditorCommand {
         layer_id: String,
         visible: bool,
     },
+    SetObjectVisible {
+        object: crate::ObjectRef,
+        visible: bool,
+    },
     FinishEdit,
     CancelEdit,
     Undo,

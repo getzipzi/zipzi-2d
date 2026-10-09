@@ -457,6 +457,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                         let is_mesh = node.kind == TreeNodeKind::Mesh;
                         let thumbnail = if is_mesh { images.next().flatten() } else { None };
                         let reference = node.reference();
+                        let visibility_object = reference.clone();
                         let lock_object = reference.clone();
                         let lock_owner = this.owner.clone();
                         let locked = reference.as_ref().is_some_and(|r| owner.read(cx).editor.document().is_some_and(|d| d.lock_index().is_locked(r)));
@@ -617,8 +618,9 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                 if owner.modal || window.has_active_dialog(cx) || owner.editor.is_busy() || owner.editor.active_id() != Some(target) {
                                                     return;
                                                 }
-                                                let result = owner.editor.execute_for(target, EditorCommand::SetLayerVisible {
-                                                    layer_id: id_for_vis.clone(),
+                                                let Some(object) = visibility_object.clone() else { return; };
+                                                let result = owner.editor.execute_for(target, EditorCommand::SetObjectVisible {
+                                                    object,
                                                     visible: !visible,
                                                 });
                                                 owner.complete_edit(result, cx);

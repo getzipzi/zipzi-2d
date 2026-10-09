@@ -23,7 +23,6 @@ impl LockState {
 pub struct LockIndex {
     states: HashMap<ObjectRef, LockState>,
     organization: HashMap<ObjectRef, Vec<ObjectRef>>,
-    deformation: HashMap<ObjectRef, Vec<ObjectRef>>,
 }
 impl LockIndex {
     pub fn state(&self, object: &ObjectRef) -> &LockState {
@@ -42,36 +41,31 @@ impl LockIndex {
 
     fn build(model: &kasane_core::Document) -> Self {
         let mut organization = HashMap::new();
-        let mut deformation = HashMap::new();
-        let mut add = |kind, id: &str, part: &str, deformer: &str| {
+        let mut add = |kind, id: &str, part: &str| {
             let object = ObjectRef::new(kind, id);
             organization.insert(
                 object.clone(),
                 (!part.is_empty()).then(|| ObjectRef::new(K::Part, part)),
             );
-            deformation.insert(
-                object,
-                (!deformer.is_empty()).then(|| ObjectRef::new(K::Deformer, deformer)),
-            );
         };
         for id in model.part_order() {
             if let Some(p) = model.get_part(id) {
-                add(K::Part, id, &p.parent_id, "");
+                add(K::Part, id, &p.parent_id);
             }
         }
         for id in model.transform_order() {
             if let Some(t) = model.get_transform(id) {
-                add(K::Deformer, id, t.part(), t.parent());
+                add(K::Deformer, id, t.part());
             }
         }
         for id in model.mesh_order() {
             if let Some(m) = model.get_mesh(id) {
-                add(K::Mesh, id, &m.part_id, &m.deformer_id);
+                add(K::Mesh, id, &m.part_id);
             }
         }
         for id in model.offscreen_order() {
             if let Some(o) = model.get_offscreen(id) {
-                add(K::Offscreen, id, &o.part_id, "");
+                add(K::Offscreen, id, &o.part_id);
             }
         }
         fn ancestors(
@@ -94,10 +88,8 @@ impl LockIndex {
         let mut index = Self::default();
         for object in organization.keys() {
             let parts = ancestors(object, &organization);
-            let deformers = ancestors(object, &deformation);
             let inherited = parts
                 .iter()
-                .chain(&deformers)
                 .filter(|r| explicit.contains(&r.id))
                 .cloned()
                 .collect();
@@ -109,7 +101,6 @@ impl LockIndex {
                 },
             );
             index.organization.insert(object.clone(), parts);
-            index.deformation.insert(object.clone(), deformers);
         }
         index
     }
@@ -149,13 +140,12 @@ impl Document {
     }
     pub(crate) fn ensure_tree_editable(&self, object: &ObjectRef, deformer: bool) -> Result<()> {
         self.ensure_editable(std::slice::from_ref(object))?;
+        // Reordering a deformer does not edit the objects it deforms.
+        if deformer {
+            return Ok(());
+        }
         let locks = self.lock_index();
-        let ancestry = if deformer {
-            &locks.deformation
-        } else {
-            &locks.organization
-        };
-        for (child, ancestors) in ancestry {
+        for (child, ancestors) in &locks.organization {
             if ancestors.contains(object) {
                 self.ensure_editable(std::slice::from_ref(child))?;
             }

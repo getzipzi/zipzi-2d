@@ -38,6 +38,8 @@ pub struct ControlGeometry {
     pub points: Vec<ModelPoint>,
     pub edges: Arc<[(usize, usize)]>,
     pub enabled: bool,
+    /// Editor display only. Hidden controls still supply their children's coordinate space.
+    pub visible: bool,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ComponentRef {
@@ -147,6 +149,7 @@ impl CanvasScene {
                 points: evaluated.points.iter().copied().map(to_model).collect(),
                 edges: t.edges.clone(),
                 enabled: evaluated.enabled,
+                visible: document.deformer_controls_visible(&evaluated.id),
             });
         }
         let mesh_slots = previous
@@ -191,6 +194,7 @@ impl CanvasScene {
                 points,
                 edges: edges.into(),
                 enabled: visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b),
+                visible: true,
             });
         }
         let texture_slots = source
@@ -260,6 +264,9 @@ impl CanvasScene {
         let visible_meshes = visible_meshes(&source.frame);
         let mut controls = self.controls.clone();
         for control in &mut controls {
+            if control.object.kind == K::Deformer {
+                control.visible = document.deformer_controls_visible(&control.object.id);
+            }
             if control.kind == ControlKind::Glue {
                 if let Some(g) = topology.glues.iter().find(|g| g.object == control.object) {
                     control.enabled =
@@ -336,6 +343,7 @@ impl CanvasScene {
         visibility: DeformerVisibility,
     ) -> bool {
         c.enabled
+            && c.visible
             && (selection.contains(&c.object)
                 || match c.kind {
                     ControlKind::Glue => tool == ToolId::Glue,
@@ -585,6 +593,9 @@ impl CanvasScene {
         let mut seen = HashSet::new();
         objects
             .into_iter()
+            .filter(|r| {
+                r.kind != K::Deformer || self.control(&r.id).is_some_and(|c| c.enabled && c.visible)
+            })
             .filter(|r| !locks.is_locked(r) && seen.insert(r.clone()))
             .map(|object| PickCandidate {
                 label: format!("{} · {:?}", self.index.name(&object), object.kind),

@@ -444,7 +444,7 @@ impl ObjectIndex {
         for id in m.offscreen_order() {
             if let Some(x) = m.get_offscreen(id) {
                 let r = ObjectRef::new(K::Offscreen, id);
-                s.add(r.clone(), &x.name, json!(x), None);
+                s.add(r.clone(), &x.name, json!(x), Some(x.enabled));
                 s.ref_edge(&r, R::PartOwner, K::Part, &x.part_id);
                 for mask in &x.masks {
                     s.ref_edge(&r, R::Mask, K::Mesh, mask);

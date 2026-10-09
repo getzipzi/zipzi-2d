@@ -233,6 +233,9 @@ impl DocumentSession {
             EditorCommand::SetLayerVisible { layer_id, visible } => {
                 self.document.set_layer_visible(&layer_id, visible)
             }
+            EditorCommand::SetObjectVisible { object, visible } => {
+                self.document.set_object_visible(&object, visible)
+            }
             EditorCommand::FinishEdit => self.document.finish_edit(),
             EditorCommand::CancelEdit => {
                 self.document.cancel_edit();

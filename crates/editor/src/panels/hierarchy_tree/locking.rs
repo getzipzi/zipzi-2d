@@ -2,7 +2,7 @@ use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ObjectRef};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable, WindowExt,
+    ActiveTheme, Disableable, Icon, Sizable, WindowExt,
     button::{Button, ButtonVariants},
     menu::{ContextMenuExt, PopupMenuItem},
 };
@@ -67,6 +67,8 @@ pub(super) fn button(
     };
     let color = if explicit {
         cx.theme().foreground
+    } else if locked {
+        cx.theme().muted_foreground.opacity(0.4)
     } else {
         cx.theme().muted_foreground
     };
@@ -83,12 +85,15 @@ pub(super) fn button(
                 .small()
                 .w(px(24.))
                 .h(px(24.))
-                .icon(if locked {
-                    IconName::Lock
-                } else {
-                    IconName::LockOpen
-                })
-                .text_color(color)
+                // Keep inherited locks dim even when the ghost button is hovered.
+                .icon(
+                    Icon::new(if locked {
+                        IconName::Lock
+                    } else {
+                        IconName::LockOpen
+                    })
+                    .text_color(color),
+                )
                 .disabled(disabled)
                 .tooltip(tooltip)
                 .when(!locked, |button| {
