@@ -64,6 +64,9 @@ impl FormDialogState {
 
 /// Implemented by both editable forms and confirmations (which have no dirty draft).
 pub(crate) trait FormDialogView: Render {
+    fn width(_window: &Window) -> f32 {
+        520.
+    }
     fn dialog(&self) -> &FormDialogState;
     fn dialog_mut(&mut self) -> &mut FormDialogState;
     /// Must revalidate against the current source immediately before executing.
@@ -147,13 +150,13 @@ pub(crate) fn open<V: FormDialogView>(
         options,
     });
     let dialog_view = view.clone();
-    window.open_dialog(cx, move |dialog, _, _| {
+    window.open_dialog(cx, move |dialog, window, _| {
         let confirm = dialog_view.clone();
         let cancel = dialog_view.clone();
         let close = dialog_view.clone();
         dialog
             .title(title.clone())
-            .w(px(520.))
+            .w(px(V::width(window)))
             .overlay_closable(false)
             .child(dialog_view.clone())
             .footer(footer.clone())

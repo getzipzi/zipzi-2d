@@ -15,7 +15,9 @@ pub use object_state::{ObjectState, ObjectStateIndex};
 
 #[path = "mesh_generation.rs"]
 mod mesh_generation;
-pub use mesh_generation::MeshGridOptions;
+pub use mesh_generation::{
+    MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource, MeshGridOptions,
+};
 
 #[path = "sorting.rs"]
 mod sorting;

@@ -63,6 +63,7 @@ pub enum EditorCommand {
         options: crate::MeshGridOptions,
         expected_revision: u64,
     },
+    ApplyMeshGeneration(std::sync::Arc<crate::MeshGenerationPreview>),
     ToggleDeformers,
     ToggleAncestorDeformers,
     ToggleDeformerGrid,

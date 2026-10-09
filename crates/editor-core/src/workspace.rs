@@ -316,6 +316,7 @@ impl Editor {
             &command,
             EditorCommand::CreateParameter(_)
                 | EditorCommand::GenerateMeshGrid { .. }
+                | EditorCommand::ApplyMeshGeneration(_)
                 | EditorCommand::CreateParameterChecked { .. }
                 | EditorCommand::UpdateParameter { .. }
                 | EditorCommand::DeleteParameter { .. }

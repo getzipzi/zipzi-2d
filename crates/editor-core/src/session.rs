@@ -193,6 +193,13 @@ impl DocumentSession {
                 }
                 result
             }
+            EditorCommand::ApplyMeshGeneration(preview) => {
+                let result = self.document.apply_mesh_generation(&preview);
+                if result.is_ok() {
+                    self.tools.clear();
+                }
+                result
+            }
             EditorCommand::ToggleDeformers => {
                 self.tools.deformer_visibility.all = !self.tools.deformer_visibility.all;
                 return Ok(());

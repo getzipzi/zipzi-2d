@@ -151,3 +151,77 @@ fn generation_rejects_stale_locked_unsupported_and_invalid_targets() -> anyhow::
     assert!(!editor.command_available(editor.command(CommandId::GenerateMesh)));
     Ok(())
 }
+
+#[test]
+fn previews_are_isolated_repeatable_and_match_application() -> anyhow::Result<()> {
+    let (mut doc, dir) = support::rectangle_document(false)?;
+    let revision = doc.mesh_generation_revision();
+    let source = doc.mesh_generation_source(&mesh())?;
+    let sparse = source.generate(MeshGenerationOptions::Grid(MeshGridOptions {
+        columns: 4,
+        rows: 4,
+    }))?;
+    let candidate = source.generate(MeshGenerationOptions::Grid(MeshGridOptions {
+        columns: 8,
+        rows: 3,
+    }))?;
+    assert_eq!(sparse.geometry().positions.len(), 25);
+    assert_eq!(candidate.geometry().positions.len(), 36);
+    assert_eq!(doc.layers()[0].vertices, 4);
+    assert_eq!(doc.mesh_generation_revision(), revision);
+    assert_eq!(doc.history_lengths(), (0, 0));
+    assert!(!doc.modified());
+    assert!((sparse.minimum_angle() - 45.).abs() < 0.01);
+    assert!(candidate.minimum_angle() < sparse.minimum_angle());
+    let repeated = source.generate(candidate.options())?;
+    assert_eq!(candidate.geometry(), repeated.geometry());
+    doc.apply_mesh_generation(&candidate)?;
+    assert_eq!(doc.history_lengths(), (1, 0));
+    let saved = doc.save(&dir.path().join("preview-applied.kasane"))?;
+    let mut session = kasane_sdk::AuthoringSession::new(
+        &id(920),
+        kasane_core::Canvas::new(256., 256., Vec2::default(), 1.),
+    )?;
+    session.open_project(&saved.manifest, None)?;
+    let applied = session.mesh(&mesh().id).unwrap();
+    assert_eq!(applied.base_positions, candidate.geometry().positions);
+    assert_eq!(applied.uvs, candidate.geometry().uvs);
+    assert_eq!(applied.triangles, candidate.geometry().triangles);
+    assert_eq!(applied.vertex_ids, candidate.geometry().vertex_ids);
+    assert_eq!(doc.history_lengths(), (1, 0));
+    assert!(doc.apply_mesh_generation(&sparse).is_err());
+    Ok(())
+}
+
+#[test]
+fn snapshot_preview_keeps_binding_constraints_and_rejects_stale_apply() -> anyhow::Result<()> {
+    let (doc, _dir) = support::rectangle_document(true)?;
+    let mut editor = Editor::from_document(doc);
+    let source = editor.document().unwrap().mesh_generation_source(&mesh())?;
+    assert!(
+        source
+            .generate(MeshGenerationOptions::Grid(MeshGridOptions {
+                columns: 3,
+                rows: 4
+            }))
+            .is_err()
+    );
+    let candidate = source.generate(MeshGenerationOptions::Grid(MeshGridOptions {
+        columns: 4,
+        rows: 4,
+    }))?;
+    editor.execute(EditorCommand::SetObjectsLocked {
+        objects: vec![mesh()],
+        locked: true,
+    })?;
+    assert!(
+        editor
+            .execute(EditorCommand::ApplyMeshGeneration(std::sync::Arc::new(
+                candidate
+            )))
+            .is_err()
+    );
+    assert_eq!(editor.document().unwrap().layers()[0].vertices, 4);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    Ok(())
+}

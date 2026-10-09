@@ -30,7 +30,11 @@ cargo run --locked -p component-playground
 
 ## Mesh generation
 
-Select one unlocked, standard four-corner rectangle mesh (such as an imported PSD layer), then click the grid icon in the canvas toolbar or press Shift+M. Set the column and row subdivision counts and choose Generate. The dialog shows the resulting vertex and triangle counts; grids are limited to 65,536 vertices.
+Select one unlocked, standard four-corner rectangle mesh (such as an imported PSD layer), then click the grid icon in the canvas toolbar or press Shift+M. Choose an algorithm and density preset, or edit its settings. Rectangle Grid currently provides Sparse (4×4), Medium (8×8), and Dense (16×16) presets plus custom row and column counts; Alpha contour + CDT is shown as unavailable until its backend is implemented.
+
+The dialog places configuration on the left and a square preview on the right, sized to the window. It regenerates a temporary candidate as settings change and shows its vertex and triangle counts. Toggle Wireframe, use the mouse wheel or +/− buttons to zoom, and drag with the left or middle button to pan. Trackpad scrolling pans; pinch or Ctrl/Cmd + scrolling zooms around the pointer. Fit resets the view. Changing settings preserves the preview camera. The preview shows the neutral source layer without poses, masks, or compositing. Grids are limited to 65,536 vertices.
+
+Choose **Apply mesh** to commit the current candidate in one undoable edit. Cancel leaves the mesh and history unchanged. Invalid settings hide the previous candidate and disable Apply; changing the document invalidates the preview. Preview generation runs on a worker from an immutable source snapshot.
 
 This tool uses Kasane SDK's rectangle grid generator. It preserves mesh keyforms, BlendShapes, and corner Glue references in one undoable edit. Meshes with keyforms or BlendShapes require equal row and column counts. Existing non-rectangular or subdivided meshes are unsupported; undo generation before choosing different counts. Alpha-contour mesh generation is not yet implemented in the SDK.
 
