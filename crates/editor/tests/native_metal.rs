@@ -430,3 +430,61 @@ fn content_cache_isolates_same_asset_ids_and_reuses_textures_across_views() -> a
         Ok(())
     })
 }
+
+#[test]
+fn mesh_candidate_preview_renders_only_its_triangles() -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        use editor_core::{MeshGenerationOptions, MeshGridOptions};
+        let (doc, _dir) = support::rectangle_document(false)?;
+        let source = doc.mesh_generation_source(&doc.mesh_generation_target()?)?;
+        let plan = source.generate(MeshGenerationOptions::Grid(MeshGridOptions {
+            columns: 1,
+            rows: 1,
+        }))?;
+        let mut texture = source.texture.unwrap();
+        // Opaque color makes missing geometry observable without a wireframe.
+        texture.rgba = [230, 45, 80, 255]
+            .repeat((texture.width * texture.height) as usize)
+            .into();
+        texture.cache_key = "opaque-candidate-test".into();
+        let full = plan.scene(texture);
+        let mut missing = full.clone();
+        std::sync::Arc::make_mut(&mut missing.viewport_frame).drawables[0].indices =
+            full.viewport_frame.drawables[0].indices[..3]
+                .to_vec()
+                .into();
+        let mut gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        for size_px in [32, 208, 416] {
+            let config = MetalTargetConfig {
+                width: size_px,
+                height: size_px,
+                format: MTLPixelFormat::RGBA8Unorm,
+            };
+            let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
+            let mut capture = |snapshot: &SceneSnapshot| -> anyhow::Result<image::RgbaImage> {
+                let texture = renderer.draw(&gpu.queue, config, snapshot, ViewState::default())?;
+                Ok(gpui.render_scene_to_image(
+                    &scene(texture, size_px as f32, false),
+                    size(DevicePixels(size_px as i32), DevicePixels(size_px as i32)),
+                )?)
+            };
+            let whole = capture(&full)?;
+            assert_eq!(
+                whole,
+                capture(&full)?,
+                "Same rectangle must render repeatably"
+            );
+            let cut = capture(&missing)?;
+            assert_ne!(
+                whole, cut,
+                "Missing triangle must remain visible with no wireframe"
+            );
+            let (x, y) = (size_px / 4, 3 * size_px / 4);
+            assert_ne!(whole.get_pixel(x, y), cut.get_pixel(x, y));
+            assert_eq!(cut.get_pixel(x, y).0, [255; 4]);
+            assert_eq!(whole.get_pixel(y, x), cut.get_pixel(y, x));
+        }
+        Ok(())
+    })
+}

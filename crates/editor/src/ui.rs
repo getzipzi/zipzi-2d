@@ -1,5 +1,6 @@
 pub(crate) mod form_dialog;
 pub(crate) mod mesh_generation;
+mod mesh_preview;
 pub(crate) mod preview_viewport;
 
 use super::*;

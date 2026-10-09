@@ -49,3 +49,5 @@ mod deformer;
 pub use deformer::*;
 
 mod warp_bezier;
+
+mod mesh_generation_scene;

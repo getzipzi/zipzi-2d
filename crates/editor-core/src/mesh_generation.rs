@@ -27,6 +27,7 @@ pub struct MeshGenerationPreview {
     options: MeshGenerationOptions,
     geometry: MeshGeometry,
     minimum_angle: f64,
+    source_bounds: [kasane_core::Vec2; 2],
 }
 
 impl MeshGenerationSource {
@@ -68,11 +69,15 @@ impl MeshGenerationSource {
             options,
             geometry,
             minimum_angle,
+            source_bounds: [self.geometry.positions[0], self.geometry.positions[2]],
         })
     }
 }
 
 impl MeshGenerationPreview {
+    pub fn source_bounds(&self) -> [kasane_core::Vec2; 2] {
+        self.source_bounds
+    }
     pub fn geometry(&self) -> &MeshGeometry {
         &self.geometry
     }

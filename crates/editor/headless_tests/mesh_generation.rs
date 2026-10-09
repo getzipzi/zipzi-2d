@@ -3,6 +3,15 @@ use editor_core::{CommandId, EditorCommand};
 use gpui_kit::component::WindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 
+fn settle(cx: &mut TestAppContext) {
+    for _ in 0..3 {
+        cx.run_until_parked();
+        cx.executor()
+            .advance_clock(std::time::Duration::from_millis(110));
+    }
+    cx.run_until_parked();
+}
+
 fn open(harness: &Harness, cx: &mut TestAppContext) {
     cx.update(|cx| cx.set_reduce_motion(true));
     cx.update_window(harness.window, |_, window, cx| {
@@ -11,7 +20,7 @@ fn open(harness: &Harness, cx: &mut TestAppContext) {
         window.click("tool_generate_mesh", cx);
     })
     .unwrap();
-    cx.run_until_parked();
+    settle(cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(window.has_active_dialog(cx));
@@ -26,7 +35,7 @@ fn fill(harness: &Harness, field: &'static str, value: &str, cx: &mut TestAppCon
         window.input(value, cx);
     })
     .unwrap();
-    cx.run_until_parked();
+    settle(cx);
 }
 
 #[gpui_kit::test]
@@ -40,7 +49,7 @@ fn toolbar_generation_submits_once_and_refreshes_history(cx: &mut TestAppContext
         window.press("enter", cx);
     })
     .unwrap();
-    cx.run_until_parked();
+    settle(cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(!window.has_active_dialog(cx));
@@ -79,7 +88,7 @@ fn invalid_bound_counts_and_cancel_leave_mesh_unchanged(cx: &mut TestAppContext)
             window.press("enter", cx);
         })
         .unwrap();
-        cx.run_until_parked();
+        settle(cx);
         harness.view.read_with(cx, |v, _| {
             assert_eq!(v.editor.document().unwrap().history_lengths(), (0, 0));
         });
@@ -88,7 +97,7 @@ fn invalid_bound_counts_and_cancel_leave_mesh_unchanged(cx: &mut TestAppContext)
         window.click("mesh-generation-cancel", cx);
     })
     .unwrap();
-    cx.run_until_parked();
+    settle(cx);
     cx.update_window(harness.window, |_, window, cx| {
         assert!(!window.has_active_dialog(cx));
         assert_eq!(harness.view.read(cx).editor.layers()[0].vertices, 4);
@@ -121,14 +130,14 @@ fn changed_document_blocks_dialog_submission(cx: &mut TestAppContext) {
         });
     })
     .unwrap();
-    cx.run_until_parked();
+    settle(cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(window.find("mesh-generation-error").visible());
         window.press("enter", cx);
     })
     .unwrap();
-    cx.run_until_parked();
+    settle(cx);
     harness.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.layers()[0].vertices, 4);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
@@ -150,7 +159,7 @@ fn live_preview_presets_and_cancel_do_not_edit_document(cx: &mut TestAppContext)
             window.click(preset, cx);
         })
         .unwrap();
-        cx.run_until_parked();
+        settle(cx);
         cx.update_window(harness.window, |_, window, cx| {
             window.render_frame(cx);
             assert!(window.find("mesh-generation-preview").visible());
@@ -169,7 +178,7 @@ fn live_preview_presets_and_cancel_do_not_edit_document(cx: &mut TestAppContext)
         window.click("mesh-generation-cancel", cx);
     })
     .unwrap();
-    cx.run_until_parked();
+    settle(cx);
     cx.update_window(harness.window, |_, window, cx| {
         assert!(!window.has_active_dialog(cx));
         assert_eq!(
@@ -216,7 +225,7 @@ fn changed_inputs_remove_old_preview_until_valid_again(cx: &mut TestAppContext) 
         window.click("mesh-generation-submit", cx);
     })
     .unwrap();
-    cx.run_until_parked();
+    settle(cx);
     harness.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.document().unwrap().layers()[0].vertices, 25);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
@@ -231,7 +240,7 @@ fn generator_uses_square_preview_and_keeps_actions_visible_when_resized(cx: &mut
     open(&harness, cx);
     for (width, height) in [(1100., 740.), (900., 620.), (1500., 1000.)] {
         cx.simulate_window_resize(harness.window, size(px(width), px(height)));
-        cx.run_until_parked();
+        settle(cx);
         cx.update_window(harness.window, |_, window, cx| {
             window.render_frame(cx);
             let preview = window.find("preview-viewport").bounds();

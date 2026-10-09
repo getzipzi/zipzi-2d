@@ -1,5 +1,7 @@
 use super::form_dialog::{self, FormDialogOptions, FormDialogState, FormDialogView};
-use super::preview_viewport::{PreviewContent, PreviewViewport};
+use super::preview_viewport::{
+    PreviewContent, PreviewPaintStatus, PreviewPainter, PreviewViewport,
+};
 use crate::{EditorView, t};
 use editor_core::{
     CommandId, DocumentId, EditorCommand, MeshGenerationOptions, MeshGenerationPreview,
@@ -13,7 +15,9 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
+    rc::Rc,
     sync::Arc,
 };
 
@@ -41,32 +45,17 @@ struct Candidate {
     plan: Arc<MeshGenerationPreview>,
     edges: Arc<[([f32; 2], [f32; 2])]>,
     aspect: f32,
+    renderer: Option<super::mesh_preview::MeshPreview>,
 }
 impl Candidate {
-    fn new(plan: MeshGenerationPreview) -> Self {
+    fn new(
+        plan: MeshGenerationPreview,
+        texture: Option<editor_core::SceneTexture>,
+        gpu: Option<SharedMetalContext>,
+    ) -> anyhow::Result<Self> {
         let geometry = plan.geometry();
-        let min_x = geometry
-            .positions
-            .iter()
-            .map(|p| p.x)
-            .fold(f32::INFINITY, f32::min);
-        let min_y = geometry
-            .positions
-            .iter()
-            .map(|p| p.y)
-            .fold(f32::INFINITY, f32::min);
-        let max_x = geometry
-            .positions
-            .iter()
-            .map(|p| p.x)
-            .fold(f32::NEG_INFINITY, f32::max);
-        let max_y = geometry
-            .positions
-            .iter()
-            .map(|p| p.y)
-            .fold(f32::NEG_INFINITY, f32::max);
-        let width = max_x - min_x;
-        let height = max_y - min_y;
+        let [a, c] = plan.source_bounds();
+        let (min_x, min_y, width, height) = (a.x, a.y, c.x - a.x, c.y - a.y);
         let points: HashMap<_, _> = geometry
             .vertex_ids
             .iter()
@@ -88,11 +77,16 @@ impl Candidate {
                 }
             }
         }
-        Self {
+        let scene = texture.map(|texture| plan.scene(texture));
+        let renderer = scene
+            .map(|scene| super::mesh_preview::MeshPreview::prepare(scene, gpu))
+            .transpose()?;
+        Ok(Self {
+            renderer,
             plan: Arc::new(plan),
             edges: edges.into(),
             aspect: width / height,
-        }
+        })
     }
 }
 
@@ -102,6 +96,7 @@ pub(crate) struct MeshGenerationForm {
     revision: u64,
     target: ObjectRef,
     source: Arc<MeshGenerationSource>,
+    gpu: Option<SharedMetalContext>,
     name: String,
     square: bool,
     algorithm: Entity<SelectState<Vec<AlgorithmChoice>>>,
@@ -111,7 +106,9 @@ pub(crate) struct MeshGenerationForm {
     requested: Option<MeshGenerationOptions>,
     candidate: Option<Arc<Candidate>>,
     task: Option<Task<()>>,
-    image_task: Option<Task<()>>,
+    request_id: u64,
+    painter: Option<PreviewPainter>,
+    painted: bool,
     viewport: Entity<PreviewViewport>,
     _subscriptions: Vec<Subscription>,
 }
@@ -195,12 +192,31 @@ impl MeshGenerationForm {
                     cx.notify();
                 }
             }));
+            let viewport = cx.new(PreviewViewport::new);
+            subscriptions.push(cx.subscribe(
+                &viewport,
+                |this: &mut Self, _, status: &PreviewPaintStatus, cx| {
+                    if status.0 != this.request_id || this.candidate.is_none() {
+                        return;
+                    }
+                    match &status.1 {
+                        Ok(()) => this.painted = true,
+                        Err(error) => {
+                            this.painted = false;
+                            this.dialog.error = Some(error.clone());
+                        }
+                    }
+                    this.refresh(cx);
+                    cx.notify();
+                },
+            ));
             Self {
                 owner,
                 document,
                 revision,
                 target,
                 source,
+                gpu: window.metal_context(),
                 name,
                 square,
                 algorithm,
@@ -210,13 +226,14 @@ impl MeshGenerationForm {
                 requested: None,
                 candidate: None,
                 task: None,
-                image_task: None,
-                viewport: cx.new(PreviewViewport::new),
+                request_id: 0,
+                painter: None,
+                painted: false,
+                viewport,
                 _subscriptions: subscriptions,
             }
         });
         form.update(cx, |form, cx| {
-            form.load_image(cx);
             form.refresh(cx);
         });
         let options = FormDialogOptions {
@@ -229,30 +246,6 @@ impl MeshGenerationForm {
         };
         form_dialog::open(form, options, window, cx);
         Ok(())
-    }
-
-    fn load_image(&mut self, cx: &mut Context<Self>) {
-        let Some(texture) = self.source.texture.clone() else {
-            return;
-        };
-        let background = cx.background_executor().spawn(async move {
-            let buffer =
-                image::RgbaImage::from_raw(texture.width, texture.height, texture.rgba.to_vec())?;
-            let mut buffer = image::imageops::thumbnail(&buffer, 1024, 1024);
-            for pixel in buffer.pixels_mut() {
-                pixel.0.swap(0, 2);
-            }
-            Some(Arc::new(RenderImage::new([image::Frame::new(buffer)])))
-        });
-        self.image_task = Some(cx.spawn(async move |this, cx| {
-            let image = background.await;
-            _ = this.update(cx, |this, cx| {
-                this.viewport
-                    .update(cx, |viewport, cx| viewport.set_image(image, cx));
-                this.image_task = None;
-                cx.notify();
-            });
-        }));
     }
 
     fn validate(&self, cx: &App) -> anyhow::Result<MeshGenerationOptions> {
@@ -308,38 +301,23 @@ impl MeshGenerationForm {
         self.validation = self.validate(cx);
         let options = self.validation.as_ref().ok().copied();
         if self.requested != options {
-            self.task = None;
+            self.request_id += 1;
             self.candidate = None;
+            self.painter = None;
+            self.painted = false;
             self.requested = options;
-            if let Some(options) = options {
-                let source = self.source.clone();
-                let background = cx
-                    .background_executor()
-                    .spawn(async move { source.generate(options).map(Candidate::new) });
-                self.task = Some(cx.spawn(async move |this, cx| {
-                    let result = background.await;
-                    _ = this.update(cx, |this, cx| {
-                        if this.dialog.closed() || this.requested != Some(options) {
-                            return;
-                        }
-                        this.task = None;
-                        match result {
-                            Ok(candidate) => {
-                                this.dialog.edited();
-                                this.candidate = Some(Arc::new(candidate));
-                            }
-                            Err(error) => this.dialog.error = Some(error.to_string()),
-                        }
-                        this.refresh(cx);
-                        cx.notify();
-                    });
-                }));
-            }
         }
-        self.dialog
-            .set_validation(self.validation.is_ok() && self.candidate.is_some(), true);
+        if self.task.is_none() && self.candidate.is_none() && self.dialog.error.is_none() {
+            self.start_generation(cx);
+        }
+        self.dialog.set_validation(
+            self.validation.is_ok() && self.candidate.is_some() && self.painted,
+            true,
+        );
         let content = self.candidate.as_ref().map(|c| PreviewContent {
             aspect: c.aspect,
+            painter: self.painter.clone(),
+            request: self.request_id,
             edges: c.edges.clone(),
         });
         let message = if self.validation.is_ok() && self.dialog.error.is_none() {
@@ -350,6 +328,53 @@ impl MeshGenerationForm {
         self.viewport.update(cx, |viewport, cx| {
             viewport.set_content(content, message.into(), cx)
         });
+    }
+
+    fn start_generation(&mut self, cx: &mut Context<Self>) {
+        let Some(options) = self.requested else {
+            return;
+        };
+        if self.dialog.closed() {
+            return;
+        }
+        let request = self.request_id;
+        let source = self.source.clone();
+        let gpu = self.gpu.clone();
+        let executor = cx.background_executor().clone();
+        let timer = executor.timer(std::time::Duration::from_millis(100));
+        let background = executor.spawn(async move {
+            timer.await;
+            source.generate(options).and_then(|plan| {
+                objc2::rc::autoreleasepool(|_| Candidate::new(plan, source.texture.clone(), gpu))
+            })
+        });
+        self.task = Some(cx.spawn(async move |this, cx| {
+            let result = background.await;
+            _ = this.update(cx, |this, cx| {
+                this.task = None;
+                if this.dialog.closed() {
+                    return;
+                }
+                if this.request_id == request {
+                    match result {
+                        Ok(mut candidate) => {
+                            this.dialog.edited();
+                            this.painter = candidate.renderer.take().map(|mut renderer| {
+                                Rc::new(RefCell::new(
+                                    move |bounds, content, window: &mut Window| {
+                                        renderer.paint(bounds, content, window)
+                                    },
+                                )) as PreviewPainter
+                            });
+                            this.candidate = Some(Arc::new(candidate));
+                        }
+                        Err(error) => this.dialog.error = Some(error.to_string()),
+                    }
+                }
+                this.refresh(cx);
+                cx.notify();
+            });
+        }));
     }
 
     fn preset(&mut self, count: usize, window: &mut Window, cx: &mut Context<Self>) {
@@ -379,6 +404,7 @@ impl FormDialogView for MeshGenerationForm {
     }
     fn submit(&mut self, _: &mut Window, cx: &mut Context<Self>) -> anyhow::Result<()> {
         let options = self.validate(cx)?;
+        anyhow::ensure!(self.painted, t!("mesh_generation.preparing"));
         let candidate = self
             .candidate
             .as_ref()

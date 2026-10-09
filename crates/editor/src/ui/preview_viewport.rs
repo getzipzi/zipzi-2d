@@ -7,17 +7,29 @@ use gpui_kit::component::{
     button::{Button, ButtonVariants},
 };
 use gpui_kit::{prelude::*, *};
-use std::{cell::Cell, rc::Rc, sync::Arc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+    sync::Arc,
+};
+
+pub(crate) type PreviewPainter =
+    Rc<RefCell<dyn FnMut(Bounds<Pixels>, Bounds<Pixels>, &mut Window) -> anyhow::Result<()>>>;
+#[derive(Clone, Debug)]
+pub(crate) struct PreviewPaintStatus(pub u64, pub Result<(), String>);
+impl EventEmitter<PreviewPaintStatus> for PreviewViewport {}
 
 #[derive(Clone)]
 pub(crate) struct PreviewContent {
     pub aspect: f32,
+    pub painter: Option<PreviewPainter>,
+    pub request: u64,
     pub edges: Arc<[([f32; 2], [f32; 2])]>,
 }
 
 pub(crate) struct PreviewViewport {
     content: Option<PreviewContent>,
-    image: Option<Arc<RenderImage>>,
+    painted: Rc<Cell<Option<(u64, bool)>>>,
     message: SharedString,
     zoom: f32,
     pan: Point<Pixels>,
@@ -27,16 +39,10 @@ pub(crate) struct PreviewViewport {
 }
 
 impl PreviewViewport {
-    pub fn new(cx: &mut Context<Self>) -> Self {
-        cx.on_release(|this: &mut Self, cx| {
-            if let Some(image) = this.image.take() {
-                cx.drop_image(image, None);
-            }
-        })
-        .detach();
+    pub fn new(_cx: &mut Context<Self>) -> Self {
         Self {
             content: None,
-            image: None,
+            painted: Rc::new(Cell::new(None)),
             message: "".into(),
             zoom: 1.,
             pan: point(px(0.), px(0.)),
@@ -44,14 +50,6 @@ impl PreviewViewport {
             wireframe: true,
             bounds: Rc::new(Cell::new(Bounds::default())),
         }
-    }
-
-    pub fn set_image(&mut self, image: Option<Arc<RenderImage>>, cx: &mut Context<Self>) {
-        if let Some(old) = self.image.take() {
-            cx.drop_image(old, None);
-        }
-        self.image = image;
-        cx.notify();
     }
 
     /// Replacing a candidate preserves the user's inspection position.
@@ -90,7 +88,8 @@ impl Render for PreviewViewport {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let measured = self.bounds.clone();
         let content = self.content.clone();
-        let image = self.image.clone();
+        let painted = self.painted.clone();
+        let entity = cx.entity().downgrade();
         let zoom = self.zoom;
         let pan = self.pan;
         let wireframe = self.wireframe;
@@ -169,7 +168,7 @@ impl Render for PreviewViewport {
             .child(
                 canvas(
                     move |bounds, _, _| measured.set(bounds),
-                    move |bounds, _, window, _| {
+                    move |bounds, _, window, cx| {
                         let Some(content) = &content else { return };
                         let width = (bounds.size.width.as_f32() - 32.)
                             .max(1.)
@@ -215,15 +214,21 @@ impl Render for PreviewViewport {
                                         ));
                                     }
                                 }
-                                if let Some(image) = &image {
-                                    _ = window.paint_image(
-                                        bounds,
-                                        image_bounds,
-                                        Corners::default(),
-                                        image.clone(),
-                                        0,
-                                        false,
-                                    );
+                                let result = if let Some(painter) = &content.painter {
+                                    (painter.borrow_mut())(bounds, image_bounds, window)
+                                        .map_err(|e| e.to_string())
+                                } else {
+                                    Ok(())
+                                };
+                                if painted.get() != Some((content.request, result.is_ok())) {
+                                    painted.set(Some((content.request, result.is_ok())));
+                                    let entity = entity.clone();
+                                    let request = content.request;
+                                    cx.defer(move |cx| {
+                                        _ = entity.update(cx, |_, cx| {
+                                            cx.emit(PreviewPaintStatus(request, result))
+                                        });
+                                    });
                                 }
                                 if wireframe {
                                     let edges: Vec<_> = content

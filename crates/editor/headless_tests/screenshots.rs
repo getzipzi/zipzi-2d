@@ -439,6 +439,8 @@ pub(super) fn run() -> anyhow::Result<()> {
     })?;
     harness._assets = assets;
     harness.cx.run_until_parked();
+    harness.cx.advance_clock(Duration::from_millis(150));
+    harness.cx.run_until_parked();
     let mesh_preview = harness.capture()?;
     save(
         &harness.dialog_image(&mesh_preview)?,
@@ -460,6 +462,8 @@ pub(super) fn run() -> anyhow::Result<()> {
         theme::change(gpui_kit::component::ThemeMode::Dark, cx);
         window.click("tool_generate_mesh", cx);
     })?;
+    harness.cx.run_until_parked();
+    harness.cx.advance_clock(Duration::from_millis(150));
     harness.cx.run_until_parked();
     let mesh_preview = harness.capture()?;
     save(
