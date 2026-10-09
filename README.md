@@ -22,38 +22,6 @@ To explore the UI components:
 cargo run --locked -p component-playground
 ```
 
-## Canvas navigation
-
-- Trackpad: two-finger scrolling pans in both directions, including momentum; pinch zooms around the pointer.
-- Mouse: the wheel zooms proportionally around the pointer, with a short smooth transition; middle-button dragging pans. Reduced Motion disables the transition.
-- Ctrl/Cmd + trackpad scrolling also zooms proportionally, with immediate response like pinch. H or held Space enables left-button panning.
-
-## Mesh generation
-
-Select one unlocked, standard four-corner rectangle mesh (such as an imported PSD layer), then click the grid icon in the canvas toolbar or press Shift+M. Choose an algorithm and density preset, or edit its settings. Rectangle Grid currently provides Sparse (4×4), Medium (8×8), and Dense (16×16) presets plus custom row and column counts; Alpha contour + CDT is shown as unavailable until its backend is implemented.
-
-The dialog places configuration on the left and a square preview on the right, sized to the window. It regenerates a temporary candidate as settings change and shows its vertex and triangle counts. Toggle Wireframe, use the mouse wheel or +/− buttons to zoom, and drag with the left or middle button to pan. Trackpad scrolling pans; pinch or Ctrl/Cmd + scrolling zooms around the pointer. Fit resets the view. Changing settings preserves the preview camera. The preview shows the neutral source layer without poses, masks, or compositing. Grids are limited to 65,536 vertices.
-
-Choose **Apply mesh** to commit the current candidate in one undoable edit. Cancel leaves the mesh and history unchanged. Invalid settings hide the previous candidate and disable Apply; changing the document invalidates the preview. Preview generation runs on a worker from an immutable source snapshot.
-
-This tool uses Kasane SDK's rectangle grid generator. It preserves mesh keyforms, BlendShapes, and corner Glue references in one undoable edit. Meshes with keyforms or BlendShapes require equal row and column counts. Existing non-rectangular or subdivided meshes are unsupported; undo generation before choosing different counts. Alpha-contour mesh generation is not yet implemented in the SDK.
-
-## Parameter management
-
-Use the Parameters toolbar to create a parameter or group. Right-click a parameter or group to edit or delete it; group menus also create parameters in place. The Properties panel provides edit and delete actions for the inspected parameter or group.
-
-The UI currently creates only top-level groups and does not expose a parent-group selector. Existing nested groups can be dragged before or after a top-level group, or onto the Ungrouped header to move them to the end of the top level. The core model still supports nested groups.
-
-Parameters with references cannot be deleted until those references are removed. Deleting a group keeps its contents and moves its direct parameters and child groups to the parent. Each operation supports undo and redo. See [parameter management](docs/parameter-management-design.md) for editing and persistence rules.
-
-## Tree visibility
-
-Use the eye beside a Mesh, Part, Warp Deformer, Rotation Deformer, or Offscreen, including while locked. Eyes affect editor display only; runtime `enabled`, deformation, animation, masks, and model export retain their authored behavior. A Deformer's eye hides its own controls. A Part hides objects in its organization subtree, without following deformation links into other Parts. An Offscreen hides its composited group output. A hidden Mesh still contributes to masks.
-
-Part locks inherit through the organization hierarchy. Deformer locks protect only direct edits to that Deformer; they do not freeze the pose or lock deformation children. Both trees use the same object state. Gray icons indicate inherited restrictions and show their sources; clicking opens options to locate or change a source without silently changing selection or child flags.
-
-Explicit eye and lock flags share a sparse `document.editor_state.objects` map keyed by object ID. These edits support undo, redo, and saving in project format v10. The former `object_locks` and `deformer_display` schemas and APIs are removed; projects containing those fields are rejected without migration. Runtime `enabled` remains separate authoring data. Use **Model enabled** in Properties to edit that authored state separately. Tree collapse, filtering and global overlay preferences remain separate view state.
-
 ## Develop
 
 Install `watchexec`, then rebuild and restart automatically when source files change:
