@@ -908,7 +908,9 @@ pub fn editable_property(kind: ObjectKind, field: &str) -> bool {
             "name" | "minimum" | "maximum" | "default_value" | "decimal_places" | "repeat"
         ),
         K::Glue => matches!(field, "name" | "intensity"),
-        K::Offscreen | K::Texture => field == "name",
+        K::Mesh => field == "enabled",
+        K::Offscreen => matches!(field, "name" | "enabled"),
+        K::Texture => field == "name",
         K::Motion => matches!(field, "name" | "looping" | "fade_in" | "fade_out"),
         K::Expression => matches!(field, "name" | "fade_in" | "fade_out"),
         _ => false,

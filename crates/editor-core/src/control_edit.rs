@@ -103,7 +103,7 @@ impl ControlEdit {
                         .map(|axis| {
                             let value = scene
                                 .source
-                                .frame
+                                .viewport_frame
                                 .parameters
                                 .iter()
                                 .find(|p| p.id == axis.parameter_id)
@@ -122,7 +122,7 @@ impl ControlEdit {
                 && axes.iter().zip(keys).all(|(axis, key)| {
                     scene
                         .source
-                        .frame
+                        .viewport_frame
                         .parameters
                         .iter()
                         .find(|p| p.id == axis.parameter_id)
@@ -176,7 +176,7 @@ impl ControlEdit {
                             && axes.iter().zip(keys).all(|(a, k)| {
                                 scene
                                     .source
-                                    .frame
+                                    .viewport_frame
                                     .parameters
                                     .iter()
                                     .find(|p| p.id == a.parameter_id)
@@ -495,7 +495,7 @@ impl ControlSpace {
             parent,
             parent_shape,
             parent_points,
-            canvas: scene.source.frame.canvas,
+            canvas: scene.source.viewport_frame.canvas,
         })
     }
     pub fn to_model(&self, p: Vec2) -> ModelPoint {

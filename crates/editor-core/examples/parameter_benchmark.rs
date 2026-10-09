@@ -41,7 +41,7 @@ fn main() -> anyhow::Result<()> {
         println!(
             "{sample},{},{edit_ms:.3},{scene_ms:.3},{}",
             parameter.id,
-            preview.scene.frame.drawables.len()
+            preview.scene.viewport_frame.drawables.len()
         );
     }
     Ok(())

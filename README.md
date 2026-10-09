@@ -38,11 +38,11 @@ Parameters with references cannot be deleted until those references are removed.
 
 ## Tree visibility
 
-Use the eye beside a Mesh, Part, Warp Deformer, Rotation Deformer, or Offscreen, including while locked. A Deformer's eye hides only its own editor controls; its deformation and its children's controls and artwork remain active. Hiding a Part hides its contents; hiding an Offscreen hides its composited group. Child objects keep their own visibility settings.
+Use the eye beside a Mesh, Part, Warp Deformer, Rotation Deformer, or Offscreen, including while locked. Eyes affect editor display only; runtime `enabled`, deformation, animation, masks, and model export retain their authored behavior. A Deformer's eye hides its own controls. A Part hides objects in its organization subtree, without following deformation links into other Parts. An Offscreen hides its composited group output. A hidden Mesh still contributes to masks.
 
-Part locks are inherited through the organization hierarchy. Deformer locks protect only the Deformer itself, so its child Deformers and Meshes remain editable unless separately locked or protected by their Part. Both trees display the same object state.
+Part locks inherit through the organization hierarchy. Deformer locks protect only direct edits to that Deformer; they do not freeze the pose or lock deformation children. Both trees use the same object state. Gray icons indicate inherited restrictions and show their sources; clicking opens options to locate or change a source without silently changing selection or child flags.
 
-These edits support undo, redo, and saving. Hidden Offscreens require project format v8; hidden Deformer controls use separate editor metadata in v9. Runtime `Transform.enabled` remains independent of the eye control, and existing runtime-disabled transforms retain their authored state.
+Explicit eye and lock flags share a sparse `document.editor_state.objects` map keyed by object ID. These edits support undo, redo, and saving in project format v10. The former `object_locks` and `deformer_display` schemas and APIs are removed; projects containing those fields are rejected without migration. Runtime `enabled` remains separate authoring data. Use **Model enabled** in Properties to edit that authored state separately. Tree collapse, filtering and global overlay preferences remain separate view state.
 
 ## Develop
 

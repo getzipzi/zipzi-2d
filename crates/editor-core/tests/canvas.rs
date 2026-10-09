@@ -126,12 +126,12 @@ fn multi_vertex_drag_is_one_history_step_and_preserves_uv_topology() -> anyhow::
     assert_eq!(positions[1].1, ModelPoint { x: 244., y: 136. });
     let scene = editor.preview()?.scene;
     assert_eq!(
-        scene.frame.drawables[0].uvs,
-        original.frame.drawables[0].uvs
+        scene.viewport_frame.drawables[0].uvs,
+        original.viewport_frame.drawables[0].uvs
     );
     assert_eq!(
-        scene.frame.drawables[0].indices,
-        original.frame.drawables[0].indices
+        scene.viewport_frame.drawables[0].indices,
+        original.viewport_frame.drawables[0].indices
     );
     editor.execute(EditorCommand::Undo)?;
     assert_eq!(
@@ -143,7 +143,16 @@ fn multi_vertex_drag_is_one_history_step_and_preserves_uv_topology() -> anyhow::
 #[test]
 fn returning_to_anchor_or_cancelling_keeps_redo_and_original_positions() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
-    editor.execute(EditorCommand::SetVisible(false))?;
+    editor.execute(EditorCommand::SetObjectVisible {
+        object: editor
+            .document()
+            .unwrap()
+            .context()
+            .selection
+            .clone()
+            .unwrap(),
+        visible: false,
+    })?;
     editor.execute(EditorCommand::Undo)?;
     present(&mut editor)?;
     let start = editor.overlay().vertices[0].position;
@@ -430,7 +439,16 @@ fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<(
 fn invalid_drag_rolls_back_candidate_without_losing_redo() -> anyhow::Result<()> {
     for release in [false, true] {
         let (mut editor, _dir) = setup()?;
-        editor.execute(EditorCommand::SetVisible(false))?;
+        editor.execute(EditorCommand::SetObjectVisible {
+            object: editor
+                .document()
+                .unwrap()
+                .context()
+                .selection
+                .clone()
+                .unwrap(),
+            visible: false,
+        })?;
         editor.execute(EditorCommand::Undo)?;
         present(&mut editor)?;
         let original = editor.document().unwrap().selected_vertex_positions();
@@ -569,15 +587,15 @@ fn opacity_preview_refreshes_picking_and_preserves_undo() -> anyhow::Result<()> 
         &original.canvas.unwrap().geometry,
         &hidden.canvas.unwrap().geometry
     ));
-    assert_eq!(hidden.scene.frame.drawables[0].opacity, 0.);
+    assert_eq!(hidden.scene.viewport_frame.drawables[0].opacity, 0.);
     editor.execute(EditorCommand::PreviewOpacity(0.5))?;
     let half = editor.preview()?;
-    assert_eq!(half.scene.frame.drawables[0].opacity, 0.5);
+    assert_eq!(half.scene.viewport_frame.drawables[0].opacity, 0.5);
     editor.execute(EditorCommand::FinishEdit)?;
     editor.execute(EditorCommand::Undo)?;
     assert_eq!(
-        editor.preview()?.scene.frame.drawables[0].opacity,
-        original.scene.frame.drawables[0].opacity
+        editor.preview()?.scene.viewport_frame.drawables[0].opacity,
+        original.scene.viewport_frame.drawables[0].opacity
     );
     Ok(())
 }

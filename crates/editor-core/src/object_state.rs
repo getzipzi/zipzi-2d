@@ -1,41 +1,50 @@
-//! Editor protection policy, separate from runtime evaluation and SDK authoring.
+//! Shared editor visibility and protection policy for trees, canvas, and tools.
 use super::Document;
 use crate::{ObjectKind as K, ObjectRef};
 use anyhow::{Result, ensure};
-use kasane_core::document::ObjectLocks;
+use kasane_core::document::ObjectEditorState;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 
+/// One resolved editor state for every scene object. Only `explicit` is persisted.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct LockState {
-    pub explicit: bool,
-    pub inherited: Vec<ObjectRef>,
+pub struct ObjectState {
+    pub explicit: ObjectEditorState,
+    pub locked_by: Vec<ObjectRef>,
+    pub hidden_by: Vec<ObjectRef>,
 }
-impl LockState {
+impl ObjectState {
     pub fn locked(&self) -> bool {
-        self.explicit || !self.inherited.is_empty()
+        self.explicit.locked || !self.locked_by.is_empty()
+    }
+    pub fn visible(&self) -> bool {
+        !self.explicit.hidden_in_editor && self.hidden_by.is_empty()
     }
 }
 
 #[derive(Debug, Default)]
-pub struct LockIndex {
-    states: HashMap<ObjectRef, LockState>,
+pub struct ObjectStateIndex {
+    states: HashMap<ObjectRef, ObjectState>,
     organization: HashMap<ObjectRef, Vec<ObjectRef>>,
 }
-impl LockIndex {
-    pub fn state(&self, object: &ObjectRef) -> &LockState {
-        static EMPTY: LockState = LockState {
-            explicit: false,
-            inherited: Vec::new(),
+impl ObjectStateIndex {
+    pub fn state(&self, object: &ObjectRef) -> &ObjectState {
+        static EMPTY: ObjectState = ObjectState {
+            explicit: ObjectEditorState {
+                locked: false,
+                hidden_in_editor: false,
+            },
+            locked_by: Vec::new(),
+            hidden_by: Vec::new(),
         };
         self.states.get(object).unwrap_or(&EMPTY)
     }
     pub fn is_locked(&self, object: &ObjectRef) -> bool {
         self.state(object).locked()
     }
-    pub fn lockable(&self, object: &ObjectRef) -> bool {
+    pub fn contains(&self, object: &ObjectRef) -> bool {
         self.states.contains_key(object)
     }
 
@@ -84,20 +93,50 @@ impl LockIndex {
             }
             result
         }
-        let explicit: HashSet<_> = model.object_locks().objects.iter().collect();
+        for id in model.glue_order() {
+            add(K::Glue, id, "");
+        }
+        let editor = model.editor_state();
+        let mut composites: HashMap<&str, Vec<&str>> = HashMap::new();
+        for id in model.offscreen_order() {
+            if editor.get(id).hidden_in_editor {
+                if let Some(group) = model.get_offscreen(id) {
+                    composites.entry(&group.part_id).or_default().push(id);
+                }
+            }
+        }
         let mut index = Self::default();
         for object in organization.keys() {
             let parts = ancestors(object, &organization);
-            let inherited = parts
+            let locked_by = parts
                 .iter()
-                .filter(|r| explicit.contains(&r.id))
+                .filter(|r| editor.get(&r.id).locked)
                 .cloned()
                 .collect();
+            let mut hidden_by: Vec<_> = parts
+                .iter()
+                .filter(|r| editor.get(&r.id).hidden_in_editor)
+                .cloned()
+                .collect();
+            // Composite output restrictions apply to artwork, never controls.
+            if matches!(object.kind, K::Mesh | K::Offscreen) {
+                for part in &parts {
+                    if let Some(groups) = composites.get(part.id.as_str()) {
+                        hidden_by.extend(
+                            groups
+                                .iter()
+                                .filter(|id| **id != object.id)
+                                .map(|id| ObjectRef::new(K::Offscreen, *id)),
+                        );
+                    }
+                }
+            }
             index.states.insert(
                 object.clone(),
-                LockState {
-                    explicit: explicit.contains(&object.id),
-                    inherited,
+                ObjectState {
+                    explicit: editor.get(&object.id),
+                    locked_by,
+                    hidden_by,
                 },
             );
             index.organization.insert(object.clone(), parts);
@@ -107,20 +146,23 @@ impl LockIndex {
 }
 
 impl Document {
-    pub fn lock_index(&self) -> Arc<LockIndex> {
+    pub fn object_state_index(&self) -> Arc<ObjectStateIndex> {
         // Pending geometry gestures never change lock membership or hierarchy.
         let revision = self.session.document().revision();
-        let mut cache = self.lock_index.lock().unwrap();
+        let mut cache = self.object_state_index.lock().unwrap();
         if cache.as_ref().is_none_or(|(r, _)| *r != revision) {
             *cache = Some((
                 revision,
-                Arc::new(LockIndex::build(self.session.document())),
+                Arc::new(ObjectStateIndex::build(self.session.document())),
             ));
         }
         cache.as_ref().unwrap().1.clone()
     }
+    pub fn object_state(&self, object: &ObjectRef) -> ObjectState {
+        self.object_state_index().state(object).clone()
+    }
     pub fn ensure_editable(&self, objects: &[ObjectRef]) -> Result<()> {
-        let locks = self.lock_index();
+        let locks = self.object_state_index();
         for object in objects {
             let target = if object.kind.is_binding() {
                 self.object_index()
@@ -144,7 +186,7 @@ impl Document {
         if deformer {
             return Ok(());
         }
-        let locks = self.lock_index();
+        let locks = self.object_state_index();
         for (child, ancestors) in &locks.organization {
             if ancestors.contains(object) {
                 self.ensure_editable(std::slice::from_ref(child))?;
@@ -152,44 +194,43 @@ impl Document {
         }
         Ok(())
     }
+    pub fn set_object_visible(&mut self, object: &ObjectRef, visible: bool) -> Result<()> {
+        self.edit_object_state(std::slice::from_ref(object), StateEdit::Hidden(!visible))
+    }
     pub fn set_objects_locked(&mut self, objects: &[ObjectRef], locked: bool) -> Result<()> {
-        let index = self.lock_index();
+        self.edit_object_state(objects, StateEdit::Locked(locked))
+    }
+    fn edit_object_state(&mut self, objects: &[ObjectRef], change: StateEdit) -> Result<()> {
+        let index = self.object_state_index();
         ensure!(!objects.is_empty(), "Select an object first");
         for object in objects {
             ensure!(
-                index.lockable(object),
-                "Object cannot be locked: {}",
+                index.contains(object),
+                "Object does not support editor state: {}",
                 object.id
             );
         }
-        // Do not let an unpublished gesture commit after protection has changed.
-        self.cancel_edit();
-        let mut ids: HashSet<_> = self
-            .session
-            .document()
-            .object_locks()
-            .objects
-            .iter()
-            .cloned()
-            .collect();
+        match change {
+            StateEdit::Locked(_) => self.cancel_edit(),
+            StateEdit::Hidden(_) => self.finish_edit()?,
+        }
+        let mut state = self.model().editor_state().clone();
         for object in objects {
-            if locked {
-                ids.insert(object.id.clone());
-            } else {
-                ids.remove(&object.id);
+            let flags = state.objects.entry(object.id.clone()).or_default();
+            match change {
+                StateEdit::Locked(value) => flags.locked = value,
+                StateEdit::Hidden(value) => flags.hidden_in_editor = value,
             }
         }
-        let mut objects: Vec<_> = ids.into_iter().collect();
-        objects.sort();
-        let (_, receipt) = self.session.edit(
-            if locked {
-                "Lock objects"
-            } else {
-                "Unlock objects"
-            },
-            None,
-            |edit| edit.replace_object_locks(ObjectLocks { objects }),
-        )?;
+        let label = match change {
+            StateEdit::Locked(true) => "Lock objects",
+            StateEdit::Locked(false) => "Unlock objects",
+            StateEdit::Hidden(true) => "Hide in editor",
+            StateEdit::Hidden(false) => "Show in editor",
+        };
+        let (_, receipt) = self
+            .session
+            .edit(label, None, |edit| edit.replace_editor_state(state))?;
         self.session.drain_events();
         if receipt.changed {
             self.projection_revision += 1;
@@ -201,10 +242,13 @@ impl Document {
         self.ensure_editable(&objects)?;
         self.select_objects(objects)
     }
-    pub(crate) fn explicit_locks(&self) -> &ObjectLocks {
-        self.session.document().object_locks()
-    }
     pub(crate) fn evaluation_revision(&self) -> u64 {
         self.session.evaluation_revision()
     }
+}
+
+#[derive(Clone, Copy)]
+enum StateEdit {
+    Hidden(bool),
+    Locked(bool),
 }

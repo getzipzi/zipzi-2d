@@ -1,7 +1,7 @@
 use crate::{SceneSnapshot, SceneTexture, TreeNode, TreeNodeKind, tree::nest_nodes};
 use anyhow::{Result, anyhow, ensure};
 use kasane_core::{Canvas, Mesh, ParameterKind, Vec2, preview::PreviewState};
-use kasane_sdk::{AuthoringSession, EditSession, MeshProperties, SaveReceipt};
+use kasane_sdk::{AuthoringSession, EditSession, SaveReceipt};
 use std::collections::HashMap;
 use std::{
     path::Path,
@@ -9,9 +9,9 @@ use std::{
 };
 use uuid::Uuid;
 
-#[path = "locks.rs"]
-mod locks;
-pub use locks::{LockIndex, LockState};
+#[path = "object_state.rs"]
+mod object_state;
+pub use object_state::{ObjectState, ObjectStateIndex};
 
 #[path = "sorting.rs"]
 mod sorting;
@@ -73,19 +73,6 @@ pub struct ParameterKey {
     pub base: bool,
 }
 
-impl From<Mesh> for Layer {
-    fn from(mesh: Mesh) -> Self {
-        Self {
-            id: mesh.id,
-            name: mesh.name,
-            opacity: mesh.appearance.opacity,
-            visible: mesh.enabled,
-            vertices: mesh.vertex_ids.len(),
-            triangles: mesh.triangles.len(),
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Gesture {
     Rename,
@@ -111,7 +98,7 @@ pub struct Document {
     context: crate::PanelContext,
     projection_revision: u64,
     preview_revision: u64,
-    lock_index: std::sync::Mutex<Option<(u64, Arc<LockIndex>)>>,
+    object_state_index: std::sync::Mutex<Option<(u64, Arc<ObjectStateIndex>)>>,
     object_index: std::sync::Mutex<Option<(u64, Arc<crate::ObjectIndex>)>>,
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
     pending: Option<PendingEdit>,
@@ -197,7 +184,7 @@ impl Document {
             },
             projection_revision: 1,
             preview_revision: 0,
-            lock_index: std::sync::Mutex::new(None),
+            object_state_index: std::sync::Mutex::new(None),
             object_index: std::sync::Mutex::new(Some((1, projection))),
             canvas_topology: std::sync::Mutex::new(None),
             selected,
@@ -273,11 +260,23 @@ impl Document {
             .map_or_else(|| self.session.document(), |p| p.edit.candidate_document())
     }
 
+    fn layer(&self, id: &str) -> Option<Layer> {
+        let mesh = self.mesh(id)?;
+        Some(Layer {
+            id: mesh.id,
+            name: mesh.name,
+            opacity: mesh.appearance.opacity,
+            visible: !self.model().editor_state().get(id).hidden_in_editor,
+            vertices: mesh.vertex_ids.len(),
+            triangles: mesh.triangles.len(),
+        })
+    }
+
     pub fn layers(&self) -> Vec<Layer> {
         self.session
             .mesh_ids()
             .iter()
-            .filter_map(|id| self.mesh(id).map(Into::into))
+            .filter_map(|id| self.layer(id))
             .collect()
     }
 
@@ -533,11 +532,13 @@ impl Document {
                 _ => continue,
             };
             let mut node = TreeNode::new(x.reference.id.clone(), x.name.clone(), kind);
-            node.visible = if x.reference.kind == K::Deformer {
-                Some(self.deformer_controls_visible(&x.reference.id))
-            } else {
-                x.enabled
-            };
+            node.visible = Some(
+                !self
+                    .model()
+                    .editor_state()
+                    .get(&x.reference.id)
+                    .hidden_in_editor,
+            );
             if kind == TreeNodeKind::Mesh {
                 node.triangles = self.model().get_mesh(&node.id).map(|m| m.triangles.len());
             }
@@ -629,10 +630,7 @@ impl Document {
     }
 
     pub fn selected_layer(&self) -> Option<Layer> {
-        self.selected
-            .as_deref()
-            .and_then(|id| self.mesh(id))
-            .map(Into::into)
+        self.selected.as_deref().and_then(|id| self.layer(id))
     }
 
     /// Shared scalar inspector edits remain SDK transactions and history entries.
@@ -680,6 +678,7 @@ impl Document {
             }};
         }
         let changed = match object.kind {
+            K::Mesh => update!(get_mesh, kasane_core::Mesh, replace_mesh),
             K::Part => update!(get_part, kasane_core::Part, replace_part),
             K::Deformer => update!(get_transform, kasane_core::Transform, replace_transform),
             K::Parameter => update!(get_parameter, kasane_core::Parameter, replace_parameter),
@@ -1059,109 +1058,32 @@ impl Document {
         }
     }
 
-    pub fn set_visible(&mut self, visible: bool) -> Result<()> {
-        let id = self
-            .selected
-            .clone()
-            .ok_or_else(|| anyhow!("Select a layer first"))?;
-        self.set_layer_visible(&id, visible)
-    }
-
-    pub fn set_layer_visible(&mut self, id: &str, visible: bool) -> Result<()> {
-        self.set_object_visible(&crate::ObjectRef::new(crate::ObjectKind::Mesh, id), visible)
-    }
-
-    /// The eye on a deformer controls its own editor handles, not its runtime effect.
     pub fn deformer_controls_visible(&self, id: &str) -> bool {
-        !self
-            .model()
-            .deformer_display()
-            .hidden
-            .iter()
-            .any(|hidden| hidden == id)
-    }
-
-    /// Visibility remains editable under a lock and changes only the object's own flag.
-    pub fn set_object_visible(&mut self, object: &crate::ObjectRef, visible: bool) -> Result<()> {
-        use crate::ObjectKind as K;
-        self.finish_edit()?;
-        macro_rules! update {
-            ($get:ident, $replace:ident) => {{
-                let mut next = self
-                    .model()
-                    .$get(&object.id)
-                    .cloned()
-                    .ok_or_else(|| anyhow!("Object no longer exists: {}", object.id))?;
-                if next.enabled == visible {
-                    return Ok(());
-                }
-                next.enabled = visible;
-                self.session
-                    .edit("Change object visibility", None, |edit| edit.$replace(next))?;
-            }};
-        }
-        match object.kind {
-            K::Part => update!(get_part, replace_part),
-            K::Deformer => {
-                ensure!(
-                    self.model().get_transform(&object.id).is_some(),
-                    "Deformer no longer exists"
-                );
-                if self.deformer_controls_visible(&object.id) == visible {
-                    return Ok(());
-                }
-                let mut display = self.model().deformer_display().clone();
-                if visible {
-                    display.hidden.retain(|id| id != &object.id);
-                } else {
-                    display.hidden.push(object.id.clone());
-                }
-                self.session
-                    .edit("Change deformer control visibility", None, |edit| {
-                        edit.replace_deformer_display(display)
-                    })?;
-            }
-            K::Offscreen => update!(get_offscreen, replace_offscreen),
-            K::Mesh => {
-                let mesh = self
-                    .session
-                    .mesh(&object.id)
-                    .ok_or_else(|| anyhow!("Layer not found: {}", object.id))?;
-                if mesh.enabled == visible {
-                    return Ok(());
-                }
-                let mut properties = MeshProperties::from(&mesh);
-                properties.enabled = visible;
-                self.session
-                    .edit("Change object visibility", None, |edit| {
-                        edit.update_mesh_properties(&mesh.id, properties)
-                    })?;
-            }
-            _ => anyhow::bail!("Object does not support visibility"),
-        }
-        self.session.drain_events();
-        self.pristine_blank = false;
-        self.projection_revision += 1;
-        Ok(())
+        self.object_state(&crate::ObjectRef::new(crate::ObjectKind::Deformer, id))
+            .visible()
     }
 
     pub fn undo(&mut self) -> Result<()> {
         self.finish_edit()?;
         let before = self.evaluation_revision();
-        let locks = self.explicit_locks().clone();
+        let state = self.model().editor_state().clone();
         self.session.undo()?;
         self.reconcile_parameter_preview()?;
-        self.after_history(before != self.evaluation_revision() || locks == *self.explicit_locks());
+        self.after_history(
+            before != self.evaluation_revision() || state == *self.model().editor_state(),
+        );
         Ok(())
     }
 
     pub fn redo(&mut self) -> Result<()> {
         self.finish_edit()?;
         let before = self.evaluation_revision();
-        let locks = self.explicit_locks().clone();
+        let state = self.model().editor_state().clone();
         self.session.redo()?;
         self.reconcile_parameter_preview()?;
-        self.after_history(before != self.evaluation_revision() || locks == *self.explicit_locks());
+        self.after_history(
+            before != self.evaluation_revision() || state == *self.model().editor_state(),
+        );
         Ok(())
     }
 
@@ -1198,8 +1120,10 @@ impl Document {
         } else {
             self.session.preview_frame()?
         };
+        let viewport_frame = self.viewport_frame(&frame);
         Ok(SceneSnapshot {
-            frame,
+            runtime_frame: frame,
+            viewport_frame,
             textures: self.textures.clone(),
         })
     }

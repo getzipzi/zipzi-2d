@@ -147,7 +147,7 @@ fn blank_document_starts_clean_and_can_be_saved() -> anyhow::Result<()> {
     assert_eq!(document.history_lengths(), (0, 0));
     assert!(!document.modified());
     let snapshot = document.snapshot()?;
-    assert!(snapshot.frame.drawables.is_empty());
+    assert!(snapshot.viewport_frame.drawables.is_empty());
     assert!(snapshot.textures.is_empty());
 
     let output = tempfile::tempdir()?;
@@ -155,7 +155,7 @@ fn blank_document_starts_clean_and_can_be_saved() -> anyhow::Result<()> {
     assert!(!document.modified());
     let mut reopened = Document::open(&receipt.manifest)?;
     assert!(reopened.layers().is_empty());
-    assert!(reopened.snapshot()?.frame.drawables.is_empty());
+    assert!(reopened.snapshot()?.viewport_frame.drawables.is_empty());
     Ok(())
 }
 
@@ -209,13 +209,16 @@ fn opacity_gesture_previews_then_commits_one_undo_step() -> anyhow::Result<()> {
     }
     assert_eq!(document.history_lengths(), history);
     assert_eq!(document.selected_layer().unwrap().opacity, 0.4);
-    assert_eq!(document.snapshot()?.frame.drawables[0].opacity, 0.4);
-    assert_eq!(original.frame.drawables[0].opacity, 1.);
+    assert_eq!(
+        document.snapshot()?.viewport_frame.drawables[0].opacity,
+        0.4
+    );
+    assert_eq!(original.viewport_frame.drawables[0].opacity, 1.);
     document.finish_edit()?;
     assert_eq!(document.history_lengths(), (history.0 + 1, 0));
     document.undo()?;
     assert_eq!(document.selected_layer().unwrap().opacity, 1.);
-    assert_eq!(document.snapshot()?.frame.drawables[0].opacity, 1.);
+    assert_eq!(document.snapshot()?.viewport_frame.drawables[0].opacity, 1.);
     document.redo()?;
     assert_eq!(document.selected_layer().unwrap().opacity, 0.4);
     Ok(())
@@ -224,7 +227,7 @@ fn opacity_gesture_previews_then_commits_one_undo_step() -> anyhow::Result<()> {
 #[test]
 fn cancelled_and_unchanged_gestures_preserve_history_and_redo() -> anyhow::Result<()> {
     let (mut document, _source) = sample_document()?;
-    document.set_visible(false)?;
+    document.set_object_visible(&document.context().selection.clone().unwrap(), false)?;
     document.undo()?;
     let history = document.history_lengths();
     document.preview_name("New name")?;
@@ -246,11 +249,11 @@ fn rename_and_visibility_are_real_model_edits() -> anyhow::Result<()> {
     let (mut document, _source) = sample_document()?;
     document.preview_name("Face")?;
     document.finish_edit()?;
-    document.set_visible(false)?;
+    document.set_object_visible(&document.context().selection.clone().unwrap(), false)?;
     assert!(
         document
             .snapshot()?
-            .frame
+            .viewport_frame
             .drawables
             .iter()
             .all(|drawable| !drawable.visible)
@@ -295,7 +298,7 @@ fn project_round_trip_preserves_edits_and_copies_source_texture() -> anyhow::Res
         reopened.snapshot()?.textures[0].rgba.as_ref(),
         &[100, 205, 230, 255]
     );
-    assert_eq!(snapshot.frame.drawables[0].opacity, 0.35);
+    assert_eq!(snapshot.viewport_frame.drawables[0].opacity, 0.35);
     assert_eq!(snapshot.textures[0].rgba.as_ref(), &[100, 205, 230, 255]);
     Ok(())
 }
@@ -318,7 +321,7 @@ fn failed_save_keeps_live_document_and_bad_open_does_not_require_replacing_it() 
     std::fs::write(&broken, b"not a project")?;
     assert!(Document::open(&broken).is_err());
     assert!(!document.modified());
-    assert_eq!(document.snapshot()?.frame.drawables.len(), 1);
+    assert_eq!(document.snapshot()?.viewport_frame.drawables.len(), 1);
     Ok(())
 }
 
@@ -360,7 +363,7 @@ fn opening_multiple_layers_edits_only_the_selected_mesh() -> anyhow::Result<()> 
     let frame = document.snapshot()?;
     assert_eq!(
         frame
-            .frame
+            .viewport_frame
             .drawables
             .iter()
             .find(|d| d.id == second)

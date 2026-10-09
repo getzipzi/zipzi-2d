@@ -132,7 +132,7 @@ impl ToolController {
         self.hovered = None;
     }
     pub fn reconcile(&mut self, document: &Document) {
-        let locks = document.lock_index();
+        let locks = document.object_state_index();
         let model = document.model();
         self.components.retain(|c| {
             !locks.is_locked(&c.object)
@@ -180,7 +180,7 @@ impl ToolController {
         frame: &CanvasFrame,
         event: CanvasInput,
     ) -> Result<bool> {
-        let locks = document.lock_index();
+        let locks = document.object_state_index();
         let scene = &frame.geometry;
         let t = frame.transform;
         match event {
@@ -533,7 +533,7 @@ impl ToolController {
         Ok(true)
     }
     pub fn overlay(&self, document: &Document, frame: &CanvasFrame) -> OverlaySnapshot {
-        let locks = document.lock_index();
+        let locks = document.object_state_index();
         let scene = &frame.geometry;
         let t = frame.transform;
         let selection = &document.context().selections;
@@ -825,7 +825,7 @@ impl ToolController {
                     format!("{:.1}°", -radians.to_degrees())
                 }
                 ControlChange::Rotation { angle, scale, .. } => {
-                    let angle = if p.scene.source.frame.canvas.flag & 1 == 0 {
+                    let angle = if p.scene.source.viewport_frame.canvas.flag & 1 == 0 {
                         -angle
                     } else {
                         angle

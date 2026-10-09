@@ -140,7 +140,16 @@ fn same_model_uuid_in_two_files_has_distinct_document_identity() -> anyhow::Resu
     load(&mut editor, &copy)?;
     let second = editor.active_id().unwrap();
     assert_ne!(first, second);
-    editor.execute(EditorCommand::SetVisible(false))?;
+    editor.execute(EditorCommand::SetObjectVisible {
+        object: editor
+            .document()
+            .unwrap()
+            .context()
+            .selection
+            .clone()
+            .unwrap(),
+        visible: false,
+    })?;
     editor.activate(first)?;
     assert!(editor.document().unwrap().selected_layer().unwrap().visible);
     assert!(!editor.can_undo());

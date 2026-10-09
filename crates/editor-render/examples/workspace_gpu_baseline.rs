@@ -62,7 +62,7 @@ fn main() -> anyhow::Result<()> {
             objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
                 let preview = editor.preview()?;
                 let transform = ViewportTransform::new(
-                    preview.scene.frame.canvas,
+                    preview.scene.viewport_frame.canvas,
                     metrics,
                     ViewState {
                         zoom: 1. + (index as f32 % 4.) * 0.05,

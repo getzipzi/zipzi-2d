@@ -689,7 +689,7 @@ impl Editor {
             &s.document().context().selections,
             s.tools.active,
             s.tools.deformer_visibility,
-            &s.document().lock_index(),
+            &s.document().object_state_index(),
         )
     }
     pub fn canvas_input(&mut self, input: crate::CanvasInput) -> Result<bool> {
@@ -777,19 +777,18 @@ impl Editor {
         let (scene, geometry) = session.scene()?;
         let view = session.view();
         let versions = (id, session.scene_revision, session.viewport_revision);
-        let canvas =
-            crate::ViewportTransform::new(scene.frame.canvas, metrics, view).map(|transform| {
-                crate::CanvasFrame {
-                    version: crate::FrameVersion {
-                        document: id,
-                        scene: versions.1,
-                        viewport: versions.2,
-                        request: revision,
-                    },
-                    transform,
-                    geometry,
-                }
-            });
+        let canvas = crate::ViewportTransform::new(scene.viewport_frame.canvas, metrics, view).map(
+            |transform| crate::CanvasFrame {
+                version: crate::FrameVersion {
+                    document: id,
+                    scene: versions.1,
+                    viewport: versions.2,
+                    request: revision,
+                },
+                transform,
+                geometry,
+            },
+        );
         self.requested_scene = Some(versions);
         if self.displayed_request.is_none() {
             self.presentation_floor = revision;

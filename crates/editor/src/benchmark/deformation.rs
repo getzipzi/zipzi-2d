@@ -30,7 +30,7 @@ pub(super) fn frame_ready(view: &EditorView) -> bool {
         return false;
     };
     view.editor.has_presented_frame(Some(shown.canvas.version))
-        && std::sync::Arc::ptr_eq(&shown.canvas.geometry.source.frame, &evaluated)
+        && std::sync::Arc::ptr_eq(&shown.canvas.geometry.source.viewport_frame, &evaluated)
         && Some(shown.canvas.transform)
             == editor_core::ViewportTransform::new(
                 document.canvas(),

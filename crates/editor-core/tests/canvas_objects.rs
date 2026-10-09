@@ -38,7 +38,7 @@ fn texture(id: &str, alpha: [u8; 2]) -> SceneTexture {
 }
 fn pixel_scene(doc: &mut Document) -> anyhow::Result<SceneSnapshot> {
     let mut source = doc.snapshot()?;
-    let f = Arc::make_mut(&mut source.frame);
+    let f = Arc::make_mut(&mut source.viewport_frame);
     for d in &mut f.drawables {
         d.texture_asset_id = "solid".into();
     }
@@ -141,9 +141,9 @@ fn texture_alpha_picking_matches_renderer_v_orientation_for_surfaces_and_masks()
         rgba: vec![255, 255, 255, 255, 255, 255, 255, 0].into(),
     });
     source.textures = textures.into();
-    let bottom = source.frame.drawables[0].id.clone();
-    let top = source.frame.drawables[1].id.clone();
-    let frame = Arc::make_mut(&mut source.frame);
+    let bottom = source.viewport_frame.drawables[0].id.clone();
+    let top = source.viewport_frame.drawables[1].id.clone();
+    let frame = Arc::make_mut(&mut source.viewport_frame);
     // Set UVs explicitly in the renderer's convention for this diamond fixture.
     for d in &mut frame.drawables {
         d.uvs = d
@@ -163,14 +163,14 @@ fn texture_alpha_picking_matches_renderer_v_orientation_for_surfaces_and_masks()
     assert_eq!(scene.mesh_hits(lower), [bottom.clone()]);
 
     // The same conversion must apply to mask sources, including inverted masks.
-    let frame = Arc::make_mut(&mut source.frame);
+    let frame = Arc::make_mut(&mut source.viewport_frame);
     frame.drawables[0].texture_asset_id = "vertical-cutout".into();
     frame.drawables[1].texture_asset_id = "solid".into();
     frame.drawables[1].masks = vec![bottom.clone()];
     let scene = CanvasScene::new(&doc, source.clone());
     assert_eq!(scene.mesh_hits(upper), [top.clone(), bottom.clone()]);
     assert!(scene.mesh_hits(lower).is_empty());
-    Arc::make_mut(&mut source.frame).drawables[1].inverted_mask = true;
+    Arc::make_mut(&mut source.viewport_frame).drawables[1].inverted_mask = true;
     let scene = CanvasScene::new(&doc, source);
     assert_eq!(scene.mesh_hits(upper), [bottom]);
     assert_eq!(scene.mesh_hits(lower), [top]);
@@ -180,9 +180,9 @@ fn texture_alpha_picking_matches_renderer_v_orientation_for_surfaces_and_masks()
 fn alpha_holes_pass_through_and_mask_inversion_changes_candidates() -> anyhow::Result<()> {
     let (mut doc, _) = support::sample_document_with_two_layers()?;
     let mut source = pixel_scene(&mut doc)?;
-    let bottom = source.frame.drawables[0].id.clone();
-    let top = source.frame.drawables[1].id.clone();
-    Arc::make_mut(&mut source.frame).drawables[1].texture_asset_id = "cutout".into();
+    let bottom = source.viewport_frame.drawables[0].id.clone();
+    let top = source.viewport_frame.drawables[1].id.clone();
+    Arc::make_mut(&mut source.viewport_frame).drawables[1].texture_asset_id = "cutout".into();
     let scene = CanvasScene::new(&doc, source.clone());
     assert_eq!(
         scene.mesh_hits(ModelPoint { x: 70., y: 128. }),
@@ -192,7 +192,7 @@ fn alpha_holes_pass_through_and_mask_inversion_changes_candidates() -> anyhow::R
         scene.mesh_hits(ModelPoint { x: 190., y: 128. }),
         [top.clone(), bottom.clone()]
     );
-    let f = Arc::make_mut(&mut source.frame);
+    let f = Arc::make_mut(&mut source.viewport_frame);
     f.drawables[0].texture_asset_id = "cutout".into();
     f.drawables[1].texture_asset_id = "solid".into();
     f.drawables[1].masks = vec![bottom.clone()];
@@ -201,7 +201,7 @@ fn alpha_holes_pass_through_and_mask_inversion_changes_candidates() -> anyhow::R
             .mesh_hits(ModelPoint { x: 70., y: 128. })
             .is_empty()
     );
-    Arc::make_mut(&mut source.frame).drawables[1].inverted_mask = true;
+    Arc::make_mut(&mut source.viewport_frame).drawables[1].inverted_mask = true;
     let scene = CanvasScene::new(&doc, source);
     assert_eq!(scene.mesh_hits(ModelPoint { x: 70., y: 128. }), [top]);
     assert_eq!(scene.mesh_hits(ModelPoint { x: 190., y: 128. }), [bottom]);
@@ -211,9 +211,9 @@ fn alpha_holes_pass_through_and_mask_inversion_changes_candidates() -> anyhow::R
 fn offscreen_plan_overrides_flat_rank_and_applies_group_alpha() -> anyhow::Result<()> {
     let (mut doc, _) = support::sample_document_with_two_layers()?;
     let mut source = pixel_scene(&mut doc)?;
-    let bottom = source.frame.drawables[0].id.clone();
-    let top = source.frame.drawables[1].id.clone();
-    let f = Arc::make_mut(&mut source.frame);
+    let bottom = source.viewport_frame.drawables[0].id.clone();
+    let top = source.viewport_frame.drawables[1].id.clone();
+    let f = Arc::make_mut(&mut source.viewport_frame);
     f.drawables[0].render_order = 999;
     f.drawables[1].render_order = 0;
     f.offscreens = vec![OffscreenFrame {
@@ -241,7 +241,7 @@ fn offscreen_plan_overrides_flat_rank_and_applies_group_alpha() -> anyhow::Resul
         CanvasScene::new(&doc, source.clone()).mesh_hits(point),
         [top, bottom.clone()]
     );
-    Arc::make_mut(&mut source.frame).offscreens[0].opacity = 0.;
+    Arc::make_mut(&mut source.viewport_frame).offscreens[0].opacity = 0.;
     assert_eq!(CanvasScene::new(&doc, source).mesh_hits(point), [bottom]);
     Ok(())
 }
@@ -840,7 +840,12 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
     })?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     let moved = editor.preview()?.scene;
-    for (before, after) in original.frame.drawables.iter().zip(&moved.frame.drawables) {
+    for (before, after) in original
+        .viewport_frame
+        .drawables
+        .iter()
+        .zip(&moved.viewport_frame.drawables)
+    {
         for (a, b) in before.positions.iter().zip(&after.positions) {
             assert!((b.x - a.x - 10.).abs() < 1e-4);
             assert!((b.y - a.y + 5.).abs() < 1e-4);
@@ -848,8 +853,8 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
     }
     editor.execute(EditorCommand::Undo)?;
     assert_eq!(
-        editor.preview()?.scene.frame.drawables,
-        original.frame.drawables
+        editor.preview()?.scene.viewport_frame.drawables,
+        original.viewport_frame.drawables
     );
     Ok(())
 }
@@ -857,7 +862,16 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
 #[test]
 fn hidden_meshes_have_no_invisible_component_hit_targets() -> anyhow::Result<()> {
     let (mut editor, _) = setup()?;
-    editor.execute(EditorCommand::SetVisible(false))?;
+    editor.execute(EditorCommand::SetObjectVisible {
+        object: editor
+            .document()
+            .unwrap()
+            .context()
+            .selection
+            .clone()
+            .unwrap(),
+        visible: false,
+    })?;
     let frame = shown(&mut editor)?;
     assert!(editor.overlay().vertices.is_empty());
     let scene = &frame.geometry;
@@ -920,7 +934,7 @@ fn invisible_offscreen_members_have_no_handles_and_are_excluded_from_marquee() -
     let (mut editor, _dir) = setup()?;
     let mut frame = editor.preview()?.canvas.unwrap();
     let mut source = frame.geometry.source.clone();
-    let evaluated = Arc::make_mut(&mut source.frame);
+    let evaluated = Arc::make_mut(&mut source.viewport_frame);
     let hidden = evaluated.drawables[0].id.clone();
     let visible = evaluated.drawables[1].id.clone();
     evaluated.offscreens = vec![OffscreenFrame {
@@ -2003,7 +2017,7 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
             let mut logical_positions = None;
             for dpi in [1., 2.] {
                 let transform = ViewportTransform::new(
-                    scene.source.frame.canvas,
+                    scene.source.viewport_frame.canvas,
                     CanvasMetrics {
                         width,
                         height: width,
@@ -2538,15 +2552,15 @@ fn locked_deformer_has_only_read_only_lines_and_blocks_control_adjustments() -> 
 fn locked_mask_still_clips_unlocked_objects_in_canvas_candidates() -> anyhow::Result<()> {
     let (mut doc, _dir) = support::sample_document_with_two_layers()?;
     let mut source = pixel_scene(&mut doc)?;
-    let bottom = source.frame.drawables[0].id.clone();
-    let top = source.frame.drawables[1].id.clone();
-    let f = Arc::make_mut(&mut source.frame);
+    let bottom = source.viewport_frame.drawables[0].id.clone();
+    let top = source.viewport_frame.drawables[1].id.clone();
+    let f = Arc::make_mut(&mut source.viewport_frame);
     f.drawables[0].texture_asset_id = "cutout".into();
     f.drawables[1].masks = vec![bottom.clone()];
     let scene = CanvasScene::new(&doc, source);
     doc.set_objects_locked(&[ObjectRef::new(ObjectKind::Mesh, bottom)], true)?;
     let t = ViewportTransform::new(
-        scene.source.frame.canvas,
+        scene.source.viewport_frame.canvas,
         CanvasMetrics {
             width: 512.,
             height: 512.,
@@ -2562,7 +2576,7 @@ fn locked_mask_still_clips_unlocked_objects_in_canvas_candidates() -> anyhow::Re
             &[],
             ToolId::Select,
             DeformerVisibility::default(),
-            &doc.lock_index(),
+            &doc.object_state_index(),
         )
     };
     assert!(candidates(70.).is_empty());

@@ -93,14 +93,15 @@ impl CanvasScene {
     fn build(document: &Document, source: SceneSnapshot, previous: Option<&Self>) -> Self {
         let topology = document.canvas_topology();
         let index = topology.index.clone();
-        let canvas = source.frame.canvas;
+        let canvas = source.viewport_frame.canvas;
         let previous = previous.filter(|previous| {
-            Arc::ptr_eq(&previous.topology, &topology) && previous.source.frame.canvas == canvas
+            Arc::ptr_eq(&previous.topology, &topology)
+                && previous.source.viewport_frame.canvas == canvas
         });
-        let visible_meshes = visible_meshes(&source.frame);
+        let visible_meshes = visible_meshes(&source.viewport_frame);
         let to_model = |p| ViewportTransform::evaluated_to_source(canvas, p);
         let meshes: Arc<[Arc<MeshGeometry>]> = source
-            .frame
+            .viewport_frame
             .drawables
             .iter()
             .enumerate()
@@ -109,7 +110,7 @@ impl CanvasScene {
                 if let Some(previous) = previous
                     && previous
                         .source
-                        .frame
+                        .viewport_frame
                         .drawables
                         .get(slot)
                         .is_some_and(|old| old.id == d.id && old.positions == d.positions)
@@ -139,7 +140,7 @@ impl CanvasScene {
             })
             .collect();
         let mut controls = Vec::new();
-        for evaluated in &source.frame.deformers {
+        for evaluated in &source.viewport_frame.deformers {
             let Some(t) = topology.controls.get(&evaluated.id) else {
                 continue;
             };
@@ -194,7 +195,7 @@ impl CanvasScene {
                 points,
                 edges: edges.into(),
                 enabled: visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b),
-                visible: true,
+                visible: document.object_state(&g.object).visible(),
             });
         }
         let texture_slots = source
@@ -236,7 +237,7 @@ impl CanvasScene {
         };
         let parameters = scene
             .source
-            .frame
+            .viewport_frame
             .parameters
             .iter()
             .map(|p| (p.id.as_str(), p.value))
@@ -261,13 +262,14 @@ impl CanvasScene {
         if !Arc::ptr_eq(&self.topology, &topology) {
             return Self::new(document, source);
         }
-        let visible_meshes = visible_meshes(&source.frame);
+        let visible_meshes = visible_meshes(&source.viewport_frame);
         let mut controls = self.controls.clone();
         for control in &mut controls {
             if control.object.kind == K::Deformer {
                 control.visible = document.deformer_controls_visible(&control.object.id);
             }
             if control.kind == ControlKind::Glue {
+                control.visible = document.object_state(&control.object).visible();
                 if let Some(g) = topology.glues.iter().find(|g| g.object == control.object) {
                     control.enabled =
                         visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b);
@@ -391,7 +393,7 @@ impl CanvasScene {
             tool,
             visibility,
             false,
-            &crate::LockIndex::default(),
+            &crate::ObjectStateIndex::default(),
         )
     }
     pub(crate) fn hit_with_mode(
@@ -402,7 +404,7 @@ impl CanvasScene {
         tool: ToolId,
         visibility: DeformerVisibility,
         fine: bool,
-        locks: &crate::LockIndex,
+        locks: &crate::ObjectStateIndex,
     ) -> Option<HitTarget> {
         if tool == ToolId::Hand {
             return None;
@@ -561,7 +563,7 @@ impl CanvasScene {
             selection,
             tool,
             visibility,
-            &crate::LockIndex::default(),
+            &crate::ObjectStateIndex::default(),
         )
     }
     pub fn candidates_with_locks(
@@ -571,7 +573,7 @@ impl CanvasScene {
         selection: &[ObjectRef],
         tool: ToolId,
         visibility: DeformerVisibility,
-        locks: &crate::LockIndex,
+        locks: &crate::ObjectStateIndex,
     ) -> Vec<PickCandidate> {
         let mut objects = Vec::new();
         if let Some(hit) = self.hit_with_mode(point, t, selection, tool, visibility, false, locks) {
@@ -604,7 +606,7 @@ impl CanvasScene {
             .collect()
     }
     fn raw_alpha(&self, slot: usize, p: ModelPoint) -> f32 {
-        let d = &self.source.frame.drawables[slot];
+        let d = &self.source.viewport_frame.drawables[slot];
         let Some(mesh) = self.mesh(&d.id) else {
             return 0.;
         };
@@ -621,7 +623,7 @@ impl CanvasScene {
         else {
             return 0.;
         };
-        let canvas = self.source.frame.canvas;
+        let canvas = self.source.viewport_frame.canvas;
         let mut alpha: f32 = 0.;
         for indices in d.indices.chunks_exact(3) {
             let [a, b, c] = [
@@ -661,7 +663,7 @@ impl CanvasScene {
         if !p.x.is_finite() || !p.y.is_finite() {
             return Vec::new();
         }
-        let frame = &self.source.frame;
+        let frame = &self.source.viewport_frame;
         let raw: HashMap<_, _> = frame
             .drawables
             .iter()

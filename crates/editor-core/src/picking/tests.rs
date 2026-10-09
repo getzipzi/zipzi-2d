@@ -41,7 +41,7 @@ fn updated_positions_reuse_other_meshes_and_refresh_bounds_and_boundaries() -> a
     let source = document.snapshot()?;
     let original = CanvasScene::new(&document, source.clone());
     let mut moved = source;
-    let frame = Arc::make_mut(&mut moved.frame);
+    let frame = Arc::make_mut(&mut moved.viewport_frame);
     frame.drawables[1].positions[0].x -= 50.;
     let updated = original.with_positions(&document, moved);
     assert!(Arc::ptr_eq(&original.meshes[0], &updated.meshes[0]));
@@ -69,7 +69,9 @@ fn geometry_reuse_respects_canvas_coordinates_drawable_order_and_topology() -> a
     let source = document.snapshot()?;
     let original = CanvasScene::new(&document, source.clone());
     let mut reordered = source.clone();
-    Arc::make_mut(&mut reordered.frame).drawables.swap(0, 1);
+    Arc::make_mut(&mut reordered.viewport_frame)
+        .drawables
+        .swap(0, 1);
     let reordered = original.with_positions(&document, reordered);
     for (index, mesh) in reordered.meshes.iter().enumerate() {
         assert_eq!(mesh.id, original.meshes[1 - index].id);
@@ -78,7 +80,7 @@ fn geometry_reuse_respects_canvas_coordinates_drawable_order_and_topology() -> a
     }
     for flag in [0, 1] {
         let mut changed_canvas = source.clone();
-        let canvas = &mut Arc::make_mut(&mut changed_canvas.frame).canvas;
+        let canvas = &mut Arc::make_mut(&mut changed_canvas.viewport_frame).canvas;
         canvas.pixels_per_unit = 2.;
         canvas.origin = Vec2::new(7., 9.);
         canvas.flag = flag;

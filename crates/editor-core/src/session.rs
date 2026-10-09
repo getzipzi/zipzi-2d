@@ -40,7 +40,9 @@ impl DocumentSession {
         &self.document
     }
     pub fn evaluated_frame(&self) -> Option<Arc<kasane_core::DrawableFrame>> {
-        self.cache.as_ref().map(|scene| scene.frame.clone())
+        self.cache
+            .as_ref()
+            .map(|scene| scene.viewport_frame.clone())
     }
     pub fn view(&self) -> ViewState {
         self.view
@@ -74,8 +76,8 @@ impl DocumentSession {
         };
         let had_pending = self.document.has_pending_edit();
         let evaluation_before = self.document.evaluation_revision();
-        let history_locks = matches!(&command, EditorCommand::Undo | EditorCommand::Redo)
-            .then(|| self.document.explicit_locks().clone());
+        let history_state = matches!(&command, EditorCommand::Undo | EditorCommand::Redo)
+            .then(|| self.document.model().editor_state().clone());
         let is_lock = matches!(&command, EditorCommand::SetObjectsLocked { .. });
         let lock_or_history = matches!(
             &command,
@@ -229,10 +231,6 @@ impl DocumentSession {
             EditorCommand::SetPreviewParameters { values } => {
                 self.document.set_preview_parameters(&values)
             }
-            EditorCommand::SetVisible(v) => self.document.set_visible(v),
-            EditorCommand::SetLayerVisible { layer_id, visible } => {
-                self.document.set_layer_visible(&layer_id, visible)
-            }
             EditorCommand::SetObjectVisible { object, visible } => {
                 self.document.set_object_visible(&object, visible)
             }
@@ -249,8 +247,10 @@ impl DocumentSession {
         }
         // Editor lock edits are standalone transactions. Other metadata history
         // (for example names) must refresh labels captured in canvas topology.
-        let lock_history =
-            history_locks.is_some_and(|before| before != *self.document.explicit_locks());
+        let lock_history = history_state.is_some_and(|before| {
+            let after = self.document.model().editor_state();
+            before != *after && before.hidden_objects().eq(after.hidden_objects())
+        });
         if invalidate
             && (!(is_lock || lock_history)
                 || had_pending

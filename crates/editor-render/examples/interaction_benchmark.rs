@@ -56,7 +56,8 @@ fn main() -> anyhow::Result<()> {
                     y: (sample as f32 * 0.07).cos() * 40.,
                 },
             };
-            let transform = ViewportTransform::new(scene.frame.canvas, metrics, view).unwrap();
+            let transform =
+                ViewportTransform::new(scene.viewport_frame.canvas, metrics, view).unwrap();
             let start = Instant::now();
             let (mut edit_ms, mut scene_ms) = (0., 0.);
             if mode == "opacity_edit" {
@@ -70,7 +71,7 @@ fn main() -> anyhow::Result<()> {
             if mode == "mesh_edit" {
                 // An immutable scene update with one changed mesh. Include the
                 // snapshot copy; SDK evaluation is covered by the core benchmark.
-                let frame = Arc::make_mut(&mut edited.frame);
+                let frame = Arc::make_mut(&mut edited.viewport_frame);
                 if let Some(mesh) = frame
                     .drawables
                     .iter_mut()
@@ -80,7 +81,7 @@ fn main() -> anyhow::Result<()> {
                 }
             }
             if mode == "deform_all" {
-                let frame = Arc::make_mut(&mut edited.frame);
+                let frame = Arc::make_mut(&mut edited.viewport_frame);
                 let delta = if sample % 2 == 0 { 0.001 } else { -0.001 };
                 for mesh in &mut frame.drawables {
                     for position in &mut mesh.positions {

@@ -90,11 +90,6 @@ pub enum EditorCommand {
     SetPreviewParameters {
         values: Vec<(String, f32)>,
     },
-    SetVisible(bool),
-    SetLayerVisible {
-        layer_id: String,
-        visible: bool,
-    },
     SetObjectVisible {
         object: crate::ObjectRef,
         visible: bool,

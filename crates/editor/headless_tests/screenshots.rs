@@ -243,9 +243,16 @@ pub(super) fn run() -> anyhow::Result<()> {
             .click(format!("mesh-lock-{mesh}"), cx);
         harness.view.read_with(cx, |view, _| {
             assert!(view.editor.overlay().vertices.is_empty());
-            assert!(view.editor.document().unwrap().lock_index().is_locked(
-                &editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, &mesh)
-            ));
+            assert!(
+                view.editor
+                    .document()
+                    .unwrap()
+                    .object_state_index()
+                    .is_locked(&editor_core::ObjectRef::new(
+                        editor_core::ObjectKind::Mesh,
+                        &mesh
+                    ))
+            );
         });
     })?;
     let locked = harness.capture()?;

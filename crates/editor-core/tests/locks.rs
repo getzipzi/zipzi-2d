@@ -44,28 +44,28 @@ fn explicit_and_inherited_locks_survive_save_and_do_not_cross_hierarchies() -> a
     sdk.save_project(&saved.manifest, None)?;
     let mut doc = Document::open(&saved.manifest)?;
     doc.set_objects_locked(&[part.clone()], true)?;
-    assert!(doc.lock_index().is_locked(&deformer));
+    assert!(doc.object_state_index().is_locked(&deformer));
     assert!(
-        !doc.lock_index().is_locked(&mesh),
+        !doc.object_state_index().is_locked(&mesh),
         "inherited Part lock must not propagate through a Deformer into another Part"
     );
     doc.set_objects_locked(&[deformer.clone(), mesh.clone()], true)?;
     assert_eq!(doc.history_lengths(), (2, 0));
-    let state = doc.lock_index().state(&mesh).clone();
-    assert!(state.explicit);
-    assert!(state.inherited.is_empty());
+    let state = doc.object_state_index().state(&mesh).clone();
+    assert!(state.explicit.locked);
+    assert!(state.locked_by.is_empty());
     doc.set_objects_locked(&[mesh.clone()], false)?;
-    assert!(!doc.lock_index().is_locked(&mesh));
+    assert!(!doc.object_state_index().is_locked(&mesh));
     doc.set_objects_locked(&[part.clone()], false)?;
-    assert!(doc.lock_index().is_locked(&deformer));
+    assert!(doc.object_state_index().is_locked(&deformer));
     let saved = doc.save(&dir.path().join("locked.kasane"))?;
     let reopened = Document::open(&saved.manifest)?;
     assert_eq!(
-        reopened.lock_index().state(&mesh),
-        doc.lock_index().state(&mesh)
+        reopened.object_state_index().state(&mesh),
+        doc.object_state_index().state(&mesh)
     );
     doc.undo()?;
-    assert!(doc.lock_index().state(&part).explicit);
+    assert!(doc.object_state_index().state(&part).explicit.locked);
     Ok(())
 }
 #[test]
@@ -89,21 +89,21 @@ fn deformer_lock_only_protects_itself_but_part_locks_still_protect_members() -> 
     doc.preview_name("Editable mesh")?;
     doc.finish_edit()?;
     doc.set_objects_locked(&[child.clone()], true)?;
-    assert!(doc.lock_index().is_locked(&child));
-    assert!(!doc.lock_index().is_locked(&mesh));
+    assert!(doc.object_state_index().is_locked(&child));
+    assert!(!doc.object_state_index().is_locked(&mesh));
     doc.undo()?;
-    assert!(!doc.lock_index().is_locked(&child));
+    assert!(!doc.object_state_index().is_locked(&child));
     doc.redo()?;
-    assert!(doc.lock_index().state(&child).explicit);
+    assert!(doc.object_state_index().state(&child).explicit.locked);
     let saved = doc.save(&dir.path().join("local-locks.kasane"))?;
     let reopened = Document::open(&saved.manifest)?;
-    assert!(reopened.lock_index().is_locked(&parent));
-    assert!(reopened.lock_index().is_locked(&child));
-    assert!(!reopened.lock_index().is_locked(&mesh));
+    assert!(reopened.object_state_index().is_locked(&parent));
+    assert!(reopened.object_state_index().is_locked(&child));
+    assert!(!reopened.object_state_index().is_locked(&mesh));
     let part = object(ObjectKind::Part, 101);
     doc.set_objects_locked(&[part.clone()], true)?;
     assert!(doc.ensure_editable(&[mesh.clone()]).is_err());
-    assert_eq!(doc.lock_index().state(&mesh).inherited, vec![part]);
+    assert_eq!(doc.object_state_index().state(&mesh).locked_by, vec![part]);
     Ok(())
 }
 
@@ -138,8 +138,11 @@ fn locked_selection_is_inspectable_but_direct_writes_and_structure_moves_fail() 
             .is_err()
     );
     assert_eq!(doc.history_lengths(), (1, 0));
-    doc.set_layer_visible(&mesh.id, false)?;
-    assert!(doc.lock_index().is_locked(&mesh));
+    doc.set_object_visible(
+        &editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, &mesh.id),
+        false,
+    )?;
+    assert!(doc.object_state_index().is_locked(&mesh));
     doc.set_objects_locked(&[parent.clone()], true)?;
     assert!(
         doc.set_object_property(&parent, "name", serde_json::json!("changed"))
@@ -193,9 +196,21 @@ fn lock_undo_redo_reuse_frames_and_live_picking_skips_locked_top_surface() -> an
     editor.canvas_input(CanvasInput::Up { point })?;
     assert_eq!(editor.document().unwrap().context().selection, Some(lower));
     editor.execute(EditorCommand::Undo)?;
-    assert!(!editor.document().unwrap().lock_index().is_locked(&top));
+    assert!(
+        !editor
+            .document()
+            .unwrap()
+            .object_state_index()
+            .is_locked(&top)
+    );
     editor.execute(EditorCommand::Redo)?;
-    assert!(editor.document().unwrap().lock_index().is_locked(&top));
+    assert!(
+        editor
+            .document()
+            .unwrap()
+            .object_state_index()
+            .is_locked(&top)
+    );
     let after = editor.preview()?.canvas.unwrap();
     assert!(Arc::ptr_eq(&first.geometry, &after.geometry));
     assert_eq!(editor.evaluation_count(), evaluations);
@@ -280,9 +295,12 @@ fn parameter_preview_and_visibility_remain_available_on_locked_binding_targets()
     assert_eq!(doc.parameters()[0].value, 0.5);
     doc.preview_keyform(&binding, 1)?;
     assert_eq!(doc.parameters()[0].value, 1.);
-    doc.set_layer_visible(&target.id, false)?;
+    doc.set_object_visible(
+        &editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, &target.id),
+        false,
+    )?;
     assert!(!doc.layers()[0].visible);
-    assert!(doc.lock_index().is_locked(&target));
+    assert!(doc.object_state_index().is_locked(&target));
     Ok(())
 }
 

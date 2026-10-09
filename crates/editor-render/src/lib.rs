@@ -79,7 +79,7 @@ impl MetalSceneRenderer {
             height: config.height as f32,
             scale_factor: 1.,
         };
-        let transform = ViewportTransform::new(scene.frame.canvas, metrics, view)
+        let transform = ViewportTransform::new(scene.viewport_frame.canvas, metrics, view)
             .ok_or_else(|| anyhow!("Invalid viewport"))?;
         self.draw_transformed(queue, config, scene, transform)
     }
@@ -197,10 +197,11 @@ impl MetalSceneRenderer {
         let output = self.context.output_texture(config).map_err(status)?;
         self.renderer.resize(config).map_err(status)?;
         if !self.synced_scene.as_ref().is_some_and(|last| {
-            Arc::ptr_eq(&last.frame, &scene.frame) && Arc::ptr_eq(&last.textures, &scene.textures)
+            Arc::ptr_eq(&last.viewport_frame, &scene.viewport_frame)
+                && Arc::ptr_eq(&last.textures, &scene.textures)
         }) {
             self.renderer
-                .sync_model_shared(scene.frame.clone(), &textures)
+                .sync_model_shared(scene.viewport_frame.clone(), &textures)
                 .map_err(status)?;
             self.synced_scene = Some(scene.clone());
         }

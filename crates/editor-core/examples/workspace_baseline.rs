@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
             println!(
                 "{sample},{stage}_snapshot,{:.6},{},{}",
                 start.elapsed().as_secs_f64() * 1000.,
-                preview.scene.frame.drawables.len(),
+                preview.scene.viewport_frame.drawables.len(),
                 preview
                     .scene
                     .textures

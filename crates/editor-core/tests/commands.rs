@@ -4,7 +4,16 @@ mod support;
 fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Result<()> {
     let (doc, dir) = support::sample_document()?;
     let mut editor = Editor::from_document(doc);
-    editor.execute(EditorCommand::SetVisible(false))?;
+    editor.execute(EditorCommand::SetObjectVisible {
+        object: editor
+            .document()
+            .unwrap()
+            .context()
+            .selection
+            .clone()
+            .unwrap(),
+        visible: false,
+    })?;
     let undo = editor.command(CommandId::Undo);
     assert!(editor.command_available(undo));
     let original = editor.active_id().unwrap();
@@ -39,8 +48,8 @@ fn visibility_targets_the_clicked_layer_without_changing_selection() -> anyhow::
         .find(|layer| layer.name == "Second")
         .unwrap();
 
-    editor.execute(EditorCommand::SetLayerVisible {
-        layer_id: second.id.clone(),
+    editor.execute(EditorCommand::SetObjectVisible {
+        object: editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, second.id.clone()),
         visible: false,
     })?;
     assert_eq!(
@@ -192,8 +201,8 @@ fn tree_cache_revision_and_visibility_follow_edits_not_navigation() -> anyhow::R
     editor.pan_by(CanvasPoint { x: 10., y: 10. });
     assert_eq!(editor.tree_revision(), revision);
     assert_eq!(editor.selected_layer_id(), Some(id.as_str()));
-    editor.execute(EditorCommand::SetLayerVisible {
-        layer_id: id.clone(),
+    editor.execute(EditorCommand::SetObjectVisible {
+        object: editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, id.clone()),
         visible: false,
     })?;
     assert_ne!(editor.tree_revision(), revision);

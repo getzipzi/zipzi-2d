@@ -3,6 +3,7 @@ use editor_core::EditorCommand;
 use gpui_kit::component::{
     ActiveTheme, Disableable, WindowExt,
     button::{Button, ButtonVariants},
+    checkbox::Checkbox,
     dock::{BasePanel, Panel, PanelEvent},
 };
 use gpui_kit::{prelude::*, *};
@@ -75,7 +76,16 @@ impl Render for PropertiesPanel {
         let mut rows = info.map_or_else(Vec::new, |info| {
             super::document_panel::property_rows(&info.properties)
         });
-        rows.sort_by_key(|(field, _)| (field != "name", field.clone()));
+        rows.sort_by_key(|(field, _)| {
+            (
+                match field.as_str() {
+                    "name" => 0,
+                    "enabled" => 1,
+                    _ => 2,
+                },
+                field.clone(),
+            )
+        });
         let doc_ref = index.objects[0].reference.clone();
         let mut body = div()
             .id("object-properties")
@@ -171,6 +181,49 @@ impl Render for PropertiesPanel {
             }
         }
         for (field, value) in rows {
+            if field == "enabled" && editor_core::editable_property(inspected.kind, &field) {
+                let owner = self.owner.clone();
+                let object = inspected.clone();
+                body = body.child(
+                    Checkbox::new("object-model-enabled")
+                        .label(t!("editor.model_enabled").into_owned())
+                        .checked(value == "true")
+                        .disabled(
+                            state.modal
+                                || state.editor.is_busy()
+                                || doc
+                                    .ensure_editable(std::slice::from_ref(&inspected))
+                                    .is_err(),
+                        )
+                        .on_click(move |checked: &bool, window, cx| {
+                            cx.stop_propagation();
+                            if window.has_active_dialog(cx) {
+                                return;
+                            }
+                            let Some(owner) = owner.upgrade() else {
+                                return;
+                            };
+                            owner.update(cx, |owner, cx| {
+                                if owner.modal
+                                    || owner.editor.is_busy()
+                                    || owner.editor.active_id() != Some(document)
+                                {
+                                    return;
+                                }
+                                let result = owner.editor.execute_for(
+                                    document,
+                                    EditorCommand::SetObjectProperty {
+                                        object: object.clone(),
+                                        field: "enabled".into(),
+                                        value: (*checked).into(),
+                                    },
+                                );
+                                owner.complete_edit(result, cx);
+                            });
+                        }),
+                );
+                continue;
+            }
             body = body.child(
                 div()
                     .id(SharedString::from(format!("object-property-{field}")))

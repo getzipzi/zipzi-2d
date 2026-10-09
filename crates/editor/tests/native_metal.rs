@@ -15,8 +15,82 @@ fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {
     let (mut document, _source) = support::sample_document()?;
     document.preview_opacity(opacity)?;
     document.finish_edit()?;
-    document.set_visible(visible)?;
+    document.set_object_visible(&document.context().selection.clone().unwrap(), visible)?;
     document.snapshot()
+}
+
+#[test]
+fn editor_hidden_mask_source_still_clips_native_metal_output() -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        use kasane_core::{Canvas, Vec2};
+        let (mut document, directory) = support::sample_document_with_two_layers()?;
+        let saved = document.save(&directory.path().join("mask.kasane"))?;
+        let mut sdk = kasane_sdk::AuthoringSession::new(
+            &uuid::Uuid::new_v4().to_string(),
+            Canvas::new(256., 256., Vec2::default(), 1.),
+        )?;
+        sdk.open_project(&saved.manifest, None)?;
+        let ids = sdk.mesh_ids().to_vec();
+        let mut source = sdk.mesh(&ids[0]).unwrap();
+        let mut masked = sdk.mesh(&ids[1]).unwrap();
+        for (mesh, right) in [(&mut source, 128.), (&mut masked, 232.)] {
+            mesh.vertex_ids = vec![0, 1, 2, 3];
+            mesh.base_positions = vec![
+                Vec2::new(24., 24.),
+                Vec2::new(right, 24.),
+                Vec2::new(right, 232.),
+                Vec2::new(24., 232.),
+            ];
+            mesh.uvs = vec![Vec2::new(0.5, 0.5); 4];
+            mesh.triangles = vec![[0, 1, 2], [0, 2, 3]];
+        }
+        masked.masks = vec![source.id.clone()];
+        sdk.edit("Mask fixture", None, |e| {
+            e.replace_mesh(source)?;
+            e.replace_mesh(masked)
+        })?;
+        sdk.save_project(&saved.manifest, None)?;
+        let mut document = Document::open(&saved.manifest)?;
+        document.set_object_visible(
+            &editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, &ids[0]),
+            false,
+        )?;
+        let hidden = document.snapshot()?;
+        assert!(hidden.runtime_frame.drawables[0].visible);
+        assert!(!hidden.viewport_frame.drawables[0].visible);
+        let mut gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let config = MetalTargetConfig {
+            width: 256,
+            height: 256,
+            format: MTLPixelFormat::RGBA8Unorm,
+        };
+        let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
+        let mut capture = |snapshot: &SceneSnapshot| -> anyhow::Result<image::RgbaImage> {
+            let texture = renderer.draw(&gpu.queue, config, snapshot, ViewState::default())?;
+            Ok(gpui.render_scene_to_image(
+                &scene(texture, 256., false),
+                size(DevicePixels(256), DevicePixels(256)),
+            )?)
+        };
+        let clipped = capture(&hidden)?;
+        assert_ne!(
+            clipped.get_pixel(80, 128).0,
+            [255; 4],
+            "Hidden source must still contribute mask coverage"
+        );
+        assert_eq!(
+            clipped.get_pixel(180, 128).0,
+            [255; 4],
+            "Mask must still clip outside its geometry"
+        );
+        let mut unmasked = hidden;
+        std::sync::Arc::make_mut(&mut unmasked.viewport_frame).drawables[1]
+            .masks
+            .clear();
+        assert_ne!(capture(&unmasked)?.get_pixel(180, 128).0, [255; 4]);
+        Ok(())
+    })
 }
 
 #[test]
@@ -57,7 +131,7 @@ fn imported_heijiao_renders_with_clipping_groups() -> anyhow::Result<()> {
             )?)
         };
         let masked = capture(&imported)?;
-        for drawable in &mut std::sync::Arc::make_mut(&mut imported.frame).drawables {
+        for drawable in &mut std::sync::Arc::make_mut(&mut imported.viewport_frame).drawables {
             drawable.raw_blend_mode = None;
         }
         let unmasked = capture(&imported)?;
@@ -163,7 +237,7 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
                 image.get_pixel(112, 128)
             );
         }
-        document.set_visible(false)?;
+        document.set_object_visible(&document.context().selection.clone().unwrap(), false)?;
         let hidden = kasane.draw(
             &gpu.queue,
             config,
@@ -341,9 +415,9 @@ fn content_cache_isolates_same_asset_ids_and_reuses_textures_across_views() -> a
             "viewport changes do not upload textures"
         );
         let mut alias = a.clone();
-        let mut frame = (*alias.frame).clone();
+        let mut frame = (*alias.viewport_frame).clone();
         frame.drawables[0].texture_asset_id = "other-document-asset".into();
-        alias.frame = std::sync::Arc::new(frame);
+        alias.viewport_frame = std::sync::Arc::new(frame);
         let mut textures = alias.textures.to_vec();
         textures[0].asset_id = "other-document-asset".into();
         alias.textures = textures.into();

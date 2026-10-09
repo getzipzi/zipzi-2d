@@ -213,7 +213,7 @@ impl crate::Document {
             .ok_or_else(|| anyhow::anyhow!("Deformer has no points"))?;
         let change = if target.rotation {
             ControlChange::Rotation {
-                angle: if snapshot.frame.canvas.flag & 1 == 0 {
+                angle: if snapshot.viewport_frame.canvas.flag & 1 == 0 {
                     -adjustment.angle
                 } else {
                     adjustment.angle

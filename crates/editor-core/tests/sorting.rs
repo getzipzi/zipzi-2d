@@ -27,11 +27,11 @@ fn hierarchy_order_is_independent_of_other_tree_and_rendering_and_survives_histo
     let children = &original[0].children;
     let first = children[0].reference().unwrap();
     let second = children[1].reference().unwrap();
-    let before = document.snapshot()?.frame;
+    let before = document.snapshot()?.viewport_frame;
     document.reorder_tree(false, &second, &first, ReorderPosition::Before)?;
     assert_eq!(document.mesh_tree()[0].children[0].id, second.id);
     assert_eq!(document.deformer_tree(), deformation);
-    let after = document.snapshot()?.frame;
+    let after = document.snapshot()?.viewport_frame;
     assert_eq!(before.drawables.len(), after.drawables.len());
     for (a, b) in before.drawables.iter().zip(&after.drawables) {
         assert_eq!(a.id, b.id);
@@ -440,7 +440,7 @@ fn parameterized_render_orders(
             document.set_preview_parameter(&id(201), value)?;
             Ok(document
                 .snapshot()?
-                .frame
+                .viewport_frame
                 .drawables
                 .iter()
                 .map(|mesh| (mesh.id.clone(), mesh.draw_order, mesh.render_order))

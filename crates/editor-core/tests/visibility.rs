@@ -41,6 +41,16 @@ fn all_scene_objects_support_visibility_under_locks_with_history_and_persistence
             visible: false,
         })?;
         assert_ne!(editor.tree_revision(), revision);
+        assert_eq!(
+            editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&target)
+                .unwrap()
+                .enabled,
+            Some(true)
+        );
         assert_eq!(visible(&editor.mesh_tree(), &target.id), Some(false));
         if matches!(target.kind, ObjectKind::Mesh | ObjectKind::Deformer) {
             assert_eq!(visible(&editor.deformer_tree(), &target.id), Some(false));
@@ -78,6 +88,91 @@ fn all_scene_objects_support_visibility_under_locks_with_history_and_persistence
             visible: true,
         })?;
     }
+    Ok(())
+}
+
+#[test]
+fn hiding_a_part_does_not_follow_deformation_links_into_another_part() -> anyhow::Result<()> {
+    let (mut doc, dir) = support::sample_document_with_scene_objects()?;
+    let saved = doc.save(&dir.path().join("cross-part.kasane"))?;
+    let mut sdk = kasane_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        kasane_core::Canvas::new(256., 256., kasane_core::Vec2::default(), 1.),
+    )?;
+    sdk.open_project(&saved.manifest, None)?;
+    let mesh = ObjectRef::new(ObjectKind::Mesh, sdk.mesh_ids()[1].clone());
+    let parent = object(ObjectKind::Part, 101);
+    let child = object(ObjectKind::Deformer, 502);
+    let mut transform = sdk.document().get_transform(&child.id).unwrap().clone();
+    transform.part_id = Some(object(ObjectKind::Part, 102).id.clone().into());
+    sdk.edit("Cross-part fixture", None, |e| {
+        e.set_mesh_part(&mesh.id, &object(ObjectKind::Part, 102).id)?;
+        e.replace_transform(transform)
+    })?;
+    sdk.save_project(&saved.manifest, None)?;
+    let mut doc = Document::open(&saved.manifest)?;
+    let before = doc.snapshot()?;
+    doc.set_object_visible(&parent, false)?;
+    let after = doc.snapshot()?;
+    assert!(std::sync::Arc::ptr_eq(
+        &before.runtime_frame,
+        &after.runtime_frame
+    ));
+    assert_eq!(
+        before.viewport_frame.drawables[1].positions,
+        after.viewport_frame.drawables[1].positions
+    );
+    let scene = CanvasScene::new(&doc, after);
+    assert!(scene.mesh_visible(&mesh.id));
+    assert!(doc.deformer_controls_visible(&child.id));
+    assert!(!doc.deformer_controls_visible(&object(ObjectKind::Deformer, 501).id));
+    let own_mesh = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
+    let state = doc.object_state(&own_mesh);
+    assert!(!state.explicit.hidden_in_editor);
+    assert_eq!(state.hidden_by, vec![parent]);
+    Ok(())
+}
+
+#[test]
+fn hidden_mesh_remains_a_mask_source_for_picking_and_output() -> anyhow::Result<()> {
+    let (mut doc, dir) = support::sample_document_with_two_layers()?;
+    let saved = doc.save(&dir.path().join("masked.kasane"))?;
+    let mut sdk = kasane_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        kasane_core::Canvas::new(256., 256., kasane_core::Vec2::default(), 1.),
+    )?;
+    sdk.open_project(&saved.manifest, None)?;
+    let ids = sdk.mesh_ids().to_vec();
+    let mut masked = sdk.mesh(&ids[1]).unwrap();
+    masked.masks = vec![ids[0].clone()];
+    sdk.edit("Mask fixture", None, |e| e.replace_mesh(masked))?;
+    sdk.save_project(&saved.manifest, None)?;
+    let mut doc = Document::open(&saved.manifest)?;
+    let before = doc.snapshot()?;
+    doc.set_object_visible(
+        &editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, &ids[0]),
+        false,
+    )?;
+    let after = doc.snapshot()?;
+    assert!(std::sync::Arc::ptr_eq(
+        &before.runtime_frame,
+        &after.runtime_frame
+    ));
+    assert!(!after.viewport_frame.drawables[0].visible);
+    assert!(after.viewport_frame.drawables[0].enabled);
+    assert_eq!(
+        after.viewport_frame.drawables[0].positions,
+        before.viewport_frame.drawables[0].positions
+    );
+    assert_eq!(
+        after.viewport_frame.drawables[1].masks,
+        vec![ids[0].clone()]
+    );
+    let scene = CanvasScene::new(&doc, after);
+    assert_eq!(
+        scene.mesh_hits(ModelPoint { x: 128., y: 128. }),
+        vec![ids[1].clone()]
+    );
     Ok(())
 }
 
@@ -150,13 +245,13 @@ fn hiding_parent_deformer_only_hides_its_controls_and_preserves_deformation() ->
     assert_eq!(doc.object_index().get(&parent).unwrap().enabled, Some(true));
     let after = doc.snapshot()?;
     assert!(
-        std::sync::Arc::ptr_eq(&before.frame, &after.frame),
+        std::sync::Arc::ptr_eq(&before.viewport_frame, &after.viewport_frame),
         "Control display must not invalidate runtime evaluation"
     );
     let scene = CanvasScene::new(&doc, after);
     assert!(doc.layers().iter().all(|mesh| scene.mesh_visible(&mesh.id)));
     let transform = ViewportTransform::new(
-        scene.source.frame.canvas,
+        scene.source.viewport_frame.canvas,
         CanvasMetrics {
             width: 512.,
             height: 512.,
@@ -200,8 +295,8 @@ fn hiding_parent_deformer_only_hides_its_controls_and_preserves_deformation() ->
     doc.redo()?;
     assert!(!doc.deformer_controls_visible(&parent.id));
     assert!(std::sync::Arc::ptr_eq(
-        &before.frame,
-        &doc.snapshot()?.frame
+        &before.viewport_frame,
+        &doc.snapshot()?.viewport_frame
     ));
     // Hidden parents still provide the coordinate space for edits to their children.
     doc.adjust_deformer(
@@ -214,8 +309,8 @@ fn hiding_parent_deformer_only_hides_its_controls_and_preserves_deformation() ->
     )?;
     let edited = doc.snapshot()?;
     assert_ne!(
-        before.frame.deformers[1].points,
-        edited.frame.deformers[1].points
+        before.viewport_frame.deformers[1].points,
+        edited.viewport_frame.deformers[1].points
     );
     assert!(doc.layers().iter().all(|mesh| mesh.visible));
     Ok(())
@@ -233,5 +328,40 @@ fn visibility_rejects_missing_and_non_scene_objects_without_history() -> anyhow:
         assert!(doc.set_object_visible(&target, false).is_err());
     }
     assert_eq!(doc.history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn runtime_enable_and_editor_visibility_are_independent_and_recoverable() -> anyhow::Result<()> {
+    let (mut doc, _dir) = support::sample_document_with_scene_objects()?;
+    for target in [
+        object(ObjectKind::Part, 101),
+        object(ObjectKind::Deformer, 501),
+        object(ObjectKind::Offscreen, 601),
+        ObjectRef::new(ObjectKind::Mesh, doc.layers()[0].id.clone()),
+    ] {
+        let runtime = doc.snapshot()?.runtime_frame;
+        doc.set_object_visible(&target, false)?;
+        assert!(std::sync::Arc::ptr_eq(
+            &runtime,
+            &doc.snapshot()?.runtime_frame
+        ));
+        doc.set_object_property(&target, "enabled", false.into())?;
+        doc.set_object_visible(&target, true)?;
+        assert_eq!(
+            doc.object_index().get(&target).unwrap().enabled,
+            Some(false)
+        );
+        assert!(!doc.object_state(&target).explicit.hidden_in_editor);
+        doc.set_object_property(&target, "enabled", true.into())?;
+        assert_eq!(doc.object_index().get(&target).unwrap().enabled, Some(true));
+        assert!(!doc.object_state(&target).explicit.hidden_in_editor);
+        doc.undo()?;
+        assert_eq!(
+            doc.object_index().get(&target).unwrap().enabled,
+            Some(false)
+        );
+        doc.redo()?;
+    }
     Ok(())
 }

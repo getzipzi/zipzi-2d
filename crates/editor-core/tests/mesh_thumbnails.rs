@@ -17,7 +17,7 @@ fn texture_regions_ignore_pose_appearance_and_names() -> anyhow::Result<()> {
     assert_eq!(document.mesh_texture_region(&id).unwrap(), original);
     document.preview_name("New name")?;
     document.finish_edit()?;
-    document.set_visible(false)?;
+    document.set_object_visible(&document.context().selection.clone().unwrap(), false)?;
     document.undo()?;
     document.redo()?;
     assert_eq!(document.mesh_texture_region(&id).unwrap(), original);

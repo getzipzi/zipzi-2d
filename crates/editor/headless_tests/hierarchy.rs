@@ -238,15 +238,8 @@ fn visibility_eyes_toggle_all_scene_object_kinds_without_changing_selection(
                 harness.view.read_with(cx, |view, _| {
                     assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
                     let doc = view.editor.document().unwrap();
-                    if target.kind == ObjectKind::Deformer {
-                        assert_eq!(doc.deformer_controls_visible(&target.id), expected);
-                        assert_eq!(doc.object_index().get(&target).unwrap().enabled, Some(true));
-                    } else {
-                        assert_eq!(
-                            doc.object_index().get(&target).unwrap().enabled,
-                            Some(expected)
-                        );
-                    }
+                    assert_eq!(doc.object_state(&target).visible(), expected);
+                    assert_eq!(doc.object_index().get(&target).unwrap().enabled, Some(true));
                     assert_eq!(doc.context().selections, selection);
                 });
             }
@@ -278,11 +271,11 @@ fn deformer_tree_controls_do_not_hide_or_lock_children_and_sync_with_part_tree(
         window.click(format!("deformer-vis-{}", parent.id), cx);
         harness.view.read_with(cx, |view, _| {
             let doc = view.editor.document().unwrap();
-            assert!(doc.lock_index().state(&parent).explicit);
+            assert!(doc.object_state_index().state(&parent).explicit.locked);
             assert!(!doc.deformer_controls_visible(&parent.id));
             assert!(doc.deformer_controls_visible(&child.id));
-            assert!(!doc.lock_index().is_locked(&child));
-            assert!(!doc.lock_index().is_locked(&mesh));
+            assert!(!doc.object_state_index().is_locked(&child));
+            assert!(!doc.object_state_index().is_locked(&mesh));
             assert!(doc.layers().iter().all(|layer| layer.visible));
         });
         window.hover(format!("deformer-item-WarpDeformer:{}", child.id), cx);
@@ -292,9 +285,10 @@ fn deformer_tree_controls_do_not_hide_or_lock_children_and_sync_with_part_tree(
                 view.editor
                     .document()
                     .unwrap()
-                    .lock_index()
+                    .object_state_index()
                     .state(&child)
                     .explicit
+                    .locked
             );
         });
         harness.view.update(cx, |view, cx| {
@@ -312,8 +306,8 @@ fn deformer_tree_controls_do_not_hide_or_lock_children_and_sync_with_part_tree(
             let doc = view.editor.document().unwrap();
             assert!(view.edit_error.is_none());
             assert!(doc.deformer_controls_visible(&parent.id));
-            assert!(!doc.lock_index().is_locked(&parent));
-            assert!(!doc.lock_index().is_locked(&child));
+            assert!(!doc.object_state_index().is_locked(&parent));
+            assert!(!doc.object_state_index().is_locked(&child));
         });
     })
     .unwrap();
@@ -410,8 +404,8 @@ fn mesh_thumbnails_share_images_and_reuse_them_after_selection_and_edits(cx: &mu
         });
         harness.view.update(cx, |view, cx| {
             view.editor
-                .execute(editor_core::EditorCommand::SetLayerVisible {
-                    layer_id: id.clone(),
+                .execute(editor_core::EditorCommand::SetObjectVisible {
+                    object: editor_core::ObjectRef::new(editor_core::ObjectKind::Mesh, id.clone()),
                     visible: false,
                 })
                 .unwrap();
@@ -554,7 +548,7 @@ fn tree_lock_button_preserves_selection_and_other_tree_can_unlock(cx: &mut TestA
     .unwrap();
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert!(doc.lock_index().state(&target).explicit);
+        assert!(doc.object_state_index().state(&target).explicit.locked);
         assert_eq!(doc.context().selections, original);
         assert_eq!(doc.history_lengths(), (1, 0));
     });
@@ -575,7 +569,7 @@ fn tree_lock_button_preserves_selection_and_other_tree_can_unlock(cx: &mut TestA
                 .editor
                 .document()
                 .unwrap()
-                .lock_index()
+                .object_state_index()
                 .is_locked(&target)
         );
         view.editor.execute(EditorCommand::Undo).unwrap();
@@ -583,7 +577,7 @@ fn tree_lock_button_preserves_selection_and_other_tree_can_unlock(cx: &mut TestA
             view.editor
                 .document()
                 .unwrap()
-                .lock_index()
+                .object_state_index()
                 .is_locked(&target)
         );
         cx.notify();
@@ -591,26 +585,96 @@ fn tree_lock_button_preserves_selection_and_other_tree_can_unlock(cx: &mut TestA
 }
 
 #[gpui_kit::test]
-fn inherited_lock_button_locates_parent_without_unlocking_it(cx: &mut TestAppContext) {
+fn inherited_lock_button_opens_options_without_selecting_or_unlocking_parent(
+    cx: &mut TestAppContext,
+) {
     use editor_core::{ObjectKind, ObjectRef};
     let (mut doc, assets) = super::document_fixture::sample_document_with_parts().unwrap();
     let parent = ObjectRef::new(ObjectKind::Part, uuid::Uuid::from_u128(101).to_string());
     let mesh = doc.layers()[0].id.clone();
     doc.set_objects_locked(&[parent.clone()], true).unwrap();
     let harness = super::setup_with_document(cx, doc, assets);
+    let selection = harness.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().context().selections.clone()
+    });
     cx.update_window(harness.window, |_, window, cx| {
         window.click(format!("mesh-lock-{mesh}"), cx);
+        assert!(
+            window
+                .find(format!("locate-state-source-{}", parent.id))
+                .visible()
+        );
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert_eq!(doc.context().selection.as_ref(), Some(&parent));
-        assert!(doc.lock_index().state(&parent).explicit);
+        assert_eq!(doc.context().selections, selection);
+        assert!(doc.object_state_index().state(&parent).explicit.locked);
         assert!(
-            !doc.lock_index()
+            !doc.object_state_index()
                 .state(&ObjectRef::new(ObjectKind::Mesh, mesh))
                 .explicit
+                .locked
         );
         assert_eq!(doc.history_lengths(), (1, 0));
     });
+}
+
+#[gpui_kit::test]
+fn inherited_eye_explains_source_and_only_changes_it_on_explicit_choice(cx: &mut TestAppContext) {
+    use editor_core::{ObjectKind, ObjectRef};
+    let (mut doc, assets) = super::document_fixture::sample_document_with_parts().unwrap();
+    let part = ObjectRef::new(ObjectKind::Part, uuid::Uuid::from_u128(101).to_string());
+    let mesh = ObjectRef::new(ObjectKind::Mesh, doc.layers()[0].id.clone());
+    doc.set_object_visible(&part, false).unwrap();
+    doc.select(&doc.layers()[1].id.clone()).unwrap();
+    let selection = doc.context().selections.clone();
+    let harness = super::setup_with_document(cx, doc, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(format!("mesh-vis-{}", mesh.id), cx);
+        assert!(
+            window
+                .find(format!("locate-state-source-{}", part.id))
+                .visible()
+        );
+        harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert_eq!(doc.context().selections, selection);
+            assert_eq!(doc.history_lengths(), (1, 0));
+            assert!(!doc.object_state(&mesh).visible());
+            assert!(!doc.object_state(&mesh).explicit.hidden_in_editor);
+        });
+        window.click(format!("change-state-source-{}", part.id), cx);
+        harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert_eq!(doc.context().selections, selection);
+            assert!(doc.object_state(&mesh).visible());
+            assert_eq!(doc.history_lengths(), (2, 0));
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn model_enabled_property_remains_independent_of_the_editor_eye(cx: &mut TestAppContext) {
+    use editor_core::{ObjectKind, ObjectRef};
+    let (mut doc, assets) = super::document_fixture::sample_document_with_parts().unwrap();
+    let mesh = ObjectRef::new(ObjectKind::Mesh, doc.layers()[0].id.clone());
+    doc.select(&mesh.id).unwrap();
+    let harness = super::setup_with_document(cx, doc, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert_eq!(window.find("object-model-enabled").checked(), Some(true));
+        window.click("object-model-enabled", cx);
+        window.click(format!("mesh-vis-{}", mesh.id), cx);
+        window.click(format!("mesh-vis-{}", mesh.id), cx);
+        assert_eq!(window.find("object-model-enabled").checked(), Some(false));
+        harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert_eq!(doc.object_index().get(&mesh).unwrap().enabled, Some(false));
+            assert!(doc.object_state(&mesh).visible());
+        });
+        window.click("object-model-enabled", cx);
+        assert_eq!(window.find("object-model-enabled").checked(), Some(true));
+    })
+    .unwrap();
 }

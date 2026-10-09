@@ -1,5 +1,6 @@
 mod filter;
 mod locking;
+mod visibility;
 
 use super::sorting::{self, SortItem, SortState};
 use super::toolbar::{PanelToolbar, PanelToolbarPopover, PanelToolbarSearch};
@@ -410,248 +411,375 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
         thumbnails.update(cx, |cache, cx| cache.sync_document(target, window, cx));
         let theme = cx.theme().clone();
 
-        sorting::panel_actions(div()
-            .id(if DEFORMER {
+        sorting::panel_actions(
+            div().id(if DEFORMER {
                 "deformer-tree-panel"
             } else {
                 "mesh-tree-panel"
-            }), &self.sorting)
-            .size_full()
-            .min_h_0()
-            .overflow_hidden()
-            .flex()
-            .flex_col()
-            .bg(theme.background)
-            .text_color(theme.foreground)
-            .text_sm()
-            .track_focus(&self.focus)
-            .child(self.toolbar(cx))
-            .child(if rows.is_empty() {
-                div()
-                    .id(SharedString::from(format!("{}-tree-empty", Self::prefix())))
-                    .test_support()
-                    .p_4()
-                    .text_xs()
-                    .text_color(theme.muted_foreground)
-                    .child(if filtered {
-                        t!("editor.tree_no_matches")
-                    } else if DEFORMER {
-                        t!("editor.no_deformers")
+            }),
+            &self.sorting,
+        )
+        .size_full()
+        .min_h_0()
+        .overflow_hidden()
+        .flex()
+        .flex_col()
+        .bg(theme.background)
+        .text_color(theme.foreground)
+        .text_sm()
+        .track_focus(&self.focus)
+        .child(self.toolbar(cx))
+        .child(if rows.is_empty() {
+            div()
+                .id(SharedString::from(format!("{}-tree-empty", Self::prefix())))
+                .test_support()
+                .p_4()
+                .text_xs()
+                .text_color(theme.muted_foreground)
+                .child(if filtered {
+                    t!("editor.tree_no_matches")
+                } else if DEFORMER {
+                    t!("editor.no_deformers")
+                } else {
+                    t!("editor.no_meshes")
+                })
+                .into_any_element()
+        } else {
+            sorting::scroll_area(
+                uniform_list(
+                    if DEFORMER {
+                        "deformer-tree-scroll-area"
                     } else {
-                        t!("editor.no_meshes")
-                    })
-                    .into_any_element()
-            } else {
-                sorting::scroll_area(uniform_list(
-                    if DEFORMER { "deformer-tree-scroll-area" } else { "mesh-tree-scroll-area" },
+                        "mesh-tree-scroll-area"
+                    },
                     rows.len(),
-                    move |range, window, cx| panel.update(cx, |this, cx| {
-                        let mesh_ids: Vec<_> = rows[range.clone()].iter()
-                            .filter(|row| row.node.kind == TreeNodeKind::Mesh)
-                            .map(|row| row.node.id.as_str()).collect();
-                        let mut images = thumbnails.update(cx, |cache, cx| cache.request(&owner, &mesh_ids, window, cx)).into_iter();
-                        let theme = cx.theme().clone();
-                        range.map(|index| {
-                        let row = rows[index].clone();
-                        let node = row.node;
-                        let is_mesh = node.kind == TreeNodeKind::Mesh;
-                        let thumbnail = if is_mesh { images.next().flatten() } else { None };
-                        let reference = node.reference();
-                        let visibility_object = reference.clone();
-                        let lock_object = reference.clone();
-                        let lock_owner = this.owner.clone();
-                        let locked = reference.as_ref().is_some_and(|r| owner.read(cx).editor.document().is_some_and(|d| d.lock_index().is_locked(r)));
-                        let sort_item = reference.clone().map(|object| SortItem::Tree { deformer: DEFORMER, object });
-                        let panel = cx.weak_entity();
-                        let expand_key = node_key(&node);
-                        let expand: sorting::ExpandTarget = Rc::new(move |_, _, cx| {
-                            _ = panel.update(cx, |this, cx| {
-                                if this.view.collapsed.remove(&expand_key) {
-                                    this.rows_dirty = true;
-                                    cx.notify();
-                                }
-                            });
-                        });
-                        let is_selected = reference.as_ref().is_some_and(|r| selections.contains(r));
-                        let key = node_key(&node);
-                        let is_collapsed = this.collapsed().contains(&key);
-                        let id = node.id.clone();
-                        let owner = this.owner.clone();
-                        let owner_for_vis = owner.clone();
-                        let id_for_vis = id.clone();
-                        let icon = match node.kind {
-                            TreeNodeKind::Group | TreeNodeKind::Part => IconName::Folder,
-                            TreeNodeKind::Offscreen => IconName::Layers,
-                            TreeNodeKind::Mesh => IconName::Grid2x2,
-                            TreeNodeKind::WarpDeformer => IconName::Grid3x3,
-                            TreeNodeKind::RotationDeformer => IconName::RotateCw,
-                        };
-                        let label = if node.name.is_empty() {
-                            if is_mesh {
-                                t!("editor.untitled_layer").into_owned()
-                            } else {
-                                node.id.clone()
-                            }
-                        } else {
-                            node.name
-                        };
-                        let label = if !query.is_empty() && highlight_ranges(&label, &query).is_empty() && !highlight_ranges(&id, &query).is_empty() {
-                            format!("{label} · {id}")
-                        } else {
-                            label
-                        };
-
-                        div()
-                            .id(SharedString::from(format!(
-                                "{}-item-{key}",
-                                if DEFORMER { "deformer" } else { "mesh" }
-                            )))
-                            .group("layer-row")
-                            .flex()
-                            .w_full()
-                            .min_w_0()
-                            .items_center()
-                            .h(px(26.))
-                            .pl(px(4. + row.depth as f32 * 10.))
-                            .pr_2()
-                            .rounded_md()
-                            .bg(if is_selected {
-                                theme.primary.opacity(0.15)
-                            } else {
-                                gpui::transparent_black()
-                            })
-                            .hover(|style| style.bg(if is_selected {
-                                theme.primary.opacity(0.22)
-                            } else {
-                                theme.muted.opacity(0.5)
-                            }))
-                            .cursor_pointer()
-                            .test_support()
-                            .when_some(sort_item.clone(), |element, target_item| sorting::drop_target(element, &this.sorting, target_item, Some(expand.clone()), cx))
-                            .on_click(cx.listener(move |_, event: &ClickEvent, window, cx| {
-                                if disabled { return; }
-                                let (Some(owner), Some(target), Some(reference)) = (owner.upgrade(), target, reference.clone()) else { return; };
-                                owner.update(cx, |owner, cx| {
-                                    if owner.modal || window.has_active_dialog(cx) || owner.editor.is_busy() || owner.editor.active_id() != Some(target) { return; }
-                                    let command = if event.modifiers().shift {
-                                        let mut objects = owner.editor.document().map(|d|d.context().selections.clone()).unwrap_or_default();
-                                        if objects.contains(&reference) {objects.retain(|r|r!=&reference);} else {objects.push(reference);}
-                                        EditorCommand::SelectObjects(objects)
-                                    } else {EditorCommand::SelectObject(reference)};
-                                    let result = owner.editor.execute_for(target, command);
-                                    owner.complete_edit(result, cx);
-                                });
-                            }))
-                            .child(div().id(SharedString::from(format!("tree-expand-{key}"))).test_support().w(px(16.)).on_click(cx.listener(move |this, _, _, cx| {
-                                cx.stop_propagation();
-                                if row.has_children { this.toggle_expanded(&key, cx); }
-                            })).text_color(theme.muted_foreground).when(
-                                row.has_children,
-                                |element| {
-                                    element.child(
-                                        Icon::new(if is_collapsed {
-                                            IconName::ChevronRight
-                                        } else {
-                                            IconName::ChevronDown
-                                        })
-                                        .small(),
-                                    )
-                                },
-                            ))
-                            .child(
-                                div()
-                                    .mr_1p5()
-                                    .size(px(20.))
-                                    .flex_shrink_0()
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .text_color(crate::theme::object_icon(node.kind, &theme))
-                                    .child(if let Some(image) = thumbnail {
-                                        img(image).size_full().into_any_element()
+                    move |range, window, cx| {
+                        panel.update(cx, |this, cx| {
+                            let mesh_ids: Vec<_> = rows[range.clone()]
+                                .iter()
+                                .filter(|row| row.node.kind == TreeNodeKind::Mesh)
+                                .map(|row| row.node.id.as_str())
+                                .collect();
+                            let mut images = thumbnails
+                                .update(cx, |cache, cx| {
+                                    cache.request(&owner, &mesh_ids, window, cx)
+                                })
+                                .into_iter();
+                            let theme = cx.theme().clone();
+                            range
+                                .map(|index| {
+                                    let row = rows[index].clone();
+                                    let node = row.node;
+                                    let is_mesh = node.kind == TreeNodeKind::Mesh;
+                                    let thumbnail = if is_mesh {
+                                        images.next().flatten()
                                     } else {
-                                        Icon::new(icon).small().into_any_element()
-                                    }),
-                            )
-                            .child(
-                                div()
-                                    .id(SharedString::from(format!("{}-drag-{id}", Self::prefix())))
-                                    .test_support()
-                                    .h_full()
-                                    .flex()
-                                    .items_center()
-                                    .when_some(sort_item, |element, source| sorting::drag_source(element, &this.sorting, target.unwrap(), source, label.clone(), !disabled && !locked && !filtered && node.diagnostic.is_none()))
-                                    .flex_1()
-                                    .min_w_0()
-                                    .text_xs()
-                                    .text_ellipsis()
-                                    .overflow_hidden()
-                                    .text_color(if row.context_only { theme.muted_foreground } else { theme.foreground })
-                                    .child(StyledText::new(label.clone()).with_highlights(
-                                        highlight_ranges(&label, &query).into_iter().map(|range| (
-                                            range,
-                                            HighlightStyle { font_weight: Some(FontWeight::SEMIBOLD), ..Default::default() },
-                                        )),
-                                    ))
-                                    .when_some(node.diagnostic,|this,d|this.child(format!(" ⚠ {d}"))),
-                            )
-                            .child(div().flex_1())
-                            .when_some(node.visible, |element, visible| {
-                                element.child(
+                                        None
+                                    };
+                                    let reference = node.reference();
+                                    let visibility_object = reference.clone();
+                                    let lock_object = reference.clone();
+                                    let lock_owner = this.owner.clone();
+                                    let locked =
+                                        reference.as_ref().is_some_and(|r| {
+                                            owner.read(cx).editor.document().is_some_and(|d| {
+                                                d.object_state_index().is_locked(r)
+                                            })
+                                        });
+                                    let sort_item =
+                                        reference.clone().map(|object| SortItem::Tree {
+                                            deformer: DEFORMER,
+                                            object,
+                                        });
+                                    let panel = cx.weak_entity();
+                                    let expand_key = node_key(&node);
+                                    let expand: sorting::ExpandTarget = Rc::new(move |_, _, cx| {
+                                        _ = panel.update(cx, |this, cx| {
+                                            if this.view.collapsed.remove(&expand_key) {
+                                                this.rows_dirty = true;
+                                                cx.notify();
+                                            }
+                                        });
+                                    });
+                                    let is_selected =
+                                        reference.as_ref().is_some_and(|r| selections.contains(r));
+                                    let key = node_key(&node);
+                                    let is_collapsed = this.collapsed().contains(&key);
+                                    let id = node.id.clone();
+                                    let owner = this.owner.clone();
+                                    let icon = match node.kind {
+                                        TreeNodeKind::Group | TreeNodeKind::Part => {
+                                            IconName::Folder
+                                        }
+                                        TreeNodeKind::Offscreen => IconName::Layers,
+                                        TreeNodeKind::Mesh => IconName::Grid2x2,
+                                        TreeNodeKind::WarpDeformer => IconName::Grid3x3,
+                                        TreeNodeKind::RotationDeformer => IconName::RotateCw,
+                                    };
+                                    let label = if node.name.is_empty() {
+                                        if is_mesh {
+                                            t!("editor.untitled_layer").into_owned()
+                                        } else {
+                                            node.id.clone()
+                                        }
+                                    } else {
+                                        node.name
+                                    };
+                                    let label = if !query.is_empty()
+                                        && highlight_ranges(&label, &query).is_empty()
+                                        && !highlight_ranges(&id, &query).is_empty()
+                                    {
+                                        format!("{label} · {id}")
+                                    } else {
+                                        label
+                                    };
+
                                     div()
-                                        .id(SharedString::from(format!("{}-vis-{id_for_vis}", if DEFORMER { "deformer" } else { "mesh" })))
-                                        .test_support()
-                                        .ml_auto()
-                                        .w(px(24.))
-                                        .h_full()
+                                        .id(SharedString::from(format!(
+                                            "{}-item-{key}",
+                                            if DEFORMER { "deformer" } else { "mesh" }
+                                        )))
+                                        .group("layer-row")
                                         .flex()
-                                        .flex_shrink_0()
+                                        .w_full()
+                                        .min_w_0()
                                         .items_center()
-                                        .justify_center()
-                                        .text_color(if visible { theme.muted_foreground } else { theme.muted_foreground.opacity(0.4) })
-                                        .hover(|style| style.text_color(theme.foreground))
-                                        .on_click(cx.listener(move |_, _, window, cx| {
-                                            cx.stop_propagation();
-                                            if disabled { return; }
-                                            let (Some(owner), Some(target)) = (owner_for_vis.upgrade(), target) else { return; };
-                                            owner.update(cx, |owner, cx| {
-                                                if owner.modal || window.has_active_dialog(cx) || owner.editor.is_busy() || owner.editor.active_id() != Some(target) {
+                                        .h(px(26.))
+                                        .pl(px(4. + row.depth as f32 * 10.))
+                                        .pr_2()
+                                        .rounded_md()
+                                        .bg(if is_selected {
+                                            theme.primary.opacity(0.15)
+                                        } else {
+                                            gpui::transparent_black()
+                                        })
+                                        .hover(|style| {
+                                            style.bg(if is_selected {
+                                                theme.primary.opacity(0.22)
+                                            } else {
+                                                theme.muted.opacity(0.5)
+                                            })
+                                        })
+                                        .cursor_pointer()
+                                        .test_support()
+                                        .when_some(sort_item.clone(), |element, target_item| {
+                                            sorting::drop_target(
+                                                element,
+                                                &this.sorting,
+                                                target_item,
+                                                Some(expand.clone()),
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(cx.listener(
+                                            move |_, event: &ClickEvent, window, cx| {
+                                                if disabled {
                                                     return;
                                                 }
-                                                let Some(object) = visibility_object.clone() else { return; };
-                                                let result = owner.editor.execute_for(target, EditorCommand::SetObjectVisible {
-                                                    object,
-                                                    visible: !visible,
+                                                let (Some(owner), Some(target), Some(reference)) =
+                                                    (owner.upgrade(), target, reference.clone())
+                                                else {
+                                                    return;
+                                                };
+                                                owner.update(cx, |owner, cx| {
+                                                    if owner.modal
+                                                        || window.has_active_dialog(cx)
+                                                        || owner.editor.is_busy()
+                                                        || owner.editor.active_id() != Some(target)
+                                                    {
+                                                        return;
+                                                    }
+                                                    let command = if event.modifiers().shift {
+                                                        let mut objects = owner
+                                                            .editor
+                                                            .document()
+                                                            .map(|d| d.context().selections.clone())
+                                                            .unwrap_or_default();
+                                                        if objects.contains(&reference) {
+                                                            objects.retain(|r| r != &reference);
+                                                        } else {
+                                                            objects.push(reference);
+                                                        }
+                                                        EditorCommand::SelectObjects(objects)
+                                                    } else {
+                                                        EditorCommand::SelectObject(reference)
+                                                    };
+                                                    let result =
+                                                        owner.editor.execute_for(target, command);
+                                                    owner.complete_edit(result, cx);
                                                 });
-                                                owner.complete_edit(result, cx);
-                                            });
-                                        }))
-                                        .child(Icon::new(if visible { IconName::Eye } else { IconName::EyeOff }).small()),
-                                )
-                            })
-                            .when_some(lock_object.clone(), |element, object| {
-                                element.when_some(target, |element, target| element.child(locking::button(lock_owner.clone(), target, object, SharedString::from(format!("{}-lock-{id}", Self::prefix())), disabled, cx)))
-                            })
-                            .map(|element| match (lock_object, target) {
-                                (Some(object), Some(target)) => locking::menu(element, lock_owner.clone(), target, object).into_any_element(),
-                                _ => element.into_any_element(),
-                            })
-                        }).collect()
-                    }),
-                ), &self.sorting, &self.scroll, self.rows.len())
-                    .flex_1()
-                    .min_h_0()
-                    .track_scroll(&self.scroll)
-                    .into_any_element()
-            })
-            .when(!DEFORMER && target.is_some() && !filtered, |element| {
-                element.child(sorting::drop_target(
-                    div().id("mesh-tree-root-drop").test_support().h(px(26.)).flex_shrink_0()
-                        .px_3().flex().items_center().text_xs().text_color(theme.muted_foreground)
-                        .child(t!("editor.tree_drop_root")),
-                    &self.sorting, SortItem::TreeRoot, None, cx,
-                ))
-            })
+                                            },
+                                        ))
+                                        .child(
+                                            div()
+                                                .id(SharedString::from(format!(
+                                                    "tree-expand-{key}"
+                                                )))
+                                                .test_support()
+                                                .w(px(16.))
+                                                .on_click(cx.listener(move |this, _, _, cx| {
+                                                    cx.stop_propagation();
+                                                    if row.has_children {
+                                                        this.toggle_expanded(&key, cx);
+                                                    }
+                                                }))
+                                                .text_color(theme.muted_foreground)
+                                                .when(row.has_children, |element| {
+                                                    element.child(
+                                                        Icon::new(if is_collapsed {
+                                                            IconName::ChevronRight
+                                                        } else {
+                                                            IconName::ChevronDown
+                                                        })
+                                                        .small(),
+                                                    )
+                                                }),
+                                        )
+                                        .child(
+                                            div()
+                                                .mr_1p5()
+                                                .size(px(20.))
+                                                .flex_shrink_0()
+                                                .flex()
+                                                .items_center()
+                                                .justify_center()
+                                                .text_color(crate::theme::object_icon(
+                                                    node.kind, &theme,
+                                                ))
+                                                .child(if let Some(image) = thumbnail {
+                                                    img(image).size_full().into_any_element()
+                                                } else {
+                                                    Icon::new(icon).small().into_any_element()
+                                                }),
+                                        )
+                                        .child(
+                                            div()
+                                                .id(SharedString::from(format!(
+                                                    "{}-drag-{id}",
+                                                    Self::prefix()
+                                                )))
+                                                .test_support()
+                                                .h_full()
+                                                .flex()
+                                                .items_center()
+                                                .when_some(sort_item, |element, source| {
+                                                    sorting::drag_source(
+                                                        element,
+                                                        &this.sorting,
+                                                        target.unwrap(),
+                                                        source,
+                                                        label.clone(),
+                                                        !disabled
+                                                            && !locked
+                                                            && !filtered
+                                                            && node.diagnostic.is_none(),
+                                                    )
+                                                })
+                                                .flex_1()
+                                                .min_w_0()
+                                                .text_xs()
+                                                .text_ellipsis()
+                                                .overflow_hidden()
+                                                .text_color(if row.context_only {
+                                                    theme.muted_foreground
+                                                } else {
+                                                    theme.foreground
+                                                })
+                                                .child(
+                                                    StyledText::new(label.clone()).with_highlights(
+                                                        highlight_ranges(&label, &query)
+                                                            .into_iter()
+                                                            .map(|range| {
+                                                                (
+                                                                    range,
+                                                                    HighlightStyle {
+                                                                        font_weight: Some(
+                                                                            FontWeight::SEMIBOLD,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    },
+                                                                )
+                                                            }),
+                                                    ),
+                                                )
+                                                .when_some(node.diagnostic, |this, d| {
+                                                    this.child(format!(" ⚠ {d}"))
+                                                }),
+                                        )
+                                        .child(div().flex_1())
+                                        .when_some(visibility_object, |element, object| {
+                                            element.when_some(target, |element, target| {
+                                                element.child(visibility::button(
+                                                    this.owner.clone(),
+                                                    target,
+                                                    object,
+                                                    SharedString::from(format!(
+                                                        "{}-vis-{id}",
+                                                        Self::prefix()
+                                                    )),
+                                                    disabled,
+                                                    cx,
+                                                ))
+                                            })
+                                        })
+                                        .when_some(lock_object.clone(), |element, object| {
+                                            element.when_some(target, |element, target| {
+                                                element.child(locking::button(
+                                                    lock_owner.clone(),
+                                                    target,
+                                                    object,
+                                                    SharedString::from(format!(
+                                                        "{}-lock-{id}",
+                                                        Self::prefix()
+                                                    )),
+                                                    disabled,
+                                                    cx,
+                                                ))
+                                            })
+                                        })
+                                        .map(|element| match (lock_object, target) {
+                                            (Some(object), Some(target)) => locking::menu(
+                                                element,
+                                                lock_owner.clone(),
+                                                target,
+                                                object,
+                                            )
+                                            .into_any_element(),
+                                            _ => element.into_any_element(),
+                                        })
+                                })
+                                .collect()
+                        })
+                    },
+                ),
+                &self.sorting,
+                &self.scroll,
+                self.rows.len(),
+            )
+            .flex_1()
+            .min_h_0()
+            .track_scroll(&self.scroll)
             .into_any_element()
+        })
+        .when(!DEFORMER && target.is_some() && !filtered, |element| {
+            element.child(sorting::drop_target(
+                div()
+                    .id("mesh-tree-root-drop")
+                    .test_support()
+                    .h(px(26.))
+                    .flex_shrink_0()
+                    .px_3()
+                    .flex()
+                    .items_center()
+                    .text_xs()
+                    .text_color(theme.muted_foreground)
+                    .child(t!("editor.tree_drop_root")),
+                &self.sorting,
+                SortItem::TreeRoot,
+                None,
+                cx,
+            ))
+        })
+        .into_any_element()
     }
 }

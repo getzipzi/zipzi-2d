@@ -18,7 +18,7 @@ fn heijiao_imports_with_clipping_and_survives_save_reopen() -> anyhow::Result<()
     let imported = document.snapshot()?;
     assert!(imported.textures.len() > 100);
     let layers = document.layers();
-    let mut ordered: Vec<_> = imported.frame.drawables.iter().collect();
+    let mut ordered: Vec<_> = imported.viewport_frame.drawables.iter().collect();
     ordered.sort_by_key(|d| d.render_order);
     assert_eq!(
         ordered.iter().map(|d| d.id.as_str()).collect::<Vec<_>>(),
@@ -33,7 +33,7 @@ fn heijiao_imports_with_clipping_and_survives_save_reopen() -> anyhow::Result<()
         .unwrap()
         .id;
     let neck = imported
-        .frame
+        .viewport_frame
         .drawables
         .iter()
         .find(|d| &d.id == neck_id)
@@ -42,13 +42,13 @@ fn heijiao_imports_with_clipping_and_survives_save_reopen() -> anyhow::Result<()
     assert!(neck.masks.is_empty());
     assert!(
         imported
-            .frame
+            .viewport_frame
             .offscreens
             .iter()
             .any(|group| group.owner_part_id == neck.part_id)
     );
     let base = imported
-        .frame
+        .viewport_frame
         .drawables
         .iter()
         .find(|d| d.part_id == neck.part_id && d.raw_blend_mode.is_none())
@@ -62,7 +62,7 @@ fn heijiao_imports_with_clipping_and_survives_save_reopen() -> anyhow::Result<()
         "脖子底色"
     );
     let clipped = imported
-        .frame
+        .viewport_frame
         .drawables
         .iter()
         .filter(|d| d.raw_blend_mode.is_some_and(|mode| mode >> 8 == 1))
@@ -73,21 +73,27 @@ fn heijiao_imports_with_clipping_and_survives_save_reopen() -> anyhow::Result<()
     let mut reopened = Document::open(&receipt.manifest)?;
     let restored = reopened.snapshot()?;
     assert_eq!(
-        restored.frame.drawables.len(),
-        imported.frame.drawables.len()
+        restored.viewport_frame.drawables.len(),
+        imported.viewport_frame.drawables.len()
     );
     assert_eq!(restored.textures.len(), imported.textures.len());
     for (before, after) in imported
-        .frame
+        .viewport_frame
         .drawables
         .iter()
-        .zip(&restored.frame.drawables)
+        .zip(&restored.viewport_frame.drawables)
     {
         assert_eq!(before.masks, after.masks);
         assert_eq!(before.raw_blend_mode, after.raw_blend_mode);
     }
-    assert_eq!(imported.frame.offscreens, restored.frame.offscreens);
-    assert_eq!(imported.frame.render_plan, restored.frame.render_plan);
+    assert_eq!(
+        imported.viewport_frame.offscreens,
+        restored.viewport_frame.offscreens
+    );
+    assert_eq!(
+        imported.viewport_frame.render_plan,
+        restored.viewport_frame.render_plan
+    );
     for (before, after) in imported.textures.iter().zip(restored.textures.iter()) {
         assert_eq!(before.rgba, after.rgba);
     }

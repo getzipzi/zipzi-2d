@@ -8,7 +8,7 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 
-fn execute(
+pub(super) fn execute(
     owner: &WeakEntity<EditorView>,
     document: DocumentId,
     command: EditorCommand,
@@ -42,9 +42,9 @@ pub(super) fn button(
     let (state, names) = editor
         .document()
         .map(|doc| {
-            let state = doc.lock_index().state(&object).clone();
+            let state = doc.object_state_index().state(&object).clone();
             let names = state
-                .inherited
+                .locked_by
                 .iter()
                 .map(|r| doc.object_index().name(r).to_owned())
                 .collect::<Vec<_>>()
@@ -52,7 +52,7 @@ pub(super) fn button(
             (state, names)
         })
         .unwrap_or_default();
-    let explicit = state.explicit;
+    let explicit = state.explicit.locked;
     let locked = state.locked();
     let tooltip = if !names.is_empty() {
         if explicit {
@@ -72,6 +72,10 @@ pub(super) fn button(
     } else {
         cx.theme().muted_foreground
     };
+    let sources = state.locked_by.clone();
+    let source_owner = owner.clone();
+    let source_id = id.clone();
+    let trigger = Button::new(id).ghost().small().w(px(24.)).h(px(24.));
     div()
         .w(px(24.))
         .h_full()
@@ -80,11 +84,7 @@ pub(super) fn button(
         .items_center()
         .justify_center()
         .child(
-            Button::new(id)
-                .ghost()
-                .small()
-                .w(px(24.))
-                .h(px(24.))
+            trigger
                 // Keep inherited locks dim even when the ghost button is hovered.
                 .icon(
                     Icon::new(if locked {
@@ -111,17 +111,32 @@ pub(super) fn button(
                     let Some(doc) = entity.read(cx).editor.document() else {
                         return;
                     };
-                    let locks = doc.lock_index();
+                    let locks = doc.object_state_index();
                     let state = locks.state(&object);
-                    let command = if !state.explicit && !state.inherited.is_empty() {
-                        EditorCommand::SelectObject(state.inherited[0].clone())
+                    let command = if !state.explicit.locked && !state.locked_by.is_empty() {
+                        return;
                     } else {
                         EditorCommand::SetObjectsLocked {
                             objects: vec![object.clone()],
-                            locked: !state.explicit,
+                            locked: !state.explicit.locked,
                         }
                     };
                     execute(&owner, document, command, window, cx);
+                })
+                .map(|button| {
+                    if !explicit && !sources.is_empty() {
+                        super::visibility::source_menu(
+                            button,
+                            source_id,
+                            source_owner,
+                            document,
+                            sources,
+                            false,
+                        )
+                        .into_any_element()
+                    } else {
+                        button.into_any_element()
+                    }
                 }),
         )
 }
@@ -146,18 +161,20 @@ pub(super) fn menu<E: ContextMenuExt + IntoElement + 'static>(
         let Some(doc) = state.editor.document() else {
             return menu;
         };
-        let locks = doc.lock_index();
+        let locks = doc.object_state_index();
         let objects = if doc.context().selections.contains(&object) {
             doc.context().selections.clone()
         } else {
             vec![object.clone()]
         };
-        let objects: Vec<_> = objects.into_iter().filter(|r| locks.lockable(r)).collect();
+        let objects: Vec<_> = objects.into_iter().filter(|r| locks.contains(r)).collect();
         for (locked, label) in [
             (true, t!("editor.lock_selected")),
             (false, t!("editor.unlock_selected")),
         ] {
-            let enabled = objects.iter().any(|r| locks.state(r).explicit != locked);
+            let enabled = objects
+                .iter()
+                .any(|r| locks.state(r).explicit.locked != locked);
             let owner = owner.clone();
             let objects = objects.clone();
             menu = menu.item(PopupMenuItem::new(label).disabled(!enabled).on_click(
@@ -175,7 +192,7 @@ pub(super) fn menu<E: ContextMenuExt + IntoElement + 'static>(
                 },
             ));
         }
-        for source in &locks.state(&object).inherited {
+        for source in &locks.state(&object).locked_by {
             let label = t!(
                 "editor.locate_lock_source",
                 name = doc.object_index().name(source)
