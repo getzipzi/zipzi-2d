@@ -44,7 +44,7 @@ impl SelectItem for AlgorithmChoice {
 struct Candidate {
     plan: Arc<MeshGenerationPreview>,
     edges: Arc<[([f32; 2], [f32; 2])]>,
-    aspect: f32,
+    source_size: [f32; 2],
     renderer: Option<super::mesh_preview::MeshPreview>,
 }
 impl Candidate {
@@ -85,7 +85,7 @@ impl Candidate {
             renderer,
             plan: Arc::new(plan),
             edges: edges.into(),
-            aspect: width / height,
+            source_size: [width, height],
         })
     }
 }
@@ -315,7 +315,7 @@ impl MeshGenerationForm {
             true,
         );
         let content = self.candidate.as_ref().map(|c| PreviewContent {
-            aspect: c.aspect,
+            source_size: c.source_size,
             painter: self.painter.clone(),
             request: self.request_id,
             edges: c.edges.clone(),

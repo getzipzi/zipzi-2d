@@ -25,6 +25,50 @@ fn up(editor: &mut Editor, p: CanvasPoint) -> anyhow::Result<()> {
     Ok(())
 }
 #[test]
+fn zoom_uses_actual_pixels_independent_of_viewport_and_display_scale() {
+    for (width, height) in [(640., 480.), (1600., 1200.)] {
+        let canvas = kasane_core::Canvas::new(
+            width,
+            height,
+            kasane_core::Vec2::new(width / 2., height / 2.),
+            100.,
+        );
+        for (viewport_width, viewport_height) in [(813., 517.), (300., 200.), (1800., 1400.)] {
+            for dpi in [1., 1.5, 2., 3.] {
+                for zoom in [0.25, 1., 2.75] {
+                    let transform = ViewportTransform::new(
+                        canvas,
+                        CanvasMetrics {
+                            width: viewport_width,
+                            height: viewport_height,
+                            scale_factor: dpi,
+                        },
+                        ViewState {
+                            zoom,
+                            pan: CanvasPoint { x: 13., y: -27. },
+                        },
+                    )
+                    .unwrap();
+                    let origin = transform.to_canvas(ModelPoint::default());
+                    let corner = transform.to_canvas(ModelPoint {
+                        x: width,
+                        y: height,
+                    });
+                    assert!(((corner.x - origin.x) * dpi - width * zoom).abs() < 0.001);
+                    assert!(((corner.y - origin.y) * dpi - height * zoom).abs() < 0.001);
+                    let center = transform.to_canvas(ModelPoint {
+                        x: width / 2.,
+                        y: height / 2.,
+                    });
+                    assert!((center.x - (viewport_width / 2. + 13.)).abs() < 0.001);
+                    assert!((center.y - (viewport_height / 2. - 27.)).abs() < 0.001);
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn coordinate_spaces_round_trip_at_multiple_display_scales() {
     let canvas = kasane_core::Canvas::new(640., 480., kasane_core::Vec2::new(320., 240.), 100.);
     for dpi in [1., 1.5, 2., 3.] {
@@ -122,8 +166,9 @@ fn multi_vertex_drag_is_one_history_step_and_preserves_uv_topology() -> anyhow::
     up(&mut editor, final_point)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     let positions = editor.document().unwrap().selected_vertex_positions();
-    assert_eq!(positions[0].1, ModelPoint { x: 140., y: 32. });
-    assert_eq!(positions[1].1, ModelPoint { x: 244., y: 136. });
+    // At 100% on a 2x display, 24 logical pixels move 48 source pixels.
+    assert_eq!(positions[0].1, ModelPoint { x: 176., y: 56. });
+    assert_eq!(positions[1].1, ModelPoint { x: 280., y: 160. });
     let scene = editor.preview()?.scene;
     assert_eq!(
         scene.viewport_frame.drawables[0].uvs,

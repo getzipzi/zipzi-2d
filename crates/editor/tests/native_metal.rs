@@ -20,6 +20,78 @@ fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {
 }
 
 #[test]
+fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scales()
+-> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        use editor_core::{CanvasMetrics, SceneTexture, ViewportTransform};
+
+        let (mut document, _source) = support::rectangle_document(false)?;
+        let mut snapshot = document.snapshot()?;
+        snapshot.textures = snapshot
+            .textures
+            .iter()
+            .map(|texture| SceneTexture {
+                asset_id: texture.asset_id.clone(),
+                cache_key: "solid-zoom-fixture".into(),
+                width: 1,
+                height: 1,
+                rgba: vec![255, 0, 0, 255].into(),
+            })
+            .collect::<Vec<_>>()
+            .into();
+        let mut gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let mut renderer = MetalSceneRenderer::new(
+            gpu.device.clone(),
+            MetalTargetConfig {
+                width: 256,
+                height: 256,
+                format: MTLPixelFormat::RGBA8Unorm,
+            },
+        )?;
+        for side in [256, 640] {
+            for dpi in [1., 2.] {
+                for zoom in [0.5, 1.] {
+                    let config = MetalTargetConfig {
+                        width: side,
+                        height: side,
+                        format: MTLPixelFormat::RGBA8Unorm,
+                    };
+                    let transform = ViewportTransform::new(
+                        snapshot.viewport_frame.canvas,
+                        CanvasMetrics {
+                            width: side as f32 / dpi,
+                            height: side as f32 / dpi,
+                            scale_factor: dpi,
+                        },
+                        ViewState {
+                            zoom,
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                    let texture =
+                        renderer.draw_transformed(&gpu.queue, config, &snapshot, transform)?;
+                    let image = gpui.render_scene_to_image(
+                        &scene(texture, side as f32, false),
+                        size(DevicePixels(side as i32), DevicePixels(side as i32)),
+                    )?;
+                    let coverage = (0..side)
+                        .filter(|x| image.get_pixel(*x, side / 2).0 != [255; 4])
+                        .count();
+                    assert_eq!(
+                        coverage,
+                        (208. * zoom) as usize,
+                        "viewport={side}, dpi={dpi}, zoom={zoom}"
+                    );
+                }
+            }
+        }
+        Ok(())
+    })
+}
+
+#[test]
 fn editor_hidden_mask_source_still_clips_native_metal_output() -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
         use kasane_core::{Canvas, Vec2};
@@ -463,7 +535,12 @@ fn mesh_candidate_preview_renders_only_its_triangles() -> anyhow::Result<()> {
             };
             let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
             let mut capture = |snapshot: &SceneSnapshot| -> anyhow::Result<image::RgbaImage> {
-                let texture = renderer.draw(&gpu.queue, config, snapshot, ViewState::default())?;
+                let canvas = snapshot.viewport_frame.canvas;
+                let view = ViewState {
+                    zoom: (size_px as f32 / canvas.width).min(size_px as f32 / canvas.height),
+                    ..Default::default()
+                };
+                let texture = renderer.draw(&gpu.queue, config, snapshot, view)?;
                 Ok(gpui.render_scene_to_image(
                     &scene(texture, size_px as f32, false),
                     size(DevicePixels(size_px as i32), DevicePixels(size_px as i32)),

@@ -48,7 +48,8 @@ impl ViewportTransform {
         {
             return None;
         }
-        let scale = (metrics.width / canvas.width).min(metrics.height / canvas.height) * view.zoom;
+        // Zoom is physical display pixels per source pixel. UI coordinates are logical pixels.
+        let scale = view.zoom / metrics.scale_factor;
         if !scale.is_finite() || scale <= 0. {
             return None;
         }

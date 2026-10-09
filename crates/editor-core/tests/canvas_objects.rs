@@ -804,7 +804,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: CanvasPoint {
-            x: p.x + 38.4,
+            x: p.x + 19.2,
             y: p.y,
         },
     })?; // 19.2px = 0.1 parent units
@@ -824,7 +824,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: CanvasPoint {
-            x: p.x + 20.,
+            x: p.x + 10.,
             y: p.y,
         },
     })?;
@@ -958,8 +958,8 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
         .zip(&moved.viewport_frame.drawables)
     {
         for (a, b) in before.positions.iter().zip(&after.positions) {
-            assert!((b.x - a.x - 10.).abs() < 1e-4);
-            assert!((b.y - a.y + 5.).abs() < 1e-4);
+            assert!((b.x - a.x - 40.).abs() < 1e-4);
+            assert!((b.y - a.y + 20.).abs() < 1e-4);
         }
     }
     editor.execute(EditorCommand::Undo)?;
@@ -1582,7 +1582,7 @@ fn warp_marquee_preserves_object_and_moves_selected_controls_only() -> anyhow::R
     )?;
     let after = control_points(&mut editor, &object)?;
     for i in 0..2 {
-        assert!((after[i].x - before[i].x - 10.).abs() < 0.001);
+        assert!((after[i].x - before[i].x - 40.).abs() < 0.001);
     }
     assert_eq!(&after[2..], &before[2..]);
     editor.execute(EditorCommand::Undo)?;
@@ -1608,8 +1608,8 @@ fn warp_gizmo_scales_all_points_and_cancels_as_one_edit() -> anyhow::Result<()> 
         .unwrap()
         .1;
     let end = CanvasPoint {
-        x: start.x + 96.,
-        y: start.y + 40.,
+        x: start.x + 48. * frame.transform.scale,
+        y: start.y + 20. * frame.transform.scale,
     };
     assert_eq!(
         frame.geometry.hit(
@@ -1674,8 +1674,8 @@ fn warp_outer_edge_moves_without_selecting_descendant_mesh() -> anyhow::Result<(
     )?;
     let after = control_points(&mut editor, &object)?;
     for (a, b) in before.iter().zip(&after) {
-        assert!((b.x - a.x - 10.).abs() < 0.001);
-        assert!((b.y - a.y + 8.).abs() < 0.001);
+        assert!((b.x - a.x - 40.).abs() < 0.001);
+        assert!((b.y - a.y + 32.).abs() < 0.001);
     }
     assert_eq!(editor.document().unwrap().context().selections, [object]);
     Ok(())
@@ -2125,7 +2125,6 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
     let control = scene.controls.iter().find(|c| c.object == object).unwrap();
     for width in [256., 512.] {
         for zoom in [0.5, 1., 2.] {
-            let mut logical_positions = None;
             for dpi in [1., 2.] {
                 let transform = ViewportTransform::new(
                     scene.source.viewport_frame.canvas,
@@ -2143,9 +2142,9 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
                 let points = scene.control_points(control, transform);
                 let gizmo = scene.deformer_gizmo(control, transform).unwrap();
                 let radius = |p: CanvasPoint| (p.x - gizmo.center.x).hypot(p.y - gizmo.center.y);
-                assert!((radius(points[1]) - 540. * transform.scale).abs() < 0.001);
-                assert!((radius(gizmo.outline[0].0) - 280. * transform.scale).abs() < 0.001);
-                assert!((radius(gizmo.handles[0].1) - 400. * transform.scale).abs() < 0.001);
+                assert!((radius(points[1]) * dpi - 540. * zoom).abs() < 0.001);
+                assert!((radius(gizmo.outline[0].0) * dpi - 280. * zoom).abs() < 0.001);
+                assert!((radius(gizmo.handles[0].1) * dpi - 400. * zoom).abs() < 0.001);
                 let selection = std::slice::from_ref(&object);
                 let hit = |p| {
                     scene.hit(
@@ -2175,11 +2174,6 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
                         DeformerHandle::Rotate
                     ))
                 );
-                let positions = (points, gizmo.outline, gizmo.handles);
-                if let Some(previous) = logical_positions {
-                    assert_eq!(positions, previous, "DPI must not apply the zoom twice");
-                }
-                logical_positions = Some(positions);
             }
         }
     }

@@ -1,7 +1,7 @@
 //! Reusable image/line viewport. Content is normalized to [0, 1] in both axes;
-//! the aspect ratio restores its proportions. Camera state is independent of content.
+//! source pixel dimensions restore its proportions. Camera state is independent of content.
 use crate::t;
-use editor_core::CanvasPoint;
+use editor_core::{CanvasPoint, MAX_ZOOM, MIN_ZOOM};
 use gpui_kit::component::{
     ActiveTheme, Sizable,
     button::{Button, ButtonVariants},
@@ -21,7 +21,7 @@ impl EventEmitter<PreviewPaintStatus> for PreviewViewport {}
 
 #[derive(Clone)]
 pub(crate) struct PreviewContent {
-    pub aspect: f32,
+    pub source_size: [f32; 2],
     pub painter: Option<PreviewPainter>,
     pub request: u64,
     pub edges: Arc<[([f32; 2], [f32; 2])]>,
@@ -59,13 +59,22 @@ impl PreviewViewport {
         message: SharedString,
         cx: &mut Context<Self>,
     ) {
-        self.content = content.filter(|c| c.aspect.is_finite() && c.aspect > 0.);
+        self.content = content.filter(|c| {
+            c.source_size
+                .iter()
+                .all(|dimension| dimension.is_finite() && *dimension > 0.)
+        });
         self.message = message;
         cx.notify();
     }
 
-    fn fit(&mut self, cx: &mut Context<Self>) {
-        self.zoom = 1.;
+    fn fit(&mut self, window: &Window, cx: &mut Context<Self>) {
+        let Some(content) = &self.content else { return };
+        let bounds = self.bounds.get();
+        self.zoom = (((bounds.size.width.as_f32() - 32.).max(1.) / content.source_size[0])
+            .min((bounds.size.height.as_f32() - 32.).max(1.) / content.source_size[1])
+            * window.scale_factor())
+        .clamp(MIN_ZOOM, MAX_ZOOM);
         self.pan = point(px(0.), px(0.));
         self.drag = None;
         cx.notify();
@@ -75,7 +84,7 @@ impl PreviewViewport {
         if !factor.is_finite() || factor <= 0. {
             return;
         }
-        let next = (self.zoom * factor).clamp(0.1, 16.);
+        let next = (self.zoom * factor).clamp(MIN_ZOOM, MAX_ZOOM);
         let ratio = next / self.zoom;
         let offset = anchor - self.bounds.get().center();
         self.pan = offset - (offset - self.pan) * ratio;
@@ -170,11 +179,9 @@ impl Render for PreviewViewport {
                     move |bounds, _, _| measured.set(bounds),
                     move |bounds, _, window, cx| {
                         let Some(content) = &content else { return };
-                        let width = (bounds.size.width.as_f32() - 32.)
-                            .max(1.)
-                            .min((bounds.size.height.as_f32() - 32.).max(1.) * content.aspect)
-                            * zoom;
-                        let height = width / content.aspect;
+                        let scale = zoom / window.scale_factor();
+                        let width = content.source_size[0] * scale;
+                        let height = content.source_size[1] * scale;
                         let origin = bounds.center() + pan - point(px(width / 2.), px(height / 2.));
                         let image_bounds = Bounds::new(origin, size(px(width), px(height)));
                         // Clip both the image and line paths, even at large zoom/pan offsets.
@@ -324,7 +331,7 @@ impl Render for PreviewViewport {
                         Button::new("preview-fit")
                             .small()
                             .label(t!("preview_viewport.fit"))
-                            .on_click(cx.listener(|this, _, _, cx| this.fit(cx))),
+                            .on_click(cx.listener(|this, _, window, cx| this.fit(window, cx))),
                     ),
             )
             .child(viewport)

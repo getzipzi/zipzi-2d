@@ -9,6 +9,7 @@ mod parameter_creation;
 mod parameter_groups;
 mod parameter_management;
 mod parameters;
+mod preview_viewport;
 mod project_import;
 mod properties;
 mod recent_files;

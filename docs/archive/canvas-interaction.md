@@ -80,8 +80,8 @@ scale handle. Drag the ring or direction endpoint to change angle, the square to
 scale, and the center to translate the deformer **and its contents**. Center-only
 relocation with descendant compensation is not implemented in this iteration.
 Rotation rings, direction axes and scale-handle distances follow the viewport's
-fit scale and zoom. Handle markers and pointer tolerance retain logical-pixel
-sizes for picking; display DPI does not change their logical geometry.
+zoom, where 100% maps each source pixel to one physical display pixel. Handle
+markers and pointer tolerance retain logical-pixel sizes for picking.
 
 The contextual toolbar follows deformer selection and contains ancestor display,
 Bezier/fine editing, subdivision preview and gesture help. There is no Transform dialog. Rotation

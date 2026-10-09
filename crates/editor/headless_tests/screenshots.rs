@@ -281,11 +281,12 @@ pub(super) fn run() -> anyhow::Result<()> {
     let hidden_canvas = harness.canvas_image(&hidden)?;
     let changed = hidden_canvas
         .pixels()
-        .zip(selected_canvas.pixels())
+        .zip(baseline_canvas.pixels())
         .filter(|(a, b)| a != b)
         .count();
     anyhow::ensure!(
-        changed > (hidden_canvas.width() * hidden_canvas.height()) as usize / 20,
+        // The diamond occupies over a quarter of its 256x256 canvas at actual pixel size.
+        changed > 256 * 256 / 4,
         "Hiding the model must remove its filled pixels, not just the overlay"
     );
     save(&hidden, &directory, "editor-hidden.png")?;
@@ -471,7 +472,11 @@ pub(super) fn run() -> anyhow::Result<()> {
         &directory,
         "mesh-generation-dark.png",
     )?;
-    let fitted = harness.element_image(&mesh_preview, "preview-viewport")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("preview-fit", cx);
+    })?;
+    let fit_preview = harness.capture()?;
+    let fitted = harness.element_image(&fit_preview, "preview-viewport")?;
     anyhow::ensure!(fitted.width() == fitted.height(), "Preview must be square");
     harness.cx.update_window(harness.window, |_, window, cx| {
         window.click("preview-zoom-in", cx);

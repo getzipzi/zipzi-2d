@@ -37,8 +37,8 @@ shared across snapshots; the Metal adapter caches uploads by content hash and
 dimensions, with scene-local asset aliases. It uploads a straight-RGBA mip chain
 for each texture; the Metal sampler uses linear minification, magnification and mip
 filtering. A monotonically increasing preview request revision prevents old frames
-from replacing a newer presented frame or opened project. The viewport fits the document's
-actual canvas dimensions.
+from replacing a newer presented frame or opened project. At 100% zoom, each canvas
+pixel maps to one physical display pixel, independent of viewport size and display DPI.
 
 `SurfaceSource::MetalTexture` uses GPUI's existing Surface vertex/clip path with a
 small premultiplied RGBA fragment shader. It applies element opacity once and blends
