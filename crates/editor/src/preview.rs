@@ -143,6 +143,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                             ("mask_redraws", stats.masks as u64),
                             ("mask_hits", stats.mask_cache_hits as u64),
                             ("buffer_uploads", stats.buffer_uploads as u64),
+                            ("color_attachment_bytes", stats.color_attachment_bytes),
                         ],
                     );
                     (Ok(submitted.image), Some(submitted.command))
