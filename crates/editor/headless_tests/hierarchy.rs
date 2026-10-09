@@ -656,25 +656,46 @@ fn inherited_eye_explains_source_and_only_changes_it_on_explicit_choice(cx: &mut
 }
 
 #[gpui_kit::test]
-fn model_enabled_property_remains_independent_of_the_editor_eye(cx: &mut TestAppContext) {
+fn model_enabled_property_is_read_only_and_independent_of_the_editor_eye(cx: &mut TestAppContext) {
     use editor_core::{ObjectKind, ObjectRef};
-    let (mut doc, assets) = super::document_fixture::sample_document_with_parts().unwrap();
-    let mesh = ObjectRef::new(ObjectKind::Mesh, doc.layers()[0].id.clone());
-    doc.select(&mesh.id).unwrap();
-    let harness = super::setup_with_document(cx, doc, assets);
-    cx.update_window(harness.window, |_, window, cx| {
-        assert_eq!(window.find("object-model-enabled").checked(), Some(true));
-        window.click("object-model-enabled", cx);
-        window.click(format!("mesh-vis-{}", mesh.id), cx);
-        window.click(format!("mesh-vis-{}", mesh.id), cx);
-        assert_eq!(window.find("object-model-enabled").checked(), Some(false));
-        harness.view.read_with(cx, |view, _| {
-            let doc = view.editor.document().unwrap();
-            assert_eq!(doc.object_index().get(&mesh).unwrap().enabled, Some(false));
-            assert!(doc.object_state(&mesh).visible());
-        });
-        window.click("object-model-enabled", cx);
-        assert_eq!(window.find("object-model-enabled").checked(), Some(true));
-    })
-    .unwrap();
+    for enabled in [true, false] {
+        let (mut doc, assets) = super::document_fixture::sample_document_with_parts().unwrap();
+        let mesh = ObjectRef::new(ObjectKind::Mesh, doc.layers()[0].id.clone());
+        doc.select(&mesh.id).unwrap();
+        if !enabled {
+            doc.set_object_property(&mesh, "enabled", enabled.into())
+                .unwrap();
+        }
+        let history = doc.history_lengths();
+        let harness = super::setup_with_document(cx, doc, assets);
+        cx.update_window(harness.window, |_, window, cx| {
+            assert!(window.try_find("object-model-enabled").is_none());
+            assert_eq!(window.find("object-property-enabled").checked(), None);
+            harness.view.read_with(cx, |view, _| {
+                let doc = view.editor.document().unwrap();
+                assert_eq!(
+                    doc.object_index().get(&mesh).unwrap().enabled,
+                    Some(enabled)
+                );
+                assert_eq!(doc.history_lengths(), history);
+            });
+
+            for (edit, visible) in [(1, false), (2, true)] {
+                window.click(format!("mesh-vis-{}", mesh.id), cx);
+                assert!(window.try_find("object-model-enabled").is_none());
+                assert_eq!(window.find("object-property-enabled").checked(), None);
+                harness.view.read_with(cx, |view, _| {
+                    let doc = view.editor.document().unwrap();
+                    assert_eq!(
+                        doc.object_index().get(&mesh).unwrap().enabled,
+                        Some(enabled)
+                    );
+                    assert_eq!(doc.object_state(&mesh).visible(), visible);
+                    assert_eq!(doc.context().inspected.as_ref(), Some(&mesh));
+                    assert_eq!(doc.history_lengths(), (history.0 + edit, 0));
+                });
+            }
+        })
+        .unwrap();
+    }
 }
