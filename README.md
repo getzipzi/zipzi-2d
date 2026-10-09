@@ -25,8 +25,8 @@ cargo run --locked -p component-playground
 ## Canvas navigation
 
 - Trackpad: two-finger scrolling pans in both directions, including momentum; pinch zooms around the pointer.
-- Mouse: the wheel zooms around the pointer; middle-button dragging pans.
-- Ctrl/Cmd + trackpad scrolling also zooms. H or held Space enables left-button panning.
+- Mouse: the wheel zooms proportionally around the pointer, with a short smooth transition; middle-button dragging pans. Reduced Motion disables the transition.
+- Ctrl/Cmd + trackpad scrolling also zooms proportionally, with immediate response like pinch. H or held Space enables left-button panning.
 
 ## Mesh generation
 

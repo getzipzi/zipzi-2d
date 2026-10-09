@@ -281,9 +281,18 @@ impl DocumentSession {
         self.document.save(path)
     }
     pub fn zoom_at(&mut self, delta: f32, focus: Option<CanvasPoint>, metrics: CanvasMetrics) {
-        if !self.tools.dragging() && delta.is_finite() {
+        if delta.is_finite() {
+            self.set_zoom_at(
+                (self.view.zoom + delta).clamp(MIN_ZOOM, MAX_ZOOM),
+                focus,
+                metrics,
+            );
+        }
+    }
+    pub fn set_zoom_at(&mut self, zoom: f32, focus: Option<CanvasPoint>, metrics: CanvasMetrics) {
+        if !self.tools.dragging() && zoom.is_finite() {
             let old_zoom = self.view.zoom;
-            let new_zoom = (old_zoom + delta).clamp(MIN_ZOOM, MAX_ZOOM);
+            let new_zoom = zoom.clamp(MIN_ZOOM, MAX_ZOOM);
             if new_zoom != old_zoom {
                 if metrics.visible() && old_zoom > 0. {
                     let k = new_zoom / old_zoom;

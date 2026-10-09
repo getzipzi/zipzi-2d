@@ -1,4 +1,6 @@
 //! Measured canvas, pointer ownership and overlay painting. Tool semantics live in core.
+mod navigation;
+
 use super::*;
 use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint, CommandId, EditorCommand, ToolId};
 use gpui_kit::component::{
@@ -15,6 +17,8 @@ pub struct CanvasView {
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
     space_held: bool,
+    wheel_zoom: Option<navigation::WheelZoom>,
+    zoom_frame_pending: bool,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -106,7 +110,16 @@ impl CanvasView {
         cx.new(|cx: &mut Context<Self>| {
             let focus = cx.focus_handle();
             let subscriptions = vec![
-                cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
+                cx.observe(&owner.upgrade().unwrap(), |this, owner, cx| {
+                    if this
+                        .wheel_zoom
+                        .as_ref()
+                        .is_some_and(|zoom| !zoom.valid(owner.read(cx), this.bounds))
+                    {
+                        this.wheel_zoom = None;
+                    }
+                    cx.notify();
+                }),
                 cx.on_focus_out(&focus, window, |this, _, window, cx| {
                     this.space_held = false;
                     window.suppress_key_repeats("space", false);
@@ -141,6 +154,8 @@ impl CanvasView {
                 bounds: Bounds::default(),
                 pan: None,
                 space_held: false,
+                wheel_zoom: None,
+                zoom_frame_pending: false,
                 _subscriptions: subscriptions,
             }
         })
@@ -161,6 +176,7 @@ impl CanvasView {
         self.active_tool(cx) == ToolId::Hand
     }
     pub fn cancel_pointer(&mut self) {
+        self.wheel_zoom = None;
         self.pan = None;
     }
     pub(crate) fn set_temporary_hand(
@@ -177,7 +193,7 @@ impl CanvasView {
         cx.notify();
     }
     fn cancel(&mut self, cx: &mut Context<Self>) {
-        self.pan = None;
+        self.cancel_pointer();
         let _ = self.owner.update(cx, |owner, cx| {
             owner.editor.cancel_gesture();
             owner.redraw(cx);
@@ -190,6 +206,9 @@ impl CanvasView {
         }
     }
     fn input(&mut self, input: CanvasInput, window: &mut Window, cx: &mut Context<Self>) {
+        if matches!(input, CanvasInput::Down { .. }) {
+            self.wheel_zoom = None;
+        }
         if window.has_active_dialog(cx) {
             self.cancel(cx);
             return;
@@ -479,70 +498,10 @@ impl Render for CanvasView {
                 }),
             )
             .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, window, cx| {
-                if window.has_active_dialog(cx)
-                    || this.pan.is_some()
-                    || event.touch_phase == TouchPhase::Cancelled
-                {
-                    return;
-                }
-                let delta = event.delta.pixel_delta(px(16.));
-                let delta = CanvasPoint {
-                    x: delta.x.as_f32(),
-                    y: delta.y.as_f32(),
-                };
-                if !delta.x.is_finite() || !delta.y.is_finite() || (delta.x == 0. && delta.y == 0.)
-                {
-                    return;
-                }
-                // Precise scrolling follows both trackpad axes, including the
-                // platform's natural-scroll direction and momentum. A mouse
-                // wheel or Ctrl/Cmd-scroll retains cursor-anchored zooming.
-                let pan =
-                    event.delta.precise() && !event.modifiers.control && !event.modifiers.platform;
-                let point = this.local(event.position);
-                let _ = this.owner.update(cx, |owner, cx| {
-                    if owner.modal || owner.editor.is_busy() || owner.editor.gesture_active() {
-                        return;
-                    }
-                    let before = owner.editor.view();
-                    if pan {
-                        owner.editor.pan_by(delta);
-                    } else {
-                        owner.editor.zoom_at(delta.y * (0.1 / 16.), Some(point));
-                    }
-                    if owner.editor.view().zoom != before.zoom
-                        || owner.editor.view().pan != before.pan
-                    {
-                        owner.redraw_canvas(cx);
-                    }
-                    cx.stop_propagation();
-                });
+                this.scroll(event, window, cx);
             }))
             .on_pinch(cx.listener(|this, event: &PinchEvent, window, cx| {
-                if window.has_active_dialog(cx)
-                    || this.pan.is_some()
-                    || event.phase == TouchPhase::Cancelled
-                    || !event.delta.is_finite()
-                    || event.delta == 0.
-                    || event.delta <= -1.
-                {
-                    return;
-                }
-                let point = this.local(event.position);
-                let _ = this.owner.update(cx, |owner, cx| {
-                    if owner.modal || owner.editor.is_busy() || owner.editor.gesture_active() {
-                        return;
-                    }
-                    let before = owner.editor.view();
-                    // Native magnification is relative to the current zoom.
-                    owner.editor.zoom_at(before.zoom * event.delta, Some(point));
-                    if owner.editor.view().zoom != before.zoom
-                        || owner.editor.view().pan != before.pan
-                    {
-                        owner.redraw_canvas(cx);
-                    }
-                    cx.stop_propagation();
-                });
+                this.pinch(event, window, cx);
             }))
             .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
                 if !hovered && this.pan.is_none() {

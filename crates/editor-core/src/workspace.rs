@@ -595,6 +595,16 @@ impl Editor {
     pub fn zoom_by(&mut self, delta: f32) {
         self.zoom_at(delta, None);
     }
+    /// Set an absolute zoom while keeping the model point beneath `focus` fixed.
+    pub fn set_zoom_at(&mut self, zoom: f32, focus: Option<crate::CanvasPoint>) {
+        let metrics = self.metrics;
+        if let Some(id) = self.active
+            && let Ok(entry) = self.entry_mut(id)
+            && let Some(session) = &mut entry.session
+        {
+            session.set_zoom_at(zoom, focus, metrics);
+        }
+    }
     pub fn reset_view(&mut self) {
         if let Some(id) = self.active {
             if let Ok(entry) = self.entry_mut(id) {

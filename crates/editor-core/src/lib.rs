@@ -18,7 +18,7 @@ pub use document::{
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};
-pub use scene::{SceneSnapshot, SceneTexture, ViewState};
+pub use scene::{MAX_ZOOM, MIN_ZOOM, SceneSnapshot, SceneTexture, ViewState};
 pub use tree::{TreeNode, TreeNodeKind};
 
 use session::DocumentSession;

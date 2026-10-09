@@ -184,21 +184,25 @@ impl EditorView {
     }
 
     fn redraw_canvas(&mut self, cx: &mut Context<Self>) {
-        self.request_preview();
+        self.redraw_canvas_for_input(cx, frame_trace::current_input());
+    }
+
+    fn redraw_canvas_for_input(&mut self, cx: &mut Context<Self>, input: u64) {
+        self.request_preview_for_input(input);
         self.notify_canvas(cx);
         App::notify(cx, self.status_bar.entity_id());
     }
 
     fn request_preview(&mut self) {
+        self.request_preview_for_input(frame_trace::current_input());
+    }
+
+    fn request_preview_for_input(&mut self, input: u64) {
         if self.editor.is_busy() {
             return;
         }
         let trace_id = frame_trace::next_id();
-        frame_trace::emit(
-            trace_id,
-            "scene_begin",
-            &[("input", frame_trace::current_input())],
-        );
+        frame_trace::emit(trace_id, "scene_begin", &[("input", input)]);
         let preview = self.editor.preview_if_needed();
         frame_trace::emit(trace_id, "scene_end", &[]);
         match preview {

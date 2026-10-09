@@ -677,3 +677,26 @@ fn zoom_by_preserves_viewport_center() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn absolute_zoom_clamps_and_preserves_anchor_without_changing_history() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    editor.pan_by(CanvasPoint { x: 37., y: -12. });
+    let anchor = CanvasPoint { x: 120., y: 90. };
+    let model = editor.preview()?.canvas.unwrap().transform.to_model(anchor);
+    for (requested, expected) in [(2., 2.), (100., MAX_ZOOM), (0., MIN_ZOOM)] {
+        editor.set_zoom_at(requested, Some(anchor));
+        assert_eq!(editor.view().zoom, expected);
+        let after = editor.preview()?.canvas.unwrap().transform.to_canvas(model);
+        assert!((after.x - anchor.x).abs() < 1e-3);
+        assert!((after.y - anchor.y).abs() < 1e-3);
+    }
+    let before = editor.view();
+    for invalid in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        editor.set_zoom_at(invalid, Some(anchor));
+        assert_eq!(editor.view().zoom, before.zoom);
+        assert_eq!(editor.view().pan, before.pan);
+    }
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
