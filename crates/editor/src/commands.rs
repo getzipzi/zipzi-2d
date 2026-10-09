@@ -49,6 +49,26 @@ impl EditorView {
                 CommandId::SaveAs => self.save(true, window, cx),
                 CommandId::Close => self.close_active(window, cx),
                 CommandId::Quit => self.close(window, cx),
+                CommandId::GenerateMesh => {
+                    if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
+                        self.edit_error = Some(error.to_string());
+                    } else {
+                        let owner = cx.weak_entity();
+                        window.defer(cx, move |window, cx| {
+                            if let Err(error) = crate::ui::mesh_generation::MeshGenerationForm::open(
+                                owner.clone(), command.document.unwrap(), window, cx,
+                            ) {
+                                if let Some(owner) = owner.upgrade() {
+                                    owner.update(cx, |owner, cx| {
+                                        owner.edit_error = Some(error.to_string());
+                                        cx.notify();
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    cx.notify();
+                }
                 CommandId::CreateParameter
                 | CommandId::EditParameter
                 | CommandId::DeleteParameter

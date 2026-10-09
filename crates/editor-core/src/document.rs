@@ -13,6 +13,10 @@ use uuid::Uuid;
 mod object_state;
 pub use object_state::{ObjectState, ObjectStateIndex};
 
+#[path = "mesh_generation.rs"]
+mod mesh_generation;
+pub use mesh_generation::MeshGridOptions;
+
 #[path = "sorting.rs"]
 mod sorting;
 pub use sorting::{OrganizationDestination, ParameterDestination, ReorderPosition};

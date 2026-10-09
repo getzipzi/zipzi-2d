@@ -3,6 +3,7 @@
 mod canvas;
 mod docking_tabs;
 mod hierarchy;
+mod mesh_generation;
 mod panel_toolbar;
 mod parameter_creation;
 mod parameter_groups;

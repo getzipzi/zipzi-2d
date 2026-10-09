@@ -121,6 +121,7 @@ tool_glue = "Glue 连接 (G)"
 show_deformers = "显示全部变形器"
 show_ancestor_deformers = "显示祖先变形器"
 no_canvas_objects = "此处没有可选对象"
+tool_generate_mesh = "生成矩形网格 (Shift+M)"
 tool_hand = "抓手 (H)"
 
 draw_order = "绘制顺序"
@@ -246,3 +247,15 @@ export_new_warning = "本次修改新增的导出限制（仍可保存项目）"
 export_existing_warning = "已有的导出限制"
 
 top_level_destination = "顶层（参数进入未分组）"
+
+[mesh_generation]
+title = "生成矩形网格"
+generate = "生成"
+description = "将四角矩形细分为规则网格，保留关键形态、BlendShape 和 Glue。生成后如需调整行列数，请先撤销。"
+columns = "列数（细分段数）"
+rows = "行数（细分段数）"
+counts = "%{vertices} 个顶点 · %{triangles} 个三角形"
+invalid_counts = "请输入正整数，网格顶点总数不能超过 65,536。"
+square_required = "包含关键形态或 BlendShape 的网格要求行数与列数相等。"
+stale = "文档已变化，请关闭对话框后重新打开工具。"
+locked = "请先解锁此网格及其父 Part，再生成网格。"

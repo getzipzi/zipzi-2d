@@ -69,6 +69,7 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
         item(CommandId::SelectTool),
         item(CommandId::GlueTool),
         item(CommandId::HandTool),
+        item(CommandId::GenerateMesh),
         MenuItem::separator(),
         item(CommandId::ToggleAncestorDeformers),
         item(CommandId::ToggleDeformers),

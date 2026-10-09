@@ -58,6 +58,11 @@ pub enum EditorCommand {
         locked: bool,
     },
     SetTool(crate::ToolId),
+    GenerateMeshGrid {
+        object: crate::ObjectRef,
+        options: crate::MeshGridOptions,
+        expected_revision: u64,
+    },
     ToggleDeformers,
     ToggleAncestorDeformers,
     ToggleDeformerGrid,

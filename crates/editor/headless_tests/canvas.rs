@@ -222,7 +222,7 @@ fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
                 icon: IconName::Hand,
                 tooltip_key: "editor.tool_hand",
                 selected: |_, _| false,
-                enabled: |_, modal| !modal,
+                enabled: |_, modal, _| !modal,
                 action: None,
             };
             assert!(canvas.toolbar.register(item).is_ok());

@@ -58,6 +58,8 @@ pub enum CommandId {
     HandTool,
     #[serde(rename = "tool.glue")]
     GlueTool,
+    #[serde(rename = "tool.generate-mesh")]
+    GenerateMesh,
     #[serde(rename = "view.deformers")]
     ToggleDeformers,
     #[serde(rename = "view.ancestor-deformers")]
@@ -178,6 +180,13 @@ specs![
     (ZoomOut, "menu.zoom_out", Document, true, ["cmd--"]),
     (ResetView, "menu.reset_view", Document, false, ["cmd-0"]),
     (SelectTool, "editor.tool_select", Canvas, false, ["v"]),
+    (
+        GenerateMesh,
+        "editor.tool_generate_mesh",
+        Canvas,
+        false,
+        ["shift-m"]
+    ),
     (GlueTool, "editor.tool_glue", Canvas, false, ["g"]),
     (HandTool, "editor.tool_hand", Canvas, false, ["h"]),
     (ToggleDeformers, "editor.show_deformers", Canvas, false, []),
@@ -246,6 +255,15 @@ impl Editor {
             | BlendShapes | Glue | Motions | Expressions | Physics | Pose | Resources
             | ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
+            GenerateMesh => {
+                target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && !self.gesture_active()
+                    && self
+                        .document()
+                        .is_some_and(|d| d.mesh_generation_target().is_ok())
+            }
             CreateParameter | CreateParameterGroup => target && !self.is_busy() && !self.exiting(),
             EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {
                 target

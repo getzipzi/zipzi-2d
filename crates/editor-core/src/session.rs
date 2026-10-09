@@ -180,6 +180,19 @@ impl DocumentSession {
                 self.tools.set_tool(tool, &mut self.document);
                 return Ok(());
             }
+            EditorCommand::GenerateMeshGrid {
+                object,
+                options,
+                expected_revision,
+            } => {
+                let result = self
+                    .document
+                    .generate_mesh_grid(&object, options, expected_revision);
+                if result.is_ok() {
+                    self.tools.clear();
+                }
+                result
+            }
             EditorCommand::ToggleDeformers => {
                 self.tools.deformer_visibility.all = !self.tools.deformer_visibility.all;
                 return Ok(());

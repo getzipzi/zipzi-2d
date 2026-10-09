@@ -1,4 +1,5 @@
 pub(crate) mod form_dialog;
+pub(crate) mod mesh_generation;
 
 use super::*;
 use gpui_kit::component::{ActiveTheme, WindowExt};

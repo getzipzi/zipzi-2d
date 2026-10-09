@@ -9,7 +9,7 @@ use gpui_kit::{prelude::*, *};
 
 pub(crate) type ToolbarAction = fn(&mut CanvasView, &mut Window, &mut Context<CanvasView>);
 pub(crate) type ToolbarSelected = fn(&CanvasView, &App) -> bool;
-pub(crate) type ToolbarEnabled = fn(&CanvasView, bool) -> bool;
+pub(crate) type ToolbarEnabled = fn(&CanvasView, bool, &App) -> bool;
 
 /// One button's appearance and behavior. Items render in registration order.
 #[derive(Clone, Copy)]
@@ -54,6 +54,20 @@ impl ToolbarRegistry {
                 selected: hand_selected,
                 enabled: not_modal,
                 action: Some(hand_tool),
+            },
+            ToolbarItemConfig {
+                id: "tool_generate_mesh",
+                icon: IconName::Grid2x2,
+                tooltip_key: "editor.tool_generate_mesh",
+                selected: |_, _| false,
+                enabled: |canvas, modal, cx| {
+                    !modal
+                        && canvas.owner.upgrade().is_some_and(|owner| {
+                            let editor = &owner.read(cx).editor;
+                            editor.command_available(editor.command(CommandId::GenerateMesh))
+                        })
+                },
+                action: Some(generate_mesh),
             },
         ] {
             registry.register(item).unwrap();
@@ -108,7 +122,7 @@ pub fn render_floating_toolbar(
                         .when((item.selected)(canvas, cx), |button| button.primary())
                         .icon(item.icon)
                         .tooltip(t!(item.tooltip_key))
-                        .disabled(!(item.enabled)(canvas, modal))
+                        .disabled(!(item.enabled)(canvas, modal, cx))
                         .on_click(cx.listener(move |this, _, window, cx| {
                             if let Some(action) = action {
                                 action(this, window, cx);
@@ -128,8 +142,16 @@ fn glue_selected(canvas: &CanvasView, cx: &App) -> bool {
 fn hand_selected(canvas: &CanvasView, cx: &App) -> bool {
     canvas.active_tool(cx) == ToolId::Hand
 }
-fn not_modal(_: &CanvasView, modal: bool) -> bool {
+fn not_modal(_: &CanvasView, modal: bool, _: &App) -> bool {
     !modal
+}
+fn generate_mesh(canvas: &mut CanvasView, window: &mut Window, cx: &mut Context<CanvasView>) {
+    if let Some(owner) = canvas.owner.upgrade() {
+        canvas.cancel_pointer();
+        owner.update(cx, |owner, cx| {
+            owner.run_command(CommandId::GenerateMesh, window, cx)
+        });
+    }
 }
 fn select_tool(canvas: &mut CanvasView, window: &mut Window, cx: &mut Context<CanvasView>) {
     set_tool(canvas, CommandId::SelectTool, window, cx);

@@ -28,6 +28,12 @@ cargo run --locked -p component-playground
 - Mouse: the wheel zooms around the pointer; middle-button dragging pans.
 - Ctrl/Cmd + trackpad scrolling also zooms. H or held Space enables left-button panning.
 
+## Mesh generation
+
+Select one unlocked, standard four-corner rectangle mesh (such as an imported PSD layer), then click the grid icon in the canvas toolbar or press Shift+M. Set the column and row subdivision counts and choose Generate. The dialog shows the resulting vertex and triangle counts; grids are limited to 65,536 vertices.
+
+This tool uses Kasane SDK's rectangle grid generator. It preserves mesh keyforms, BlendShapes, and corner Glue references in one undoable edit. Meshes with keyforms or BlendShapes require equal row and column counts. Existing non-rectangular or subdivided meshes are unsupported; undo generation before choosing different counts. Alpha-contour mesh generation is not yet implemented in the SDK.
+
 ## Parameter management
 
 Use the Parameters toolbar to create a parameter or group. Right-click a parameter or group to edit or delete it; group menus also create parameters in place. The Properties panel provides edit and delete actions for the inspected parameter or group.

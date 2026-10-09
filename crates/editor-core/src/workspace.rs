@@ -315,6 +315,7 @@ impl Editor {
         if matches!(
             &command,
             EditorCommand::CreateParameter(_)
+                | EditorCommand::GenerateMeshGrid { .. }
                 | EditorCommand::CreateParameterChecked { .. }
                 | EditorCommand::UpdateParameter { .. }
                 | EditorCommand::DeleteParameter { .. }
