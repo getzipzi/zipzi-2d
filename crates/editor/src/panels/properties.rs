@@ -122,22 +122,12 @@ impl Render for PropertiesPanel {
                 info.and_then(|info| info.diagnostic.clone()),
                 |this, diagnostic| this.child(diagnostic),
             );
-        if matches!(
-            inspected.kind,
-            editor_core::ObjectKind::Parameter | editor_core::ObjectKind::ParameterGroup
-        ) {
+        if inspected.kind == editor_core::ObjectKind::ParameterGroup {
             use super::parameters::ParameterAction;
-            let actions = if inspected.kind == editor_core::ObjectKind::Parameter {
-                [
-                    ParameterAction::Edit(inspected.id.clone()),
-                    ParameterAction::Delete(inspected.id.clone()),
-                ]
-            } else {
-                [
-                    ParameterAction::EditGroup(inspected.id.clone()),
-                    ParameterAction::DeleteGroup(inspected.id.clone()),
-                ]
-            };
+            let actions = [
+                ParameterAction::EditGroup(inspected.id.clone()),
+                ParameterAction::DeleteGroup(inspected.id.clone()),
+            ];
             for (i, action) in actions.into_iter().enumerate() {
                 let owner = self.owner.clone();
                 body = body.child(

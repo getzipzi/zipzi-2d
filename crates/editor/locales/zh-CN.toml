@@ -121,7 +121,7 @@ tool_glue = "Glue 连接 (G)"
 show_deformers = "显示全部变形器"
 show_ancestor_deformers = "显示祖先变形器"
 no_canvas_objects = "此处没有可选对象"
-tool_generate_mesh = "生成矩形网格 (Shift+M)"
+tool_generate_mesh = "生成网格 (Shift+M)"
 tool_hand = "抓手 (H)"
 
 draw_order = "绘制顺序"

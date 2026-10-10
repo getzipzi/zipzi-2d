@@ -122,7 +122,7 @@ tool_glue = "Glue (G)"
 show_deformers = "Show All Deformers"
 show_ancestor_deformers = "Show Ancestor Deformers"
 no_canvas_objects = "No objects at this position"
-tool_generate_mesh = "Generate rectangle mesh (Shift+M)"
+tool_generate_mesh = "Generate mesh (Shift+M)"
 tool_hand = "Hand (H)"
 
 draw_order = "Draw Order"

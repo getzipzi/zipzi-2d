@@ -31,6 +31,8 @@ use std::collections::{HashMap, HashSet};
 const PARAMETER_ROW_HEIGHT: f32 = 26.;
 // All numeric fields cover their complete range over the same drag distance.
 const PARAMETER_SLIDE_DISTANCE_PX: f64 = 400.;
+// Keep the binding summary available while temporarily hiding it from the panel.
+const SHOW_BINDING_SUMMARY: bool = false;
 
 struct ParameterRow {
     parameter: ParameterValue,
@@ -711,29 +713,6 @@ impl ParametersPanel {
             })
     }
 
-    fn key_marks_help(&self, cx: &App) -> AnyElement {
-        let Some(owner) = self.owner.upgrade() else {
-            return div().into_any_element();
-        };
-        let state = owner.read(cx);
-        let Some(doc) = state.editor.document() else {
-            return div().into_any_element();
-        };
-        div()
-            .flex_shrink_0()
-            .text_xs()
-            .px_3()
-            .py_1()
-            .child(div().text_color(cx.theme().muted_foreground).child(
-                if doc.context().active_binding.is_some() {
-                    t!("editor.binding_key_marks")
-                } else {
-                    t!("editor.aggregate_key_marks")
-                },
-            ))
-            .into_any_element()
-    }
-
     fn refresh_visible_rows(&mut self, cx: &mut Context<Self>) {
         self.visible_rows = self.layout.visible(&self.collapsed_groups);
         for row in &self.visible_rows {
@@ -1156,8 +1135,9 @@ impl Render for ParametersPanel {
                 .size_full(),
             )
             .child(self.toolbar(create_disabled, cx))
-            .child(self.key_marks_help(cx))
-            .child(self.binding_summary(cx))
+            .when(SHOW_BINDING_SUMMARY, |panel| {
+                panel.child(self.binding_summary(cx))
+            })
             .child(if row_count == 0 {
                 div()
                     .p_3()

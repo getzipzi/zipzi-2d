@@ -719,61 +719,30 @@ fn single_key_click_preserves_authored_precision(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn parameter_binding_navigation_reveals_hidden_keyforms_without_losing_selection(
-    cx: &mut TestAppContext,
-) {
-    use crate::docking::PanelKind;
-    use crate::panels::DocumentPanelKind;
+fn focusing_parameter_keeps_binding_summary_hidden(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
     let parameter = document.parameters()[0].id.clone();
-    let binding = document.object_index().bindings[0].clone();
     let selected = document.context().selection.clone();
     let harness = setup_with_document(cx, document, assets);
-    show_keyforms(&harness, cx);
     cx.update_window(harness.window, |_, window, cx| {
-        harness.view.update(cx, |view, cx| {
-            view.dock.as_ref().unwrap().toggle(
-                PanelKind::Document(DocumentPanelKind::Keyforms),
-                window,
-                cx,
-            )
-        });
-        window.render_frame(cx);
-        harness.view.read_with(cx, |view, cx| {
-            let dock = view.dock.as_ref().unwrap();
-            let keyforms = gpui_kit::component::dock::PanelId::from(
-                dock.document_panels[&DocumentPanelKind::Keyforms].entity_id(),
-            );
-            assert!(dock.area.read(cx).panel(keyforms).is_none());
-        });
-        assert!(window.try_find("binding-keyform-pad").is_none());
         window.click(format!("parameter-name-{parameter}"), cx);
-        harness.view.read_with(cx, |v, _| {
-            assert_eq!(v.editor.document().unwrap().context().selection, selected)
-        });
-        window.click(
-            format!(
-                "parameter-binding-{:?}-{}",
-                binding.reference.kind, binding.reference.id
-            ),
-            cx,
-        );
         window.render_frame(cx);
-        assert!(window.try_find("binding-keyform-pad").is_some());
+        assert!(window.try_find("parameter-binding-summary").is_none());
+        assert!(window.try_find("parameter-indirect-toggle").is_none());
+        assert!(
+            window
+                .within(format!("parameter-row-{parameter}"))
+                .try_find("slider-bar-container")
+                .is_some()
+        );
     })
     .unwrap();
-    harness.view.read_with(cx, |v, cx| {
-        let d = v.editor.document().unwrap();
-        assert_eq!(d.context().active_binding, Some(binding.reference));
-        assert_eq!(d.context().selection, selected);
-        let dock = v.dock.as_ref().unwrap();
-        assert!(
-            dock.area
-                .read(cx)
-                .panel(gpui_kit::component::dock::PanelId::from(
-                    dock.document_panels[&DocumentPanelKind::Keyforms].entity_id()
-                ))
-                .is_some()
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert_eq!(document.context().selection, selected);
+        assert_eq!(
+            document.context().parameter_focus.as_ref().unwrap().id,
+            parameter
         );
     });
 }

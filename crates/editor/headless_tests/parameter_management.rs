@@ -1,5 +1,5 @@
 use super::{Harness, setup_with_document};
-use editor_core::{Document, EditorCommand, NewParameter};
+use editor_core::{CommandId, Document, EditorCommand, NewParameter};
 use gpui_kit::component::WindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 
@@ -8,6 +8,14 @@ fn click(h: &Harness, id: &str, cx: &mut TestAppContext) {
         window.activate_window();
         window.render_frame(cx);
         window.click(id.to_owned(), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+}
+fn run_command(h: &Harness, id: CommandId, cx: &mut TestAppContext) {
+    cx.update_window(h.window, |_, window, cx| {
+        h.view
+            .update(cx, |view, cx| view.run_command(id, window, cx));
     })
     .unwrap();
     cx.run_until_parked();
@@ -31,12 +39,19 @@ fn blank(cx: &mut TestAppContext) -> Harness {
 }
 
 #[gpui_kit::test]
-fn parameter_edit_and_delete_from_properties_are_undoable(cx: &mut TestAppContext) {
+fn parameter_edit_and_delete_commands_are_undoable(cx: &mut TestAppContext) {
     let mut doc = Document::new_blank().unwrap();
     let id = doc.create_parameter(NewParameter::default()).unwrap();
     let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
     cx.update(|cx| cx.set_reduce_motion(true));
-    click(&h, "property-edit-parameter", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("property-edit-parameter").is_none());
+        assert!(window.try_find("property-delete-parameter").is_none());
+        assert!(window.try_find("object-property-name").is_some());
+    })
+    .unwrap();
+    run_command(&h, CommandId::EditParameter, cx);
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(window.try_find("edit-parameter-form").is_some());
@@ -51,7 +66,7 @@ fn parameter_edit_and_delete_from_properties_are_undoable(cx: &mut TestAppContex
         assert_eq!(d.parameters()[0].default_value, 0.375);
         assert_eq!(d.history_lengths().0, 2);
     });
-    click(&h, "property-delete-parameter", cx);
+    run_command(&h, CommandId::DeleteParameter, cx);
     click(&h, "parameter-management-submit", cx);
     h.view.read_with(cx, |v, _| {
         assert!(v.editor.document().unwrap().parameters().is_empty())
@@ -131,7 +146,7 @@ fn stale_parameter_form_keeps_input_until_explicit_reload(cx: &mut TestAppContex
     let id = doc.create_parameter(NewParameter::default()).unwrap();
     let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
     cx.update(|cx| cx.set_reduce_motion(true));
-    click(&h, "property-edit-parameter", cx);
+    run_command(&h, CommandId::EditParameter, cx);
     fill(&h, "new-parameter-name", "Stale draft", cx);
     cx.update_window(h.window, |_, _, cx| {
         h.view.update(cx, |v, cx| {
@@ -229,7 +244,7 @@ fn unchanged_parameter_and_group_edits_do_not_submit(cx: &mut TestAppContext) {
     .unwrap();
     let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
     cx.update(|cx| cx.set_reduce_motion(true));
-    click(&h, "property-edit-parameter", cx);
+    run_command(&h, CommandId::EditParameter, cx);
     fill(&h, "new-parameter-name", "  Original  ", cx);
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
@@ -272,7 +287,7 @@ fn delete_confirmation_focuses_cancel_and_contains_no_form_fields(cx: &mut TestA
     doc.create_parameter(NewParameter::default()).unwrap();
     let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
     cx.update(|cx| cx.set_reduce_motion(true));
-    click(&h, "property-delete-parameter", cx);
+    run_command(&h, CommandId::DeleteParameter, cx);
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(window.try_find("parameter-group-name").is_none());
