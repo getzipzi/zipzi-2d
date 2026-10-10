@@ -5,6 +5,7 @@ use kasane_core::{Canvas, Drawable, DrawableFrame, Vec2};
 use std::{collections::HashMap, sync::Arc};
 impl MeshGenerationPreview {
     pub fn scene(&self, texture: SceneTexture) -> SceneSnapshot {
+        let texture = self.render_texture(texture);
         let [a, c] = self.source_bounds();
         let canvas = Canvas::new(c.x - a.x, c.y - a.y, Vec2::default(), 1.);
         let g = self.geometry();

@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 mod rectangle;
 #[allow(unused_imports)]
-pub use rectangle::rectangle_document;
+pub use rectangle::{alpha_document, rectangle_document};
 
 pub fn sample_document() -> anyhow::Result<(Document, TempDir)> {
     sample_document_with_options(false, false)

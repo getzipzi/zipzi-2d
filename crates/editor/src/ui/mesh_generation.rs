@@ -4,12 +4,13 @@ use super::preview_viewport::{
 };
 use crate::{EditorView, t};
 use editor_core::{
-    CommandId, DocumentId, EditorCommand, MeshGenerationOptions, MeshGenerationPreview,
-    MeshGenerationSource, MeshGridOptions, ObjectRef,
+    AlphaMeshOptions, CommandId, DocumentId, EditorCommand, MeshGenerationOptions,
+    MeshGenerationPreview, MeshGenerationSource, MeshGridOptions, ObjectRef,
 };
 use gpui_kit::component::{
     ActiveTheme, IndexPath, Sizable, WindowExt,
     button::{Button, ButtonVariants},
+    checkbox::Checkbox,
     input::{Input, InputEvent, InputState},
     select::{Select, SelectEvent, SelectItem, SelectState},
 };
@@ -18,7 +19,10 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     rc::Rc,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
 };
 
 #[derive(Clone)]
@@ -52,6 +56,7 @@ impl Candidate {
         plan: MeshGenerationPreview,
         texture: Option<editor_core::SceneTexture>,
         gpu: Option<SharedMetalContext>,
+        preview_cache: super::mesh_preview::MeshPreviewCache,
     ) -> anyhow::Result<Self> {
         let geometry = plan.geometry();
         let [a, c] = plan.source_bounds();
@@ -79,7 +84,7 @@ impl Candidate {
         }
         let scene = texture.map(|texture| plan.scene(texture));
         let renderer = scene
-            .map(|scene| super::mesh_preview::MeshPreview::prepare(scene, gpu))
+            .map(|scene| super::mesh_preview::MeshPreview::prepare(scene, gpu, preview_cache))
             .transpose()?;
         Ok(Self {
             renderer,
@@ -97,10 +102,15 @@ pub(crate) struct MeshGenerationForm {
     target: ObjectRef,
     source: Arc<MeshGenerationSource>,
     gpu: Option<SharedMetalContext>,
+    preview_cache: super::mesh_preview::MeshPreviewCache,
+    latest_request: Arc<AtomicU64>,
     name: String,
     square: bool,
     algorithm: Entity<SelectState<Vec<AlgorithmChoice>>>,
     inputs: [Entity<InputState>; 2],
+    alpha_inputs: [Entity<InputState>; 7],
+    preserve_holes: bool,
+    remove_faint_islands: bool,
     dialog: FormDialogState,
     validation: anyhow::Result<MeshGenerationOptions>,
     requested: Option<MeshGenerationOptions>,
@@ -140,31 +150,34 @@ impl MeshGenerationForm {
         let name = doc.object_index().name(&target).to_owned();
         let revision = doc.mesh_generation_revision();
         let square = doc.mesh_grid_requires_square(&target);
+        let alpha_available = source.alpha_error().is_none();
         let form = cx.new(|cx| {
             let defaults = MeshGridOptions::default();
             let inputs = [defaults.columns, defaults.rows]
                 .map(|n| cx.new(|cx| InputState::new(window, cx).default_value(n.to_string())));
+            let alpha_inputs = alpha_input_values(alpha_presets()[0])
+                .map(|value| cx.new(|cx| InputState::new(window, cx).default_value(value)));
             let algorithm = cx.new(|cx| {
                 SelectState::new(
                     vec![
                         AlgorithmChoice {
-                            label: t!("mesh_generation.grid").into(),
-                            id: "grid",
-                            available: true,
+                            label: t!("mesh_generation.alpha").into(),
+                            id: "alpha-cdt",
+                            available: source.alpha_error().is_none(),
                         },
                         AlgorithmChoice {
-                            label: t!("mesh_generation.alpha_soon").into(),
-                            id: "alpha-cdt",
-                            available: false,
+                            label: t!("mesh_generation.grid").into(),
+                            id: "grid",
+                            available: source.grid_available(),
                         },
                     ],
-                    Some(IndexPath::new(0)),
+                    Some(IndexPath::new(if alpha_available { 0 } else { 1 })),
                     window,
                     cx,
                 )
             });
             let mut subscriptions = Vec::new();
-            for input in &inputs {
+            for input in inputs.iter().chain(&alpha_inputs) {
                 subscriptions.push(cx.subscribe_in(
                     input,
                     window,
@@ -217,12 +230,21 @@ impl MeshGenerationForm {
                 target,
                 source,
                 gpu: window.metal_context(),
+                preview_cache: Default::default(),
+                latest_request: Default::default(),
                 name,
                 square,
                 algorithm,
                 inputs,
+                alpha_inputs,
+                preserve_holes: false,
+                remove_faint_islands: true,
                 dialog: FormDialogState::new(cx),
-                validation: Ok(MeshGenerationOptions::Grid(defaults)),
+                validation: Ok(if alpha_available {
+                    MeshGenerationOptions::Alpha(alpha_presets()[0])
+                } else {
+                    MeshGenerationOptions::Grid(defaults)
+                }),
                 requested: None,
                 candidate: None,
                 task: None,
@@ -242,7 +264,15 @@ impl MeshGenerationForm {
             footer_id: "mesh-generation-footer",
             cancel_id: "mesh-generation-cancel",
             submit_id: "mesh-generation-submit",
-            initial_focus: form.read(cx).inputs[0].read(cx).focus_handle(cx),
+            initial_focus: {
+                let state = form.read(cx);
+                let input = if state.is_alpha(cx) {
+                    &state.alpha_inputs[0]
+                } else {
+                    &state.inputs[0]
+                };
+                input.read(cx).focus_handle(cx)
+            },
         };
         form_dialog::open(form, options, window, cx);
         Ok(())
@@ -270,10 +300,35 @@ impl MeshGenerationForm {
             !doc.object_state(&self.target).locked(),
             t!("mesh_generation.locked")
         );
-        anyhow::ensure!(
-            self.algorithm.read(cx).selected_value() == Some(&"grid"),
-            t!("mesh_generation.unavailable")
-        );
+        if self.is_alpha(cx) {
+            anyhow::ensure!(
+                self.source.alpha_error().is_none(),
+                "{}",
+                self.source.alpha_error().unwrap_or_default()
+            );
+            let values: Vec<_> = self
+                .alpha_inputs
+                .iter()
+                .map(|input| input.read(cx).value())
+                .collect();
+            let invalid = || anyhow::anyhow!(t!("mesh_generation.invalid_alpha"));
+            let number = |i: usize| values[i].trim().parse::<f64>().map_err(|_| invalid());
+            let options = AlphaMeshOptions {
+                outside_spacing: number(0)?,
+                inside_spacing: number(1)?,
+                outside_margin: number(2)?,
+                inside_margin: number(3)?,
+                minimum_margin: number(4)?,
+                minimum_boundary_points: values[5].trim().parse().map_err(|_| invalid())?,
+                alpha_threshold: values[6].trim().parse().map_err(|_| invalid())?,
+                preserve_holes: self.preserve_holes,
+                clip_to_image: false,
+                remove_faint_islands: self.remove_faint_islands,
+                ..AlphaMeshOptions::default()
+            };
+            options.validate().map_err(|_| invalid())?;
+            return Ok(MeshGenerationOptions::Alpha(options));
+        }
         let parse = |i: usize| {
             self.inputs[i]
                 .read(cx)
@@ -302,6 +357,8 @@ impl MeshGenerationForm {
         let options = self.validation.as_ref().ok().copied();
         if self.requested != options {
             self.request_id += 1;
+            self.latest_request
+                .store(self.request_id, Ordering::Relaxed);
             self.candidate = None;
             self.painter = None;
             self.painted = false;
@@ -340,13 +397,26 @@ impl MeshGenerationForm {
         let request = self.request_id;
         let source = self.source.clone();
         let gpu = self.gpu.clone();
+        let preview_cache = self.preview_cache.clone();
+        let latest_request = self.latest_request.clone();
         let executor = cx.background_executor().clone();
         let timer = executor.timer(std::time::Duration::from_millis(100));
         let background = executor.spawn(async move {
             timer.await;
-            source.generate(options).and_then(|plan| {
-                objc2::rc::autoreleasepool(|_| Candidate::new(plan, source.texture.clone(), gpu))
-            })
+            // Coalesce changes during the debounce and skip GPU work for results
+            // superseded while the CPU generator was running.
+            if latest_request.load(Ordering::Relaxed) != request {
+                return None;
+            }
+            let plan = source.generate(options);
+            if latest_request.load(Ordering::Relaxed) != request {
+                return None;
+            }
+            Some(plan.and_then(|plan| {
+                objc2::rc::autoreleasepool(|_| {
+                    Candidate::new(plan, source.texture.clone(), gpu, preview_cache)
+                })
+            }))
         });
         self.task = Some(cx.spawn(async move |this, cx| {
             let result = background.await;
@@ -356,7 +426,7 @@ impl MeshGenerationForm {
                     return;
                 }
                 if this.request_id == request {
-                    match result {
+                    match result.expect("Current generation must produce a result") {
                         Ok(mut candidate) => {
                             this.dialog.edited();
                             this.painter = candidate.renderer.take().map(|mut renderer| {
@@ -375,6 +445,23 @@ impl MeshGenerationForm {
                 cx.notify();
             });
         }));
+    }
+
+    fn is_alpha(&self, cx: &App) -> bool {
+        self.algorithm.read(cx).selected_value() == Some(&"alpha-cdt")
+    }
+
+    fn alpha_preset(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
+        let options = alpha_presets()[index];
+        let values = alpha_input_values(options);
+        for (input, value) in self.alpha_inputs.iter().zip(values) {
+            input.update(cx, |input, cx| input.set_value(value, window, cx));
+        }
+        self.preserve_holes = options.preserve_holes;
+        self.remove_faint_islands = options.remove_faint_islands;
+        self.dialog.edited();
+        self.refresh(cx);
+        cx.notify();
     }
 
     fn preset(&mut self, count: usize, window: &mut Window, cx: &mut Context<Self>) {
@@ -429,6 +516,34 @@ fn preview_side(window: &Window) -> f32 {
         .max(120.)
 }
 
+fn alpha_input_values(options: AlphaMeshOptions) -> [String; 7] {
+    [
+        options.outside_spacing.to_string(),
+        options.inside_spacing.to_string(),
+        options.outside_margin.to_string(),
+        options.inside_margin.to_string(),
+        options.minimum_margin.to_string(),
+        options.minimum_boundary_points.to_string(),
+        options.alpha_threshold.to_string(),
+    ]
+}
+
+fn alpha_presets() -> [AlphaMeshOptions; 3] {
+    [
+        AlphaMeshOptions {
+            minimum_boundary_points: 15,
+            ..AlphaMeshOptions::deformation_small()
+        },
+        AlphaMeshOptions::standard(),
+        AlphaMeshOptions::deformation_large(),
+    ]
+    .map(|options| AlphaMeshOptions {
+        clip_to_image: false,
+        remove_faint_islands: true,
+        ..options
+    })
+}
+
 impl Render for MeshGenerationForm {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let side = preview_side(window);
@@ -440,6 +555,8 @@ impl Render for MeshGenerationForm {
             .gap_3()
             .w(px(240.))
             .flex_shrink_0()
+            .max_h(px(side + 36.))
+            .overflow_y_scroll()
             .child(
                 div()
                     .text_sm()
@@ -464,66 +581,182 @@ impl Render for MeshGenerationForm {
                         ),
                     ),
             );
-        let mut presets = div().flex().gap_1();
-        for (id, label, count) in [
-            ("mesh-generation-sparse", t!("mesh_generation.sparse"), 4),
-            ("mesh-generation-medium", t!("mesh_generation.medium"), 8),
-            ("mesh-generation-dense", t!("mesh_generation.dense"), 16),
-        ] {
-            let selected = self.validation.as_ref().ok()
-                == Some(&MeshGenerationOptions::Grid(MeshGridOptions {
-                    columns: count,
-                    rows: count,
-                }));
-            presets = presets.child(
-                Button::new(id)
-                    .small()
-                    .label(label)
-                    .when(selected, |b| b.primary())
-                    .on_click(
-                        cx.listener(move |this, _, window, cx| this.preset(count, window, cx)),
-                    ),
-            );
-        }
-        settings = settings.child(
-            div()
-                .flex()
-                .flex_col()
-                .gap_1()
-                .child(div().text_xs().child(t!("mesh_generation.presets")))
-                .child(presets),
-        );
-        let mut counts = div().flex().gap_2();
-        for (i, label) in [t!("mesh_generation.columns"), t!("mesh_generation.rows")]
+        if self.is_alpha(cx) {
+            let mut presets = div().flex().gap_1();
+            for (i, (id, label)) in [
+                ("mesh-generation-alpha-light", t!("mesh_generation.light")),
+                (
+                    "mesh-generation-alpha-standard",
+                    t!("mesh_generation.standard"),
+                ),
+                ("mesh-generation-alpha-heavy", t!("mesh_generation.heavy")),
+            ]
             .into_iter()
             .enumerate()
-        {
-            counts = counts.child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .text_xs()
-                    .child(label.clone())
-                    .child(
-                        Input::new(&self.inputs[i])
-                            .id(if i == 0 {
-                                "mesh-generation-columns"
-                            } else {
-                                "mesh-generation-rows"
-                            })
+            {
+                let selected = self.validation.as_ref().ok()
+                    == Some(&MeshGenerationOptions::Alpha(alpha_presets()[i]));
+                presets =
+                    presets.child(
+                        Button::new(id)
                             .small()
-                            .aria_label(label),
-                    ),
-            );
-        }
-        settings = settings.child(counts).when(self.square, |v| {
-            v.child(
+                            .label(label)
+                            .when(selected, |b| b.primary())
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.alpha_preset(i, window, cx)
+                            })),
+                    );
+            }
+            settings = settings.child(presets).child(
                 div()
                     .text_xs()
                     .text_color(cx.theme().muted_foreground)
-                    .child(t!("mesh_generation.square_required")),
-            )
-        });
+                    .child(t!("mesh_generation.pixel_units")),
+            );
+            for (i, (id, label)) in [
+                (
+                    "mesh-generation-outside-spacing",
+                    t!("mesh_generation.outside_spacing"),
+                ),
+                (
+                    "mesh-generation-inside-spacing",
+                    t!("mesh_generation.inside_spacing"),
+                ),
+                (
+                    "mesh-generation-outside-margin",
+                    t!("mesh_generation.outside_margin"),
+                ),
+                (
+                    "mesh-generation-inside-margin",
+                    t!("mesh_generation.inside_margin"),
+                ),
+                (
+                    "mesh-generation-minimum-margin",
+                    t!("mesh_generation.minimum_margin"),
+                ),
+                (
+                    "mesh-generation-boundary-points",
+                    t!("mesh_generation.boundary_points"),
+                ),
+                (
+                    "mesh-generation-alpha-threshold",
+                    t!("mesh_generation.alpha_threshold"),
+                ),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                settings = settings.child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap_2()
+                        .flex_shrink_0()
+                        .child(div().flex_1().text_xs().child(label.clone()))
+                        .child(
+                            div().w(px(76.)).child(
+                                Input::new(&self.alpha_inputs[i])
+                                    .id(id)
+                                    .small()
+                                    .aria_label(label),
+                            ),
+                        ),
+                );
+            }
+            settings = settings.child(
+                Checkbox::new("mesh-generation-remove-faint-islands")
+                    .small()
+                    .label(t!("mesh_generation.remove_faint_islands").to_string())
+                    .checked(self.remove_faint_islands)
+                    .on_click(cx.listener(|this, value: &bool, _, cx| {
+                        this.remove_faint_islands = *value;
+                        this.dialog.edited();
+                        this.refresh(cx);
+                        cx.notify();
+                    })),
+            );
+            settings = settings.child(
+                Checkbox::new("mesh-generation-preserve-holes")
+                    .small()
+                    .label(t!("mesh_generation.preserve_holes").to_string())
+                    .checked(self.preserve_holes)
+                    .on_click(cx.listener(|this, value: &bool, _, cx| {
+                        this.preserve_holes = *value;
+                        this.dialog.edited();
+                        this.refresh(cx);
+                        cx.notify();
+                    })),
+            );
+        } else {
+            let mut presets = div().flex().gap_1();
+            for (id, label, count) in [
+                ("mesh-generation-sparse", t!("mesh_generation.sparse"), 4),
+                ("mesh-generation-medium", t!("mesh_generation.medium"), 8),
+                ("mesh-generation-dense", t!("mesh_generation.dense"), 16),
+            ] {
+                let selected = self.validation.as_ref().ok()
+                    == Some(&MeshGenerationOptions::Grid(MeshGridOptions {
+                        columns: count,
+                        rows: count,
+                    }));
+                presets = presets.child(
+                    Button::new(id)
+                        .small()
+                        .label(label)
+                        .when(selected, |b| b.primary())
+                        .on_click(
+                            cx.listener(move |this, _, window, cx| this.preset(count, window, cx)),
+                        ),
+                );
+            }
+            settings = settings.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .child(div().text_xs().child(t!("mesh_generation.presets")))
+                    .child(presets),
+            );
+            let mut counts = div().flex().gap_2();
+            for (i, label) in [t!("mesh_generation.columns"), t!("mesh_generation.rows")]
+                .into_iter()
+                .enumerate()
+            {
+                counts = counts.child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .text_xs()
+                        .child(label.clone())
+                        .child(
+                            Input::new(&self.inputs[i])
+                                .id(if i == 0 {
+                                    "mesh-generation-columns"
+                                } else {
+                                    "mesh-generation-rows"
+                                })
+                                .small()
+                                .aria_label(label),
+                        ),
+                );
+            }
+            settings = settings.child(counts).when(self.square, |v| {
+                v.child(
+                    div()
+                        .text_xs()
+                        .text_color(cx.theme().muted_foreground)
+                        .child(t!("mesh_generation.square_required")),
+                )
+            });
+            if self.source.alpha_error().is_some() {
+                settings = settings.child(
+                    div()
+                        .text_xs()
+                        .text_color(cx.theme().muted_foreground)
+                        .child(t!("mesh_generation.alpha_requirements")),
+                );
+            }
+        }
         if let Some(candidate) = &self.candidate {
             let geometry = candidate.plan.geometry();
             settings = settings.child(

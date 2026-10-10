@@ -111,7 +111,13 @@ impl Harness {
                         view.editor.accepts_preview(frame.canvas.version.request)
                     });
                     let (_, pending) = view.mesh_thumbnails.read(cx).cache_state();
-                    Ok::<_, anyhow::Error>(current && !pending)
+                    let mesh_ready = window.try_find("mesh-generation-form").is_none()
+                        || window.try_find("mesh-generation-counts").is_some();
+                    anyhow::ensure!(
+                        window.try_find("mesh-generation-error").is_none(),
+                        "Mesh preview failed"
+                    );
+                    Ok::<_, anyhow::Error>(current && !pending && mesh_ready)
                 })
             })??;
             if ready {
@@ -121,6 +127,7 @@ impl Harness {
                 Instant::now() < deadline,
                 "Timed out waiting for editor preview"
             );
+            self.cx.advance_clock(Duration::from_millis(10));
             std::thread::sleep(Duration::from_millis(2));
         }
     }
@@ -505,6 +512,53 @@ pub(super) fn run() -> anyhow::Result<()> {
     anyhow::ensure!(
         fitted == harness.element_image(&reset, "preview-viewport")?,
         "Fit must restore both zoom and pan"
+    );
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-generation-cancel", cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (0, 0)
+        );
+    })?;
+    let (document, assets) = fixture::alpha_document()?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        i18n::activate(Some("zh-CN"));
+        harness.view.update(cx, |view, cx| {
+            view.editor = Editor::from_document(document);
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        window.click("tool_generate_mesh", cx);
+    })?;
+    harness._assets = assets;
+    harness.capture()?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-generation-alpha-heavy", cx);
+    })?;
+    harness.cx.run_until_parked();
+    harness.cx.advance_clock(Duration::from_millis(150));
+    harness.cx.run_until_parked();
+    let alpha = harness.capture()?;
+    save(
+        &harness.dialog_image(&alpha)?,
+        &directory,
+        "mesh-generation-alpha.png",
+    )?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.find("mesh-generation-counts").visible());
+        window.click("preview-wireframe", cx);
+    })?;
+    let artwork = harness.capture()?;
+    anyhow::ensure!(
+        harness.element_image(&alpha, "mesh-generation-preview")?
+            != harness.element_image(&artwork, "mesh-generation-preview")?,
+        "Alpha mesh wireframe must change rendered pixels"
     );
     harness.cx.update_window(harness.window, |_, window, cx| {
         window.click("mesh-generation-cancel", cx);

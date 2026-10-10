@@ -20,6 +20,90 @@ fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {
 }
 
 #[test]
+fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        use editor_core::{AlphaMeshOptions, MeshGenerationOptions, ObjectKind, ObjectRef};
+        use kasane_core::{Canvas, Vec2};
+        let dir = tempfile::tempdir()?;
+        let mut session = kasane_sdk::AuthoringSession::new(
+            &uuid::Uuid::new_v4().to_string(),
+            Canvas::new(64., 64., Vec2::default(), 1.),
+        )?;
+        let asset_id = uuid::Uuid::new_v4().to_string();
+        let mesh_id = uuid::Uuid::new_v4().to_string();
+        let asset = session.prepare_rgba_asset(
+            &asset_id,
+            "solid",
+            32,
+            32,
+            [255, 0, 0, 255].repeat(32 * 32).into(),
+        )?;
+        let mesh = kasane_sdk::rectangle_mesh(
+            &mesh_id,
+            "solid",
+            &asset_id,
+            Vec2::new(16., 16.),
+            Vec2::new(48., 48.),
+        )?;
+        session.edit("fixture", None, |edit| {
+            edit.create_asset(asset)?;
+            edit.create_mesh(mesh)
+        })?;
+        let saved = session.save_project(&dir.path().join("solid.kasane"), None)?;
+        let mut doc = Document::open(&saved.manifest)?;
+        let source = doc.mesh_generation_source(&ObjectRef::new(ObjectKind::Mesh, mesh_id))?;
+        let plan = source.generate(MeshGenerationOptions::Alpha(AlphaMeshOptions {
+            outside_spacing: 16.,
+            inside_spacing: 16.,
+            outside_margin: 8.,
+            minimum_margin: 3.,
+            inside_margin: 4.,
+            clip_to_image: false,
+            ..AlphaMeshOptions::deformation_small()
+        }))?;
+        let preview = plan.scene(source.texture.unwrap());
+        let mut frames = vec![preview];
+        doc.apply_mesh_generation(&plan)?;
+        frames.push(doc.snapshot()?);
+        doc.undo()?;
+        frames.push(doc.snapshot()?);
+        doc.redo()?;
+        frames.push(doc.snapshot()?);
+        let mut gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let config = MetalTargetConfig {
+            width: 64,
+            height: 64,
+            format: MTLPixelFormat::RGBA8Unorm,
+        };
+        let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
+        for snapshot in &frames {
+            let texture = renderer.draw(&gpu.queue, config, snapshot, ViewState::default())?;
+            let pixels = gpui.render_scene_to_image(
+                &scene(texture, 64., false),
+                size(DevicePixels(64), DevicePixels(64)),
+            )?;
+            for (x, y) in [(12, 32), (52, 32), (32, 12), (32, 52)] {
+                assert_eq!(
+                    pixels.get_pixel(x, y).0,
+                    [255; 4],
+                    "edge color bled into transparent mesh margin"
+                );
+            }
+            for (x, y) in [(20, 32), (44, 32), (32, 20), (32, 44)] {
+                // The shared test compositor draws the surface at 50% opacity.
+                assert_eq!(
+                    pixels.get_pixel(x, y).0,
+                    [255, 128, 128, 255],
+                    "artwork moved or lost coverage"
+                );
+            }
+        }
+        Ok(())
+    })
+}
+
+#[test]
 fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scales()
 -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {

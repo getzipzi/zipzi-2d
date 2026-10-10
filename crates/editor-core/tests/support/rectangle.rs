@@ -8,9 +8,21 @@ fn id(n: u128) -> String {
 
 #[allow(dead_code)]
 pub fn rectangle_document(bound: bool) -> anyhow::Result<(Document, tempfile::TempDir)> {
+    rectangle_with_texture(bound, include_bytes!("../fixtures/accent.png"))
+}
+
+#[allow(dead_code)]
+pub fn alpha_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
+    rectangle_with_texture(false, include_bytes!("../fixtures/alpha-asymmetric.png"))
+}
+
+fn rectangle_with_texture(
+    bound: bool,
+    pixels: &[u8],
+) -> anyhow::Result<(Document, tempfile::TempDir)> {
     let dir = tempfile::tempdir()?;
     let texture = dir.path().join("texture.png");
-    std::fs::write(&texture, include_bytes!("../fixtures/accent.png"))?;
+    std::fs::write(&texture, pixels)?;
     let mut session =
         AuthoringSession::new(&id(900), Canvas::new(256., 256., Vec2::default(), 1.))?;
     let asset = prepare_png_asset(&id(901), "Artwork", &texture)?;

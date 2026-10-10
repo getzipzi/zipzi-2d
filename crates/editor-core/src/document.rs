@@ -16,7 +16,8 @@ pub use object_state::{ObjectState, ObjectStateIndex};
 #[path = "mesh_generation.rs"]
 mod mesh_generation;
 pub use mesh_generation::{
-    MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource, MeshGridOptions,
+    AlphaMeshOptions, MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource,
+    MeshGridOptions,
 };
 
 #[path = "sorting.rs"]
@@ -110,6 +111,7 @@ pub struct Document {
     pending: Option<PendingEdit>,
     textures: Arc<[SceneTexture]>,
     texture_slots: HashMap<String, usize>,
+    texture_assets: HashMap<String, kasane_core::ImageAsset>,
     pristine_blank: bool,
 }
 
@@ -172,6 +174,11 @@ impl Document {
         let textures = Self::load_textures(&session)?;
         let selected = session.mesh_ids().first().cloned();
         let projection = Arc::new(crate::ObjectIndex::build(session.document()));
+        let texture_assets = session
+            .asset_ids()
+            .iter()
+            .filter_map(|id| session.asset(id).map(|a| (id.clone(), a)))
+            .collect();
         Ok(Self {
             session,
             import_name: None,
@@ -200,6 +207,7 @@ impl Document {
                 .enumerate()
                 .map(|(i, t)| (t.asset_id.clone(), i))
                 .collect(),
+            texture_assets,
             textures,
             pristine_blank: false,
         })
@@ -221,6 +229,46 @@ impl Document {
             })
             .collect::<Result<Vec<_>>>()
             .map(Into::into)
+    }
+
+    fn refresh_textures(&mut self) -> Result<()> {
+        let assets: HashMap<_, _> = self
+            .session
+            .asset_ids()
+            .iter()
+            .filter_map(|id| self.session.asset(id).map(|a| (id.clone(), a)))
+            .collect();
+        if assets == self.texture_assets {
+            return Ok(());
+        }
+        let textures = self
+            .session
+            .asset_ids()
+            .iter()
+            .map(|id| {
+                if assets.get(id) == self.texture_assets.get(id)
+                    && let Some(&slot) = self.texture_slots.get(id)
+                {
+                    return Ok(self.textures[slot].clone());
+                }
+                let data = self.session.read_texture(id)?;
+                Ok(SceneTexture {
+                    asset_id: id.clone(),
+                    cache_key: data.cache_key,
+                    width: data.width,
+                    height: data.height,
+                    rgba: data.rgba,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        self.texture_slots = textures
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (t.asset_id.clone(), i))
+            .collect();
+        self.textures = textures.into();
+        self.texture_assets = assets;
+        Ok(())
     }
 
     pub fn save(&mut self, path: &Path) -> Result<SaveReceipt> {
@@ -1074,6 +1122,7 @@ impl Document {
         let before = self.evaluation_revision();
         let state = self.model().editor_state().clone();
         self.session.undo()?;
+        self.refresh_textures()?;
         self.reconcile_parameter_preview()?;
         self.after_history(
             before != self.evaluation_revision() || state == *self.model().editor_state(),
@@ -1086,6 +1135,7 @@ impl Document {
         let before = self.evaluation_revision();
         let state = self.model().editor_state().clone();
         self.session.redo()?;
+        self.refresh_textures()?;
         self.reconcile_parameter_preview()?;
         self.after_history(
             before != self.evaluation_revision() || state == *self.model().editor_state(),

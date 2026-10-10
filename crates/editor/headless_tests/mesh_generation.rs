@@ -42,7 +42,7 @@ fn fill(harness: &Harness, field: &'static str, value: &str, cx: &mut TestAppCon
 fn toolbar_generation_submits_once_and_refreshes_history(cx: &mut TestAppContext) {
     let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
     let harness = setup_with_document(cx, doc, assets);
-    open(&harness, cx);
+    open_grid(&harness, cx);
     fill(&harness, "mesh-generation-columns", "4", cx);
     fill(&harness, "mesh-generation-rows", "3", cx);
     cx.update_window(harness.window, |_, window, cx| {
@@ -80,6 +80,12 @@ fn invalid_bound_counts_and_cancel_leave_mesh_unchanged(cx: &mut TestAppContext)
     let (doc, assets) = document_fixture::rectangle_document(true).unwrap();
     let harness = setup_with_document(cx, doc, assets);
     open(&harness, cx);
+    // Existing deformation bindings cannot use alpha generation: default to grid.
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.find("mesh-generation-columns").visible());
+        assert!(window.try_find("mesh-generation-outside-spacing").is_none());
+    })
+    .unwrap();
     for value in ["0", "-1", "abc", "256", "4"] {
         fill(&harness, "mesh-generation-columns", value, cx);
         cx.update_window(harness.window, |_, window, cx| {
@@ -109,7 +115,7 @@ fn invalid_bound_counts_and_cancel_leave_mesh_unchanged(cx: &mut TestAppContext)
 fn changed_document_blocks_dialog_submission(cx: &mut TestAppContext) {
     let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
     let harness = setup_with_document(cx, doc, assets);
-    open(&harness, cx);
+    open_grid(&harness, cx);
     cx.update_window(harness.window, |_, _, cx| {
         harness.view.update(cx, |view, cx| {
             let target = view
@@ -148,7 +154,7 @@ fn changed_document_blocks_dialog_submission(cx: &mut TestAppContext) {
 fn live_preview_presets_and_cancel_do_not_edit_document(cx: &mut TestAppContext) {
     let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
     let harness = setup_with_document(cx, doc, assets);
-    open(&harness, cx);
+    open_grid(&harness, cx);
     for preset in [
         "mesh-generation-dense",
         "mesh-generation-sparse",
@@ -199,7 +205,7 @@ fn live_preview_presets_and_cancel_do_not_edit_document(cx: &mut TestAppContext)
 fn changed_inputs_remove_old_preview_until_valid_again(cx: &mut TestAppContext) {
     let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
     let harness = setup_with_document(cx, doc, assets);
-    open(&harness, cx);
+    open_grid(&harness, cx);
     fill(&harness, "mesh-generation-columns", "0", cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
@@ -237,7 +243,7 @@ fn generator_uses_square_preview_and_keeps_actions_visible_when_resized(cx: &mut
     use gpui_kit::{px, size};
     let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
     let harness = setup_with_document(cx, doc, assets);
-    open(&harness, cx);
+    open_grid(&harness, cx);
     for (width, height) in [(1100., 740.), (900., 620.), (1500., 1000.)] {
         cx.simulate_window_resize(harness.window, size(px(width), px(height)));
         settle(cx);
@@ -255,4 +261,134 @@ fn generator_uses_square_preview_and_keeps_actions_visible_when_resized(cx: &mut
         })
         .unwrap();
     }
+}
+
+fn open_grid(harness: &Harness, cx: &mut TestAppContext) {
+    open(harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        if window.try_find("mesh-generation-columns").is_none() {
+            window.click("mesh-generation-algorithm", cx);
+            window.press("down", cx);
+            window.press("enter", cx);
+        }
+    })
+    .unwrap();
+    settle(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-columns").visible());
+    })
+    .unwrap();
+}
+
+fn assert_alpha_default(harness: &Harness, cx: &mut TestAppContext) {
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-outside-spacing").visible());
+        assert!(window.try_find("mesh-generation-columns").is_none());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn alpha_controls_preview_apply_and_reopen(cx: &mut TestAppContext) {
+    let (doc, assets) = document_fixture::alpha_document().unwrap();
+    let harness = setup_with_document(cx, doc, assets);
+    open(&harness, cx);
+    assert_alpha_default(&harness, cx);
+    for id in [
+        "mesh-generation-alpha-standard",
+        "mesh-generation-alpha-heavy",
+        "mesh-generation-alpha-light",
+    ] {
+        cx.update_window(harness.window, |_, window, cx| window.click(id, cx))
+            .unwrap();
+        settle(cx);
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+    }
+    for value in ["0", "NaN", "-1"] {
+        fill(&harness, "mesh-generation-outside-spacing", value, cx);
+        cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            assert!(window.try_find("mesh-generation-counts").is_none());
+            window.click("mesh-generation-submit", cx);
+            assert_eq!(
+                harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .document()
+                    .unwrap()
+                    .history_lengths(),
+                (0, 0)
+            );
+        })
+        .unwrap();
+    }
+    fill(&harness, "mesh-generation-outside-spacing", "25", cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-generation-alpha-heavy", cx);
+    })
+    .unwrap();
+    settle(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-counts").visible());
+        window.click("mesh-generation-submit", cx);
+    })
+    .unwrap();
+    settle(cx);
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+        assert!(view.editor.layers()[0].vertices > 4);
+    });
+    open(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        // Generated contours reopen directly in Alpha mode.
+        assert!(window.find("mesh-generation-outside-spacing").visible());
+        window.click("mesh-generation-cancel", cx);
+        harness
+            .view
+            .update(cx, |view, cx| view.run_command(CommandId::Undo, window, cx));
+        assert_eq!(harness.view.read(cx).editor.layers()[0].vertices, 4);
+        harness
+            .view
+            .update(cx, |view, cx| view.run_command(CommandId::Redo, window, cx));
+        assert!(harness.view.read(cx).editor.layers()[0].vertices > 4);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn alpha_small_window_keeps_preview_and_actions_accessible(cx: &mut TestAppContext) {
+    let (doc, assets) = document_fixture::alpha_document().unwrap();
+    let harness = setup_with_document(cx, doc, assets);
+    open(&harness, cx);
+    assert_alpha_default(&harness, cx);
+    cx.simulate_window_resize(
+        harness.window,
+        gpui_kit::size(gpui_kit::px(900.), gpui_kit::px(620.)),
+    );
+    settle(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-submit").visible());
+        assert!(window.find("mesh-generation-cancel").visible());
+        assert!(window.find("preview-viewport").bounds().bottom() < gpui_kit::px(620.));
+        window.click("mesh-generation-cancel", cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (0, 0)
+        );
+    })
+    .unwrap();
 }
