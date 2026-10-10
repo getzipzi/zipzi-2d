@@ -22,7 +22,21 @@ class DevLifecycle(unittest.TestCase):
         # Copying an Apple platform-signed /bin/sleep is killed by macOS code
         # signing. Build a tiny, owned stand-in with normal process semantics.
         subprocess.run(["cc", "-x", "c", "-", "-o", str(self.root / "target/debug/kasane-editor")],
-                       input='#include <unistd.h>\n#include <stdlib.h>\n#include <signal.h>\nint main(void) { if (getenv("IGNORE_TERM")) signal(SIGTERM, SIG_IGN); for (;;) pause(); }',
+                       input='''#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <stdio.h>
+int main(void) {
+    if (getenv("IGNORE_TERM")) signal(SIGTERM, SIG_IGN);
+    const char *delay = getenv("READY_DELAY");
+    if (delay) usleep((useconds_t)(atof(delay) * 1000000));
+    const char *path = getenv("KASANE_DEV_PID_FILE");
+    if (path && !getenv("NO_READY")) {
+        FILE *file = fopen(path, "w");
+        if (file) { fprintf(file, "%d", getpid()); fclose(file); }
+    }
+    for (;;) pause();
+}''',
                        text=True, capture_output=True, check=True)
         self.bin = self.root / "tools"
         self.bin.mkdir()
@@ -33,16 +47,19 @@ while pathlib.Path('hold-build').exists(): time.sleep(0.02)
 raise SystemExit(int(os.environ.get('BUILD_FAIL','0')))
 """)
         self.tool("open", """
-import os,pathlib,subprocess,sys,time
+import os,pathlib,subprocess,sys
 args=sys.argv[1:]
 pid_file=next(a.split('=',1)[1] for a in args if a.startswith('KASANE_DEV_PID_FILE='))
 with open('launches','a') as f: f.write(pid_file+'\\n')
 if os.environ.get('OPEN_FAIL'): raise SystemExit(1)
 exe=pathlib.Path(args[-1])/'Contents/MacOS/kasane-editor'
-p=subprocess.Popen([str(exe),'600'],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+env=dict(os.environ)
+for i,arg in enumerate(args):
+    if arg == '--env':
+        key,value=args[i+1].split('=',1)
+        env[key]=value
+p=subprocess.Popen([str(exe),'600'],env=env,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
 with open('test-pids','a') as f: f.write(str(p.pid)+'\\n')
-time.sleep(float(os.environ.get('READY_DELAY','0')))
-if not os.environ.get('NO_READY'): pathlib.Path(pid_file).write_text(str(p.pid))
 """)
         self.tool("watchexec", """
 import pathlib,subprocess,time
@@ -174,6 +191,52 @@ while True:
         code,output=self.run_reload()
         self.assertNotEqual(code,0)
         self.assertIn('Untracked',output)
+        self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
+
+    def test_late_pid_after_timeout_is_recovered_on_next_reload(self):
+        code,output=self.run_reload(READY_DELAY='6.5')
+        self.assertNotEqual(code,0,output)
+        pid=int((self.root/'test-pids').read_text())
+        pending=Path((self.root/'launches').read_text().strip())
+        self.assertTrue(pending.exists())
+        self.wait_for(lambda:pending.exists() and pending.stat().st_size > 0)
+        self.assertEqual(int(pending.read_text()),pid)
+        code,output=self.run_reload()
+        self.assertEqual(code,0,output)
+        self.assertIn('Recovered',output)
+        self.assertFalse(self.alive(pid))
+        self.assertFalse(pending.exists())
+        self.assertTrue(self.alive(int(self.pid_file.read_text())))
+
+    def test_interrupted_launch_keeps_pid_record_for_recovery(self):
+        reload=self.start(READY_DELAY='1.2')
+        self.wait_for(lambda:(self.root/'test-pids').exists())
+        pid=int((self.root/'test-pids').read_text())
+        pending=Path((self.root/'launches').read_text().strip())
+        reload.terminate()
+        self.assertNotEqual(self.result(reload)[0],0)
+        self.assertTrue(pending.exists())
+        self.wait_for(lambda:pending.exists() and pending.stat().st_size > 0)
+        code,output=self.run_reload()
+        self.assertEqual(code,0,output)
+        self.assertIn('Recovered',output)
+        self.assertFalse(self.alive(pid))
+
+    def test_multiple_tracked_instances_are_preserved(self):
+        self.assertEqual(self.run_reload()[0],0)
+        first=int(self.pid_file.read_text())
+        pending=self.pid_file.with_name(self.pid_file.name+'.launch.extra')
+        exe=(self.root/'target/Kasane Editor Dev.app/Contents/MacOS/kasane-editor').resolve()
+        extra=subprocess.Popen([str(exe)],env={**self.env,'KASANE_DEV_PID_FILE':str(pending)},
+                               stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        self.children.append(extra)
+        self.wait_for(lambda:pending.exists() and pending.stat().st_size > 0)
+        code,output=self.run_reload()
+        self.assertNotEqual(code,0,output)
+        self.assertIn('Multiple tracked',output)
+        self.assertTrue(self.alive(first))
+        self.assertTrue(self.alive(extra.pid))
+        self.assertEqual(int(self.pid_file.read_text()),first)
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
 
 

@@ -250,6 +250,11 @@ impl EditorView {
 
 #[cfg(not(test))]
 fn main() {
+    // Record ownership before window creation and session restoration, which
+    // can take longer than the dev launcher's startup timeout.
+    if let Some(pid_file) = std::env::var_os("KASANE_DEV_PID_FILE") {
+        let _ = std::fs::write(pid_file, std::process::id().to_string());
+    }
     benchmark::init().expect("initialize benchmark trace");
     i18n::activate(None);
     let background_launch = std::env::var_os("KASANE_DEV_BACKGROUND").is_some();
@@ -290,9 +295,6 @@ fn main() {
                 |window, cx| cx.new(|cx| EditorView::new(window, cx)),
             )
             .expect("open kit editor");
-            if let Some(pid_file) = std::env::var_os("KASANE_DEV_PID_FILE") {
-                let _ = std::fs::write(pid_file, std::process::id().to_string());
-            }
             if !background_launch {
                 cx.activate(true);
             }

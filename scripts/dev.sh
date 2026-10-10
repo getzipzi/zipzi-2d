@@ -158,7 +158,8 @@ case "${2:-watch}" in
   reload)
     acquire_lock "$reload_lock" || exit 1
     cleanup_reload() {
-      if [ -n "$launch_pid_file" ]; then rm -f "$launch_pid_file"; fi
+      # A timed-out or interrupted launch may still publish its PID later.
+      # Keep its private record so the next reload can recover ownership.
       release_lock
     }
     trap cleanup_reload 0
@@ -179,15 +180,36 @@ case "${2:-watch}" in
       old_pid=$(cat "$pid_file")
       if ! is_dev_process "$old_pid"; then old_pid=; fi
     fi
-    # Do not guess ownership or close untracked instances with unsaved work.
-    # Refuse another open -n when a previous launch or another watcher left one.
+    # Recover a previous launch that published its PID after the reload exited.
+    # Only records created by this script establish ownership; matching the app
+    # path alone is not enough to close an instance with unsaved work.
+    recovered_pid_file=
     existing_pids=$(dev_pids)
     for existing_pid in $existing_pids; do
       if [ "$existing_pid" != "$old_pid" ]; then
-        printf 'Untracked %s instance %s is still running; close it before restarting dev watch.\n' "$package" "$existing_pid" >&2
-        exit 1
+        pending_pid_file=
+        for pending in "$pid_file".launch.*; do
+          if [ -s "$pending" ] && [ "$(cat "$pending")" = "$existing_pid" ]; then
+            pending_pid_file=$pending
+            break
+          fi
+        done
+        if [ -z "$pending_pid_file" ]; then
+          printf 'Untracked %s instance %s is still running; close it before restarting dev watch.\n' "$package" "$existing_pid" >&2
+          exit 1
+        fi
+        if [ -n "$old_pid" ]; then
+          printf 'Multiple tracked %s instances (%s, %s) are still running; close the extra instance before restarting dev watch.\n' "$package" "$old_pid" "$existing_pid" >&2
+          exit 1
+        fi
+        old_pid=$existing_pid
+        recovered_pid_file=$pending_pid_file
       fi
     done
+    if [ -n "$recovered_pid_file" ]; then
+      mv "$recovered_pid_file" "$pid_file"
+      printf 'Recovered %s instance %s from an unfinished launch.\n' "$package" "$old_pid"
+    fi
     : > "$reload_lock/restarting"
     if [ -n "$old_pid" ]; then
       if is_dev_process "$old_pid"; then kill -TERM "$old_pid" 2>/dev/null || :; fi
@@ -223,7 +245,7 @@ case "${2:-watch}" in
 </dict></plist>
 PLIST
 
-    # Each launch gets a private readiness file. Late startup from an earlier
+    # Each launch gets a private PID file. Late startup from an earlier
     # attempt cannot overwrite the PID belonging to the current app.
     launch_pid_file="$pid_file.launch.$$"
     : > "$launch_pid_file"
