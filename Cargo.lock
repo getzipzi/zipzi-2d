@@ -3837,6 +3837,7 @@ dependencies = [
  "kasane-animation",
  "kasane-core",
  "kasane-project",
+ "rstar",
  "serde",
  "spade",
 ]
