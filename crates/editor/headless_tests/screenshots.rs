@@ -299,6 +299,7 @@ pub(super) fn run() -> anyhow::Result<()> {
     save(&hidden, &directory, "editor-hidden.png")?;
 
     let (document, assets) = fixture::sample_document_with_parameter_groups()?;
+    let sliding_parameter = document.parameters()[0].id.clone();
     harness._assets = assets;
     harness.cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
@@ -331,6 +332,60 @@ pub(super) fn run() -> anyhow::Result<()> {
         &directory,
         "parameters-grouped.png",
     )?;
+    let number_origin = harness.cx.update_window(harness.window, |_, window, cx| {
+        use gpui_kit::{InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent};
+        let position = window
+            .find(format!("parameter-value-{sliding_parameter}"))
+            .bounds()
+            .center();
+        window.dispatch_event(
+            MouseMoveEvent {
+                position,
+                pressed_button: None,
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        position
+    })?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        use gpui_kit::{InputEvent as _, Modifiers, MouseButton, MouseMoveEvent};
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: number_origin + point(px(16.), px(0.)),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })?;
+    let sliding = harness.capture()?;
+    let row_id = format!("parameter-row-{sliding_parameter}");
+    let sliding_row = harness.element_image(&sliding, &row_id)?;
+    anyhow::ensure!(
+        sliding_row != harness.element_image(&grouped, &row_id)?,
+        "Sliding must display the live value and interaction border"
+    );
+    save(&sliding_row, &directory, "parameter-number-sliding.png")?;
+    harness
+        .cx
+        .update_window(harness.window, |_, window, cx| window.press("escape", cx))?;
     let face = uuid::Uuid::from_u128(101).to_string();
     harness.cx.update_window(harness.window, |_, window, cx| {
         window.click(format!("parameter-group-toggle-{face}"), cx);

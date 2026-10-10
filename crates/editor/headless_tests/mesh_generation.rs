@@ -43,8 +43,8 @@ fn toolbar_generation_submits_once_and_refreshes_history(cx: &mut TestAppContext
     let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
     let harness = setup_with_document(cx, doc, assets);
     open_grid(&harness, cx);
-    fill(&harness, "mesh-generation-columns", "4", cx);
-    fill(&harness, "mesh-generation-rows", "3", cx);
+    fill(&harness, "mesh-generation-columns", "4.9", cx);
+    fill(&harness, "mesh-generation-rows", "3.9", cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.press("enter", cx);
     })
@@ -388,6 +388,196 @@ fn alpha_small_window_keeps_preview_and_actions_accessible(cx: &mut TestAppConte
                 .unwrap()
                 .history_lengths(),
             (0, 0)
+        );
+    })
+    .unwrap();
+}
+
+fn number_value(harness: &Harness, field: &'static str, cx: &mut TestAppContext) -> String {
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(field, cx);
+        let value = window.focused_input(cx).unwrap().value(cx).to_string();
+        window.blur(cx);
+        value
+    })
+    .unwrap()
+}
+
+fn scrub_number(
+    harness: &Harness,
+    field: &'static str,
+    distance: f32,
+    shift: bool,
+    cx: &mut TestAppContext,
+) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::{point, px};
+    let origin = cx
+        .update_window(harness.window, |_, window, cx| {
+            window.blur(cx);
+            window.render_frame(cx);
+            assert!(
+                window
+                    .within(field)
+                    .try_find("slide-number-input")
+                    .is_some()
+            );
+            let origin = window.find(field).bounds().center();
+            press(window, origin, cx);
+            origin
+        })
+        .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        let position = origin + point(px(distance), px(0.));
+        // Many small moves must accumulate even when each emits no new integer.
+        for i in 1..=5 {
+            slide(
+                window,
+                origin + point(px(distance * i as f32 / 5.), px(0.)),
+                shift,
+                cx,
+            );
+        }
+        release(window, position, cx);
+    })
+    .unwrap();
+    settle(cx);
+}
+
+#[gpui_kit::test]
+fn grid_number_sliding_keeps_integer_counts_and_refreshes_preview(cx: &mut TestAppContext) {
+    let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
+    let harness = setup_with_document(cx, doc, assets);
+    open_grid(&harness, cx);
+    scrub_number(&harness, "mesh-generation-columns", 20., false, cx);
+    assert_eq!(number_value(&harness, "mesh-generation-columns", cx), "10");
+    scrub_number(&harness, "mesh-generation-rows", 100., true, cx);
+    assert_eq!(number_value(&harness, "mesh-generation-rows", cx), "9");
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-generation-columns", cx);
+        window.press("up", cx);
+        assert_eq!(window.focused_input(cx).unwrap().value(cx).as_ref(), "11");
+        window.press("down", cx);
+    })
+    .unwrap();
+    settle(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-counts").visible());
+        let document = harness.view.read(cx).editor.document().unwrap();
+        assert_eq!(document.history_lengths(), (0, 0));
+        assert_eq!(document.layers()[0].vertices, 4);
+        window.click("mesh-generation-cancel", cx);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn alpha_number_sliding_truncates_and_escape_only_cancels_the_drag(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::{point, px};
+    let (doc, assets) = document_fixture::alpha_document().unwrap();
+    let harness = setup_with_document(cx, doc, assets);
+    open(&harness, cx);
+    scrub_number(&harness, "mesh-generation-outside-spacing", 20., false, cx);
+    assert_eq!(
+        number_value(&harness, "mesh-generation-outside-spacing", cx),
+        "162"
+    );
+    scrub_number(&harness, "mesh-generation-boundary-points", 100., true, cx);
+    assert_eq!(
+        number_value(&harness, "mesh-generation-boundary-points", cx),
+        "16"
+    );
+    scrub_number(&harness, "mesh-generation-alpha-threshold", 20., false, cx);
+    assert_eq!(
+        number_value(&harness, "mesh-generation-alpha-threshold", cx),
+        "2"
+    );
+    let original = number_value(&harness, "mesh-generation-outside-margin", cx);
+    let origin = cx
+        .update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            let origin = window
+                .find("mesh-generation-outside-margin")
+                .bounds()
+                .center();
+            press(window, origin, cx);
+            origin
+        })
+        .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        slide(window, origin + point(px(100.), px(0.)), false, cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("escape", cx);
+        release(window, origin, cx);
+        assert!(window.has_active_dialog(cx));
+    })
+    .unwrap();
+    assert_eq!(
+        number_value(&harness, "mesh-generation-outside-margin", cx),
+        original
+    );
+    settle(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-counts").visible());
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (0, 0)
+        );
+        window.click("mesh-generation-cancel", cx);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn alpha_decimal_inputs_truncate_on_commit_and_generate(cx: &mut TestAppContext) {
+    let (doc, assets) = document_fixture::alpha_document().unwrap();
+    let harness = setup_with_document(cx, doc, assets);
+    open(&harness, cx);
+    for (field, value, expected) in [
+        ("mesh-generation-outside-spacing", "160.9", "160"),
+        ("mesh-generation-inside-spacing", "160.9", "160"),
+        ("mesh-generation-outside-margin", "14.9", "14"),
+        ("mesh-generation-inside-margin", "14.9", "14"),
+        ("mesh-generation-minimum-margin", "5.9", "5"),
+        ("mesh-generation-boundary-points", "15.9", "15"),
+        ("mesh-generation-alpha-threshold", "0.9", "0"),
+    ] {
+        fill(&harness, field, value, cx);
+        cx.update_window(harness.window, |_, window, cx| window.blur(cx))
+            .unwrap();
+        settle(cx);
+        assert_eq!(number_value(&harness, field, cx), expected);
+    }
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("mesh-generation-counts").visible());
+        assert!(window.try_find("mesh-generation-error").is_none());
+        window.click("mesh-generation-submit", cx);
+    })
+    .unwrap();
+    settle(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(!window.has_active_dialog(cx));
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (1, 0)
         );
     })
     .unwrap();

@@ -2,6 +2,7 @@ use super::form_dialog::{self, FormDialogOptions, FormDialogState, FormDialogVie
 use super::preview_viewport::{
     PreviewContent, PreviewPaintStatus, PreviewPainter, PreviewViewport,
 };
+use super::slide_number_input::{SlideNumberChange, SlideNumberInput, SlideNumberOptions};
 use crate::{EditorView, t};
 use editor_core::{
     AlphaMeshOptions, CommandId, DocumentId, EditorCommand, MeshGenerationOptions,
@@ -11,7 +12,7 @@ use gpui_kit::component::{
     ActiveTheme, IndexPath, Sizable, WindowExt,
     button::{Button, ButtonVariants},
     checkbox::Checkbox,
-    input::{Input, InputEvent, InputState},
+    input::{InputEvent, InputState},
     select::{Select, SelectEvent, SelectItem, SelectState},
 };
 use gpui_kit::{prelude::*, *};
@@ -31,6 +32,30 @@ struct AlgorithmChoice {
     id: &'static str,
     available: bool,
 }
+
+#[derive(Clone, Copy)]
+struct NumberField {
+    min: f64,
+    max: f64,
+}
+
+const MESH_SLIDE_DISTANCE_PX: f64 = 2000.;
+
+impl NumberField {
+    fn options(self, input: &Entity<InputState>, disabled: bool, cx: &App) -> SlideNumberOptions {
+        let value = truncated_number(&input.read(cx).value()).unwrap_or(self.min);
+        SlideNumberOptions {
+            value,
+            min: self.min,
+            max: self.max,
+            step: 1.,
+            drag_distance: Some(MESH_SLIDE_DISTANCE_PX),
+            disabled,
+        }
+    }
+}
+
+const GRID_FIELD: NumberField = NumberField { min: 1., max: 255. };
 impl SelectItem for AlgorithmChoice {
     type Value = &'static str;
     fn title(&self) -> SharedString {
@@ -108,7 +133,10 @@ pub(crate) struct MeshGenerationForm {
     square: bool,
     algorithm: Entity<SelectState<Vec<AlgorithmChoice>>>,
     inputs: [Entity<InputState>; 2],
+    numbers: [Entity<SlideNumberInput>; 2],
     alpha_inputs: [Entity<InputState>; 7],
+    alpha_numbers: [Entity<SlideNumberInput>; 7],
+    alpha_fields: [NumberField; 7],
     preserve_holes: bool,
     remove_faint_islands: bool,
     dialog: FormDialogState,
@@ -153,10 +181,68 @@ impl MeshGenerationForm {
         let alpha_available = source.alpha_error().is_none();
         let form = cx.new(|cx| {
             let defaults = MeshGridOptions::default();
-            let inputs = [defaults.columns, defaults.rows]
-                .map(|n| cx.new(|cx| InputState::new(window, cx).default_value(n.to_string())));
-            let alpha_inputs = alpha_input_values(alpha_presets()[0])
-                .map(|value| cx.new(|cx| InputState::new(window, cx).default_value(value)));
+            let inputs = [defaults.columns, defaults.rows].map(|n| {
+                cx.new(|cx| {
+                    InputState::new(window, cx)
+                        .step(1.)
+                        .default_value(n.to_string())
+                })
+            });
+            // Pixel fields use a useful image-relative scrub range; typed values
+            // continue to use the generator's existing validation limits.
+            let image_side = source
+                .texture
+                .as_ref()
+                .map_or(256., |texture| texture.width.max(texture.height) as f64);
+            let spacing = NumberField {
+                min: 1.,
+                max: image_side.max(256.),
+            };
+            let margin = NumberField {
+                min: 0.,
+                max: (image_side / 4.).max(64.),
+            };
+            let alpha_fields = [
+                spacing,
+                spacing,
+                margin,
+                margin,
+                margin,
+                NumberField { min: 3., max: 256. },
+                NumberField { min: 0., max: 255. },
+            ];
+            let alpha_defaults = alpha_input_values(alpha_presets()[0]);
+            let alpha_inputs: [Entity<InputState>; 7] = std::array::from_fn(|i| {
+                cx.new(|cx| {
+                    InputState::new(window, cx)
+                        .step(1.)
+                        .default_value(alpha_defaults[i].clone())
+                })
+            });
+            let numbers = std::array::from_fn(|i| {
+                cx.new(|cx| {
+                    SlideNumberInput::new(
+                        inputs[i].clone(),
+                        "",
+                        GRID_FIELD.options(&inputs[i], false, cx),
+                        window,
+                        cx,
+                    )
+                    .truncate_to_integer()
+                })
+            });
+            let alpha_numbers = std::array::from_fn(|i| {
+                cx.new(|cx| {
+                    SlideNumberInput::new(
+                        alpha_inputs[i].clone(),
+                        "",
+                        alpha_fields[i].options(&alpha_inputs[i], false, cx),
+                        window,
+                        cx,
+                    )
+                    .truncate_to_integer()
+                })
+            });
             let algorithm = cx.new(|cx| {
                 SelectState::new(
                     vec![
@@ -177,11 +263,47 @@ impl MeshGenerationForm {
                 )
             });
             let mut subscriptions = Vec::new();
+            for (number, input) in numbers
+                .iter()
+                .zip(&inputs)
+                .chain(alpha_numbers.iter().zip(&alpha_inputs))
+            {
+                let input = input.clone();
+                subscriptions.push(cx.subscribe_in(
+                    number,
+                    window,
+                    move |this: &mut Self, _, event: &SlideNumberChange, window, cx| {
+                        if this.dialog.closed() {
+                            return;
+                        }
+                        input.update(cx, |input, cx| {
+                            input.set_value(event.0.to_string(), window, cx)
+                        });
+                        this.dialog.edited();
+                        this.refresh(cx);
+                        cx.notify();
+                    },
+                ));
+            }
             for input in inputs.iter().chain(&alpha_inputs) {
                 subscriptions.push(cx.subscribe_in(
                     input,
                     window,
-                    |this: &mut Self, _, event: &InputEvent, window, cx| {
+                    |this: &mut Self, input, event: &InputEvent, window, cx| {
+                        if this.dialog.closed() {
+                            return;
+                        }
+                        if matches!(event, InputEvent::Blur | InputEvent::PressEnter { .. }) {
+                            let text = input.read(cx).value();
+                            if let Some(value) = truncated_number(&text) {
+                                let value = value.to_string();
+                                if text.as_ref() != value {
+                                    input
+                                        .update(cx, |input, cx| input.set_value(value, window, cx));
+                                    cx.notify();
+                                }
+                            }
+                        }
                         if matches!(event, InputEvent::Change) {
                             this.dialog.edited();
                             this.refresh(cx);
@@ -236,7 +358,10 @@ impl MeshGenerationForm {
                 square,
                 algorithm,
                 inputs,
+                numbers,
                 alpha_inputs,
+                alpha_numbers,
+                alpha_fields,
                 preserve_holes: false,
                 remove_faint_islands: true,
                 dialog: FormDialogState::new(cx),
@@ -264,15 +389,7 @@ impl MeshGenerationForm {
             footer_id: "mesh-generation-footer",
             cancel_id: "mesh-generation-cancel",
             submit_id: "mesh-generation-submit",
-            initial_focus: {
-                let state = form.read(cx);
-                let input = if state.is_alpha(cx) {
-                    &state.alpha_inputs[0]
-                } else {
-                    &state.inputs[0]
-                };
-                input.read(cx).focus_handle(cx)
-            },
+            initial_focus: form.read(cx).dialog.focus.clone(),
         };
         form_dialog::open(form, options, window, cx);
         Ok(())
@@ -312,15 +429,15 @@ impl MeshGenerationForm {
                 .map(|input| input.read(cx).value())
                 .collect();
             let invalid = || anyhow::anyhow!(t!("mesh_generation.invalid_alpha"));
-            let number = |i: usize| values[i].trim().parse::<f64>().map_err(|_| invalid());
+            let number = |i: usize| truncated_number(&values[i]).ok_or_else(invalid);
             let options = AlphaMeshOptions {
                 outside_spacing: number(0)?,
                 inside_spacing: number(1)?,
                 outside_margin: number(2)?,
                 inside_margin: number(3)?,
                 minimum_margin: number(4)?,
-                minimum_boundary_points: values[5].trim().parse().map_err(|_| invalid())?,
-                alpha_threshold: values[6].trim().parse().map_err(|_| invalid())?,
+                minimum_boundary_points: number(5)?.to_string().parse().map_err(|_| invalid())?,
+                alpha_threshold: number(6)?.to_string().parse().map_err(|_| invalid())?,
                 preserve_holes: self.preserve_holes,
                 clip_to_image: false,
                 remove_faint_islands: self.remove_faint_islands,
@@ -330,12 +447,9 @@ impl MeshGenerationForm {
             return Ok(MeshGenerationOptions::Alpha(options));
         }
         let parse = |i: usize| {
-            self.inputs[i]
-                .read(cx)
-                .value()
-                .trim()
-                .parse::<usize>()
-                .map_err(|_| anyhow::anyhow!(t!("mesh_generation.invalid_counts")))
+            truncated_number(&self.inputs[i].read(cx).value())
+                .and_then(|value| value.to_string().parse::<usize>().ok())
+                .ok_or_else(|| anyhow::anyhow!(t!("mesh_generation.invalid_counts")))
         };
         let options = MeshGridOptions {
             columns: parse(0)?,
@@ -516,13 +630,21 @@ fn preview_side(window: &Window) -> f32 {
         .max(120.)
 }
 
+fn truncated_number(text: &str) -> Option<f64> {
+    text.trim()
+        .parse::<f64>()
+        .ok()
+        .filter(|value| value.is_finite())
+        .map(|value| value.trunc() + 0.)
+}
+
 fn alpha_input_values(options: AlphaMeshOptions) -> [String; 7] {
     [
-        options.outside_spacing.to_string(),
-        options.inside_spacing.to_string(),
-        options.outside_margin.to_string(),
-        options.inside_margin.to_string(),
-        options.minimum_margin.to_string(),
+        options.outside_spacing.trunc().to_string(),
+        options.inside_spacing.trunc().to_string(),
+        options.outside_margin.trunc().to_string(),
+        options.inside_margin.trunc().to_string(),
+        options.minimum_margin.trunc().to_string(),
         options.minimum_boundary_points.to_string(),
         options.alpha_threshold.to_string(),
     ]
@@ -646,6 +768,10 @@ impl Render for MeshGenerationForm {
             .into_iter()
             .enumerate()
             {
+                let options =
+                    self.alpha_fields[i].options(&self.alpha_inputs[i], self.dialog.closed(), cx);
+                self.alpha_numbers[i]
+                    .update(cx, |input, cx| input.configure(label.clone(), options, cx));
                 settings = settings.child(
                     div()
                         .flex()
@@ -654,12 +780,12 @@ impl Render for MeshGenerationForm {
                         .flex_shrink_0()
                         .child(div().flex_1().text_xs().child(label.clone()))
                         .child(
-                            div().w(px(76.)).child(
-                                Input::new(&self.alpha_inputs[i])
-                                    .id(id)
-                                    .small()
-                                    .aria_label(label),
-                            ),
+                            div()
+                                .w(px(76.))
+                                .id(id)
+                                .test_support()
+                                .aria_label(label)
+                                .child(self.alpha_numbers[i].clone()),
                         ),
                 );
             }
@@ -722,6 +848,8 @@ impl Render for MeshGenerationForm {
                 .into_iter()
                 .enumerate()
             {
+                let options = GRID_FIELD.options(&self.inputs[i], self.dialog.closed(), cx);
+                self.numbers[i].update(cx, |input, cx| input.configure(label.clone(), options, cx));
                 counts = counts.child(
                     div()
                         .flex_1()
@@ -729,14 +857,15 @@ impl Render for MeshGenerationForm {
                         .text_xs()
                         .child(label.clone())
                         .child(
-                            Input::new(&self.inputs[i])
+                            div()
                                 .id(if i == 0 {
                                     "mesh-generation-columns"
                                 } else {
                                     "mesh-generation-rows"
                                 })
-                                .small()
-                                .aria_label(label),
+                                .test_support()
+                                .aria_label(label)
+                                .child(self.numbers[i].clone()),
                         ),
                 );
             }

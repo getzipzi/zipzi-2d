@@ -11,10 +11,11 @@ use track::parameter_track;
 
 use super::sorting::{self, SortItem, SortState};
 use super::toolbar::PanelToolbar;
+use crate::ui::slide_number_input::{SlideNumberChange, SlideNumberInput, SlideNumberOptions};
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
 use gpui_kit::assets::IconName;
-use gpui_kit::base::{NumberInput, Slider as BaseSlider, SliderIndicator};
+use gpui_kit::base::{Slider as BaseSlider, SliderIndicator};
 use gpui_kit::component::{
     ActiveTheme, Disableable, Icon, Sizable, WindowExt,
     button::{Button, ButtonVariants},
@@ -28,12 +29,15 @@ use std::collections::{HashMap, HashSet};
 
 // Group headers and parameter rows share the uniform list's measured height.
 const PARAMETER_ROW_HEIGHT: f32 = 26.;
+// All numeric fields cover their complete range over the same drag distance.
+const PARAMETER_SLIDE_DISTANCE_PX: f64 = 400.;
 
 struct ParameterRow {
     parameter: ParameterValue,
     visual: ParameterVisual,
     slider: Entity<SliderState>,
     input: Entity<InputState>,
+    number_input: Entity<SlideNumberInput>,
     input_dirty: bool,
     view: Entity<ParameterRowView>,
 }
@@ -48,6 +52,19 @@ fn format_value(value: f32) -> String {
         "0.0".into()
     } else {
         format!("{whole}.{decimal}")
+    }
+}
+
+fn slide_number_options(parameter: &ParameterValue, disabled: bool) -> SlideNumberOptions {
+    // Compute range proportions from the shortest authored decimal values.
+    let decimal = |value: f32| value.to_string().parse::<f64>().unwrap_or(value as f64);
+    SlideNumberOptions {
+        value: decimal(parameter.value),
+        min: decimal(parameter.minimum),
+        max: decimal(parameter.maximum),
+        step: 0.1,
+        drag_distance: Some(PARAMETER_SLIDE_DISTANCE_PX),
+        disabled,
     }
 }
 
@@ -238,6 +255,15 @@ impl ParametersPanel {
                             .step(0.1)
                             .default_value(format_value(parameter.value))
                     });
+                    let number_input = cx.new(|cx| {
+                        SlideNumberInput::new(
+                            input.clone(),
+                            parameter.name.clone(),
+                            slide_number_options(&parameter, false),
+                            window,
+                            cx,
+                        )
+                    });
                     let view = cx.new(|cx| ParameterRowView {
                         panel: panel.clone(),
                         document_id,
@@ -245,6 +271,7 @@ impl ParametersPanel {
                         visual: visual.clone(),
                         slider: slider.clone(),
                         input: input.clone(),
+                        number_input: number_input.clone(),
                         disabled: false,
                         summary: String::new(),
                         related: false,
@@ -259,11 +286,32 @@ impl ParametersPanel {
                         visual,
                         slider,
                         input,
+                        number_input,
                         input_dirty: false,
                     }
                 })
                 .collect();
             for row in &self.rows {
+                let parameter_id = row.parameter.id.clone();
+                self.subscriptions.push(cx.subscribe_in(
+                    &row.number_input,
+                    window,
+                    move |this: &mut Self, source, event: &SlideNumberChange, window, cx| {
+                        let Some(document_id) = document_id else {
+                            return;
+                        };
+                        if this.rows.iter().any(|row| {
+                            row.parameter.id == parameter_id && &row.number_input == source
+                        }) {
+                            this.apply_values(
+                                document_id,
+                                &[(parameter_id.clone(), event.0 as f32)],
+                                window,
+                                cx,
+                            );
+                        }
+                    },
+                ));
                 let parameter_id = row.parameter.id.clone();
                 let slider = row.slider.clone();
                 let subscription = cx.subscribe_in(
@@ -1165,6 +1213,7 @@ struct ParameterRowView {
     visual: ParameterVisual,
     slider: Entity<SliderState>,
     input: Entity<InputState>,
+    number_input: Entity<SlideNumberInput>,
     disabled: bool,
     summary: String,
     related: bool,
@@ -1180,6 +1229,13 @@ impl Render for ParameterRowView {
         let slider = &self.slider;
         let disabled = self.disabled;
         let document_id = self.document_id;
+        self.number_input.update(cx, |input, cx| {
+            input.configure(
+                parameter.name.clone(),
+                slide_number_options(parameter, disabled),
+                cx,
+            );
+        });
         let theme = cx.theme();
         let value = match slider.read(cx).value() {
             SliderValue::Single(value) => value,
@@ -1193,6 +1249,7 @@ impl Render for ParameterRowView {
         );
         div()
             .id(SharedString::from(format!("parameter-row-{parameter_id}")))
+            .test_support()
             .map(|element| {
                 sorting::drop_target(
                     element,
@@ -1319,19 +1376,7 @@ impl Render for ParameterRowView {
                     .flex()
                     .w(px(48.))
                     .flex_shrink_0()
-                    .child(
-                        NumberInput::new(&self.input)
-                            .w_full()
-                            .disabled(disabled)
-                            .decrement_button(|button| button.hidden())
-                            .increment_button(|button| button.hidden())
-                            .input(
-                                Input::new(&self.input)
-                                    .small()
-                                    .text_xs()
-                                    .aria_label(parameter.name.clone()),
-                            ),
-                    ),
+                    .child(self.number_input.clone()),
             )
             .map(|element| {
                 management::row_menu(

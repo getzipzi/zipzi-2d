@@ -2,6 +2,7 @@ pub(crate) mod form_dialog;
 pub(crate) mod mesh_generation;
 mod mesh_preview;
 pub(crate) mod preview_viewport;
+pub(crate) mod slide_number_input;
 
 use super::*;
 use gpui_kit::component::{ActiveTheme, WindowExt};

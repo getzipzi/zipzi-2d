@@ -8,9 +8,17 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 
+// Exercise the exact component used by the editor, including its interaction state.
+#[path = "../../editor/src/ui/slide_number_input.rs"]
+mod slide_number_input;
+use slide_number_input::{SlideNumberChange, SlideNumberInput, SlideNumberOptions};
+
 struct Playground {
     input: Entity<InputState>,
     slider: Entity<SliderState>,
+    number_input: Entity<SlideNumberInput>,
+    number_text: Entity<InputState>,
+    number_value: f64,
     checked: bool,
     clicks: usize,
     page: usize,
@@ -20,13 +28,65 @@ impl Playground {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let input = cx.new(|cx| InputState::new(window, cx).placeholder("输入中文或 English"));
         let slider = cx.new(|_| SliderState::new().default_value(50.));
+        let number_text = cx.new(|cx| {
+            InputState::new(window, cx)
+                .step(0.1)
+                .min(-30.)
+                .max(30.)
+                .default_value("0.0")
+        });
+        let number_input = cx.new(|cx| {
+            SlideNumberInput::new(
+                number_text.clone(),
+                "Angle",
+                SlideNumberOptions {
+                    value: 0.,
+                    min: -30.,
+                    max: 30.,
+                    step: 0.1,
+                    drag_distance: Some(200.),
+                    disabled: false,
+                },
+                window,
+                cx,
+            )
+        });
         let subscriptions = vec![
             cx.subscribe(&input, |_, _, _: &InputEvent, cx| cx.notify()),
             cx.subscribe(&slider, |_, _, _: &SliderEvent, cx| cx.notify()),
+            cx.subscribe_in(
+                &number_input,
+                window,
+                |this, _, event: &SlideNumberChange, window, cx| {
+                    this.number_value = event.0;
+                    this.number_text.update(cx, |input, cx| {
+                        input.set_value(event.0.to_string(), window, cx)
+                    });
+                    cx.notify();
+                },
+            ),
+            cx.subscribe_in(
+                &number_text,
+                window,
+                |this, _, event: &InputEvent, window, cx| {
+                    if matches!(event, InputEvent::PressEnter { .. } | InputEvent::Blur) {
+                        if let Ok(value) = this.number_text.read(cx).value().parse::<f64>() {
+                            this.number_value = value.clamp(-30., 30.);
+                        }
+                        this.number_text.update(cx, |input, cx| {
+                            input.set_value(this.number_value.to_string(), window, cx)
+                        });
+                        cx.notify();
+                    }
+                },
+            ),
         ];
         Self {
             input,
             slider,
+            number_input,
+            number_text,
+            number_value: 0.,
             checked: true,
             clicks: 0,
             page: 0,
@@ -36,6 +96,20 @@ impl Playground {
 }
 impl Render for Playground {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.number_input.update(cx, |input, cx| {
+            input.configure(
+                "Angle",
+                SlideNumberOptions {
+                    value: self.number_value,
+                    min: -30.,
+                    max: 30.,
+                    step: 0.1,
+                    drag_distance: Some(200.),
+                    disabled: false,
+                },
+                cx,
+            )
+        });
         let mut content = div().flex().flex_col().gap_4();
         let code = match self.page {
             0 => {
@@ -106,7 +180,7 @@ impl Render for Playground {
                 );
                 "window.open_dialog(cx, |dialog, _, _| dialog.title(\"组件弹窗\").child(...))"
             }
-            _ => {
+            6 => {
                 content = content
                     .child(div().text_xl().child("字体与排版 Typography"))
                     .child("中文图层 · English · 日本語 · 한글 · 0123456789")
@@ -122,6 +196,24 @@ impl Render for Playground {
                             .child("这是一个用于验证窄列单行截断的较长图层名称"),
                     );
                 "div().text_color(cx.theme().muted_foreground).child(\"辅助文字\")"
+            }
+            _ => {
+                content = content
+                    .child("Slide NumberInput · 横向拖动调值，单击输入")
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_3()
+                            .child("Angle")
+                            .child(div().w(px(48.)).child(self.number_input.clone())),
+                    )
+                    .child(format!("当前值：{}  ·  范围：−30 … 30", self.number_value))
+                    .child("向右增加，向左减少；拖动 200px 覆盖整个范围，按住 Shift 以十分之一速度微调。")
+                    .child(
+                        "Escape 撤销本次拖动；单击后可输入数值，用 ↑ / ↓ 步进，Enter 或失焦提交。",
+                    );
+                "SlideNumberInput::new(input, label, SlideNumberOptions { value: 0., min: -30., max: 30., step: 0.1, drag_distance: Some(200.), disabled: false }, window, cx)"
             }
         };
         div()
@@ -165,6 +257,7 @@ impl Render for Playground {
                             "Tabs",
                             "Dialog",
                             "Typography",
+                            "Slide Number",
                         ]
                         .into_iter()
                         .map(|label| Tab::new().label(label)),

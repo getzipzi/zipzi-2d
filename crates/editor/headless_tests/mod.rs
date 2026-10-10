@@ -13,6 +13,7 @@ mod preview_viewport;
 mod project_import;
 mod properties;
 mod recent_files;
+mod slide_number_input;
 mod sorting;
 
 use crate::{EditorView, actions, i18n, settings};
