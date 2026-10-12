@@ -10,7 +10,7 @@ use std::sync::{
 use std::time::{Duration, Instant};
 
 enum Work {
-    Evaluate(AnimationRequest),
+    Evaluate(AnimationRequest, u64),
     Suspend,
 }
 #[derive(Default)]
@@ -24,6 +24,7 @@ pub struct AnimationWorker {
     key: Option<(editor_core::DocumentId, u64, u64, u64, u64)>,
 }
 pub struct ResultFrame {
+    pub trace_id: u64,
     pub identity: AnimationIdentity,
     pub result: anyhow::Result<AnimationEvaluated>,
 }
@@ -52,24 +53,49 @@ impl AnimationWorker {
                         if inbox.closed {
                             break;
                         }
-                        (
-                            inbox.latest.take().unwrap(),
-                            cancellation.load(Ordering::Acquire),
-                        )
+                        let work = inbox.latest.take().unwrap();
+                        if let Work::Evaluate(_, trace_id) = &work {
+                            frame_trace::emit(*trace_id, "animation_dequeued", &[]);
+                        }
+                        (work, cancellation.load(Ordering::Acquire))
                     };
-                    let Work::Evaluate(request) = work else {
+                    let Work::Evaluate(request, trace_id) = work else {
                         evaluator = AnimationEvaluator::default();
                         continue;
                     };
                     let identity = request.identity;
+                    frame_trace::emit(trace_id, "animation_evaluate_begin", &[]);
                     let result = evaluator.evaluate(&request, |_, _| {
                         cancellation.load(Ordering::Acquire) == version
                     });
+                    frame_trace::emit(
+                        trace_id,
+                        "animation_evaluate_end",
+                        &[("success", result.is_ok() as u64)],
+                    );
+                    if trace_id != 0 {
+                        if let Some(stats) = evaluator.seek_cache_stats() {
+                            frame_trace::emit(
+                                trace_id,
+                                "animation_cache",
+                                &[
+                                    ("bytes", stats.estimated_bytes as u64),
+                                    ("budget", stats.budget_bytes as u64),
+                                    ("checkpoints", stats.checkpoints as u64),
+                                ],
+                            );
+                        }
+                    }
                     if cancellation.load(Ordering::Acquire) != version {
+                        frame_trace::emit(trace_id, "animation_cancelled", &[]);
                         continue;
                     }
                     if sender
-                        .send_blocking(ResultFrame { identity, result })
+                        .send_blocking(ResultFrame {
+                            trace_id,
+                            identity,
+                            result,
+                        })
                         .is_err()
                     {
                         break;
@@ -97,7 +123,20 @@ impl AnimationWorker {
             self.cancellation.fetch_add(1, Ordering::AcqRel);
             self.key = Some(key);
         }
-        inbox.latest = Some(Work::Evaluate(request));
+        let trace_id = frame_trace::next_id();
+        if let Some(Work::Evaluate(_, old_trace)) =
+            inbox.latest.replace(Work::Evaluate(request, trace_id))
+        {
+            frame_trace::emit(old_trace, "animation_coalesced", &[]);
+        }
+        frame_trace::emit(
+            trace_id,
+            "animation_enqueued",
+            &[
+                ("request", id.request),
+                ("time_us", (id.time as f64 * 1e6) as u64),
+            ],
+        );
         ready.notify_one();
     }
     pub fn suspend(&mut self) {
@@ -107,7 +146,9 @@ impl AnimationWorker {
         let (lock, ready) = &*self.shared;
         let mut inbox = lock.lock().unwrap();
         self.cancellation.fetch_add(1, Ordering::AcqRel);
-        inbox.latest = Some(Work::Suspend);
+        if let Some(Work::Evaluate(_, trace_id)) = inbox.latest.replace(Work::Suspend) {
+            frame_trace::emit(trace_id, "animation_cancelled", &[]);
+        }
         ready.notify_one();
     }
 }
@@ -117,7 +158,9 @@ impl Drop for AnimationWorker {
         let mut inbox = lock.lock().unwrap();
         self.cancellation.fetch_add(1, Ordering::AcqRel);
         inbox.closed = true;
-        inbox.latest = None;
+        if let Some(Work::Evaluate(_, trace_id)) = inbox.latest.take() {
+            frame_trace::emit(trace_id, "animation_cancelled", &[]);
+        }
         ready.notify_one();
     }
 }
@@ -150,10 +193,11 @@ impl EditorView {
                 if this
                     .update(cx, |this, cx| {
                         if !this.editor.accepts_animation(frame.identity) {
+                            frame_trace::emit(frame.trace_id, "animation_rejected_cpu", &[]);
                             return;
                         }
                         match frame.result {
-                            Ok(evaluated) => this.render_animation(evaluated),
+                            Ok(evaluated) => this.render_animation(evaluated, frame.trace_id),
                             Err(error) => {
                                 this.editor.fail_animation(
                                     frame.identity,
@@ -170,7 +214,7 @@ impl EditorView {
             }
         }));
     }
-    fn render_animation(&mut self, evaluated: AnimationEvaluated) {
+    fn render_animation(&mut self, evaluated: AnimationEvaluated, trace_id: u64) {
         let Some(transform) = editor_core::ViewportTransform::new(
             evaluated.scene.viewport_frame.canvas,
             self.editor.canvas_metrics(),
@@ -192,7 +236,7 @@ impl EditorView {
             transform,
         };
         let request = preview::Request {
-            trace_id: 0,
+            trace_id,
             revision: identity.request,
             canvas: None,
             animation: Some(state),

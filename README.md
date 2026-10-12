@@ -98,9 +98,33 @@ Run a specific test module or target:
 cargo test --locked -p editor-core --test commands
 cargo test --locked -p kasane-editor --bin kasane-editor headless_tests::canvas
 cargo test --locked -p kasane-editor --test native_metal
+cargo test --locked -p kasane-editor --test animation_acceptance
 ```
 
 Add UI tests with `#[gpui_kit::test]` in `crates/editor/headless_tests/`; register new modules in its `mod.rs` and reuse the shared `setup` harness.
+
+The animation acceptance target imports the local licensed Mao, Shirousagi and
+heijiao model3 packages when available. It checks actual Metal images, seeking,
+expression clearing, document switching, Modeling restoration and project reopen.
+Missing local packages are explicitly reported as skipped; portable fixtures still
+cover runtime semantics and masked / Offscreen opacity in the regular suite.
+
+Profile release playback with an isolated native window, or collect headless
+workflow, cancellation, seek-cache and memory data:
+
+```sh
+./scripts/animation-window-benchmark.sh models/local/mao/runtime/mao_pro.model3.json target/animation-window-run 600
+./scripts/animation-benchmark.sh target/animation-headless-run 600
+python3 scripts/test_animation_trace_report.py
+```
+
+Use a new output directory for each run. The native benchmark requires the window
+to stay visible and active; it uses the application's timer and compositor
+presentation timestamps. Headless profiling uses real SDK / Metal workers with a
+test clock and does not measure display presentation. Both emit JSONL traces and
+correlated timing / queue summaries. See the [animation validation report](docs/workspaces-animation-validation.md)
+for hardware, model coverage, measured average 60 Hz playback and remaining frame
+pacing variation.
 
 ## Headless screenshots
 

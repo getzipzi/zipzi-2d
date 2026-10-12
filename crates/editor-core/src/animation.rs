@@ -184,6 +184,10 @@ pub struct AnimationEvaluator {
     identity: Option<AnimationIdentity>,
 }
 impl AnimationEvaluator {
+    /// Detached SDK cache accounting for profiling; preview state is unchanged.
+    pub fn seek_cache_stats(&self) -> Option<kasane_sdk::SeekCacheStats> {
+        self.preview.as_ref().map(MotionPreview::seek_cache_stats)
+    }
     pub fn evaluate(
         &mut self,
         request: &AnimationRequest,

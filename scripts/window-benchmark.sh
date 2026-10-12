@@ -39,4 +39,9 @@ export KASANE_FRAME_TRACE="$output/trace.jsonl"
 export KASANE_WINDOW_BENCH=1 KASANE_BENCH_MODEL="$model"
 export KASANE_BENCH_SAMPLES="$samples" KASANE_BENCH_HZ="$hz"
 caffeinate -d -i "./target/$profile/kasane-editor" > "$output/application.log" 2>&1
-python3 scripts/frame-trace-report.py "$output/trace.jsonl" --output "$output"
+if [[ "${KASANE_BENCH_ANIMATION:-0}" == 1 ]]; then
+    python3 scripts/animation-trace-report.py "$output/trace.jsonl" > "$output/summary.json"
+    cat "$output/summary.json"
+else
+    python3 scripts/frame-trace-report.py "$output/trace.jsonl" --output "$output"
+fi

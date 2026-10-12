@@ -162,8 +162,10 @@ impl EditorView {
                                         .editor
                                         .present_animation(state.identity, state.snapshot.clone())
                                     {
+                                        frame_trace::emit(frame.trace_id, "rejected", &[]);
                                         return;
                                     }
+                                    frame_trace::emit(frame.trace_id, "accepted", &[]);
                                     this.render_stats = frame.stats;
                                     this.animation_frame =
                                         Some(animation::Presented { image, state });

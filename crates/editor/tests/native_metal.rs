@@ -655,13 +655,34 @@ fn mesh_candidate_preview_renders_only_its_triangles() -> anyhow::Result<()> {
 #[test]
 fn animation_model_opacity_matches_observer_with_overlap_mask_and_offscreen() -> anyhow::Result<()>
 {
+    let (document, assets) = support::sample_document_with_scene_objects()?;
+    check_animation_opacity(document, assets, false)
+}
+
+#[test]
+fn local_mao_opacity_and_added_offscreen_match_observer_pixels() -> anyhow::Result<()> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+    if !path.exists() {
+        eprintln!("SKIP licensed Mao model: {}", path.display());
+        return Ok(());
+    }
+    let (document, _) = Document::import_model3(&path)?;
+    check_animation_opacity(document, tempfile::tempdir()?, true)
+}
+
+fn check_animation_opacity(
+    mut document: Document,
+    assets: tempfile::TempDir,
+    actual_model: bool,
+) -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
         use editor_core::{AnimationEvaluator, CanvasMetrics, Editor, WorkspaceKind};
         use kasane_core::{Canvas, Vec2};
         use kasane_sdk_observe::{
             CanvasRoi, ObservationInput, Observer, ObserverConfig, RenderRequest,
         };
-        let (mut document, assets) = support::sample_document_with_scene_objects()?;
+        let canvas = document.canvas();
         let manifest = document
             .save(&assets.path().join("opacity.kasane"))?
             .manifest;
@@ -670,16 +691,36 @@ fn animation_model_opacity_matches_observer_with_overlap_mask_and_offscreen() ->
             Canvas::new(256., 256., Vec2::default(), 1.),
         )?;
         sdk.open_project(&manifest, None)?;
-        let ids = sdk.mesh_ids().to_vec();
-        let mut source = sdk.mesh(&ids[0]).unwrap();
-        source.deformer_id.clear();
-        let mut masked = sdk.mesh(&ids[1]).unwrap();
-        masked.masks = vec![ids[0].clone()];
-        masked.deformer_id.clear();
-        sdk.edit("Masked overlap", None, |edit| {
-            edit.replace_mesh(source)?;
-            edit.replace_mesh(masked)
-        })?;
+        if actual_model {
+            // The bundled Cubism 4 assets have no native Offscreens. Exercise a
+            // controlled Kasane Offscreen on real textured, masked geometry.
+            let part_id = sdk
+                .document()
+                .part_order()
+                .iter()
+                .find(|id| sdk.document().get_part(id).unwrap().parent_id.is_empty())
+                .unwrap()
+                .clone();
+            sdk.edit("Actual-model Offscreen", None, |edit| {
+                edit.create_offscreen(kasane_core::Offscreen {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    name: "Acceptance composite".into(),
+                    part_id,
+                    ..Default::default()
+                })
+            })?;
+        } else {
+            let ids = sdk.mesh_ids().to_vec();
+            let mut source = sdk.mesh(&ids[0]).unwrap();
+            source.deformer_id.clear();
+            let mut masked = sdk.mesh(&ids[1]).unwrap();
+            masked.masks = vec![ids[0].clone()];
+            masked.deformer_id.clear();
+            sdk.edit("Masked overlap", None, |edit| {
+                edit.replace_mesh(source)?;
+                edit.replace_mesh(masked)
+            })?;
+        }
         let gpui = MetalRenderer::new_headless(Default::default());
         let gpu = gpui.shared_metal_context();
         let config = MetalTargetConfig {
@@ -725,8 +766,8 @@ fn animation_model_opacity_matches_observer_with_overlap_mask_and_offscreen() ->
                     roi: CanvasRoi {
                         x0: 0.,
                         y0: 0.,
-                        x1: 256.,
-                        y1: 256.,
+                        x1: canvas.width,
+                        y1: canvas.height,
                     },
                     padding_canvas: 0.,
                 },
@@ -752,7 +793,13 @@ fn animation_model_opacity_matches_observer_with_overlap_mask_and_offscreen() ->
                 evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
             let scene = evaluated.scene;
             assert!(!scene.viewport_frame.offscreens.is_empty());
-            assert!(!scene.viewport_frame.drawables[1].masks.is_empty());
+            assert!(
+                scene
+                    .viewport_frame
+                    .drawables
+                    .iter()
+                    .any(|d| !d.masks.is_empty())
+            );
             let mut reference = input.frame().clone();
             reference.source_revision = scene.viewport_frame.source_revision;
             assert_eq!(scene.render_frame()?.as_ref(), &reference);
@@ -767,7 +814,10 @@ fn animation_model_opacity_matches_observer_with_overlap_mask_and_offscreen() ->
                         height: 256.,
                         scale_factor: 1.,
                     },
-                    ViewState::default(),
+                    ViewState {
+                        zoom: 256. / canvas.width.max(canvas.height),
+                        ..Default::default()
+                    },
                 )
                 .unwrap(),
             )?;

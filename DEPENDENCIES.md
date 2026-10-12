@@ -26,6 +26,14 @@
   from final flattened-image alpha. These SDK / observer changes must accompany
   this editor checkout; they are committed in the adjacent repository at
   `c90bdc5f2f00b540c87635745d0f3a4f66dd97bb`.
+- Animation acceptance reads the existing SDK `SeekCacheStats` through
+  `MotionPreview::seek_cache_stats` to check the retained checkpoint budget.
+  The native benchmark uses the existing GPUI `frame_trace` hooks and Metal
+  command timestamps to distinguish CPU evaluation, GPU completion, texture
+  adoption and compositor presentation. Stage five adds no sibling SDK or
+  renderer changes beyond the revision above. Its real-model opacity test adds
+  an Offscreen to a temporary imported Mao document; licensed source assets are
+  unchanged. See [validation results](docs/workspaces-animation-validation.md).
 
 All workspace crates use the root `Cargo.lock`. Build and test with `--locked`.
 The editor supports macOS. There are no application backend switches or CPU

@@ -38,3 +38,8 @@ image = { version = "0.25.10", default-features = false, features = ["png"] }
 name = "headless_screenshot"
 path = "tests/headless_screenshot.rs"
 harness = false
+
+[[test]]
+name = "animation_acceptance"
+path = "tests/animation_acceptance.rs"
+harness = false

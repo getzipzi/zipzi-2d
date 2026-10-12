@@ -684,3 +684,39 @@ fn runtime_failures_remain_typed_for_localized_display() {
         AnimationFailure::Other("GPU unavailable".into())
     );
 }
+
+#[test]
+fn returning_to_a_paused_document_and_closing_an_active_tab_reissue_the_gpu_target()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let first = editor.active_id().unwrap();
+    select(&mut editor, 0)?;
+    expression(&mut editor, 0)?;
+    editor.seek_animation(first, 0.75)?;
+    let mut evaluator = AnimationEvaluator::default();
+    let shown = evaluate(&mut editor, &mut evaluator)?;
+    assert!(editor.present_animation(shown.identity, shown.snapshot));
+    assert!(editor.animation_request().is_none());
+    let generation = editor.animation().unwrap().preview_generation;
+    let triggers = editor.animation().unwrap().expressions.clone();
+    let second = editor.new_document()?;
+    editor.activate(first)?;
+    let returned = editor
+        .animation_request()
+        .expect("paused tab needs a replacement GPU image");
+    assert_eq!(returned.identity.time, 0.75);
+    assert_eq!(returned.identity.preview_generation, generation);
+    assert_eq!(returned.expressions, triggers);
+    assert!(!editor.accepts_animation(shown.identity));
+    let shown = evaluator.evaluate(&returned, |_, _| true)?;
+    assert!(editor.present_animation(shown.identity, shown.snapshot));
+    editor.activate(second)?;
+    editor.close_document(second, true)?;
+    assert_eq!(editor.active_id(), Some(first));
+    assert!(!editor.accepts_animation(returned.identity));
+    assert!(editor.animation_request().is_some());
+    assert!(!editor.animation().unwrap().playing);
+    assert!(!editor.document().unwrap().modified());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}

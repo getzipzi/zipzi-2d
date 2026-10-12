@@ -404,6 +404,9 @@ impl Editor {
         self.active = Some(id);
         self.displayed_request = None;
         self.requested_scene = None;
+        // The UI releases the inactive document's GPU image. Reissue a paused
+        // target on return and reject results from its previous activation.
+        self.invalidate_animation();
         Ok(())
     }
     pub fn adjacent(&self, forward: bool) -> Option<DocumentId> {
@@ -613,6 +616,7 @@ impl Editor {
                 .documents
                 .get(index.min(self.documents.len().saturating_sub(1)))
                 .map(|e| e.id);
+            self.invalidate_animation();
             self.displayed_request = None;
         }
         Ok(true)

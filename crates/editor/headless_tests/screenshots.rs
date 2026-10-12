@@ -19,17 +19,17 @@ use std::{
 #[allow(dead_code)]
 mod fixture;
 
-struct Harness {
-    window: AnyWindowHandle,
-    view: Entity<EditorView>,
+pub(super) struct Harness {
+    pub(super) window: AnyWindowHandle,
+    pub(super) view: Entity<EditorView>,
     _config: tempfile::TempDir,
     _assets: tempfile::TempDir,
     // Drop our entity handle before the context performs its leak check.
-    cx: HeadlessAppContext,
+    pub(super) cx: HeadlessAppContext,
 }
 
 impl Harness {
-    fn new() -> anyhow::Result<Self> {
+    pub(super) fn new() -> anyhow::Result<Self> {
         let mut cx = HeadlessAppContext::with_platform(
             gpui_kit::platform::current_platform(true).text_system(),
             Arc::new(AllAssets),
@@ -88,7 +88,7 @@ impl Harness {
         })
     }
 
-    fn capture(&mut self) -> anyhow::Result<RgbaImage> {
+    pub(super) fn capture(&mut self) -> anyhow::Result<RgbaImage> {
         // The preview worker uses real I/O rather than the simulated test clock.
         // Wait for the current accepted revision and thumbnails, with a bounded deadline.
         let deadline = Instant::now() + Duration::from_secs(10);
@@ -139,14 +139,27 @@ impl Harness {
             }
             anyhow::ensure!(
                 Instant::now() < deadline,
-                "Timed out waiting for editor preview"
+                "Timed out waiting for editor preview: {:?}",
+                self.view.read_with(&self.cx, |view, _| (
+                    view.editor.workspace(),
+                    view.editor.animation().map(|a| (
+                        a.time,
+                        a.playing,
+                        a.presented.as_ref().map(|s| s.time),
+                        a.error.clone()
+                    )),
+                    view.animation_frame.as_ref().map(|f| (
+                        f.state.snapshot.time,
+                        view.editor.accepts_animation_image(f.state.identity)
+                    ))
+                ))
             );
             self.cx.advance_clock(Duration::from_millis(10));
             std::thread::sleep(Duration::from_millis(2));
         }
     }
 
-    fn canvas_image(&mut self, image: &RgbaImage) -> anyhow::Result<RgbaImage> {
+    pub(super) fn canvas_image(&mut self, image: &RgbaImage) -> anyhow::Result<RgbaImage> {
         self.element_image(image, "canvas-body")
     }
 

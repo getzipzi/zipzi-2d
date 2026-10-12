@@ -1,6 +1,6 @@
 # Modeling 与 Animation Workspace 实施计划
 
-日期：2026-10-12。状态：阶段一至四已实施并通过验证；阶段五待实施。
+日期：2026-10-12。状态：阶段一至五已实施并通过验证；性能数据、覆盖范围及剩余呈现抖动见[首版验收报告](workspaces-animation-validation.md)。
 
 将现有编辑界面确立为 Modeling workspace，新增用于已有动画资源预览与验证的 Animation workspace。首版完成 model3 模型包导入、motion 播放、expression 应用与组合预览，并保证播放不会污染建模状态和文档历史。本计划不包含动画创作功能。
 
@@ -194,10 +194,10 @@ Animation 的 [SceneSnapshot](../crates/editor-core/src/scene.rs) 使用 SDK 运
 
 ### 阶段五：回归与首版验收
 
-- [ ] 完成下述核心、headless 和 Metal 验证。
-- [ ] 在实际模型上验证循环、非循环、表情、Physics / Pose、透明度、遮罩及 Offscreen。
-- [ ] 记录求值和渲染耗时、请求积压及长 seek 响应，修复持续拒帧、无界队列和持续增长的缓存。
-- [ ] 更新 README 的功能入口与 DEPENDENCIES 中实际新增的 SDK / renderer 要求，并记录实施结果。
+- [x] 完成下述核心、headless 和 Metal 验证。
+- [x] 在实际模型上验证循环、非循环、表情、Physics / Pose、透明度、遮罩及 Offscreen（本地资源没有原生 Offscreen，使用真实 Mao 几何的临时派生文档，详见报告）。
+- [x] 记录求值和渲染耗时、请求积压及长 seek 响应，修复持续拒帧、无界队列和持续增长的缓存。
+- [x] 更新 README 的功能入口与 DEPENDENCIES 中实际新增的 SDK / renderer 要求，并记录实施结果。
 
 退出条件：通过完整用户场景；声明不支持的能力有明确反馈，不将部分兼容呈现为完整兼容。目标为代表性模型在记录的测试机器上争取稳定 60 Hz 播放；未达标时依据 CPU / GPU 数据决定优化，不能通过破坏物理步进来掩盖性能问题。
 
@@ -309,3 +309,13 @@ cargo fmt --all -- --check
 - 检查：`cargo test --locked --workspace`（360 passed，4 项现有 ignored）、`cargo check --locked --workspace`、`cargo fmt --all -- --check`、`git diff --check`。本阶段无新增 SDK 改动。
 
 阶段五继续进行实际模型完整场景及性能验收；阶段四的资源反馈与只读观察不代表已经完成 60 Hz 性能目标或全部模型兼容性验收。
+
+### 阶段五实施记录（2026-10-12）
+
+- 阶段四已提交：`b1c546f`（`Complete animation resource feedback and read-only parameter inspection`）。
+- 新增独立 `animation_acceptance` 目标，使用真实 EditorView、SDK 求值器和 Metal worker 验证三个本地模型的导入、建模试摆／隐藏隔离、动作与表情、前后定位、清除、切文档、返回建模及保存后关闭重开。Mao 非循环和 Offscreen 使用临时派生文档，源资源不变。
+- 修复返回已暂停文档时画布可能空白的问题：切入文档及关闭活动标签后的回退文档都重新发出当前动画目标，拒绝上次激活的异步结果；保留时间、资源选择和表情触发记录。新增 core 回归及真实 GPU 场景覆盖。
+- 新增贯穿 CPU / Metal / UI 呈现的可选 trace、队列峰值及缓存预算报告；默认不采集。增加原生窗口播放脚本与 headless 长 seek／取消／内存脚本，复用现有有界 trace writer 和 SDK canonical 60 Hz 步进。
+- M4 / 16 GiB、release、Mao 的原生窗口测量平均呈现 **59.95 Hz**，稳态 601 次请求全部被接受并实际呈现。CPU 求值 p95 **1.51 ms**，Metal GPU p95 **5.26 ms**，CPU 和渲染待处理槽位峰值均为 1。呈现间隔 p95 **25.00 ms**、最大 **33.33 ms**，记录为剩余节奏抖动，未宣称每帧严格满足 16.67 ms。
+- 真实 Mao 的 ModelOpacity 0 / 0.5 / 1、遮罩和新增 Offscreen 与 SDK observer 的 Metal 图像最大通道差不超过 1/255。长 seek、过期求值取消、checkpoint 上限、内存和完整模型覆盖见[验收报告](workspaces-animation-validation.md)。
+- 检查：`cargo test --locked --workspace`（362 passed，4 项现有 ignored，另含三个真实模型验收及截图目标）、`cargo check --locked --workspace`、`cargo fmt --all -- --check`、trace 报告测试、脚本语法和 `git diff --check`。本阶段无新增 SDK 改动。

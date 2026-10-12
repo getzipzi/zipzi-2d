@@ -51,10 +51,11 @@ impl RequestSender {
         if inbox.closed {
             return Err(());
         }
-        frame_trace::emit(request.trace_id, "enqueued", &[]);
+        let trace_id = request.trace_id;
         if let Some(old) = inbox.latest.replace(request) {
             frame_trace::emit(old.trace_id, "coalesced", &[]);
         }
+        frame_trace::emit(trace_id, "enqueued", &[]);
         ready.notify_one();
         Ok(())
     }
@@ -114,7 +115,9 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 if inbox.closed {
                     break;
                 }
-                inbox.latest.take().unwrap()
+                let request = inbox.latest.take().unwrap();
+                frame_trace::emit(request.trace_id, "dequeued", &[]);
+                request
             };
             let trace_id = request.trace_id;
             frame_trace::emit(trace_id, "worker_begin", &[]);
