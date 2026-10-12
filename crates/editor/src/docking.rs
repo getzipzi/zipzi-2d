@@ -87,6 +87,8 @@ impl Drop for LayoutWriter {
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PanelKind {
+    AnimationMotions,
+    AnimationInfo,
     Properties,
     MeshTree,
     Deformers,
@@ -97,6 +99,8 @@ pub enum PanelKind {
 pub struct DockWorkspace {
     pub area: Entity<DockArea>,
     pub canvas: Entity<crate::canvas::CanvasView>,
+    pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
+    pub animation_info: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub properties: Entity<crate::panels::PropertiesPanel>,
     pub mesh_tree: Entity<crate::panels::MeshTreePanel>,
     pub deformer_tree: Entity<crate::panels::DeformerTreePanel>,
@@ -142,9 +146,14 @@ impl DockWorkspace {
         let deformer_tree =
             crate::panels::DeformerTreePanel::new(owner.clone(), thumbnails, window, cx);
         let parameters = crate::panels::ParametersPanel::new(owner.clone(), window, cx);
+        use crate::panels::animation_panel::{AnimationPanel, AnimationPanelKind};
+        let animation_motions = AnimationPanel::new(owner.clone(), AnimationPanelKind::Motions, cx);
+        let animation_info = AnimationPanel::new(owner.clone(), AnimationPanelKind::Info, cx);
 
         for (name, handle) in [
             ("Canvas", panel_handle(canvas.clone())),
+            ("AnimationMotions", panel_handle(animation_motions.clone())),
+            ("AnimationInfo", panel_handle(animation_info.clone())),
             ("Properties", panel_handle(properties.clone())),
             ("MeshTree", panel_handle(mesh_tree.clone())),
             ("Deformers", panel_handle(deformer_tree.clone())),
@@ -176,6 +185,8 @@ impl DockWorkspace {
         let mut result = Self {
             area,
             canvas,
+            animation_motions,
+            animation_info,
             properties,
             mesh_tree,
             deformer_tree,
@@ -204,7 +215,21 @@ impl DockWorkspace {
             }
             if self.workspace == WorkspaceKind::Animation {
                 area.set_center(
-                    DockLayout::tabs().panel_view(panel_handle(self.canvas.clone()), cx),
+                    DockLayout::h_split()
+                        .child(
+                            DockLayout::tabs()
+                                .panel_view(panel_handle(self.animation_motions.clone()), cx),
+                            Some(px(220.)),
+                        )
+                        .child(
+                            DockLayout::tabs().panel_view(panel_handle(self.canvas.clone()), cx),
+                            None,
+                        )
+                        .child(
+                            DockLayout::tabs()
+                                .panel_view(panel_handle(self.animation_info.clone()), cx),
+                            Some(px(240.)),
+                        ),
                     window,
                     cx,
                 );
@@ -325,6 +350,20 @@ impl DockWorkspace {
 
     pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
         match kind {
+            PanelKind::AnimationMotions => toggle_panel(
+                &self.area,
+                self.animation_motions.clone(),
+                DockPlacement::Left,
+                window,
+                cx,
+            ),
+            PanelKind::AnimationInfo => toggle_panel(
+                &self.area,
+                self.animation_info.clone(),
+                DockPlacement::Right,
+                window,
+                cx,
+            ),
             PanelKind::Document(kind) => toggle_panel(
                 &self.area,
                 self.document_panels[&kind].clone(),
@@ -405,6 +444,8 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
                 ensure!(
                     [
                         "Canvas",
+                        "AnimationMotions",
+                        "AnimationInfo",
                         "Properties",
                         "MeshTree",
                         "Deformers",
@@ -424,7 +465,12 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
                     "Unknown panel"
                 );
                 ensure!(
-                    workspace == WorkspaceKind::Modeling || node.panel_name == "Canvas",
+                    if workspace == WorkspaceKind::Animation {
+                        ["Canvas", "AnimationMotions", "AnimationInfo"]
+                            .contains(&node.panel_name.as_str())
+                    } else {
+                        !["AnimationMotions", "AnimationInfo"].contains(&node.panel_name.as_str())
+                    },
                     "Panel is unavailable in this workspace"
                 );
                 ensure!(seen.insert(node.panel_name.clone()), "Duplicate panel");
@@ -502,6 +548,8 @@ impl EditorView {
             return;
         }
         self.frame = None;
+        self.animation_frame = None;
+        self.animation_anchor = None;
         self.frozen_frames.clear();
         self.render_error = None;
         if let Some(dock) = &mut self.dock {

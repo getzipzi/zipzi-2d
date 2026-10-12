@@ -6,49 +6,102 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 
-/// The transport occupies a fixed, reachable row even in a small window.
-/// Its command stays unavailable until the detached preview is connected.
-pub fn render_playback_bar(
-    view: &EditorView,
-    modal: bool,
-    cx: &mut Context<EditorView>,
-) -> impl IntoElement {
-    let command = CommandId::PlayPause;
-    div()
-        .id("animation-playback-bar")
-        .test_support()
-        .flex()
-        .flex_shrink_0()
-        .items_center()
-        .gap_3()
-        .h(px(40.))
-        .px_3()
-        .border_t_1()
-        .border_color(cx.theme().border)
-        .child(
-            Button::new("animation-play-pause")
-                .small()
-                .ghost()
-                .label(t!(command.spec().label))
-                .tooltip(t!("workspace.preview_pending"))
-                .disabled(modal || !view.editor.command_available(view.editor.command(command)))
-                .on_click(
-                    cx.listener(move |this, _, window, cx| this.run_command(command, window, cx)),
-                ),
-        )
-        .child(
-            div()
-                .text_xs()
-                .text_color(cx.theme().muted_foreground)
-                .child("0:00"),
-        )
-        .child(
+pub struct PlaybackBar {
+    owner: WeakEntity<EditorView>,
+    _observe: Subscription,
+}
+impl PlaybackBar {
+    pub fn new(owner: WeakEntity<EditorView>, cx: &mut App) -> Entity<Self> {
+        cx.new(|cx| Self {
+            _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
+            owner,
+        })
+    }
+}
+impl Render for PlaybackBar {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpui_kit::component::WindowExt;
+        let Some(owner) = self.owner.upgrade() else {
+            return div().into_any_element();
+        };
+        let dialog = window.has_active_dialog(cx);
+        let view = owner.read(cx);
+        let animation = view.editor.animation();
+        let modal = view.modal || dialog;
+        let playing = animation.is_some_and(|a| a.playing);
+        let resource = view.editor.document().and_then(|d| {
+            d.motion_resources()
+                .into_iter()
+                .find(|r| animation.is_some_and(|a| a.motion.as_ref() == Some(&r.selection)))
+        });
+        // The accepted GPU frame owns the displayed time.
+        let time = animation
+            .and_then(|a| a.presented.as_ref())
+            .map_or(0., |s| s.time);
+        let label = resource.as_ref().map_or_else(
+            || t!("workspace.select_motion").into_owned(),
+            |r| {
+                if r.looping && r.playable() {
+                    format!(
+                        "{:.2} / {:.2} s · {} {}",
+                        time % r.duration,
+                        r.duration,
+                        t!("workspace.cycle"),
+                        (time / r.duration).floor() as u64 + 1
+                    )
+                } else {
+                    format!("{time:.2} / {:.2} s", r.duration)
+                }
+            },
+        );
+        let mut bar = div()
+            .id("animation-playback-bar")
+            .test_support()
+            .flex()
+            .flex_shrink_0()
+            .items_center()
+            .gap_3()
+            .h(px(40.))
+            .px_3()
+            .border_t_1()
+            .border_color(cx.theme().border);
+        for (id, command, label) in [
+            (
+                "animation-play-pause",
+                CommandId::PlayPause,
+                if playing {
+                    t!("workspace.pause")
+                } else {
+                    t!("workspace.play")
+                },
+            ),
+            (
+                "animation-rewind",
+                CommandId::RewindAnimation,
+                t!("workspace.rewind"),
+            ),
+        ] {
+            let owner = self.owner.clone();
+            bar = bar.child(
+                Button::new(id)
+                    .small()
+                    .ghost()
+                    .label(label)
+                    .disabled(modal || !view.editor.command_available(view.editor.command(command)))
+                    .on_click(move |_, window, cx| {
+                        let _ = owner.update(cx, |view, cx| view.run_command(command, window, cx));
+                    }),
+            );
+        }
+        bar.child(
             div()
                 .min_w_0()
                 .overflow_hidden()
                 .text_ellipsis()
                 .text_xs()
                 .text_color(cx.theme().muted_foreground)
-                .child(t!("workspace.preview_pending")),
+                .child(label),
         )
+        .into_any_element()
+    }
 }

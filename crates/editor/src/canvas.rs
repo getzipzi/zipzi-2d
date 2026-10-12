@@ -138,7 +138,9 @@ impl CanvasView {
                     if !window.is_visible() {
                         this.cancel(cx);
                         let _ = this.owner.update(cx, |owner, cx| {
+                            owner.editor.pause_animation();
                             owner.editor.set_canvas_metrics(CanvasMetrics::default());
+                            owner.redraw(cx);
                             cx.notify();
                         });
                     } else {
@@ -148,6 +150,10 @@ impl CanvasView {
                 cx.observe_window_activation(window, |this, window, cx| {
                     if !window.is_window_active() {
                         this.cancel(cx);
+                        let _ = this.owner.update(cx, |owner, cx| {
+                            owner.editor.pause_animation();
+                            owner.redraw(cx);
+                        });
                     }
                 }),
             ];
@@ -352,6 +358,17 @@ impl Render for CanvasView {
         let state = owner.read(cx);
         let modeling = state.editor.workspace() == WorkspaceKind::Modeling;
         let frame = modeling.then(|| state.frame.clone()).flatten();
+        let image = if modeling {
+            frame
+                .as_ref()
+                .map(|f| (f.image.clone(), f.canvas.transform.metrics))
+        } else {
+            state
+                .animation_frame
+                .as_ref()
+                .filter(|f| state.editor.accepts_animation_image(f.state.identity))
+                .map(|f| (f.image.clone(), f.state.transform.metrics))
+        };
         let mut overlay = state
             .editor
             .overlay_for_frame(frame.as_ref().map(|f| f.canvas.version));
@@ -386,7 +403,11 @@ impl Render for CanvasView {
         if modal {
             self.cancel_pointer();
         }
-        let error = state.render_error.clone();
+        let error = state.render_error.clone().or_else(|| {
+            (!modeling)
+                .then(|| state.editor.animation().and_then(|a| a.error.clone()))
+                .flatten()
+        });
         let capture = self.pan.is_some() || state.editor.gesture_active();
         let palette = crate::canvas_overlay::Palette::new(cx.theme().is_dark());
         let primary = palette.selected;
@@ -522,15 +543,14 @@ impl Render for CanvasView {
                     }
                 }),
             )
-            .children(frame.map(|frame| {
-                let metrics = frame.canvas.transform.metrics;
+            .children(image.map(|(image, metrics)| {
                 div()
                     .absolute()
                     .left_0()
                     .top_0()
                     .w(px(metrics.width))
                     .h(px(metrics.height))
-                    .child(preview::element(frame.image))
+                    .child(preview::element(image))
             }))
             .when(active.is_none(), |e| {
                 e.child(
@@ -663,20 +683,6 @@ impl Render for CanvasView {
                 e.child(workspace::deformer_bar::render_deformer_bar(
                     self, modal, cx,
                 ))
-            })
-            .when(!modeling && active.is_some(), |e| {
-                e.child(
-                    div()
-                        .id("animation-preview-pending")
-                        .test_support()
-                        .absolute()
-                        .left(px(60.))
-                        .top(px(56.))
-                        .right_3()
-                        .text_sm()
-                        .text_color(muted)
-                        .child(t!("workspace.preview_pending")),
-                )
             })
             .children(interaction_label.map(|label| {
                 div()

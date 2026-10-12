@@ -320,3 +320,79 @@ pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Docum
     let receipt = session.save_project(&assets.path().join("nonuniform.kasane"), None)?;
     Ok((Document::open(&receipt.manifest)?, assets))
 }
+
+/// A parameter-bound rectangle with repeated registrations (distinct fades),
+/// and an ungrouped looping clip.
+#[allow(dead_code)]
+pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
+    use kasane_core::document::{
+        MotionClip, MotionGroup, MotionPoint, MotionRegistration, MotionSegment, MotionTrack,
+        MotionTrackTarget,
+    };
+    let (mut doc, assets) = rectangle_document(true)?;
+    let path = doc.save(&assets.path().join("animation.kasane"))?.manifest;
+    let mut session = AuthoringSession::new(
+        &Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::default(), 1.),
+    )?;
+    session.open_project(&path, None)?;
+    let parameter_id = session.parameter_ids()[0].clone();
+    let clip = Uuid::new_v4().to_string();
+    let make_clip = |id: String, name: &str, looping: bool, duration: f32| MotionClip {
+        id,
+        name: name.into(),
+        duration,
+        fps: 60.,
+        looping,
+        restricted_beziers: true,
+        fade_in: Some(0.),
+        fade_out: Some(0.),
+        tracks: vec![MotionTrack {
+            id: Uuid::new_v4().to_string(),
+            target: MotionTrackTarget::Parameter {
+                parameter_id: parameter_id.clone(),
+            },
+            initial: MotionPoint {
+                time: 0.,
+                value: 0.,
+            },
+            segments: (duration > 0.)
+                .then(|| MotionSegment::Linear {
+                    end: MotionPoint {
+                        time: duration,
+                        value: 1.,
+                    },
+                })
+                .into_iter()
+                .collect::<Vec<_>>()
+                .into(),
+            fade_in: None,
+            fade_out: None,
+            extensions: Default::default(),
+        }],
+        events: vec![],
+        extensions: Default::default(),
+        meta_extensions: Default::default(),
+        opaque_source_ids: None,
+        opaque_source_content_hash: None,
+    };
+    session.edit("Animation fixture", None, |edit| {
+        edit.create_motion(make_clip(clip.clone(), "Once", false, 2.))?;
+        edit.create_motion(make_clip(Uuid::new_v4().to_string(), "Loop", true, 1.))?;
+        edit.set_motion_groups(vec![MotionGroup {
+            name: "Idle".into(),
+            entries: [0., 1.]
+                .into_iter()
+                .map(|fade| MotionRegistration {
+                    clip_id: clip.clone(),
+                    fade_in: Some(fade),
+                    fade_out: Some(0.),
+                    sound: Some("test.wav".into()),
+                    extensions: Default::default(),
+                })
+                .collect(),
+        }])
+    })?;
+    session.save_project(&path, None)?;
+    Ok((Document::open(&path)?, assets))
+}

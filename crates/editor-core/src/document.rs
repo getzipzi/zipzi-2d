@@ -116,6 +116,18 @@ pub struct Document {
 }
 
 impl Document {
+    pub fn model_generation(&self) -> u64 {
+        // SDK generation identifies project replacement; revision advances on
+        // every committed content change, including checkpoint Undo / Redo.
+        // Document never replaces its session with another project in place.
+        self.session.version().revision
+    }
+    pub(crate) fn animation_source(&self) -> crate::AnimationSource {
+        crate::AnimationSource {
+            snapshot: self.session.read_snapshot(),
+            textures: self.textures.clone(),
+        }
+    }
     pub fn new_blank() -> Result<Self> {
         let mut document = Self::from_session(Self::empty_session()?)?;
         document.pristine_blank = true;
@@ -1178,6 +1190,7 @@ impl Document {
         };
         let viewport_frame = self.viewport_frame(&frame);
         Ok(SceneSnapshot {
+            model_opacity: 1.,
             runtime_frame: frame,
             viewport_frame,
             textures: self.textures.clone(),

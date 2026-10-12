@@ -177,7 +177,7 @@ fn play_pause_has_one_non_repeating_space_binding_in_both_modes() -> anyhow::Res
     assert!(!play.repeat);
     for workspace in WorkspaceKind::ALL {
         editor.set_workspace(workspace)?;
-        // Phase one installs the entry point; phase two supplies availability.
+        // A blank document has no playable motion in either workspace.
         assert!(!editor.command_available(editor.command(CommandId::PlayPause)));
         assert!(
             editor

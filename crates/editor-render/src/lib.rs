@@ -205,9 +205,10 @@ impl MetalSceneRenderer {
         if !self.synced_scene.as_ref().is_some_and(|last| {
             Arc::ptr_eq(&last.viewport_frame, &scene.viewport_frame)
                 && Arc::ptr_eq(&last.textures, &scene.textures)
+                && last.model_opacity == scene.model_opacity
         }) {
             self.renderer
-                .sync_model_shared(scene.viewport_frame.clone(), &textures)
+                .sync_model_shared(scene.render_frame()?, &textures)
                 .map_err(status)?;
             self.synced_scene = Some(scene.clone());
         }

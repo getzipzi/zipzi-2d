@@ -1,6 +1,6 @@
 # Modeling 与 Animation Workspace 实施计划
 
-日期：2026-10-12。状态：阶段一已实施并通过验证；阶段二至五待实施。
+日期：2026-10-12。状态：阶段一、二已实施并通过验证；阶段三至五待实施。
 
 将现有编辑界面确立为 Modeling workspace，新增用于已有动画资源预览与验证的 Animation workspace。首版完成 model3 模型包导入、motion 播放、expression 应用与组合预览，并保证播放不会污染建模状态和文档历史。本计划不包含动画创作功能。
 
@@ -167,10 +167,10 @@ Animation 的 [SceneSnapshot](../crates/editor-core/src/scene.rs) 使用 SDK 运
 
 ### 阶段二：单 motion 播放闭环
 
-- [ ] 建立 AnimationSession 与 SDK detached preview 适配，按 group / entry 选择动作。
-- [ ] 打通后台求值、时钟推进、运行时帧、整体透明度和现有 Metal 输出。
-- [ ] 实现播放、暂停、归零、自然结束及资源自身循环。
-- [ ] 完成文档／workspace 身份与 generation 检查，以及保存、失焦和关闭时的暂停与清理。
+- [x] 建立 AnimationSession 与 SDK detached preview 适配，按 group / entry 选择动作。
+- [x] 打通后台求值、时钟推进、运行时帧、整体透明度和现有 Metal 输出。
+- [x] 实现播放、暂停、归零、自然结束及资源自身循环。
+- [x] 完成文档／workspace 身份与 generation 检查，以及保存、失焦和关闭时的暂停与清理。
 
 退出条件：真实模型包中的一个 motion 连续播放正确；播放中可导航；切回 Modeling 恢复原状态；历史和 modified 不变；旧异步帧不覆盖新画面。此阶段必须验证整体透明度，不能仅验证参数发生变化。
 
@@ -248,7 +248,7 @@ cargo fmt --all -- --check
 - 当前 canvas 已支持中键平移；此次输入改动重点是删除 Space 抓手分支并统一播放命令。
 - 当前 scene 缓存与建模 picking 几何耦合，且现有帧接受规则围绕建模交互；动画需要独立失效和呈现规则，不能仅靠每帧全窗口 redraw 接入。
 
-相邻实现依据：`../kasane-2d/modules/kasane-sdk/src/session.rs`、`modules/kasane-animation/src/motion_preview.rs`、`expression.rs` 及 `tests/motion_preview.rs`。以上为已有 API 能力；播放求值与运行时帧接入仍待阶段二至五实施。
+相邻实现依据：`../kasane-2d/modules/kasane-sdk/src/session.rs`、`modules/kasane-animation/src/motion_preview.rs`、`expression.rs` 及 `tests/motion_preview.rs`。阶段二已接入后台播放与运行时帧，并补充共享 canonical 步进和透明度 API；expression 控制与定位仍待阶段三实施。
 
 ## 实施记录
 
@@ -263,3 +263,20 @@ cargo fmt --all -- --check
 - 验证：`cargo check --locked --workspace`、`cargo test --locked --workspace`、`cargo fmt --all -- --check`。真实 Metal 截图新增 `target/headless-screenshots/workspace-animation.png`，并验证切回 Modeling 后画布像素恢复。
 
 下一阶段从 detached `MotionPreview`、后台动画执行器和运行时渲染描述开始；本次未改变 SDK / renderer 依赖，也未实现 motion / expression 播放或 model opacity 接入。
+
+
+### 2026-10-12：阶段二
+
+- 阶段一提交：`4f2822a`（`Add Modeling and Animation workspace boundaries`）。
+- 每个文档增加独立 AnimationSession，保存 motion 注册项、目标时间、运行状态、实际呈现快照与错误。按 group / entry 保留重复 clip 的不同 fades；未分组 clip 使用自身配置。播放不写 SDK authoring preview、不提交历史。
+- 后台独占一个 detached MotionPreview；输入只有一个可替换请求槽，输出和现有 Metal worker 均有背压。完整描述允许安全合并选择；新 recipe、暂停屏障、切 workspace / 文档和关闭使旧求值失效。导航重用当前运行时，不建立 modeling picking 或覆盖层。
+- 请求贯穿 CPU 和 GPU，携带 DocumentId、workspace revision、模型 / 预览 generation、请求序号、接受下界、视图 revision 和实际求值时间。允许同一代晚到但较已显示帧新的结果，拒绝倒退与重复呈现；暂停屏障的接受下界单调递增。
+- 模型 generation 使用此 Document 生命周期内单调的 SDK document revision，覆盖资源、元数据及 Undo / Redo。SDK Version.generation 仅标识项目替换，不能用来判断每次内容修改。快照变化后暂停、重建并校验原注册项。
+- SDK 新增 `advance_to_with_progress`，复用 canonical seek 的绝对 60 Hz 网格。连续显示可以合并，模拟步仍逐步执行；取消保留已完成的 canonical 步，下一目标可继续。冷 seek、缓存 seek 与连续推进在 Motion / Expression / Physics / Pose 组合 fixture 中完全一致。
+- Animation 默认布局提供专用 Motions 和 Preview Info，两者可从菜单重开。播放按钮、Space 与 View 菜单共用命令入口，长按不重复切换；支持暂停、归零、非循环结束及原资源循环。显示时间来自实际接受的 GPU 帧；循环显示圈内时间和圈数。无 motion 仍显示运行时基线并允许导航。
+- 首次按视口适配模型。切文档、workspace、保存、失焦、隐藏或模态暂停并清理时钟锚点；非活动文档只保留描述和时间。帧交付只通知 Canvas、PlaybackBar 与 Preview Info，避免逐帧刷新建模面板。
+- `SceneSnapshot::model_opacity` 在 Modeling 为 1，Animation 使用 SDK snapshot 值。共享 `apply_model_opacity` 与现有 observer host policy 一致：逐 drawable、遮罩和 Offscreen 合成前应用一次。复用已有 Framework renderer color alpha 参考，不对最终整图额外乘 alpha。重叠 + mask + Offscreen fixture 在 0 / 0.5 / 1 与 observer 实际 Metal 图像比较，最大通道差不超过 1/255，且验证与最终图像半透明的差别。
+- 验证：新增 6 个 core 测试（包含本地 Mao model3 的连续 / 冷回放一致性）、2 个 headless 播放测试、后台取消 / 挂起测试、Metal opacity 图像测试。真实截图新增 `animation-motion-zero.png` 与 `animation-motion-one-second.png`，检查动画像素改变、实际时间为 1s、历史和 modified 不变；切回 Modeling 的像素恢复仍通过。
+- 检查：编辑器 `cargo test --locked --workspace`、`cargo check --locked --workspace`、`cargo fmt --all -- --check`；相邻 SDK `cargo test --locked -p kasane-animation -p kasane-sdk-observe` 与 `cargo fmt --all -- --check`。SDK 改动及其新 API 要求见 DEPENDENCIES.md。
+
+下一阶段实现 expression 单独 / 组合预览、触发记录与立即清除，以及进度尺和确定性 seek。本阶段尚未开放 expression 控制或时间拖动，也未完成阶段四、五的全部诊断和性能验收。

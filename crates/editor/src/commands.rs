@@ -21,6 +21,9 @@ impl EditorView {
         let previous = self.editor.active_id();
         match self.editor.dispatch(command) {
             Ok(CommandEffect::Done) => {
+                if matches!(id, CommandId::RewindAnimation) {
+                    self.animation_anchor = None;
+                }
                 if matches!(
                     id,
                     CommandId::SelectTool
@@ -93,6 +96,7 @@ impl EditorView {
                 | CommandId::BlendShapes
                 | CommandId::Glue
                 | CommandId::Motions
+                | CommandId::AnimationInfo
                 | CommandId::Expressions
                 | CommandId::Physics
                 | CommandId::Pose
@@ -100,6 +104,13 @@ impl EditorView {
                     if let Some(dock) = &mut self.dock {
                         dock.toggle(
                             match id {
+                                CommandId::Motions
+                                    if self.editor.workspace()
+                                        == editor_core::WorkspaceKind::Animation =>
+                                {
+                                    docking::PanelKind::AnimationMotions
+                                }
+                                CommandId::AnimationInfo => docking::PanelKind::AnimationInfo,
                                 CommandId::MeshTree => docking::PanelKind::MeshTree,
                                 CommandId::Deformers => docking::PanelKind::Deformers,
                                 CommandId::Parameters => docking::PanelKind::Parameters,

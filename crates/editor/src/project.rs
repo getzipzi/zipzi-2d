@@ -34,7 +34,12 @@ impl EditorView {
         if let Some(dock) = &self.dock {
             dock.canvas.update(cx, |canvas, _| canvas.cancel_pointer());
         }
+        self.animation_anchor = None;
         let active = self.editor.active_id();
+        self.animation_frame = self
+            .animation_frame
+            .take()
+            .filter(|f| Some(f.state.identity.document) == active);
         self.mesh_thumbnails
             .update(cx, |cache, cx| cache.sync_document(active, window, cx));
         // A repeated tab click or save completion may reuse the same scene.
@@ -93,6 +98,8 @@ impl EditorView {
                 .unwrap_or_else(|| t!("project.untitled").into_owned())
         );
         let picker = cx.prompt_for_new_path(&directory, Some(&suggested));
+        self.editor.pause_animation();
+        self.animation_anchor = None;
         self.modal = true;
         self.redraw(cx);
         cx.spawn_in(window, async move |this, cx| {
@@ -251,6 +258,8 @@ impl EditorView {
                 t!("project.open").into()
             }),
         });
+        self.editor.pause_animation();
+        self.animation_anchor = None;
         self.modal = true;
         self.redraw(cx);
         cx.spawn_in(window, async move |this, cx| {
@@ -428,6 +437,8 @@ impl EditorView {
                     ],
                     cx,
                 );
+                self.editor.pause_animation();
+                self.animation_anchor = None;
                 self.modal = true;
                 cx.notify();
                 cx.spawn_in(window, async move |this, cx| {

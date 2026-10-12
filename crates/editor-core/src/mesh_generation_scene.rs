@@ -46,6 +46,7 @@ impl MeshGenerationPreview {
             ..Default::default()
         });
         SceneSnapshot {
+            model_opacity: 1.,
             runtime_frame: frame.clone(),
             viewport_frame: frame,
             textures: Arc::from([texture]),

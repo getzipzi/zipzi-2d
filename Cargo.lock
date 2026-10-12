@@ -3751,6 +3751,7 @@ dependencies = [
  "image",
  "kasane-core",
  "kasane-sdk",
+ "kasane-sdk-observe",
  "metal",
  "objc2 0.6.4",
  "rust-i18n",
@@ -3830,6 +3831,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kasane-render-wgpu"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "kasane-core",
+ "kasane-render",
+ "wgpu",
+]
+
+[[package]]
 name = "kasane-sdk"
 version = "0.1.0"
 dependencies = [
@@ -3840,6 +3851,25 @@ dependencies = [
  "rstar",
  "serde",
  "spade",
+]
+
+[[package]]
+name = "kasane-sdk-observe"
+version = "0.1.0"
+dependencies = [
+ "kasane-animation",
+ "kasane-core",
+ "kasane-project",
+ "kasane-render",
+ "kasane-render-metal",
+ "kasane-render-wgpu",
+ "kasane-sdk",
+ "png 0.17.16",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "uuid",
+ "wgpu",
 ]
 
 [[package]]

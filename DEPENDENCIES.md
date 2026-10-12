@@ -8,6 +8,25 @@
 - Tree visibility also requires `Offscreen.enabled` and its evaluation/persistence support in the local Kasane checkout. Hidden Offscreens require project format v8 or later; projects without hidden Offscreens or hidden Deformer controls continue to save as v7.
 - Deformer control visibility requires `DeformerDisplay` metadata and `EditSession::replace_deformer_display`. Projects with hidden Deformer controls save as v9, without changing runtime transform enablement or geometry.
 
+- Animation additionally requires `MotionPreview::advance_to_with_progress` in
+  the local `kasane-animation` crate, reusing the canonical absolute 60 Hz seek
+  grid for continuous playback. Cancellation preserves completed canonical
+  steps; backward and fractional-state replay use transactional seek. The SDK
+  still owns Motion / Expression / Physics / Pose evaluation.
+- The local SDK must reexport `apply_model_opacity`, shared by the animation
+  renderer and `kasane-sdk-observe`. This host policy multiplies each drawable
+  once before masking / Offscreen; Offscreen and Part opacities remain separate.
+  It matches the observer's existing host policy and the Framework renderer
+  color-alpha reference documented in the sibling
+  `docs/archive/EDITOR-ANIMATION-IMPLEMENTATION.md`. Framework Model opacity
+  alone does not automatically set renderer alpha.
+- The editor's Metal tests use the sibling `kasane-sdk-observe` as a development
+  dependency. An overlapping, masked Offscreen fixture at opacity 0 / 0.5 / 1
+  compares actual pixels (maximum error 1/255) and distinguishes this policy
+  from final flattened-image alpha. These SDK / observer changes must accompany
+  this editor checkout; they are committed in the adjacent repository at
+  `c90bdc5f2f00b540c87635745d0f3a4f66dd97bb`.
+
 All workspace crates use the root `Cargo.lock`. Build and test with `--locked`.
 The editor supports macOS. There are no application backend switches or CPU
 readback fallback. No sibling GPUI checkout is required.

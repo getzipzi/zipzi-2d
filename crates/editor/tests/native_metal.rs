@@ -649,3 +649,191 @@ fn mesh_candidate_preview_renders_only_its_triangles() -> anyhow::Result<()> {
         Ok(())
     })
 }
+
+/// The host policy matches the SDK observer before masks / Offscreen. Overlap
+/// distinguishes it from multiplying the alpha of a flattened model image.
+#[test]
+fn animation_model_opacity_matches_observer_with_overlap_mask_and_offscreen() -> anyhow::Result<()>
+{
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        use editor_core::{AnimationEvaluator, CanvasMetrics, Editor, WorkspaceKind};
+        use kasane_core::{Canvas, Vec2};
+        use kasane_sdk_observe::{
+            CanvasRoi, ObservationInput, Observer, ObserverConfig, RenderRequest,
+        };
+        let (mut document, assets) = support::sample_document_with_scene_objects()?;
+        let manifest = document
+            .save(&assets.path().join("opacity.kasane"))?
+            .manifest;
+        let mut sdk = kasane_sdk::AuthoringSession::new(
+            &uuid::Uuid::new_v4().to_string(),
+            Canvas::new(256., 256., Vec2::default(), 1.),
+        )?;
+        sdk.open_project(&manifest, None)?;
+        let ids = sdk.mesh_ids().to_vec();
+        let mut source = sdk.mesh(&ids[0]).unwrap();
+        source.deformer_id.clear();
+        let mut masked = sdk.mesh(&ids[1]).unwrap();
+        masked.masks = vec![ids[0].clone()];
+        masked.deformer_id.clear();
+        sdk.edit("Masked overlap", None, |edit| {
+            edit.replace_mesh(source)?;
+            edit.replace_mesh(masked)
+        })?;
+        let gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let config = MetalTargetConfig {
+            width: 256,
+            height: 256,
+            format: MTLPixelFormat::RGBA8Unorm,
+        };
+        let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
+        let mut observer = Observer::new(ObserverConfig {
+            width: 256,
+            height: 256,
+            fit_long_side: 256.,
+        })?;
+        let mut images = Vec::new();
+        for opacity in [0., 0.5, 1.] {
+            let motion_id = uuid::Uuid::new_v4().to_string();
+            let source = serde_json::json!({"Version":3,"Meta":{"Duration":1,"Fps":60,"Loop":false,
+                "AreBeziersRestricted":true,"CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,"FadeInTime":0,"FadeOutTime":0,"UserDataCount":0,"TotalUserDataSize":0},
+                "Curves":[{"Target":"Model","Id":"Opacity","Segments":[0,opacity,0,1,opacity]}]});
+            sdk.edit("Opacity motion", None, |edit| {
+                edit.import_motion3(
+                    &motion_id,
+                    &format!("Opacity {opacity}"),
+                    &source.to_string(),
+                )
+                .map(|_| ())
+            })?;
+            sdk.save_project(&manifest, None)?;
+            let mut preview = sdk.motion_preview();
+            preview.schedule_motion(&motion_id, 0.)?;
+            preview.seek(0.)?;
+            assert_eq!(preview.snapshot().model_opacity, opacity);
+            let input = ObservationInput::capture_motion_from_snapshot(
+                &sdk.read_snapshot(),
+                &preview,
+                true,
+            )?;
+            let expected = observer.render(
+                &kasane_sdk_observe::ResolvedObservation::capture(input.clone())?,
+                RenderRequest {
+                    width: 256,
+                    height: 256,
+                    roi: CanvasRoi {
+                        x0: 0.,
+                        y0: 0.,
+                        x1: 256.,
+                        y1: 256.,
+                    },
+                    padding_canvas: 0.,
+                },
+            )?;
+            let mut editor = Editor::from_document(Document::open(&manifest)?);
+            editor.set_workspace(WorkspaceKind::Animation)?;
+            editor.set_canvas_metrics(CanvasMetrics {
+                width: 256.,
+                height: 256.,
+                scale_factor: 1.,
+            });
+            let selection = editor
+                .document()
+                .unwrap()
+                .motion_resources()
+                .into_iter()
+                .find(|m| m.selection.clip_id == motion_id)
+                .unwrap()
+                .selection;
+            editor.select_motion(editor.active_id().unwrap(), selection)?;
+            let mut evaluator = AnimationEvaluator::default();
+            let evaluated =
+                evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
+            let scene = evaluated.scene;
+            assert!(!scene.viewport_frame.offscreens.is_empty());
+            assert!(!scene.viewport_frame.drawables[1].masks.is_empty());
+            let mut reference = input.frame().clone();
+            reference.source_revision = scene.viewport_frame.source_revision;
+            assert_eq!(scene.render_frame()?.as_ref(), &reference);
+            let submitted = renderer.submit_transformed(
+                &gpu.queue,
+                config,
+                &scene,
+                editor_core::ViewportTransform::new(
+                    scene.viewport_frame.canvas,
+                    CanvasMetrics {
+                        width: 256.,
+                        height: 256.,
+                        scale_factor: 1.,
+                    },
+                    ViewState::default(),
+                )
+                .unwrap(),
+            )?;
+            submitted.command.wait_until_completed();
+            let actual = read_preview(&gpu.device, &gpu.queue, &submitted.image);
+            let max_difference = actual
+                .iter()
+                .zip(&expected.rgba)
+                .map(|(a, b)| a.abs_diff(*b))
+                .max()
+                .unwrap();
+            assert!(
+                max_difference <= 1,
+                "opacity={opacity}, max channel difference={max_difference}"
+            );
+            images.push(actual);
+        }
+        assert!(images[0].iter().all(|v| *v == 0));
+        assert!(
+            images[1] != images[2],
+            "Half and full opacity must change pixels"
+        );
+        assert!(
+            images[1]
+                .iter()
+                .zip(&images[2])
+                .any(|(half, full)| (*half as i16 - (*full as f32 * 0.5).round() as i16).abs() > 2),
+            "Fixture must distinguish per-drawable opacity from final image alpha"
+        );
+        Ok(())
+    })
+}
+
+fn read_preview(
+    device: &metal::DeviceRef,
+    queue: &metal::CommandQueueRef,
+    source: &metal::TextureRef,
+) -> Vec<u8> {
+    let descriptor = metal::TextureDescriptor::new();
+    descriptor.set_pixel_format(MTLPixelFormat::RGBA8Unorm);
+    descriptor.set_width(source.width());
+    descriptor.set_height(source.height());
+    descriptor.set_storage_mode(metal::MTLStorageMode::Shared);
+    let target = device.new_texture(&descriptor);
+    let command = queue.new_command_buffer();
+    let blit = command.new_blit_command_encoder();
+    blit.copy_from_texture(
+        source,
+        0,
+        0,
+        metal::MTLOrigin { x: 0, y: 0, z: 0 },
+        metal::MTLSize::new(source.width(), source.height(), 1),
+        &target,
+        0,
+        0,
+        metal::MTLOrigin { x: 0, y: 0, z: 0 },
+    );
+    blit.end_encoding();
+    command.commit();
+    command.wait_until_completed();
+    let mut bytes = vec![0; (source.width() * source.height() * 4) as usize];
+    target.get_bytes(
+        bytes.as_mut_ptr().cast(),
+        source.width() * 4,
+        metal::MTLRegion::new_2d(0, 0, source.width(), source.height()),
+        0,
+    );
+    bytes
+}

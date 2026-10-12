@@ -141,6 +141,15 @@ pub struct Editor {
     requested_scene: Option<(DocumentId, u64, u64)>,
 }
 impl Editor {
+    pub(crate) fn active_session(&self) -> Option<&DocumentSession> {
+        self.active
+            .and_then(|id| self.entry(id).ok())
+            .and_then(|entry| entry.session.as_ref())
+    }
+    pub(crate) fn active_session_mut(&mut self) -> Option<&mut DocumentSession> {
+        let id = self.active?;
+        self.entry_mut(id).ok()?.session.as_mut()
+    }
     pub fn new() -> Result<Self> {
         Ok(Self::from_document(Document::new_blank()?))
     }
@@ -175,6 +184,7 @@ impl Editor {
         self.insert_with_id(DocumentId(Uuid::new_v4()), document)
     }
     fn insert_with_id(&mut self, id: DocumentId, document: Document) -> DocumentId {
+        self.pause_animation();
         let mut session = DocumentSession::from_document(document);
         session.set_workspace(self.workspace);
         self.documents.push(Entry {
@@ -385,6 +395,7 @@ impl Editor {
         if self.active == Some(id) {
             return Ok(());
         }
+        self.pause_animation();
         if let Some(previous) = self.active {
             if self.entry(previous)?.session.is_some() {
                 self.execute_for(previous, EditorCommand::FinishEdit)?;
@@ -499,6 +510,9 @@ impl Editor {
         close_after: bool,
     ) -> Result<SaveTask> {
         let identity = self.ensure_available_path(Some(id), path)?;
+        if let Some(session) = &mut self.entry_mut(id)?.session {
+            session.animation.pause();
+        }
         self.execute_for(id, EditorCommand::FinishEdit)?;
         let operation = OperationId(Uuid::new_v4());
         let close_reason = if self.exiting {
@@ -574,6 +588,7 @@ impl Editor {
     }
     pub fn close_document(&mut self, id: DocumentId, discard: bool) -> Result<bool> {
         if let Some(s) = &mut self.entry_mut(id)?.session {
+            s.animation.pause();
             s.cancel_gesture();
         }
         let disposition = self.close_disposition(id)?;
@@ -605,6 +620,11 @@ impl Editor {
     pub fn request_exit(&mut self) -> Result<()> {
         ensure!(self.loads.is_empty(), "Wait for project loading to finish");
         self.exiting = true;
+        for entry in &mut self.documents {
+            if let Some(session) = &mut entry.session {
+                session.animation.pause();
+            }
+        }
         Ok(())
     }
     pub fn cancel_exit(&mut self) {
@@ -658,6 +678,7 @@ impl Editor {
     }
     pub fn prepare_close(&mut self, id: DocumentId) -> Result<CloseDisposition> {
         if let Some(s) = &mut self.entry_mut(id)?.session {
+            s.animation.pause();
             s.execute(EditorCommand::FinishEdit)?;
         }
         self.close_disposition(id)

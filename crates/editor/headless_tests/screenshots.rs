@@ -107,10 +107,20 @@ impl Harness {
                         "Editor failed: {:?}",
                         view.edit_error
                     );
-                    let current = view.editor.workspace() == editor_core::WorkspaceKind::Animation
-                        || view.frame.as_ref().is_some_and(|frame| {
-                            view.editor.accepts_preview(frame.canvas.version.request)
-                        });
+                    let current =
+                        if view.editor.workspace() == editor_core::WorkspaceKind::Animation {
+                            view.animation_frame.as_ref().is_some_and(|frame| {
+                                view.editor.accepts_animation_image(frame.state.identity)
+                                    && view
+                                        .editor
+                                        .animation()
+                                        .is_some_and(|a| a.time == frame.state.snapshot.time)
+                            })
+                        } else {
+                            view.frame.as_ref().is_some_and(|frame| {
+                                view.editor.accepts_preview(frame.canvas.version.request)
+                            })
+                        };
                     let (_, pending) = view.mesh_thumbnails.read(cx).cache_state();
                     let mesh_ready = window.try_find("mesh-generation-form").is_none()
                         || window.try_find("mesh-generation-counts").is_some();
@@ -249,7 +259,7 @@ pub(super) fn run() -> anyhow::Result<()> {
     })?;
     let selected = harness.capture()?;
     let selected_canvas = harness.canvas_image(&selected)?;
-    let marker = harness.view.read_with(&harness.cx, |view, _| {
+    let marker = harness.view.read_with(&mut harness.cx, |view, _| {
         let position = view.editor.overlay().vertices[0].position;
         let scale = view
             .frame
@@ -657,6 +667,50 @@ pub(super) fn run() -> anyhow::Result<()> {
             (0, 0)
         );
     })?;
+    let (document, assets) = fixture::animation_document()?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        i18n::activate(Some("en"));
+        harness.view.update(cx, |view, cx| {
+            view.editor = Editor::from_document(document);
+            view.edit_error = None;
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+    })?;
+    harness._assets = assets;
+    let zero = harness.capture()?;
+    save(&zero, &directory, "animation-motion-zero.png")?;
+    harness.cx.update_window(harness.window, |_, _, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor.toggle_animation().unwrap();
+            view.editor.advance_animation_clock(1.);
+            view.editor.pause_animation();
+            view.redraw(cx);
+        });
+    })?;
+    let advanced = harness.capture()?;
+    save(&advanced, &directory, "animation-motion-one-second.png")?;
+    anyhow::ensure!(
+        harness.canvas_image(&zero)? != harness.canvas_image(&advanced)?,
+        "Detached motion must change runtime pixels"
+    );
+    harness.view.read_with(&mut harness.cx, |view, _| {
+        assert_eq!(
+            view.editor
+                .animation()
+                .unwrap()
+                .presented
+                .as_ref()
+                .unwrap()
+                .time,
+            1.
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        assert!(!view.editor.document().unwrap().modified());
+    });
     println!("Headless editor screenshots passed (real Metal, no native window).");
     Ok(())
 }

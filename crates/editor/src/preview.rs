@@ -15,7 +15,9 @@ pub struct Presented {
 pub struct Request {
     pub trace_id: u64,
     pub revision: u64,
-    pub canvas: editor_core::CanvasFrame,
+    pub canvas: Option<editor_core::CanvasFrame>,
+    pub animation: Option<crate::animation::Presentation>,
+    pub transform: editor_core::ViewportTransform,
     pub scene: SceneSnapshot,
     pub target: MetalTargetConfig,
 }
@@ -24,6 +26,7 @@ pub struct Frame {
     pub trace_id: u64,
     pub revision: u64,
     pub canvas: Option<editor_core::CanvasFrame>,
+    pub animation: Option<crate::animation::Presentation>,
     pub stats: (u64, u64, u64),
     pub image: Result<Image, String>,
 }
@@ -94,6 +97,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                     trace_id: 0,
                     revision: 0,
                     canvas: None,
+                    animation: None,
                     stats: (0, 0, 0),
                     image: Err(error.to_string()),
                 });
@@ -122,7 +126,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                         &gpu.queue,
                         request.target,
                         &request.scene,
-                        request.canvas.transform,
+                        request.transform,
                         |stage| frame_trace::emit(trace_id, stage, &[]),
                     )
                     .map_err(|e| e.to_string())
@@ -157,7 +161,8 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 .send_blocking(Frame {
                     trace_id,
                     revision: request.revision,
-                    canvas: Some(request.canvas),
+                    canvas: request.canvas,
+                    animation: request.animation,
                     stats: renderer.stats(),
                     image,
                 })

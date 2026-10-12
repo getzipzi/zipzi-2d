@@ -1,6 +1,7 @@
 rust_i18n::i18n!("locales", fallback = "en");
 
 mod actions;
+mod animation;
 mod benchmark;
 mod canvas;
 mod canvas_overlay;
@@ -36,6 +37,11 @@ struct EditorView {
     dock: Option<docking::DockWorkspace>,
     ui_subscriptions: Vec<Subscription>,
     frame: Option<preview::Presented>,
+    animation_frame: Option<animation::Presented>,
+    animation_worker: Option<animation::AnimationWorker>,
+    _animation_results: Option<Task<()>>,
+    animation_anchor: Option<(std::time::Instant, f32)>,
+    animation_clock_running: bool,
     render_stats: (u64, u64, u64),
     menu_state: menus::MenuState,
     edit_error: Option<String>,
@@ -45,6 +51,7 @@ struct EditorView {
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
+    playback_bar: Entity<workspace::playback_bar::PlaybackBar>,
     dev_session: Option<dev_session::DevSession>,
 }
 impl EditorView {
@@ -64,6 +71,11 @@ impl EditorView {
             dock: None,
             ui_subscriptions: Vec::new(),
             frame: None,
+            animation_frame: None,
+            animation_worker: None,
+            _animation_results: None,
+            animation_anchor: None,
+            animation_clock_running: false,
             render_stats: (0, 0, 0),
             menu_state: menus::MenuState::default(),
             edit_error: None,
@@ -77,6 +89,7 @@ impl EditorView {
             gpu_device: None,
             _frames: None,
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
+            playback_bar: workspace::playback_bar::PlaybackBar::new(cx.weak_entity(), cx),
             dev_session: dev_session::DevSession::from_env(),
         };
         let entity = cx.weak_entity();
@@ -121,6 +134,8 @@ impl EditorView {
         self._frames = None;
         self.requests = None;
         self.frame = None;
+        self.animation_frame = None;
+        self.editor.invalidate_animation();
         self.frozen_frames.clear();
         self.editor.invalidate_preview();
         let (requests, frames, device) = match preview::start(window) {
@@ -130,6 +145,9 @@ impl EditorView {
                 return;
             }
         };
+        if self.animation_worker.is_none() {
+            self.init_animation(cx);
+        }
         self.gpu_device = device;
         self.render_error = None;
         self._frames = Some(cx.spawn(async move |this, cx| {
@@ -137,6 +155,25 @@ impl EditorView {
                 if this
                     .update(cx, |this, cx| {
                         frame_trace::emit(frame.trace_id, "ui_received", &[]);
+                        if let Some(state) = frame.animation {
+                            match frame.image {
+                                Ok(image) => {
+                                    if !this
+                                        .editor
+                                        .present_animation(state.identity, state.snapshot.clone())
+                                    {
+                                        return;
+                                    }
+                                    this.render_stats = frame.stats;
+                                    this.animation_frame =
+                                        Some(animation::Presented { image, state });
+                                }
+                                Err(error) => this.editor.fail_animation(state.identity, error),
+                            }
+                            this.sync_animation_clock(cx);
+                            this.notify_animation(cx);
+                            return;
+                        }
                         match frame.image {
                             Ok(image) => {
                                 let Some(canvas) = frame.canvas else {
@@ -177,9 +214,17 @@ impl EditorView {
 
     fn redraw(&mut self, cx: &mut Context<Self>) {
         self.request_preview();
+        self.sync_animation_clock(cx);
         cx.notify();
     }
 
+    fn notify_animation(&self, cx: &mut Context<Self>) {
+        self.notify_canvas(cx);
+        App::notify(cx, self.playback_bar.entity_id());
+        if let Some(dock) = &self.dock {
+            App::notify(cx, dock.animation_info.entity_id());
+        }
+    }
     fn notify_canvas(&self, cx: &mut Context<Self>) {
         if let Some(dock) = &self.dock {
             App::notify(cx, dock.canvas.entity_id());
@@ -201,6 +246,24 @@ impl EditorView {
     }
 
     fn request_preview_for_input(&mut self, input: u64) {
+        if self.editor.workspace() == editor_core::WorkspaceKind::Animation {
+            if self.editor.is_busy()
+                || !self.editor.canvas_metrics().visible()
+                || self.editor.active_id().is_none()
+            {
+                if let Some(worker) = &mut self.animation_worker {
+                    worker.suspend();
+                }
+            } else if let Some(request) = self.editor.animation_request() {
+                if let Some(worker) = &mut self.animation_worker {
+                    worker.send(request);
+                }
+            }
+            return;
+        }
+        if let Some(worker) = &mut self.animation_worker {
+            worker.suspend();
+        }
         if self.editor.is_busy() {
             return;
         }
@@ -228,7 +291,9 @@ impl EditorView {
                 let request = preview::Request {
                     trace_id,
                     revision: preview.revision,
-                    canvas,
+                    transform: canvas.transform,
+                    canvas: Some(canvas),
+                    animation: None,
                     scene: preview.scene,
                     target: editor_render::MetalTargetConfig {
                         width,

@@ -13,3 +13,5 @@ pub use properties::PropertiesPanel;
 
 pub mod document_panel;
 pub use document_panel::{DocumentPanel, DocumentPanelKind};
+
+pub mod animation_panel;

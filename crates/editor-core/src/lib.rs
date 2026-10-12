@@ -1,5 +1,7 @@
 //! UI-independent editor coordination, SDK-backed document editing and CPU-only previews.
+mod animation;
 mod document;
+pub use animation::*;
 mod editor;
 mod objects;
 mod scene;

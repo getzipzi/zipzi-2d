@@ -30,9 +30,19 @@ per-document zoom/pan. Modeling keeps the existing editing layout and parameter
 preview. The last workspace and each layout are restored on startup; Reset Layout
 only resets the current workspace.
 
-Animation currently provides the workspace shell, navigation and a disabled
-playback bar. Motion/expression playback is the next implementation phase.
-Space is reserved for Play / Pause and no longer temporarily activates Hand.
+Animation previews one existing motion at a time. Select a registered group
+entry or an ungrouped clip in Motions, then use Space, the playback button or
+the View menu to play / pause. Back to Start pauses and returns to zero.
+Motion loops follow the resource; the transport shows the rendered time and
+cycle. Preview Info shows duration, coverage and unsupported Sound registrations.
+Physics / Pose run in the detached runtime. Playback does not change modeling
+parameters, editor visibility, history or the project's modified state.
+Leaving the workspace, changing documents, losing window activation, opening a
+modal or saving pauses playback. Animation fits the model on first entry and
+keeps its own zoom / pan afterward. Expression controls and a seek ruler are
+still pending.
+
+Space no longer temporarily activates Hand.
 Use middle-button drag, the Hand tool, or trackpad gestures to navigate.
 
 ## Develop

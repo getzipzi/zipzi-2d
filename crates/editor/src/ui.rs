@@ -24,6 +24,10 @@ impl Render for EditorView {
             self.connect_preview(window, cx);
         }
         let modal = self.modal || window.has_active_dialog(cx);
+        if modal && self.editor.animation().is_some_and(|a| a.playing) {
+            self.editor.pause_animation();
+            self.redraw(cx);
+        }
         if modal && self.editor.gesture_active() {
             self.editor.cancel_gesture();
             self.redraw(cx);
@@ -52,11 +56,7 @@ impl Render for EditorView {
             // 4. Figma-style Status Bar
             .when(
                 self.editor.workspace() == editor_core::WorkspaceKind::Animation,
-                |e| {
-                    e.child(workspace::playback_bar::render_playback_bar(
-                        self, modal, cx,
-                    ))
-                },
+                |e| e.child(self.playback_bar.clone()),
             )
             .child(self.status_bar.clone())
             .into_any_element()

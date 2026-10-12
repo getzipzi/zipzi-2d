@@ -18,11 +18,23 @@ pub struct SceneTexture {
 /// A frame and its resources remain valid after editing or closing the source document.
 #[derive(Clone, Debug)]
 pub struct SceneSnapshot {
+    pub model_opacity: f32,
     /// Runtime evaluation, unaffected by editor visibility; suitable for export.
     pub runtime_frame: Arc<DrawableFrame>,
     /// Viewport color output. Mask inputs and evaluated deformation stay intact.
     pub viewport_frame: Arc<DrawableFrame>,
     pub textures: Arc<[SceneTexture]>,
+}
+
+impl SceneSnapshot {
+    pub fn render_frame(&self) -> anyhow::Result<Arc<DrawableFrame>> {
+        if self.model_opacity == 1. {
+            return Ok(self.viewport_frame.clone());
+        }
+        let mut frame = self.viewport_frame.as_ref().clone();
+        kasane_sdk::apply_model_opacity(&mut frame, self.model_opacity)?;
+        Ok(Arc::new(frame))
+    }
 }
 
 impl crate::Document {

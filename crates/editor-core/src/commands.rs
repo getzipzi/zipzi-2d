@@ -12,6 +12,10 @@ pub enum CommandId {
     AnimationWorkspace,
     #[serde(rename = "animation.play-pause")]
     PlayPause,
+    #[serde(rename = "animation.rewind")]
+    RewindAnimation,
+    #[serde(rename = "panel.animation-info")]
+    AnimationInfo,
     #[serde(rename = "file.new")]
     New,
     #[serde(rename = "file.open")]
@@ -147,6 +151,8 @@ specs![
         false,
         ["space"]
     ),
+    (RewindAnimation, "workspace.rewind", Document, false, []),
+    (AnimationInfo, "workspace.info", Workspace, false, []),
     (New, "menu.new", Workspace, false, ["cmd-n"]),
     (Open, "menu.open", Workspace, false, ["cmd-o"]),
     (ImportModel3, "menu.import_model3", Workspace, false, []),
@@ -277,14 +283,21 @@ impl Editor {
         let modeling = self.workspace() == crate::WorkspaceKind::Modeling;
         match command.id {
             ModelingWorkspace | AnimationWorkspace => !self.exiting(),
-            // The binding and UI entry point are installed now; enable when
-            // the detached runtime executor is connected in phase two.
-            PlayPause => false,
+            PlayPause => {
+                !modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && self.animation_playable()
+            }
+            RewindAnimation => !modeling && target && !self.is_busy() && !self.exiting(),
+            AnimationInfo => !modeling,
+            Motions => true,
             New | Open | ImportModel3 | ImportPsd => !self.exiting(),
             Quit => true,
             Previous | Next => self.document_count() > 1,
             MeshTree | Deformers | Parameters | Properties | DrawOrder | Relations | Keyforms
-            | BlendShapes | Glue | Motions | Expressions | Physics | Pose | Resources => modeling,
+            | BlendShapes | Glue | Expressions | Physics | Pose | Resources => modeling,
             ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
             Save | SaveAs => target && !self.is_busy(),
@@ -346,6 +359,8 @@ impl Editor {
         );
         use CommandId::*;
         match command.id {
+            PlayPause => self.toggle_animation()?,
+            RewindAnimation => self.rewind_animation()?,
             New => {
                 self.new_document()?;
             }

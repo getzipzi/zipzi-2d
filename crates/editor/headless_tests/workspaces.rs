@@ -26,7 +26,8 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
         assert!(window.try_find("tool_generate_mesh").is_none());
         assert!(window.try_find("tool_hand").is_some());
         assert!(window.try_find("animation-playback-bar").is_some());
-        assert!(window.try_find("animation-preview-pending").is_some());
+        assert!(window.try_find("AnimationMotions").is_some());
+        assert!(window.try_find("AnimationInfo").is_some());
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.workspace(), WorkspaceKind::Animation);
             assert_eq!(view.editor.active_id(), document);

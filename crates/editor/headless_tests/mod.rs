@@ -1,5 +1,6 @@
 //! Editor UI integration tests using GPUI's headless window.
 
+mod animation;
 mod canvas;
 mod docking_tabs;
 mod hierarchy;
@@ -26,7 +27,7 @@ use gpui_kit::{
 
 #[path = "../../editor-core/tests/support/mod.rs"]
 #[allow(dead_code)]
-mod document_fixture;
+pub(crate) mod document_fixture;
 
 struct Harness {
     window: AnyWindowHandle,

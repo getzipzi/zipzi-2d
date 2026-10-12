@@ -8,9 +8,11 @@ use kasane_sdk::SaveReceipt;
 use std::{path::Path, sync::Arc};
 
 pub struct DocumentSession {
+    pub animation: crate::AnimationSession,
     document: Document,
     views: [ViewState; 2],
     workspace: WorkspaceKind,
+    animation_fitted: bool,
     pub scene_revision: u64,
     pub viewport_revision: u64,
     cache: Option<SceneSnapshot>,
@@ -24,9 +26,11 @@ pub struct DocumentSession {
 impl DocumentSession {
     pub fn from_document(document: Document) -> Self {
         Self {
+            animation: crate::AnimationSession::new(&document),
             document,
             views: [ViewState::default(); 2],
             workspace: WorkspaceKind::default(),
+            animation_fitted: false,
             scene_revision: 1,
             viewport_revision: 1,
             cache: None,
@@ -41,10 +45,31 @@ impl DocumentSession {
     pub fn document(&self) -> &Document {
         &self.document
     }
+    pub(crate) fn reconcile_animation(&mut self) {
+        self.animation.reconcile(&self.document);
+    }
     pub fn evaluated_frame(&self) -> Option<Arc<kasane_core::DrawableFrame>> {
         self.cache
             .as_ref()
             .map(|scene| scene.viewport_frame.clone())
+    }
+    pub(crate) fn fit_animation_once(&mut self, metrics: CanvasMetrics) {
+        if self.animation_fitted || !metrics.visible() {
+            return;
+        }
+        let canvas = self.document.model().canvas();
+        if canvas.width <= 0. || canvas.height <= 0. {
+            return;
+        }
+        let view = &mut self.views[WorkspaceKind::Animation.index()];
+        if view.zoom == 1. && view.pan == CanvasPoint::default() {
+            view.zoom = (metrics.width / canvas.width).min(metrics.height / canvas.height)
+                * metrics.scale_factor
+                * 0.9;
+            view.zoom = view.zoom.clamp(MIN_ZOOM, MAX_ZOOM);
+            self.viewport_revision += 1;
+        }
+        self.animation_fitted = true;
     }
     pub fn view(&self) -> ViewState {
         self.view_for(self.workspace)
@@ -58,6 +83,7 @@ impl DocumentSession {
         }
         self.cancel_gesture();
         self.workspace = workspace;
+        self.animation.pause();
         self.viewport_revision += 1;
         self.displayed = None;
     }
@@ -319,6 +345,7 @@ impl DocumentSession {
                 self.appearance_geometry = reusable;
             }
         }
+        self.reconcile_animation();
         result
     }
     pub fn save(&mut self, path: &Path) -> Result<SaveReceipt> {
