@@ -156,17 +156,24 @@ impl MetalSceneRenderer {
             self.next_revision += 1;
             self.uploads += 1;
         }
-        while self.textures.values().map(|t| t.bytes).sum::<u64>() > self.cache_budget {
-            let old = self
+        let mut cached_bytes = self.textures.values().map(|t| t.bytes).sum::<u64>();
+        if cached_bytes > self.cache_budget {
+            // Sort idle entries once instead of scanning the whole cache for
+            // every eviction when switching between texture-heavy documents.
+            let mut idle: Vec<_> = self
                 .textures
                 .iter()
                 .filter(|(_, t)| t.used != self.draws)
-                .min_by_key(|(_, t)| t.used)
-                .map(|(k, _)| k.clone());
-            if let Some(old) = old {
-                self.textures.remove(&old);
-            } else {
-                break;
+                .map(|(key, texture)| (key.clone(), texture.used))
+                .collect();
+            idle.sort_unstable_by_key(|(_, used)| *used);
+            for (key, _) in idle {
+                if cached_bytes <= self.cache_budget {
+                    break;
+                }
+                if let Some(texture) = self.textures.remove(&key) {
+                    cached_bytes -= texture.bytes;
+                }
             }
         }
         // Asset ids are local aliases for this scene; cache identity is immutable content.
@@ -233,6 +240,68 @@ impl MetalSceneRenderer {
         Ok(SubmittedFrame {
             image: output,
             command: command.to_owned(),
+        })
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+    use super::*;
+    use editor_core::{Document, SceneTexture};
+
+    #[test]
+    fn texture_eviction_keeps_recent_and_active_sources_without_reuploads() -> Result<()> {
+        objc2::rc::autoreleasepool(|_| {
+            let device = metal::Device::system_default().expect("Metal device");
+            let queue = device.new_command_queue();
+            let config = MetalTargetConfig {
+                width: 1,
+                height: 1,
+                format: metal::MTLPixelFormat::RGBA8Unorm,
+            };
+            let mut renderer = MetalSceneRenderer::new(device, config)?;
+            renderer.cache_budget = 12; // Three 1x1 RGBA textures.
+            let mut scene = Document::new_blank()?.snapshot()?;
+            let mut draw = |ids: &[&str]| -> Result<(u64, u64, u64)> {
+                scene.textures = ids
+                    .iter()
+                    .map(|id| SceneTexture {
+                        asset_id: (*id).into(),
+                        cache_key: (*id).into(),
+                        width: 1,
+                        height: 1,
+                        rgba: Arc::from([255; 4]),
+                    })
+                    .collect::<Vec<_>>()
+                    .into();
+                let transform = ViewportTransform::new(
+                    scene.viewport_frame.canvas,
+                    CanvasMetrics {
+                        width: 1.,
+                        height: 1.,
+                        scale_factor: 1.,
+                    },
+                    ViewState::default(),
+                )
+                .unwrap();
+                let submitted = renderer.submit_transformed(&queue, config, &scene, transform)?;
+                submitted.command.wait_until_completed();
+                assert_eq!(
+                    submitted.command.status(),
+                    metal::MTLCommandBufferStatus::Completed
+                );
+                Ok(renderer.stats())
+            };
+            assert_eq!(draw(&["a", "b", "c"])?, (1, 3, 12));
+            assert_eq!(draw(&["a", "b"])?, (2, 3, 12));
+            assert_eq!(draw(&["a", "d", "e"])?, (3, 5, 12));
+            // The current scene survives eviction even when it exceeds budget.
+            assert_eq!(draw(&["a", "d", "e", "f"])?, (4, 6, 16));
+            assert_eq!(draw(&["a", "d", "e", "f"])?, (5, 6, 16));
+            assert_eq!(draw(&["a", "d"])?, (6, 6, 12));
+            // The oldest source was evicted and must upload again.
+            assert_eq!(draw(&["c"])?, (7, 7, 12));
+            Ok(())
         })
     }
 }
