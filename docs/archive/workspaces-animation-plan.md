@@ -124,11 +124,11 @@ model3 注册项使用 `schedule_motion_entry(group, index, time)`；未分组 c
 
 新增编辑器侧动画执行器，例如 `crates/editor/src/animation.rs`：后台独占一个活动的 `MotionPreview`，接收核心生成的播放描述和目标时间，返回不可变的动画帧与状态快照。UI 不执行长时间 seek；非活动文档保留描述和时间，可释放求值实例。
 
-控制命令按序处理，时钟和拖动产生的目标时间可以合并。不要合并掉尚未生效的选择／清除操作。长 seek 使用 SDK `seek_with_progress` 检查取消和最新请求；新 seek、切换 workspace、切文档、关闭和快照失效均使旧任务失效。
+控制命令按序处理，时钟和拖动产生的目标时间可以合并。不要合并掉尚未生效的选择／清除操作。长 seek 使用 SDK 的 progress 回调检查取消；精确 seek、切换 workspace、切文档、关闭和快照失效均使旧任务失效。同一次进度尺拖动保持接受和取消屏障不变，只替换尚未开始的目标，让在途计算有机会完成并显示；松手时发起精确 seek 并使拖动期间的旧请求失效。
 
 播放以单调时钟计算目标时间，按与 SDK canonical seek 相同的 60 Hz 步进规则推进；不能直接把不稳定的 UI 帧间隔当成物理步长。显示帧可合并，必要的模拟步不能任意跳过。暂停或窗口失焦后重设墙钟锚点，避免恢复时追赶失焦期间的时间。SDK 可重用的步进适配若不足，先补小范围 API 和一致性测试，不复制一份动画算法到编辑器。
 
-每个异步结果至少携带 DocumentId、workspace、模型 generation、预览 generation、请求序号和实际求值时间。渲染结果沿用同一身份；拒绝其他文档、旧 workspace、旧预览或时间倒退的过期帧。连续播放允许同一 generation 内晚到但比已显示帧更新的结果，不能要求每一帧都等于最新请求而造成持续拒帧。暂停、seek、重置时提高接受下界，阻止之前的播放帧覆盖目标帧。
+每个异步结果至少携带 DocumentId、workspace、模型 generation、预览 generation、请求序号和实际求值时间。渲染结果沿用同一身份；拒绝其他文档、旧 workspace、旧预览及请求序号倒退的帧。连续播放允许同一 generation 内晚到但比已显示帧更新的结果，不能要求每一帧都等于最新请求而造成持续拒帧。拖动期间允许时间向后，但显示的请求序号必须递增；循环 motion 只在本次拖动开始时重建第一圈。暂停、精确 seek、重置时提高接受下界，阻止之前的播放或拖动帧覆盖最终目标帧。
 
 当前 [DocumentSession::scene](../crates/editor-core/src/session.rs) 同时构造画面与建模 picking 几何。Animation 只需运行时画面，需拆出共享渲染描述和可选的建模交互数据，避免每帧重建对象树、缩略图、拾取几何和建模覆盖层。保留现有 Metal 渲染器及 [preview worker](../crates/editor/src/preview.rs) 的请求合并和 GPU 背压。
 

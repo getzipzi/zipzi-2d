@@ -7,6 +7,33 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+fn immediate_replay_after_natural_end_starts_with_a_fresh_clock(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::PlayPause, window, cx);
+            // The transport can reach its end before the timer's next wake or
+            // the final GPU result clears the old wall-clock anchor.
+            view.animation_anchor = Some((
+                std::time::Instant::now() - std::time::Duration::from_secs(2),
+                0.5,
+            ));
+            view.editor.advance_animation_clock(2.);
+            assert!(!view.editor.animation().unwrap().playing);
+            view.run_command(CommandId::PlayPause, window, cx);
+            assert!(view.editor.animation().unwrap().playing);
+            assert_eq!(view.editor.animation().unwrap().time, 0.);
+            assert_eq!(view.animation_anchor.unwrap().1, 0.);
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn motion_selection_space_button_and_menu_share_transport_and_repeat_guard(
     cx: &mut TestAppContext,
 ) {

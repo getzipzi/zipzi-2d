@@ -182,6 +182,7 @@ pub struct AnimationEvaluated {
 pub struct AnimationEvaluator {
     preview: Option<MotionPreview>,
     identity: Option<AnimationIdentity>,
+    motion: Option<MotionSelection>,
 }
 impl AnimationEvaluator {
     /// Detached SDK cache accounting for profiling; preview state is unchanged.
@@ -197,8 +198,14 @@ impl AnimationEvaluator {
         let reusable = self.identity.is_some_and(|previous| {
             previous.document == id.document
                 && previous.model_generation == id.model_generation
-                && previous.preview_generation == id.preview_generation
+                && self.motion == request.motion
         });
+        let expressions = || {
+            request
+                .expressions
+                .iter()
+                .map(|trigger| (trigger.expression_id.as_str(), trigger.time))
+        };
         if !reusable {
             let mut preview = MotionPreview::new(request.source.snapshot.document());
             let version = request.source.snapshot.version();
@@ -222,12 +229,19 @@ impl AnimationEvaluator {
                     preview.schedule_motion(&motion.clip_id, 0.)?;
                 }
             }
-            for trigger in &request.expressions {
-                preview.schedule_expression(&trigger.expression_id, trigger.time)?;
-            }
+            preview.replace_expression_schedule(expressions())?;
             self.preview = Some(preview);
-            self.identity = Some(id);
+            self.motion.clone_from(&request.motion);
+        } else if self
+            .identity
+            .is_some_and(|previous| previous.preview_generation != id.preview_generation)
+        {
+            self.preview
+                .as_mut()
+                .unwrap()
+                .replace_expression_schedule(expressions())?;
         }
+        self.identity = Some(id);
         let preview = self.preview.as_mut().unwrap();
         preview.advance_to_with_progress(id.time, progress)?;
         let snapshot = Arc::new(preview.snapshot().clone());
@@ -264,6 +278,7 @@ pub struct AnimationSession {
     requested: Option<(u64, u64, f32)>,
     floor: u64,
     shown: u64,
+    scrubbing: bool,
 }
 impl AnimationSession {
     pub(crate) fn new(document: &Document) -> Self {
@@ -282,6 +297,7 @@ impl AnimationSession {
             requested: None,
             floor: 0,
             shown: 0,
+            scrubbing: false,
         }
     }
     pub(crate) fn pause(&mut self) {
@@ -291,6 +307,11 @@ impl AnimationSession {
         self.barrier();
     }
     fn barrier(&mut self) {
+        if self.scrubbing {
+            // A completed drag sample can be ahead of the final pointer target.
+            self.presented = None;
+        }
+        self.scrubbing = false;
         self.floor = self.floor.max(
             self.requested
                 .map_or(self.shown + 1, |(sequence, _, _)| sequence + 1),
@@ -330,16 +351,20 @@ impl AnimationSession {
         self.model_generation = generation;
         self.source = None;
         self.rebuild();
+        if self.motion.is_none() && self.expression.is_none() && self.expressions.is_empty() {
+            return;
+        }
+        let catalog = document.animation_catalog();
         if let Some(selection) = &self.motion {
-            if let Some(resource) = document
-                .motion_resources()
-                .iter()
-                .find(|r| &r.selection == selection)
-            {
-                self.time = if resource.playable() {
-                    self.time.min(resource.duration)
-                } else {
+            if let Some(resource) = catalog.motions.iter().find(|r| &r.selection == selection) {
+                self.time = if !resource.playable() {
                     0.
+                } else if resource.looping && !self.loop_position {
+                    // A looping preview's clock includes completed cycles and
+                    // timestamps the expression schedule and physics history.
+                    self.time
+                } else {
+                    self.time.min(resource.duration)
                 };
             } else {
                 self.motion = None;
@@ -347,9 +372,9 @@ impl AnimationSession {
                 self.error = Some(AnimationFailure::MotionRemoved);
             }
         }
-        let resources = document.expression_resources();
         let valid = |id: &str| {
-            resources
+            catalog
+                .expressions
                 .iter()
                 .any(|r| r.id == id && r.unresolved_targets.is_empty())
         };
@@ -371,10 +396,11 @@ impl AnimationSession {
             && self
                 .requested
                 .is_some_and(|(latest, _, _)| id.request <= latest)
-            && self
-                .presented
-                .as_ref()
-                .is_none_or(|shown| id.time >= shown.time)
+            && (self.scrubbing
+                || self
+                    .presented
+                    .as_ref()
+                    .is_none_or(|shown| id.time >= shown.time))
     }
 }
 
@@ -393,7 +419,8 @@ impl Editor {
                 || (a.motion.is_none() && a.expression.is_some())
                 || a.motion.as_ref().is_some_and(|selection| {
                     self.document().is_some_and(|d| {
-                        d.motion_resources()
+                        d.animation_catalog()
+                            .motions
                             .iter()
                             .any(|r| &r.selection == selection && r.playable())
                     })
@@ -413,7 +440,8 @@ impl Editor {
         ensure!(
             session
                 .document()
-                .motion_resources()
+                .animation_catalog()
+                .motions
                 .iter()
                 .any(|r| r.selection == selection),
             "Motion registration no longer exists"
@@ -426,10 +454,10 @@ impl Editor {
     pub fn select_expression(&mut self, document: DocumentId, expression_id: String) -> Result<()> {
         self.ensure_animation_target(document)?;
         let session = self.active_session_mut().unwrap();
-        let resource = session
-            .document()
-            .expression_resources()
-            .into_iter()
+        let catalog = session.document().animation_catalog();
+        let resource = catalog
+            .expressions
+            .iter()
             .find(|r| r.id == expression_id)
             .ok_or_else(|| anyhow::anyhow!("Expression no longer exists"))?;
         ensure!(
@@ -438,7 +466,14 @@ impl Editor {
             resource.unresolved_targets.join(", ")
         );
         let animation = &mut session.animation;
-        if animation.expression.as_ref() == Some(&expression_id) {
+        if animation.expression.as_ref() == Some(&expression_id)
+            && animation
+                .expressions
+                .iter()
+                .rev()
+                .find(|trigger| trigger.time <= animation.time)
+                .is_some_and(|trigger| trigger.expression_id == expression_id)
+        {
             return Ok(());
         }
         let playing = animation.playing;
@@ -481,33 +516,45 @@ impl Editor {
         Ok(())
     }
     pub fn seek_animation(&mut self, document: DocumentId, time: f32) -> Result<()> {
+        self.locate_animation(document, time, false)
+    }
+    /// While the pointer moves, allow completed samples from this drag to be
+    /// presented in request order. Finish with `seek_animation` for an exact target.
+    pub fn scrub_animation(&mut self, document: DocumentId, time: f32) -> Result<()> {
+        self.locate_animation(document, time, true)
+    }
+    fn locate_animation(&mut self, document: DocumentId, time: f32, scrubbing: bool) -> Result<()> {
         self.ensure_animation_target(document)?;
         ensure!(time.is_finite() && time >= 0., "Invalid animation time");
         let session = self.active_session_mut().unwrap();
+        let catalog = session.document().animation_catalog();
         let motion = session
             .animation
             .motion
             .as_ref()
-            .and_then(|selection| {
-                session
-                    .document()
-                    .motion_resources()
-                    .into_iter()
-                    .find(|r| &r.selection == selection)
-            })
-            .filter(MotionResource::playable)
+            .and_then(|selection| catalog.motions.iter().find(|r| &r.selection == selection))
+            .filter(|r| r.playable())
             .ok_or_else(|| anyhow::anyhow!("Select a seekable motion"))?;
         let animation = &mut session.animation;
-        if motion.looping {
-            animation.new_run();
+        let time = time.min(motion.duration);
+        if scrubbing && animation.scrubbing {
+            // Keep the acceptance/cancellation epoch stable for the entire drag.
+            // Replacing the queued target must not starve work already in flight.
+            animation.time = time;
+            animation.error = None;
+        } else {
+            if motion.looping {
+                animation.new_run();
+            }
+            animation.locate(time);
         }
-        animation.locate(time.min(motion.duration));
+        animation.scrubbing = scrubbing;
         animation.loop_position = motion.looping;
         Ok(())
     }
     pub fn pause_animation(&mut self) {
         if let Some(session) = self.active_session_mut() {
-            if session.animation.playing {
+            if session.animation.playing || session.animation.scrubbing {
                 session.animation.pause();
             }
         }
@@ -518,23 +565,25 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
         let session = self.active_session_mut().unwrap();
-        let motion = session.animation.motion.as_ref().and_then(|selection| {
-            session
-                .document()
-                .motion_resources()
-                .into_iter()
-                .find(|r| &r.selection == selection)
-        });
+        let catalog = session.document().animation_catalog();
+        let motion = session
+            .animation
+            .motion
+            .as_ref()
+            .and_then(|selection| catalog.motions.iter().find(|r| &r.selection == selection));
         let animation = &mut session.animation;
         if animation.playing {
             animation.pause();
             return Ok(());
         }
         ensure!(
-            motion.as_ref().is_some_and(MotionResource::playable)
+            motion.is_some_and(MotionResource::playable)
                 || (motion.is_none() && animation.expression.is_some()),
             "Select a playable motion or expression"
         );
+        if animation.scrubbing {
+            animation.pause();
+        }
         if let Some(motion) = motion {
             if !motion.looping && animation.time >= motion.duration {
                 animation.locate(0.);
@@ -559,13 +608,11 @@ impl Editor {
             return;
         }
         if let Some(session) = self.active_session_mut() {
-            let motion = session.animation.motion.as_ref().and_then(|selection| {
-                session
-                    .document()
-                    .motion_resources()
-                    .into_iter()
-                    .find(|r| &r.selection == selection)
-            });
+            let catalog = session.document().animation_catalog();
+            let motion =
+                session.animation.motion.as_ref().and_then(|selection| {
+                    catalog.motions.iter().find(|r| &r.selection == selection)
+                });
             let animation = &mut session.animation;
             if !animation.playing {
                 return;
@@ -644,13 +691,17 @@ impl Editor {
             expressions: animation.expressions.clone(),
         })
     }
-    pub fn accepts_animation_image(&self, identity: AnimationIdentity) -> bool {
-        self.workspace() == WorkspaceKind::Animation
+    /// Keep the last presented image visible while a new recipe is evaluated.
+    /// Incoming CPU/GPU results must still pass `accepts_animation` / `present_animation`.
+    pub fn can_display_animation_image(&self, identity: AnimationIdentity) -> bool {
+        identity.workspace == WorkspaceKind::Animation
+            && self.workspace() == WorkspaceKind::Animation
             && self.workspace_revision() == identity.workspace_revision
             && self.active_id() == Some(identity.document)
             && self.animation().is_some_and(|a| {
                 a.model_generation == identity.model_generation
-                    && a.preview_generation == identity.preview_generation
+                    && a.shown != 0
+                    && a.shown == identity.request
             })
     }
     pub fn accepts_animation(&self, identity: AnimationIdentity) -> bool {

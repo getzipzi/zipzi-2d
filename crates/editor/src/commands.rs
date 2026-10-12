@@ -23,7 +23,8 @@ impl EditorView {
             Ok(CommandEffect::Done) => {
                 if matches!(
                     id,
-                    CommandId::RewindAnimation
+                    CommandId::PlayPause
+                        | CommandId::RewindAnimation
                         | CommandId::ResetAnimation
                         | CommandId::ClearExpression
                 ) {

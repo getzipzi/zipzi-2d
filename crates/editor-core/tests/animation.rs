@@ -34,6 +34,70 @@ fn evaluate(
 }
 
 #[test]
+fn live_expression_switch_replays_only_nearby_steps_and_matches_cold_replay() -> anyhow::Result<()>
+{
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 2)?;
+    editor.toggle_animation()?;
+    let mut evaluator = AnimationEvaluator::default();
+    editor.advance_animation_clock(1.);
+    evaluate(&mut editor, &mut evaluator)?;
+    editor.advance_animation_clock(60.5);
+    evaluate(&mut editor, &mut evaluator)?;
+    for index in [0, 2, 1] {
+        expression(&mut editor, index)?;
+        let request = editor.animation_request().unwrap();
+        let mut steps = 0;
+        let start = std::time::Instant::now();
+        let frame = evaluator.evaluate(&request, |_, total| {
+            steps = total;
+            true
+        })?;
+        eprintln!(
+            "expression switch: {steps} replay steps, {:?}",
+            start.elapsed()
+        );
+        assert!(steps <= 60, "switch replayed {steps} steps of old history");
+        let cold = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+        assert_eq!(frame.snapshot, cold.snapshot);
+        assert_eq!(frame.scene.runtime_frame, cold.scene.runtime_frame);
+        editor.advance_animation_clock(editor.animation().unwrap().time + 0.5);
+        evaluate(&mut editor, &mut evaluator)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn invalid_replacement_recipe_preserves_the_running_evaluator() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 2)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(5.);
+    let mut request = editor.animation_request().unwrap();
+    let mut evaluator = AnimationEvaluator::default();
+    let before = evaluator.evaluate(&request, |_, _| true)?;
+    let stats = evaluator.seek_cache_stats();
+    request.identity.model_generation += 1;
+    request.expressions.push(ExpressionTrigger {
+        expression_id: "missing".into(),
+        time: 0.,
+    });
+    assert!(evaluator.evaluate(&request, |_, _| true).is_err());
+    assert_eq!(evaluator.seek_cache_stats(), stats);
+    request.identity.model_generation -= 1;
+    request.expressions.clear();
+    let after = evaluator.evaluate(&request, |_, total| {
+        assert_eq!(
+            total, 0,
+            "invalid input must not discard completed playback"
+        );
+        true
+    })?;
+    assert_eq!(before.snapshot, after.snapshot);
+    Ok(())
+}
+
+#[test]
 fn expression_only_preview_switches_without_playing_and_clear_preserves_clock() -> anyhow::Result<()>
 {
     let (mut editor, _assets) = setup()?;
@@ -316,6 +380,67 @@ fn changed_resources_pause_revalidate_and_rebuild_expression_recipe() -> anyhow:
 }
 
 #[test]
+fn model_changes_preserve_the_absolute_loop_time_and_expression_schedule() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 2)?;
+    expression(&mut editor, 0)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(3.5);
+    expression(&mut editor, 2)?;
+    editor.advance_animation_clock(4.25);
+    let schedule = editor.animation().unwrap().expressions.clone();
+    let expression_id = editor.animation().unwrap().expression.clone().unwrap();
+
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    editor.execute(EditorCommand::SetObjectProperty {
+        object: ObjectRef::new(ObjectKind::Expression, expression_id),
+        field: "fade_in".into(),
+        value: serde_json::json!(0.7),
+    })?;
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    assert_eq!(editor.animation().unwrap().time, 4.25);
+    assert_eq!(editor.animation().unwrap().expressions, schedule);
+    assert!(!editor.animation().unwrap().playing);
+    let evaluated = evaluate(&mut editor, &mut AnimationEvaluator::default())?;
+    assert_eq!(evaluated.snapshot.time, 4.25);
+    assert!(
+        evaluated
+            .snapshot
+            .active_expressions
+            .contains(editor.animation().unwrap().expression.as_ref().unwrap())
+    );
+    Ok(())
+}
+
+#[test]
+fn selecting_a_future_expression_after_seeking_back_branches_at_the_current_time()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    select(&mut editor, 0)?;
+    expression(&mut editor, 0)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(1.);
+    expression(&mut editor, 2)?;
+    let selected = editor.animation().unwrap().expression.clone().unwrap();
+    editor.seek_animation(id, 0.25)?;
+    expression(&mut editor, 2)?;
+    let animation = editor.animation().unwrap();
+    assert_eq!(animation.expressions.len(), 2);
+    assert_eq!(animation.expressions[1].time, 0.25);
+    assert_eq!(animation.expressions[1].expression_id, selected);
+    let generation = animation.preview_generation;
+    // Clicking again without moving before the trigger must remain a no-op.
+    expression(&mut editor, 2)?;
+    assert_eq!(editor.animation().unwrap().preview_generation, generation);
+    editor.seek_animation(id, 0.75)?;
+    let frame = evaluate(&mut editor, &mut AnimationEvaluator::default())?;
+    let parameter = editor.document().unwrap().parameters()[0].id.clone();
+    assert!((frame.snapshot.parameters[&parameter] - 0.8).abs() < 1e-6);
+    Ok(())
+}
+
+#[test]
 fn detached_runtime_uses_defaults_restores_hidden_objects_and_preserves_authoring_state()
 -> anyhow::Result<()> {
     let (mut editor, _assets) = setup()?;
@@ -421,6 +546,146 @@ fn transport_finishes_once_replays_and_keeps_loop_clock_absolute() -> anyhow::Re
 }
 
 #[test]
+fn recipe_changes_keep_the_displayed_image_until_a_replacement_is_presented() -> anyhow::Result<()>
+{
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 2)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(0.5);
+    let mut evaluator = AnimationEvaluator::default();
+    let shown = evaluate(&mut editor, &mut evaluator)?;
+    assert!(editor.present_animation(shown.identity, shown.snapshot.clone()));
+
+    expression(&mut editor, 0)?;
+    assert!(editor.animation().unwrap().playing);
+    assert!(editor.can_display_animation_image(shown.identity));
+    assert!(!editor.accepts_animation(shown.identity));
+    let obsolete = evaluate(&mut editor, &mut evaluator)?;
+    expression(&mut editor, 2)?;
+    select(&mut editor, 0)?;
+    assert!(editor.can_display_animation_image(shown.identity));
+    assert!(!editor.present_animation(obsolete.identity, obsolete.snapshot));
+    assert!(!editor.present_animation(shown.identity, shown.snapshot));
+
+    let replacement = evaluate(&mut editor, &mut evaluator)?;
+    assert!(!editor.can_display_animation_image(replacement.identity));
+    assert!(editor.can_display_animation_image(shown.identity));
+    assert!(editor.present_animation(replacement.identity, replacement.snapshot));
+    assert!(editor.can_display_animation_image(replacement.identity));
+    assert!(!editor.can_display_animation_image(shown.identity));
+    Ok(())
+}
+
+#[test]
+fn retained_animation_images_cannot_cross_document_workspace_or_model_changes() -> anyhow::Result<()>
+{
+    for change in 0..3 {
+        let (mut editor, _assets) = setup()?;
+        if change == 2 {
+            editor.set_workspace(WorkspaceKind::Modeling)?;
+            let motion = editor.document().unwrap().animation_catalog().motions[2]
+                .selection
+                .clip_id
+                .clone();
+            editor.execute(EditorCommand::SetObjectProperty {
+                object: ObjectRef::new(ObjectKind::Motion, motion),
+                field: "looping".into(),
+                value: serde_json::json!(false),
+            })?;
+            editor.set_workspace(WorkspaceKind::Animation)?;
+        }
+        select(&mut editor, 2)?;
+        let frame = evaluate(&mut editor, &mut AnimationEvaluator::default())?;
+        assert!(editor.present_animation(frame.identity, frame.snapshot));
+        assert!(editor.can_display_animation_image(frame.identity));
+        match change {
+            0 => {
+                editor.new_document()?;
+            }
+            1 => {
+                editor.set_workspace(WorkspaceKind::Modeling)?;
+            }
+            _ => {
+                editor.dispatch(editor.command(CommandId::Undo))?;
+            }
+        }
+        assert!(!editor.can_display_animation_image(frame.identity));
+    }
+    Ok(())
+}
+
+#[test]
+fn scrubbing_presents_completed_samples_and_release_rejects_old_targets() -> anyhow::Result<()> {
+    for motion in [0, 2] {
+        let (mut editor, _assets) = setup()?;
+        select(&mut editor, motion)?;
+        let document = editor.active_id().unwrap();
+        let mut evaluator = AnimationEvaluator::default();
+        editor.scrub_animation(document, 0.8)?;
+        let first = evaluate(&mut editor, &mut evaluator)?;
+        editor.scrub_animation(document, 0.2)?;
+        let backward = evaluate(&mut editor, &mut evaluator)?;
+        assert_eq!(
+            first.identity.preview_generation,
+            backward.identity.preview_generation
+        );
+        assert_eq!(
+            first.identity.acceptance_floor,
+            backward.identity.acceptance_floor
+        );
+        // CPU and GPU completion can both lag behind the pointer.
+        assert!(editor.accepts_animation(first.identity));
+        assert!(editor.present_animation(first.identity, first.snapshot));
+        editor.scrub_animation(document, 0.6)?;
+        let pending = editor.animation_request().unwrap();
+        assert!(editor.present_animation(backward.identity, backward.snapshot));
+        assert_eq!(
+            editor.animation().unwrap().presented.as_ref().unwrap().time,
+            0.2
+        );
+        assert!(!editor.accepts_animation(first.identity));
+        editor.seek_animation(document, 0.4)?;
+        assert!(!editor.accepts_animation(pending.identity));
+        let released = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(released.identity, released.snapshot));
+        assert_eq!(
+            editor.animation().unwrap().presented.as_ref().unwrap().time,
+            0.4
+        );
+        assert!(!editor.animation().unwrap().playing);
+    }
+    Ok(())
+}
+
+#[test]
+fn interrupting_a_backward_scrub_does_not_block_the_final_lower_frame() -> anyhow::Result<()> {
+    for resume in [false, true] {
+        let (mut editor, _assets) = setup()?;
+        select(&mut editor, 0)?;
+        let document = editor.active_id().unwrap();
+        let mut evaluator = AnimationEvaluator::default();
+        editor.scrub_animation(document, 1.5)?;
+        let shown = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(shown.identity, shown.snapshot));
+        editor.scrub_animation(document, 0.2)?;
+        let obsolete = editor.animation_request().unwrap();
+        if resume {
+            editor.toggle_animation()?;
+        } else {
+            editor.pause_animation();
+        }
+        assert!(!editor.accepts_animation(obsolete.identity));
+        let lower = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(lower.identity, lower.snapshot));
+        assert_eq!(
+            editor.animation().unwrap().presented.as_ref().unwrap().time,
+            0.2
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn continuous_frames_do_not_starve_and_barriers_reject_late_frames() -> anyhow::Result<()> {
     let (mut editor, _assets) = setup()?;
     select(&mut editor, 2)?;
@@ -497,6 +762,66 @@ fn document_workspace_save_and_history_changes_pause_and_invalidate() -> anyhow:
     assert!(redo.identity.model_generation > after.identity.model_generation);
     editor.close_document(first, true)?;
     assert!(!editor.accepts_animation(redo.identity));
+    Ok(())
+}
+
+#[test]
+fn local_model3_live_expression_switch_reuses_physics_history() -> anyhow::Result<()> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+    if !path.exists() {
+        eprintln!("Skipping live expression timing: local Mao model is unavailable");
+        return Ok(());
+    }
+    let (document, _) = Document::import_model3(&path)?;
+    let catalog = document.animation_catalog();
+    let motion = catalog
+        .motions
+        .iter()
+        .find(|motion| motion.looping && motion.playable())
+        .unwrap();
+    let mut editor = Editor::from_document(document);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 640.,
+        height: 480.,
+        scale_factor: 1.,
+    });
+    editor.select_motion(editor.active_id().unwrap(), motion.selection.clone())?;
+    editor.toggle_animation()?;
+    let mut evaluator = AnimationEvaluator::default();
+    editor.advance_animation_clock(1.);
+    evaluate(&mut editor, &mut evaluator)?;
+    editor.advance_animation_clock(60.5);
+    evaluate(&mut editor, &mut evaluator)?;
+    for expression in catalog
+        .expressions
+        .iter()
+        .filter(|expression| expression.unresolved_targets.is_empty())
+        .take(2)
+    {
+        editor.select_expression(editor.active_id().unwrap(), expression.id.clone())?;
+        let request = editor.animation_request().unwrap();
+        let mut steps = 0;
+        let start = std::time::Instant::now();
+        let frame = evaluator.evaluate(&request, |_, total| {
+            steps = total;
+            true
+        })?;
+        let incremental = start.elapsed();
+        let start = std::time::Instant::now();
+        let cold = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+        eprintln!(
+            "Mao expression switch at {}s: {steps} steps, {incremental:?}; cold replay {:?}",
+            request.identity.time,
+            start.elapsed()
+        );
+        assert!(steps <= 60);
+        assert_eq!(frame.snapshot, cold.snapshot);
+        assert_eq!(frame.scene.runtime_frame, cold.scene.runtime_frame);
+        editor.advance_animation_clock(editor.animation().unwrap().time + 0.5);
+        evaluate(&mut editor, &mut evaluator)?;
+    }
     Ok(())
 }
 

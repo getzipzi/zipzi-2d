@@ -168,7 +168,11 @@ impl Render for PlaybackBar {
                             {
                                 return;
                             }
-                            let result = view.editor.seek_animation(target.document, time);
+                            let result = if matches!(event, SliderEvent::Change(_)) {
+                                view.editor.scrub_animation(target.document, time)
+                            } else {
+                                view.editor.seek_animation(target.document, time)
+                            };
                             view.animation_anchor = None;
                             view.complete_edit(result, cx);
                         });

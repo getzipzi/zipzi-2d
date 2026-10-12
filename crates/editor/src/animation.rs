@@ -181,7 +181,10 @@ impl EditorView {
     pub(crate) fn displayed_animation(&self) -> Option<&kasane_sdk::MotionSnapshot> {
         self.animation_frame
             .as_ref()
-            .filter(|frame| self.editor.accepts_animation_image(frame.state.identity))
+            .filter(|frame| {
+                self.editor
+                    .can_display_animation_image(frame.state.identity)
+            })
             .map(|frame| frame.state.snapshot.as_ref())
             .or_else(|| self.editor.animation().and_then(|a| a.presented.as_deref()))
     }
@@ -203,6 +206,7 @@ impl EditorView {
                                     frame.identity,
                                     editor_core::AnimationFailure::from_error(&error),
                                 );
+                                this.sync_animation_clock(cx);
                                 this.notify_animation(cx);
                             }
                         }
@@ -280,7 +284,7 @@ impl EditorView {
                     .timer(Duration::from_millis(16))
                     .await;
                 let keep = this
-                    .update(cx, |this, _cx| {
+                    .update(cx, |this, cx| {
                         if !this
                             .editor
                             .animation()
@@ -296,6 +300,12 @@ impl EditorView {
                                 ((time + anchor.elapsed().as_secs_f32()) * 60.).floor() / 60.;
                             this.editor.advance_animation_clock(target);
                             this.request_preview();
+                            if !this.editor.animation().is_some_and(|a| a.playing) {
+                                this.animation_clock_running = false;
+                                this.animation_anchor = None;
+                                this.notify_animation(cx);
+                                return false;
+                            }
                         }
                         true
                     })

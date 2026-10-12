@@ -111,7 +111,8 @@ impl Harness {
                         == editor_core::WorkspaceKind::Animation
                     {
                         view.animation_frame.as_ref().is_some_and(|frame| {
-                            view.editor.accepts_animation_image(frame.state.identity)
+                            view.editor
+                                .can_display_animation_image(frame.state.identity)
                                 && view.editor.animation().is_some_and(|a| {
                                     a.time == frame.state.snapshot.time
                                         && a.presented.as_ref().is_some_and(|snapshot| {
@@ -150,7 +151,7 @@ impl Harness {
                     )),
                     view.animation_frame.as_ref().map(|f| (
                         f.state.snapshot.time,
-                        view.editor.accepts_animation_image(f.state.identity)
+                        view.editor.can_display_animation_image(f.state.identity)
                     ))
                 ))
             );
@@ -212,6 +213,195 @@ fn save(image: &RgbaImage, directory: &std::path::Path, name: &str) -> anyhow::R
     Ok(())
 }
 
+fn animation_replacement_keeps_canvas(harness: &mut Harness) -> anyhow::Result<()> {
+    let (document, assets) = fixture::animation_document()?;
+    harness.cx.update_window(harness.window, |_, _, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor = Editor::from_document(document);
+            view.editor
+                .set_workspace(editor_core::WorkspaceKind::Animation)
+                .unwrap();
+            let id = view.editor.active_id().unwrap();
+            let motion = view.editor.document().unwrap().animation_catalog().motions[2]
+                .selection
+                .clone();
+            view.editor.select_motion(id, motion).unwrap();
+            view.editor.seek_animation(id, 0.5).unwrap();
+            view.redraw(cx);
+        });
+    })?;
+    harness._assets = assets;
+    let mut before = harness.capture()?;
+    for change in 0..6 {
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.editor.toggle_animation().unwrap();
+                let id = view.editor.active_id().unwrap();
+                let catalog = view.editor.document().unwrap().animation_catalog();
+                match change {
+                    0 | 1 => view
+                        .editor
+                        .select_expression(id, catalog.expressions[change * 2].id.clone())
+                        .unwrap(),
+                    2 | 3 => view
+                        .editor
+                        .select_motion(id, catalog.motions[(change - 2) * 2].selection.clone())
+                        .unwrap(),
+                    4 => view.editor.clear_expression().unwrap(),
+                    _ => view.editor.reset_animation().unwrap(),
+                }
+                // Delay submitting the replacement to deterministically capture the gap
+                // between changing the recipe and receiving the next Metal image.
+                view.notify_animation(cx);
+                cx.notify();
+            });
+            window.render_frame(cx);
+        })?;
+        let waiting = harness.cx.capture_screenshot(harness.window)?;
+        anyhow::ensure!(
+            harness.canvas_image(&before)? == harness.canvas_image(&waiting)?,
+            "Animation change {change} cleared the canvas while waiting for a replacement"
+        );
+        let previous = harness.view.read_with(&harness.cx, |view, _| {
+            let frame = view.animation_frame.as_ref().unwrap();
+            assert!(std::ptr::eq(
+                view.displayed_animation().unwrap(),
+                frame.state.snapshot.as_ref()
+            ));
+            frame.state.identity.request
+        });
+        harness.cx.update_window(harness.window, |_, _, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.editor.pause_animation();
+                view.redraw(cx);
+            });
+        })?;
+        before = harness.capture()?;
+        harness.view.read_with(&harness.cx, |view, _| {
+            assert!(
+                view.animation_frame
+                    .as_ref()
+                    .unwrap()
+                    .state
+                    .identity
+                    .request
+                    > previous
+            );
+        });
+    }
+    Ok(())
+}
+
+fn animation_scrubbing_presents_frames_before_release() -> anyhow::Result<()> {
+    use gpui_kit::{InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+    let mut harness = Harness::new()?;
+    let (document, assets) = fixture::animation_document()?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor = Editor::from_document(document);
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        window.click("workspace-animation", cx);
+    })?;
+    harness._assets = assets;
+    for motion in [0usize, 2] {
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            window.click(("animation-motion", motion), cx);
+        })?;
+        let before = harness.capture()?;
+        let before = harness.canvas_image(&before)?;
+        let track = harness.cx.update_window(harness.window, |_, window, _| {
+            window
+                .within("animation-seek")
+                .find("slider-bar-container")
+                .bounds()
+        })?;
+        let mut pointer = point(track.left() + track.size.width * 0.15, track.center().y);
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: pointer,
+                    pressed_button: None,
+                    modifiers: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position: pointer,
+                    modifiers: Default::default(),
+                    click_count: 1,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+        })?;
+        let mut shown_times = Vec::new();
+        let mut pixels_changed = false;
+        for sample in 0..40 {
+            // Move forward, then backward, without giving the worker an idle pause
+            // between targets. GPU completions may lag behind several pointer events.
+            let progress = if sample < 20 { sample } else { 39 - sample } as f32 / 20.;
+            pointer.x = track.left() + track.size.width * (0.15 + 0.7 * progress);
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                window.dispatch_event(
+                    MouseMoveEvent {
+                        position: pointer,
+                        pressed_button: Some(MouseButton::Left),
+                        modifiers: Default::default(),
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+                window.render_frame(cx);
+            })?;
+            std::thread::sleep(Duration::from_millis(8));
+            harness.cx.run_until_parked();
+            let time = harness.view.read_with(&harness.cx, |view, _| {
+                view.displayed_animation().unwrap().time
+            });
+            if shown_times.last() != Some(&time) {
+                shown_times.push(time);
+                let image = harness.cx.capture_screenshot(harness.window)?;
+                pixels_changed |= harness.canvas_image(&image)? != before;
+            }
+        }
+        anyhow::ensure!(
+            shown_times.len() > 2 && pixels_changed,
+            "Scrubbing motion {motion} must display changing Metal frames before release: {shown_times:?}"
+        );
+        anyhow::ensure!(
+            shown_times.windows(2).any(|pair| pair[1] < pair[0]),
+            "Backward dragging must display earlier frames before release: {shown_times:?}"
+        );
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            window.dispatch_event(
+                MouseUpEvent {
+                    button: MouseButton::Left,
+                    position: pointer,
+                    modifiers: Default::default(),
+                    click_count: 1,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+        })?;
+        harness.capture()?;
+        harness.view.read_with(&harness.cx, |view, _| {
+            let animation = view.editor.animation().unwrap();
+            assert!(!animation.playing);
+            assert_eq!(view.displayed_animation().unwrap().time, animation.time);
+        });
+    }
+    Ok(())
+}
+
 pub(super) fn run() -> anyhow::Result<()> {
     anyhow::ensure!(
         std::env::var_os("KASANE_DEV_SESSION_DIR").is_none(),
@@ -223,6 +413,7 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    animation_scrubbing_presents_frames_before_release()?;
     let mut harness = Harness::new()?;
     let baseline = harness.capture()?;
     anyhow::ensure!(
@@ -847,6 +1038,7 @@ pub(super) fn run() -> anyhow::Result<()> {
     save(&diagnostics, &directory, "animation-diagnostics-zh.png")?;
     drop(diagnostics_assets);
     i18n::activate(Some("en"));
+    animation_replacement_keeps_canvas(&mut harness)?;
     println!("Headless editor screenshots passed (real Metal, no native window).");
     Ok(())
 }

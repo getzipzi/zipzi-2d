@@ -366,7 +366,7 @@ impl Render for CanvasView {
             state
                 .animation_frame
                 .as_ref()
-                .filter(|f| state.editor.accepts_animation_image(f.state.identity))
+                .filter(|f| state.editor.can_display_animation_image(f.state.identity))
                 .map(|f| (f.image.clone(), f.state.transform.metrics))
         };
         let mut overlay = state
