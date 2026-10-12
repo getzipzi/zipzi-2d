@@ -96,6 +96,298 @@ fn quad(id: &str, texture: &str) -> Drawable {
 }
 
 #[test]
+fn cropped_masks_follow_zoom_pan_and_resize_including_empty_inverted_masks() {
+    let context = MetalContext::new().unwrap();
+    let texture = context.upload_rgba8(1, 1, &[255, 0, 0, 255], &[]).unwrap();
+    let mut catalog = MetalTextureCatalog::new(HashMap::from([(
+        "red".into(),
+        MetalTexture {
+            view: &texture,
+            width: 1,
+            height: 1,
+        },
+    )]));
+    catalog.set_revision("red", 1);
+    for (count, inverted, offscreen) in [
+        (1, false, false),
+        (1, true, false),
+        (40, false, false),
+        (40, true, false),
+        (1, false, true),
+    ] {
+        let mut frame = DrawableFrame {
+            canvas: Canvas::new(4096., 4096., Vec2::default(), 1.),
+            ..Default::default()
+        };
+        for i in 0..count {
+            let mut source = quad(&format!("mask-{i}"), "red");
+            source.visible = false;
+            for point in &mut source.positions {
+                point.x *= 32.;
+                point.y *= 64.;
+            }
+            let mut consumer = quad(&format!("mesh-{i}"), "red");
+            for point in &mut consumer.positions {
+                point.x *= 64.;
+                point.y *= 64.;
+            }
+            consumer.masks = vec![source.id.clone()];
+            consumer.inverted_mask = inverted;
+            frame.drawables.extend([source, consumer]);
+        }
+        if offscreen {
+            frame.offscreens = vec![
+                OffscreenFrame {
+                    id: "outer".into(),
+                    enabled: true,
+                    opacity: 1.,
+                    multiply_color: [1.; 4],
+                    masks: vec!["mask-0".into()],
+                    ..Default::default()
+                },
+                OffscreenFrame {
+                    id: "inner".into(),
+                    parent_offscreen_id: Some("outer".into()),
+                    enabled: true,
+                    opacity: 1.,
+                    multiply_color: [1.; 4],
+                    masks: vec!["mask-0".into()],
+                    ..Default::default()
+                },
+            ];
+            frame.render_plan = vec![
+                RenderCommand::DrawMesh {
+                    mesh_id: "mask-0".into(),
+                },
+                RenderCommand::BeginOffscreen {
+                    offscreen_id: "outer".into(),
+                },
+                RenderCommand::BeginOffscreen {
+                    offscreen_id: "inner".into(),
+                },
+                RenderCommand::DrawMesh {
+                    mesh_id: "mesh-0".into(),
+                },
+                RenderCommand::EndOffscreen {
+                    offscreen_id: "inner".into(),
+                },
+                RenderCommand::EndOffscreen {
+                    offscreen_id: "outer".into(),
+                },
+            ];
+        }
+        let mut target = MetalTargetConfig {
+            width: 64,
+            height: 64,
+            format: MTLPixelFormat::RGBA8Unorm,
+        };
+        let mut renderer = MetalRenderer::new(&context, target).unwrap();
+        renderer.sync_model(&frame, &catalog).unwrap();
+        for (side, center_x) in [
+            (64, 2048.),
+            (64, 2048.125),
+            (64, 1024.),
+            (64, 3072.),
+            (128, 2048.),
+            (64, 2048.),
+        ] {
+            target.width = side;
+            target.height = side;
+            renderer.resize(target).unwrap();
+            renderer
+                .update_view(ViewportConfig {
+                    transform: Affine2 {
+                        a: Vec2::new(32., 0.),
+                        b: Vec2::new(0., 32.),
+                        origin: Vec2::new(
+                            side as f32 / 2. - center_x * 32.,
+                            side as f32 / 2. - 2048. * 32.,
+                        ),
+                    },
+                    target_extent: Vec2::new(side as f32, side as f32),
+                    mask_scale: 32.,
+                })
+                .unwrap();
+            let output = context.output_texture(target).unwrap();
+            let command = context.queue().new_command_buffer();
+            let stats = renderer
+                .encode(command, &output, MetalOutputMode::Replace, &catalog)
+                .unwrap();
+            command.commit();
+            command.wait_until_completed();
+            assert_eq!(
+                command.status(),
+                kasane_render_metal::metal::MTLCommandBufferStatus::Completed
+            );
+            assert!(
+                stats.attachment_budget_bytes < 128 * 1024 * 1024,
+                "Only the visible mask region should be allocated: {stats:?}"
+            );
+            if center_x == 2048.125 {
+                assert_eq!(
+                    stats.masks, 0,
+                    "A small pan within the snapped crop reuses masks"
+                );
+            }
+            let pixels = read_rgba8(&output).unwrap();
+            for x in [0, side / 4, side * 3 / 4, side - 1] {
+                let model_x = center_x + (x as f32 + 0.5 - side as f32 / 2.) / 32.;
+                let covered = (model_x < 2048.) != inverted;
+                let expected = if covered { [255, 0, 0, 255] } else { [0; 4] };
+                let offset = ((side / 2 * side + x) * 4) as usize;
+                assert_eq!(
+                    &pixels[offset..offset + 4],
+                    &expected,
+                    "count={count}, inverted={inverted}, center={center_x}, side={side}, x={x}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn cropped_mask_sampling_stays_stable_across_integer_pixel_pans() {
+    let context = MetalContext::new().unwrap();
+    let texture = context.upload_rgba8(1, 1, &[255; 4], &[]).unwrap();
+    let mut catalog = MetalTextureCatalog::new(HashMap::from([(
+        "solid".into(),
+        MetalTexture {
+            view: &texture,
+            width: 1,
+            height: 1,
+        },
+    )]));
+    catalog.set_revision("solid", 1);
+    let mut source = quad("mask", "solid");
+    source.visible = false;
+    source.indices = Arc::from([0, 1, 2]);
+    let mut consumer = quad("mesh", "solid");
+    consumer.masks = vec![source.id.clone()];
+    let frame = DrawableFrame {
+        canvas: Canvas::new(64., 64., Vec2::default(), 1.),
+        drawables: vec![source, consumer],
+        ..Default::default()
+    };
+    let target = MetalTargetConfig {
+        width: 256,
+        height: 256,
+        format: MTLPixelFormat::RGBA8Unorm,
+    };
+    let mut renderer = MetalRenderer::new(&context, target).unwrap();
+    renderer.sync_model(&frame, &catalog).unwrap();
+    let capture = |renderer: &mut MetalRenderer, zoom: f32, pan: f32| {
+        renderer
+            .update_view(ViewportConfig {
+                transform: Affine2 {
+                    a: Vec2::new(zoom, 0.),
+                    b: Vec2::new(0., zoom),
+                    origin: Vec2::new(128. - 32. * zoom + pan, 128. - 32. * zoom),
+                },
+                target_extent: Vec2::new(256., 256.),
+                mask_scale: f64::from(zoom),
+            })
+            .unwrap();
+        let output = context.output_texture(target).unwrap();
+        let command = context.queue().new_command_buffer();
+        renderer
+            .encode(command, &output, MetalOutputMode::Replace, &catalog)
+            .unwrap();
+        command.commit();
+        command.wait_until_completed();
+        assert_eq!(
+            command.status(),
+            kasane_render_metal::metal::MTLCommandBufferStatus::Completed
+        );
+        read_rgba8(&output).unwrap()
+    };
+    for zoom in [20., 24.] {
+        let before = capture(&mut renderer, zoom, 0.);
+        assert!(before
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .any(|p| p[3] > 0 && p[3] < 255));
+        let after = capture(&mut renderer, zoom, 64.);
+        let mut worst_difference = 0;
+        for y in 0..256 {
+            for x in 0..192 {
+                let a = before[(y * 256 + x) * 4 + 3];
+                let b = after[(y * 256 + x + 64) * 4 + 3];
+                worst_difference = worst_difference.max(a.abs_diff(b));
+            }
+        }
+        assert!(
+            worst_difference <= 1,
+            "At zoom {zoom}, a pan changed mask coverage by {worst_difference}/255"
+        );
+        assert_eq!(before, capture(&mut renderer, zoom, 0.));
+    }
+}
+
+#[test]
+fn visible_masks_lower_resolution_when_shared_budget_is_exhausted() {
+    let context = MetalContext::new().unwrap();
+    let texture = context.upload_rgba8(1, 1, &[255, 0, 0, 255], &[]).unwrap();
+    let catalog = MetalTextureCatalog::new(HashMap::from([(
+        "red".into(),
+        MetalTexture {
+            view: &texture,
+            width: 1,
+            height: 1,
+        },
+    )]));
+    let mut frame = DrawableFrame {
+        canvas: Canvas::new(8000., 8000., Vec2::default(), 1.),
+        ..Default::default()
+    };
+    for i in 0..8 {
+        let mut source = quad(&format!("mask-{i}"), "red");
+        for point in &mut source.positions {
+            point.x *= 125.;
+            point.y *= 125.;
+        }
+        source.visible = false;
+        let mut consumer = source.clone();
+        consumer.id = format!("mesh-{i}");
+        consumer.visible = true;
+        consumer.masks = vec![source.id.clone()];
+        frame.drawables.extend([source, consumer]);
+    }
+    let target = MetalTargetConfig {
+        width: 4096,
+        height: 4096,
+        format: MTLPixelFormat::RGBA8Unorm,
+    };
+    let mut renderer = MetalRenderer::new(&context, target).unwrap();
+    renderer.sync_model(&frame, &catalog).unwrap();
+    renderer
+        .update_view(ViewportConfig {
+            transform: Affine2::IDENTITY,
+            target_extent: Vec2::new(4096., 4096.),
+            mask_scale: 1.,
+        })
+        .unwrap();
+    let output = context.output_texture(target).unwrap();
+    let command = context.queue().new_command_buffer();
+    let stats = renderer
+        .encode(command, &output, MetalOutputMode::Replace, &catalog)
+        .unwrap();
+    assert_eq!(stats.mask_resolution_limit, 2048);
+    assert!(stats.attachment_budget_bytes <= kasane_render::OFFSCREEN_BUDGET_BYTES as u64);
+    command.commit();
+    command.wait_until_completed();
+    assert_eq!(
+        command.status(),
+        kasane_render_metal::metal::MTLCommandBufferStatus::Completed
+    );
+    let pixels = read_rgba8(&output).unwrap();
+    for (x, y) in [(0, 0), (4095, 0), (2048, 2048), (0, 4095), (4095, 4095)] {
+        let offset = (y * 4096 + x) * 4;
+        assert_eq!(&pixels[offset..offset + 4], &[255, 0, 0, 255]);
+    }
+}
+
+#[test]
 fn filtered_transparent_texels_do_not_tint_normal_or_clipped_edges() {
     let context = MetalContext::new().unwrap();
     let target = MetalTargetConfig {

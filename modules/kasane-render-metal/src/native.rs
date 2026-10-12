@@ -9,7 +9,7 @@ use kasane_render::gpu::{
     quad_vertices, MaskLayout, Vertex,
 };
 use kasane_render::{
-    surface_layout, Affine2, MaskId, ScenePlan, TargetId, TargetItem, TextureCatalog,
+    surface_layout, Affine2, Bounds2, MaskId, ScenePlan, TargetId, TargetItem, TextureCatalog,
     ViewportConfig,
 };
 use metal::{
@@ -175,6 +175,11 @@ pub struct MetalRenderStats {
     pub destination_copies: usize,
     /// Per-command color/snapshot storage, excluding the host output and masks.
     pub color_attachment_bytes: u64,
+    /// Conservative per-command attachment reservation, including host output,
+    /// mask storage and atlas packing overhead. Never exceeds the shared budget.
+    pub attachment_budget_bytes: u64,
+    /// Longest mask edge allowed after budget-driven resolution reduction.
+    pub mask_resolution_limit: u32,
 }
 
 pub struct MetalTexture<'a> {
@@ -794,7 +799,7 @@ impl MetalRenderer {
             .frame
             .as_ref()
             .ok_or_else(|| Status::error("MISSING_MODEL", "Submit a model before encoding."))?;
-        let mut viewport = self
+        let viewport = self
             .viewport
             .ok_or_else(|| Status::error("MISSING_VIEW", "Update the view before encoding."))?;
         if output.width() != self.target.width as u64
@@ -835,25 +840,10 @@ impl MetalRenderer {
             viewport.target_extent,
         )?;
         let surface_size = (size.width as u32, size.height as u32);
-        // Raw masks do not depend on pan or the final view matrix. Round their
-        // density upward so nearby zoom levels share one high-quality mask.
-        // Keep exact density when rounding would exceed the attachment budget.
-        let rounded_scale = viewport.mask_scale.log2().ceil().exp2();
-        let rounded_view = ViewportConfig {
-            mask_scale: rounded_scale,
-            ..viewport
-        };
-        let rounded_budget = (rounded_scale.is_finite() && rounded_scale > 0.)
-            .then(|| {
-                self.validate_attachment_budget(frame, rounded_view, surface_size, output_mode)
-            })
-            .and_then(Result::ok);
-        let attachment_bytes = if let Some(bytes) = rounded_budget {
-            viewport = rounded_view;
-            bytes
-        } else {
-            self.validate_attachment_budget(frame, viewport, surface_size, output_mode)?
-        };
+        let (viewport, mask_view, attachment_bytes) =
+            fit_mask_budget(viewport, |view, mask_view| {
+                self.validate_attachment_budget(frame, view, surface_size, output_mode, mask_view)
+            })?;
         let surface_to_model = inverse_affine(surface_transform)?;
         // Replace can render directly to the host texture. Composite requires
         // an intermediate image to preserve the host's existing background.
@@ -876,6 +866,7 @@ impl MetalRenderer {
             renderer: self,
             frame,
             viewport,
+            mask_view,
             textures,
             command,
             surface_size,
@@ -893,6 +884,8 @@ impl MetalRenderer {
             atlas_cleared: Default::default(),
             stats: MetalRenderStats {
                 buffer_uploads,
+                attachment_budget_bytes: attachment_bytes,
+                mask_resolution_limit: mask_view.max_dimension,
                 color_attachment_bytes: if output_mode == MetalOutputMode::Composite {
                     u64::from(self.target.width) * u64::from(self.target.height) * 4
                 } else {
@@ -902,6 +895,11 @@ impl MetalRenderer {
             },
         };
         state.prepare_mask_atlas()?;
+        state.stats.attachment_budget_bytes += state
+            .atlas_pages
+            .iter()
+            .map(|texture| texture.width() * texture.height() * 4)
+            .sum::<u64>();
         state.encode_masks()?;
         state.finish_pass();
         state.encode_target(TargetId::MAIN, &main_color)?;
@@ -960,14 +958,14 @@ impl MetalRenderer {
         })
     }
 
-    fn mask_layout(&self, mask: MaskId, scale: f64) -> Result<MaskLayout, Status> {
+    fn mask_layout(
+        &self,
+        mask: MaskId,
+        scale: f64,
+        view: MaskViewport,
+    ) -> Result<Option<MaskLayout>, Status> {
         let bounds = self.scene.masks()[mask.0].bounds;
-        mask_layout_from_bounds(
-            bounds.position,
-            bounds.end(),
-            scale,
-            MAX_TEXTURE_DIMENSION.min(4096),
-        )
+        view.layout(bounds, scale)
     }
 
     fn validate_attachment_budget(
@@ -976,6 +974,7 @@ impl MetalRenderer {
         viewport: ViewportConfig,
         surface_size: (u32, u32),
         output_mode: MetalOutputMode,
+        mask_view: MaskViewport,
     ) -> Result<u64, Status> {
         let bytes = |size: (u32, u32)| u64::from(size.0) * u64::from(size.1) * 4;
         // Children are rendered and consumed in target order. Color storage is
@@ -1029,8 +1028,9 @@ impl MetalRenderer {
         total = total.saturating_add(surface_count.saturating_mul(bytes(surface_size)));
         let mut masks = std::collections::HashSet::new();
         let mut count_mask = |sources: &[String], mask: MaskId, scale: f64| -> Result<(), Status> {
-            if masks.insert(MaskCacheKey::new(sources, scale)) {
-                let layout = self.mask_layout(mask, scale)?;
+            let layout = self.mask_layout(mask, scale, mask_view)?;
+            if masks.insert(MaskCacheKey::new(sources, layout)) {
+                let layout = layout.unwrap_or(EMPTY_MASK_LAYOUT);
                 total = total.saturating_add(bytes((layout.width, layout.height)));
             }
             Ok(())
@@ -1090,14 +1090,154 @@ struct MaskAttachment {
     region: [f32; 4],
 }
 
+/// Keep the best available density before sacrificing resolution. Color-only
+/// exhaustion remains an error, even after every mask has reached one texel.
+fn fit_mask_budget(
+    viewport: ViewportConfig,
+    mut budget: impl FnMut(ViewportConfig, MaskViewport) -> Result<u64, Status>,
+) -> Result<(ViewportConfig, MaskViewport, u64), Status> {
+    let mut mask_view = MaskViewport::new(viewport)?;
+    let rounded_scale = viewport.mask_scale.log2().ceil().exp2();
+    let rounded_view = ViewportConfig {
+        mask_scale: rounded_scale,
+        ..viewport
+    };
+    if rounded_scale.is_finite() && rounded_scale > 0. {
+        match budget(rounded_view, mask_view) {
+            Ok(bytes) => return Ok((rounded_view, mask_view, bytes)),
+            Err(error) if error.code == "OFFSCREEN_BUDGET_EXCEEDED" => {}
+            Err(error) => return Err(error),
+        }
+    }
+    loop {
+        match budget(viewport, mask_view) {
+            Ok(bytes) => return Ok((viewport, mask_view, bytes)),
+            Err(error)
+                if error.code == "OFFSCREEN_BUDGET_EXCEEDED" && mask_view.max_dimension > 1 =>
+            {
+                mask_view.max_dimension /= 2;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+// A fully offscreen mask has zero coverage, including for inverted consumers.
+// Its 1x1 attachment is cleared without drawing the source geometry.
+const EMPTY_MASK_LAYOUT: MaskLayout = MaskLayout {
+    width: 1,
+    height: 1,
+    origin: Vec2 { x: 0., y: 0. },
+    logical_size: Vec2 { x: 1., y: 1. },
+    scale: 1.,
+};
+
+#[derive(Clone, Copy)]
+struct MaskViewport {
+    bounds: Bounds2,
+    max_dimension: u32,
+}
+
+impl MaskViewport {
+    fn new(viewport: ViewportConfig) -> Result<Self, Status> {
+        let inverse = inverse_affine(viewport.transform)?;
+        // A small screen-space apron and snapped bounds make small pans share
+        // coverage. The layout helper retains its four canvas-pixel border.
+        let margin = 64.;
+        let min = Vec2::new(-margin, -margin);
+        let max = Vec2::new(
+            viewport.target_extent.x + margin,
+            viewport.target_extent.y + margin,
+        );
+        let mut bounds = Bounds2::from_point(inverse.transform_point(min));
+        for point in [Vec2::new(max.x, min.y), max, Vec2::new(min.x, max.y)] {
+            bounds = bounds.include(inverse.transform_point(point));
+        }
+        if !bounds.position.x.is_finite()
+            || !bounds.position.y.is_finite()
+            || !bounds.size.x.is_finite()
+            || !bounds.size.y.is_finite()
+        {
+            return Err(Status::error(
+                "INVALID_TRANSFORM",
+                "Visible mask bounds overflowed.",
+            ));
+        }
+        let tile = Vec2::new(
+            margin * (inverse.a.x.abs() + inverse.b.x.abs()),
+            margin * (inverse.a.y.abs() + inverse.b.y.abs()),
+        );
+        if !tile.x.is_finite() || !tile.y.is_finite() || tile.x <= 0. || tile.y <= 0. {
+            return Err(Status::error(
+                "INVALID_TRANSFORM",
+                "Visible mask grid overflowed.",
+            ));
+        }
+        let end = bounds.end();
+        let origin = Vec2::new(
+            (bounds.position.x / tile.x).floor() * tile.x,
+            (bounds.position.y / tile.y).floor() * tile.y,
+        );
+        bounds = Bounds2 {
+            position: origin,
+            size: Vec2::new(
+                (end.x / tile.x).ceil() * tile.x - origin.x,
+                (end.y / tile.y).ceil() * tile.y - origin.y,
+            ),
+        };
+        Ok(Self {
+            bounds,
+            max_dimension: 4096,
+        })
+    }
+
+    fn layout(self, bounds: Bounds2, scale: f64) -> Result<Option<MaskLayout>, Status> {
+        let min = Vec2::new(
+            bounds.position.x.max(self.bounds.position.x),
+            bounds.position.y.max(self.bounds.position.y),
+        );
+        let max = Vec2::new(
+            bounds.end().x.min(self.bounds.end().x),
+            bounds.end().y.min(self.bounds.end().y),
+        );
+        if max.x <= min.x || max.y <= min.y {
+            return Ok(None);
+        }
+        // Cropping must not change the sampling phase. The screen-space crop
+        // grid is generally fractional in mask texels (e.g. zoom 20 with a
+        // rounded mask density of 32), which otherwise makes edges shimmer
+        // whenever panning crosses a crop boundary. Align to the uncropped
+        // source's grid before adding the filtering border.
+        let layout = mask_layout_from_bounds(min, max, scale, self.max_dimension)?;
+        if layout.scale != scale as f32 || !layout.scale.is_finite() || layout.scale <= 0. {
+            // Resolution-limited layouts already change density with their
+            // extent. Keep their dimensions within the selected budget cap.
+            return Ok(Some(layout));
+        }
+        let align = |value: f32, origin: f32| {
+            let density = f64::from(layout.scale);
+            (f64::from(origin)
+                + ((f64::from(value) - f64::from(origin)) * density).floor() / density)
+                as f32
+        };
+        let min = Vec2::new(
+            align(min.x, bounds.position.x),
+            align(min.y, bounds.position.y),
+        );
+        mask_layout_from_bounds(min, max, scale, self.max_dimension).map(Some)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct MaskCacheKey {
     sources: Vec<String>,
-    scale: u64,
+    // Cropped origin and extent must participate in cache identity, even when
+    // density and source geometry are unchanged by a pan or resize.
+    layout: Option<[u32; 7]>,
 }
 
 impl MaskCacheKey {
-    fn new(sources: &[String], scale: f64) -> Self {
+    fn new(sources: &[String], layout: Option<MaskLayout>) -> Self {
         let mut unique = Vec::new();
         for source in sources {
             if !unique.contains(source) {
@@ -1106,7 +1246,17 @@ impl MaskCacheKey {
         }
         Self {
             sources: unique,
-            scale: scale.to_bits(),
+            layout: layout.map(|layout| {
+                [
+                    layout.width,
+                    layout.height,
+                    layout.origin.x.to_bits(),
+                    layout.origin.y.to_bits(),
+                    layout.logical_size.x.to_bits(),
+                    layout.logical_size.y.to_bits(),
+                    layout.scale.to_bits(),
+                ]
+            }),
         }
     }
 }
@@ -1130,6 +1280,7 @@ struct FrameEncoder<'a, 'tex> {
     renderer: &'a MetalRenderer,
     frame: &'a DrawableFrame,
     viewport: ViewportConfig,
+    mask_view: MaskViewport,
     textures: &'a MetalTextureCatalog<'tex>,
     command: &'a CommandBufferRef,
     surface_size: (u32, u32),
@@ -1166,9 +1317,10 @@ impl FrameEncoder<'_, '_> {
         let mut jobs = Vec::new();
         let mut seen = std::collections::HashSet::new();
         let mut add = |sources: &[String], mask: MaskId, scale: f64| -> Result<(), Status> {
-            let key = MaskCacheKey::new(sources, scale);
+            let layout = self.renderer.mask_layout(mask, scale, self.mask_view)?;
+            let key = MaskCacheKey::new(sources, layout);
             if seen.insert(key.clone()) {
-                jobs.push((key, self.renderer.mask_layout(mask, scale)?));
+                jobs.push((key, layout.unwrap_or(EMPTY_MASK_LAYOUT)));
             }
             Ok(())
         };
@@ -1315,7 +1467,10 @@ impl FrameEncoder<'_, '_> {
         mask: MaskId,
         scale: f64,
     ) -> Result<(), Status> {
-        let key = MaskCacheKey::new(sources, scale);
+        let layout = self.renderer.mask_layout(mask, scale, self.mask_view)?;
+        let empty = layout.is_none();
+        let key = MaskCacheKey::new(sources, layout);
+        let layout = layout.unwrap_or(EMPTY_MASK_LAYOUT);
         let source_indices: Vec<_> = key
             .sources
             .iter()
@@ -1353,7 +1508,6 @@ impl FrameEncoder<'_, '_> {
                 return Ok(());
             }
         }
-        let layout = self.renderer.mask_layout(mask, scale)?;
         // Commands are submitted on one queue, so an earlier frame's reads
         // finish before this frame clears and rewrites the same attachment.
         let atlas_slot = self.atlas_slots.get(&key).copied();
@@ -1408,7 +1562,7 @@ impl FrameEncoder<'_, '_> {
                     .to_owned()
             })
             .collect();
-        for index in source_indices {
+        for index in source_indices.into_iter().filter(|_| !empty) {
             let source = &self.frame.drawables[index];
             if source.indices.is_empty() {
                 continue;
@@ -1823,4 +1977,114 @@ pub fn read_rgba8(texture: &TextureRef) -> Result<Vec<u8>, Status> {
         0,
     );
     Ok(rgba)
+}
+
+#[cfg(test)]
+mod mask_tests {
+    use super::*;
+
+    fn view() -> ViewportConfig {
+        ViewportConfig {
+            transform: Affine2::IDENTITY,
+            target_extent: Vec2::new(4096., 4096.),
+            mask_scale: 32.,
+        }
+    }
+
+    #[test]
+    fn visible_mask_budget_reduces_resolution_and_keeps_color_limit() {
+        let bounds = Bounds2 {
+            position: Vec2::default(),
+            size: Vec2::new(8000., 8000.),
+        };
+        let colors = 4096u64 * 4096 * 4;
+        let budget = kasane_render::OFFSCREEN_BUDGET_BYTES as u64;
+        let (_, policy, bytes) = fit_mask_budget(view(), |view, policy| {
+            let layout = policy.layout(bounds, view.mask_scale)?.unwrap();
+            let bytes = colors + 20 * u64::from(layout.width) * u64::from(layout.height) * 4;
+            if bytes > budget {
+                Err(Status::error("OFFSCREEN_BUDGET_EXCEEDED", "test"))
+            } else {
+                Ok(bytes)
+            }
+        })
+        .unwrap();
+        assert_eq!(policy.max_dimension, 2048);
+        assert!(bytes <= budget);
+        let error = fit_mask_budget(view(), |_, _| {
+            Err(Status::error(
+                "OFFSCREEN_BUDGET_EXCEEDED",
+                "Color storage alone exceeds the budget.",
+            ))
+        })
+        .err()
+        .unwrap();
+        assert_eq!(error.code, "OFFSCREEN_BUDGET_EXCEEDED");
+    }
+
+    #[test]
+    fn exact_density_is_tried_before_reducing_resolution() {
+        let bounds = Bounds2 {
+            position: Vec2::default(),
+            size: Vec2::new(64., 64.),
+        };
+        let (_, policy, bytes) = fit_mask_budget(
+            ViewportConfig {
+                mask_scale: 1.1,
+                ..view()
+            },
+            |view, policy| {
+                let layout = policy.layout(bounds, view.mask_scale)?.unwrap();
+                let bytes = u64::from(layout.width) * u64::from(layout.height) * 4;
+                if bytes > 32 * 1024 {
+                    Err(Status::error("OFFSCREEN_BUDGET_EXCEEDED", "test"))
+                } else {
+                    Ok(bytes)
+                }
+            },
+        )
+        .unwrap();
+        assert_eq!(policy.max_dimension, 4096);
+        assert!(bytes < 32 * 1024);
+    }
+
+    #[test]
+    fn rotated_and_sheared_viewport_crop_covers_every_visible_corner() {
+        let viewport = ViewportConfig {
+            transform: Affine2 {
+                a: Vec2::new(24., 8.),
+                b: Vec2::new(-16., 32.),
+                origin: Vec2::new(-10000., -9000.),
+            },
+            target_extent: Vec2::new(1280., 800.),
+            mask_scale: 32.,
+        };
+        let policy = MaskViewport::new(viewport).unwrap();
+        let layout = policy
+            .layout(
+                Bounds2 {
+                    position: Vec2::new(-8000., -8000.),
+                    size: Vec2::new(16000., 16000.),
+                },
+                32.,
+            )
+            .unwrap()
+            .unwrap();
+        assert!(layout.width < 4096 && layout.height < 4096);
+        let inverse = inverse_affine(viewport.transform).unwrap();
+        for point in [
+            Vec2::default(),
+            Vec2::new(1280., 0.),
+            Vec2::new(0., 800.),
+            Vec2::new(1280., 800.),
+        ] {
+            let model = inverse.transform_point(point);
+            assert!(
+                model.x >= layout.origin.x && model.x <= layout.origin.x + layout.logical_size.x
+            );
+            assert!(
+                model.y >= layout.origin.y && model.y <= layout.origin.y + layout.logical_size.y
+            );
+        }
+    }
 }

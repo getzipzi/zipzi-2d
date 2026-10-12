@@ -48,9 +48,21 @@ if shelf storage would exceed the attachment budget, rendering falls back to
 individual masks. Small scenes retain individual-mask caching.
 
 Raw masks are shared by consumers and cached across frames
-using geometry, scale, texture identity/revision, and repeat mode.
+using geometry, physical mask layout, texture identity/revision, and repeat mode.
+Their canvas-space bounds are intersected with the inverse-transformed visible
+viewport, including a 64-screen-pixel apron snapped to a grid and the usual
+filtering border. Fully offscreen sources use cleared one-texel masks, preserving
+inverted-mask coverage. Cropped origin and extent participate in cache identity,
+so pans and resizes cannot reuse coverage from a different region. Small pans
+within the same crop reuse coverage.
+At full mask density, crop origins also align to the source's mask texel grid,
+so crossing a crop boundary does not shift filtered edges during a pan.
 Mask density rounds up to powers of two to share masks across nearby zoom levels,
 falling back to exact density when the larger masks exceed the attachment budget.
+If visible masks still exceed the budget, their maximum edge is halved from
+4096 until the frame fits. This also reduces Offscreen masks below their usual
+minimum density when necessary. Color storage that exceeds the budget even with
+one-texel masks still fails before encoding.
 Give textures
 monotonically increasing revisions with `set_revision` when their contents
 change. Unversioned textures redraw masks every frame. Unused mask entries are
@@ -60,7 +72,9 @@ cached. Output and offscreen textures remain per-frame allocations.
 `MetalRenderStats` reports draw calls, render passes, mask redraws/cache hits and
 buffer uploads. `color_attachment_bytes` reports the color/snapshot storage
 allocated for that command, excluding the host output and masks. A warm pan
-requires no geometry upload or mask redraw.
+requires no geometry upload. `attachment_budget_bytes` reports the conservative
+reservation including host output, masks and atlas packing overhead;
+`mask_resolution_limit` reports the mask edge limit chosen for the frame.
 
 On macOS, `kasane-sdk-observe` and the Python `observe` feature use this
 native backend. Other platforms keep `kasane-render-wgpu`. Python builds
