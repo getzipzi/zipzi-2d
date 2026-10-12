@@ -1,6 +1,6 @@
 # Modeling 与 Animation Workspace 实施计划
 
-日期：2026-10-12。状态：阶段一至三已实施并通过验证；阶段四、五待实施。
+日期：2026-10-12。状态：阶段一至四已实施并通过验证；阶段五待实施。
 
 将现有编辑界面确立为 Modeling workspace，新增用于已有动画资源预览与验证的 Animation workspace。首版完成 model3 模型包导入、motion 播放、expression 应用与组合预览，并保证播放不会污染建模状态和文档历史。本计划不包含动画创作功能。
 
@@ -185,10 +185,10 @@ Animation 的 [SceneSnapshot](../crates/editor-core/src/scene.rs) 使用 SDK 运
 
 ### 阶段四：资源面板与完整反馈
 
-- [ ] 完成 motion 分组列表、expression 列表、资源信息及必要的只读状态展示。
-- [ ] 完成空资源、缺失文件、未解析目标、不支持通道、Sound 未播放等诊断。
-- [ ] 把现有对象投影中“playback tools not implemented”等硬编码文案改为准确的资源说明；运行状态来自 AnimationSession。
-- [ ] 完成菜单、工具提示、本地化、布局重置和重启恢复。
+- [x] 完成 motion 分组列表、expression 列表、资源信息及必要的只读状态展示。
+- [x] 完成空资源、缺失文件、未解析目标、不支持通道、Sound 未播放等诊断。
+- [x] 把现有对象投影中“playback tools not implemented”等硬编码文案改为准确的资源说明；运行状态来自 AnimationSession。
+- [x] 完成菜单、工具提示、本地化、布局重置和重启恢复。
 
 退出条件：用户能从导入一路完成选择、组合、暂停、定位、清除和回到建模，不需要通过日志判断播放是否生效。
 
@@ -295,3 +295,17 @@ cargo fmt --all -- --check
 - 检查：`cargo test --locked --workspace`（355 项通过，4 项已有忽略，包含真实 Metal 截图）、`cargo check --locked --workspace`、`cargo fmt --all -- --check`、`git diff --check` 均通过。相邻 SDK 本阶段没有新增改动。
 
 阶段四、五继续完善资源反馈、本地化诊断、真实模型完整场景与性能验收；阶段三未增加新的 SDK API 或额外驱动。
+
+
+### 阶段四实施记录（2026-10-12）
+
+- 阶段三已提交：`8150e29`（`Add expression previews and deterministic animation seeking`）。
+- 引入按 SDK revision 缓存的只读 AnimationCatalog。动作注册保留 group / entry 身份及有效淡入淡出值，资源信息展示时长、FPS、轨道／事件数量；表情展示参数数量、淡入淡出和 Add / Multiply / Overwrite 混合方式。未分组和空名称分组分别展示。
+- 资源诊断无需播放即可查看：缺失文件、motion / expression 未解析目标、不支持的 Model 通道、无 Pose 的 PartOpacity、Physics / Pose 未解析引用、Sound 注册但不播放音频。已知 SDK coverage 映射到同一条类型化诊断并去重；未知运行时提示保留详情，不维护持续增长的诊断日志。不可求值的表情在列表中禁用并说明目标。
+- Preview Info 展示播放／暂停／求值／失败状态、实际呈现帧的时间和模型透明度、选中与活跃表情、Physics / Pose 资源状态。事件仅展示该帧文本，不执行音频或外部行为。预览失败类型在显示时本地化，资源投影不再包含“not playing”“saved, not applied”等过时状态。
+- 新增可选 Preview Parameters 面板，通过 Window 菜单或 Preview Info 打开。只读观察实际显示帧，复用画布冻结旧帧的身份校验，不以异步求值目标冒充已呈现值；不修改建模参数、history 或 modified。
+- 补齐中英文反馈与操作提示；参数面板随 Animation 布局恢复，Modeling 布局拒绝动画面板，Reset Layout 恢复默认 Motions / Expressions / Preview Info。关闭最后一个可选面板释放空 dock，时间标签保留完整可见宽度。
+- 验证：新增资源投影／缓存失效、诊断去重、缺失文件、类型化错误和只读参数交互测试；扩展重启恢复、模式隔离和 Reset Layout 测试。真实 Metal 截图新增 `animation-readonly-parameters.png`、`animation-diagnostics-zh.png`，检查实际帧参数和中文诊断布局。
+- 检查：`cargo test --locked --workspace`（360 passed，4 项现有 ignored）、`cargo check --locked --workspace`、`cargo fmt --all -- --check`、`git diff --check`。本阶段无新增 SDK 改动。
+
+阶段五继续进行实际模型完整场景及性能验收；阶段四的资源反馈与只读观察不代表已经完成 60 Hz 性能目标或全部模型兼容性验收。

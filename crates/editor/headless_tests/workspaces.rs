@@ -303,6 +303,11 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
         window.render_frame(cx);
         window.click("workspace-animation", cx);
         window.render_frame(cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::AnimationParameters, window, cx);
+            view.run_command(CommandId::Expressions, window, cx);
+        });
+        window.render_frame(cx);
         window.simulate_next_frame(cx);
     })
     .unwrap();
@@ -323,6 +328,22 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
     cx.update_window(window, |_, window, cx| {
         window.render_frame(cx);
         assert_eq!(view.read(cx).editor.workspace(), WorkspaceKind::Animation);
+        view.read_with(cx, |view, cx| {
+            let dock = view.dock.as_ref().unwrap();
+            let area = dock.area.read(cx);
+            assert!(
+                area.panel(PanelId::from(dock.animation_parameters.entity_id()))
+                    .is_some()
+            );
+            assert!(
+                area.panel(PanelId::from(dock.animation_expressions.entity_id()))
+                    .is_none()
+            );
+            crate::docking::validate_layout(&area.dump(cx), WorkspaceKind::Animation).unwrap();
+            assert!(
+                crate::docking::validate_layout(&area.dump(cx), WorkspaceKind::Modeling).is_err()
+            );
+        });
         for id in [
             "workspace-modeling",
             "workspace-animation",
@@ -347,6 +368,29 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
                 dock.area
                     .read(cx)
                     .panel(PanelId::from(dock.parameters.entity_id()))
+                    .is_some()
+            );
+        });
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        view.update(cx, |view, cx| {
+            view.run_command(CommandId::ResetLayout, window, cx)
+        });
+        window.render_frame(cx);
+        window.simulate_next_frame(cx);
+        view.read_with(cx, |view, cx| {
+            let dock = view.dock.as_ref().unwrap();
+            let area = dock.area.read(cx);
+            assert!(
+                area.panel(PanelId::from(dock.animation_parameters.entity_id()))
+                    .is_none()
+            );
+            assert!(
+                area.panel(PanelId::from(dock.animation_expressions.entity_id()))
+                    .is_some()
+            );
+            assert!(
+                area.panel(PanelId::from(dock.animation_info.entity_id()))
                     .is_some()
             );
         });

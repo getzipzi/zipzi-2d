@@ -135,6 +135,13 @@ pub struct Presented {
 }
 
 impl EditorView {
+    pub(crate) fn displayed_animation(&self) -> Option<&kasane_sdk::MotionSnapshot> {
+        self.animation_frame
+            .as_ref()
+            .filter(|frame| self.editor.accepts_animation_image(frame.state.identity))
+            .map(|frame| frame.state.snapshot.as_ref())
+            .or_else(|| self.editor.animation().and_then(|a| a.presented.as_deref()))
+    }
     pub(super) fn init_animation(&mut self, cx: &mut Context<Self>) {
         let (worker, results) = AnimationWorker::start();
         self.animation_worker = Some(worker);
@@ -148,8 +155,10 @@ impl EditorView {
                         match frame.result {
                             Ok(evaluated) => this.render_animation(evaluated),
                             Err(error) => {
-                                this.editor
-                                    .fail_animation(frame.identity, error.to_string());
+                                this.editor.fail_animation(
+                                    frame.identity,
+                                    editor_core::AnimationFailure::from_error(&error),
+                                );
                                 this.notify_animation(cx);
                             }
                         }
@@ -201,7 +210,7 @@ impl EditorView {
             .is_some_and(|requests| requests.send(request).is_err())
         {
             self.editor
-                .fail_animation(identity, t!("editor.preview_stopped").into_owned());
+                .fail_animation(identity, editor_core::AnimationFailure::RendererStopped);
         }
     }
     pub(super) fn sync_animation_clock(&mut self, cx: &mut Context<Self>) {

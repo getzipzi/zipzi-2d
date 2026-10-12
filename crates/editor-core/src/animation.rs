@@ -1,5 +1,7 @@
 //! Detached playback descriptions and frame provenance. No authoring edits.
-use crate::{Document, DocumentId, Editor, SceneSnapshot, SceneTexture, WorkspaceKind};
+use crate::{
+    AnimationFailure, Document, DocumentId, Editor, SceneSnapshot, SceneTexture, WorkspaceKind,
+};
 use anyhow::{Result, ensure};
 use kasane_sdk::{AuthoringSnapshot, MotionPreview, MotionSnapshot};
 use std::{collections::HashSet, sync::Arc};
@@ -19,6 +21,12 @@ pub struct MotionResource {
     pub duration: f32,
     pub looping: bool,
     pub sound: Option<String>,
+    pub fps: f32,
+    /// Effective registration → clip → SDK default fades, in seconds.
+    pub fade_in: f32,
+    pub fade_out: f32,
+    pub tracks: usize,
+    pub events: usize,
 }
 impl MotionResource {
     pub fn playable(&self) -> bool {
@@ -31,6 +39,10 @@ pub struct ExpressionResource {
     pub id: String,
     pub name: String,
     pub unresolved_targets: Vec<String>,
+    pub fade_in: f32,
+    pub fade_out: f32,
+    pub parameters: usize,
+    pub blends: Vec<kasane_core::document::ExpressionBlend>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -51,6 +63,24 @@ impl Document {
                 Some(ExpressionResource {
                     id: id.clone(),
                     name: expression.name.clone(),
+                    fade_in: expression.fade_in.unwrap_or(1.),
+                    fade_out: expression.fade_out.unwrap_or(1.),
+                    parameters: expression.entries.len(),
+                    blends: [
+                        kasane_core::document::ExpressionBlend::Add,
+                        kasane_core::document::ExpressionBlend::Multiply,
+                        kasane_core::document::ExpressionBlend::Overwrite,
+                    ]
+                    .into_iter()
+                    .filter(|blend| {
+                        expression.entries.iter().any(|entry| {
+                            entry
+                                .blend
+                                .unwrap_or(kasane_core::document::ExpressionBlend::Add)
+                                == *blend
+                        })
+                    })
+                    .collect(),
                     unresolved_targets: expression
                         .entries
                         .iter()
@@ -80,6 +110,11 @@ impl Document {
                         duration: clip.duration,
                         looping: clip.looping,
                         sound: entry.sound.clone(),
+                        fps: clip.fps,
+                        fade_in: entry.fade_in.or(clip.fade_in).unwrap_or(1.),
+                        fade_out: entry.fade_out.or(clip.fade_out).unwrap_or(1.),
+                        tracks: clip.tracks.len(),
+                        events: clip.events.len(),
                     });
                 }
             }
@@ -97,6 +132,11 @@ impl Document {
                     duration: clip.duration,
                     looping: clip.looping,
                     sound: None,
+                    fps: clip.fps,
+                    fade_in: clip.fade_in.unwrap_or(1.),
+                    fade_out: clip.fade_out.unwrap_or(1.),
+                    tracks: clip.tracks.len(),
+                    events: clip.events.len(),
                 });
             }
         }
@@ -213,7 +253,7 @@ pub struct AnimationSession {
     /// A paused loop scrub denotes the first cycle, including its right endpoint.
     pub loop_position: bool,
     pub presented: Option<Arc<MotionSnapshot>>,
-    pub error: Option<String>,
+    pub error: Option<AnimationFailure>,
     pub model_generation: u64,
     pub preview_generation: u64,
     source: Option<Arc<AnimationSource>>,
@@ -300,7 +340,7 @@ impl AnimationSession {
             } else {
                 self.motion = None;
                 self.time = 0.;
-                self.error = Some("Selected motion registration no longer exists".into());
+                self.error = Some(AnimationFailure::MotionRemoved);
             }
         }
         let resources = document.expression_resources();
@@ -314,9 +354,9 @@ impl AnimationSession {
             .retain(|trigger| valid(&trigger.expression_id));
         if self.expression.as_ref().is_some_and(|id| !valid(id)) {
             self.expression = None;
-            self.error = Some("Selected expression is missing or has unresolved targets".into());
+            self.error = Some(AnimationFailure::ExpressionUnavailable);
         } else if before != self.expressions.len() {
-            self.error = Some("Unavailable expression triggers were removed".into());
+            self.error = Some(AnimationFailure::TriggersRemoved);
         }
     }
     fn accepts(&self, id: AnimationIdentity) -> bool {
@@ -636,7 +676,7 @@ impl Editor {
         animation.presented = Some(snapshot);
         true
     }
-    pub fn fail_animation(&mut self, identity: AnimationIdentity, error: String) {
+    pub fn fail_animation(&mut self, identity: AnimationIdentity, error: AnimationFailure) {
         if self.accepts_animation(identity) {
             let animation = &mut self.active_session_mut().unwrap().animation;
             animation.playing = false;

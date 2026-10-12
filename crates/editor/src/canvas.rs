@@ -405,7 +405,13 @@ impl Render for CanvasView {
         }
         let error = state.render_error.clone().or_else(|| {
             (!modeling)
-                .then(|| state.editor.animation().and_then(|a| a.error.clone()))
+                .then(|| {
+                    state.editor.animation().and_then(|a| {
+                        a.error
+                            .as_ref()
+                            .map(crate::panels::animation_feedback::failure_text)
+                    })
+                })
                 .flatten()
         });
         let capture = self.pan.is_some() || state.editor.gesture_active();

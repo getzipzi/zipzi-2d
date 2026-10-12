@@ -20,6 +20,8 @@ pub enum CommandId {
     ResetAnimation,
     #[serde(rename = "panel.animation-info")]
     AnimationInfo,
+    #[serde(rename = "panel.animation-parameters")]
+    AnimationParameters,
     #[serde(rename = "file.new")]
     New,
     #[serde(rename = "file.open")]
@@ -171,6 +173,13 @@ specs![
         []
     ),
     (AnimationInfo, "workspace.info", Workspace, false, []),
+    (
+        AnimationParameters,
+        "workspace.parameters",
+        Workspace,
+        false,
+        []
+    ),
     (New, "menu.new", Workspace, false, ["cmd-n"]),
     (Open, "menu.open", Workspace, false, ["cmd-o"]),
     (ImportModel3, "menu.import_model3", Workspace, false, []),
@@ -320,7 +329,7 @@ impl Editor {
                         .animation()
                         .is_some_and(|a| a.expression.is_some() || !a.expressions.is_empty())
             }
-            AnimationInfo => !modeling,
+            AnimationInfo | AnimationParameters => !modeling,
             Motions | Expressions => true,
             New | Open | ImportModel3 | ImportPsd => !self.exiting(),
             Quit => true,

@@ -4,6 +4,7 @@ use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable,
     button::{Button, ButtonVariants},
     slider::{Slider, SliderEvent, SliderState, SliderValue},
+    tooltip::Tooltip,
 };
 use gpui_kit::{prelude::*, *};
 
@@ -86,18 +87,14 @@ impl Render for PlaybackBar {
         let playing = animation.is_some_and(|a| a.playing);
         let loop_position = animation.is_some_and(|a| a.loop_position);
         let resource = view.editor.document().and_then(|d| {
-            d.motion_resources()
-                .into_iter()
+            d.animation_catalog()
+                .motions
+                .iter()
                 .find(|r| animation.is_some_and(|a| a.motion.as_ref() == Some(&r.selection)))
+                .cloned()
         });
         // The accepted GPU frame owns the displayed time.
-        let time = view
-            .animation_frame
-            .as_ref()
-            .filter(|f| view.editor.accepts_animation_image(f.state.identity))
-            .map(|f| &f.state.snapshot)
-            .or_else(|| animation.and_then(|a| a.presented.as_ref()))
-            .map_or(0., |s| s.time);
+        let time = view.displayed_animation().map_or(0., |s| s.time);
         let label = resource.as_ref().map_or_else(
             || format!("{time:.2} s"),
             |r| {
@@ -241,6 +238,11 @@ impl Render for PlaybackBar {
                     .small()
                     .ghost()
                     .label(label)
+                    .tooltip(if command == CommandId::PlayPause {
+                        t!("workspace.play_hint")
+                    } else {
+                        t!("workspace.rewind_hint")
+                    })
                     .disabled(!available)
                     .on_click(move |_, window, cx| {
                         let _ = owner.update(cx, |view, cx| view.run_command(command, window, cx));
@@ -253,6 +255,17 @@ impl Render for PlaybackBar {
                 .test_support()
                 .flex_1()
                 .min_w(px(36.))
+                .tooltip(move |window, cx| {
+                    Tooltip::new(
+                        (if enabled {
+                            t!("workspace.seek_hint")
+                        } else {
+                            t!("workspace.no_seek_hint")
+                        })
+                        .into_owned(),
+                    )
+                    .build(window, cx)
+                })
                 .when(self.seek.is_none(), |e| {
                     e.child(div().w_full().h(px(3.)).bg(cx.theme().border))
                 })
@@ -296,6 +309,7 @@ impl Render for PlaybackBar {
         );
         bar.child(
             div()
+                .flex_shrink_0()
                 .min_w_0()
                 .overflow_hidden()
                 .text_ellipsis()

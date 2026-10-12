@@ -224,6 +224,7 @@ impl EditorView {
                 item(CommandId::Glue),
                 item(CommandId::Motions),
                 item(CommandId::AnimationInfo),
+                item(CommandId::AnimationParameters),
                 item(CommandId::Expressions),
                 item(CommandId::Physics),
                 item(CommandId::Pose),

@@ -470,3 +470,98 @@ fn leaving_animation_cancels_ruler_drag_and_old_pointer_events(cx: &mut TestAppC
         assert!(!view.editor.animation().unwrap().playing);
     });
 }
+
+#[gpui_kit::test]
+fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_parameters_are_read_only(
+    cx: &mut TestAppContext,
+) {
+    let (document, assets) = document_fixture::diagnostic_animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    let authoring = harness
+        .view
+        .read_with(cx, |view, _| view.editor.document().unwrap().parameters());
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        for index in 0..5usize {
+            assert!(window.try_find(("animation-diagnostic", index)).is_some());
+        }
+        window.click(("animation-expression", 3usize), cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.animation().unwrap().expression.is_none());
+            assert!(view.edit_error.is_none());
+        });
+        window.click(("animation-motion", 0usize), cx);
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .seek_animation(view.editor.active_id().unwrap(), 1.)
+                .unwrap();
+            let request = view.editor.animation_request().unwrap();
+            let frame = editor_core::AnimationEvaluator::default()
+                .evaluate(&request, |_, _| true)
+                .unwrap();
+            assert!(
+                view.editor
+                    .present_animation(frame.identity, frame.snapshot)
+            );
+            view.notify_animation(cx);
+            view.run_command(CommandId::AnimationParameters, window, cx);
+        });
+        window.render_frame(cx);
+        assert!(window.try_find("AnimationParameters").is_some());
+        let row = window.find(("animation-parameter", 0usize));
+        window.drag(
+            row.bounds().center(),
+            row.bounds().center() + gpui_kit::point(gpui_kit::px(40.), gpui_kit::px(0.)),
+            cx,
+        );
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor
+                    .animation()
+                    .unwrap()
+                    .presented
+                    .as_ref()
+                    .unwrap()
+                    .time,
+                1.
+            );
+            assert_ne!(
+                view.editor
+                    .animation()
+                    .unwrap()
+                    .presented
+                    .as_ref()
+                    .unwrap()
+                    .parameters[&authoring[0].id],
+                authoring[0].value
+            );
+            assert_eq!(view.editor.document().unwrap().parameters(), authoring);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+            assert!(!view.editor.document().unwrap().modified());
+        });
+        // Closing the opt-in panel does not affect playback or the document.
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::AnimationParameters, window, cx)
+        });
+        window.render_frame(cx);
+        assert!(window.try_find("AnimationParameters").is_none());
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .area
+                .read(cx)
+                .layout(gpui_kit::component::dock::DockPlacement::Right)
+                .is_none()
+        );
+        window.click("workspace-modeling", cx);
+        window.render_frame(cx);
+        assert!(window.try_find("AnimationParameters").is_none());
+        assert!(window.try_find("animation-playback-bar").is_none());
+    })
+    .unwrap();
+}

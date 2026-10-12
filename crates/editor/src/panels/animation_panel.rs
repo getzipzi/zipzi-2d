@@ -4,6 +4,7 @@ use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
+    tooltip::Tooltip,
 };
 use gpui_kit::{prelude::*, *};
 
@@ -12,6 +13,7 @@ pub enum AnimationPanelKind {
     Motions,
     Expressions,
     Info,
+    Parameters,
 }
 impl AnimationPanelKind {
     pub fn name(self) -> &'static str {
@@ -19,6 +21,7 @@ impl AnimationPanelKind {
             Self::Motions => "AnimationMotions",
             Self::Expressions => "AnimationExpressions",
             Self::Info => "AnimationInfo",
+            Self::Parameters => "AnimationParameters",
         }
     }
     fn label(self) -> &'static str {
@@ -26,6 +29,7 @@ impl AnimationPanelKind {
             Self::Motions => "editor.motions",
             Self::Expressions => "editor.expressions",
             Self::Info => "workspace.info",
+            Self::Parameters => "workspace.parameters",
         }
     }
 }
@@ -80,7 +84,9 @@ impl Render for AnimationPanel {
         };
         let id = state.editor.active_id().unwrap();
         let animation = state.editor.animation().unwrap();
-        let resources = document.motion_resources();
+        let catalog = document.animation_catalog();
+        let resources = &catalog.motions;
+        let snapshot = state.displayed_animation();
         let mut content = div()
             .id(self.kind.name())
             .test_support()
@@ -95,13 +101,15 @@ impl Render for AnimationPanel {
             .text_xs();
         match self.kind {
             AnimationPanelKind::Expressions => {
-                let expressions = document.expression_resources();
+                let expressions = &catalog.expressions;
                 if expressions.is_empty() {
                     content = content.child(t!("workspace.no_expressions"));
                 }
                 for (index, resource) in expressions.iter().enumerate() {
                     let selected = animation.expression.as_ref() == Some(&resource.id);
                     let expression = resource.id.clone();
+                    let valid = resource.unresolved_targets.is_empty();
+                    let hint = expression_info(resource);
                     let owner = self.owner.clone();
                     content = content.child(
                         div()
@@ -111,10 +119,12 @@ impl Render for AnimationPanel {
                             .py_1()
                             .rounded_md()
                             .when(selected, |e| e.bg(cx.theme().accent))
-                            .cursor_pointer()
+                            .when(valid, |e| e.cursor_pointer())
+                            .when(!valid, |e| e.text_color(cx.theme().muted_foreground))
+                            .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
                             .child(resource.name.clone())
                             .on_click(move |_, window, cx| {
-                                if window.has_active_dialog(cx) {
+                                if !valid || window.has_active_dialog(cx) {
                                     return;
                                 }
                                 let _ = owner.update(cx, |owner, cx| {
@@ -144,6 +154,7 @@ impl Render for AnimationPanel {
                         .small()
                         .ghost()
                         .label(t!("workspace.clear_expression"))
+                        .tooltip(t!("workspace.clear_hint"))
                         .disabled(
                             state.modal
                                 || dialog
@@ -161,25 +172,30 @@ impl Render for AnimationPanel {
                 if resources.is_empty() {
                     content = content.child(t!("workspace.no_motions"));
                 }
-                let mut previous_group = None;
+                let mut previous_group: Option<Option<&str>> = None;
                 for (index, resource) in resources.iter().enumerate() {
                     let group = resource
                         .selection
                         .entry
                         .as_ref()
-                        .map(|(name, _)| name.clone())
-                        .unwrap_or_else(|| t!("workspace.ungrouped").into_owned());
-                    if previous_group.as_ref() != Some(&group) {
+                        .map(|(name, _)| name.as_str());
+                    if previous_group != Some(group) {
+                        let label = match group {
+                            None => t!("workspace.ungrouped").into_owned(),
+                            Some("") => t!("workspace.unnamed_group").into_owned(),
+                            Some(name) => name.to_string(),
+                        };
                         content = content.child(
                             div()
                                 .mt_2()
                                 .text_color(cx.theme().muted_foreground)
-                                .child(group.clone()),
+                                .child(label),
                         );
                         previous_group = Some(group);
                     }
                     let selected = animation.motion.as_ref() == Some(&resource.selection);
                     let selection = resource.selection.clone();
+                    let hint = motion_info(resource).join(" · ");
                     let owner = self.owner.clone();
                     content = content.child(
                         div()
@@ -190,6 +206,7 @@ impl Render for AnimationPanel {
                             .rounded_md()
                             .when(selected, |e| e.bg(cx.theme().accent))
                             .cursor_pointer()
+                            .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
                             .child(resource.selection.entry.as_ref().map_or_else(
                                 || resource.name.clone(),
                                 |(_, entry)| format!("{} · {}", entry + 1, resource.name),
@@ -211,34 +228,58 @@ impl Render for AnimationPanel {
                 }
             }
             AnimationPanelKind::Info => {
+                let status = if animation.error.is_some() {
+                    t!("workspace.failed")
+                } else if animation.playing {
+                    t!("workspace.playing")
+                } else if animation.presented.is_none() {
+                    t!("workspace.evaluating")
+                } else {
+                    t!("workspace.paused")
+                };
+                content = content.child(div().id("animation-status").test_support().child(status));
+                if let Some(error) = &animation.error {
+                    content = content.child(
+                        div()
+                            .text_color(cx.theme().danger)
+                            .child(super::animation_feedback::failure_text(error)),
+                    );
+                }
+                if let Some(snapshot) = snapshot {
+                    content = content
+                        .child(
+                            div()
+                                .id("animation-presented-time")
+                                .test_support()
+                                .child(t!(
+                                    "workspace.presented_time",
+                                    time = format!("{:.3}", snapshot.time)
+                                )),
+                        )
+                        .child(t!(
+                            "workspace.model_opacity",
+                            value = format!("{:.3}", snapshot.model_opacity)
+                        ));
+                }
+                if resources.is_empty() && catalog.expressions.is_empty() {
+                    content = content.child(t!("workspace.no_resources"));
+                }
                 if let Some(resource) = resources
                     .iter()
                     .find(|r| animation.motion.as_ref() == Some(&r.selection))
                 {
                     content = content
                         .child(resource.name.clone())
-                        .child(format!(
-                            "{}: {:.3} s",
-                            t!("workspace.duration"),
-                            resource.duration
-                        ))
-                        .child(if resource.looping {
-                            t!("workspace.looping")
-                        } else {
-                            t!("workspace.once")
-                        });
+                        .children(motion_info(resource));
                     if !resource.playable() {
                         content = content.child(t!("workspace.invalid_duration"));
-                    }
-                    if resource.sound.is_some() {
-                        content = content.child(t!("workspace.sound_unsupported"));
                     }
                 } else {
                     content = content.child(t!("workspace.select_motion"));
                 }
-                let expressions = document.expression_resources();
                 let name = |id: &str| {
-                    expressions
+                    catalog
+                        .expressions
                         .iter()
                         .find(|r| r.id == id)
                         .map_or_else(|| id.to_string(), |r| r.name.clone())
@@ -251,7 +292,14 @@ impl Render for AnimationPanel {
                         .as_ref()
                         .map_or_else(|| t!("workspace.none").into_owned(), |id| name(id))
                 ));
-                if let Some(snapshot) = &animation.presented {
+                if let Some(resource) = catalog
+                    .expressions
+                    .iter()
+                    .find(|r| animation.expression.as_ref() == Some(&r.id))
+                {
+                    content = content.child(expression_info(resource));
+                }
+                if let Some(snapshot) = snapshot {
                     content = content.child(format!(
                         "{}: {}",
                         t!("workspace.active_expressions"),
@@ -266,13 +314,57 @@ impl Render for AnimationPanel {
                                 .join(", ")
                         }
                     ));
-                    for diagnostic in &snapshot.coverage {
-                        content = content.child(diagnostic.clone());
-                    }
-                    for event in &snapshot.fired_events {
-                        content = content.child(format!("{event:?}"));
+                    if !snapshot.fired_events.is_empty() {
+                        content = content.child(t!("workspace.frame_events"));
+                        for event in &snapshot.fired_events {
+                            let motion = resources
+                                .iter()
+                                .find(|r| r.selection.clip_id == event.motion_id)
+                                .map_or_else(|| event.motion_id.clone(), |r| r.name.clone());
+                            content = content.child(format!("{}: {}", motion, event.value));
+                        }
                     }
                 }
+                for (label, loaded) in [("Physics", catalog.physics), ("Pose", catalog.pose)] {
+                    content = content.child(format!(
+                        "{label}: {}",
+                        if loaded {
+                            t!("workspace.loaded")
+                        } else {
+                            t!("workspace.absent")
+                        }
+                    ));
+                }
+                let diagnostics = catalog.diagnostics_for(snapshot);
+                if !diagnostics.is_empty() {
+                    content = content.child(t!("workspace.diagnostics"));
+                    for (index, diagnostic) in diagnostics.iter().enumerate() {
+                        content = content.child(
+                            div()
+                                .id(("animation-diagnostic", index))
+                                .test_support()
+                                .child(super::animation_feedback::diagnostic_text(diagnostic)),
+                        );
+                    }
+                }
+                let panel_owner = self.owner.clone();
+                content = content.child(
+                    Button::new("animation-open-parameters")
+                        .small()
+                        .ghost()
+                        .label(t!("workspace.parameters"))
+                        .tooltip(t!("workspace.parameters_hint"))
+                        .disabled(state.modal || dialog)
+                        .on_click(move |_, window, cx| {
+                            let _ = panel_owner.update(cx, |owner, cx| {
+                                owner.run_command(
+                                    editor_core::CommandId::AnimationParameters,
+                                    window,
+                                    cx,
+                                )
+                            });
+                        }),
+                );
                 let command = editor_core::CommandId::ResetAnimation;
                 let owner = self.owner.clone();
                 content = content.child(
@@ -280,6 +372,7 @@ impl Render for AnimationPanel {
                         .small()
                         .ghost()
                         .label(t!("workspace.reset_preview"))
+                        .tooltip(t!("workspace.reset_hint"))
                         .disabled(
                             state.modal
                                 || dialog
@@ -292,12 +385,104 @@ impl Render for AnimationPanel {
                                 .update(cx, |owner, cx| owner.run_command(command, window, cx));
                         }),
                 );
-                if let Some(error) = &animation.error {
-                    content =
-                        content.child(div().text_color(cx.theme().danger).child(error.clone()));
+            }
+            AnimationPanelKind::Parameters => {
+                content = content.child(t!("workspace.parameters_hint"));
+                if let Some(snapshot) = snapshot {
+                    content = content.child(t!(
+                        "workspace.presented_time",
+                        time = format!("{:.3}", snapshot.time)
+                    ));
+                    for (index, parameter) in catalog.parameters.iter().enumerate() {
+                        if let Some(value) = snapshot.parameters.get(&parameter.id) {
+                            let runtime_id = parameter.runtime_id.clone();
+                            content = content.child(
+                                div()
+                                    .id(("animation-parameter", index))
+                                    .test_support()
+                                    .flex()
+                                    .justify_between()
+                                    .gap_2()
+                                    .tooltip(move |window, cx| {
+                                        Tooltip::new(runtime_id.clone()).build(window, cx)
+                                    })
+                                    .child(
+                                        div()
+                                            .flex_1()
+                                            .min_w_0()
+                                            .overflow_hidden()
+                                            .text_ellipsis()
+                                            .child(parameter.name.clone()),
+                                    )
+                                    .child(div().flex_shrink_0().child(format!("{value:.4}"))),
+                            );
+                        }
+                    }
+                    if catalog.parameters.is_empty() {
+                        content = content.child(t!("workspace.no_parameters"));
+                    }
+                } else if let Some(error) = &animation.error {
+                    content = content.child(super::animation_feedback::failure_text(error));
+                } else {
+                    content = content.child(t!("workspace.evaluating"));
                 }
             }
         }
         content.into_any_element()
     }
+}
+
+fn motion_info(resource: &editor_core::MotionResource) -> Vec<String> {
+    vec![
+        format!(
+            "{}: {:.3} s · {:.1} fps · {}",
+            t!("workspace.duration"),
+            resource.duration,
+            resource.fps,
+            if resource.looping {
+                t!("workspace.looping")
+            } else {
+                t!("workspace.once")
+            }
+        ),
+        t!(
+            "workspace.fades",
+            fade_in = format!("{:.3}", resource.fade_in),
+            fade_out = format!("{:.3}", resource.fade_out)
+        )
+        .into_owned(),
+        t!(
+            "workspace.motion_counts",
+            tracks = resource.tracks,
+            events = resource.events
+        )
+        .into_owned(),
+    ]
+}
+fn expression_info(resource: &editor_core::ExpressionResource) -> String {
+    let blends = resource
+        .blends
+        .iter()
+        .map(|blend| {
+            match blend {
+                kasane_core::document::ExpressionBlend::Add => t!("workspace.blend_add"),
+                kasane_core::document::ExpressionBlend::Multiply => t!("workspace.blend_multiply"),
+                kasane_core::document::ExpressionBlend::Overwrite => {
+                    t!("workspace.blend_overwrite")
+                }
+            }
+            .into_owned()
+        })
+        .collect::<Vec<_>>()
+        .join(" / ");
+    format!(
+        "{} · {} · {}",
+        t!("workspace.expression_count", count = resource.parameters),
+        blends,
+        t!(
+            "workspace.fades",
+            fade_in = format!("{:.3}", resource.fade_in),
+            fade_out = format!("{:.3}", resource.fade_out)
+        )
+    )
 }

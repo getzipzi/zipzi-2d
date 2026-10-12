@@ -90,6 +90,7 @@ pub enum PanelKind {
     AnimationMotions,
     AnimationExpressions,
     AnimationInfo,
+    AnimationParameters,
     Properties,
     MeshTree,
     Deformers,
@@ -103,6 +104,7 @@ pub struct DockWorkspace {
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_info: Entity<crate::panels::animation_panel::AnimationPanel>,
+    pub animation_parameters: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub properties: Entity<crate::panels::PropertiesPanel>,
     pub mesh_tree: Entity<crate::panels::MeshTreePanel>,
     pub deformer_tree: Entity<crate::panels::DeformerTreePanel>,
@@ -153,6 +155,8 @@ impl DockWorkspace {
         let animation_expressions =
             AnimationPanel::new(owner.clone(), AnimationPanelKind::Expressions, cx);
         let animation_info = AnimationPanel::new(owner.clone(), AnimationPanelKind::Info, cx);
+        let animation_parameters =
+            AnimationPanel::new(owner.clone(), AnimationPanelKind::Parameters, cx);
 
         for (name, handle) in [
             ("Canvas", panel_handle(canvas.clone())),
@@ -162,6 +166,10 @@ impl DockWorkspace {
                 panel_handle(animation_expressions.clone()),
             ),
             ("AnimationInfo", panel_handle(animation_info.clone())),
+            (
+                "AnimationParameters",
+                panel_handle(animation_parameters.clone()),
+            ),
             ("Properties", panel_handle(properties.clone())),
             ("MeshTree", panel_handle(mesh_tree.clone())),
             ("Deformers", panel_handle(deformer_tree.clone())),
@@ -196,6 +204,7 @@ impl DockWorkspace {
             animation_motions,
             animation_expressions,
             animation_info,
+            animation_parameters,
             properties,
             mesh_tree,
             deformer_tree,
@@ -372,6 +381,13 @@ impl DockWorkspace {
 
     pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
         match kind {
+            PanelKind::AnimationParameters => toggle_panel(
+                &self.area,
+                self.animation_parameters.clone(),
+                DockPlacement::Right,
+                window,
+                cx,
+            ),
             PanelKind::AnimationExpressions => toggle_panel(
                 &self.area,
                 self.animation_expressions.clone(),
@@ -446,6 +462,19 @@ fn toggle_panel<P: Panel>(
     area.update(cx, |area, cx| {
         if exists {
             area.remove_panel(panel, window, cx);
+            // Closing the last opt-in panel must also release its empty dock.
+            for placement in [
+                DockPlacement::Left,
+                DockPlacement::Right,
+                DockPlacement::Bottom,
+            ] {
+                if area
+                    .layout(placement)
+                    .is_some_and(|tree| tree.panels().next().is_none())
+                {
+                    area.remove_dock(placement, window, cx);
+                }
+            }
         } else {
             area.add_panel_view(panel_handle(panel), placement, None, window, cx);
         }
@@ -476,6 +505,7 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
                         "AnimationMotions",
                         "AnimationExpressions",
                         "AnimationInfo",
+                        "AnimationParameters",
                         "Properties",
                         "MeshTree",
                         "Deformers",
@@ -501,11 +531,17 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
                             "AnimationMotions",
                             "AnimationExpressions",
                             "AnimationInfo",
+                            "AnimationParameters",
                         ]
                         .contains(&node.panel_name.as_str())
                     } else {
-                        !["AnimationMotions", "AnimationExpressions", "AnimationInfo"]
-                            .contains(&node.panel_name.as_str())
+                        ![
+                            "AnimationMotions",
+                            "AnimationExpressions",
+                            "AnimationInfo",
+                            "AnimationParameters",
+                        ]
+                        .contains(&node.panel_name.as_str())
                     },
                     "Panel is unavailable in this workspace"
                 );

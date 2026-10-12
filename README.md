@@ -34,7 +34,11 @@ Animation previews one existing motion at a time. Select a registered group
 entry or an ungrouped clip in Motions, then use Space, the playback button or
 the View menu to play / pause. Back to Start pauses and returns to zero.
 Motion loops follow the resource; the transport shows the rendered time and
-cycle. Preview Info shows duration, coverage and unsupported Sound registrations.
+cycle. Preview Info shows the displayed frame's time and opacity, motion duration,
+FPS, effective fades, track/event counts, expression blends, and Physics / Pose
+availability. Resource diagnostics are available before playback: missing files,
+unresolved targets, unsupported Model channels, PartOpacity without Pose, and Sound
+registrations whose audio is not played. Runtime diagnostics use the same list.
 Select an expression in Expressions to preview it alone or with the motion.
 Switches use the resource's fades and Add / Multiply / Overwrite rules; Preview
 Info distinguishes the selected expression from those active in the rendered frame.
@@ -48,6 +52,11 @@ Clear Expression immediately rebuilds the current time without any expression
 switches and preserves play / pause. Reset Preview clears both resource selections
 and returns to a paused baseline at zero. Expressions without a motion use a
 continuous preview clock with the ruler disabled.
+Open Preview Parameters from the Window menu or Preview Info to inspect parameter
+values from the displayed frame. This optional panel is read only and is restored
+with the Animation layout. Reset Layout returns to Motions, Expressions and Preview
+Info. Transport and resource tooltips explain seeking, fades, clear and reset;
+feedback is available in English and Simplified Chinese.
 Motion / Expression / Physics / Pose run in the detached runtime. Playback does not change modeling
 parameters, editor visibility, history or the project's modified state.
 Leaving the workspace, changing documents, losing window activation, opening a

@@ -543,3 +543,144 @@ fn local_model3_motion_uses_imported_physics_and_default_runtime_baseline() -> a
     assert_eq!(editor.document().unwrap().modified(), modified);
     Ok(())
 }
+
+#[test]
+fn catalog_preserves_registration_fades_and_reuses_only_the_current_model_revision()
+-> anyhow::Result<()> {
+    use std::sync::Arc;
+    let (mut editor, _assets) = setup()?;
+    let first = editor.document().unwrap().animation_catalog();
+    assert_eq!(first.motions.len(), 3);
+    assert_eq!(
+        first.motions[0].selection.clip_id,
+        first.motions[1].selection.clip_id
+    );
+    assert_ne!(first.motions[0].selection, first.motions[1].selection);
+    assert_eq!(first.motions[0].fade_in, 0.);
+    assert_eq!(first.motions[1].fade_in, 1.);
+    assert_eq!(
+        (
+            first.motions[0].fps,
+            first.motions[0].tracks,
+            first.motions[0].events
+        ),
+        (60., 1, 0)
+    );
+    assert_eq!(
+        (first.expressions[0].fade_in, first.expressions[0].fade_out),
+        (0.2, 0.3)
+    );
+    assert_eq!(first.expressions[0].parameters, 1);
+    assert_eq!(
+        first.expressions[0].blends,
+        vec![kasane_core::document::ExpressionBlend::Add]
+    );
+    assert_eq!(
+        first.parameters.len(),
+        editor.document().unwrap().parameters().len()
+    );
+    expression(&mut editor, 0)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(0.75);
+    assert!(Arc::ptr_eq(
+        &first,
+        &editor.document().unwrap().animation_catalog()
+    ));
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    editor.execute(EditorCommand::SetObjectProperty {
+        object: ObjectRef::new(ObjectKind::Expression, first.expressions[0].id.clone()),
+        field: "fade_in".into(),
+        value: serde_json::json!(0.7),
+    })?;
+    let changed = editor.document().unwrap().animation_catalog();
+    assert!(!Arc::ptr_eq(&first, &changed));
+    assert_eq!(changed.expressions[0].fade_in, 0.7);
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    let undone = editor.document().unwrap().animation_catalog();
+    assert!(!Arc::ptr_eq(&changed, &undone));
+    assert_eq!(undone.expressions[0].fade_in, 0.2);
+    editor.dispatch(editor.command(CommandId::Redo))?;
+    assert_eq!(
+        editor.document().unwrap().animation_catalog().expressions[0].fade_in,
+        0.7
+    );
+    Ok(())
+}
+
+#[test]
+fn diagnostics_are_available_before_play_and_do_not_duplicate_sdk_coverage() -> anyhow::Result<()> {
+    let (document, _assets) = support::diagnostic_animation_document()?;
+    let mut editor = Editor::from_document(document);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let catalog = editor.document().unwrap().animation_catalog();
+    assert_eq!(catalog.diagnostics.len(), 5); // 2 distinct registrations of Sound + 3 target issues.
+    assert!(catalog.diagnostics.iter().any(
+        |d| matches!(d, AnimationDiagnostic::SoundUnsupported { file, .. } if file == "test.wav")
+    ));
+    let invalid = &catalog.expressions[3];
+    assert_eq!((invalid.fade_in, invalid.fade_out), (1., 1.));
+    assert_eq!(
+        invalid.blends,
+        vec![kasane_core::document::ExpressionBlend::Add]
+    );
+    assert!(
+        editor
+            .select_expression(editor.active_id().unwrap(), invalid.id.clone())
+            .is_err()
+    );
+    assert!(editor.animation().unwrap().expression.is_none());
+    editor.select_motion(
+        editor.active_id().unwrap(),
+        catalog.motions[3].selection.clone(),
+    )?;
+    let mut evaluator = AnimationEvaluator::default();
+    let evaluated = evaluate(&mut editor, &mut evaluator)?;
+    assert_eq!(evaluated.snapshot.coverage.len(), 2);
+    assert_eq!(
+        catalog.diagnostics_for(Some(&evaluated.snapshot)),
+        catalog.diagnostics
+    );
+    let mut snapshot = (*evaluated.snapshot).clone();
+    snapshot.coverage.extend([
+        "Physics: step limit reached".into(),
+        "Future coverage".into(),
+        "Future coverage".into(),
+    ]);
+    let diagnostics = catalog.diagnostics_for(Some(&snapshot));
+    assert_eq!(diagnostics.len(), 7);
+    assert!(diagnostics.contains(&AnimationDiagnostic::PhysicsStepLimit));
+    assert!(diagnostics.contains(&AnimationDiagnostic::RuntimeCoverage {
+        detail: "Future coverage".into()
+    }));
+    let index = editor.document().unwrap().object_index();
+    for object in &index.objects {
+        if object.reference.kind == ObjectKind::Motion {
+            assert!(object.properties.get("state").is_none());
+        }
+    }
+    for relation in &index.relations {
+        assert!(!relation.detail.contains("not playing"));
+        assert!(!relation.detail.contains("not applied"));
+    }
+    assert!(!editor.document().unwrap().modified());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn runtime_failures_remain_typed_for_localized_display() {
+    let error: anyhow::Error = kasane_sdk::AnimationError::SeekLimit.into();
+    assert_eq!(
+        AnimationFailure::from_error(&error),
+        AnimationFailure::Runtime(kasane_sdk::AnimationError::SeekLimit)
+    );
+    assert_eq!(
+        AnimationFailure::from_error(&anyhow::anyhow!("GPU unavailable")),
+        AnimationFailure::Other("GPU unavailable".into())
+    );
+}

@@ -168,7 +168,10 @@ impl EditorView {
                                     this.animation_frame =
                                         Some(animation::Presented { image, state });
                                 }
-                                Err(error) => this.editor.fail_animation(state.identity, error),
+                                Err(error) => this.editor.fail_animation(
+                                    state.identity,
+                                    editor_core::AnimationFailure::Other(error),
+                                ),
                             }
                             this.sync_animation_clock(cx);
                             this.notify_animation(cx);
@@ -223,6 +226,7 @@ impl EditorView {
         App::notify(cx, self.playback_bar.entity_id());
         if let Some(dock) = &self.dock {
             App::notify(cx, dock.animation_info.entity_id());
+            App::notify(cx, dock.animation_parameters.entity_id());
         }
     }
     fn notify_canvas(&self, cx: &mut Context<Self>) {

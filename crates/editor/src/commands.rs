@@ -102,6 +102,7 @@ impl EditorView {
                 | CommandId::Glue
                 | CommandId::Motions
                 | CommandId::AnimationInfo
+                | CommandId::AnimationParameters
                 | CommandId::Expressions
                 | CommandId::Physics
                 | CommandId::Pose
@@ -116,6 +117,9 @@ impl EditorView {
                                     docking::PanelKind::AnimationMotions
                                 }
                                 CommandId::AnimationInfo => docking::PanelKind::AnimationInfo,
+                                CommandId::AnimationParameters => {
+                                    docking::PanelKind::AnimationParameters
+                                }
                                 CommandId::Expressions
                                     if self.editor.workspace()
                                         == editor_core::WorkspaceKind::Animation =>

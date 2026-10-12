@@ -479,3 +479,58 @@ pub fn combined_animation_document() -> anyhow::Result<(Document, TempDir)> {
     session.save_project(&path, None)?;
     Ok((Document::open(&path)?, assets))
 }
+
+/// Unsupported and unresolved resources are retained for diagnostics, never repaired by preview.
+#[allow(dead_code)]
+pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
+    use kasane_core::document::{
+        ExpressionAsset, ExpressionEntry, ExpressionTarget, MotionTrackTarget,
+    };
+    let (mut document, assets) = animation_document()?;
+    let path = document
+        .save(&assets.path().join("diagnostics.kasane"))?
+        .manifest;
+    let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.canvas())?;
+    session.open_project(&path, None)?;
+    let mut clip = session
+        .document()
+        .get_motion(&session.document().motion_order()[0])
+        .unwrap()
+        .clone();
+    clip.id = Uuid::new_v4().to_string();
+    clip.name = "Unsupported".into();
+    let mut unsupported = clip.tracks[0].clone();
+    unsupported.id = Uuid::new_v4().to_string();
+    unsupported.target = MotionTrackTarget::Model {
+        runtime_id: "EyeBlink".into(),
+    };
+    clip.tracks[0].id = Uuid::new_v4().to_string();
+    clip.tracks[0].target = MotionTrackTarget::Unresolved {
+        category: "Parameter".into(),
+        runtime_id: "MissingParam".into(),
+    };
+    clip.tracks.push(unsupported);
+    session.edit("Diagnostic resources", None, |edit| {
+        edit.create_motion(clip)?;
+        edit.create_expression(ExpressionAsset {
+            id: Uuid::new_v4().to_string(),
+            name: "Unavailable".into(),
+            file_type: None,
+            fade_in: None,
+            fade_out: None,
+            entries: vec![ExpressionEntry {
+                target: ExpressionTarget::Unresolved {
+                    runtime_id: "MissingExpressionParam".into(),
+                },
+                value: 1.,
+                blend: None,
+                extensions: Default::default(),
+            }],
+            extensions: Default::default(),
+            opaque_source_ids: None,
+            opaque_source_content_hash: None,
+        })
+    })?;
+    session.save_project(&path, None)?;
+    Ok((Document::open(&path)?, assets))
+}

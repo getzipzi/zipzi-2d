@@ -599,7 +599,7 @@ impl ObjectIndex {
         for id in m.motion_order() {
             if let Some(x) = m.get_motion(id) {
                 let r = ObjectRef::new(K::Motion, id);
-                s.add(r.clone(),&x.name,json!({"name":x.name,"duration":x.duration,"fps":x.fps,"looping":x.looping,"fade_in":x.fade_in,"fade_out":x.fade_out,"events":x.events,"extensions":x.extensions,"state":"not playing; playback tools not implemented"}),None);
+                s.add(r.clone(),&x.name,json!({"name":x.name,"duration":x.duration,"fps":x.fps,"looping":x.looping,"fade_in":x.fade_in,"fade_out":x.fade_out,"events":x.events,"extensions":x.extensions}),None);
                 for t in &x.tracks {
                     let tr = ObjectRef::new(K::MotionTrack, format!("{id}/{}", t.id));
                     s.add(tr.clone(),format!("Track {}",t.id),json!({"target":t.target,"initial":t.initial,"segments":t.segments.len(),"fade_in":t.fade_in,"fade_out":t.fade_out,"extensions":t.extensions}),None);
@@ -619,9 +619,9 @@ impl ObjectIndex {
                     };
                     let detail = match &t.target {
                         MotionTrackTarget::Model { runtime_id } => {
-                            format!("Model channel {runtime_id}; saved track, not playing")
+                            format!("Model channel {runtime_id}")
                         }
-                        _ => "saved track; not playing".into(),
+                        _ => "".into(),
                     };
                     s.edge(&tr, R::MotionWrites, target, detail);
                 }
@@ -645,7 +645,7 @@ impl ObjectIndex {
                         R::ExpressionWrites,
                         target,
                         format!(
-                            "{} · {:?}; saved, not applied",
+                            "{} · {:?}",
                             e.value,
                             e.blend
                                 .unwrap_or(kasane_core::document::ExpressionBlend::Add)

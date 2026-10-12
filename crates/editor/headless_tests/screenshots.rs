@@ -810,6 +810,30 @@ pub(super) fn run() -> anyhow::Result<()> {
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         assert!(!view.editor.document().unwrap().modified());
     });
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.run_command(editor_core::CommandId::AnimationParameters, window, cx)
+        });
+    })?;
+    let parameters = harness.capture()?;
+    save(&parameters, &directory, "animation-readonly-parameters.png")?;
+    // Verify localized resource feedback with actual rendered UI, before playback.
+    let (document, diagnostics_assets) = fixture::diagnostic_animation_document()?;
+    i18n::activate(Some("zh-CN"));
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.run_command(editor_core::CommandId::AnimationParameters, window, cx);
+            view.editor = Editor::from_document(document);
+            view.editor
+                .set_workspace(editor_core::WorkspaceKind::Animation)
+                .unwrap();
+            view.redraw(cx);
+        });
+    })?;
+    let diagnostics = harness.capture()?;
+    save(&diagnostics, &directory, "animation-diagnostics-zh.png")?;
+    drop(diagnostics_assets);
+    i18n::activate(Some("en"));
     println!("Headless editor screenshots passed (real Metal, no native window).");
     Ok(())
 }

@@ -1,5 +1,7 @@
 //! UI-independent editor coordination, SDK-backed document editing and CPU-only previews.
 mod animation;
+mod animation_resources;
+pub use animation_resources::*;
 mod document;
 pub use animation::*;
 mod editor;
