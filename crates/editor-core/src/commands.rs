@@ -6,6 +6,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CommandId {
+    #[serde(rename = "workspace.modeling")]
+    ModelingWorkspace,
+    #[serde(rename = "workspace.animation")]
+    AnimationWorkspace,
+    #[serde(rename = "animation.play-pause")]
+    PlayPause,
     #[serde(rename = "file.new")]
     New,
     #[serde(rename = "file.open")]
@@ -120,6 +126,27 @@ macro_rules! specs { ($(($id:ident,$label:literal,$scope:ident,$repeat:literal,[
     pub const COMMANDS: &[CommandSpec] = &[$(CommandSpec { id: CommandId::$id, label:$label, scope:CommandScope::$scope, repeat:$repeat, keys:&[$($key),*] }),*];
 }; }
 specs![
+    (
+        ModelingWorkspace,
+        "workspace.modeling",
+        Workspace,
+        false,
+        []
+    ),
+    (
+        AnimationWorkspace,
+        "workspace.animation",
+        Workspace,
+        false,
+        []
+    ),
+    (
+        PlayPause,
+        "workspace.play_pause",
+        Document,
+        false,
+        ["space"]
+    ),
     (New, "menu.new", Workspace, false, ["cmd-n"]),
     (Open, "menu.open", Workspace, false, ["cmd-o"]),
     (ImportModel3, "menu.import_model3", Workspace, false, []),
@@ -247,16 +274,23 @@ impl Editor {
     pub fn command_available(&self, command: Command) -> bool {
         use CommandId::*;
         let target = command.document.is_some() && command.document == self.active_id();
+        let modeling = self.workspace() == crate::WorkspaceKind::Modeling;
         match command.id {
+            ModelingWorkspace | AnimationWorkspace => !self.exiting(),
+            // The binding and UI entry point are installed now; enable when
+            // the detached runtime executor is connected in phase two.
+            PlayPause => false,
             New | Open | ImportModel3 | ImportPsd => !self.exiting(),
             Quit => true,
             Previous | Next => self.document_count() > 1,
             MeshTree | Deformers | Parameters | Properties | DrawOrder | Relations | Keyforms
-            | BlendShapes | Glue | Motions | Expressions | Physics | Pose | Resources
-            | ResetLayout | ResetShortcuts | ShowShortcuts => true,
+            | BlendShapes | Glue | Motions | Expressions | Physics | Pose | Resources => modeling,
+            ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
+            Save | SaveAs => target && !self.is_busy(),
             GenerateMesh => {
-                target
+                modeling
+                    && target
                     && !self.is_busy()
                     && !self.exiting()
                     && !self.gesture_active()
@@ -264,9 +298,12 @@ impl Editor {
                         .document()
                         .is_some_and(|d| d.mesh_generation_target().is_ok())
             }
-            CreateParameter | CreateParameterGroup => target && !self.is_busy() && !self.exiting(),
+            CreateParameter | CreateParameterGroup => {
+                modeling && target && !self.is_busy() && !self.exiting()
+            }
             EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {
-                target
+                modeling
+                    && target
                     && !self.is_busy()
                     && !self.exiting()
                     && self.document().is_some_and(|doc| {
@@ -298,7 +335,8 @@ impl Editor {
             }
             ResetView => target && !self.is_busy() && !self.gesture_active(),
             CancelGesture => target && !self.is_busy(),
-            _ => target && !self.is_busy(),
+            HandTool => target && !self.is_busy(),
+            _ => modeling && target && !self.is_busy(),
         }
     }
     pub fn dispatch(&mut self, command: Command) -> Result<CommandEffect> {

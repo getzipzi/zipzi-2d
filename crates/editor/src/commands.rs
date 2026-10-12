@@ -42,6 +42,12 @@ impl EditorView {
                 }
             }
             Ok(CommandEffect::Host(command)) => match command.id {
+                CommandId::ModelingWorkspace => {
+                    self.switch_workspace(editor_core::WorkspaceKind::Modeling, window, cx)
+                }
+                CommandId::AnimationWorkspace => {
+                    self.switch_workspace(editor_core::WorkspaceKind::Animation, window, cx)
+                }
                 CommandId::Open => self.open(window, cx),
                 CommandId::ImportModel3 => self.import(ImportKind::Model3, window, cx),
                 CommandId::ImportPsd => self.import(ImportKind::Psd, window, cx),

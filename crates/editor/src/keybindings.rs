@@ -180,6 +180,10 @@ mod tests {
         assert_eq!(find("cmd-alt-o", "KasaneEditor > Input"), 1);
         assert_eq!(find("v", "KasaneEditor > Input"), 0);
         assert_eq!(find("cmd-z", "KasaneEditor > Input"), 0);
+        assert_eq!(find("space", "KasaneEditor > Input"), 0);
+        assert_eq!(find("space", "KasaneEditor"), 1);
+        assert_eq!(find("space", "KasaneEditor > KasaneCanvas"), 1);
+        assert_eq!(find("space", "KasaneEditor KasaneModal"), 0);
         assert_eq!(find("v", "KasaneEditor > KasaneCanvas"), 1);
         assert_eq!(find("cmd-s", "KasaneEditor KasaneModal"), 0);
         assert_eq!(find("escape", "KasaneEditor > Input"), 1);

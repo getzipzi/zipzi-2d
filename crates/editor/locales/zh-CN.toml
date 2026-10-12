@@ -290,3 +290,9 @@ wireframe = "线框"
 zoom_in = "放大"
 zoom_out = "缩小"
 fit = "适应"
+
+[workspace]
+modeling = "建模"
+animation = "动画"
+play_pause = "播放 / 暂停"
+preview_pending = "动画预览尚未接入。"

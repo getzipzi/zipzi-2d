@@ -36,7 +36,9 @@ impl ToolbarRegistry {
                 icon: IconName::MousePointer,
                 tooltip_key: "editor.tool_select",
                 selected: select_selected,
-                enabled: not_modal,
+                enabled: |canvas, modal, cx| {
+                    command_enabled(canvas, modal, cx, CommandId::SelectTool)
+                },
                 action: Some(select_tool),
             },
             ToolbarItemConfig {
@@ -44,7 +46,9 @@ impl ToolbarRegistry {
                 icon: IconName::Link,
                 tooltip_key: "editor.tool_glue",
                 selected: glue_selected,
-                enabled: not_modal,
+                enabled: |canvas, modal, cx| {
+                    command_enabled(canvas, modal, cx, CommandId::GlueTool)
+                },
                 action: Some(glue_tool),
             },
             ToolbarItemConfig {
@@ -52,7 +56,9 @@ impl ToolbarRegistry {
                 icon: IconName::Hand,
                 tooltip_key: "editor.tool_hand",
                 selected: hand_selected,
-                enabled: not_modal,
+                enabled: |canvas, modal, cx| {
+                    command_enabled(canvas, modal, cx, CommandId::HandTool)
+                },
                 action: Some(hand_tool),
             },
             ToolbarItemConfig {
@@ -114,6 +120,13 @@ pub fn render_floating_toolbar(
                 .toolbar
                 .items
                 .iter()
+                .filter(|item| {
+                    item.id == "tool_hand"
+                        || canvas.owner.upgrade().is_none_or(|owner| {
+                            owner.read(cx).editor.workspace()
+                                == editor_core::WorkspaceKind::Modeling
+                        })
+                })
                 .map(|item| {
                     let action = item.action;
                     Button::new(item.id)
@@ -142,8 +155,12 @@ fn glue_selected(canvas: &CanvasView, cx: &App) -> bool {
 fn hand_selected(canvas: &CanvasView, cx: &App) -> bool {
     canvas.active_tool(cx) == ToolId::Hand
 }
-fn not_modal(_: &CanvasView, modal: bool, _: &App) -> bool {
+fn command_enabled(canvas: &CanvasView, modal: bool, cx: &App, command: CommandId) -> bool {
     !modal
+        && canvas.owner.upgrade().is_some_and(|owner| {
+            let editor = &owner.read(cx).editor;
+            editor.command_available(editor.command(command))
+        })
 }
 fn generate_mesh(canvas: &mut CanvasView, window: &mut Window, cx: &mut Context<CanvasView>) {
     if let Some(owner) = canvas.owner.upgrade() {

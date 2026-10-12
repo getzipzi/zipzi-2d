@@ -366,29 +366,32 @@ fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext)
 }
 
 #[gpui_kit::test]
-fn space_pan_ignores_key_repeats_until_release(cx: &mut TestAppContext) {
+fn space_never_enters_temporary_hand_and_repeats_are_suppressed(cx: &mut TestAppContext) {
     use gpui_kit::{
         KeyDownEvent, KeyUpEvent, Keystroke, MouseButton, MouseDownEvent, MouseMoveEvent,
+        MouseUpEvent,
     };
-
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        let canvas_focus = harness.view.read_with(cx, |view, cx| {
+        let focus = harness.view.read_with(cx, |view, cx| {
             view.dock.as_ref().unwrap().canvas.read(cx).focus.clone()
         });
-        window.focus(&canvas_focus, cx);
-        let space = Keystroke::parse("space").unwrap();
-        window.dispatch_event(
-            KeyDownEvent {
-                keystroke: space.clone(),
-                is_held: false,
-                prefer_character_input: false,
+        window.focus(&focus, cx);
+        for held in [false, true, true] {
+            let result = window.dispatch_event(
+                KeyDownEvent {
+                    keystroke: Keystroke::parse("space").unwrap(),
+                    is_held: held,
+                    prefer_character_input: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            if held {
+                assert!(!result.propagate);
             }
-            .to_platform_input(),
-            cx,
-        );
+        }
         window.render_frame(cx);
-
         let from = window.find("canvas-body").bounds().center();
         window.dispatch_event(
             MouseDownEvent {
@@ -401,7 +404,6 @@ fn space_pan_ignores_key_repeats_until_release(cx: &mut TestAppContext) {
             .to_platform_input(),
             cx,
         );
-        window.render_frame(cx);
         window.dispatch_event(
             MouseMoveEvent {
                 position: from + point(px(20.), px(0.)),
@@ -411,98 +413,61 @@ fn space_pan_ignores_key_repeats_until_release(cx: &mut TestAppContext) {
             .to_platform_input(),
             cx,
         );
-        assert!(!window.last_input_was_keyboard());
-        let repeated = window.dispatch_event(
-            KeyDownEvent {
-                keystroke: space.clone(),
-                is_held: true,
-                prefer_character_input: false,
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: from + point(px(20.), px(0.)),
+                modifiers: Default::default(),
+                click_count: 1,
             }
             .to_platform_input(),
             cx,
         );
-        assert!(!repeated.propagate);
-        assert!(!window.last_input_was_keyboard());
-        assert_eq!(
-            harness.view.read_with(cx, |v, _| v.editor.view().pan.x),
-            20.
-        );
-
         window.dispatch_event(
             KeyUpEvent {
-                keystroke: space.clone(),
+                keystroke: Keystroke::parse("space").unwrap(),
             }
             .to_platform_input(),
             cx,
         );
-        let repeated_after_release = window.dispatch_event(
-            KeyDownEvent {
-                keystroke: space,
-                is_held: true,
-                prefer_character_input: false,
-            }
-            .to_platform_input(),
-            cx,
-        );
-        assert!(repeated_after_release.propagate);
-        assert!(window.last_input_was_keyboard());
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.view().pan, editor_core::CanvasPoint::default());
+            assert_eq!(
+                view.editor.workspace(),
+                editor_core::WorkspaceKind::Modeling
+            );
+            assert_eq!(view.editor.active_tool(), editor_core::ToolId::Select);
+            assert!(
+                !view
+                    .editor
+                    .command_available(view.editor.command(editor_core::CommandId::PlayPause))
+            );
+        });
     })
     .unwrap();
 }
 
 #[gpui_kit::test]
-fn space_after_document_switch_enters_temporary_hand_mode(cx: &mut TestAppContext) {
-    use gpui_kit::{KeyDownEvent, Keystroke, MouseButton, MouseDownEvent, MouseMoveEvent};
-
+fn space_after_document_switch_does_not_pan(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        let first_id = harness
+        let first = harness
             .view
             .read_with(cx, |view, _| view.editor.active_id().unwrap());
         window.press("cmd-n", cx);
         window.render_frame(cx);
-        window.click(format!("tab-item-{first_id:?}"), cx);
-        let editor_focus = harness.view.read_with(cx, |view, _| view.focus.clone());
-        assert!(editor_focus.is_focused(window));
-
-        window.dispatch_event(
-            KeyDownEvent {
-                keystroke: Keystroke::parse("space").unwrap(),
-                is_held: false,
-                prefer_character_input: false,
-            }
-            .to_platform_input(),
-            cx,
-        );
+        window.click(format!("tab-item-{first:?}"), cx);
+        window.press("space", cx);
         window.render_frame(cx);
-
         let from = window.find("canvas-body").bounds().center();
-        window.dispatch_event(
-            MouseDownEvent {
-                button: MouseButton::Left,
-                position: from,
-                modifiers: Default::default(),
-                click_count: 1,
-                first_mouse: false,
-            }
-            .to_platform_input(),
-            cx,
-        );
-        window.dispatch_event(
-            MouseMoveEvent {
-                position: from + point(px(20.), px(0.)),
-                pressed_button: Some(MouseButton::Left),
-                modifiers: Default::default(),
-            }
-            .to_platform_input(),
-            cx,
-        );
-        assert_eq!(
-            harness
-                .view
-                .read_with(cx, |view, _| view.editor.view().pan.x),
-            20.
-        );
+        window.drag(from, from + point(px(20.), px(0.)), cx);
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.view().pan, editor_core::CanvasPoint::default());
+            assert_eq!(
+                view.editor.workspace(),
+                editor_core::WorkspaceKind::Modeling
+            );
+        });
     })
     .unwrap();
 }

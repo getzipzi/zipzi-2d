@@ -1,5 +1,9 @@
 use crate::{EditorView, t};
-use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable};
+use editor_core::{CommandId, WorkspaceKind};
+use gpui_kit::component::{
+    ActiveTheme, Disableable, Icon, IconName, Sizable,
+    button::{Button, ButtonVariants},
+};
 use gpui_kit::{prelude::*, *};
 
 pub fn render_tab_bar(
@@ -25,6 +29,7 @@ pub fn render_tab_bar(
             div()
                 .id("document-tabs-scroll")
                 .min_w_0()
+                .flex_1()
                 .h_full()
                 .flex()
                 .overflow_x_scroll()
@@ -127,5 +132,46 @@ pub fn render_tab_bar(
                                 .child(Icon::new(IconName::Close).small()),
                         )
                 })),
+        )
+        .child(
+            div()
+                .id("workspace-switcher")
+                .test_support()
+                .flex()
+                .flex_shrink_0()
+                .items_center()
+                .gap_1()
+                .px_2()
+                .border_l_1()
+                .border_color(theme.border)
+                .children(
+                    [
+                        (
+                            WorkspaceKind::Modeling,
+                            CommandId::ModelingWorkspace,
+                            "workspace-modeling",
+                        ),
+                        (
+                            WorkspaceKind::Animation,
+                            CommandId::AnimationWorkspace,
+                            "workspace-animation",
+                        ),
+                    ]
+                    .into_iter()
+                    .map(|(kind, command, id)| {
+                        Button::new(id)
+                            .small()
+                            .ghost()
+                            .label(t!(command.spec().label))
+                            .when(view.editor.workspace() == kind, |button| button.primary())
+                            .disabled(
+                                modal
+                                    || !view.editor.command_available(view.editor.command(command)),
+                            )
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.run_command(command, window, cx);
+                            }))
+                    }),
+                ),
         )
 }

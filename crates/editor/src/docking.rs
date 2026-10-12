@@ -1,6 +1,8 @@
 use super::*;
+use editor_core::WorkspaceKind;
 use gpui_kit::component::dock::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::{sync::mpsc, thread, time::Duration};
 
 mod skin;
@@ -30,16 +32,21 @@ impl LayoutWriter {
         let (sender, receiver) = mpsc::channel::<LayoutConfig>();
         let (errors, error_receiver) = async_channel::unbounded();
         let worker = thread::spawn(move || {
-            while let Ok(mut latest) = receiver.recv() {
+            while let Ok(first) = receiver.recv() {
+                let mut pending = HashMap::from([(first.workspace, first)]);
                 let closed = loop {
                     match receiver.recv_timeout(Duration::from_millis(150)) {
-                        Ok(next) => latest = next,
+                        Ok(next) => {
+                            pending.insert(next.workspace, next);
+                        }
                         Err(mpsc::RecvTimeoutError::Timeout) => break false,
                         Err(mpsc::RecvTimeoutError::Disconnected) => break true,
                     }
                 };
-                if let Err(error) = store.write("layout.json", &latest) {
-                    let _ = errors.try_send(error.to_string());
+                for (workspace, latest) in pending {
+                    if let Err(error) = store.write(layout_file(workspace), &latest) {
+                        let _ = errors.try_send(error.to_string());
+                    }
                 }
                 if closed {
                     break;
@@ -56,15 +63,15 @@ impl LayoutWriter {
             error_receiver,
         )
     }
-    fn save(&self, layout: DockAreaState) -> anyhow::Result<()> {
+    fn save(&self, workspace: WorkspaceKind, layout: DockAreaState) -> anyhow::Result<()> {
         #[cfg(test)]
         if let Some(store) = &self.test_store {
-            return store.write("layout.json", &LayoutConfig { layout });
+            return store.write(layout_file(workspace), &LayoutConfig { workspace, layout });
         }
         self.sender
             .as_ref()
             .unwrap()
-            .send(LayoutConfig { layout })
+            .send(LayoutConfig { workspace, layout })
             .map_err(|_| anyhow::anyhow!("Layout persistence worker stopped"))
     }
 }
@@ -100,17 +107,29 @@ pub struct DockWorkspace {
     >,
     pub last_valid: DockAreaState,
     pending_layout_measurement: bool,
+    workspace: WorkspaceKind,
+    layouts: HashMap<WorkspaceKind, DockAreaState>,
+    layout_epoch: u64,
     writer: LayoutWriter,
     errors: Option<async_channel::Receiver<String>>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct LayoutConfig {
+    pub workspace: WorkspaceKind,
     pub layout: DockAreaState,
+}
+
+fn layout_file(workspace: WorkspaceKind) -> &'static str {
+    match workspace {
+        WorkspaceKind::Modeling => "layout-modeling.json",
+        WorkspaceKind::Animation => "layout-animation.json",
+    }
 }
 
 impl DockWorkspace {
     pub fn new(
+        workspace: WorkspaceKind,
         owner: WeakEntity<EditorView>,
         thumbnails: Entity<crate::mesh_thumbnails::MeshThumbnails>,
         window: &mut Window,
@@ -164,6 +183,9 @@ impl DockWorkspace {
             document_panels,
             last_valid,
             pending_layout_measurement: false,
+            workspace,
+            layouts: HashMap::new(),
+            layout_epoch: 0,
             writer,
             errors: Some(errors),
         };
@@ -179,6 +201,14 @@ impl DockWorkspace {
                 DockPlacement::Bottom,
             ] {
                 area.remove_dock(placement, window, cx);
+            }
+            if self.workspace == WorkspaceKind::Animation {
+                area.set_center(
+                    DockLayout::tabs().panel_view(panel_handle(self.canvas.clone()), cx),
+                    window,
+                    cx,
+                );
+                return;
             }
             area.set_center(
                 DockLayout::h_split()
@@ -235,6 +265,62 @@ impl DockWorkspace {
             );
         });
         self.last_valid = self.area.read(cx).dump(cx);
+    }
+
+    fn restore(&mut self, window: &mut Window, cx: &mut App) -> anyhow::Result<()> {
+        let saved = if let Some(layout) = self.layouts.get(&self.workspace) {
+            Some(LayoutConfig {
+                workspace: self.workspace,
+                layout: layout.clone(),
+            })
+        } else {
+            cx.global::<settings::Settings>()
+                .store
+                .read::<LayoutConfig>(layout_file(self.workspace))?
+        };
+        if let Some(saved) = saved {
+            anyhow::ensure!(
+                saved.workspace == self.workspace,
+                "Layout workspace does not match"
+            );
+            validate_layout(&saved.layout, self.workspace)?;
+            self.area
+                .update(cx, |area, cx| area.load(saved.layout, window, cx))?;
+            self.last_valid = self.area.read(cx).dump(cx);
+        }
+        Ok(())
+    }
+
+    fn switch(
+        &mut self,
+        workspace: WorkspaceKind,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> anyhow::Result<()> {
+        if self.workspace == workspace {
+            return Ok(());
+        }
+        let previous = self.area.read(cx).dump(cx);
+        let previous = if validate_layout(&previous, self.workspace).is_ok() {
+            previous
+        } else {
+            self.last_valid.clone()
+        };
+        self.layouts.insert(self.workspace, previous.clone());
+        let saved = if !self.pending_layout_measurement {
+            self.writer.save(self.workspace, previous)
+        } else {
+            Ok(())
+        };
+        self.workspace = workspace;
+        self.layout_epoch += 1;
+        self.pending_layout_measurement = true;
+        self.reset(window, cx);
+        let result = self.restore(window, cx);
+        if result.is_err() {
+            self.reset(window, cx);
+        }
+        result.and(saved)
     }
 
     pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
@@ -298,12 +384,13 @@ fn toggle_panel<P: Panel>(
     });
 }
 
-pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
+pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyhow::Result<()> {
     use anyhow::ensure;
     fn walk(
         node: &PanelState,
         seen: &mut std::collections::HashSet<String>,
         depth: usize,
+        workspace: WorkspaceKind,
     ) -> anyhow::Result<usize> {
         ensure!(
             depth < 16 && node.children.len() < 32,
@@ -336,13 +423,17 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
                     .contains(&node.panel_name.as_str()),
                     "Unknown panel"
                 );
+                ensure!(
+                    workspace == WorkspaceKind::Modeling || node.panel_name == "Canvas",
+                    "Panel is unavailable in this workspace"
+                );
                 ensure!(seen.insert(node.panel_name.clone()), "Duplicate panel");
                 Ok(usize::from(node.panel_name == "Canvas"))
             }
             PanelInfo::Tabs { .. } => {
                 let mut canvas = 0;
                 for child in &node.children {
-                    canvas += walk(child, seen, depth + 1)?;
+                    canvas += walk(child, seen, depth + 1, workspace)?;
                 }
                 ensure!(
                     canvas == 0 || node.children.len() == 1,
@@ -360,7 +451,7 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
                 );
                 let mut canvas = 0;
                 for child in &node.children {
-                    canvas += walk(child, seen, depth + 1)?;
+                    canvas += walk(child, seen, depth + 1, workspace)?;
                 }
                 Ok(canvas)
             }
@@ -369,7 +460,7 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
     ensure!(state.version == Some(3), "Unsupported layout version");
     let mut seen = std::collections::HashSet::new();
     ensure!(
-        walk(&state.center, &mut seen, 0)? == 1,
+        walk(&state.center, &mut seen, 0, workspace)? == 1,
         "Exactly one central canvas is required"
     );
     for dock in [&state.left_dock, &state.right_dock, &state.bottom_dock]
@@ -381,14 +472,57 @@ pub fn validate_layout(state: &DockAreaState) -> anyhow::Result<()> {
             "Invalid dock size"
         );
         ensure!(
-            walk(dock.panel(), &mut seen, 0)? == 0,
+            walk(dock.panel(), &mut seen, 0, workspace)? == 0,
             "Canvas cannot move into a side dock"
         );
     }
     Ok(())
 }
 impl EditorView {
+    pub(super) fn switch_workspace(
+        &mut self,
+        workspace: WorkspaceKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.editor.workspace() == workspace {
+            return;
+        }
+        // Let the existing input blur rules finish before changing context.
+        window.focus(&self.focus, cx);
+        if let Some(dock) = &self.dock {
+            dock.canvas.update(cx, |canvas, _| canvas.cancel_pointer());
+            for panel in dock.document_panels.values() {
+                panel.update(cx, |panel, _| panel.cancel_drag());
+            }
+        }
+        if let Err(error) = self.editor.set_workspace(workspace) {
+            self.edit_error = Some(error.to_string());
+            cx.notify();
+            return;
+        }
+        self.frame = None;
+        self.frozen_frames.clear();
+        self.render_error = None;
+        if let Some(dock) = &mut self.dock {
+            if let Err(error) = dock.switch(workspace, window, cx) {
+                self.edit_error = Some(error.to_string());
+            }
+        }
+        self.save_layout_after_frame(window, cx);
+        if let Err(error) = cx
+            .global_mut::<settings::Settings>()
+            .set_workspace(workspace)
+        {
+            self.edit_error = Some(error.to_string());
+        }
+        self.redraw(cx);
+    }
+
     pub(super) fn reveal_keyforms(&mut self, window: &mut Window, cx: &mut App) {
+        if self.editor.workspace() != WorkspaceKind::Modeling {
+            return;
+        }
         if let Some(dock) = &self.dock {
             let panel = dock.document_panels[&crate::panels::DocumentPanelKind::Keyforms].clone();
             let id = PanelId::from(panel.entity_id());
@@ -408,8 +542,13 @@ impl EditorView {
         }
     }
     pub(super) fn init_dock(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let mut dock =
-            DockWorkspace::new(cx.weak_entity(), self.mesh_thumbnails.clone(), window, cx);
+        let mut dock = DockWorkspace::new(
+            self.editor.workspace(),
+            cx.weak_entity(),
+            self.mesh_thumbnails.clone(),
+            window,
+            cx,
+        );
         let errors = dock.errors.take().unwrap();
         cx.spawn(async move |this, cx| {
             while let Ok(error) = errors.recv().await {
@@ -425,35 +564,9 @@ impl EditorView {
             }
         })
         .detach();
-        let store = cx.global::<settings::Settings>().store.clone();
-        let mut save_measured_default = false;
-        match store.read::<LayoutConfig>("layout.json") {
-            // Version 1 includes the retired Layers panel and tabbed sidebars.
-            // Replace it once with the new split layout after its first frame
-            // has measured the flexible center pane.
-            Ok(Some(saved)) if matches!(saved.layout.version, Some(1 | 2)) => {
-                save_measured_default = true;
-            }
-            // An older build saved the default before layout, when every
-            // unconstrained pane still had the 100px placeholder size.
-            Ok(Some(saved)) if saved.layout == dock.last_valid => {
-                save_measured_default = true;
-            }
-            Ok(Some(saved)) => {
-                match validate_layout(&saved.layout).and_then(|_| {
-                    dock.area
-                        .update(cx, |area, cx| area.load(saved.layout, window, cx))
-                }) {
-                    Ok(()) => dock.last_valid = dock.area.read(cx).dump(cx),
-                    Err(e) => {
-                        self.message = e.to_string();
-                        dock.reset(window, cx);
-                        save_measured_default = true;
-                    }
-                }
-            }
-            Err(e) => self.message = e.to_string(),
-            _ => {}
+        if let Err(error) = dock.restore(window, cx) {
+            self.message = error.to_string();
+            dock.reset(window, cx);
         }
         self.ui_subscriptions.push(cx.subscribe_in(
             &dock.area,
@@ -476,33 +589,40 @@ impl EditorView {
                 if state == dock.last_valid {
                     return;
                 }
-                if validate_layout(&state).is_err() {
+                if validate_layout(&state, dock.workspace).is_err() {
                     let previous = dock.last_valid.clone();
                     let _ = area.update(cx, |area, cx| area.load(previous, window, cx));
                     return;
                 }
                 dock.last_valid = state.clone();
-                if let Err(error) = dock.writer.save(state) {
+                if let Err(error) = dock.writer.save(dock.workspace, state) {
                     this.edit_error = Some(error.to_string());
                 }
                 cx.notify();
             },
         ));
-        dock.pending_layout_measurement = save_measured_default;
+        dock.pending_layout_measurement = true;
         self.dock = Some(dock);
-        if save_measured_default {
-            self.save_layout_after_frame(window, cx);
-        }
+        self.save_layout_after_frame(window, cx);
     }
     fn save_layout_after_frame(&self, window: &Window, cx: &Context<Self>) {
+        let Some(dock) = &self.dock else { return };
+        let workspace = dock.workspace;
+        let epoch = dock.layout_epoch;
         let owner = cx.weak_entity();
         window.on_next_frame(move |_, cx| {
             let _ = owner.update(cx, |view, cx| {
                 let Some(dock) = &mut view.dock else { return };
+                if dock.workspace != workspace || dock.layout_epoch != epoch {
+                    return;
+                }
                 let state = dock.area.read(cx).dump(cx);
+                if validate_layout(&state, workspace).is_err() {
+                    return;
+                }
                 dock.last_valid = state.clone();
                 dock.pending_layout_measurement = false;
-                if let Err(error) = dock.writer.save(state) {
+                if let Err(error) = dock.writer.save(dock.workspace, state) {
                     view.edit_error = Some(error.to_string());
                     cx.notify();
                 }
@@ -512,6 +632,7 @@ impl EditorView {
     pub(super) fn reset_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(dock) = &mut self.dock {
             dock.pending_layout_measurement = true;
+            dock.layout_epoch += 1;
             dock.reset(window, cx);
             self.save_layout_after_frame(window, cx);
         }
@@ -522,7 +643,7 @@ impl EditorView {
 #[cfg(test)]
 mod tests {
     use super::{LayoutConfig, validate_layout};
-    use editor_core::ConfigStore;
+    use editor_core::{ConfigStore, WorkspaceKind};
     use gpui_kit::component::dock::{DockAreaState, PanelInfo, PanelState};
     fn layout() -> DockAreaState {
         DockAreaState {
@@ -544,47 +665,55 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let store = ConfigStore::new(dir.path());
         let default = layout();
-        validate_layout(&default)?;
+        validate_layout(&default, WorkspaceKind::Modeling)?;
         let mut edited = default.clone();
         edited.center.children.remove(0);
-        validate_layout(&edited)?;
+        validate_layout(&edited, WorkspaceKind::Modeling)?;
         store.write(
-            "layout.json",
+            "layout-modeling.json",
             &LayoutConfig {
+                workspace: WorkspaceKind::Modeling,
                 layout: edited.clone(),
             },
         )?;
         assert_eq!(
-            store.read::<LayoutConfig>("layout.json")?.unwrap().layout,
+            store
+                .read::<LayoutConfig>("layout-modeling.json")?
+                .unwrap()
+                .layout,
             edited
         );
         store.write(
-            "layout.json",
+            "layout-modeling.json",
             &LayoutConfig {
+                workspace: WorkspaceKind::Modeling,
                 layout: default.clone(),
             },
         )?;
         assert_eq!(
-            store.read::<LayoutConfig>("layout.json")?.unwrap().layout,
+            store
+                .read::<LayoutConfig>("layout-modeling.json")?
+                .unwrap()
+                .layout,
             default
         );
         let mut invalid = default.clone();
         invalid.center.info = PanelInfo::tabs(0);
-        assert!(validate_layout(&invalid).is_err());
+        assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());
         invalid = default.clone();
         invalid.version = Some(1);
-        assert!(validate_layout(&invalid).is_err());
+        assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());
         invalid = default.clone();
         invalid.center.children.push(PanelState::new("Layers"));
-        assert!(validate_layout(&invalid).is_err());
+        assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());
         invalid = default.clone();
         invalid.center.children.push(PanelState::new("unknown"));
-        assert!(validate_layout(&invalid).is_err());
+        assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());
         invalid = default.clone();
         invalid.center.children.push(PanelState::new("Canvas"));
-        assert!(validate_layout(&invalid).is_err());
-        std::fs::write(dir.path().join("layout.json"), "{")?;
-        assert!(store.read::<LayoutConfig>("layout.json").is_err());
+        assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());
+        std::fs::write(dir.path().join("layout-modeling.json"), "{")?;
+        assert!(store.read::<LayoutConfig>("layout-modeling.json").is_err());
         Ok(())
     }
 
@@ -594,21 +723,39 @@ mod tests {
         let dir = tempfile::tempdir()?;
         let store = ConfigStore::new(dir.path());
         let (writer, errors) = super::LayoutWriter::new(store.clone());
-        writer.save(layout())?;
+        writer.save(WorkspaceKind::Modeling, layout())?;
         let mut latest = layout();
         latest.center.children.remove(0);
-        writer.save(latest.clone())?;
+        writer.save(WorkspaceKind::Modeling, latest.clone())?;
+        let animation = DockAreaState {
+            version: Some(3),
+            center: PanelState::new("Canvas"),
+            ..Default::default()
+        };
+        writer.save(WorkspaceKind::Animation, animation.clone())?;
+        writer.save(WorkspaceKind::Modeling, latest.clone())?;
         drop(writer);
         assert_eq!(
-            store.read::<LayoutConfig>("layout.json")?.unwrap().layout,
+            store
+                .read::<LayoutConfig>("layout-modeling.json")?
+                .unwrap()
+                .layout,
             latest
         );
         assert!(errors.try_recv().is_err());
+        assert_eq!(
+            store
+                .read::<LayoutConfig>("layout-animation.json")?
+                .unwrap()
+                .layout,
+            animation
+        );
+        assert!(validate_layout(&latest, WorkspaceKind::Animation).is_err());
 
         let blocked = dir.path().join("not-a-directory");
         std::fs::write(&blocked, "blocked")?;
         let (writer, errors) = super::LayoutWriter::new(ConfigStore::new(blocked));
-        writer.save(layout())?;
+        writer.save(WorkspaceKind::Modeling, layout())?;
         drop(writer);
         assert!(errors.try_recv().is_ok());
         Ok(())

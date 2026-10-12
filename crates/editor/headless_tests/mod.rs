@@ -15,6 +15,7 @@ mod properties;
 mod recent_files;
 mod slide_number_input;
 mod sorting;
+mod workspaces;
 
 use crate::{EditorView, actions, i18n, settings};
 use editor_core::{ConfigStore, Document, Editor};

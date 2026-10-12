@@ -22,6 +22,19 @@ To explore the UI components:
 cargo run --locked -p component-playground
 ```
 
+## Workspaces
+
+Use the Modeling / Animation switch beside the document tabs, or the View menu.
+Both workspaces share open documents and history, and keep separate layouts and
+per-document zoom/pan. Modeling keeps the existing editing layout and parameter
+preview. The last workspace and each layout are restored on startup; Reset Layout
+only resets the current workspace.
+
+Animation currently provides the workspace shell, navigation and a disabled
+playback bar. Motion/expression playback is the next implementation phase.
+Space is reserved for Play / Pause and no longer temporarily activates Hand.
+Use middle-button drag, the Hand tool, or trackpad gestures to navigate.
+
 ## Develop
 
 Install `watchexec`, then rebuild and restart automatically when source files change:

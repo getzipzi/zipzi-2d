@@ -19,6 +19,7 @@ fn scroll_zoom(zoom: f32, lines: f32) -> f32 {
 
 pub(super) struct WheelZoom {
     document: DocumentId,
+    workspace_revision: u64,
     bounds: Bounds<Pixels>,
     metrics: CanvasMetrics,
     expected: ViewState,
@@ -36,6 +37,7 @@ impl WheelZoom {
             && !owner.editor.is_busy()
             && !owner.editor.gesture_active()
             && owner.editor.active_id() == Some(self.document)
+            && owner.editor.workspace_revision() == self.workspace_revision
             && owner.editor.canvas_metrics() == self.metrics
             && bounds == self.bounds
             && owner.editor.view().zoom == self.expected.zoom
@@ -113,6 +115,7 @@ impl CanvasView {
                 // Reversal discards unfinished movement in the previous direction.
                 self.wheel_zoom = (target != before.zoom).then_some(WheelZoom {
                     document,
+                    workspace_revision: owner.editor.workspace_revision(),
                     bounds: self.bounds,
                     metrics: owner.editor.canvas_metrics(),
                     expected: before,

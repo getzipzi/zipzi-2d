@@ -31,6 +31,9 @@ impl EditorView {
         }
     }
     pub(super) fn refresh_document(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(dock) = &self.dock {
+            dock.canvas.update(cx, |canvas, _| canvas.cancel_pointer());
+        }
         let active = self.editor.active_id();
         self.mesh_thumbnails
             .update(cx, |cache, cx| cache.sync_document(active, window, cx));

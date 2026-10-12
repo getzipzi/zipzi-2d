@@ -2,7 +2,9 @@
 mod navigation;
 
 use super::*;
-use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint, CommandId, EditorCommand, ToolId};
+use editor_core::{
+    CanvasInput, CanvasMetrics, CanvasPoint, CommandId, EditorCommand, ToolId, WorkspaceKind,
+};
 use gpui_kit::component::{
     ActiveTheme, WindowExt,
     dock::{BasePanel, Panel, PanelEvent},
@@ -16,7 +18,6 @@ pub struct CanvasView {
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
-    space_held: bool,
     wheel_zoom: Option<navigation::WheelZoom>,
     zoom_frame_pending: bool,
     _subscriptions: Vec<Subscription>,
@@ -103,6 +104,7 @@ struct PanGesture {
     position: Point<Pixels>,
     button: MouseButton,
     document: Option<editor_core::DocumentId>,
+    workspace_revision: u64,
 }
 
 impl CanvasView {
@@ -111,6 +113,15 @@ impl CanvasView {
             let focus = cx.focus_handle();
             let subscriptions = vec![
                 cx.observe(&owner.upgrade().unwrap(), |this, owner, cx| {
+                    let state = owner.read(cx);
+                    if state.modal
+                        || this.pan.is_some_and(|pan| {
+                            pan.document != state.editor.active_id()
+                                || pan.workspace_revision != state.editor.workspace_revision()
+                        })
+                    {
+                        this.cancel_pointer();
+                    }
                     if this
                         .wheel_zoom
                         .as_ref()
@@ -120,15 +131,11 @@ impl CanvasView {
                     }
                     cx.notify();
                 }),
-                cx.on_focus_out(&focus, window, |this, _, window, cx| {
-                    this.space_held = false;
-                    window.suppress_key_repeats("space", false);
+                cx.on_focus_out(&focus, window, |this, _, _, cx| {
                     this.cancel(cx);
                 }),
                 cx.observe_window_visibility(window, |this, _, window, cx| {
                     if !window.is_visible() {
-                        this.space_held = false;
-                        window.suppress_key_repeats("space", false);
                         this.cancel(cx);
                         let _ = this.owner.update(cx, |owner, cx| {
                             owner.editor.set_canvas_metrics(CanvasMetrics::default());
@@ -140,8 +147,6 @@ impl CanvasView {
                 }),
                 cx.observe_window_activation(window, |this, window, cx| {
                     if !window.is_window_active() {
-                        this.space_held = false;
-                        window.suppress_key_repeats("space", false);
                         this.cancel(cx);
                     }
                 }),
@@ -153,7 +158,6 @@ impl CanvasView {
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 pan: None,
-                space_held: false,
                 wheel_zoom: None,
                 zoom_frame_pending: false,
                 _subscriptions: subscriptions,
@@ -178,19 +182,6 @@ impl CanvasView {
     pub fn cancel_pointer(&mut self) {
         self.wheel_zoom = None;
         self.pan = None;
-    }
-    pub(crate) fn set_temporary_hand(
-        &mut self,
-        held: bool,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if self.space_held == held {
-            return;
-        }
-        self.space_held = held;
-        window.suppress_key_repeats("space", held);
-        cx.notify();
     }
     fn cancel(&mut self, cx: &mut Context<Self>) {
         self.cancel_pointer();
@@ -258,17 +249,21 @@ impl CanvasView {
         if benchmark::ignore_native_mouse_move() {
             return;
         }
+        if window.has_active_dialog(cx) {
+            self.cancel(cx);
+            return;
+        }
         if let Some(PanGesture {
             position,
             button,
             document,
+            workspace_revision,
         }) = self.pan
         {
-            if self
-                .owner
-                .upgrade()
-                .is_none_or(|o| o.read(cx).editor.active_id() != document)
-            {
+            if self.owner.upgrade().is_none_or(|o| {
+                let editor = &o.read(cx).editor;
+                editor.active_id() != document || editor.workspace_revision() != workspace_revision
+            }) {
                 self.pan = None;
                 cx.notify();
                 return;
@@ -289,6 +284,7 @@ impl CanvasView {
                 position: event.position,
                 button,
                 document,
+                workspace_revision,
             });
             let _ = self.owner.update(cx, |owner, cx| {
                 if !owner.modal {
@@ -354,7 +350,8 @@ impl Render for CanvasView {
         };
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
-        let frame = state.frame.clone();
+        let modeling = state.editor.workspace() == WorkspaceKind::Modeling;
+        let frame = modeling.then(|| state.frame.clone()).flatten();
         let mut overlay = state
             .editor
             .overlay_for_frame(frame.as_ref().map(|f| f.canvas.version));
@@ -386,6 +383,9 @@ impl Render for CanvasView {
         let hand_tool = state.editor.active_tool() == ToolId::Hand;
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
+        if modal {
+            self.cancel_pointer();
+        }
         let error = state.render_error.clone();
         let capture = self.pan.is_some() || state.editor.gesture_active();
         let palette = crate::canvas_overlay::Palette::new(cx.theme().is_dark());
@@ -422,10 +422,9 @@ impl Render for CanvasView {
             .overflow_hidden()
             .bg(cx.theme().muted)
             .when(!modal && self.pan.is_some(), |e| e.cursor_grabbing())
-            .when(
-                !modal && self.pan.is_none() && (self.space_held || hand_tool),
-                |e| e.cursor_grab(),
-            )
+            .when(!modal && self.pan.is_none() && hand_tool, |e| {
+                e.cursor_grab()
+            })
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, event: &MouseDownEvent, window, cx| {
@@ -438,7 +437,7 @@ impl Render for CanvasView {
                         return;
                     }
                     window.focus(&this.focus, cx);
-                    if this.space_held || this.hand_tool(cx) {
+                    if this.hand_tool(cx) {
                         this.cancel(cx);
                         this.pan = Some(PanGesture {
                             position: event.position,
@@ -447,6 +446,10 @@ impl Render for CanvasView {
                                 .owner
                                 .upgrade()
                                 .and_then(|o| o.read(cx).editor.active_id()),
+                            workspace_revision: this
+                                .owner
+                                .upgrade()
+                                .map_or(0, |o| o.read(cx).editor.workspace_revision()),
                         });
                         cx.notify();
                         return;
@@ -481,6 +484,10 @@ impl Render for CanvasView {
                             .owner
                             .upgrade()
                             .and_then(|o| o.read(cx).editor.active_id()),
+                        workspace_revision: this
+                            .owner
+                            .upgrade()
+                            .map_or(0, |o| o.read(cx).editor.workspace_revision()),
                     });
                     cx.notify();
                 }),
@@ -652,9 +659,25 @@ impl Render for CanvasView {
             )
             .child(workspace::render_floating_toolbar(self, modal, cx))
             .child(workspace::render_floating_zoom_bar(&owner, modal, cx))
-            .child(workspace::deformer_bar::render_deformer_bar(
-                self, modal, cx,
-            ))
+            .when(modeling, |e| {
+                e.child(workspace::deformer_bar::render_deformer_bar(
+                    self, modal, cx,
+                ))
+            })
+            .when(!modeling && active.is_some(), |e| {
+                e.child(
+                    div()
+                        .id("animation-preview-pending")
+                        .test_support()
+                        .absolute()
+                        .left(px(60.))
+                        .top(px(56.))
+                        .right_3()
+                        .text_sm()
+                        .text_color(muted)
+                        .child(t!("workspace.preview_pending")),
+                )
+            })
             .children(interaction_label.map(|label| {
                 div()
                     .absolute()
@@ -707,7 +730,10 @@ impl Render for CanvasView {
                     return menu;
                 }
                 let state = owner.read(cx);
-                if state.modal || state.editor.is_busy() {
+                if state.modal
+                    || state.editor.is_busy()
+                    || state.editor.workspace() != WorkspaceKind::Modeling
+                {
                     return menu;
                 }
                 let point = canvas.read(cx).local(window.mouse_position());
@@ -715,6 +741,7 @@ impl Render for CanvasView {
                     .editor
                     .pick_candidates(point, state.frame.as_ref().map(|f| f.canvas.version));
                 let document = state.editor.active_id();
+                let workspace_revision = state.editor.workspace_revision();
                 let visibility = state.editor.deformer_visibility();
                 if candidates.is_empty() {
                     menu = menu
@@ -730,7 +757,9 @@ impl Render for CanvasView {
                                     return;
                                 };
                                 owner.update(cx, |owner, cx| {
-                                    if owner.editor.active_id() != document
+                                    if owner.editor.workspace_revision() != workspace_revision
+                                        || owner.editor.active_id() != document
+                                        || owner.editor.workspace() != WorkspaceKind::Modeling
                                         || owner.modal
                                         || owner.editor.is_busy()
                                     {
@@ -763,7 +792,10 @@ impl Render for CanvasView {
                             .on_click(move |_, window, cx| {
                                 if let Some(owner) = owner.upgrade() {
                                     owner.update(cx, |owner, cx| {
-                                        if owner.editor.active_id() == document {
+                                        if owner.editor.active_id() == document
+                                            && owner.editor.workspace_revision()
+                                                == workspace_revision
+                                        {
                                             owner.run_command(command, window, cx);
                                         }
                                     });

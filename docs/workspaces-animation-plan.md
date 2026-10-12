@@ -1,6 +1,6 @@
 # Modeling 与 Animation Workspace 实施计划
 
-日期：2026-10-12。状态：待实施。
+日期：2026-10-12。状态：阶段一已实施并通过验证；阶段二至五待实施。
 
 将现有编辑界面确立为 Modeling workspace，新增用于已有动画资源预览与验证的 Animation workspace。首版完成 model3 模型包导入、motion 播放、expression 应用与组合预览，并保证播放不会污染建模状态和文档历史。本计划不包含动画创作功能。
 
@@ -158,10 +158,10 @@ Animation 的 [SceneSnapshot](../crates/editor-core/src/scene.rs) 使用 SDK 运
 
 ### 阶段一：Workspace 边界与输入整理
 
-- [ ] 添加 WorkspaceKind、切换入口和每 workspace 的视图／布局状态。
-- [ ] 保留现有 Modeling 默认布局，提供 Animation 最小画布和播放区域。
-- [ ] 移除 Space 临时抓手，播放命令使用统一绑定；中键、Hand 工具和触控板导航继续可用。
-- [ ] 定义模式切换、手势取消、命令可用性和独立布局保存。
+- [x] 添加 WorkspaceKind、切换入口和每 workspace 的视图／布局状态。
+- [x] 保留现有 Modeling 默认布局，提供 Animation 最小画布和播放区域。
+- [x] 移除 Space 临时抓手，播放命令使用统一绑定；中键、Hand 工具和触控板导航继续可用。
+- [x] 定义模式切换、手势取消、命令可用性和独立布局保存。
 
 退出条件：往返切换不修改文档、不丢失建模试摆和视图；独立布局可恢复；旧模式事件无法继续操作新模式；Space 在任何 workspace 都不进入抓手。
 
@@ -248,4 +248,18 @@ cargo fmt --all -- --check
 - 当前 canvas 已支持中键平移；此次输入改动重点是删除 Space 抓手分支并统一播放命令。
 - 当前 scene 缓存与建模 picking 几何耦合，且现有帧接受规则围绕建模交互；动画需要独立失效和呈现规则，不能仅靠每帧全窗口 redraw 接入。
 
-相邻实现依据：`../kasane-2d/modules/kasane-sdk/src/session.rs`、`modules/kasane-animation/src/motion_preview.rs`、`expression.rs` 及 `tests/motion_preview.rs`。以上为已有 API 能力；本计划中的 UI、状态边界和接入行为仍待实施。
+相邻实现依据：`../kasane-2d/modules/kasane-sdk/src/session.rs`、`modules/kasane-animation/src/motion_preview.rs`、`expression.rs` 及 `tests/motion_preview.rs`。以上为已有 API 能力；播放求值与运行时帧接入仍待阶段二至五实施。
+
+## 实施记录
+
+### 2026-10-12：阶段一
+
+- 新增窗口级 `WorkspaceKind` 与模式 revision。文档标签旁和 View 菜单共用命令入口；每个 DocumentSession 保留两套视图，Modeling 的选择、工具和参数试摆保持原有所有权。
+- 保留 Modeling 默认 docking 布局；Animation 使用同一个 Canvas entity，仅显示导航工具和固定底部播放区域。运行时尚未接入，画布明确提示这一状态，不显示 Modeling 试摆帧。
+- 删除 Space 临时抓手。`animation.play-pause` 使用唯一、不可重复的 Space 绑定，保护文本输入和模态上下文；阶段一按钮、菜单和快捷键均不可用，等待阶段二接入播放执行器。
+- `workspace.json` 保存最后模式；`layout-modeling.json` / `layout-animation.json` 各自携带 workspace 标识并独立校验和恢复。旧 `layout.json` 不读取。后台写入按 workspace 合并，测量回调捕获 workspace 与 layout epoch；Reset Layout 只修改当前布局。
+- 切换前取消画布手势并沿用属性提交规则；清理中键捕获、滚轮插值和旧画面，拒绝旧模式帧及延迟导航。Animation 中禁止建模写入命令，保留共享 Undo / Redo；保存期间切换后，返回的文档会话对齐当前模式并保留两套视图。
+- 新增 5 个 core workspace 测试和 7 个 headless workspace 测试；更新 Space、布局配置和快捷键回归。覆盖往返切换、每文档视图、试摆与历史、未完成手势、旧帧、保存交叉操作、布局合并和重置、损坏配置、新窗口恢复、640×480 控件可达性、模态保护及三种导航方式。
+- 验证：`cargo check --locked --workspace`、`cargo test --locked --workspace`、`cargo fmt --all -- --check`。真实 Metal 截图新增 `target/headless-screenshots/workspace-animation.png`，并验证切回 Modeling 后画布像素恢复。
+
+下一阶段从 detached `MotionPreview`、后台动画执行器和运行时渲染描述开始；本次未改变 SDK / renderer 依赖，也未实现 motion / expression 播放或 model opacity 接入。

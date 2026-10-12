@@ -13,6 +13,7 @@ pub struct MenuState {
     pub recent_files: Vec<PathBuf>,
     pub language: Option<String>,
     pub deformer_visibility: editor_core::DeformerVisibility,
+    pub workspace: editor_core::WorkspaceKind,
 }
 
 pub fn path_title(path: &Path) -> String {
@@ -62,6 +63,10 @@ pub fn recent_file_label(path: &Path, all_paths: &[PathBuf]) -> String {
 /// View controls the canvas and presentation; Window owns panels and layout.
 fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
     Menu::new(t!("menu.view")).items([
+        item(CommandId::ModelingWorkspace),
+        item(CommandId::AnimationWorkspace),
+        item(CommandId::PlayPause),
+        MenuItem::separator(),
         item(CommandId::ZoomIn),
         item(CommandId::ZoomOut),
         item(CommandId::ResetView),
@@ -92,6 +97,7 @@ impl EditorView {
         let text = self.has_focused_input(window, cx);
         let settings = cx.global::<settings::Settings>();
         let state = MenuState {
+            workspace: self.editor.workspace(),
             deformer_visibility: self.editor.deformer_visibility(),
             commands: COMMANDS
                 .iter()
@@ -129,6 +135,12 @@ impl EditorView {
             MenuItem::action(t!(id.spec().label).into_owned(), RunCommand { id })
                 .disabled(modal || !self.editor.command_available(self.editor.command(id)))
                 .checked(match id {
+                    CommandId::ModelingWorkspace => {
+                        self.editor.workspace() == editor_core::WorkspaceKind::Modeling
+                    }
+                    CommandId::AnimationWorkspace => {
+                        self.editor.workspace() == editor_core::WorkspaceKind::Animation
+                    }
                     CommandId::ToggleAncestorDeformers => {
                         self.editor.deformer_visibility().ancestors
                     }

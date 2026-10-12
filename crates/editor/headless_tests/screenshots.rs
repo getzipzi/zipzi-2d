@@ -107,9 +107,10 @@ impl Harness {
                         "Editor failed: {:?}",
                         view.edit_error
                     );
-                    let current = view.frame.as_ref().is_some_and(|frame| {
-                        view.editor.accepts_preview(frame.canvas.version.request)
-                    });
+                    let current = view.editor.workspace() == editor_core::WorkspaceKind::Animation
+                        || view.frame.as_ref().is_some_and(|frame| {
+                            view.editor.accepts_preview(frame.canvas.version.request)
+                        });
                     let (_, pending) = view.mesh_thumbnails.read(cx).cache_state();
                     let mesh_ready = window.try_find("mesh-generation-form").is_none()
                         || window.try_find("mesh-generation-counts").is_some();
@@ -208,6 +209,34 @@ pub(super) fn run() -> anyhow::Result<()> {
     );
     save(&baseline, &directory, "editor.png")?;
     let baseline_canvas = harness.canvas_image(&baseline)?;
+
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        anyhow::ensure!(
+            window.try_find("animation-playback-bar").is_some(),
+            "Animation transport is missing"
+        );
+        anyhow::ensure!(
+            window.try_find("tool_glue").is_none(),
+            "Animation must hide modeling tools"
+        );
+        Ok::<_, anyhow::Error>(())
+    })??;
+    let animation = harness.capture()?;
+    save(&animation, &directory, "workspace-animation.png")?;
+    anyhow::ensure!(
+        animation != baseline,
+        "Workspace switch must change the visible layout"
+    );
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-modeling", cx);
+    })?;
+    let restored = harness.capture()?;
+    anyhow::ensure!(
+        harness.canvas_image(&restored)? == baseline_canvas,
+        "Returning to Modeling must restore its canvas"
+    );
 
     let mesh = harness
         .view

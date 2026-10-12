@@ -1,7 +1,7 @@
 use crate::scene::{MAX_ZOOM, MIN_ZOOM};
 use crate::{
     CanvasFrame, CanvasMetrics, CanvasPoint, CanvasScene, Document, EditorCommand, OverlaySnapshot,
-    SceneSnapshot, ToolController, ViewState,
+    SceneSnapshot, ToolController, ViewState, WorkspaceKind,
 };
 use anyhow::{Result, ensure};
 use kasane_sdk::SaveReceipt;
@@ -9,7 +9,8 @@ use std::{path::Path, sync::Arc};
 
 pub struct DocumentSession {
     document: Document,
-    view: ViewState,
+    views: [ViewState; 2],
+    workspace: WorkspaceKind,
     pub scene_revision: u64,
     pub viewport_revision: u64,
     cache: Option<SceneSnapshot>,
@@ -24,7 +25,8 @@ impl DocumentSession {
     pub fn from_document(document: Document) -> Self {
         Self {
             document,
-            view: ViewState::default(),
+            views: [ViewState::default(); 2],
+            workspace: WorkspaceKind::default(),
             scene_revision: 1,
             viewport_revision: 1,
             cache: None,
@@ -45,7 +47,25 @@ impl DocumentSession {
             .map(|scene| scene.viewport_frame.clone())
     }
     pub fn view(&self) -> ViewState {
-        self.view
+        self.view_for(self.workspace)
+    }
+    pub fn view_for(&self, workspace: WorkspaceKind) -> ViewState {
+        self.views[workspace.index()]
+    }
+    pub fn set_workspace(&mut self, workspace: WorkspaceKind) {
+        if self.workspace == workspace {
+            return;
+        }
+        self.cancel_gesture();
+        self.workspace = workspace;
+        self.viewport_revision += 1;
+        self.displayed = None;
+    }
+    pub fn active_tool(&self) -> crate::ToolId {
+        match self.workspace {
+            WorkspaceKind::Modeling => self.tools.active,
+            WorkspaceKind::Animation => crate::ToolId::Hand,
+        }
     }
     fn invalidate_scene(&mut self) {
         self.scene_revision += 1;
@@ -63,6 +83,23 @@ impl DocumentSession {
         }
     }
     pub fn execute(&mut self, command: EditorCommand) -> Result<()> {
+        ensure!(
+            self.workspace == WorkspaceKind::Modeling
+                || matches!(
+                    command,
+                    EditorCommand::Undo
+                        | EditorCommand::Redo
+                        | EditorCommand::FinishEdit
+                        | EditorCommand::CancelEdit
+                        | EditorCommand::SetTool(crate::ToolId::Hand)
+                ),
+            "Modeling commands are unavailable in Animation"
+        );
+        if self.workspace == WorkspaceKind::Animation
+            && matches!(command, EditorCommand::SetTool(crate::ToolId::Hand))
+        {
+            return Ok(());
+        }
         self.cancel_gesture();
         let reusable = if matches!(
             command,
@@ -290,7 +327,7 @@ impl DocumentSession {
     pub fn zoom_at(&mut self, delta: f32, focus: Option<CanvasPoint>, metrics: CanvasMetrics) {
         if delta.is_finite() {
             self.set_zoom_at(
-                (self.view.zoom + delta).clamp(MIN_ZOOM, MAX_ZOOM),
+                (self.view().zoom + delta).clamp(MIN_ZOOM, MAX_ZOOM),
                 focus,
                 metrics,
             );
@@ -298,7 +335,8 @@ impl DocumentSession {
     }
     pub fn set_zoom_at(&mut self, zoom: f32, focus: Option<CanvasPoint>, metrics: CanvasMetrics) {
         if !self.tools.dragging() && zoom.is_finite() {
-            let old_zoom = self.view.zoom;
+            let view = &mut self.views[self.workspace.index()];
+            let old_zoom = view.zoom;
             let new_zoom = zoom.clamp(MIN_ZOOM, MAX_ZOOM);
             if new_zoom != old_zoom {
                 if metrics.visible() && old_zoom > 0. {
@@ -310,11 +348,11 @@ impl DocumentSession {
                     if anchor.x.is_finite() && anchor.y.is_finite() {
                         let vx = anchor.x - metrics.width / 2.0;
                         let vy = anchor.y - metrics.height / 2.0;
-                        self.view.pan.x += (1.0 - k) * (vx - self.view.pan.x);
-                        self.view.pan.y += (1.0 - k) * (vy - self.view.pan.y);
+                        view.pan.x += (1.0 - k) * (vx - view.pan.x);
+                        view.pan.y += (1.0 - k) * (vy - view.pan.y);
                     }
                 }
-                self.view.zoom = new_zoom;
+                view.zoom = new_zoom;
                 self.viewport_revision += 1;
             }
         }
@@ -325,14 +363,14 @@ impl DocumentSession {
             && delta.y.is_finite()
             && (delta.x != 0. || delta.y != 0.)
         {
-            self.view.pan.x += delta.x;
-            self.view.pan.y += delta.y;
+            self.views[self.workspace.index()].pan.x += delta.x;
+            self.views[self.workspace.index()].pan.y += delta.y;
             self.viewport_revision += 1;
         }
     }
     pub fn reset_view(&mut self) {
         if !self.tools.dragging() {
-            self.view = ViewState::default();
+            self.views[self.workspace.index()] = ViewState::default();
             self.viewport_revision += 1;
         }
     }
@@ -358,12 +396,18 @@ impl DocumentSession {
         ))
     }
     pub fn overlay(&self) -> OverlaySnapshot {
+        if self.workspace != WorkspaceKind::Modeling {
+            return OverlaySnapshot::default();
+        }
         let Some(frame) = &self.displayed else {
             return OverlaySnapshot::default();
         };
         self.tools.overlay(&self.document, frame)
     }
     pub fn input(&mut self, event: crate::CanvasInput, _metrics: CanvasMetrics) -> Result<bool> {
+        if self.workspace != WorkspaceKind::Modeling {
+            return Ok(false);
+        }
         if matches!(event, crate::CanvasInput::Cancel) {
             let was = self.tools.dragging();
             self.cancel_gesture();

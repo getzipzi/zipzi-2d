@@ -1,4 +1,4 @@
-use editor_core::{ConfigStore, EffectiveBinding, RecentFiles, ShortcutOverrides};
+use editor_core::{ConfigStore, EffectiveBinding, RecentFiles, ShortcutOverrides, WorkspaceKind};
 use gpui_kit::{App, Global, KeybindingKeystroke, Keystroke, PlatformKeyboardMapper};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -7,6 +7,10 @@ use std::path::Path;
 struct LanguagePreference {
     language: Option<String>,
 }
+#[derive(Default, Deserialize, Serialize)]
+struct WorkspacePreference {
+    workspace: WorkspaceKind,
+}
 
 #[derive(Clone)]
 pub struct Settings {
@@ -14,6 +18,7 @@ pub struct Settings {
     pub bindings: Vec<EffectiveBinding>,
     pub recent_files: RecentFiles,
     pub language: Option<String>,
+    pub workspace: WorkspaceKind,
     pub notices: Vec<String>,
 }
 impl Global for Settings {}
@@ -70,13 +75,28 @@ impl Settings {
                 None
             }
         };
+        let workspace = match store.read::<WorkspacePreference>("workspace.json") {
+            Ok(preference) => preference.unwrap_or_default().workspace,
+            Err(error) => {
+                notices.push(error.to_string());
+                WorkspaceKind::default()
+            }
+        };
         Self {
             store,
             bindings,
             recent_files,
             language,
+            workspace,
             notices,
         }
+    }
+
+    pub fn set_workspace(&mut self, workspace: WorkspaceKind) -> anyhow::Result<()> {
+        self.store
+            .write("workspace.json", &WorkspacePreference { workspace })?;
+        self.workspace = workspace;
+        Ok(())
     }
 
     pub fn set_language(&mut self, language: Option<String>) -> anyhow::Result<()> {
@@ -162,6 +182,24 @@ mod tests {
             Settings::from_store(store, &DummyKeyboardMapper).language,
             None
         );
+        Ok(())
+    }
+    #[test]
+    fn workspace_preference_survives_reload_and_invalid_config_defaults_to_modeling()
+    -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let store = ConfigStore::new(dir.path());
+        let mut settings = Settings::from_store(store.clone(), &DummyKeyboardMapper);
+        assert_eq!(settings.workspace, editor_core::WorkspaceKind::Modeling);
+        settings.set_workspace(editor_core::WorkspaceKind::Animation)?;
+        assert_eq!(
+            Settings::from_store(store.clone(), &DummyKeyboardMapper).workspace,
+            editor_core::WorkspaceKind::Animation
+        );
+        std::fs::write(dir.path().join("workspace.json"), "{")?;
+        let settings = Settings::from_store(store, &DummyKeyboardMapper);
+        assert_eq!(settings.workspace, editor_core::WorkspaceKind::Modeling);
+        assert!(!settings.notices.is_empty());
         Ok(())
     }
     #[test]

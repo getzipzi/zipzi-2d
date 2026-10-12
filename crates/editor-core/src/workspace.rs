@@ -1,7 +1,7 @@
 //! Window workspace. Documents, tasks and previews are addressed by runtime identity.
 use crate::{
     CloseDisposition, Document, DocumentSession, EditorCommand, EditorPreview, Layer, LoadRequest,
-    TreeNode, ViewState,
+    TreeNode, ViewState, WorkspaceKind,
 };
 use anyhow::{Result, anyhow, ensure};
 use kasane_sdk::SaveReceipt;
@@ -47,7 +47,7 @@ struct Entry {
     frozen_selected: Option<Layer>,
     frozen_mesh_tree: Vec<TreeNode>,
     frozen_deformer_tree: Vec<TreeNode>,
-    view: ViewState,
+    views: [ViewState; 2],
     saving: Option<(OperationId, PathBuf)>,
     close_after_save: Option<DeferredClose>,
 }
@@ -128,6 +128,8 @@ impl SaveTask {
 }
 
 pub struct Editor {
+    workspace: WorkspaceKind,
+    workspace_revision: u64,
     documents: Vec<Entry>,
     active: Option<DocumentId>,
     loads: HashMap<OperationId, (DocumentId, Option<PathBuf>)>,
@@ -144,6 +146,8 @@ impl Editor {
     }
     pub fn empty() -> Self {
         Self {
+            workspace: WorkspaceKind::default(),
+            workspace_revision: 0,
             documents: Vec::new(),
             active: None,
             loads: HashMap::new(),
@@ -171,7 +175,8 @@ impl Editor {
         self.insert_with_id(DocumentId(Uuid::new_v4()), document)
     }
     fn insert_with_id(&mut self, id: DocumentId, document: Document) -> DocumentId {
-        let session = DocumentSession::from_document(document);
+        let mut session = DocumentSession::from_document(document);
+        session.set_workspace(self.workspace);
         self.documents.push(Entry {
             id,
             frozen: DocumentSummary::read(id, &session),
@@ -179,7 +184,7 @@ impl Editor {
             frozen_selected: None,
             frozen_mesh_tree: Vec::new(),
             frozen_deformer_tree: Vec::new(),
-            view: session.view(),
+            views: WorkspaceKind::ALL.map(|kind| session.view_for(kind)),
             session: Some(session),
             saving: None,
             close_after_save: None,
@@ -203,6 +208,33 @@ impl Editor {
     }
     pub fn active_id(&self) -> Option<DocumentId> {
         self.active
+    }
+    pub fn workspace(&self) -> WorkspaceKind {
+        self.workspace
+    }
+    pub fn workspace_revision(&self) -> u64 {
+        self.workspace_revision
+    }
+    /// Finish property edits and roll back unfinished canvas gestures before
+    /// changing modes. View revisions also reject frames from the old mode.
+    pub fn set_workspace(&mut self, workspace: WorkspaceKind) -> Result<()> {
+        if self.workspace == workspace {
+            return Ok(());
+        }
+        ensure!(!self.exiting(), "Workspace is closing");
+        if self.active.is_some() && !self.is_busy() {
+            self.execute(EditorCommand::FinishEdit)?;
+        }
+        for entry in &mut self.documents {
+            if let Some(session) = &mut entry.session {
+                session.set_workspace(workspace);
+            }
+        }
+        self.workspace = workspace;
+        self.workspace_revision += 1;
+        self.invalidate_preview();
+        self.presentation_floor = self.revision + 1;
+        Ok(())
     }
     pub fn documents(&self) -> Vec<DocumentSummary> {
         self.documents.iter().map(Entry::summary).collect()
@@ -287,10 +319,13 @@ impl Editor {
             .and_then(DocumentSession::evaluated_frame)
     }
     pub fn view(&self) -> ViewState {
+        let workspace = self.workspace;
         self.active
             .and_then(|id| self.entry(id).ok())
             .map_or_else(ViewState::default, |e| {
-                e.session.as_ref().map_or(e.view, DocumentSession::view)
+                e.session
+                    .as_ref()
+                    .map_or(e.views[workspace.index()], DocumentSession::view)
             })
     }
     pub fn is_busy(&self) -> bool {
@@ -473,7 +508,7 @@ impl Editor {
         };
         let entry = self.entry_mut(id)?;
         entry.frozen = entry.summary();
-        entry.view = entry.session.as_ref().unwrap().view();
+        entry.views = WorkspaceKind::ALL.map(|kind| entry.session.as_ref().unwrap().view_for(kind));
         entry.frozen_layers = entry.session.as_ref().unwrap().document().layers();
         entry.frozen_selected = entry.session.as_ref().unwrap().document().selected_layer();
         entry.frozen_mesh_tree = entry.session.as_ref().unwrap().document().mesh_tree();
@@ -490,6 +525,7 @@ impl Editor {
     }
     /// Rejected delivery leaves the envelope intact so its owner can recover it.
     pub fn finish_save(&mut self, completion: &mut SaveCompletion) -> Result<SaveReceipt> {
+        let workspace = self.workspace;
         let entry = self.entry_mut(completion.id)?;
         ensure!(
             entry
@@ -505,6 +541,7 @@ impl Editor {
         // Metrics/device state may change on the UI while the session is saving.
         // Also replace any pending preview rejected while it was on the worker.
         session.viewport_revision += 1;
+        session.set_workspace(workspace);
         entry.session = Some(session);
         entry.frozen_layers.clear();
         entry.frozen_selected = None;
@@ -655,7 +692,7 @@ impl Editor {
         self.active
             .and_then(|id| self.entry(id).ok())
             .and_then(|e| e.session.as_ref())
-            .map_or(crate::ToolId::Select, |s| s.tools.active)
+            .map_or(crate::ToolId::Select, DocumentSession::active_tool)
     }
     pub fn deformer_visibility(&self) -> crate::DeformerVisibility {
         self.active
@@ -682,6 +719,9 @@ impl Editor {
         point: crate::CanvasPoint,
         image: Option<crate::FrameVersion>,
     ) -> Vec<crate::PickCandidate> {
+        if self.workspace != WorkspaceKind::Modeling {
+            return Vec::new();
+        }
         if !self.has_presented_frame(image) {
             return Vec::new();
         }
@@ -764,6 +804,11 @@ impl Editor {
         }
     }
     pub fn preview_if_needed(&mut self) -> Result<Option<EditorPreview>> {
+        // Runtime frames are supplied by the animation executor in phase two.
+        // Never expose the Modeling pose or editor visibility as an animation frame.
+        if self.workspace != WorkspaceKind::Modeling {
+            return Ok(None);
+        }
         let Some(id) = self.active else {
             return Ok(None);
         };
@@ -777,6 +822,10 @@ impl Editor {
         self.preview().map(Some)
     }
     pub fn preview(&mut self) -> Result<EditorPreview> {
+        ensure!(
+            self.workspace == WorkspaceKind::Modeling,
+            "Animation preview is not connected yet"
+        );
         let id = self.active.ok_or_else(|| anyhow!("No active document"))?;
         let metrics = self.metrics;
         self.revision += 1;
@@ -814,19 +863,22 @@ impl Editor {
         })
     }
     pub fn accepts_preview(&self, revision: u64) -> bool {
-        self.active.is_some_and(|id| {
-            self.displayed_request == Some((id, revision))
-                && self
-                    .entry(id)
-                    .ok()
-                    .and_then(|e| e.session.as_ref())
-                    .is_some_and(|s| {
-                        self.requested_scene == Some((id, s.scene_revision, s.viewport_revision))
-                    })
-        })
+        self.workspace == WorkspaceKind::Modeling
+            && self.active.is_some_and(|id| {
+                self.displayed_request == Some((id, revision))
+                    && self
+                        .entry(id)
+                        .ok()
+                        .and_then(|e| e.session.as_ref())
+                        .is_some_and(|s| {
+                            self.requested_scene
+                                == Some((id, s.scene_revision, s.viewport_revision))
+                        })
+            })
     }
     pub fn present_frame(&mut self, frame: crate::CanvasFrame) -> bool {
-        if self.active != Some(frame.version.document)
+        if self.workspace != WorkspaceKind::Modeling
+            || self.active != Some(frame.version.document)
             || frame.version.request < self.presentation_floor
             || !self.displayed_request.is_some_and(|(id, latest)| {
                 id == frame.version.document && frame.version.request <= latest

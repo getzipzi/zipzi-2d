@@ -9,6 +9,8 @@ mod tree;
 pub use objects::*;
 pub use thumbnail::{MESH_THUMBNAIL_SIZE, MeshTextureRegion};
 mod workspace;
+mod workspace_kind;
+pub use workspace_kind::WorkspaceKind;
 
 pub use document::{
     AlphaMeshOptions, Document, Layer, MeshGenerationOptions, MeshGenerationPreview,

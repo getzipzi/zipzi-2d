@@ -365,7 +365,7 @@ fn reset_layout_saves_measured_center_size(cx: &mut TestAppContext) {
     })
     .unwrap();
     let saved = ConfigStore::new(harness._config_dir.path())
-        .read::<LayoutConfig>("layout.json")
+        .read::<LayoutConfig>("layout-modeling.json")
         .unwrap()
         .unwrap()
         .layout;

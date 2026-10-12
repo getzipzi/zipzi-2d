@@ -49,7 +49,10 @@ struct EditorView {
 }
 impl EditorView {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let editor = Editor::empty();
+        let mut editor = Editor::empty();
+        editor
+            .set_workspace(cx.global::<settings::Settings>().workspace)
+            .unwrap();
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut editor = Self {

@@ -291,3 +291,9 @@ wireframe = "Wireframe"
 zoom_in = "Zoom in"
 zoom_out = "Zoom out"
 fit = "Fit"
+
+[workspace]
+modeling = "Modeling"
+animation = "Animation"
+play_pause = "Play / Pause"
+preview_pending = "Animation preview is not available yet."
