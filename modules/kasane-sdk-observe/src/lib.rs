@@ -410,17 +410,12 @@ impl ObservationInput {
                 asset_id: None,
             })?;
         if apply_model_opacity {
-            let opacity = preview.snapshot().model_opacity;
-            if !opacity.is_finite() || !(0.0..=1.0).contains(&opacity) {
-                return Err(ObservationError {
+            kasane_animation::apply_model_opacity(&mut frame, preview.snapshot().model_opacity)
+                .map_err(|error| ObservationError {
                     code: "INVALID_MODEL_OPACITY".into(),
-                    message: "Model opacity must be finite and between zero and one".into(),
+                    message: error.to_string(),
                     asset_id: None,
-                });
-            }
-            for drawable in &mut frame.drawables {
-                drawable.opacity *= opacity;
-            }
+                })?;
         }
         Self::capture_frame(
             snapshot,

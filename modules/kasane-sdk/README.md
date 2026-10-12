@@ -112,3 +112,26 @@ cargo test -p kasane-sdk --test alpha_mesh --locked
 Tests cover whole-pixel coverage, winding, closed boundaries, UV orientation,
 holes, disconnected islands, tiny/diagonal features, thresholding, density,
 limits and repeatability.
+
+
+## Detached animation playback
+
+`AuthoringSession::motion_preview()` captures an independent default-parameter
+runtime. Use `schedule_motion_entry(group, index, time)` for model3 registration
+fades, or `schedule_motion(clip_id, time)` for an ungrouped clip's own fades.
+Playback never writes authoring preview values or history.
+
+`MotionPreview::advance_to_with_progress(target_time, progress)` advances on the
+same absolute 60 Hz grid as canonical `seek`. It reuses completed full steps;
+backward targets and noncanonical current states use transactional seek.
+Cancellation during incremental advance retains completed full steps, allowing
+a newer target to resume; discard cancelled results. In contrast,
+`seek_with_progress` preserves the entire prior state on cancellation. Both
+validate finite nonnegative targets and enforce the one-million-step limit.
+
+`MotionSnapshot::model_opacity` is separate from the evaluated drawable frame.
+Hosts using the observer's Model color-alpha policy call
+`apply_model_opacity(&mut frame, opacity)` once before mask / Offscreen rendering.
+This multiplies each drawable opacity and leaves independent Part / Offscreen
+factors intact. Scaling a final flattened image produces different overlap
+pixels. Framework Model opacity does not set renderer color alpha automatically.

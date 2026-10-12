@@ -129,6 +129,7 @@ pub struct MotionPreview {
     // Scratch only, not simulation state. A mutex preserves the shared-reference
     // API and Send + Sync while independent previews use independent workspaces.
     geometry: Mutex<GeometryWorkspace>,
+    canonical_step: Option<u32>,
 }
 
 impl MotionPreview {
@@ -165,6 +166,7 @@ impl MotionPreview {
             curves,
             source_identity: None,
             geometry: Mutex::default(),
+            canonical_step: None,
             cache: SeekCache::default(),
             operation: MotionOperation {
                 preview_id: uuid::Uuid::new_v4().to_string(),
@@ -232,6 +234,7 @@ impl MotionPreview {
         self.motion
             .schedule_motion(&self.document, self.snapshot.time, id, time, (None, None))?;
         self.cache.clear();
+        self.canonical_step = None;
         self.commit_operation(MotionOperationKind::ScheduleMotion {
             motion_id: id.into(),
             time,
@@ -277,6 +280,7 @@ impl MotionPreview {
             (entry.fade_in, entry.fade_out),
         )?;
         self.cache.clear();
+        self.canonical_step = None;
         self.commit_operation(MotionOperationKind::ScheduleMotionEntry {
             group: group.into(),
             index,
@@ -340,6 +344,7 @@ impl MotionPreview {
         self.expressions
             .schedule(&self.document, self.snapshot.time, id, time)?;
         self.cache.clear();
+        self.canonical_step = None;
         self.commit_operation(MotionOperationKind::ScheduleExpression {
             expression_id: id.into(),
             time,
@@ -390,6 +395,7 @@ impl MotionPreview {
             value,
         )?;
         self.cache.clear();
+        self.canonical_step = None;
         self.commit_operation(MotionOperationKind::ScheduleParameterInput {
             parameter_id: id.into(),
             time,
@@ -407,6 +413,7 @@ impl MotionPreview {
     }
 
     fn reset_state(&mut self) {
+        self.canonical_step = None;
         self.cache.clear();
         let mut parameters = self.base.clone();
         let mut virtual_controls = BTreeMap::new();
@@ -459,6 +466,7 @@ impl MotionPreview {
             &mut self.snapshot.part_opacities,
             &self.pose.opacities,
         );
+        self.canonical_step = None;
         self.snapshot.time = time;
         self.snapshot.coverage.sort();
         self.snapshot.coverage.dedup();
@@ -470,6 +478,7 @@ impl MotionPreview {
     /// Does not advance time or run Motion/Expression/Pose. Does not seed checkpoints;
     /// subsequent seek still replays the original baseline and scheduled inputs.
     pub fn stabilize_physics(&mut self) {
+        self.canonical_step = None;
         self.physics
             .stabilize(&self.document, &mut self.snapshot.parameters);
         self.commit_operation(MotionOperationKind::StabilizePhysics);
@@ -540,12 +549,44 @@ impl MotionPreview {
                 return Err(AnimationError::SeekCancelled);
             }
         }
+        candidate.canonical_step = (time > 0.0 && time == (time * 60.0).round() / 60.0)
+            .then_some((time * 60.0).round() as u32);
         candidate.cache = cache;
         candidate.operation.sequence = self.operation.sequence;
         candidate.commit_operation(MotionOperationKind::Seek {
             requested_time: time,
         });
         *self = candidate;
+        Ok(&self.snapshot)
+    }
+
+    /// Advance on the same absolute 60 Hz grid as canonical seek, reusing the
+    /// current simulation when it is a canonical full step. Partial/backward
+    /// targets fall back to transactional seek. No UI frame delta enters physics.
+    /// Cancellation retains completed canonical steps; callers should discard
+    /// the cancelled result and may resume toward a newer target.
+    pub fn advance_to_with_progress(
+        &mut self,
+        time: f32,
+        mut progress: impl FnMut(u32, u32) -> bool,
+    ) -> Result<&MotionSnapshot, AnimationError> {
+        let mut steps = crate::replay::ReplaySteps::new(time)?;
+        let Some(start) = self.canonical_step.filter(|_| time >= self.snapshot.time) else {
+            return self.seek_with_progress(time, progress);
+        };
+        let total = steps.total() - start;
+        if !progress(0, total) {
+            return Err(AnimationError::SeekCancelled);
+        }
+        steps.resume_after(start);
+        for (index, next) in steps.enumerate() {
+            self.advance((next - self.snapshot.time).max(0.0))?;
+            let step = start + index as u32 + 1;
+            self.canonical_step = (next == step as f32 / 60.0).then_some(step);
+            if !progress(step - start, total) {
+                return Err(AnimationError::SeekCancelled);
+            }
+        }
         Ok(&self.snapshot)
     }
 

@@ -76,3 +76,6 @@ pub enum AnimationError {
     #[error("geometry evaluation failed: {0}")]
     Evaluation(String),
 }
+
+mod model_opacity;
+pub use model_opacity::apply_model_opacity;

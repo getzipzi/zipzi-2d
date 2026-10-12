@@ -785,3 +785,68 @@ fn geometry_workspace_preserves_owned_frames_and_shared_reads() {
     assert_eq!(*preview.snapshot(), snapshot);
     assert_eq!(*preview.operation(), operation);
 }
+
+#[test]
+fn canonical_continuous_playback_matches_cold_and_cached_seek_with_physics_pose_expressions() {
+    let mut continuous = combined_cache_preview();
+    let mut cached = combined_cache_preview();
+    let mut cold = combined_cache_preview();
+    cold.set_seek_cache_budget(0);
+    cached.seek(8.0).unwrap();
+    // Seek(0) initializes Pose/Physics; the first positive target still follows
+    // the canonical cold replay, which starts with 1/60 rather than advance(0).
+    continuous
+        .advance_to_with_progress(0., |_, _| true)
+        .unwrap();
+    for step in [1, 2, 13, 59, 60, 61, 90, 143, 144, 300, 417, 480] {
+        let target = step as f32 / 60.;
+        let snapshot = continuous
+            .advance_to_with_progress(target, |_, _| true)
+            .unwrap();
+        assert_eq!(snapshot, cold.seek(target).unwrap(), "cold step {step}");
+        assert_eq!(snapshot, cached.seek(target).unwrap(), "cached step {step}");
+    }
+    for target in [8.003, 8.02, 0.0, 1.01, 2., 2.01, 4.] {
+        assert_eq!(
+            continuous
+                .advance_to_with_progress(target, |_, _| true)
+                .unwrap(),
+            cold.seek(target).unwrap(),
+            "fraction/backward {target}"
+        );
+    }
+    continuous.advance(0.031).unwrap();
+    assert_eq!(
+        continuous
+            .advance_to_with_progress(5., |_, _| true)
+            .unwrap(),
+        cold.seek(5.).unwrap()
+    );
+}
+
+#[test]
+fn canonical_playback_cancellation_resumes_without_skipping_simulation_steps() {
+    let mut preview = combined_cache_preview();
+    let mut cold = combined_cache_preview();
+    preview.advance_to_with_progress(1., |_, _| true).unwrap();
+    assert!(matches!(
+        preview.advance_to_with_progress(4., |done, _| done < 37),
+        Err(kasane_animation::AnimationError::SeekCancelled)
+    ));
+    assert_eq!(preview.snapshot().time, 97. / 60.);
+    assert_eq!(
+        preview.advance_to_with_progress(4., |_, _| true).unwrap(),
+        cold.seek(4.).unwrap()
+    );
+    let before = preview.snapshot().clone();
+    for time in [f32::NAN, -1., 1_000_001. / 60.] {
+        assert!(preview.advance_to_with_progress(time, |_, _| true).is_err());
+        assert_eq!(preview.snapshot(), &before);
+    }
+    preview.schedule_parameter_input(PARAM, 4.5, 0.3).unwrap();
+    cold.schedule_parameter_input(PARAM, 4.5, 0.3).unwrap();
+    assert_eq!(
+        preview.advance_to_with_progress(5., |_, _| true).unwrap(),
+        cold.seek(5.).unwrap()
+    );
+}
