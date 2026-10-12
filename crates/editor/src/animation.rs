@@ -298,12 +298,30 @@ mod tests {
             }
         };
         assert_eq!(receive(target)?.snapshot.time, 0.);
+        // A long seek within the same recipe must also yield to a newer scrub.
+        editor.invalidate_animation();
+        let mut long = editor.animation_request().unwrap();
+        long.identity.time = 10_000.;
+        worker.send(long);
+        let document = editor.active_id().unwrap();
+        for time in [1.5, 0.2, 1., 0.4] {
+            editor.seek_animation(document, time)?;
+            worker.send(editor.animation_request().unwrap());
+        }
+        // Reissue the current target after another barrier to obtain its identity.
+        editor.seek_animation(document, 0.4)?;
+        let request = editor.animation_request().unwrap();
+        let expected =
+            editor_core::AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+        let target = request.identity;
+        worker.send(request);
+        assert_eq!(receive(target)?.snapshot, expected.snapshot);
         worker.suspend();
         editor.invalidate_animation();
         let request = editor.animation_request().unwrap();
         let target = request.identity;
         worker.send(request);
-        assert_eq!(receive(target)?.snapshot.time, 0.);
+        assert_eq!(receive(target)?.snapshot.time, 0.4);
         Ok(())
     }
 }

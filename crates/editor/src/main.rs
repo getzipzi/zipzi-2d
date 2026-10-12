@@ -89,7 +89,7 @@ impl EditorView {
             gpu_device: None,
             _frames: None,
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
-            playback_bar: workspace::playback_bar::PlaybackBar::new(cx.weak_entity(), cx),
+            playback_bar: workspace::playback_bar::PlaybackBar::new(cx.weak_entity(), window, cx),
             dev_session: dev_session::DevSession::from_env(),
         };
         let entity = cx.weak_entity();

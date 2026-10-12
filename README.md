@@ -35,12 +35,25 @@ entry or an ungrouped clip in Motions, then use Space, the playback button or
 the View menu to play / pause. Back to Start pauses and returns to zero.
 Motion loops follow the resource; the transport shows the rendered time and
 cycle. Preview Info shows duration, coverage and unsupported Sound registrations.
-Physics / Pose run in the detached runtime. Playback does not change modeling
+Select an expression in Expressions to preview it alone or with the motion.
+Switches use the resource's fades and Add / Multiply / Overwrite rules; Preview
+Info distinguishes the selected expression from those active in the rendered frame.
+Drag the ruler to pause and locate a motion. Non-looping seeks and Back to Start
+replay this run's expression switches; selecting another expression in the past
+replaces future switches. Loop scrubbing starts a new first-cycle preview with
+the selected expression activated at zero. Pausing / resuming a loop keeps its
+continuous physics clock.
+
+Clear Expression immediately rebuilds the current time without any expression
+switches and preserves play / pause. Reset Preview clears both resource selections
+and returns to a paused baseline at zero. Expressions without a motion use a
+continuous preview clock with the ruler disabled.
+Motion / Expression / Physics / Pose run in the detached runtime. Playback does not change modeling
 parameters, editor visibility, history or the project's modified state.
 Leaving the workspace, changing documents, losing window activation, opening a
 modal or saving pauses playback. Animation fits the model on first entry and
-keeps its own zoom / pan afterward. Expression controls and a seek ruler are
-still pending.
+keeps its own zoom / pan afterward. Seek runs on the background evaluator with
+latest-target coalescing and cancellation; old results cannot overwrite a newer target.
 
 Space no longer temporarily activates Hand.
 Use middle-button drag, the Hand tool, or trackpad gestures to navigate.

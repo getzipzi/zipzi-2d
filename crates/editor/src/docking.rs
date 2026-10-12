@@ -88,6 +88,7 @@ impl Drop for LayoutWriter {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PanelKind {
     AnimationMotions,
+    AnimationExpressions,
     AnimationInfo,
     Properties,
     MeshTree,
@@ -100,6 +101,7 @@ pub struct DockWorkspace {
     pub area: Entity<DockArea>,
     pub canvas: Entity<crate::canvas::CanvasView>,
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
+    pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_info: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub properties: Entity<crate::panels::PropertiesPanel>,
     pub mesh_tree: Entity<crate::panels::MeshTreePanel>,
@@ -148,11 +150,17 @@ impl DockWorkspace {
         let parameters = crate::panels::ParametersPanel::new(owner.clone(), window, cx);
         use crate::panels::animation_panel::{AnimationPanel, AnimationPanelKind};
         let animation_motions = AnimationPanel::new(owner.clone(), AnimationPanelKind::Motions, cx);
+        let animation_expressions =
+            AnimationPanel::new(owner.clone(), AnimationPanelKind::Expressions, cx);
         let animation_info = AnimationPanel::new(owner.clone(), AnimationPanelKind::Info, cx);
 
         for (name, handle) in [
             ("Canvas", panel_handle(canvas.clone())),
             ("AnimationMotions", panel_handle(animation_motions.clone())),
+            (
+                "AnimationExpressions",
+                panel_handle(animation_expressions.clone()),
+            ),
             ("AnimationInfo", panel_handle(animation_info.clone())),
             ("Properties", panel_handle(properties.clone())),
             ("MeshTree", panel_handle(mesh_tree.clone())),
@@ -186,6 +194,7 @@ impl DockWorkspace {
             area,
             canvas,
             animation_motions,
+            animation_expressions,
             animation_info,
             properties,
             mesh_tree,
@@ -217,8 +226,21 @@ impl DockWorkspace {
                 area.set_center(
                     DockLayout::h_split()
                         .child(
-                            DockLayout::tabs()
-                                .panel_view(panel_handle(self.animation_motions.clone()), cx),
+                            DockLayout::v_split()
+                                .child(
+                                    DockLayout::tabs().panel_view(
+                                        panel_handle(self.animation_motions.clone()),
+                                        cx,
+                                    ),
+                                    None,
+                                )
+                                .child(
+                                    DockLayout::tabs().panel_view(
+                                        panel_handle(self.animation_expressions.clone()),
+                                        cx,
+                                    ),
+                                    None,
+                                ),
                             Some(px(220.)),
                         )
                         .child(
@@ -350,6 +372,13 @@ impl DockWorkspace {
 
     pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
         match kind {
+            PanelKind::AnimationExpressions => toggle_panel(
+                &self.area,
+                self.animation_expressions.clone(),
+                DockPlacement::Left,
+                window,
+                cx,
+            ),
             PanelKind::AnimationMotions => toggle_panel(
                 &self.area,
                 self.animation_motions.clone(),
@@ -445,6 +474,7 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
                     [
                         "Canvas",
                         "AnimationMotions",
+                        "AnimationExpressions",
                         "AnimationInfo",
                         "Properties",
                         "MeshTree",
@@ -466,10 +496,16 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
                 );
                 ensure!(
                     if workspace == WorkspaceKind::Animation {
-                        ["Canvas", "AnimationMotions", "AnimationInfo"]
-                            .contains(&node.panel_name.as_str())
+                        [
+                            "Canvas",
+                            "AnimationMotions",
+                            "AnimationExpressions",
+                            "AnimationInfo",
+                        ]
+                        .contains(&node.panel_name.as_str())
                     } else {
-                        !["AnimationMotions", "AnimationInfo"].contains(&node.panel_name.as_str())
+                        !["AnimationMotions", "AnimationExpressions", "AnimationInfo"]
+                            .contains(&node.panel_name.as_str())
                     },
                     "Panel is unavailable in this workspace"
                 );

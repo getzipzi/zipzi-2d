@@ -326,7 +326,8 @@ pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Docum
 #[allow(dead_code)]
 pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
     use kasane_core::document::{
-        MotionClip, MotionGroup, MotionPoint, MotionRegistration, MotionSegment, MotionTrack,
+        ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget, MotionClip,
+        MotionGroup, MotionPoint, MotionRegistration, MotionSegment, MotionTrack,
         MotionTrackTarget,
     };
     let (mut doc, assets) = rectangle_document(true)?;
@@ -377,6 +378,30 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
         opaque_source_content_hash: None,
     };
     session.edit("Animation fixture", None, |edit| {
+        for (name, blend, value) in [
+            ("Add", ExpressionBlend::Add, 0.3),
+            ("Multiply", ExpressionBlend::Multiply, 0.5),
+            ("Overwrite", ExpressionBlend::Overwrite, 0.8),
+        ] {
+            edit.create_expression(ExpressionAsset {
+                id: Uuid::new_v4().to_string(),
+                name: name.into(),
+                file_type: None,
+                fade_in: Some(0.2),
+                fade_out: Some(0.3),
+                entries: vec![ExpressionEntry {
+                    target: ExpressionTarget::Resolved {
+                        parameter_id: parameter_id.clone(),
+                    },
+                    value,
+                    blend: Some(blend),
+                    extensions: Default::default(),
+                }],
+                extensions: Default::default(),
+                opaque_source_ids: None,
+                opaque_source_content_hash: None,
+            })?;
+        }
         edit.create_motion(make_clip(clip.clone(), "Once", false, 2.))?;
         edit.create_motion(make_clip(Uuid::new_v4().to_string(), "Loop", true, 1.))?;
         edit.set_motion_groups(vec![MotionGroup {
@@ -392,6 +417,64 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
                 })
                 .collect(),
         }])
+    })?;
+    session.save_project(&path, None)?;
+    Ok((Document::open(&path)?, assets))
+}
+
+/// Non-looping motion and expressions with an actual pendulum and Pose group.
+#[allow(dead_code)]
+pub fn combined_animation_document() -> anyhow::Result<(Document, TempDir)> {
+    let (mut document, assets) = animation_document()?;
+    let path = document
+        .save(&assets.path().join("combined.kasane"))?
+        .manifest;
+    let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.canvas())?;
+    session.open_project(&path, None)?;
+    let mut input = session.parameter(&session.parameter_ids()[0]).unwrap();
+    input.runtime_id = "ParamX".into();
+    let mut part = session
+        .document()
+        .get_part(&session.document().part_order()[0])
+        .unwrap()
+        .clone();
+    part.runtime_id = "Part0".into();
+    let physics = serde_json::json!({
+        "Version": 3,
+        "Meta": {"PhysicsSettingCount":1,"TotalInputCount":1,"TotalOutputCount":1,"VertexCount":2,"Fps":30,
+            "EffectiveForces":{"Gravity":{"X":0,"Y":-1},"Wind":{"X":0,"Y":0}},
+            "PhysicsDictionary":[{"Id":"Probe","Name":"Probe"}]},
+        "PhysicsSettings":[{"Id":"Probe",
+            "Input":[{"Source":{"Target":"Parameter","Id":"ParamX"},"Weight":100,"Type":"X","Reflect":false}],
+            "Output":[{"Destination":{"Target":"Parameter","Id":"ParamY"},"VertexIndex":1,"Scale":1,"Weight":100,"Type":"Angle","Reflect":false}],
+            "Vertices":[{"Position":{"X":0,"Y":0},"Mobility":1,"Delay":1,"Acceleration":1,"Radius":0},
+                {"Position":{"X":0,"Y":1},"Mobility":0.8,"Delay":0.9,"Acceleration":1.5,"Radius":1}],
+            "Normalization":{"Position":{"Minimum":-1,"Default":0,"Maximum":1},"Angle":{"Minimum":-1,"Default":0,"Maximum":1}}
+        }]
+    });
+    session.edit("Combined runtime fixture", None, |edit| {
+        edit.replace_parameter(input)?;
+        edit.create_parameter(kasane_core::Parameter {
+            id: Uuid::new_v4().to_string(),
+            runtime_id: "ParamY".into(),
+            name: "Physics output".into(),
+            minimum: -1.,
+            maximum: 1.,
+            ..Default::default()
+        })?;
+        edit.replace_part(part)?;
+        edit.create_part(kasane_core::Part {
+            id: Uuid::new_v4().to_string(),
+            runtime_id: "Part1".into(),
+            name: "Pose peer".into(),
+            ..Default::default()
+        })?;
+        edit.import_physics3(&Uuid::new_v4().to_string(), &physics.to_string())?;
+        edit.import_pose3(
+            &Uuid::new_v4().to_string(),
+            r#"{"Type":"Live2D Pose","FadeInTime":0.5,"Groups":[[{"Id":"Part0"},{"Id":"Part1"}]]}"#,
+        )?;
+        Ok(())
     })?;
     session.save_project(&path, None)?;
     Ok((Document::open(&path)?, assets))

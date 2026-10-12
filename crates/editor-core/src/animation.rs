@@ -26,7 +26,43 @@ impl MotionResource {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct ExpressionResource {
+    pub id: String,
+    pub name: String,
+    pub unresolved_targets: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExpressionTrigger {
+    pub expression_id: String,
+    pub time: f32,
+}
+
 impl Document {
+    pub fn expression_resources(&self) -> Vec<ExpressionResource> {
+        use kasane_core::document::ExpressionTarget;
+        let model = self.model();
+        model
+            .expression_order()
+            .iter()
+            .filter_map(|id| {
+                let expression = model.get_expression(id)?;
+                Some(ExpressionResource {
+                    id: id.clone(),
+                    name: expression.name.clone(),
+                    unresolved_targets: expression
+                        .entries
+                        .iter()
+                        .filter_map(|entry| match &entry.target {
+                            ExpressionTarget::Unresolved { runtime_id } => Some(runtime_id.clone()),
+                            _ => None,
+                        })
+                        .collect(),
+                })
+            })
+            .collect()
+    }
     pub fn motion_resources(&self) -> Vec<MotionResource> {
         let model = self.model();
         let mut result = Vec::new();
@@ -90,6 +126,8 @@ pub struct AnimationRequest {
     pub identity: AnimationIdentity,
     pub source: Arc<AnimationSource>,
     pub motion: Option<MotionSelection>,
+    /// Complete ordered schedule, including future events after a backward seek.
+    pub expressions: Vec<ExpressionTrigger>,
 }
 
 pub struct AnimationEvaluated {
@@ -99,7 +137,7 @@ pub struct AnimationEvaluated {
 }
 
 /// Background-owned SDK adapter. Immutable descriptions make latest-request
-/// coalescing safe: every motion selection is a complete replacement recipe.
+/// coalescing safe: each recipe contains the motion and full expression schedule.
 #[derive(Default)]
 pub struct AnimationEvaluator {
     preview: Option<MotionPreview>,
@@ -140,6 +178,9 @@ impl AnimationEvaluator {
                     preview.schedule_motion(&motion.clip_id, 0.)?;
                 }
             }
+            for trigger in &request.expressions {
+                preview.schedule_expression(&trigger.expression_id, trigger.time)?;
+            }
             self.preview = Some(preview);
             self.identity = Some(id);
         }
@@ -165,8 +206,12 @@ impl AnimationEvaluator {
 
 pub struct AnimationSession {
     pub motion: Option<MotionSelection>,
+    pub expression: Option<String>,
+    pub expressions: Vec<ExpressionTrigger>,
     pub time: f32,
     pub playing: bool,
+    /// A paused loop scrub denotes the first cycle, including its right endpoint.
+    pub loop_position: bool,
     pub presented: Option<Arc<MotionSnapshot>>,
     pub error: Option<String>,
     pub model_generation: u64,
@@ -180,8 +225,11 @@ impl AnimationSession {
     pub(crate) fn new(document: &Document) -> Self {
         Self {
             motion: None,
+            expression: None,
+            expressions: Vec::new(),
             time: 0.,
             playing: false,
+            loop_position: false,
             presented: None,
             error: None,
             model_generation: document.model_generation(),
@@ -211,6 +259,25 @@ impl AnimationSession {
         self.presented = None;
         self.error = None;
     }
+    fn new_run(&mut self) {
+        self.loop_position = false;
+        self.expressions.clear();
+        if let Some(id) = &self.expression {
+            self.expressions.push(ExpressionTrigger {
+                expression_id: id.clone(),
+                time: 0.,
+            });
+        }
+        self.rebuild();
+    }
+    fn locate(&mut self, time: f32) {
+        self.loop_position = false;
+        self.time = time;
+        self.pause();
+        // Permit a backward frame in this recipe without dropping the SDK seek cache.
+        self.presented = None;
+        self.error = None;
+    }
     pub(crate) fn reconcile(&mut self, document: &Document) {
         let generation = document.model_generation();
         if generation == self.model_generation {
@@ -225,12 +292,31 @@ impl AnimationSession {
                 .iter()
                 .find(|r| &r.selection == selection)
             {
-                self.time = self.time.min(resource.duration);
+                self.time = if resource.playable() {
+                    self.time.min(resource.duration)
+                } else {
+                    0.
+                };
             } else {
                 self.motion = None;
                 self.time = 0.;
                 self.error = Some("Selected motion registration no longer exists".into());
             }
+        }
+        let resources = document.expression_resources();
+        let valid = |id: &str| {
+            resources
+                .iter()
+                .any(|r| r.id == id && r.unresolved_targets.is_empty())
+        };
+        let before = self.expressions.len();
+        self.expressions
+            .retain(|trigger| valid(&trigger.expression_id));
+        if self.expression.as_ref().is_some_and(|id| !valid(id)) {
+            self.expression = None;
+            self.error = Some("Selected expression is missing or has unresolved targets".into());
+        } else if before != self.expressions.len() {
+            self.error = Some("Unavailable expression triggers were removed".into());
         }
     }
     fn accepts(&self, id: AnimationIdentity) -> bool {
@@ -260,6 +346,7 @@ impl Editor {
     pub fn animation_playable(&self) -> bool {
         self.animation().is_some_and(|a| {
             a.playing
+                || (a.motion.is_none() && a.expression.is_some())
                 || a.motion.as_ref().is_some_and(|selection| {
                     self.document().is_some_and(|d| {
                         d.motion_resources()
@@ -289,7 +376,89 @@ impl Editor {
         );
         session.animation.motion = Some(selection);
         session.animation.time = 0.;
-        session.animation.rebuild();
+        session.animation.new_run();
+        Ok(())
+    }
+    pub fn select_expression(&mut self, document: DocumentId, expression_id: String) -> Result<()> {
+        self.ensure_animation_target(document)?;
+        let session = self.active_session_mut().unwrap();
+        let resource = session
+            .document()
+            .expression_resources()
+            .into_iter()
+            .find(|r| r.id == expression_id)
+            .ok_or_else(|| anyhow::anyhow!("Expression no longer exists"))?;
+        ensure!(
+            resource.unresolved_targets.is_empty(),
+            "Unresolved expression targets: {}",
+            resource.unresolved_targets.join(", ")
+        );
+        let animation = &mut session.animation;
+        if animation.expression.as_ref() == Some(&expression_id) {
+            return Ok(());
+        }
+        let playing = animation.playing;
+        animation
+            .expressions
+            .retain(|trigger| trigger.time <= animation.time);
+        animation.expressions.push(ExpressionTrigger {
+            expression_id: expression_id.clone(),
+            time: animation.time,
+        });
+        animation.expression = Some(expression_id);
+        animation.rebuild();
+        animation.playing = playing;
+        Ok(())
+    }
+    pub fn clear_expression(&mut self) -> Result<()> {
+        let id = self
+            .active_id()
+            .ok_or_else(|| anyhow::anyhow!("No active document"))?;
+        self.ensure_animation_target(id)?;
+        let animation = &mut self.active_session_mut().unwrap().animation;
+        let playing = animation.playing;
+        animation.expression = None;
+        animation.expressions.clear();
+        animation.rebuild();
+        animation.playing = playing;
+        Ok(())
+    }
+    pub fn reset_animation(&mut self) -> Result<()> {
+        let id = self
+            .active_id()
+            .ok_or_else(|| anyhow::anyhow!("No active document"))?;
+        self.ensure_animation_target(id)?;
+        let animation = &mut self.active_session_mut().unwrap().animation;
+        animation.motion = None;
+        animation.expression = None;
+        animation.expressions.clear();
+        animation.time = 0.;
+        animation.rebuild();
+        Ok(())
+    }
+    pub fn seek_animation(&mut self, document: DocumentId, time: f32) -> Result<()> {
+        self.ensure_animation_target(document)?;
+        ensure!(time.is_finite() && time >= 0., "Invalid animation time");
+        let session = self.active_session_mut().unwrap();
+        let motion = session
+            .animation
+            .motion
+            .as_ref()
+            .and_then(|selection| {
+                session
+                    .document()
+                    .motion_resources()
+                    .into_iter()
+                    .find(|r| &r.selection == selection)
+            })
+            .filter(MotionResource::playable)
+            .ok_or_else(|| anyhow::anyhow!("Select a seekable motion"))?;
+        let animation = &mut session.animation;
+        if motion.looping {
+            animation.new_run();
+        }
+        animation.locate(time.min(motion.duration));
+        animation.loop_position = motion.looping;
         Ok(())
     }
     pub fn pause_animation(&mut self) {
@@ -318,16 +487,18 @@ impl Editor {
             return Ok(());
         }
         ensure!(
-            motion.as_ref().is_some_and(MotionResource::playable),
-            "Select a playable motion"
+            motion.as_ref().is_some_and(MotionResource::playable)
+                || (motion.is_none() && animation.expression.is_some()),
+            "Select a playable motion or expression"
         );
-        let motion = motion.unwrap();
-        if !motion.looping && animation.time >= motion.duration {
-            animation.time = 0.;
-            animation.rebuild();
+        if let Some(motion) = motion {
+            if !motion.looping && animation.time >= motion.duration {
+                animation.locate(0.);
+            }
         }
         animation.error = None;
         animation.playing = true;
+        animation.loop_position = false;
         Ok(())
     }
     pub fn rewind_animation(&mut self) -> Result<()> {
@@ -336,8 +507,7 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
         let animation = &mut self.active_session_mut().unwrap().animation;
-        animation.time = 0.;
-        animation.rebuild();
+        animation.locate(0.);
         Ok(())
     }
     pub fn advance_animation_clock(&mut self, target: f32) {
@@ -366,6 +536,8 @@ impl Editor {
                 if !motion.looping && animation.time >= motion.duration {
                     animation.pause();
                 }
+            } else {
+                animation.time = target.max(animation.time);
             }
         }
     }
@@ -425,6 +597,7 @@ impl Editor {
             },
             source,
             motion: animation.motion.clone(),
+            expressions: animation.expressions.clone(),
         })
     }
     pub fn accepts_animation_image(&self, identity: AnimationIdentity) -> bool {

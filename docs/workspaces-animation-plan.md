@@ -1,6 +1,6 @@
 # Modeling 与 Animation Workspace 实施计划
 
-日期：2026-10-12。状态：阶段一、二已实施并通过验证；阶段三至五待实施。
+日期：2026-10-12。状态：阶段一至三已实施并通过验证；阶段四、五待实施。
 
 将现有编辑界面确立为 Modeling workspace，新增用于已有动画资源预览与验证的 Animation workspace。首版完成 model3 模型包导入、motion 播放、expression 应用与组合预览，并保证播放不会污染建模状态和文档历史。本计划不包含动画创作功能。
 
@@ -176,10 +176,10 @@ Animation 的 [SceneSnapshot](../crates/editor-core/src/scene.rs) 使用 SDK 运
 
 ### 阶段三：Expression 组合与确定性定位
 
-- [ ] 实现 expression 单独预览、切换、临时触发记录和立即清除。
-- [ ] 实现 motion / expression / physics / pose 的同一预览链路。
-- [ ] 实现进度尺、后台 seek、合并与取消，以及循环定位规则。
-- [ ] 对齐播放步进与 seek 结果；资源或模型变化后重建预览。
+- [x] 实现 expression 单独预览、切换、临时触发记录和立即清除。
+- [x] 实现 motion / expression / physics / pose 的同一预览链路。
+- [x] 实现进度尺、后台 seek、合并与取消，以及循环定位规则。
+- [x] 对齐播放步进与 seek 结果；资源或模型变化后重建预览。
 
 退出条件：同一预览描述在同一时刻的结果可重复；向前／向后定位正确重放表情和物理；清除后不复活旧表情；快速拖动不阻塞 UI、不呈现过期结果。
 
@@ -248,7 +248,7 @@ cargo fmt --all -- --check
 - 当前 canvas 已支持中键平移；此次输入改动重点是删除 Space 抓手分支并统一播放命令。
 - 当前 scene 缓存与建模 picking 几何耦合，且现有帧接受规则围绕建模交互；动画需要独立失效和呈现规则，不能仅靠每帧全窗口 redraw 接入。
 
-相邻实现依据：`../kasane-2d/modules/kasane-sdk/src/session.rs`、`modules/kasane-animation/src/motion_preview.rs`、`expression.rs` 及 `tests/motion_preview.rs`。阶段二已接入后台播放与运行时帧，并补充共享 canonical 步进和透明度 API；expression 控制与定位仍待阶段三实施。
+相邻实现依据：`../kasane-2d/modules/kasane-sdk/src/session.rs`、`modules/kasane-animation/src/motion_preview.rs`、`expression.rs` 及 `tests/motion_preview.rs`。阶段二接入后台播放与运行时帧，并补充共享 canonical 步进和透明度 API；阶段三复用其表情调度、组合求值和 seek 缓存完成控制与定位。
 
 ## 实施记录
 
@@ -280,3 +280,18 @@ cargo fmt --all -- --check
 - 检查：编辑器 `cargo test --locked --workspace`、`cargo check --locked --workspace`、`cargo fmt --all -- --check`；相邻 SDK `cargo test --locked -p kasane-animation -p kasane-sdk-observe` 与 `cargo fmt --all -- --check`。SDK 改动及其新 API 要求见 DEPENDENCIES.md。
 
 下一阶段实现 expression 单独 / 组合预览、触发记录与立即清除，以及进度尺和确定性 seek。本阶段尚未开放 expression 控制或时间拖动，也未完成阶段四、五的全部诊断和性能验收。
+
+### 2026-10-12：阶段三
+
+- 阶段二已提交：编辑器 `e8b4cfe`（`Implement Motion playback in the Animation workspace`）；相邻 kasane-2d `c90bdc5`（`Support canonical animation playback and shared model opacity`）。DEPENDENCIES.md 已记录 SDK 提交。
+- AnimationSession 增加稳定 expression ID 选择与按时间、调用顺序保存的临时触发记录。后台请求包含完整 schedule，连续选择和清除可以安全合并；同一预览的 Motion / Expression / Physics / Pose 仍全部由 SDK 求值，不修改 authoring preview 或历史。
+- 首次选择和切换表情在当前时刻激活，并保留原播放／暂停状态；重复选择不追加记录。非循环定位和归零保留本轮记录；在旧时刻选择另一表情会丢弃之后的触发，保留同一时刻的调用顺序。
+- Clear Expression 清空整个表情 schedule，重建相同 motion 到当前时刻，恢复原播放状态；不使用保留 schedule 的 SDK reset。Reset Preview 清空选择和触发记录，暂停并返回零时刻；无 motion 的表情使用独立持续时钟。
+- 非循环 seek 保留预览 generation 与 SDK 缓存，提高接受下界并允许目标时间倒退；每次新定位取消旧 replay，最新目标覆盖单槽请求。循环 seek 重建第一圈并在零时刻激活所选表情；右端点仍显示第一圈，继续播放后恢复绝对循环时钟。
+- Animation 默认布局同时显示 Motions / Expressions；Window 菜单可重开表情面板。Preview Info 区分已选表情和实际呈现快照中的活跃表情；清除、重置按钮与菜单使用同一命令入口。进度尺按下即暂停，释放保持暂停；表情单独预览时禁用。切模式、文档、失焦、隐藏、模型变化和模态会撤销旧滑条的订阅及拖动捕获。
+- 新增 6 个 core 测试，覆盖 Add / Multiply / Overwrite、同一时刻顺序、过去分支、立即清除、单独表情时钟、循环首圈、异步旧帧拒绝与资源编辑后的重建。带实际 pendulum Physics 和 Pose group 的 fixture 对比连续推进、冷／缓存回放和取消后再次定位的完整 snapshot 与几何。
+- 新增 4 个 headless 交互测试，覆盖表情选择、重复点击、清除／重置、按下滑块立即暂停、快速往返拖动、循环定位、模态禁用、表情面板重开及切模式后旧指针事件无效。后台 worker 回归增加同一 recipe 长 seek 被后续定位替换的场景。
+- 真实 Metal 截图新增 `animation-expression-add.png`、`animation-expression-overwrite.png`、`animation-expression-seek-back.png`、`animation-expression-cleared.png`。验证表情确实改变像素，向后再向前定位得到相同画布像素，清除后再次定位不会恢复旧表情，history / modified 保持不变。截图等待当前 GPU 呈现 snapshot，避免把仍可冻结显示的旧图当作新目标交付。
+- 检查：`cargo test --locked --workspace`（355 项通过，4 项已有忽略，包含真实 Metal 截图）、`cargo check --locked --workspace`、`cargo fmt --all -- --check`、`git diff --check` 均通过。相邻 SDK 本阶段没有新增改动。
+
+阶段四、五继续完善资源反馈、本地化诊断、真实模型完整场景与性能验收；阶段三未增加新的 SDK API 或额外驱动。

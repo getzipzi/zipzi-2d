@@ -107,20 +107,23 @@ impl Harness {
                         "Editor failed: {:?}",
                         view.edit_error
                     );
-                    let current =
-                        if view.editor.workspace() == editor_core::WorkspaceKind::Animation {
-                            view.animation_frame.as_ref().is_some_and(|frame| {
-                                view.editor.accepts_animation_image(frame.state.identity)
-                                    && view
-                                        .editor
-                                        .animation()
-                                        .is_some_and(|a| a.time == frame.state.snapshot.time)
-                            })
-                        } else {
-                            view.frame.as_ref().is_some_and(|frame| {
-                                view.editor.accepts_preview(frame.canvas.version.request)
-                            })
-                        };
+                    let current = if view.editor.workspace()
+                        == editor_core::WorkspaceKind::Animation
+                    {
+                        view.animation_frame.as_ref().is_some_and(|frame| {
+                            view.editor.accepts_animation_image(frame.state.identity)
+                                && view.editor.animation().is_some_and(|a| {
+                                    a.time == frame.state.snapshot.time
+                                        && a.presented.as_ref().is_some_and(|snapshot| {
+                                            std::sync::Arc::ptr_eq(snapshot, &frame.state.snapshot)
+                                        })
+                                })
+                        })
+                    } else {
+                        view.frame.as_ref().is_some_and(|frame| {
+                            view.editor.accepts_preview(frame.canvas.version.request)
+                        })
+                    };
                     let (_, pending) = view.mesh_thumbnails.read(cx).cache_state();
                     let mesh_ready = window.try_find("mesh-generation-form").is_none()
                         || window.try_find("mesh-generation-counts").is_some();
@@ -707,6 +710,102 @@ pub(super) fn run() -> anyhow::Result<()> {
                 .unwrap()
                 .time,
             1.
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        assert!(!view.editor.document().unwrap().modified());
+    });
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click(("animation-expression", 0usize), cx);
+        harness.view.update(cx, |view, cx| {
+            view.editor.toggle_animation().unwrap();
+            view.editor.advance_animation_clock(1.5);
+            view.editor.pause_animation();
+            view.redraw(cx);
+        });
+    })?;
+    let add = harness.capture()?;
+    save(&add, &directory, "animation-expression-add.png")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click(("animation-expression", 2usize), cx);
+        harness.view.update(cx, |view, cx| {
+            let id = view.editor.active_id().unwrap();
+            view.editor.seek_animation(id, 1.9).unwrap();
+            view.redraw(cx);
+        });
+    })?;
+    let overwrite = harness.capture()?;
+    save(&overwrite, &directory, "animation-expression-overwrite.png")?;
+    anyhow::ensure!(
+        harness.canvas_image(&add)? != harness.canvas_image(&overwrite)?,
+        "Expression switching must change actual Metal pixels"
+    );
+    harness.cx.update_window(harness.window, |_, _, cx| {
+        harness.view.update(cx, |view, cx| {
+            let id = view.editor.active_id().unwrap();
+            view.editor.seek_animation(id, 1.25).unwrap();
+            view.redraw(cx);
+        });
+    })?;
+    let back = harness.capture()?;
+    save(&back, &directory, "animation-expression-seek-back.png")?;
+    harness.view.read_with(&mut harness.cx, |view, _| {
+        let expressions = view.editor.document().unwrap().expression_resources();
+        assert_eq!(
+            view.editor
+                .animation()
+                .unwrap()
+                .presented
+                .as_ref()
+                .unwrap()
+                .active_expressions,
+            vec![expressions[0].id.clone()]
+        );
+    });
+    harness.cx.update_window(harness.window, |_, _, cx| {
+        harness.view.update(cx, |view, cx| {
+            let id = view.editor.active_id().unwrap();
+            view.editor.seek_animation(id, 1.9).unwrap();
+            view.redraw(cx);
+        });
+    })?;
+    let replayed = harness.capture()?;
+    anyhow::ensure!(
+        harness.canvas_image(&overwrite)? == harness.canvas_image(&replayed)?,
+        "Backward / forward seek must reproduce the same runtime pixels"
+    );
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("animation-clear-expression", cx);
+    })?;
+    let clear = harness.capture()?;
+    save(&clear, &directory, "animation-expression-cleared.png")?;
+    anyhow::ensure!(
+        harness.canvas_image(&clear)? != harness.canvas_image(&overwrite)?,
+        "Clearing must immediately rebuild without the expression"
+    );
+    harness.cx.update_window(harness.window, |_, _, cx| {
+        harness.view.update(cx, |view, cx| {
+            let id = view.editor.active_id().unwrap();
+            view.editor.seek_animation(id, 0.25).unwrap();
+            view.editor.seek_animation(id, 1.9).unwrap();
+            view.redraw(cx);
+        });
+    })?;
+    let clear_replayed = harness.capture()?;
+    anyhow::ensure!(
+        harness.canvas_image(&clear)? == harness.canvas_image(&clear_replayed)?,
+        "Seek must never resurrect cleared expressions"
+    );
+    harness.view.read_with(&mut harness.cx, |view, _| {
+        let animation = view.editor.animation().unwrap();
+        assert!(!animation.playing);
+        assert!(animation.expressions.is_empty());
+        assert!(
+            animation
+                .presented
+                .as_ref()
+                .unwrap()
+                .active_expressions
+                .is_empty()
         );
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         assert!(!view.editor.document().unwrap().modified());

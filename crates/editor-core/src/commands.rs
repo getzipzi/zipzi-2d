@@ -14,6 +14,10 @@ pub enum CommandId {
     PlayPause,
     #[serde(rename = "animation.rewind")]
     RewindAnimation,
+    #[serde(rename = "animation.clear-expression")]
+    ClearExpression,
+    #[serde(rename = "animation.reset")]
+    ResetAnimation,
     #[serde(rename = "panel.animation-info")]
     AnimationInfo,
     #[serde(rename = "file.new")]
@@ -152,6 +156,20 @@ specs![
         ["space"]
     ),
     (RewindAnimation, "workspace.rewind", Document, false, []),
+    (
+        ClearExpression,
+        "workspace.clear_expression",
+        Document,
+        false,
+        []
+    ),
+    (
+        ResetAnimation,
+        "workspace.reset_preview",
+        Document,
+        false,
+        []
+    ),
     (AnimationInfo, "workspace.info", Workspace, false, []),
     (New, "menu.new", Workspace, false, ["cmd-n"]),
     (Open, "menu.open", Workspace, false, ["cmd-o"]),
@@ -290,14 +308,25 @@ impl Editor {
                     && !self.exiting()
                     && self.animation_playable()
             }
-            RewindAnimation => !modeling && target && !self.is_busy() && !self.exiting(),
+            RewindAnimation | ResetAnimation => {
+                !modeling && target && !self.is_busy() && !self.exiting()
+            }
+            ClearExpression => {
+                !modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && self
+                        .animation()
+                        .is_some_and(|a| a.expression.is_some() || !a.expressions.is_empty())
+            }
             AnimationInfo => !modeling,
-            Motions => true,
+            Motions | Expressions => true,
             New | Open | ImportModel3 | ImportPsd => !self.exiting(),
             Quit => true,
             Previous | Next => self.document_count() > 1,
             MeshTree | Deformers | Parameters | Properties | DrawOrder | Relations | Keyforms
-            | BlendShapes | Glue | Expressions | Physics | Pose | Resources => modeling,
+            | BlendShapes | Glue | Physics | Pose | Resources => modeling,
             ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
             Save | SaveAs => target && !self.is_busy(),
@@ -361,6 +390,8 @@ impl Editor {
         match command.id {
             PlayPause => self.toggle_animation()?,
             RewindAnimation => self.rewind_animation()?,
+            ClearExpression => self.clear_expression()?,
+            ResetAnimation => self.reset_animation()?,
             New => {
                 self.new_document()?;
             }

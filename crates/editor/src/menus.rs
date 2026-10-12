@@ -67,6 +67,8 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
         item(CommandId::AnimationWorkspace),
         item(CommandId::PlayPause),
         item(CommandId::RewindAnimation),
+        item(CommandId::ClearExpression),
+        item(CommandId::ResetAnimation),
         MenuItem::separator(),
         item(CommandId::ZoomIn),
         item(CommandId::ZoomOut),

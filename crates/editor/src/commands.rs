@@ -21,7 +21,12 @@ impl EditorView {
         let previous = self.editor.active_id();
         match self.editor.dispatch(command) {
             Ok(CommandEffect::Done) => {
-                if matches!(id, CommandId::RewindAnimation) {
+                if matches!(
+                    id,
+                    CommandId::RewindAnimation
+                        | CommandId::ResetAnimation
+                        | CommandId::ClearExpression
+                ) {
                     self.animation_anchor = None;
                 }
                 if matches!(
@@ -111,6 +116,12 @@ impl EditorView {
                                     docking::PanelKind::AnimationMotions
                                 }
                                 CommandId::AnimationInfo => docking::PanelKind::AnimationInfo,
+                                CommandId::Expressions
+                                    if self.editor.workspace()
+                                        == editor_core::WorkspaceKind::Animation =>
+                                {
+                                    docking::PanelKind::AnimationExpressions
+                                }
                                 CommandId::MeshTree => docking::PanelKind::MeshTree,
                                 CommandId::Deformers => docking::PanelKind::Deformers,
                                 CommandId::Parameters => docking::PanelKind::Parameters,

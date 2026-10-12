@@ -20,6 +20,301 @@ fn select(editor: &mut Editor, index: usize) -> anyhow::Result<()> {
     editor.select_motion(editor.active_id().unwrap(), selection)
 }
 
+fn expression(editor: &mut Editor, index: usize) -> anyhow::Result<()> {
+    let id = editor.document().unwrap().expression_resources()[index]
+        .id
+        .clone();
+    editor.select_expression(editor.active_id().unwrap(), id)
+}
+fn evaluate(
+    editor: &mut Editor,
+    evaluator: &mut AnimationEvaluator,
+) -> anyhow::Result<AnimationEvaluated> {
+    evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)
+}
+
+#[test]
+fn expression_only_preview_switches_without_playing_and_clear_preserves_clock() -> anyhow::Result<()>
+{
+    let (mut editor, _assets) = setup()?;
+    let baseline = (
+        editor.document().unwrap().history_lengths(),
+        editor.document().unwrap().modified(),
+    );
+    let parameter = editor.document().unwrap().parameters()[0].id.clone();
+    let mut evaluator = AnimationEvaluator::default();
+    expression(&mut editor, 0)?;
+    assert!(!editor.animation().unwrap().playing);
+    assert!(editor.command_available(editor.command(CommandId::PlayPause)));
+    assert_eq!(
+        evaluate(&mut editor, &mut evaluator)?.snapshot.parameters[&parameter],
+        0.
+    );
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(0.5);
+    let add = evaluate(&mut editor, &mut evaluator)?;
+    assert!((add.snapshot.parameters[&parameter] - 0.3).abs() < 1e-6);
+    expression(&mut editor, 2)?;
+    assert!(editor.animation().unwrap().playing);
+    assert_eq!(editor.animation().unwrap().expressions[1].time, 0.5);
+    expression(&mut editor, 2)?;
+    assert_eq!(editor.animation().unwrap().expressions.len(), 2);
+    editor.advance_animation_clock(1.);
+    let overwrite = evaluate(&mut editor, &mut evaluator)?;
+    assert!((overwrite.snapshot.parameters[&parameter] - 0.8).abs() < 1e-6);
+    editor.dispatch(editor.command(CommandId::ClearExpression))?;
+    assert!(editor.animation().unwrap().playing);
+    assert_eq!(editor.animation().unwrap().time, 1.);
+    let clear = evaluate(&mut editor, &mut evaluator)?;
+    assert_eq!(clear.snapshot.parameters[&parameter], 0.);
+    assert!(clear.snapshot.active_expressions.is_empty());
+    editor.pause_animation();
+    expression(&mut editor, 1)?;
+    assert!(!editor.animation().unwrap().playing);
+    assert_eq!(editor.animation().unwrap().time, 1.);
+    editor.rewind_animation()?;
+    assert_eq!(editor.animation().unwrap().expressions[0].time, 1.);
+    let rewind = evaluate(&mut editor, &mut evaluator)?;
+    assert!(rewind.snapshot.active_expressions.is_empty());
+    editor.dispatch(editor.command(CommandId::ResetAnimation))?;
+    assert!(editor.animation().unwrap().expression.is_none());
+    assert!(editor.animation().unwrap().motion.is_none());
+    assert!(editor.animation().unwrap().expressions.is_empty());
+    assert_eq!(editor.animation().unwrap().time, 0.);
+    assert_eq!(
+        (
+            editor.document().unwrap().history_lengths(),
+            editor.document().unwrap().modified()
+        ),
+        baseline
+    );
+    Ok(())
+}
+
+#[test]
+fn seeks_replay_ordered_expressions_branch_in_the_past_and_clear_never_resurrects()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    let parameter = editor.document().unwrap().parameters()[0].id.clone();
+    select(&mut editor, 0)?;
+    expression(&mut editor, 0)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(0.5);
+    expression(&mut editor, 1)?;
+    expression(&mut editor, 2)?; // Same-time calls retain their order.
+    editor.advance_animation_clock(1.);
+    let mut evaluator = AnimationEvaluator::default();
+    let combined = evaluate(&mut editor, &mut evaluator)?;
+    assert!((combined.snapshot.parameters[&parameter] - 0.8).abs() < 1e-6);
+    let recipe = editor.animation().unwrap().expressions.clone();
+    for time in [0.25, 1., 0.501, 0., 1.5, 0.9] {
+        editor.seek_animation(id, time)?;
+        let request = editor.animation_request().unwrap();
+        let cached = evaluator.evaluate(&request, |_, _| true)?;
+        let cold = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+        assert_eq!(cached.snapshot, cold.snapshot, "time={time}");
+        assert_eq!(cached.scene.viewport_frame, cold.scene.viewport_frame);
+        assert!(editor.present_animation(cached.identity, cached.snapshot));
+        assert_eq!(editor.animation().unwrap().expressions, recipe);
+        assert!(!editor.animation().unwrap().playing);
+    }
+    editor.seek_animation(id, 0.25)?;
+    expression(&mut editor, 1)?;
+    let branched = &editor.animation().unwrap().expressions;
+    assert_eq!(branched.len(), 2);
+    assert_eq!(branched[1].time, 0.25);
+    editor.seek_animation(id, 1.)?;
+    let multiply = evaluate(&mut editor, &mut evaluator)?;
+    assert!((multiply.snapshot.parameters[&parameter] - 59. / 240.).abs() < 1e-6);
+    editor.clear_expression()?;
+    for time in [0., 0.5, 1.5] {
+        editor.seek_animation(id, time)?;
+        assert!(
+            evaluate(&mut editor, &mut evaluator)?
+                .snapshot
+                .active_expressions
+                .is_empty()
+        );
+    }
+    assert!(!editor.document().unwrap().modified());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn loop_seek_creates_first_cycle_recipe_and_rewind_retains_current_run() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    expression(&mut editor, 0)?;
+    select(&mut editor, 2)?;
+    assert_eq!(editor.animation().unwrap().expressions.len(), 1);
+    assert_eq!(editor.animation().unwrap().expressions[0].time, 0.);
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(3.5);
+    expression(&mut editor, 2)?;
+    let mut evaluator = AnimationEvaluator::default();
+    let old = evaluate(&mut editor, &mut evaluator)?;
+    editor.rewind_animation()?;
+    assert_eq!(editor.animation().unwrap().expressions.len(), 2);
+    editor.seek_animation(id, 0.5)?;
+    assert!(!editor.accepts_animation(old.identity));
+    assert_eq!(editor.animation().unwrap().time, 0.5);
+    assert_eq!(editor.animation().unwrap().expressions.len(), 1);
+    assert_eq!(editor.animation().unwrap().expressions[0].time, 0.);
+    assert_eq!(
+        editor.animation().unwrap().expressions[0].expression_id,
+        editor.animation().unwrap().expression.clone().unwrap()
+    );
+    editor.seek_animation(id, 100.)?;
+    assert_eq!(editor.animation().unwrap().time, 1.);
+    assert!(editor.animation().unwrap().loop_position);
+    assert!(!editor.animation().unwrap().playing);
+    let current = evaluate(&mut editor, &mut evaluator)?;
+    assert!(editor.present_animation(current.identity, current.snapshot));
+    editor.toggle_animation()?;
+    assert!(!editor.animation().unwrap().loop_position);
+    select(&mut editor, 0)?;
+    assert_eq!(editor.animation().unwrap().expressions[0].time, 0.);
+    for time in [-1., f32::NAN, f32::INFINITY] {
+        assert!(editor.seek_animation(id, time).is_err());
+        assert_eq!(editor.animation().unwrap().time, 0.);
+    }
+    editor.reset_animation()?;
+    assert!(editor.seek_animation(id, 0.5).is_err());
+    Ok(())
+}
+
+#[test]
+fn rapid_seeks_and_recipe_replacements_reject_every_obsolete_frame() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    select(&mut editor, 0)?;
+    expression(&mut editor, 0)?;
+    let mut evaluator = AnimationEvaluator::default();
+    let mut obsolete = Vec::new();
+    for time in [1., 0.25, 1.5, 0.8] {
+        editor.seek_animation(id, time)?;
+        obsolete.push(evaluate(&mut editor, &mut evaluator)?);
+    }
+    editor.clear_expression()?;
+    for frame in obsolete {
+        assert!(!editor.present_animation(frame.identity, frame.snapshot));
+    }
+    editor.seek_animation(id, 0.1)?;
+    let latest = evaluate(&mut editor, &mut evaluator)?;
+    assert!(editor.present_animation(latest.identity, latest.snapshot));
+    assert_eq!(
+        editor.animation().unwrap().presented.as_ref().unwrap().time,
+        0.1
+    );
+    Ok(())
+}
+
+#[test]
+fn combined_physics_pose_expression_replay_matches_continuous_and_cancelled_seek()
+-> anyhow::Result<()> {
+    let (document, _assets) = support::combined_animation_document()?;
+    let physics = document
+        .parameters()
+        .iter()
+        .find(|p| p.name == "Physics output")
+        .unwrap()
+        .id
+        .clone();
+    let mut editor = Editor::from_document(document);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 256.,
+        height: 256.,
+        scale_factor: 1.,
+    });
+    let id = editor.active_id().unwrap();
+    select(&mut editor, 0)?;
+    expression(&mut editor, 0)?;
+    let mut evaluator = AnimationEvaluator::default();
+    editor.toggle_animation()?;
+    for time in [0.25, 0.5, 0.75, 1.] {
+        editor.advance_animation_clock(time);
+        if time == 0.5 {
+            expression(&mut editor, 2)?;
+        }
+        let request = editor.animation_request().unwrap();
+        let continuous = evaluator.evaluate(&request, |_, _| true)?;
+        let cold = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+        assert_eq!(continuous.snapshot, cold.snapshot);
+        assert_eq!(continuous.scene.runtime_frame, cold.scene.runtime_frame);
+        assert!(!continuous.snapshot.part_opacities.is_empty());
+        if time == 1. {
+            assert_ne!(continuous.snapshot.parameters[&physics], 0.);
+        }
+    }
+    for time in [0.1, 0.75, 0.503, 1.5] {
+        editor.seek_animation(id, time)?;
+        let request = editor.animation_request().unwrap();
+        let cached = evaluator.evaluate(&request, |_, _| true)?;
+        let cold = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+        assert_eq!(cached.snapshot, cold.snapshot);
+        assert_eq!(cached.scene.runtime_frame, cold.scene.runtime_frame);
+    }
+    editor.seek_animation(id, 0.2)?;
+    let mut cancelled = editor.animation_request().unwrap();
+    cancelled.identity.time = 100.;
+    assert!(evaluator.evaluate(&cancelled, |step, _| step < 20).is_err());
+    editor.seek_animation(id, 0.3)?;
+    let request = editor.animation_request().unwrap();
+    assert_eq!(
+        evaluator.evaluate(&request, |_, _| true)?.snapshot,
+        AnimationEvaluator::default()
+            .evaluate(&request, |_, _| true)?
+            .snapshot
+    );
+    editor.clear_expression()?;
+    let no_expression = evaluate(&mut editor, &mut evaluator)?;
+    assert!(no_expression.snapshot.active_expressions.is_empty());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    assert!(!editor.document().unwrap().modified());
+    Ok(())
+}
+
+#[test]
+fn changed_resources_pause_revalidate_and_rebuild_expression_recipe() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    expression(&mut editor, 0)?;
+    select(&mut editor, 0)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(1.);
+    let before = editor.animation_request().unwrap();
+    let expression_id = editor.animation().unwrap().expression.clone().unwrap();
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    editor.execute(EditorCommand::SetObjectProperty {
+        object: ObjectRef::new(ObjectKind::Expression, expression_id.clone()),
+        field: "fade_in".into(),
+        value: serde_json::json!(0.7),
+    })?;
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    let changed = editor.animation_request().unwrap();
+    assert!(changed.identity.model_generation > before.identity.model_generation);
+    assert_eq!(
+        editor.animation().unwrap().expression.as_ref(),
+        Some(&expression_id)
+    );
+    assert_eq!(editor.animation().unwrap().expressions.len(), 1);
+    assert_eq!(editor.animation().unwrap().expressions[0].time, 0.);
+    assert!(!editor.animation().unwrap().playing);
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    editor.select_expression(editor.active_id().unwrap(), expression_id)?;
+    assert_eq!(editor.animation().unwrap().expressions[0].time, 0.);
+    assert!(!editor.animation().unwrap().playing);
+    let restored = editor.animation_request().unwrap();
+    assert!(restored.identity.model_generation > changed.identity.model_generation);
+    assert!(!editor.accepts_animation(changed.identity));
+    let mut evaluator = AnimationEvaluator::default();
+    let frame = evaluator.evaluate(&restored, |_, _| true)?;
+    assert!(editor.present_animation(frame.identity, frame.snapshot));
+    Ok(())
+}
+
 #[test]
 fn detached_runtime_uses_defaults_restores_hidden_objects_and_preserves_authoring_state()
 -> anyhow::Result<()> {
