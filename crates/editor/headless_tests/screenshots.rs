@@ -1016,7 +1016,12 @@ pub(super) fn run() -> anyhow::Result<()> {
     });
     harness.cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.run_command(editor_core::CommandId::AnimationParameters, window, cx)
+            view.dock.as_ref().unwrap().show(
+                editor_core::PanelKind::AnimationParameters,
+                None,
+                window,
+                cx,
+            )
         });
     })?;
     let parameters = harness.capture()?;

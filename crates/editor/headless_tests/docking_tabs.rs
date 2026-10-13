@@ -170,7 +170,8 @@ fn animation_add_menu_places_panel_in_the_clicked_group_and_restores_it(cx: &mut
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::AnimationWorkspace, window, cx)
+            view.run_command(CommandId::AnimationWorkspace, window, cx);
+            view.run_command(CommandId::AnimationParameters, window, cx);
         });
         window.render_frame(cx);
         window.simulate_next_frame(cx);
@@ -236,6 +237,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
             harness.view.update(cx, |view, cx| {
                 view.run_command(CommandId::AnimationWorkspace, window, cx);
                 view.run_command(CommandId::ResetLayout, window, cx);
+                view.run_command(CommandId::AnimationParameters, window, cx);
             });
             window.render_frame(cx);
             window.simulate_next_frame(cx);
@@ -281,6 +283,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
             }
             harness.view.update(cx, |view, cx| {
                 view.run_command(CommandId::ResetLayout, window, cx);
+                view.run_command(CommandId::AnimationParameters, window, cx);
                 let dock = view.dock.as_ref().unwrap();
                 dock.show(
                     PanelKind::AnimationParameters,
@@ -331,7 +334,8 @@ fn adding_to_collapsed_dock_reveals_the_new_panel(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::AnimationWorkspace, window, cx)
+            view.run_command(CommandId::AnimationWorkspace, window, cx);
+            view.run_command(CommandId::AnimationParameters, window, cx);
         });
         window.render_frame(cx);
         window.simulate_next_frame(cx);
@@ -415,7 +419,8 @@ fn global_add_menu_splits_beside_canvas_in_animation(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::AnimationWorkspace, window, cx)
+            view.run_command(CommandId::AnimationWorkspace, window, cx);
+            view.run_command(CommandId::AnimationParameters, window, cx);
         });
         window.render_frame(cx);
         window.simulate_next_frame(cx);
@@ -443,7 +448,7 @@ fn global_add_menu_splits_beside_canvas_in_animation(cx: &mut TestAppContext) {
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(window.try_find("AnimationParameters").is_none());
+        assert!(window.find("AnimationParameters").visible());
         assert!(window.find("AnimationMotions").visible());
     })
     .unwrap();
@@ -456,6 +461,7 @@ fn adding_before_next_frame_is_saved_when_leaving_workspace(cx: &mut TestAppCont
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::AnimationWorkspace, window, cx);
+            view.run_command(CommandId::AnimationParameters, window, cx);
             view.dock
                 .as_ref()
                 .unwrap()

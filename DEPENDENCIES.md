@@ -46,3 +46,10 @@ readback fallback. No sibling GPUI checkout is required.
 GPUI Kit has dependencies for other target platforms, which Cargo may retain in
 the cross-platform lockfile. This does not make them active macOS dependencies.
 See `vendor/README.md` for the exact local patch scope.
+
+- Paused expression inspection additionally requires
+  `MotionPreview::replace_expression_schedule_with_transitions` and the SDK
+  reexport of `ExpressionTransition`. Immediate activations replace the expression
+  queue at full weight at the current time; faded activations retain authored
+  transitions. These changes live in the adjacent `kasane-2d` checkout and must
+  accompany this editor change.

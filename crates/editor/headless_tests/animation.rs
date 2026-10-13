@@ -532,10 +532,25 @@ fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_parameters_
                     .present_animation(frame.identity, frame.snapshot)
             );
             view.notify_animation(cx);
-            view.run_command(CommandId::AnimationParameters, window, cx);
+            view.dock.as_ref().unwrap().show(
+                editor_core::PanelKind::AnimationParameters,
+                None,
+                window,
+                cx,
+            );
         });
         window.render_frame(cx);
         assert!(window.try_find("AnimationParameters").is_some());
+        let expected = harness
+            .view
+            .read(cx)
+            .displayed_animation()
+            .unwrap()
+            .parameters[&authoring[0].id];
+        assert_eq!(
+            window.find(("animation-parameter", 0usize)).value(),
+            Some(format!("{expected:.4}").as_str())
+        );
         let row = window.find(("animation-parameter", 0usize));
         window.drag(
             row.bounds().center(),

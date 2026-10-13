@@ -1,5 +1,6 @@
 //! Playback projections. These controls never edit the authoring document.
 mod inspectors;
+mod parameters;
 mod resources;
 use crate::{EditorView, t};
 use gpui_kit::component::{
@@ -50,16 +51,17 @@ pub struct AnimationPanel {
     focus: FocusHandle,
     _observe: Subscription,
     resources: resources::ResourceList,
+    parameters: parameters::PreviewParameters,
 }
 impl AnimationPanel {
     pub fn new(
         owner: WeakEntity<EditorView>,
         kind: AnimationPanelKind,
-        window: &mut Window,
         cx: &mut App,
     ) -> Entity<Self> {
         cx.new(|cx| Self {
-            resources: resources::ResourceList::new(kind, window, cx),
+            resources: resources::ResourceList::default(),
+            parameters: parameters::PreviewParameters::default(),
             _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
             owner,
             kind,
@@ -85,7 +87,9 @@ impl Panel for AnimationPanel {
     fn inner_padding(&self, _: &App) -> bool {
         !matches!(
             self.kind,
-            AnimationPanelKind::Motions | AnimationPanelKind::Expressions
+            AnimationPanelKind::Motions
+                | AnimationPanelKind::Expressions
+                | AnimationPanelKind::Parameters
         )
     }
 
@@ -100,6 +104,9 @@ impl Render for AnimationPanel {
             AnimationPanelKind::Motions | AnimationPanelKind::Expressions
         ) {
             return self.render_resources(window, cx);
+        }
+        if matches!(self.kind, AnimationPanelKind::Parameters) {
+            return self.render_parameters(cx);
         }
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
@@ -291,47 +298,7 @@ impl Render for AnimationPanel {
                     }
                 }
             }
-            AnimationPanelKind::Parameters => {
-                content = content.child(t!("workspace.parameters_hint"));
-                if let Some(snapshot) = snapshot {
-                    content = content.child(t!(
-                        "workspace.presented_time",
-                        time = format!("{:.3}", snapshot.time)
-                    ));
-                    for (index, parameter) in catalog.parameters.iter().enumerate() {
-                        if let Some(value) = snapshot.parameters.get(&parameter.id) {
-                            let runtime_id = parameter.runtime_id.clone();
-                            content = content.child(
-                                div()
-                                    .id(("animation-parameter", index))
-                                    .test_support()
-                                    .flex()
-                                    .justify_between()
-                                    .gap_2()
-                                    .tooltip(move |window, cx| {
-                                        Tooltip::new(runtime_id.clone()).build(window, cx)
-                                    })
-                                    .child(
-                                        div()
-                                            .flex_1()
-                                            .min_w_0()
-                                            .overflow_hidden()
-                                            .text_ellipsis()
-                                            .child(parameter.name.clone()),
-                                    )
-                                    .child(div().flex_shrink_0().child(format!("{value:.4}"))),
-                            );
-                        }
-                    }
-                    if catalog.parameters.is_empty() {
-                        content = content.child(t!("workspace.no_parameters"));
-                    }
-                } else if let Some(error) = &animation.error {
-                    content = content.child(super::animation_feedback::failure_text(error));
-                } else {
-                    content = content.child(t!("workspace.evaluating"));
-                }
-            }
+            AnimationPanelKind::Parameters => unreachable!(),
         }
         content
             .test_support()

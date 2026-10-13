@@ -3,7 +3,7 @@ use crate::{
     AnimationFailure, Document, DocumentId, Editor, SceneSnapshot, SceneTexture, WorkspaceKind,
 };
 use anyhow::{Result, ensure};
-use kasane_sdk::{AuthoringSnapshot, MotionPreview, MotionSnapshot};
+use kasane_sdk::{AuthoringSnapshot, ExpressionTransition, MotionPreview, MotionSnapshot};
 use std::{collections::HashSet, sync::Arc};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -49,6 +49,7 @@ pub struct ExpressionResource {
 pub struct ExpressionTrigger {
     pub expression_id: String,
     pub time: f32,
+    pub transition: ExpressionTransition,
 }
 
 impl Document {
@@ -201,10 +202,13 @@ impl AnimationEvaluator {
                 && self.motion == request.motion
         });
         let expressions = || {
-            request
-                .expressions
-                .iter()
-                .map(|trigger| (trigger.expression_id.as_str(), trigger.time))
+            request.expressions.iter().map(|trigger| {
+                (
+                    trigger.expression_id.as_str(),
+                    trigger.time,
+                    trigger.transition,
+                )
+            })
         };
         if !reusable {
             let mut preview = MotionPreview::new(request.source.snapshot.document());
@@ -229,7 +233,7 @@ impl AnimationEvaluator {
                     preview.schedule_motion(&motion.clip_id, 0.)?;
                 }
             }
-            preview.replace_expression_schedule(expressions())?;
+            preview.replace_expression_schedule_with_transitions(expressions())?;
             self.preview = Some(preview);
             self.motion.clone_from(&request.motion);
         } else if self
@@ -239,7 +243,7 @@ impl AnimationEvaluator {
             self.preview
                 .as_mut()
                 .unwrap()
-                .replace_expression_schedule(expressions())?;
+                .replace_expression_schedule_with_transitions(expressions())?;
         }
         self.identity = Some(id);
         let preview = self.preview.as_mut().unwrap();
@@ -331,6 +335,7 @@ impl AnimationSession {
             self.expressions.push(ExpressionTrigger {
                 expression_id: id.clone(),
                 time: 0.,
+                transition: ExpressionTransition::Fade,
             });
         }
         self.rebuild();
@@ -472,17 +477,28 @@ impl Editor {
                 .iter()
                 .rev()
                 .find(|trigger| trigger.time <= animation.time)
-                .is_some_and(|trigger| trigger.expression_id == expression_id)
+                .is_some_and(|trigger| {
+                    trigger.expression_id == expression_id
+                        && (animation.playing
+                            || trigger.transition == ExpressionTransition::Immediate)
+                })
         {
             return Ok(());
         }
         let playing = animation.playing;
-        animation
-            .expressions
-            .retain(|trigger| trigger.time <= animation.time);
+        // A paused click replaces this time's choice. Earlier triggers remain
+        // replayable, but the immediate activation cuts their runtime queue.
+        animation.expressions.retain(|trigger| {
+            trigger.time < animation.time || (playing && trigger.time == animation.time)
+        });
         animation.expressions.push(ExpressionTrigger {
             expression_id: expression_id.clone(),
             time: animation.time,
+            transition: if playing {
+                ExpressionTransition::Fade
+            } else {
+                ExpressionTransition::Immediate
+            },
         });
         animation.expression = Some(expression_id);
         animation.rebuild();

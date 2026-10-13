@@ -50,9 +50,9 @@ panels! {
     (Resources, Some(C::Resources), Some(Modeling), Right, 0, false),
     (AnimationMotions, Some(C::Motions), Some(Animation), Left, 0, true),
     (AnimationExpressions, Some(C::Expressions), Some(Animation), Left, 1, true),
+    (AnimationInfo, Some(C::AnimationInfo), Some(Animation), Right, 0, true),
     (AnimationProperties, Some(C::Properties), Some(Animation), Right, 0, true),
-    (AnimationInfo, Some(C::AnimationInfo), Some(Animation), Right, 1, true),
-    (AnimationParameters, Some(C::AnimationParameters), Some(Animation), Right, 1, false),
+    (AnimationParameters, Some(C::AnimationParameters), Some(Animation), Right, 1, true),
     (AnimationPhysics, Some(C::Physics), Some(Animation), Right, 1, false),
     (AnimationPose, Some(C::Pose), Some(Animation), Right, 1, false),
 }

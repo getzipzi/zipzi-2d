@@ -2,7 +2,7 @@ use editor_core::{ParameterGroupValue, ParameterValue};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Clone)]
-pub(super) enum ListRow {
+pub(crate) enum ListRow {
     Group {
         id: Option<String>,
         name: String,
@@ -24,7 +24,7 @@ impl ListRow {
 }
 
 #[derive(Default)]
-pub(super) struct ParameterLayout {
+pub(crate) struct ParameterLayout {
     rows: Vec<ListRow>,
 }
 

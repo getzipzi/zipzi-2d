@@ -160,14 +160,12 @@ impl DockWorkspace {
             crate::panels::DeformerTreePanel::new(owner.clone(), thumbnails, window, cx);
         let parameters = crate::panels::ParametersPanel::new(owner.clone(), window, cx);
         use crate::panels::animation_panel::{AnimationPanel, AnimationPanelKind};
-        let animation_motions =
-            AnimationPanel::new(owner.clone(), AnimationPanelKind::Motions, window, cx);
+        let animation_motions = AnimationPanel::new(owner.clone(), AnimationPanelKind::Motions, cx);
         let animation_expressions =
-            AnimationPanel::new(owner.clone(), AnimationPanelKind::Expressions, window, cx);
-        let animation_info =
-            AnimationPanel::new(owner.clone(), AnimationPanelKind::Info, window, cx);
+            AnimationPanel::new(owner.clone(), AnimationPanelKind::Expressions, cx);
+        let animation_info = AnimationPanel::new(owner.clone(), AnimationPanelKind::Info, cx);
         let animation_parameters =
-            AnimationPanel::new(owner.clone(), AnimationPanelKind::Parameters, window, cx);
+            AnimationPanel::new(owner.clone(), AnimationPanelKind::Parameters, cx);
 
         let animation_inspectors: HashMap<_, _> = [
             (
@@ -178,7 +176,7 @@ impl DockWorkspace {
             (PanelKind::AnimationPose, AnimationPanelKind::Pose),
         ]
         .into_iter()
-        .map(|(id, kind)| (id, AnimationPanel::new(owner.clone(), kind, window, cx)))
+        .map(|(id, kind)| (id, AnimationPanel::new(owner.clone(), kind, cx)))
         .collect();
         let mut panels: PanelViews = animation_inspectors
             .iter()
@@ -272,6 +270,10 @@ impl DockWorkspace {
     }
 
     pub fn reset(&mut self, window: &mut Window, cx: &mut App) {
+        let animation = self.workspace == WorkspaceKind::Animation;
+        let viewport = window.viewport_size();
+        // Animation chrome: document tabs (34), transport (40), status (24).
+        let content_height = (viewport.height - px(98.)).max(px(0.));
         let column = |region, cx: &App| {
             let mut groups = std::collections::BTreeMap::<usize, DockLayout>::new();
             for spec in PANELS.iter().filter(|spec| {
@@ -287,21 +289,33 @@ impl DockWorkspace {
                 groups.into_values().next().unwrap()
             } else {
                 groups
-                    .into_values()
-                    .fold(DockLayout::v_split(), |column, group| {
-                        column.child(group, None)
+                    .into_iter()
+                    .fold(DockLayout::v_split(), |column, (index, group)| {
+                        let size = if animation && index == 0 {
+                            match region {
+                                PanelRegion::Left => Some(content_height * 0.39),
+                                PanelRegion::Right => Some(content_height * 0.48),
+                                _ => None,
+                            }
+                        } else {
+                            None
+                        };
+                        column.child(group, size)
                     })
             }
         };
-        let (left, right) = if self.workspace == WorkspaceKind::Animation {
-            (220., 240.)
+        let (left, right) = if animation {
+            (viewport.width * 0.28, viewport.width * 0.32)
         } else {
-            (360., 360.)
+            (px(360.), px(360.))
         };
         let layout = DockLayout::h_split()
-            .child(column(PanelRegion::Left, cx), Some(px(left)))
-            .child(column(PanelRegion::Center, cx), None)
-            .child(column(PanelRegion::Right, cx), Some(px(right)));
+            .child(column(PanelRegion::Left, cx), Some(left))
+            .child(
+                column(PanelRegion::Center, cx),
+                animation.then_some(viewport.width * 0.40),
+            )
+            .child(column(PanelRegion::Right, cx), Some(right));
         self.area.update(cx, |area, cx| {
             area.set_zoomed_out(window, cx);
             for placement in REGIONS.into_iter().skip(1) {

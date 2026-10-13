@@ -24,12 +24,18 @@ cargo run --locked -p component-playground
 
 Animation uses its own panel set. Properties shows the selected motion and
 expression definitions; Preview Info shows playback status, events and diagnostics.
-Add Preview Parameters, Physics or Pose from a panel's `⋯` menu to inspect values
-from the displayed frame. Physics shows final parameter values, including motion
+The default layout places Motions above Expressions on the left, Preview Info
+and Properties in a shared tab group on the upper right, and Preview Parameters
+below them. Preview Info is the initially active tab. Add Physics or Pose from a
+panel's `⋯` menu to inspect additional values from the displayed frame. Physics shows final parameter values, including motion
 and expression effects. These inspectors are read-only and do not change Modeling
-state. Existing saved layouts keep their arrangement; add Properties from `⋯` or
-use Window → Reset Layout (also in the workspace `⋯` menu) to load the default
+state. Existing saved layouts keep their arrangement; use Window → Reset Layout (also in the workspace `⋯` menu) to load the default
 arrangement. Layout recovery remains available when all panels have been closed.
+Click a motion row to select it; clicking the selected row preserves playback
+progress and state. Double-click to play it from the start. Use the transport or
+Space to pause and resume.
+Switching expressions while paused immediately previews the latest choice at the
+current time. Switching during playback preserves the authored fades.
 
 ## Develop
 

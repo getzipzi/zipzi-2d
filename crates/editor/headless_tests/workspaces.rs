@@ -28,6 +28,26 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
         assert!(window.try_find("animation-playback-bar").is_some());
         assert!(window.try_find("AnimationMotions").is_some());
         assert!(window.try_find("AnimationInfo").is_some());
+        let motions = window.find("AnimationMotions").bounds();
+        let expressions = window.find("AnimationExpressions").bounds();
+        let info = window.find("AnimationInfo").bounds();
+        let parameters = window.find("AnimationParameters").bounds();
+        let canvas_bounds = window.find("canvas-body").bounds();
+        assert!(motions.bottom() <= expressions.top());
+        assert!(motions.size.height < expressions.size.height);
+        assert!(info.bottom() <= parameters.top());
+        assert!(motions.right() <= canvas_bounds.left());
+        assert!(info.left() >= canvas_bounds.right());
+        harness.view.read_with(cx, |view, cx| {
+            use editor_core::PanelKind;
+            let dock = view.dock.as_ref().unwrap();
+            let tree = dock.area.read(cx).layout(DockPlacement::Center).unwrap();
+            let info = tree.find_panel_node(PanelId::from(dock.animation_info.entity_id()));
+            let properties = tree.find_panel_node(PanelId::from(
+                dock.animation_inspectors[&PanelKind::AnimationProperties].entity_id(),
+            ));
+            assert_eq!(info, properties, "Info and Properties share tabs");
+        });
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.workspace(), WorkspaceKind::Animation);
             assert_eq!(view.editor.active_id(), document);
@@ -304,7 +324,12 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
         window.click("workspace-animation", cx);
         window.render_frame(cx);
         harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::AnimationParameters, window, cx);
+            view.dock.as_ref().unwrap().show(
+                editor_core::PanelKind::AnimationParameters,
+                None,
+                window,
+                cx,
+            );
             view.run_command(CommandId::Expressions, window, cx);
         });
         window.render_frame(cx);
@@ -383,7 +408,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
             let area = dock.area.read(cx);
             assert!(
                 area.panel(PanelId::from(dock.animation_parameters.entity_id()))
-                    .is_none()
+                    .is_some()
             );
             assert!(
                 area.panel(PanelId::from(dock.animation_expressions.entity_id()))

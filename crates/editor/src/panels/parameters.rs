@@ -4,8 +4,9 @@ mod form;
 mod group_form;
 mod management;
 pub(crate) use management::ParameterAction;
-mod grouping;
-mod track;
+pub(super) mod grouping;
+pub(super) mod row;
+pub(super) mod track;
 use grouping::{ListRow, ParameterLayout};
 use track::parameter_track;
 
@@ -1225,25 +1226,9 @@ impl Render for ParameterRowView {
                     }
                 }),
             )
-            .flex()
-            .items_center()
-            .w_full()
-            .h(px(PARAMETER_ROW_HEIGHT))
-            .min_w_0()
-            .gap_2()
-            .px_3()
-            .border_b_1()
-            .border_color(theme.border)
+            .map(|element| row::style(element, cx))
             .child(
-                div()
-                    .flex_1()
-                    .flex_grow(2.)
-                    .max_w(px(200.))
-                    .min_w_0()
-                    .text_xs()
-                    .pl(px(self.depth.min(6) as f32 * 12.))
-                    .text_ellipsis()
-                    .overflow_hidden()
+                row::name(self.depth)
                     .id(SharedString::from(format!("parameter-name-{parameter_id}")))
                     .when_some(document_id, |element, document| {
                         sorting::drag_source(
@@ -1279,35 +1264,23 @@ impl Render for ParameterRowView {
                             .child(parameter.name.clone()),
                     ),
             )
+            .child(row::track().child(parameter_track(
+                slider,
+                parameter,
+                &self.visual,
+                value,
+                disabled,
+                theme,
+                self.panel.clone(),
+                document_id,
+            )))
             .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .flex_1()
-                    .min_w(px(100.))
-                    .px_2()
-                    .h_6()
-                    .child(parameter_track(
-                        slider,
-                        parameter,
-                        &self.visual,
-                        value,
-                        disabled,
-                        theme,
-                        self.panel.clone(),
-                        document_id,
-                    )),
-            )
-            .child(
-                div()
+                row::value()
                     .id(SharedString::from(format!(
                         "parameter-value-{parameter_id}"
                     )))
                     .test_support()
                     .aria_label(parameter.name.clone())
-                    .flex()
-                    .w(px(48.))
-                    .flex_shrink_0()
                     .child(self.number_input.clone()),
             )
             .map(|element| {

@@ -81,6 +81,7 @@ fn invalid_replacement_recipe_preserves_the_running_evaluator() -> anyhow::Resul
     request.expressions.push(ExpressionTrigger {
         expression_id: "missing".into(),
         time: 0.,
+        transition: kasane_sdk::ExpressionTransition::Fade,
     });
     assert!(evaluator.evaluate(&request, |_, _| true).is_err());
     assert_eq!(evaluator.seek_cache_stats(), stats);
@@ -112,7 +113,7 @@ fn expression_only_preview_switches_without_playing_and_clear_preserves_clock() 
     assert!(editor.command_available(editor.command(CommandId::PlayPause)));
     assert_eq!(
         evaluate(&mut editor, &mut evaluator)?.snapshot.parameters[&parameter],
-        0.
+        0.3
     );
     editor.toggle_animation()?;
     editor.advance_animation_clock(0.5);
@@ -1043,5 +1044,80 @@ fn returning_to_a_paused_document_and_closing_an_active_tab_reissue_the_gpu_targ
     assert!(!editor.animation().unwrap().playing);
     assert!(!editor.document().unwrap().modified());
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn paused_expression_switches_cut_immediately_without_advancing_motion_or_accumulating()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let authoring = editor.document().unwrap().parameters();
+    let parameter = authoring[0].id.clone();
+    select(&mut editor, 2)?;
+    expression(&mut editor, 0)?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(41.591);
+    let mut evaluator = AnimationEvaluator::default();
+    evaluate(&mut editor, &mut evaluator)?;
+    editor.pause_animation();
+    for index in [2, 1, 0, 2] {
+        expression(&mut editor, index)?;
+        let animation = editor.animation().unwrap();
+        assert!(!animation.playing);
+        assert_eq!(animation.time, 41.591);
+        assert_eq!(
+            animation.expressions.len(),
+            2,
+            "only one cut at the paused time"
+        );
+        let selected = animation.expression.clone().unwrap();
+        let request = editor.animation_request().unwrap();
+        let frame = evaluator.evaluate(&request, |_, _| true)?;
+        let cold = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+        assert_eq!(frame.snapshot, cold.snapshot);
+        assert_eq!(frame.scene.runtime_frame, cold.scene.runtime_frame);
+        assert_eq!(frame.snapshot.time, 41.591);
+        assert_eq!(frame.snapshot.active_expressions, vec![selected]);
+        if index == 2 {
+            assert!((frame.snapshot.parameters[&parameter] - 0.8).abs() < 1e-6);
+        }
+        assert!(editor.present_animation(frame.identity, frame.snapshot));
+    }
+    let generation = editor.animation().unwrap().preview_generation;
+    expression(&mut editor, 2)?;
+    assert_eq!(editor.animation().unwrap().preview_generation, generation);
+    // Resuming does not undo the cut; subsequent choices still crossfade.
+    editor.toggle_animation()?;
+    expression(&mut editor, 0)?;
+    let started = evaluate(&mut editor, &mut evaluator)?;
+    assert_eq!(started.snapshot.active_expressions.len(), 2);
+    editor.advance_animation_clock(42.);
+    let finished = evaluate(&mut editor, &mut evaluator)?;
+    assert_eq!(
+        finished.snapshot.active_expressions,
+        vec![editor.animation().unwrap().expression.clone().unwrap()]
+    );
+    assert_eq!(editor.document().unwrap().parameters(), authoring);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    assert!(!editor.document().unwrap().modified());
+    Ok(())
+}
+
+#[test]
+fn paused_click_on_the_selected_fading_expression_settles_it_and_rejects_old_frames()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 0)?;
+    editor.toggle_animation()?;
+    expression(&mut editor, 2)?;
+    let stale = evaluate(&mut editor, &mut AnimationEvaluator::default())?;
+    editor.pause_animation();
+    expression(&mut editor, 2)?;
+    assert!(!editor.present_animation(stale.identity, stale.snapshot));
+    let frame = evaluate(&mut editor, &mut AnimationEvaluator::default())?;
+    let parameter = editor.document().unwrap().parameters()[0].id.clone();
+    assert_eq!(frame.snapshot.time, 0.);
+    assert!((frame.snapshot.parameters[&parameter] - 0.8).abs() < 1e-6);
+    assert_eq!(frame.snapshot.active_expressions.len(), 1);
     Ok(())
 }
