@@ -956,19 +956,23 @@ fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {
         .unwrap();
     let mut samples = Vec::new();
     let mut dispatch_samples = Vec::new();
+    let workload = std::env::var("KASANE_BENCH_WORKLOAD").unwrap_or_else(|_| "pan".into());
+    assert!(matches!(workload.as_str(), "pan" | "idle"));
     for index in 0..110 {
         let start = Instant::now();
         let mut dispatch_ms = 0.;
         cx.update_window(harness.window, |_, window, cx| {
-            window.dispatch_event(
-                MouseMoveEvent {
-                    position: from + point(px((index as f32 * 0.1).sin() * 80.), px(0.)),
-                    pressed_button: Some(MouseButton::Left),
-                    modifiers: Default::default(),
-                }
-                .to_platform_input(),
-                cx,
-            );
+            if workload == "pan" {
+                window.dispatch_event(
+                    MouseMoveEvent {
+                        position: from + point(px((index as f32 * 0.1).sin() * 80.), px(0.)),
+                        pressed_button: Some(MouseButton::Left),
+                        modifiers: Default::default(),
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+            }
             dispatch_ms = start.elapsed().as_secs_f64() * 1000.;
             window.draw(cx).clear(cx);
         })
@@ -981,7 +985,7 @@ fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {
     samples.sort_by(f64::total_cmp);
     dispatch_samples.sort_by(f64::total_cmp);
     println!(
-        "GPUI CPU pan / 100 samples: p50={:.3}ms p95={:.3}ms p99={:.3}ms",
+        "GPUI CPU {workload} / 100 samples: p50={:.3}ms p95={:.3}ms p99={:.3}ms",
         samples[49], samples[94], samples[98]
     );
     println!(

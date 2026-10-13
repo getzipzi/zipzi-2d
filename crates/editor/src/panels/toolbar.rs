@@ -14,7 +14,7 @@ use gpui_kit::{prelude::*, *};
 
 const COMPACT_WIDTH: Pixels = px(260.);
 
-#[derive(IntoElement)]
+#[derive(gpui_kit::IntoElement)]
 pub struct PanelToolbar {
     id: ElementId,
     actions: Vec<Box<dyn FnOnce(bool) -> Button>>,
@@ -111,7 +111,7 @@ impl RenderOnce for PanelToolbar {
     }
 }
 
-#[derive(IntoElement)]
+#[derive(gpui_kit::IntoElement)]
 pub struct PanelToolbarSearch {
     input: Input,
     reset: Option<Button>,
@@ -190,7 +190,7 @@ impl RenderOnce for PanelToolbarSearch {
 
 /// A controlled Kit popover with a toolbar-sized trigger. The caller builds
 /// the trigger's name, selected state and badge, and owns the popup contents.
-#[derive(IntoElement)]
+#[derive(gpui_kit::IntoElement)]
 pub struct PanelToolbarPopover(Popover);
 
 impl PanelToolbarPopover {

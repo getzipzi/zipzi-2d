@@ -1,4 +1,4 @@
-//! Regression coverage for the editor-owned Dock cache boundary.
+//! Regression coverage for Dock and virtual-list cache boundaries.
 use super::EditorTabGroupSkin;
 use gpui_kit::TestSupportExt as _;
 use gpui_kit::component::dock::{
@@ -13,6 +13,163 @@ use gpui_kit::{
     prelude::*, px, size,
 };
 use std::{cell::Cell, rc::Rc};
+
+struct WritingInput {
+    options: Entity<bool>,
+    renders: Rc<Cell<usize>>,
+    value: bool,
+}
+
+impl Render for WritingInput {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.renders.set(self.renders.get() + 1);
+        // Like Input::render configuring InputState: a write without notify,
+        // even when the option's value is unchanged.
+        self.options.update(cx, |option, _| *option = true);
+        div().size_full().bg(if self.value {
+            gpui_kit::rgb(0xff0000)
+        } else {
+            gpui_kit::rgb(0x0000ff)
+        })
+    }
+}
+
+struct VirtualCachedRow {
+    input: Entity<WritingInput>,
+    renders: Rc<Cell<usize>>,
+}
+
+impl Render for VirtualCachedRow {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        self.renders.set(self.renders.get() + 1);
+        div().size_full().child(self.input.clone())
+    }
+}
+
+struct CachedVirtualList {
+    rows: Vec<Entity<VirtualCachedRow>>,
+}
+
+impl Render for CachedVirtualList {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        let rows = self.rows.clone();
+        div().size_full().child(
+            gpui_kit::uniform_list("cached-virtual-rows", rows.len(), move |range, _, _| {
+                range
+                    .map(|index| {
+                        rows[index]
+                            .clone()
+                            .cached(StyleRefinement::default().w_full().h(px(32.)))
+                    })
+                    .collect()
+            })
+            .w(px(240.))
+            .h(px(96.)),
+        )
+    }
+}
+
+#[gpui_kit::test]
+fn virtual_list_cached_rows_ignore_render_writes_but_refresh_notified_inputs(
+    cx: &mut TestAppContext,
+) {
+    for retention in [true, false] {
+        let row_counts = [Rc::new(Cell::new(0)), Rc::new(Cell::new(0))];
+        let input_counts = [Rc::new(Cell::new(0)), Rc::new(Cell::new(0))];
+        let (window, list) = cx.update(|cx| {
+            gpui_kit::init(cx);
+            gpui_kit::open_window(WindowOptions::default(), cx, |window, cx| {
+                window.set_view_retention(retention);
+                // Two inputs use the same options. The later row's render
+                // writes a dependency of the earlier row without notifying it.
+                let options = cx.new(|_| false);
+                let rows = (0..2)
+                    .map(|index| {
+                        let input = cx.new(|_| WritingInput {
+                            options: options.clone(),
+                            renders: input_counts[index].clone(),
+                            value: false,
+                        });
+                        cx.new(|_| VirtualCachedRow {
+                            input,
+                            renders: row_counts[index].clone(),
+                        })
+                    })
+                    .collect();
+                cx.new(|_| CachedVirtualList { rows })
+            })
+            .unwrap()
+        });
+        let draw = |cx: &mut TestAppContext| {
+            cx.update_window(window, |_, window, cx| {
+                window.draw(cx).clear(cx);
+                window
+                    .painted_quads()
+                    .iter()
+                    .map(|quad| format!("{:?} {:?}", quad.bounds, quad.background))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap()
+        };
+        let original = draw(cx);
+        let rows_before = row_counts.each_ref().map(|count| count.get());
+        let inputs_before = input_counts.each_ref().map(|count| count.get());
+        assert!(rows_before.iter().all(|count| *count > 0));
+        assert!(inputs_before.iter().all(|count| *count > 0));
+
+        // uniform_list lays its cached items out as independent roots, without
+        // a parent layout key. Their descendants' render writes must not turn
+        // that explicit cache boundary into an automatically retained view.
+        let options = list.read_with(cx, |list, cx| {
+            list.rows[0].read(cx).input.read(cx).options.clone()
+        });
+        for _ in 0..4 {
+            options.update(cx, |option, _| *option = true);
+            list.update(cx, |_, cx| cx.notify());
+            assert_eq!(draw(cx), original);
+            assert_eq!(row_counts.each_ref().map(|count| count.get()), rows_before);
+            assert_eq!(
+                input_counts.each_ref().map(|count| count.get()),
+                inputs_before
+            );
+        }
+
+        let input = list.read_with(cx, |list, cx| list.rows[0].read(cx).input.clone());
+        input.update(cx, |input, cx| {
+            input.value = true;
+            cx.notify();
+        });
+        let changed = draw(cx);
+        assert_ne!(changed, original, "notified input must repaint");
+        assert!(input_counts[0].get() > inputs_before[0]);
+        assert_eq!(
+            input_counts[1].get(),
+            inputs_before[1],
+            "sibling stays cached"
+        );
+        let after_change = input_counts.each_ref().map(|count| count.get());
+        for _ in 0..4 {
+            assert_eq!(draw(cx), changed);
+            assert_eq!(
+                input_counts.each_ref().map(|count| count.get()),
+                after_change
+            );
+        }
+
+        cx.update_window(window, |_, window, cx| {
+            window.refresh();
+            window.draw(cx).clear(cx);
+        })
+        .unwrap();
+        assert!(input_counts[0].get() > after_change[0]);
+        assert!(input_counts[1].get() > after_change[1]);
+        assert_eq!(
+            draw(cx),
+            changed,
+            "full refresh preserves the updated paint"
+        );
+    }
+}
 
 struct CachedChild {
     id: &'static str,
@@ -128,11 +285,19 @@ impl Render for Composer {
 
 #[gpui_kit::test]
 fn editor_dock_preserves_row_caches_and_delegates_other_panel_caches(cx: &mut TestAppContext) {
-    for (targeted, weak) in [(true, false), (true, true), (false, false)] {
+    for (retention, targeted, weak) in [
+        (true, true, false),
+        (true, true, true),
+        (true, false, false),
+        (false, true, false),
+        (false, true, true),
+        (false, false, false),
+    ] {
         let counts = [Rc::new(Cell::new(0)), Rc::new(Cell::new(0))];
         let (window, composer) = cx.update(|cx| {
             gpui_kit::init(cx);
             gpui_kit::open_window(WindowOptions::default(), cx, |window, cx| {
+                window.set_view_retention(retention);
                 let children = ["cached-first", "cached-second"]
                     .into_iter()
                     .enumerate()
@@ -210,7 +375,12 @@ fn editor_dock_preserves_row_caches_and_delegates_other_panel_caches(cx: &mut Te
         cx.update_window(window, |_, window, cx| {
             window.draw(cx).clear(cx);
             assert_eq!(counts[0].get(), before[0] + 1);
-            assert_eq!(counts[1].get(), before[1] + usize::from(!targeted));
+            // Unchanged siblings stay cached under either dock renderer.
+            assert_eq!(
+                counts[1].get(),
+                before[1],
+                "retention={retention}, targeted={targeted}, weak={weak}"
+            );
             // A reused child's mouse listener must remain live.
             let position = window.find("cached-first").bounds().center();
             window.dispatch_event(

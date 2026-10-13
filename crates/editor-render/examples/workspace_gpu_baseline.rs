@@ -43,8 +43,13 @@ fn main() -> anyhow::Result<()> {
     let mut editor = Editor::empty();
     editor.set_canvas_metrics(metrics);
     eprintln!(
-        "device={}, profile=dev, logical=640x400, scale=2, physical=1280x800, HUD=off, samples={samples}",
-        device.name()
+        "device={}, profile={}, logical=640x400, scale=2, physical=1280x800, HUD=off, samples={samples}",
+        device.name(),
+        if cfg!(debug_assertions) {
+            "debug"
+        } else {
+            "release"
+        }
     );
     println!(
         "kind,stage,sample,milliseconds,draws,uploads,texture_cache_bytes,gpu_allocated_bytes,rss_bytes"

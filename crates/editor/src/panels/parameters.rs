@@ -131,11 +131,31 @@ impl ParametersPanel {
         })
     }
 
-    pub(crate) fn benchmark_slider_bounds(&self, cx: &App) -> Option<Bounds<Pixels>> {
-        self.rows.iter().find_map(|row| {
+    pub(crate) fn benchmark_slider(&self, cx: &App) -> Option<(Bounds<Pixels>, Point<Pixels>)> {
+        let viewport = self.scroll.0.borrow().base_handle.bounds();
+        self.visible_rows.iter().find_map(|entry| {
+            let ListRow::Parameter { index, .. } = entry else {
+                return None;
+            };
+            let row = &self.rows[*index];
             let bounds = row.slider.read(cx).bounds();
-            (row.parameter.minimum < row.parameter.maximum && bounds.size.width > px(0.))
-                .then_some(bounds)
+            // Virtualized rows may retain nonzero bounds from measurement or
+            // earlier paints, even when their track is outside the viewport.
+            (row.parameter.minimum < row.parameter.maximum
+                && bounds.size.width > px(0.)
+                && viewport.contains(&bounds.center()))
+            .then(|| {
+                let fraction = ((row.parameter.value - row.parameter.minimum)
+                    / (row.parameter.maximum - row.parameter.minimum))
+                    .clamp(0., 1.);
+                (
+                    bounds,
+                    point(
+                        bounds.left() + bounds.size.width * fraction,
+                        bounds.center().y,
+                    ),
+                )
+            })
         })
     }
 

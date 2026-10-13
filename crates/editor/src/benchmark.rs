@@ -135,6 +135,9 @@ pub fn init() -> anyhow::Result<()> {
             serde_json::json!({
                 "type": "metadata", "schema": 1, "clock": "mach_host_nanoseconds",
                 "debug_assertions": cfg!(debug_assertions), "automatic": automatic,
+                "gpui_backend": "gpui-fast",
+                "view_retention": std::env::var("GPUI_VIEW_RETENTION").map_or(true, |v| v != "0"),
+                "scroll_layers": std::env::var("GPUI_SCROLL_LAYERS").map_or(true, |v| v != "0"),
                 "model": config.map(|c| c.model.display().to_string()),
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
                 "parameters_only": config.map(|c| c.parameters_only),
@@ -355,7 +358,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 } else {
                     None
                 };
-                let slider_bounds = if mode == 4 {
+                let slider = if mode == 4 {
                     Some(
                         view.update_in(cx, |view, _, cx| {
                             view.dock
@@ -363,16 +366,16 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                 .unwrap()
                                 .parameters
                                 .read(cx)
-                                .benchmark_slider_bounds(cx)
+                                .benchmark_slider(cx)
                         })?
                         .context("parameters panel has no visible slider")?,
                     )
                 } else {
                     None
                 };
-                let center = slider_bounds.map_or(center.0, |bounds| {
-                    point(bounds.left() + bounds.size.width * 0.25, bounds.center().y)
-                });
+                // Press the actual thumb: a fixed fraction can hit a keyframe
+                // marker, which selects a value without starting a drag.
+                let center = slider.map_or(center.0, |(_, thumb)| thumb);
                 let center = drag.as_ref().map_or(center, |drag| drag.start);
                 executor.timer(Duration::from_millis(250)).await;
                 if let Some(drag) = &drag {
@@ -466,7 +469,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                 );
                             }
                             4 => {
-                                let bounds = slider_bounds.unwrap();
+                                let (bounds, _) = slider.unwrap();
                                 dispatch_pointer(
                                     window,
                                     MouseMoveEvent {

@@ -1,492 +1,39 @@
---- a/vendor/gpui-pre-apple/src/metal_renderer.rs
-+++ b/vendor/gpui-pre-apple/src/metal_renderer.rs
-@@ -118,6 +118,7 @@
-     /// For headless rendering, tracks whether output should be opaque
-     opaque: bool,
-     command_queue: CommandQueue,
-+    diagnostic_offscreen_enabled: bool,
-     paths_rasterization_pipeline_state: metal::RenderPipelineState,
-     path_sprites_pipeline_state: metal::RenderPipelineState,
-     shadows_pipeline_state: metal::RenderPipelineState,
-@@ -126,6 +127,7 @@
-     monochrome_sprites_pipeline_state: metal::RenderPipelineState,
-     polychrome_sprites_pipeline_state: metal::RenderPipelineState,
-     surfaces_pipeline_state: metal::RenderPipelineState,
-+    rgba_surfaces_pipeline_state: metal::RenderPipelineState,
-     unit_vertices: metal::Buffer,
-     #[allow(clippy::arc_with_non_send_sync)]
-     instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>,
-@@ -148,6 +150,10 @@
-     pub bounds: Bounds<ScaledPixels>,
- }
-
-+fn diagnostic_offscreen_enabled() -> bool {
-+    gpui::frame_trace::enabled() && std::env::var("GPUI_TRACE_OFFSCREEN").is_ok_and(|v| v == "1")
-+}
-+
- impl MetalRenderer {
-     /// Creates a new MetalRenderer with a CAMetalLayer for window-based rendering.
-     pub fn new(instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>, transparent: bool) -> Self {
-@@ -160,6 +166,28 @@
-         // https://developer.apple.com/documentation/metal/managing-your-game-window-for-metal-in-macos
-         layer.set_opaque(!transparent);
-         layer.set_maximum_drawable_count(3);
-+        // Diagnostic controls are inert unless an application installs a trace sink.
-+        // Keep production presentation behavior unchanged.
-+        if gpui::frame_trace::enabled() {
-+            if std::env::var("GPUI_TRACE_DRAWABLES").is_ok_and(|v| v == "2") {
-+                layer.set_maximum_drawable_count(2);
-+            }
-+            if std::env::var("GPUI_TRACE_DISPLAY_SYNC").is_ok_and(|v| v == "0") {
-+                layer.set_display_sync_enabled(false);
-+            }
-+            if diagnostic_offscreen_enabled() {
-+                layer.set_framebuffer_only(false);
-+            }
-+            gpui::frame_trace::emit(
-+                gpui::frame_trace::next_id(),
-+                "layer_config",
-+                &[
-+                    ("drawables", layer.maximum_drawable_count()),
-+                    ("display_sync", u64::from(layer.display_sync_enabled())),
-+                    ("offscreen", u64::from(diagnostic_offscreen_enabled())),
-+                ],
-+            );
-+        }
-         // Allow texture reading for visual tests (captures screenshots without ScreenCaptureKit)
-         #[cfg(any(test, feature = "test-support"))]
-         layer.set_framebuffer_only(false);
-@@ -324,6 +352,14 @@
-             MTLPixelFormat::BGRA8Unorm,
-         );
-
-+        let rgba_surfaces_pipeline_state = build_pipeline_state(
-+            &device,
-+            &library,
-+            "rgba_surfaces",
-+            "surface_vertex",
-+            "rgba_surface_fragment",
-+            MTLPixelFormat::BGRA8Unorm,
-+        );
-         let command_queue = device.new_command_queue();
-         let sprite_atlas = Arc::new(MetalAtlas::new(device.clone(), is_apple_gpu));
-         let core_video_texture_cache =
-@@ -337,6 +373,7 @@
-             is_unified_memory,
-             opaque,
-             command_queue,
-+            diagnostic_offscreen_enabled: diagnostic_offscreen_enabled(),
-             paths_rasterization_pipeline_state,
-             path_sprites_pipeline_state,
-             shadows_pipeline_state,
-@@ -345,6 +382,7 @@
-             monochrome_sprites_pipeline_state,
-             polychrome_sprites_pipeline_state,
-             surfaces_pipeline_state,
-+            rgba_surfaces_pipeline_state,
-             unit_vertices,
-             instance_buffer_pool,
-             sprite_atlas,
-@@ -354,6 +392,14 @@
-             path_sample_count: PATH_SAMPLE_COUNT,
-             #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
-             headless_render_target: None,
-+        }
-+    }
-+
-+    /// Handles for native texture producers. Commit before handing frames to GPUI.
-+    pub fn shared_metal_context(&self) -> gpui::SharedMetalContext {
-+        gpui::SharedMetalContext {
-+            device: self.device.clone(),
-+            queue: self.command_queue.clone(),
-         }
-     }
-
-@@ -445,6 +491,40 @@
-     }
-
-     pub fn draw(&mut self, scene: &Scene) {
-+        let trace_id = gpui::frame_trace::next_id();
-+        gpui::frame_trace::emit(
-+            trace_id,
-+            "compose_begin",
-+            &[
-+                ("cpu_frame", scene.frame_trace_id),
-+                ("quads", scene.quads.len() as u64),
-+                ("shadows", scene.shadows.len() as u64),
-+                ("paths", scene.paths.len() as u64),
-+                (
-+                    "path_batches",
-+                    if trace_id != 0 {
-+                        scene
-+                            .batches()
-+                            .filter(|batch| matches!(batch, PrimitiveBatch::Paths(_)))
-+                            .count() as u64
-+                    } else {
-+                        0
-+                    },
-+                ),
-+                ("surfaces", scene.surfaces.len() as u64),
-+            ],
-+        );
-+        if trace_id != 0 {
-+            for surface in &scene.surfaces {
-+                if let gpui::SurfaceSource::MetalTexture(texture) = &surface.source {
-+                    gpui::frame_trace::emit(
-+                        trace_id,
-+                        "compose_surface",
-+                        &[("texture", texture.as_ptr() as u64)],
-+                    );
-+                }
-+            }
-+        }
-         let layer = match &self.layer {
-             Some(l) => l.clone(),
-             None => {
-@@ -459,6 +539,7 @@
-             (viewport_size.width.ceil() as i32).into(),
-             (viewport_size.height.ceil() as i32).into(),
-         );
-+        gpui::frame_trace::emit(trace_id, "drawable_wait_begin", &[]);
-         let drawable = if let Some(drawable) = layer.next_drawable() {
-             drawable
-         } else {
-@@ -469,14 +550,127 @@
-             return;
-         };
-
--        let command_buffer = match self.render_frame(scene, drawable.texture(), viewport_size) {
-+        gpui::frame_trace::emit(trace_id, "drawable_acquired", &[]);
-+        // Diagnostic split: render the identical scene into a private texture,
-+        // then copy it into the drawable on the same queue. This isolates the UI
-+        // render command from drawable attachment/presentation dependencies.
-+        let offscreen = if self.diagnostic_offscreen_enabled {
-+            // Fresh per frame: no previous presentation read can delay this
-+            // probe's render pass through a reused intermediate texture.
-+            let descriptor = metal::TextureDescriptor::new();
-+            descriptor.set_width(drawable.texture().width());
-+            descriptor.set_height(drawable.texture().height());
-+            descriptor.set_pixel_format(MTLPixelFormat::BGRA8Unorm);
-+            descriptor.set_storage_mode(metal::MTLStorageMode::Private);
-+            descriptor.set_usage(
-+                metal::MTLTextureUsage::RenderTarget | metal::MTLTextureUsage::ShaderRead,
-+            );
-+            Some(self.device.new_texture(&descriptor))
-+        } else {
-+            None
-+        };
-+        let target = offscreen.as_deref().unwrap_or(drawable.texture());
-+        let rendered = match self.render_frame(scene, target, viewport_size) {
-             Ok(command_buffer) => command_buffer,
-             Err(error) => {
-                 log::error!("failed to render: {error:#}");
-                 return;
-             }
-         };
--
-+        let command_buffer = if let Some(offscreen) = offscreen {
-+            let completed = ConcreteBlock::new(move |command: &metal::CommandBufferRef| {
-+                gpui::frame_trace::emit(
-+                    trace_id,
-+                    "offscreen_complete",
-+                    &[("status", command.status() as u64)],
-+                );
-+                let start: f64 = unsafe { msg_send![command, GPUStartTime] };
-+                let end: f64 = unsafe { msg_send![command, GPUEndTime] };
-+                if start > 0. && end >= start {
-+                    gpui::frame_trace::emit_at(
-+                        trace_id,
-+                        "offscreen_gpu_start",
-+                        (start * 1e9) as u64,
-+                        &[],
-+                    );
-+                    gpui::frame_trace::emit_at(
-+                        trace_id,
-+                        "offscreen_gpu_end",
-+                        (end * 1e9) as u64,
-+                        &[],
-+                    );
-+                }
-+            })
-+            .copy();
-+            rendered.add_completed_handler(&completed);
-+            gpui::frame_trace::emit(trace_id, "offscreen_commit_begin", &[]);
-+            rendered.commit();
-+            let command = self.command_queue.new_command_buffer();
-+            let blit = command.new_blit_command_encoder();
-+            blit.copy_from_texture(
-+                &offscreen,
-+                0,
-+                0,
-+                metal::MTLOrigin { x: 0, y: 0, z: 0 },
-+                metal::MTLSize {
-+                    width: offscreen.width(),
-+                    height: offscreen.height(),
-+                    depth: 1,
-+                },
-+                drawable.texture(),
-+                0,
-+                0,
-+                metal::MTLOrigin { x: 0, y: 0, z: 0 },
-+            );
-+            blit.end_encoding();
-+            command.to_owned()
-+        } else {
-+            rendered
-+        };
-+
-+        if trace_id != 0 {
-+            let scheduled = ConcreteBlock::new(move |_: &metal::CommandBufferRef| {
-+                gpui::frame_trace::emit(trace_id, "compose_scheduled", &[]);
-+            })
-+            .copy();
-+            command_buffer.add_scheduled_handler(&scheduled);
-+            let completed = ConcreteBlock::new(move |command: &metal::CommandBufferRef| {
-+                gpui::frame_trace::emit(
-+                    trace_id,
-+                    "compose_complete",
-+                    &[("status", command.status() as u64)],
-+                );
-+                let start: f64 = unsafe { msg_send![command, GPUStartTime] };
-+                let end: f64 = unsafe { msg_send![command, GPUEndTime] };
-+                if start > 0. && end >= start {
-+                    gpui::frame_trace::emit_at(
-+                        trace_id,
-+                        "compose_gpu_start",
-+                        (start * 1e9) as u64,
-+                        &[],
-+                    );
-+                    gpui::frame_trace::emit_at(
-+                        trace_id,
-+                        "compose_gpu_end",
-+                        (end * 1e9) as u64,
-+                        &[],
-+                    );
-+                }
-+            })
-+            .copy();
-+            command_buffer.add_completed_handler(&completed);
-+            let presented = ConcreteBlock::new(move |drawable: &metal::DrawableRef| {
-+                let time = drawable.presented_time();
-+                if time > 0. {
-+                    gpui::frame_trace::emit_at(trace_id, "presented", (time * 1e9) as u64, &[]);
-+                } else {
-+                    gpui::frame_trace::emit(trace_id, "present_dropped", &[]);
-+                }
-+            })
-+            .copy();
-+            drawable.add_presented_handler(&presented);
-+        }
-+        gpui::frame_trace::emit(trace_id, "compose_commit_begin", &[]);
-         if self.presents_with_transaction {
-             command_buffer.commit();
-             command_buffer.wait_until_scheduled();
-@@ -485,6 +679,7 @@
-             command_buffer.present_drawable(drawable);
-             command_buffer.commit();
-         }
-+        gpui::frame_trace::emit(trace_id, "compose_submitted", &[]);
-     }
-
-     fn render_frame(
-@@ -620,12 +815,33 @@
-     /// inspected.
-     #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
-     pub fn render_scene(&mut self, scene: &Scene, size: Size<DevicePixels>) -> Result<()> {
-+        self.submit_scene_for_benchmark(scene, size).map(|_| ())
-+    }
-+
-+    /// Submit a headless frame and return its command for GPU timing/completion.
-+    /// Reuse targets at the same size, as a window does between resize events.
-+    /// The caller must wait before reusing mutable producer textures or buffers.
-+    #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
-+    pub fn submit_scene_for_benchmark(
-+        &mut self,
-+        scene: &Scene,
-+        size: Size<DevicePixels>,
-+    ) -> Result<metal::CommandBuffer> {
-         if size.width.0 <= 0 || size.height.0 <= 0 {
-             anyhow::bail!("Invalid size for render_scene: {:?}", size);
-         }
-
-         objc2::rc::autoreleasepool(|_| {
--            self.update_path_intermediate_textures(size);
-+            if self
-+                .path_intermediate_texture
-+                .as_ref()
-+                .is_none_or(|texture| {
-+                    texture.width() != size.width.0 as u64
-+                        || texture.height() != size.height.0 as u64
-+                })
-+            {
-+                self.update_path_intermediate_textures(size);
-+            }
-
-             let needs_new_target = self.headless_render_target.as_ref().is_none_or(|texture| {
-                 texture.width() != size.width.0 as u64 || texture.height() != size.height.0 as u64
-@@ -651,7 +867,7 @@
-             // Commit without waiting, mirroring presentation to a real window where
-             // the CPU doesn't block on the GPU.
-             command_buffer.commit();
--            Ok(())
-+            Ok(command_buffer)
-         })
-     }
-
-@@ -1152,35 +1368,62 @@
-         );
-
-         for (index, surface) in surfaces.iter().enumerate() {
-+            if let gpui::SurfaceSource::MetalTexture(texture) = &surface.source {
-+                assert!(
-+                    std::ptr::eq(texture.device(), self.device.as_ref()),
-+                    "Metal surface device mismatch"
-+                );
-+                assert!(texture.usage().contains(metal::MTLTextureUsage::ShaderRead));
-+                command_encoder.set_render_pipeline_state(&self.rgba_surfaces_pipeline_state);
-+                command_encoder
-+                    .set_fragment_texture(SurfaceInputIndex::YTexture as u64, Some(texture));
-+                command_encoder.set_fragment_bytes(
-+                    0,
-+                    mem::size_of::<f32>() as u64,
-+                    &surface.opacity as *const f32 as *const _,
-+                );
-+                command_encoder.draw_primitives_instanced_base_instance(
-+                    metal::MTLPrimitiveType::Triangle,
-+                    0,
-+                    6,
-+                    1,
-+                    (first_surface + index) as u64,
-+                );
-+                continue;
-+            }
-+            command_encoder.set_render_pipeline_state(&self.surfaces_pipeline_state);
-+            let gpui::SurfaceSource::Surface(image_buffer) = &surface.source else {
-+                unreachable!("MetalTexture was handled above");
-+            };
-             let texture_size = size(
--                DevicePixels::from(surface.image_buffer.get_width() as i32),
--                DevicePixels::from(surface.image_buffer.get_height() as i32),
-+                DevicePixels::from(image_buffer.get_width() as i32),
-+                DevicePixels::from(image_buffer.get_height() as i32),
-             );
-
-             assert_eq!(
--                surface.image_buffer.get_pixel_format(),
-+                image_buffer.get_pixel_format(),
-                 kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
-             );
-
-             let y_texture = self
-                 .core_video_texture_cache
-                 .create_texture_from_image(
--                    surface.image_buffer.as_concrete_TypeRef(),
-+                    image_buffer.as_concrete_TypeRef(),
-                     None,
-                     MTLPixelFormat::R8Unorm,
--                    surface.image_buffer.get_width_of_plane(0),
--                    surface.image_buffer.get_height_of_plane(0),
-+                    image_buffer.get_width_of_plane(0),
-+                    image_buffer.get_height_of_plane(0),
-                     0,
-                 )
-                 .unwrap();
-             let cb_cr_texture = self
-                 .core_video_texture_cache
-                 .create_texture_from_image(
--                    surface.image_buffer.as_concrete_TypeRef(),
-+                    image_buffer.as_concrete_TypeRef(),
-                     None,
-                     MTLPixelFormat::RG8Unorm,
--                    surface.image_buffer.get_width_of_plane(1),
--                    surface.image_buffer.get_height_of_plane(1),
-+                    image_buffer.get_width_of_plane(1),
-+                    image_buffer.get_height_of_plane(1),
-                     1,
-                 )
-                 .unwrap();
-@@ -1302,6 +1545,12 @@
-     color_attachment.set_destination_rgb_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
-     color_attachment.set_destination_alpha_blend_factor(metal::MTLBlendFactor::One);
-
-+    if fragment_fn_name == "rgba_surface_fragment" {
-+        color_attachment.set_source_rgb_blend_factor(metal::MTLBlendFactor::One);
-+        color_attachment
-+            .set_destination_alpha_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
-+    }
-+
-     device
-         .new_render_pipeline_state(&descriptor)
-         .expect("could not create render pipeline state")
-@@ -1615,6 +1864,10 @@
-
- #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
- impl gpui::PlatformHeadlessRenderer for MetalHeadlessRenderer {
-+    fn metal_context(&self) -> Option<gpui::SharedMetalContext> {
-+        Some(self.renderer.shared_metal_context())
-+    }
-+
-     fn render_scene_to_image(
-         &mut self,
-         scene: &Scene,
---- a/vendor/gpui-pre-apple/src/shaders.metal
-+++ b/vendor/gpui-pre-apple/src/shaders.metal
-@@ -1277,3 +1277,11 @@
-
-   return color;
- }
-+
-+// Kasane supplies premultiplied color; do not multiply its alpha a second time.
-+fragment float4 rgba_surface_fragment(SurfaceFragmentInput input [[stage_in]],
-+    texture2d<float> source [[texture(SurfaceInputIndex_YTexture)]],
-+    constant float &opacity [[buffer(0)]]) {
-+  constexpr sampler s(mag_filter::linear, min_filter::linear);
-+  return source.sample(s, input.texture_position) * opacity;
-+}
---- a/vendor/gpui-pre-macos/src/window.rs
-+++ b/vendor/gpui-pre-macos/src/window.rs
-@@ -2119,6 +2119,10 @@
-         self.0.lock().renderer.sprite_atlas().clone()
-     }
-
-+    fn metal_context(&self) -> Option<gpui::SharedMetalContext> {
-+        Some(self.0.lock().renderer.shared_metal_context())
-+    }
-+
-     fn gpu_specs(&self) -> Option<gpui::GpuSpecs> {
-         None
-     }
---- a/vendor/gpui-pre/Cargo.toml
-+++ b/vendor/gpui-pre/Cargo.toml
-@@ -667,3 +667,6 @@
+--- a/vendor/gpui-fast/Cargo.toml
++++ b/vendor/gpui-fast/Cargo.toml
+@@ -508,3 +508,6 @@
  [lints.rust.unexpected_cfgs]
  level = "allow"
  priority = 0
 +
 +[target.'cfg(target_os = "macos")'.dependencies.metal]
 +version = "0.33"
---- a/vendor/gpui-pre/src/elements/surface.rs
-+++ b/vendor/gpui-pre/src/elements/surface.rs
-@@ -7,12 +7,30 @@
+--- a/vendor/gpui-fast/src/elements/surface.rs
++++ b/vendor/gpui-fast/src/elements/surface.rs
+@@ -9,11 +9,14 @@
  use refineable::Refineable;
 
  /// A source of a surface's content.
 -#[derive(Clone, Debug, PartialEq, Eq)]
 +#[derive(Clone, Debug)]
  pub enum SurfaceSource {
-     /// A macOS image buffer from CoreVideo
-     #[cfg(target_os = "macos")]
-     Surface(CVPixelBuffer),
-+    /// Premultiplied RGBA/BGRA texture from the window's native Metal device.
-+    /// Submit producer work to `Window::metal_context().queue` before publishing.
+     /// A CoreVideo image buffer
+     #[cfg(any(target_os = "macos", target_os = "ios"))]
+     Surface(CFRetained<CVPixelBuffer>),
++    /// Premultiplied texture submitted on the window shared Metal queue.
 +    #[cfg(target_os = "macos")]
 +    MetalTexture(metal::Texture),
+ }
+
+ #[cfg(any(target_os = "macos", target_os = "ios"))]
+@@ -22,6 +25,21 @@
+         SurfaceSource::Surface(value)
+     }
  }
 +
 +impl PartialEq for SurfaceSource {
 +    fn eq(&self, other: &Self) -> bool {
 +        match (self, other) {
-+            #[cfg(target_os = "macos")]
++            #[cfg(any(target_os = "macos", target_os = "ios"))]
 +            (Self::Surface(a), Self::Surface(b)) => a == b,
 +            #[cfg(target_os = "macos")]
 +            (Self::MetalTexture(a), Self::MetalTexture(b)) => std::ptr::eq(a.as_ref(), b.as_ref()),
@@ -496,10 +43,11 @@
 +    }
 +}
 +impl Eq for SurfaceSource {}
++
 
- #[cfg(target_os = "macos")]
- impl From<CVPixelBuffer> for SurfaceSource {
-@@ -100,6 +118,17 @@
+ /// A surface element.
+ pub struct Surface {
+@@ -113,6 +131,17 @@
                  // TODO: Add support for corner_radii
                  window.paint_surface(new_bounds, surface.clone());
              }
@@ -517,8 +65,8 @@
              #[allow(unreachable_patterns)]
              _ => {}
          }
---- /dev/null
-+++ b/vendor/gpui-pre/src/frame_trace.rs
+--- a/vendor/gpui-fast/src/frame_trace.rs
++++ b/vendor/gpui-fast/src/frame_trace.rs
 @@ -0,0 +1,112 @@
 +//! Opt-in frame timing hooks. No logging, allocation or clock reads without a sink.
 +//! On macOS timestamps share Metal's host-time clock (seconds since mach boot).
@@ -632,20 +180,34 @@
 +        }
 +    }
 +}
---- a/vendor/gpui-pre/src/gpui.rs
-+++ b/vendor/gpui-pre/src/gpui.rs
-@@ -23,6 +23,7 @@
- mod executor;
+--- a/vendor/gpui-fast/src/gpui.rs
++++ b/vendor/gpui-fast/src/gpui.rs
+@@ -26,6 +26,7 @@
+ mod fast;
  mod platform_scheduler;
  pub(crate) use platform_scheduler::PlatformScheduler;
 +pub mod frame_trace;
  mod geometry;
  mod gestures;
  mod global;
---- a/vendor/gpui-pre/src/platform.rs
-+++ b/vendor/gpui-pre/src/platform.rs
-@@ -798,6 +798,16 @@
-     pub deactivation: Box<dyn Fn() + Send + 'static>,
+--- a/vendor/gpui-fast/src/platform/test/window.rs
++++ b/vendor/gpui-fast/src/platform/test/window.rs
+@@ -306,6 +306,11 @@
+ }
+
+ impl PlatformWindow for TestWindow {
++    #[cfg(target_os = "macos")]
++    fn metal_context(&self) -> Option<crate::SharedMetalContext> {
++        self.0.lock().renderer.as_ref()?.metal_context()
++    }
++
+     fn visual_viewport_bounds(&self) -> Bounds<Pixels> {
+         let state = self.0.lock();
+         state
+--- a/vendor/gpui-fast/src/platform.rs
++++ b/vendor/gpui-fast/src/platform.rs
+@@ -1016,6 +1016,16 @@
+     LocalSchedule,
  }
 
 +/// Native Metal handles for producers composited by the native macOS renderer.
@@ -661,7 +223,7 @@
  #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
  #[expect(missing_docs)]
  pub struct RequestFrameOptions {
-@@ -878,6 +888,12 @@
+@@ -1192,6 +1202,12 @@
 
  #[expect(missing_docs)]
  pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
@@ -674,7 +236,7 @@
      fn bounds(&self) -> Bounds<Pixels>;
      fn is_maximized(&self) -> bool;
      fn window_bounds(&self) -> WindowBounds;
-@@ -1092,6 +1108,12 @@
+@@ -1427,6 +1443,12 @@
  /// A renderer for headless windows that can produce real rendered output.
  #[cfg(any(test, feature = "test-support", feature = "bench-support"))]
  pub trait PlatformHeadlessRenderer {
@@ -687,62 +249,49 @@
      /// Render a scene and return the result as an RGBA image.
      fn render_scene_to_image(
          &mut self,
---- a/vendor/gpui-pre/src/platform/test/window.rs
-+++ b/vendor/gpui-pre/src/platform/test/window.rs
-@@ -290,6 +290,11 @@
- }
-
- impl PlatformWindow for TestWindow {
-+    #[cfg(target_os = "macos")]
-+    fn metal_context(&self) -> Option<crate::SharedMetalContext> {
-+        self.0.lock().renderer.as_ref()?.metal_context()
-+    }
-+
-     fn visual_viewport_bounds(&self) -> Bounds<Pixels> {
-         let state = self.0.lock();
-         state
---- a/vendor/gpui-pre/src/scene.rs
-+++ b/vendor/gpui-pre/src/scene.rs
-@@ -39,6 +39,8 @@
+--- a/vendor/gpui-fast/src/scene.rs
++++ b/vendor/gpui-fast/src/scene.rs
+@@ -40,6 +40,8 @@
  #[derive(Default)]
  #[expect(missing_docs)]
  pub struct Scene {
 +    /// CPU frame correlation ID for opt-in timing; zero when tracing is disabled.
 +    pub frame_trace_id: u64,
      pub(crate) paint_operations: Vec<PaintOperation>,
-     primitive_bounds: BoundsTree<ScaledPixels>,
+     pub(crate) primitive_bounds: BoundsTree<ScaledPixels>,
      layer_stack: Vec<DrawOrder>,
-@@ -769,8 +771,8 @@
-     pub order: DrawOrder,
+@@ -765,7 +767,8 @@
      pub bounds: Bounds<ScaledPixels>,
      pub content_mask: ContentMask<ScaledPixels>,
--    #[cfg(target_os = "macos")]
--    pub image_buffer: core_video::pixel_buffer::CVPixelBuffer,
+     #[cfg(any(target_os = "macos", target_os = "ios"))]
+-    pub image_buffer: objc2_core_foundation::CFRetained<objc2_core_video::CVPixelBuffer>,
 +    pub source: crate::SurfaceSource,
 +    pub opacity: f32,
  }
 
  impl From<PaintSurface> for Primitive {
---- a/vendor/gpui-pre/src/window.rs
-+++ b/vendor/gpui-pre/src/window.rs
-@@ -29,8 +29,6 @@
- use crate::interactive::TouchEvent;
- use anyhow::{Context as _, Result, anyhow};
- use collections::{FxHashMap, FxHashSet};
--#[cfg(target_os = "macos")]
--use core_video::pixel_buffer::CVPixelBuffer;
- use derive_more::{Deref, DerefMut};
- use futures::channel::oneshot;
- use gpui_util::post_inc;
-@@ -1219,6 +1217,7 @@
+--- a/vendor/gpui-fast/src/window.rs
++++ b/vendor/gpui-fast/src/window.rs
+@@ -36,10 +36,6 @@
+ use gpui_util::{ResultExt, measure};
+ use itertools::FoldWhile::{Continue, Done};
+ use itertools::Itertools;
+-#[cfg(any(target_os = "macos", target_os = "ios"))]
+-use objc2_core_foundation::CFRetained;
+-#[cfg(any(target_os = "macos", target_os = "ios"))]
+-use objc2_core_video::CVPixelBuffer;
+ use parking_lot::RwLock;
+ use raw_window_handle::{HandleError, HasDisplayHandle, HasWindowHandle};
+ use scheduler::Instant;
+@@ -1297,6 +1293,7 @@
      #[cfg(feature = "profiler")]
-     window_profiler: profiler::WindowProfiler,
+     pub(crate) window_profiler: profiler::WindowProfiler,
      last_input_modality: InputModality,
 +    suppressed_key_repeats: FxHashSet<String>,
      touch_gestures: TouchGestureRecognizer,
      touch_prediction_enabled: bool,
      long_press_timer: Option<Task<()>>,
-@@ -2072,6 +2071,7 @@
+@@ -2200,6 +2197,7 @@
              #[cfg(feature = "profiler")]
              window_profiler: profiler::WindowProfiler::new(handle.window_id())?,
              last_input_modality: InputModality::Mouse,
@@ -750,24 +299,7 @@
              touch_gestures: TouchGestureRecognizer::new(
                  cx.platform
                      .gestures()
-@@ -2273,6 +2273,16 @@
-         if self.invalidator.not_drawing() {
-             self.refreshing = true;
-             self.invalidator.set_dirty(true);
-+        }
-+    }
-+
-+    /// Suppress repeated key-down events for a key temporarily owned by a gesture.
-+    /// The initial key-down and key-up events are still dispatched normally.
-+    pub fn suppress_key_repeats(&mut self, key: &str, suppress: bool) {
-+        if suppress {
-+            self.suppressed_key_repeats.insert(key.to_owned());
-+        } else {
-+            self.suppressed_key_repeats.remove(key);
-         }
-     }
-
-@@ -3263,6 +3273,8 @@
+@@ -3445,6 +3443,8 @@
      /// the contents of the new [`Scene`], use [`Self::present`].
      #[profiling::function]
      pub fn draw(&mut self, cx: &mut App) -> ArenaClearNeeded {
@@ -776,7 +308,7 @@
          // Drain every draw in profiler builds so a previous frame's
          // first-invalidation timestamp can't be attributed to this one.
          #[cfg(feature = "profiler")]
-@@ -3404,6 +3416,8 @@
+@@ -3589,6 +3589,8 @@
              self.refresh();
          }
          self.needs_present.set(true);
@@ -785,20 +317,16 @@
 
          #[cfg(feature = "profiler")]
          {
-@@ -4978,7 +4992,11 @@
-     ///
-     /// This method should only be called as part of the paint phase of element drawing.
-     #[cfg(target_os = "macos")]
--    pub fn paint_surface(&mut self, bounds: Bounds<Pixels>, image_buffer: CVPixelBuffer) {
-+    pub fn paint_surface(
-+        &mut self,
-+        bounds: Bounds<Pixels>,
+@@ -5194,7 +5196,7 @@
+     pub fn paint_surface(
+         &mut self,
+         bounds: Bounds<Pixels>,
+-        image_buffer: CFRetained<CVPixelBuffer>,
 +        source: impl Into<crate::SurfaceSource>,
-+    ) {
+     ) {
          use crate::PaintSurface;
 
-         self.invalidator.debug_assert_paint();
-@@ -4989,8 +5007,15 @@
+@@ -5206,9 +5208,27 @@
              order: 0,
              bounds,
              content_mask,
@@ -806,16 +334,28 @@
 +            source: source.into(),
 +            opacity: self.element_opacity(),
          });
+     }
++
++    /// Suppress repeated key-down events for a key temporarily owned by a gesture.
++    /// The initial key-down and key-up events are still dispatched normally.
++    pub fn suppress_key_repeats(&mut self, key: &str, suppress: bool) {
++        if suppress {
++            self.suppressed_key_repeats.insert(key.to_owned());
++        } else {
++            self.suppressed_key_repeats.remove(key);
++        }
 +    }
 +
 +    /// Native Metal device and queue used by this window.
 +    #[cfg(target_os = "macos")]
 +    pub fn metal_context(&self) -> Option<crate::SharedMetalContext> {
 +        self.platform_window.metal_context()
-     }
++    }
++
 
      /// Removes an image from the sprite atlas.
-@@ -5413,6 +5438,27 @@
+     pub fn drop_image(&mut self, data: Arc<RenderImage>) -> Result<()> {
+@@ -5633,6 +5653,28 @@
      /// Dispatch a mouse, keyboard, or touch event on the window.
      #[profiling::function]
      pub fn dispatch_event(&mut self, event: PlatformInput, cx: &mut App) -> DispatchEventResult {
@@ -840,6 +380,429 @@
 +            PlatformInput::ScrollWheel(_) => 4,
 +            _ => 5,
 +        });
++
          #[cfg(feature = "profiler")]
          self.window_profiler.begin_input(event.kind_name());
          let update_count_before = self.invalidator.update_count();
+--- a/vendor/gpui-fast-macos/src/window.rs
++++ b/vendor/gpui-fast-macos/src/window.rs
+@@ -2155,6 +2155,10 @@
+         self.0.lock().renderer.sprite_atlas().clone()
+     }
+
++    fn metal_context(&self) -> Option<gpui::SharedMetalContext> {
++        Some(self.0.lock().renderer.shared_metal_context())
++    }
++
+     fn gpu_specs(&self) -> Option<gpui::GpuSpecs> {
+         None
+     }
+--- a/vendor/gpui-fast-apple/src/metal_renderer.rs
++++ b/vendor/gpui-fast-apple/src/metal_renderer.rs
+@@ -121,6 +121,7 @@
+     /// For headless rendering, tracks whether output should be opaque
+     pub(crate) opaque: bool,
+     pub(crate) command_queue: CommandQueue,
++    diagnostic_offscreen_enabled: bool,
+     pub(crate) paths_rasterization_pipeline_state: metal::RenderPipelineState,
+     path_sprites_pipeline_state: metal::RenderPipelineState,
+     shadows_pipeline_state: metal::RenderPipelineState,
+@@ -129,6 +130,7 @@
+     monochrome_sprites_pipeline_state: metal::RenderPipelineState,
+     pub(crate) polychrome_sprites_pipeline_state: metal::RenderPipelineState,
+     surfaces_pipeline_state: metal::RenderPipelineState,
++    rgba_surfaces_pipeline_state: metal::RenderPipelineState,
+     pub(crate) unit_vertices: metal::Buffer,
+     #[allow(clippy::arc_with_non_send_sync)]
+     pub(crate) instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>,
+@@ -152,6 +154,10 @@
+     pub bounds: Bounds<ScaledPixels>,
+ }
+
++fn diagnostic_offscreen_enabled() -> bool {
++    gpui::frame_trace::enabled() && std::env::var("GPUI_TRACE_OFFSCREEN").is_ok_and(|v| v == "1")
++}
++
+ impl MetalRenderer {
+     /// Creates a new MetalRenderer with a CAMetalLayer for window-based rendering.
+     pub fn new(instance_buffer_pool: Arc<Mutex<InstanceBufferPool>>, transparent: bool) -> Self {
+@@ -187,6 +193,29 @@
+         // https://developer.apple.com/documentation/metal/managing-your-game-window-for-metal-in-macos
+         layer.set_opaque(!transparent);
+         layer.set_maximum_drawable_count(3);
++        // Diagnostic controls are inert unless an application installs a trace sink.
++        // Keep production presentation behavior unchanged.
++        if gpui::frame_trace::enabled() {
++            if std::env::var("GPUI_TRACE_DRAWABLES").is_ok_and(|v| v == "2") {
++                layer.set_maximum_drawable_count(2);
++            }
++            if std::env::var("GPUI_TRACE_DISPLAY_SYNC").is_ok_and(|v| v == "0") {
++                layer.set_display_sync_enabled(false);
++            }
++            if diagnostic_offscreen_enabled() {
++                layer.set_framebuffer_only(false);
++            }
++            gpui::frame_trace::emit(
++                gpui::frame_trace::next_id(),
++                "layer_config",
++                &[
++                    ("drawables", layer.maximum_drawable_count()),
++                    ("display_sync", u64::from(layer.display_sync_enabled())),
++                    ("offscreen", u64::from(diagnostic_offscreen_enabled())),
++                ],
++            );
++        }
++
+         // Allow texture reading for visual tests and UI automation screenshots
+         // (captures without ScreenCaptureKit). Only debug builds pay the
+         // presentation cost, even when `test-support` is compiled in.
+@@ -366,6 +395,14 @@
+             MTLPixelFormat::BGRA8Unorm,
+         );
+
++        let rgba_surfaces_pipeline_state = build_pipeline_state(
++            &device,
++            &library,
++            "rgba_surfaces",
++            "surface_vertex",
++            "rgba_surface_fragment",
++            MTLPixelFormat::BGRA8Unorm,
++        );
+         let command_queue = device.new_command_queue();
+         let supports_shared_storage = cfg!(target_os = "ios") || is_apple_gpu;
+         let sprite_atlas = Arc::new(MetalAtlas::new(device.clone(), supports_shared_storage));
+@@ -397,6 +434,7 @@
+             is_unified_memory,
+             opaque,
+             command_queue,
++            diagnostic_offscreen_enabled: diagnostic_offscreen_enabled(),
+             paths_rasterization_pipeline_state,
+             path_sprites_pipeline_state,
+             shadows_pipeline_state,
+@@ -405,6 +443,7 @@
+             monochrome_sprites_pipeline_state,
+             polychrome_sprites_pipeline_state,
+             surfaces_pipeline_state,
++            rgba_surfaces_pipeline_state,
+             unit_vertices,
+             instance_buffer_pool,
+             sprite_atlas,
+@@ -440,6 +479,14 @@
+         }
+     }
+
++    /// Handles for native texture producers. Commit before handing frames to GPUI.
++    pub fn shared_metal_context(&self) -> gpui::SharedMetalContext {
++        gpui::SharedMetalContext {
++            device: self.device.clone(),
++            queue: self.command_queue.clone(),
++        }
++    }
++
+     pub fn update_drawable_size(&mut self, size: Size<DevicePixels>) {
+         if let Some(layer) = &self.layer {
+             layer.set_drawable_size(CGSize::new(size.width.0 as f64, size.height.0 as f64));
+@@ -498,6 +545,40 @@
+     }
+
+     pub fn draw(&mut self, scene: &Scene) {
++        let trace_id = gpui::frame_trace::next_id();
++        gpui::frame_trace::emit(
++            trace_id,
++            "compose_begin",
++            &[
++                ("cpu_frame", scene.frame_trace_id),
++                ("quads", scene.quads.len() as u64),
++                ("shadows", scene.shadows.len() as u64),
++                ("paths", scene.paths.len() as u64),
++                (
++                    "path_batches",
++                    if trace_id != 0 {
++                        scene
++                            .batches()
++                            .filter(|batch| matches!(batch, PrimitiveBatch::Paths(_)))
++                            .count() as u64
++                    } else {
++                        0
++                    },
++                ),
++                ("surfaces", scene.surfaces.len() as u64),
++            ],
++        );
++        if trace_id != 0 {
++            for surface in &scene.surfaces {
++                if let gpui::SurfaceSource::MetalTexture(texture) = &surface.source {
++                    gpui::frame_trace::emit(
++                        trace_id,
++                        "compose_surface",
++                        &[("texture", texture.as_ptr() as u64)],
++                    );
++                }
++            }
++        }
+         let layer = match &self.layer {
+             Some(l) => l.clone(),
+             None => {
+@@ -512,6 +593,7 @@
+             (viewport_size.width.ceil() as i32).into(),
+             (viewport_size.height.ceil() as i32).into(),
+         );
++        gpui::frame_trace::emit(trace_id, "drawable_wait_begin", &[]);
+         let drawable = if let Some(drawable) = layer.next_drawable() {
+             drawable
+         } else {
+@@ -522,14 +604,126 @@
+             return;
+         };
+
+-        let command_buffer = match self.render_frame(scene, drawable.texture(), viewport_size) {
++        gpui::frame_trace::emit(trace_id, "drawable_acquired", &[]);
++        // Diagnostic split: render the identical scene into a private texture,
++        // then copy it into the drawable on the same queue. This isolates the UI
++        // render command from drawable attachment/presentation dependencies.
++        let offscreen = if self.diagnostic_offscreen_enabled {
++            // Fresh per frame: no previous presentation read can delay this
++            // probe's render pass through a reused intermediate texture.
++            let descriptor = metal::TextureDescriptor::new();
++            descriptor.set_width(drawable.texture().width());
++            descriptor.set_height(drawable.texture().height());
++            descriptor.set_pixel_format(MTLPixelFormat::BGRA8Unorm);
++            descriptor.set_storage_mode(metal::MTLStorageMode::Private);
++            descriptor.set_usage(
++                metal::MTLTextureUsage::RenderTarget | metal::MTLTextureUsage::ShaderRead,
++            );
++            Some(self.device.new_texture(&descriptor))
++        } else {
++            None
++        };
++        let target = offscreen.as_deref().unwrap_or(drawable.texture());
++        let rendered = match self.render_frame(scene, target, viewport_size) {
+             Ok(command_buffer) => command_buffer,
+             Err(error) => {
+                 log::error!("failed to render: {error:#}");
+                 return;
+             }
+         };
+-
++        let command_buffer = if let Some(offscreen) = offscreen {
++            let completed = RcBlock::new(move |raw: *mut AnyObject| {
++                let command = unsafe { metal::CommandBufferRef::from_ptr(raw.cast()) };
++                gpui::frame_trace::emit(
++                    trace_id,
++                    "offscreen_complete",
++                    &[("status", command.status() as u64)],
++                );
++                let start: f64 = unsafe { objc2::msg_send![&*raw, GPUStartTime] };
++                let end: f64 = unsafe { objc2::msg_send![&*raw, GPUEndTime] };
++                if start > 0. && end >= start {
++                    gpui::frame_trace::emit_at(
++                        trace_id,
++                        "offscreen_gpu_start",
++                        (start * 1e9) as u64,
++                        &[],
++                    );
++                    gpui::frame_trace::emit_at(
++                        trace_id,
++                        "offscreen_gpu_end",
++                        (end * 1e9) as u64,
++                        &[],
++                    );
++                }
++            });
++            unsafe { rendered.add_completed_handler(&*RcBlock::as_ptr(&completed).cast()); }
++            gpui::frame_trace::emit(trace_id, "offscreen_commit_begin", &[]);
++            rendered.commit();
++            let command = self.command_queue.new_command_buffer();
++            let blit = command.new_blit_command_encoder();
++            blit.copy_from_texture(
++                &offscreen,
++                0,
++                0,
++                metal::MTLOrigin { x: 0, y: 0, z: 0 },
++                metal::MTLSize {
++                    width: offscreen.width(),
++                    height: offscreen.height(),
++                    depth: 1,
++                },
++                drawable.texture(),
++                0,
++                0,
++                metal::MTLOrigin { x: 0, y: 0, z: 0 },
++            );
++            blit.end_encoding();
++            command.to_owned()
++        } else {
++            rendered
++        };
++
++        if trace_id != 0 {
++            let scheduled = RcBlock::new(move |_: *mut AnyObject| {
++                gpui::frame_trace::emit(trace_id, "compose_scheduled", &[]);
++            });
++            unsafe { command_buffer.add_scheduled_handler(&*RcBlock::as_ptr(&scheduled).cast()); }
++            let completed = RcBlock::new(move |raw: *mut AnyObject| {
++                let command = unsafe { metal::CommandBufferRef::from_ptr(raw.cast()) };
++                gpui::frame_trace::emit(
++                    trace_id,
++                    "compose_complete",
++                    &[("status", command.status() as u64)],
++                );
++                let start: f64 = unsafe { objc2::msg_send![&*raw, GPUStartTime] };
++                let end: f64 = unsafe { objc2::msg_send![&*raw, GPUEndTime] };
++                if start > 0. && end >= start {
++                    gpui::frame_trace::emit_at(
++                        trace_id,
++                        "compose_gpu_start",
++                        (start * 1e9) as u64,
++                        &[],
++                    );
++                    gpui::frame_trace::emit_at(
++                        trace_id,
++                        "compose_gpu_end",
++                        (end * 1e9) as u64,
++                        &[],
++                    );
++                }
++            });
++            unsafe { command_buffer.add_completed_handler(&*RcBlock::as_ptr(&completed).cast()); }
++            let presented = RcBlock::new(move |raw: *mut AnyObject| {
++                let drawable = unsafe { metal::DrawableRef::from_ptr(raw.cast()) };
++                let time = drawable.presented_time();
++                if time > 0. {
++                    gpui::frame_trace::emit_at(trace_id, "presented", (time * 1e9) as u64, &[]);
++                } else {
++                    gpui::frame_trace::emit(trace_id, "present_dropped", &[]);
++                }
++            });
++            unsafe { drawable.add_presented_handler(&*RcBlock::as_ptr(&presented).cast()); }
++        }
++        gpui::frame_trace::emit(trace_id, "compose_commit_begin", &[]);
+         if self.presents_with_transaction {
+             command_buffer.commit();
+             command_buffer.wait_until_scheduled();
+@@ -538,6 +732,7 @@
+             command_buffer.present_drawable(drawable);
+             command_buffer.commit();
+         }
++        gpui::frame_trace::emit(trace_id, "compose_submitted", &[]);
+     }
+
+     fn render_frame(
+@@ -683,12 +878,33 @@
+     /// inspected.
+     #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
+     pub fn render_scene(&mut self, scene: &Scene, size: Size<DevicePixels>) -> Result<()> {
++        self.submit_scene_for_benchmark(scene, size).map(|_| ())
++    }
++
++    /// Submit a headless frame and return its command for GPU timing/completion.
++    /// Reuse targets at the same size, as a window does between resize events.
++    /// The caller must wait before reusing mutable producer textures or buffers.
++    #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
++    pub fn submit_scene_for_benchmark(
++        &mut self,
++        scene: &Scene,
++        size: Size<DevicePixels>,
++    ) -> Result<metal::CommandBuffer> {
+         if size.width.0 <= 0 || size.height.0 <= 0 {
+             anyhow::bail!("Invalid size for render_scene: {:?}", size);
+         }
+
+         objc2::rc::autoreleasepool(|_| {
+-            self.update_path_intermediate_textures(size);
++            if self
++                .path_intermediate_texture
++                .as_ref()
++                .is_none_or(|texture| {
++                    texture.width() != size.width.0 as u64
++                        || texture.height() != size.height.0 as u64
++                })
++            {
++                self.update_path_intermediate_textures(size);
++            }
+
+             let needs_new_target = self.headless_render_target.as_ref().is_none_or(|texture| {
+                 texture.width() != size.width.0 as u64 || texture.height() != size.height.0 as u64
+@@ -714,7 +930,7 @@
+             // Commit without waiting, mirroring presentation to a real window where
+             // the CPU doesn't block on the GPU.
+             command_buffer.commit();
+-            Ok(())
++            Ok(command_buffer)
+         })
+     }
+
+@@ -1239,7 +1455,34 @@
+         );
+
+         for (index, surface) in surfaces.iter().enumerate() {
+-            let image_buffer = &surface.image_buffer;
++            if let gpui::SurfaceSource::MetalTexture(texture) = &surface.source {
++                assert!(
++                    std::ptr::eq(texture.device(), self.device.as_ref()),
++                    "Metal surface device mismatch"
++                );
++                assert!(texture.usage().contains(metal::MTLTextureUsage::ShaderRead));
++                command_encoder.set_render_pipeline_state(&self.rgba_surfaces_pipeline_state);
++                command_encoder
++                    .set_fragment_texture(SurfaceInputIndex::YTexture as u64, Some(texture));
++                command_encoder.set_fragment_bytes(
++                    0,
++                    mem::size_of::<f32>() as u64,
++                    &surface.opacity as *const f32 as *const _,
++                );
++                command_encoder.draw_primitives_instanced_base_instance(
++                    metal::MTLPrimitiveType::Triangle,
++                    0,
++                    6,
++                    1,
++                    (first_surface + index) as u64,
++                );
++                continue;
++            }
++            command_encoder.set_render_pipeline_state(&self.surfaces_pipeline_state);
++            let gpui::SurfaceSource::Surface(image_buffer) = &surface.source else {
++                unreachable!("MetalTexture was handled above");
++            };
++
+             let texture_size = size(
+                 DevicePixels::from(CVPixelBufferGetWidth(image_buffer) as i32),
+                 DevicePixels::from(CVPixelBufferGetHeight(image_buffer) as i32),
+@@ -1396,6 +1639,12 @@
+     color_attachment.set_destination_rgb_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
+     color_attachment.set_destination_alpha_blend_factor(metal::MTLBlendFactor::One);
+
++    if fragment_fn_name == "rgba_surface_fragment" {
++        color_attachment.set_source_rgb_blend_factor(metal::MTLBlendFactor::One);
++        color_attachment
++            .set_destination_alpha_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
++    }
++
+     device
+         .new_render_pipeline_state(&descriptor)
+         .expect("could not create render pipeline state")
+@@ -1709,6 +1958,10 @@
+
+ #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
+ impl gpui::PlatformHeadlessRenderer for MetalHeadlessRenderer {
++    fn metal_context(&self) -> Option<gpui::SharedMetalContext> {
++        Some(self.renderer.shared_metal_context())
++    }
++
+     fn render_scene_to_image(
+         &mut self,
+         scene: &Scene,
+--- a/vendor/gpui-fast-apple/src/shaders.metal
++++ b/vendor/gpui-fast-apple/src/shaders.metal
+@@ -1278,3 +1278,11 @@
+
+   return color;
+ }
++
++// Kasane supplies premultiplied color; do not multiply its alpha a second time.
++fragment float4 rgba_surface_fragment(SurfaceFragmentInput input [[stage_in]],
++    texture2d<float> source [[texture(SurfaceInputIndex_YTexture)]],
++    constant float &opacity [[buffer(0)]]) {
++  constexpr sampler s(mag_filter::linear, min_filter::linear);
++  return source.sample(s, input.texture_position) * opacity;
++}

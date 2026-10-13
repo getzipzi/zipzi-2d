@@ -30,7 +30,7 @@ libc = "0.2"
 [dev-dependencies]
 kasane-sdk-observe = { path = "../../../kasane-2d/modules/kasane-sdk-observe" }
 gpui-kit = { workspace = true, features = ["test-support"] }
-gpui-apple = { package = "gpui-pre-apple", version = "=0.3.6", features = ["test-support"] }
+gpui-apple = { package = "gpui-fast-apple", version = "=0.1.7", features = ["test-support"] }
 kasane-core.workspace = true
 tempfile.workspace = true
 uuid.workspace = true
