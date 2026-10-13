@@ -123,7 +123,11 @@ Playback never writes authoring preview values or history.
 
 `MotionPreview::advance_to_with_progress(target_time, progress)` advances on the
 same absolute 60 Hz grid as canonical `seek`. It reuses completed full steps;
-backward targets and noncanonical current states use transactional seek.
+a fractional display sample retains the preceding full state so the next
+sample resumes without accumulating partial physics steps. Backward targets and
+arbitrary `advance` states use transactional seek. This permits display-rate
+sampling (for example 120 Hz) with results identical to canonical seek. One
+transient full state is retained outside the seek-checkpoint budget.
 Cancellation during incremental advance retains completed full steps, allowing
 a newer target to resume; discard cancelled results. In contrast,
 `seek_with_progress` preserves the entire prior state on cancellation. Both

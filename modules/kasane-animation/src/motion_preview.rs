@@ -130,6 +130,8 @@ pub struct MotionPreview {
     // API and Send + Sync while independent previews use independent workspaces.
     geometry: Mutex<GeometryWorkspace>,
     canonical_step: Option<u32>,
+    // Full simulation state before a presentation-only fractional tail.
+    fractional_base: Option<Checkpoint>,
 }
 
 impl MotionPreview {
@@ -167,6 +169,7 @@ impl MotionPreview {
             source_identity: None,
             geometry: Mutex::default(),
             canonical_step: None,
+            fractional_base: None,
             cache: SeekCache::default(),
             operation: MotionOperation {
                 preview_id: uuid::Uuid::new_v4().to_string(),
@@ -219,6 +222,7 @@ impl MotionPreview {
     }
 
     fn commit_operation(&mut self, kind: MotionOperationKind) {
+        self.fractional_base = None;
         self.operation.sequence += 1;
         self.operation.kind = kind;
         self.operation.actual_time = self.snapshot.time;
@@ -531,9 +535,13 @@ impl MotionPreview {
             return Err(AnimationError::SeekCancelled);
         }
         steps.resume_after(start);
+        let mut fractional_base = None;
         for (index, next) in steps.enumerate() {
-            candidate.advance((next - candidate.snapshot.time).max(0.0))?;
             let step = start + index as u32 + 1;
+            if next > 0.0 && next != step as f32 / 60.0 {
+                fractional_base = Some(candidate.checkpoint(step - 1));
+            }
+            candidate.advance((next - candidate.snapshot.time).max(0.0))?;
             // Never retain partial tail steps, seek(0), or arbitrary advance state.
             if step.is_multiple_of(60) && next == step as f32 / 60.0 {
                 cache.insert(candidate.checkpoint_bytes(), || Checkpoint {
@@ -556,12 +564,14 @@ impl MotionPreview {
         candidate.commit_operation(MotionOperationKind::Seek {
             requested_time: time,
         });
+        candidate.fractional_base = fractional_base;
         *self = candidate;
         Ok(&self.snapshot)
     }
 
     /// Advance on the same absolute 60 Hz grid as canonical seek, reusing the
-    /// current simulation when it is a canonical full step. Partial/backward
+    /// current simulation or the full step retained before a fractional sample.
+    /// Fractional tails never feed into subsequent simulation steps. Backward
     /// targets fall back to transactional seek. No UI frame delta enters physics.
     /// Cancellation retains completed canonical steps; callers should discard
     /// the cancelled result and may resume toward a newer target.
@@ -571,23 +581,56 @@ impl MotionPreview {
         mut progress: impl FnMut(u32, u32) -> bool,
     ) -> Result<&MotionSnapshot, AnimationError> {
         let mut steps = crate::replay::ReplaySteps::new(time)?;
-        let Some(start) = self.canonical_step.filter(|_| time >= self.snapshot.time) else {
+        let Some(start) = self
+            .canonical_step
+            .or_else(|| self.fractional_base.as_ref().map(|base| base.step))
+            .filter(|_| time >= self.snapshot.time)
+        else {
             return self.seek_with_progress(time, progress);
         };
         let total = steps.total() - start;
         if !progress(0, total) {
             return Err(AnimationError::SeekCancelled);
         }
+        if let Some(base) = self.fractional_base.take() {
+            self.restore_checkpoint(base);
+        }
         steps.resume_after(start);
         for (index, next) in steps.enumerate() {
-            self.advance((next - self.snapshot.time).max(0.0))?;
             let step = start + index as u32 + 1;
+            let fractional_base = (next != step as f32 / 60.0).then(|| self.checkpoint(step - 1));
+            self.advance((next - self.snapshot.time).max(0.0))?;
             self.canonical_step = (next == step as f32 / 60.0).then_some(step);
+            self.fractional_base = fractional_base;
             if !progress(step - start, total) {
+                if let Some(base) = self.fractional_base.take() {
+                    self.restore_checkpoint(base);
+                }
                 return Err(AnimationError::SeekCancelled);
             }
         }
         Ok(&self.snapshot)
+    }
+
+    fn checkpoint(&self, step: u32) -> Checkpoint {
+        Checkpoint {
+            step,
+            snapshot: self.snapshot.clone(),
+            motion: self.motion.clone(),
+            expressions: self.expressions.clone(),
+            physics: self.physics.clone(),
+            pose: self.pose.clone(),
+        }
+    }
+
+    fn restore_checkpoint(&mut self, state: Checkpoint) {
+        self.snapshot = state.snapshot;
+        self.motion = state.motion;
+        self.expressions = state.expressions;
+        self.physics = state.physics;
+        self.pose = state.pose;
+        self.canonical_step = Some(state.step);
+        self.operation.actual_time = self.snapshot.time;
     }
 
     /// Evaluate geometry and multiply each drawable by its ancestor Part opacities.

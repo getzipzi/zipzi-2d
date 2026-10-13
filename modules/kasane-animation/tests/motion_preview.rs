@@ -850,3 +850,62 @@ fn canonical_playback_cancellation_resumes_without_skipping_simulation_steps() {
         cold.seek(5.).unwrap()
     );
 }
+
+#[test]
+fn display_samples_reuse_full_steps_and_match_cold_seek() {
+    for hz in [75, 120, 144] {
+        let mut live = combined_cache_preview();
+        let mut cold = combined_cache_preview();
+        live.set_seek_cache_budget(0);
+        cold.set_seek_cache_budget(0);
+        for frame in 1..=hz * 3 {
+            let time = frame as f32 / hz as f32;
+            let mut steps = 0;
+            let actual = live
+                .advance_to_with_progress(time, |_, total| {
+                    steps = total;
+                    true
+                })
+                .unwrap();
+            assert_eq!(actual, cold.seek(time).unwrap(), "{hz} Hz frame {frame}");
+            assert!(steps <= 2, "{hz} Hz frame {frame} replayed {steps} steps");
+        }
+        // A fractional seek can also resume without replaying old history.
+        live.seek(1.007).unwrap();
+        assert_eq!(
+            live.advance_to_with_progress(1.014, |_, total| {
+                assert_eq!(total, 1);
+                true
+            })
+            .unwrap(),
+            cold.seek(1.014).unwrap()
+        );
+    }
+}
+
+#[test]
+fn fractional_sampling_cancellation_and_schedule_changes_preserve_canonical_history() {
+    let mut live = combined_cache_preview();
+    let mut cold = combined_cache_preview();
+    live.advance_to_with_progress(1.007, |_, _| true).unwrap();
+    let before = live.snapshot().clone();
+    assert!(live.advance_to_with_progress(1.01, |_, _| false).is_err());
+    assert_eq!(live.snapshot(), &before);
+    assert!(live
+        .advance_to_with_progress(1.025, |done, total| done < total)
+        .is_err());
+    assert_eq!(live.snapshot(), cold.seek(61. / 60.).unwrap());
+    assert_eq!(
+        live.advance_to_with_progress(1.033, |_, _| true).unwrap(),
+        cold.seek(1.033).unwrap()
+    );
+    let expression = "00000000-0000-4000-8000-000000000e06";
+    live.schedule_expression(expression, 1.033).unwrap();
+    cold.schedule_expression(expression, 1.033).unwrap();
+    for time in [1.04, 1.05, 0.007, 0.014, 0., 0.008, 0.02] {
+        assert_eq!(
+            live.advance_to_with_progress(time, |_, _| true).unwrap(),
+            cold.seek(time).unwrap()
+        );
+    }
+}
