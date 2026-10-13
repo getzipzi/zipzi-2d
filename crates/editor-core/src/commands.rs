@@ -306,6 +306,13 @@ impl Editor {
     }
     pub fn command_available(&self, command: Command) -> bool {
         use CommandId::*;
+        if crate::PANELS
+            .iter()
+            .any(|spec| spec.command == Some(command.id))
+        {
+            return !self.exiting()
+                && crate::PanelKind::for_command(command.id, self.workspace()).is_some();
+        }
         let target = command.document.is_some() && command.document == self.active_id();
         let modeling = self.workspace() == crate::WorkspaceKind::Modeling;
         match command.id {
@@ -329,13 +336,10 @@ impl Editor {
                         .animation()
                         .is_some_and(|a| a.expression.is_some() || !a.expressions.is_empty())
             }
-            AnimationInfo | AnimationParameters => !modeling,
-            Motions | Expressions => true,
+
             New | Open | ImportModel3 | ImportPsd => !self.exiting(),
             Quit => true,
             Previous | Next => self.document_count() > 1,
-            MeshTree | Deformers | Parameters | Properties | DrawOrder | Relations | Keyforms
-            | BlendShapes | Glue | Physics | Pose | Resources => modeling,
             ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
             Save | SaveAs => target && !self.is_busy(),

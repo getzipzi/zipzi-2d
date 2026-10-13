@@ -60,7 +60,7 @@ pub fn recent_file_label(path: &Path, all_paths: &[PathBuf]) -> String {
         title
     }
 }
-/// View controls the canvas and presentation; Window owns panels and layout.
+/// View controls the canvas and presentation; Window owns navigation and layout recovery.
 fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
     Menu::new(t!("menu.view")).items([
         item(CommandId::ModelingWorkspace),
@@ -213,25 +213,11 @@ impl EditorView {
             ])),
             view_menu(item),
             Menu::new(t!("menu.window")).items([
-                item(CommandId::MeshTree),
-                item(CommandId::Deformers),
-                item(CommandId::DrawOrder),
-                item(CommandId::Properties),
-                item(CommandId::Relations),
-                item(CommandId::Parameters),
-                item(CommandId::Keyforms),
-                item(CommandId::BlendShapes),
-                item(CommandId::Glue),
-                item(CommandId::Motions),
-                item(CommandId::AnimationInfo),
-                item(CommandId::AnimationParameters),
-                item(CommandId::Expressions),
-                item(CommandId::Physics),
-                item(CommandId::Pose),
-                item(CommandId::Resources),
                 item(CommandId::ResetLayout),
+                MenuItem::separator(),
                 item(CommandId::Previous),
                 item(CommandId::Next),
+                MenuItem::separator(),
                 MenuItem::action(t!("menu.minimize"), Minimize),
                 MenuItem::action(t!("menu.zoom_window"), ZoomWindow),
             ]),

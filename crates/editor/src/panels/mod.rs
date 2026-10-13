@@ -1,4 +1,5 @@
 pub mod deformer_tree;
+mod group_header;
 mod hierarchy_tree;
 pub mod mesh_tree;
 pub mod parameters;

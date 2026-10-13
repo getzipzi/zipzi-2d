@@ -22,6 +22,15 @@ To explore the UI components:
 cargo run --locked -p component-playground
 ```
 
+Animation uses its own panel set. Properties shows the selected motion and
+expression definitions; Preview Info shows playback status, events and diagnostics.
+Add Preview Parameters, Physics or Pose from a panel's `⋯` menu to inspect values
+from the displayed frame. Physics shows final parameter values, including motion
+and expression effects. These inspectors are read-only and do not change Modeling
+state. Existing saved layouts keep their arrangement; add Properties from `⋯` or
+use Window → Reset Layout (also in the workspace `⋯` menu) to load the default
+arrangement. Layout recovery remains available when all panels have been closed.
+
 ## Develop
 
 Install `watchexec`, then rebuild and restart automatically when source files change:

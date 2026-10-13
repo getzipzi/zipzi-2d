@@ -1,4 +1,6 @@
 //! Playback projections. These controls never edit the authoring document.
+mod inspectors;
+mod resources;
 use crate::{EditorView, t};
 use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable, WindowExt,
@@ -14,6 +16,9 @@ pub enum AnimationPanelKind {
     Expressions,
     Info,
     Parameters,
+    Properties,
+    Physics,
+    Pose,
 }
 impl AnimationPanelKind {
     pub fn name(self) -> &'static str {
@@ -22,6 +27,9 @@ impl AnimationPanelKind {
             Self::Expressions => "AnimationExpressions",
             Self::Info => "AnimationInfo",
             Self::Parameters => "AnimationParameters",
+            Self::Properties => "AnimationProperties",
+            Self::Physics => "AnimationPhysics",
+            Self::Pose => "AnimationPose",
         }
     }
     fn label(self) -> &'static str {
@@ -30,6 +38,9 @@ impl AnimationPanelKind {
             Self::Expressions => "editor.expressions",
             Self::Info => "workspace.info",
             Self::Parameters => "workspace.parameters",
+            Self::Properties => "editor.properties",
+            Self::Physics => "editor.physics",
+            Self::Pose => "editor.pose",
         }
     }
 }
@@ -38,14 +49,17 @@ pub struct AnimationPanel {
     kind: AnimationPanelKind,
     focus: FocusHandle,
     _observe: Subscription,
+    resources: resources::ResourceList,
 }
 impl AnimationPanel {
     pub fn new(
         owner: WeakEntity<EditorView>,
         kind: AnimationPanelKind,
+        window: &mut Window,
         cx: &mut App,
     ) -> Entity<Self> {
         cx.new(|cx| Self {
+            resources: resources::ResourceList::new(kind, window, cx),
             _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
             owner,
             kind,
@@ -68,12 +82,25 @@ impl BasePanel for AnimationPanel {
     }
 }
 impl Panel for AnimationPanel {
+    fn inner_padding(&self, _: &App) -> bool {
+        !matches!(
+            self.kind,
+            AnimationPanelKind::Motions | AnimationPanelKind::Expressions
+        )
+    }
+
     fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         t!(self.kind.label()).into_owned()
     }
 }
 impl Render for AnimationPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if matches!(
+            self.kind,
+            AnimationPanelKind::Motions | AnimationPanelKind::Expressions
+        ) {
+            return self.render_resources(window, cx);
+        }
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
@@ -82,15 +109,12 @@ impl Render for AnimationPanel {
         let Some(document) = state.editor.document() else {
             return div().p_3().child(t!("editor.welcome")).into_any_element();
         };
-        let id = state.editor.active_id().unwrap();
         let animation = state.editor.animation().unwrap();
         let catalog = document.animation_catalog();
         let resources = &catalog.motions;
         let snapshot = state.displayed_animation();
         let mut content = div()
             .id(self.kind.name())
-            .test_support()
-            .track_focus(&self.focus)
             .key_context("KasaneDocument")
             .size_full()
             .overflow_y_scroll()
@@ -100,132 +124,16 @@ impl Render for AnimationPanel {
             .gap_2()
             .text_xs();
         match self.kind {
-            AnimationPanelKind::Expressions => {
-                let expressions = &catalog.expressions;
-                if expressions.is_empty() {
-                    content = content.child(t!("workspace.no_expressions"));
-                }
-                for (index, resource) in expressions.iter().enumerate() {
-                    let selected = animation.expression.as_ref() == Some(&resource.id);
-                    let expression = resource.id.clone();
-                    let valid = resource.unresolved_targets.is_empty();
-                    let hint = expression_info(resource);
-                    let owner = self.owner.clone();
-                    content = content.child(
-                        div()
-                            .id(("animation-expression", index))
-                            .test_support()
-                            .px_2()
-                            .py_1()
-                            .rounded_md()
-                            .when(selected, |e| e.bg(cx.theme().accent))
-                            .when(valid, |e| e.cursor_pointer())
-                            .when(!valid, |e| e.text_color(cx.theme().muted_foreground))
-                            .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
-                            .child(resource.name.clone())
-                            .on_click(move |_, window, cx| {
-                                if !valid || window.has_active_dialog(cx) {
-                                    return;
-                                }
-                                let _ = owner.update(cx, |owner, cx| {
-                                    if owner.modal {
-                                        return;
-                                    }
-                                    let result =
-                                        owner.editor.select_expression(id, expression.clone());
-                                    owner.animation_anchor = None;
-                                    owner.complete_edit(result, cx);
-                                });
-                            }),
-                    );
-                    if !resource.unresolved_targets.is_empty() {
-                        content =
-                            content.child(div().text_color(cx.theme().danger).child(format!(
-                                "{}: {}",
-                                t!("workspace.unresolved_targets"),
-                                resource.unresolved_targets.join(", ")
-                            )));
-                    }
-                }
-                let command = editor_core::CommandId::ClearExpression;
-                let owner = self.owner.clone();
-                content = content.child(
-                    Button::new("animation-clear-expression")
-                        .small()
-                        .ghost()
-                        .label(t!("workspace.clear_expression"))
-                        .tooltip(t!("workspace.clear_hint"))
-                        .disabled(
-                            state.modal
-                                || dialog
-                                || !state
-                                    .editor
-                                    .command_available(state.editor.command(command)),
-                        )
-                        .on_click(move |_, window, cx| {
-                            let _ = owner
-                                .update(cx, |owner, cx| owner.run_command(command, window, cx));
-                        }),
-                );
+            AnimationPanelKind::Expressions | AnimationPanelKind::Motions => unreachable!(),
+            AnimationPanelKind::Properties => {
+                content =
+                    inspectors::properties(content.gap_1(), document, animation, &catalog, cx);
             }
-            AnimationPanelKind::Motions => {
-                if resources.is_empty() {
-                    content = content.child(t!("workspace.no_motions"));
-                }
-                let mut previous_group: Option<Option<&str>> = None;
-                for (index, resource) in resources.iter().enumerate() {
-                    let group = resource
-                        .selection
-                        .entry
-                        .as_ref()
-                        .map(|(name, _)| name.as_str());
-                    if previous_group != Some(group) {
-                        let label = match group {
-                            None => t!("workspace.ungrouped").into_owned(),
-                            Some("") => t!("workspace.unnamed_group").into_owned(),
-                            Some(name) => name.to_string(),
-                        };
-                        content = content.child(
-                            div()
-                                .mt_2()
-                                .text_color(cx.theme().muted_foreground)
-                                .child(label),
-                        );
-                        previous_group = Some(group);
-                    }
-                    let selected = animation.motion.as_ref() == Some(&resource.selection);
-                    let selection = resource.selection.clone();
-                    let hint = motion_info(resource).join(" · ");
-                    let owner = self.owner.clone();
-                    content = content.child(
-                        div()
-                            .id(("animation-motion", index))
-                            .test_support()
-                            .px_2()
-                            .py_1()
-                            .rounded_md()
-                            .when(selected, |e| e.bg(cx.theme().accent))
-                            .cursor_pointer()
-                            .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
-                            .child(resource.selection.entry.as_ref().map_or_else(
-                                || resource.name.clone(),
-                                |(_, entry)| format!("{} · {}", entry + 1, resource.name),
-                            ))
-                            .on_click(move |_, window, cx| {
-                                if window.has_active_dialog(cx) {
-                                    return;
-                                }
-                                let _ = owner.update(cx, |owner, cx| {
-                                    if owner.modal {
-                                        return;
-                                    }
-                                    let result = owner.editor.select_motion(id, selection.clone());
-                                    owner.animation_anchor = None;
-                                    owner.complete_edit(result, cx);
-                                });
-                            }),
-                    );
-                }
+            AnimationPanelKind::Physics => {
+                content = inspectors::physics(content.gap_1(), document, snapshot, cx);
+            }
+            AnimationPanelKind::Pose => {
+                content = inspectors::pose(content.gap_1(), document, snapshot, cx);
             }
             AnimationPanelKind::Info => {
                 let status = if animation.error.is_some() {
@@ -238,6 +146,50 @@ impl Render for AnimationPanel {
                     t!("workspace.paused")
                 };
                 content = content.child(div().id("animation-status").test_support().child(status));
+                let panel_owner = self.owner.clone();
+                content = content.child(
+                    Button::new("animation-open-parameters")
+                        .small()
+                        .ghost()
+                        .label(t!("workspace.parameters"))
+                        .tooltip(t!("workspace.parameters_hint"))
+                        .disabled(state.modal || dialog)
+                        .on_click(move |_, window, cx| {
+                            let _ = panel_owner.update(cx, |owner, cx| {
+                                if !owner.modal && !window.has_active_dialog(cx) {
+                                    if let Some(dock) = &owner.dock {
+                                        dock.show(
+                                            editor_core::PanelKind::AnimationParameters,
+                                            None,
+                                            window,
+                                            cx,
+                                        );
+                                    }
+                                    cx.notify();
+                                }
+                            });
+                        }),
+                );
+                let command = editor_core::CommandId::ResetAnimation;
+                let owner = self.owner.clone();
+                content = content.child(
+                    Button::new("animation-reset")
+                        .small()
+                        .ghost()
+                        .label(t!("workspace.reset_preview"))
+                        .tooltip(t!("workspace.reset_hint"))
+                        .disabled(
+                            state.modal
+                                || dialog
+                                || !state
+                                    .editor
+                                    .command_available(state.editor.command(command)),
+                        )
+                        .on_click(move |_, window, cx| {
+                            let _ = owner
+                                .update(cx, |owner, cx| owner.run_command(command, window, cx));
+                        }),
+                );
                 if let Some(error) = &animation.error {
                     content = content.child(
                         div()
@@ -268,9 +220,7 @@ impl Render for AnimationPanel {
                     .iter()
                     .find(|r| animation.motion.as_ref() == Some(&r.selection))
                 {
-                    content = content
-                        .child(resource.name.clone())
-                        .children(motion_info(resource));
+                    content = content.child(resource.name.clone());
                     if !resource.playable() {
                         content = content.child(t!("workspace.invalid_duration"));
                     }
@@ -292,13 +242,6 @@ impl Render for AnimationPanel {
                         .as_ref()
                         .map_or_else(|| t!("workspace.none").into_owned(), |id| name(id))
                 ));
-                if let Some(resource) = catalog
-                    .expressions
-                    .iter()
-                    .find(|r| animation.expression.as_ref() == Some(&r.id))
-                {
-                    content = content.child(expression_info(resource));
-                }
                 if let Some(snapshot) = snapshot {
                     content = content.child(format!(
                         "{}: {}",
@@ -347,44 +290,6 @@ impl Render for AnimationPanel {
                         );
                     }
                 }
-                let panel_owner = self.owner.clone();
-                content = content.child(
-                    Button::new("animation-open-parameters")
-                        .small()
-                        .ghost()
-                        .label(t!("workspace.parameters"))
-                        .tooltip(t!("workspace.parameters_hint"))
-                        .disabled(state.modal || dialog)
-                        .on_click(move |_, window, cx| {
-                            let _ = panel_owner.update(cx, |owner, cx| {
-                                owner.run_command(
-                                    editor_core::CommandId::AnimationParameters,
-                                    window,
-                                    cx,
-                                )
-                            });
-                        }),
-                );
-                let command = editor_core::CommandId::ResetAnimation;
-                let owner = self.owner.clone();
-                content = content.child(
-                    Button::new("animation-reset")
-                        .small()
-                        .ghost()
-                        .label(t!("workspace.reset_preview"))
-                        .tooltip(t!("workspace.reset_hint"))
-                        .disabled(
-                            state.modal
-                                || dialog
-                                || !state
-                                    .editor
-                                    .command_available(state.editor.command(command)),
-                        )
-                        .on_click(move |_, window, cx| {
-                            let _ = owner
-                                .update(cx, |owner, cx| owner.run_command(command, window, cx));
-                        }),
-                );
             }
             AnimationPanelKind::Parameters => {
                 content = content.child(t!("workspace.parameters_hint"));
@@ -428,7 +333,10 @@ impl Render for AnimationPanel {
                 }
             }
         }
-        content.into_any_element()
+        content
+            .test_support()
+            .track_focus(&self.focus)
+            .into_any_element()
     }
 }
 

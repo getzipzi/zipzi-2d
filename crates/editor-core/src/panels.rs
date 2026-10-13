@@ -1,0 +1,80 @@
+//! Workspace panel catalog shared by commands, menus, layout defaults and validation.
+use crate::{CommandId, WorkspaceKind};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PanelRegion {
+    Center,
+    Left,
+    Right,
+    Bottom,
+}
+
+pub struct PanelSpec {
+    pub kind: PanelKind,
+    pub name: &'static str,
+    pub command: Option<CommandId>,
+    pub workspace: Option<WorkspaceKind>,
+    pub region: PanelRegion,
+    pub group: usize,
+    pub default_visible: bool,
+}
+
+macro_rules! panels {
+    ($(($kind:ident, $command:expr, $workspace:expr, $region:ident, $group:expr, $visible:expr)),* $(,)?) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+        pub enum PanelKind { $($kind),* }
+        pub const PANELS: &[PanelSpec] = &[$(PanelSpec {
+            kind: PanelKind::$kind, name: stringify!($kind), command: $command,
+            workspace: $workspace, region: PanelRegion::$region, group: $group,
+            default_visible: $visible,
+        }),*];
+    };
+}
+use CommandId as C;
+use WorkspaceKind::{Animation, Modeling};
+panels! {
+    (Canvas, None, None, Center, 0, true),
+    (MeshTree, Some(C::MeshTree), Some(Modeling), Left, 0, true),
+    (DrawOrder, Some(C::DrawOrder), Some(Modeling), Left, 0, true),
+    (Deformers, Some(C::Deformers), Some(Modeling), Left, 1, true),
+    (Properties, Some(C::Properties), Some(Modeling), Right, 0, true),
+    (Relations, Some(C::Relations), Some(Modeling), Right, 0, true),
+    (Parameters, Some(C::Parameters), Some(Modeling), Right, 1, true),
+    (Keyforms, Some(C::Keyforms), Some(Modeling), Bottom, 0, false),
+    (BlendShapes, Some(C::BlendShapes), Some(Modeling), Right, 0, false),
+    (Glue, Some(C::Glue), Some(Modeling), Right, 0, false),
+    (Motions, Some(C::Motions), Some(Modeling), Right, 0, false),
+    (Expressions, Some(C::Expressions), Some(Modeling), Right, 0, false),
+    (Physics, Some(C::Physics), Some(Modeling), Right, 0, false),
+    (Pose, Some(C::Pose), Some(Modeling), Right, 0, false),
+    (Resources, Some(C::Resources), Some(Modeling), Right, 0, false),
+    (AnimationMotions, Some(C::Motions), Some(Animation), Left, 0, true),
+    (AnimationExpressions, Some(C::Expressions), Some(Animation), Left, 1, true),
+    (AnimationProperties, Some(C::Properties), Some(Animation), Right, 0, true),
+    (AnimationInfo, Some(C::AnimationInfo), Some(Animation), Right, 1, true),
+    (AnimationParameters, Some(C::AnimationParameters), Some(Animation), Right, 1, false),
+    (AnimationPhysics, Some(C::Physics), Some(Animation), Right, 1, false),
+    (AnimationPose, Some(C::Pose), Some(Animation), Right, 1, false),
+}
+impl PanelSpec {
+    pub fn available(&self, workspace: WorkspaceKind) -> bool {
+        self.workspace.is_none_or(|kind| kind == workspace)
+    }
+}
+impl PanelKind {
+    pub fn spec(self) -> &'static PanelSpec {
+        PANELS.iter().find(|spec| spec.kind == self).unwrap()
+    }
+    pub fn from_name(name: &str) -> Option<Self> {
+        PANELS
+            .iter()
+            .find(|spec| spec.name == name)
+            .map(|spec| spec.kind)
+    }
+    pub fn for_command(command: CommandId, workspace: WorkspaceKind) -> Option<Self> {
+        PANELS
+            .iter()
+            .find(|spec| spec.command == Some(command) && spec.available(workspace))
+            .map(|spec| spec.kind)
+    }
+}

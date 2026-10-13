@@ -223,6 +223,27 @@ impl AnimationCatalog {
     }
 }
 impl Document {
+    /// Borrow resource definitions for read-only inspection without exposing the
+    /// authoring model or copying motion curves on each preview frame.
+    pub fn motion_definition(&self, id: &str) -> Option<&kasane_core::document::MotionClip> {
+        self.model().get_motion(id)
+    }
+
+    pub fn expression_definition(
+        &self,
+        id: &str,
+    ) -> Option<&kasane_core::document::ExpressionAsset> {
+        self.model().get_expression(id)
+    }
+
+    pub fn physics_definition(&self) -> Option<&kasane_core::document::PhysicsAsset> {
+        self.model().physics()
+    }
+
+    pub fn pose_definition(&self) -> Option<&kasane_core::document::PoseAsset> {
+        self.model().pose()
+    }
+
     pub fn animation_catalog(&self) -> Arc<AnimationCatalog> {
         let generation = self.model_generation();
         let mut cache = self.animation_catalog.lock().unwrap();

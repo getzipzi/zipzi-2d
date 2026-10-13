@@ -46,6 +46,14 @@ fn wheel_zoom_interpolates_proportionally_and_keeps_anchor_on_every_frame(cx: &m
     use std::{cell::Cell, rc::Rc};
 
     let harness = setup(cx);
+    // Popup triggers measure their anchor during the first render and request
+    // a follow-up frame, even while closed. Deliver that initialization before
+    // observing navigation so it cannot be mistaken for a wheel-zoom update.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.simulate_next_frame(cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
     let notifications = Rc::new(Cell::new(0));
     let count = notifications.clone();
     let _observe =
@@ -73,6 +81,11 @@ fn wheel_zoom_interpolates_proportionally_and_keeps_anchor_on_every_frame(cx: &m
         let mut previous = initial;
         for _ in 0..4 {
             advance_zoom(&harness, cx, 20);
+            assert_eq!(
+                notifications.get(),
+                0,
+                "zoom frames must not notify document observers"
+            );
             harness.view.update(cx, |view, _| {
                 let zoom = view.editor.view().zoom;
                 assert!(zoom > previous && zoom <= initial * 1.1 + 1e-5);

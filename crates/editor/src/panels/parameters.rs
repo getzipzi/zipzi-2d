@@ -9,6 +9,7 @@ mod track;
 use grouping::{ListRow, ParameterLayout};
 use track::parameter_track;
 
+use super::group_header;
 use super::sorting::{self, SortItem, SortState};
 use super::toolbar::PanelToolbar;
 use crate::ui::slide_number_input::{SlideNumberChange, SlideNumberInput, SlideNumberOptions};
@@ -17,7 +18,7 @@ use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
 use gpui_kit::assets::IconName;
 use gpui_kit::base::{Slider as BaseSlider, SliderIndicator};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Icon, Sizable, WindowExt,
+    ActiveTheme, Disableable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
     input::{Input, InputEvent, InputState},
@@ -28,7 +29,7 @@ use gpui_kit::{prelude::*, *};
 use std::collections::{HashMap, HashSet};
 
 // Group headers and parameter rows share the uniform list's measured height.
-const PARAMETER_ROW_HEIGHT: f32 = 26.;
+const PARAMETER_ROW_HEIGHT: f32 = group_header::GROUP_ROW_HEIGHT;
 // All numeric fields cover their complete range over the same drag distance.
 const PARAMETER_SLIDE_DISTANCE_PX: f64 = 400.;
 // Keep the binding summary available while temporarily hiding it from the panel.
@@ -742,7 +743,6 @@ impl ParametersPanel {
         let group = id.clone();
         let owner = self.owner.clone();
         let document_id = self.document_id;
-        let theme = cx.theme().clone();
         let panel = cx.weak_entity();
         let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
             if let SortItem::Group(group) = item {
@@ -782,77 +782,29 @@ impl ParametersPanel {
             .role(gpui::Role::Group)
             .aria_label(name.clone())
             .aria_expanded(expanded)
-            .flex()
-            .items_center()
-            .w_full()
-            .h(px(PARAMETER_ROW_HEIGHT))
-            .pr_2()
-            .border_b_1()
-            .border_color(theme.border)
-            .bg(theme.muted.opacity(if depth == 0 { 0.6 } else { 0.3 }))
+            .map(|element| group_header::row_style(element, depth, cx))
             .child(
-                Button::new(SharedString::from(format!("parameter-group-toggle-{key}")))
-                    .ghost()
-                    .small()
-                    .flex_1()
-                    .min_w_0()
-                    .h_full()
-                    .px_3()
-                    .pl(px(12. + depth.min(6) as f32 * 12.))
-                    .justify_start()
-                    .accessibility_label(name.clone())
-                    .disabled(disabled)
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        if !this.slider_interaction_allowed(window, cx) {
-                            return;
-                        }
-                        this.finish_slider_drag(cx);
-                        if !this.collapsed_groups.remove(&group) {
-                            this.collapsed_groups.insert(group.clone());
-                        }
-                        this.refresh_visible_rows(cx);
-                        cx.notify();
-                    }))
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap_2()
-                            .w_full()
-                            .min_w_0()
-                            .child(
-                                Icon::new(if expanded {
-                                    IconName::ChevronDown
-                                } else {
-                                    IconName::ChevronRight
-                                })
-                                .small()
-                                .text_color(theme.muted_foreground),
-                            )
-                            .child(
-                                Icon::new(IconName::Folder)
-                                    .small()
-                                    .text_color(theme.muted_foreground),
-                            )
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .text_ellipsis()
-                                    .text_xs()
-                                    .font_weight(FontWeight::SEMIBOLD)
-                                    .child(name),
-                            )
-                            .child(
-                                div()
-                                    .id(SharedString::from(format!("parameter-group-count-{key}")))
-                                    .test_support()
-                                    .aria_value(count.to_string())
-                                    .text_xs()
-                                    .text_color(theme.muted_foreground)
-                                    .child(count.to_string()),
-                            ),
-                    ),
+                group_header::toggle(
+                    SharedString::from(format!("parameter-group-toggle-{key}")),
+                    SharedString::from(format!("parameter-group-count-{key}")),
+                    name,
+                    count,
+                    expanded,
+                    depth,
+                    cx,
+                )
+                .disabled(disabled)
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    if !this.slider_interaction_allowed(window, cx) {
+                        return;
+                    }
+                    this.finish_slider_drag(cx);
+                    if !this.collapsed_groups.remove(&group) {
+                        this.collapsed_groups.insert(group.clone());
+                    }
+                    this.refresh_visible_rows(cx);
+                    cx.notify();
+                })),
             )
             .when_some(id, |header, id| {
                 header.child(

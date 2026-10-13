@@ -1,6 +1,7 @@
 //! Editor UI integration tests using GPUI's headless window.
 
 mod animation;
+mod animation_panels;
 mod canvas;
 mod docking_tabs;
 mod hierarchy;

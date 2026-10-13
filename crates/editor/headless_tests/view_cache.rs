@@ -174,6 +174,7 @@ fn editor_dock_preserves_row_caches_and_delegates_other_panel_caches(cx: &mut Te
                         component: component.unwrap(),
                         row_cached_panel,
                         area: dock_area.downgrade(),
+                        owner: WeakEntity::new_invalid(),
                         scroll_handle: Default::default(),
                         last_displayed: Cell::new(None),
                     },

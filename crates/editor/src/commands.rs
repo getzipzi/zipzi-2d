@@ -92,71 +92,13 @@ impl EditorView {
                 | CommandId::DeleteParameterGroup => {
                     self.handle_parameter_command(command, window, cx);
                 }
-                CommandId::MeshTree
-                | CommandId::Deformers
-                | CommandId::Properties
-                | CommandId::Parameters
-                | CommandId::DrawOrder
-                | CommandId::Relations
-                | CommandId::Keyforms
-                | CommandId::BlendShapes
-                | CommandId::Glue
-                | CommandId::Motions
-                | CommandId::AnimationInfo
-                | CommandId::AnimationParameters
-                | CommandId::Expressions
-                | CommandId::Physics
-                | CommandId::Pose
-                | CommandId::Resources => {
+                id if editor_core::PanelKind::for_command(id, self.editor.workspace())
+                    .is_some() =>
+                {
+                    let kind =
+                        editor_core::PanelKind::for_command(id, self.editor.workspace()).unwrap();
                     if let Some(dock) = &mut self.dock {
-                        dock.toggle(
-                            match id {
-                                CommandId::Motions
-                                    if self.editor.workspace()
-                                        == editor_core::WorkspaceKind::Animation =>
-                                {
-                                    docking::PanelKind::AnimationMotions
-                                }
-                                CommandId::AnimationInfo => docking::PanelKind::AnimationInfo,
-                                CommandId::AnimationParameters => {
-                                    docking::PanelKind::AnimationParameters
-                                }
-                                CommandId::Expressions
-                                    if self.editor.workspace()
-                                        == editor_core::WorkspaceKind::Animation =>
-                                {
-                                    docking::PanelKind::AnimationExpressions
-                                }
-                                CommandId::MeshTree => docking::PanelKind::MeshTree,
-                                CommandId::Deformers => docking::PanelKind::Deformers,
-                                CommandId::Parameters => docking::PanelKind::Parameters,
-                                CommandId::Properties => docking::PanelKind::Properties,
-                                _ => docking::PanelKind::Document(match id {
-                                    CommandId::DrawOrder => {
-                                        crate::panels::DocumentPanelKind::DrawOrder
-                                    }
-                                    CommandId::Relations => {
-                                        crate::panels::DocumentPanelKind::Relations
-                                    }
-                                    CommandId::Keyforms => {
-                                        crate::panels::DocumentPanelKind::Keyforms
-                                    }
-                                    CommandId::BlendShapes => {
-                                        crate::panels::DocumentPanelKind::BlendShapes
-                                    }
-                                    CommandId::Glue => crate::panels::DocumentPanelKind::Glue,
-                                    CommandId::Motions => crate::panels::DocumentPanelKind::Motions,
-                                    CommandId::Expressions => {
-                                        crate::panels::DocumentPanelKind::Expressions
-                                    }
-                                    CommandId::Physics => crate::panels::DocumentPanelKind::Physics,
-                                    CommandId::Pose => crate::panels::DocumentPanelKind::Pose,
-                                    _ => crate::panels::DocumentPanelKind::Resources,
-                                }),
-                            },
-                            window,
-                            cx,
-                        );
+                        dock.toggle(kind, window, cx);
                     }
                     cx.notify();
                 }

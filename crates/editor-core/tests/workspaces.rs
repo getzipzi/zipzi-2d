@@ -42,6 +42,17 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     assert!(!editor.command_available(editor.command(CommandId::GenerateMesh)));
     assert!(!editor.command_available(editor.command(CommandId::SelectTool)));
     assert!(!editor.command_available(editor.command(CommandId::Parameters)));
+    for (command, kind) in [
+        (CommandId::Properties, PanelKind::AnimationProperties),
+        (CommandId::Physics, PanelKind::AnimationPhysics),
+        (CommandId::Pose, PanelKind::AnimationPose),
+    ] {
+        assert!(editor.command_available(editor.command(command)));
+        assert_eq!(
+            PanelKind::for_command(command, editor.workspace()),
+            Some(kind)
+        );
+    }
     assert!(editor.command_available(editor.command(CommandId::HandTool)));
     assert!(editor.command_available(editor.command(CommandId::Save)));
     assert!(editor.command_available(editor.command(CommandId::SaveAs)));
@@ -53,6 +64,18 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     editor.pan_by(CanvasPoint { x: 101., y: 9. });
     let second_animation = editor.view();
     editor.set_workspace(WorkspaceKind::Modeling)?;
+    assert_eq!(
+        PanelKind::for_command(CommandId::Properties, editor.workspace()),
+        Some(PanelKind::Properties)
+    );
+    assert_eq!(
+        PanelKind::for_command(CommandId::Physics, editor.workspace()),
+        Some(PanelKind::Physics)
+    );
+    assert_eq!(
+        PanelKind::for_command(CommandId::Pose, editor.workspace()),
+        Some(PanelKind::Pose)
+    );
     assert_view(editor.view(), ViewState::default());
     editor.activate(first)?;
     assert_view(editor.view(), modeling);

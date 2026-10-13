@@ -34,6 +34,9 @@ pub use workspace::{
     SaveTask,
 };
 
+mod panels;
+pub use panels::*;
+
 mod commands;
 mod recent_files;
 mod settings;

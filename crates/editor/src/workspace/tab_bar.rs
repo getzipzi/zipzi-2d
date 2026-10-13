@@ -3,6 +3,8 @@ use editor_core::{CommandId, WorkspaceKind};
 use gpui_kit::component::{
     ActiveTheme, Disableable, Icon, IconName, Sizable,
     button::{Button, ButtonVariants},
+    dock::{DockPlacement, PanelId},
+    menu::DropdownMenu,
 };
 use gpui_kit::{prelude::*, *};
 
@@ -132,6 +134,48 @@ pub fn render_tab_bar(
                                 .child(Icon::new(IconName::Close).small()),
                         )
                 })),
+        )
+        .child(
+            div().h_full().flex().items_center().flex_shrink_0().child(
+                Button::new("workspace-layout-menu")
+                    .icon(IconName::Ellipsis)
+                    .small()
+                    .ghost()
+                    .tooltip(t!("dock.layout_actions"))
+                    .disabled(modal)
+                    .dropdown_menu({
+                        let owner = cx.weak_entity();
+                        move |mut menu, window, cx| {
+                            let node = owner.upgrade().and_then(|view| {
+                                let dock = view.read(cx).dock.as_ref()?;
+                                dock.area
+                                    .read(cx)
+                                    .layout(DockPlacement::Center)
+                                    .and_then(|tree| {
+                                        tree.find_panel_node(PanelId::from(dock.canvas.entity_id()))
+                                    })
+                            });
+                            if let Some(node) = node {
+                                menu = crate::docking::add_panel::menu(
+                                    menu,
+                                    owner.clone(),
+                                    node,
+                                    false,
+                                    window,
+                                    cx,
+                                )
+                                .separator();
+                            }
+                            menu.menu(
+                                t!("menu.reset_layout"),
+                                Box::new(crate::actions::RunCommand {
+                                    id: CommandId::ResetLayout,
+                                }),
+                            )
+                        }
+                    })
+                    .anchor(Anchor::TopRight),
+            ),
         )
         .child(
             div()

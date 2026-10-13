@@ -228,8 +228,27 @@ impl EditorView {
         self.notify_canvas(cx);
         App::notify(cx, self.playback_bar.entity_id());
         if let Some(dock) = &self.dock {
+            let playing = self.editor.animation().is_some_and(|a| a.playing);
+            let failed = self.editor.animation().is_some_and(|a| a.error.is_some());
+            let active = self
+                .displayed_animation()
+                .map(|s| s.active_expressions.as_slice())
+                .unwrap_or_default();
+            for panel in [&dock.animation_motions, &dock.animation_expressions] {
+                panel.update(cx, |panel, cx| {
+                    panel.refresh_feedback(playing, failed, active, cx)
+                });
+            }
             App::notify(cx, dock.animation_info.entity_id());
             App::notify(cx, dock.animation_parameters.entity_id());
+            for kind in [
+                editor_core::PanelKind::AnimationPhysics,
+                editor_core::PanelKind::AnimationPose,
+            ] {
+                if dock.contains(kind, cx) {
+                    App::notify(cx, dock.animation_inspectors[&kind].entity_id());
+                }
+            }
         }
     }
     fn notify_canvas(&self, cx: &mut Context<Self>) {

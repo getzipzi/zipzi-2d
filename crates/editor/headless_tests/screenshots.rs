@@ -1039,6 +1039,105 @@ pub(super) fn run() -> anyhow::Result<()> {
     drop(diagnostics_assets);
     i18n::activate(Some("en"));
     animation_replacement_keeps_canvas(&mut harness)?;
+    animation_panel_review_screenshots(&mut harness, &directory)?;
     println!("Headless editor screenshots passed (real Metal, no native window).");
+    Ok(())
+}
+
+// Optional real-model layout review; portable fixtures above remain the required checks.
+fn animation_panel_review_screenshots(
+    harness: &mut Harness,
+    directory: &std::path::Path,
+) -> anyhow::Result<()> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+    if !path.is_file() {
+        return Ok(());
+    }
+    let task = harness
+        .cx
+        .update_window(harness.window, |_, _, cx| {
+            harness.view.update(cx, |view, _| {
+                view.editor
+                    .prepare_load(editor_core::LoadRequest::Model3(path))
+            })
+        })??
+        .unwrap();
+    let loaded = task.run();
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| -> anyhow::Result<()> {
+            view.editor.finish_load(loaded)?;
+            view.refresh_document(window, cx);
+            view.run_command(editor_core::CommandId::AnimationWorkspace, window, cx);
+            view.run_command(editor_core::CommandId::ResetLayout, window, cx);
+            let id = view.editor.active_id().unwrap();
+            let catalog = view.editor.document().unwrap().animation_catalog();
+            if let Some(motion) = catalog.motions.first() {
+                view.editor.select_motion(id, motion.selection.clone())?;
+            }
+            if let Some(expression) = catalog.expressions.first() {
+                view.editor.select_expression(id, expression.id.clone())?;
+            }
+            view.editor.seek_animation(id, 0.8)?;
+            view.redraw(cx);
+            Ok(())
+        })
+    })??;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        use gpui_kit::{InputEvent as _, MouseMoveEvent};
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: point(px(550.), px(80.)),
+                pressed_button: None,
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.refresh();
+    })?;
+    let dark = harness.capture()?;
+    save(&dark, directory, "animation-panels-mao.png")?;
+    for (command, file) in [
+        (editor_core::CommandId::Physics, "animation-physics-mao.png"),
+        (editor_core::CommandId::Pose, "animation-pose-mao.png"),
+    ] {
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            harness
+                .view
+                .update(cx, |view, cx| view.run_command(command, window, cx));
+        })?;
+        let inspector = harness.capture()?;
+        save(&inspector, directory, file)?;
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            harness
+                .view
+                .update(cx, |view, cx| view.run_command(command, window, cx));
+        })?;
+    }
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click(("animation-motion-group", 0usize), cx);
+    })?;
+    let collapsed = harness.capture()?;
+    save(&collapsed, directory, "animation-panels-mao-collapsed.png")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click(("animation-motion-group", 0usize), cx);
+    })?;
+    harness.cx.update(|cx| {
+        i18n::activate(Some("zh-CN"));
+        theme::change(gpui_kit::component::ThemeMode::Light, cx);
+    });
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            // Request a fresh preview when changing the backdrop theme.
+            let id = view.editor.active_id().unwrap();
+            view.editor.seek_animation(id, 0.8).unwrap();
+            view.redraw(cx);
+        });
+        window.refresh();
+    })?;
+    let light = harness.capture()?;
+    save(&light, directory, "animation-panels-mao-zh-light.png")?;
+    i18n::activate(Some("en"));
     Ok(())
 }

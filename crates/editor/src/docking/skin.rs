@@ -48,6 +48,7 @@ pub(super) struct EditorDockSkin {
     component: Rc<DockSkin>,
     row_cached_panel: EntityId,
     area: WeakEntity<DockArea>,
+    owner: WeakEntity<crate::EditorView>,
 }
 
 impl EditorDockSkin {
@@ -55,11 +56,13 @@ impl EditorDockSkin {
         component: Rc<DockSkin>,
         row_cached_panel: EntityId,
         area: WeakEntity<DockArea>,
+        owner: WeakEntity<crate::EditorView>,
     ) -> Rc<Self> {
         Rc::new(Self {
             component,
             row_cached_panel,
             area,
+            owner,
         })
     }
 }
@@ -116,6 +119,7 @@ impl DockAreaRenderer for EditorDockSkin {
             component: self.component.tab_group_renderer(),
             row_cached_panel: self.row_cached_panel,
             area: self.area.clone(),
+            owner: self.owner.clone(),
             scroll_handle: ScrollHandle::default(),
             last_displayed: Cell::new(None),
         })
@@ -126,6 +130,7 @@ struct EditorTabGroupSkin {
     component: Rc<dyn TabGroupRenderer>,
     row_cached_panel: EntityId,
     area: WeakEntity<DockArea>,
+    owner: WeakEntity<crate::EditorView>,
     scroll_handle: ScrollHandle,
     last_displayed: Cell<Option<PanelId>>,
 }
@@ -206,6 +211,8 @@ impl EditorTabGroupSkin {
         let zoomed = group.is_zoomed();
         let panel = handle.map(PanelHandle::panel);
         let closable = group.is_closable();
+        let owner = self.owner.clone();
+        let node = group.node();
         let zoom_title = if zoomed {
             t!("dock.restore")
         } else {
@@ -247,26 +254,27 @@ impl EditorTabGroupSkin {
                 },
             )
             .child(
-                Button::new("dock-menu")
+                Button::new(SharedString::from(format!("dock-menu-{}", node.as_u64())))
                     .icon(IconName::Ellipsis)
                     .xsmall()
                     .ghost()
                     .tab_stop(false)
                     .tooltip(t!("dock.panel_actions"))
                     .dropdown_menu(move |menu, window, cx| {
-                        menu.when_some(panel.clone(), |menu, panel| {
+                        let menu = menu.when_some(panel.clone(), |menu, panel| {
                             panel.dropdown_menu(menu, window, cx)
-                        })
-                        .separator()
-                        .menu_with_disabled(
-                            zoom_title.clone(),
-                            Box::new(ToggleZoom),
-                            !zoomed && !control.is_some_and(|control| control.menu_visible()),
-                        )
-                        .when(closable, |menu| {
-                            menu.separator()
-                                .menu(t!("dock.close"), Box::new(ClosePanel))
-                        })
+                        });
+                        super::add_panel::menu(menu, owner.clone(), node, true, window, cx)
+                            .separator()
+                            .menu_with_disabled(
+                                zoom_title.clone(),
+                                Box::new(ToggleZoom),
+                                !zoomed && !control.is_some_and(|control| control.menu_visible()),
+                            )
+                            .when(closable, |menu| {
+                                menu.separator()
+                                    .menu(t!("dock.close"), Box::new(ClosePanel))
+                            })
                     })
                     .anchor(Anchor::TopRight),
             )
