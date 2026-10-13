@@ -18,6 +18,7 @@ pub use motion_preview::{
 };
 
 mod expression;
+pub use expression::ExpressionTransition;
 mod expression_preview;
 pub use expression_preview::{ExpressionPreview, RuntimeSnapshot};
 use thiserror::Error;

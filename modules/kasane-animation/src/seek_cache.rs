@@ -11,7 +11,8 @@ use std::{
 
 /// Retained cache usage and work performed by the last successful seek.
 ///
-/// Cache clearing/invalidation resets all fields except `budget_bytes` to zero.
+/// Clearing the cache resets all fields except `budget_bytes` to zero.
+/// Expression schedule edits retain unaffected checkpoints and reset replay statistics.
 /// Failed or cancelled seeks leave these statistics unchanged.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SeekCacheStats {
@@ -69,6 +70,16 @@ impl SeekCache {
     pub fn set_budget(&mut self, bytes: usize) {
         self.clear();
         self.stats.budget_bytes = bytes;
+    }
+    pub fn retain_before(&mut self, time: f32) {
+        self.entries = std::mem::take(&mut self.entries)
+            .into_iter()
+            .filter(|(_, state)| state.snapshot.time < time)
+            .collect();
+        self.stats.estimated_bytes = self.entries.iter().map(|(bytes, _)| bytes).sum();
+        self.stats.checkpoints = self.entries.len();
+        self.stats.last_restored_time = 0.0;
+        self.stats.last_replayed_steps = 0;
     }
     pub fn nearest(&self, time: f32) -> Option<Arc<Checkpoint>> {
         self.entries

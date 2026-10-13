@@ -10,7 +10,7 @@ use kasane_core::{
     Document, DrawableFrame, FrameEvaluator, PreviewValues,
 };
 
-use crate::expression::ExpressionRuntime;
+use crate::expression::{ExpressionRuntime, ExpressionTransition};
 use crate::motion_runtime::MotionRuntime;
 use crate::physics::PhysicsRuntime;
 use crate::pose::PoseRuntime;
@@ -83,6 +83,9 @@ pub enum MotionOperationKind {
     ScheduleExpression {
         expression_id: String,
         time: f32,
+    },
+    ReplaceExpressionSchedule {
+        activations: Vec<(String, f32, ExpressionTransition)>,
     },
     ScheduleParameterInput {
         parameter_id: String,
@@ -356,6 +359,61 @@ impl MotionPreview {
         Ok(())
     }
 
+    /// Replace the complete expression schedule, preserving unchanged simulation history.
+    /// Times are absolute, finite and nonnegative; equal-time entries retain input order.
+    /// Unlike `schedule_expression`, past activations can be edited or removed.
+    /// Invalid entries leave playback, schedules and cache unchanged.
+    ///
+    /// Checkpoints at or after the first changed activation are discarded. If the
+    /// current frame is affected, playback rewinds to the last unaffected checkpoint
+    /// (or the initial state). Call `advance_to_with_progress` to evaluate the desired
+    /// time before presenting it. Identical schedules leave all state unchanged.
+    pub fn replace_expression_schedule<'a>(
+        &mut self,
+        schedule: impl IntoIterator<Item = (&'a str, f32)>,
+    ) -> Result<(), AnimationError> {
+        self.replace_expression_schedule_with_transitions(
+            schedule
+                .into_iter()
+                .map(|(id, time)| (id, time, ExpressionTransition::Fade)),
+        )
+    }
+
+    /// Replace a schedule with per-activation transitions. Immediate activations
+    /// discard the previous expression queue and apply at full weight without
+    /// advancing time. Faded activations retain authored fade-in/out behavior.
+    /// Validation, replay and cache invalidation match `replace_expression_schedule`.
+    pub fn replace_expression_schedule_with_transitions<'a>(
+        &mut self,
+        schedule: impl IntoIterator<Item = (&'a str, f32, ExpressionTransition)>,
+    ) -> Result<(), AnimationError> {
+        let mut replacement = ExpressionRuntime::default();
+        let mut activations = Vec::new();
+        for (id, time, transition) in schedule {
+            replacement.schedule_with_transition(&self.document, 0.0, id, time, transition)?;
+            activations.push((id.to_owned(), time, transition));
+        }
+        let Some(changed_at) = self.expressions.first_schedule_difference(&replacement) else {
+            return Ok(());
+        };
+        self.cache.retain_before(changed_at);
+        if self.snapshot.time >= changed_at {
+            if let Some(state) = self.cache.nearest(changed_at) {
+                self.snapshot.clone_from(&state.snapshot);
+                self.motion.clone_from(&state.motion);
+                self.expressions.clone_from(&state.expressions);
+                self.physics.clone_from(&state.physics);
+                self.pose.clone_from(&state.pose);
+                self.canonical_step = Some(state.step);
+            } else {
+                self.reset_state();
+            }
+        }
+        self.expressions.copy_schedule_from(&replacement);
+        self.commit_operation(MotionOperationKind::ReplaceExpressionSchedule { activations });
+        Ok(())
+    }
+
     /// Set a parameter UUID baseline, clamp it to its range, then reset playback.
     /// Retains schedules. Missing UUIDs/nonfinite values return [`AnimationError::Evaluation`]
     /// without changing state. Motion preview also clears seek checkpoints/statistics.
@@ -525,6 +583,8 @@ impl MotionPreview {
             candidate.snapshot.clone_from(&state.snapshot);
             candidate.motion.clone_from(&state.motion);
             candidate.expressions.clone_from(&state.expressions);
+            // Retained checkpoints may predate an edit to future activations.
+            candidate.expressions.copy_schedule_from(&self.expressions);
             candidate.physics.clone_from(&state.physics);
             candidate.pose.clone_from(&state.pose);
         }
@@ -601,6 +661,16 @@ impl MotionPreview {
             let fractional_base = (next != step as f32 / 60.0).then(|| self.checkpoint(step - 1));
             self.advance((next - self.snapshot.time).max(0.0))?;
             self.canonical_step = (next == step as f32 / 60.0).then_some(step);
+            if self.canonical_step.is_some() && step.is_multiple_of(60) {
+                self.cache.insert(self.checkpoint_bytes(), || Checkpoint {
+                    step,
+                    snapshot: self.snapshot.clone(),
+                    motion: self.motion.clone(),
+                    expressions: self.expressions.clone(),
+                    physics: self.physics.clone(),
+                    pose: self.pose.clone(),
+                });
+            }
             self.fractional_base = fractional_base;
             if !progress(step - start, total) {
                 if let Some(base) = self.fractional_base.take() {

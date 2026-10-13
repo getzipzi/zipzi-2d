@@ -133,9 +133,25 @@ a newer target to resume; discard cancelled results. In contrast,
 `seek_with_progress` preserves the entire prior state on cancellation. Both
 validate finite nonnegative targets and enforce the one-million-step limit.
 
+Canonical playback also retains bounded checkpoints once per simulated second.
+For live expression changes, `replace_expression_schedule` replaces the complete
+ordered `(expression_id, time)` schedule and keeps history before its first change.
+It rewinds an affected current frame to the nearest unaffected checkpoint; then
+call `advance_to_with_progress` for the target time. This avoids restarting the
+entire motion and physics simulation on every expression switch. Checkpoints at
+or after the change are discarded, and backward seeks use the updated schedule.
+Invalid schedules preserve all state; identical schedules are a no-op.
+
 `MotionSnapshot::model_opacity` is separate from the evaluated drawable frame.
 Hosts using the observer's Model color-alpha policy call
 `apply_model_opacity(&mut frame, opacity)` once before mask / Offscreen rendering.
 This multiplies each drawable opacity and leaves independent Part / Offscreen
 factors intact. Scaling a final flattened image produces different overlap
 pixels. Framework Model opacity does not set renderer color alpha automatically.
+
+For paused inspection, `MotionPreview::replace_expression_schedule_with_transitions`
+accepts `(expression_id, time, ExpressionTransition)` entries. `Immediate` replaces
+all currently active expressions at full weight without advancing the clock;
+`Fade` preserves authored fade-in/out. The transition is part of the schedule and
+cache identity, so seeking and cold replay preserve cuts. Expression values still
+feed the normal Physics and Pose stages; the authoring document is unchanged.

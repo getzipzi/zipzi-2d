@@ -5,15 +5,29 @@ use kasane_core::{
     Document,
 };
 use std::collections::BTreeMap;
-#[derive(Debug, Clone)]
+/// How an expression enters the runtime queue. Immediate cuts are useful for
+/// paused inspection; subsequent faded activations still use authored fades.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExpressionTransition {
+    /// Blend using the expression's authored fade-in and fade-out durations.
+    #[default]
+    Fade,
+    /// Replace the current queue at full weight on the activation frame.
+    Immediate,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 struct Activation {
     time: f32,
     expression_id: String,
+    transition: ExpressionTransition,
 }
 
 #[derive(Debug, Clone)]
 struct PlayingExpression {
     id: String,
+    transition: ExpressionTransition,
     fade_in_start: Option<f32>,
     fade_out_triggered: bool,
     end_time: Option<f32>,
@@ -33,6 +47,26 @@ pub(crate) struct ExpressionRuntime {
     playing: Vec<PlayingExpression>,
 }
 impl ExpressionRuntime {
+    pub(crate) fn first_schedule_difference(&self, other: &Self) -> Option<f32> {
+        let common = self
+            .activations
+            .iter()
+            .zip(&other.activations)
+            .take_while(|(a, b)| a == b)
+            .count();
+        self.activations
+            .get(common)
+            .into_iter()
+            .chain(other.activations.get(common))
+            .map(|activation| activation.time)
+            .min_by(f32::total_cmp)
+    }
+
+    /// Only valid when the applied prefix is unchanged at this runtime's time.
+    pub(crate) fn copy_schedule_from(&mut self, other: &Self) {
+        self.activations.clone_from(&other.activations);
+    }
+
     pub(crate) fn heap_bytes(&self) -> usize {
         use crate::seek_cache::vec_bytes;
         vec_bytes(&self.activations)
@@ -51,6 +85,17 @@ impl ExpressionRuntime {
         now: f32,
         id: &str,
         time: f32,
+    ) -> Result<(), AnimationError> {
+        self.schedule_with_transition(document, now, id, time, ExpressionTransition::Fade)
+    }
+
+    pub(crate) fn schedule_with_transition(
+        &mut self,
+        document: &Document,
+        now: f32,
+        id: &str,
+        time: f32,
+        transition: ExpressionTransition,
     ) -> Result<(), AnimationError> {
         if !time.is_finite() || time < 0.0 {
             return Err(AnimationError::InvalidTime);
@@ -75,6 +120,7 @@ impl ExpressionRuntime {
             Activation {
                 time,
                 expression_id: id.into(),
+                transition,
             },
         );
         Ok(())
@@ -96,11 +142,17 @@ impl ExpressionRuntime {
         while self.next_activation < self.activations.len()
             && self.activations[self.next_activation].time <= time
         {
-            for item in &mut self.playing {
-                item.fade_out_triggered = true;
+            let transition = self.activations[self.next_activation].transition;
+            if transition == ExpressionTransition::Immediate {
+                self.playing.clear();
+            } else {
+                for item in &mut self.playing {
+                    item.fade_out_triggered = true;
+                }
             }
             self.playing.push(PlayingExpression {
                 id: self.activations[self.next_activation].expression_id.clone(),
+                transition,
                 fade_in_start: None,
                 fade_out_triggered: false,
                 end_time: None,
@@ -125,11 +177,12 @@ impl ExpressionRuntime {
             let start = *playing.fade_in_start.get_or_insert(time);
             let fade_in = expression.fade_in.unwrap_or(1.0);
             let fade_out = expression.fade_out.unwrap_or(1.0);
-            let in_weight = if fade_in == 0.0 {
-                1.0
-            } else {
-                ease((time - start) / fade_in)
-            };
+            let in_weight =
+                if playing.transition == ExpressionTransition::Immediate || fade_in == 0.0 {
+                    1.0
+                } else {
+                    ease((time - start) / fade_in)
+                };
             let out_weight = match playing.end_time {
                 Some(end) if fade_out != 0.0 => ease((end - time) / fade_out),
                 _ => 1.0,
