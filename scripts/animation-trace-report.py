@@ -16,6 +16,11 @@ PAIRS = {
     "render_mailbox_ms": ("enqueued", "worker_begin"),
     "render_submit_ms": ("worker_begin", "preview_submitted"),
     "gpu_ms": ("preview_gpu_start", "preview_gpu_end"),
+    "accept_to_compose_ms": ("accepted", "compose_begin"),
+    "ui_draw_ms": ("ui_draw_begin", "ui_draw_end"),
+    "drawable_wait_ms": ("drawable_wait_begin", "drawable_acquired"),
+    "compose_gpu_ms": ("compose_gpu_start", "compose_gpu_end"),
+    "gpu_to_present_ms": ("compose_gpu_end", "presented"),
     "enqueue_to_accept_ms": ("animation_enqueued", "accepted"),
 }
 
@@ -75,9 +80,17 @@ def report(records):
             if fields["bytes"] > fields["budget"]:
                 raise ValueError("cache exceeded budget")
             cache = max(cache, fields["bytes"])
-        presented = [groups[c]["presented"] for c in compositions[key] if "presented" in groups[c]]
+        presented = [groups[c] for c in compositions[key] if "presented" in groups[c]]
         if presented:
-            g["presented"] = min(presented, key=lambda e: e["at_ns"])
+            first = min(presented, key=lambda c: c["presented"]["at_ns"])
+            for stage in ("compose_begin", "drawable_wait_begin", "drawable_acquired",
+                          "compose_gpu_start", "compose_gpu_end", "presented"):
+                if stage in first:
+                    g[stage] = first[stage]
+            cpu_frame = first.get("compose_begin", {}).get("fields", {}).get("cpu_frame")
+            for stage in ("ui_draw_begin", "ui_draw_end"):
+                if stage in groups.get(cpu_frame, {}):
+                    g[stage] = groups[cpu_frame][stage]
         if phase[1] == 1:
             playback[phase[0]].append(g)
     result = {"profile": "debug" if metadata.get("debug_assertions") else "release", "lost_events": 0, "cpu_pending_high_water": max_cpu,
@@ -88,10 +101,29 @@ def report(records):
         for name, (start, finish) in PAIRS.items():
             values[name] = summarize([(g[finish]["at_ns"]-g[start]["at_ns"])/1e6
                                      for g in groups if start in g and finish in g])
+        for name, start, finish in (("evaluate", "animation_evaluate_begin", "animation_cpu"),
+                                    ("render", "worker_begin", "render_cpu")):
+            samples = [g for g in groups if start in g and finish in g]
+            values[f"{name}_cpu_ms"] = summarize([g[finish]["fields"]["cpu_ns"]/1e6 for g in samples])
+            # Wall minus thread CPU includes blocking and descheduling. It is
+            # evidence of time off CPU, not proof of which scheduler caused it.
+            values[f"{name}_non_cpu_ms"] = summarize([max(0, g[finish]["at_ns"] -
+                g[start]["at_ns"] - g[finish]["fields"]["cpu_ns"])/1e6 for g in samples])
         accepted = sorted(g["accepted"]["at_ns"] for g in groups if "accepted" in g)
         values["accepted_interval_ms"] = summarize([(b-a)/1e6 for a, b in zip(accepted, accepted[1:])])
-        presented = sorted(g["presented"]["at_ns"] for g in groups if "presented" in g)
+        presented_frames = [g for g in groups if "presented" in g]
+        presented = sorted({g["presented"]["at_ns"] for g in presented_frames})
+        values["presented_textures"] = len(presented_frames)
         values["presented_interval_ms"] = summarize([(b-a)/1e6 for a,b in zip(presented,presented[1:])])
+        intervals = [b-a for a, b in zip(presented, presented[1:])]
+        # The median observed cadence is descriptive; this is not a claim
+        # about the display's advertised refresh rate or hardware scanout.
+        nominal = sorted(intervals)[len(intervals)//2] if intervals else 0
+        values["long_present_intervals"] = [dict(
+            after_ns=a, interval_ms=(b-a)/1e6,
+            request_ids=[g["animation_enqueued"]["id"] for g in presented_frames
+                         if g["presented"]["at_ns"] == b],
+        ) for a, b in zip(presented, presented[1:]) if b-a > nominal*1.5]
         values["presented"] = len(presented)
         values["presented_hz"] = (len(presented)-1)*1e9/(presented[-1]-presented[0]) if len(presented)>1 else None
         values["requests"] = len(groups)

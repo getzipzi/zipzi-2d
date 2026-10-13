@@ -1,4 +1,4 @@
-//! Native window playback: the application's real timer, GPU workers and compositor.
+//! Native window playback: the application's display callbacks, GPU workers and compositor.
 use super::*;
 
 pub(super) async fn run(

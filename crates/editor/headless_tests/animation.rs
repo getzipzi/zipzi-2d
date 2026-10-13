@@ -592,3 +592,41 @@ fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_parameters_
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn display_callbacks_sample_fractional_time_and_stop_after_pause(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 2usize), cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::PlayPause, window, cx);
+            view.animation_anchor = Some((
+                std::time::Instant::now() - std::time::Duration::from_micros(8300),
+                0.,
+            ));
+            view.schedule_animation_frame(window, cx);
+            assert!(view.animation_clock_running);
+        });
+        window.simulate_next_frame(cx);
+        let first = harness.view.read(cx).editor.animation().unwrap().time;
+        assert!(first > 0.);
+        assert_ne!(
+            first,
+            (first * 60.).floor() / 60.,
+            "display time was quantized to 60 Hz"
+        );
+        assert!(harness.view.read(cx).animation_clock_running);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::PlayPause, window, cx);
+        });
+        window.simulate_next_frame(cx);
+        let view = harness.view.read(cx);
+        assert_eq!(view.editor.animation().unwrap().time, first);
+        assert!(!view.animation_clock_running);
+        assert!(view.animation_anchor.is_none());
+    })
+    .unwrap();
+}

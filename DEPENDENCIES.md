@@ -11,8 +11,12 @@
 - Animation additionally requires `MotionPreview::advance_to_with_progress` in
   the local `kasane-animation` crate, reusing the canonical absolute 60 Hz seek
   grid for continuous playback. Cancellation preserves completed canonical
-  steps; backward and fractional-state replay use transactional seek. The SDK
-  still owns Motion / Expression / Physics / Pose evaluation.
+  steps; backward replay uses transactional seek. High-refresh playback also
+  requires retention of the full canonical step before each fractional sample:
+  presentation tails must not accumulate into physics or replay from an old
+  checkpoint every display frame. The SDK still owns Motion / Expression /
+  Physics / Pose evaluation.
+  Fractional-state retention is implemented in `2e2912a2d098bebec0f3d66df5e05489427bd3e2`.
 - The local SDK must reexport `apply_model_opacity`, shared by the animation
   renderer and `kasane-sdk-observe`. This host policy multiplies each drawable
   once before masking / Offscreen; Offscreen and Part opacities remain separate.
@@ -33,7 +37,7 @@
   adoption and compositor presentation. Stage five adds no sibling SDK or
   renderer changes beyond the revision above. Its real-model opacity test adds
   an Offscreen to a temporary imported Mao document; licensed source assets are
-  unchanged. See [validation results](docs/workspaces-animation-validation.md).
+  unchanged. See [validation results](docs/archive/workspaces-animation-validation.md).
 
 All workspace crates use the root `Cargo.lock`. Build and test with `--locked`.
 The editor supports macOS. There are no application backend switches or CPU

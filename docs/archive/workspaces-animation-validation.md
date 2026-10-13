@@ -104,3 +104,46 @@ cargo test --locked -p kasane-editor --test animation_acceptance
 原生结果包含 `environment.txt`、`application.log`、`trace.jsonl`、`summary.json`；headless 另外包含 `run.log`、`results.json` 和模型截图。JSONL writer 有固定容量并报告丢失事件；报告拒绝不完整 trace、丢失事件、失败 GPU command 和超预算 checkpoint。
 
 许可模型不在公共仓库中。缺失模型会显式输出 `SKIP` 并在结果中缺席；没有本地资源时只能确认 portable fixture 回归，不能声称重复了本报告的实际模型验收或性能测量。
+
+## 2026-10-13：高刷播放与偶发长帧复查
+
+播放已改为窗口帧回调，取消 60 Hz 目标时间截断。SDK 保留完整的 60 Hz
+模拟状态，从该状态求值显示时间的分数尾步；尾步不累积到后续物理模拟。
+75 / 120 / 144 Hz 连续采样与冷 seek 完全一致，连续采样最多推进两个步。
+首次原生窗口实测约 119.3 Hz，但仍存在 16.67 ms 的呈现间隔。
+
+后续 trace 增加线程 CPU 用时、接受到合成、UI 绘制、drawable 等待、合成 GPU
+以及 GPU 完成到系统呈现的分段。一次默认优先级求值的墙钟耗时为 36.95 ms，
+线程 CPU 仅 1.77 ms；一次渲染准备耗时为 30.29 ms，线程 CPU 仅 1.30 ms。
+这说明长耗时主要落在阻塞／调度等待，不能把墙钟耗时全部视为算法计算。
+原始高刷 trace 也有模型和 GPU 及时完成、系统呈现多等一个周期的情况，
+未将这部分归因为 SDK。
+
+两个专用预览线程现在使用 macOS `QOS_CLASS_USER_INTERACTIVE`，仅作用于
+动画求值与 Metal 提交；没有改变模拟步长、GPU 背压、显示同步或三缓冲配置。
+空闲时仍在有界 mailbox 上阻塞。线程 CPU 计时仅在 trace 开启时采集。
+`KASANE_TRACE_DEFAULT_WORKER_QOS=1` 可在 trace 模式下恢复默认调度作对照。
+
+同一 Release 二进制、Mao、120 Hz 显示环境，顺序对照如下。长间隔定义为超过
+该轮实际唯一呈现时间戳中位间隔的 1.5 倍；系统呈现时间不是硬件扫描测量。
+
+| 配置 | 时长 | 新动画帧呈现 Hz | 长间隔数 | 最大间隔 ms | 求值非 CPU 时间 P99 ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 默认优先级，第 1 轮 | 20 s | 118.25 | 22 | 50.00 | 3.465 |
+| 交互优先级，第 1 轮 | 10 s | 120.00 | 0 | 8.334 | 0.0183 |
+| 默认优先级，第 2 轮 | 10 s | 119.00 | 10 | 16.67 | 2.321 |
+| 交互优先级，第 2 轮 | 20 s | 120.00 | 0 | 8.334 | 0.0186 |
+
+四轮均无 trace 丢失，CPU / 渲染待处理槽位峰值均为 1。对照支持保留交互
+优先级，但短时测量不能保证所有系统负载和模型永久无掉帧。失焦的两轮和
+受并行面板重构影响的构建失败不进入结果。报告现在按唯一呈现时间戳计算
+Hz，避免多个关联纹理在同一系统呈现时刻重复计数。
+
+本地原始数据为 `target/animation-pacing-{default-qos-1,qos-4,default-qos-2,qos-5}/`；
+`target/animation-pacing-comparison.json` 保存汇总及二进制 SHA-256。
+
+本轮验证：动画交互与 worker 定向回归 10 项通过；原生 Metal 9 项通过、1 项
+既有忽略；trace 报告 6 项通过；工作区编译检查通过。扩大到名称包含
+`animation` 的全部 UI 测试时，另一个并行 docking 改动中的
+`animation_add_menu_places_panel_in_the_clicked_group_and_restores_it`
+出现面板节点归属断言失败；没有将该轮报告为全量测试通过。

@@ -24,6 +24,9 @@ image = { version = "0.25.10", default-features = false }
 metal.workspace = true
 objc2.workspace = true
 
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 kasane-sdk-observe = { path = "../../../kasane-2d/modules/kasane-sdk-observe" }
 gpui-kit = { workspace = true, features = ["test-support"] }

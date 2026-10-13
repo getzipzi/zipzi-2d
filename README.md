@@ -21,6 +21,7 @@ To explore the UI components:
 ```sh
 cargo run --locked -p component-playground
 ```
+
 ## Develop
 
 Install `watchexec`, then rebuild and restart automatically when source files change:
@@ -73,12 +74,23 @@ python3 scripts/test_animation_trace_report.py
 ```
 
 Use a new output directory for each run. The native benchmark requires the window
-to stay visible and active; it uses the application's timer and compositor
+to stay visible and active; it uses the application's display callbacks and compositor
 presentation timestamps. Headless profiling uses real SDK / Metal workers with a
 test clock and does not measure display presentation. Both emit JSONL traces and
-correlated timing / queue summaries. See the [animation validation report](docs/workspaces-animation-validation.md)
-for hardware, model coverage, measured average 60 Hz playback and remaining frame
-pacing variation.
+correlated timing / queue summaries.
+
+Animation samples follow the window frame cadence, including high-refresh displays;
+the SDK retains the canonical 60 Hz simulation state and evaluates fractional
+presentation times without accumulating partial physics steps. Actual throughput
+still depends on evaluation, rendering and compositor timing. See the
+[initial animation validation report](docs/archive/workspaces-animation-validation.md)
+for model coverage and the original 60 Hz baseline.
+
+Animation evaluation and Metal submission workers use macOS interactive QoS;
+idle workers still sleep on their bounded mailboxes. Traces include thread CPU
+versus elapsed time, UI/compositor timing, and long presentation intervals.
+For a scheduling A/B run, prefix the native benchmark command with
+`KASANE_TRACE_DEFAULT_WORKER_QOS=1`; this opt-out only applies while tracing.
 
 ## Headless screenshots
 

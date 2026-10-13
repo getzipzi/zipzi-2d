@@ -22,6 +22,7 @@ mod project;
 mod settings;
 mod theme;
 mod ui;
+mod worker;
 mod workspace;
 
 use editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};

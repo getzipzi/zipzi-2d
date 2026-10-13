@@ -89,6 +89,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
         format: MTLPixelFormat::RGBA8Unorm,
     };
     std::thread::spawn(move || {
+        crate::worker::configure(1);
         let renderer =
             objc2::rc::autoreleasepool(|_| MetalSceneRenderer::new(gpu.device, initial_target));
         let mut renderer = match renderer {
@@ -123,6 +124,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
             frame_trace::emit(trace_id, "worker_begin", &[]);
             // Background Metal calls need a pool per frame; NSApplication's pool
             // does not drain autoreleased objects created on this thread.
+            let cpu_start = crate::worker::cpu_time(trace_id);
             let frame = objc2::rc::autoreleasepool(|_| {
                 renderer
                     .submit_transformed_traced(
@@ -134,6 +136,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                     )
                     .map_err(|e| e.to_string())
             });
+            crate::worker::record_cpu_time(trace_id, "render_cpu", cpu_start);
             let (image, completion) = match frame {
                 Ok(submitted) => {
                     let stats = renderer.last_frame_stats();

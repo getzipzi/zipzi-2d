@@ -3752,6 +3752,7 @@ dependencies = [
  "kasane-core",
  "kasane-sdk",
  "kasane-sdk-observe",
+ "libc",
  "metal",
  "objc2 0.6.4",
  "rust-i18n",

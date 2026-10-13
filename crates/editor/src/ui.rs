@@ -32,6 +32,7 @@ impl Render for EditorView {
             self.editor.cancel_gesture();
             self.redraw(cx);
         }
+        self.schedule_animation_frame(window, cx);
         self.refresh_menus(modal, window, cx);
         let theme = cx.theme();
 

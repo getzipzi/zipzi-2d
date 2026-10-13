@@ -38,6 +38,40 @@ class AnimationTraceTests(unittest.TestCase):
         self.assertEqual(result["playback"]["0"]["presented"],2)
         self.assertEqual(result["playback"]["0"]["presented_interval_ms"]["p50"],4)
 
+    def test_correlates_cpu_accounting_composition_and_long_intervals(self):
+        events = [event(100, "animation_workload", 0, model=0, phase=1)]
+        for i, presented in enumerate([20, 28, 36, 52], start=1):
+            events += [event(i, "animation_enqueued", i),
+                       event(i, "animation_evaluate_begin", i+1),
+                       event(i, "animation_cpu", i+5, cpu_ns=1_000_000),
+                       event(i, "published", i+6, texture=i),
+                       event(i, "accepted", i+7),
+                       event(100+i, "ui_draw_begin", i+8),
+                       event(100+i, "ui_draw_end", i+9),
+                       event(200+i, "compose_begin", i+10, cpu_frame=100+i),
+                       event(200+i, "compose_surface", i+10, texture=i),
+                       event(200+i, "compose_gpu_end", i+12),
+                       event(200+i, "presented", presented)]
+        result = report.report(events+[dict(type="end", lost_events=0)])["playback"]["0"]
+        self.assertEqual(result["evaluate_cpu_ms"]["p50"], 1)
+        self.assertEqual(result["evaluate_non_cpu_ms"]["p50"], 3)
+        self.assertEqual(result["accept_to_compose_ms"]["p50"], 3)
+        self.assertEqual(result["ui_draw_ms"]["p50"], 1)
+        self.assertEqual(result["long_present_intervals"],
+                         [dict(after_ns=36_000_000, interval_ms=16, request_ids=[4])])
+
+    def test_shared_presentation_timestamp_does_not_inflate_fps(self):
+        events = [event(10, "animation_workload", 0, model=0, phase=1)]
+        for i, time in enumerate([20, 20, 30], start=1):
+            events += [event(i, "animation_enqueued", i),
+                       event(i, "published", i+1, texture=i),
+                       event(20+i, "compose_surface", i+2, texture=i),
+                       event(20+i, "presented", time)]
+        result = report.report(events+[dict(type="end", lost_events=0)])["playback"]["0"]
+        self.assertEqual(result["presented"], 2)
+        self.assertEqual(result["presented_textures"], 3)
+        self.assertEqual(result["presented_hz"], 100)
+
     def test_refuses_lost_or_unfinished_trace_and_excess_cache(self):
         for records in [[], [dict(type="end",lost_events=1)],
                         [event(1,"animation_enqueued",0), event(1,"animation_cache",1,bytes=1025,budget=1024),dict(type="end",lost_events=0)]]:

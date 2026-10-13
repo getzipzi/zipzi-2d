@@ -7,7 +7,9 @@ use std::sync::{
     Arc, Condvar, Mutex,
     atomic::{AtomicU64, Ordering},
 };
-use std::time::{Duration, Instant};
+#[cfg(test)]
+use std::time::Duration;
+use std::time::Instant;
 
 enum Work {
     Evaluate(AnimationRequest, u64),
@@ -42,6 +44,7 @@ impl AnimationWorker {
             .name("kasane-animation".into())
             .stack_size(8 * 1024 * 1024)
             .spawn(move || {
+                worker::configure(0);
                 let mut evaluator = AnimationEvaluator::default();
                 loop {
                     let (work, version) = {
@@ -65,6 +68,7 @@ impl AnimationWorker {
                     };
                     let identity = request.identity;
                     frame_trace::emit(trace_id, "animation_evaluate_begin", &[]);
+                    let cpu_start = worker::cpu_time(trace_id);
                     let result = evaluator.evaluate(&request, |_, _| {
                         cancellation.load(Ordering::Acquire) == version
                     });
@@ -73,6 +77,7 @@ impl AnimationWorker {
                         "animation_evaluate_end",
                         &[("success", result.is_ok() as u64)],
                     );
+                    worker::record_cpu_time(trace_id, "animation_cpu", cpu_start);
                     if trace_id != 0 {
                         if let Some(stats) = evaluator.seek_cache_stats() {
                             frame_trace::emit(
@@ -274,48 +279,39 @@ impl EditorView {
         if self.animation_anchor.is_none() {
             self.animation_anchor = Some((Instant::now(), self.editor.animation().unwrap().time));
         }
-        if self.animation_clock_running {
+        if !self.animation_clock_running {
+            // Render installs the first display callback; subsequent callbacks
+            // reschedule themselves without rebuilding the editor UI.
+            cx.notify();
+        }
+    }
+
+    pub(super) fn schedule_animation_frame(&mut self, window: &Window, cx: &Context<Self>) {
+        if self.animation_anchor.is_none() || self.animation_clock_running {
             return;
         }
         self.animation_clock_running = true;
-        cx.spawn(async move |this, cx| {
-            loop {
-                cx.background_executor()
-                    .timer(Duration::from_millis(16))
-                    .await;
-                let keep = this
-                    .update(cx, |this, cx| {
-                        if !this
-                            .editor
-                            .animation()
-                            .is_some_and(|animation| animation.playing)
-                            || this.editor.workspace() != WorkspaceKind::Animation
-                        {
-                            this.animation_clock_running = false;
-                            this.animation_anchor = None;
-                            return false;
-                        }
-                        if let Some((anchor, time)) = this.animation_anchor {
-                            let target =
-                                ((time + anchor.elapsed().as_secs_f32()) * 60.).floor() / 60.;
-                            this.editor.advance_animation_clock(target);
-                            this.request_preview();
-                            if !this.editor.animation().is_some_and(|a| a.playing) {
-                                this.animation_clock_running = false;
-                                this.animation_anchor = None;
-                                this.notify_animation(cx);
-                                return false;
-                            }
-                        }
-                        true
-                    })
-                    .unwrap_or(false);
-                if !keep {
-                    break;
+        let view = cx.weak_entity();
+        window.on_next_frame(move |window, cx| {
+            let _ = view.update(cx, |this, cx| {
+                this.sync_animation_clock(cx);
+                this.animation_clock_running = false;
+                let Some((anchor, time)) = this.animation_anchor else {
+                    return;
+                };
+                // Display cadence chooses the sample time, never the physics
+                // integration step. The SDK retains its canonical 60 Hz history.
+                this.editor
+                    .advance_animation_clock(time + anchor.elapsed().as_secs_f32());
+                this.request_preview();
+                if !this.editor.animation().is_some_and(|a| a.playing) {
+                    this.animation_anchor = None;
+                    this.notify_animation(cx);
+                    return;
                 }
-            }
-        })
-        .detach();
+                this.schedule_animation_frame(window, cx);
+            });
+        });
     }
 }
 

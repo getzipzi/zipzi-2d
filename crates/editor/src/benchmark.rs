@@ -146,6 +146,7 @@ pub fn init() -> anyhow::Result<()> {
                     "drawables": std::env::var("GPUI_TRACE_DRAWABLES").ok(),
                     "display_sync": std::env::var("GPUI_TRACE_DISPLAY_SYNC").ok(),
                     "offscreen": std::env::var("GPUI_TRACE_OFFSCREEN").ok(),
+                    "default_worker_qos": std::env::var("KASANE_TRACE_DEFAULT_WORKER_QOS").is_ok_and(|v| v == "1"),
                     "hide_mesh_edges": HIDE_MESH_EDGES.load(Ordering::Relaxed),
                     "batch_mesh_edges": BATCH_MESH_EDGES.load(Ordering::Relaxed),
                     "metal_mesh_overlay": METAL_MESH_OVERLAY.load(Ordering::Relaxed),
