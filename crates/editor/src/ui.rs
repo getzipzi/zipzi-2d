@@ -46,18 +46,12 @@ impl Render for EditorView {
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 this.filter_repeat(event, window, cx)
             }))
-            // 1. Global Document TabBar
             .child(workspace::render_tab_bar(self, modal, window, cx))
-            // 3. Central Dock Area
+            .child(self.top_bar.clone())
             .children(
                 self.dock
                     .as_ref()
                     .map(|dock| div().flex_1().min_h_0().child(dock.area.clone())),
-            )
-            // 4. Figma-style Status Bar
-            .when(
-                self.editor.workspace() == editor_core::WorkspaceKind::Animation,
-                |e| e.child(self.playback_bar.clone()),
             )
             .child(self.status_bar.clone())
             .into_any_element()

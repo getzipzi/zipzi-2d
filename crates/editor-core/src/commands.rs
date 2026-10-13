@@ -68,6 +68,8 @@ pub enum CommandId {
     ZoomOut,
     #[serde(rename = "view.reset")]
     ResetView,
+    #[serde(rename = "view.fit")]
+    FitView,
     #[serde(rename = "tool.select")]
     SelectTool,
     #[serde(rename = "tool.hand")]
@@ -239,6 +241,7 @@ specs![
     (ZoomIn, "menu.zoom_in", Document, true, ["cmd-=", "cmd-+"]),
     (ZoomOut, "menu.zoom_out", Document, true, ["cmd--"]),
     (ResetView, "menu.reset_view", Document, false, ["cmd-0"]),
+    (FitView, "menu.fit_view", Document, false, []),
     (SelectTool, "editor.tool_select", Canvas, false, ["v"]),
     (
         GenerateMesh,
@@ -389,6 +392,12 @@ impl Editor {
                 target && !self.is_busy() && !self.gesture_active() && self.view().zoom > MIN_ZOOM
             }
             ResetView => target && !self.is_busy() && !self.gesture_active(),
+            FitView => {
+                target
+                    && !self.is_busy()
+                    && !self.gesture_active()
+                    && self.canvas_metrics().visible()
+            }
             CancelGesture => target && !self.is_busy(),
             HandTool => target && !self.is_busy(),
             _ => modeling && target && !self.is_busy(),
@@ -422,6 +431,7 @@ impl Editor {
             ZoomIn => self.zoom_by(0.25),
             ZoomOut => self.zoom_by(-0.25),
             ResetView => self.reset_view(),
+            FitView => self.fit_view(),
             SelectTool | GlueTool | HandTool => {
                 let tool = match command.id {
                     SelectTool => crate::ToolId::Select,

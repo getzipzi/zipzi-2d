@@ -33,6 +33,10 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
         let info = window.find("AnimationInfo").bounds();
         let parameters = window.find("AnimationParameters").bounds();
         let canvas_bounds = window.find("canvas-body").bounds();
+        let playback = window.find("animation-playback-bar").bounds();
+        assert_eq!(playback.left(), canvas_bounds.left());
+        assert_eq!(playback.right(), canvas_bounds.right());
+        assert!(canvas_bounds.bottom() <= playback.top());
         assert!(motions.bottom() <= expressions.top());
         assert!(motions.size.height < expressions.size.height);
         assert!(info.bottom() <= parameters.top());
@@ -70,6 +74,50 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
             assert!(!view.editor.document().unwrap().modified());
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
         });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn project_tabs_restore_mode_tools_and_layout(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let first = harness.view.read(cx).editor.active_id().unwrap();
+        window.click("tool_glue", cx);
+        harness
+            .view
+            .update(cx, |view, cx| view.run_command(CommandId::New, window, cx));
+        let second = harness.view.read(cx).editor.active_id().unwrap();
+        assert_ne!(first, second);
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(format!("tab-item-{first:?}"), cx);
+        window.render_frame(cx);
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.workspace(), WorkspaceKind::Modeling);
+            assert_eq!(view.editor.active_tool(), ToolId::Glue);
+        });
+        assert!(window.try_find("tool_glue").is_some());
+        assert!(window.try_find("animation-playback-bar").is_none());
+        window.click(format!("tab-item-{second:?}"), cx);
+        window.render_frame(cx);
+        assert_eq!(
+            harness.view.read(cx).editor.workspace(),
+            WorkspaceKind::Animation
+        );
+        assert!(window.try_find("AnimationMotions").is_some());
+        assert!(window.try_find("animation-playback-bar").is_some());
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::Close, window, cx)
+        });
+        window.render_frame(cx);
+        assert_eq!(harness.view.read(cx).editor.active_id(), Some(first));
+        assert_eq!(
+            harness.view.read(cx).editor.workspace(),
+            WorkspaceKind::Modeling
+        );
+        assert!(window.try_find("tool_glue").is_some());
+        assert!(window.try_find("animation-playback-bar").is_none());
     })
     .unwrap();
 }
@@ -343,7 +391,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
                     point(px(0.), px(0.)),
                     size(px(640.), px(480.)),
                 ))),
-                ..Default::default()
+                ..crate::workspace::tab_bar::window_options()
             },
             cx,
             |window, cx| cx.new(|cx| crate::EditorView::new(window, cx)),

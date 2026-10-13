@@ -57,7 +57,7 @@ impl Harness {
                     // A TestWindow has no OS window. Logical visibility allows canvas measurement.
                     show: true,
                     focus: false,
-                    ..Default::default()
+                    ..crate::workspace::tab_bar::window_options()
                 },
                 cx,
                 |window, cx| cx.new(|cx| EditorView::new(window, cx)),
@@ -107,9 +107,9 @@ impl Harness {
                         "Editor failed: {:?}",
                         view.edit_error
                     );
-                    let current = if view.editor.workspace()
-                        == editor_core::WorkspaceKind::Animation
-                    {
+                    let current = if view.editor.active_id().is_none() {
+                        true
+                    } else if view.editor.workspace() == editor_core::WorkspaceKind::Animation {
                         view.animation_frame.as_ref().is_some_and(|frame| {
                             view.editor
                                 .can_display_animation_image(frame.state.identity)
@@ -413,6 +413,19 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    {
+        let mut empty = Harness::new()?;
+        empty.cx.update_window(empty.window, |_, window, cx| {
+            empty.view.update(cx, |view, cx| {
+                view.run_command(editor_core::CommandId::Close, window, cx);
+            });
+        })?;
+        save(&empty.capture()?, &directory, "titlebar-empty.png")?;
+        empty.cx.update_window(empty.window, |_, window, cx| {
+            window.click("project-new-or-open", cx);
+        })?;
+        save(&empty.capture()?, &directory, "titlebar-project-menu.png")?;
+    }
     animation_scrubbing_presents_frames_before_release()?;
     let mut harness = Harness::new()?;
     let baseline = harness.capture()?;

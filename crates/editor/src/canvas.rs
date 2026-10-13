@@ -14,7 +14,6 @@ use gpui_kit::component::{
 pub struct CanvasView {
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
-    pub(crate) toolbar: workspace::toolbar::ToolbarRegistry,
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
@@ -160,7 +159,6 @@ impl CanvasView {
             Self {
                 owner,
                 focus,
-                toolbar: workspace::toolbar::ToolbarRegistry::with_defaults(),
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 pan: None,
@@ -683,8 +681,6 @@ impl Render for CanvasView {
                 .absolute()
                 .size_full(),
             )
-            .child(workspace::render_floating_toolbar(self, modal, cx))
-            .child(workspace::render_floating_zoom_bar(&owner, modal, cx))
             .when(modeling, |e| {
                 e.child(workspace::deformer_bar::render_deformer_bar(
                     self, modal, cx,
@@ -693,7 +689,7 @@ impl Render for CanvasView {
             .children(interaction_label.map(|label| {
                 div()
                     .absolute()
-                    .left(px(52.))
+                    .left_2()
                     .top(px(48.))
                     .px_2()
                     .py_1()
@@ -709,7 +705,7 @@ impl Render for CanvasView {
                     .test_support()
                     .absolute()
                     .right_3()
-                    .bottom(px(56.))
+                    .bottom_3()
                     .max_w(px(360.))
                     .px_2p5()
                     .py_1()
@@ -832,6 +828,7 @@ impl Render for CanvasView {
                 "KasaneCanvas"
             })
             .child(body)
+            .when(!modeling, |e| e.child(owner.read(cx).playback_bar.clone()))
             .into_any_element()
     }
 }

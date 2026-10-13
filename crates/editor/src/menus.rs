@@ -73,6 +73,7 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
         item(CommandId::ZoomIn),
         item(CommandId::ZoomOut),
         item(CommandId::ResetView),
+        item(CommandId::FitView),
         MenuItem::separator(),
         item(CommandId::SelectTool),
         item(CommandId::GlueTool),

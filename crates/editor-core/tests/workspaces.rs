@@ -7,6 +7,71 @@ fn assert_view(actual: ViewState, expected: ViewState) {
 }
 
 #[test]
+fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow::Result<()> {
+    let mut editor = Editor::new()?;
+    let first = editor.active_id().unwrap();
+    let second = editor.new_document()?;
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    let output = tempfile::tempdir()?;
+    let save = editor.prepare_save(second, &output.path().join("second"), false)?;
+    editor.activate(first)?;
+    assert_eq!(editor.workspace(), WorkspaceKind::Modeling);
+    editor.finish_save(&mut save.run())?;
+    assert_eq!(editor.workspace(), WorkspaceKind::Modeling);
+    editor.activate(second)?;
+    assert_eq!(editor.workspace(), WorkspaceKind::Animation);
+    assert_eq!(editor.active_tool(), ToolId::Hand);
+    // Closing after an asynchronous save must restore the surviving tab's mode.
+    let save = editor.prepare_save(second, &output.path().join("second"), true)?;
+    editor.finish_save(&mut save.run())?;
+    assert_eq!(editor.active_id(), Some(first));
+    assert_eq!(editor.workspace(), WorkspaceKind::Modeling);
+    let third = editor.new_document()?;
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.close_document(third, true)?;
+    assert_eq!(editor.active_id(), Some(first));
+    assert_eq!(editor.workspace(), WorkspaceKind::Modeling);
+    Ok(())
+}
+
+#[test]
+fn fit_view_uses_canvas_and_display_scale_without_changing_other_views() -> anyhow::Result<()> {
+    let mut editor = Editor::new()?;
+    assert!(!editor.command_available(editor.command(CommandId::FitView)));
+    let first = editor.active_id().unwrap();
+    editor.pan_by(CanvasPoint { x: 30., y: 40. });
+    let modeling = editor.view();
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    let canvas = editor.document().unwrap().canvas();
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 420.,
+        height: 280.,
+        scale_factor: 2.,
+    });
+    editor.pan_by(CanvasPoint { x: 10., y: -40. });
+    editor.dispatch(editor.command(CommandId::FitView))?;
+    assert_view(
+        editor.view(),
+        ViewState {
+            zoom: (420. / canvas.width).min(280. / canvas.height) * 2. * 0.9,
+            pan: CanvasPoint::default(),
+        },
+    );
+    let fitted = editor.view();
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    assert_view(editor.view(), modeling);
+    let second = editor.new_document()?;
+    assert_view(editor.view(), ViewState::default());
+    editor.activate(first)?;
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    assert_view(editor.view(), fitted);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    editor.activate(second)?;
+    assert_view(editor.view(), ViewState::default());
+    Ok(())
+}
+
+#[test]
 fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views()
 -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document_with_binding(true)?;
@@ -78,6 +143,9 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     );
     assert_view(editor.view(), ViewState::default());
     editor.activate(first)?;
+    assert_eq!(editor.workspace(), WorkspaceKind::Animation);
+    assert_view(editor.view(), animation);
+    editor.set_workspace(WorkspaceKind::Modeling)?;
     assert_view(editor.view(), modeling);
     assert_eq!(editor.active_tool(), ToolId::Glue);
     assert_eq!(editor.document().unwrap().parameters()[0].value, 0.75);
@@ -87,6 +155,8 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     editor.set_workspace(WorkspaceKind::Animation)?;
     assert_view(editor.view(), animation);
     editor.activate(second)?;
+    assert_eq!(editor.workspace(), WorkspaceKind::Modeling);
+    editor.set_workspace(WorkspaceKind::Animation)?;
     assert_view(editor.view(), second_animation);
     editor.reset_view();
     assert_view(editor.view(), ViewState::default());

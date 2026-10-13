@@ -52,6 +52,8 @@ struct EditorView {
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
+    top_bar: Entity<workspace::top_bar::TopBar>,
+    toolbar: workspace::toolbar::ToolbarRegistry,
     playback_bar: Entity<workspace::playback_bar::PlaybackBar>,
     dev_session: Option<dev_session::DevSession>,
 }
@@ -90,6 +92,8 @@ impl EditorView {
             gpu_device: None,
             _frames: None,
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
+            top_bar: workspace::top_bar::TopBar::new(cx.weak_entity(), cx),
+            toolbar: workspace::toolbar::ToolbarRegistry::with_defaults(),
             playback_bar: workspace::playback_bar::PlaybackBar::new(cx.weak_entity(), window, cx),
             dev_session: dev_session::DevSession::from_env(),
         };
@@ -362,17 +366,13 @@ fn main() {
             .detach();
             gpui_kit::open_window(
                 WindowOptions {
-                    titlebar: Some(TitlebarOptions {
-                        title: Some(t!("app.title").into()),
-                        ..Default::default()
-                    }),
                     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                         None,
                         size(px(1100.), px(740.)),
                         cx,
                     ))),
                     window_min_size: Some(size(px(800.), px(480.))),
-                    ..Default::default()
+                    ..workspace::tab_bar::window_options()
                 },
                 cx,
                 |window, cx| cx.new(|cx| EditorView::new(window, cx)),

@@ -74,6 +74,21 @@ impl DocumentSession {
     pub fn view(&self) -> ViewState {
         self.view_for(self.workspace)
     }
+    pub fn fit_view(&mut self, metrics: CanvasMetrics) {
+        let canvas = self.document.model().canvas();
+        if !metrics.visible() || canvas.width <= 0. || canvas.height <= 0. || self.tools.dragging()
+        {
+            return;
+        }
+        self.views[self.workspace.index()] = ViewState {
+            zoom: ((metrics.width / canvas.width).min(metrics.height / canvas.height)
+                * metrics.scale_factor
+                * 0.9)
+                .clamp(MIN_ZOOM, MAX_ZOOM),
+            pan: CanvasPoint::default(),
+        };
+        self.viewport_revision += 1;
+    }
     pub fn view_for(&self, workspace: WorkspaceKind) -> ViewState {
         self.views[workspace.index()]
     }

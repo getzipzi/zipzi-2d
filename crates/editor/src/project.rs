@@ -31,6 +31,7 @@ impl EditorView {
         }
     }
     pub(super) fn refresh_document(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.sync_workspace_layout(window, cx);
         if let Some(dock) = &self.dock {
             dock.canvas.update(cx, |canvas, _| canvas.cancel_pointer());
         }

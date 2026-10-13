@@ -1,5 +1,6 @@
 use crate::{EditorView, t};
 use editor_core::{CommandId, DocumentId, MotionSelection, WorkspaceKind};
+use gpui_kit::assets::IconName;
 use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable,
     button::{Button, ButtonVariants},
@@ -206,42 +207,45 @@ impl Render for PlaybackBar {
                 }
             }
         }
-        let mut bar = div()
+        let mut controls = div().w_full().min_w_0().flex().items_center().gap_1();
+        let bar = div()
             .id("animation-playback-bar")
             .test_support()
             .flex()
+            .flex_col()
             .flex_shrink_0()
             .items_center()
-            .gap_3()
-            .h(px(40.))
+            .justify_center()
+            .gap_1()
+            .h(px(64.))
             .px_3()
             .border_t_1()
             .border_color(cx.theme().border);
-        for ((id, command, label), available) in [
+        for ((id, command, icon), available) in [
             (
                 "animation-play-pause",
                 CommandId::PlayPause,
                 if playing {
-                    t!("workspace.pause")
+                    IconName::Pause
                 } else {
-                    t!("workspace.play")
+                    IconName::Play
                 },
             ),
             (
                 "animation-rewind",
                 CommandId::RewindAnimation,
-                t!("workspace.rewind"),
+                IconName::RotateCcw,
             ),
         ]
         .into_iter()
         .zip(available)
         {
             let owner = self.owner.clone();
-            bar = bar.child(
+            controls = controls.child(
                 Button::new(id)
                     .small()
                     .ghost()
-                    .label(label)
+                    .icon(icon)
                     .tooltip(if command == CommandId::PlayPause {
                         t!("workspace.play_hint")
                     } else {
@@ -253,11 +257,27 @@ impl Render for PlaybackBar {
                     }),
             );
         }
-        bar = bar.child(
+        let bar = bar.child(
+            controls.child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .text_right()
+                    .text_xs()
+                    .text_color(cx.theme().muted_foreground)
+                    .child(label),
+            ),
+        );
+        bar.child(
             div()
                 .id("animation-seek")
                 .test_support()
-                .flex_1()
+                .w_full()
+                .h(px(16.))
+                .flex()
+                .items_center()
                 .min_w(px(36.))
                 .tooltip(move |window, cx| {
                     Tooltip::new(
@@ -310,16 +330,6 @@ impl Render for PlaybackBar {
                         .as_ref()
                         .map(|seek| Slider::new(&seek.state).w_full()),
                 ),
-        );
-        bar.child(
-            div()
-                .flex_shrink_0()
-                .min_w_0()
-                .overflow_hidden()
-                .text_ellipsis()
-                .text_xs()
-                .text_color(cx.theme().muted_foreground)
-                .child(label),
         )
         .into_any_element()
     }

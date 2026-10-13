@@ -1,5 +1,5 @@
 use crate::EditorView;
-use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable};
+use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable, WindowExt};
 use gpui_kit::{prelude::*, *};
 
 pub struct StatusBar {
@@ -17,15 +17,17 @@ impl StatusBar {
 }
 
 impl Render for StatusBar {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
-        render_status_bar(owner.read(cx), cx).into_any_element()
+        let modal = owner.read(cx).modal || window.has_active_dialog(cx);
+        let zoom = super::zoom_bar::render_zoom_bar(&owner, modal, cx);
+        render_status_bar(owner.read(cx), zoom, cx).into_any_element()
     }
 }
 
-fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
+fn render_status_bar(view: &EditorView, zoom: impl IntoElement, cx: &App) -> impl IntoElement {
     let theme = cx.theme();
     let error = view
         .edit_error
@@ -37,7 +39,8 @@ fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
 
     div()
         .id("app-status-bar")
-        .h(px(24.))
+        .test_support()
+        .h(px(28.))
         .w_full()
         .flex_shrink_0()
         .bg(theme.background)
@@ -45,13 +48,15 @@ fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
         .border_color(theme.border)
         .flex()
         .items_center()
-        .justify_between()
+        .gap_3()
         .px_3()
         .text_xs()
         // Left side: status message
         .child(
             div()
                 .flex()
+                .flex_1()
+                .min_w_0()
                 .items_center()
                 .gap_1p5()
                 .text_color(if is_error {
@@ -64,7 +69,7 @@ fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
                 })
                 .child(
                     div()
-                        .max_w(px(500.))
+                        .min_w_0()
                         .overflow_hidden()
                         .text_ellipsis()
                         .child(message),
@@ -74,14 +79,16 @@ fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
         .child(
             div()
                 .flex()
+                .min_w_0()
                 .items_center()
                 .gap_3()
                 .text_color(theme.muted_foreground)
                 .when_some(selected_layer, |e, layer| {
-                    e.child(div().child(format!(
+                    e.child(div().overflow_hidden().text_ellipsis().child(format!(
                         "{}: {}v / {}t",
                         layer.name, layer.vertices, layer.triangles
                     )))
                 }),
         )
+        .child(zoom)
 }

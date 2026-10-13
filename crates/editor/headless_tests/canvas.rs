@@ -503,30 +503,25 @@ fn space_in_parameter_input_keeps_input_focus(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
+fn centered_toolbar_and_status_zoom_controls(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        // Verify top bar is removed
-        assert!(
-            window.try_find("app-toolbar").is_none(),
-            "top bar app-toolbar should be removed"
-        );
-
-        // Verify floating toolbar exists on canvas
-        assert!(
-            window.try_find("canvas-floating-toolbar").is_some(),
-            "canvas-floating-toolbar should exist"
-        );
+        let tabs = window.find("global-document-tabs").bounds();
+        let top = window.find("workspace-top-bar").bounds();
+        let tools = window.find("workspace-toolbar").bounds();
+        let canvas = window.find("canvas-body").bounds();
+        assert!(tabs.bottom() <= top.top());
+        assert!(top.bottom() <= canvas.top());
+        assert!((tools.center().x - top.center().x).abs() <= px(1.));
+        assert!(top.contains(&window.find("workspace-layout-menu").bounds().center()));
+        assert!(window.try_find("canvas-floating-toolbar").is_none());
         assert!(window.try_find("tool_select").is_some());
         assert!(window.try_find("tool_mesh").is_none());
         assert!(window.try_find("tool_deformer").is_none());
         assert!(window.try_find("tool_hand").is_some());
 
         // A configured button becomes visible through registration.
-        let canvas = harness
-            .view
-            .read_with(cx, |view, _| view.dock.as_ref().unwrap().canvas.clone());
-        canvas.update(cx, |canvas, cx| {
+        harness.view.update(cx, |view, cx| {
             let item = ToolbarItemConfig {
                 id: "registered-toolbar-item",
                 icon: IconName::Hand,
@@ -535,16 +530,16 @@ fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
                 enabled: |_, modal, _| !modal,
                 action: None,
             };
-            assert!(canvas.toolbar.register(item).is_ok());
-            assert!(canvas.toolbar.register(item).is_err());
+            assert!(view.toolbar.register(item).is_ok());
+            assert!(view.toolbar.register(item).is_err());
             cx.notify();
         });
 
-        // Verify floating zoom bar exists on canvas
-        assert!(
-            window.try_find("canvas-floating-zoom").is_some(),
-            "canvas-floating-zoom should exist"
-        );
+        assert!(window.try_find("canvas-floating-zoom").is_none());
+        let status = window.find("app-status-bar").bounds();
+        let zoom = window.find("status-zoom").bounds();
+        assert!(status.contains(&zoom.origin));
+        assert!(zoom.bottom() <= status.bottom());
         assert!(window.try_find("btn_zoom_out").is_some());
         assert!(window.try_find("zoom-percentage").is_some());
         assert!(window.try_find("btn_zoom_in").is_some());
@@ -585,6 +580,11 @@ fn floating_toolbar_and_zoom_controls(cx: &mut TestAppContext) {
         let after_scroll_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
         assert!(after_scroll_zoom > zoomed_out);
         assert_ne!(after_scroll_pan, before_scroll_pan);
+        window.click("btn_zoom_fit", cx);
+        assert_eq!(
+            harness.view.read_with(cx, |view, _| view.editor.view().pan),
+            Default::default()
+        );
     })
     .unwrap();
 

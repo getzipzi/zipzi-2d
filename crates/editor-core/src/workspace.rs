@@ -41,6 +41,7 @@ impl DocumentSummary {
 }
 struct Entry {
     id: DocumentId,
+    workspace: WorkspaceKind,
     session: Option<DocumentSession>,
     frozen: DocumentSummary,
     frozen_layers: Vec<Layer>,
@@ -189,6 +190,7 @@ impl Editor {
         session.set_workspace(self.workspace);
         self.documents.push(Entry {
             id,
+            workspace: self.workspace,
             frozen: DocumentSummary::read(id, &session),
             frozen_layers: Vec::new(),
             frozen_selected: None,
@@ -235,16 +237,29 @@ impl Editor {
         if self.active.is_some() && !self.is_busy() {
             self.execute(EditorCommand::FinishEdit)?;
         }
-        for entry in &mut self.documents {
+        if let Some(id) = self.active {
+            let entry = self.entry_mut(id)?;
+            entry.workspace = workspace;
             if let Some(session) = &mut entry.session {
                 session.set_workspace(workspace);
             }
+        }
+        self.update_workspace(workspace);
+        Ok(())
+    }
+    fn update_workspace(&mut self, workspace: WorkspaceKind) {
+        if self.workspace == workspace {
+            return;
         }
         self.workspace = workspace;
         self.workspace_revision += 1;
         self.invalidate_preview();
         self.presentation_floor = self.revision + 1;
-        Ok(())
+    }
+    fn restore_active_workspace(&mut self) {
+        if let Some(entry) = self.active.and_then(|id| self.entry(id).ok()) {
+            self.update_workspace(entry.workspace);
+        }
     }
     pub fn documents(&self) -> Vec<DocumentSummary> {
         self.documents.iter().map(Entry::summary).collect()
@@ -402,6 +417,7 @@ impl Editor {
             }
         }
         self.active = Some(id);
+        self.restore_active_workspace();
         self.displayed_request = None;
         self.requested_scene = None;
         // The UI releases the inactive document's GPU image. Reissue a paused
@@ -542,7 +558,6 @@ impl Editor {
     }
     /// Rejected delivery leaves the envelope intact so its owner can recover it.
     pub fn finish_save(&mut self, completion: &mut SaveCompletion) -> Result<SaveReceipt> {
-        let workspace = self.workspace;
         let entry = self.entry_mut(completion.id)?;
         ensure!(
             entry
@@ -558,7 +573,7 @@ impl Editor {
         // Metrics/device state may change on the UI while the session is saving.
         // Also replace any pending preview rejected while it was on the worker.
         session.viewport_revision += 1;
-        session.set_workspace(workspace);
+        session.set_workspace(entry.workspace);
         entry.session = Some(session);
         entry.frozen_layers.clear();
         entry.frozen_selected = None;
@@ -616,6 +631,7 @@ impl Editor {
                 .documents
                 .get(index.min(self.documents.len().saturating_sub(1)))
                 .map(|e| e.id);
+            self.restore_active_workspace();
             self.invalidate_animation();
             self.displayed_request = None;
         }
@@ -679,6 +695,12 @@ impl Editor {
     pub fn invalidate_preview(&mut self) {
         self.requested_scene = None;
         self.displayed_request = None;
+    }
+    pub fn fit_view(&mut self) {
+        let metrics = self.metrics;
+        if let Some(session) = self.active_session_mut() {
+            session.fit_view(metrics);
+        }
     }
     pub fn prepare_close(&mut self, id: DocumentId) -> Result<CloseDisposition> {
         if let Some(s) = &mut self.entry_mut(id)?.session {

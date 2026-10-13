@@ -687,6 +687,20 @@ impl EditorView {
             cx.notify();
             return;
         }
+        self.sync_workspace_layout(window, cx);
+        self.redraw(cx);
+    }
+
+    /// Mode can change through tab activation, closing a tab, or save completion.
+    pub(super) fn sync_workspace_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let workspace = self.editor.workspace();
+        if self
+            .dock
+            .as_ref()
+            .is_none_or(|dock| dock.workspace == workspace)
+        {
+            return;
+        }
         self.frame = None;
         self.animation_frame = None;
         self.animation_anchor = None;
@@ -704,7 +718,6 @@ impl EditorView {
         {
             self.edit_error = Some(error.to_string());
         }
-        self.redraw(cx);
     }
 
     pub(super) fn reveal_keyforms(&mut self, window: &mut Window, cx: &mut App) {

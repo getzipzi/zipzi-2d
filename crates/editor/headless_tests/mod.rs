@@ -17,6 +17,7 @@ mod properties;
 mod recent_files;
 mod slide_number_input;
 mod sorting;
+mod titlebar;
 mod workspaces;
 
 use crate::{EditorView, actions, i18n, settings};
@@ -66,7 +67,7 @@ fn setup_with_document(
                     point(px(0.), px(0.)),
                     size(px(1100.), px(740.)),
                 ))),
-                ..Default::default()
+                ..crate::workspace::tab_bar::window_options()
             },
             cx,
             |window, cx| cx.new(|cx| EditorView::new(window, cx)),
