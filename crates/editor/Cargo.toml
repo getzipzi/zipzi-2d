@@ -46,3 +46,8 @@ harness = false
 name = "animation_acceptance"
 path = "tests/animation_acceptance.rs"
 harness = false
+
+[[test]]
+name = "timeline_acceptance"
+path = "tests/timeline_acceptance.rs"
+harness = false

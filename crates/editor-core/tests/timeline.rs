@@ -14,6 +14,41 @@ use std::{collections::HashSet, sync::Arc};
 fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
 }
+
+#[test]
+fn navigation_and_selection_share_rows_but_visibility_changes_rebuild_them() -> anyhow::Result<()> {
+    let (mut editor, _assets) = fixture(false, false)?;
+    let doc = editor.active_id().unwrap();
+    let original = editor.timeline_visible_rows().unwrap();
+    let key = editor
+        .timeline_projection()
+        .unwrap()
+        .tracks
+        .values()
+        .next()
+        .unwrap()
+        .keys[0]
+        .reference
+        .clone();
+    editor.update_timeline_view(doc, |view| {
+        view.scroll = 52.;
+        view.time_range = (0.1, 0.7);
+        view.mode = TimelineDisplayMode::Curves;
+        view.keys.insert(key.clone());
+    })?;
+    assert!(Arc::ptr_eq(
+        &original,
+        &editor.timeline_visible_rows().unwrap()
+    ));
+    assert!(editor.timeline_view().unwrap().keys.contains(&key));
+    editor.update_timeline_view(doc, |view| view.search = "does not exist".into())?;
+    assert!(!Arc::ptr_eq(
+        &original,
+        &editor.timeline_visible_rows().unwrap()
+    ));
+    assert!(editor.timeline_view().unwrap().keys.is_empty());
+    Ok(())
+}
 fn fixture(duplicate: bool, opaque: bool) -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let temp = tempfile::tempdir()?;
     let mut s = AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;

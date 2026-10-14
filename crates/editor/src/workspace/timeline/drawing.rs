@@ -49,29 +49,7 @@ pub(super) struct SceneCache {
 }
 impl Scene {
     pub fn hit(&self, position: Point<Pixels>) -> Result<Option<Hit>, ()> {
-        let nearby: Vec<_> = self
-            .markers
-            .iter()
-            .rev()
-            .filter(|marker| {
-                (marker.position.x - position.x).abs() <= px(6.)
-                    && (marker.position.y - position.y).abs() <= px(6.)
-            })
-            .collect();
-        if let Some(handle) = nearby
-            .iter()
-            .find(|marker| matches!(marker.hit, Hit::Handle { .. }))
-        {
-            return Ok(Some(handle.hit.clone()));
-        }
-        if nearby.len() > 1
-            && nearby
-                .windows(2)
-                .any(|pair| pair[0].position == pair[1].position)
-        {
-            return Err(());
-        }
-        Ok(nearby.first().map(|marker| marker.hit.clone()))
+        hit_markers(&self.markers, position)
     }
     pub fn marquee(
         &self,
@@ -94,6 +72,79 @@ impl Scene {
             }
         }
         (keys, events)
+    }
+}
+fn hit_markers(markers: &[Marker], position: Point<Pixels>) -> Result<Option<Hit>, ()> {
+    let mut closest: Option<(&Marker, f32)> = None;
+    let mut ambiguous = false;
+    for marker in markers {
+        let dx = (marker.position.x - position.x).abs().as_f32();
+        let dy = (marker.position.y - position.y).abs().as_f32();
+        if dx > 6. || dy > 6. {
+            continue;
+        }
+        let distance = dx * dx + dy * dy;
+        let handle = matches!(marker.hit, Hit::Handle { .. });
+        match closest {
+            Some((previous, best)) => {
+                let previous_handle = matches!(previous.hit, Hit::Handle { .. });
+                if (handle && !previous_handle) || (handle == previous_handle && distance < best) {
+                    closest = Some((marker, distance));
+                    ambiguous = false;
+                } else if handle == previous_handle && marker.position == previous.position {
+                    ambiguous = true;
+                }
+            }
+            None => closest = Some((marker, distance)),
+        }
+    }
+    if ambiguous {
+        Err(())
+    } else {
+        Ok(closest.map(|(marker, _)| marker.hit.clone()))
+    }
+}
+
+#[cfg(test)]
+mod hit_tests {
+    use super::{Hit, Marker, hit_markers, tick_label, ticks};
+    use gpui_kit::{point, px};
+    fn marker(x: f32, id: &str) -> Marker {
+        Marker {
+            position: point(px(x), px(10.)),
+            hit: Hit::Event(id.into()),
+        }
+    }
+    #[test]
+    fn dense_points_choose_the_nearest_in_either_draw_order() {
+        for markers in [
+            vec![marker(10., "nearest"), marker(14., "far")],
+            vec![marker(14., "far"), marker(10., "nearest")],
+        ] {
+            assert!(
+                matches!(hit_markers(&markers, point(px(10.5), px(10.))), Ok(Some(Hit::Event(id))) if id == "nearest")
+            );
+        }
+    }
+    #[test]
+    fn coincident_points_require_disambiguation_only_when_nearest() {
+        let markers = vec![marker(10., "a"), marker(10., "b"), marker(14., "c")];
+        assert!(hit_markers(&markers, point(px(10.), px(10.))).is_err());
+        assert!(
+            matches!(hit_markers(&markers, point(px(14.), px(10.))), Ok(Some(Hit::Event(id))) if id == "c")
+        );
+    }
+    #[test]
+    fn zoomed_ruler_preserves_subframe_and_subsecond_labels() {
+        for seconds in [false, true] {
+            let marks = ticks((0., 0.001), 600., 30., seconds);
+            let step = marks[1] - marks[0];
+            let labels: std::collections::HashSet<_> = marks
+                .iter()
+                .map(|t| tick_label(*t, step, 30., seconds))
+                .collect();
+            assert_eq!(labels.len(), marks.len());
+        }
     }
 }
 pub(super) fn time_x(time: f64, range: (f64, f64), width: f32) -> f32 {
@@ -490,6 +541,15 @@ fn ticks(range: (f64, f64), width: f32, fps: f32, seconds: bool) -> Vec<f64> {
         .take_while(|time| *time <= range.1)
         .collect()
 }
+fn tick_label(time: f64, step: f64, fps: f32, seconds: bool) -> String {
+    let units = if seconds { 1. } else { fps as f64 };
+    let precision = (-(step * units).max(1e-9).log10().floor()).clamp(0., 9.) as usize;
+    if seconds {
+        format!("{time:.precision$}s", precision = precision.max(2))
+    } else {
+        format!("{:.precision$}", time * units)
+    }
+}
 pub(super) fn paint_ruler(
     bounds: Bounds<Pixels>,
     projection: &TimelineProjection,
@@ -502,22 +562,23 @@ pub(super) fn paint_ruler(
     let foreground = cx.theme().muted_foreground;
     let primary = cx.theme().primary;
     window.with_content_mask(Some(ContentMask { bounds }), |window| {
-        for time in ticks(
+        let marks = ticks(
             state.time_range,
             bounds.size.width.as_f32(),
             projection.fps,
             seconds,
-        ) {
+        );
+        let step = marks
+            .get(1)
+            .zip(marks.first())
+            .map_or(state.time_range.1 - state.time_range.0, |(b, a)| b - a);
+        for time in marks {
             let x = time_x(time, state.time_range, bounds.size.width.as_f32());
             label(
                 window,
                 cx,
                 bounds.origin + point(px(x + 3.), px(1.)),
-                if seconds {
-                    format!("{time:.2}s")
-                } else {
-                    format!("{:.0}", time * projection.fps as f64)
-                },
+                tick_label(time, step, projection.fps, seconds),
                 foreground,
             );
             line(

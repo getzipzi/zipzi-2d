@@ -20,6 +20,10 @@ pub(super) async fn run(
             .context("native benchmark needs a looping motion")?;
         view.editor
             .select_motion(view.editor.active_id().unwrap(), resource.selection)?;
+        view.editor.set_animation_preview_mode(
+            view.editor.active_id().unwrap(),
+            editor_core::AnimationPreviewMode::Result,
+        )?;
         view.redraw(cx);
         Ok((
             view.editor.document().unwrap().history_lengths(),

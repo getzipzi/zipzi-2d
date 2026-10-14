@@ -96,6 +96,8 @@ pub struct TimelineEdit {
     pub local_time: f64,
     pub candidate: MotionClipCandidate,
     original: MotionClip,
+    original_candidate: MotionClipCandidate,
+    original_projection: Arc<TimelineProjection>,
     source: Arc<AnimationSource>,
     target: Option<String>,
     track_id: String,
@@ -111,8 +113,8 @@ impl TimelineEdit {
         snap: bool,
     ) -> Result<MotionClipCandidate> {
         let model = document.model();
-        let mut candidate = MotionClipCandidate::new(model, self.original.clone())?;
-        let projection = TimelineProjection::from_clip(document, &self.original)?;
+        let mut candidate = self.original_candidate.clone();
+        let projection = &self.original_projection;
         let validate_key = |key: &TimelineKeyRef| -> Result<()> {
             ensure!(
                 projection.key(key).is_some(),
@@ -530,8 +532,15 @@ impl Editor {
             .timeline
             .current_mut()
             .unwrap();
+        let visibility_changed = state.view.collapsed != view.collapsed
+            || state.view.search != view.search
+            || state.view.filter != view.filter;
         state.view = view;
-        state.refresh_visible();
+        if visibility_changed {
+            state.refresh_visible();
+        } else {
+            state.retain_selection();
+        }
         Ok(())
     }
     pub fn create_timeline_motion(&mut self, document: DocumentId) -> Result<String> {
@@ -593,6 +602,7 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
         let original = session.document.motion_definition(clip_id).unwrap().clone();
         let candidate = MotionClipCandidate::new(session.document.model(), original.clone())?;
+        let original_projection = session.timeline.current().unwrap().projection.clone();
         let source = Arc::new(session.document.animation_source());
         session.timeline.next_edit += 1;
         let identity = TimelineCandidateIdentity {
@@ -603,6 +613,8 @@ impl Editor {
             identity,
             base_version: source.snapshot.version(),
             original,
+            original_candidate: candidate.clone(),
+            original_projection,
             source,
             candidate,
             local_time: f64::from(session.animation.edit_time),

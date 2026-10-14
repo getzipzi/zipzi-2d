@@ -190,15 +190,23 @@ impl TimelineClipState {
         self.refresh_visible();
     }
     fn refresh_visible(&mut self) {
-        let rows = self.projection.visible_rows(&self.view);
-        let visible: HashSet<_> = rows.iter().flat_map(|row| &row.keys).cloned().collect();
-        self.view.keys.retain(|key| visible.contains(key));
+        self.visible = self.projection.visible_rows(&self.view).into();
+        self.retain_selection();
+    }
+    fn retain_selection(&mut self) {
+        let tracks: HashSet<_> = self
+            .visible
+            .iter()
+            .filter_map(|row| row.track_id.as_ref())
+            .collect();
+        self.view
+            .keys
+            .retain(|key| tracks.contains(&key.track_id) && self.projection.key(key).is_some());
         self.view
             .events
             .retain(|id| self.projection.events.iter().any(|event| &event.id == id));
-        let ids: HashSet<_> = rows.iter().map(|row| &row.id).collect();
+        let ids: HashSet<_> = self.visible.iter().map(|row| &row.id).collect();
         self.view.channels.retain(|row| ids.contains(row));
-        self.visible = rows.into();
     }
 }
 
