@@ -822,6 +822,11 @@ fn cached_tracks_are_not_repainted_for_clock_only_updates(cx: &mut TestAppContex
         // Normal draw, unlike render_frame's intentional full-window refresh.
         window.draw(cx).clear(cx);
         assert_eq!(
+            window.find("timeline-overlay").bounds(),
+            window.find("timeline-graph").bounds(),
+            "Playhead and marquee must cover the graph, not flow below the cached tracks"
+        );
+        assert_eq!(
             harness.view.read(cx).timeline.read(cx).scene_paints(),
             paints
         );
@@ -896,6 +901,70 @@ fn committing_on_blur_keeps_the_next_field_focused_and_uses_the_new_asset(cx: &m
         assert!(view.editor.timeline_edit().is_none());
         assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
     });
+}
+
+#[gpui_kit::test]
+fn invalid_inspector_text_does_not_commit_the_last_valid_intermediate_value(
+    cx: &mut TestAppContext,
+) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    let (key, original) = cx
+        .update_window(harness.window, |_, window, cx| {
+            window.activate_window();
+            window.click("workspace-animation", cx);
+            window.render_frame(cx);
+            window.click(("animation-motion", 0usize), cx);
+            window.render_frame(cx);
+            let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
+            let key_data = &projection.tracks.values().next().unwrap().keys[0];
+            let key = key_data.reference.clone();
+            let original = key_data.value;
+            let position = harness
+                .view
+                .read(cx)
+                .timeline
+                .read(cx)
+                .key_position(&key)
+                .unwrap()
+                + point(px(2.), px(0.));
+            press(window, position, cx);
+            release(window, position, cx);
+            window.render_frame(cx);
+            (key, original)
+        })
+        .unwrap();
+    for invalid in ["-", "999999"] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click(format!("timeline-number-KeyValue({key:?})"), cx);
+            window.press("cmd-a", cx);
+            window.input("0.25", cx);
+        })
+        .unwrap();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.press("cmd-a", cx);
+            window.input(invalid, cx);
+        })
+        .unwrap();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.press("enter", cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.timeline_edit().is_none());
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+            assert_eq!(
+                view.editor
+                    .timeline_projection()
+                    .unwrap()
+                    .key(&key)
+                    .unwrap()
+                    .value,
+                original
+            );
+        });
+    }
 }
 
 #[gpui_kit::test]

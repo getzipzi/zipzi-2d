@@ -549,6 +549,96 @@ fn explicitly_selected_subframe_key_keeps_exact_time_with_snap_enabled() -> anyh
 }
 
 #[test]
+fn inspector_value_and_event_text_edits_preserve_subframe_times() -> anyhow::Result<()> {
+    let (mut e, _temp) = fixture(false, false)?;
+    let d = e.active_id().unwrap();
+    e.execute_timeline(
+        d,
+        TimelineCommand::Event {
+            id: Some(id(40)),
+            time: f64::from(0.1137_f32),
+            value: "Original".into(),
+        },
+    )?;
+    e.update_timeline_view(d, |view| view.snap = true)?;
+    let original = e
+        .document()
+        .unwrap()
+        .motion_definition(&id(4))
+        .unwrap()
+        .clone();
+    let initial = &original.tracks[0].initial;
+    e.execute_timeline(
+        d,
+        TimelineCommand::SetKey {
+            key: key(10),
+            time: f64::from(initial.time),
+            value: 0.25,
+        },
+    )?;
+    assert_eq!(
+        e.timeline_projection().unwrap().key(&key(10)).unwrap().time,
+        f64::from(initial.time)
+    );
+    e.execute_timeline(
+        d,
+        TimelineCommand::Event {
+            id: Some(id(40)),
+            time: f64::from(original.events[0].time),
+            value: "Renamed".into(),
+        },
+    )?;
+    let clip = e.document().unwrap().motion_definition(&id(4)).unwrap();
+    assert_eq!(clip.events[0].time, original.events[0].time);
+    assert_eq!(clip.events[0].value, "Renamed");
+    assert_eq!(clip.tracks[0].initial.value, 0.25);
+    // Explicit time edits still use frame snapping.
+    e.execute_timeline(
+        d,
+        TimelineCommand::SetKey {
+            key: key(10),
+            time: 0.24,
+            value: 0.25,
+        },
+    )?;
+    e.execute_timeline(
+        d,
+        TimelineCommand::Event {
+            id: Some(id(40)),
+            time: 0.24,
+            value: "Renamed".into(),
+        },
+    )?;
+    let clip = e.document().unwrap().motion_definition(&id(4)).unwrap();
+    assert_eq!(clip.tracks[0].initial.time, 7. / 30.);
+    assert_eq!(clip.events[0].time, 7. / 30.);
+    Ok(())
+}
+
+#[test]
+fn shrinking_motion_reconciles_the_edit_head_with_the_preview_clock() -> anyhow::Result<()> {
+    let (mut e, _temp) = fixture(false, false)?;
+    let d = e.active_id().unwrap();
+    e.seek_timeline(d, 1.9)?;
+    e.execute_timeline(
+        d,
+        TimelineCommand::Timing {
+            duration: 1.6,
+            fps: 30.,
+            looping: false,
+            fade_in: Some(0.),
+            fade_out: Some(0.),
+        },
+    )?;
+    assert_eq!(e.animation().unwrap().time, 1.6);
+    assert_eq!(e.animation().unwrap().edit_time, 1.6);
+    e.execute_timeline(d, write(3, None, 0.4))?;
+    let clip = e.document().unwrap().motion_definition(&id(4)).unwrap();
+    assert_eq!(clip.tracks.last().unwrap().initial.time, 1.6);
+    Ok(())
+}
+
+#[test]
 fn multi_key_moves_snap_only_anchor_keep_rhythm_and_reject_collisions_atomically()
 -> anyhow::Result<()> {
     let (mut e, _temp) = fixture(true, false)?;

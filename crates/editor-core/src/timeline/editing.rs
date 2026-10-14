@@ -227,12 +227,19 @@ impl TimelineEdit {
             }
             TimelineCommand::SetKey { key, time, value } => {
                 validate_key(key)?;
+                let original_time = projection.key(key).unwrap().time;
+                // A value-only inspector edit must not quantize an imported key.
+                let time = if *time == original_time {
+                    original_time as f32
+                } else {
+                    timeline_time(*time, projection.fps, snap)?
+                };
                 candidate.move_keys(
                     model,
                     &[MotionKeyMove {
                         key: key.sdk(),
                         point: MotionPoint {
-                            time: timeline_time(*time, projection.fps, snap)?,
+                            time,
                             value: *value,
                         },
                     }],
@@ -292,19 +299,20 @@ impl TimelineEdit {
             }
             TimelineCommand::Event { id, time, value } => {
                 let mut clip = candidate.into_clip();
-                let time = timeline_time(*time, projection.fps, snap)?;
                 if let Some(id) = id {
                     let event = clip
                         .events
                         .iter_mut()
                         .find(|event| &event.id == id)
                         .ok_or_else(|| anyhow::anyhow!("Event no longer exists"))?;
-                    event.time = time;
+                    if *time != f64::from(event.time) {
+                        event.time = timeline_time(*time, projection.fps, snap)?;
+                    }
                     event.value = value.clone();
                 } else {
                     clip.events.push(MotionEvent {
                         id: self.event_id.clone(),
-                        time,
+                        time: timeline_time(*time, projection.fps, snap)?,
                         value: value.clone(),
                         extensions: Default::default(),
                     });

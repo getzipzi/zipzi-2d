@@ -299,6 +299,9 @@ impl Timeline {
             match value.parse::<f64>() {
                 Ok(value) if value.is_finite() => Some(value),
                 _ => {
+                    if !sliding {
+                        self.cancel_number_candidate(&field, cx);
+                    }
                     self.error = Some(t!("timeline.invalid_number").into_owned());
                     cx.notify();
                     return;
@@ -366,6 +369,25 @@ impl Timeline {
         }
         let token = edit.token;
         self.update_candidate(token, command, cx);
+        if !sliding && self.error.is_some() {
+            self.cancel_number_candidate(&field, cx);
+        }
+    }
+    // Invalid text must not leave a previous valid candidate available to Enter,
+    // blur or Save. Keep the text focused so the user can correct it. Pointer
+    // drags instead retain their last legal candidate when hitting a boundary.
+    fn cancel_number_candidate(&mut self, field: &Field, cx: &mut Context<Self>) {
+        if self
+            .number_edit
+            .as_ref()
+            .is_some_and(|edit| &edit.field == field)
+        {
+            self.number_edit = None;
+            let _ = self.owner.update(cx, |owner, cx| {
+                owner.editor.cancel_timeline_edit();
+                owner.redraw(cx);
+            });
+        }
     }
     pub(super) fn finish_number_outside(
         &mut self,

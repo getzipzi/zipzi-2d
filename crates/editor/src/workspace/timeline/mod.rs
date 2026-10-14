@@ -767,16 +767,23 @@ impl Render for Timeline {
                             .cached(StyleRefinement::default().size_full()),
                     )
                     .child(
-                        canvas(
-                            |_, _, _| (),
-                            move |bounds, _, window, _| {
-                                drawing::paint_head(
-                                    bounds, head_range, head, marquee, primary, window,
+                        div()
+                            .id("timeline-overlay")
+                            .test_support()
+                            .absolute()
+                            .inset_0()
+                            .size_full()
+                            .child(
+                                canvas(
+                                    |_, _, _| (),
+                                    move |bounds, _, window, _| {
+                                        drawing::paint_head(
+                                            bounds, head_range, head, marquee, primary, window,
+                                        )
+                                    },
                                 )
-                            },
-                        )
-                        .absolute()
-                        .size_full(),
+                                .size_full(),
+                            ),
                     ),
             );
         let body = div()

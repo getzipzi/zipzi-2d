@@ -438,6 +438,21 @@ impl AnimationSession {
             if let Some(resource) = catalog.motions.iter().find(|r| &r.selection == selection) {
                 self.time = if !resource.playable() {
                     0.
+                } else if self.preview_mode == AnimationPreviewMode::Editing {
+                    // Raw preview uses clip-local time, including imported tail keys.
+                    let end = document
+                        .motion_definition(&selection.clip_id)
+                        .unwrap()
+                        .tracks
+                        .iter()
+                        .map(|track| {
+                            track
+                                .segments
+                                .last()
+                                .map_or(track.initial.time, |s| s.end().time)
+                        })
+                        .fold(resource.duration, f32::max);
+                    self.edit_time.min(end)
                 } else if resource.looping && !self.loop_position {
                     // A looping preview's clock includes completed cycles and
                     // timestamps the expression schedule and physics history.
@@ -445,9 +460,15 @@ impl AnimationSession {
                 } else {
                     self.time.min(resource.duration)
                 };
+                if self.preview_mode == AnimationPreviewMode::Editing {
+                    self.edit_time = self.time;
+                } else if !resource.looping {
+                    self.edit_time = self.edit_time.min(resource.duration);
+                }
             } else {
                 self.motion = None;
                 self.time = 0.;
+                self.edit_time = 0.;
                 self.error = Some(AnimationFailure::MotionRemoved);
             }
         }
