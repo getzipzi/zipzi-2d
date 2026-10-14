@@ -103,38 +103,40 @@ impl From<&MotionTrack> for CompiledCurve {
 /// `time` is a finite clip-local time in seconds. This low-level sampler assumes
 /// validated points; it does not apply looping, fades, parameter clamping or events.
 pub fn sample_motion_curve(curve: &CompiledCurve, time: f32, restricted_beziers: bool) -> f32 {
-    if curve.segments.is_empty() {
-        return curve.initial.value;
-    }
-    let mut start = curve.initial;
-    for segment in curve.segments.iter() {
+    // End times are strictly increasing. Exact endpoints belong to the next
+    // segment, which matters for an outgoing InverseStepped segment.
+    let index = curve
+        .segments
+        .partition_point(|segment| segment.end().time <= time);
+    let start = index
+        .checked_sub(1)
+        .map_or(curve.initial, |i| curve.segments[i].end());
+    if let Some(segment) = curve.segments.get(index) {
         let end = segment.end();
-        if time < end.time {
-            return match segment {
-                CompiledSegment::Linear { .. } => {
-                    let t = ((time - start.time) / (end.time - start.time)).max(0.0);
-                    lerp(start.value, end.value, t)
-                }
-                CompiledSegment::Bezier {
-                    control1, control2, ..
-                } => {
-                    let t = motion_bezier_parameter(
-                        start,
-                        *control1,
-                        *control2,
-                        end,
-                        time,
-                        restricted_beziers,
-                    );
-                    bezier_value(start, *control1, *control2, end, t)
-                }
-                CompiledSegment::Stepped { .. } => start.value,
-                CompiledSegment::InverseStepped { .. } => end.value,
-            };
+        match segment {
+            CompiledSegment::Linear { .. } => {
+                let t = ((time - start.time) / (end.time - start.time)).max(0.0);
+                lerp(start.value, end.value, t)
+            }
+            CompiledSegment::Bezier {
+                control1, control2, ..
+            } => {
+                let t = motion_bezier_parameter(
+                    start,
+                    *control1,
+                    *control2,
+                    end,
+                    time,
+                    restricted_beziers,
+                );
+                bezier_value(start, *control1, *control2, end, t)
+            }
+            CompiledSegment::Stepped { .. } => start.value,
+            CompiledSegment::InverseStepped { .. } => end.value,
         }
-        start = end;
+    } else {
+        start.value
     }
-    start.value
 }
 
 /// The exact runtime inverse-time branch, shared by sampling and authoring splits.

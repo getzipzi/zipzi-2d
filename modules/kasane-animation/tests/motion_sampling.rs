@@ -81,3 +81,46 @@ fn linear_stepped_and_inverse_stepped_use_framework_boundaries() {
     assert!((sample_motion_curve(curve, 0.75, false) - 0.9).abs() < 0.00001);
     assert!((sample_motion_curve(curve, 1.0, false) - 0.9).abs() < 0.00001);
 }
+
+#[test]
+fn mixed_segment_boundaries_choose_the_outgoing_segment_and_hold_the_tail() {
+    use kasane_animation::CompiledSegment;
+    use kasane_core::document::MotionPoint;
+    let point = |time, value| MotionPoint { time, value };
+    let curve = CompiledCurve {
+        initial: point(0., 0.),
+        segments: std::sync::Arc::new(vec![
+            CompiledSegment::Linear { end: point(1., 1.) },
+            CompiledSegment::Stepped { end: point(2., 2.) },
+            CompiledSegment::InverseStepped { end: point(3., 3.) },
+            CompiledSegment::Linear { end: point(4., 4.) },
+        ]),
+    };
+    for restricted in [false, true] {
+        for (time, expected) in [
+            (-1., 0.),
+            (0., 0.),
+            (0.5, 0.5),
+            (1., 1.),
+            (2_f32.next_down(), 1.),
+            (2., 3.),
+            (2_f32.next_up(), 3.),
+            (3., 3.),
+            (3.5, 3.5),
+            (4., 4.),
+            (10., 4.),
+        ] {
+            assert_eq!(
+                sample_motion_curve(&curve, time, restricted),
+                expected,
+                "time={time}"
+            );
+        }
+    }
+    let single = CompiledCurve {
+        initial: point(0.25, 0.75),
+        segments: Default::default(),
+    };
+    assert_eq!(sample_motion_curve(&single, 0., false), 0.75);
+    assert_eq!(sample_motion_curve(&single, 10., false), 0.75);
+}
