@@ -1,6 +1,6 @@
 # Animation Timeline 设计
 
-状态：2026-10-14 开始实现，第一阶段 SDK 曲线基础已落地；editor-core 协调与 Timeline UI 尚未接入。本文确定第一版的数据、交互和实现边界，实现记录见下文。
+状态：2026-10-14 第一阶段 SDK 曲线基础与第二阶段 editor-core 协调已落地。现有播放栏已接入两种预览模式，总览／曲线 Timeline UI 尚未实现。本文确定第一版的数据、交互和实现边界，实现记录见下文。
 
 Timeline 编辑一个 MotionClip 的参数曲线和事件。核心工作流是选择通道、定位时间、修改数值、调整节奏和插值、验证播放效果。参数分组负责导航，关键帧总览负责节奏，曲线视图负责数值变化；三个视图使用同一份动画数据和选择状态。
 
@@ -178,7 +178,25 @@ SDK 事务负责资源变更和历史；editor-core 负责 Timeline 命令、选
 - kasane-editor：`cargo test --locked -p editor-core`，以及 `cargo check --locked --workspace --tests`。
 - kasane-2d：`cargo check --locked -p kasane-python`；Python 运行时测试尚未执行。
 
-后续仍需完成第二至第四阶段：行树与选择、写值与复制粘贴命令、两种预览模式及异步候选接受屏障、总览与曲线 UI、真实密集动作的交互和性能验收。当前界面仍使用 PlaybackBar；本阶段测试不能替代完整 UI 手势、取消恢复画面和播放呈现验收。
+第一阶段测试不能替代完整 UI 手势、取消恢复画面和播放呈现验收。第二阶段实现记录如下，总览与曲线 UI、真实密集动作的交互和性能验收仍待完成。
+
+### 第二阶段实现记录（2026-10-14）
+
+参数面板、结果监视与 Timeline 共用 editor-core 的 `ParameterLayout`。`TimelineProjection` 从模型实际轨道建立通道、UUID 索引、能力诊断和行树；支持 CDI 顺序与归属、重复目标的具体轨道子行、模型／部件／未解析分类、精确时间分组摘要、子帧与尾点范围。投影不随播放重建。`TimelineViewState` 按文档与 Clip 保存筛选、搜索、折叠、滚动、时间范围、显示模式和选区；搜索临时展开命中路径，隐藏的关键点从可操作选区中移除。
+
+`TimelineCommand` 与 `TimelineEdit` 已接入空动作创建、当前时间写值与采样插入、批量移动／删除、插值、手柄、事件、时长／FPS 与显式时间缩放。同 Clip 复制粘贴保留相对节奏及连续选区的内部段，分配新 UUID，跨轨冲突原子拒绝；单轨可指定兼容参数目标。一次手势从原始 Clip 和总位移重算，非法更新保留最后合法候选，提交一次 SDK 历史。Save 结束有效编辑，手势中的 Undo 先取消；播放、切换 Clip／文档／工作区、重置与关闭取消候选。
+
+编辑器请求、CPU 缓存、worker 取消身份和结果接受条件包含候选编辑 ID／版本与预览模式。手势更新与结束也校验编辑 ID，过期输入回调不能改写或提交后续手势。候选快照不修改资产；取消、提交、Undo 或上下文切换后旧 CPU／GPU 结果不能被接受。新建通道自动选中并请求定位，撤销按 UUID 保留仍有效的选区。
+
+默认编辑预览使用 SDK 的 `MotionEditingPreview`，从默认基线采样原始通道；Pose 在当前控制值上即时求解，不回放 Pose 淡入。结果预览继续使用原有 Motion、Expression、Physics、Pose 和资源／注册淡入淡出流程。播放栏提供两种模式和独立的编辑预览循环入口，表情预览入口切到结果模式。参数面板改名为“结果监视”，始终只读。SDK 返回实际局部时间、周期和循环编号；Timeline 定位使用 SDK 同轮映射，纯 seek 保留表情记录。正常播放暂停锁定最后呈现帧，显式定位的编辑头保持目标时间。
+
+已运行第二阶段验证：
+
+- `cargo test --locked -p editor-core`，其中 Timeline 专项覆盖文档／Clip 隔离、缓存复用、取消／提交／Undo 屏障、重复目标、空轨建帧、锚点吸附、事件稳定顺序、跨轨粘贴原子性、保存重开、只读通道及尾点容差。
+- `cargo test --locked -p kasane-editor --bin kasane-editor headless_tests`：151 通过，1 项原有忽略项；另验证后台动画 worker 的取消与请求合并。
+- kasane-2d 的 core／project／animation／sdk 回归，以及编辑预览的默认基线、即时 Pose、错误原子性、循环零点与名义结束位置映射测试；Python 绑定通过编译检查。
+
+第三阶段仍需用可调整高度的 Timeline 替换 PlaybackBar，接入总览／曲线绘制、命中、数值检查区、框选、拖动和焦点键盘命令。第四阶段的真实密集动作与呈现延迟测量尚未执行，不能据本阶段核心测试宣称完整 Timeline 已验收。
 
 ## 代码依据
 

@@ -1,7 +1,11 @@
 //! UI-independent editor coordination, SDK-backed document editing and CPU-only previews.
 mod animation;
 mod animation_resources;
+mod parameter_layout;
+pub use parameter_layout::{ParameterLayout, ParameterRow};
+mod timeline;
 pub use animation_resources::*;
+pub use timeline::*;
 mod document;
 pub use animation::*;
 mod editor;

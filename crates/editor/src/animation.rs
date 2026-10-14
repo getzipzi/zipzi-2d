@@ -23,7 +23,15 @@ struct Inbox {
 pub struct AnimationWorker {
     shared: Arc<(Mutex<Inbox>, Condvar)>,
     cancellation: Arc<AtomicU64>,
-    key: Option<(editor_core::DocumentId, u64, u64, u64, u64)>,
+    key: Option<(
+        editor_core::DocumentId,
+        u64,
+        u64,
+        u64,
+        u64,
+        editor_core::AnimationPreviewMode,
+        Option<editor_core::TimelineCandidateIdentity>,
+    )>,
 }
 pub struct ResultFrame {
     pub trace_id: u64,
@@ -118,6 +126,8 @@ impl AnimationWorker {
             id.model_generation,
             id.preview_generation,
             id.acceptance_floor,
+            id.preview_mode,
+            id.candidate,
         );
         let (lock, ready) = &*self.shared;
         let mut inbox = lock.lock().unwrap();
@@ -326,6 +336,10 @@ mod tests {
         let (document, _assets) = crate::headless_tests::document_fixture::animation_document()?;
         let mut editor = editor_core::Editor::from_document(document);
         editor.set_workspace(WorkspaceKind::Animation)?;
+        editor.set_animation_preview_mode(
+            editor.active_id().unwrap(),
+            editor_core::AnimationPreviewMode::Result,
+        )?;
         editor.set_canvas_metrics(editor_core::CanvasMetrics {
             width: 256.,
             height: 256.,

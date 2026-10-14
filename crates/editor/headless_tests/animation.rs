@@ -7,6 +7,47 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+fn preview_modes_and_preview_loop_are_session_controls(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .animation()
+                .unwrap()
+                .preview_mode,
+            editor_core::AnimationPreviewMode::Editing
+        );
+        window.click("animation-result-preview", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .animation()
+                .unwrap()
+                .preview_mode,
+            editor_core::AnimationPreviewMode::Result
+        );
+        window.click("animation-edit-preview", cx);
+        window.render_frame(cx);
+        window.click("animation-preview-loop", cx);
+        window.render_frame(cx);
+        let view = harness.view.read(cx);
+        assert!(view.editor.animation().unwrap().preview_loop);
+        assert!(!view.editor.document().unwrap().modified());
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn immediate_replay_after_natural_end_starts_with_a_fresh_clock(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
@@ -320,7 +361,7 @@ fn ruler_press_pauses_immediately_and_scrubbing_preserves_nonloop_triggers(
         let animation = harness.view.read(cx).editor.animation().unwrap();
         assert!(!animation.playing);
         assert!(
-            (animation.time - 0.5).abs() < 0.01,
+            (animation.edit_time - 0.5).abs() < 0.01,
             "time={}",
             animation.time
         );
@@ -352,7 +393,7 @@ fn ruler_press_pauses_immediately_and_scrubbing_preserves_nonloop_triggers(
 }
 
 #[gpui_kit::test]
-fn ruler_loop_locates_first_cycle_and_expression_panel_reopens(cx: &mut TestAppContext) {
+fn ruler_loop_keeps_expression_schedule_and_expression_panel_reopens(cx: &mut TestAppContext) {
     use gpui_kit::point;
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
@@ -380,8 +421,8 @@ fn ruler_loop_locates_first_cycle_and_expression_panel_reopens(cx: &mut TestAppC
     cx.update_window(harness.window, |_, window, cx| {
         let animation = harness.view.read(cx).editor.animation().unwrap();
         assert!(!animation.playing);
-        assert!((animation.time - 0.4).abs() < 0.01);
-        assert_eq!(animation.expressions.len(), 1);
+        assert!((animation.edit_time - 0.4).abs() < 0.01);
+        assert_eq!(animation.expressions.len(), 2);
         assert_eq!(animation.expressions[0].time, 0.);
         let panel = PanelId::from(
             harness

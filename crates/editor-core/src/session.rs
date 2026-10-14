@@ -9,7 +9,8 @@ use std::{path::Path, sync::Arc};
 
 pub struct DocumentSession {
     pub animation: crate::AnimationSession,
-    document: Document,
+    pub(crate) timeline: crate::timeline::TimelineSession,
+    pub(crate) document: Document,
     views: [ViewState; 2],
     workspace: WorkspaceKind,
     animation_fitted: bool,
@@ -27,6 +28,7 @@ impl DocumentSession {
     pub fn from_document(document: Document) -> Self {
         Self {
             animation: crate::AnimationSession::new(&document),
+            timeline: Default::default(),
             document,
             views: [ViewState::default(); 2],
             workspace: WorkspaceKind::default(),
@@ -46,7 +48,22 @@ impl DocumentSession {
         &self.document
     }
     pub(crate) fn reconcile_animation(&mut self) {
+        if self
+            .timeline
+            .edit
+            .as_ref()
+            .is_some_and(|edit| edit.base_version.revision != self.document.model_generation())
+        {
+            self.cancel_timeline_edit();
+        }
         self.animation.reconcile(&self.document);
+        self.timeline.reconcile(
+            &self.document,
+            self.animation
+                .motion
+                .as_ref()
+                .map(|motion| motion.clip_id.as_str()),
+        );
     }
     pub fn evaluated_frame(&self) -> Option<Arc<kasane_core::DrawableFrame>> {
         self.cache
@@ -97,6 +114,7 @@ impl DocumentSession {
             return;
         }
         self.cancel_gesture();
+        self.cancel_timeline_edit();
         self.workspace = workspace;
         self.animation.pause();
         self.viewport_revision += 1;
@@ -136,6 +154,16 @@ impl DocumentSession {
                 ),
             "Modeling commands are unavailable in Animation"
         );
+        if self.timeline.edit.is_some() {
+            match command {
+                EditorCommand::Undo | EditorCommand::Redo | EditorCommand::CancelEdit => {
+                    self.cancel_timeline_edit();
+                    return Ok(());
+                }
+                EditorCommand::FinishEdit => self.finish_timeline_edit()?,
+                _ => self.cancel_timeline_edit(),
+            }
+        }
         if self.workspace == WorkspaceKind::Animation
             && matches!(command, EditorCommand::SetTool(crate::ToolId::Hand))
         {

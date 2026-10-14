@@ -33,6 +33,8 @@ pub use parameter::{
 
 #[path = "parameter_group.rs"]
 mod parameter_group;
+#[path = "timeline_document.rs"]
+mod timeline_document;
 pub use parameter_group::ParameterGroupDraft;
 #[path = "parameter_export.rs"]
 mod parameter_export;

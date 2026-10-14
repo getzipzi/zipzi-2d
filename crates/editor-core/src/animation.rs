@@ -1,6 +1,7 @@
 //! Detached playback descriptions and frame provenance. No authoring edits.
 use crate::{
-    AnimationFailure, Document, DocumentId, Editor, SceneSnapshot, SceneTexture, WorkspaceKind,
+    AnimationFailure, AnimationPreviewMode, Document, DocumentId, Editor, SceneSnapshot,
+    SceneTexture, TimelineCandidateIdentity, WorkspaceKind,
 };
 use anyhow::{Result, ensure};
 use kasane_sdk::{AuthoringSnapshot, ExpressionTransition, MotionPreview, MotionSnapshot};
@@ -161,6 +162,8 @@ pub struct AnimationIdentity {
     pub acceptance_floor: u64,
     pub viewport_revision: u64,
     pub time: f32,
+    pub preview_mode: AnimationPreviewMode,
+    pub candidate: Option<TimelineCandidateIdentity>,
 }
 
 pub struct AnimationRequest {
@@ -184,6 +187,7 @@ pub struct AnimationEvaluator {
     preview: Option<MotionPreview>,
     identity: Option<AnimationIdentity>,
     motion: Option<MotionSelection>,
+    editing: Option<kasane_sdk::MotionEditingPreview>,
 }
 impl AnimationEvaluator {
     /// Detached SDK cache accounting for profiling; preview state is unchanged.
@@ -196,10 +200,53 @@ impl AnimationEvaluator {
         progress: impl FnMut(u32, u32) -> bool,
     ) -> Result<AnimationEvaluated> {
         let id = request.identity;
+        if id.preview_mode == AnimationPreviewMode::Editing {
+            if self.identity.is_none_or(|previous| {
+                previous.document != id.document
+                    || previous.model_generation != id.model_generation
+                    || previous.candidate != id.candidate
+                    || previous.preview_mode != id.preview_mode
+            }) {
+                self.editing = Some(kasane_sdk::MotionEditingPreview::new(
+                    request.source.snapshot.document(),
+                ));
+            }
+            let mut progress = progress;
+            if !progress(0, 1) {
+                anyhow::bail!(kasane_sdk::AnimationError::SeekCancelled);
+            }
+            let preview = self.editing.as_mut().unwrap();
+            preview.sample(
+                request
+                    .motion
+                    .as_ref()
+                    .map(|motion| motion.clip_id.as_str()),
+                id.time,
+            )?;
+            let frame = Arc::new(preview.evaluate_drawables()?);
+            if !progress(1, 1) {
+                anyhow::bail!(kasane_sdk::AnimationError::SeekCancelled);
+            }
+            let snapshot = Arc::new(preview.snapshot().clone());
+            self.identity = Some(id);
+            self.preview = None;
+            return Ok(AnimationEvaluated {
+                identity: id,
+                scene: SceneSnapshot {
+                    runtime_frame: frame.clone(),
+                    viewport_frame: frame,
+                    textures: request.source.textures.clone(),
+                    model_opacity: snapshot.model_opacity,
+                },
+                snapshot,
+            });
+        }
         let reusable = self.identity.is_some_and(|previous| {
             previous.document == id.document
                 && previous.model_generation == id.model_generation
                 && self.motion == request.motion
+                && previous.candidate == id.candidate
+                && previous.preview_mode == id.preview_mode
         });
         let expressions = || {
             request.expressions.iter().map(|trigger| {
@@ -271,6 +318,12 @@ pub struct AnimationSession {
     pub expression: Option<String>,
     pub expressions: Vec<ExpressionTrigger>,
     pub time: f32,
+    pub edit_time: f32,
+    pub(crate) head_located: bool,
+    pub preview_mode: AnimationPreviewMode,
+    pub preview_loop: bool,
+    pub candidate: Option<TimelineCandidateIdentity>,
+    result_position: Option<kasane_sdk::MotionPlaybackPosition>,
     pub playing: bool,
     /// A paused loop scrub denotes the first cycle, including its right endpoint.
     pub loop_position: bool,
@@ -278,7 +331,7 @@ pub struct AnimationSession {
     pub error: Option<AnimationFailure>,
     pub model_generation: u64,
     pub preview_generation: u64,
-    source: Option<Arc<AnimationSource>>,
+    pub(crate) source: Option<Arc<AnimationSource>>,
     requested: Option<(u64, u64, f32)>,
     floor: u64,
     shown: u64,
@@ -291,6 +344,12 @@ impl AnimationSession {
             expression: None,
             expressions: Vec::new(),
             time: 0.,
+            edit_time: 0.,
+            head_located: true,
+            preview_mode: AnimationPreviewMode::Editing,
+            preview_loop: false,
+            candidate: None,
+            result_position: None,
             playing: false,
             loop_position: false,
             presented: None,
@@ -309,6 +368,13 @@ impl AnimationSession {
         // An explicit pause needs a fresh request even at an unchanged time.
         // Requests already in flight cannot replace this target frame.
         self.barrier();
+    }
+    pub(crate) fn set_candidate(&mut self, candidate: Option<TimelineCandidateIdentity>) {
+        self.pause();
+        self.candidate = candidate;
+        self.preview_generation += 1;
+        self.source = None;
+        self.error = None;
     }
     fn barrier(&mut self) {
         if self.scrubbing {
@@ -329,6 +395,9 @@ impl AnimationSession {
         self.error = None;
     }
     fn new_run(&mut self) {
+        self.edit_time = 0.;
+        self.head_located = true;
+        self.result_position = None;
         self.loop_position = false;
         self.expressions.clear();
         if let Some(id) = &self.expression {
@@ -341,6 +410,7 @@ impl AnimationSession {
         self.rebuild();
     }
     fn locate(&mut self, time: f32) {
+        self.head_located = true;
         self.loop_position = false;
         self.time = time;
         self.pause();
@@ -395,13 +465,16 @@ impl AnimationSession {
     }
     fn accepts(&self, id: AnimationIdentity) -> bool {
         id.model_generation == self.model_generation
+            && id.candidate == self.candidate
+            && id.preview_mode == self.preview_mode
             && id.preview_generation == self.preview_generation
             && id.request >= self.floor
             && id.request > self.shown
             && self
                 .requested
                 .is_some_and(|(latest, _, _)| id.request <= latest)
-            && (self.scrubbing
+            && ((self.preview_mode == AnimationPreviewMode::Editing && self.preview_loop)
+                || self.scrubbing
                 || self
                     .presented
                     .as_ref()
@@ -410,6 +483,58 @@ impl AnimationSession {
 }
 
 impl Editor {
+    pub fn set_animation_preview_mode(
+        &mut self,
+        document: DocumentId,
+        mode: AnimationPreviewMode,
+    ) -> Result<()> {
+        self.ensure_animation_target(document)?;
+        self.cancel_timeline_edit();
+        let session = self.active_session_mut().unwrap();
+        let animation = &mut session.animation;
+        if animation.preview_mode == mode {
+            return Ok(());
+        }
+        let local = animation.edit_time;
+        let time = if mode == AnimationPreviewMode::Result {
+            if let Some(clip) = animation
+                .motion
+                .as_ref()
+                .and_then(|motion| session.document.motion_definition(&motion.clip_id))
+            {
+                kasane_sdk::canonical_motion_seek_time(
+                    clip,
+                    animation
+                        .result_position
+                        .as_ref()
+                        .map_or(0, |position| position.loop_index),
+                    local.min(clip.duration),
+                )?
+            } else {
+                local
+            }
+        } else {
+            local
+        };
+        animation.preview_mode = mode;
+        animation.head_located = true;
+        animation.time = time;
+        animation.rebuild();
+        animation.source = None;
+        Ok(())
+    }
+    pub fn set_animation_preview_loop(
+        &mut self,
+        document: DocumentId,
+        looping: bool,
+    ) -> Result<()> {
+        self.ensure_animation_target(document)?;
+        self.cancel_timeline_edit();
+        let animation = &mut self.active_session_mut().unwrap().animation;
+        animation.preview_loop = looping;
+        animation.pause();
+        Ok(())
+    }
     pub fn animation_viewport_revision(&self) -> Option<u64> {
         self.active_session().map(|s| s.viewport_revision)
     }
@@ -420,6 +545,9 @@ impl Editor {
     }
     pub fn animation_playable(&self) -> bool {
         self.animation().is_some_and(|a| {
+            if a.preview_mode == AnimationPreviewMode::Editing && a.motion.is_none() {
+                return false;
+            }
             a.playing
                 || (a.motion.is_none() && a.expression.is_some())
                 || a.motion.as_ref().is_some_and(|selection| {
@@ -441,6 +569,7 @@ impl Editor {
         selection: MotionSelection,
     ) -> Result<()> {
         self.ensure_animation_target(document)?;
+        self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
         ensure!(
             session
@@ -454,10 +583,12 @@ impl Editor {
         session.animation.motion = Some(selection);
         session.animation.time = 0.;
         session.animation.new_run();
+        session.reconcile_animation();
         Ok(())
     }
     pub fn select_expression(&mut self, document: DocumentId, expression_id: String) -> Result<()> {
         self.ensure_animation_target(document)?;
+        self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
         let catalog = session.document().animation_catalog();
         let resource = catalog
@@ -510,6 +641,7 @@ impl Editor {
             .active_id()
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
+        self.cancel_timeline_edit();
         let animation = &mut self.active_session_mut().unwrap().animation;
         let playing = animation.playing;
         animation.expression = None;
@@ -523,24 +655,39 @@ impl Editor {
             .active_id()
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
+        self.cancel_timeline_edit();
         let animation = &mut self.active_session_mut().unwrap().animation;
         animation.motion = None;
         animation.expression = None;
         animation.expressions.clear();
         animation.time = 0.;
-        animation.rebuild();
+        animation.new_run();
+        self.active_session_mut().unwrap().reconcile_animation();
         Ok(())
     }
     pub fn seek_animation(&mut self, document: DocumentId, time: f32) -> Result<()> {
-        self.locate_animation(document, time, false)
+        self.locate_animation(document, time, false, false)
+    }
+    pub fn seek_timeline(&mut self, document: DocumentId, time: f32) -> Result<()> {
+        self.locate_animation(document, time, false, true)
+    }
+    pub fn scrub_timeline(&mut self, document: DocumentId, time: f32) -> Result<()> {
+        self.locate_animation(document, time, true, true)
     }
     /// While the pointer moves, allow completed samples from this drag to be
     /// presented in request order. Finish with `seek_animation` for an exact target.
     pub fn scrub_animation(&mut self, document: DocumentId, time: f32) -> Result<()> {
-        self.locate_animation(document, time, true)
+        self.locate_animation(document, time, true, false)
     }
-    fn locate_animation(&mut self, document: DocumentId, time: f32, scrubbing: bool) -> Result<()> {
+    fn locate_animation(
+        &mut self,
+        document: DocumentId,
+        time: f32,
+        scrubbing: bool,
+        timeline: bool,
+    ) -> Result<()> {
         self.ensure_animation_target(document)?;
+        self.cancel_timeline_edit();
         ensure!(time.is_finite() && time >= 0., "Invalid animation time");
         let session = self.active_session_mut().unwrap();
         let catalog = session.document().animation_catalog();
@@ -552,16 +699,33 @@ impl Editor {
             .filter(|r| r.playable())
             .ok_or_else(|| anyhow::anyhow!("Select a seekable motion"))?;
         let animation = &mut session.animation;
-        let time = time.min(motion.duration);
+        let max_time = session
+            .timeline
+            .current()
+            .map_or(motion.duration, |state| state.projection.display_end as f32);
+        let local = time.min(max_time);
+        let time = if timeline && animation.preview_mode == AnimationPreviewMode::Result {
+            kasane_sdk::canonical_motion_seek_time(
+                session
+                    .document
+                    .motion_definition(&motion.selection.clip_id)
+                    .unwrap(),
+                animation
+                    .result_position
+                    .as_ref()
+                    .map_or(0, |position| position.loop_index),
+                local,
+            )?
+        } else {
+            local
+        };
+        animation.edit_time = local;
         if scrubbing && animation.scrubbing {
             // Keep the acceptance/cancellation epoch stable for the entire drag.
             // Replacing the queued target must not starve work already in flight.
             animation.time = time;
             animation.error = None;
         } else {
-            if motion.looping {
-                animation.new_run();
-            }
             animation.locate(time);
         }
         animation.scrubbing = scrubbing;
@@ -571,6 +735,25 @@ impl Editor {
     pub fn pause_animation(&mut self) {
         if let Some(session) = self.active_session_mut() {
             if session.animation.playing || session.animation.scrubbing {
+                if let Some(frame) = session
+                    .animation
+                    .presented
+                    .as_ref()
+                    .filter(|_| session.animation.playing && !session.animation.scrubbing)
+                {
+                    session.animation.time = frame.time;
+                    session.animation.edit_time = session
+                        .animation
+                        .motion
+                        .as_ref()
+                        .and_then(|motion| {
+                            frame
+                                .motion_positions
+                                .iter()
+                                .find(|position| position.motion_id == motion.clip_id)
+                        })
+                        .map_or(frame.time, |position| position.local_time);
+                }
                 session.animation.pause();
             }
         }
@@ -580,6 +763,11 @@ impl Editor {
             .active_id()
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
+        self.cancel_timeline_edit();
+        if self.animation().unwrap().playing {
+            self.pause_animation();
+            return Ok(());
+        }
         let session = self.active_session_mut().unwrap();
         let catalog = session.document().animation_catalog();
         let motion = session
@@ -594,19 +782,28 @@ impl Editor {
         }
         ensure!(
             motion.is_some_and(MotionResource::playable)
-                || (motion.is_none() && animation.expression.is_some()),
+                || (animation.preview_mode == AnimationPreviewMode::Result
+                    && motion.is_none()
+                    && animation.expression.is_some()),
             "Select a playable motion or expression"
         );
         if animation.scrubbing {
             animation.pause();
         }
         if let Some(motion) = motion {
-            if !motion.looping && animation.time >= motion.duration {
+            let looping = if animation.preview_mode == AnimationPreviewMode::Editing {
+                animation.preview_loop
+            } else {
+                motion.looping
+            };
+            if !looping && animation.time >= motion.duration {
                 animation.locate(0.);
+                animation.edit_time = 0.;
             }
         }
         animation.error = None;
         animation.playing = true;
+        animation.head_located = false;
         animation.loop_position = false;
         Ok(())
     }
@@ -615,8 +812,11 @@ impl Editor {
             .active_id()
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
+        self.cancel_timeline_edit();
         let animation = &mut self.active_session_mut().unwrap().animation;
         animation.locate(0.);
+        animation.edit_time = 0.;
+        animation.result_position = None;
         Ok(())
     }
     pub fn advance_animation_clock(&mut self, target: f32) {
@@ -634,6 +834,17 @@ impl Editor {
                 return;
             }
             if let Some(motion) = motion {
+                if animation.preview_mode == AnimationPreviewMode::Editing {
+                    animation.time = if animation.preview_loop && target > motion.duration {
+                        target % motion.duration
+                    } else {
+                        target.min(motion.duration)
+                    };
+                    if !animation.preview_loop && target >= motion.duration {
+                        animation.pause();
+                    }
+                    return;
+                }
                 let target = target.max(animation.time);
                 animation.time = if motion.looping {
                     target
@@ -648,7 +859,7 @@ impl Editor {
             }
         }
     }
-    fn ensure_animation_target(&self, document: DocumentId) -> Result<()> {
+    pub(crate) fn ensure_animation_target(&self, document: DocumentId) -> Result<()> {
         ensure!(
             self.workspace() == WorkspaceKind::Animation
                 && self.active_id() == Some(document)
@@ -701,6 +912,8 @@ impl Editor {
                 acceptance_floor: animation.floor,
                 viewport_revision: viewport,
                 time: animation.time,
+                preview_mode: animation.preview_mode,
+                candidate: animation.candidate,
             },
             source,
             motion: animation.motion.clone(),
@@ -744,6 +957,30 @@ impl Editor {
         }
         let animation = &mut self.active_session_mut().unwrap().animation;
         animation.shown = identity.request;
+        if animation.preview_mode == AnimationPreviewMode::Result {
+            animation.result_position = animation
+                .motion
+                .as_ref()
+                .and_then(|motion| {
+                    snapshot
+                        .motion_positions
+                        .iter()
+                        .find(|position| position.motion_id == motion.clip_id)
+                })
+                .cloned();
+        }
+        if animation.playing || !animation.head_located {
+            animation.edit_time = animation
+                .motion
+                .as_ref()
+                .and_then(|motion| {
+                    snapshot
+                        .motion_positions
+                        .iter()
+                        .find(|position| position.motion_id == motion.clip_id)
+                })
+                .map_or(snapshot.time, |position| position.local_time);
+        }
         animation.presented = Some(snapshot);
         true
     }

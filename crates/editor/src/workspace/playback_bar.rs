@@ -1,8 +1,8 @@
 use crate::{EditorView, t};
-use editor_core::{CommandId, DocumentId, MotionSelection, WorkspaceKind};
+use editor_core::{AnimationPreviewMode, CommandId, DocumentId, MotionSelection, WorkspaceKind};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable,
+    ActiveTheme, Disableable, Selectable, Sizable,
     button::{Button, ButtonVariants},
     slider::{Slider, SliderEvent, SliderState, SliderValue},
     tooltip::Tooltip,
@@ -21,6 +21,7 @@ struct SeekKey {
     workspace_revision: u64,
     model_generation: u64,
     motion: MotionSelection,
+    preview_mode: AnimationPreviewMode,
 }
 struct SeekControl {
     key: SeekKey,
@@ -50,6 +51,7 @@ impl PlaybackBar {
                                 && view.editor.workspace_revision() == seek.key.workspace_revision
                                 && view.editor.animation().is_some_and(|a| {
                                     a.model_generation == seek.key.model_generation
+                                        && a.preview_mode == seek.key.preview_mode
                                         && a.motion.as_ref() == Some(&seek.key.motion)
                                 })
                         });
@@ -86,7 +88,9 @@ impl Render for PlaybackBar {
         let animation = view.editor.animation();
         let modal = view.modal || dialog;
         let playing = animation.is_some_and(|a| a.playing);
-        let loop_position = animation.is_some_and(|a| a.loop_position);
+        let preview_loop = animation.is_some_and(|animation| animation.preview_loop);
+        let preview_mode = animation.map_or(AnimationPreviewMode::Editing, |a| a.preview_mode);
+        let document_id = view.editor.active_id();
         let resource = view.editor.document().and_then(|d| {
             d.animation_catalog()
                 .motions
@@ -94,26 +98,28 @@ impl Render for PlaybackBar {
                 .find(|r| animation.is_some_and(|a| a.motion.as_ref() == Some(&r.selection)))
                 .cloned()
         });
-        // The accepted GPU frame owns the displayed time.
-        let time = view.displayed_animation().map_or(0., |s| s.time);
+        // Local time and loop number come from the accepted SDK frame.
+        let displayed = view.displayed_animation();
+        let position = displayed.and_then(|frame| {
+            frame.motion_positions.iter().find(|position| {
+                resource
+                    .as_ref()
+                    .is_some_and(|r| position.motion_id == r.selection.clip_id)
+            })
+        });
+        let time = position.map_or_else(
+            || displayed.map_or(0., |frame| frame.time),
+            |position| position.local_time,
+        );
         let label = resource.as_ref().map_or_else(
             || format!("{time:.2} s"),
             |r| {
-                if r.looping && r.playable() {
+                if r.looping && preview_mode == AnimationPreviewMode::Result {
                     format!(
-                        "{:.2} / {:.2} s · {} {}",
-                        if loop_position {
-                            time
-                        } else {
-                            time % r.duration
-                        },
+                        "{time:.2} / {:.2} s · {} {}",
                         r.duration,
                         t!("workspace.cycle"),
-                        if loop_position {
-                            1
-                        } else {
-                            (time / r.duration).floor() as u64 + 1
-                        }
+                        position.map_or(1, |position| position.loop_index + 1)
                     )
                 } else {
                     format!("{time:.2} / {:.2} s", r.duration)
@@ -131,9 +137,10 @@ impl Render for PlaybackBar {
             workspace_revision: view.editor.workspace_revision(),
             model_generation: animation.unwrap().model_generation,
             motion: resource.as_ref().unwrap().selection.clone(),
+            preview_mode,
         });
         let failed = animation.is_some_and(|a| a.error.is_some());
-        let target_time = animation.map_or(0., |a| a.time);
+        let target_time = animation.map_or(0., |a| a.edit_time);
         let available = [CommandId::PlayPause, CommandId::RewindAnimation]
             .map(|command| !modal && view.editor.command_available(view.editor.command(command)));
         let duration = resource.as_ref().map_or(1., |r| r.duration);
@@ -164,15 +171,16 @@ impl Render for PlaybackBar {
                                 || view.editor.workspace_revision() != target.workspace_revision
                                 || !view.editor.animation().is_some_and(|a| {
                                     a.model_generation == target.model_generation
+                                        && a.preview_mode == target.preview_mode
                                         && a.motion.as_ref() == Some(&target.motion)
                                 })
                             {
                                 return;
                             }
                             let result = if matches!(event, SliderEvent::Change(_)) {
-                                view.editor.scrub_animation(target.document, time)
+                                view.editor.scrub_timeline(target.document, time)
                             } else {
-                                view.editor.seek_animation(target.document, time)
+                                view.editor.seek_timeline(target.document, time)
                             };
                             view.animation_anchor = None;
                             view.complete_edit(result, cx);
@@ -196,11 +204,7 @@ impl Render for PlaybackBar {
                 seek.pending = None;
             }
             if !seek.dragging && seek.pending.is_none() {
-                let progress = if !loop_position && resource.as_ref().is_some_and(|r| r.looping) {
-                    time % duration / duration
-                } else {
-                    (time / duration).clamp(0., 1.)
-                };
+                let progress = (time / duration).clamp(0., 1.);
                 if seek.state.read(cx).value() != SliderValue::Single(progress) {
                     seek.state
                         .update(cx, |state, cx| state.set_value(progress, window, cx));
@@ -257,6 +261,69 @@ impl Render for PlaybackBar {
                     }),
             );
         }
+        for (id, mode, label) in [
+            (
+                "animation-edit-preview",
+                AnimationPreviewMode::Editing,
+                t!("workspace.edit_preview"),
+            ),
+            (
+                "animation-result-preview",
+                AnimationPreviewMode::Result,
+                t!("workspace.result_preview"),
+            ),
+        ] {
+            let owner = self.owner.clone();
+            controls = controls.child(
+                Button::new(id)
+                    .small()
+                    .ghost()
+                    .label(label)
+                    .selected(preview_mode == mode)
+                    .disabled(modal || document_id.is_none())
+                    .on_click(move |_, window, cx| {
+                        if window.has_active_dialog(cx) {
+                            return;
+                        }
+                        let _ = owner.update(cx, |view, cx| {
+                            if view.modal {
+                                return;
+                            }
+                            let result = view
+                                .editor
+                                .set_animation_preview_mode(document_id.unwrap(), mode);
+                            view.animation_anchor = None;
+                            view.complete_edit(result, cx);
+                        });
+                    }),
+            );
+        }
+        let owner = self.owner.clone();
+        controls = controls.child(
+            Button::new("animation-preview-loop")
+                .small()
+                .ghost()
+                .label(t!("workspace.loop_preview"))
+                .selected(preview_loop)
+                .disabled(
+                    modal || document_id.is_none() || preview_mode != AnimationPreviewMode::Editing,
+                )
+                .on_click(move |_, window, cx| {
+                    if window.has_active_dialog(cx) {
+                        return;
+                    }
+                    let _ = owner.update(cx, |view, cx| {
+                        if view.modal {
+                            return;
+                        }
+                        let result = view
+                            .editor
+                            .set_animation_preview_loop(document_id.unwrap(), !preview_loop);
+                        view.animation_anchor = None;
+                        view.complete_edit(result, cx);
+                    });
+                }),
+        );
         let bar = bar.child(
             controls.child(
                 div()

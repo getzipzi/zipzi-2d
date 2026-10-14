@@ -6,6 +6,7 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (document, assets) = support::animation_document()?;
     let mut editor = Editor::from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -208,7 +209,7 @@ fn seeks_replay_ordered_expressions_branch_in_the_past_and_clear_never_resurrect
 }
 
 #[test]
-fn loop_seek_creates_first_cycle_recipe_and_rewind_retains_current_run() -> anyhow::Result<()> {
+fn loop_seek_preserves_expression_schedule_and_rewind_retains_current_run() -> anyhow::Result<()> {
     let (mut editor, _assets) = setup()?;
     let id = editor.active_id().unwrap();
     expression(&mut editor, 0)?;
@@ -225,10 +226,10 @@ fn loop_seek_creates_first_cycle_recipe_and_rewind_retains_current_run() -> anyh
     editor.seek_animation(id, 0.5)?;
     assert!(!editor.accepts_animation(old.identity));
     assert_eq!(editor.animation().unwrap().time, 0.5);
-    assert_eq!(editor.animation().unwrap().expressions.len(), 1);
-    assert_eq!(editor.animation().unwrap().expressions[0].time, 0.);
+    assert_eq!(editor.animation().unwrap().expressions.len(), 2);
+    assert_eq!(editor.animation().unwrap().expressions[1].time, 3.5);
     assert_eq!(
-        editor.animation().unwrap().expressions[0].expression_id,
+        editor.animation().unwrap().expressions[1].expression_id,
         editor.animation().unwrap().expression.clone().unwrap()
     );
     editor.seek_animation(id, 100.)?;
@@ -289,6 +290,7 @@ fn combined_physics_pose_expression_replay_matches_continuous_and_cancelled_seek
         .clone();
     let mut editor = Editor::from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {
         width: 256.,
         height: 256.,
@@ -358,6 +360,7 @@ fn changed_resources_pause_revalidate_and_rebuild_expression_recipe() -> anyhow:
         value: serde_json::json!(0.7),
     })?;
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     let changed = editor.animation_request().unwrap();
     assert!(changed.identity.model_generation > before.identity.model_generation);
     assert_eq!(
@@ -399,6 +402,7 @@ fn model_changes_preserve_the_absolute_loop_time_and_expression_schedule() -> an
         value: serde_json::json!(0.7),
     })?;
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     assert_eq!(editor.animation().unwrap().time, 4.25);
     assert_eq!(editor.animation().unwrap().expressions, schedule);
     assert!(!editor.animation().unwrap().playing);
@@ -462,6 +466,7 @@ fn detached_runtime_uses_defaults_restores_hidden_objects_and_preserves_authorin
     let modified = editor.document().unwrap().modified();
     let mut evaluator = AnimationEvaluator::default();
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     let baseline = evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
     assert_eq!(baseline.snapshot.parameters[&parameter], 0.);
     assert!(
@@ -594,6 +599,10 @@ fn retained_animation_images_cannot_cross_document_workspace_or_model_changes() 
                 value: serde_json::json!(false),
             })?;
             editor.set_workspace(WorkspaceKind::Animation)?;
+            editor.set_animation_preview_mode(
+                editor.active_id().unwrap(),
+                AnimationPreviewMode::Result,
+            )?;
         }
         select(&mut editor, 2)?;
         let frame = evaluate(&mut editor, &mut AnimationEvaluator::default())?;
@@ -704,7 +713,7 @@ fn continuous_frames_do_not_starve_and_barriers_reject_late_frames() -> anyhow::
     assert!(editor.present_animation(paused.identity, paused.snapshot));
     assert_eq!(
         editor.animation().unwrap().presented.as_ref().unwrap().time,
-        0.6
+        0.5
     );
     editor.rewind_animation()?;
     let zero = evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
@@ -740,6 +749,7 @@ fn document_workspace_save_and_history_changes_pause_and_invalidate() -> anyhow:
     editor.toggle_animation()?;
     editor.set_workspace(WorkspaceKind::Modeling)?;
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     assert!(!editor.animation().unwrap().playing);
     assert!(!editor.accepts_animation(pending.identity));
     editor.set_workspace(WorkspaceKind::Modeling)?;
@@ -751,6 +761,7 @@ fn document_workspace_save_and_history_changes_pause_and_invalidate() -> anyhow:
         visible: false,
     })?;
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     let before = editor.animation_request().unwrap();
     editor.toggle_animation()?;
     editor.dispatch(editor.command(CommandId::Undo))?;
@@ -783,6 +794,7 @@ fn local_model3_live_expression_switch_reuses_physics_history() -> anyhow::Resul
         .unwrap();
     let mut editor = Editor::from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {
         width: 640.,
         height: 480.,
@@ -838,6 +850,7 @@ fn local_model3_motion_uses_imported_physics_and_default_runtime_baseline() -> a
     let history = document.history_lengths();
     let mut editor = Editor::from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {
         width: 640.,
         height: 480.,
@@ -938,6 +951,7 @@ fn diagnostics_are_available_before_play_and_do_not_duplicate_sdk_coverage() -> 
     let (document, _assets) = support::diagnostic_animation_document()?;
     let mut editor = Editor::from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,

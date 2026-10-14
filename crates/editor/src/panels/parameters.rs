@@ -227,7 +227,7 @@ impl ParametersPanel {
                 id.as_ref()
                     .is_none_or(|id| groups.iter().any(|group| &group.id == id))
             });
-            self.layout = ParameterLayout::new(&groups, &parameters);
+            self.layout = ParameterLayout::new(&groups, &parameters, &t!("parameter.ungrouped"));
         }
         let visuals_changed = structure_changed
             || self.visual_revision != revision

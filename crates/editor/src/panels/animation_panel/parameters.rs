@@ -51,8 +51,11 @@ impl AnimationPanel {
         let source = (id, document.parameter_model_revision());
         if self.parameters.source != Some(source) {
             self.parameters.parameters = document.parameters();
-            self.parameters.layout =
-                ParameterLayout::new(&document.parameter_groups(), &self.parameters.parameters);
+            self.parameters.layout = ParameterLayout::new(
+                &document.parameter_groups(),
+                &self.parameters.parameters,
+                &crate::t!("parameter.ungrouped"),
+            );
             self.parameters.runtime_ids = document
                 .animation_catalog()
                 .parameters

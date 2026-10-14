@@ -1,0 +1,268 @@
+//! Timeline projections and session state. Persistent edits belong to the SDK.
+mod projection;
+pub use projection::*;
+mod editing;
+pub use editing::*;
+mod clipboard;
+pub use clipboard::TimelinePasteTarget;
+
+use std::collections::{BTreeSet, HashMap, HashSet};
+use std::sync::Arc;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum TimelineChannelId {
+    Parameter(String),
+    Model(String),
+    PartOpacity(String),
+    Unresolved {
+        category: String,
+        runtime_id: String,
+    },
+}
+
+impl TimelineChannelId {
+    pub fn target(&self) -> kasane_core::document::MotionTrackTarget {
+        use kasane_core::document::MotionTrackTarget as T;
+        match self {
+            Self::Parameter(id) => T::Parameter {
+                parameter_id: id.clone(),
+            },
+            Self::Model(id) => T::Model {
+                runtime_id: id.clone(),
+            },
+            Self::PartOpacity(id) => T::PartOpacity {
+                part_id: id.clone(),
+            },
+            Self::Unresolved {
+                category,
+                runtime_id,
+            } => T::Unresolved {
+                category: category.clone(),
+                runtime_id: runtime_id.clone(),
+            },
+        }
+    }
+    pub fn from_target(target: &kasane_core::document::MotionTrackTarget) -> Self {
+        use kasane_core::document::MotionTrackTarget as T;
+        match target {
+            T::Parameter { parameter_id } => Self::Parameter(parameter_id.clone()),
+            T::Model { runtime_id } => Self::Model(runtime_id.clone()),
+            T::PartOpacity { part_id } => Self::PartOpacity(part_id.clone()),
+            T::Unresolved {
+                category,
+                runtime_id,
+            } => Self::Unresolved {
+                category: category.clone(),
+                runtime_id: runtime_id.clone(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum TimelineCategory {
+    Model,
+    Parts,
+    Unresolved,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum TimelineRowId {
+    Group(Option<String>),
+    Category(TimelineCategory),
+    Channel(TimelineChannelId),
+    Track(String),
+    Events,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TimelineKeyRef {
+    pub clip_id: String,
+    pub track_id: String,
+    pub key_id: String,
+}
+impl TimelineKeyRef {
+    pub fn sdk(&self) -> kasane_sdk::MotionKeyRef {
+        kasane_sdk::MotionKeyRef {
+            track_id: self.track_id.clone(),
+            key_id: self.key_id.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TimelineDisplayMode {
+    #[default]
+    Overview,
+    Curves,
+}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TimelineFilter {
+    #[default]
+    Animated,
+    All,
+}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+pub enum AnimationPreviewMode {
+    #[default]
+    Editing,
+    Result,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TimelineViewState {
+    pub collapsed: HashSet<TimelineRowId>,
+    pub search: String,
+    pub filter: TimelineFilter,
+    pub mode: TimelineDisplayMode,
+    pub time_range: (f64, f64),
+    pub scroll: f64,
+    pub normalized: bool,
+    pub snap: bool,
+    pub channels: BTreeSet<TimelineRowId>,
+    pub keys: BTreeSet<TimelineKeyRef>,
+    pub events: BTreeSet<String>,
+    pub reveal_row: Option<TimelineRowId>,
+}
+impl Default for TimelineViewState {
+    fn default() -> Self {
+        Self {
+            collapsed: HashSet::new(),
+            search: String::new(),
+            filter: TimelineFilter::Animated,
+            mode: TimelineDisplayMode::Overview,
+            time_range: (0., 2.),
+            scroll: 0.,
+            normalized: false,
+            snap: true,
+            channels: BTreeSet::new(),
+            keys: BTreeSet::new(),
+            events: BTreeSet::new(),
+            reveal_row: None,
+        }
+    }
+}
+
+pub(crate) struct TimelineClipState {
+    pub view: TimelineViewState,
+    pub projection: Arc<TimelineProjection>,
+    pub visible: Arc<[TimelineRow]>,
+    pub generation: u64,
+}
+impl TimelineClipState {
+    fn reveal(&mut self, keys: &[TimelineKeyRef]) {
+        let mut ancestors: Vec<&TimelineRow> = Vec::new();
+        let mut channels = BTreeSet::new();
+        for row in &self.projection.rows {
+            while ancestors
+                .last()
+                .is_some_and(|parent| parent.depth >= row.depth)
+            {
+                ancestors.pop();
+            }
+            if row.keys.iter().any(|key| keys.contains(key)) {
+                channels.insert(row.id.clone());
+                for parent in &ancestors {
+                    self.view.collapsed.remove(&parent.id);
+                }
+                self.view.reveal_row = Some(row.id.clone());
+            }
+            ancestors.push(row);
+        }
+        self.view.keys = keys.iter().cloned().collect();
+        self.view.channels = channels;
+        if !self
+            .projection
+            .visible_rows(&self.view)
+            .iter()
+            .any(|row| row.keys.iter().any(|key| keys.contains(key)))
+        {
+            self.view.search.clear();
+        }
+        if let Some(key) = keys.first().and_then(|key| self.projection.key(key)) {
+            let (left, right) = self.view.time_range;
+            if key.time < left || key.time > right {
+                let width = right - left;
+                let left = (key.time - width / 2.).max(0.);
+                self.view.time_range = (left, left + width);
+            }
+        }
+        self.refresh_visible();
+    }
+    fn refresh_visible(&mut self) {
+        let rows = self.projection.visible_rows(&self.view);
+        let visible: HashSet<_> = rows.iter().flat_map(|row| &row.keys).cloned().collect();
+        self.view.keys.retain(|key| visible.contains(key));
+        self.view
+            .events
+            .retain(|id| self.projection.events.iter().any(|event| &event.id == id));
+        let ids: HashSet<_> = rows.iter().map(|row| &row.id).collect();
+        self.view.channels.retain(|row| ids.contains(row));
+        self.visible = rows.into();
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct TimelineSession {
+    pub clips: HashMap<String, TimelineClipState>,
+    pub active: Option<String>,
+    pub edit: Option<TimelineEdit>,
+    pub clipboard: Option<clipboard::TimelineClipboard>,
+    pub next_edit: u64,
+}
+impl TimelineSession {
+    pub fn reconcile(&mut self, document: &crate::Document, active: Option<&str>) {
+        self.clips
+            .retain(|id, _| document.motion_definition(id).is_some());
+        self.active = active
+            .filter(|id| document.motion_definition(id).is_some())
+            .map(str::to_owned);
+        let Some(id) = &self.active else {
+            return;
+        };
+        let generation = document.model_generation();
+        let state = self.clips.entry(id.clone()).or_insert_with(|| {
+            let projection =
+                Arc::new(TimelineProjection::new(document, id).expect("valid active clip"));
+            let view = TimelineViewState {
+                time_range: (0., projection.display_end),
+                ..Default::default()
+            };
+            let visible = projection.visible_rows(&view).into();
+            TimelineClipState {
+                view,
+                projection,
+                visible,
+                generation,
+            }
+        });
+        if state.generation != generation {
+            state.projection =
+                Arc::new(TimelineProjection::new(document, id).expect("valid active clip"));
+            state.generation = generation;
+            state.refresh_visible();
+        }
+    }
+    pub fn current(&self) -> Option<&TimelineClipState> {
+        self.clips.get(self.active.as_ref()?)
+    }
+    pub fn current_mut(&mut self) -> Option<&mut TimelineClipState> {
+        self.clips.get_mut(self.active.as_ref()?)
+    }
+}
+
+/// Frame snapping is a command decision. Imported times are never quantized by projection.
+pub fn timeline_time(time: f64, fps: f32, snap: bool) -> anyhow::Result<f32> {
+    anyhow::ensure!(
+        time.is_finite() && fps.is_finite() && fps > 0.,
+        "Invalid timeline time or FPS"
+    );
+    let time = if snap {
+        (time * f64::from(fps)).round() / f64::from(fps)
+    } else {
+        time
+    };
+    let time = time as f32;
+    anyhow::ensure!(time.is_finite(), "Time is outside f32 precision");
+    Ok(time)
+}

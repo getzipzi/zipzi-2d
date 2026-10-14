@@ -55,7 +55,10 @@ impl AnimationPanel {
             }
             let result = match choice {
                 Choice::Motion(selection) => owner.editor.select_motion(document, selection),
-                Choice::Expression(id) => owner.editor.select_expression(document, id),
+                Choice::Expression(id) => owner
+                    .editor
+                    .set_animation_preview_mode(document, editor_core::AnimationPreviewMode::Result)
+                    .and_then(|_| owner.editor.select_expression(document, id)),
             };
             let start = play && result.is_ok();
             owner.animation_anchor = None;

@@ -172,6 +172,7 @@ impl Editor {
     pub fn new_document(&mut self) -> Result<DocumentId> {
         ensure!(!self.exiting, "Workspace is closing");
         if self.active.is_some() && !self.is_busy() {
+            self.cancel_timeline_edit();
             self.execute(EditorCommand::FinishEdit)?;
         }
         Ok(self.insert(Document::new_blank()?))
@@ -235,6 +236,7 @@ impl Editor {
         }
         ensure!(!self.exiting(), "Workspace is closing");
         if self.active.is_some() && !self.is_busy() {
+            self.cancel_timeline_edit();
             self.execute(EditorCommand::FinishEdit)?;
         }
         if let Some(id) = self.active {
@@ -358,12 +360,16 @@ impl Editor {
             .is_some_and(|id| self.entry(id).is_ok_and(|e| e.saving.is_some()))
     }
     pub fn can_undo(&self) -> bool {
-        self.document()
-            .is_some_and(|d| d.history_lengths().0 > 0 || d.has_pending_edit())
+        self.timeline_edit().is_some()
+            || self
+                .document()
+                .is_some_and(|d| d.history_lengths().0 > 0 || d.has_pending_edit())
     }
     pub fn can_redo(&self) -> bool {
-        self.document()
-            .is_some_and(|d| d.history_lengths().1 > 0 && !d.has_pending_edit())
+        self.timeline_edit().is_none()
+            && self
+                .document()
+                .is_some_and(|d| d.history_lengths().1 > 0 && !d.has_pending_edit())
     }
     pub fn execute(&mut self, command: EditorCommand) -> Result<()> {
         self.execute_for(
@@ -410,6 +416,7 @@ impl Editor {
         if self.active == Some(id) {
             return Ok(());
         }
+        self.cancel_timeline_edit();
         self.pause_animation();
         if let Some(previous) = self.active {
             if self.entry(previous)?.session.is_some() {
@@ -458,6 +465,7 @@ impl Editor {
             );
         }
         if self.active.is_some() && !self.is_busy() {
+            self.cancel_timeline_edit();
             self.execute(EditorCommand::FinishEdit)?;
         }
         let id = DocumentId(Uuid::new_v4());
@@ -486,6 +494,7 @@ impl Editor {
         }
         // A user may have edited the old tab while loading.
         if self.active.is_some() && !self.is_busy() {
+            self.cancel_timeline_edit();
             self.execute(EditorCommand::FinishEdit)?;
         }
         self.insert_with_id(completion.id, document);
@@ -704,6 +713,7 @@ impl Editor {
     }
     pub fn prepare_close(&mut self, id: DocumentId) -> Result<CloseDisposition> {
         if let Some(s) = &mut self.entry_mut(id)?.session {
+            s.cancel_timeline_edit();
             s.animation.pause();
             s.execute(EditorCommand::FinishEdit)?;
         }
