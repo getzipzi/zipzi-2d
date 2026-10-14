@@ -38,6 +38,8 @@ Run UI tests or capture screenshots:
 ```sh
 cargo test --locked -p kasane-editor --bin kasane-editor headless_tests
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test headless_screenshot
+# Focused Timeline views and candidate/cancel pixel verification:
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --test headless_screenshot
 ```
 
 ## Build

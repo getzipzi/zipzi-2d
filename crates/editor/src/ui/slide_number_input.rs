@@ -105,6 +105,17 @@ impl SlideNumberInput {
         }
     }
 
+    pub(crate) fn is_sliding(&self) -> bool {
+        self.drag.as_ref().is_some_and(|drag| drag.sliding)
+    }
+
+    /// Stop an owning transaction without emitting a new numeric edit.
+    pub(crate) fn reset_drag(&mut self, cx: &mut Context<Self>) {
+        if self.drag.take().is_some() {
+            cx.notify();
+        }
+    }
+
     fn begin(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         if event.button != MouseButton::Left
             || self.options.disabled

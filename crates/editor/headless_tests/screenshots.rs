@@ -115,6 +115,12 @@ impl Harness {
                                 .can_display_animation_image(frame.state.identity)
                                 && view.editor.animation().is_some_and(|a| {
                                     a.time == frame.state.snapshot.time
+                                        && a.candidate == frame.state.identity.candidate
+                                        && a.model_generation
+                                            == frame.state.identity.model_generation
+                                        && a.preview_generation
+                                            == frame.state.identity.preview_generation
+                                        && a.preview_mode == frame.state.identity.preview_mode
                                         && a.presented.as_ref().is_some_and(|snapshot| {
                                             std::sync::Arc::ptr_eq(snapshot, &frame.state.snapshot)
                                         })
@@ -315,7 +321,7 @@ fn animation_scrubbing_presents_frames_before_release() -> anyhow::Result<()> {
         let track = harness.cx.update_window(harness.window, |_, window, _| {
             window
                 .within("animation-seek")
-                .find("slider-bar-container")
+                .find("timeline-ruler")
                 .bounds()
         })?;
         let mut pointer = point(track.left() + track.size.width * 0.15, track.center().y);
@@ -413,6 +419,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("timeline") {
+        timeline_screenshots(&directory)?;
+        println!("Timeline Metal screenshots passed.");
+        return Ok(());
+    }
     {
         let mut empty = Harness::new()?;
         empty.cx.update_window(empty.window, |_, window, cx| {
@@ -444,7 +455,7 @@ pub(super) fn run() -> anyhow::Result<()> {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
         anyhow::ensure!(
-            window.try_find("animation-playback-bar").is_some(),
+            window.try_find("animation-timeline").is_some(),
             "Animation transport is missing"
         );
         anyhow::ensure!(
@@ -899,6 +910,9 @@ pub(super) fn run() -> anyhow::Result<()> {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(editor_core::CommandId::FitView, window, cx)
+        });
     })?;
     harness._assets = assets;
     let zero = harness.capture()?;
@@ -908,6 +922,8 @@ pub(super) fn run() -> anyhow::Result<()> {
             view.editor.toggle_animation().unwrap();
             view.editor.advance_animation_clock(1.);
             view.editor.pause_animation();
+            let id = view.editor.active_id().unwrap();
+            view.editor.seek_animation(id, 1.).unwrap();
             view.redraw(cx);
         });
     })?;
@@ -932,18 +948,20 @@ pub(super) fn run() -> anyhow::Result<()> {
         assert!(!view.editor.document().unwrap().modified());
     });
     harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click(("animation-expression", 0usize), cx);
+        click_expression(window, 0, cx);
         harness.view.update(cx, |view, cx| {
             view.editor.toggle_animation().unwrap();
             view.editor.advance_animation_clock(1.5);
             view.editor.pause_animation();
+            let id = view.editor.active_id().unwrap();
+            view.editor.seek_animation(id, 1.5).unwrap();
             view.redraw(cx);
         });
     })?;
     let add = harness.capture()?;
     save(&add, &directory, "animation-expression-add.png")?;
     harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click(("animation-expression", 2usize), cx);
+        click_expression(window, 2, cx);
         harness.view.update(cx, |view, cx| {
             let id = view.editor.active_id().unwrap();
             view.editor.seek_animation(id, 1.9).unwrap();
@@ -1158,4 +1176,117 @@ fn animation_panel_review_screenshots(
     save(&light, directory, "animation-panels-mao-zh-light.png")?;
     i18n::activate(Some("en"));
     Ok(())
+}
+
+fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
+    let mut harness = Harness::new()?;
+    let (document, assets) = fixture::animation_document()?;
+    harness._assets = assets;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor = Editor::from_document(document);
+            view.redraw(cx);
+        });
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        window.render_frame(cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(editor_core::CommandId::FitView, window, cx);
+            let projection = view.editor.timeline_projection().unwrap();
+            let row = projection
+                .rows
+                .iter()
+                .find(|row| row.track_id.is_some())
+                .unwrap();
+            let key = row.keys[0].clone();
+            let row = row.id.clone();
+            let d = view.editor.active_id().unwrap();
+            view.editor
+                .update_timeline_view(d, |state| {
+                    state.channels.insert(row);
+                    state.keys.insert(key);
+                })
+                .unwrap();
+            view.redraw(cx);
+        });
+    })?;
+    let overview = harness.capture()?;
+    save(&overview, directory, "timeline-overview.png")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("timeline-interpolation-bezier", cx);
+        window.render_frame(cx);
+        window.click("timeline-curves", cx);
+        window.render_frame(cx);
+    })?;
+    let curves = harness.capture()?;
+    save(&curves, directory, "timeline-curves.png")?;
+    anyhow::ensure!(
+        overview != curves,
+        "Timeline mode did not alter the rendered scene"
+    );
+    let canvas_before = harness.canvas_image(&curves)?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        let key = harness
+            .view
+            .read(cx)
+            .editor
+            .timeline_view()
+            .unwrap()
+            .keys
+            .first()
+            .unwrap()
+            .clone();
+        window.click(format!("timeline-number-KeyValue({key:?})"), cx);
+        window.press("cmd-a", cx);
+        window.input("0.6", cx);
+    })?;
+    let candidate = harness.capture()?;
+    save(&candidate, directory, "timeline-candidate.png")?;
+    anyhow::ensure!(
+        harness.canvas_image(&candidate)? != canvas_before,
+        "Candidate key edit did not alter the rendered image"
+    );
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        let view = harness.view.read(cx);
+        anyhow::ensure!(
+            view.editor.timeline_edit().is_some(),
+            "Candidate was committed during preview"
+        );
+        anyhow::ensure!(
+            view.editor.document().unwrap().history_lengths() == (1, 0),
+            "Preview added history"
+        );
+        window.press("escape", cx);
+        Ok::<_, anyhow::Error>(())
+    })??;
+    let restored = harness.capture()?;
+    save(&restored, directory, "timeline-cancel-restored.png")?;
+    anyhow::ensure!(
+        harness.canvas_image(&restored)? == canvas_before,
+        "Cancel did not restore the canvas image"
+    );
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        i18n::activate(Some("zh-CN"));
+        gpui_kit::component::Theme::change(gpui_kit::component::ThemeMode::Light, Some(window), cx);
+        harness.view.update(cx, |view, cx| view.redraw(cx));
+    })?;
+    save(
+        &harness.capture()?,
+        directory,
+        "timeline-curves-zh-light.png",
+    )?;
+    i18n::activate(Some("en"));
+    Ok(())
+}
+
+fn click_expression(window: &mut gpui_kit::Window, index: usize, cx: &mut gpui_kit::App) {
+    let bounds = window.find(("animation-expression", index)).bounds();
+    let viewport = window.find("animation-expression-list").bounds();
+    window.scroll(
+        "animation-expression-list",
+        gpui_kit::ScrollDelta::Pixels(point(px(0.), viewport.center().y - bounds.center().y)),
+        cx,
+    );
+    window.click(("animation-expression", index), cx);
 }

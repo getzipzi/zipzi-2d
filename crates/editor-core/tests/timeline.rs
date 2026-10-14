@@ -648,6 +648,12 @@ fn result_seek_uses_sdk_current_cycle_and_pause_uses_presented_time() -> anyhow:
     e.set_animation_preview_mode(d, AnimationPreviewMode::Result)?;
     let restored = evaluate(&mut e, &mut evaluator)?;
     assert_eq!(restored.snapshot.motion_positions[0].loop_index, 2);
+    let tail = (2. + position.period) / 2.;
+    e.seek_timeline(d, tail)?;
+    let tail_frame = evaluate(&mut e, &mut evaluator)?;
+    assert_eq!(tail_frame.snapshot.motion_positions[0].loop_index, 2);
+    assert!((tail_frame.snapshot.motion_positions[0].local_time - tail).abs() < 1e-5);
+    assert!(tail_frame.snapshot.motion_positions[0].local_time > 2.);
     Ok(())
 }
 
@@ -1232,6 +1238,28 @@ fn late_gesture_callbacks_cannot_update_or_commit_a_new_gesture_on_the_same_trac
             .value,
         0.8
     );
+    assert_eq!(e.document().unwrap().history_lengths(), (1, 0));
+    Ok(())
+}
+
+#[test]
+fn acknowledging_a_new_key_reveal_keeps_the_live_candidate_and_snapshot() -> anyhow::Result<()> {
+    let (mut e, _temp) = fixture(false, false)?;
+    let d = e.active_id().unwrap();
+    e.seek_timeline(d, 0.4)?;
+    let token = e.begin_timeline_edit(d, "Write")?;
+    e.update_timeline_edit(d, token, write(3, None, 0.6))?;
+    let candidate = e.timeline_edit().unwrap().candidate.clone();
+    let identity = e.timeline_edit().unwrap().identity;
+    let row = e.timeline_view().unwrap().reveal_row.clone().unwrap();
+    let rows = e.timeline_visible_rows().unwrap();
+    e.acknowledge_timeline_reveal(d, &row, 26.)?;
+    assert!(e.timeline_view().unwrap().reveal_row.is_none());
+    assert_eq!(e.timeline_view().unwrap().scroll, 26.);
+    assert_eq!(e.timeline_edit().unwrap().identity, identity);
+    assert_eq!(e.timeline_edit().unwrap().candidate, candidate);
+    assert!(Arc::ptr_eq(&rows, &e.timeline_visible_rows().unwrap()));
+    e.finish_timeline_edit(d, token)?;
     assert_eq!(e.document().unwrap().history_lengths(), (1, 0));
     Ok(())
 }

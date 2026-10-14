@@ -223,19 +223,19 @@ fn expression_controls_preserve_pause_clear_at_current_time_and_reset(cx: &mut T
     cx.update_window(harness.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
-        window.click(("animation-expression", 0usize), cx);
+        super::animation::click_expression(window, 0, cx);
         assert!(!harness.view.read(cx).editor.animation().unwrap().playing);
         window.render_frame(cx);
         window.click("animation-play-pause", cx);
         harness
             .view
             .update(cx, |view, _| view.editor.advance_animation_clock(0.5));
-        window.click(("animation-expression", 2usize), cx);
+        super::animation::click_expression(window, 2, cx);
         let animation = harness.view.read(cx).editor.animation().unwrap();
         assert!(animation.playing);
         assert_eq!(animation.expressions[1].time, 0.5);
         window.render_frame(cx);
-        window.click(("animation-expression", 2usize), cx);
+        super::animation::click_expression(window, 2, cx);
         assert_eq!(
             harness
                 .view
@@ -256,7 +256,7 @@ fn expression_controls_preserve_pause_clear_at_current_time_and_reset(cx: &mut T
         assert!(animation.expressions.is_empty());
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
-        window.click(("animation-expression", 0usize), cx);
+        super::animation::click_expression(window, 0, cx);
         window.render_frame(cx);
         window.click("animation-reset", cx);
         let animation = harness.view.read(cx).editor.animation().unwrap();
@@ -290,13 +290,13 @@ fn ruler_press_pauses_immediately_and_scrubbing_preserves_nonloop_triggers(
         window.click("workspace-animation", cx);
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
-        window.click(("animation-expression", 0usize), cx);
+        super::animation::click_expression(window, 0, cx);
         window.render_frame(cx);
         window.click("animation-play-pause", cx);
         window.render_frame(cx);
         let track = window
             .within("animation-seek")
-            .find("slider-bar-container")
+            .find("timeline-ruler")
             .bounds();
         // A thumb press pauses even before movement generates a SliderEvent.
         let start = point(track.left() + px(1.), track.center().y);
@@ -333,7 +333,7 @@ fn ruler_press_pauses_immediately_and_scrubbing_preserves_nonloop_triggers(
         window.render_frame(cx);
         let track = window
             .within("animation-seek")
-            .find("slider-bar-container")
+            .find("timeline-ruler")
             .bounds();
         let end = point(track.left() + track.size.width * 0.25, track.center().y);
         window.dispatch_event(
@@ -381,11 +381,19 @@ fn ruler_press_pauses_immediately_and_scrubbing_preserves_nonloop_triggers(
         window.render_frame(cx);
         window.open_dialog(cx, |dialog, _, _| dialog.title("Modal"));
         window.render_frame(cx);
-        assert!(
-            window
-                .within("animation-seek")
-                .try_find("slider-bar-container")
-                .is_none()
+        let before = harness.view.read(cx).editor.animation().unwrap().edit_time;
+        let ruler = window
+            .within("animation-seek")
+            .find("timeline-ruler")
+            .bounds();
+        window.within("animation-seek").click_at(
+            "timeline-ruler",
+            point(ruler.size.width * 0.8, ruler.size.height / 2.),
+            cx,
+        );
+        assert_eq!(
+            harness.view.read(cx).editor.animation().unwrap().edit_time,
+            before
         );
         window.close_dialog(cx);
     })
@@ -401,18 +409,29 @@ fn ruler_loop_keeps_expression_schedule_and_expression_panel_reopens(cx: &mut Te
         window.click("workspace-animation", cx);
         window.render_frame(cx);
         window.click(("animation-motion", 2usize), cx);
-        window.click(("animation-expression", 0usize), cx);
+        super::animation::click_expression(window, 0, cx);
         window.render_frame(cx);
         window.click("animation-play-pause", cx);
         harness
             .view
             .update(cx, |view, _| view.editor.advance_animation_clock(5.));
-        window.click(("animation-expression", 1usize), cx);
+        super::animation::click_expression(window, 1, cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .animation()
+                .unwrap()
+                .expressions
+                .len(),
+            2
+        );
         window.render_frame(cx);
         let mut ruler = window.within("animation-seek");
-        let track = ruler.find("slider-bar-container").bounds();
+        let track = ruler.find("timeline-ruler").bounds();
         ruler.click_at(
-            "slider-bar-container",
+            "timeline-ruler",
             point(track.size.width * 0.4, track.size.height / 2.),
             cx,
         );
@@ -460,7 +479,7 @@ fn leaving_animation_cancels_ruler_drag_and_old_pointer_events(cx: &mut TestAppC
             window.render_frame(cx);
             let track = window
                 .within("animation-seek")
-                .find("slider-bar-container")
+                .find("timeline-ruler")
                 .bounds();
             let start = point(track.left() + track.size.width * 0.3, track.center().y);
             let end = point(track.left() + track.size.width * 0.8, track.center().y);
@@ -493,7 +512,7 @@ fn leaving_animation_cancels_ruler_drag_and_old_pointer_events(cx: &mut TestAppC
                 .to_platform_input(),
                 cx,
             );
-            assert!(cx.has_active_drag());
+            assert!(harness.view.read(cx).timeline.read(cx).pointer_active());
             end
         })
         .unwrap();
@@ -507,7 +526,7 @@ fn leaving_animation_cancels_ruler_drag_and_old_pointer_events(cx: &mut TestAppC
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        assert!(!cx.has_active_drag());
+        assert!(!harness.view.read(cx).timeline.read(cx).pointer_active());
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::AnimationWorkspace, window, cx)
         });
@@ -554,7 +573,7 @@ fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_parameters_
         for index in 0..5usize {
             assert!(window.try_find(("animation-diagnostic", index)).is_some());
         }
-        window.click(("animation-expression", 3usize), cx);
+        super::animation::click_expression(window, 3, cx);
         harness.view.read_with(cx, |view, _| {
             assert!(view.editor.animation().unwrap().expression.is_none());
             assert!(view.edit_error.is_none());
@@ -644,7 +663,7 @@ fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_parameters_
         window.click("workspace-modeling", cx);
         window.render_frame(cx);
         assert!(window.try_find("AnimationParameters").is_none());
-        assert!(window.try_find("animation-playback-bar").is_none());
+        assert!(window.try_find("animation-timeline").is_none());
     })
     .unwrap();
 }
@@ -685,4 +704,23 @@ fn display_callbacks_sample_fractional_time_and_stop_after_pause(cx: &mut TestAp
         assert!(view.animation_anchor.is_none());
     })
     .unwrap();
+}
+
+// Timeline reduces the resource pane's height; center a resource before clicking.
+pub(super) fn click_expression(
+    window: &mut gpui_kit::Window,
+    index: usize,
+    cx: &mut gpui_kit::App,
+) {
+    let row = window.find(("animation-expression", index)).bounds();
+    let viewport = window.find("animation-expression-list").bounds();
+    window.scroll(
+        "animation-expression-list",
+        gpui_kit::ScrollDelta::Pixels(gpui_kit::point(
+            gpui_kit::px(0.),
+            viewport.center().y - row.center().y,
+        )),
+        cx,
+    );
+    window.click(("animation-expression", index), cx);
 }

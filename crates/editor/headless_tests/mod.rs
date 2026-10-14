@@ -17,6 +17,7 @@ mod properties;
 mod recent_files;
 mod slide_number_input;
 mod sorting;
+mod timeline;
 mod titlebar;
 mod workspaces;
 

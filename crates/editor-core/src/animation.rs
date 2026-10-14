@@ -338,6 +338,10 @@ pub struct AnimationSession {
     scrubbing: bool,
 }
 impl AnimationSession {
+    /// Last SDK result coordinates, retained while inspecting raw clip values.
+    pub fn result_playback_position(&self) -> Option<&kasane_sdk::MotionPlaybackPosition> {
+        self.result_position.as_ref()
+    }
     pub(crate) fn new(document: &Document) -> Self {
         Self {
             motion: None,
@@ -703,6 +707,14 @@ impl Editor {
             .timeline
             .current()
             .map_or(motion.duration, |state| state.projection.display_end as f32);
+        let max_time = if timeline && animation.preview_mode == AnimationPreviewMode::Result {
+            animation
+                .result_position
+                .as_ref()
+                .map_or(max_time, |position| max_time.max(position.period))
+        } else {
+            max_time
+        };
         let local = time.min(max_time);
         let time = if timeline && animation.preview_mode == AnimationPreviewMode::Result {
             kasane_sdk::canonical_motion_seek_time(

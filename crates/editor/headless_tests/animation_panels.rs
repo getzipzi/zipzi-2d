@@ -119,7 +119,7 @@ fn expression_rows_omit_status_and_icon_clears_expression(cx: &mut TestAppContex
     cx.update_window(harness.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
-        window.click(("animation-expression", 0usize), cx);
+        super::animation::click_expression(window, 0, cx);
         window.render_frame(cx);
         assert!(
             window
@@ -250,7 +250,7 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
             window.find("animation-property-fades").label(),
             Some("Fade in 1.000 s / out 0.000 s")
         );
-        window.click(("animation-expression", 0usize), cx);
+        super::animation::click_expression(window, 0, cx);
         window.render_frame(cx);
         assert_eq!(
             window.find("animation-property-expression").label(),
@@ -583,7 +583,7 @@ fn paused_expression_clicks_show_only_the_latest_expression_as_active(cx: &mut T
         window.click("workspace-animation", cx);
         window.render_frame(cx);
         for selected in [0usize, 2, 1, 2] {
-            window.click(("animation-expression", selected), cx);
+            super::animation::click_expression(window, selected, cx);
             harness.view.update(cx, |view, cx| {
                 view.editor.invalidate_animation();
                 let frame = evaluator

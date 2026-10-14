@@ -39,6 +39,7 @@ actions!(
 );
 
 pub(super) fn init(cx: &mut App) {
+    workspace::timeline::init(cx);
     keybindings::init(cx);
     cx.on_action(|_: &Hide, cx| cx.hide());
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());

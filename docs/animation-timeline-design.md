@@ -1,6 +1,6 @@
 # Animation Timeline 设计
 
-状态：2026-10-14 第一阶段 SDK 曲线基础与第二阶段 editor-core 协调已落地。现有播放栏已接入两种预览模式，总览／曲线 Timeline UI 尚未实现。本文确定第一版的数据、交互和实现边界，实现记录见下文。
+状态：2026-10-14 第一、二、三阶段已落地。Animation 工作区已使用可调整高度的总览／曲线 Timeline；第四阶段的密集动作编辑与性能验收待完成。本文记录第一版的数据、交互和实现边界，实现与验证记录见下文。
 
 Timeline 编辑一个 MotionClip 的参数曲线和事件。核心工作流是选择通道、定位时间、修改数值、调整节奏和插值、验证播放效果。参数分组负责导航，关键帧总览负责节奏，曲线视图负责数值变化；三个视图使用同一份动画数据和选择状态。
 
@@ -8,7 +8,7 @@ Timeline 编辑一个 MotionClip 的参数曲线和事件。核心工作流是�
 
 第一版交付单 Motion 编辑，包括新建空动作、添加通道、关键帧增删改、批量移动与复制粘贴、曲线手柄、事件、事务预览、撤销重做以及保存重开。多 Motion 编排、音频轨道、持久化表情调度、物理烘焙不进入这一版。MotionGroup 继续表示资源注册分组。
 
-Timeline 是 Animation 工作区底部可调整高度的面板，替换现有 PlaybackBar。顶部保留一条紧凑工具栏：当前 Motion、播放与定位、时间、总览／曲线模式、帧吸附、预览模式。时长、FPS、资源循环和淡入淡出放入动作属性，不长期占用工具栏。
+Timeline 是 Animation 工作区底部可调整高度的面板，替换现有 PlaybackBar。顶部保留紧凑的传输与编辑工具栏：当前 Motion、播放与定位、时间、总览／曲线模式、帧吸附、预览模式。时长、FPS、资源循环和淡入淡出放入动作属性，不长期占用工具栏。
 
 左侧固定列显示层级、名称、紧凑可编辑数值和关键帧状态；右侧显示共用标尺下的关键帧或曲线。默认不为每行铺设滑块。选中通道时，检查区提供完整名称、范围、精确数值和滑块；选中关键帧时显示时间、值和相邻段插值。行内数值支持拖动调节和双击输入。
 
@@ -178,7 +178,7 @@ SDK 事务负责资源变更和历史；editor-core 负责 Timeline 命令、选
 - kasane-editor：`cargo test --locked -p editor-core`，以及 `cargo check --locked --workspace --tests`。
 - kasane-2d：`cargo check --locked -p kasane-python`；Python 运行时测试尚未执行。
 
-第一阶段测试不能替代完整 UI 手势、取消恢复画面和播放呈现验收。第二阶段实现记录如下，总览与曲线 UI、真实密集动作的交互和性能验收仍待完成。
+第一阶段测试不能替代完整 UI 手势、取消恢复画面和播放呈现验收。后续阶段的实现与验证记录如下。
 
 ### 第二阶段实现记录（2026-10-14）
 
@@ -196,12 +196,34 @@ SDK 事务负责资源变更和历史；editor-core 负责 Timeline 命令、选
 - `cargo test --locked -p kasane-editor --bin kasane-editor headless_tests`：151 通过，1 项原有忽略项；另验证后台动画 worker 的取消与请求合并。
 - kasane-2d 的 core／project／animation／sdk 回归，以及编辑预览的默认基线、即时 Pose、错误原子性、循环零点与名义结束位置映射测试；Python 绑定通过编译检查。
 
-第三阶段仍需用可调整高度的 Timeline 替换 PlaybackBar，接入总览／曲线绘制、命中、数值检查区、框选、拖动和焦点键盘命令。第四阶段的真实密集动作与呈现延迟测量尚未执行，不能据本阶段核心测试宣称完整 Timeline 已验收。
+第三阶段实现记录如下。第四阶段的真实密集动作编辑与呈现延迟测量仍需单独验收。
+
+### 第三阶段实现记录（2026-10-14）
+
+Animation 工作区底部已用跨工作区宽度、可调整高度的 `Timeline` 替换 PlaybackBar。传输控制保留两种预览模式与独立循环预览，编辑工具提供 Motion 选择／创建、总览／曲线切换、帧吸附、帧／秒标尺、适配、归一化与动作属性。左侧层级、行内原始值和右侧关键帧使用同一份可见行与纵向滚动，支持搜索、已有动画／全部筛选、折叠摘要展开定位。
+
+总览支持真实关键帧命中、加选、空白框选、跨轨时间批移和 UUID 选区；曲线视图只绘制选中通道，使用 SDK 采样语义，分别绘制阶跃方向与 Bezier 手柄。未建轨通道显示默认值常线；受限 Bezier 的水平手柄保持锁定，非单调曲线按能力诊断限制操作。绘制与命中复用裁剪后的场景，曲线段按时间索引限定可见范围；静态网格／曲线／关键点使用独立 GPUI 缓存层，播放头与框选使用动态覆盖层。
+
+行内数值、关键帧时间／值、插值、事件内容与时间、时长／FPS／资源循环／淡入淡出及显式时间缩放均接入候选事务。Enter 或失焦提交、Escape 取消；切换字段保留新字段焦点，格式化产生的无变化事件不创建空事务。事件列表可选定同时间的不同事件。键盘命令仅在 Timeline 的非文本输入上下文生效，包含逐帧、前后关键点、删除、内部复制粘贴；恢复默认快捷键后仍有效。指针回调校验上下文，过期手势继续由候选身份屏障拒绝。
+
+核心补充了共享可见行 Arc 与不终止候选的定位确认接口，自动滚动到新建通道不会取消手势。结果预览允许定位到 SDK 返回的循环尾区，尾区不变成可写资产边界。视图操作不产生历史，曲线与属性手势仍只提交一次 SDK 历史。
+
+已运行的专项验收包含批量拖动的一次 Undo、候选资产隔离与取消、空动作单点建轨、受限手柄、文本输入优先、跨字段失焦提交、事件稳定身份、显式时间缩放、快捷键恢复和静态绘制层的时钟更新缓存。Metal 像素验收分别保存总览、曲线、候选编辑、取消恢复及中文浅色图；截图等待当前候选身份真正呈现，不能把等待期间保留的旧画面当作新结果。
+
+最终已运行验证：
+
+- `env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace`：437 项测试通过，4 项原有忽略项；其中 Timeline headless 专项 12 项通过，另通过完整编辑器截图流程与 Mao、Shirousagi、heijiao 三份本地模型的既有动画／Metal 验收。
+- `env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --test headless_screenshot`：五张 Timeline 截图与候选／取消恢复像素对比通过。
+- `cargo fmt --all -- --check` 与 `git diff --check` 通过。
+
+动作属性区区分资源默认与显式淡入淡出，可恢复默认；打开属性和输入框格式化不会改写资产。既有结果管线验收显式选择结果预览，截图定位使用明确的目标时间，并在当前预览身份实际呈现后检查像素。
+
+第四阶段的真实密集动作编辑、滚动吞吐、拖动到呈现延迟和连续快速 seek 压力测量尚未执行；既有三模型播放验收不能替代这些测量。
 
 ## 代码依据
 
 - 编辑器预览会话与配方：[animation.rs](../crates/editor-core/src/animation.rs)。
-- 当前进度条：[playback_bar.rs](../crates/editor/src/workspace/playback_bar.rs)。
+- Timeline 面板：[timeline/mod.rs](../crates/editor/src/workspace/timeline/mod.rs)，绘制与缓存：[drawing.rs](../crates/editor/src/workspace/timeline/drawing.rs)，输入与事务：[input.rs](../crates/editor/src/workspace/timeline/input.rs)。
 - 参数分组投影：[grouping.rs](../crates/editor/src/panels/parameters/grouping.rs)。
 - 参数分组与属性：[parameter.rs](../crates/editor-core/src/parameter.rs)。
 - 最终结果监视：[parameters.rs](../crates/editor/src/panels/animation_panel/parameters.rs)。

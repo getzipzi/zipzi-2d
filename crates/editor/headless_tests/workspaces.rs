@@ -25,7 +25,7 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
         assert!(window.try_find("tool_glue").is_none());
         assert!(window.try_find("tool_generate_mesh").is_none());
         assert!(window.try_find("tool_hand").is_some());
-        assert!(window.try_find("animation-playback-bar").is_some());
+        assert!(window.try_find("animation-timeline").is_some());
         assert!(window.try_find("AnimationMotions").is_some());
         assert!(window.try_find("AnimationInfo").is_some());
         let motions = window.find("AnimationMotions").bounds();
@@ -33,12 +33,15 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
         let info = window.find("AnimationInfo").bounds();
         let parameters = window.find("AnimationParameters").bounds();
         let canvas_bounds = window.find("canvas-body").bounds();
-        let playback = window.find("animation-playback-bar").bounds();
-        assert_eq!(playback.left(), canvas_bounds.left());
-        assert_eq!(playback.right(), canvas_bounds.right());
+        let playback = window.find("animation-timeline").bounds();
+        assert!(playback.left() <= motions.left());
+        assert!(playback.right() >= info.right());
         assert!(canvas_bounds.bottom() <= playback.top());
         assert!(motions.bottom() <= expressions.top());
-        assert!(motions.size.height < expressions.size.height);
+        assert!(
+            window.find("AnimationMotions").visible()
+                && window.find("AnimationExpressions").visible()
+        );
         assert!(info.bottom() <= parameters.top());
         assert!(motions.right() <= canvas_bounds.left());
         assert!(info.left() >= canvas_bounds.right());
@@ -64,7 +67,7 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
         window.press("space", cx);
         window.click("workspace-modeling", cx);
         window.render_frame(cx);
-        assert!(window.try_find("animation-playback-bar").is_none());
+        assert!(window.try_find("animation-timeline").is_none());
         assert!(window.try_find("tool_select").is_some());
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.workspace(), WorkspaceKind::Modeling);
@@ -98,7 +101,7 @@ fn project_tabs_restore_mode_tools_and_layout(cx: &mut TestAppContext) {
             assert_eq!(view.editor.active_tool(), ToolId::Glue);
         });
         assert!(window.try_find("tool_glue").is_some());
-        assert!(window.try_find("animation-playback-bar").is_none());
+        assert!(window.try_find("animation-timeline").is_none());
         window.click(format!("tab-item-{second:?}"), cx);
         window.render_frame(cx);
         assert_eq!(
@@ -106,7 +109,7 @@ fn project_tabs_restore_mode_tools_and_layout(cx: &mut TestAppContext) {
             WorkspaceKind::Animation
         );
         assert!(window.try_find("AnimationMotions").is_some());
-        assert!(window.try_find("animation-playback-bar").is_some());
+        assert!(window.try_find("animation-timeline").is_some());
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::Close, window, cx)
         });
@@ -117,7 +120,7 @@ fn project_tabs_restore_mode_tools_and_layout(cx: &mut TestAppContext) {
             WorkspaceKind::Modeling
         );
         assert!(window.try_find("tool_glue").is_some());
-        assert!(window.try_find("animation-playback-bar").is_none());
+        assert!(window.try_find("animation-timeline").is_none());
     })
     .unwrap();
 }
@@ -341,7 +344,7 @@ fn invalid_animation_layout_falls_back_without_resetting_modeling(cx: &mut TestA
         window.render_frame(cx);
         window.simulate_next_frame(cx);
         assert!(harness.view.read(cx).edit_error.is_some());
-        assert!(window.try_find("animation-playback-bar").is_some());
+        assert!(window.try_find("animation-timeline").is_some());
         window.click("workspace-modeling", cx);
         window.render_frame(cx);
         harness.view.read_with(cx, |view, cx| {

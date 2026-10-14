@@ -828,7 +828,6 @@ impl Render for CanvasView {
                 "KasaneCanvas"
             })
             .child(body)
-            .when(!modeling, |e| e.child(owner.read(cx).playback_bar.clone()))
             .into_any_element()
     }
 }

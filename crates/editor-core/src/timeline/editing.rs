@@ -466,8 +466,32 @@ impl Editor {
     pub fn timeline_view(&self) -> Option<&TimelineViewState> {
         Some(&self.active_session()?.timeline.current()?.view)
     }
+    /// Share the cached visible layout with UI render closures without cloning keys.
+    pub fn timeline_visible_rows(&self) -> Option<Arc<[TimelineRow]>> {
+        Some(self.active_session()?.timeline.current()?.visible.clone())
+    }
     pub fn timeline_rows(&self) -> Option<&[TimelineRow]> {
         Some(&self.active_session()?.timeline.current()?.visible)
+    }
+    /// Acknowledge a UI reveal without ending the candidate that requested it.
+    pub fn acknowledge_timeline_reveal(
+        &mut self,
+        document: DocumentId,
+        row: &TimelineRowId,
+        scroll: f64,
+    ) -> Result<()> {
+        self.ensure_animation_target(document)?;
+        ensure!(
+            scroll.is_finite() && scroll >= 0.,
+            "Invalid timeline scroll"
+        );
+        if let Some(state) = self.active_session_mut().unwrap().timeline.current_mut() {
+            if state.view.reveal_row.as_ref() == Some(row) {
+                state.view.scroll = scroll;
+                state.view.reveal_row = None;
+            }
+        }
+        Ok(())
     }
     pub fn timeline_edit(&self) -> Option<&TimelineEdit> {
         self.active_session()?.timeline.edit.as_ref()

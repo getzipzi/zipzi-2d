@@ -211,6 +211,13 @@ fn model(
     before.save(output.join(format!("model-{index}-modeling.png")))?;
     let before_canvas = h.canvas_image(&before)?;
     command(&mut h, CommandId::AnimationWorkspace)?;
+    // This suite checks the complete SDK pipeline and replay checkpoints.
+    update(&mut h, |view, _, cx| {
+        view.editor
+            .set_animation_preview_mode(id, editor_core::AnimationPreviewMode::Result)
+            .unwrap();
+        view.redraw(cx);
+    })?;
     let zero = h.capture()?;
     zero.save(output.join(format!("model-{index}-animation.png")))?;
     let request = update(&mut h, |view, _, _| {
