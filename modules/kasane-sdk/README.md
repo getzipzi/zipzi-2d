@@ -116,6 +116,21 @@ limits and repeatability.
 
 ## Detached animation playback
 
+`MotionEditingPreview` samples one raw clip at a local time on the model's
+default baseline. It applies no motion fades, expressions, physics or events;
+Pose resolves the sampled Part controls immediately, without replaying Pose
+fades. Sampling is deterministic across forward/backward inspection and never
+changes authoring assets. Numeric parameter maps and geometry scratch storage
+are reused. Result preview continues to use `MotionPreview` and its full SDK
+pipeline.
+
+`MotionSnapshot::motion_positions` reports the actual SDK local sample time,
+period, loop index and absolute cycle origin. `canonical_motion_seek_time` maps
+a local time in the selected loop for canonical replay of a clip scheduled at
+zero. Exact cycle seams belong to the preceding SDK loop, so seeking the next
+loop's zero uses the next representable preview clock value; asset times are
+unchanged. Do not derive the displayed phase with `absolute_time % duration`.
+
 Motion initial keys and segment endpoints use persistent `MotionKey` UUIDs;
 Bezier handles still use `MotionPoint`. Runtime `CompiledCurve` strips identities.
 `MotionClipCandidate` supports UUID-addressed simultaneous key moves, sampled

@@ -7,6 +7,8 @@ mod project_io;
 mod session;
 mod spatial;
 mod types;
+pub use kasane_animation::canonical_motion_seek_time;
+pub use kasane_animation::CompiledSegment;
 
 pub use alpha_mesh::{alpha_mesh_geometry, AlphaMask, AlphaMeshOptions};
 pub use assets::{
@@ -18,6 +20,10 @@ pub use kasane_animation::{
     apply_model_opacity, AnimationError, ExpressionPreview, ExpressionTransition, MotionEventFired,
     MotionPreview, MotionSnapshot, PhysicsPreview, PreviewGeometryTimings, RuntimeSnapshot,
     SeekCacheStats,
+};
+pub use kasane_animation::{
+    motion_bezier_time_is_monotonic, sample_motion_curve, CompiledCurve, MotionEditingPreview,
+    MotionPlaybackPosition,
 };
 pub use kasane_project::{
     FileSystem, ImportReport, NativeFileSystem, ProjectResult, PsdImportReport, ResourceDiagnostic,

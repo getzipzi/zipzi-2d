@@ -1,7 +1,10 @@
 //! Motion stage. The owner supplies one clock and frame for all stages.
 use crate::parameter_values::{copy_values, set_value};
 use crate::pose::real_parameter_for_part;
-use crate::{sample_motion_curve, AnimationError, CompiledCurve, MotionEventFired, MotionSnapshot};
+use crate::{
+    sample_motion_curve, AnimationError, CompiledCurve, MotionEventFired, MotionPlaybackPosition,
+    MotionSnapshot,
+};
 use kasane_core::{
     document::{MotionClip, MotionSegment, MotionTrack, MotionTrackTarget},
     Document,
@@ -29,6 +32,7 @@ struct Playing {
     end_time: Option<f32>,
     previous_offset: f32,
     fades: (f32, f32),
+    loop_index: u64,
 }
 
 #[derive(Clone)]
@@ -179,6 +183,7 @@ impl MotionRuntime {
         copy_values(&mut snapshot.parameters, &self.motion_parameters);
         snapshot.fired_events.clear();
         snapshot.coverage.clear();
+        snapshot.motion_positions.clear();
         while self.next_activation < self.activations.len()
             && self.activations[self.next_activation].time <= time
         {
@@ -199,6 +204,7 @@ impl MotionRuntime {
                 end_time: (!clip.looping).then_some(time + clip.duration),
                 previous_offset: 0.0,
                 fades: self.activations[self.next_activation].fades,
+                loop_index: 0,
             });
             self.next_activation += 1;
         }
@@ -218,6 +224,18 @@ impl MotionRuntime {
             } else {
                 elapsed
             };
+            let completed = if clip.looping && elapsed > cycle {
+                (elapsed / cycle).floor() as u64 - u64::from(elapsed % cycle == 0.0)
+            } else {
+                0
+            };
+            snapshot.motion_positions.push(MotionPlaybackPosition {
+                motion_id: clip.id.clone(),
+                local_time: offset,
+                period: if clip.looping { cycle } else { clip.duration },
+                loop_index: playing.loop_index.saturating_add(completed),
+                cycle_origin: time - offset,
+            });
             let in_weight = if fade_in <= 0.0 {
                 1.0
             } else {
@@ -316,6 +334,7 @@ impl MotionRuntime {
             fire_events(clip, before, after, &mut snapshot.fired_events);
             playing.previous_offset = offset;
             if clip.looping && time - playing.start_time >= cycle {
+                playing.loop_index = playing.loop_index.saturating_add(completed);
                 playing.start_time = time - offset;
                 playing.previous_offset = offset;
                 playing.fade_in_start = playing.start_time;

@@ -2,6 +2,7 @@
 //! preview never edits it or the owning SDK session.
 
 mod motion;
+pub use motion::canonical_motion_seek_time;
 mod replay;
 mod seek_cache;
 pub use motion::{
@@ -16,9 +17,11 @@ mod physics;
 pub use physics::PhysicsPreview;
 mod pose;
 pub use motion_preview::{
-    MotionEventFired, MotionOperation, MotionOperationKind, MotionPreview, MotionSnapshot,
-    PreviewGeometryTimings,
+    MotionEventFired, MotionOperation, MotionOperationKind, MotionPlaybackPosition, MotionPreview,
+    MotionSnapshot, PreviewGeometryTimings,
 };
+mod motion_editing_preview;
+pub use motion_editing_preview::MotionEditingPreview;
 
 mod expression;
 pub use expression::ExpressionTransition;

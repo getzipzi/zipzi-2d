@@ -49,6 +49,17 @@ pub struct MotionSnapshot {
     pub fired_events: Vec<MotionEventFired>,
     /// Model EyeBlink/LipSync mappings and unsupported Model IDs are reported.
     pub coverage: Vec<String>,
+    /// SDK sampling coordinates, including the duration + 1 / FPS loop tail.
+    pub motion_positions: Vec<MotionPlaybackPosition>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct MotionPlaybackPosition {
+    pub motion_id: String,
+    pub local_time: f32,
+    pub period: f32,
+    pub loop_index: u64,
+    pub cycle_origin: f32,
 }
 
 /// Identity of the last successful preview operation. This is evidence of
@@ -194,6 +205,7 @@ impl MotionPreview {
                 active_expressions: Vec::new(),
                 fired_events: Vec::new(),
                 coverage: Vec::new(),
+                motion_positions: Vec::new(),
             },
             pose,
         }
@@ -327,6 +339,13 @@ impl MotionPreview {
             + map_bytes(&self.snapshot.part_opacity_channels)
             + map_bytes(&self.snapshot.part_opacities)
             + strings_bytes(&self.snapshot.active_motions)
+            + vec_bytes(&self.snapshot.motion_positions)
+            + self
+                .snapshot
+                .motion_positions
+                .iter()
+                .map(|position| position.motion_id.capacity())
+                .sum::<usize>()
             + strings_bytes(&self.snapshot.active_expressions)
             + strings_bytes(&self.snapshot.coverage)
             + vec_bytes(&self.snapshot.fired_events)
@@ -494,6 +513,7 @@ impl MotionPreview {
             active_expressions: Vec::new(),
             fired_events: Vec::new(),
             coverage: Vec::new(),
+            motion_positions: Vec::new(),
         };
     }
 

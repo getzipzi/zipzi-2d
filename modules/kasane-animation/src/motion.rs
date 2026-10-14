@@ -1,6 +1,36 @@
 //! Stateless motion curve sampling. Queue state and fades are separate.
 use kasane_core::document::{MotionPoint, MotionSegment, MotionTrack};
 
+/// Local seeks for canonical replay of one clip scheduled at absolute zero.
+/// Activation occurs on the first 60 Hz step; use the SDK's returned loop index.
+pub fn canonical_motion_seek_time(
+    clip: &kasane_core::document::MotionClip,
+    loop_index: u64,
+    local: f32,
+) -> Result<f32, crate::AnimationError> {
+    let period = if clip.looping {
+        clip.duration + 1. / clip.fps
+    } else {
+        clip.duration
+    };
+    if !local.is_finite() || local < 0. || local > period || (!clip.looping && loop_index != 0) {
+        return Err(crate::AnimationError::InvalidTime);
+    }
+    if loop_index == 0 && local == 0. {
+        return Ok(0.);
+    }
+    let mut time = (f64::from(period) * loop_index as f64 + f64::from(local) + 1. / 60.) as f32;
+    // An exact seam belongs to the preceding SDK cycle. A preview seek to the
+    // next cycle's zero uses the next representable clock value, never a key edit.
+    if loop_index > 0 && local == 0. {
+        time = time.next_up();
+    }
+    if !time.is_finite() || time * 60. > 1_000_000. {
+        return Err(crate::AnimationError::SeekLimit);
+    }
+    Ok(time)
+}
+
 /// Numeric segments contain no authoring UUIDs or other persistent metadata.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CompiledSegment {
