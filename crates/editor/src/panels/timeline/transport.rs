@@ -1,5 +1,6 @@
 use super::*;
 use editor_core::CommandId;
+use gpui_kit::component::Icon;
 
 impl Timeline {
     pub(super) fn toolbar(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
@@ -257,6 +258,20 @@ impl Timeline {
                     .text_ellipsis()
                     .when(!self.compact, |label| label.child(name)),
             )
+            .when_some(self.error.clone(), |toolbar, error| {
+                toolbar.child(
+                    div()
+                        .id("timeline-error")
+                        .test_support()
+                        .flex_shrink_0()
+                        .text_color(cx.theme().danger)
+                        .tooltip(move |window, cx| {
+                            gpui_kit::component::tooltip::Tooltip::new(error.clone())
+                                .build(window, cx)
+                        })
+                        .child(Icon::new(IconName::TriangleAlert).small()),
+                )
+            })
             .child(
                 div()
                     .id("timeline-time")

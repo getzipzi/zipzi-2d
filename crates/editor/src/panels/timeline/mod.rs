@@ -28,7 +28,7 @@ use std::{cell::Cell, collections::HashMap, rc::Rc, sync::Arc};
 const ROW: f32 = 26.;
 const LEFT: f32 = 248.;
 const INSPECTOR: f32 = 220.;
-const RULER: f32 = 24.;
+const RULER: f32 = 28.;
 const COMPACT_WIDTH: f32 = 900.;
 const COMPACT_LEFT: f32 = 160.;
 
@@ -921,81 +921,49 @@ impl Render for Timeline {
             .overflow_hidden()
             .child(
                 div()
-                    .flex_1()
-                    .min_w_0()
+                    .w(px(left_width))
+                    .flex_shrink_0()
                     .flex()
                     .flex_col()
                     .child(
                         div()
-                            .h(px(28.))
+                            .h(px(RULER))
                             .flex_shrink_0()
                             .flex()
                             .items_center()
+                            .gap_1()
+                            .px_1()
                             .border_b_1()
                             .border_color(cx.theme().border)
                             .child(
-                                div()
-                                    .w(px(left_width))
-                                    .flex_shrink_0()
-                                    .flex()
-                                    .items_center()
-                                    .gap_1()
-                                    .px_1()
-                                    .child(
-                                        crate::panels::toolbar::PanelToolbarSearch::new(
-                                            &self.search,
-                                        )
-                                        .id("timeline-search")
-                                        .label(t!("timeline.search").into_owned()),
-                                    )
-                                    .child(
-                                        Button::new("timeline-filter")
-                                            .small()
-                                            .ghost()
-                                            .icon(IconName::ListFilter)
-                                            .selected(state.filter == TimelineFilter::Animated)
-                                            .tooltip(if state.filter == TimelineFilter::Animated {
-                                                t!("timeline.animated")
-                                            } else {
-                                                t!("timeline.all")
-                                            })
-                                            .on_click(cx.listener(|this, _, window, cx| {
-                                                if this.allowed(window, cx) {
-                                                    this.change_view(
-                                                        |view| {
-                                                            view.filter = if view.filter
-                                                                == TimelineFilter::Animated
-                                                            {
-                                                                TimelineFilter::All
-                                                            } else {
-                                                                TimelineFilter::Animated
-                                                            }
-                                                        },
-                                                        cx,
-                                                    );
-                                                }
-                                            })),
-                                    ),
+                                crate::panels::toolbar::PanelToolbarSearch::new(&self.search)
+                                    .id("timeline-search")
+                                    .label(t!("timeline.search").into_owned()),
                             )
                             .child(
-                                div()
-                                    .id("timeline-status")
-                                    .test_support()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .px_2()
-                                    .overflow_hidden()
-                                    .text_ellipsis()
-                                    .text_color(if self.error.is_some() {
-                                        cx.theme().danger
+                                Button::new("timeline-filter")
+                                    .small()
+                                    .ghost()
+                                    .icon(IconName::ListFilter)
+                                    .selected(state.filter == TimelineFilter::Animated)
+                                    .tooltip(if state.filter == TimelineFilter::Animated {
+                                        t!("timeline.animated")
                                     } else {
-                                        cx.theme().muted_foreground
+                                        t!("timeline.all")
                                     })
-                                    .child(self.error.clone().unwrap_or_else(|| {
-                                        if state.mode == TimelineDisplayMode::Curves {
-                                            t!("timeline.curve_hint").into_owned()
-                                        } else {
-                                            t!("timeline.overview_hint").into_owned()
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        if this.allowed(window, cx) {
+                                            this.change_view(
+                                                |view| {
+                                                    view.filter =
+                                                        if view.filter == TimelineFilter::Animated {
+                                                            TimelineFilter::All
+                                                        } else {
+                                                            TimelineFilter::Animated
+                                                        }
+                                                },
+                                                cx,
+                                            );
                                         }
                                     })),
                             ),
@@ -1004,31 +972,11 @@ impl Render for Timeline {
                         div()
                             .flex_1()
                             .min_h_0()
-                            .flex()
-                            .child(
-                                div()
-                                    .w(px(left_width))
-                                    .flex_shrink_0()
-                                    .flex()
-                                    .flex_col()
-                                    .child(
-                                        div()
-                                            .h(px(RULER))
-                                            .flex_shrink_0()
-                                            .px_2()
-                                            .child(t!("timeline.channels")),
-                                    )
-                                    .child(
-                                        div()
-                                            .flex_1()
-                                            .min_h_0()
-                                            .on_scroll_wheel(cx.listener(Self::wheel))
-                                            .child(left),
-                                    ),
-                            )
-                            .child(graph),
+                            .on_scroll_wheel(cx.listener(Self::wheel))
+                            .child(left),
                     ),
             )
+            .child(graph)
             .when_some(inline_inspector, |body, inspector| body.child(inspector));
         panel = panel
             .child(body)
