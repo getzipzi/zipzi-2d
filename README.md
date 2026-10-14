@@ -40,9 +40,9 @@ cargo test --locked -p kasane-editor --bin kasane-editor headless_tests
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test headless_screenshot
 # Focused Timeline views and candidate/cancel pixel verification:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --test headless_screenshot
-# Imported motion edge cases and real GPUI/Metal editing acceptance (local Mao asset):
+# Imported motion edge cases, editing and canvas navigation acceptance (local Mao asset):
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeline_acceptance
-# Release input/draw, candidate latency, playback and rapid-seek measurements:
+# Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:
 ./scripts/timeline-benchmark.sh target/timeline-benchmark-run 600
 ```
 

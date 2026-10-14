@@ -1,6 +1,7 @@
 //! Playback projections. These controls never edit the authoring document.
 mod inspectors;
 mod parameters;
+mod properties;
 mod resources;
 use crate::{EditorView, t};
 use gpui_kit::component::{
@@ -52,6 +53,7 @@ pub struct AnimationPanel {
     _observe: Subscription,
     resources: resources::ResourceList,
     parameters: parameters::PreviewParameters,
+    properties: properties::Properties,
 }
 impl AnimationPanel {
     pub fn new(
@@ -62,6 +64,7 @@ impl AnimationPanel {
         cx.new(|cx| Self {
             resources: resources::ResourceList::default(),
             parameters: parameters::PreviewParameters::default(),
+            properties: properties::Properties::default(),
             _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
             owner,
             kind,
@@ -108,6 +111,9 @@ impl Render for AnimationPanel {
         if matches!(self.kind, AnimationPanelKind::Parameters) {
             return self.render_parameters(cx);
         }
+        if matches!(self.kind, AnimationPanelKind::Properties) {
+            return self.render_properties(cx);
+        }
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
@@ -132,10 +138,7 @@ impl Render for AnimationPanel {
             .text_xs();
         match self.kind {
             AnimationPanelKind::Expressions | AnimationPanelKind::Motions => unreachable!(),
-            AnimationPanelKind::Properties => {
-                content =
-                    inspectors::properties(content.gap_1(), document, animation, &catalog, cx);
-            }
+            AnimationPanelKind::Properties => unreachable!(),
             AnimationPanelKind::Physics => {
                 content = inspectors::physics(content.gap_1(), document, snapshot, cx);
             }

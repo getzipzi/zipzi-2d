@@ -54,7 +54,6 @@ struct EditorView {
     status_bar: Entity<workspace::status_bar::StatusBar>,
     top_bar: Entity<workspace::top_bar::TopBar>,
     toolbar: workspace::toolbar::ToolbarRegistry,
-    timeline: Entity<workspace::timeline::Timeline>,
     dev_session: Option<dev_session::DevSession>,
 }
 impl EditorView {
@@ -94,7 +93,6 @@ impl EditorView {
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
             top_bar: workspace::top_bar::TopBar::new(cx.weak_entity(), cx),
             toolbar: workspace::toolbar::ToolbarRegistry::with_defaults(),
-            timeline: workspace::timeline::Timeline::new(cx.weak_entity(), window, cx),
             dev_session: dev_session::DevSession::from_env(),
         };
         let entity = cx.weak_entity();
@@ -161,6 +159,7 @@ impl EditorView {
                     .update(cx, |this, cx| {
                         frame_trace::emit(frame.trace_id, "ui_received", &[]);
                         if let Some(state) = frame.animation {
+                            let mut pose_changed = true;
                             match frame.image {
                                 Ok(image) => {
                                     if !this
@@ -172,6 +171,13 @@ impl EditorView {
                                     }
                                     frame_trace::emit(frame.trace_id, "accepted", &[]);
                                     this.render_stats = frame.stats;
+                                    pose_changed =
+                                        this.animation_frame.as_ref().is_none_or(|frame| {
+                                            !std::sync::Arc::ptr_eq(
+                                                &frame.state.snapshot,
+                                                &state.snapshot,
+                                            )
+                                        });
                                     this.animation_frame =
                                         Some(animation::Presented { image, state });
                                 }
@@ -181,7 +187,12 @@ impl EditorView {
                                 ),
                             }
                             this.sync_animation_clock(cx);
-                            this.notify_animation(cx);
+                            if pose_changed {
+                                this.notify_animation(cx);
+                            } else {
+                                // Panning/zooming a completed pose only changes its image.
+                                this.notify_canvas(cx);
+                            }
                             return;
                         }
                         match frame.image {
@@ -230,8 +241,8 @@ impl EditorView {
 
     fn notify_animation(&self, cx: &mut Context<Self>) {
         self.notify_canvas(cx);
-        App::notify(cx, self.timeline.entity_id());
         if let Some(dock) = &self.dock {
+            App::notify(cx, dock.timeline.entity_id());
             App::notify(cx, dock.animation_info.entity_id());
             App::notify(cx, dock.animation_parameters.entity_id());
             for kind in [

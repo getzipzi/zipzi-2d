@@ -1631,7 +1631,9 @@ impl Element for List {
         {
             let new_items = SumTree::from_iter(
                 state.items.iter().map(|item| ListItem::Unmeasured {
-                    size_hint: None,
+                    // Remeasure at the new width, but retain an estimate for
+                    // offscreen rows so the scroll range does not collapse.
+                    size_hint: item.size().or_else(|| item.size_hint()),
                     focus_handle: item.focus_handle(),
                 }),
                 (),

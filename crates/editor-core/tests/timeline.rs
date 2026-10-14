@@ -1060,6 +1060,47 @@ fn paste_collision_on_second_track_rolls_back_the_entire_batch() -> anyhow::Resu
 }
 
 #[test]
+fn viewport_pose_cache_tracks_candidate_revisions_cancel_commit_and_undo() -> anyhow::Result<()> {
+    let (mut e, _temp) = fixture(false, false)?;
+    let d = e.active_id().unwrap();
+    e.seek_timeline(d, 0.6)?;
+    let mut evaluator = AnimationEvaluator::default();
+    let original = evaluate(&mut e, &mut evaluator)?;
+    for value in [0.8, 0.9] {
+        if e.timeline_edit().is_none() {
+            e.begin_timeline_edit(d, "Value")?;
+        }
+        e.update_timeline_edit(
+            d,
+            e.timeline_edit().unwrap().identity,
+            write(2, None, value),
+        )?;
+        let candidate = evaluate(&mut e, &mut evaluator)?;
+        assert_eq!(candidate.snapshot.parameters[&id(2)], value);
+        assert!(!Arc::ptr_eq(&original.snapshot, &candidate.snapshot));
+        e.pan_by(CanvasPoint { x: 2., y: 3. });
+        let panned = evaluate(&mut e, &mut evaluator)?;
+        assert!(Arc::ptr_eq(&candidate.snapshot, &panned.snapshot));
+        assert!(Arc::ptr_eq(
+            &candidate.scene.viewport_frame,
+            &panned.scene.viewport_frame
+        ));
+        assert!(!e.present_animation(candidate.identity, candidate.snapshot));
+        assert!(e.present_animation(panned.identity, panned.snapshot));
+    }
+    e.cancel_timeline_edit();
+    let cancelled = evaluate(&mut e, &mut evaluator)?;
+    assert_eq!(cancelled.snapshot.parameters[&id(2)], 0.5);
+    e.execute_timeline(d, write(2, None, 0.8))?;
+    let committed = evaluate(&mut e, &mut evaluator)?;
+    assert_eq!(committed.snapshot.parameters[&id(2)], 0.8);
+    e.execute(EditorCommand::Undo)?;
+    let restored = evaluate(&mut e, &mut evaluator)?;
+    assert_eq!(restored.snapshot.parameters[&id(2)], 0.5);
+    Ok(())
+}
+
+#[test]
 fn commit_undo_and_modes_reject_old_cpu_and_gpu_candidates() -> anyhow::Result<()> {
     let (mut e, _temp) = fixture(false, false)?;
     let d = e.active_id().unwrap();

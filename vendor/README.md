@@ -4,7 +4,7 @@
 
 仅保留 crates.io 发布的 `gpui-fast`、`gpui-fast-macos`、`gpui-fast-apple` **0.1.7**，作为 GPUI Kit 0.7.3 的 `gpui-fast` 后端。根目录 `Cargo.toml` 的 `[patch.crates-io]` 选择这些本地包；Kit 本身仍使用官方固定 commit。
 
-原生 Metal 集成涉及 **11 个文件（10 个源码文件 + 1 个依赖清单），新增 495 行、删除 13 行**，差异见 [native-metal.patch](native-metal.patch)。此外，Fast 缓存边界修复涉及 `fast/retained.rs` 和 `fast/splice.rs` 两个文件，独立保存为 [cache-boundary.patch](cache-boundary.patch)。合计修改/新增 13 个文件，其余保持发布版本原样。
+原生 Metal 集成涉及 **11 个文件（10 个源码文件 + 1 个依赖清单），新增 495 行、删除 13 行**，差异见 [native-metal.patch](native-metal.patch)。此外，Fast 缓存边界修复涉及 `fast/retained.rs` 和 `fast/splice.rs` 两个文件，独立保存为 [cache-boundary.patch](cache-boundary.patch)；虚拟列表高度估计修复涉及 `elements/list.rs`，保存为 [list-height-estimates.patch](list-height-estimates.patch)。合计修改/新增 14 个文件，其余保持发布版本原样。
 
 `Cargo.toml.orig` 保留发布包附带的原始工作区清单，并非本地实际构建清单；构建使用标准化的 `Cargo.toml`。Apache-2.0 许可文件保留。
 
@@ -13,6 +13,10 @@
 `RetainedSubtree` 独立保存显式 `.cached()` 身份，创建缓存记录时标记，在跨帧复用和 splice 复制时保留；`is_cached()` 不再从可选的 `Rebuild` 推断。虚拟列表项没有父布局 key 时依然是缓存边界，其后代未通知的状态写入不会触发无谓的重复构建。通知、全量刷新及原有其他失效条件仍生效。正式代码没有实验环境变量或诊断日志。
 
 回归位于 [view_cache.rs](../crates/editor/headless_tests/view_cache.rs)，覆盖 retention on/off、虚拟列表缓存行及其普通子视图、无通知更新、通知重绘、不变兄弟行复用和全量刷新。测试在修复前失败、修复后通过。性能和窗口延迟见 [正式修复验证](../docs/gpui-fast-cache-boundary-fix.md)。
+
+## 虚拟列表尺寸变化
+
+变宽后，`List` 仍把条目标记为未测量，但保留原高度或调用方提供的高度估计。可见行在新宽度下重新测量；未显示行继续贡献估计高度，避免滚动范围收缩、滚动条变短和无法直接滚动到尾部。回归见 [view_cache.rs](../crates/editor/headless_tests/view_cache.rs) 的 `variable_list_resize_preserves_scroll_estimates_and_remeasures_visible_rows`，真实 Motion 的末行可达性由 Timeline Metal 验收覆盖。
 
 ## 原生 Metal 逐文件修改
 
@@ -50,9 +54,10 @@ cargo test --locked --workspace
 # 只核对完整补丁与当前源码是否一致，不修改文件：
 git apply --reverse --check vendor/native-metal.patch
 git apply --reverse --check vendor/cache-boundary.patch
+git apply --reverse --check vendor/list-height-estimates.patch
 ```
 
-补丁使用仓库根目录相对路径，可应用到按相同目录布局放置的原始 0.1.7 发布包。更新 GPUI 时，应以新发布包为基线重新核对上述两份补丁涉及的 13 个文件，检查上游是否已修复缓存边界，重新生成仍需要的补丁并更新统计，运行合成测试、完整 UI 截图测试和两个应用构建。原生 Metal 集成细节见 [native-metal.md](../docs/archive/native-metal.md)。
+补丁使用仓库根目录相对路径，可应用到按相同目录布局放置的原始 0.1.7 发布包。更新 GPUI 时，应以新发布包为基线重新核对上述三份补丁涉及的 14 个文件，检查上游是否已修复缓存边界及列表高度估计，重新生成仍需要的补丁并更新统计，运行合成测试、完整 UI 截图测试和两个应用构建。原生 Metal 集成细节见 [native-metal.md](../docs/archive/native-metal.md)。
 
 实际窗口 benchmark 的计时约定、命令和限制见 [窗口 benchmark](../docs/archive/window-benchmark.md)。
 

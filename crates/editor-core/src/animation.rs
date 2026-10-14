@@ -166,6 +166,7 @@ pub struct AnimationIdentity {
     pub candidate: Option<TimelineCandidateIdentity>,
 }
 
+#[derive(Clone)]
 pub struct AnimationRequest {
     pub identity: AnimationIdentity,
     pub source: Arc<AnimationSource>,
@@ -173,7 +174,24 @@ pub struct AnimationRequest {
     /// Complete ordered schedule, including future events after a backward seek.
     pub expressions: Vec<ExpressionTrigger>,
 }
+impl AnimationRequest {
+    fn same_pose(&self, other: &Self) -> bool {
+        // Navigation and acceptance barriers change frame provenance, not pose.
+        // Compare the full recipe as well: detached callers may replace it
+        // without going through the editor's preview-generation bookkeeping.
+        AnimationIdentity {
+            request: other.identity.request,
+            acceptance_floor: other.identity.acceptance_floor,
+            viewport_revision: other.identity.viewport_revision,
+            ..self.identity
+        } == other.identity
+            && Arc::ptr_eq(&self.source, &other.source)
+            && self.motion == other.motion
+            && self.expressions == other.expressions
+    }
+}
 
+#[derive(Clone)]
 pub struct AnimationEvaluated {
     pub identity: AnimationIdentity,
     pub scene: SceneSnapshot,
@@ -188,6 +206,7 @@ pub struct AnimationEvaluator {
     identity: Option<AnimationIdentity>,
     motion: Option<MotionSelection>,
     editing: Option<kasane_sdk::MotionEditingPreview>,
+    completed: Option<(AnimationRequest, AnimationEvaluated)>,
 }
 impl AnimationEvaluator {
     /// Detached SDK cache accounting for profiling; preview state is unchanged.
@@ -195,6 +214,28 @@ impl AnimationEvaluator {
         self.preview.as_ref().map(MotionPreview::seek_cache_stats)
     }
     pub fn evaluate(
+        &mut self,
+        request: &AnimationRequest,
+        mut progress: impl FnMut(u32, u32) -> bool,
+    ) -> Result<AnimationEvaluated> {
+        if let Some((previous, frame)) = &self.completed {
+            if previous.same_pose(request) {
+                if !progress(0, 0) {
+                    anyhow::bail!(kasane_sdk::AnimationError::SeekCancelled);
+                }
+                let mut frame = frame.clone();
+                frame.identity.request = request.identity.request;
+                frame.identity.acceptance_floor = request.identity.acceptance_floor;
+                frame.identity.viewport_revision = request.identity.viewport_revision;
+                return Ok(frame);
+            }
+        }
+        self.completed = None;
+        let frame = self.evaluate_pose(request, progress)?;
+        self.completed = Some((request.clone(), frame.clone()));
+        Ok(frame)
+    }
+    fn evaluate_pose(
         &mut self,
         request: &AnimationRequest,
         progress: impl FnMut(u32, u32) -> bool,
@@ -910,7 +951,7 @@ impl Editor {
         let workspace_revision = self.workspace_revision();
         let metrics = self.canvas_metrics();
         let session = self.active_session_mut()?;
-        session.fit_animation_once(metrics);
+        session.fit_default_view(metrics);
         session.reconcile_animation();
         let viewport = session.viewport_revision;
         let source = if let Some(source) = &session.animation.source {

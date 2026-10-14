@@ -588,8 +588,15 @@ impl Render for CanvasView {
                             this.bounds = bounds;
                             let _ = this.owner.update(cx, |owner, cx| {
                                 if owner.editor.canvas_metrics() != metrics {
+                                    let editing = owner.editor.gesture_active();
                                     owner.editor.set_canvas_metrics(metrics);
-                                    owner.redraw(cx);
+                                    if editing {
+                                        // Resizing cancels an authoring gesture; its
+                                        // rollback must also reach document panels.
+                                        owner.redraw(cx);
+                                    } else {
+                                        owner.redraw_canvas(cx);
+                                    }
                                 }
                             });
                         });

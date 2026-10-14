@@ -9,6 +9,85 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+fn timeline_dock_size_and_hidden_state_restore_in_new_windows(cx: &mut TestAppContext) {
+    use crate::EditorView;
+    use editor_core::PanelKind;
+    use gpui_kit::{Bounds, WindowBounds, WindowOptions, size};
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.simulate_next_frame(cx);
+        let area = harness.view.read(cx).dock.as_ref().unwrap().area.clone();
+        area.update(cx, |area, cx| {
+            area.set_dock_size(DockPlacement::Bottom, px(330.), window, cx)
+        });
+        window.render_frame(cx);
+        window.simulate_next_frame(cx);
+    })
+    .unwrap();
+    let open = |cx: &mut gpui_kit::App| {
+        gpui_kit::open_window(
+            WindowOptions {
+                window_bounds: Some(WindowBounds::Windowed(Bounds::new(
+                    point(px(0.), px(0.)),
+                    size(px(1100.), px(740.)),
+                ))),
+                ..crate::workspace::tab_bar::window_options()
+            },
+            cx,
+            |window, cx| cx.new(|cx| EditorView::new(window, cx)),
+        )
+        .unwrap()
+    };
+    let (second_window, second) = cx.update(open);
+    cx.update_window(second_window, |_, window, cx| {
+        window.render_frame(cx);
+        window.simulate_next_frame(cx);
+        let dock = second.read(cx).dock.as_ref().unwrap();
+        assert!(dock.contains(PanelKind::AnimationTimeline, cx));
+        assert_eq!(
+            dock.area.read(cx).dock_size(DockPlacement::Bottom),
+            Some(px(330.))
+        );
+        second.update(cx, |view, cx| {
+            view.run_command(CommandId::AnimationTimeline, window, cx)
+        });
+        window.render_frame(cx);
+        window.simulate_next_frame(cx);
+        assert!(
+            !second
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .contains(PanelKind::AnimationTimeline, cx)
+        );
+    })
+    .unwrap();
+    let (third_window, third) = cx.update(open);
+    cx.update_window(third_window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(third.read(cx).editor.workspace(), WorkspaceKind::Animation);
+        assert!(
+            !third
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .contains(PanelKind::AnimationTimeline, cx)
+        );
+        assert!(window.try_find("animation-timeline").is_none());
+        third.update(cx, |view, cx| {
+            view.run_command(CommandId::AnimationTimeline, window, cx)
+        });
+        window.render_frame(cx);
+        assert!(window.find("animation-timeline").visible());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let (document, canvas) = harness.view.read_with(cx, |view, _| {
@@ -196,6 +275,9 @@ fn middle_button_trackpad_and_hand_navigation_work_in_both_workspaces(cx: &mut T
 #[gpui_kit::test]
 fn old_pan_and_wheel_callbacks_cannot_continue_after_switching(cx: &mut TestAppContext) {
     let harness = setup(cx);
+    let initial_zoom = harness
+        .view
+        .read_with(cx, |view, _| view.editor.view().zoom);
     cx.update_window(harness.window, |_, window, cx| {
         let from = window.find("canvas-body").bounds().center();
         window.dispatch_event(
@@ -213,7 +295,7 @@ fn old_pan_and_wheel_callbacks_cannot_continue_after_switching(cx: &mut TestAppC
         });
         window.render_frame(cx);
         window.simulate_next_frame(cx);
-        assert_eq!(harness.view.read(cx).editor.view().zoom, 1.);
+        assert_eq!(harness.view.read(cx).editor.view().zoom, initial_zoom);
         let from = window.find("canvas-body").bounds().center();
         window.dispatch_event(
             MouseDownEvent {

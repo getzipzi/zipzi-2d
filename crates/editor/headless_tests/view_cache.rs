@@ -14,6 +14,93 @@ use gpui_kit::{
 };
 use std::{cell::Cell, rc::Rc};
 
+#[gpui_kit::test]
+fn variable_list_resize_preserves_scroll_estimates_and_remeasures_visible_rows(
+    cx: &mut TestAppContext,
+) {
+    struct VariableList {
+        state: gpui_kit::ListState,
+        width: f32,
+        renders: Rc<Cell<usize>>,
+        last: Rc<Cell<usize>>,
+    }
+    impl Render for VariableList {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            let renders = self.renders.clone();
+            let last = self.last.clone();
+            let height = if self.width > 150. { 20. } else { 40. };
+            div().w(px(self.width)).h(px(80.)).child(
+                gpui_kit::list(self.state.clone(), move |index, _, _| {
+                    renders.set(renders.get() + 1);
+                    last.set(last.get().max(index));
+                    div().w_full().h(px(height)).into_any_element()
+                })
+                .size_full(),
+            )
+        }
+    }
+    let state = gpui_kit::ListState::new(100, gpui_kit::ListAlignment::Top, px(0.))
+        .with_uniform_item_height(px(20.));
+    let renders = Rc::new(Cell::new(0));
+    let last = Rc::new(Cell::new(0));
+    let (window, view) = cx.update(|cx| {
+        gpui_kit::init(cx);
+        gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| {
+            cx.new(|_| VariableList {
+                state: state.clone(),
+                width: 200.,
+                renders: renders.clone(),
+                last: last.clone(),
+            })
+        })
+        .unwrap()
+    });
+    cx.update_window(window, |_, w, cx| {
+        w.draw(cx).clear(cx);
+    })
+    .unwrap();
+    assert!(state.max_offset_for_scrollbar().y >= px(1900.));
+    assert!(renders.get() < 10, "list measured offscreen rows");
+    view.update(cx, |v, cx| {
+        v.width = 100.;
+        cx.notify();
+    });
+    renders.set(0);
+    cx.update_window(window, |_, w, cx| {
+        w.draw(cx).clear(cx);
+    })
+    .unwrap();
+    assert!(state.max_offset_for_scrollbar().y >= px(1900.));
+    assert!(renders.get() < 10, "resize measured offscreen rows");
+    // The two visible rows must have been measured at their new 40px height.
+    assert!(state.max_offset_for_scrollbar().y >= px(1960.));
+    // Heights are estimates until visited, so a second scroll may compensate
+    // for the final rows growing from 20px to 40px at the narrower width.
+    for _ in 0..3 {
+        cx.update_window(window, |_, w, cx| {
+            w.dispatch_event(
+                gpui_kit::ScrollWheelEvent {
+                    position: point(px(30.), px(30.)),
+                    delta: gpui_kit::ScrollDelta::Pixels(point(px(0.), px(-100_000.))),
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            w.draw(cx).clear(cx);
+        })
+        .unwrap();
+        if last.get() == 99 {
+            break;
+        }
+    }
+    assert_eq!(
+        last.get(),
+        99,
+        "scroll could not reach an unmeasured last row"
+    );
+}
+
 struct WritingInput {
     options: Entity<bool>,
     renders: Rc<Cell<usize>>,

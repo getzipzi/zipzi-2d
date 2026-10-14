@@ -14,6 +14,8 @@ fn shown(editor: &mut Editor) -> anyhow::Result<CanvasFrame> {
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document_with_two_layers()?;
     let mut editor = Editor::from_document(doc);
+    // Fixed pixel/source-unit assertions use an explicit 100% view.
+    editor.reset_view();
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -194,6 +196,7 @@ fn hit_test_miss_clears_objects_and_components_even_with_shift() -> anyhow::Resu
     let (doc, _dir, warp, rotation, _) = rich_document()?;
     let mesh = doc.context().selection.clone().unwrap();
     let mut editor = Editor::from_document(doc);
+    editor.reset_view();
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -791,6 +794,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     let (doc, _dir, warp, _, _) = rich_document()?;
     let mesh = doc.context().selection.clone().unwrap();
     let mut editor = Editor::from_document(doc);
+    editor.reset_view();
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -1457,6 +1461,8 @@ fn deformer_editor(rotation: bool) -> anyhow::Result<(Editor, tempfile::TempDir,
     let (doc, dir, warp, rotate, _) = rich_document()?;
     let object = ObjectRef::new(ObjectKind::Deformer, if rotation { rotate } else { warp });
     let mut editor = Editor::from_document(doc);
+    // Drag distances below are calibrated at 100% on a 2x display.
+    editor.reset_view();
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,

@@ -29,10 +29,6 @@ pub(super) fn bind_keys(cx: &mut App) {
     ]);
 }
 pub(super) enum Gesture {
-    Resize {
-        y: f32,
-        height: f32,
-    },
     Seek,
     Marquee {
         origin: Point<f32>,
@@ -406,14 +402,6 @@ impl Timeline {
                 }
         };
         let command = match self.gesture.as_mut().unwrap() {
-            Gesture::Resize { y, height } => {
-                self.height = (*height + *y - event.position.y.as_f32()).clamp(
-                    180.,
-                    (window.viewport_size().height.as_f32() * 0.65).max(180.),
-                );
-                cx.notify();
-                return;
-            }
             Gesture::Seek => {
                 self.seek_at(event.position, true, cx);
                 return;

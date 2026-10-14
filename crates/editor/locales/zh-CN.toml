@@ -409,6 +409,7 @@ seek_cancelled = "上一次定位已取消。"
 evaluation_failed = "求值失败：%{detail}"
 
 [timeline]
+title = "时间轴"
 search = "搜索通道"
 select_motion = "选择动作"
 new_motion = "新建动作"

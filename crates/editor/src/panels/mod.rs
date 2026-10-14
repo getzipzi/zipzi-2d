@@ -5,6 +5,7 @@ pub mod mesh_tree;
 pub mod parameters;
 pub mod properties;
 mod sorting;
+pub mod timeline;
 pub(crate) mod toolbar;
 
 pub use deformer_tree::DeformerTreePanel;

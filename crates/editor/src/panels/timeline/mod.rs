@@ -16,6 +16,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::{
     ActiveTheme, Disableable, Selectable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
+    dock::{BasePanel, Panel, PanelEvent},
     input::{Input, InputEvent, InputState},
     menu::{DropdownMenu, PopupMenuItem},
 };
@@ -37,6 +38,8 @@ struct Target {
 }
 
 pub struct Timeline {
+    #[cfg(test)]
+    renders: u64,
     owner: WeakEntity<EditorView>,
     focus: FocusHandle,
     transport: Entity<transport::TimelineTransport>,
@@ -44,8 +47,6 @@ pub struct Timeline {
     search: Entity<InputState>,
     search_placeholder: String,
     context: Option<Target>,
-    heights: HashMap<DocumentId, f32>,
-    height: f32,
     graph: Rc<Cell<Bounds<Pixels>>>,
     ruler: Rc<Cell<Bounds<Pixels>>>,
     body_height: f32,
@@ -76,6 +77,8 @@ impl Timeline {
             let search =
                 cx.new(|cx| InputState::new(window, cx).placeholder(t!("timeline.search")));
             Self {
+                #[cfg(test)]
+                renders: 0,
                 transport: transport::TimelineTransport::new(owner.clone(), cx),
                 tracks: cx.new(|_| drawing::TracksLayer::new(scene.clone())),
                 _search_events: cx.subscribe_in(
@@ -108,8 +111,6 @@ impl Timeline {
                 search,
                 search_placeholder: t!("timeline.search").into_owned(),
                 context: None,
-                heights: HashMap::new(),
-                height: 288.,
                 graph: Rc::new(Cell::new(Bounds::default())),
                 ruler: Rc::new(Cell::new(Bounds::default())),
                 body_height: 180.,
@@ -190,9 +191,6 @@ impl Timeline {
                         && old.clip == new.clip
                         && old.mode == new.mode
                 });
-            if let Some(context) = &self.context {
-                self.heights.insert(context.document, self.height);
-            }
             self.gesture = None;
             self.number_edit = None;
             if same_clip {
@@ -212,9 +210,6 @@ impl Timeline {
                 self.error = None;
             }
             self.scene.borrow_mut().scene = None;
-            if let Some(target) = &target {
-                self.height = *self.heights.get(&target.document).unwrap_or(&288.);
-            }
             if target.as_ref().is_none_or(|target| target.clip.is_empty()) {
                 self.tracks.update(cx, |tracks, cx| tracks.clear(cx));
             }
@@ -381,8 +376,89 @@ impl Timeline {
     }
 }
 
+impl EventEmitter<PanelEvent> for Timeline {}
+impl Focusable for Timeline {
+    fn focus_handle(&self, _: &App) -> FocusHandle {
+        self.focus.clone()
+    }
+}
+impl BasePanel for Timeline {
+    fn panel_name(&self) -> &'static str {
+        "AnimationTimeline"
+    }
+
+    fn set_active(&mut self, active: bool, window: &mut Window, cx: &mut Context<Self>) {
+        if !active {
+            self.deactivate(window, cx);
+        }
+    }
+
+    fn on_removed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.deactivate(window, cx);
+    }
+}
+impl Panel for Timeline {
+    fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        t!("timeline.title")
+    }
+
+    fn inner_padding(&self, _: &App) -> bool {
+        false
+    }
+}
+
+impl Timeline {
+    pub(crate) fn deactivate(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let token = self
+            .gesture
+            .as_ref()
+            .and_then(input::Gesture::token)
+            .or_else(|| self.number_edit.as_ref().map(|edit| edit.token));
+        let seeking = matches!(self.gesture, Some(input::Gesture::Seek));
+        if self.gesture.is_some() || self.number_edit.is_some() {
+            cx.stop_active_drag(window);
+        }
+        self.gesture = None;
+        self.number_edit = None;
+        for field in self.fields.values() {
+            field.number.update(cx, |number, cx| number.reset_drag(cx));
+        }
+        if token.is_none() && !seeking {
+            return;
+        }
+        let owner = self.owner.clone();
+        let document = self.context.as_ref().map(|target| target.document);
+        // Dock callbacks may run inside an EditorView update. Resolve the owner
+        // after it is released, and never cancel a newer gesture or another tab.
+        cx.defer(move |cx| {
+            let _ = owner.update(cx, |owner, cx| {
+                if owner.editor.active_id() != document {
+                    return;
+                }
+                if token.is_some_and(|token| {
+                    owner
+                        .editor
+                        .timeline_edit()
+                        .is_some_and(|edit| edit.identity.edit == token.edit)
+                }) {
+                    owner.editor.cancel_timeline_edit();
+                }
+                if seeking {
+                    owner.editor.pause_animation();
+                    owner.animation_anchor = None;
+                }
+                owner.redraw(cx);
+            });
+        });
+    }
+}
+
 #[cfg(test)]
 impl Timeline {
+    #[allow(dead_code)] // Used by the real Metal acceptance harness.
+    pub(crate) fn renders(&self) -> u64 {
+        self.renders
+    }
     pub(crate) fn scene_paints(&self) -> u64 {
         self.scene.borrow().paints
     }
@@ -425,6 +501,10 @@ impl Timeline {
 
 impl Render for Timeline {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        #[cfg(test)]
+        {
+            self.renders += 1;
+        }
         self.sync(window, cx);
         if self.graph.get().size.height > px(0.) {
             self.body_height = self.graph.get().size.height.as_f32();
@@ -462,8 +542,6 @@ impl Render for Timeline {
                 a.edit_time
             }
         });
-        let max_height = (window.viewport_size().height.as_f32() * 0.65).max(180.);
-        let height = self.height.clamp(180., max_height);
         let tools = self.tools(window, cx);
         let pointer_target = self.target(cx);
         let release_target = pointer_target.clone();
@@ -471,9 +549,10 @@ impl Render for Timeline {
             .id("animation-timeline")
             .test_support()
             .relative()
-            .h(px(height))
-            .w_full()
-            .flex_shrink_0()
+            .size_full()
+            .min_h_0()
+            .min_w_0()
+            .overflow_hidden()
             .flex()
             .flex_col()
             .bg(cx.theme().background)
@@ -561,28 +640,6 @@ impl Render for Timeline {
             .on_action(cx.listener(|this, _: &input::NextKey, window, cx| {
                 this.key_command("next", window, cx)
             }))
-            .child(
-                div()
-                    .id("timeline-resize")
-                    .test_support()
-                    .h(px(5.))
-                    .flex_shrink_0()
-                    .cursor(CursorStyle::ResizeUpDown)
-                    .bg(cx.theme().border)
-                    .on_mouse_down(
-                        MouseButton::Left,
-                        cx.listener(|this, event: &MouseDownEvent, window, cx| {
-                            if this.allowed(window, cx) {
-                                this.gesture = Some(input::Gesture::Resize {
-                                    y: event.position.y.as_f32(),
-                                    height: this.height,
-                                });
-                                window.focus(&this.focus, cx);
-                                cx.stop_propagation();
-                            }
-                        }),
-                    ),
-            )
             .child(self.transport.clone())
             .child(tools);
         let weak = cx.weak_entity();
@@ -620,6 +677,7 @@ impl Render for Timeline {
                 },
             )
             .absolute()
+            .inset_0()
             .size_full(),
         );
         let Some(projection) = projection else {

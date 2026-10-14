@@ -512,7 +512,17 @@ fn leaving_animation_cancels_ruler_drag_and_old_pointer_events(cx: &mut TestAppC
                 .to_platform_input(),
                 cx,
             );
-            assert!(harness.view.read(cx).timeline.read(cx).pointer_active());
+            assert!(
+                harness
+                    .view
+                    .read(cx)
+                    .dock
+                    .as_ref()
+                    .unwrap()
+                    .timeline
+                    .read(cx)
+                    .pointer_active()
+            );
             end
         })
         .unwrap();
@@ -526,7 +536,17 @@ fn leaving_animation_cancels_ruler_drag_and_old_pointer_events(cx: &mut TestAppC
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        assert!(!harness.view.read(cx).timeline.read(cx).pointer_active());
+        assert!(
+            !harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .timeline
+                .read(cx)
+                .pointer_active()
+        );
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::AnimationWorkspace, window, cx)
         });

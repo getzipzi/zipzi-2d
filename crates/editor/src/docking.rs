@@ -107,6 +107,7 @@ const REGIONS: [DockPlacement; 4] = [
 pub struct DockWorkspace {
     pub area: Entity<DockArea>,
     pub canvas: Entity<crate::canvas::CanvasView>,
+    pub timeline: Entity<crate::panels::timeline::Timeline>,
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_info: Entity<crate::panels::animation_panel::AnimationPanel>,
@@ -144,6 +145,18 @@ fn layout_file(workspace: WorkspaceKind) -> &'static str {
     }
 }
 
+fn layout_version(workspace: WorkspaceKind) -> usize {
+    match workspace {
+        WorkspaceKind::Modeling => 3,
+        // Timeline is now part of the dock layout rather than window chrome.
+        WorkspaceKind::Animation => 4,
+    }
+}
+
+fn timeline_height(window: &Window) -> Pixels {
+    ((window.viewport_size().height - px(98.)).max(px(0.)) * 0.44).clamp(px(180.), px(320.))
+}
+
 impl DockWorkspace {
     pub fn new(
         workspace: WorkspaceKind,
@@ -153,6 +166,7 @@ impl DockWorkspace {
         cx: &mut App,
     ) -> Self {
         let canvas = crate::canvas::CanvasView::new(owner.clone(), window, cx);
+        let timeline = crate::panels::timeline::Timeline::new(owner.clone(), window, cx);
         let properties = crate::panels::PropertiesPanel::new(owner.clone(), window, cx);
         let mesh_tree =
             crate::panels::MeshTreePanel::new(owner.clone(), thumbnails.clone(), window, cx);
@@ -184,6 +198,7 @@ impl DockWorkspace {
             .collect();
         for (name, handle) in [
             ("Canvas", panel_handle(canvas.clone())),
+            ("AnimationTimeline", panel_handle(timeline.clone())),
             ("AnimationMotions", panel_handle(animation_motions.clone())),
             (
                 "AnimationExpressions",
@@ -211,14 +226,18 @@ impl DockWorkspace {
         }
         let area = cx.new(|cx| {
             let skin = DockSkin::new(cx);
-            DockArea::new("kasane-workspace", Some(3), window, cx).with_renderer(
-                skin::EditorDockSkin::new(
-                    skin,
-                    parameters.entity_id(),
-                    cx.weak_entity(),
-                    owner.clone(),
-                ),
+            DockArea::new(
+                "kasane-workspace",
+                Some(layout_version(workspace)),
+                window,
+                cx,
             )
+            .with_renderer(skin::EditorDockSkin::new(
+                skin,
+                parameters.entity_id(),
+                cx.weak_entity(),
+                owner.clone(),
+            ))
         });
         let panels = Rc::new(panels);
         if cx.try_global::<WorkspacePanels>().is_none() {
@@ -246,6 +265,7 @@ impl DockWorkspace {
         let mut result = Self {
             area,
             canvas,
+            timeline,
             animation_motions,
             animation_expressions,
             animation_info,
@@ -272,8 +292,13 @@ impl DockWorkspace {
     pub fn reset(&mut self, window: &mut Window, cx: &mut App) {
         let animation = self.workspace == WorkspaceKind::Animation;
         let viewport = window.viewport_size();
-        // Animation chrome: document tabs (34), transport (40), status (24).
+        // Window chrome: document tabs (34), workspace toolbar (40), status (24).
         let content_height = (viewport.height - px(98.)).max(px(0.));
+        let content_height = if animation {
+            (content_height - timeline_height(window)).max(px(0.))
+        } else {
+            content_height
+        };
         let column = |region, cx: &App| {
             let mut groups = std::collections::BTreeMap::<usize, DockLayout>::new();
             for spec in PANELS.iter().filter(|spec| {
@@ -293,7 +318,7 @@ impl DockWorkspace {
                     .fold(DockLayout::v_split(), |column, (index, group)| {
                         let size = if animation && index == 0 {
                             match region {
-                                PanelRegion::Left => Some(content_height * 0.39),
+                                PanelRegion::Left => Some(content_height * 0.56),
                                 PanelRegion::Right => Some(content_height * 0.48),
                                 _ => None,
                             }
@@ -316,12 +341,27 @@ impl DockWorkspace {
                 animation.then_some(viewport.width * 0.40),
             )
             .child(column(PanelRegion::Right, cx), Some(right));
+        let bottom = PANELS
+            .iter()
+            .any(|spec| {
+                spec.available(self.workspace)
+                    && spec.default_visible
+                    && spec.region == PanelRegion::Bottom
+            })
+            .then(|| column(PanelRegion::Bottom, cx));
+        let version = layout_version(self.workspace);
+        let bottom_height = timeline_height(window);
         self.area.update(cx, |area, cx| {
+            area.set_version(Some(version), cx);
             area.set_zoomed_out(window, cx);
             for placement in REGIONS.into_iter().skip(1) {
                 area.remove_dock(placement, window, cx);
             }
             area.set_center(layout, window, cx);
+            if let Some(bottom) = bottom {
+                area.set_dock(DockPlacement::Bottom, bottom, window, cx);
+                area.set_dock_size(DockPlacement::Bottom, bottom_height, window, cx);
+            }
         });
         self.last_valid = self.area.read(cx).dump(cx);
     }
@@ -387,6 +427,24 @@ impl DockWorkspace {
             .is_some()
     }
 
+    fn displayed(&self, kind: PanelKind, cx: &App) -> bool {
+        let area = self.area.read(cx);
+        let id = self.panels[&kind].panel_id(cx);
+        let Some(region) = panel_region(area, id) else {
+            return false;
+        };
+        if region != DockPlacement::Center && !area.is_dock_open(region) {
+            return false;
+        }
+        let tree = area.layout(region).unwrap();
+        let node = tree.find_panel_node(id).unwrap();
+        if area.is_zoomed() && area.zoomed_group() != Some(node) {
+            return false;
+        }
+        matches!(tree.find_node(node).unwrap().kind(), PaneRef::Tabs { panels, active_ix }
+            if panels.get(active_ix) == Some(&id))
+    }
+
     pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
         if !kind.spec().available(self.workspace) || kind == PanelKind::Canvas {
             return;
@@ -424,6 +482,9 @@ impl DockWorkspace {
                         }
                         PanelKind::AnimationParameters => {
                             area.remove_panel(self.animation_parameters.clone(), window, cx)
+                        }
+                        PanelKind::AnimationTimeline => {
+                            area.remove_panel(self.timeline.clone(), window, cx)
                         }
                         kind if self.animation_inspectors.contains_key(&kind) => {
                             area.remove_panel(self.animation_inspectors[&kind].clone(), window, cx);
@@ -497,6 +558,20 @@ impl DockWorkspace {
         }
         let panel = self.panels[&kind].clone();
         let id = panel.panel_id(cx);
+        if kind == PanelKind::AnimationTimeline && target.is_none() && !self.contains(kind, cx) {
+            self.area.update(cx, |area, cx| {
+                let new_dock = !area.has_dock(DockPlacement::Bottom);
+                area.add_panel_view(panel, DockPlacement::Bottom, None, window, cx);
+                if new_dock {
+                    area.set_dock_size(DockPlacement::Bottom, timeline_height(window), window, cx);
+                }
+                if !area.is_dock_open(DockPlacement::Bottom) {
+                    area.toggle_dock(DockPlacement::Bottom, window, cx);
+                }
+                area.select_panel(id, window, cx);
+            });
+            return;
+        }
         let target = target.unwrap_or_else(|| self.default_target(kind, cx));
         let node = match target {
             InsertTarget::Tabs { node, .. } | InsertTarget::Split { node, .. } => node,
@@ -635,7 +710,10 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
             }
         }
     }
-    ensure!(state.version == Some(3), "Unsupported layout version");
+    ensure!(
+        state.version == Some(layout_version(workspace)),
+        "Unsupported layout version"
+    );
     let mut seen = std::collections::HashSet::new();
     ensure!(
         walk(&state.center, &mut seen, 0, workspace)? == 1,
@@ -766,6 +844,10 @@ impl EditorView {
                 let Some(dock) = &mut this.dock else {
                     return;
                 };
+                if !dock.displayed(PanelKind::AnimationTimeline, cx) {
+                    dock.timeline
+                        .update(cx, |timeline, cx| timeline.deactivate(window, cx));
+                }
                 for panel in dock.document_panels.values() {
                     panel.update(cx, |panel, _| panel.cancel_drag());
                 }
@@ -837,6 +919,21 @@ mod tests {
     use super::{LayoutConfig, validate_layout};
     use editor_core::{ConfigStore, WorkspaceKind};
     use gpui_kit::component::dock::{DockAreaState, PanelInfo, PanelState};
+
+    #[test]
+    fn animation_dock_layout_requires_the_timeline_panel_layout_version() {
+        let mut state = DockAreaState {
+            version: Some(3),
+            center: PanelState::new("Canvas"),
+            ..Default::default()
+        };
+        assert!(validate_layout(&state, WorkspaceKind::Modeling).is_ok());
+        assert!(validate_layout(&state, WorkspaceKind::Animation).is_err());
+        state.version = Some(4);
+        // A deliberately closed Timeline is still a valid new Animation layout.
+        assert!(validate_layout(&state, WorkspaceKind::Animation).is_ok());
+        assert!(validate_layout(&state, WorkspaceKind::Modeling).is_err());
+    }
     fn layout() -> DockAreaState {
         DockAreaState {
             version: Some(3),

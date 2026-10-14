@@ -215,6 +215,7 @@ impl EditorView {
             view_menu(item),
             Menu::new(t!("menu.window")).items([
                 item(CommandId::ResetLayout),
+                item(CommandId::AnimationTimeline),
                 MenuItem::separator(),
                 item(CommandId::Previous),
                 item(CommandId::Next),

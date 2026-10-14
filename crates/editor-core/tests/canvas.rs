@@ -131,6 +131,9 @@ fn hover_selection_and_viewport_reuse_the_evaluated_scene() -> anyhow::Result<()
 #[test]
 fn multi_vertex_drag_is_one_history_step_and_preserves_uv_topology() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
+    // The movement assertions below explicitly exercise 100% on a 2x display.
+    editor.reset_view();
+    present(&mut editor)?;
     let original = editor.preview()?.scene;
     let vertices = editor.overlay().vertices;
     down(&mut editor, vertices[0].position, false)?;

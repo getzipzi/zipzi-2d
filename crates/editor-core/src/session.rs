@@ -13,7 +13,7 @@ pub struct DocumentSession {
     pub(crate) document: Document,
     views: [ViewState; 2],
     workspace: WorkspaceKind,
-    animation_fitted: bool,
+    default_fit: [bool; 2],
     pub scene_revision: u64,
     pub viewport_revision: u64,
     cache: Option<SceneSnapshot>,
@@ -32,7 +32,7 @@ impl DocumentSession {
             document,
             views: [ViewState::default(); 2],
             workspace: WorkspaceKind::default(),
-            animation_fitted: false,
+            default_fit: [true; 2],
             scene_revision: 1,
             viewport_revision: 1,
             cache: None,
@@ -70,23 +70,12 @@ impl DocumentSession {
             .as_ref()
             .map(|scene| scene.viewport_frame.clone())
     }
-    pub(crate) fn fit_animation_once(&mut self, metrics: CanvasMetrics) {
-        if self.animation_fitted || !metrics.visible() {
-            return;
+    pub(crate) fn fit_default_view(&mut self, metrics: CanvasMetrics) {
+        // Layout can settle over several measurements (for example, when the
+        // Timeline dock opens). Keep the default fitted until the user navigates.
+        if self.default_fit[self.workspace.index()] {
+            self.fit_view(metrics);
         }
-        let canvas = self.document.model().canvas();
-        if canvas.width <= 0. || canvas.height <= 0. {
-            return;
-        }
-        let view = &mut self.views[WorkspaceKind::Animation.index()];
-        if view.zoom == 1. && view.pan == CanvasPoint::default() {
-            view.zoom = (metrics.width / canvas.width).min(metrics.height / canvas.height)
-                * metrics.scale_factor
-                * 0.9;
-            view.zoom = view.zoom.clamp(MIN_ZOOM, MAX_ZOOM);
-            self.viewport_revision += 1;
-        }
-        self.animation_fitted = true;
     }
     pub fn view(&self) -> ViewState {
         self.view_for(self.workspace)
@@ -97,13 +86,18 @@ impl DocumentSession {
         {
             return;
         }
-        self.views[self.workspace.index()] = ViewState {
+        let fitted = ViewState {
             zoom: ((metrics.width / canvas.width).min(metrics.height / canvas.height)
                 * metrics.scale_factor
                 * 0.9)
                 .clamp(MIN_ZOOM, MAX_ZOOM),
             pan: CanvasPoint::default(),
         };
+        let view = &mut self.views[self.workspace.index()];
+        if view.zoom == fitted.zoom && view.pan == fitted.pan {
+            return;
+        }
+        *view = fitted;
         self.viewport_revision += 1;
     }
     pub fn view_for(&self, workspace: WorkspaceKind) -> ViewState {
@@ -405,6 +399,7 @@ impl DocumentSession {
     }
     pub fn set_zoom_at(&mut self, zoom: f32, focus: Option<CanvasPoint>, metrics: CanvasMetrics) {
         if !self.tools.dragging() && zoom.is_finite() {
+            self.default_fit[self.workspace.index()] = false;
             let view = &mut self.views[self.workspace.index()];
             let old_zoom = view.zoom;
             let new_zoom = zoom.clamp(MIN_ZOOM, MAX_ZOOM);
@@ -433,6 +428,7 @@ impl DocumentSession {
             && delta.y.is_finite()
             && (delta.x != 0. || delta.y != 0.)
         {
+            self.default_fit[self.workspace.index()] = false;
             self.views[self.workspace.index()].pan.x += delta.x;
             self.views[self.workspace.index()].pan.y += delta.y;
             self.viewport_revision += 1;
@@ -440,6 +436,7 @@ impl DocumentSession {
     }
     pub fn reset_view(&mut self) {
         if !self.tools.dragging() {
+            self.default_fit[self.workspace.index()] = false;
             self.views[self.workspace.index()] = ViewState::default();
             self.viewport_revision += 1;
         }

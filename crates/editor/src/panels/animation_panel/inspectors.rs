@@ -1,11 +1,11 @@
 //! Read-only inspectors. Resource definitions come from the document; runtime
 //! values come exclusively from the same presented snapshot as the preview.
 use super::*;
-use editor_core::{AnimationCatalog, AnimationSession, Document, ObjectKind, ObjectRef};
-use kasane_core::document::{ExpressionBlend, ExpressionTarget, MotionTrackTarget, PosePartRef};
+use editor_core::{Document, ObjectKind, ObjectRef};
+use kasane_core::document::PosePartRef;
 use kasane_sdk::MotionSnapshot;
 
-fn heading(title: impl Into<SharedString>, cx: &App) -> Div {
+pub(super) fn heading(title: impl Into<SharedString>, cx: &App) -> Div {
     div()
         .mt_2()
         .pb_1()
@@ -15,7 +15,7 @@ fn heading(title: impl Into<SharedString>, cx: &App) -> Div {
         .child(title.into())
 }
 
-fn field(
+pub(super) fn field(
     id: impl Into<ElementId>,
     label: impl Into<SharedString>,
     value: impl Into<SharedString>,
@@ -41,7 +41,7 @@ fn field(
         )
 }
 
-fn property(
+pub(super) fn property(
     id: impl Into<ElementId>,
     label: impl Into<SharedString>,
     value: impl Into<SharedString>,
@@ -83,7 +83,7 @@ fn parameter_name(document: &Document, id: &str) -> String {
         )
 }
 
-fn part_name(document: &Document, part: &PosePartRef) -> String {
+pub(super) fn part_name(document: &Document, part: &PosePartRef) -> String {
     match part {
         PosePartRef::Resolved { part_id } => document
             .object_index()
@@ -102,197 +102,6 @@ fn part_name(document: &Document, part: &PosePartRef) -> String {
             t!("workspace.unresolved_binding", target = runtime_id).into_owned()
         }
     }
-}
-
-pub(super) fn properties(
-    mut content: Stateful<Div>,
-    document: &Document,
-    animation: &AnimationSession,
-    catalog: &AnimationCatalog,
-    cx: &App,
-) -> Stateful<Div> {
-    content = content
-        .child(
-            div()
-                .text_color(cx.theme().muted_foreground)
-                .child(t!("workspace.properties_hint")),
-        )
-        .child(heading(t!("workspace.selected_motion"), cx));
-    if let Some(resource) = catalog
-        .motions
-        .iter()
-        .find(|r| animation.motion.as_ref() == Some(&r.selection))
-    {
-        content = content
-            .child(property(
-                "animation-property-motion",
-                t!("workspace.resource_name"),
-                resource.name.clone(),
-                cx,
-            ))
-            .child(property(
-                "animation-property-registration",
-                t!("workspace.registration"),
-                resource.selection.entry.as_ref().map_or_else(
-                    || t!("workspace.ungrouped").into_owned(),
-                    |(group, index)| format!("{group} [{}]", index + 1),
-                ),
-                cx,
-            ))
-            .child(property(
-                "animation-property-duration",
-                t!("workspace.duration"),
-                format!("{:.3} s", resource.duration),
-                cx,
-            ))
-            .child(property(
-                "animation-property-fps",
-                t!("workspace.frame_rate"),
-                format!("{:.1} fps", resource.fps),
-                cx,
-            ))
-            .child(property(
-                "animation-property-loop",
-                t!("workspace.playback_mode"),
-                if resource.looping {
-                    t!("workspace.looping")
-                } else {
-                    t!("workspace.once")
-                },
-                cx,
-            ))
-            .child(property(
-                "animation-property-fades",
-                t!("workspace.effective_fades"),
-                t!(
-                    "workspace.fades",
-                    fade_in = format!("{:.3}", resource.fade_in),
-                    fade_out = format!("{:.3}", resource.fade_out)
-                ),
-                cx,
-            ));
-        if !resource.playable() {
-            content = content.child(t!("workspace.invalid_duration"));
-        }
-        if let Some(sound) = &resource.sound {
-            content = content
-                .child(field(
-                    "animation-property-sound",
-                    t!("workspace.sound"),
-                    sound.clone(),
-                    cx,
-                ))
-                .child(t!("workspace.sound_unsupported"));
-        }
-    } else {
-        content = content.child(
-            div()
-                .id("animation-property-no-motion")
-                .test_support()
-                .child(t!("workspace.select_motion")),
-        );
-    }
-    content = content.child(heading(t!("workspace.selected_expression"), cx));
-    if let Some(resource) = catalog
-        .expressions
-        .iter()
-        .find(|r| animation.expression.as_ref() == Some(&r.id))
-    {
-        content = content
-            .child(property(
-                "animation-property-expression",
-                t!("workspace.resource_name"),
-                resource.name.clone(),
-                cx,
-            ))
-            .child(
-                div()
-                    .id("animation-property-expression-summary")
-                    .test_support()
-                    .child(expression_info(resource)),
-            );
-        if let Some(expression) = document.expression_definition(&resource.id) {
-            for (index, entry) in expression.entries.iter().enumerate() {
-                let target = match &entry.target {
-                    ExpressionTarget::Resolved { parameter_id } => {
-                        parameter_name(document, parameter_id)
-                    }
-                    ExpressionTarget::Unresolved { runtime_id } => {
-                        t!("workspace.unresolved_binding", target = runtime_id).into_owned()
-                    }
-                };
-                let blend = match entry.blend.unwrap_or(ExpressionBlend::Add) {
-                    ExpressionBlend::Add => t!("workspace.blend_add"),
-                    ExpressionBlend::Multiply => t!("workspace.blend_multiply"),
-                    ExpressionBlend::Overwrite => t!("workspace.blend_overwrite"),
-                };
-                content = content.child(field(
-                    ("animation-property-expression-entry", index),
-                    target,
-                    format!("{blend} · {:.4}", entry.value),
-                    cx,
-                ));
-            }
-        }
-    } else {
-        content = content.child(
-            div()
-                .id("animation-property-no-expression")
-                .test_support()
-                .child(t!("workspace.none")),
-        );
-    }
-    if let Some(resource) = catalog
-        .motions
-        .iter()
-        .find(|r| animation.motion.as_ref() == Some(&r.selection))
-    {
-        if let Some(clip) = document.motion_definition(&resource.selection.clip_id) {
-            content = content.child(heading(t!("workspace.track_targets"), cx));
-            for (index, track) in clip.tracks.iter().enumerate() {
-                let target = match &track.target {
-                    MotionTrackTarget::Parameter { parameter_id } => {
-                        parameter_name(document, parameter_id)
-                    }
-                    MotionTrackTarget::PartOpacity { part_id } => part_name(
-                        document,
-                        &PosePartRef::Resolved {
-                            part_id: part_id.clone(),
-                        },
-                    ),
-                    MotionTrackTarget::Model { runtime_id } => {
-                        t!("workspace.model_channel", target = runtime_id).into_owned()
-                    }
-                    MotionTrackTarget::Unresolved {
-                        category,
-                        runtime_id,
-                    } => t!(
-                        "workspace.unresolved_binding",
-                        target = format!("{category}: {runtime_id}")
-                    )
-                    .into_owned(),
-                };
-                content = content.child(field(
-                    ("animation-property-track", index),
-                    target,
-                    t!("workspace.track_segments", count = track.segments.len()),
-                    cx,
-                ));
-            }
-            if !clip.events.is_empty() {
-                content = content.child(heading(t!("workspace.motion_events"), cx));
-                for (index, event) in clip.events.iter().enumerate() {
-                    content = content.child(field(
-                        ("animation-property-event", index),
-                        format!("{:.3} s", event.time),
-                        event.value.clone(),
-                        cx,
-                    ));
-                }
-            }
-        }
-    }
-    content
 }
 
 fn frame_status(mut content: Stateful<Div>, snapshot: Option<&MotionSnapshot>) -> Stateful<Div> {

@@ -2,6 +2,31 @@ use super::{document_fixture, setup_with_document};
 use editor_core::{AnimationEvaluator, CommandId};
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 
+fn reveal_property(
+    window: &mut gpui_kit::Window,
+    id: impl Into<gpui_kit::ElementId>,
+    cx: &mut gpui_kit::App,
+) {
+    use gpui_kit::{InputEvent as _, ScrollDelta, ScrollWheelEvent, point, px};
+    let id = id.into();
+    for _ in 0..30 {
+        if window.try_find(id.clone()).is_some() {
+            return;
+        }
+        window.dispatch_event(
+            ScrollWheelEvent {
+                position: window.find("AnimationProperties").bounds().center(),
+                delta: ScrollDelta::Pixels(point(px(0.), px(-32.))),
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+    }
+    panic!("property was not reachable by scrolling: {id:?}");
+}
+
 #[gpui_kit::test]
 fn double_click_play_restart_and_keyboard_browsing_preserve_transport_contract(
     cx: &mut TestAppContext,
@@ -236,6 +261,7 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
             window.find("animation-property-registration").label(),
             Some("Idle [1]")
         );
+        reveal_property(window, "animation-property-fades", cx);
         assert_eq!(
             window.find("animation-property-fades").label(),
             Some("Fade in 0.000 s / out 0.000 s")
@@ -246,12 +272,14 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
             window.find("animation-property-registration").label(),
             Some("Idle [2]")
         );
+        reveal_property(window, "animation-property-fades", cx);
         assert_eq!(
             window.find("animation-property-fades").label(),
             Some("Fade in 1.000 s / out 0.000 s")
         );
         super::animation::click_expression(window, 0, cx);
         window.render_frame(cx);
+        reveal_property(window, ("animation-property-expression-entry", 0usize), cx);
         assert_eq!(
             window.find("animation-property-expression").label(),
             Some("Add")
@@ -264,6 +292,7 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
         );
         window.click("animation-clear-expression", cx);
         window.render_frame(cx);
+        reveal_property(window, "animation-property-no-expression", cx);
         assert!(window.try_find("animation-property-expression").is_none());
         assert!(
             window

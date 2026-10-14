@@ -57,10 +57,6 @@ impl Render for EditorView {
                     .as_ref()
                     .map(|dock| div().flex_1().min_h_0().child(dock.area.clone())),
             )
-            .when(
-                self.editor.workspace() == editor_core::WorkspaceKind::Animation,
-                |e| e.child(self.timeline.clone()),
-            )
             .child(self.status_bar.clone())
             .into_any_element()
     }

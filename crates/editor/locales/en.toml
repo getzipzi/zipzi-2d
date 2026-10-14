@@ -410,6 +410,7 @@ seek_cancelled = "The previous seek was cancelled."
 evaluation_failed = "Evaluation failed: %{detail}"
 
 [timeline]
+title = "Timeline"
 search = "Search channels"
 select_motion = "Select Motion"
 new_motion = "New Motion"

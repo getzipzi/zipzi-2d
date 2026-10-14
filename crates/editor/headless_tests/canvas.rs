@@ -120,6 +120,7 @@ fn wheel_zoom_interpolates_proportionally_and_keeps_anchor_on_every_frame(cx: &m
 #[gpui_kit::test]
 fn wheel_zoom_accumulates_input_and_reverses_without_finishing_old_target(cx: &mut TestAppContext) {
     let harness = setup(cx);
+    let initial = navigation_view(&harness, cx).zoom;
     let position = cx
         .update_window(harness.window, |_, window, _| {
             window.find("canvas-body").bounds().center()
@@ -129,9 +130,9 @@ fn wheel_zoom_accumulates_input_and_reverses_without_finishing_old_target(cx: &m
     wheel(&harness, cx, position, 1.);
     advance_zoom(&harness, cx, 40);
     let halfway = navigation_view(&harness, cx).zoom;
-    assert!(halfway > 1. && halfway < 1.21);
+    assert!(halfway > initial && halfway < initial * 1.21);
     advance_zoom(&harness, cx, 40);
-    assert!((navigation_view(&harness, cx).zoom - 1.21).abs() < 1e-5);
+    assert!((navigation_view(&harness, cx).zoom / initial - 1.21).abs() < 1e-5);
 
     wheel(&harness, cx, position, 4.);
     advance_zoom(&harness, cx, 20);
@@ -220,6 +221,7 @@ fn wheel_zoom_stops_when_other_navigation_takes_over(cx: &mut TestAppContext) {
 #[gpui_kit::test]
 fn wheel_zoom_uses_the_new_pointer_anchor_when_retargeted(cx: &mut TestAppContext) {
     let harness = setup(cx);
+    let initial = navigation_view(&harness, cx).zoom;
     let bounds = cx
         .update_window(harness.window, |_, window, _| {
             window.find("canvas-body").bounds()
@@ -257,7 +259,7 @@ fn wheel_zoom_uses_the_new_pointer_anchor_when_retargeted(cx: &mut TestAppContex
         assert!((after.x - anchor.x).abs() < 1e-3);
         assert!((after.y - anchor.y).abs() < 1e-3);
     }
-    assert!((navigation_view(&harness, cx).zoom - 1.21).abs() < 1e-5);
+    assert!((navigation_view(&harness, cx).zoom / initial - 1.21).abs() < 1e-5);
 }
 
 #[gpui_kit::test]
@@ -692,7 +694,7 @@ fn trackpad_pinch_scales_relative_to_zoom_and_preserves_pointer_anchor(cx: &mut 
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.editor.zoom_by(1.);
+            view.editor.set_zoom_at(2., None);
             view.editor
                 .pan_by(editor_core::CanvasPoint { x: 37., y: -12. });
             cx.notify();

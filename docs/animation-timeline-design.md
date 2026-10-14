@@ -8,7 +8,11 @@ Timeline 编辑一个 MotionClip 的参数曲线和事件。核心工作流是�
 
 第一版交付单 Motion 编辑，包括新建空动作、添加通道、关键帧增删改、批量移动与复制粘贴、曲线手柄、事件、事务预览、撤销重做以及保存重开。多 Motion 编排、音频轨道、持久化表情调度、物理烘焙不进入这一版。MotionGroup 继续表示资源注册分组。
 
-Timeline 是 Animation 工作区底部可调整高度的面板，替换现有 PlaybackBar。顶部保留紧凑的传输与编辑工具栏：当前 Motion、播放与定位、时间、总览／曲线模式、帧吸附、预览模式。时长、FPS、资源循环和淡入淡出放入动作属性，不长期占用工具栏。
+Timeline 通过 `AnimationTimeline` 注册为 Animation 专属的 Dock Panel，默认位于底部。Dock 统一管理高度、折叠、关闭、拖动停靠、共享页签和最大化；Window 菜单与面板添加菜单提供显示入口。Timeline 不再保存独立高度或绘制自己的 resize handle。
+
+布局位置、高度与显示状态保存在动画工作区布局中；首次加载旧版动画布局时重置为包含 Timeline 的默认布局，Modeling 布局版本保持不变。关闭、折叠或切换到其他页签时取消未完成的 Timeline 手势，候选配方与迟到回调仍按编辑身份隔离。
+
+顶部保留紧凑的传输与编辑工具栏：当前 Motion、播放与定位、时间、总览／曲线模式、帧吸附、预览模式。时长、FPS、资源循环和淡入淡出放入动作属性，不长期占用工具栏。
 
 左侧固定列显示层级、名称、紧凑可编辑数值和关键帧状态；右侧显示共用标尺下的关键帧或曲线。默认不为每行铺设滑块。选中通道时，检查区提供完整名称、范围、精确数值和滑块；选中关键帧时显示时间、值和相邻段插值。行内数值支持拖动调节和双击输入。
 
@@ -153,6 +157,10 @@ SDK 事务负责资源变更和历史；editor-core 负责 Timeline 命令、选
 
 行树和分组摘要按模型／Clip 版本缓存，不随播放每帧重建。纵向只布局可见行，横向通过有序时间索引查找可见关键点。网格、轨道和关键点静态层与播放头、选择框动态层分开失效化；播放不触发全量曲线重建。
 
+画布平移、缩放和尺寸变化复用最近一次完成的动画姿态与共享几何，只更新视口渲染；视口结果返回时仅通知画布。姿态缓存校验文档、工作区版本、模型版本、预览版本、模式、候选身份、采样时间和完整播放配置，且保留请求序号、取消与 GPU 接受屏障。Motion、Expression、时间定位或关键帧编辑变化后重新求值，不复用旧姿态。
+
+Animation Properties 按文档版本、Motion 注册、Expression 与语言缓存只读行数据；轨道、事件和元数据使用变高虚拟列表，仅构造可见行。画布尺寸测量只刷新画布与缩放状态，不通知整个编辑器。右侧 dock 的真实指针拖动纳入验收，对比 Modeling、Animation Info 与 Animation Properties，检查姿态和属性数据复用，以及 resize 后滚动至最后一行。
+
 键盘命令只在 Timeline 或其检查区拥有焦点时处理，文本输入优先。左右键逐帧移动，独立命令跳到前后关键点，Delete 删除选中关键点或事件；通道与分组删除另设菜单，不能因行被选中就删除参数。空白拖动框选，标尺拖动定位，关键点拖动修改，三类命中区域不复用同一隐含手势。
 
 ## 实现顺序与验收
@@ -233,7 +241,8 @@ Release 下真实动作版拖动到当前 Metal 画布并完成 GPUI draw 的 P9
 ## 代码依据
 
 - 编辑器预览会话与配方：[animation.rs](../crates/editor-core/src/animation.rs)。
-- Timeline 面板：[timeline/mod.rs](../crates/editor/src/workspace/timeline/mod.rs)，绘制与缓存：[drawing.rs](../crates/editor/src/workspace/timeline/drawing.rs)，输入与事务：[input.rs](../crates/editor/src/workspace/timeline/input.rs)。
+- Timeline 面板：[timeline/mod.rs](../crates/editor/src/panels/timeline/mod.rs)，绘制与缓存：[drawing.rs](../crates/editor/src/panels/timeline/drawing.rs)，输入与事务：[input.rs](../crates/editor/src/panels/timeline/input.rs)。
+- 面板目录：[panels.rs](../crates/editor-core/src/panels.rs)，停靠与布局持久化：[docking.rs](../crates/editor/src/docking.rs)。
 - 参数分组投影：[grouping.rs](../crates/editor/src/panels/parameters/grouping.rs)。
 - 参数分组与属性：[parameter.rs](../crates/editor-core/src/parameter.rs)。
 - 最终结果监视：[parameters.rs](../crates/editor/src/panels/animation_panel/parameters.rs)。

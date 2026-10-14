@@ -35,6 +35,85 @@ fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow:
 }
 
 #[test]
+fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Result<()> {
+    let mut editor = Editor::new()?;
+    let first = editor.active_id().unwrap();
+    // An unmeasured canvas must not consume the default Fit behavior.
+    assert!(editor.preview()?.canvas.is_none());
+    let fitted = |editor: &Editor| {
+        let canvas = editor.document().unwrap().canvas();
+        let metrics = editor.canvas_metrics();
+        ViewState {
+            zoom: ((metrics.width / canvas.width).min(metrics.height / canvas.height)
+                * metrics.scale_factor
+                * 0.9)
+                .clamp(0.04, 32.),
+            pan: CanvasPoint::default(),
+        }
+    };
+    for workspace in WorkspaceKind::ALL {
+        editor.set_workspace(workspace)?;
+        for (width, height, scale_factor) in [(800., 600., 1.), (420., 280., 2.)] {
+            editor.set_canvas_metrics(CanvasMetrics {
+                width,
+                height,
+                scale_factor,
+            });
+            match workspace {
+                WorkspaceKind::Modeling => {
+                    editor.preview_if_needed()?.unwrap();
+                }
+                WorkspaceKind::Animation => {
+                    editor.animation_request().unwrap();
+                }
+            }
+            assert_view(editor.view(), fitted(&editor));
+        }
+        match workspace {
+            WorkspaceKind::Modeling => assert!(editor.preview_if_needed()?.is_none()),
+            WorkspaceKind::Animation => assert!(editor.animation_request().is_none()),
+        }
+        // Explicit 100%, including a centered view, must survive later layouts.
+        editor.reset_view();
+        editor.set_canvas_metrics(CanvasMetrics {
+            width: 600.,
+            height: 450.,
+            scale_factor: 2.,
+        });
+        match workspace {
+            WorkspaceKind::Modeling => {
+                editor.preview_if_needed()?.unwrap();
+            }
+            WorkspaceKind::Animation => {
+                editor.animation_request().unwrap();
+            }
+        }
+        assert_view(editor.view(), ViewState::default());
+    }
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    let second = editor.new_document()?;
+    editor.preview_if_needed()?.unwrap();
+    assert_view(editor.view(), fitted(&editor));
+    editor.activate(first)?;
+    editor.preview_if_needed()?.unwrap();
+    assert_view(editor.view(), ViewState::default());
+    editor.activate(second)?;
+    editor.set_zoom_at(0.75, None);
+    editor.pan_by(CanvasPoint { x: 12., y: -8. });
+    let manual = editor.view();
+    editor.set_canvas_metrics(CanvasMetrics {
+        width: 320.,
+        height: 240.,
+        scale_factor: 1.,
+    });
+    editor.preview_if_needed()?.unwrap();
+    assert_view(editor.view(), manual);
+    assert!(!editor.document().unwrap().modified());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
 fn fit_view_uses_canvas_and_display_scale_without_changing_other_views() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
     assert!(!editor.command_available(editor.command(CommandId::FitView)));
@@ -111,6 +190,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
         (CommandId::Properties, PanelKind::AnimationProperties),
         (CommandId::Physics, PanelKind::AnimationPhysics),
         (CommandId::Pose, PanelKind::AnimationPose),
+        (CommandId::AnimationTimeline, PanelKind::AnimationTimeline),
     ] {
         assert!(editor.command_available(editor.command(command)));
         assert_eq!(
@@ -129,6 +209,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     editor.pan_by(CanvasPoint { x: 101., y: 9. });
     let second_animation = editor.view();
     editor.set_workspace(WorkspaceKind::Modeling)?;
+    assert!(!editor.command_available(editor.command(CommandId::AnimationTimeline)));
     assert_eq!(
         PanelKind::for_command(CommandId::Properties, editor.workspace()),
         Some(PanelKind::Properties)

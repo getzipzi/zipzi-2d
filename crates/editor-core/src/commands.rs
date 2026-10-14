@@ -22,6 +22,8 @@ pub enum CommandId {
     AnimationInfo,
     #[serde(rename = "panel.animation-parameters")]
     AnimationParameters,
+    #[serde(rename = "panel.animation-timeline")]
+    AnimationTimeline,
     #[serde(rename = "file.new")]
     New,
     #[serde(rename = "file.open")]
@@ -175,6 +177,7 @@ specs![
         []
     ),
     (AnimationInfo, "workspace.info", Workspace, false, []),
+    (AnimationTimeline, "timeline.title", Workspace, false, []),
     (
         AnimationParameters,
         "workspace.parameters",

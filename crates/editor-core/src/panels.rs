@@ -49,6 +49,7 @@ panels! {
     (Pose, Some(C::Pose), Some(Modeling), Right, 0, false),
     (Resources, Some(C::Resources), Some(Modeling), Right, 0, false),
     (AnimationMotions, Some(C::Motions), Some(Animation), Left, 0, true),
+    (AnimationTimeline, Some(C::AnimationTimeline), Some(Animation), Bottom, 0, true),
     (AnimationExpressions, Some(C::Expressions), Some(Animation), Left, 1, true),
     (AnimationInfo, Some(C::AnimationInfo), Some(Animation), Right, 0, true),
     (AnimationProperties, Some(C::Properties), Some(Animation), Right, 0, true),

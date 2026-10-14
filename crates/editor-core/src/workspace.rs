@@ -892,6 +892,7 @@ impl Editor {
             .session
             .as_mut()
             .ok_or_else(|| anyhow!("Document is saving"))?;
+        session.fit_default_view(metrics);
         let (scene, geometry) = session.scene()?;
         let view = session.view();
         let versions = (id, session.scene_revision, session.viewport_revision);
