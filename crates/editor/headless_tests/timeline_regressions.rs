@@ -434,7 +434,7 @@ fn keyboard_navigation_reveals_hidden_keys_and_preserves_zoom(cx: &mut TestAppCo
             .focus_handle(cx);
         window.focus(&focus, cx);
         crate::keybindings::reset(cx).unwrap();
-        window.press("alt-right", cx);
+        window.press("cmd-right", cx);
         let view = harness.view.read(cx);
         assert_eq!(view.editor.animation().unwrap().edit_time, 2.);
         let s = view.editor.timeline_view().unwrap();

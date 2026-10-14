@@ -3,347 +3,226 @@ use super::*;
 impl Timeline {
     pub(super) fn tools(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let owner = self.owner.upgrade().unwrap();
-        let view = owner.read(cx);
-        let state = view.editor.timeline_view().cloned().unwrap_or_default();
-        let document = view.editor.active_id();
-        let current = view.editor.animation().and_then(|a| a.motion.as_ref());
-        let motions = view
+        let state = owner
+            .read(cx)
             .editor
-            .document()
-            .map(|d| d.animation_catalog().motions.clone())
+            .timeline_view()
+            .cloned()
             .unwrap_or_default();
-        let name = motions
-            .iter()
-            .find(|motion| Some(&motion.selection) == current)
-            .map(|motion| motion.name.clone())
-            .unwrap_or_else(|| t!("timeline.select_motion").into_owned());
-        let selected_motion = current.cloned();
         let allowed = self.allowed(window, cx);
-        let compact_motions = motions.clone();
-        let compact_owner = self.owner.clone();
+        let editable = self.editable(window, cx);
+        let actions = [
+            (
+                "timeline-previous-frame",
+                IconName::ChevronLeft,
+                t!("timeline.previous_frame").into_owned(),
+                false,
+                allowed,
+            ),
+            (
+                "timeline-next-frame",
+                IconName::ChevronRight,
+                t!("timeline.next_frame").into_owned(),
+                false,
+                allowed,
+            ),
+            (
+                "timeline-view",
+                if state.mode == TimelineDisplayMode::Curves {
+                    IconName::ChartLine
+                } else {
+                    IconName::List
+                },
+                t!(if state.mode == TimelineDisplayMode::Curves {
+                    "timeline.curves"
+                } else {
+                    "timeline.overview"
+                })
+                .into_owned(),
+                state.mode == TimelineDisplayMode::Curves,
+                allowed,
+            ),
+            (
+                "timeline-pan",
+                IconName::Hand,
+                t!("timeline.pan_hint").into_owned(),
+                self.pan_tool,
+                allowed,
+            ),
+            (
+                "timeline-snap",
+                IconName::Magnet,
+                t!("timeline.snap_hint").into_owned(),
+                state.snap,
+                allowed,
+            ),
+            (
+                "timeline-fit",
+                IconName::Scan,
+                t!("timeline.fit").into_owned(),
+                false,
+                allowed,
+            ),
+            (
+                "timeline-seconds",
+                if self.seconds {
+                    IconName::Clock
+                } else {
+                    IconName::Film
+                },
+                t!("timeline.units").into_owned(),
+                self.seconds,
+                allowed,
+            ),
+            (
+                "timeline-normalized",
+                IconName::Percent,
+                t!("timeline.normalize_hint").into_owned(),
+                state.normalized,
+                allowed && state.mode == TimelineDisplayMode::Curves,
+            ),
+            (
+                "timeline-properties",
+                IconName::Settings,
+                t!("timeline.properties").into_owned(),
+                self.show_properties,
+                allowed,
+            ),
+            (
+                "timeline-add-event",
+                IconName::MessageSquarePlus,
+                t!("timeline.add_event").into_owned(),
+                false,
+                editable,
+            ),
+            (
+                "timeline-delete",
+                IconName::Trash,
+                t!("timeline.delete").into_owned(),
+                false,
+                editable && (!state.keys.is_empty() || !state.events.is_empty()),
+            ),
+            (
+                "timeline-inspector-toggle",
+                IconName::PanelRight,
+                t!("timeline.inspector").into_owned(),
+                self.inspector_visible(),
+                allowed,
+            ),
+        ];
         let mut tools = div()
-            .h(px(34.))
-            .flex_shrink_0()
+            .id("timeline-tools")
+            .test_support()
             .flex()
             .items_center()
-            .gap_1()
-            .px_2()
-            .overflow_hidden();
-        let weak = self.owner.clone();
-        tools = tools
-            .child(
-                Button::new("timeline-motion")
-                    .small()
-                    .ghost()
-                    .label(name.clone())
-                    .tooltip(name)
-                    .max_w(px(if self.compact { 130. } else { 220. }))
-                    .overflow_hidden()
-                    .disabled(!allowed)
-                    .dropdown_menu(move |mut menu, _, _| {
-                        for motion in &motions {
-                            let weak = weak.clone();
-                            let selection = motion.selection.clone();
-                            menu = menu.item(PopupMenuItem::new(motion.name.clone()).on_click(
-                                move |_, window, cx| {
-                                    if window.has_active_dialog(cx) {
-                                        return;
-                                    }
-                                    let _ = weak.update(cx, |owner, cx| {
-                                        if let Some(document) = document {
-                                            let result = owner
-                                                .editor
-                                                .select_motion(document, selection.clone());
-                                            owner.animation_anchor = None;
-                                            owner.complete_edit(result, cx);
-                                        }
-                                    });
-                                },
-                            ));
-                        }
-                        menu
-                    }),
-            )
-            .child(
-                Button::new("timeline-new-motion")
-                    .small()
-                    .ghost()
-                    .icon(IconName::Plus)
-                    .tooltip(t!("timeline.new_motion"))
-                    .disabled(!allowed)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        if !this.allowed(window, cx) {
-                            return;
-                        }
-                        let Some(target) = this.target(cx) else {
-                            return;
-                        };
-                        let _ = this.owner.update(cx, |owner, cx| {
-                            let result = owner
-                                .editor
-                                .create_timeline_motion(target.document)
-                                .map(|_| ());
-                            owner.complete_edit(result, cx);
-                        });
-                    })),
-            );
-        let inspector = Button::new("timeline-inspector-toggle")
-            .small()
-            .ghost()
-            .icon(IconName::PanelRight)
-            .selected(self.inspector_visible())
-            .tooltip(t!("timeline.inspector"))
-            .on_click(cx.listener(|this, _, _, cx| {
-                this.finish_number(cx);
-                this.inspector_open = Some(!this.inspector_visible());
-                cx.notify();
-            }));
-        if self.compact {
-            let weak = cx.weak_entity();
-            let seconds = self.seconds;
-            let properties = self.show_properties;
-            return div()
-                .h(px(32.))
-                .flex()
-                .items_center()
-                .gap_1()
-                .px_1()
-                .flex_shrink_0()
-                .child(inspector)
-                .child(
-                    Button::new("timeline-more")
-                        .small()
-                        .ghost()
-                        .icon(IconName::Ellipsis)
-                        .tooltip(t!("timeline.more_tools"))
-                        .disabled(!allowed)
-                        .dropdown_menu(move |mut menu, window, cx| {
-                            let motions = compact_motions.clone();
-                            let selected = selected_motion.clone();
-                            let owner = compact_owner.clone();
-                            menu = menu.submenu(
-                                t!("timeline.select_motion").into_owned(),
-                                window,
-                                cx,
-                                move |mut menu, _, _| {
-                                    for motion in &motions {
-                                        let selection = motion.selection.clone();
-                                        let owner = owner.clone();
-                                        menu = menu.item(
-                                            PopupMenuItem::new(motion.name.clone())
-                                                .checked(selected.as_ref() == Some(&selection))
-                                                .on_click(move |_, window, cx| {
-                                                    if window.has_active_dialog(cx) {
-                                                        return;
-                                                    }
-                                                    let _ = owner.update(cx, |owner, cx| {
-                                                        if let Some(document) = document {
-                                                            let result =
-                                                                owner.editor.select_motion(
-                                                                    document,
-                                                                    selection.clone(),
-                                                                );
-                                                            owner.animation_anchor = None;
-                                                            owner.complete_edit(result, cx);
-                                                        }
-                                                    });
-                                                }),
-                                        );
-                                    }
-                                    menu
-                                },
-                            );
-                            for (id, label, checked, enabled) in [
-                                (
-                                    "overview",
-                                    t!("timeline.overview"),
-                                    state.mode == TimelineDisplayMode::Overview,
-                                    true,
-                                ),
-                                (
-                                    "curves",
-                                    t!("timeline.curves"),
-                                    state.mode == TimelineDisplayMode::Curves,
-                                    true,
-                                ),
-                                ("snap", t!("timeline.snap"), state.snap, true),
-                                ("units", t!("timeline.units"), seconds, true),
-                                ("fit", t!("timeline.fit"), false, true),
-                                (
-                                    "normalize",
-                                    t!("timeline.normalize"),
-                                    state.normalized,
-                                    state.mode == TimelineDisplayMode::Curves,
-                                ),
-                                ("properties", t!("timeline.properties"), properties, true),
-                                ("new-motion", t!("timeline.new_motion"), false, true),
-                            ] {
-                                let weak = weak.clone();
-                                let label = label.into_owned();
-                                menu = menu.item(
-                                    PopupMenuItem::element(move |_, _| {
-                                        div()
-                                            .id(SharedString::from(format!("timeline-menu-{id}")))
-                                            .test_support()
-                                            .child(label.clone())
-                                    })
-                                    .checked(checked)
-                                    .disabled(!enabled)
-                                    .on_click(
-                                        move |_, window, cx| {
-                                            let _ = weak.update(cx, |this, cx| {
-                                                if !this.allowed(window, cx) {
-                                                    return;
-                                                }
-                                                this.finish_number(cx);
-                                                match id {
-                                                    "overview" => this.change_view(
-                                                        |view| {
-                                                            view.mode =
-                                                                TimelineDisplayMode::Overview
-                                                        },
-                                                        cx,
-                                                    ),
-                                                    "curves" => this.change_view(
-                                                        |view| {
-                                                            view.mode = TimelineDisplayMode::Curves
-                                                        },
-                                                        cx,
-                                                    ),
-                                                    "snap" => this.change_view(
-                                                        |view| view.snap = !view.snap,
-                                                        cx,
-                                                    ),
-                                                    "units" => this.seconds = !this.seconds,
-                                                    "fit" => this.fit(cx),
-                                                    "normalize" => this.change_view(
-                                                        |view| view.normalized = !view.normalized,
-                                                        cx,
-                                                    ),
-                                                    "properties" => {
-                                                        this.show_properties =
-                                                            !this.show_properties;
-                                                        this.inspector_open = Some(true);
-                                                    }
-                                                    "new-motion" => {
-                                                        if let Some(target) = this.target(cx) {
-                                                            let _ = this.owner.update(
-                                                                cx,
-                                                                |owner, cx| {
-                                                                    let result = owner
-                                                                        .editor
-                                                                        .create_timeline_motion(
-                                                                            target.document,
-                                                                        )
-                                                                        .map(|_| ());
-                                                                    owner.complete_edit(result, cx);
-                                                                },
-                                                            );
-                                                        }
-                                                    }
-                                                    _ => unreachable!(),
-                                                }
-                                                cx.notify();
-                                            });
-                                        },
-                                    ),
-                                );
-                            }
-                            menu
-                        }),
-                )
-                .into_any_element();
-        }
-        for (id, mode, label) in [
-            (
-                "timeline-overview",
-                TimelineDisplayMode::Overview,
-                t!("timeline.overview"),
-            ),
-            (
-                "timeline-curves",
-                TimelineDisplayMode::Curves,
-                t!("timeline.curves"),
-            ),
-        ] {
+            .gap(px(2.))
+            .flex_shrink_0();
+        for (id, icon, label, selected, enabled) in &actions {
+            if !self.compact && matches!(*id, "timeline-previous-frame" | "timeline-next-frame") {
+                continue;
+            }
+            if self.compact && !matches!(*id, "timeline-pan" | "timeline-inspector-toggle") {
+                continue;
+            }
+            let id = *id;
             tools = tools.child(
                 Button::new(id)
                     .small()
+                    .when(self.compact, |button| button.xsmall())
                     .ghost()
-                    .label(label)
-                    .selected(state.mode == mode)
-                    .disabled(!allowed || document.is_none())
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        if this.allowed(window, cx) {
-                            this.change_view(|view| view.mode = mode, cx);
-                        }
-                    })),
+                    .icon(*icon)
+                    .accessibility_label(label.clone())
+                    .tooltip(label.clone())
+                    .selected(*selected)
+                    .disabled(!enabled)
+                    .on_click(
+                        cx.listener(move |this, _, window, cx| this.activate_tool(id, window, cx)),
+                    ),
             );
         }
-        tools = tools
-            .child(
-                Button::new("timeline-snap")
-                    .small()
+        if self.compact {
+            let weak = cx.weak_entity();
+            tools = tools.child(
+                Button::new("timeline-more")
+                    .xsmall()
                     .ghost()
-                    .label(t!("timeline.snap"))
-                    .selected(state.snap)
+                    .icon(IconName::Ellipsis)
+                    .accessibility_label(t!("timeline.more_tools").into_owned())
+                    .tooltip(t!("timeline.more_tools"))
                     .disabled(!allowed)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        if this.allowed(window, cx) {
-                            this.change_view(|view| view.snap = !view.snap, cx);
+                    .dropdown_menu(move |mut menu, _, _| {
+                        for (id, icon, label, selected, enabled) in &actions {
+                            if matches!(*id, "timeline-pan" | "timeline-inspector-toggle") {
+                                continue;
+                            }
+                            let id = *id;
+                            let label = label.clone();
+                            let weak = weak.clone();
+                            menu = menu.item(
+                                PopupMenuItem::element(move |_, _| {
+                                    div()
+                                        .id(SharedString::from(format!(
+                                            "timeline-menu-{}",
+                                            id.trim_start_matches("timeline-")
+                                        )))
+                                        .test_support()
+                                        .child(label.clone())
+                                })
+                                .icon(*icon)
+                                .checked(*selected)
+                                .disabled(!enabled)
+                                .on_click(move |_, window, cx| {
+                                    let _ = weak
+                                        .update(cx, |this, cx| this.activate_tool(id, window, cx));
+                                }),
+                            );
                         }
-                    })),
-            )
-            .child(
-                Button::new("timeline-seconds")
-                    .small()
-                    .ghost()
-                    .label(if self.seconds { "s" } else { "f" })
-                    .tooltip(t!("timeline.units"))
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.seconds = !this.seconds;
-                        cx.notify();
-                    })),
-            )
-            .child(
-                Button::new("timeline-fit")
-                    .small()
-                    .ghost()
-                    .label(t!("timeline.fit"))
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        if this.allowed(window, cx) {
-                            this.fit(cx);
-                        }
-                    })),
-            )
-            .child(
-                Button::new("timeline-normalized")
-                    .small()
-                    .ghost()
-                    .label(t!("timeline.normalize"))
-                    .selected(state.normalized)
-                    .disabled(state.mode != TimelineDisplayMode::Curves)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        if this.allowed(window, cx) {
-                            this.change_view(|view| view.normalized = !view.normalized, cx);
-                        }
-                    })),
-            )
-            .child(
-                Button::new("timeline-properties")
-                    .small()
-                    .ghost()
-                    .icon(IconName::Settings)
-                    .selected(self.show_properties)
-                    .tooltip(t!("timeline.properties"))
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.show_properties = !this.show_properties;
-                        this.inspector_open = Some(true);
-                        cx.notify();
-                    })),
-            )
-            .child(inspector);
+                        menu
+                    }),
+            );
+        }
         tools.into_any_element()
+    }
+
+    fn activate_tool(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.allowed(window, cx) {
+            return;
+        }
+        self.finish_number(cx);
+        window.focus(&self.focus, cx);
+        match id {
+            "timeline-previous-frame" => self.key_command("left", window, cx),
+            "timeline-next-frame" => self.key_command("right", window, cx),
+            "timeline-view" => self.change_view(
+                |view| {
+                    view.mode = if view.mode == TimelineDisplayMode::Curves {
+                        TimelineDisplayMode::Overview
+                    } else {
+                        TimelineDisplayMode::Curves
+                    }
+                },
+                cx,
+            ),
+            "timeline-pan" => {
+                self.cancel(window, cx);
+                self.pan_tool = !self.pan_tool;
+            }
+            "timeline-snap" => self.change_view(|view| view.snap = !view.snap, cx),
+            "timeline-fit" => self.fit(cx),
+            "timeline-seconds" => self.seconds = !self.seconds,
+            "timeline-normalized" => {
+                self.change_view(|view| view.normalized = !view.normalized, cx)
+            }
+            "timeline-properties" => {
+                self.show_properties = !self.show_properties;
+                self.inspector_open = Some(true);
+            }
+            "timeline-inspector-toggle" => self.inspector_open = Some(!self.inspector_visible()),
+            "timeline-add-event" => self.add_event(window, cx),
+            "timeline-delete" => self.key_command("delete", window, cx),
+            _ => unreachable!(),
+        }
+        cx.notify();
     }
 
     pub(super) fn row(

@@ -1,283 +1,274 @@
-use crate::{EditorView, t};
-use editor_core::{AnimationPreviewMode, CommandId};
-use gpui_kit::assets::IconName;
-use gpui_kit::component::{
-    ActiveTheme, Disableable, Selectable, Sizable,
-    button::{Button, ButtonVariants},
-    menu::{DropdownMenu, PopupMenuItem},
-};
-use gpui_kit::{prelude::*, *};
+use super::*;
+use editor_core::CommandId;
 
-pub struct TimelineTransport {
-    owner: WeakEntity<EditorView>,
-    compact: bool,
-    _observe: Subscription,
-}
-impl TimelineTransport {
-    pub fn new(owner: WeakEntity<EditorView>, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self {
-            _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
-            owner,
-            compact: false,
-        })
-    }
-    pub(super) fn set_compact(&mut self, compact: bool, cx: &mut Context<Self>) {
-        if self.compact != compact {
-            self.compact = compact;
-            cx.notify();
-        }
-    }
-}
-impl Render for TimelineTransport {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        use gpui_kit::component::WindowExt;
-        let Some(owner) = self.owner.upgrade() else {
-            return div().into_any_element();
-        };
-        let dialog = window.has_active_dialog(cx);
+impl Timeline {
+    pub(super) fn toolbar(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let owner = self.owner.upgrade().unwrap();
         let view = owner.read(cx);
         let animation = view.editor.animation();
-        let modal = view.modal || dialog;
+        let document = view.editor.active_id();
         let playing = animation.is_some_and(|a| a.playing);
-        let preview_loop = animation.is_some_and(|animation| animation.preview_loop);
-        let preview_mode = animation.map_or(AnimationPreviewMode::Editing, |a| a.preview_mode);
-        let document_id = view.editor.active_id();
-        let resource = view.editor.document().and_then(|d| {
-            d.animation_catalog()
+        let mode = animation.map_or(AnimationPreviewMode::Editing, |a| a.preview_mode);
+        let looping = animation.is_some_and(|a| a.preview_loop);
+        let resource = view.editor.document().and_then(|document| {
+            document
+                .animation_catalog()
                 .motions
                 .iter()
                 .find(|r| animation.is_some_and(|a| a.motion.as_ref() == Some(&r.selection)))
                 .cloned()
         });
-        // Local time and loop number come from the accepted SDK frame.
-        let displayed = view.displayed_animation();
-        let position = displayed.and_then(|frame| {
+        let snapshot = view.displayed_animation();
+        let position = snapshot.and_then(|frame| {
             frame.motion_positions.iter().find(|position| {
                 resource
                     .as_ref()
                     .is_some_and(|r| position.motion_id == r.selection.clip_id)
             })
         });
-        let time = position.map_or_else(
-            || displayed.map_or(0., |frame| frame.time),
-            |position| position.local_time,
-        );
         let time = if playing {
-            time
+            position.map_or_else(|| snapshot.map_or(0., |s| s.time), |p| p.local_time)
         } else {
-            animation.map_or(time, |a| a.edit_time)
+            animation.map_or(0., |a| a.edit_time)
         };
-        let label = resource.as_ref().map_or_else(
-            || format!("{time:.2} s"),
-            |r| {
-                if r.looping && preview_mode == AnimationPreviewMode::Result {
-                    format!(
-                        "{time:.2} / {:.2} s · {} {}",
-                        r.duration,
-                        t!("workspace.cycle"),
-                        position.map_or(1, |position| position.loop_index + 1)
-                    )
-                } else {
-                    format!("{time:.2} / {:.2} s", r.duration)
-                }
-            },
+        let play_enabled = view
+            .editor
+            .command_available(view.editor.command(CommandId::PlayPause));
+        let name = resource.as_ref().map_or_else(
+            || t!("timeline.select_motion").into_owned(),
+            |r| r.name.clone(),
         );
-        let available = [CommandId::PlayPause, CommandId::RewindAnimation]
-            .map(|command| !modal && view.editor.command_available(view.editor.command(command)));
-        let mut controls = div().w_full().min_w_0().flex().items_center().gap_1();
-        let bar = div()
+        let time_label = resource.as_ref().map_or_else(
+            || format!("{time:.2} s"),
+            |r| format!("{time:.2} / {:.2} s", r.duration),
+        );
+        let cycle = position.map_or(1, |p| p.loop_index + 1);
+        let time_hint = if mode == AnimationPreviewMode::Result
+            && resource.as_ref().is_some_and(|r| r.looping)
+        {
+            format!("{time_label} · {} {cycle}", t!("workspace.cycle"))
+        } else {
+            time_label.clone()
+        };
+        let asset_loop = resource.as_ref().is_some_and(|r| r.looping);
+        let allowed = self.allowed(window, cx);
+        let seek_enabled = allowed && resource.as_ref().is_some_and(|r| r.playable());
+        let mut transport = div()
             .id("timeline-transport")
             .test_support()
             .flex()
-            .flex_col()
-            .flex_shrink_0()
             .items_center()
-            .justify_center()
-            .gap_1()
-            .h(px(32.))
-            .px_3()
-            .when(self.compact, |bar| bar.w_full().min_w_0().px_1())
-            .border_t_1()
-            .border_color(cx.theme().border);
-        for ((id, command, icon), available) in [
+            .gap(px(2.))
+            .flex_shrink_0();
+        for (id, command, icon, hint) in [
+            (
+                "timeline-start",
+                "start",
+                IconName::SkipBack,
+                t!("timeline.jump_start"),
+            ),
+            (
+                "timeline-previous-key",
+                "previous",
+                IconName::ChevronsLeft,
+                t!("timeline.previous_key"),
+            ),
+            (
+                "timeline-previous-frame",
+                "left",
+                IconName::ChevronLeft,
+                t!("timeline.previous_frame"),
+            ),
             (
                 "animation-play-pause",
-                CommandId::PlayPause,
+                "play",
                 if playing {
                     IconName::Pause
                 } else {
                     IconName::Play
                 },
+                t!("workspace.play_hint"),
             ),
             (
-                "animation-rewind",
-                CommandId::RewindAnimation,
-                IconName::RotateCcw,
+                "timeline-next-frame",
+                "right",
+                IconName::ChevronRight,
+                t!("timeline.next_frame"),
             ),
-        ]
-        .into_iter()
-        .zip(available)
-        {
-            let owner = self.owner.clone();
-            controls = controls.child(
+            (
+                "timeline-next-key",
+                "next",
+                IconName::ChevronsRight,
+                t!("timeline.next_key"),
+            ),
+            (
+                "timeline-end",
+                "end",
+                IconName::SkipForward,
+                t!("timeline.jump_end"),
+            ),
+        ] {
+            if self.compact && matches!(command, "left" | "right") {
+                continue;
+            }
+            transport = transport.child(
                 Button::new(id)
                     .small()
+                    .when(self.compact, |button| button.xsmall())
                     .ghost()
                     .icon(icon)
-                    .tooltip(if command == CommandId::PlayPause {
-                        t!("workspace.play_hint")
+                    .accessibility_label(hint.clone().into_owned())
+                    .tooltip(hint)
+                    .disabled(if command == "play" {
+                        !allowed || !play_enabled
                     } else {
-                        t!("workspace.rewind_hint")
+                        !seek_enabled
                     })
-                    .disabled(!available)
-                    .on_click(move |_, window, cx| {
-                        let _ = owner.update(cx, |view, cx| view.run_command(command, window, cx));
-                    }),
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.finish_number(cx);
+                        window.focus(&this.focus, cx);
+                        if command == "play" {
+                            let _ = this.owner.update(cx, |owner, cx| {
+                                owner.run_command(CommandId::PlayPause, window, cx)
+                            });
+                        } else {
+                            this.key_command(command, window, cx);
+                        }
+                    })),
             );
         }
-        if self.compact {
-            let owner = self.owner.clone();
-            controls = controls.child(
-                Button::new("animation-preview-mode")
-                    .small()
-                    .ghost()
-                    .label(if preview_mode == AnimationPreviewMode::Editing {
-                        t!("workspace.edit_preview")
+        let weak = self.owner.clone();
+        transport = transport.child(
+            Button::new("animation-preview-loop")
+                .small()
+                .when(self.compact, |button| button.xsmall())
+                .ghost()
+                .icon(IconName::Repeat)
+                .selected(if mode == AnimationPreviewMode::Editing {
+                    looping
+                } else {
+                    asset_loop
+                })
+                .accessibility_label(t!("timeline.loop_playback").into_owned())
+                .tooltip(t!(if mode == AnimationPreviewMode::Editing {
+                    "timeline.loop_hint"
+                } else {
+                    "timeline.asset_loop_hint"
+                }))
+                .disabled(!allowed || document.is_none() || mode != AnimationPreviewMode::Editing)
+                .on_click(move |_, window, cx| {
+                    if window.has_active_dialog(cx) {
+                        return;
+                    }
+                    let _ = weak.update(cx, |owner, cx| {
+                        let result = owner
+                            .editor
+                            .set_animation_preview_loop(document.unwrap(), !looping);
+                        owner.animation_anchor = None;
+                        owner.complete_edit(result, cx);
+                    });
+                }),
+        );
+        let weak = self.owner.clone();
+        transport = transport.child(
+            Button::new("animation-preview-mode")
+                .small()
+                .when(self.compact, |button| button.xsmall())
+                .ghost()
+                .icon(if mode == AnimationPreviewMode::Editing {
+                    IconName::EyeOff
+                } else {
+                    IconName::Eye
+                })
+                .selected(mode == AnimationPreviewMode::Result)
+                .accessibility_label(t!("timeline.preview_effect").into_owned())
+                .tooltip(format!(
+                    "{}\n{}",
+                    t!("timeline.preview_effect"),
+                    t!(if mode == AnimationPreviewMode::Editing {
+                        "timeline.editing_hint"
                     } else {
-                        t!("workspace.result_preview")
+                        "timeline.result_hint"
                     })
-                    .disabled(modal || document_id.is_none())
-                    .dropdown_menu(move |mut menu, _, _| {
-                        for (mode, label) in [
-                            (AnimationPreviewMode::Editing, t!("workspace.edit_preview")),
-                            (AnimationPreviewMode::Result, t!("workspace.result_preview")),
-                        ] {
-                            let owner = owner.clone();
-                            menu = menu.item(
-                                PopupMenuItem::new(label.into_owned())
-                                    .checked(preview_mode == mode)
-                                    .on_click(move |_, window, cx| {
-                                        if window.has_active_dialog(cx) {
-                                            return;
-                                        }
-                                        let _ = owner.update(cx, |view, cx| {
-                                            if view.modal {
-                                                return;
-                                            }
-                                            let result = view.editor.set_animation_preview_mode(
-                                                document_id.unwrap(),
-                                                mode,
-                                            );
-                                            view.animation_anchor = None;
-                                            view.complete_edit(result, cx);
-                                        });
-                                    }),
-                            );
-                        }
-                        let owner = owner.clone();
-                        menu.item(
-                            PopupMenuItem::new(t!("workspace.loop_preview").into_owned())
-                                .checked(preview_loop)
-                                .disabled(preview_mode != AnimationPreviewMode::Editing)
-                                .on_click(move |_, window, cx| {
-                                    if window.has_active_dialog(cx) {
-                                        return;
-                                    }
-                                    let _ = owner.update(cx, |view, cx| {
-                                        if view.modal {
-                                            return;
-                                        }
-                                        let result = view.editor.set_animation_preview_loop(
-                                            document_id.unwrap(),
-                                            !preview_loop,
-                                        );
-                                        view.animation_anchor = None;
-                                        view.complete_edit(result, cx);
-                                    });
-                                }),
-                        )
-                    }),
-            );
-        } else {
-            for (id, mode, label) in [
-                (
-                    "animation-edit-preview",
-                    AnimationPreviewMode::Editing,
-                    t!("workspace.edit_preview"),
-                ),
-                (
-                    "animation-result-preview",
-                    AnimationPreviewMode::Result,
-                    t!("workspace.result_preview"),
-                ),
-            ] {
-                let owner = self.owner.clone();
-                controls = controls.child(
-                    Button::new(id)
-                        .small()
-                        .ghost()
-                        .label(label)
-                        .selected(preview_mode == mode)
-                        .disabled(modal || document_id.is_none())
-                        .on_click(move |_, window, cx| {
-                            if window.has_active_dialog(cx) {
-                                return;
-                            }
-                            let _ = owner.update(cx, |view, cx| {
-                                if view.modal {
+                ))
+                .disabled(!allowed || document.is_none())
+                .dropdown_menu(move |mut menu, _, _| {
+                    for (id, choice, label) in [
+                        (
+                            "animation-edit-preview",
+                            AnimationPreviewMode::Editing,
+                            t!("timeline.editing_effect"),
+                        ),
+                        (
+                            "animation-result-preview",
+                            AnimationPreviewMode::Result,
+                            t!("timeline.result_effect"),
+                        ),
+                    ] {
+                        let label = label.into_owned();
+                        let weak = weak.clone();
+                        menu = menu.item(
+                            PopupMenuItem::element(move |_, _| {
+                                div().id(id).test_support().child(label.clone())
+                            })
+                            .checked(mode == choice)
+                            .on_click(move |_, window, cx| {
+                                if window.has_active_dialog(cx) {
                                     return;
                                 }
-                                let result = view
-                                    .editor
-                                    .set_animation_preview_mode(document_id.unwrap(), mode);
-                                view.animation_anchor = None;
-                                view.complete_edit(result, cx);
-                            });
-                        }),
-                );
-            }
-            let owner = self.owner.clone();
-            controls = controls.child(
-                Button::new("animation-preview-loop")
-                    .small()
-                    .ghost()
-                    .label(t!("workspace.loop_preview"))
-                    .selected(preview_loop)
-                    .disabled(
-                        modal
-                            || document_id.is_none()
-                            || preview_mode != AnimationPreviewMode::Editing,
-                    )
-                    .on_click(move |_, window, cx| {
-                        if window.has_active_dialog(cx) {
-                            return;
-                        }
-                        let _ = owner.update(cx, |view, cx| {
-                            if view.modal {
-                                return;
-                            }
-                            let result = view
-                                .editor
-                                .set_animation_preview_loop(document_id.unwrap(), !preview_loop);
-                            view.animation_anchor = None;
-                            view.complete_edit(result, cx);
-                        });
-                    }),
-            );
-        }
-        let bar = bar.child(
-            controls.child(
+                                let _ = weak.update(cx, |owner, cx| {
+                                    let result = owner
+                                        .editor
+                                        .set_animation_preview_mode(document.unwrap(), choice);
+                                    owner.animation_anchor = None;
+                                    owner.complete_edit(result, cx);
+                                });
+                            }),
+                        );
+                    }
+                    menu
+                }),
+        );
+        let tools = self.tools(window, cx);
+        div()
+            .id("timeline-toolbar")
+            .test_support()
+            .h(px(32.))
+            .flex_shrink_0()
+            .flex()
+            .items_center()
+            .gap_1()
+            .px_1()
+            .child(transport)
+            .child(
                 div()
+                    .h(px(18.))
+                    .border_l_1()
+                    .border_color(cx.theme().border),
+            )
+            .child(tools)
+            .child(
+                div()
+                    .id("timeline-motion-name")
+                    .test_support()
                     .flex_1()
                     .min_w_0()
                     .overflow_hidden()
                     .text_ellipsis()
-                    .text_right()
+                    .when(!self.compact, |label| label.child(name)),
+            )
+            .child(
+                div()
+                    .id("timeline-time")
+                    .test_support()
+                    .flex_shrink_0()
                     .text_xs()
-                    .text_color(cx.theme().muted_foreground)
-                    .child(label),
-            ),
-        );
-        bar.into_any_element()
+                    .tooltip(move |window, cx| {
+                        gpui_kit::component::tooltip::Tooltip::new(time_hint.clone())
+                            .build(window, cx)
+                    })
+                    .child(time_label),
+            )
+            .into_any_element()
     }
 }

@@ -76,6 +76,52 @@ fn revealing_keys_clears_event_selection_and_keeps_zoom() -> anyhow::Result<()> 
     Ok(())
 }
 
+#[test]
+fn camera_navigation_preserves_candidate_identity_and_history_boundary() -> anyhow::Result<()> {
+    let (mut editor, _assets) = fixture(false, false)?;
+    let document = editor.active_id().unwrap();
+    let original = editor
+        .document()
+        .unwrap()
+        .motion_definition(&id(4))
+        .unwrap()
+        .clone();
+    let token = editor.begin_timeline_edit(document, "Drag motion key")?;
+    editor.update_timeline_edit(
+        document,
+        token,
+        TimelineCommand::SetKey {
+            key: key(10),
+            time: 0.1137,
+            value: 0.8,
+        },
+    )?;
+    let identity = editor.timeline_edit().unwrap().identity;
+    let candidate = editor.timeline_edit().unwrap().candidate.clip().clone();
+    editor.navigate_timeline_view(document, (0.2, 0.7), 26.)?;
+    assert_eq!(editor.timeline_edit().unwrap().identity, identity);
+    assert_eq!(editor.timeline_edit().unwrap().candidate.clip(), &candidate);
+    assert_eq!(
+        editor.document().unwrap().motion_definition(&id(4)),
+        Some(&original)
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    assert!(
+        editor
+            .navigate_timeline_view(document, (-0.1, 0.7), 26.)
+            .is_err()
+    );
+    assert_eq!(editor.timeline_edit().unwrap().identity, identity);
+    editor.finish_timeline_edit(document, identity)?;
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(
+        editor.document().unwrap().motion_definition(&id(4)),
+        Some(&original)
+    );
+    Ok(())
+}
+
 fn fixture(duplicate: bool, opaque: bool) -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let temp = tempfile::tempdir()?;
     let mut s = AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;

@@ -12,7 +12,9 @@ actions!(
         FrameLeft,
         FrameRight,
         PreviousKey,
-        NextKey
+        NextKey,
+        Start,
+        End
     ]
 );
 pub(super) fn bind_keys(cx: &mut App) {
@@ -24,11 +26,17 @@ pub(super) fn bind_keys(cx: &mut App) {
         KeyBinding::new("cmd-v", PasteKeys, scope),
         KeyBinding::new("left", FrameLeft, scope),
         KeyBinding::new("right", FrameRight, scope),
-        KeyBinding::new("alt-left", PreviousKey, scope),
-        KeyBinding::new("alt-right", NextKey, scope),
+        KeyBinding::new("cmd-left", PreviousKey, scope),
+        KeyBinding::new("cmd-right", NextKey, scope),
+        KeyBinding::new("shift-left", Start, scope),
+        KeyBinding::new("shift-right", End, scope),
     ]);
 }
 pub(super) enum Gesture {
+    Pan {
+        last: Point<f32>,
+        button: MouseButton,
+    },
     Seek,
     Marquee {
         origin: Point<f32>,
@@ -64,6 +72,12 @@ pub(super) enum Gesture {
     },
 }
 impl Gesture {
+    pub fn button(&self) -> MouseButton {
+        match self {
+            Self::Pan { button, .. } => *button,
+            _ => MouseButton::Left,
+        }
+    }
     pub fn token(&self) -> Option<TimelineCandidateIdentity> {
         match self {
             Self::Keys { token, .. } | Self::Handle { token, .. } | Self::Event { token, .. } => {
@@ -74,7 +88,7 @@ impl Gesture {
     }
 }
 impl Timeline {
-    fn local(&self, position: Point<Pixels>) -> Point<f32> {
+    pub(super) fn local(&self, position: Point<Pixels>) -> Point<f32> {
         let local = position - self.graph.get().origin;
         point(local.x.as_f32(), local.y.as_f32())
     }
@@ -185,6 +199,10 @@ impl Timeline {
         cx: &mut Context<Self>,
     ) {
         if !self.allowed(window, cx) {
+            return;
+        }
+        if self.pan_tool {
+            self.start_pan(event, window, cx);
             return;
         }
         self.finish_number(cx);
@@ -360,6 +378,7 @@ impl Timeline {
                 }
             }
         }
+        self.pointer = event.position;
         cx.notify();
         cx.stop_propagation();
     }
@@ -372,11 +391,14 @@ impl Timeline {
         if self.gesture.is_none() {
             return;
         }
-        if !self.allowed(window, cx) || event.pressed_button != Some(MouseButton::Left) {
+        if !self.allowed(window, cx)
+            || event.pressed_button != self.gesture.as_ref().map(Gesture::button)
+        {
             self.cancel(window, cx);
             return;
         }
         let local = self.local(event.position);
+        self.pointer = event.position;
         let Some(owner) = self.owner.upgrade() else {
             return;
         };
@@ -386,6 +408,19 @@ impl Timeline {
             .timeline_view()
             .cloned()
             .unwrap_or_default();
+        if let Some(Gesture::Pan { last, .. }) = self.gesture.as_mut() {
+            let delta = local - *last;
+            *last = local;
+            self.pan_by(
+                -delta.x,
+                -delta.y,
+                state.mode == TimelineDisplayMode::Curves,
+                cx,
+            );
+            cx.stop_propagation();
+            return;
+        }
+        self.start_edge_scroll(window, cx);
         let width = self.graph.get().size.width.as_f32().max(1.);
         let height = self.graph.get().size.height.as_f32();
         let time_delta = |origin: f32| {
@@ -402,6 +437,7 @@ impl Timeline {
                 }
         };
         let command = match self.gesture.as_mut().unwrap() {
+            Gesture::Pan { .. } => unreachable!(),
             Gesture::Seek => {
                 self.seek_at(event.position, true, cx);
                 return;
@@ -413,18 +449,16 @@ impl Timeline {
                 events,
             } => {
                 *current = local;
-                let (mut selected, mut selected_events) = self
-                    .scene
-                    .borrow()
-                    .scene
-                    .as_ref()
-                    .map(|scene| {
-                        scene.marquee(
-                            point(px(origin.x), px(origin.y)),
-                            point(px(local.x), px(local.y)),
-                        )
-                    })
-                    .unwrap_or_default();
+                let (mut selected, mut selected_events) = super::navigation::marquee_selection(
+                    &owner.read(cx).editor.timeline_projection().unwrap(),
+                    &state,
+                    &owner.read(cx).editor.timeline_visible_rows().unwrap(),
+                    *origin,
+                    local,
+                    self.value_range,
+                    width,
+                    height,
+                );
                 selected.extend(keys.clone());
                 selected_events.extend(events.clone());
                 let projection = owner.read(cx).editor.timeline_projection().unwrap();
@@ -512,6 +546,7 @@ impl Timeline {
         cx.stop_propagation();
     }
     pub(super) fn release_pointer(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.edge_scroll = None;
         if !self.allowed(window, cx) {
             if self.gesture.is_some() || self.number_edit.is_some() {
                 self.cancel(window, cx);
@@ -550,7 +585,7 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if !self.allowed(window, cx) || self.gesture.is_some() || self.number_edit.is_some() {
+        if !self.allowed(window, cx) || self.number_edit.is_some() {
             return;
         }
         let delta = match event.delta {
@@ -563,7 +598,11 @@ impl Timeline {
         let Some(state) = owner.read(cx).editor.timeline_view().cloned() else {
             return;
         };
+        let mut moved = false;
         if event.modifiers.platform {
+            if self.gesture.is_some() {
+                return;
+            }
             let bounds = self.graph.get();
             let anchor = x_time(
                 (event.position.x - bounds.left()).as_f32(),
@@ -577,28 +616,23 @@ impl Timeline {
             let left = (anchor - fraction * span).max(0.);
             self.change_view(move |view| view.time_range = (left, left + span), cx);
         } else if event.modifiers.shift || delta.x.abs() > delta.y.abs() {
-            let offset = -if event.modifiers.shift {
+            let horizontal = if event.modifiers.shift && delta.x.abs() <= delta.y.abs() {
                 delta.y
             } else {
                 delta.x
-            } as f64
-                / self.graph.get().size.width.as_f32().max(1.) as f64
-                * (state.time_range.1 - state.time_range.0);
-            let left = (state.time_range.0 + offset).max(0.);
-            let span = state.time_range.1 - state.time_range.0;
-            self.change_view(move |view| view.time_range = (left, left + span), cx);
+            };
+            moved = self.pan_by(-horizontal, 0., false, cx);
         } else {
-            let max = (owner
-                .read(cx)
-                .editor
-                .timeline_rows()
-                .unwrap_or_default()
-                .len() as f64
-                * ROW as f64
-                - self.body_height as f64)
-                .max(0.);
-            self.change_view(
-                move |view| view.scroll = (view.scroll - delta.y as f64).clamp(0., max),
+            moved = self.pan_by(0., -delta.y, false, cx);
+        }
+        if moved && self.gesture.is_some() {
+            self.move_pointer(
+                &MouseMoveEvent {
+                    position: self.pointer,
+                    pressed_button: self.gesture.as_ref().map(Gesture::button),
+                    modifiers: event.modifiers,
+                },
+                window,
                 cx,
             );
         }
@@ -693,8 +727,10 @@ impl Timeline {
                         _ => None,
                     };
                     let next = match command {
-                        "left" => time - 1. / projection.fps as f64,
-                        "right" => time + 1. / projection.fps as f64,
+                        "start" => 0.,
+                        "end" => projection.duration,
+                        "left" => f64::from(time as f32 - 1. / projection.fps),
+                        "right" => f64::from(time as f32 + 1. / projection.fps),
                         "previous" => destination.map_or(0., |key| key.time),
                         _ => destination.map_or(projection.duration, |key| key.time),
                     }

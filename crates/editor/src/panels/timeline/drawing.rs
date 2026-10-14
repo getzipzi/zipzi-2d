@@ -51,29 +51,8 @@ impl Scene {
     pub fn hit(&self, position: Point<Pixels>) -> Result<Option<Hit>, ()> {
         hit_markers(&self.markers, position)
     }
-    pub fn marquee(
-        &self,
-        a: Point<Pixels>,
-        b: Point<Pixels>,
-    ) -> (Vec<TimelineKeyRef>, Vec<String>) {
-        let bounds = Bounds::from_corners(
-            point(a.x.min(b.x), a.y.min(b.y)),
-            point(a.x.max(b.x), a.y.max(b.y)),
-        );
-        let mut keys = vec![];
-        let mut events = vec![];
-        for marker in &self.markers {
-            if bounds.contains(&marker.position) {
-                match &marker.hit {
-                    Hit::Key(key) => keys.push(key.clone()),
-                    Hit::Event(event) => events.push(event.clone()),
-                    _ => {}
-                }
-            }
-        }
-        (keys, events)
-    }
 }
+
 fn hit_markers(markers: &[Marker], position: Point<Pixels>) -> Result<Option<Hit>, ()> {
     let mut closest: Option<(&Marker, f32)> = None;
     let mut ambiguous = false;
@@ -175,14 +154,14 @@ pub(super) fn track_range(projection: &TimelineProjection, track: &str) -> (f64,
             }
         })
 }
-fn display_value(value: f64, normalized: bool, range: (f64, f64)) -> f64 {
+pub(super) fn display_value(value: f64, normalized: bool, range: (f64, f64)) -> f64 {
     if normalized {
         (value - range.0) / (range.1 - range.0)
     } else {
         value
     }
 }
-fn selected_tracks<'a>(
+pub(super) fn selected_tracks<'a>(
     projection: &'a TimelineProjection,
     state: &TimelineViewState,
 ) -> Vec<&'a TimelineTrack> {

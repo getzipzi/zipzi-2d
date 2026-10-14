@@ -3,6 +3,7 @@ mod controls;
 mod drawing;
 mod input;
 mod inspector;
+mod navigation;
 mod transport;
 
 use crate::{EditorView, t};
@@ -45,7 +46,6 @@ pub struct Timeline {
     renders: u64,
     owner: WeakEntity<EditorView>,
     focus: FocusHandle,
-    transport: Entity<transport::TimelineTransport>,
     tracks: Entity<drawing::TracksLayer>,
     search: Entity<InputState>,
     search_placeholder: String,
@@ -54,6 +54,9 @@ pub struct Timeline {
     ruler: Rc<Cell<Bounds<Pixels>>>,
     body_height: f32,
     gesture: Option<input::Gesture>,
+    edge_scroll: Option<Task<()>>,
+    pointer: Point<Pixels>,
+    pan_tool: bool,
     number_edit: Option<inspector::NumberEdit>,
     fields: HashMap<inspector::Field, inspector::FieldControl>,
     slider: Option<inspector::ChannelSlider>,
@@ -88,7 +91,6 @@ impl Timeline {
             Self {
                 #[cfg(test)]
                 renders: 0,
-                transport: transport::TimelineTransport::new(owner.clone(), cx),
                 tracks: cx.new(|_| drawing::TracksLayer::new(scene.clone())),
                 _search_events: cx.subscribe_in(
                     &search,
@@ -124,6 +126,9 @@ impl Timeline {
                 ruler: Rc::new(Cell::new(Bounds::default())),
                 body_height: 180.,
                 gesture: None,
+                edge_scroll: None,
+                pointer: Point::default(),
+                pan_tool: false,
                 number_edit: None,
                 fields: HashMap::new(),
                 slider: None,
@@ -203,6 +208,7 @@ impl Timeline {
                         && old.mode == new.mode
                 });
             self.gesture = None;
+            self.edge_scroll = None;
             self.number_edit = None;
             if same_clip {
                 let projection = self
@@ -257,6 +263,7 @@ impl Timeline {
             .is_some_and(|token| active != Some(token.edit))
         {
             self.gesture = None;
+            self.edge_scroll = None;
         }
         if window.has_active_dialog(cx) && (self.gesture.is_some() || self.number_edit.is_some()) {
             self.cancel(window, cx);
@@ -305,6 +312,7 @@ impl Timeline {
     fn cancel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         cx.stop_active_drag(window);
         self.gesture = None;
+        self.edge_scroll = None;
         self.number_edit = None;
         let numbers: Vec<_> = self
             .fields
@@ -445,6 +453,7 @@ impl Timeline {
             cx.stop_active_drag(window);
         }
         self.gesture = None;
+        self.edge_scroll = None;
         self.number_edit = None;
         for field in self.fields.values() {
             field.number.update(cx, |number, cx| number.reset_drag(cx));
@@ -568,24 +577,7 @@ impl Render for Timeline {
                 a.edit_time
             }
         });
-        let tools = self.tools(window, cx);
-        self.transport
-            .update(cx, |transport, cx| transport.set_compact(self.compact, cx));
-        let header = if self.compact {
-            div()
-                .flex()
-                .h(px(32.))
-                .flex_shrink_0()
-                .child(div().flex_1().min_w_0().child(self.transport.clone()))
-                .child(tools)
-        } else {
-            div()
-                .flex()
-                .flex_col()
-                .flex_shrink_0()
-                .child(self.transport.clone())
-                .child(tools)
-        };
+        let header = self.toolbar(window, cx);
         let panel_entity = cx.weak_entity();
         let left_width = if self.compact { COMPACT_LEFT } else { LEFT };
         let pointer_target = self.target(cx);
@@ -701,6 +693,12 @@ impl Render for Timeline {
             .on_action(cx.listener(|this, _: &input::NextKey, window, cx| {
                 this.key_command("next", window, cx)
             }))
+            .on_action(cx.listener(|this, _: &input::Start, window, cx| {
+                this.key_command("start", window, cx)
+            }))
+            .on_action(
+                cx.listener(|this, _: &input::End, window, cx| this.key_command("end", window, cx)),
+            )
             .child(header);
         let weak = cx.weak_entity();
         panel = panel.child(
@@ -729,7 +727,9 @@ impl Render for Timeline {
                     });
                     let releasing = weak.clone();
                     window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
-                        if phase == DispatchPhase::Capture && event.button == MouseButton::Left {
+                        if phase == DispatchPhase::Capture
+                            && matches!(event.button, MouseButton::Left | MouseButton::Middle)
+                        {
                             let _ =
                                 releasing.update(cx, |this, cx| this.release_pointer(window, cx));
                         }
@@ -885,6 +885,8 @@ impl Render for Timeline {
                     .relative()
                     .overflow_hidden()
                     .on_mouse_down(MouseButton::Left, cx.listener(Self::start_graph))
+                    .on_mouse_down(MouseButton::Middle, cx.listener(Self::start_pan))
+                    .when(self.pan_tool, |graph| graph.cursor(CursorStyle::ClosedHand))
                     .on_scroll_wheel(cx.listener(Self::wheel))
                     .child(
                         self.tracks
@@ -939,12 +941,20 @@ impl Render for Timeline {
                                     .items_center()
                                     .gap_1()
                                     .px_1()
-                                    .child(Input::new(&self.search).small().flex_1())
+                                    .child(
+                                        crate::panels::toolbar::PanelToolbarSearch::new(
+                                            &self.search,
+                                        )
+                                        .id("timeline-search")
+                                        .label(t!("timeline.search").into_owned()),
+                                    )
                                     .child(
                                         Button::new("timeline-filter")
                                             .small()
                                             .ghost()
-                                            .label(if state.filter == TimelineFilter::Animated {
+                                            .icon(IconName::ListFilter)
+                                            .selected(state.filter == TimelineFilter::Animated)
+                                            .tooltip(if state.filter == TimelineFilter::Animated {
                                                 t!("timeline.animated")
                                             } else {
                                                 t!("timeline.all")

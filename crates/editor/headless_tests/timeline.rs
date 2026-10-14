@@ -292,7 +292,7 @@ fn empty_motion_inline_value_creates_one_key_at_the_head_and_can_cancel(cx: &mut
     cx.update_window(harness.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
-        window.click("timeline-new-motion", cx);
+        window.click("animation-new-motion", cx);
         window.render_frame(cx);
     })
     .unwrap();
@@ -390,7 +390,7 @@ fn curve_view_draws_handles_and_restricted_handle_drag_only_changes_value(cx: &m
         window.render_frame(cx);
         window.click("timeline-interpolation-bezier", cx);
         window.render_frame(cx);
-        window.click("timeline-curves", cx);
+        window.click("timeline-view", cx);
         window.render_frame(cx);
         let handles = harness
             .view
@@ -443,7 +443,7 @@ fn curve_view_draws_handles_and_restricted_handle_drag_only_changes_value(cx: &m
             .unwrap()
             .keys
             .clone();
-        window.click("timeline-overview", cx);
+        window.click("timeline-view", cx);
         window.render_frame(cx);
         assert_eq!(
             harness.view.read(cx).editor.timeline_view().unwrap().keys,
@@ -667,7 +667,7 @@ fn seek_reuses_static_curve_geometry_and_marquee_selects_real_keys(cx: &mut Test
         press(window, origin, cx);
         release(window, origin, cx);
         window.render_frame(cx);
-        window.click("timeline-curves", cx);
+        window.click("timeline-view", cx);
         window.render_frame(cx);
         let builds = harness
             .view
@@ -696,7 +696,7 @@ fn seek_reuses_static_curve_geometry_and_marquee_selects_real_keys(cx: &mut Test
                 .scene_builds(),
             builds
         );
-        window.click("timeline-overview", cx);
+        window.click("timeline-view", cx);
         window.render_frame(cx);
         let origin = harness
             .view

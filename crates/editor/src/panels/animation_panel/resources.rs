@@ -55,10 +55,7 @@ impl AnimationPanel {
             }
             let result = match choice {
                 Choice::Motion(selection) => owner.editor.select_motion(document, selection),
-                Choice::Expression(id) => owner
-                    .editor
-                    .set_animation_preview_mode(document, editor_core::AnimationPreviewMode::Result)
-                    .and_then(|_| owner.editor.select_expression(document, id)),
+                Choice::Expression(id) => owner.editor.select_expression(document, id),
             };
             let start = play && result.is_ok();
             owner.animation_anchor = None;
@@ -104,6 +101,7 @@ impl AnimationPanel {
         };
         let catalog = state.editor.document().unwrap().animation_catalog();
         let animation = state.editor.animation().unwrap();
+        let preview_mode = animation.preview_mode;
         let disabled = state.modal || state.editor.is_busy() || dialog;
         let motion_panel = matches!(self.kind, AnimationPanelKind::Motions);
         let prefix = if motion_panel {
@@ -113,7 +111,58 @@ impl AnimationPanel {
         };
         let theme = cx.theme().clone();
         let mut toolbar = PanelToolbar::new(SharedString::from(format!("{prefix}-toolbar")));
-        if !motion_panel {
+        if motion_panel {
+            let owner = self.owner.clone();
+            toolbar = toolbar.action(move |_| {
+                Button::new("animation-new-motion")
+                    .icon(IconName::Plus)
+                    .ghost()
+                    .accessibility_label(t!("timeline.new_motion").into_owned())
+                    .tooltip(t!("timeline.new_motion"))
+                    .disabled(disabled)
+                    .on_click(move |_, window, cx| {
+                        if window.has_active_dialog(cx) {
+                            return;
+                        }
+                        let _ = owner.update(cx, |owner, cx| {
+                            if owner.modal
+                                || owner.editor.is_busy()
+                                || owner.editor.active_id() != Some(id)
+                            {
+                                return;
+                            }
+                            let result = owner.editor.create_timeline_motion(id).map(|_| ());
+                            owner.animation_anchor = None;
+                            owner.complete_edit(result, cx);
+                        });
+                    })
+            });
+        } else {
+            let owner = self.owner.clone();
+            toolbar = toolbar.action(move |_| {
+                Button::new("animation-expression-preview-result")
+                    .icon(IconName::Eye)
+                    .ghost()
+                    .accessibility_label(t!("timeline.result_effect").into_owned())
+                    .tooltip(t!("timeline.expression_hint"))
+                    .disabled(disabled || preview_mode == editor_core::AnimationPreviewMode::Result)
+                    .on_click(move |_, window, cx| {
+                        if window.has_active_dialog(cx) {
+                            return;
+                        }
+                        let _ = owner.update(cx, |owner, cx| {
+                            if owner.modal || owner.editor.active_id() != Some(id) {
+                                return;
+                            }
+                            let result = owner.editor.set_animation_preview_mode(
+                                id,
+                                editor_core::AnimationPreviewMode::Result,
+                            );
+                            owner.animation_anchor = None;
+                            owner.complete_edit(result, cx);
+                        });
+                    })
+            });
             let owner = self.owner.clone();
             let unavailable = disabled
                 || !state
@@ -381,7 +430,20 @@ impl AnimationPanel {
             .flex()
             .flex_col()
             .text_xs()
-            .when(!motion_panel, |panel| panel.child(toolbar))
+            .child(toolbar)
+            .when(
+                !motion_panel && preview_mode == editor_core::AnimationPreviewMode::Editing,
+                |panel| {
+                    panel.child(
+                        div()
+                            .px_2()
+                            .py_1()
+                            .text_xs()
+                            .text_color(theme.muted_foreground)
+                            .child(t!("timeline.expression_hint")),
+                    )
+                },
+            )
             .child(list)
             .on_key_down(cx.listener(move |panel, event: &KeyDownEvent, window, cx| {
                 if disabled || !panel.focus.is_focused(window) || choices.is_empty() {

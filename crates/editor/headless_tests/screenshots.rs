@@ -1216,7 +1216,7 @@ fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
     harness.cx.update_window(harness.window, |_, window, cx| {
         window.click("timeline-interpolation-bezier", cx);
         window.render_frame(cx);
-        window.click("timeline-curves", cx);
+        window.click("timeline-view", cx);
         window.render_frame(cx);
     })?;
     let curves = harness.capture()?;
@@ -1330,6 +1330,8 @@ fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
 }
 
 fn click_expression(window: &mut gpui_kit::Window, index: usize, cx: &mut gpui_kit::App) {
+    window.click("animation-expression-preview-result", cx);
+    window.render_frame(cx);
     let bounds = window.find(("animation-expression", index)).bounds();
     let viewport = window.find("animation-expression-list").bounds();
     window.scroll(

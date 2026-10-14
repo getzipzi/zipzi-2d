@@ -23,6 +23,8 @@ fn preview_modes_and_preview_loop_are_session_controls(cx: &mut TestAppContext) 
                 .preview_mode,
             editor_core::AnimationPreviewMode::Editing
         );
+        window.click("animation-preview-mode", cx);
+        window.render_frame(cx);
         window.click("animation-result-preview", cx);
         window.render_frame(cx);
         assert_eq!(
@@ -35,8 +37,18 @@ fn preview_modes_and_preview_loop_are_session_controls(cx: &mut TestAppContext) 
                 .preview_mode,
             editor_core::AnimationPreviewMode::Result
         );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("animation-preview-mode", cx);
+        window.render_frame(cx);
         window.click("animation-edit-preview", cx);
         window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
         window.click("animation-preview-loop", cx);
         window.render_frame(cx);
         let view = harness.view.read(cx);
@@ -139,7 +151,7 @@ fn motion_selection_space_button_and_menu_share_transport_and_repeat_guard(
         assert_eq!(entry.as_ref().unwrap().1, 1);
         window.click("animation-play-pause", cx);
         window.render_frame(cx);
-        window.click("animation-rewind", cx);
+        window.click("timeline-start", cx);
         assert_eq!(harness.view.read(cx).editor.animation().unwrap().time, 0.);
         assert!(!harness.view.read(cx).editor.animation().unwrap().playing);
         assert!(!harness.view.read(cx).editor.document().unwrap().modified());
@@ -732,6 +744,8 @@ pub(super) fn click_expression(
     index: usize,
     cx: &mut gpui_kit::App,
 ) {
+    window.click("animation-expression-preview-result", cx);
+    window.render_frame(cx);
     let row = window.find(("animation-expression", index)).bounds();
     let viewport = window.find("animation-expression-list").bounds();
     window.scroll(

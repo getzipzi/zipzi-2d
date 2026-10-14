@@ -121,7 +121,7 @@ pub struct PanelToolbarSearch {
 impl PanelToolbarSearch {
     pub fn new(state: &Entity<InputState>) -> Self {
         Self {
-            input: Input::new(state),
+            input: Input::new(state).cleanable(true),
             reset: None,
             disabled: false,
         }
@@ -149,7 +149,7 @@ impl PanelToolbarSearch {
             let label = label.into();
             self.reset = Some(
                 Button::new(id)
-                    .icon(IconName::Close)
+                    .icon(IconName::RotateCcw)
                     .ghost()
                     .xsmall()
                     .accessibility_label(label.clone())
@@ -170,21 +170,25 @@ impl Disableable for PanelToolbarSearch {
 
 impl RenderOnce for PanelToolbarSearch {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
-        div().flex().flex_1().min_w_0().child(
-            self.input
-                .small()
-                .disabled(self.disabled)
-                .flex_1()
-                .min_w_0()
-                .prefix(
-                    Icon::new(IconName::Search)
-                        .xsmall()
-                        .text_color(cx.theme().muted_foreground),
-                )
-                .when_some(self.reset, |input, reset| {
-                    input.suffix(reset.disabled(self.disabled))
-                }),
-        )
+        div()
+            .flex()
+            .flex_1()
+            .min_w_0()
+            .child(
+                self.input
+                    .small()
+                    .disabled(self.disabled)
+                    .flex_1()
+                    .min_w_0()
+                    .prefix(
+                        Icon::new(IconName::Search)
+                            .xsmall()
+                            .text_color(cx.theme().muted_foreground),
+                    ),
+            )
+            .when_some(self.reset, |row, reset| {
+                row.child(reset.disabled(self.disabled).flex_shrink_0())
+            })
     }
 }
 

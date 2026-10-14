@@ -551,6 +551,33 @@ impl Editor {
         }
         Ok(())
     }
+    /// Camera motion is allowed during a candidate gesture and never changes selection.
+    pub fn navigate_timeline_view(
+        &mut self,
+        document: DocumentId,
+        time_range: (f64, f64),
+        scroll: f64,
+    ) -> Result<()> {
+        self.ensure_animation_target(document)?;
+        ensure!(
+            time_range.0.is_finite()
+                && time_range.0 >= 0.
+                && time_range.1.is_finite()
+                && time_range.0 < time_range.1
+                && scroll.is_finite()
+                && scroll >= 0.,
+            "Invalid timeline navigation"
+        );
+        let state = self
+            .active_session_mut()
+            .unwrap()
+            .timeline
+            .current_mut()
+            .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
+        state.view.time_range = time_range;
+        state.view.scroll = scroll;
+        Ok(())
+    }
     pub fn create_timeline_motion(&mut self, document: DocumentId) -> Result<String> {
         self.ensure_animation_target(document)?;
         self.cancel_timeline_edit();

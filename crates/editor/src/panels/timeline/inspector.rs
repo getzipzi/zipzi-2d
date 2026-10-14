@@ -951,68 +951,51 @@ impl Timeline {
                     .child(t!("timeline.pause_to_edit")),
             );
         }
-        content
-            .child(
-                Button::new("timeline-add-event")
-                    .small()
-                    .ghost()
-                    .label(t!("timeline.add_event"))
-                    .disabled(disabled)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        let Some(owner) = this.owner.upgrade() else {
-                            return;
-                        };
-                        let time = owner
-                            .read(cx)
-                            .editor
-                            .animation()
-                            .map_or(0., |a| a.edit_time as f64);
-                        let before = owner
-                            .read(cx)
-                            .editor
-                            .timeline_projection()
-                            .map(|p| p.events.iter().map(|e| e.id.clone()).collect::<Vec<_>>())
-                            .unwrap_or_default();
-                        this.execute(
-                            TimelineCommand::Event {
-                                id: None,
-                                time,
-                                value: String::new(),
-                            },
-                            window,
-                            cx,
-                        );
-                        let added = owner.read(cx).editor.timeline_projection().and_then(|p| {
-                            p.events
-                                .iter()
-                                .find(|e| !before.contains(&e.id))
-                                .map(|e| e.id.clone())
-                        });
-                        if let Some(id) = added {
-                            this.change_view(
-                                move |view| {
-                                    view.keys.clear();
-                                    view.events.clear();
-                                    view.events.insert(id);
-                                    view.channels.clear();
-                                    view.channels.insert(TimelineRowId::Events);
-                                    view.reveal_row = Some(TimelineRowId::Events);
-                                },
-                                cx,
-                            );
-                        }
-                    })),
-            )
-            .child(
-                Button::new("timeline-delete")
-                    .small()
-                    .ghost()
-                    .label(t!("timeline.delete"))
-                    .disabled(disabled || state.keys.is_empty() && state.events.is_empty())
-                    .on_click(
-                        cx.listener(|this, _, window, cx| this.key_command("delete", window, cx)),
-                    ),
-            )
-            .into_any_element()
+        content.into_any_element()
+    }
+
+    pub(super) fn add_event(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        let time = owner
+            .read(cx)
+            .editor
+            .animation()
+            .map_or(0., |a| a.edit_time as f64);
+        let before = owner
+            .read(cx)
+            .editor
+            .timeline_projection()
+            .map(|p| p.events.iter().map(|e| e.id.clone()).collect::<Vec<_>>())
+            .unwrap_or_default();
+        self.execute(
+            TimelineCommand::Event {
+                id: None,
+                time,
+                value: String::new(),
+            },
+            window,
+            cx,
+        );
+        let added = owner.read(cx).editor.timeline_projection().and_then(|p| {
+            p.events
+                .iter()
+                .find(|e| !before.contains(&e.id))
+                .map(|e| e.id.clone())
+        });
+        if let Some(id) = added {
+            self.change_view(
+                move |view| {
+                    view.keys.clear();
+                    view.events.clear();
+                    view.events.insert(id);
+                    view.channels.clear();
+                    view.channels.insert(TimelineRowId::Events);
+                    view.reveal_row = Some(TimelineRowId::Events);
+                },
+                cx,
+            );
+        }
     }
 }
