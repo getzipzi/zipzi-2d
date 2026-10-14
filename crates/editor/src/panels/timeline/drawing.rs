@@ -154,10 +154,14 @@ pub(super) fn x_time(x: f32, range: (f64, f64), width: f32) -> f64 {
     range.0 + x as f64 / width.max(1.) as f64 * (range.1 - range.0)
 }
 pub(super) fn value_y(value: f64, range: (f64, f64), height: f32) -> f32 {
-    8. + ((range.1 - value) / (range.1 - range.0) * (height - ROW - 16.).max(1.) as f64) as f32
+    8. + ((range.1 - value) / (range.1 - range.0) * curve_height(height) as f64) as f32
 }
 pub(super) fn y_value(y: f32, range: (f64, f64), height: f32) -> f64 {
-    range.1 - (y - 8.) as f64 / (height - ROW - 16.).max(1.) as f64 * (range.1 - range.0)
+    range.1 - (y - 8.) as f64 / curve_height(height) as f64 * (range.1 - range.0)
+}
+fn curve_height(height: f32) -> f32 {
+    // Preserve the normal event lane, but share the limited height in short docks.
+    (height - ROW.min(height * 0.2) - 16.).max(1.)
 }
 pub(super) fn track_range(projection: &TimelineProjection, track: &str) -> (f64, f64) {
     projection
@@ -809,8 +813,9 @@ fn paint_scene(
                 );
             }
         } else {
-            for n in 0..5 {
-                let value = range.0 + (range.1 - range.0) * n as f64 / 4.;
+            let intervals = (curve_height(height) / 28.).floor().clamp(1., 4.) as usize;
+            for n in 0..=intervals {
+                let value = range.0 + (range.1 - range.0) * n as f64 / intervals as f64;
                 let y = value_y(value, range, height);
                 line(
                     window,
@@ -822,7 +827,7 @@ fn paint_scene(
                 label(
                     window,
                     cx,
-                    bounds.origin + point(px(4.), px(y - 14.)),
+                    bounds.origin + point(px(4.), px((y - 7.).clamp(0., (height - 14.).max(0.)))),
                     format!("{value:.2}"),
                     theme.muted_foreground,
                 );

@@ -4,11 +4,13 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::{
     ActiveTheme, Disableable, Selectable, Sizable,
     button::{Button, ButtonVariants},
+    menu::{DropdownMenu, PopupMenuItem},
 };
 use gpui_kit::{prelude::*, *};
 
 pub struct TimelineTransport {
     owner: WeakEntity<EditorView>,
+    compact: bool,
     _observe: Subscription,
 }
 impl TimelineTransport {
@@ -16,7 +18,14 @@ impl TimelineTransport {
         cx.new(|cx| Self {
             _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
             owner,
+            compact: false,
         })
+    }
+    pub(super) fn set_compact(&mut self, compact: bool, cx: &mut Context<Self>) {
+        if self.compact != compact {
+            self.compact = compact;
+            cx.notify();
+        }
     }
 }
 impl Render for TimelineTransport {
@@ -87,6 +96,7 @@ impl Render for TimelineTransport {
             .gap_1()
             .h(px(32.))
             .px_3()
+            .when(self.compact, |bar| bar.w_full().min_w_0().px_1())
             .border_t_1()
             .border_color(cx.theme().border);
         for ((id, command, icon), available) in [
@@ -125,26 +135,119 @@ impl Render for TimelineTransport {
                     }),
             );
         }
-        for (id, mode, label) in [
-            (
-                "animation-edit-preview",
-                AnimationPreviewMode::Editing,
-                t!("workspace.edit_preview"),
-            ),
-            (
-                "animation-result-preview",
-                AnimationPreviewMode::Result,
-                t!("workspace.result_preview"),
-            ),
-        ] {
+        if self.compact {
             let owner = self.owner.clone();
             controls = controls.child(
-                Button::new(id)
+                Button::new("animation-preview-mode")
                     .small()
                     .ghost()
-                    .label(label)
-                    .selected(preview_mode == mode)
+                    .label(if preview_mode == AnimationPreviewMode::Editing {
+                        t!("workspace.edit_preview")
+                    } else {
+                        t!("workspace.result_preview")
+                    })
                     .disabled(modal || document_id.is_none())
+                    .dropdown_menu(move |mut menu, _, _| {
+                        for (mode, label) in [
+                            (AnimationPreviewMode::Editing, t!("workspace.edit_preview")),
+                            (AnimationPreviewMode::Result, t!("workspace.result_preview")),
+                        ] {
+                            let owner = owner.clone();
+                            menu = menu.item(
+                                PopupMenuItem::new(label.into_owned())
+                                    .checked(preview_mode == mode)
+                                    .on_click(move |_, window, cx| {
+                                        if window.has_active_dialog(cx) {
+                                            return;
+                                        }
+                                        let _ = owner.update(cx, |view, cx| {
+                                            if view.modal {
+                                                return;
+                                            }
+                                            let result = view.editor.set_animation_preview_mode(
+                                                document_id.unwrap(),
+                                                mode,
+                                            );
+                                            view.animation_anchor = None;
+                                            view.complete_edit(result, cx);
+                                        });
+                                    }),
+                            );
+                        }
+                        let owner = owner.clone();
+                        menu.item(
+                            PopupMenuItem::new(t!("workspace.loop_preview").into_owned())
+                                .checked(preview_loop)
+                                .disabled(preview_mode != AnimationPreviewMode::Editing)
+                                .on_click(move |_, window, cx| {
+                                    if window.has_active_dialog(cx) {
+                                        return;
+                                    }
+                                    let _ = owner.update(cx, |view, cx| {
+                                        if view.modal {
+                                            return;
+                                        }
+                                        let result = view.editor.set_animation_preview_loop(
+                                            document_id.unwrap(),
+                                            !preview_loop,
+                                        );
+                                        view.animation_anchor = None;
+                                        view.complete_edit(result, cx);
+                                    });
+                                }),
+                        )
+                    }),
+            );
+        } else {
+            for (id, mode, label) in [
+                (
+                    "animation-edit-preview",
+                    AnimationPreviewMode::Editing,
+                    t!("workspace.edit_preview"),
+                ),
+                (
+                    "animation-result-preview",
+                    AnimationPreviewMode::Result,
+                    t!("workspace.result_preview"),
+                ),
+            ] {
+                let owner = self.owner.clone();
+                controls = controls.child(
+                    Button::new(id)
+                        .small()
+                        .ghost()
+                        .label(label)
+                        .selected(preview_mode == mode)
+                        .disabled(modal || document_id.is_none())
+                        .on_click(move |_, window, cx| {
+                            if window.has_active_dialog(cx) {
+                                return;
+                            }
+                            let _ = owner.update(cx, |view, cx| {
+                                if view.modal {
+                                    return;
+                                }
+                                let result = view
+                                    .editor
+                                    .set_animation_preview_mode(document_id.unwrap(), mode);
+                                view.animation_anchor = None;
+                                view.complete_edit(result, cx);
+                            });
+                        }),
+                );
+            }
+            let owner = self.owner.clone();
+            controls = controls.child(
+                Button::new("animation-preview-loop")
+                    .small()
+                    .ghost()
+                    .label(t!("workspace.loop_preview"))
+                    .selected(preview_loop)
+                    .disabled(
+                        modal
+                            || document_id.is_none()
+                            || preview_mode != AnimationPreviewMode::Editing,
+                    )
                     .on_click(move |_, window, cx| {
                         if window.has_active_dialog(cx) {
                             return;
@@ -155,39 +258,13 @@ impl Render for TimelineTransport {
                             }
                             let result = view
                                 .editor
-                                .set_animation_preview_mode(document_id.unwrap(), mode);
+                                .set_animation_preview_loop(document_id.unwrap(), !preview_loop);
                             view.animation_anchor = None;
                             view.complete_edit(result, cx);
                         });
                     }),
             );
         }
-        let owner = self.owner.clone();
-        controls = controls.child(
-            Button::new("animation-preview-loop")
-                .small()
-                .ghost()
-                .label(t!("workspace.loop_preview"))
-                .selected(preview_loop)
-                .disabled(
-                    modal || document_id.is_none() || preview_mode != AnimationPreviewMode::Editing,
-                )
-                .on_click(move |_, window, cx| {
-                    if window.has_active_dialog(cx) {
-                        return;
-                    }
-                    let _ = owner.update(cx, |view, cx| {
-                        if view.modal {
-                            return;
-                        }
-                        let result = view
-                            .editor
-                            .set_animation_preview_loop(document_id.unwrap(), !preview_loop);
-                        view.animation_anchor = None;
-                        view.complete_edit(result, cx);
-                    });
-                }),
-        );
         let bar = bar.child(
             controls.child(
                 div()

@@ -242,6 +242,13 @@ impl TimelineClipboard {
 }
 
 impl crate::Editor {
+    /// Only a single copied track may be redirected to the selected channel.
+    pub fn timeline_clipboard_can_retarget(&self) -> bool {
+        self.active_session()
+            .and_then(|session| session.timeline.clipboard.as_ref())
+            .is_some_and(|clipboard| clipboard.tracks.len() == 1)
+    }
+
     pub fn copy_timeline_selection(&mut self, document: crate::DocumentId) -> Result<usize> {
         self.ensure_animation_target(document)?;
         self.cancel_timeline_edit();

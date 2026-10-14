@@ -17,7 +17,10 @@ impl Timeline {
             .find(|motion| Some(&motion.selection) == current)
             .map(|motion| motion.name.clone())
             .unwrap_or_else(|| t!("timeline.select_motion").into_owned());
+        let selected_motion = current.cloned();
         let allowed = self.allowed(window, cx);
+        let compact_motions = motions.clone();
+        let compact_owner = self.owner.clone();
         let mut tools = div()
             .h(px(34.))
             .flex_shrink_0()
@@ -32,7 +35,10 @@ impl Timeline {
                 Button::new("timeline-motion")
                     .small()
                     .ghost()
-                    .label(name)
+                    .label(name.clone())
+                    .tooltip(name)
+                    .max_w(px(if self.compact { 130. } else { 220. }))
+                    .overflow_hidden()
                     .disabled(!allowed)
                     .dropdown_menu(move |mut menu, _, _| {
                         for motion in &motions {
@@ -81,6 +87,173 @@ impl Timeline {
                         });
                     })),
             );
+        let inspector = Button::new("timeline-inspector-toggle")
+            .small()
+            .ghost()
+            .icon(IconName::PanelRight)
+            .selected(self.inspector_visible())
+            .tooltip(t!("timeline.inspector"))
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.finish_number(cx);
+                this.inspector_open = Some(!this.inspector_visible());
+                cx.notify();
+            }));
+        if self.compact {
+            let weak = cx.weak_entity();
+            let seconds = self.seconds;
+            let properties = self.show_properties;
+            return div()
+                .h(px(32.))
+                .flex()
+                .items_center()
+                .gap_1()
+                .px_1()
+                .flex_shrink_0()
+                .child(inspector)
+                .child(
+                    Button::new("timeline-more")
+                        .small()
+                        .ghost()
+                        .icon(IconName::Ellipsis)
+                        .tooltip(t!("timeline.more_tools"))
+                        .disabled(!allowed)
+                        .dropdown_menu(move |mut menu, window, cx| {
+                            let motions = compact_motions.clone();
+                            let selected = selected_motion.clone();
+                            let owner = compact_owner.clone();
+                            menu = menu.submenu(
+                                t!("timeline.select_motion").into_owned(),
+                                window,
+                                cx,
+                                move |mut menu, _, _| {
+                                    for motion in &motions {
+                                        let selection = motion.selection.clone();
+                                        let owner = owner.clone();
+                                        menu = menu.item(
+                                            PopupMenuItem::new(motion.name.clone())
+                                                .checked(selected.as_ref() == Some(&selection))
+                                                .on_click(move |_, window, cx| {
+                                                    if window.has_active_dialog(cx) {
+                                                        return;
+                                                    }
+                                                    let _ = owner.update(cx, |owner, cx| {
+                                                        if let Some(document) = document {
+                                                            let result =
+                                                                owner.editor.select_motion(
+                                                                    document,
+                                                                    selection.clone(),
+                                                                );
+                                                            owner.animation_anchor = None;
+                                                            owner.complete_edit(result, cx);
+                                                        }
+                                                    });
+                                                }),
+                                        );
+                                    }
+                                    menu
+                                },
+                            );
+                            for (id, label, checked, enabled) in [
+                                (
+                                    "overview",
+                                    t!("timeline.overview"),
+                                    state.mode == TimelineDisplayMode::Overview,
+                                    true,
+                                ),
+                                (
+                                    "curves",
+                                    t!("timeline.curves"),
+                                    state.mode == TimelineDisplayMode::Curves,
+                                    true,
+                                ),
+                                ("snap", t!("timeline.snap"), state.snap, true),
+                                ("units", t!("timeline.units"), seconds, true),
+                                ("fit", t!("timeline.fit"), false, true),
+                                (
+                                    "normalize",
+                                    t!("timeline.normalize"),
+                                    state.normalized,
+                                    state.mode == TimelineDisplayMode::Curves,
+                                ),
+                                ("properties", t!("timeline.properties"), properties, true),
+                                ("new-motion", t!("timeline.new_motion"), false, true),
+                            ] {
+                                let weak = weak.clone();
+                                let label = label.into_owned();
+                                menu = menu.item(
+                                    PopupMenuItem::element(move |_, _| {
+                                        div()
+                                            .id(SharedString::from(format!("timeline-menu-{id}")))
+                                            .test_support()
+                                            .child(label.clone())
+                                    })
+                                    .checked(checked)
+                                    .disabled(!enabled)
+                                    .on_click(
+                                        move |_, window, cx| {
+                                            let _ = weak.update(cx, |this, cx| {
+                                                if !this.allowed(window, cx) {
+                                                    return;
+                                                }
+                                                this.finish_number(cx);
+                                                match id {
+                                                    "overview" => this.change_view(
+                                                        |view| {
+                                                            view.mode =
+                                                                TimelineDisplayMode::Overview
+                                                        },
+                                                        cx,
+                                                    ),
+                                                    "curves" => this.change_view(
+                                                        |view| {
+                                                            view.mode = TimelineDisplayMode::Curves
+                                                        },
+                                                        cx,
+                                                    ),
+                                                    "snap" => this.change_view(
+                                                        |view| view.snap = !view.snap,
+                                                        cx,
+                                                    ),
+                                                    "units" => this.seconds = !this.seconds,
+                                                    "fit" => this.fit(cx),
+                                                    "normalize" => this.change_view(
+                                                        |view| view.normalized = !view.normalized,
+                                                        cx,
+                                                    ),
+                                                    "properties" => {
+                                                        this.show_properties =
+                                                            !this.show_properties;
+                                                        this.inspector_open = Some(true);
+                                                    }
+                                                    "new-motion" => {
+                                                        if let Some(target) = this.target(cx) {
+                                                            let _ = this.owner.update(
+                                                                cx,
+                                                                |owner, cx| {
+                                                                    let result = owner
+                                                                        .editor
+                                                                        .create_timeline_motion(
+                                                                            target.document,
+                                                                        )
+                                                                        .map(|_| ());
+                                                                    owner.complete_edit(result, cx);
+                                                                },
+                                                            );
+                                                        }
+                                                    }
+                                                    _ => unreachable!(),
+                                                }
+                                                cx.notify();
+                                            });
+                                        },
+                                    ),
+                                );
+                            }
+                            menu
+                        }),
+                )
+                .into_any_element();
+        }
         for (id, mode, label) in [
             (
                 "timeline-overview",
@@ -165,9 +338,11 @@ impl Timeline {
                     .tooltip(t!("timeline.properties"))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.show_properties = !this.show_properties;
+                        this.inspector_open = Some(true);
                         cx.notify();
                     })),
-            );
+            )
+            .child(inspector);
         tools.into_any_element()
     }
 

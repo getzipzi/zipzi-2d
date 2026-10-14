@@ -17,6 +17,29 @@ pub(super) enum Field {
     Scale,
 }
 impl Field {
+    fn number_options(
+        &self,
+        value: f64,
+        range: (f64, f64),
+        fps: f32,
+        disabled: bool,
+    ) -> SlideNumberOptions {
+        let (step, drag_distance) = match self {
+            Self::RowValue(_) | Self::KeyValue(_) if range.1 - range.0 < 1e6 => (0.001, Some(400.)),
+            Self::KeyTime(_) | Self::EventTime(_) => (1. / f64::from(fps), None),
+            Self::Fps => (1., None),
+            _ => (0.01, None),
+        };
+        SlideNumberOptions {
+            value,
+            min: range.0,
+            max: range.1,
+            step,
+            drag_distance,
+            disabled,
+        }
+    }
+
     pub(super) fn exists(&self, projection: &TimelineProjection) -> bool {
         match self {
             Self::RowValue(id) => projection.rows.iter().any(|row| &row.id == id),
@@ -116,20 +139,18 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let fps = self
+            .owner
+            .upgrade()
+            .and_then(|owner| owner.read(cx).editor.timeline_projection())
+            .map_or(30., |projection| projection.fps);
         if !self.fields.contains_key(field) {
             let input = cx.new(|cx| InputState::new(window, cx).default_value(value.clone()));
             let number = cx.new(|cx| {
                 SlideNumberInput::new(
                     input.clone(),
                     t!("timeline.value").into_owned(),
-                    SlideNumberOptions {
-                        value: value.parse().unwrap_or(0.),
-                        min: range.0,
-                        max: range.1,
-                        step: 0.001,
-                        drag_distance: Some(400.),
-                        disabled,
-                    },
+                    field.number_options(value.parse().unwrap_or(0.), range, fps, disabled),
                     window,
                     cx,
                 )
@@ -252,14 +273,7 @@ impl Timeline {
         control.number.update(cx, |number, cx| {
             number.configure(
                 t!("timeline.value").into_owned(),
-                SlideNumberOptions {
-                    value: value.parse().unwrap_or(0.),
-                    min: range.0,
-                    max: range.1,
-                    step: 0.001,
-                    drag_distance: Some(400.),
-                    disabled,
-                },
+                field.number_options(value.parse().unwrap_or(0.), range, fps, disabled),
                 cx,
             )
         });
@@ -474,11 +488,42 @@ impl Timeline {
             .flex_shrink_0()
             .border_l_1()
             .border_color(cx.theme().border)
+            .bg(cx.theme().background)
+            .when(self.compact, |content| {
+                content
+                    .absolute()
+                    .right_0()
+                    .top(px(32.))
+                    .bottom_0()
+                    .h_auto()
+                    .occlude()
+            })
             .overflow_y_scroll()
             .p_2()
             .flex()
             .flex_col()
-            .gap_2();
+            .gap_2()
+            .when(self.compact, |content| {
+                content.child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .child(t!("timeline.inspector"))
+                        .child(
+                            Button::new("timeline-inspector-close")
+                                .small()
+                                .ghost()
+                                .icon(IconName::Close)
+                                .tooltip(t!("timeline.inspector"))
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.finish_number(cx);
+                                    this.inspector_open = Some(false);
+                                    cx.notify();
+                                })),
+                        ),
+                )
+            });
         if self.show_properties {
             let Some(owner) = self.owner.upgrade() else {
                 return content.into_any_element();
@@ -729,7 +774,9 @@ impl Timeline {
         } else if let Some(row) = state
             .channels
             .first()
-            .filter(|_| state.channels.len() == 1)
+            .filter(|_| {
+                state.channels.len() == 1 && state.keys.is_empty() && state.events.is_empty()
+            })
             .and_then(|id| projection.rows.iter().find(|row| &row.id == id))
         {
             if let Some(channel) = row

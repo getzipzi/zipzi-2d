@@ -1276,6 +1276,55 @@ fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
         directory,
         "timeline-curves-zh-light.png",
     )?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        use gpui_kit::component::dock::{DockPlacement, InsertTarget, PanelId};
+        let dock = harness.view.read(cx).dock.as_ref().unwrap();
+        let panel = PanelId::from(dock.timeline.entity_id());
+        let info = PanelId::from(dock.animation_info.entity_id());
+        let area = dock.area.clone();
+        let node = area
+            .read(cx)
+            .layout(DockPlacement::Center)
+            .unwrap()
+            .find_panel_node(info)
+            .unwrap();
+        area.update(cx, |area, cx| {
+            area.move_panel(
+                panel,
+                InsertTarget::Tabs {
+                    node,
+                    ix: None,
+                    activate: true,
+                },
+                window,
+                cx,
+            )
+        });
+    })?;
+    save(
+        &harness.capture()?,
+        directory,
+        "timeline-narrow-zh-light.png",
+    )?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        anyhow::ensure!(
+            window.find("timeline-graph").bounds().size.width >= px(150.),
+            "Narrow dock lost its editable graph"
+        );
+        anyhow::ensure!(
+            window.find("timeline-graph").bounds().size.height >= px(50.),
+            "Narrow dock chrome consumed the graph height"
+        );
+        window.click("timeline-more", cx);
+        window.render_frame(cx);
+        window.click("timeline-menu-properties", cx);
+        Ok::<_, anyhow::Error>(())
+    })??;
+    save(
+        &harness.capture()?,
+        directory,
+        "timeline-narrow-properties-zh-light.png",
+    )?;
     i18n::activate(Some("en"));
     Ok(())
 }

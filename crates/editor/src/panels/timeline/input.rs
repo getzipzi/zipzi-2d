@@ -646,7 +646,9 @@ impl Timeline {
                             .map(|_| ()),
                         _ => {
                             let selected = owner.editor.timeline_view().and_then(|state| {
-                                (state.channels.len() == 1).then(|| state.channels.first().unwrap())
+                                (owner.editor.timeline_clipboard_can_retarget()
+                                    && state.channels.len() == 1)
+                                    .then(|| state.channels.first().unwrap())
                             });
                             let paste = selected
                                 .and_then(|id| {
@@ -674,28 +676,43 @@ impl Timeline {
                         return;
                     };
                     let time = owner.editor.animation().unwrap().edit_time as f64;
+                    let keys = || {
+                        projection
+                            .rows
+                            .iter()
+                            .filter_map(|row| row.track_id.as_ref())
+                            .flat_map(|id| &projection.tracks[id].keys)
+                    };
+                    let destination = match command {
+                        "previous" => keys()
+                            .filter(|key| key.time < time)
+                            .max_by(|a, b| a.time.total_cmp(&b.time)),
+                        "next" => keys()
+                            .filter(|key| key.time > time)
+                            .min_by(|a, b| a.time.total_cmp(&b.time)),
+                        _ => None,
+                    };
                     let next = match command {
                         "left" => time - 1. / projection.fps as f64,
                         "right" => time + 1. / projection.fps as f64,
-                        "previous" => projection
-                            .tracks
-                            .values()
-                            .flat_map(|track| &track.keys)
-                            .map(|key| key.time)
-                            .filter(|key| *key < time)
-                            .max_by(f64::total_cmp)
-                            .unwrap_or(0.),
-                        _ => projection
-                            .tracks
-                            .values()
-                            .flat_map(|track| &track.keys)
-                            .map(|key| key.time)
-                            .filter(|key| *key > time)
-                            .min_by(f64::total_cmp)
-                            .unwrap_or(projection.duration),
+                        "previous" => destination.map_or(0., |key| key.time),
+                        _ => destination.map_or(projection.duration, |key| key.time),
                     }
                     .clamp(0., projection.display_end);
-                    let result = owner.editor.seek_timeline(target.document, next as f32);
+                    let result = owner
+                        .editor
+                        .seek_timeline(target.document, next as f32)
+                        .and_then(|_| {
+                            if let Some(key) = destination {
+                                owner
+                                    .editor
+                                    .reveal_timeline_keys(target.document, &[key.reference.clone()])
+                            } else {
+                                owner.editor.update_timeline_view(target.document, |view| {
+                                    view.reveal_time(next)
+                                })
+                            }
+                        });
                     owner.animation_anchor = None;
                     owner.complete_edit(result, cx);
                 });

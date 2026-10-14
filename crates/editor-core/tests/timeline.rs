@@ -49,6 +49,33 @@ fn navigation_and_selection_share_rows_but_visibility_changes_rebuild_them() -> 
     assert!(editor.timeline_view().unwrap().keys.is_empty());
     Ok(())
 }
+
+#[test]
+fn revealing_keys_clears_event_selection_and_keeps_zoom() -> anyhow::Result<()> {
+    let (mut editor, _assets) = fixture(false, false)?;
+    let document = editor.active_id().unwrap();
+    editor.update_timeline_view(document, |view| {
+        view.events.insert(id(40));
+        view.search = "missing channel".into();
+        view.time_range = (1., 1.1);
+    })?;
+    editor.reveal_timeline_keys(document, &[key(10)])?;
+    let view = editor.timeline_view().unwrap();
+    let time = editor
+        .timeline_projection()
+        .unwrap()
+        .key(&key(10))
+        .unwrap()
+        .time;
+    assert!(view.events.is_empty());
+    assert!(view.search.is_empty());
+    assert_eq!(view.keys.iter().cloned().collect::<Vec<_>>(), vec![key(10)]);
+    assert!(view.time_range.0 < time && view.time_range.1 > time);
+    assert!((view.time_range.1 - view.time_range.0 - 0.1).abs() < 1e-9);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
 fn fixture(duplicate: bool, opaque: bool) -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let temp = tempfile::tempdir()?;
     let mut s = AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;

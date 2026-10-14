@@ -13,6 +13,7 @@ use editor_core::{
     TimelineViewState, WorkspaceKind, timeline_time,
 };
 use gpui_kit::assets::IconName;
+use gpui_kit::base::ElementExt;
 use gpui_kit::component::{
     ActiveTheme, Disableable, Selectable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
@@ -27,6 +28,8 @@ const ROW: f32 = 26.;
 const LEFT: f32 = 248.;
 const INSPECTOR: f32 = 220.;
 const RULER: f32 = 24.;
+const COMPACT_WIDTH: f32 = 900.;
+const COMPACT_LEFT: f32 = 160.;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Target {
@@ -60,6 +63,8 @@ pub struct Timeline {
     normalized: bool,
     seconds: bool,
     show_properties: bool,
+    compact: bool,
+    inspector_open: Option<bool>,
     error: Option<String>,
     _search_events: Subscription,
     _observe: Subscription,
@@ -71,6 +76,10 @@ pub(crate) fn init(cx: &mut App) {
 }
 
 impl Timeline {
+    fn inspector_visible(&self) -> bool {
+        self.inspector_open.unwrap_or(!self.compact)
+    }
+
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
             let scene = Rc::new(std::cell::RefCell::new(drawing::SceneCache::default()));
@@ -124,6 +133,8 @@ impl Timeline {
                 normalized: false,
                 seconds: false,
                 show_properties: false,
+                compact: false,
+                inspector_open: None,
                 error: None,
             }
         })
@@ -341,12 +352,27 @@ impl Timeline {
         let Some(projection) = owner.read(cx).editor.timeline_projection() else {
             return;
         };
+        if reveal && !additive {
+            let Some(target) = self.target(cx) else {
+                return;
+            };
+            let _ = self.owner.update(cx, |owner, cx| {
+                let result = owner.editor.reveal_timeline_keys(target.document, &keys);
+                owner.complete_edit(result, cx);
+            });
+            return;
+        }
         self.change_view(
             move |view| {
                 if !additive {
                     view.keys.clear();
                     view.events.clear();
                     view.channels.clear();
+                }
+                if reveal {
+                    if let Some(key) = keys.first().and_then(|key| projection.key(key)) {
+                        view.reveal_time(key.time);
+                    }
                 }
                 for key in keys {
                     view.keys.insert(key.clone());
@@ -543,6 +569,25 @@ impl Render for Timeline {
             }
         });
         let tools = self.tools(window, cx);
+        self.transport
+            .update(cx, |transport, cx| transport.set_compact(self.compact, cx));
+        let header = if self.compact {
+            div()
+                .flex()
+                .h(px(32.))
+                .flex_shrink_0()
+                .child(div().flex_1().min_w_0().child(self.transport.clone()))
+                .child(tools)
+        } else {
+            div()
+                .flex()
+                .flex_col()
+                .flex_shrink_0()
+                .child(self.transport.clone())
+                .child(tools)
+        };
+        let panel_entity = cx.weak_entity();
+        let left_width = if self.compact { COMPACT_LEFT } else { LEFT };
         let pointer_target = self.target(cx);
         let release_target = pointer_target.clone();
         let mut panel = div()
@@ -560,6 +605,22 @@ impl Render for Timeline {
             .text_xs()
             .track_focus(&self.focus)
             .key_context("KasaneTimeline")
+            .on_prepaint(move |bounds, window, cx| {
+                let compact = bounds.size.width < px(COMPACT_WIDTH);
+                if panel_entity
+                    .upgrade()
+                    .is_some_and(|panel| panel.read(cx).compact != compact)
+                {
+                    window.defer(cx, move |_, cx| {
+                        let _ = panel_entity.update(cx, |panel, cx| {
+                            if panel.compact != compact {
+                                panel.compact = compact;
+                                cx.notify();
+                            }
+                        });
+                    });
+                }
+            })
             .capture_any_mouse_down(cx.listener(move |this, event: &MouseDownEvent, _, cx| {
                 if this.target(cx) != pointer_target {
                     cx.stop_propagation();
@@ -640,8 +701,7 @@ impl Render for Timeline {
             .on_action(cx.listener(|this, _: &input::NextKey, window, cx| {
                 this.key_command("next", window, cx)
             }))
-            .child(self.transport.clone())
-            .child(tools);
+            .child(header);
         let weak = cx.weak_entity();
         panel = panel.child(
             canvas(
@@ -718,12 +778,19 @@ impl Render for Timeline {
                 });
             }
         }
-        let inspector = self.render_inspector(&projection, &state, f64::from(time), window, cx);
+        let inspector = self
+            .inspector_visible()
+            .then(|| self.render_inspector(&projection, &state, f64::from(time), window, cx));
+        let (inline_inspector, floating_inspector) = if self.compact {
+            (None, inspector)
+        } else {
+            (inspector, None)
+        };
         let ruler_bounds = self.ruler.clone();
         let mut left = div()
             .id("timeline-rows")
             .test_support()
-            .w(px(LEFT))
+            .w(px(left_width))
             .h_full()
             .relative()
             .overflow_hidden()
@@ -845,6 +912,7 @@ impl Render for Timeline {
                     ),
             );
         let body = div()
+            .relative()
             .flex_1()
             .min_h_0()
             .flex()
@@ -865,7 +933,7 @@ impl Render for Timeline {
                             .border_color(cx.theme().border)
                             .child(
                                 div()
-                                    .w(px(LEFT))
+                                    .w(px(left_width))
                                     .flex_shrink_0()
                                     .flex()
                                     .items_center()
@@ -929,7 +997,7 @@ impl Render for Timeline {
                             .flex()
                             .child(
                                 div()
-                                    .w(px(LEFT))
+                                    .w(px(left_width))
                                     .flex_shrink_0()
                                     .flex()
                                     .flex_col()
@@ -951,8 +1019,12 @@ impl Render for Timeline {
                             .child(graph),
                     ),
             )
-            .child(inspector);
-        panel = panel.child(body);
+            .when_some(inline_inspector, |body, inspector| body.child(inspector));
+        panel = panel
+            .child(body)
+            .when_some(floating_inspector, |panel, inspector| {
+                panel.child(inspector)
+            });
         panel.into_any_element()
     }
 }

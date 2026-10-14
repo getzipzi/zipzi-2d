@@ -143,6 +143,19 @@ impl Default for TimelineViewState {
     }
 }
 
+impl TimelineViewState {
+    /// Keep the current zoom while bringing an explicitly located time into view.
+    pub fn reveal_time(&mut self, time: f64) {
+        let (left, right) = self.time_range;
+        let width = right - left;
+        let margin = width * 0.05;
+        if time < left + margin || time > right - margin {
+            let left = (time - width / 2.).max(0.);
+            self.time_range = (left, left + width);
+        }
+    }
+}
+
 pub(crate) struct TimelineClipState {
     pub view: TimelineViewState,
     pub projection: Arc<TimelineProjection>,
@@ -170,6 +183,7 @@ impl TimelineClipState {
             ancestors.push(row);
         }
         self.view.keys = keys.iter().cloned().collect();
+        self.view.events.clear();
         self.view.channels = channels;
         if !self
             .projection
@@ -180,12 +194,7 @@ impl TimelineClipState {
             self.view.search.clear();
         }
         if let Some(key) = keys.first().and_then(|key| self.projection.key(key)) {
-            let (left, right) = self.view.time_range;
-            if key.time < left || key.time > right {
-                let width = right - left;
-                let left = (key.time - width / 2.).max(0.);
-                self.view.time_range = (left, left + width);
-            }
+            self.view.reveal_time(key.time);
         }
         self.refresh_visible();
     }

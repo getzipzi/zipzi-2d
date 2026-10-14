@@ -18,6 +18,7 @@ mod recent_files;
 mod slide_number_input;
 mod sorting;
 mod timeline;
+mod timeline_regressions;
 mod titlebar;
 mod workspaces;
 

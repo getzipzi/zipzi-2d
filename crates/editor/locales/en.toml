@@ -410,6 +410,8 @@ seek_cancelled = "The previous seek was cancelled."
 evaluation_failed = "Evaluation failed: %{detail}"
 
 [timeline]
+inspector = "Inspector"
+more_tools = "Timeline tools"
 title = "Timeline"
 search = "Search channels"
 select_motion = "Select Motion"
