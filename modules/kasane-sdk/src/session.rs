@@ -51,6 +51,33 @@ pub struct AuthoringSnapshot {
 }
 
 impl AuthoringSnapshot {
+    /// Capture an independent curve candidate without publishing it or changing
+    /// authoring preview values. The version remains the committed base version;
+    /// hosts must pair it with their candidate edit ID/revision when accepting
+    /// asynchronous results. Old snapshots retain their original curves.
+    pub fn with_motion_candidate(
+        &self,
+        candidate: &crate::MotionClipCandidate,
+    ) -> Result<Self, SdkError> {
+        let started = std::time::Instant::now();
+        crate::MotionClipCandidate::new(&self.document, candidate.clip().clone())?;
+        let mut document = self.document.fork_candidate();
+        let result = document.replace_motion(candidate.clip().clone());
+        if !result.status.is_ok() {
+            return Err(SdkError::from_status(
+                result.status,
+                "with_motion_candidate",
+                vec![candidate.clip().id.clone()],
+            ));
+        }
+        Ok(Self {
+            document,
+            version: self.version,
+            project_path: self.project_path.clone(),
+            clone_elapsed_ns: started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
+        })
+    }
+
     pub fn document(&self) -> &Document {
         &self.document
     }

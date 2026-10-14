@@ -361,7 +361,7 @@ fn sample_track(track: &MotionTrack, curve: &CompiledCurve, time: f32, clip: &Mo
         let end = track
             .segments
             .last()
-            .map_or(track.initial, MotionSegment::end);
+            .map_or(&track.initial, MotionSegment::end);
         let cycle = clip.duration + 1.0 / clip.fps;
         return match track.segments.last() {
             Some(MotionSegment::Linear { .. } | MotionSegment::Bezier { .. }) => lerp(

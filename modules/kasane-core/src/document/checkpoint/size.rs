@@ -22,8 +22,8 @@ use super::super::{ContentRef, DocumentContent};
 use super::super::{ExpressionAsset, ExpressionEntry, ExpressionTarget};
 use super::super::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
 use super::super::{
-    MotionClip, MotionEvent, MotionGroup, MotionPoint, MotionRegistration, MotionSegment,
-    MotionTrack, MotionTrackTarget,
+    MotionClip, MotionEvent, MotionGroup, MotionKey, MotionPoint, MotionRegistration,
+    MotionSegment, MotionTrack, MotionTrackTarget,
 };
 use super::super::{PoseAsset, PoseEntry, PosePartRef};
 use serde_json::Value;
@@ -118,9 +118,19 @@ no_extra!(
     DeltaPartKeyform,
     DeltaGlueKeyform,
     DeltaOffscreenKeyform,
-    MotionPoint,
-    MotionSegment
+    MotionPoint
 );
+
+impl ExtraBytes for MotionKey {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity()
+    }
+}
+impl ExtraBytes for MotionSegment {
+    fn extra_bytes(&self) -> usize {
+        self.end().extra_bytes()
+    }
+}
 
 impl ExtraBytes for ImageAsset {
     fn extra_bytes(&self) -> usize {
@@ -291,6 +301,7 @@ impl ExtraBytes for MotionTrack {
     fn extra_bytes(&self) -> usize {
         self.id.capacity()
             + self.target.extra_bytes()
+            + self.initial.extra_bytes()
             + self.segments.extra_bytes()
             + self.extensions.extra_bytes()
     }

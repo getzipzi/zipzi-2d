@@ -27,7 +27,7 @@ fn document() -> Document {
 }
 
 #[test]
-fn motion_import_roundtrips_segments_events_and_v5_project() {
+fn motion_import_roundtrips_segments_events_and_project() {
     let source = include_str!("../../../tests/fixtures/animation_cpu/typed.motion3.json");
     let imported = import_motion3(&document(), MOTION, "Idle", source).unwrap();
     assert!(imported.diagnostics.is_empty());
@@ -56,6 +56,72 @@ fn motion_import_roundtrips_segments_events_and_v5_project() {
     );
     assert!(reopened.erase_object(MOTION).status.is_ok());
     assert!(reopened.erase_object(PARAM).status.is_ok());
+}
+
+#[test]
+fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
+    let source = include_str!("../../../tests/fixtures/animation_cpu/typed.motion3.json");
+    let imported = import_motion3(&document(), MOTION, "Idle", source).unwrap();
+    let clip = imported.candidate.get_motion(MOTION).unwrap();
+    let ids: Vec<_> = clip.tracks[0].keys().map(|key| key.id.clone()).collect();
+    assert_eq!(ids.len(), 5);
+    assert_eq!(
+        ids.iter().collect::<std::collections::HashSet<_>>().len(),
+        ids.len()
+    );
+    let project = encode_project(&imported.candidate).unwrap();
+    let wire: Value = serde_json::from_str(&project).unwrap();
+    assert_eq!(wire["format_version"], 11);
+    let reopened = decode_project(&project).unwrap();
+    assert_eq!(reopened.get_motion(MOTION), Some(clip));
+    assert_eq!(encode_project(&reopened).unwrap(), project);
+    let again = import_motion3(&reopened, MOTION, "Idle", source).unwrap();
+    assert!(again.candidate.get_motion(MOTION).unwrap().tracks[0]
+        .keys()
+        .all(|key| !ids.contains(&key.id)));
+    let original: Value =
+        serde_json::from_str(&export_motion3(&imported.candidate, MOTION).unwrap()).unwrap();
+    let exported: Value =
+        serde_json::from_str(&export_motion3(&again.candidate, MOTION).unwrap()).unwrap();
+    assert_eq!(exported["Curves"], original["Curves"]);
+    let mut old = wire.clone();
+    old["format_version"] = 10.into();
+    assert_eq!(
+        decode_project(&old.to_string()).unwrap_err().code,
+        "UNSUPPORTED_VERSION"
+    );
+    let mut missing_id = wire;
+    missing_id["document"]["animation_assets"]["motions"][0]["tracks"][0]["initial"]
+        .as_object_mut()
+        .unwrap()
+        .remove("id");
+    assert!(decode_project(&missing_id.to_string()).is_err());
+}
+
+#[test]
+fn key_identity_is_excluded_from_opaque_content_fingerprint() {
+    let mut source: Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/animation_cpu/typed.motion3.json"
+    ))
+    .unwrap();
+    source["Future"] = serde_json::json!({"label": "preserve"});
+    let mut document = import_motion3(&document(), MOTION, "Opaque", &source.to_string())
+        .unwrap()
+        .candidate;
+    let exported = export_motion3(&document, MOTION).unwrap();
+    let mut clip = document.get_motion(MOTION).unwrap().clone();
+    clip.tracks[0].initial.id = "00000000-0000-4000-8000-00000000f001".into();
+    std::sync::Arc::make_mut(&mut clip.tracks[0].segments)[0]
+        .end_mut()
+        .id = "00000000-0000-4000-8000-00000000f002".into();
+    assert!(document.replace_motion(clip.clone()).status.is_ok());
+    assert_eq!(export_motion3(&document, MOTION).unwrap(), exported);
+    clip.tracks[0].initial.value += 0.1;
+    assert!(document.replace_motion(clip).status.is_ok());
+    assert_eq!(
+        export_motion3(&document, MOTION).unwrap_err().code,
+        "OPAQUE_CONTENT_CHANGED"
+    );
 }
 
 #[test]

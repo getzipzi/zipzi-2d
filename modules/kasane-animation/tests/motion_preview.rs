@@ -443,6 +443,10 @@ fn editing_one_track_preserves_shared_snapshots_and_other_track_storage() {
     let mut clip = original.get_motion(MOTION).unwrap().clone();
     let mut second = clip.tracks[0].clone();
     second.id = "00000000-0000-4000-8000-000000000d99".into();
+    second.initial.id = uuid::Uuid::new_v4().to_string();
+    for segment in Arc::make_mut(&mut second.segments) {
+        segment.end_mut().id = uuid::Uuid::new_v4().to_string();
+    }
     clip.tracks.push(second);
     assert!(original.replace_motion(clip).status.is_ok());
     let saved = original.checkpoint();
@@ -454,8 +458,10 @@ fn editing_one_track_preserves_shared_snapshots_and_other_track_storage() {
     let mut clip = candidate.get_motion(MOTION).unwrap().clone();
     let before = original.get_motion(MOTION).unwrap();
     let segment = &mut Arc::make_mut(&mut clip.tracks[0].segments)[0];
+    let key_id = segment.end().id.clone();
     *segment = kasane_core::document::MotionSegment::Linear {
-        end: kasane_core::document::MotionPoint {
+        end: kasane_core::document::MotionKey {
+            id: key_id,
             time: 1.0,
             value: 0.25,
         },

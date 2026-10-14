@@ -1,19 +1,69 @@
 //! Stateless motion curve sampling. Queue state and fades are separate.
 use kasane_core::document::{MotionPoint, MotionSegment, MotionTrack};
 
+/// Numeric segments contain no authoring UUIDs or other persistent metadata.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CompiledSegment {
+    Linear {
+        end: MotionPoint,
+    },
+    Bezier {
+        control1: MotionPoint,
+        control2: MotionPoint,
+        end: MotionPoint,
+    },
+    Stepped {
+        end: MotionPoint,
+    },
+    InverseStepped {
+        end: MotionPoint,
+    },
+}
+
+impl CompiledSegment {
+    pub fn end(&self) -> MotionPoint {
+        match self {
+            Self::Linear { end }
+            | Self::Bezier { end, .. }
+            | Self::Stepped { end }
+            | Self::InverseStepped { end } => *end,
+        }
+    }
+}
+
+impl From<&MotionSegment> for CompiledSegment {
+    fn from(segment: &MotionSegment) -> Self {
+        let end = segment.end().point();
+        match segment {
+            MotionSegment::Linear { .. } => Self::Linear { end },
+            MotionSegment::Bezier {
+                control1, control2, ..
+            } => Self::Bezier {
+                control1: *control1,
+                control2: *control2,
+                end,
+            },
+            MotionSegment::Stepped { .. } => Self::Stepped { end },
+            MotionSegment::InverseStepped { .. } => Self::InverseStepped { end },
+        }
+    }
+}
+
 /// Immutable runtime curve, independent of JSON representation and metadata.
 #[derive(Debug, Clone)]
 pub struct CompiledCurve {
     /// Initial point, with time in seconds and an unweighted channel value.
     pub initial: MotionPoint,
     /// Shared ordered curve segments; source tracks must satisfy document validation.
-    pub segments: std::sync::Arc<Vec<MotionSegment>>,
+    pub segments: std::sync::Arc<Vec<CompiledSegment>>,
 }
 impl From<&MotionTrack> for CompiledCurve {
     fn from(track: &MotionTrack) -> Self {
         Self {
-            initial: track.initial,
-            segments: track.segments.clone(),
+            initial: track.initial.point(),
+            segments: std::sync::Arc::new(
+                track.segments.iter().map(CompiledSegment::from).collect(),
+            ),
         }
     }
 }
@@ -31,30 +81,71 @@ pub fn sample_motion_curve(curve: &CompiledCurve, time: f32, restricted_beziers:
         let end = segment.end();
         if time < end.time {
             return match segment {
-                MotionSegment::Linear { .. } => {
+                CompiledSegment::Linear { .. } => {
                     let t = ((time - start.time) / (end.time - start.time)).max(0.0);
                     lerp(start.value, end.value, t)
                 }
-                MotionSegment::Bezier {
+                CompiledSegment::Bezier {
                     control1, control2, ..
                 } => {
-                    let t = if restricted_beziers {
-                        ((time - start.time) / (end.time - start.time)).max(0.0)
-                    } else {
-                        let a = end.time - 3.0 * control2.time + 3.0 * control1.time - start.time;
-                        let b = 3.0 * control2.time - 6.0 * control1.time + 3.0 * start.time;
-                        let c = 3.0 * control1.time - 3.0 * start.time;
-                        cardano_bezier(a, b, c, start.time - time)
-                    };
+                    let t = motion_bezier_parameter(
+                        start,
+                        *control1,
+                        *control2,
+                        end,
+                        time,
+                        restricted_beziers,
+                    );
                     bezier_value(start, *control1, *control2, end, t)
                 }
-                MotionSegment::Stepped { .. } => start.value,
-                MotionSegment::InverseStepped { .. } => end.value,
+                CompiledSegment::Stepped { .. } => start.value,
+                CompiledSegment::InverseStepped { .. } => end.value,
             };
         }
         start = end;
     }
     start.value
+}
+
+/// The exact runtime inverse-time branch, shared by sampling and authoring splits.
+/// Inputs must be finite and the endpoint times strictly increasing.
+pub fn motion_bezier_parameter(
+    start: MotionPoint,
+    control1: MotionPoint,
+    control2: MotionPoint,
+    end: MotionPoint,
+    time: f32,
+    restricted_beziers: bool,
+) -> f32 {
+    if restricted_beziers {
+        ((time - start.time) / (end.time - start.time)).max(0.0)
+    } else {
+        let a = end.time - 3.0 * control2.time + 3.0 * control1.time - start.time;
+        let b = 3.0 * control2.time - 6.0 * control1.time + 3.0 * start.time;
+        let c = 3.0 * control1.time - 3.0 * start.time;
+        cardano_bezier(a, b, c, start.time - time)
+    }
+}
+
+/// Whether the cubic time coordinate is monotone over its whole parameter range.
+/// Ordered control times are sufficient but not necessary for this condition.
+pub fn motion_bezier_time_is_monotonic(start: f32, first: f32, second: f32, end: f32) -> bool {
+    if ![start, first, second, end].into_iter().all(f32::is_finite) || start >= end {
+        return false;
+    }
+    let [s, p, q, e] = [start, first, second, end].map(f64::from);
+    let a = -s + 3.0 * p - 3.0 * q + e;
+    let b = 2.0 * (s - 2.0 * p + q);
+    let c = p - s;
+    let derivative = |t: f64| (a * t + b) * t + c;
+    let mut minimum = derivative(0.0).min(derivative(1.0));
+    if a > 0.0 {
+        let t = -b / (2.0 * a);
+        if (0.0..1.0).contains(&t) {
+            minimum = minimum.min(derivative(t));
+        }
+    }
+    minimum >= 0.0
 }
 
 fn lerp(start: f32, end: f32, t: f32) -> f32 {

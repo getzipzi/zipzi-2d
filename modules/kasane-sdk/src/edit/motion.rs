@@ -3,6 +3,9 @@
 //! a new baseline. Missing clip/track errors are `MISSING_MOTION`/`MISSING_MOTION_TRACK`.
 use super::EditSession;
 use crate::types::SdkError;
+use crate::{
+    MotionBezierHandle, MotionClipCandidate, MotionInterpolation, MotionKeyMove, MotionKeyRef,
+};
 use kasane_core::document::{
     MotionClip, MotionEvent, MotionGroup, MotionPoint, MotionSegment, MotionTrack,
 };
@@ -16,6 +19,107 @@ fn project_error(error: MotionProjectError, operation: &'static str) -> SdkError
 }
 
 impl EditSession<'_> {
+    fn mutate_motion_curves(
+        &mut self,
+        id: &str,
+        operation: &'static str,
+        change: impl FnOnce(&mut MotionClipCandidate, &kasane_core::Document) -> Result<(), SdkError>,
+    ) -> Result<(), SdkError> {
+        self.ensure_active(operation)?;
+        let result: Result<MotionClipCandidate, SdkError> = (|| {
+            let document = self.candidate_document();
+            let clip = document
+                .get_motion(id)
+                .cloned()
+                .ok_or_else(|| SdkError::new("MISSING_MOTION", id, operation))?;
+            let mut candidate = MotionClipCandidate::new(document, clip)?;
+            change(&mut candidate, document)?;
+            Ok(candidate)
+        })();
+        let candidate = result.map_err(|mut error| {
+            error.operation = operation;
+            self.abort_with(error)
+        })?;
+        self.replace_motion(candidate.into_clip())
+    }
+
+    /// Publish a detached, validated candidate once through the normal history.
+    /// Pass the gesture's base version to begin_edit to reject stale candidates.
+    pub fn replace_motion_candidate(
+        &mut self,
+        candidate: MotionClipCandidate,
+    ) -> Result<(), SdkError> {
+        let id = candidate.clip().id.clone();
+        self.mutate_motion(&id, "replace_motion_candidate", |clip| {
+            *clip = candidate.into_clip();
+            Ok(())
+        })
+    }
+
+    /// Simultaneous UUID-addressed moves; validates the final clip, not each key.
+    pub fn move_motion_keys(&mut self, id: &str, moves: &[MotionKeyMove]) -> Result<(), SdkError> {
+        self.mutate_motion_curves(id, "move_motion_keys", |candidate, document| {
+            candidate.move_keys(document, moves)
+        })
+    }
+
+    pub fn move_motion_key_by_id(
+        &mut self,
+        id: &str,
+        key: MotionKeyRef,
+        point: MotionPoint,
+    ) -> Result<(), SdkError> {
+        self.move_motion_keys(id, &[MotionKeyMove { key, point }])
+    }
+
+    pub fn set_motion_bezier_handle(
+        &mut self,
+        id: &str,
+        end_key: &MotionKeyRef,
+        handle: MotionBezierHandle,
+        point: MotionPoint,
+    ) -> Result<(), SdkError> {
+        self.mutate_motion_curves(id, "set_motion_bezier_handle", |candidate, document| {
+            candidate.set_handle(document, end_key, handle, point)
+        })
+    }
+
+    pub fn insert_motion_key(
+        &mut self,
+        id: &str,
+        track_id: &str,
+        key_id: &str,
+        time: f32,
+        value: Option<f32>,
+    ) -> Result<(), SdkError> {
+        self.mutate_motion_curves(id, "insert_motion_key", |candidate, document| {
+            candidate.insert_key(document, track_id, key_id, time, value)
+        })
+    }
+
+    pub fn delete_motion_keys(&mut self, id: &str, keys: &[MotionKeyRef]) -> Result<(), SdkError> {
+        self.mutate_motion_curves(id, "delete_motion_keys", |candidate, document| {
+            candidate.delete_keys(document, keys)
+        })
+    }
+
+    pub fn set_motion_interpolation(
+        &mut self,
+        id: &str,
+        keys: &[MotionKeyRef],
+        kind: MotionInterpolation,
+    ) -> Result<(), SdkError> {
+        self.mutate_motion_curves(id, "set_motion_interpolation", |candidate, document| {
+            candidate.set_interpolation(document, keys, kind)
+        })
+    }
+
+    pub fn scale_motion_time(&mut self, id: &str, duration: f32) -> Result<(), SdkError> {
+        self.mutate_motion_curves(id, "scale_motion_time", |candidate, document| {
+            candidate.scale_time(document, duration)
+        })
+    }
+
     fn mutate_motion(
         &mut self,
         id: &str,
@@ -167,7 +271,8 @@ impl EditSession<'_> {
                     SdkError::new("MISSING_MOTION_TRACK", track_id, "move_motion_key")
                 })?;
             if index == 0 {
-                track.initial = point;
+                track.initial.time = point.time;
+                track.initial.value = point.value;
             } else {
                 let segment = std::sync::Arc::make_mut(&mut track.segments)
                     .get_mut(index - 1)
@@ -178,12 +283,8 @@ impl EditSession<'_> {
                             "move_motion_key",
                         )
                     })?;
-                match segment {
-                    MotionSegment::Linear { end }
-                    | MotionSegment::Stepped { end }
-                    | MotionSegment::InverseStepped { end }
-                    | MotionSegment::Bezier { end, .. } => *end = point,
-                }
+                segment.end_mut().time = point.time;
+                segment.end_mut().value = point.value;
             }
             Ok(())
         })

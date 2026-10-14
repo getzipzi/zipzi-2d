@@ -2,7 +2,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use kasane_core::document::{
-    MotionClip, MotionEvent, MotionPoint, MotionSegment, MotionTrack, MotionTrackTarget,
+    MotionClip, MotionEvent, MotionKey, MotionPoint, MotionSegment, MotionTrack, MotionTrackTarget,
 };
 use kasane_core::Document;
 use kasane_live2d::motion3::{
@@ -72,6 +72,13 @@ fn point(point: WirePoint) -> MotionPoint {
         value: point.value,
     }
 }
+fn key(point: WirePoint) -> MotionKey {
+    MotionKey {
+        id: uuid::Uuid::new_v4().to_string(),
+        time: point.time,
+        value: point.value,
+    }
+}
 fn wire_point(point: MotionPoint) -> WirePoint {
     WirePoint {
         time: point.time,
@@ -81,7 +88,7 @@ fn wire_point(point: MotionPoint) -> WirePoint {
 
 fn segment(segment: WireSegment) -> MotionSegment {
     match segment {
-        WireSegment::Linear { end } => MotionSegment::Linear { end: point(end) },
+        WireSegment::Linear { end } => MotionSegment::Linear { end: key(end) },
         WireSegment::Bezier {
             control1,
             control2,
@@ -89,17 +96,17 @@ fn segment(segment: WireSegment) -> MotionSegment {
         } => MotionSegment::Bezier {
             control1: point(control1),
             control2: point(control2),
-            end: point(end),
+            end: key(end),
         },
-        WireSegment::Stepped { end } => MotionSegment::Stepped { end: point(end) },
-        WireSegment::InverseStepped { end } => MotionSegment::InverseStepped { end: point(end) },
+        WireSegment::Stepped { end } => MotionSegment::Stepped { end: key(end) },
+        WireSegment::InverseStepped { end } => MotionSegment::InverseStepped { end: key(end) },
     }
 }
 
 fn wire_segment(segment: &MotionSegment) -> WireSegment {
     match segment {
         MotionSegment::Linear { end } => WireSegment::Linear {
-            end: wire_point(*end),
+            end: wire_point(end.point()),
         },
         MotionSegment::Bezier {
             control1,
@@ -108,13 +115,13 @@ fn wire_segment(segment: &MotionSegment) -> WireSegment {
         } => WireSegment::Bezier {
             control1: wire_point(*control1),
             control2: wire_point(*control2),
-            end: wire_point(*end),
+            end: wire_point(end.point()),
         },
         MotionSegment::Stepped { end } => WireSegment::Stepped {
-            end: wire_point(*end),
+            end: wire_point(end.point()),
         },
         MotionSegment::InverseStepped { end } => WireSegment::InverseStepped {
-            end: wire_point(*end),
+            end: wire_point(end.point()),
         },
     }
 }
@@ -159,6 +166,23 @@ fn namespace(document: &Document, clip: Option<&MotionClip>) -> BTreeMap<String,
 }
 
 fn content_hash(clip: &MotionClip) -> String {
+    // Key UUIDs are project identity, not unknown motion3 content. Replacing
+    // their identities alone must not invalidate an opaque import baseline.
+    let tracks: Vec<_> = clip
+        .tracks
+        .iter()
+        .map(|track| {
+            (
+                &track.id,
+                &track.target,
+                track.initial.point(),
+                track.segments.iter().map(wire_segment).collect::<Vec<_>>(),
+                track.fade_in,
+                track.fade_out,
+                &track.extensions,
+            )
+        })
+        .collect();
     let bytes = serde_json::to_vec(&(
         &clip.name,
         clip.duration,
@@ -167,7 +191,7 @@ fn content_hash(clip: &MotionClip) -> String {
         clip.restricted_beziers,
         clip.fade_in,
         clip.fade_out,
-        &clip.tracks,
+        &tracks,
         &clip.events,
         &clip.extensions,
         &clip.meta_extensions,
@@ -274,7 +298,7 @@ pub fn import_motion3(
             MotionTrack {
                 id: child_id(id, "track", index),
                 target,
-                initial: point(curve.initial),
+                initial: key(curve.initial),
                 segments: std::sync::Arc::new(curve.segments.into_iter().map(segment).collect()),
                 fade_in: curve.fade_in,
                 fade_out: curve.fade_out,
@@ -386,7 +410,7 @@ pub fn export_motion3(document: &Document, id: &str) -> Result<String, MotionPro
             Ok(Motion3Curve {
                 target,
                 id: runtime_id,
-                initial: wire_point(track.initial),
+                initial: wire_point(track.initial.point()),
                 segments: track.segments.iter().map(wire_segment).collect(),
                 fade_in: track.fade_in,
                 fade_out: track.fade_out,

@@ -20,6 +20,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 sha2 = { workspace = true }
 png = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
 ciborium = { version = "0.2.2", optional = true }
 
 [[example]]

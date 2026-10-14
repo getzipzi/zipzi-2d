@@ -13,32 +13,59 @@ pub struct MotionPoint {
     pub value: f32,
 }
 
+/// Persistent identity belongs to keys, never to Bezier control points.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MotionKey {
+    pub id: String,
+    pub time: f32,
+    pub value: f32,
+}
+
+impl MotionKey {
+    pub fn point(&self) -> MotionPoint {
+        MotionPoint {
+            time: self.time,
+            value: self.value,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum MotionSegment {
     Linear {
-        end: MotionPoint,
+        end: MotionKey,
     },
     Bezier {
         control1: MotionPoint,
         control2: MotionPoint,
-        end: MotionPoint,
+        end: MotionKey,
     },
     Stepped {
-        end: MotionPoint,
+        end: MotionKey,
     },
     InverseStepped {
-        end: MotionPoint,
+        end: MotionKey,
     },
 }
 
 impl MotionSegment {
-    pub fn end(&self) -> MotionPoint {
+    pub fn end(&self) -> &MotionKey {
         match self {
             Self::Linear { end }
             | Self::Bezier { end, .. }
             | Self::Stepped { end }
-            | Self::InverseStepped { end } => *end,
+            | Self::InverseStepped { end } => end,
+        }
+    }
+
+    pub fn end_mut(&mut self) -> &mut MotionKey {
+        match self {
+            Self::Linear { end }
+            | Self::Bezier { end, .. }
+            | Self::Stepped { end }
+            | Self::InverseStepped { end } => end,
         }
     }
 }
@@ -66,11 +93,18 @@ pub enum MotionTrackTarget {
 pub struct MotionTrack {
     pub id: String,
     pub target: MotionTrackTarget,
-    pub initial: MotionPoint,
+    pub initial: MotionKey,
     pub segments: std::sync::Arc<Vec<MotionSegment>>,
     pub fade_in: Option<f32>,
     pub fade_out: Option<f32>,
     pub extensions: BTreeMap<String, Value>,
+}
+
+impl MotionTrack {
+    /// Ordered projection; there is only one persistent representation of a key.
+    pub fn keys(&self) -> impl Iterator<Item = &MotionKey> {
+        std::iter::once(&self.initial).chain(self.segments.iter().map(MotionSegment::end))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -247,20 +281,20 @@ impl Document {
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
-    fn validate_motion(&self, clip: &MotionClip) -> Status {
+    /// Validate a complete candidate without changing the document or history.
+    pub fn validate_motion(&self, clip: &MotionClip) -> Status {
         if !super::valid_uuid(&clip.id) {
             return Status::error("INVALID_MOTION_ID", &clip.id);
         }
-        let nested_elsewhere = |id: &str| {
-            self.motions
-                .values()
-                .filter(|other| other.id != clip.id)
-                .any(|other| {
-                    other.tracks.iter().any(|track| track.id == id)
-                        || other.events.iter().any(|event| event.id == id)
-                })
-        };
-        if nested_elsewhere(&clip.id) {
+        let mut nested_elsewhere = HashSet::new();
+        for other in self.motions.values().filter(|other| other.id != clip.id) {
+            for track in &other.tracks {
+                nested_elsewhere.insert(track.id.as_str());
+                nested_elsewhere.extend(track.keys().map(|key| key.id.as_str()));
+            }
+            nested_elsewhere.extend(other.events.iter().map(|event| event.id.as_str()));
+        }
+        if nested_elsewhere.contains(clip.id.as_str()) {
             return Status::error("DUPLICATE_ID", &clip.id);
         }
         if clip.name.is_empty() || clip.name.contains('\0') {
@@ -297,8 +331,19 @@ impl Document {
                     format!("{}.tracks[{index}]", clip.id),
                 );
             }
-            if self.contains_id(&track.id) || nested_elsewhere(&track.id) {
+            if self.contains_id(&track.id) || nested_elsewhere.contains(track.id.as_str()) {
                 return Status::error("DUPLICATE_ID", &track.id);
+            }
+            for key in track.keys() {
+                if !super::valid_uuid(&key.id) || !ids.insert(key.id.as_str()) {
+                    return Status::error("INVALID_MOTION_KEY_ID", &key.id);
+                }
+                if key.id == clip.id
+                    || self.contains_id(&key.id)
+                    || nested_elsewhere.contains(key.id.as_str())
+                {
+                    return Status::error("DUPLICATE_ID", &key.id);
+                }
             }
             if [track.fade_in, track.fade_out]
                 .into_iter()
@@ -401,7 +446,7 @@ impl Document {
                     format!("{}.events[{index}]", clip.id),
                 );
             }
-            if self.contains_id(&event.id) || nested_elsewhere(&event.id) {
+            if self.contains_id(&event.id) || nested_elsewhere.contains(event.id.as_str()) {
                 return Status::error("DUPLICATE_ID", &event.id);
             }
             if !event.time.is_finite() || event.time < 0.0 || event.time > clip.duration {

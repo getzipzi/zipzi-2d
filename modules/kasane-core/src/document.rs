@@ -35,8 +35,8 @@ pub use expressions::{ExpressionAsset, ExpressionBlend, ExpressionEntry, Express
 pub use hierarchy_order::HierarchyOrder;
 pub use model3::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
 pub use motions::{
-    MotionClip, MotionEvent, MotionGroup, MotionPoint, MotionRegistration, MotionSegment,
-    MotionTrack, MotionTrackTarget,
+    MotionClip, MotionEvent, MotionGroup, MotionKey, MotionPoint, MotionRegistration,
+    MotionSegment, MotionTrack, MotionTrackTarget,
 };
 pub use physics::PhysicsAsset;
 pub use pose::{PoseAsset, PoseEntry, PosePartRef};

@@ -35,3 +35,8 @@ pub use types::{
 
 mod geometry;
 pub use geometry::{rectangle_grid_geometry, MeshGeometry};
+
+mod motion_edit;
+pub use motion_edit::{
+    MotionBezierHandle, MotionClipCandidate, MotionInterpolation, MotionKeyMove, MotionKeyRef,
+};

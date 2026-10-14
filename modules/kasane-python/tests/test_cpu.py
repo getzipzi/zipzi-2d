@@ -80,8 +80,8 @@ class CpuWheelTests(unittest.TestCase):
             edit.create_motion_track(MOTION, {
                 "id": MOTION_TRACK,
                 "target": {"kind": "parameter", "parameter_id": PARAMETER},
-                "initial": {"time": 0, "value": 1},
-                "segments": [{"kind": "linear", "end": {"time": 4, "value": 1}}],
+                "initial": {"id": "00000000-0000-4000-8000-0000000000ae", "time": 0, "value": 1},
+                "segments": [{"kind": "linear", "end": {"id": "00000000-0000-4000-8000-0000000000af", "time": 4, "value": 1}}],
                 "fade_in": None, "fade_out": None, "extensions": {},
             })
             edit.set_motion_groups([{"name": "Idle", "entries": [{"clip_id": MOTION,
@@ -233,8 +233,8 @@ class CpuWheelTests(unittest.TestCase):
             edit.create_motion_track(MOTION, {
                 "id": MOTION_TRACK,
                 "target": {"kind": "parameter", "parameter_id": PARAMETER},
-                "initial": {"time": 0, "value": 0},
-                "segments": [{"kind": "linear", "end": {"time": 1, "value": 1}}],
+                "initial": {"id": "00000000-0000-4000-8000-0000000000ae", "time": 0, "value": 0},
+                "segments": [{"kind": "linear", "end": {"id": "00000000-0000-4000-8000-0000000000af", "time": 1, "value": 1}}],
                 "fade_in": None, "fade_out": None, "extensions": {},
             })
             edit.set_motion_event(MOTION, {"id": MOTION_EVENT, "time": 0.5,

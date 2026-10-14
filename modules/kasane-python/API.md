@@ -238,7 +238,11 @@ preview state. Exceptions from the callback also leave the state unchanged.
 
 
 
-### Motion timeline records and indices
+### Motion timeline records and identities
+
+Initial keys and segment endpoints have persistent UUIDs; Bezier control points
+remain `{time, value}` records without IDs. Project v11 requires key identities
+and does not migrate older motion records.
 
 The following records use project UUIDs, seconds and domain field names, not
 motion3 wire-format arrays. Parameter and Part references must exist in the
@@ -246,12 +250,12 @@ same document. Use `Session.motion(id)` as the starting point for full-clip
 replacement; it returns `None` for an unknown UUID.
 
 ```python
-point = {"time": 1.0, "value": 0.5}
-segment = {"kind": "linear", "end": point}
+key = {"id": key_uuid, "time": 1.0, "value": 0.5}
+segment = {"kind": "linear", "end": key}
 track = {
     "id": track_uuid,
     "target": {"kind": "parameter", "parameter_id": parameter_uuid},
-    "initial": {"time": 0.0, "value": 0.0},
+    "initial": {"id": initial_key_uuid, "time": 0.0, "value": 0.0},
     "segments": [segment],
     "fade_in": None, "fade_out": None, "extensions": {},
 }

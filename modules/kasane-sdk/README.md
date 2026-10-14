@@ -28,7 +28,7 @@ Editor visibility and protection use `EditorState` and
 Editors resolve Part inheritance and composite visibility; deformation parentage
 does not propagate editor flags. SDK model writes ignore editor locks. Metadata
 participates in modified state, history budgets, deletion cleanup and undo/redo
-without invalidating runtime previews. Writers emit project v10. The old
+without invalidating runtime previews. Writers emit project v11. The old
 `ObjectLocks` and `DeformerDisplay` APIs and wire fields are removed, with no
 migration adapters.
 
@@ -115,6 +115,34 @@ limits and repeatability.
 
 
 ## Detached animation playback
+
+Motion initial keys and segment endpoints use persistent `MotionKey` UUIDs;
+Bezier handles still use `MotionPoint`. Runtime `CompiledCurve` strips identities.
+`MotionClipCandidate` supports UUID-addressed simultaneous key moves, sampled
+insertion (including De Casteljau Bezier splits), batch deletion, interpolation,
+independent handles and explicit time scaling. Failed operations retain its last
+legal state. Unknown targets are read-only; unknown clip extensions retain the
+existing opaque edit protection. Ordinary non-monotone time Beziers support
+endpoint value changes but reject splits and endpoint time changes.
+Ill-conditioned f32 Bezier splits that fail runtime sample probes return
+`MOTION_BEZIER_SPLIT_PRECISION` and retain the original candidate.
+
+For each drag update, rebuild a candidate from the original clip and total
+displacement. `AuthoringSnapshot::with_motion_candidate` produces an independent
+preview source without changing committed assets, history or authoring preview
+values. Its version is the committed base version; hosts must include their own
+edit ID/revision in asynchronous acceptance checks. Dropping a candidate cancels
+it. Commit once with `EditSession::replace_motion_candidate`, using the original
+version in `begin_edit`. UUID-based `move_motion_keys`, `insert_motion_key`,
+`delete_motion_keys`, `set_motion_interpolation`, `set_motion_bezier_handle` and
+`scale_motion_time` are also available inside normal SDK transactions. No-change
+commits preserve history and redo. The older index-based move method remains a
+low-level operation that leaves handles unchanged.
+
+```sh
+cargo test --locked -p kasane-sdk --test motion_editing
+cargo test --locked -p kasane-project --test motion_tests
+```
 
 `AuthoringSession::motion_preview()` captures an independent default-parameter
 runtime. Use `schedule_motion_entry(group, index, time)` for model3 registration

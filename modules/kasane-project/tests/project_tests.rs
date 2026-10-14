@@ -319,7 +319,7 @@ fn test_project_encode_decode_roundtrip() {
     assert_eq!(encoded.bytes().filter(|&byte| byte == b'\n').count(), 1);
     let root: serde_json::Value = serde_json::from_str(&encoded).unwrap();
     assert_eq!(root["format"], "kasane-directory-project");
-    assert_eq!(root["format_version"], 10);
+    assert_eq!(root["format_version"], 11);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
     assert!(before.same_content(&decoded));
@@ -1713,7 +1713,7 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
 
     let encoded = encode_project(&doc).expect("encode_project failed");
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 10);
+    assert_eq!(wire["format_version"], 11);
     for field in [
         "blend_key_tables",
         "blend_constraints",
@@ -1778,7 +1778,7 @@ fn test_project_v1_v2_v3_v4_migration_to_current_format() {
         // Saving emits the current format.
         let re_encoded = encode_project(&decoded).expect("Failed to re-encode project");
         let re_wire: serde_json::Value = serde_json::from_str(&re_encoded).unwrap();
-        assert_eq!(re_wire["format_version"], 10);
+        assert_eq!(re_wire["format_version"], 11);
     }
 }
 
@@ -1885,7 +1885,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     assert!(doc.create_offscreen(offscreen.clone()).status.is_ok());
     let encoded = encode_project(&doc).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 10);
+    assert_eq!(wire["format_version"], 11);
     assert!(wire["document"]["offscreens"][0].get("enabled").is_none());
     assert!(
         decode_project(&encoded)
@@ -1899,7 +1899,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     assert!(doc.replace_offscreen(offscreen.clone()).status.is_ok());
     let encoded = encode_project(&doc).unwrap();
     let mut wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 10);
+    assert_eq!(wire["format_version"], 11);
     assert_eq!(wire["document"]["offscreens"][0]["enabled"], false);
     assert_eq!(
         decode_project(&encoded).unwrap().get_offscreen(&id(10)),
@@ -1925,7 +1925,7 @@ fn test_project_v4_preserves_repeat_parameter() {
 
     let encoded = encode_project(&doc).expect("encode_project failed");
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 10);
+    assert_eq!(wire["format_version"], 11);
     assert_eq!(wire["document"]["parameters"][0]["repeat"], true);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
@@ -2243,7 +2243,7 @@ fn v5_model3_migrates_to_uuid_references_and_survives_runtime_renames() {
     assert!(migrated.replace_mesh(renamed).status.is_ok());
     let encoded = encode_project(&migrated).unwrap();
     let new_wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(new_wire["format_version"], 10);
+    assert_eq!(new_wire["format_version"], 11);
     let reopened = decode_project(&encoded).unwrap();
     let model = kasane_project::model3::export_settings(&reopened).unwrap();
     assert_eq!(model["Groups"][0]["Ids"][0], "RenamedParameter");

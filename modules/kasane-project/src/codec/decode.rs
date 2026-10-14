@@ -141,7 +141,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
     }
 
-    if !(1..=10).contains(&root.format_version) {
+    if !(1..=11).contains(&root.format_version) {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             format!(
@@ -151,6 +151,14 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         ));
     }
 
+    if root.format_version < 11
+        && matches!(&root.document.animation_assets, Present::Present(Some(assets)) if !assets.motions.is_empty())
+    {
+        return Err(Status::error(
+            "UNSUPPORTED_VERSION",
+            "Persistent motion key IDs require project version 11; no automatic migration",
+        ));
+    }
     if root.format_version < 10 && !root.document.editor_state.is_absent() {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",

@@ -1,6 +1,6 @@
 //! Synthetic storage benchmark; the deep-copy baseline is explicitly simulated.
 use kasane_core::{
-    document::{MotionPoint, MotionSegment},
+    document::{MotionKey, MotionSegment},
     Canvas, Document, Vec2,
 };
 use std::{hint::black_box, sync::Arc, time::Instant};
@@ -32,10 +32,15 @@ fn main() {
         .map(|index| {
             let mut track = template.clone();
             track.id = format!("00000000-0000-4000-8000-{:012x}", index + 100);
+            track.initial.id = format!("00000000-0000-4000-8001-{:012x}", index * (KEYS + 1));
             track.segments = Arc::new(
                 (1..=KEYS)
                     .map(|key| MotionSegment::Linear {
-                        end: MotionPoint {
+                        end: MotionKey {
+                            id: format!(
+                                "00000000-0000-4000-8001-{:012x}",
+                                index * (KEYS + 1) + key
+                            ),
                             time: key as f32,
                             value: (key % 2) as f32,
                         },
@@ -63,8 +68,10 @@ fn main() {
     let start = Instant::now();
     for _ in 0..ITERATIONS {
         let mut clip = document.get_motion(id).unwrap().clone();
+        let key_id = clip.tracks[0].segments[0].end().id.clone();
         Arc::make_mut(&mut clip.tracks[0].segments)[0] = MotionSegment::Linear {
-            end: MotionPoint {
+            end: MotionKey {
+                id: key_id,
                 time: 1.0,
                 value: 0.25,
             },
