@@ -1,6 +1,6 @@
 # Animation Timeline 设计
 
-状态：2026-10-14 设计决策，尚未实现。本文确定第一版的数据、交互和实现边界，作为后续重构依据。
+状态：2026-10-14 开始实现，第一阶段 SDK 曲线基础已落地；editor-core 协调与 Timeline UI 尚未接入。本文确定第一版的数据、交互和实现边界，实现记录见下文。
 
 Timeline 编辑一个 MotionClip 的参数曲线和事件。核心工作流是选择通道、定位时间、修改数值、调整节奏和插值、验证播放效果。参数分组负责导航，关键帧总览负责节奏，曲线视图负责数值变化；三个视图使用同一份动画数据和选择状态。
 
@@ -163,6 +163,22 @@ SDK 事务负责资源变更和历史；editor-core 负责 Timeline 命令、选
 4. 用真实导入动作验证关键帧密集、子帧、末端容差、同目标多轨、未解析通道和未知扩展。测量滚动、拖动到呈现延迟、连续播放与快速 seek，防止退化。
 
 验收必须包括：无操作保存不改曲线；一次拖动一次撤销；取消后资产与画面恢复；插入未改值关键点在支持的曲线上保形；跨轨批量移动冲突时无部分结果；重开项目恢复关键点身份；结果预览与现有 SDK 在相同配方和时间下保持一致。设计阶段不以未运行的测试作为完成证据。
+
+### 第一阶段实现记录（2026-10-14）
+
+已在相邻 kasane-2d 仓库实现 `MotionKey`：initial 和段终点保存 UUID，控制点仍为 `MotionPoint`。项目写入格式为 v11，不迁移旧动画记录；导入分配新关键帧身份，项目保存重开保留身份。UUID 参与结构校验与历史内存计量，不进入 motion3 数字数组、opaque 内容指纹或运行时 `CompiledCurve`。
+
+`MotionClipCandidate` 提供按 UUID 的同时移动、采样插入、批量删除、四种插值切换、独立手柄和显式时间缩放。碰撞不排序、不合并、不覆盖；失败保留最后合法候选。Bezier 插入复用运行时反解分支并使用 De Casteljau，受限段在编辑时规范化有效控制点时间。非单调时间曲线拒绝拆分和端点时间编辑，保留端点改值；f32 反解精度不足、采样探测超出容差的拆分原子拒绝。
+
+`AuthoringSnapshot::with_motion_candidate` 提供独立候选输入，不发布资产或历史；提交通过 `EditSession::replace_motion_candidate` 进入现有历史。SDK 也提供事务内按 ID 的关键帧与手柄命令。无变化提交保留 Undo／Redo，未知目标和 opaque Clip 保持编辑保护。编辑器及 Python 测试记录已适配新关键帧结构。
+
+已运行验证：
+
+- kasane-2d：`cargo test --locked -p kasane-core -p kasane-project -p kasane-animation -p kasane-sdk`；新增曲线测试覆盖批量冲突、一次提交一次撤销、候选隔离、四种插值、受限／普通 Bezier 保形、子帧、尾点容差、只读目标与精度拒绝；持久化测试覆盖重开身份、重新导入和 opaque 指纹。
+- kasane-editor：`cargo test --locked -p editor-core`，以及 `cargo check --locked --workspace --tests`。
+- kasane-2d：`cargo check --locked -p kasane-python`；Python 运行时测试尚未执行。
+
+后续仍需完成第二至第四阶段：行树与选择、写值与复制粘贴命令、两种预览模式及异步候选接受屏障、总览与曲线 UI、真实密集动作的交互和性能验收。当前界面仍使用 PlaybackBar；本阶段测试不能替代完整 UI 手势、取消恢复画面和播放呈现验收。
 
 ## 代码依据
 

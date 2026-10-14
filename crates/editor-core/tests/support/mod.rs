@@ -327,8 +327,7 @@ pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Docum
 pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
     use kasane_core::document::{
         ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget, MotionClip,
-        MotionGroup, MotionPoint, MotionRegistration, MotionSegment, MotionTrack,
-        MotionTrackTarget,
+        MotionGroup, MotionKey, MotionRegistration, MotionSegment, MotionTrack, MotionTrackTarget,
     };
     let (mut doc, assets) = rectangle_document(true)?;
     let path = doc.save(&assets.path().join("animation.kasane"))?.manifest;
@@ -353,13 +352,15 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
             target: MotionTrackTarget::Parameter {
                 parameter_id: parameter_id.clone(),
             },
-            initial: MotionPoint {
+            initial: MotionKey {
+                id: Uuid::new_v4().to_string(),
                 time: 0.,
                 value: 0.,
             },
             segments: (duration > 0.)
                 .then(|| MotionSegment::Linear {
-                    end: MotionPoint {
+                    end: MotionKey {
+                        id: Uuid::new_v4().to_string(),
                         time: duration,
                         value: 1.,
                     },
@@ -510,6 +511,12 @@ pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
         runtime_id: "MissingParam".into(),
     };
     clip.tracks.push(unsupported);
+    for track in &mut clip.tracks {
+        track.initial.id = Uuid::new_v4().to_string();
+        for segment in std::sync::Arc::make_mut(&mut track.segments) {
+            segment.end_mut().id = Uuid::new_v4().to_string();
+        }
+    }
     session.edit("Diagnostic resources", None, |edit| {
         edit.create_motion(clip)?;
         edit.create_expression(ExpressionAsset {
