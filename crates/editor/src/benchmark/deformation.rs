@@ -59,7 +59,7 @@ pub(super) fn prepare(
         .dock
         .as_ref()
         .unwrap()
-        .canvas
+        .active_canvas()
         .read(cx)
         .benchmark_bounds()
         .context("canvas has no bounds")?;

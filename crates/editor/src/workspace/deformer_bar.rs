@@ -39,7 +39,7 @@ pub fn render_deformer_bar(
         .id("deformer-actions")
         .absolute()
         .top_2()
-        .left_2()
+        .left(px(48.))
         .flex()
         .items_center()
         .gap_1()

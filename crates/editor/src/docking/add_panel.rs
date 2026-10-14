@@ -95,6 +95,7 @@ fn items(
             } else {
                 label
             })
+            .icon(super::skin::panel_icon(spec.name))
             .checked(present)
             .disabled(present)
             .on_click(move |_, window, cx| {

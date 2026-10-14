@@ -39,8 +39,9 @@ impl EditorView {
                 ) {
                     if let Some(dock) = &self.dock {
                         self.editor.cancel_gesture();
-                        dock.canvas.update(cx, |canvas, _| canvas.cancel_pointer());
-                        window.focus(&dock.canvas.read(cx).focus_handle(cx), cx);
+                        dock.active_canvas()
+                            .update(cx, |canvas, _| canvas.cancel_pointer());
+                        window.focus(&dock.active_canvas().read(cx).focus_handle(cx), cx);
                     }
                 }
                 if self.editor.active_id() != previous {

@@ -109,7 +109,7 @@ impl EditorView {
         let canvas = self
             .dock
             .as_ref()
-            .is_some_and(|d| d.canvas.focus_handle(cx).is_focused(window));
+            .is_some_and(|d| d.active_canvas().focus_handle(cx).is_focused(window));
         let key = event.keystroke.unparse();
         if cx.global::<settings::Settings>().bindings.iter().any(|b| {
             b.key == key

@@ -337,7 +337,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         view.dock
                             .as_ref()
                             .unwrap()
-                            .canvas
+                            .active_canvas()
                             .read(cx)
                             .benchmark_center()
                             .map(|center| (center, window.is_visible()))

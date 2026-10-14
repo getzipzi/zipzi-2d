@@ -72,6 +72,60 @@ impl AnimationPanel {
         })
     }
 }
+impl AnimationPanel {
+    fn render_info_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        use gpui_kit::assets::IconName;
+        let dialog = window.has_active_dialog(cx);
+        let Some(owner) = self.owner.upgrade() else {
+            return Empty.into_any_element();
+        };
+        let state = owner.read(cx);
+        let disabled = state.modal || dialog;
+        let command = editor_core::CommandId::ResetAnimation;
+        let reset_disabled = disabled
+            || !state
+                .editor
+                .command_available(state.editor.command(command));
+        let parameters_owner = self.owner.clone();
+        let reset_owner = self.owner.clone();
+        super::toolbar::PanelToolbar::new("animation-info-toolbar")
+            .action(move |_| {
+                Button::new("animation-open-parameters")
+                    .icon(IconName::SlidersHorizontal)
+                    .accessibility_label(t!("workspace.parameters").into_owned())
+                    .tooltip(t!("workspace.parameters_hint"))
+                    .disabled(disabled)
+                    .on_click(move |_, window, cx| {
+                        _ = parameters_owner.update(cx, |owner, cx| {
+                            if !owner.modal && !window.has_active_dialog(cx) {
+                                if let Some(dock) = &owner.dock {
+                                    dock.show(
+                                        editor_core::PanelKind::AnimationParameters,
+                                        None,
+                                        window,
+                                        cx,
+                                    );
+                                }
+                                cx.notify();
+                            }
+                        });
+                    })
+            })
+            .action(move |_| {
+                Button::new("animation-reset")
+                    .icon(IconName::RotateCcw)
+                    .accessibility_label(t!("workspace.reset_preview").into_owned())
+                    .tooltip(t!("workspace.reset_hint"))
+                    .disabled(reset_disabled)
+                    .on_click(move |_, window, cx| {
+                        _ = reset_owner
+                            .update(cx, |owner, cx| owner.run_command(command, window, cx));
+                    })
+            })
+            .into_any_element()
+    }
+}
+
 impl EventEmitter<PanelEvent> for AnimationPanel {}
 impl Focusable for AnimationPanel {
     fn focus_handle(&self, _: &App) -> FocusHandle {
@@ -100,6 +154,16 @@ impl Panel for AnimationPanel {
         t!(self.kind.label()).into_owned()
     }
 }
+impl crate::docking::header::PanelHeader for AnimationPanel {
+    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        if matches!(self.kind, AnimationPanelKind::Info) {
+            self.render_info_header(window, cx)
+        } else {
+            self.render_header_toolbar(window, cx)
+        }
+    }
+}
+
 impl Render for AnimationPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if matches!(
@@ -117,7 +181,6 @@ impl Render for AnimationPanel {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
-        let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
         let Some(document) = state.editor.document() else {
             return div().p_3().child(t!("editor.welcome")).into_any_element();
@@ -156,50 +219,6 @@ impl Render for AnimationPanel {
                     t!("workspace.paused")
                 };
                 content = content.child(div().id("animation-status").test_support().child(status));
-                let panel_owner = self.owner.clone();
-                content = content.child(
-                    Button::new("animation-open-parameters")
-                        .small()
-                        .ghost()
-                        .label(t!("workspace.parameters"))
-                        .tooltip(t!("workspace.parameters_hint"))
-                        .disabled(state.modal || dialog)
-                        .on_click(move |_, window, cx| {
-                            let _ = panel_owner.update(cx, |owner, cx| {
-                                if !owner.modal && !window.has_active_dialog(cx) {
-                                    if let Some(dock) = &owner.dock {
-                                        dock.show(
-                                            editor_core::PanelKind::AnimationParameters,
-                                            None,
-                                            window,
-                                            cx,
-                                        );
-                                    }
-                                    cx.notify();
-                                }
-                            });
-                        }),
-                );
-                let command = editor_core::CommandId::ResetAnimation;
-                let owner = self.owner.clone();
-                content = content.child(
-                    Button::new("animation-reset")
-                        .small()
-                        .ghost()
-                        .label(t!("workspace.reset_preview"))
-                        .tooltip(t!("workspace.reset_hint"))
-                        .disabled(
-                            state.modal
-                                || dialog
-                                || !state
-                                    .editor
-                                    .command_available(state.editor.command(command)),
-                        )
-                        .on_click(move |_, window, cx| {
-                            let _ = owner
-                                .update(cx, |owner, cx| owner.run_command(command, window, cx));
-                        }),
-                );
                 if let Some(error) = &animation.error {
                     content = content.child(
                         div()

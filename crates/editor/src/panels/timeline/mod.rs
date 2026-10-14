@@ -67,6 +67,7 @@ pub struct Timeline {
     seconds: bool,
     show_properties: bool,
     compact: bool,
+    header_compact: bool,
     inspector_open: Option<bool>,
     error: Option<String>,
     _search_events: Subscription,
@@ -139,6 +140,7 @@ impl Timeline {
                 seconds: false,
                 show_properties: false,
                 compact: false,
+                header_compact: false,
                 inspector_open: None,
                 error: None,
             }
@@ -534,85 +536,17 @@ impl Timeline {
     }
 }
 
-impl Render for Timeline {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        #[cfg(test)]
-        {
-            self.renders += 1;
-        }
-        self.sync(window, cx);
-        if self.graph.get().size.height > px(0.) {
-            self.body_height = self.graph.get().size.height.as_f32();
-        }
-        let Some(owner) = self.owner.upgrade() else {
-            return div().into_any_element();
-        };
-        let projection = owner.read(cx).editor.timeline_projection();
-        let mut state = owner
-            .read(cx)
-            .editor
-            .timeline_view()
-            .cloned()
-            .unwrap_or_default();
-        let rows = owner
-            .read(cx)
-            .editor
-            .timeline_visible_rows()
-            .unwrap_or_else(|| Arc::from([]));
-        state.scroll = state
-            .scroll
-            .min((rows.len() as f64 * ROW as f64 - self.body_height as f64).max(0.));
-        let time = owner.read(cx).editor.animation().map_or(0., |a| {
-            if a.playing {
-                a.presented
-                    .as_ref()
-                    .and_then(|frame| {
-                        frame
-                            .motion_positions
-                            .iter()
-                            .find(|p| a.motion.as_ref().is_some_and(|m| m.clip_id == p.motion_id))
-                    })
-                    .map_or(a.edit_time, |p| p.local_time)
-            } else {
-                a.edit_time
-            }
-        });
-        let header = self.toolbar(window, cx);
-        let panel_entity = cx.weak_entity();
-        let left_width = if self.compact { COMPACT_LEFT } else { LEFT };
+impl Timeline {
+    // Header controls are siblings of the content now. Both regions must use
+    // the same edit guards, commit-on-click behavior and keyboard actions.
+    fn interactive_frame<E: StatefulInteractiveElement>(
+        &self,
+        frame: E,
+        cx: &mut Context<Self>,
+    ) -> E {
         let pointer_target = self.target(cx);
         let release_target = pointer_target.clone();
-        let mut panel = div()
-            .id("animation-timeline")
-            .test_support()
-            .relative()
-            .size_full()
-            .min_h_0()
-            .min_w_0()
-            .overflow_hidden()
-            .flex()
-            .flex_col()
-            .bg(cx.theme().background)
-            .text_color(cx.theme().foreground)
-            .text_xs()
-            .track_focus(&self.focus)
-            .key_context("KasaneTimeline")
-            .on_prepaint(move |bounds, window, cx| {
-                let compact = bounds.size.width < px(COMPACT_WIDTH);
-                if panel_entity
-                    .upgrade()
-                    .is_some_and(|panel| panel.read(cx).compact != compact)
-                {
-                    window.defer(cx, move |_, cx| {
-                        let _ = panel_entity.update(cx, |panel, cx| {
-                            if panel.compact != compact {
-                                panel.compact = compact;
-                                cx.notify();
-                            }
-                        });
-                    });
-                }
-            })
+        frame
             .capture_any_mouse_down(cx.listener(move |this, event: &MouseDownEvent, _, cx| {
                 if this.target(cx) != pointer_target {
                     cx.stop_propagation();
@@ -699,7 +633,117 @@ impl Render for Timeline {
             .on_action(
                 cx.listener(|this, _: &input::End, window, cx| this.key_command("end", window, cx)),
             )
-            .child(header);
+    }
+}
+
+impl crate::docking::header::PanelHeader for Timeline {
+    fn header_min_width(&self) -> Pixels {
+        px(280.)
+    }
+
+    fn header_resized(&mut self, width: Pixels, cx: &mut Context<Self>) {
+        let compact = width < px(COMPACT_WIDTH);
+        if self.header_compact != compact {
+            self.header_compact = compact;
+            cx.notify();
+        }
+    }
+
+    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        self.sync(window, cx);
+        let toolbar = self.toolbar(window, cx);
+        self.interactive_frame(
+            div()
+                .id("timeline-header")
+                .test_support()
+                .w_full()
+                .h_full()
+                .track_focus(&self.focus)
+                .key_context("KasaneTimeline"),
+            cx,
+        )
+        .child(toolbar)
+        .into_any_element()
+    }
+}
+
+impl Render for Timeline {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        #[cfg(test)]
+        {
+            self.renders += 1;
+        }
+        self.sync(window, cx);
+        if self.graph.get().size.height > px(0.) {
+            self.body_height = self.graph.get().size.height.as_f32();
+        }
+        let Some(owner) = self.owner.upgrade() else {
+            return div().into_any_element();
+        };
+        let projection = owner.read(cx).editor.timeline_projection();
+        let mut state = owner
+            .read(cx)
+            .editor
+            .timeline_view()
+            .cloned()
+            .unwrap_or_default();
+        let rows = owner
+            .read(cx)
+            .editor
+            .timeline_visible_rows()
+            .unwrap_or_else(|| Arc::from([]));
+        state.scroll = state
+            .scroll
+            .min((rows.len() as f64 * ROW as f64 - self.body_height as f64).max(0.));
+        let time = owner.read(cx).editor.animation().map_or(0., |a| {
+            if a.playing {
+                a.presented
+                    .as_ref()
+                    .and_then(|frame| {
+                        frame
+                            .motion_positions
+                            .iter()
+                            .find(|p| a.motion.as_ref().is_some_and(|m| m.clip_id == p.motion_id))
+                    })
+                    .map_or(a.edit_time, |p| p.local_time)
+            } else {
+                a.edit_time
+            }
+        });
+        let panel_entity = cx.weak_entity();
+        let left_width = if self.compact { COMPACT_LEFT } else { LEFT };
+        let panel = div()
+            .id("animation-timeline")
+            .test_support()
+            .relative()
+            .size_full()
+            .min_h_0()
+            .min_w_0()
+            .overflow_hidden()
+            .flex()
+            .flex_col()
+            .bg(cx.theme().background)
+            .text_color(cx.theme().foreground)
+            .text_xs()
+            .track_focus(&self.focus)
+            .key_context("KasaneTimeline")
+            .on_prepaint(move |bounds, window, cx| {
+                let compact = bounds.size.width < px(COMPACT_WIDTH);
+                if panel_entity
+                    .upgrade()
+                    .is_some_and(|panel| panel.read(cx).compact != compact)
+                {
+                    window.defer(cx, move |_, cx| {
+                        let _ = panel_entity.update(cx, |panel, cx| {
+                            if panel.compact != compact {
+                                panel.compact = compact;
+                                cx.notify();
+                            }
+                        });
+                    });
+                }
+            });
+        let mut panel = self.interactive_frame(panel, cx);
         let weak = cx.weak_entity();
         panel = panel.child(
             canvas(

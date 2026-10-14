@@ -2,7 +2,7 @@ use crate::{EditorView, t};
 use editor_core::{CommandId, ToolId};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    Disableable, Sizable,
+    ActiveTheme, Disableable, Sizable,
     button::{Button, ButtonVariants},
 };
 use gpui_kit::{prelude::*, *};
@@ -80,14 +80,32 @@ impl ToolbarRegistry {
     }
 }
 
-pub fn render_toolbar(owner: &Entity<EditorView>, modal: bool, cx: &App) -> impl IntoElement {
+pub fn render_toolbar(
+    owner: &Entity<EditorView>,
+    canvas: &Entity<crate::canvas::CanvasView>,
+    modal: bool,
+    cx: &App,
+) -> impl IntoElement {
     let view = owner.read(cx);
     div()
-        .id("workspace-toolbar")
+        .id("canvas-toolbar")
         .test_support()
+        .absolute()
+        .top_2()
+        .left_2()
+        .occlude()
         .flex()
+        .flex_col()
         .items_center()
         .gap_1()
+        .p_1()
+        .rounded_md()
+        .border_1()
+        .border_color(cx.theme().border)
+        .bg(cx.theme().background)
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
+        .on_mouse_down(MouseButton::Middle, |_, _, cx| cx.stop_propagation())
         .children(
             view.toolbar
                 .items
@@ -99,14 +117,24 @@ pub fn render_toolbar(owner: &Entity<EditorView>, modal: bool, cx: &App) -> impl
                 .map(|item| {
                     let action = item.action;
                     let owner = owner.clone();
+                    let canvas = canvas.clone();
                     Button::new(item.id)
                         .small()
                         .ghost()
                         .when((item.selected)(view, cx), |button| button.primary())
                         .icon(item.icon)
+                        .accessibility_label(t!(item.tooltip_key).into_owned())
                         .tooltip(t!(item.tooltip_key))
                         .disabled(!(item.enabled)(view, modal, cx))
                         .on_click(move |_, window, cx| {
+                            let id = canvas.entity_id();
+                            let focus = canvas.read(cx).focus.clone();
+                            window.focus(&focus, cx);
+                            owner.update(cx, |view, _| {
+                                if let Some(dock) = &mut view.dock {
+                                    dock.activate_canvas(id);
+                                }
+                            });
                             if let Some(action) = action {
                                 owner.update(cx, |view, cx| action(view, window, cx));
                             }

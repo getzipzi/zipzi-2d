@@ -1,20 +1,80 @@
 //! Compact editor dock chrome and the Parameters panel's row cache boundary.
+use super::header::PanelHeaders;
 use crate::t;
-use gpui_kit::base::{ResizeHandleContext, Tab, Tabs};
+use editor_core::PanelKind;
+use gpui_kit::assets::IconName;
+use gpui_kit::base::ResizeHandleContext;
 use gpui_kit::component::dock::*;
 use gpui_kit::component::{
-    ActiveTheme, IconName, Selectable, Sizable,
+    ActiveTheme, Icon, Selectable, Sizable,
     button::{Button, ButtonVariants},
     menu::{ContextMenuExt, DropdownMenu, PopupMenuItem},
 };
 use gpui_kit::{
-    Anchor, AnyElement, AnyView, App, Axis, Context, Div, Empty, EntityId, FontWeight, IntoElement,
-    Render, ScrollHandle, SharedString, Stateful, TestSupportExt as _, WeakEntity, Window, div,
-    prelude::*, px,
+    Anchor, AnyElement, AnyView, App, Axis, Context, Div, Empty, EntityId, IntoElement, Render,
+    SharedString, Stateful, TestSupportExt as _, WeakEntity, Window, div, prelude::*, px,
 };
-use std::{cell::Cell, rc::Rc, sync::Arc};
+use std::{rc::Rc, sync::Arc};
 
 const TAB_BAR_HEIGHT: f32 = 28.;
+
+/// Component's styled Button does not expose drag initiation. Keep Base's
+/// accessible button behavior and drag handling behind the same menu trigger.
+#[derive(gpui_kit::IntoElement)]
+struct PanelSelectorButton {
+    button: gpui_kit::base::Button,
+    group: TabGroupContext,
+    active: PanelId,
+    closable: bool,
+}
+
+impl Selectable for PanelSelectorButton {
+    fn selected(mut self, selected: bool) -> Self {
+        self.button = self.button.selected(selected);
+        self
+    }
+    fn is_selected(&self) -> bool {
+        self.button.is_selected()
+    }
+}
+
+impl gpui_kit::InteractiveElement for PanelSelectorButton {
+    fn interactivity(&mut self) -> &mut gpui_kit::Interactivity {
+        self.button.interactivity()
+    }
+}
+
+impl gpui_kit::Styled for PanelSelectorButton {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
+        self.button.style()
+    }
+}
+
+impl DropdownMenu for PanelSelectorButton {}
+
+impl gpui_kit::RenderOnce for PanelSelectorButton {
+    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        let active = self.active;
+        let closable = self.closable;
+        let group = self.group;
+        self.button.context_menu(move |menu, _, _| {
+            menu.item(
+                PopupMenuItem::element(move |_, _| {
+                    div()
+                        .id(SharedString::from(format!("dock-close-{active:?}")))
+                        .test_support()
+                        .child(t!("dock.close"))
+                })
+                .icon(IconName::Close)
+                .disabled(!closable)
+                .on_click({
+                    let group = group.clone();
+                    move |_, window, cx| group.close(active, window, cx)
+                }),
+            )
+        })
+    }
+}
 
 struct EditorDragPreview {
     panel: Arc<dyn BasePanelView>,
@@ -47,6 +107,7 @@ impl Render for EditorDragPreview {
 pub(super) struct EditorDockSkin {
     component: Rc<DockSkin>,
     row_cached_panel: EntityId,
+    headers: Rc<PanelHeaders>,
     area: WeakEntity<DockArea>,
     owner: WeakEntity<crate::EditorView>,
 }
@@ -55,12 +116,14 @@ impl EditorDockSkin {
     pub(super) fn new(
         component: Rc<DockSkin>,
         row_cached_panel: EntityId,
+        headers: Rc<PanelHeaders>,
         area: WeakEntity<DockArea>,
         owner: WeakEntity<crate::EditorView>,
     ) -> Rc<Self> {
         Rc::new(Self {
             component,
             row_cached_panel,
+            headers,
             area,
             owner,
         })
@@ -118,10 +181,9 @@ impl DockAreaRenderer for EditorDockSkin {
         Rc::new(EditorTabGroupSkin {
             component: self.component.tab_group_renderer(),
             row_cached_panel: self.row_cached_panel,
+            headers: self.headers.clone(),
             area: self.area.clone(),
             owner: self.owner.clone(),
-            scroll_handle: ScrollHandle::default(),
-            last_displayed: Cell::new(None),
         })
     }
 }
@@ -129,10 +191,9 @@ impl DockAreaRenderer for EditorDockSkin {
 struct EditorTabGroupSkin {
     component: Rc<dyn TabGroupRenderer>,
     row_cached_panel: EntityId,
+    headers: Rc<PanelHeaders>,
     area: WeakEntity<DockArea>,
     owner: WeakEntity<crate::EditorView>,
-    scroll_handle: ScrollHandle,
-    last_displayed: Cell<Option<PanelId>>,
 }
 
 impl EditorTabGroupSkin {
@@ -281,148 +342,120 @@ impl EditorTabGroupSkin {
             .into_any_element()
     }
 
-    fn tab(
-        &self,
-        group: &TabGroupContext,
-        ix: usize,
-        position: usize,
-        count: usize,
-        single: bool,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> AnyElement {
-        let panel = &group.panels()[ix];
-        let handle = PanelHandle::of(panel);
-        let panel_id = panel.panel_id(cx);
-        let closable = !group.is_collapsed() && group.is_panel_closable(panel_id, cx);
-        let active = !group.is_collapsed()
-            && group
-                .active_panel()
-                .is_some_and(|panel| panel.panel_id(cx) == panel_id);
-        let title = match handle {
-            Some(handle) => handle
-                .tab_name(cx)
-                .map(IntoElement::into_any_element)
-                .unwrap_or_else(|| handle.title(window, cx)),
-            None => SharedString::from(panel.panel_name(cx)).into_any_element(),
+    fn selector(&self, group: &TabGroupContext, cx: &mut App) -> AnyElement {
+        let Some(active) = group.active_panel() else {
+            return Empty.into_any_element();
         };
-        let theme = cx.theme();
-        let tab_id: SharedString = format!("dock-tab-{panel_id:?}").into();
-        Tab::new(tab_id)
-            .selected(active)
-            .set_position(position + 1, count)
-            .h_full()
-            .min_w_0()
-            .flex_shrink_0()
-            .gap(px(4.))
-            .px(px(8.))
-            .relative()
-            .text_xs()
-            .cursor_pointer()
-            .text_color(if active {
-                theme.foreground
-            } else {
-                theme.muted_foreground
-            })
-            .hover(move |style| style.text_color(theme.foreground))
-            .child(
-                div()
-                    .min_w_0()
-                    .max_w(px(144.))
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .whitespace_nowrap()
-                    .font_weight(if active {
-                        FontWeight::MEDIUM
-                    } else {
-                        FontWeight::NORMAL
-                    })
-                    .child(title),
-            )
-            .when(active && !single, |this| {
-                this.child(
-                    div()
-                        .absolute()
-                        .bottom_0()
-                        .left(px(8.))
-                        .right(px(8.))
-                        .h(px(2.))
-                        .rounded_full()
-                        .bg(theme.primary),
-                )
-            })
-            .on_click({
-                let group = group.clone();
-                let area = self.area.clone();
-                move |_, window, cx| {
-                    group.select_tab(ix, window, cx);
-                    if group.is_collapsed() {
-                        _ = area.update(cx, |area, cx| {
-                            if !area.is_dock_open(DockPlacement::Bottom) {
-                                area.toggle_dock(DockPlacement::Bottom, window, cx);
-                            }
-                        });
-                    }
-                }
-            })
-            .when(!group.is_collapsed(), |this| {
-                this.when_some(
-                    group
-                        .is_draggable()
-                        .then(|| group.drag_panel(ix, cx))
-                        .flatten(),
-                    |this, drag| {
-                        this.on_drag(drag, {
-                            let panel = panel.clone();
-                            move |drag, offset, _, cx| {
-                                cx.stop_propagation();
-                                drag.set_drag_offset(offset);
-                                drag.set_preview_size(gpui_kit::size(px(96.), px(TAB_BAR_HEIGHT)));
-                                cx.new(|_| EditorDragPreview {
-                                    panel: panel.clone(),
-                                })
-                            }
-                        })
-                    },
-                )
-                .when(group.is_droppable(), |this| {
-                    this.drag_over::<DragPanel>(|style, _, _, cx| {
-                        style
-                            .bg(cx.theme().primary.opacity(0.12))
-                            .border_l_2()
-                            .border_color(cx.theme().drag_border)
-                    })
-                    .on_drop({
-                        let group = group.clone();
-                        move |drag: &DragPanel, window, cx| {
-                            group.drop_panel(drag.clone(), Some(ix), true, window, cx)
-                        }
-                    })
-                    .drag_over::<AnyDrag>(|style, _, _, cx| {
-                        style.bg(cx.theme().primary.opacity(0.12))
-                    })
-                    .on_drop({
-                        let group = group.clone();
-                        move |item: &AnyDrag, window, cx| {
-                            group.drop_item(item.clone(), None, window, cx)
-                        }
+        let active_id = active.panel_id(cx);
+        let name = active.panel_name(cx);
+        let label = panel_label(name);
+        let ix = group
+            .panels()
+            .iter()
+            .position(|panel| panel.panel_id(cx) == active_id)
+            .unwrap();
+        let entries: Vec<_> = group
+            .panels()
+            .iter()
+            .filter(|panel| panel.visible(cx))
+            .map(|panel| (panel.panel_id(cx), panel.panel_name(cx)))
+            .collect();
+        let area = self.area.clone();
+        let collapsed = group.is_collapsed();
+        let owner = self.owner.clone();
+        let node = group.node();
+        let button = gpui_kit::base::Button::new(SharedString::from(format!(
+            "dock-selector-{}",
+            node.as_u64()
+        )))
+        .h(px(22.))
+        .px(px(4.))
+        .gap(px(2.))
+        .flex_shrink_0()
+        .rounded(px(3.))
+        .hover({
+            let color = cx.theme().accent;
+            move |style| style.bg(color)
+        })
+        .child(Icon::new(panel_icon(name)).xsmall())
+        .child(Icon::new(IconName::ChevronDown).xsmall())
+        .accessibility_label(format!("{}: {label}", t!("dock.select_panel")))
+        .tooltip(move |window, cx| {
+            gpui_kit::component::tooltip::Tooltip::new(label.clone()).build(window, cx)
+        })
+        .when_some(
+            group
+                .is_draggable()
+                .then(|| group.drag_panel(ix, cx))
+                .flatten(),
+            |button, drag| {
+                let panel = active.clone();
+                button.on_drag(drag, move |drag, offset, _, cx| {
+                    cx.stop_propagation();
+                    drag.set_drag_offset(offset);
+                    drag.set_preview_size(gpui_kit::size(px(96.), px(TAB_BAR_HEIGHT)));
+                    cx.new(|_| EditorDragPreview {
+                        panel: panel.clone(),
                     })
                 })
-            })
-            .context_menu({
-                let group = group.clone();
-                move |menu, _, _| {
-                    menu.item(
-                        PopupMenuItem::new(t!("dock.close"))
-                            .icon(IconName::Close)
-                            .disabled(!closable)
-                            .on_click({
-                                let group = group.clone();
-                                move |_, window, cx| group.close(panel_id, window, cx)
-                            }),
-                    )
-                }
-            })
+            },
+        )
+        .when(group.is_droppable() && !collapsed, |button| {
+            button
+                .drag_over::<DragPanel>(|style, _, _, cx| {
+                    style.bg(cx.theme().primary.opacity(0.12))
+                })
+                .on_drop({
+                    let group = group.clone();
+                    move |drag: &DragPanel, window, cx| {
+                        cx.stop_propagation();
+                        group.drop_panel(drag.clone(), Some(ix), true, window, cx)
+                    }
+                })
+        });
+        let button = PanelSelectorButton {
+            button,
+            group: group.clone(),
+            active: active_id,
+            closable: group.is_panel_closable(active_id, cx),
+        }
+        .dropdown_menu(move |mut menu, window, cx| {
+            menu = menu.check_side(gpui_kit::component::Side::Right);
+            for (id, name) in &entries {
+                let area = area.clone();
+                let id = *id;
+                let label = panel_label(name);
+                let item_id: SharedString = format!("dock-select-{id:?}").into();
+                menu = menu.item(
+                    PopupMenuItem::element(move |_, _| {
+                        div()
+                            .id(item_id.clone())
+                            .test_support()
+                            .child(label.clone())
+                    })
+                    .icon(panel_icon(name))
+                    .checked(id == active_id)
+                    .on_click(move |_, window, cx| {
+                        _ = area.update(cx, |area, cx| {
+                            // Select after reopening: toggling reconciles groups
+                            // from the tree and would overwrite an earlier selection.
+                            if collapsed && !area.is_dock_open(DockPlacement::Bottom) {
+                                area.toggle_dock(DockPlacement::Bottom, window, cx);
+                            }
+                            area.select_panel(id, window, cx);
+                        });
+                    }),
+                );
+            }
+            super::add_panel::menu(menu.separator(), owner.clone(), node, true, window, cx)
+        });
+        div()
+            .id(SharedString::from(format!("dock-tab-{active_id:?}")))
+            .test_support()
+            .flex()
+            .items_center()
+            .flex_shrink_0()
+            .child(button)
             .into_any_element()
     }
 }
@@ -438,7 +471,7 @@ impl TabGroupRenderer for EditorTabGroupSkin {
         window: &mut Window,
         cx: &mut App,
     ) -> Stateful<Div> {
-        self.component.content_frame(group, window, cx)
+        self.component.content_frame(group, window, cx).pt_0()
     }
 
     fn render_tab_bar(
@@ -447,131 +480,66 @@ impl TabGroupRenderer for EditorTabGroupSkin {
         window: &mut Window,
         cx: &mut App,
     ) -> AnyElement {
-        let visible: Vec<_> = group
-            .panels()
-            .iter()
-            .enumerate()
-            .filter(|(_, panel)| panel.visible(cx))
-            .map(|(ix, _)| ix)
-            .collect();
-        if visible.is_empty() {
+        let Some(active) = group.active_panel() else {
             return Empty.into_any_element();
-        }
-        let single = visible.len() == 1;
-        if single
-            && group
-                .active_panel()
-                .and_then(PanelHandle::of)
-                .is_some_and(|handle| !handle.title_bar(cx))
-        {
-            return Empty.into_any_element();
-        }
-        let displayed = group.active_panel().map(|panel| panel.panel_id(cx));
-        if self.last_displayed.replace(displayed) != displayed {
-            if let Some(position) = visible
-                .iter()
-                .position(|ix| Some(group.panels()[*ix].panel_id(cx)) == displayed)
-            {
-                self.scroll_handle.scroll_to_item(position);
-            }
-        }
-        let left = self.dock_toggle(DockPlacement::Left, group, cx);
-        let bottom = self.dock_toggle(DockPlacement::Bottom, group, cx);
-        let right = self.dock_toggle(DockPlacement::Right, group, cx);
-        let tabs: Vec<_> = visible
-            .iter()
-            .enumerate()
-            .map(|(position, &ix)| self.tab(group, ix, position, visible.len(), single, window, cx))
-            .collect();
+        };
+        let selector = self.selector(group, cx);
+        let header = (!group.is_collapsed())
+            .then(|| self.headers.get(&active.view().entity_id()).cloned())
+            .flatten();
         let suffix = (!group.is_collapsed())
-            .then(|| {
-                group
-                    .active_panel()
-                    .and_then(PanelHandle::of)
-                    .and_then(|handle| handle.title_suffix(window, cx))
-            })
+            .then(|| PanelHandle::of(active).and_then(|h| h.title_suffix(window, cx)))
             .flatten();
         let toolbar = (!group.is_collapsed()).then(|| self.toolbar(group, window, cx));
-        let droppable = group.is_droppable() && !group.is_collapsed();
-        let count = group.panels().len();
         div()
-            .id("editor-dock-tab-bar")
+            .id(SharedString::from(format!(
+                "dock-header-{}",
+                group.node().as_u64()
+            )))
             .test_support()
             .h(px(TAB_BAR_HEIGHT))
             .w_full()
+            .min_w_0()
             .flex_shrink_0()
             .flex()
             .items_center()
+            .gap(px(2.))
             .bg(cx.theme().tab_bar)
             .text_color(cx.theme().foreground)
             .border_b_1()
             .border_color(cx.theme().border.opacity(0.65))
-            .children(left)
-            .children(bottom)
-            .child(
-                Tabs::new("editor-dock-tabs")
-                    .h_full()
-                    .flex_1()
-                    .min_w_0()
-                    .overflow_x_hidden()
-                    .child(
-                        div()
-                            .id("editor-dock-tabs-scroll")
-                            .test_support()
-                            .h_full()
-                            .w_full()
-                            .flex()
-                            .overflow_x_scroll()
-                            .track_scroll(&self.scroll_handle)
-                            .children(tabs)
-                            .child(
-                                div()
-                                    .id("dock-tab-empty-space")
-                                    .h_full()
-                                    .flex_1()
-                                    .min_w(px(12.))
-                                    .when(droppable, |this| {
-                                        this.drag_over::<DragPanel>(|style, _, _, cx| {
-                                            style.bg(cx.theme().primary.opacity(0.1))
-                                        })
-                                        .on_drop({
-                                            let group = group.clone();
-                                            move |drag: &DragPanel, window, cx| {
-                                                let ix = (drag.source() == group.node())
-                                                    .then_some(count - 1);
-                                                group.drop_panel(
-                                                    drag.clone(),
-                                                    ix,
-                                                    false,
-                                                    window,
-                                                    cx,
-                                                );
-                                            }
-                                        })
-                                        .drag_over::<AnyDrag>(|style, _, _, cx| {
-                                            style.bg(cx.theme().primary.opacity(0.1))
-                                        })
-                                        .on_drop({
-                                            let group = group.clone();
-                                            move |item: &AnyDrag, window, cx| {
-                                                group.drop_item(item.clone(), None, window, cx)
-                                            }
-                                        })
-                                    }),
-                            ),
-                    ),
-            )
+            .child(selector)
             .child(
                 div()
-                    .flex()
-                    .items_center()
-                    .flex_shrink_0()
-                    .gap(px(2.))
-                    .px(px(4.))
-                    .children(suffix)
-                    .children(toolbar)
-                    .children(right),
+                    .id("dock-panel-toolbar")
+                    .test_support()
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
+                    .children(header)
+                    .children(suffix),
             )
+            .children(toolbar)
+            .children(self.dock_toggle(DockPlacement::Left, group, cx))
+            .children(self.dock_toggle(DockPlacement::Bottom, group, cx))
+            .children(self.dock_toggle(DockPlacement::Right, group, cx))
+            .when(group.is_droppable() && !group.is_collapsed(), |this| {
+                this.drag_over::<DragPanel>(|style, _, _, cx| {
+                    style.bg(cx.theme().primary.opacity(0.1))
+                })
+                .on_drop({
+                    let group = group.clone();
+                    move |drag: &DragPanel, window, cx| {
+                        group.drop_panel(drag.clone(), Some(group.panels().len()), true, window, cx)
+                    }
+                })
+                .on_drop({
+                    let group = group.clone();
+                    move |item: &AnyDrag, window, cx| {
+                        group.drop_item(item.clone(), None, window, cx)
+                    }
+                })
+            })
             .into_any_element()
     }
 
@@ -616,6 +584,43 @@ impl TabGroupRenderer for EditorTabGroupSkin {
         cx: &mut App,
     ) -> Option<AnyElement> {
         self.component.render_empty(group, window, cx)
+    }
+}
+
+fn panel_label(name: &str) -> SharedString {
+    PanelKind::from_name(name)
+        .and_then(|kind| kind.spec().command)
+        .map(|command| SharedString::from(t!(command.spec().label).into_owned()))
+        .unwrap_or_else(|| {
+            if name == "Canvas" {
+                t!("dock.canvas").into_owned().into()
+            } else {
+                name.to_owned().into()
+            }
+        })
+}
+
+pub(super) fn panel_icon(name: &str) -> IconName {
+    use PanelKind::*;
+    match PanelKind::from_name(name) {
+        Some(Canvas) => IconName::Image,
+        Some(MeshTree) => IconName::Layers,
+        Some(Deformers) => IconName::Network,
+        Some(DrawOrder) => IconName::ListOrdered,
+        Some(Properties | AnimationProperties) => IconName::Settings,
+        Some(Relations) => IconName::GitBranch,
+        Some(Parameters | AnimationParameters) => IconName::SlidersHorizontal,
+        Some(Keyforms) => IconName::Grid2x2,
+        Some(BlendShapes) => IconName::Blend,
+        Some(Glue) => IconName::Link,
+        Some(Motions | AnimationMotions) => IconName::Film,
+        Some(Expressions | AnimationExpressions) => IconName::Shapes,
+        Some(Physics | AnimationPhysics) => IconName::Activity,
+        Some(Pose | AnimationPose) => IconName::Bone,
+        Some(Resources) => IconName::Folder,
+        Some(AnimationInfo) => IconName::Info,
+        Some(AnimationTimeline) => IconName::ChartLine,
+        None => IconName::LayoutGrid,
     }
 }
 

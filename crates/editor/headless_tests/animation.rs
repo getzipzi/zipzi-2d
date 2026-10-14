@@ -103,7 +103,7 @@ fn motion_selection_space_button_and_menu_share_transport_and_repeat_guard(
             .dock
             .as_ref()
             .unwrap()
-            .canvas
+            .active_canvas()
             .read(cx)
             .focus
             .clone();

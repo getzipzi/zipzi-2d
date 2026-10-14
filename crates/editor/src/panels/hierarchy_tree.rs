@@ -156,6 +156,41 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         cx.notify();
     }
 
+    fn sync_header(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let target = self
+            .owner
+            .upgrade()
+            .and_then(|owner| owner.read(cx).editor.active_id());
+        let document_changed = self.document_id != target;
+        if document_changed {
+            if let Some(previous) = self.document_id {
+                self.document_views.insert(previous, self.view.clone());
+            }
+            self.view = target
+                .and_then(|id| self.document_views.get(&id).cloned())
+                .unwrap_or_default();
+            self.document_id = target;
+            self.revision = None;
+            self.last_selection = None;
+            self.rows_dirty = true;
+            self.nodes.clear();
+            self.rows = Rc::new(Vec::new());
+            self.filtered_collapsed.clear();
+            self.filter_open = false;
+            self.search.update(cx, |search, cx| {
+                search.set_value(self.view.filter.query.clone(), window, cx);
+            });
+            self.scroll = UniformListScrollHandle::new();
+        }
+        let placeholder = t!("editor.tree_search");
+        if self.search_placeholder != placeholder {
+            self.search_placeholder = placeholder.to_string();
+            self.search.update(cx, |search, cx| {
+                search.set_placeholder(placeholder, window, cx)
+            });
+        }
+    }
+
     fn toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let prefix = Self::prefix();
         let active = self.view.filter.is_active();
@@ -297,6 +332,13 @@ impl<const DEFORMER: bool> Panel for HierarchyTreePanel<DEFORMER> {
     }
 }
 
+impl<const DEFORMER: bool> crate::docking::header::PanelHeader for HierarchyTreePanel<DEFORMER> {
+    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        self.sync_header(window, cx);
+        self.toolbar(cx).into_any_element()
+    }
+}
+
 impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(owner) = self.owner.upgrade() else {
@@ -321,28 +363,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             )
         };
         let document_changed = self.document_id != target;
-        if document_changed {
-            if let Some(previous) = self.document_id {
-                self.document_views.insert(previous, self.view.clone());
-            }
-            self.view = target
-                .and_then(|id| self.document_views.get(&id).cloned())
-                .unwrap_or_default();
-            self.document_id = target;
-            self.filtered_collapsed.clear();
-            self.filter_open = false;
-            self.search.update(cx, |search, cx| {
-                search.set_value(self.view.filter.query.clone(), window, cx);
-            });
-            self.scroll = UniformListScrollHandle::new();
-        }
-        let placeholder = t!("editor.tree_search");
-        if self.search_placeholder != placeholder {
-            self.search_placeholder = placeholder.to_string();
-            self.search.update(cx, |search, cx| {
-                search.set_placeholder(placeholder, window, cx)
-            });
-        }
+        self.sync_header(window, cx);
         if document_changed || self.revision != revision {
             self.revision = revision;
             self.nodes = if DEFORMER {
@@ -428,7 +449,6 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
         .text_color(theme.foreground)
         .text_sm()
         .track_focus(&self.focus)
-        .child(self.toolbar(cx))
         .child(if rows.is_empty() {
             div()
                 .id(SharedString::from(format!("{}-tree-empty", Self::prefix())))

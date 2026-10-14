@@ -10,6 +10,8 @@ use std::{
 use std::{sync::mpsc, thread, time::Duration};
 
 pub(super) mod add_panel;
+mod canvases;
+pub(crate) mod header;
 mod skin;
 
 /// Serialize persistence off the UI thread and coalesce a resize/drag burst.
@@ -106,7 +108,7 @@ const REGIONS: [DockPlacement; 4] = [
 
 pub struct DockWorkspace {
     pub area: Entity<DockArea>,
-    pub canvas: Entity<crate::canvas::CanvasView>,
+    canvases: canvases::CanvasPanels,
     pub timeline: Entity<crate::panels::timeline::Timeline>,
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,
@@ -158,6 +160,26 @@ fn timeline_height(window: &Window) -> Pixels {
 }
 
 impl DockWorkspace {
+    pub fn active_canvas(&self) -> &Entity<crate::canvas::CanvasView> {
+        self.canvases.active()
+    }
+
+    pub(super) fn activate_canvas(&mut self, id: EntityId) {
+        self.canvases.activate(id);
+    }
+
+    pub(super) fn canvas_views(&self) -> impl Iterator<Item = &Entity<crate::canvas::CanvasView>> {
+        self.canvases.iter()
+    }
+
+    pub(super) fn canvas_node(&self, cx: &App) -> Option<NodeId> {
+        let id = PanelId::from(self.active_canvas().entity_id());
+        let area = self.area.read(cx);
+        REGIONS
+            .into_iter()
+            .find_map(|placement| area.layout(placement)?.find_panel_node(id))
+    }
+
     pub fn new(
         workspace: WorkspaceKind,
         owner: WeakEntity<EditorView>,
@@ -224,6 +246,20 @@ impl DockWorkspace {
             panels.insert(PanelKind::from_name(kind.name()).unwrap(), handle);
             document_panels.insert(kind, panel);
         }
+        let mut headers = header::PanelHeaders::new();
+        header::register(&mut headers, &mesh_tree, cx);
+        header::register(&mut headers, &deformer_tree, cx);
+        header::register(&mut headers, &parameters, cx);
+        header::register(&mut headers, &timeline, cx);
+        header::register(&mut headers, &animation_motions, cx);
+        header::register(&mut headers, &animation_expressions, cx);
+        header::register(&mut headers, &animation_info, cx);
+        header::register(
+            &mut headers,
+            &document_panels[&crate::panels::DocumentPanelKind::Relations],
+            cx,
+        );
+        let headers = Rc::new(headers);
         let area = cx.new(|cx| {
             let skin = DockSkin::new(cx);
             DockArea::new(
@@ -235,6 +271,7 @@ impl DockWorkspace {
             .with_renderer(skin::EditorDockSkin::new(
                 skin,
                 parameters.entity_id(),
+                headers.clone(),
                 cx.weak_entity(),
                 owner.clone(),
             ))
@@ -264,7 +301,7 @@ impl DockWorkspace {
 
         let mut result = Self {
             area,
-            canvas,
+            canvases: canvases::CanvasPanels::new(canvas),
             timeline,
             animation_motions,
             animation_expressions,
@@ -528,12 +565,11 @@ impl DockWorkspace {
                 };
             }
         }
-        let canvas = self.panels[&PanelKind::Canvas].panel_id(cx);
-        let node = area
-            .layout(DockPlacement::Center)
-            .unwrap()
-            .find_panel_node(canvas)
-            .unwrap();
+        let canvas = PanelId::from(self.active_canvas().entity_id());
+        let node = REGIONS
+            .into_iter()
+            .find_map(|region| area.layout(region)?.find_panel_node(canvas))
+            .expect("workspace contains a canvas");
         InsertTarget::Split {
             node,
             placement: match spec.region {
@@ -585,13 +621,9 @@ impl DockWorkspace {
         };
         if matches!(target, InsertTarget::Tabs { .. }) {
             let tree = area.layout(destination).unwrap();
-            let Some(PaneRef::Tabs { panels, .. }) = tree.find_node(node).map(|node| node.kind())
-            else {
+            let Some(PaneRef::Tabs { .. }) = tree.find_node(node).map(|node| node.kind()) else {
                 return;
             };
-            if panels.contains(&self.panels[&PanelKind::Canvas].panel_id(cx)) {
-                return;
-            }
         }
         self.area.update(cx, |area, cx| {
             area.set_zoomed_out(window, cx);
@@ -688,10 +720,6 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
                 for child in &node.children {
                     canvas += walk(child, seen, depth + 1, workspace)?;
                 }
-                ensure!(
-                    canvas == 0 || node.children.len() == 1,
-                    "Canvas cannot share a dock tab group"
-                );
                 Ok(canvas)
             }
             PanelInfo::Stack { sizes, axis } => {
@@ -715,10 +743,7 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
         "Unsupported layout version"
     );
     let mut seen = std::collections::HashSet::new();
-    ensure!(
-        walk(&state.center, &mut seen, 0, workspace)? == 1,
-        "Exactly one central canvas is required"
-    );
+    let mut canvases = walk(&state.center, &mut seen, 0, workspace)?;
     for (placement, dock) in [
         (DockPlacement::Left, &state.left_dock),
         (DockPlacement::Right, &state.right_dock),
@@ -735,11 +760,11 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
             dock.size().as_f32().is_finite() && dock.size().as_f32() >= 0.,
             "Invalid dock size"
         );
-        ensure!(
-            walk(dock.panel(), &mut seen, 0, workspace)? == 0,
-            "Canvas cannot move into a side dock"
-        );
+        canvases += walk(dock.panel(), &mut seen, 0, workspace)?;
     }
+    // The canvas is a normal dock panel. Instance count remains one until the
+    // render scheduler and document view states support independent viewports.
+    ensure!(canvases == 1, "Exactly one canvas is required");
     Ok(())
 }
 impl EditorView {
@@ -755,7 +780,9 @@ impl EditorView {
         // Let the existing input blur rules finish before changing context.
         window.focus(&self.focus, cx);
         if let Some(dock) = &self.dock {
-            dock.canvas.update(cx, |canvas, _| canvas.cancel_pointer());
+            for canvas in dock.canvas_views() {
+                canvas.update(cx, |canvas, _| canvas.cancel_pointer());
+            }
             for panel in dock.document_panels.values() {
                 panel.update(cx, |panel, _| panel.cancel_drag());
             }
@@ -950,7 +977,8 @@ mod tests {
         }
     }
     #[test]
-    fn layouts_roundtrip_reset_and_reject_canvas_groups_or_unknown_panels() -> anyhow::Result<()> {
+    fn layouts_roundtrip_and_accept_canvas_groups_but_reject_invalid_panels() -> anyhow::Result<()>
+    {
         let dir = tempfile::tempdir()?;
         let store = ConfigStore::new(dir.path());
         let default = layout();
@@ -988,7 +1016,7 @@ mod tests {
         );
         let mut invalid = default.clone();
         invalid.center.info = PanelInfo::tabs(0);
-        assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());
+        assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_ok());
         invalid = default.clone();
         invalid.version = Some(1);
         assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());

@@ -130,6 +130,15 @@ impl CanvasView {
                     }
                     cx.notify();
                 }),
+                cx.on_focus_in(&focus, window, |this, _, cx| {
+                    let id = cx.entity_id();
+                    let owner = this.owner.clone();
+                    _ = owner.update(cx, |owner, _| {
+                        if let Some(dock) = &mut owner.dock {
+                            dock.activate_canvas(id);
+                        }
+                    });
+                }),
                 cx.on_focus_out(&focus, window, |this, _, _, cx| {
                     this.cancel(cx);
                 }),
@@ -335,13 +344,10 @@ impl BasePanel for CanvasView {
     fn closable(&self, _: &App) -> bool {
         false
     }
-    fn zoomable(&self, _: &App) -> bool {
-        false
-    }
 }
 impl Panel for CanvasView {
-    fn title_bar(&self, _: &App) -> bool {
-        false
+    fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        t!("dock.canvas")
     }
     fn inner_padding(&self, _: &App) -> bool {
         false
@@ -688,6 +694,12 @@ impl Render for CanvasView {
                 .absolute()
                 .size_full(),
             )
+            .child(workspace::toolbar::render_toolbar(
+                &owner,
+                &cx.entity(),
+                modal,
+                cx,
+            ))
             .when(modeling, |e| {
                 e.child(workspace::deformer_bar::render_deformer_bar(
                     self, modal, cx,
@@ -696,7 +708,7 @@ impl Render for CanvasView {
             .children(interaction_label.map(|label| {
                 div()
                     .absolute()
-                    .left_2()
+                    .left(px(48.))
                     .top(px(48.))
                     .px_2()
                     .py_1()

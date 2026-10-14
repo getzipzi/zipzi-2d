@@ -109,13 +109,13 @@ impl Timeline {
                 t!("timeline.jump_end"),
             ),
         ] {
-            if self.compact && matches!(command, "left" | "right") {
+            if self.header_compact && matches!(command, "left" | "right") {
                 continue;
             }
             transport = transport.child(
                 Button::new(id)
-                    .small()
-                    .when(self.compact, |button| button.xsmall())
+                    .xsmall()
+                    .when(self.header_compact, |button| button.xsmall())
                     .ghost()
                     .icon(icon)
                     .accessibility_label(hint.clone().into_owned())
@@ -141,8 +141,8 @@ impl Timeline {
         let weak = self.owner.clone();
         transport = transport.child(
             Button::new("animation-preview-loop")
-                .small()
-                .when(self.compact, |button| button.xsmall())
+                .xsmall()
+                .when(self.header_compact, |button| button.xsmall())
                 .ghost()
                 .icon(IconName::Repeat)
                 .selected(if mode == AnimationPreviewMode::Editing {
@@ -173,8 +173,8 @@ impl Timeline {
         let weak = self.owner.clone();
         transport = transport.child(
             Button::new("animation-preview-mode")
-                .small()
-                .when(self.compact, |button| button.xsmall())
+                .xsmall()
+                .when(self.header_compact, |button| button.xsmall())
                 .ghost()
                 .icon(if mode == AnimationPreviewMode::Editing {
                     IconName::EyeOff
@@ -234,12 +234,14 @@ impl Timeline {
         div()
             .id("timeline-toolbar")
             .test_support()
-            .h(px(32.))
+            .h(px(27.))
+            .w_full()
+            .min_w_0()
             .flex_shrink_0()
             .flex()
             .items_center()
-            .gap_1()
-            .px_1()
+            .gap(px(2.))
+            .px(px(2.))
             .child(transport)
             .child(
                 div()
@@ -256,7 +258,7 @@ impl Timeline {
                     .min_w_0()
                     .overflow_hidden()
                     .text_ellipsis()
-                    .when(!self.compact, |label| label.child(name)),
+                    .when(!self.header_compact, |label| label.child(name)),
             )
             .when_some(self.error.clone(), |toolbar, error| {
                 toolbar.child(
@@ -269,7 +271,7 @@ impl Timeline {
                             gpui_kit::component::tooltip::Tooltip::new(error.clone())
                                 .build(window, cx)
                         })
-                        .child(Icon::new(IconName::TriangleAlert).small()),
+                        .child(Icon::new(IconName::TriangleAlert).xsmall()),
                 )
             })
             .child(
@@ -282,7 +284,11 @@ impl Timeline {
                         gpui_kit::component::tooltip::Tooltip::new(time_hint.clone())
                             .build(window, cx)
                     })
-                    .child(time_label),
+                    .child(if self.header_compact {
+                        format!("{time:.2}")
+                    } else {
+                        time_label
+                    }),
             )
             .into_any_element()
     }

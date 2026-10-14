@@ -360,7 +360,14 @@ fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext)
     cx.update_window(harness.window, |_, window, cx| {
         window.click("tool_hand", cx);
         harness.view.read_with(cx, |view, cx| {
-            assert!(view.dock.as_ref().unwrap().canvas.read(cx).hand_tool(cx));
+            assert!(
+                view.dock
+                    .as_ref()
+                    .unwrap()
+                    .active_canvas()
+                    .read(cx)
+                    .hand_tool(cx)
+            );
         });
 
         let canvas = window.find("canvas-body").bounds();
@@ -374,7 +381,15 @@ fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext)
 
         window.click("tool_select", cx);
         harness.view.read_with(cx, |view, cx| {
-            assert!(!view.dock.as_ref().unwrap().canvas.read(cx).hand_tool(cx));
+            assert!(
+                !view
+                    .dock
+                    .as_ref()
+                    .unwrap()
+                    .active_canvas()
+                    .read(cx)
+                    .hand_tool(cx)
+            );
         });
     })
     .unwrap();
@@ -389,7 +404,13 @@ fn space_never_enters_temporary_hand_and_repeats_are_suppressed(cx: &mut TestApp
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         let focus = harness.view.read_with(cx, |view, cx| {
-            view.dock.as_ref().unwrap().canvas.read(cx).focus.clone()
+            view.dock
+                .as_ref()
+                .unwrap()
+                .active_canvas()
+                .read(cx)
+                .focus
+                .clone()
         });
         window.focus(&focus, cx);
         for held in [false, true, true] {
@@ -498,23 +519,35 @@ fn space_in_parameter_input_keeps_input_focus(cx: &mut TestAppContext) {
         window.press("space", cx);
         assert!(window.has_focused_input(cx));
         harness.view.read_with(cx, |view, cx| {
-            assert!(!view.dock.as_ref().unwrap().canvas.read(cx).hand_tool(cx));
+            assert!(
+                !view
+                    .dock
+                    .as_ref()
+                    .unwrap()
+                    .active_canvas()
+                    .read(cx)
+                    .hand_tool(cx)
+            );
         });
     })
     .unwrap();
 }
 
 #[gpui_kit::test]
-fn centered_toolbar_and_status_zoom_controls(cx: &mut TestAppContext) {
+fn canvas_floating_toolbar_and_status_zoom_controls(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         let tabs = window.find("global-document-tabs").bounds();
         let top = window.find("workspace-top-bar").bounds();
-        let tools = window.find("workspace-toolbar").bounds();
+        let tools = window.find("canvas-toolbar").bounds();
         let canvas = window.find("canvas-body").bounds();
         assert!(tabs.bottom() <= top.top());
         assert!(top.bottom() <= canvas.top());
-        assert!((tools.center().x - top.center().x).abs() <= px(1.));
+        assert!(canvas.contains(&tools.origin));
+        assert!(tools.right() <= canvas.right());
+        assert!(tools.bottom() <= canvas.bottom());
+        assert!(tools.size.height > tools.size.width);
+        assert!(window.try_find("workspace-toolbar").is_none());
         assert!(top.contains(&window.find("workspace-layout-menu").bounds().center()));
         assert!(window.try_find("canvas-floating-toolbar").is_none());
         assert!(window.try_find("tool_select").is_some());
@@ -1128,7 +1161,7 @@ fn overlap_menu_selects_a_candidate_and_keeps_history(cx: &mut TestAppContext) {
                 view.dock
                     .as_ref()
                     .unwrap()
-                    .canvas
+                    .active_canvas()
                     .read(cx)
                     .focus
                     .is_focused(window)
@@ -1212,7 +1245,7 @@ fn helper_menu_toggles_preserve_selection_history_and_canvas_focus(cx: &mut Test
                     view.dock
                         .as_ref()
                         .unwrap()
-                        .canvas
+                        .active_canvas()
                         .read(cx)
                         .focus
                         .is_focused(window)

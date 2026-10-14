@@ -93,7 +93,7 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
     let (document, canvas) = harness.view.read_with(cx, |view, _| {
         (
             view.editor.active_id(),
-            view.dock.as_ref().unwrap().canvas.entity_id(),
+            view.dock.as_ref().unwrap().active_canvas().entity_id(),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -138,7 +138,10 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
             assert_eq!(view.editor.workspace(), WorkspaceKind::Animation);
             assert_eq!(view.editor.active_id(), document);
             assert_eq!(view.editor.document_count(), 1);
-            assert_eq!(view.dock.as_ref().unwrap().canvas.entity_id(), canvas);
+            assert_eq!(
+                view.dock.as_ref().unwrap().active_canvas().entity_id(),
+                canvas
+            );
             assert!(view.frame.is_none());
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         });
@@ -152,7 +155,10 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
             assert_eq!(view.editor.workspace(), WorkspaceKind::Modeling);
             assert_eq!(view.editor.active_id(), document);
             assert_eq!(view.editor.active_tool(), ToolId::Glue);
-            assert_eq!(view.dock.as_ref().unwrap().canvas.entity_id(), canvas);
+            assert_eq!(
+                view.dock.as_ref().unwrap().active_canvas().entity_id(),
+                canvas
+            );
             assert!(!view.editor.document().unwrap().modified());
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
         });

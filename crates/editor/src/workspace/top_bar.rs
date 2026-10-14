@@ -3,7 +3,6 @@ use editor_core::{CommandId, WorkspaceKind};
 use gpui_kit::component::{
     ActiveTheme, Disableable, IconName, Sizable, WindowExt,
     button::{Button, ButtonVariants},
-    dock::{DockPlacement, PanelId},
     menu::DropdownMenu,
 };
 use gpui_kit::{prelude::*, *};
@@ -50,15 +49,12 @@ fn render_top_bar(
         .bg(cx.theme().background)
         .border_b_1()
         .border_color(cx.theme().border)
-        // Equal flexible sides keep the tools centered on the window rather
-        // than on the space left over after the mode switcher.
         .child(
             div()
                 .flex_1()
                 .min_w_0()
                 .child(render_workspace_switcher(owner, modal, window, cx)),
         )
-        .child(super::toolbar::render_toolbar(owner, modal, cx))
         .child(
             div()
                 .flex_1()
@@ -81,12 +77,7 @@ fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl IntoElement
             move |mut menu, window, cx| {
                 let node = owner.upgrade().and_then(|view| {
                     let dock = view.read(cx).dock.as_ref()?;
-                    dock.area
-                        .read(cx)
-                        .layout(DockPlacement::Center)
-                        .and_then(|tree| {
-                            tree.find_panel_node(PanelId::from(dock.canvas.entity_id()))
-                        })
+                    dock.canvas_node(cx)
                 });
                 if let Some(node) = node {
                     menu = crate::docking::add_panel::menu(

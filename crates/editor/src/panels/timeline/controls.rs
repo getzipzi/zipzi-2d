@@ -118,17 +118,19 @@ impl Timeline {
             .gap(px(2.))
             .flex_shrink_0();
         for (id, icon, label, selected, enabled) in &actions {
-            if !self.compact && matches!(*id, "timeline-previous-frame" | "timeline-next-frame") {
+            if !self.header_compact
+                && matches!(*id, "timeline-previous-frame" | "timeline-next-frame")
+            {
                 continue;
             }
-            if self.compact && !matches!(*id, "timeline-pan" | "timeline-inspector-toggle") {
+            if self.header_compact && !matches!(*id, "timeline-pan" | "timeline-inspector-toggle") {
                 continue;
             }
             let id = *id;
             tools = tools.child(
                 Button::new(id)
                     .small()
-                    .when(self.compact, |button| button.xsmall())
+                    .when(self.header_compact, |button| button.xsmall())
                     .ghost()
                     .icon(*icon)
                     .accessibility_label(label.clone())
@@ -140,7 +142,7 @@ impl Timeline {
                     ),
             );
         }
-        if self.compact {
+        if self.header_compact {
             let weak = cx.weak_entity();
             tools = tools.child(
                 Button::new("timeline-more")

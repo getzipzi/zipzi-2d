@@ -67,41 +67,25 @@ impl AnimationPanel {
         cx.notify();
     }
 
-    pub(super) fn render_resources(
+    pub(super) fn render_header_toolbar(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let Some(owner) = self.owner.upgrade() else {
-            return div().into_any_element();
+            return Empty.into_any_element();
         };
-        let document = owner.read(cx).editor.active_id();
-        if self.resources.document != document {
-            let old = std::mem::take(&mut self.resources.view);
-            if let Some(id) = self.resources.document {
-                self.resources.documents.insert(id, old);
-            }
-            self.resources.view = document
-                .and_then(|id| self.resources.documents.remove(&id))
-                .unwrap_or_default();
-            self.resources.document = document;
-        }
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
-        let open_documents = state.editor.documents();
-        self.resources
-            .documents
-            .retain(|id, _| open_documents.iter().any(|doc| doc.id == *id));
-        let Some(id) = document else {
-            return div()
-                .p_3()
-                .text_xs()
-                .child(t!("editor.welcome"))
-                .into_any_element();
+        let Some(id) = state.editor.active_id() else {
+            return Empty.into_any_element();
         };
-        let catalog = state.editor.document().unwrap().animation_catalog();
-        let animation = state.editor.animation().unwrap();
-        let preview_mode = animation.preview_mode;
+        let preview_mode = state
+            .editor
+            .animation()
+            .map_or(editor_core::AnimationPreviewMode::Editing, |a| {
+                a.preview_mode
+            });
         let disabled = state.modal || state.editor.is_busy() || dialog;
         let motion_panel = matches!(self.kind, AnimationPanelKind::Motions);
         let prefix = if motion_panel {
@@ -109,7 +93,6 @@ impl AnimationPanel {
         } else {
             "animation-expression"
         };
-        let theme = cx.theme().clone();
         let mut toolbar = PanelToolbar::new(SharedString::from(format!("{prefix}-toolbar")));
         if motion_panel {
             let owner = self.owner.clone();
@@ -184,6 +167,52 @@ impl AnimationPanel {
                     })
             });
         }
+        toolbar.into_any_element()
+    }
+
+    pub(super) fn render_resources(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let Some(owner) = self.owner.upgrade() else {
+            return div().into_any_element();
+        };
+        let document = owner.read(cx).editor.active_id();
+        if self.resources.document != document {
+            let old = std::mem::take(&mut self.resources.view);
+            if let Some(id) = self.resources.document {
+                self.resources.documents.insert(id, old);
+            }
+            self.resources.view = document
+                .and_then(|id| self.resources.documents.remove(&id))
+                .unwrap_or_default();
+            self.resources.document = document;
+        }
+        let dialog = window.has_active_dialog(cx);
+        let state = owner.read(cx);
+        let open_documents = state.editor.documents();
+        self.resources
+            .documents
+            .retain(|id, _| open_documents.iter().any(|doc| doc.id == *id));
+        let Some(id) = document else {
+            return div()
+                .p_3()
+                .text_xs()
+                .child(t!("editor.welcome"))
+                .into_any_element();
+        };
+        let catalog = state.editor.document().unwrap().animation_catalog();
+        let animation = state.editor.animation().unwrap();
+        let preview_mode = animation.preview_mode;
+        let disabled = state.modal || state.editor.is_busy() || dialog;
+        let motion_panel = matches!(self.kind, AnimationPanelKind::Motions);
+        let prefix = if motion_panel {
+            "animation-motion"
+        } else {
+            "animation-expression"
+        };
+        let theme = cx.theme().clone();
         let mut list = div()
             .id(SharedString::from(format!("{prefix}-list")))
             .test_support()
@@ -430,7 +459,6 @@ impl AnimationPanel {
             .flex()
             .flex_col()
             .text_xs()
-            .child(toolbar)
             .when(
                 !motion_panel && preview_mode == editor_core::AnimationPreviewMode::Editing,
                 |panel| {

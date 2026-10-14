@@ -57,13 +57,17 @@ impl RenderOnce for PanelToolbar {
         let compact = window.use_keyed_state((self.id.clone(), "compact"), cx, |_, _| true);
         let is_compact = *compact.read(cx);
         let mut bar = Toolbar::new((self.id.clone(), "bar"))
-            .small()
+            .xsmall()
+            .h_full()
+            .px(px(2.))
+            .py(px(3.))
+            .gap(px(2.))
             .w_full()
             .min_w_0();
         if !self.actions.is_empty() {
             let mut group = ToolbarGroup::new((self.id.clone(), "actions"))
                 .label(t!("editor.panel_toolbar_actions"))
-                .gap_1()
+                .gap(px(2.))
                 .flex_shrink_0();
             for build in self.actions {
                 group = group.child(build(is_compact));
@@ -73,7 +77,7 @@ impl RenderOnce for PanelToolbar {
         if !self.controls.is_empty() {
             let mut group = ToolbarGroup::new((self.id.clone(), "controls"))
                 .label(t!("editor.panel_toolbar_view"))
-                .gap_1()
+                .gap(px(2.))
                 .flex_shrink_0();
             for control in self.controls {
                 group = group.content(control);
@@ -91,8 +95,7 @@ impl RenderOnce for PanelToolbar {
             .w_full()
             .min_w_0()
             .flex_shrink_0()
-            .border_b_1()
-            .border_color(cx.theme().border)
+            .h(px(27.))
             .on_prepaint(move |bounds, window, cx| {
                 let next = bounds.size.width < COMPACT_WIDTH;
                 if next != *compact.read(cx) {
@@ -202,7 +205,7 @@ impl PanelToolbarPopover {
         Self(
             Popover::new(id)
                 .p_2()
-                .trigger(trigger.prepare_for_toolbar().small()),
+                .trigger(trigger.prepare_for_toolbar().xsmall()),
         )
     }
 

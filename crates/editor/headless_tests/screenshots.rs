@@ -419,6 +419,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("dock") {
+        dock_screenshots(&directory)?;
+        println!("Dock Metal screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("timeline") {
         timeline_screenshots(&directory)?;
         println!("Timeline Metal screenshots passed.");
@@ -581,7 +586,8 @@ pub(super) fn run() -> anyhow::Result<()> {
                 area.set_center(
                     DockLayout::h_split()
                         .child(
-                            DockLayout::tabs().panel_view(panel_handle(dock.canvas.clone()), cx),
+                            DockLayout::tabs()
+                                .panel_view(panel_handle(dock.active_canvas().clone()), cx),
                             None,
                         )
                         .child(
@@ -1324,6 +1330,70 @@ fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
         &harness.capture()?,
         directory,
         "timeline-narrow-properties-zh-light.png",
+    )?;
+    i18n::activate(Some("en"));
+    Ok(())
+}
+
+fn dock_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
+    use gpui_kit::component::dock::{DockLayout, DockPlacement, PanelId, panel_handle};
+    let mut harness = Harness::new()?;
+    save(&harness.capture()?, directory, "dock-workspace.png")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        let dock = harness.view.read(cx).dock.as_ref().unwrap();
+        let node = dock
+            .area
+            .read(cx)
+            .layout(DockPlacement::Center)
+            .unwrap()
+            .find_panel_node(PanelId::from(dock.mesh_tree.entity_id()))
+            .unwrap();
+        window.click(format!("dock-selector-{}", node.as_u64()), cx);
+    })?;
+    save(&harness.capture()?, directory, "dock-panel-selector.png")?;
+    harness
+        .cx
+        .update_window(harness.window, |_, window, cx| window.press("escape", cx))?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        let dock = harness.view.read(cx).dock.as_ref().unwrap();
+        let area = dock.area.clone();
+        let layout = DockLayout::h_split()
+            .child(
+                DockLayout::tabs().panel_view(panel_handle(dock.mesh_tree.clone()), cx),
+                Some(px(100.)),
+            )
+            .child(
+                DockLayout::tabs().panel_view(panel_handle(dock.active_canvas().clone()), cx),
+                None,
+            );
+        area.update(cx, |area, cx| area.set_center(layout, window, cx));
+    })?;
+    save(&harness.capture()?, directory, "dock-narrow.png")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.click("panel-header-tools", cx)
+    })?;
+    save(&harness.capture()?, directory, "dock-narrow-tools.png")?;
+    harness
+        .cx
+        .update_window(harness.window, |_, window, cx| window.press("escape", cx))?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        let dock = harness.view.read(cx).dock.as_ref().unwrap();
+        let area = dock.area.clone();
+        let layout = DockLayout::tabs()
+            .panel_view(panel_handle(dock.active_canvas().clone()), cx)
+            .panel_view(panel_handle(dock.mesh_tree.clone()), cx);
+        area.update(cx, |area, cx| area.set_center(layout, window, cx));
+    })?;
+    save(&harness.capture()?, directory, "dock-canvas-group.png")?;
+    i18n::activate(Some("zh-CN"));
+    harness
+        .cx
+        .update(|cx| theme::change(gpui_kit::component::ThemeMode::Light, cx));
+    harness.view.update(&mut harness.cx, |_, cx| cx.notify());
+    save(
+        &harness.capture()?,
+        directory,
+        "dock-canvas-group-zh-light.png",
     )?;
     i18n::activate(Some("en"));
     Ok(())

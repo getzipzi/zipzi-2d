@@ -507,3 +507,29 @@ fn key_list_reveals_keys_outside_the_time_range(cx: &mut TestAppContext) {
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn shared_header_retains_timeline_keyboard_context(cx: &mut TestAppContext) {
+    let harness = animation(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.blur(cx);
+        let mut found = false;
+        for _ in 0..64 {
+            window.focus_next(cx);
+            window.render_frame(cx);
+            if window.find("animation-preview-loop").focused() == Some(true) {
+                found = true;
+                break;
+            }
+        }
+        assert!(
+            found,
+            "transport remains reachable by keyboard in the shared header"
+        );
+        let before = harness.view.read(cx).editor.animation().unwrap().edit_time;
+        window.press("right", cx);
+        let after = harness.view.read(cx).editor.animation().unwrap().edit_time;
+        assert!((after - before - 1. / 60.).abs() < 1e-5);
+    })
+    .unwrap();
+}

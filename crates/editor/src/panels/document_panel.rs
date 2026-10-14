@@ -480,6 +480,34 @@ impl Panel for DocumentPanel {
         self.kind.title()
     }
 }
+impl crate::docking::header::PanelHeader for DocumentPanel {
+    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        use gpui_kit::component::{Disableable, button::Button};
+        let dialog = window.has_active_dialog(cx);
+        let Some(owner) = self.owner.upgrade() else {
+            return Empty.into_any_element();
+        };
+        let state = owner.read(cx);
+        let Some(document) = state.editor.active_id() else {
+            return Empty.into_any_element();
+        };
+        let disabled = dialog || state.modal || state.editor.is_busy();
+        let back = cx.listener(move |this, _, window, cx| {
+            this.run(document, EditorCommand::NavigateBack, window, cx)
+        });
+        super::toolbar::PanelToolbar::new("relations-toolbar")
+            .action(move |_| {
+                Button::new("relation-back")
+                    .icon(gpui_kit::assets::IconName::ArrowLeft)
+                    .accessibility_label(t!("editor.navigate_back").into_owned())
+                    .tooltip(t!("editor.navigate_back"))
+                    .disabled(disabled)
+                    .on_click(back)
+            })
+            .into_any_element()
+    }
+}
+
 impl Render for DocumentPanel {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.row_sequence = 0;
@@ -510,17 +538,6 @@ impl Render for DocumentPanel {
                 .h_full()
                 .child(self.keyforms(index, context, parameters, document, disabled, cx));
         } else if self.kind == DocumentPanelKind::Relations {
-            body = body.child(
-                div()
-                    .id("relation-back")
-                    .px_2()
-                    .py_1()
-                    .cursor_pointer()
-                    .child(t!("editor.navigate_back"))
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.run(document, EditorCommand::NavigateBack, window, cx)
-                    })),
-            );
             if let Some(r) = context.inspected.as_ref() {
                 body = body.child(
                     div()

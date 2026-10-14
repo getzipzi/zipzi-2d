@@ -1032,6 +1032,24 @@ impl Panel for ParametersPanel {
     }
 }
 
+impl crate::docking::header::PanelHeader for ParametersPanel {
+    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let dialog = window.has_active_dialog(cx);
+        let disabled = self.owner.upgrade().is_none_or(|owner| {
+            let state = owner.read(cx);
+            state.modal
+                || dialog
+                || state.editor.is_busy()
+                || !state.editor.command_available(
+                    state
+                        .editor
+                        .command(editor_core::CommandId::CreateParameter),
+                )
+        });
+        self.toolbar(disabled, cx).into_any_element()
+    }
+}
+
 impl Render for ParametersPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(owner) = self.owner.upgrade() else {
@@ -1040,12 +1058,6 @@ impl Render for ParametersPanel {
         let dialog_active = window.has_active_dialog(cx);
         let state = owner.read(cx);
         let disabled = state.modal || dialog_active || state.editor.is_busy();
-        let create_disabled = disabled
-            || !state.editor.command_available(
-                state
-                    .editor
-                    .command(editor_core::CommandId::CreateParameter),
-            );
         if disabled {
             self.finish_slider_drag(cx);
         }
@@ -1107,7 +1119,6 @@ impl Render for ParametersPanel {
                 .absolute()
                 .size_full(),
             )
-            .child(self.toolbar(create_disabled, cx))
             .when(SHOW_BINDING_SUMMARY, |panel| {
                 panel.child(self.binding_summary(cx))
             })

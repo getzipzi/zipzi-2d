@@ -257,7 +257,9 @@ impl EditorView {
     }
     fn notify_canvas(&self, cx: &mut Context<Self>) {
         if let Some(dock) = &self.dock {
-            App::notify(cx, dock.canvas.entity_id());
+            for canvas in dock.canvas_views() {
+                App::notify(cx, canvas.entity_id());
+            }
         }
     }
 
