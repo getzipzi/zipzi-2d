@@ -35,6 +35,10 @@ Right-click a panel header (including its tab and unused space) for panel action
 or to add panels. Drag the tab or header background to move a panel. Groups with
 multiple tabs offer a selection-only dropdown. Canvas tools live in the canvas overlay;
 zoom controls are aligned to the right of its panel header.
+Context and dropdown menus share Kit's Small density, including submenus and
+multiline project entries. Menus and Selects use 12px text. Selects use XSmall
+dropdown styling with 22px triggers; compact menu rows are 20px. Both follow
+the editor's UI scale.
 
 ## Test
 
@@ -58,6 +62,8 @@ env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --lock
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=titlebar cargo test --locked -p kasane-editor --test headless_screenshot
 # Compact layout, UI scale, and opaque Metal corner pixel checks:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact cargo test --locked -p kasane-editor --test headless_screenshot
+# Compact menus, submenus and plain/searchable Selects at every UI scale:
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact-popups cargo test --locked -p kasane-editor --test headless_screenshot
 # Imported motion edge cases, editing and canvas navigation acceptance (local Mao asset):
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeline_acceptance
 # Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:

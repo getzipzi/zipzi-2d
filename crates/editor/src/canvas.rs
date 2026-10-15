@@ -750,6 +750,7 @@ impl Render for CanvasView {
                     .child(label)
             }))
             .context_menu(move |mut menu, window, cx| {
+                menu = crate::ui::compact::menu(menu);
                 let Some(owner) = menu_owner.upgrade() else {
                     return menu;
                 };

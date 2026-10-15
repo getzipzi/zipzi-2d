@@ -555,10 +555,9 @@ impl Render for ParameterForm {
                             .gap_1()
                             .child(div().text_xs().child(t!("parameter.kind")))
                             .child(
-                                Select::new(&self.kind)
+                                crate::ui::compact::select(Select::new(&self.kind))
                                     .id("new-parameter-kind")
                                     .accessibility_label(t!("parameter.kind"))
-                                    .small()
                                     .w_full(),
                             ),
                     )
@@ -571,10 +570,9 @@ impl Render for ParameterForm {
                             .gap_1()
                             .child(div().text_xs().child(t!("parameter.group")))
                             .child(
-                                Select::new(&self.group)
+                                crate::ui::compact::select(Select::new(&self.group))
                                     .id("new-parameter-group")
                                     .accessibility_label(t!("parameter.group"))
-                                    .small()
                                     .w_full(),
                             ),
                     ),

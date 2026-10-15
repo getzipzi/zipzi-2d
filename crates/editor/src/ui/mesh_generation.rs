@@ -699,10 +699,9 @@ impl Render for MeshGenerationForm {
                     .child(t!("mesh_generation.algorithm"))
                     .child(
                         div().flex_shrink_0().child(
-                            Select::new(&self.algorithm)
+                            crate::ui::compact::select(Select::new(&self.algorithm))
                                 .id("mesh-generation-algorithm")
                                 .accessibility_label(t!("mesh_generation.algorithm"))
-                                .small()
                                 .w_full(),
                         ),
                     ),

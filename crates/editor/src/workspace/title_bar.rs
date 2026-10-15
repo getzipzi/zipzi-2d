@@ -171,6 +171,7 @@ fn render_project_select(
             )
         })
         .dropdown_menu(move |mut menu, _, cx| {
+            menu = crate::ui::compact::menu(menu);
             menu = menu
                 .check_side(Side::Right)
                 .min_w(compact::scaled(240., cx))

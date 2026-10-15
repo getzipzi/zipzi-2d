@@ -422,6 +422,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("compact-popups") {
+        compact_popup_screenshots(&directory)?;
+        println!("Compact popup density and scale screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("titlebar") {
         titlebar_screenshots(&directory)?;
         println!("Title bar project and empty-state screenshots passed.");
@@ -1363,6 +1368,108 @@ fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
         directory,
         "timeline-narrow-properties-zh-light.png",
     )?;
+    i18n::activate(Some("en"));
+    Ok(())
+}
+
+fn compact_popup_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
+    use crate::settings::{Settings, UiScale};
+    use gpui_kit::component::ThemeMode;
+    for (mode, locale, appearance) in [
+        (ThemeMode::Dark, "en", "dark"),
+        (ThemeMode::Light, "zh-CN", "light-zh"),
+    ] {
+        let mut harness = Harness::new()?;
+        for scale in UiScale::ALL {
+            harness
+                .cx
+                .update_window(harness.window, |_, window, _| window.activate_window())?;
+            i18n::activate(Some(locale));
+            harness.cx.update(|cx| {
+                cx.update_global::<Settings, _>(|settings, _| {
+                    settings.set_ui_scale(scale).unwrap()
+                });
+                theme::change(mode, cx);
+            });
+            harness.view.update(&mut harness.cx, |_, cx| cx.notify());
+            harness.capture()?;
+            let name = format!(
+                "compact-popup-{appearance}-{}",
+                scale.label().trim_end_matches('%')
+            );
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                window.click("project-select", cx);
+            })?;
+            save(
+                &harness.capture()?,
+                directory,
+                &format!("{name}-projects.png"),
+            )?;
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                window.press("escape", cx);
+            })?;
+            harness.capture()?;
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                window.click("workspace-layout-menu", cx);
+                // The first entry opens an Add Panel submenu.
+                window.within("popup-menu").hover(0usize, cx);
+                window.render_frame(cx);
+                let row = window
+                    .within("submenu")
+                    .within("popup-menu")
+                    .find(0usize)
+                    .bounds();
+                anyhow::ensure!(
+                    (row.size.height - px(20. * scale.factor())).abs() <= px(0.5),
+                    "Submenu density at {}: {row:?}",
+                    scale.label()
+                );
+                Ok::<_, anyhow::Error>(())
+            })??;
+            save(
+                &harness.capture()?,
+                directory,
+                &format!("{name}-submenu.png"),
+            )?;
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                window.press("escape", cx);
+            })?;
+            harness.capture()?;
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                window.click("new-parameter", cx);
+            })?;
+            harness.capture()?;
+            for (id, suffix) in [
+                ("new-parameter-kind", "select"),
+                ("new-parameter-group", "search-select"),
+            ] {
+                harness.cx.update_window(harness.window, |_, window, cx| {
+                    let bounds = window.find(id).bounds();
+                    anyhow::ensure!(
+                        (bounds.size.height - px(crate::ui::compact::CONTROL * scale.factor()))
+                            .abs()
+                            <= px(0.5),
+                        "Select density at {}: {bounds:?}",
+                        scale.label()
+                    );
+                    window.click(id, cx);
+                    Ok::<_, anyhow::Error>(())
+                })??;
+                save(
+                    &harness.capture()?,
+                    directory,
+                    &format!("{name}-{suffix}.png"),
+                )?;
+                harness
+                    .cx
+                    .update_window(harness.window, |_, window, cx| window.press("escape", cx))?;
+            }
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                window.click("new-parameter-cancel", cx)
+            })?;
+            harness.capture()?;
+        }
+    }
     i18n::activate(Some("en"));
     Ok(())
 }

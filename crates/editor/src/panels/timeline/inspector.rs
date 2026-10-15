@@ -869,6 +869,7 @@ impl Timeline {
                         compact::button(Button::new("timeline-key-list"))
                             .label(t!("timeline.key_list"))
                             .dropdown_menu(move |mut menu, _, _| {
+                                menu = crate::ui::compact::menu(menu);
                                 for (key, label) in &items {
                                     let key = key.clone();
                                     let weak = weak.clone();
@@ -896,6 +897,7 @@ impl Timeline {
                 compact::button(Button::new("timeline-event-list"))
                     .label(t!("timeline.event_list"))
                     .dropdown_menu(move |mut menu, _, _| {
+                        menu = crate::ui::compact::menu(menu);
                         for (index, event) in events.iter().enumerate() {
                             let id = event.id.clone();
                             let weak = weak.clone();

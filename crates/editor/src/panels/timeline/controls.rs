@@ -192,6 +192,7 @@ impl Timeline {
                     .tooltip(t!("timeline.more_tools"))
                     .disabled(!allowed)
                     .dropdown_menu(move |mut menu, _, _| {
+                        menu = crate::ui::compact::menu(menu);
                         for (id, icon, label, selected, enabled) in &actions {
                             if !tiny && matches!(*id, "timeline-pan" | "timeline-inspector-toggle")
                             {

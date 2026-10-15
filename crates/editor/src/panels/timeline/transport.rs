@@ -195,6 +195,7 @@ impl Timeline {
             ))
             .disabled(!allowed || document.is_none())
             .dropdown_menu(move |mut menu, _, _| {
+                menu = crate::ui::compact::menu(menu);
                 for (id, choice, label) in [
                     (
                         "animation-edit-preview",

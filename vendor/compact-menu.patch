@@ -1,0 +1,58 @@
+diff --git a/vendor/gpui-kit/crates/component/src/menu/popup_menu.rs b/vendor/gpui-kit/crates/component/src/menu/popup_menu.rs
+--- a/vendor/gpui-kit/crates/component/src/menu/popup_menu.rs
++++ b/vendor/gpui-kit/crates/component/src/menu/popup_menu.rs
+@@ -1228,13 +1228,15 @@
+         let is_submenu = matches!(item, PopupMenuItem::Submenu { .. });
+ 
+         let (item_height, radius) = match self.size {
+-            Size::Small => (px(20.), options.radius.half()),
++            // Keep compact rows proportional to the window's UI font scale.
++            Size::Small => (window.rem_size() * 1.25, options.radius.half()),
+             _ => (px(26.), options.radius),
+         };
+ 
+         let this = MenuItemElement::new(ix)
+             .relative()
+             .text_sm()
++            .when(self.size == Size::Small, |this| this.text_xs())
+             .py_0()
+             .px(INNER_PADDING)
+             .rounded(radius)
+@@ -1427,6 +1429,13 @@
+ }
+ 
+ impl FluentBuilder for PopupMenu {}
++impl crate::Sizable for PopupMenu {
++    fn with_size(mut self, size: impl Into<Size>) -> Self {
++        self.size = size.into();
++        self
++    }
++}
++
+ impl EventEmitter<DismissEvent> for PopupMenu {}
+ impl Focusable for PopupMenu {
+     fn focus_handle(&self, _: &App) -> FocusHandle {
+@@ -1449,15 +1458,19 @@
+         // path (from contexts that only have the menu value, e.g. a table
+         // delegate's `context_menu`) have no parent wired at construction time.
+         // Wire them here so the dismiss chain, click-outside checks and keyboard
+-        // navigation treat them the same as `submenu()`-built children.
++        // navigation treat them the same as `submenu()`-built children. Both
++        // paths inherit density here, even when the parent is sized last.
+         let parent = cx.entity().downgrade();
+         let parent_priority = self.priority;
+         for item in &self.menu_items {
+             if let PopupMenuItem::Submenu { menu, .. } = item {
+-                if menu.read(cx).parent_menu.is_none() {
++                if menu.read(cx).parent_menu.is_none() || menu.read(cx).size != self.size {
+                     menu.update(cx, |menu, _| {
+-                        menu.parent_menu = Some(parent.clone());
+-                        menu.priority = parent_priority + 1;
++                        if menu.parent_menu.is_none() {
++                            menu.parent_menu = Some(parent.clone());
++                            menu.priority = parent_priority + 1;
++                        }
++                        menu.size = self.size;
+                     });
+                 }
+             }

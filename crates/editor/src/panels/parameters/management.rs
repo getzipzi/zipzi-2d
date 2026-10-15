@@ -164,6 +164,7 @@ pub(super) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
     actions: Vec<ParameterAction>,
 ) -> impl IntoElement {
     element.context_menu(move |mut menu, window, cx| {
+        menu = crate::ui::compact::menu(menu);
         if window.has_active_dialog(cx) {
             return menu;
         }

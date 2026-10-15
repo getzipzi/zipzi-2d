@@ -1,7 +1,7 @@
 [workspace]
 members = ["crates/editor", "crates/editor-core", "crates/editor-render", "crates/component-playground"]
 resolver = "3"
-exclude = ["vendor/gpui-fast", "vendor/gpui-fast-macos", "vendor/gpui-fast-apple"]
+exclude = ["vendor/gpui-fast", "vendor/gpui-fast-macos", "vendor/gpui-fast-apple", "vendor/gpui-kit"]
 
 [workspace.package]
 version = "0.1.0"
@@ -40,3 +40,6 @@ opt-level = 2
 gpui-fast = { path = "vendor/gpui-fast" }
 gpui-fast-macos = { path = "vendor/gpui-fast-macos" }
 gpui-fast-apple = { path = "vendor/gpui-fast-apple" }
+
+[patch."https://github.com/longbridge/gpui-kit"]
+gpui-component = { path = "vendor/gpui-kit/crates/component" }

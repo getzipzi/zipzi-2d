@@ -20,6 +20,7 @@ pub(super) fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl 
         .dropdown_menu({
             let owner = owner.downgrade();
             move |mut menu, window, cx| {
+                menu = compact::menu(menu);
                 let node = owner.upgrade().and_then(|view| {
                     let dock = view.read(cx).dock.as_ref()?;
                     dock.canvas_node(cx)

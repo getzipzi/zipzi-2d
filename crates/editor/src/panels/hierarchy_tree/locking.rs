@@ -150,6 +150,7 @@ pub(super) fn menu<E: ContextMenuExt + IntoElement + 'static>(
     object: ObjectRef,
 ) -> impl IntoElement {
     element.context_menu(move |mut menu, window, cx| {
+        menu = crate::ui::compact::menu(menu);
         let Some(entity) = owner.upgrade() else {
             return menu;
         };

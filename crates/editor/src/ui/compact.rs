@@ -4,6 +4,8 @@ use gpui_kit::component::{
     ActiveTheme, Selectable, Sizable, Theme,
     button::{Button, ButtonVariant, ButtonVariants},
     input::Input,
+    menu::PopupMenu,
+    select::{Select, SelectDelegate},
 };
 use gpui_kit::{prelude::*, *};
 
@@ -133,6 +135,18 @@ pub fn header_button(button: Button) -> Button {
     self::button(button)
         .h(rem(HEADER_CONTROL))
         .min_w(rem(HEADER_CONTROL))
+}
+
+/// Keep menu interaction in Kit, including submenus and custom multiline rows.
+#[allow(dead_code)]
+pub fn menu(menu: PopupMenu) -> PopupMenu {
+    menu.small()
+}
+
+/// XSmall supplies 12px text to the trigger, options and search input.
+#[allow(dead_code)]
+pub fn select<D: SelectDelegate + 'static>(select: Select<D>) -> Select<D> {
+    select.xsmall().h(rem(CONTROL))
 }
 
 /// Stop a control's press after composed popovers/menus have handled it, so

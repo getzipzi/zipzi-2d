@@ -510,6 +510,7 @@ impl EditorTabGroupSkin {
         let button = if multiple {
             button
                 .dropdown_menu(move |mut menu, _, _| {
+                    menu = crate::ui::compact::menu(menu);
                     menu = menu.check_side(gpui_kit::component::Side::Right);
                     for (id, name) in &entries {
                         let area = area.clone();
@@ -698,7 +699,13 @@ impl TabGroupRenderer for EditorTabGroupSkin {
                 })
             })
             .context_menu(move |menu, window, cx| {
-                panel_menu(menu, &menu_group, menu_owner.clone(), window, cx)
+                panel_menu(
+                    compact::menu(menu),
+                    &menu_group,
+                    menu_owner.clone(),
+                    window,
+                    cx,
+                )
             })
             .into_any_element()
     }

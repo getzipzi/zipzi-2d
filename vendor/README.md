@@ -2,7 +2,32 @@
 
 ## 对比基线
 
-仅保留 crates.io 发布的 `gpui-fast`、`gpui-fast-macos`、`gpui-fast-apple` **0.1.7**，作为 GPUI Kit 0.7.3 的 `gpui-fast` 后端。根目录 `Cargo.toml` 的 `[patch.crates-io]` 选择这些本地包；Kit 本身仍使用官方固定 commit。
+保留 crates.io 发布的 `gpui-fast`、`gpui-fast-macos`、`gpui-fast-apple` **0.1.7**，作为 GPUI Kit 0.7.3 的 `gpui-fast` 后端。根目录 `Cargo.toml` 的 `[patch.crates-io]` 选择这些本地包。Kit 固定在官方 commit，另通过 Git source 的 `[patch]` 覆盖下述 `gpui-component` 包。
+
+## Kit compact 菜单
+
+`vendor/gpui-kit/crates/component` 来自 Kit commit `507e82b8115ac73af92b7d3856501f9d7b73b2c9`，保留完整包、上游清单和 Apache-2.0 许可。精简的 `vendor/gpui-kit/Cargo.toml` 提供原清单继承的依赖与 lint；同仓库的 base、assets、macros 仍指向相同 Git commit，未整体 vendor Kit。额外保留 README 和上游测试通过相对路径引用的五份文件，它们不作为其他本地包编译。
+
+工作区清单相对上述固定 commit 的完整差异见 [kit-workspace.patch](kit-workspace.patch)，涵盖成员裁剪、依赖继承与同版本 Git 引用。该补丁以原始 Kit 根目录 `Cargo.toml` 为基线，目标路径为 `vendor/gpui-kit/Cargo.toml`。
+
+唯一修改的 Kit 源码是 `menu/popup_menu.rs`，完整差异见 [compact-menu.patch](compact-menu.patch)：
+
+- 实现 `Sizable`，公开已有 Small 密度。
+- Small 普通行保留 20px 基准，改为随 window rem 缩放；其余尺寸保持上游行为。
+- Small 菜单项字体改为 `text_xs()`，在 100% UI scale 下为 12px。
+- 子菜单在渲染时继承父菜单尺寸，同时覆盖 `submenu()` 和 `PopupMenuItem::submenu()` 两条构造路径，包括最后才设置父菜单尺寸的情况。
+
+菜单水平 padding 继续使用 8px，圆角使用原 Small 的半径减半规则；自定义内容保留最小行高，项目标题与路径不会被固定为单行高度。编辑器通过 `ui::compact::menu` 和 `ui::compact::select` 统一入口；Select 使用原生 XSmall，将触发框、选项与搜索框字体一并缩小为 12px，触发框高度仍为 22px。XSmall 的选项垂直 padding 沿用 Kit 的 4px。字体跟随现有 UI scale。未重写交互逻辑或修改兄弟工作目录。
+
+回归见 [compact_popups.rs](../crates/editor/headless_tests/compact_popups.rs)，覆盖明暗主题、三档 UI 缩放、两种子菜单构造方式、多行内容，以及真实编辑器对话框中的普通/可搜索 Select。右键菜单动作继续由现有 Dock、Canvas 和参数管理测试覆盖。真实 Metal 截图使用 `KASANE_SCREENSHOT_SCENE=compact-popups`。
+
+更新 Kit 时，将该包、README、五份测试引用文件及根工作区清单替换为新固定 commit 的对应内容，再适配并应用 `kit-workspace.patch` 和 `compact-menu.patch`。更新精简工作区中的 Git revisions，重新核对补丁是否仍需要，以新基线重新生成两份补丁，并更新根目录依赖和 lockfile。
+
+```sh
+git apply --reverse --check vendor/kit-workspace.patch
+git apply --reverse --check vendor/compact-menu.patch
+cargo test --locked -p kasane-editor --bin kasane-editor headless_tests::compact_popups
+```
 
 原生 Metal 集成涉及 **11 个文件（10 个源码文件 + 1 个依赖清单），新增 495 行、删除 13 行**，差异见 [native-metal.patch](native-metal.patch)。此外，Fast 缓存边界修复涉及 `fast/retained.rs` 和 `fast/splice.rs` 两个文件，独立保存为 [cache-boundary.patch](cache-boundary.patch)；虚拟列表高度估计修复涉及 `elements/list.rs`，保存为 [list-height-estimates.patch](list-height-estimates.patch)。合计修改/新增 14 个文件，其余保持发布版本原样。
 
@@ -39,7 +64,7 @@
 - 生产者必须先在 `SharedMetalContext.queue` 提交绘制，再把纹理交给 GPUI。共享 device 本身不提供跨队列同步。
 - 应用发布不可变帧；GPUI 场景保留纹理句柄，以免后台线程改写仍在显示的上一帧。此策略位于 editor，未增加 GPUI 帧调度机制。可选 benchmark 钩子只观察边界，不更改调度或等待 GPU。
 - 直接构造 `PaintSurface` 的外部代码需要适配字段变化；穷尽匹配 `SurfaceSource` 的代码需要处理新变体。因此这不是对所有下游源码完全无影响的改动。
-- macOS renderer 选择、窗口生命周期、IME、字体、Kit 组件均未改动。输入事件仅在画布显式接管 Space 期间屏蔽其自动重复 KeyDown；首次按下和松开仍正常分发。
+- Fast 补丁不修改 macOS renderer 选择、窗口生命周期、IME、字体或 Kit 组件。输入事件仅在画布显式接管 Space 期间屏蔽其自动重复 KeyDown；首次按下和松开仍正常分发。Kit 的独立菜单补丁见上文。
 
 ## 为什么还需要三个包
 
@@ -51,11 +76,15 @@ core 定义绘制与平台接口，macOS 负责窗口到 renderer 的转发，Ap
 
 ```sh
 cargo test --locked --workspace
-# 只核对完整补丁与当前源码是否一致，不修改文件：
+# 检查全部补丁能否从当前文件反向应用，不修改文件：
 git apply --reverse --check vendor/native-metal.patch
 git apply --reverse --check vendor/cache-boundary.patch
 git apply --reverse --check vendor/list-height-estimates.patch
+git apply --reverse --check vendor/kit-workspace.patch
+git apply --reverse --check vendor/compact-menu.patch
 ```
+
+反向检查不能单独证明没有遗漏改动。核对补丁覆盖完整性时，应在临时目录准备上述原始发布包和 Kit 保留文件，按相同 `vendor/` 路径布局应用全部五份补丁，再逐文件比对重建结果与当前依赖包目录；文件集合及内容均应一致。
 
 补丁使用仓库根目录相对路径，可应用到按相同目录布局放置的原始 0.1.7 发布包。更新 GPUI 时，应以新发布包为基线重新核对上述三份补丁涉及的 14 个文件，检查上游是否已修复缓存边界及列表高度估计，重新生成仍需要的补丁并更新统计，运行合成测试、完整 UI 截图测试和两个应用构建。原生 Metal 集成细节见 [native-metal.md](../docs/archive/native-metal.md)。
 
