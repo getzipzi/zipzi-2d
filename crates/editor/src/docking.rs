@@ -247,7 +247,13 @@ impl DockWorkspace {
             document_panels.insert(kind, panel);
         }
         let mut headers = header::PanelHeaders::new();
-        header::register(&mut headers, &canvas, cx);
+        header::register_with_state(
+            &mut headers,
+            &canvas,
+            window,
+            cx,
+            crate::canvas::CanvasView::header_state,
+        );
         header::register(&mut headers, &mesh_tree, cx);
         header::register(&mut headers, &deformer_tree, cx);
         header::register(&mut headers, &parameters, cx);

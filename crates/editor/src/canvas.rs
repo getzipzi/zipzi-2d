@@ -854,6 +854,20 @@ impl Render for CanvasView {
     }
 }
 
+impl CanvasView {
+    pub(crate) fn header_state(
+        panel: &Entity<Self>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<(i32, [bool; 3])> {
+        let dialog = window.has_active_dialog(cx);
+        panel.read(cx).owner.upgrade().map(|owner| {
+            let owner = owner.read(cx);
+            zoom_bar::state(owner, owner.modal || dialog)
+        })
+    }
+}
+
 impl crate::docking::header::PanelHeader for CanvasView {
     fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let Some(owner) = self.owner.upgrade() else {

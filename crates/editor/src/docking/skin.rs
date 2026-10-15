@@ -17,6 +17,8 @@ use gpui_kit::{
 use std::{rc::Rc, sync::Arc};
 
 const TAB_BAR_HEIGHT: f32 = compact::DOCK_HEADER;
+const BOTTOM_LEFT_CORNER: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 1H1C.44771525 1 0 .55228475 0 0Z"/></svg>"#;
+const BOTTOM_RIGHT_CORNER: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M1 1H0C.55228475 1 1 .55228475 1 0Z"/></svg>"#;
 
 /// Component's styled Button does not expose drag initiation. Keep Base's
 /// accessible button behavior and drag handling behind the same menu trigger.
@@ -729,20 +731,31 @@ impl TabGroupRenderer for EditorTabGroupSkin {
         let radius = compact::scaled(compact::PANEL_RADIUS - 1., cx);
         let corners = gpui_kit::canvas(
             |_, _, _| (),
-            move |bounds, _, window, _| {
-                for (origin, sx) in [
-                    (gpui_kit::point(bounds.left(), bounds.bottom()), 1.),
-                    (gpui_kit::point(bounds.right(), bounds.bottom()), -1.),
+            move |bounds, _, window, cx| {
+                // The atlas caches these tiny alpha masks per display/UI scale.
+                // A live Path would add a multisampled path pass every frame,
+                // even when only a Metal canvas surface changes.
+                for (x, name, svg) in [
+                    (bounds.left(), "kasane-dock-bottom-left", BOTTOM_LEFT_CORNER),
+                    (
+                        bounds.right() - radius,
+                        "kasane-dock-bottom-right",
+                        BOTTOM_RIGHT_CORNER,
+                    ),
                 ] {
-                    let p = |x, y| origin + gpui_kit::point(radius * x * sx, -radius * y);
-                    let mut path = gpui_kit::PathBuilder::fill();
-                    path.move_to(p(0., 0.));
-                    path.line_to(p(1., 0.));
-                    path.cubic_bezier_to(p(0., 1.), p(0.44771525, 0.), p(0., 0.44771525));
-                    path.close();
-                    if let Ok(path) = path.build() {
-                        window.paint_path(path, background);
-                    }
+                    window
+                        .paint_svg(
+                            gpui_kit::Bounds::new(
+                                gpui_kit::point(x, bounds.bottom() - radius),
+                                gpui_kit::size(radius, radius),
+                            ),
+                            name.into(),
+                            Some(svg),
+                            Default::default(),
+                            background,
+                            cx,
+                        )
+                        .expect("valid dock corner SVG");
                 }
             },
         )

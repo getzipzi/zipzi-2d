@@ -22,6 +22,7 @@ mod timeline;
 mod timeline_navigation;
 mod timeline_regressions;
 mod titlebar;
+mod ui_performance;
 mod workspaces;
 
 use crate::{EditorView, actions, i18n, settings};

@@ -107,3 +107,30 @@ pub(super) fn register<P: PanelHeader>(
     });
     headers.insert(panel.entity_id(), header.into());
 }
+
+/// Canvas frames change much more often than their header controls. Observe
+/// only the displayed state so a frame arrival does not schedule another draw.
+pub(super) fn register_with_state<P: PanelHeader, S: PartialEq + 'static>(
+    headers: &mut PanelHeaders,
+    panel: &Entity<P>,
+    window: &mut Window,
+    cx: &mut App,
+    state: fn(&Entity<P>, &mut Window, &mut App) -> S,
+) {
+    // The component root is installed after dock construction. Read window
+    // state only once notifications arrive, when the window is ready.
+    let mut previous = None;
+    let header = cx.new(|cx| HeaderView {
+        panel: panel.clone(),
+        compact: false,
+        width: px(0.),
+        _observe: cx.observe_in(panel, window, move |_, panel, window, cx| {
+            let next = Some(state(&panel, window, cx));
+            if next != previous {
+                previous = next;
+                cx.notify();
+            }
+        }),
+    });
+    headers.insert(panel.entity_id(), header.into());
+}

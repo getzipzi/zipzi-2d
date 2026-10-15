@@ -49,6 +49,8 @@ Run UI tests or capture screenshots:
 
 ```sh
 cargo test --locked -p kasane-editor --bin kasane-editor headless_tests
+# Focused work-count regressions for canvas redraws and property-list virtualization:
+cargo test --locked -p kasane-editor --bin kasane-editor headless_tests::ui_performance
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test headless_screenshot
 # Focused Timeline views and candidate/cancel pixel verification:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --test headless_screenshot
@@ -61,6 +63,12 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeli
 # Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:
 ./scripts/timeline-benchmark.sh target/timeline-benchmark-run 600
 ```
+
+## References
+
+- [UI performance](docs/references/ui-performance.md): optional guidance on redraws,
+  virtualization, rendering costs, and choosing regression checks. Agents and
+  contributors can decide whether to consult it based on the task.
 
 ## Build
 

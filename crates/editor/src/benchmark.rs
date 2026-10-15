@@ -332,7 +332,6 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 let center = view
                     .update_in(cx, |view, window, cx| {
                         view.editor.cancel_gesture();
-                        view.editor.reset_view();
                         view.redraw(cx);
                         view.dock
                             .as_ref()

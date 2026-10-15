@@ -17,6 +17,18 @@ const ZOOM_ACTIONS: [(&str, CommandId, IconName); 3] = [
 
 type ZoomAction = Rc<dyn Fn(CommandId, &mut Window, &mut App)>;
 
+pub(super) fn state(owner: &EditorView, modal: bool) -> (i32, [bool; 3]) {
+    (
+        (owner.editor.view().zoom * 100.0).round() as i32,
+        ZOOM_ACTIONS.map(|(_, command, _)| {
+            !modal
+                && owner
+                    .editor
+                    .command_available(owner.editor.command(command))
+        }),
+    )
+}
+
 /// One framed control: zoom steps and readout share a surface, fit is its trailing segment.
 #[derive(gpui_kit::IntoElement)]
 struct ZoomControl {
@@ -106,13 +118,7 @@ pub(super) struct CanvasZoomBar {
 impl RenderOnce for CanvasZoomBar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let state = self.owner.read(cx);
-        let percentage = (state.editor.view().zoom * 100.0).round() as i32;
-        let enabled = ZOOM_ACTIONS.map(|(_, command, _)| {
-            !self.modal
-                && state
-                    .editor
-                    .command_available(state.editor.command(command))
-        });
+        let (percentage, enabled) = self::state(state, self.modal);
         let owner = self.owner;
         let canvas = self.canvas;
         let on_action: ZoomAction = Rc::new(move |command, window, cx| {
