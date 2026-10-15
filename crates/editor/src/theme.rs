@@ -9,25 +9,14 @@ pub(crate) fn init(cx: &mut App) {
 
 pub(crate) fn change(mode: ThemeMode, cx: &mut App) {
     Theme::change(mode, None, cx);
-    // Update Kit's resolved tokens and Base projection together. Keep neutral
-    // surfaces and the parameter/keyform status palette unchanged.
+    // Update Kit's resolved tokens and Base projection together.
+    let scale = cx
+        .try_global::<crate::settings::Settings>()
+        .map_or(1., |s| s.ui_scale.factor());
     Theme::update(cx, |theme| {
-        let (primary, hover, active, foreground) = if theme.is_dark() {
-            (0x82aaff, 0x96b8ff, 0x7198e6, 0x182334)
-        } else {
-            (0x3568ad, 0x2f5e9e, 0x28518a, 0xffffff)
-        };
-        theme.primary = rgb(primary).into();
-        theme.primary_hover = rgb(hover).into();
-        theme.primary_active = rgb(active).into();
-        theme.primary_foreground = rgb(foreground).into();
-        theme.button_primary = theme.primary;
-        theme.button_primary_hover = theme.primary_hover;
-        theme.button_primary_active = theme.primary_active;
-        theme.button_primary_foreground = theme.primary_foreground;
-        theme.ring = theme.primary;
-        theme.drag_border = theme.primary;
-        theme.selection = theme.primary.opacity(0.25);
+        crate::ui::compact::apply_theme(theme);
+        theme.font_size = gpui_kit::px(16. * scale);
+        theme.radius = gpui_kit::px(crate::ui::compact::RADIUS * scale);
     });
 }
 

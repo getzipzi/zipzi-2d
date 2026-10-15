@@ -1,6 +1,7 @@
+use super::compact;
 use gpui_kit::base::NumberInput;
 use gpui_kit::component::{
-    ActiveTheme, Sizable,
+    ActiveTheme,
     input::{Input, InputState},
 };
 use gpui_kit::{prelude::*, *};
@@ -83,6 +84,7 @@ impl SlideNumberInput {
     }
 
     /// Keep fractional drag movement, but emit and display only truncated integers.
+    #[allow(dead_code)]
     pub fn truncate_to_integer(mut self) -> Self {
         self.truncate_to_integer = true;
         self
@@ -105,11 +107,13 @@ impl SlideNumberInput {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn is_sliding(&self) -> bool {
         self.drag.as_ref().is_some_and(|drag| drag.sliding)
     }
 
     /// Stop an owning transaction without emitting a new numeric edit.
+    #[allow(dead_code)]
     pub(crate) fn reset_drag(&mut self, cx: &mut Context<Self>) {
         if self.drag.take().is_some() {
             cx.notify();
@@ -243,6 +247,7 @@ impl Render for SlideNumberInput {
             .test_support()
             .relative()
             .w_full()
+            .h(compact::rem(compact::NUMBER_CONTROL))
             .track_focus(&self.focus)
             .capture_any_mouse_down(cx.listener(Self::begin))
             .on_action(
@@ -264,13 +269,16 @@ impl Render for SlideNumberInput {
             .child(
                 NumberInput::new(&self.input)
                     .w_full()
+                    .h_full()
                     .disabled(disabled)
                     .decrement_button(|button| button.hidden())
                     .increment_button(|button| button.hidden())
                     .input(
-                        Input::new(&self.input)
-                            .small()
-                            .text_xs()
+                        compact::input(Input::new(&self.input))
+                            .map(|input| Styled::h(input, compact::rem(compact::NUMBER_CONTROL)))
+                            .line_height(compact::rem(14.))
+                            .text_align(TextAlign::Right)
+                            .font_family(".AppleSystemUIFontMonospaced")
                             .disabled(disabled)
                             .aria_label(self.label.clone()),
                     ),
@@ -286,13 +294,15 @@ impl Render for SlideNumberInput {
                         .when(sliding, |surface| {
                             surface
                                 .bg(theme.input_background())
-                                .rounded(theme.radius)
+                                .rounded(compact::rem(compact::RADIUS))
                                 .border_1()
                                 .border_color(theme.ring)
-                                .px_2()
+                                .px(compact::rem(4.))
                                 .flex()
                                 .items_center()
-                                .text_xs()
+                                .justify_end()
+                                .text_size(compact::rem(compact::BODY))
+                                .font_family(".AppleSystemUIFontMonospaced")
                                 .text_color(theme.foreground)
                                 .overflow_hidden()
                                 .child((self.options.value as f32).to_string())

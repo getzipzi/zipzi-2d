@@ -1,5 +1,5 @@
 use super::setup;
-use crate::workspace::toolbar::ToolbarItemConfig;
+use crate::canvas::toolbar::ToolbarItemConfig;
 use gpui_kit::assets::IconName;
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{
@@ -492,7 +492,8 @@ fn space_after_document_switch_does_not_pan(cx: &mut TestAppContext) {
             .read_with(cx, |view, _| view.editor.active_id().unwrap());
         window.press("cmd-n", cx);
         window.render_frame(cx);
-        window.click(format!("tab-item-{first:?}"), cx);
+        window.click("project-select", cx);
+        window.click(format!("project-select-{first:?}"), cx);
         window.press("space", cx);
         window.render_frame(cx);
         let from = window.find("canvas-body").bounds().center();
@@ -534,14 +535,12 @@ fn space_in_parameter_input_keeps_input_focus(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn canvas_floating_toolbar_and_status_zoom_controls(cx: &mut TestAppContext) {
+fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        let tabs = window.find("global-document-tabs").bounds();
-        let top = window.find("workspace-top-bar").bounds();
+        let top = window.find("workspace-titlebar").bounds();
         let tools = window.find("canvas-toolbar").bounds();
         let canvas = window.find("canvas-body").bounds();
-        assert!(tabs.bottom() <= top.top());
         assert!(top.bottom() <= canvas.top());
         assert!(canvas.contains(&tools.origin));
         assert!(tools.right() <= canvas.right());
@@ -565,19 +564,45 @@ fn canvas_floating_toolbar_and_status_zoom_controls(cx: &mut TestAppContext) {
                 enabled: |_, modal, _| !modal,
                 action: None,
             };
-            assert!(view.toolbar.register(item).is_ok());
-            assert!(view.toolbar.register(item).is_err());
+            view.dock
+                .as_ref()
+                .unwrap()
+                .active_canvas()
+                .update(cx, |canvas, cx| {
+                    assert!(canvas.toolbar.register(item).is_ok());
+                    assert!(canvas.toolbar.register(item).is_err());
+                    cx.notify();
+                });
             cx.notify();
         });
 
         assert!(window.try_find("canvas-floating-zoom").is_none());
         let status = window.find("app-status-bar").bounds();
-        let zoom = window.find("status-zoom").bounds();
-        assert!(status.contains(&zoom.origin));
-        assert!(zoom.bottom() <= status.bottom());
+        let zoom = window.find("canvas-zoom-toolbar").bounds();
+        let controls = window.find("canvas-zoom-controls").bounds();
+        assert!(zoom.bottom() <= canvas.top());
+        assert!(zoom.top() >= top.bottom());
+        assert!(controls.left() >= zoom.left());
+        assert!((controls.right() - zoom.right()).abs() <= px(1.));
+        assert!((controls.center().y - zoom.center().y).abs() <= px(1.));
+        assert!(zoom.bottom() < status.top());
+        assert!(window.try_find("status-zoom").is_none());
         assert!(window.try_find("btn_zoom_out").is_some());
         assert!(window.try_find("zoom-percentage").is_some());
         assert!(window.try_find("btn_zoom_in").is_some());
+        let segments = [
+            "btn_zoom_out",
+            "zoom-percentage",
+            "btn_zoom_in",
+            "btn_zoom_fit",
+        ]
+        .map(|id| window.find(id).bounds());
+        for pair in segments.windows(2) {
+            assert_eq!(pair[0].right(), pair[1].left());
+        }
+        assert_eq!(segments[0].left(), controls.left() + px(1.));
+        assert_eq!(segments[3].right(), controls.right() - px(1.));
+        assert_eq!(controls.size.height, px(20.));
 
         // Test zoom buttons
         let initial_zoom = harness
@@ -620,6 +645,20 @@ fn canvas_floating_toolbar_and_status_zoom_controls(cx: &mut TestAppContext) {
             harness.view.read_with(cx, |view, _| view.editor.view().pan),
             Default::default()
         );
+        harness.view.update(cx, |view, cx| {
+            view.modal = true;
+            cx.notify();
+        });
+        window.render_frame(cx);
+        let before_disabled = harness.view.read(cx).editor.view().zoom;
+        for id in ["btn_zoom_out", "btn_zoom_in", "btn_zoom_fit"] {
+            window.click(id, cx);
+            assert_eq!(harness.view.read(cx).editor.view().zoom, before_disabled);
+        }
+        harness.view.update(cx, |view, cx| {
+            view.modal = false;
+            cx.notify();
+        });
     })
     .unwrap();
 

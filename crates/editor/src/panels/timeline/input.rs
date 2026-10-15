@@ -426,9 +426,10 @@ impl Timeline {
         let time_delta = |origin: f32| {
             (local.x - origin) as f64 / width as f64 * (state.time_range.1 - state.time_range.0)
         };
+        let row_height = self.row_height();
         let value_delta = |origin: f32, scale: (f64, f64)| {
-            let delta = y_value(local.y, self.value_range, height)
-                - y_value(origin, self.value_range, height);
+            let delta = y_value(local.y, self.value_range, height, row_height)
+                - y_value(origin, self.value_range, height, row_height);
             delta
                 * if state.normalized {
                     scale.1 - scale.0
@@ -458,6 +459,7 @@ impl Timeline {
                     self.value_range,
                     width,
                     height,
+                    row_height,
                 );
                 selected.extend(keys.clone());
                 selected_events.extend(events.clone());
@@ -590,7 +592,7 @@ impl Timeline {
         }
         let delta = match event.delta {
             ScrollDelta::Pixels(p) => point(p.x.as_f32(), p.y.as_f32()),
-            ScrollDelta::Lines(p) => point(p.x * ROW, p.y * ROW),
+            ScrollDelta::Lines(p) => point(p.x * self.row_height(), p.y * self.row_height()),
         };
         let Some(owner) = self.owner.upgrade() else {
             return;

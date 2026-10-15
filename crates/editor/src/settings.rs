@@ -12,6 +12,38 @@ struct WorkspacePreference {
     workspace: WorkspaceKind,
 }
 
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum UiScale {
+    #[default]
+    #[serde(rename = "100")]
+    Standard,
+    #[serde(rename = "110")]
+    Large,
+    #[serde(rename = "125")]
+    Largest,
+}
+impl UiScale {
+    pub const ALL: [Self; 3] = [Self::Standard, Self::Large, Self::Largest];
+    pub fn factor(self) -> f32 {
+        match self {
+            Self::Standard => 1.,
+            Self::Large => 1.1,
+            Self::Largest => 1.25,
+        }
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Standard => "100%",
+            Self::Large => "110%",
+            Self::Largest => "125%",
+        }
+    }
+}
+#[derive(Default, Deserialize, Serialize)]
+struct AppearancePreference {
+    ui_scale: UiScale,
+}
+
 #[derive(Clone)]
 pub struct Settings {
     pub store: ConfigStore,
@@ -19,6 +51,7 @@ pub struct Settings {
     pub recent_files: RecentFiles,
     pub language: Option<String>,
     pub workspace: WorkspaceKind,
+    pub ui_scale: UiScale,
     pub notices: Vec<String>,
 }
 impl Global for Settings {}
@@ -82,14 +115,29 @@ impl Settings {
                 WorkspaceKind::default()
             }
         };
+        let ui_scale = match store.read::<AppearancePreference>("appearance.json") {
+            Ok(preference) => preference.unwrap_or_default().ui_scale,
+            Err(error) => {
+                notices.push(error.to_string());
+                UiScale::default()
+            }
+        };
         Self {
             store,
             bindings,
             recent_files,
             language,
             workspace,
+            ui_scale,
             notices,
         }
+    }
+
+    pub fn set_ui_scale(&mut self, ui_scale: UiScale) -> anyhow::Result<()> {
+        self.store
+            .write("appearance.json", &AppearancePreference { ui_scale })?;
+        self.ui_scale = ui_scale;
+        Ok(())
     }
 
     pub fn set_workspace(&mut self, workspace: WorkspaceKind) -> anyhow::Result<()> {

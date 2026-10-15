@@ -1,6 +1,6 @@
 //! Shared panel chrome. Panel owners keep input state, commands and popover state.
 
-use crate::t;
+use crate::{t, ui::compact};
 use gpui_kit::assets::IconName;
 use gpui_kit::base::ElementExt;
 use gpui_kit::component::{
@@ -59,30 +59,33 @@ impl RenderOnce for PanelToolbar {
         let mut bar = Toolbar::new((self.id.clone(), "bar"))
             .xsmall()
             .h_full()
-            .px(px(2.))
-            .py(px(3.))
-            .gap(px(2.))
+            .p_0()
+            .gap(crate::ui::compact::rem(2.))
             .w_full()
             .min_w_0();
         if !self.actions.is_empty() {
-            let mut group = ToolbarGroup::new((self.id.clone(), "actions"))
-                .label(t!("editor.panel_toolbar_actions"))
-                .gap(px(2.))
-                .flex_shrink_0();
-            for build in self.actions {
-                group = group.child(build(is_compact));
-            }
-            bar = bar.child(group);
+            let buttons = self
+                .actions
+                .into_iter()
+                .map(|build| compact::header_button(build(is_compact)))
+                .collect();
+            let group = compact::group(
+                (self.id.clone(), "actions"),
+                t!("editor.panel_toolbar_actions"),
+                Axis::Horizontal,
+                buttons,
+            );
+            bar = bar.content(compact::header_control(group));
         }
         if !self.controls.is_empty() {
             let mut group = ToolbarGroup::new((self.id.clone(), "controls"))
                 .label(t!("editor.panel_toolbar_view"))
-                .gap(px(2.))
+                .gap(crate::ui::compact::rem(2.))
                 .flex_shrink_0();
             for control in self.controls {
                 group = group.content(control);
             }
-            bar = bar.child(group);
+            bar = bar.content(compact::header_control(group));
         }
         bar = match self.search {
             Some(search) => bar.content(search),
@@ -95,9 +98,9 @@ impl RenderOnce for PanelToolbar {
             .w_full()
             .min_w_0()
             .flex_shrink_0()
-            .h(px(27.))
+            .h(crate::ui::compact::rem(compact::HEADER_CONTROL))
             .on_prepaint(move |bounds, window, cx| {
-                let next = bounds.size.width < COMPACT_WIDTH;
+                let next = bounds.size.width < COMPACT_WIDTH * compact::scale(cx);
                 if next != *compact.read(cx) {
                     let compact = compact.clone();
                     window.defer(cx, move |_, cx| {
@@ -177,9 +180,10 @@ impl RenderOnce for PanelToolbarSearch {
             .flex()
             .flex_1()
             .min_w_0()
+            .items_center()
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(
-                self.input
-                    .small()
+                compact::header_input(self.input)
                     .disabled(self.disabled)
                     .flex_1()
                     .min_w_0()
@@ -190,7 +194,11 @@ impl RenderOnce for PanelToolbarSearch {
                     ),
             )
             .when_some(self.reset, |row, reset| {
-                row.child(reset.disabled(self.disabled).flex_shrink_0())
+                row.child(
+                    compact::header_button(reset)
+                        .disabled(self.disabled)
+                        .flex_shrink_0(),
+                )
             })
     }
 }
@@ -205,7 +213,7 @@ impl PanelToolbarPopover {
         Self(
             Popover::new(id)
                 .p_2()
-                .trigger(trigger.prepare_for_toolbar().xsmall()),
+                .trigger(compact::header_button(trigger.prepare_for_toolbar())),
         )
     }
 

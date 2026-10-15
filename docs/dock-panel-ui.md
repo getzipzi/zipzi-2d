@@ -1,17 +1,18 @@
 # Dock Panel UI
 
-Dock groups use one 28 px header instead of a horizontal tab strip and a
-separate panel toolbar. The first control shows the active panel's icon and
-opens a menu of the group's visible panels. Entries include names, icons and
-the current selection. The same trigger supports keyboard activation, dragging
-the active panel, and its close context menu. The group menu retains add,
-split, close and maximize actions.
+Dock groups use one 26 logical px header at 100% UI scale instead of a horizontal
+tab strip and a separate panel toolbar. The first control shows the active panel's
+icon. Groups with multiple visible panels offer a selection-only dropdown with
+names, icons and the current selection. The tab and unused header space support
+dragging; right-clicking the header opens add, split, close and maximize actions.
+Each group has a thin outline, rounded corners and a shared 4 logical px gap.
 
 The rest of the header contains the active panel's controls, followed by dock
 actions. Panel names remain available in the selector's tooltip and menu.
 The content region has the same padding whether it holds one or several
-panels. Bottom docks retain Kit's 29 px collapsed extent; the 28 px header fits
-inside that strip and selecting a panel reopens it before changing selection.
+panels. Bottom docks retain Kit's fixed 29 px collapsed extent; a 27 px header
+and 2 px top inset fit inside that strip. Selecting a panel reopens it before
+changing selection. The expanded header and controls scale together.
 
 ## Header ownership
 
@@ -22,7 +23,7 @@ their owners. The header observes the panel to refresh selected and disabled
 states without rebuilding the whole dock.
 
 Hierarchy trees, Parameters, animation resources, preview information,
-Relations and Timeline expose their controls through this interface. Their
+Relations, Canvas and Timeline expose their controls through this interface. Their
 content renderers no longer draw a second toolbar row. `PanelToolbar` supplies
 the shared compact spacing and search/popover controls.
 
@@ -33,11 +34,17 @@ header width separately from content width; Timeline uses this for its
 transport and overflow tools. Its compact time label omits the duration while
 the tooltip retains the complete time information.
 
+Header controls isolate left mouse presses after their menus and popovers handle
+them. This preserves search text selection and button interaction without arming
+the header's panel drag. The isolation belongs around composed controls, not on
+popover triggers, because the parent popover needs the press to open.
+
 ## Canvas
 
 Canvas uses the same header and selector and can be grouped, moved to a side
 dock or maximized. Closing the only canvas remains prohibited. A canvas's
-editing tools live in a vertical floating toolbar at its left edge. Deformer
+editing tools live in a vertical floating toolbar at its left edge; zoom controls
+belong to the canvas header and align to its right edge. Deformer
 controls sit beside it. Pointer events on the floating controls do not start
 canvas gestures, and activating a tool focuses that canvas.
 

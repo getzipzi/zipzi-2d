@@ -56,17 +56,15 @@ pub(super) fn source_menu(
                     div()
                         .flex()
                         .items_center()
-                        .h(px(28.))
+                        .h(crate::ui::compact::rem(crate::ui::compact::DOCK_HEADER))
                         .flex_shrink_0()
-                        .gap(px(2.))
+                        .gap(crate::ui::compact::rem(crate::ui::compact::GAP))
                         .child(
-                            Button::new(SharedString::from(format!(
+                            crate::ui::compact::button(Button::new(SharedString::from(format!(
                                 "locate-state-source-{}",
                                 source.id
-                            )))
-                            .ghost()
-                            .small()
-                            .h(px(26.))
+                            ))))
+                            .h(crate::ui::compact::rem(crate::ui::compact::CONTROL))
                             .px_1()
                             .flex_1()
                             .min_w_0()
@@ -105,14 +103,12 @@ pub(super) fn source_menu(
                             }),
                         )
                         .child(
-                            Button::new(SharedString::from(format!(
+                            crate::ui::compact::button(Button::new(SharedString::from(format!(
                                 "change-state-source-{}",
                                 source.id
-                            )))
-                            .ghost()
-                            .small()
-                            .w(px(26.))
-                            .h(px(26.))
+                            ))))
+                            .w(crate::ui::compact::rem(crate::ui::compact::CONTROL))
+                            .h(crate::ui::compact::rem(crate::ui::compact::CONTROL))
                             .flex_shrink_0()
                             .icon(
                                 Icon::new(if visibility {
@@ -208,11 +204,9 @@ pub(super) fn button(
         cx.theme().foreground
     });
     let inherited_only = !state.explicit.hidden_in_editor && inherited;
-    let trigger = Button::new(id.clone())
+    let trigger = crate::ui::compact::header_button(Button::new(id.clone()))
         .ghost()
-        .small()
-        .w(px(24.))
-        .h(px(24.))
+        .w(crate::ui::compact::rem(crate::ui::compact::HEADER_CONTROL))
         .icon(icon)
         .tooltip(tooltip)
         .disabled(disabled);

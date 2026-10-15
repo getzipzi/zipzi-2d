@@ -24,6 +24,18 @@ brew install watchexec
 ./scripts/dev.sh playground  # Component playground
 ```
 
+The playground opens the Compact sample by default, using the editor's shared
+styles and number input. It includes Chinese/English labels, button states,
+search, property rows, and a panel-spacing prototype; use the theme button to
+compare dark and light appearances and the UI scale button for 100%, 110%, and 125%.
+The title bar combines a project dropdown (including New/Open and Close), a centered
+workspace switcher, and a workspace menu (the top-right ellipsis) with UI scale.
+The project dropdown remains available when no project is open.
+Right-click a panel header (including its tab and unused space) for panel actions
+or to add panels. Drag the tab or header background to move a panel. Groups with
+multiple tabs offer a selection-only dropdown. Canvas tools live in the canvas overlay;
+zoom controls are aligned to the right of its panel header.
+
 ## Test
 
 The full suite requires macOS and Metal.
@@ -40,6 +52,10 @@ cargo test --locked -p kasane-editor --bin kasane-editor headless_tests
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test headless_screenshot
 # Focused Timeline views and candidate/cancel pixel verification:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --test headless_screenshot
+# Title bar project switching and empty states:
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=titlebar cargo test --locked -p kasane-editor --test headless_screenshot
+# Compact layout, UI scale, and opaque Metal corner pixel checks:
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact cargo test --locked -p kasane-editor --test headless_screenshot
 # Imported motion edge cases, editing and canvas navigation acceptance (local Mao asset):
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeline_acceptance
 # Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:

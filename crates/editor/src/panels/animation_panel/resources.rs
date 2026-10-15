@@ -519,12 +519,12 @@ impl AnimationPanel {
             .id(id)
             .w_full()
             .min_w_0()
-            .h(px(30.))
+            .h(crate::ui::compact::rem(crate::ui::compact::ROW))
             .flex()
             .items_center()
-            .gap_2()
-            .px_2()
-            .rounded_md()
+            .gap(crate::ui::compact::rem(crate::ui::compact::GAP))
+            .px(crate::ui::compact::rem(crate::ui::compact::PADDING))
+            .rounded(crate::ui::compact::rem(crate::ui::compact::RADIUS))
             .border_1()
             .border_color(
                 if self.focus.is_focused(window) && self.resources.view.cursor == Some(cursor) {

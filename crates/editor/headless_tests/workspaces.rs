@@ -33,7 +33,7 @@ fn timeline_dock_size_and_hidden_state_restore_in_new_windows(cx: &mut TestAppCo
                     point(px(0.), px(0.)),
                     size(px(1100.), px(740.)),
                 ))),
-                ..crate::workspace::tab_bar::window_options()
+                ..crate::workspace::title_bar::window_options()
             },
             cx,
             |window, cx| cx.new(|cx| EditorView::new(window, cx)),
@@ -167,27 +167,36 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
 }
 
 #[gpui_kit::test]
-fn project_tabs_restore_mode_tools_and_layout(cx: &mut TestAppContext) {
+fn project_select_restores_mode_tools_and_layout(cx: &mut TestAppContext) {
     let harness = setup(cx);
+    let second = cx
+        .update_window(harness.window, |_, window, cx| {
+            let first = harness.view.read(cx).editor.active_id().unwrap();
+            window.click("tool_glue", cx);
+            harness
+                .view
+                .update(cx, |view, cx| view.run_command(CommandId::New, window, cx));
+            let second = harness.view.read(cx).editor.active_id().unwrap();
+            assert_ne!(first, second);
+            window.click("workspace-animation", cx);
+            window.render_frame(cx);
+            window.click("project-select", cx);
+            window.click(format!("project-select-{first:?}"), cx);
+            window.render_frame(cx);
+            harness.view.read_with(cx, |view, _| {
+                assert_eq!(view.editor.workspace(), WorkspaceKind::Modeling);
+                assert_eq!(view.editor.active_tool(), ToolId::Glue);
+            });
+            assert!(window.try_find("tool_glue").is_some());
+            assert!(window.try_find("animation-timeline").is_none());
+            second
+        })
+        .unwrap();
+    cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         let first = harness.view.read(cx).editor.active_id().unwrap();
-        window.click("tool_glue", cx);
-        harness
-            .view
-            .update(cx, |view, cx| view.run_command(CommandId::New, window, cx));
-        let second = harness.view.read(cx).editor.active_id().unwrap();
-        assert_ne!(first, second);
-        window.click("workspace-animation", cx);
-        window.render_frame(cx);
-        window.click(format!("tab-item-{first:?}"), cx);
-        window.render_frame(cx);
-        harness.view.read_with(cx, |view, _| {
-            assert_eq!(view.editor.workspace(), WorkspaceKind::Modeling);
-            assert_eq!(view.editor.active_tool(), ToolId::Glue);
-        });
-        assert!(window.try_find("tool_glue").is_some());
-        assert!(window.try_find("animation-timeline").is_none());
-        window.click(format!("tab-item-{second:?}"), cx);
+        window.click("project-select", cx);
+        window.click(format!("project-select-{second:?}"), cx);
         window.render_frame(cx);
         assert_eq!(
             harness.view.read(cx).editor.workspace(),
@@ -482,7 +491,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
                     point(px(0.), px(0.)),
                     size(px(640.), px(480.)),
                 ))),
-                ..crate::workspace::tab_bar::window_options()
+                ..crate::workspace::title_bar::window_options()
             },
             cx,
             |window, cx| cx.new(|cx| crate::EditorView::new(window, cx)),

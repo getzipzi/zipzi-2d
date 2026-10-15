@@ -33,6 +33,7 @@ struct SceneKey {
     events: Vec<String>,
     range: (f64, f64),
     normalized: bool,
+    row_height: f32,
 }
 pub(super) struct Scene {
     key: SceneKey,
@@ -49,17 +50,25 @@ pub(super) struct SceneCache {
 }
 impl Scene {
     pub fn hit(&self, position: Point<Pixels>) -> Result<Option<Hit>, ()> {
-        hit_markers(&self.markers, position)
+        hit_markers_scaled(&self.markers, position, 6. * self.key.row_height / ROW)
     }
 }
 
+#[cfg(test)]
 fn hit_markers(markers: &[Marker], position: Point<Pixels>) -> Result<Option<Hit>, ()> {
+    hit_markers_scaled(markers, position, 6.)
+}
+fn hit_markers_scaled(
+    markers: &[Marker],
+    position: Point<Pixels>,
+    radius: f32,
+) -> Result<Option<Hit>, ()> {
     let mut closest: Option<(&Marker, f32)> = None;
     let mut ambiguous = false;
     for marker in markers {
         let dx = (marker.position.x - position.x).abs().as_f32();
         let dy = (marker.position.y - position.y).abs().as_f32();
-        if dx > 6. || dy > 6. {
+        if dx > radius || dy > radius {
             continue;
         }
         let distance = dx * dx + dy * dy;
@@ -132,15 +141,18 @@ pub(super) fn time_x(time: f64, range: (f64, f64), width: f32) -> f32 {
 pub(super) fn x_time(x: f32, range: (f64, f64), width: f32) -> f64 {
     range.0 + x as f64 / width.max(1.) as f64 * (range.1 - range.0)
 }
-pub(super) fn value_y(value: f64, range: (f64, f64), height: f32) -> f32 {
-    8. + ((range.1 - value) / (range.1 - range.0) * curve_height(height) as f64) as f32
+pub(super) fn value_y(value: f64, range: (f64, f64), height: f32, row_height: f32) -> f32 {
+    8. * row_height / ROW
+        + ((range.1 - value) / (range.1 - range.0) * curve_height(height, row_height) as f64) as f32
 }
-pub(super) fn y_value(y: f32, range: (f64, f64), height: f32) -> f64 {
-    range.1 - (y - 8.) as f64 / curve_height(height) as f64 * (range.1 - range.0)
+pub(super) fn y_value(y: f32, range: (f64, f64), height: f32, row_height: f32) -> f64 {
+    range.1
+        - (y - 8. * row_height / ROW) as f64 / curve_height(height, row_height) as f64
+            * (range.1 - range.0)
 }
-fn curve_height(height: f32) -> f32 {
+fn curve_height(height: f32, row_height: f32) -> f32 {
     // Preserve the normal event lane, but share the limited height in short docks.
-    (height - ROW.min(height * 0.2) - 16.).max(1.)
+    (height - row_height.min(height * 0.2) - 16. * row_height / ROW).max(1.)
 }
 pub(super) fn track_range(projection: &TimelineProjection, track: &str) -> (f64, f64) {
     projection
@@ -260,6 +272,7 @@ fn build_scene(
     state: &TimelineViewState,
     rows: &Arc<[TimelineRow]>,
 ) -> Scene {
+    let row_height = key.row_height;
     let width = key.size.width.as_f32();
     let height = key.size.height.as_f32();
     let mut scene = Scene {
@@ -271,14 +284,14 @@ fn build_scene(
     };
     let x = |time| px(time_x(time, state.time_range, width));
     if state.mode == TimelineDisplayMode::Overview {
-        let first = (state.scroll / ROW as f64).floor() as usize;
+        let first = (state.scroll / row_height as f64).floor() as usize;
         for (index, row) in rows
             .iter()
             .enumerate()
             .skip(first)
-            .take((height / ROW).ceil() as usize + 2)
+            .take((height / row_height).ceil() as usize + 2)
         {
-            let y = px(index as f32 * ROW + ROW / 2. - state.scroll as f32);
+            let y = px(index as f32 * row_height + row_height / 2. - state.scroll as f32);
             if let Some(track) = row
                 .track_id
                 .as_ref()
@@ -318,6 +331,7 @@ fn build_scene(
                     display_value(value as f64, state.normalized, scale),
                     scene.key.range,
                     height,
+                    row_height,
                 ))
             };
             let position = |time: f64, value: f32| point(x(time), y(value));
@@ -454,7 +468,7 @@ fn build_scene(
                 state.normalized,
                 channel_range(channel),
             );
-            let y = px(value_y(value, scene.key.range, height));
+            let y = px(value_y(value, scene.key.range, height, row_height));
             scene.strokes.push(Stroke {
                 points: vec![point(px(0.), y), point(px(width), y)],
                 color: scene.strokes.len(),
@@ -463,7 +477,7 @@ fn build_scene(
         for event in &projection.events {
             if (state.time_range.0..=state.time_range.1).contains(&f64::from(event.time)) {
                 scene.markers.push(Marker {
-                    position: point(x(f64::from(event.time)), px(height - ROW / 2.)),
+                    position: point(x(f64::from(event.time)), px(height - row_height / 2.)),
                     hit: Hit::Event(event.id.clone()),
                 });
             }
@@ -503,10 +517,20 @@ fn label(window: &mut Window, cx: &mut App, origin: Point<Pixels>, text: String,
         underline: None,
         strikethrough: None,
     };
-    let shaped = window
-        .text_system()
-        .shape_line(text.into(), px(10.), &[run], None);
-    let _ = shaped.paint(origin, px(14.), TextAlign::Left, None, window, cx);
+    let shaped = window.text_system().shape_line(
+        text.into(),
+        compact::scaled(compact::CAPTION, cx),
+        &[run],
+        None,
+    );
+    let _ = shaped.paint(
+        origin,
+        compact::scaled(14., cx),
+        TextAlign::Left,
+        None,
+        window,
+        cx,
+    );
 }
 fn ticks(range: (f64, f64), width: f32, fps: f32, seconds: bool) -> Vec<f64> {
     let raw = (range.1 - range.0) / (width / 70.).max(1.) as f64;
@@ -566,8 +590,8 @@ pub(super) fn paint_ruler(
             );
             line(
                 window,
-                bounds.origin + point(px(x), px(RULER - 5.)),
-                bounds.origin + point(px(x), px(RULER)),
+                bounds.origin + point(px(x), compact::scaled(RULER - 5., cx)),
+                bounds.origin + point(px(x), compact::scaled(RULER, cx)),
                 foreground,
                 1.,
             );
@@ -575,7 +599,7 @@ pub(super) fn paint_ruler(
         let x = time_x(head as f64, state.time_range, bounds.size.width.as_f32());
         diamond(
             window,
-            bounds.origin + point(px(x), px(RULER - 5.)),
+            bounds.origin + point(px(x), compact::scaled(RULER - 5., cx)),
             4.,
             primary,
         );
@@ -740,12 +764,14 @@ fn paint_scene(
         events: state.events.iter().cloned().collect(),
         range,
         normalized: state.normalized,
+        row_height: ROW * compact::scale(cx),
     };
     if cache.scene.as_ref().is_none_or(|scene| scene.key != key) {
         cache.scene = Some(build_scene(key, projection, state, rows));
         cache.builds += 1;
     }
     let scene = cache.scene.as_ref().unwrap();
+    let row_height = scene.key.row_height;
     let theme = cx.theme().clone();
     window.with_content_mask(Some(ContentMask { bounds }), |window| {
         let width = bounds.size.width.as_f32();
@@ -771,31 +797,37 @@ fn paint_scene(
             );
         }
         if state.mode == TimelineDisplayMode::Overview {
-            let first = (state.scroll / ROW as f64).floor() as usize;
-            for index in first..rows.len().min(first + (height / ROW).ceil() as usize + 2) {
-                let y = index as f32 * ROW - state.scroll as f32;
+            let first = (state.scroll / row_height as f64).floor() as usize;
+            for index in first
+                ..rows
+                    .len()
+                    .min(first + (height / row_height).ceil() as usize + 2)
+            {
+                let y = index as f32 * row_height - state.scroll as f32;
                 if state.channels.contains(&rows[index].id) {
                     window.paint_quad(fill(
                         Bounds::new(
                             bounds.origin + point(px(0.), px(y)),
-                            size(bounds.size.width, px(ROW)),
+                            size(bounds.size.width, px(row_height)),
                         ),
                         theme.accent.opacity(0.08),
                     ));
                 }
                 line(
                     window,
-                    bounds.origin + point(px(0.), px(y + ROW)),
-                    bounds.origin + point(px(width), px(y + ROW)),
+                    bounds.origin + point(px(0.), px(y + row_height)),
+                    bounds.origin + point(px(width), px(y + row_height)),
                     theme.border.opacity(0.4),
                     1.,
                 );
             }
         } else {
-            let intervals = (curve_height(height) / 28.).floor().clamp(1., 4.) as usize;
+            let intervals = (curve_height(height, row_height) / 28.)
+                .floor()
+                .clamp(1., 4.) as usize;
             for n in 0..=intervals {
                 let value = range.0 + (range.1 - range.0) * n as f64 / intervals as f64;
-                let y = value_y(value, range, height);
+                let y = value_y(value, range, height, row_height);
                 line(
                     window,
                     bounds.origin + point(px(0.), px(y)),
@@ -867,7 +899,12 @@ fn paint_scene(
                     .corner_radii(px(2.)),
                 );
             } else {
-                diamond(window, bounds.origin + marker.position, 4.5, color);
+                diamond(
+                    window,
+                    bounds.origin + marker.position,
+                    4.5 * compact::scale(cx),
+                    color,
+                );
             }
         }
     });

@@ -54,13 +54,7 @@ impl Timeline {
         let asset_loop = resource.as_ref().is_some_and(|r| r.looping);
         let allowed = self.allowed(window, cx);
         let seek_enabled = allowed && resource.as_ref().is_some_and(|r| r.playable());
-        let mut transport = div()
-            .id("timeline-transport")
-            .test_support()
-            .flex()
-            .items_center()
-            .gap(px(2.))
-            .flex_shrink_0();
+        let mut transport = Vec::new();
         for (id, command, icon, hint) in [
             (
                 "timeline-start",
@@ -109,41 +103,47 @@ impl Timeline {
                 t!("timeline.jump_end"),
             ),
         ] {
-            if self.header_compact && matches!(command, "left" | "right") {
+            if (self.header_tiny && command != "play")
+                || (self.header_compact && matches!(command, "left" | "right"))
+            {
                 continue;
             }
-            transport = transport.child(
-                Button::new(id)
-                    .xsmall()
-                    .when(self.header_compact, |button| button.xsmall())
-                    .ghost()
-                    .icon(icon)
-                    .accessibility_label(hint.clone().into_owned())
-                    .tooltip(hint)
-                    .disabled(if command == "play" {
-                        !allowed || !play_enabled
+            transport.push(
+                compact::header_button(Button::new(id).when(command == "play", |button| {
+                    button.selected(playing).toggled(playing)
+                }))
+                .icon(icon)
+                .accessibility_label(hint.clone().into_owned())
+                .tooltip(hint)
+                .disabled(if command == "play" {
+                    !allowed || !play_enabled
+                } else {
+                    !seek_enabled
+                })
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    this.finish_number(cx);
+                    window.focus(&this.focus, cx);
+                    if command == "play" {
+                        let _ = this.owner.update(cx, |owner, cx| {
+                            owner.run_command(CommandId::PlayPause, window, cx)
+                        });
                     } else {
-                        !seek_enabled
-                    })
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.finish_number(cx);
-                        window.focus(&this.focus, cx);
-                        if command == "play" {
-                            let _ = this.owner.update(cx, |owner, cx| {
-                                owner.run_command(CommandId::PlayPause, window, cx)
-                            });
-                        } else {
-                            this.key_command(command, window, cx);
-                        }
-                    })),
+                        this.key_command(command, window, cx);
+                    }
+                })),
             );
         }
         let weak = self.owner.clone();
-        transport = transport.child(
-            Button::new("animation-preview-loop")
-                .xsmall()
-                .when(self.header_compact, |button| button.xsmall())
-                .ghost()
+        if !self.header_tiny {
+            transport.push(
+                compact::header_button(compact::toggle(
+                    Button::new("animation-preview-loop"),
+                    if mode == AnimationPreviewMode::Editing {
+                        looping
+                    } else {
+                        asset_loop
+                    },
+                ))
                 .icon(IconName::Repeat)
                 .selected(if mode == AnimationPreviewMode::Editing {
                     looping
@@ -169,87 +169,101 @@ impl Timeline {
                         owner.complete_edit(result, cx);
                     });
                 }),
-        );
+            );
+        }
         let weak = self.owner.clone();
-        transport = transport.child(
-            Button::new("animation-preview-mode")
-                .xsmall()
-                .when(self.header_compact, |button| button.xsmall())
-                .ghost()
-                .icon(if mode == AnimationPreviewMode::Editing {
-                    IconName::EyeOff
+        let preview = (!self.header_tiny).then(|| {
+            compact::header_button(
+                Button::new("animation-preview-mode")
+                    .selected(mode == AnimationPreviewMode::Result),
+            )
+            .icon(if mode == AnimationPreviewMode::Editing {
+                IconName::EyeOff
+            } else {
+                IconName::Eye
+            })
+            .selected(mode == AnimationPreviewMode::Result)
+            .accessibility_label(t!("timeline.preview_effect").into_owned())
+            .tooltip(format!(
+                "{}\n{}",
+                t!("timeline.preview_effect"),
+                t!(if mode == AnimationPreviewMode::Editing {
+                    "timeline.editing_hint"
                 } else {
-                    IconName::Eye
+                    "timeline.result_hint"
                 })
-                .selected(mode == AnimationPreviewMode::Result)
-                .accessibility_label(t!("timeline.preview_effect").into_owned())
-                .tooltip(format!(
-                    "{}\n{}",
-                    t!("timeline.preview_effect"),
-                    t!(if mode == AnimationPreviewMode::Editing {
-                        "timeline.editing_hint"
-                    } else {
-                        "timeline.result_hint"
-                    })
-                ))
-                .disabled(!allowed || document.is_none())
-                .dropdown_menu(move |mut menu, _, _| {
-                    for (id, choice, label) in [
-                        (
-                            "animation-edit-preview",
-                            AnimationPreviewMode::Editing,
-                            t!("timeline.editing_effect"),
-                        ),
-                        (
-                            "animation-result-preview",
-                            AnimationPreviewMode::Result,
-                            t!("timeline.result_effect"),
-                        ),
-                    ] {
-                        let label = label.into_owned();
-                        let weak = weak.clone();
-                        menu = menu.item(
-                            PopupMenuItem::element(move |_, _| {
-                                div().id(id).test_support().child(label.clone())
-                            })
-                            .checked(mode == choice)
-                            .on_click(move |_, window, cx| {
-                                if window.has_active_dialog(cx) {
-                                    return;
-                                }
-                                let _ = weak.update(cx, |owner, cx| {
-                                    let result = owner
-                                        .editor
-                                        .set_animation_preview_mode(document.unwrap(), choice);
-                                    owner.animation_anchor = None;
-                                    owner.complete_edit(result, cx);
-                                });
-                            }),
-                        );
-                    }
-                    menu
-                }),
+            ))
+            .disabled(!allowed || document.is_none())
+            .dropdown_menu(move |mut menu, _, _| {
+                for (id, choice, label) in [
+                    (
+                        "animation-edit-preview",
+                        AnimationPreviewMode::Editing,
+                        t!("timeline.editing_effect"),
+                    ),
+                    (
+                        "animation-result-preview",
+                        AnimationPreviewMode::Result,
+                        t!("timeline.result_effect"),
+                    ),
+                ] {
+                    let label = label.into_owned();
+                    let weak = weak.clone();
+                    menu = menu.item(
+                        PopupMenuItem::element(move |_, _| {
+                            div().id(id).test_support().child(label.clone())
+                        })
+                        .checked(mode == choice)
+                        .on_click(move |_, window, cx| {
+                            if window.has_active_dialog(cx) {
+                                return;
+                            }
+                            let _ = weak.update(cx, |owner, cx| {
+                                let result = owner
+                                    .editor
+                                    .set_animation_preview_mode(document.unwrap(), choice);
+                                owner.animation_anchor = None;
+                                owner.complete_edit(result, cx);
+                            });
+                        }),
+                    );
+                }
+                menu
+            })
+            .into_any_element()
+        });
+        let transport = compact::group(
+            "timeline-transport",
+            t!("timeline.playback_group"),
+            Axis::Horizontal,
+            transport,
         );
         let tools = self.tools(window, cx);
         div()
             .id("timeline-toolbar")
             .test_support()
-            .h(px(27.))
+            .h(compact::rem(compact::HEADER_CONTROL))
             .w_full()
             .min_w_0()
             .flex_shrink_0()
             .flex()
             .items_center()
-            .gap(px(2.))
-            .px(px(2.))
-            .child(transport)
+            .gap(compact::rem(6.))
+            .px_0()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    .child(transport)
+                    .children(preview),
+            )
             .child(
                 div()
                     .h(px(18.))
                     .border_l_1()
                     .border_color(cx.theme().border),
             )
-            .child(tools)
             .child(
                 div()
                     .id("timeline-motion-name")
@@ -279,7 +293,8 @@ impl Timeline {
                     .id("timeline-time")
                     .test_support()
                     .flex_shrink_0()
-                    .text_xs()
+                    .text_size(compact::rem(compact::CAPTION))
+                    .font_family(".AppleSystemUIFontMonospaced")
                     .tooltip(move |window, cx| {
                         gpui_kit::component::tooltip::Tooltip::new(time_hint.clone())
                             .build(window, cx)
@@ -290,6 +305,7 @@ impl Timeline {
                         time_label
                     }),
             )
+            .child(tools)
             .into_any_element()
     }
 }

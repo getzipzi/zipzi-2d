@@ -247,6 +247,7 @@ impl DockWorkspace {
             document_panels.insert(kind, panel);
         }
         let mut headers = header::PanelHeaders::new();
+        header::register(&mut headers, &canvas, cx);
         header::register(&mut headers, &mesh_tree, cx);
         header::register(&mut headers, &deformer_tree, cx);
         header::register(&mut headers, &parameters, cx);
@@ -865,6 +866,26 @@ impl EditorView {
             window,
             |this, area, event, window, cx| {
                 if !matches!(event, DockEvent::LayoutChanged) {
+                    return;
+                }
+                let has_empty_dock = [
+                    DockPlacement::Left,
+                    DockPlacement::Right,
+                    DockPlacement::Bottom,
+                ]
+                .into_iter()
+                .any(|placement| {
+                    area.read(cx)
+                        .layout(placement)
+                        .is_some_and(|tree| tree.panels().next().is_none())
+                });
+                if has_empty_dock {
+                    // Dragging the last panel out should release the old dock's
+                    // space just like closing that panel through the menu.
+                    let area = area.clone();
+                    window.defer(cx, move |window, cx| {
+                        area.update(cx, |area, cx| prune_empty_docks(area, window, cx))
+                    });
                     return;
                 }
                 let state = area.read(cx).dump(cx);

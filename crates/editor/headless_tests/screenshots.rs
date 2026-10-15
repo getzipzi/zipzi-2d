@@ -3,10 +3,10 @@
 
 use crate::{EditorView, actions, i18n, settings, theme};
 use editor_core::{ConfigStore, Editor};
-use gpui_kit::component::WindowExt;
+use gpui_kit::component::{ActiveTheme, WindowExt};
 use gpui_kit::{
-    AnyWindowHandle, AppContext as _, Bounds, Entity, HeadlessAppContext, WindowBounds,
-    WindowOptions, assets::AllAssets, point, px, size, test::TestWindowExt,
+    AnyWindowHandle, AppContext as _, BorrowAppContext as _, Bounds, Entity, HeadlessAppContext,
+    WindowBounds, WindowOptions, assets::AllAssets, point, px, size, test::TestWindowExt,
 };
 use image::RgbaImage;
 use std::{
@@ -40,6 +40,9 @@ impl Harness {
         i18n::activate(Some("en"));
         cx.update(|cx| {
             gpui_kit::init(cx);
+            // Pixel baselines capture settled controls rather than a spring's
+            // intermediate frame after changing workspace or UI scale.
+            cx.set_reduce_motion(true);
             cx.set_global(settings::Settings::from_store(
                 ConfigStore::new(config.path()),
                 cx.keyboard_mapper().as_ref(),
@@ -57,7 +60,7 @@ impl Harness {
                     // A TestWindow has no OS window. Logical visibility allows canvas measurement.
                     show: true,
                     focus: false,
-                    ..crate::workspace::tab_bar::window_options()
+                    ..crate::workspace::title_bar::window_options()
                 },
                 cx,
                 |window, cx| cx.new(|cx| EditorView::new(window, cx)),
@@ -419,6 +422,16 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("titlebar") {
+        titlebar_screenshots(&directory)?;
+        println!("Title bar project and empty-state screenshots passed.");
+        return Ok(());
+    }
+    if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("compact") {
+        compact_screenshots(&directory)?;
+        println!("Compact density, scale and Metal corner screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("dock") {
         dock_screenshots(&directory)?;
         println!("Dock Metal screenshots passed.");
@@ -438,7 +451,7 @@ pub(super) fn run() -> anyhow::Result<()> {
         })?;
         save(&empty.capture()?, &directory, "titlebar-empty.png")?;
         empty.cx.update_window(empty.window, |_, window, cx| {
-            window.click("project-new-or-open", cx);
+            window.click("project-select", cx);
         })?;
         save(&empty.capture()?, &directory, "titlebar-project-menu.png")?;
     }
@@ -1220,6 +1233,25 @@ fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
     let overview = harness.capture()?;
     save(&overview, directory, "timeline-overview.png")?;
     harness.cx.update_window(harness.window, |_, window, cx| {
+        let bounds = window.find("editor-bottom-dock").bounds();
+        let scale = window.scale_factor();
+        let expected = if cx.theme().is_dark() { 31 } else { 217 };
+        for fraction in [0.25, 0.5, 0.75] {
+            let x = ((bounds.left().as_f32() + bounds.size.width.as_f32() * fraction) * scale)
+                .floor() as u32;
+            let y = (bounds.top().as_f32() * scale).ceil() as u32;
+            let pixel = overview.get_pixel(x, y);
+            anyhow::ensure!(
+                pixel.0[..3]
+                    .iter()
+                    .all(|channel| channel.abs_diff(expected) <= 3),
+                "Extra line above Timeline at ({x}, {y}): {:?}",
+                pixel.0
+            );
+        }
+        Ok::<_, anyhow::Error>(())
+    })??;
+    harness.cx.update_window(harness.window, |_, window, cx| {
         window.click("timeline-interpolation-bezier", cx);
         window.render_frame(cx);
         window.click("timeline-view", cx);
@@ -1272,9 +1304,9 @@ fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
         harness.canvas_image(&restored)? == canvas_before,
         "Cancel did not restore the canvas image"
     );
-    harness.cx.update_window(harness.window, |_, window, cx| {
+    harness.cx.update_window(harness.window, |_, _window, cx| {
         i18n::activate(Some("zh-CN"));
-        gpui_kit::component::Theme::change(gpui_kit::component::ThemeMode::Light, Some(window), cx);
+        theme::change(gpui_kit::component::ThemeMode::Light, cx);
         harness.view.update(cx, |view, cx| view.redraw(cx));
     })?;
     save(
@@ -1330,6 +1362,238 @@ fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
         &harness.capture()?,
         directory,
         "timeline-narrow-properties-zh-light.png",
+    )?;
+    i18n::activate(Some("en"));
+    Ok(())
+}
+
+fn titlebar_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
+    use gpui_kit::component::ThemeMode;
+    for (mode, locale, appearance) in [
+        (ThemeMode::Dark, "en", "dark"),
+        (ThemeMode::Light, "zh-CN", "light-zh"),
+    ] {
+        let mut harness = Harness::new()?;
+        i18n::activate(Some(locale));
+        harness.cx.update(|cx| theme::change(mode, cx));
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                let first = view.editor.active_id().unwrap();
+                view.editor.new_document().unwrap();
+                view.editor.new_document().unwrap();
+                view.editor.activate(first).unwrap();
+                view.editor
+                    .execute(editor_core::EditorCommand::CreateParameter(
+                        editor_core::NewParameter {
+                            name: "Test".into(),
+                            runtime_id: "ParamTest".into(),
+                            minimum: -1.,
+                            maximum: 1.,
+                            default_value: 0.,
+                            ..Default::default()
+                        },
+                    ))
+                    .unwrap();
+                view.refresh_document(window, cx);
+            });
+        })?;
+        save(
+            &harness.capture()?,
+            directory,
+            &format!("titlebar-{appearance}.png"),
+        )?;
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            window.click("project-select", cx)
+        })?;
+        save(
+            &harness.capture()?,
+            directory,
+            &format!("titlebar-{appearance}-projects.png"),
+        )?;
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            window.press("escape", cx);
+            harness.view.update(cx, |view, cx| {
+                view.editor = Editor::empty();
+                view.refresh_document(window, cx);
+            });
+        })?;
+        save(
+            &harness.capture()?,
+            directory,
+            &format!("titlebar-{appearance}-empty.png"),
+        )?;
+        harness.cx.update_window(harness.window, |_, window, cx| {
+            window.click("project-select", cx)
+        })?;
+        save(
+            &harness.capture()?,
+            directory,
+            &format!("titlebar-{appearance}-empty-menu.png"),
+        )?;
+    }
+    i18n::activate(Some("en"));
+    Ok(())
+}
+
+fn compact_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
+    use crate::settings::{Settings, UiScale};
+    use gpui_kit::component::dock::{DockPlacement, PaneNode, PaneRef};
+    use gpui_kit::component::{ActiveTheme, ThemeMode};
+    fn groups(node: &PaneNode, result: &mut Vec<u64>) {
+        match node.kind() {
+            PaneRef::Tabs { .. } => result.push(node.id().as_u64()),
+            PaneRef::Split { children, .. } => {
+                for child in children {
+                    groups(child, result);
+                }
+            }
+        }
+    }
+    let mut harness = Harness::new()?;
+    let (mut document, assets) = fixture::sample_document()?;
+    for index in 0..3 {
+        document.create_parameter(editor_core::NewParameter {
+            name: format!("Parameter {index}"),
+            runtime_id: format!("Param{index}"),
+            minimum: -1.,
+            maximum: 1.,
+            default_value: 0.,
+            ..Default::default()
+        })?;
+    }
+    harness._assets = assets;
+    harness.view.update(&mut harness.cx, |view, cx| {
+        view.editor = Editor::from_document(document);
+        view.redraw(cx);
+    });
+    let mut metrics = Vec::new();
+    for scale in UiScale::ALL {
+        for (mode, locale, appearance) in [
+            (ThemeMode::Dark, "en", "dark"),
+            (ThemeMode::Light, "zh-CN", "light-zh"),
+        ] {
+            i18n::activate(Some(locale));
+            harness.cx.update(|cx| {
+                cx.update_global::<Settings, _>(|settings, _| {
+                    settings.set_ui_scale(scale).unwrap()
+                });
+                theme::change(mode, cx);
+            });
+            harness.view.update(&mut harness.cx, |_, cx| cx.notify());
+            let screenshot = harness.capture()?;
+            let name = format!(
+                "compact-{appearance}-{}",
+                scale.label().trim_end_matches('%')
+            );
+            save(&screenshot, directory, &format!("{name}.png"))?;
+            let data = harness.cx.update_window(harness.window, |_, window, cx| {
+                let display_scale = window.scale_factor();
+                let canvas = window.find("canvas-body").bounds();
+                let viewport = window.viewport_size();
+                let mut nodes = Vec::new();
+                let dock = harness.view.read(cx).dock.as_ref().unwrap();
+                for placement in [DockPlacement::Center, DockPlacement::Left, DockPlacement::Right, DockPlacement::Bottom] {
+                    if let Some(tree) = dock.area.read(cx).layout(placement) { groups(tree.root(), &mut nodes); }
+                }
+                let mut overflow = 0;
+                let headers: Vec<_> = nodes.iter().filter_map(|node| {
+                    let id = format!("dock-header-{node}");
+                    let header = window.try_find(id.clone())?;
+                    if window.within(id.clone()).try_find("panel-header-tools").is_some() { overflow += 1; }
+                    let bounds = header.bounds();
+                    Some(serde_json::json!({"node": node, "x": bounds.left().as_f32(), "y": bounds.top().as_f32(), "width": bounds.size.width.as_f32(), "height": bounds.size.height.as_f32()}))
+                }).collect();
+                // A local corner mask must cover real Metal content at every scale.
+                let expected = if cx.theme().is_dark() { 31 } else { 217 };
+                for x in [(canvas.left().as_f32() * display_scale).ceil() as u32, (canvas.right().as_f32() * display_scale).floor() as u32 - 1] {
+                    let pixel = screenshot.get_pixel(x, (canvas.bottom().as_f32() * display_scale).floor() as u32 - 1);
+                    anyhow::ensure!(pixel.0[..3].iter().all(|channel| channel.abs_diff(expected) <= 3), "Metal corner leaked at {}: {:?}, canvas={:?}, x={:?}", scale.label(), pixel.0, canvas, x);
+                }
+                let tree_height = (window.find("mesh-tree-panel").bounds().size.height.as_f32() - crate::ui::compact::ROW * scale.factor()).max(0.);
+                Ok::<_, anyhow::Error>(serde_json::json!({"scene": name, "logical_window": [viewport.width.as_f32(), viewport.height.as_f32()], "display_scale": display_scale, "ui_scale": scale.factor(), "canvas": {"width": canvas.size.width.as_f32(), "height": canvas.size.height.as_f32(), "area": canvas.size.width.as_f32() * canvas.size.height.as_f32()}, "tree_row_capacity": (tree_height / (crate::ui::compact::ROW * scale.factor())).floor(), "header_overflow_count": overflow, "headers": headers}))
+            })??;
+            metrics.push(data);
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                window.hover("tool_glue", cx);
+            })?;
+            let hovered = harness.capture()?;
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                let bounds = window.find("tool_glue").bounds();
+                let display_scale = window.scale_factor();
+                for point in [
+                    point(bounds.left(), bounds.center().y),
+                    point(bounds.right() - px(0.5), bounds.center().y),
+                    // The preceding button owns the joined top border.
+                    point(bounds.center().x, bounds.top() - px(0.5)),
+                    point(bounds.center().x, bounds.bottom() - px(0.5)),
+                ] {
+                    let x = (point.x.as_f32() * display_scale).floor() as u32;
+                    let y = (point.y.as_f32() * display_scale).floor() as u32;
+                    anyhow::ensure!(
+                        screenshot.get_pixel(x, y) == hovered.get_pixel(x, y),
+                        "Toolbar hover changed border at {name} ({x}, {y})"
+                    );
+                }
+                let x = ((bounds.left() + px(4.)).as_f32() * display_scale).floor() as u32;
+                let y = ((bounds.top() + px(4.)).as_f32() * display_scale).floor() as u32;
+                anyhow::ensure!(
+                    screenshot.get_pixel(x, y) != hovered.get_pixel(x, y),
+                    "Toolbar hover did not change its fill at {name}"
+                );
+                window.hover("workspace-titlebar", cx);
+                Ok::<_, anyhow::Error>(())
+            })??;
+            save(&hovered, directory, &format!("{name}-toolbar-hover.png"))?;
+            let previous_zoom = harness
+                .view
+                .read_with(&harness.cx, |view, _| view.editor.view().zoom);
+            harness.view.update(&mut harness.cx, |view, cx| {
+                view.editor.set_zoom_at(50., None);
+                view.redraw(cx);
+            });
+            let covered = harness.capture()?;
+            save(&covered, directory, &format!("{name}-metal-corners.png"))?;
+            harness.cx.update_window(harness.window, |_, window, cx| {
+                let canvas = window.find("canvas-body").bounds();
+                let display_scale = window.scale_factor();
+                let expected = if cx.theme().is_dark() { 31 } else { 217 };
+                for x in [
+                    (canvas.left().as_f32() * display_scale).ceil() as u32,
+                    (canvas.right().as_f32() * display_scale).floor() as u32 - 1,
+                ] {
+                    let pixel = covered.get_pixel(
+                        x,
+                        (canvas.bottom().as_f32() * display_scale).floor() as u32 - 1,
+                    );
+                    anyhow::ensure!(
+                        pixel.0[..3]
+                            .iter()
+                            .all(|channel| channel.abs_diff(expected) <= 3),
+                        "Opaque Metal leaked outside rounded canvas at {}: {:?}",
+                        scale.label(),
+                        pixel.0
+                    );
+                }
+                let inside = covered.get_pixel(
+                    ((canvas.left().as_f32() + 8.) * display_scale).floor() as u32,
+                    ((canvas.bottom().as_f32() - 8.) * display_scale).floor() as u32,
+                );
+                anyhow::ensure!(
+                    inside.0[1] > inside.0[0].saturating_add(20),
+                    "Metal corner fixture did not cover the canvas: {:?}",
+                    inside.0
+                );
+                Ok::<_, anyhow::Error>(())
+            })??;
+            harness.view.update(&mut harness.cx, |view, cx| {
+                view.editor.set_zoom_at(previous_zoom, None);
+                view.redraw(cx);
+            });
+        }
+    }
+    std::fs::write(
+        directory.join("compact-metrics.json"),
+        serde_json::to_vec_pretty(&metrics)?,
     )?;
     i18n::activate(Some("en"));
     Ok(())

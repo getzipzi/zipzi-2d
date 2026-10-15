@@ -553,9 +553,13 @@ pub(super) fn scroll_area(
             let pointer = event.event.position;
             let direction = if !event.bounds.contains(&pointer) {
                 0
-            } else if pointer.y < event.bounds.top() + px(26.) {
+            } else if pointer.y
+                < event.bounds.top() + crate::ui::compact::scaled(crate::ui::compact::ROW, cx)
+            {
                 -1
-            } else if pointer.y > event.bounds.bottom() - px(26.) {
+            } else if pointer.y
+                > event.bounds.bottom() - crate::ui::compact::scaled(crate::ui::compact::ROW, cx)
+            {
                 1
             } else {
                 0
@@ -577,8 +581,9 @@ pub(super) fn scroll_area(
                                     state.scroll_task = None;
                                     return false;
                                 };
-                                let top = (-scroll.0.borrow().base_handle.offset().y / px(26.))
-                                    .floor() as usize;
+                                let top = (-scroll.0.borrow().base_handle.offset().y
+                                    / crate::ui::compact::scaled(crate::ui::compact::ROW, cx))
+                                .floor() as usize;
                                 let index = (top as i32 + direction)
                                     .clamp(0, count.saturating_sub(1) as i32)
                                     as usize;

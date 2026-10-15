@@ -64,8 +64,9 @@ impl FormDialogState {
 
 /// Implemented by both editable forms and confirmations (which have no dirty draft).
 pub(crate) trait FormDialogView: Render {
-    fn width(_window: &Window) -> f32 {
-        520.
+    /// Resolved logical pixels, including the current UI scale.
+    fn width(_window: &Window, cx: &App) -> Pixels {
+        crate::ui::compact::scaled(520., cx)
     }
     fn dialog(&self) -> &FormDialogState;
     fn dialog_mut(&mut self) -> &mut FormDialogState;
@@ -150,13 +151,14 @@ pub(crate) fn open<V: FormDialogView>(
         options,
     });
     let dialog_view = view.clone();
-    window.open_dialog(cx, move |dialog, window, _| {
+    window.open_dialog(cx, move |dialog, window, cx| {
         let confirm = dialog_view.clone();
         let cancel = dialog_view.clone();
         let close = dialog_view.clone();
         dialog
             .title(title.clone())
-            .w(px(V::width(window)))
+            .w(V::width(window, cx).min(window.viewport_size().width - px(24.)))
+            .text_size(crate::ui::compact::rem(crate::ui::compact::BODY))
             .overlay_closable(false)
             .child(dialog_view.clone())
             .footer(footer.clone())
@@ -196,14 +198,14 @@ impl<V: FormDialogView> Render for FormDialogFooter<V> {
                     BaseButton::new(self.options.cancel_id)
                         .track_focus(&state.cancel_focus)
                         .accessibility_label(t!("project.cancel"))
-                        .h_8()
+                        .h(crate::ui::compact::rem(crate::ui::compact::CONTROL))
                         .px_2p5()
                         .rounded(cx.theme().radius)
                         .border_1()
                         .border_color(cx.theme().input)
                         .bg(cx.theme().input_background())
                         .text_color(cx.theme().button_foreground)
-                        .text_sm()
+                        .text_size(crate::ui::compact::rem(crate::ui::compact::BODY))
                         .line_height(relative(1.25))
                         .hover(|b| b.bg(cx.theme().button_hover))
                         .when(state.cancel_focus.is_focused(window), |b| {
@@ -219,7 +221,7 @@ impl<V: FormDialogView> Render for FormDialogFooter<V> {
                         .on_click(move |_, window, cx| cancel.dispatch_action(&Cancel, window, cx)),
                 )
                 .child(
-                    Button::new(self.options.submit_id)
+                    crate::ui::compact::button(Button::new(self.options.submit_id))
                         .primary()
                         .label(self.options.submit_label.clone())
                         .disabled(!state.can_submit())

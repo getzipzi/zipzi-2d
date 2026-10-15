@@ -1136,14 +1136,14 @@ impl Render for ParametersPanel {
                         panel.update(cx, |this, cx| {
                             range
                                 .map(|index| match this.visible_rows[index].clone() {
+                                    // The cache supplies uniform_list's measured geometry;
+                                    // it must scale with the row's own content height.
                                     ListRow::Parameter { index, .. } => this.rows[index]
                                         .view
                                         .clone()
-                                        .cached(
-                                            StyleRefinement::default()
-                                                .w_full()
-                                                .h(px(PARAMETER_ROW_HEIGHT)),
-                                        )
+                                        .cached(StyleRefinement::default().w_full().h(
+                                            crate::ui::compact::scaled(PARAMETER_ROW_HEIGHT, cx),
+                                        ))
                                         .into_any_element(),
                                     ListRow::Group {
                                         id,

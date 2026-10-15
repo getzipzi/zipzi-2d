@@ -47,3 +47,58 @@ fn part_properties_use_the_same_read_only_inspector(cx: &mut TestAppContext) {
         assert!(!doc.modified());
     });
 }
+
+#[gpui_kit::test]
+fn compact_properties_align_and_wrap_without_overflow_in_narrow_panels(cx: &mut TestAppContext) {
+    use gpui_kit::{prelude::*, *};
+
+    struct PropertyHarness(Pixels);
+    impl Render for PropertyHarness {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            crate::ui::compact::property_row(
+                "canvas.pixels_per_unit",
+                crate::ui::compact::property_value(
+                    "a-long-identifier-01234567-89ab-cdef-0123-456789abcdef",
+                ),
+                cx,
+            )
+            .id("property-row")
+            .test_support()
+            .w(self.0)
+        }
+    }
+
+    cx.update(gpui_kit::init);
+    let (window, harness) = cx.update(|cx| {
+        gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| {
+            cx.new(|_| PropertyHarness(px(360.)))
+        })
+        .unwrap()
+    });
+    for width in [360., 180., 100.] {
+        cx.update_window(window, |_, window, cx| {
+            harness.update(cx, |harness, cx| {
+                harness.0 = px(width);
+                cx.notify();
+            });
+            window.render_frame(cx);
+            let row = window.find("property-row").bounds();
+            let label = window
+                .find("property-label-canvas.pixels_per_unit")
+                .bounds();
+            let value = window.find("property-value").bounds();
+            for bounds in [label, value] {
+                assert!(bounds.left() >= row.left());
+                assert!(bounds.right() <= row.right());
+                assert!(bounds.bottom() <= row.bottom());
+            }
+            if width == 360. {
+                assert!(value.left() >= label.right());
+                assert!(value.top() < label.bottom());
+            } else {
+                assert!(value.top() >= label.bottom());
+            }
+        })
+        .unwrap();
+    }
+}

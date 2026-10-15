@@ -4,7 +4,7 @@ use crate::ui::form_dialog::{self, FormDialogOptions, FormDialogState, FormDialo
 use editor_core::{NewParameter, ParameterCreateError as Error};
 use gpui_kit::component::{
     IndexPath,
-    button::{Button, ButtonVariants},
+    button::Button,
     checkbox::Checkbox,
     select::{SearchableVec, Select, SelectEvent, SelectItem, SelectState},
 };
@@ -371,7 +371,7 @@ impl ParameterForm {
             .gap_1()
             .child(div().text_xs().child(label.clone()))
             .child(
-                Input::new(&self.inputs[index])
+                crate::ui::compact::input(Input::new(&self.inputs[index]))
                     .id(field_id(index))
                     .small()
                     .aria_label(label),
@@ -600,8 +600,7 @@ impl Render for ParameterForm {
             })
             .when(self.session.needs_reload(cx), |body| {
                 body.child(
-                    Button::new("parameter-reload")
-                        .ghost()
+                    crate::ui::compact::button(Button::new("parameter-reload"))
                         .label(t!("parameter.reload"))
                         .on_click(cx.listener(|this, _, window, cx| {
                             let action = this

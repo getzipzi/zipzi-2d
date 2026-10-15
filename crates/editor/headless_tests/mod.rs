@@ -3,6 +3,7 @@
 mod animation;
 mod animation_panels;
 mod canvas;
+mod compact_ui;
 mod docking_tabs;
 mod hierarchy;
 mod mesh_generation;
@@ -70,7 +71,7 @@ fn setup_with_document(
                     point(px(0.), px(0.)),
                     size(px(1100.), px(740.)),
                 ))),
-                ..crate::workspace::tab_bar::window_options()
+                ..crate::workspace::title_bar::window_options()
             },
             cx,
             |window, cx| cx.new(|cx| EditorView::new(window, cx)),

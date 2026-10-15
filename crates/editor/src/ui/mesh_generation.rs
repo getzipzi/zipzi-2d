@@ -591,8 +591,9 @@ impl MeshGenerationForm {
 }
 
 impl FormDialogView for MeshGenerationForm {
-    fn width(window: &Window) -> f32 {
-        preview_side(window) + 288.
+    fn width(window: &Window, cx: &App) -> Pixels {
+        // Settings, column gap and dialog padding scale; its 1px border does not.
+        crate::ui::compact::scaled(preview_side(window, cx) + 288., cx) + px(2.)
     }
     fn dialog(&self) -> &FormDialogState {
         &self.dialog
@@ -623,10 +624,13 @@ impl FormDialogView for MeshGenerationForm {
     }
 }
 
-fn preview_side(window: &Window) -> f32 {
+fn preview_side(window: &Window, cx: &App) -> f32 {
     let size = window.viewport_size();
-    (size.height.as_f32() - 192.)
-        .min(size.width.as_f32() - 336.)
+    let scale = crate::ui::compact::scale(cx);
+    // Work in the same unscaled units as the rem-based form, before fitting it
+    // to the viewport. Scaling an already fitted side overflows small windows.
+    (size.height.as_f32() / scale - 192.)
+        .min(size.width.as_f32() / scale - 336.)
         .max(120.)
 }
 
@@ -668,20 +672,20 @@ fn alpha_presets() -> [AlphaMeshOptions; 3] {
 
 impl Render for MeshGenerationForm {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let side = preview_side(window);
+        let side = preview_side(window, cx);
         let mut settings = div()
             .id("mesh-generation-settings")
             .test_support()
             .flex()
             .flex_col()
             .gap_3()
-            .w(px(240.))
+            .w(crate::ui::compact::rem(240.))
             .flex_shrink_0()
-            .max_h(px(side + 36.))
+            .max_h(crate::ui::compact::rem(side + 36.))
             .overflow_y_scroll()
             .child(
                 div()
-                    .text_sm()
+                    .text_size(crate::ui::compact::rem(crate::ui::compact::BODY))
                     .font_weight(FontWeight::MEDIUM)
                     .truncate()
                     .child(self.name.clone()),
@@ -720,8 +724,7 @@ impl Render for MeshGenerationForm {
                     == Some(&MeshGenerationOptions::Alpha(alpha_presets()[i]));
                 presets =
                     presets.child(
-                        Button::new(id)
-                            .small()
+                        crate::ui::compact::button(Button::new(id))
                             .label(label)
                             .when(selected, |b| b.primary())
                             .on_click(cx.listener(move |this, _, window, cx| {
@@ -781,7 +784,7 @@ impl Render for MeshGenerationForm {
                         .child(div().flex_1().text_xs().child(label.clone()))
                         .child(
                             div()
-                                .w(px(76.))
+                                .w(crate::ui::compact::rem(76.))
                                 .id(id)
                                 .test_support()
                                 .aria_label(label)
@@ -826,8 +829,7 @@ impl Render for MeshGenerationForm {
                         rows: count,
                     }));
                 presets = presets.child(
-                    Button::new(id)
-                        .small()
+                    crate::ui::compact::button(Button::new(id))
                         .label(label)
                         .when(selected, |b| b.primary())
                         .on_click(
@@ -931,8 +933,8 @@ impl Render for MeshGenerationForm {
                 div()
                     .id("mesh-generation-preview")
                     .test_support()
-                    .w(px(side))
-                    .h(px(side + 36.))
+                    .w(crate::ui::compact::rem(side))
+                    .h(crate::ui::compact::rem(side + 36.))
                     .flex_shrink_0()
                     .child(self.viewport.clone()),
             )

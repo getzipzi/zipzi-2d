@@ -6,7 +6,7 @@ mod inspector;
 mod navigation;
 mod transport;
 
-use crate::{EditorView, t};
+use crate::{EditorView, t, ui::compact};
 use editor_core::{
     AnimationPreviewMode, DocumentId, TimelineCandidateIdentity, TimelineCategory, TimelineChannel,
     TimelineCommand, TimelineDiagnostic, TimelineDisplayMode, TimelineFilter, TimelineKeyRef,
@@ -25,10 +25,10 @@ use gpui_kit::component::{
 use gpui_kit::{prelude::*, *};
 use std::{cell::Cell, collections::HashMap, rc::Rc, sync::Arc};
 
-const ROW: f32 = 26.;
+const ROW: f32 = 24.;
 const LEFT: f32 = 248.;
 const INSPECTOR: f32 = 220.;
-const RULER: f32 = 28.;
+const RULER: f32 = 24.;
 const COMPACT_WIDTH: f32 = 900.;
 const COMPACT_LEFT: f32 = 160.;
 
@@ -42,6 +42,7 @@ struct Target {
 }
 
 pub struct Timeline {
+    ui_scale: f32,
     #[cfg(test)]
     renders: u64,
     owner: WeakEntity<EditorView>,
@@ -68,6 +69,7 @@ pub struct Timeline {
     show_properties: bool,
     compact: bool,
     header_compact: bool,
+    header_tiny: bool,
     inspector_open: Option<bool>,
     error: Option<String>,
     _search_events: Subscription,
@@ -80,6 +82,10 @@ pub(crate) fn init(cx: &mut App) {
 }
 
 impl Timeline {
+    fn row_height(&self) -> f32 {
+        ROW * self.ui_scale
+    }
+
     fn inspector_visible(&self) -> bool {
         self.inspector_open.unwrap_or(!self.compact)
     }
@@ -92,6 +98,7 @@ impl Timeline {
             Self {
                 #[cfg(test)]
                 renders: 0,
+                ui_scale: compact::scale(cx),
                 tracks: cx.new(|_| drawing::TracksLayer::new(scene.clone())),
                 _search_events: cx.subscribe_in(
                     &search,
@@ -141,6 +148,7 @@ impl Timeline {
                 show_properties: false,
                 compact: false,
                 header_compact: false,
+                header_tiny: false,
                 inspector_open: None,
                 error: None,
             }
@@ -182,6 +190,11 @@ impl Timeline {
             })
     }
     fn sync(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let scale = compact::scale(cx);
+        if self.ui_scale != scale {
+            self.cancel(window, cx);
+            self.ui_scale = scale;
+        }
         let placeholder = t!("timeline.search");
         if self.search_placeholder != placeholder.as_ref() {
             self.search_placeholder = placeholder.into_owned();
@@ -637,13 +650,19 @@ impl Timeline {
 }
 
 impl crate::docking::header::PanelHeader for Timeline {
+    fn header_filtered(&self, cx: &App) -> bool {
+        !self.search.read(cx).value().is_empty()
+    }
+
     fn header_min_width(&self) -> Pixels {
-        px(280.)
+        px(120.)
     }
 
     fn header_resized(&mut self, width: Pixels, cx: &mut Context<Self>) {
-        let compact = width < px(COMPACT_WIDTH);
-        if self.header_compact != compact {
+        let compact = width < compact::scaled(COMPACT_WIDTH, cx);
+        let tiny = width < crate::ui::compact::scaled(260., cx);
+        if self.header_compact != compact || self.header_tiny != tiny {
+            self.header_tiny = tiny;
             self.header_compact = compact;
             cx.notify();
         }
@@ -656,6 +675,8 @@ impl crate::docking::header::PanelHeader for Timeline {
             div()
                 .id("timeline-header")
                 .test_support()
+                .flex()
+                .items_center()
                 .w_full()
                 .h_full()
                 .track_focus(&self.focus)
@@ -694,7 +715,7 @@ impl Render for Timeline {
             .unwrap_or_else(|| Arc::from([]));
         state.scroll = state
             .scroll
-            .min((rows.len() as f64 * ROW as f64 - self.body_height as f64).max(0.));
+            .min((rows.len() as f64 * self.row_height() as f64 - self.body_height as f64).max(0.));
         let time = owner.read(cx).editor.animation().map_or(0., |a| {
             if a.playing {
                 a.presented
@@ -711,7 +732,7 @@ impl Render for Timeline {
             }
         });
         let panel_entity = cx.weak_entity();
-        let left_width = if self.compact { COMPACT_LEFT } else { LEFT };
+        let left_width = (if self.compact { COMPACT_LEFT } else { LEFT }) * self.ui_scale;
         let panel = div()
             .id("animation-timeline")
             .test_support()
@@ -728,7 +749,7 @@ impl Render for Timeline {
             .track_focus(&self.focus)
             .key_context("KasaneTimeline")
             .on_prepaint(move |bounds, window, cx| {
-                let compact = bounds.size.width < px(COMPACT_WIDTH);
+                let compact = bounds.size.width < compact::scaled(COMPACT_WIDTH, cx);
                 if panel_entity
                     .upgrade()
                     .is_some_and(|panel| panel.read(cx).compact != compact)
@@ -799,11 +820,11 @@ impl Render for Timeline {
         self.update_range(&projection, &state);
         if let Some(reveal) = &state.reveal_row {
             if let Some(index) = rows.iter().position(|row| &row.id == reveal) {
-                let top = index as f64 * ROW as f64;
+                let top = index as f64 * self.row_height() as f64;
                 let scroll = if top < state.scroll {
                     top
-                } else if top + ROW as f64 > state.scroll + self.body_height as f64 {
-                    (top + ROW as f64 - self.body_height as f64).max(0.)
+                } else if top + self.row_height() as f64 > state.scroll + self.body_height as f64 {
+                    (top + self.row_height() as f64 - self.body_height as f64).max(0.)
                 } else {
                     state.scroll
                 };
@@ -841,15 +862,15 @@ impl Render for Timeline {
             .flex_shrink_0()
             .border_r_1()
             .border_color(cx.theme().border);
-        let first = (state.scroll as f32 / ROW).floor() as usize;
-        let count = (self.body_height / ROW).ceil() as usize + 2;
+        let first = (state.scroll as f32 / self.row_height()).floor() as usize;
+        let count = (self.body_height / self.row_height()).ceil() as usize + 2;
         for (index, row) in rows.iter().enumerate().skip(first).take(count) {
             left = left.child(self.row(
                 row,
                 &state,
                 &projection,
                 f64::from(time),
-                index as f32 * ROW - state.scroll as f32,
+                index as f32 * self.row_height() - state.scroll as f32,
                 window,
                 cx,
             ));
@@ -889,7 +910,7 @@ impl Render for Timeline {
                 div()
                     .id("animation-seek")
                     .test_support()
-                    .h(px(RULER))
+                    .h(compact::rem(RULER))
                     .w_full()
                     .flex_shrink_0()
                     .child(
@@ -971,7 +992,7 @@ impl Render for Timeline {
                     .flex_col()
                     .child(
                         div()
-                            .h(px(RULER))
+                            .h(compact::rem(RULER))
                             .flex_shrink_0()
                             .flex()
                             .items_center()

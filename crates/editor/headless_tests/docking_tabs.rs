@@ -23,6 +23,20 @@ fn selector(
     format!("dock-selector-{}", node.as_u64())
 }
 
+fn right_click_header_padding(window: &mut gpui_kit::Window, id: String, cx: &mut gpui_kit::App) {
+    let bounds = window.find(id.clone()).bounds();
+    window.click_with_options(
+        id,
+        gpui_kit::test::ClickOptions::new()
+            .with_offset(gpui_kit::point(
+                bounds.size.width - px(5.),
+                bounds.size.height / 2.,
+            ))
+            .with_button(gpui_kit::MouseButton::Right),
+        cx,
+    );
+}
+
 #[gpui_kit::test]
 fn panel_selector_switches_and_context_menu_closes_only_the_active_panel(cx: &mut TestAppContext) {
     let harness = setup(cx);
@@ -38,6 +52,13 @@ fn panel_selector_switches_and_context_menu_closes_only_the_active_panel(cx: &mu
         window.click(selector(&area, mesh, cx), cx);
         window.render_frame(cx);
         assert!(window.find(format!("dock-select-{draw_order:?}")).visible());
+        // Selection never offers creation, split, zoom or close actions.
+        let group = area.read(cx).layout(DockPlacement::Center).unwrap();
+        let node = group.find_panel_node(mesh).unwrap();
+        let PaneRef::Tabs { panels, .. } = group.find_node(node).unwrap().kind() else {
+            panic!("tabs")
+        };
+        assert!(window.within("popup-menu").try_find(panels.len()).is_none());
         window.click(format!("dock-select-{draw_order:?}"), cx);
         window.render_frame(cx);
         assert!(window.find(format!("dock-tab-{draw_order:?}")).visible());
@@ -59,6 +80,61 @@ fn panel_selector_switches_and_context_menu_closes_only_the_active_panel(cx: &mu
         assert!(area.read(cx).panel(draw_order).is_none());
         assert!(area.read(cx).panel(mesh).is_some());
         assert!(window.find("mesh-panel-toolbar").visible());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn single_panel_has_a_padded_draggable_tab_and_context_actions_without_a_selector(
+    cx: &mut TestAppContext,
+) {
+    let harness = setup(cx);
+    let (area, panel) = harness.view.read_with(cx, |view, _| {
+        let dock = view.dock.as_ref().unwrap();
+        (
+            dock.area.clone(),
+            PanelId::from(dock.properties.entity_id()),
+        )
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        let dock = harness.view.read(cx).dock.as_ref().unwrap();
+        let layout = DockLayout::h_split()
+            .child(
+                DockLayout::tabs().panel_view(panel_handle(dock.properties.clone()), cx),
+                Some(px(240.)),
+            )
+            .child(
+                DockLayout::tabs().panel_view(panel_handle(dock.active_canvas().clone()), cx),
+                None,
+            );
+        area.update(cx, |area, cx| area.set_center(layout, window, cx));
+        window.render_frame(cx);
+        let selector_id = selector(&area, panel, cx);
+        let header_id = selector_id.replace("dock-selector-", "dock-header-");
+        let tab = format!("dock-tab-{panel:?}");
+        assert!(window.try_find(selector_id.clone()).is_none());
+        assert!(
+            window
+                .try_find(selector_id.replace("dock-selector-", "dock-menu-"))
+                .is_none()
+        );
+        let header = window.find(header_id.clone()).bounds();
+        let tab_bounds = window.find(tab.clone()).bounds();
+        assert_eq!(tab_bounds.left() - header.left(), px(3.));
+        assert!(tab_bounds.right() <= header.right() - px(3.));
+        window.click(tab.clone(), cx);
+        window.render_frame(cx);
+        assert!(window.try_find("popup-menu").is_none());
+        right_click_header_padding(window, header_id, cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find(format!("dock-close-{panel:?}")).visible());
+        // Creation is reachable through the tab context menu even with one tab.
+        window.within("popup-menu").hover(0usize, cx);
+        window.render_frame(cx);
+        assert!(window.try_find("submenu").is_some());
     })
     .unwrap();
 }
@@ -98,20 +174,21 @@ fn selector_keeps_every_grouped_panel_reachable_without_a_tab_strip(cx: &mut Tes
         window.render_frame(cx);
         assert!(window.find(format!("dock-tab-{last:?}")).visible());
         let header_id = selector(&area, last, cx).replace("dock-selector-", "dock-header-");
-        assert_eq!(window.find(header_id).bounds().size.height, px(28.));
+        assert_eq!(window.find(header_id).bounds().size.height, px(26.));
     })
     .unwrap();
 }
 
 #[gpui_kit::test]
-fn active_panel_selector_drags_between_groups(cx: &mut TestAppContext) {
+fn active_panel_drags_from_tab_and_full_header_between_groups(cx: &mut TestAppContext) {
     let harness = setup(cx);
-    let (area, source, target) = harness.view.read_with(cx, |view, _| {
+    let (area, source, target, mesh) = harness.view.read_with(cx, |view, _| {
         let dock = view.dock.as_ref().unwrap();
         (
             dock.area.clone(),
             PanelId::from(dock.document_panels[&DocumentPanelKind::DrawOrder].entity_id()),
             PanelId::from(dock.properties.entity_id()),
+            PanelId::from(dock.mesh_tree.entity_id()),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -127,6 +204,94 @@ fn active_panel_selector_drags_between_groups(cx: &mut TestAppContext) {
         let tree = area.layout(DockPlacement::Center).unwrap();
         assert_eq!(tree.find_panel_node(source), tree.find_panel_node(target));
     });
+    cx.update_window(harness.window, |_, window, cx| {
+        let header = window
+            .find(selector(&area, source, cx).replace("dock-selector-", "dock-header-"))
+            .bounds();
+        let target = window.find(format!("dock-tab-{mesh:?}")).bounds();
+        window.drag(header.center(), target.center(), cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    area.read_with(cx, |area, _| {
+        let tree = area.layout(DockPlacement::Center).unwrap();
+        assert_eq!(tree.find_panel_node(source), tree.find_panel_node(mesh));
+        assert_ne!(tree.find_panel_node(source), tree.find_panel_node(target));
+    });
+}
+
+#[gpui_kit::test]
+fn selecting_header_search_text_does_not_drag_the_panel(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("mesh-tree-search", cx);
+        window.input("select this text", cx);
+        let search = window.find("mesh-tree-search").bounds();
+        let from = gpui_kit::point(search.left() + px(45.), search.center().y);
+        let to = from + gpui_kit::point(px(35.), px(0.));
+        super::slide_number_input::press(window, from, cx);
+        super::slide_number_input::slide(window, to, false, cx);
+        window.render_frame(cx);
+        assert!(!cx.has_active_drag(), "text selection started a dock drag");
+        super::slide_number_input::release(window, to, cx);
+        assert_eq!(window.find("mesh-tree-search").focused(), Some(true));
+        for id in ["mesh-tree-filter", "btn_zoom_out"] {
+            let from = window.find(id).bounds().center();
+            let to = from + gpui_kit::point(px(35.), px(0.));
+            super::slide_number_input::press(window, from, cx);
+            super::slide_number_input::slide(window, to, false, cx);
+            window.render_frame(cx);
+            assert!(!cx.has_active_drag(), "{id} started a dock drag");
+            super::slide_number_input::release(window, to, cx);
+        }
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn canvas_drags_from_header_background_and_keeps_zoom_controls(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let (area, canvas, mesh) = harness.view.read_with(cx, |view, _| {
+        let dock = view.dock.as_ref().unwrap();
+        (
+            dock.area.clone(),
+            PanelId::from(dock.active_canvas().entity_id()),
+            PanelId::from(dock.mesh_tree.entity_id()),
+        )
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        let header = window
+            .find(selector(&area, canvas, cx).replace("dock-selector-", "dock-header-"))
+            .bounds();
+        let target = window.find(format!("dock-tab-{mesh:?}")).bounds();
+        let from = gpui_kit::point(header.right() - px(140.), header.center().y);
+        super::slide_number_input::press(window, from, cx);
+        super::slide_number_input::slide(
+            window,
+            from - gpui_kit::point(px(20.), px(0.)),
+            false,
+            cx,
+        );
+        window.render_frame(cx);
+        assert!(
+            cx.has_active_drag(),
+            "Canvas header did not initiate a drag: {header:?}, from {from:?}"
+        );
+        super::slide_number_input::slide(window, target.center(), false, cx);
+        window.render_frame(cx);
+        super::slide_number_input::release(window, target.center(), cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    // Dock moves arrive through TabGroupEvent after the input dispatch returns.
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let tree = area.read(cx).layout(DockPlacement::Center).unwrap();
+        assert_eq!(tree.find_panel_node(canvas), tree.find_panel_node(mesh));
+        assert!(window.find("canvas-zoom-controls").visible());
+        assert!(harness.view.read(cx).edit_error.is_none());
+    })
+    .unwrap();
 }
 
 #[gpui_kit::test]
@@ -166,35 +331,45 @@ fn collapsed_bottom_selector_reopens_the_selected_panel(cx: &mut TestAppContext)
 fn animation_add_menu_places_panel_in_the_clicked_group_and_restores_it(cx: &mut TestAppContext) {
     use editor_core::{CommandId, WorkspaceKind};
     let harness = setup(cx);
+    let (area, motions, parameters, group) = cx
+        .update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.run_command(CommandId::AnimationWorkspace, window, cx);
+                view.run_command(CommandId::AnimationParameters, window, cx);
+            });
+            window.render_frame(cx);
+            window.simulate_next_frame(cx);
+            let (area, motions, parameters) = harness.view.read_with(cx, |view, _| {
+                let dock = view.dock.as_ref().unwrap();
+                (
+                    dock.area.clone(),
+                    PanelId::from(dock.animation_motions.entity_id()),
+                    PanelId::from(dock.animation_parameters.entity_id()),
+                )
+            });
+            let group = area
+                .read(cx)
+                .layout(DockPlacement::Center)
+                .unwrap()
+                .find_panel_node(motions)
+                .unwrap();
+            assert!(
+                window
+                    .try_find(format!("dock-add-panel-{}", group.as_u64()))
+                    .is_none()
+            );
+            assert!(
+                window
+                    .try_find(format!("dock-menu-{}", group.as_u64()))
+                    .is_none()
+            );
+            right_click_header_padding(window, format!("dock-header-{}", group.as_u64()), cx);
+            (area, motions, parameters, group)
+        })
+        .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::AnimationWorkspace, window, cx);
-            view.run_command(CommandId::AnimationParameters, window, cx);
-        });
         window.render_frame(cx);
-        window.simulate_next_frame(cx);
-        let (area, motions, parameters) = harness.view.read_with(cx, |view, _| {
-            let dock = view.dock.as_ref().unwrap();
-            (
-                dock.area.clone(),
-                PanelId::from(dock.animation_motions.entity_id()),
-                PanelId::from(dock.animation_parameters.entity_id()),
-            )
-        });
-        let group = area
-            .read(cx)
-            .layout(DockPlacement::Center)
-            .unwrap()
-            .find_panel_node(motions)
-            .unwrap();
-        assert!(
-            window
-                .try_find(format!("dock-add-panel-{}", group.as_u64()))
-                .is_none()
-        );
-        window.click(format!("dock-menu-{}", group.as_u64()), cx);
-        window.render_frame(cx);
-        // More > Add Panel > the first unopened Animation panel, Parameters.
+        // Tab context menu > Add Panel > first unopened Animation panel.
         window.within("popup-menu").hover(0usize, cx);
         window.render_frame(cx);
         window.within("submenu").click(0usize, cx);
@@ -507,8 +682,8 @@ fn workspace_menu_recovers_a_layout_without_any_panels(cx: &mut TestAppContext) 
             );
             window.click("workspace-layout-menu", cx);
             window.render_frame(cx);
-            // Without a canvas target the recovery action is the sole menu item.
-            window.within("popup-menu").click(0usize, cx);
+            // Recovery remains reachable beside the appearance settings.
+            window.click("workspace-reset-layout", cx);
         })
         .unwrap();
         cx.update_window(harness.window, |_, window, cx| {

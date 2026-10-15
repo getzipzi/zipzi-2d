@@ -1,3 +1,4 @@
+use gpui_kit::assets::IconName;
 use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable, Theme, ThemeMode, WindowExt,
     button::{Button, ButtonVariants},
@@ -7,6 +8,9 @@ use gpui_kit::component::{
     tab::{Tab, TabBar},
 };
 use gpui_kit::{prelude::*, *};
+
+#[path = "../../editor/src/ui/compact.rs"]
+mod compact;
 
 // Exercise the exact component used by the editor, including its interaction state.
 #[path = "../../editor/src/ui/slide_number_input.rs"]
@@ -22,6 +26,7 @@ struct Playground {
     checked: bool,
     clicks: usize,
     page: usize,
+    ui_scale_index: usize,
     _subscriptions: Vec<Subscription>,
 }
 impl Playground {
@@ -89,11 +94,87 @@ impl Playground {
             number_value: 0.,
             checked: true,
             clicks: 0,
-            page: 0,
+            page: 8,
+            ui_scale_index: 0,
             _subscriptions: subscriptions,
         }
     }
 }
+impl Playground {
+    fn compact_sample(&self, cx: &mut Context<Self>) -> Div {
+        let panel = |title: &'static str| {
+            div()
+                .flex()
+                .flex_col()
+                .flex_1()
+                .min_w_0()
+                .rounded(compact::rem(compact::PANEL_RADIUS))
+                .border_1()
+                .border_color(cx.theme().border)
+                .bg(cx.theme().background)
+                .child(
+                    div()
+                        .h(compact::rem(compact::DOCK_HEADER))
+                        .flex()
+                        .items_center()
+                        .px(compact::rem(compact::PADDING))
+                        .bg(cx.theme().tab_bar)
+                        .border_b_1()
+                        .border_color(cx.theme().border)
+                        .child(title),
+                )
+        };
+        div().flex().flex_col().gap(compact::rem(compact::PADDING))
+            .text_size(compact::rem(compact::BODY))
+            .child("Compact · 中文 / English · 基准：12px 文字 · 22px 控件")
+            .child(div().flex().items_center().gap(compact::rem(compact::GAP))
+                .child(compact::button(Button::new("compact-default")).label("默认 Default")
+                    .on_click(cx.listener(|this, _, _, cx| { this.clicks += 1; cx.notify(); })))
+                .child(compact::toggle(Button::new("compact-selected"), true).label("选中 Selected"))
+                .child(compact::button(Button::new("compact-disabled")).label("禁用 Disabled").disabled(true))
+                .child(compact::header_button(Button::new("compact-icon")).icon(IconName::Plus)
+                    .accessibility_label("添加 Add").tooltip("添加 Add"))
+                .child(format!("{} 次", self.clicks)))
+            .child(compact::group(
+                "compact-tools",
+                "工具 Tools",
+                Axis::Horizontal,
+                vec![
+                    compact::toggle(Button::new("compact-tool-select"), self.checked)
+                        .icon(IconName::MousePointer)
+                        .accessibility_label("选择 Select")
+                        .tooltip("选择 Select")
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.checked = true;
+                            cx.notify();
+                        })),
+                    compact::toggle(Button::new("compact-tool-hand"), !self.checked)
+                        .icon(IconName::Hand)
+                        .accessibility_label("平移 Pan")
+                        .tooltip("平移 Pan")
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.checked = false;
+                            cx.notify();
+                        })),
+                ],
+            ))
+            .child(div().flex().gap(compact::rem(compact::PANEL_GAP)).p(compact::rem(compact::PANEL_GAP))
+                .bg(compact::workspace(cx))
+                .child(panel("属性 Properties").child(div().p(compact::rem(compact::PADDING))
+                    .child(compact::property_row("名称 Name", compact::property_value("中文图层 · English"), cx))
+                    .child(compact::property_row("角度 Angle", self.number_input.clone(), cx))
+                    .child(compact::property_row("长属性名称", compact::property_value("长值省略显示，悬停查看完整内容。"), cx))))
+                .child(panel("搜索 Search").child(div().p(compact::rem(compact::PADDING))
+                    .child(compact::input(Input::new(&self.input)).cleanable(true)
+                        .prefix(gpui_kit::component::Icon::new(IconName::Search).xsmall()))
+                    .child(compact::property_row("过滤 Filter", compact::property_value(self.input.read(cx).value()), cx)))))
+            .child(div().w(compact::rem(180.)).child(panel("窄面板 Narrow").child(div().p(compact::rem(compact::PADDING))
+                .child(compact::property_row("名称 Name", compact::property_value("中文长标签 · English value"), cx)))))
+            .child(div().text_size(compact::rem(compact::CAPTION)).text_color(cx.theme().muted_foreground)
+                .child("将指针移到按钮上检查 hover；点击或按 Tab 检查焦点；数字支持拖动、Shift 精调和 Escape 恢复。"))
+    }
+}
+
 impl Render for Playground {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.number_input.update(cx, |input, cx| {
@@ -110,6 +191,7 @@ impl Render for Playground {
                 cx,
             )
         });
+        let scale_factor = [1., 1.1, 1.25][self.ui_scale_index];
         let mut content = div().flex().flex_col().gap_4();
         let code = match self.page {
             0 => {
@@ -197,7 +279,7 @@ impl Render for Playground {
                     );
                 "div().text_color(cx.theme().muted_foreground).child(\"辅助文字\")"
             }
-            _ => {
+            7 => {
                 content = content
                     .child("Slide NumberInput · 横向拖动调值，单击输入")
                     .child(
@@ -215,6 +297,10 @@ impl Render for Playground {
                     );
                 "SlideNumberInput::new(input, label, SlideNumberOptions { value: 0., min: -30., max: 30., step: 0.1, drag_distance: Some(200.), disabled: false }, window, cx)"
             }
+            _ => {
+                content = self.compact_sample(cx);
+                "compact::button(Button::new(id))\ncompact::input(Input::new(&state))\ncompact::property_row(label, value, cx)"
+            }
         };
         div()
             .size_full()
@@ -231,17 +317,36 @@ impl Render for Playground {
                     .gap_4()
                     .child(div().text_lg().flex_1().child("Kit 组件验证"))
                     .child(
+                        compact::button(Button::new("ui-scale-sample"))
+                            .label(format!("UI {}%", [100, 110, 125][self.ui_scale_index]))
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.ui_scale_index = (this.ui_scale_index + 1) % 3;
+                                let scale = [1., 1.1, 1.25][this.ui_scale_index];
+                                Theme::update(cx, |theme| {
+                                    theme.font_size = px(16. * scale);
+                                    theme.radius = px(compact::RADIUS * scale);
+                                });
+                                window.refresh();
+                                cx.notify();
+                            })),
+                    )
+                    .child(
                         Button::new("theme")
                             .label("切换主题")
                             .ghost()
                             .small()
-                            .on_click(|_, window, cx| {
+                            .on_click(move |_, window, cx| {
                                 let mode = if cx.theme().is_dark() {
                                     ThemeMode::Light
                                 } else {
                                     ThemeMode::Dark
                                 };
                                 Theme::change(mode, Some(window), cx);
+                                Theme::update(cx, |theme| {
+                                    compact::apply_theme(theme);
+                                    theme.font_size = px(16. * scale_factor);
+                                    theme.radius = px(compact::RADIUS * scale_factor);
+                                });
                             }),
                     ),
             )
@@ -258,6 +363,7 @@ impl Render for Playground {
                             "Dialog",
                             "Typography",
                             "Slide Number",
+                            "Compact",
                         ]
                         .into_iter()
                         .map(|label| Tab::new().label(label)),
@@ -304,6 +410,7 @@ fn main() {
         .run(move |cx| {
             gpui_kit::init(cx);
             Theme::change(ThemeMode::Dark, None, cx);
+            Theme::update(cx, compact::apply_theme);
             cx.on_window_closed(|cx, _| {
                 if cx.windows().is_empty() {
                     cx.quit();

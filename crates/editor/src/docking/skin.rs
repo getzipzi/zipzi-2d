@@ -1,34 +1,31 @@
 //! Compact editor dock chrome and the Parameters panel's row cache boundary.
 use super::header::PanelHeaders;
-use crate::t;
+use crate::{t, ui::compact};
 use editor_core::PanelKind;
 use gpui_kit::assets::IconName;
 use gpui_kit::base::ResizeHandleContext;
 use gpui_kit::component::dock::*;
 use gpui_kit::component::{
     ActiveTheme, Icon, Selectable, Sizable,
-    button::{Button, ButtonVariants},
-    menu::{ContextMenuExt, DropdownMenu, PopupMenuItem},
+    button::Button,
+    menu::{ContextMenuExt, DropdownMenu, PopupMenu, PopupMenuItem},
 };
 use gpui_kit::{
-    Anchor, AnyElement, AnyView, App, Axis, Context, Div, Empty, EntityId, IntoElement, Render,
+    AnyElement, AnyView, App, Axis, Context, Div, Empty, EntityId, IntoElement, Render,
     SharedString, Stateful, TestSupportExt as _, WeakEntity, Window, div, prelude::*, px,
 };
 use std::{rc::Rc, sync::Arc};
 
-const TAB_BAR_HEIGHT: f32 = 28.;
+const TAB_BAR_HEIGHT: f32 = compact::DOCK_HEADER;
 
 /// Component's styled Button does not expose drag initiation. Keep Base's
 /// accessible button behavior and drag handling behind the same menu trigger.
 #[derive(gpui_kit::IntoElement)]
-struct PanelSelectorButton {
+struct PanelTabButton {
     button: gpui_kit::base::Button,
-    group: TabGroupContext,
-    active: PanelId,
-    closable: bool,
 }
 
-impl Selectable for PanelSelectorButton {
+impl Selectable for PanelTabButton {
     fn selected(mut self, selected: bool) -> Self {
         self.button = self.button.selected(selected);
         self
@@ -38,42 +35,80 @@ impl Selectable for PanelSelectorButton {
     }
 }
 
-impl gpui_kit::InteractiveElement for PanelSelectorButton {
+impl gpui_kit::InteractiveElement for PanelTabButton {
     fn interactivity(&mut self) -> &mut gpui_kit::Interactivity {
         self.button.interactivity()
     }
 }
 
-impl gpui_kit::Styled for PanelSelectorButton {
+impl gpui_kit::Styled for PanelTabButton {
     fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         self.button.style()
     }
 }
 
-impl DropdownMenu for PanelSelectorButton {}
+impl DropdownMenu for PanelTabButton {}
 
-impl gpui_kit::RenderOnce for PanelSelectorButton {
+impl gpui_kit::RenderOnce for PanelTabButton {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
-        let active = self.active;
-        let closable = self.closable;
-        let group = self.group;
-        self.button.context_menu(move |menu, _, _| {
-            menu.item(
-                PopupMenuItem::element(move |_, _| {
-                    div()
-                        .id(SharedString::from(format!("dock-close-{active:?}")))
-                        .test_support()
-                        .child(t!("dock.close"))
-                })
-                .icon(IconName::Close)
-                .disabled(!closable)
-                .on_click({
-                    let group = group.clone();
-                    move |_, window, cx| group.close(active, window, cx)
-                }),
-            )
-        })
+        self.button
     }
+}
+
+fn panel_menu(
+    menu: PopupMenu,
+    group: &TabGroupContext,
+    owner: WeakEntity<crate::EditorView>,
+    window: &mut Window,
+    cx: &mut Context<PopupMenu>,
+) -> PopupMenu {
+    let Some(active) = group.active_panel() else {
+        return menu;
+    };
+    let active_id = active.panel_id(cx);
+    let closable = group.is_panel_closable(active_id, cx);
+    let handle = PanelHandle::of(active);
+    let control = active
+        .zoomable(cx)
+        .then(|| handle.and_then(|handle| handle.zoom_control(cx)))
+        .flatten();
+    let zoomed = group.is_zoomed();
+    let menu = menu.when_some(handle.map(PanelHandle::panel), |menu, panel| {
+        panel.dropdown_menu(menu, window, cx)
+    });
+    super::add_panel::menu(menu, owner, group.node(), true, window, cx)
+        .separator()
+        .item(
+            PopupMenuItem::new(if zoomed {
+                t!("dock.restore")
+            } else {
+                t!("dock.maximize")
+            })
+            .icon(if zoomed {
+                IconName::Minimize
+            } else {
+                IconName::Maximize
+            })
+            .disabled(!zoomed && !control.is_some_and(|control| control.menu_visible()))
+            .on_click({
+                let group = group.clone();
+                move |_, window, cx| group.toggle_zoom(window, cx)
+            }),
+        )
+        .item(
+            PopupMenuItem::element(move |_, _| {
+                div()
+                    .id(SharedString::from(format!("dock-close-{active_id:?}")))
+                    .test_support()
+                    .child(t!("dock.close"))
+            })
+            .icon(IconName::Close)
+            .disabled(!closable)
+            .on_click({
+                let group = group.clone();
+                move |_, window, cx| group.close(active_id, window, cx)
+            }),
+        )
 }
 
 struct EditorDragPreview {
@@ -86,9 +121,9 @@ impl Render for EditorDragPreview {
             .map(|handle| handle.title(window, cx))
             .unwrap_or_else(|| SharedString::from(self.panel.panel_name(cx)).into_any_element());
         div()
-            .h(px(TAB_BAR_HEIGHT))
-            .w(px(96.))
-            .px(px(8.))
+            .h(compact::rem(TAB_BAR_HEIGHT))
+            .w(crate::ui::compact::rem(96.))
+            .px(crate::ui::compact::rem(8.))
             .flex()
             .items_center()
             .text_xs()
@@ -98,7 +133,7 @@ impl Render for EditorDragPreview {
             .text_color(cx.theme().foreground)
             .border_1()
             .border_color(cx.theme().border)
-            .rounded(px(4.))
+            .rounded(crate::ui::compact::rem(4.))
             .opacity(0.9)
             .child(title)
     }
@@ -132,7 +167,11 @@ impl EditorDockSkin {
 
 impl DockAreaRenderer for EditorDockSkin {
     fn frame(&self, window: &mut Window, cx: &mut App) -> Stateful<Div> {
-        self.component.frame(window, cx)
+        self.component
+            .frame(window, cx)
+            .p(compact::rem(compact::PANEL_GAP / 2.))
+            .pt_0()
+            .bg(compact::workspace(cx))
     }
 
     fn center_frame(&self, window: &mut Window, cx: &mut App) -> Stateful<Div> {
@@ -146,16 +185,24 @@ impl DockAreaRenderer for EditorDockSkin {
         window: &mut Window,
         cx: &mut App,
     ) -> Stateful<Div> {
-        self.component.split_frame(node, axis, window, cx)
+        self.component
+            .split_frame(node, axis, window, cx)
+            .bg(compact::workspace(cx))
     }
 
     fn render_split_handle(
         &self,
         handle: &ResizeHandleContext,
-        window: &mut Window,
+        _: &mut Window,
         cx: &mut App,
     ) -> Option<AnyElement> {
-        self.component.render_split_handle(handle, window, cx)
+        let color =
+            if handle.is_active() || handle.state() == gpui_kit::base::ResizeHandleState::Hovered {
+                cx.theme().primary.opacity(0.6)
+            } else {
+                compact::workspace(cx)
+            };
+        Some(gpui_kit::div().size_full().bg(color).into_any_element())
     }
 
     fn render_dock(
@@ -165,7 +212,33 @@ impl DockAreaRenderer for EditorDockSkin {
         window: &mut Window,
         cx: &mut App,
     ) -> AnyElement {
-        self.component.render_dock(dock, content, window, cx)
+        let chrome = self.component.render_dock(dock, content, window, cx);
+        if dock.placement() != DockPlacement::Bottom {
+            return chrome;
+        }
+        let background = compact::workspace(cx);
+        // Only hide the outer handle's resting hairline, above the panel frame.
+        // Kit retains its drag band and tracker; its deferred hover pill paints last.
+        div()
+            .id("editor-bottom-dock")
+            .test_support()
+            .relative()
+            .size_full()
+            .child(chrome)
+            .child(
+                gpui_kit::canvas(
+                    |_, _, _| (),
+                    move |bounds, _, window, _| {
+                        window.paint_quad(gpui_kit::fill(bounds, background));
+                    },
+                )
+                .absolute()
+                .top_0()
+                .left_0()
+                .w_full()
+                .h(px(1.)),
+            )
+            .into_any_element()
     }
 
     fn build_placeholder(
@@ -247,99 +320,91 @@ impl EditorTabGroupSkin {
         };
         let area = self.area.clone();
         Some(
-            Button::new(SharedString::from(format!("dock-toggle-{placement:?}")))
-                .icon(icon)
-                .xsmall()
-                .ghost()
-                .tab_stop(false)
-                .tooltip(if open {
-                    t!("dock.collapse")
-                } else {
-                    t!("dock.expand")
-                })
-                .on_click(move |_, window, cx| {
-                    _ = area.update(cx, |area, cx| area.toggle_dock(placement, window, cx));
-                }),
+            compact::header_button(Button::new(SharedString::from(format!(
+                "dock-toggle-{placement:?}"
+            ))))
+            .icon(icon)
+            .xsmall()
+            .tab_stop(false)
+            .on_mouse_down(gpui_kit::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation()
+            })
+            .accessibility_label(if open {
+                t!("dock.collapse")
+            } else {
+                t!("dock.expand")
+            })
+            .tooltip(if open {
+                t!("dock.collapse")
+            } else {
+                t!("dock.expand")
+            })
+            .on_click(move |_, window, cx| {
+                _ = area.update(cx, |area, cx| area.toggle_dock(placement, window, cx));
+            }),
         )
     }
 
-    fn toolbar(&self, group: &TabGroupContext, window: &mut Window, cx: &mut App) -> AnyElement {
+    fn toolbar(
+        &self,
+        group: &TabGroupContext,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<AnyElement> {
         let handle = group.active_panel().and_then(PanelHandle::of);
         let control = group
             .active_panel()
             .filter(|panel| panel.zoomable(cx))
             .and_then(|_| handle.and_then(|handle| handle.zoom_control(cx)));
+        let buttons = handle
+            .and_then(|handle| handle.toolbar_buttons(window, cx))
+            .unwrap_or_default();
         let zoomed = group.is_zoomed();
-        let panel = handle.map(PanelHandle::panel);
-        let closable = group.is_closable();
-        let owner = self.owner.clone();
-        let node = group.node();
+        let show_zoom = zoomed || control.is_some_and(|control| control.toolbar_visible());
+        if buttons.is_empty() && !show_zoom {
+            return None;
+        }
         let zoom_title = if zoomed {
             t!("dock.restore")
         } else {
             t!("dock.maximize")
         };
-        div()
-            .flex()
-            .items_center()
-            .gap(px(2.))
-            .flex_shrink_0()
-            .occlude()
-            .children(
-                handle
-                    .and_then(|handle| handle.toolbar_buttons(window, cx))
-                    .into_iter()
-                    .flatten()
-                    .map(|button| button.xsmall().ghost().tab_stop(false)),
-            )
-            .when(
-                zoomed || control.is_some_and(|control| control.toolbar_visible()),
-                |this| {
+        Some(
+            div()
+                .flex()
+                .items_center()
+                .gap(crate::ui::compact::rem(compact::PANEL_GAP / 2.))
+                .flex_shrink_0()
+                .occlude()
+                .on_mouse_down(gpui_kit::MouseButton::Left, |_, _, cx| {
+                    cx.stop_propagation()
+                })
+                .children(
+                    buttons
+                        .into_iter()
+                        .map(|button| compact::header_button(button).tab_stop(false)),
+                )
+                .when(show_zoom, |this| {
                     this.child(
-                        Button::new("dock-zoom")
+                        compact::header_button(Button::new("dock-zoom"))
                             .icon(if zoomed {
                                 IconName::Minimize
                             } else {
                                 IconName::Maximize
                             })
                             .xsmall()
-                            .ghost()
                             .tab_stop(false)
                             .selected(zoomed)
+                            .accessibility_label(zoom_title.clone())
                             .tooltip(zoom_title.clone())
                             .on_click({
                                 let group = group.clone();
                                 move |_, window, cx| group.toggle_zoom(window, cx)
                             }),
                     )
-                },
-            )
-            .child(
-                Button::new(SharedString::from(format!("dock-menu-{}", node.as_u64())))
-                    .icon(IconName::Ellipsis)
-                    .xsmall()
-                    .ghost()
-                    .tab_stop(false)
-                    .tooltip(t!("dock.panel_actions"))
-                    .dropdown_menu(move |menu, window, cx| {
-                        let menu = menu.when_some(panel.clone(), |menu, panel| {
-                            panel.dropdown_menu(menu, window, cx)
-                        });
-                        super::add_panel::menu(menu, owner.clone(), node, true, window, cx)
-                            .separator()
-                            .menu_with_disabled(
-                                zoom_title.clone(),
-                                Box::new(ToggleZoom),
-                                !zoomed && !control.is_some_and(|control| control.menu_visible()),
-                            )
-                            .when(closable, |menu| {
-                                menu.separator()
-                                    .menu(t!("dock.close"), Box::new(ClosePanel))
-                            })
-                    })
-                    .anchor(Anchor::TopRight),
-            )
-            .into_any_element()
+                })
+                .into_any_element(),
+        )
     }
 
     fn selector(&self, group: &TabGroupContext, cx: &mut App) -> AnyElement {
@@ -362,26 +427,49 @@ impl EditorTabGroupSkin {
             .collect();
         let area = self.area.clone();
         let collapsed = group.is_collapsed();
-        let owner = self.owner.clone();
         let node = group.node();
+        let multiple = entries.len() > 1;
         let button = gpui_kit::base::Button::new(SharedString::from(format!(
-            "dock-selector-{}",
+            "dock-{}-{}",
+            if multiple { "selector" } else { "label" },
             node.as_u64()
         )))
-        .h(px(22.))
-        .px(px(4.))
-        .gap(px(2.))
+        .h(compact::scaled(compact::HEADER_CONTROL, cx))
+        .px(crate::ui::compact::rem(4.))
+        .gap(crate::ui::compact::rem(compact::PANEL_GAP / 2.))
         .flex_shrink_0()
-        .rounded(px(3.))
+        .rounded(crate::ui::compact::rem(compact::RADIUS))
+        .when(multiple, |button| {
+            button
+                .bg(cx.theme().button)
+                .border_1()
+                .border_color(cx.theme().border)
+        })
         .hover({
             let color = cx.theme().accent;
             move |style| style.bg(color)
         })
         .child(Icon::new(panel_icon(name)).xsmall())
-        .child(Icon::new(IconName::ChevronDown).xsmall())
-        .accessibility_label(format!("{}: {label}", t!("dock.select_panel")))
+        .when(multiple, |button| {
+            button.child(Icon::new(IconName::ChevronDown).xsmall())
+        })
+        .accessibility_label(if multiple {
+            format!("{}: {label}", t!("dock.select_panel"))
+        } else {
+            label.to_string()
+        })
         .tooltip(move |window, cx| {
             gpui_kit::component::tooltip::Tooltip::new(label.clone()).build(window, cx)
+        })
+        .when(collapsed && !multiple, |button| {
+            let area = self.area.clone();
+            button.on_click(move |_, window, cx| {
+                _ = area.update(cx, |area, cx| {
+                    if !area.is_dock_open(DockPlacement::Bottom) {
+                        area.toggle_dock(DockPlacement::Bottom, window, cx);
+                    }
+                });
+            })
         })
         .when_some(
             group
@@ -393,7 +481,10 @@ impl EditorTabGroupSkin {
                 button.on_drag(drag, move |drag, offset, _, cx| {
                     cx.stop_propagation();
                     drag.set_drag_offset(offset);
-                    drag.set_preview_size(gpui_kit::size(px(96.), px(TAB_BAR_HEIGHT)));
+                    drag.set_preview_size(gpui_kit::size(
+                        px(96.),
+                        compact::scaled(TAB_BAR_HEIGHT, cx),
+                    ));
                     cx.new(|_| EditorDragPreview {
                         panel: panel.clone(),
                     })
@@ -413,42 +504,43 @@ impl EditorTabGroupSkin {
                     }
                 })
         });
-        let button = PanelSelectorButton {
-            button,
-            group: group.clone(),
-            active: active_id,
-            closable: group.is_panel_closable(active_id, cx),
-        }
-        .dropdown_menu(move |mut menu, window, cx| {
-            menu = menu.check_side(gpui_kit::component::Side::Right);
-            for (id, name) in &entries {
-                let area = area.clone();
-                let id = *id;
-                let label = panel_label(name);
-                let item_id: SharedString = format!("dock-select-{id:?}").into();
-                menu = menu.item(
-                    PopupMenuItem::element(move |_, _| {
-                        div()
-                            .id(item_id.clone())
-                            .test_support()
-                            .child(label.clone())
-                    })
-                    .icon(panel_icon(name))
-                    .checked(id == active_id)
-                    .on_click(move |_, window, cx| {
-                        _ = area.update(cx, |area, cx| {
-                            // Select after reopening: toggling reconciles groups
-                            // from the tree and would overwrite an earlier selection.
-                            if collapsed && !area.is_dock_open(DockPlacement::Bottom) {
-                                area.toggle_dock(DockPlacement::Bottom, window, cx);
-                            }
-                            area.select_panel(id, window, cx);
-                        });
-                    }),
-                );
-            }
-            super::add_panel::menu(menu.separator(), owner.clone(), node, true, window, cx)
-        });
+        let button = PanelTabButton { button };
+        let button = if multiple {
+            button
+                .dropdown_menu(move |mut menu, _, _| {
+                    menu = menu.check_side(gpui_kit::component::Side::Right);
+                    for (id, name) in &entries {
+                        let area = area.clone();
+                        let id = *id;
+                        let label = panel_label(name);
+                        let item_id: SharedString = format!("dock-select-{id:?}").into();
+                        menu = menu.item(
+                            PopupMenuItem::element(move |_, _| {
+                                div()
+                                    .id(item_id.clone())
+                                    .test_support()
+                                    .child(label.clone())
+                            })
+                            .icon(panel_icon(name))
+                            .checked(id == active_id)
+                            .on_click(move |_, window, cx| {
+                                _ = area.update(cx, |area, cx| {
+                                    // Select after reopening: toggling reconciles groups
+                                    // from the tree and would overwrite an earlier selection.
+                                    if collapsed && !area.is_dock_open(DockPlacement::Bottom) {
+                                        area.toggle_dock(DockPlacement::Bottom, window, cx);
+                                    }
+                                    area.select_panel(id, window, cx);
+                                });
+                            }),
+                        );
+                    }
+                    menu
+                })
+                .into_any_element()
+        } else {
+            button.into_any_element()
+        };
         div()
             .id(SharedString::from(format!("dock-tab-{active_id:?}")))
             .test_support()
@@ -462,7 +554,15 @@ impl EditorTabGroupSkin {
 
 impl TabGroupRenderer for EditorTabGroupSkin {
     fn frame(&self, group: &TabGroupContext, window: &mut Window, cx: &mut App) -> Stateful<Div> {
-        self.component.frame(group, window, cx)
+        // Padding reserves the shared panel gap without drawing an outline or
+        // changing the sizes managed by Kit, including nested splits.
+        self.component
+            .frame(group, window, cx)
+            .relative()
+            .border_0()
+            .p(compact::rem(compact::PANEL_GAP / 2.))
+            .bg(compact::workspace(cx))
+            .when(group.is_collapsed(), |frame| frame.pt(px(2.)).pb(px(0.)))
     }
 
     fn content_frame(
@@ -471,7 +571,16 @@ impl TabGroupRenderer for EditorTabGroupSkin {
         window: &mut Window,
         cx: &mut App,
     ) -> Stateful<Div> {
-        self.component.content_frame(group, window, cx).pt_0()
+        self.component
+            .content_frame(group, window, cx)
+            .pt_0()
+            .border_l_1()
+            .border_r_1()
+            .border_b_1()
+            .border_color(cx.theme().border)
+            .rounded_bl(compact::rem(compact::PANEL_RADIUS))
+            .rounded_br(compact::rem(compact::PANEL_RADIUS))
+            .when(group.is_collapsed(), |frame| frame.border_0())
     }
 
     fn render_tab_bar(
@@ -490,24 +599,55 @@ impl TabGroupRenderer for EditorTabGroupSkin {
         let suffix = (!group.is_collapsed())
             .then(|| PanelHandle::of(active).and_then(|h| h.title_suffix(window, cx)))
             .flatten();
-        let toolbar = (!group.is_collapsed()).then(|| self.toolbar(group, window, cx));
+        let toolbar = (!group.is_collapsed())
+            .then(|| self.toolbar(group, window, cx))
+            .flatten();
+        let drag = group
+            .is_draggable()
+            .then(|| {
+                let ix = group
+                    .panels()
+                    .iter()
+                    .position(|panel| panel.panel_id(cx) == active.panel_id(cx))?;
+                group.drag_panel(ix, cx)
+            })
+            .flatten();
+        let dragged_panel = active.clone();
+        let menu_group = group.clone();
+        let menu_owner = self.owner.clone();
         div()
             .id(SharedString::from(format!(
                 "dock-header-{}",
                 group.node().as_u64()
             )))
             .test_support()
-            .h(px(TAB_BAR_HEIGHT))
+            .h(if group.is_collapsed() {
+                px(27.)
+            } else {
+                compact::scaled(TAB_BAR_HEIGHT, cx)
+            })
             .w_full()
             .min_w_0()
             .flex_shrink_0()
             .flex()
             .items_center()
-            .gap(px(2.))
-            .bg(cx.theme().tab_bar)
+            .gap(crate::ui::compact::rem(compact::PANEL_GAP / 2.))
+            .px(if group.is_collapsed() {
+                (px(27.) - compact::scaled(compact::HEADER_CONTROL, cx) - px(2.)) / 2.
+            } else {
+                compact::header_padding(cx)
+            })
+            .bg(cx.theme().background)
             .text_color(cx.theme().foreground)
-            .border_b_1()
-            .border_color(cx.theme().border.opacity(0.65))
+            .border_1()
+            .border_color(cx.theme().border)
+            .rounded_tl(compact::rem(compact::PANEL_RADIUS))
+            .rounded_tr(compact::rem(compact::PANEL_RADIUS))
+            .when(group.is_collapsed(), |header| {
+                header
+                    .rounded_bl(compact::rem(compact::PANEL_RADIUS))
+                    .rounded_br(compact::rem(compact::PANEL_RADIUS))
+            })
             .child(selector)
             .child(
                 div()
@@ -523,6 +663,21 @@ impl TabGroupRenderer for EditorTabGroupSkin {
             .children(self.dock_toggle(DockPlacement::Left, group, cx))
             .children(self.dock_toggle(DockPlacement::Bottom, group, cx))
             .children(self.dock_toggle(DockPlacement::Right, group, cx))
+            .when_some(drag, |header, drag| {
+                header.on_drag(drag, move |drag, offset, _, cx| {
+                    cx.stop_propagation();
+                    // A header can be much wider than its preview. Keep the
+                    // grab point inside that preview when dragging from its tail.
+                    drag.set_drag_offset(gpui_kit::point(offset.x.min(px(48.)), offset.y));
+                    drag.set_preview_size(gpui_kit::size(
+                        px(96.),
+                        compact::scaled(TAB_BAR_HEIGHT, cx),
+                    ));
+                    cx.new(|_| EditorDragPreview {
+                        panel: dragged_panel.clone(),
+                    })
+                })
+            })
             .when(group.is_droppable() && !group.is_collapsed(), |this| {
                 this.drag_over::<DragPanel>(|style, _, _, cx| {
                     style.bg(cx.theme().primary.opacity(0.1))
@@ -540,6 +695,9 @@ impl TabGroupRenderer for EditorTabGroupSkin {
                     }
                 })
             })
+            .context_menu(move |menu, window, cx| {
+                panel_menu(menu, &menu_group, menu_owner.clone(), window, cx)
+            })
             .into_any_element()
     }
 
@@ -550,21 +708,55 @@ impl TabGroupRenderer for EditorTabGroupSkin {
         window: &mut Window,
         cx: &mut App,
     ) -> AnyElement {
-        if panel.entity_id() != self.row_cached_panel {
-            return self.component.render_active_panel(panel, group, window, cx);
-        }
         if group.is_collapsed() {
             return Empty.into_any_element();
         }
-        // An outer view cache would force every child cache to refresh whenever
-        // one parameter row changes. Keep the component skin's sizing and scroll
-        // region, and let the panel's virtualized rows own the view caches.
-        div()
-            .id("tab-content")
-            .overflow_y_scroll()
-            .overflow_x_hidden()
-            .flex_1()
-            .child(div().absolute().size_full().child(panel))
+        let content = if panel.entity_id() != self.row_cached_panel {
+            self.component.render_active_panel(panel, group, window, cx)
+        } else {
+            // An outer view cache would force every child cache to refresh whenever
+            // one parameter row changes. Keep the component skin's sizing and scroll
+            // region, and let the panel's virtualized rows own the view caches.
+            div()
+                .id("tab-content")
+                .overflow_y_scroll()
+                .overflow_x_hidden()
+                .flex_1()
+                .child(div().absolute().size_full().child(panel))
+                .into_any_element()
+        };
+        let background = compact::workspace(cx);
+        let radius = compact::scaled(compact::PANEL_RADIUS - 1., cx);
+        let corners = gpui_kit::canvas(
+            |_, _, _| (),
+            move |bounds, _, window, _| {
+                for (origin, sx) in [
+                    (gpui_kit::point(bounds.left(), bounds.bottom()), 1.),
+                    (gpui_kit::point(bounds.right(), bounds.bottom()), -1.),
+                ] {
+                    let p = |x, y| origin + gpui_kit::point(radius * x * sx, -radius * y);
+                    let mut path = gpui_kit::PathBuilder::fill();
+                    path.move_to(p(0., 0.));
+                    path.line_to(p(1., 0.));
+                    path.cubic_bezier_to(p(0., 1.), p(0.44771525, 0.), p(0., 0.44771525));
+                    path.close();
+                    if let Ok(path) = path.build() {
+                        window.paint_path(path, background);
+                    }
+                }
+            },
+        )
+        .absolute()
+        .inset_0();
+        // Paint locally after Metal, before deferred menus; this has no hitbox.
+        gpui_kit::div()
+            .relative()
+            .flex()
+            .flex_col()
+            .size_full()
+            .min_h_0()
+            .child(content)
+            .child(corners)
             .into_any_element()
     }
 

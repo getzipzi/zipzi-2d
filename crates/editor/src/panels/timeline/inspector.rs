@@ -483,7 +483,7 @@ impl Timeline {
         let mut content = div()
             .id("timeline-inspector")
             .test_support()
-            .w(px(INSPECTOR))
+            .w(compact::rem(INSPECTOR))
             .h_full()
             .flex_shrink_0()
             .border_l_1()
@@ -511,9 +511,7 @@ impl Timeline {
                         .justify_between()
                         .child(t!("timeline.inspector"))
                         .child(
-                            Button::new("timeline-inspector-close")
-                                .small()
-                                .ghost()
+                            compact::header_button(Button::new("timeline-inspector-close"))
                                 .icon(IconName::Close)
                                 .tooltip(t!("timeline.inspector"))
                                 .on_click(cx.listener(|this, _, _, cx| {
@@ -599,11 +597,9 @@ impl Timeline {
                                 .child(label.into_owned()),
                         )
                         .child(
-                            Button::new(SharedString::from(format!(
+                            compact::button(Button::new(SharedString::from(format!(
                                 "timeline-fade-custom-{field:?}"
-                            )))
-                            .small()
-                            .ghost()
+                            ))))
                             .label(t!("timeline.custom_fade"))
                             .tooltip(t!("timeline.custom_fade_hint"))
                             .disabled(disabled)
@@ -625,11 +621,9 @@ impl Timeline {
                     ));
                     if fade.is_some() {
                         content = content.child(
-                            Button::new(SharedString::from(format!(
+                            compact::button(Button::new(SharedString::from(format!(
                                 "timeline-fade-default-{field:?}"
-                            )))
-                            .small()
-                            .ghost()
+                            ))))
                             .label(t!("workspace.resource_default"))
                             .disabled(disabled)
                             .on_click(cx.listener(
@@ -642,11 +636,8 @@ impl Timeline {
                 }
             }
             content = content.child(
-                Button::new("timeline-asset-loop")
-                    .small()
-                    .ghost()
+                compact::toggle(Button::new("timeline-asset-loop"), clip.looping)
                     .label(t!("timeline.asset_loop"))
-                    .selected(clip.looping)
                     .disabled(disabled)
                     .on_click(cx.listener(move |this, _, window, cx| {
                         this.finish_number(cx);
@@ -714,31 +705,30 @@ impl Timeline {
                 ),
             ] {
                 let keys: Vec<_> = state.keys.iter().cloned().collect();
+                let selected = state
+                    .keys
+                    .iter()
+                    .filter_map(|key| projection.key(key))
+                    .filter_map(|key| key.outgoing)
+                    .all(|outgoing| outgoing == kind);
                 choices = choices.child(
-                    Button::new(SharedString::from(format!("timeline-interpolation-{id}")))
-                        .w(px(94.))
-                        .small()
-                        .ghost()
-                        .label(label)
-                        .selected(
-                            state
-                                .keys
-                                .iter()
-                                .filter_map(|key| projection.key(key))
-                                .filter_map(|key| key.outgoing)
-                                .all(|outgoing| outgoing == kind),
+                    compact::button(
+                        Button::new(SharedString::from(format!("timeline-interpolation-{id}")))
+                            .selected(selected),
+                    )
+                    .w(compact::rem(94.))
+                    .label(label)
+                    .disabled(disabled)
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.execute(
+                            TimelineCommand::Interpolation {
+                                keys: keys.clone(),
+                                kind,
+                            },
+                            window,
+                            cx,
                         )
-                        .disabled(disabled)
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            this.execute(
-                                TimelineCommand::Interpolation {
-                                    keys: keys.clone(),
-                                    kind,
-                                },
-                                window,
-                                cx,
-                            )
-                        })),
+                    })),
                 );
             }
             content = content.child(choices).child(
@@ -765,7 +755,7 @@ impl Timeline {
                     .child(div().child(t!("timeline.event_value")))
                     .child(
                         div().id("timeline-event-value").test_support().child(
-                            Input::new(&self.fields[&field].input)
+                            compact::input(Input::new(&self.fields[&field].input))
                                 .small()
                                 .disabled(disabled),
                         ),
@@ -876,9 +866,7 @@ impl Timeline {
                         })
                         .collect();
                     content = content.child(
-                        Button::new("timeline-key-list")
-                            .small()
-                            .ghost()
+                        compact::button(Button::new("timeline-key-list"))
                             .label(t!("timeline.key_list"))
                             .dropdown_menu(move |mut menu, _, _| {
                                 for (key, label) in &items {
@@ -905,9 +893,7 @@ impl Timeline {
             let events = projection.events.clone();
             let weak = cx.weak_entity();
             content = content.child(
-                Button::new("timeline-event-list")
-                    .small()
-                    .ghost()
+                compact::button(Button::new("timeline-event-list"))
                     .label(t!("timeline.event_list"))
                     .dropdown_menu(move |mut menu, _, _| {
                         for (index, event) in events.iter().enumerate() {

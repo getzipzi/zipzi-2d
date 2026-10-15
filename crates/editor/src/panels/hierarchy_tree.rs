@@ -231,7 +231,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
                         .flex()
                         .flex_col()
                         .gap_1()
-                        .w(px(172.))
+                        .w(crate::ui::compact::rem(172.))
                         .text_xs()
                         .child(
                             div()
@@ -273,7 +273,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
                             Checkbox::new(SharedString::from(format!("tree-kind-{kind:?}")))
                                 .label(label.into_owned())
                                 .small()
-                                .h(px(24.))
+                                .h(crate::ui::compact::rem(24.))
                                 .w_full()
                                 .checked(filter.includes(kind))
                                 .on_change(move |checked, _, cx| {
@@ -333,6 +333,10 @@ impl<const DEFORMER: bool> Panel for HierarchyTreePanel<DEFORMER> {
 }
 
 impl<const DEFORMER: bool> crate::docking::header::PanelHeader for HierarchyTreePanel<DEFORMER> {
+    fn header_filtered(&self, _: &App) -> bool {
+        self.view.filter.is_active()
+    }
+
     fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         self.sync_header(window, cx);
         self.toolbar(cx).into_any_element()
@@ -440,6 +444,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             }),
             &self.sorting,
         )
+        .test_support()
         .size_full()
         .min_h_0()
         .overflow_hidden()
@@ -564,10 +569,12 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                         .w_full()
                                         .min_w_0()
                                         .items_center()
-                                        .h(px(26.))
-                                        .pl(px(4. + row.depth as f32 * 10.))
+                                        .h(crate::ui::compact::rem(crate::ui::compact::ROW))
+                                        .pl(crate::ui::compact::rem(4. + row.depth as f32 * 10.))
                                         .pr_2()
-                                        .rounded_md()
+                                        .rounded(crate::ui::compact::rem(
+                                            crate::ui::compact::RADIUS,
+                                        ))
                                         .bg(if is_selected {
                                             theme.primary.opacity(0.15)
                                         } else {
@@ -636,7 +643,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                     "tree-expand-{key}"
                                                 )))
                                                 .test_support()
-                                                .w(px(16.))
+                                                .w(crate::ui::compact::rem(16.))
                                                 .on_click(cx.listener(move |this, _, _, cx| {
                                                     cx.stop_propagation();
                                                     if row.has_children {
@@ -658,7 +665,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                         .child(
                                             div()
                                                 .mr_1p5()
-                                                .size(px(20.))
+                                                .size(crate::ui::compact::rem(20.))
                                                 .flex_shrink_0()
                                                 .flex()
                                                 .items_center()
@@ -726,7 +733,6 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                     this.child(format!(" ⚠ {d}"))
                                                 }),
                                         )
-                                        .child(div().flex_1())
                                         .when_some(visibility_object, |element, object| {
                                             element.when_some(target, |element, target| {
                                                 element.child(visibility::button(
@@ -786,7 +792,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 div()
                     .id("mesh-tree-root-drop")
                     .test_support()
-                    .h(px(26.))
+                    .h(crate::ui::compact::rem(crate::ui::compact::ROW))
                     .flex_shrink_0()
                     .px_3()
                     .flex()

@@ -6,14 +6,14 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 
-pub const GROUP_ROW_HEIGHT: f32 = 26.;
+pub const GROUP_ROW_HEIGHT: f32 = crate::ui::compact::ROW;
 
 pub fn row_style<T: Styled>(element: T, depth: usize, cx: &App) -> T {
     element
         .flex()
         .items_center()
         .w_full()
-        .h(px(GROUP_ROW_HEIGHT))
+        .h(crate::ui::compact::rem(GROUP_ROW_HEIGHT))
         .pr_2()
         .border_b_1()
         .border_color(cx.theme().border)
@@ -36,8 +36,10 @@ pub fn toggle(
         .flex_1()
         .min_w_0()
         .h_full()
-        .px_3()
-        .pl(px(12. + depth.min(6) as f32 * 12.))
+        .px(crate::ui::compact::rem(crate::ui::compact::PADDING))
+        .pl(crate::ui::compact::rem(
+            crate::ui::compact::PADDING + depth.min(6) as f32 * 12.,
+        ))
         .justify_start()
         .accessibility_label(name.clone())
         .child(

@@ -28,7 +28,7 @@ pub(super) fn parameter_track(
     let snap_parameter = parameter.clone();
     div()
         .w_full()
-        .h_6()
+        .h(crate::ui::compact::rem(crate::ui::compact::ROW))
         .when(!disabled, |this| {
             this.on_mouse_down(MouseButton::Right, move |event, window, cx| {
                 let bounds = snap_slider.read(cx).bounds();
@@ -61,7 +61,7 @@ pub(super) fn parameter_track(
             BaseSlider::new(slider)
                 .disabled(disabled)
                 .w_full()
-                .h_6()
+                .h(crate::ui::compact::rem(crate::ui::compact::ROW))
                 .child(
                     div()
                         .id("slider-bar-container")
@@ -86,7 +86,7 @@ pub(super) fn parameter_track(
                             })
                         })
                         .w_full()
-                        .h_6()
+                        .h(crate::ui::compact::rem(crate::ui::compact::ROW))
                         .flex()
                         .items_center()
                         .child(track_style(SliderIndicator::new(slider), theme).children(marks)),
@@ -173,9 +173,9 @@ fn track_marks(
                 .test_support()
                 .absolute()
                 .left(relative(position))
-                .top(px((TRACK_HEIGHT - MARKER_SIZE) / 2.))
-                .ml(-px(MARKER_SIZE / 2.))
-                .size(px(MARKER_SIZE))
+                .top(crate::ui::compact::rem((TRACK_HEIGHT - MARKER_SIZE) / 2.))
+                .ml(crate::ui::compact::rem(-MARKER_SIZE / 2.))
+                .size(crate::ui::compact::rem(MARKER_SIZE))
                 .border_1()
                 .border_color(color)
                 .when(
@@ -223,15 +223,17 @@ fn track_marks(
             })
             .absolute()
             .left(relative(fraction))
-            .top(px((TRACK_HEIGHT - HANDLE_HIT_SIZE) / 2.))
-            .ml(-px(HANDLE_HIT_SIZE / 2.))
-            .size(px(HANDLE_HIT_SIZE))
+            .top(crate::ui::compact::rem(
+                (TRACK_HEIGHT - HANDLE_HIT_SIZE) / 2.,
+            ))
+            .ml(crate::ui::compact::rem(-HANDLE_HIT_SIZE / 2.))
+            .size(crate::ui::compact::rem(HANDLE_HIT_SIZE))
             .flex()
             .items_center()
             .justify_center()
             .child(
                 div()
-                    .size(px(MARKER_SIZE))
+                    .size(crate::ui::compact::rem(MARKER_SIZE))
                     .rounded_full()
                     .border_1()
                     .border_color(cursor_color)
@@ -248,7 +250,7 @@ fn track_style<T: Styled>(element: T, theme: &gpui_kit::component::Theme) -> T {
     element
         .relative()
         .w_full()
-        .h(px(TRACK_HEIGHT))
+        .h(crate::ui::compact::rem(TRACK_HEIGHT))
         .bg(theme.muted_foreground.opacity(0.55))
 }
 
@@ -258,13 +260,16 @@ pub(crate) fn readonly_track(parameter: &ParameterValue, value: f32, cx: &App) -
         repeat: false,
         keys: Vec::new(),
     };
-    div().w_full().h_6().flex().items_center().child(
-        track_style(div(), cx.theme()).children(track_marks(
+    div()
+        .w_full()
+        .h(crate::ui::compact::rem(crate::ui::compact::ROW))
+        .flex()
+        .items_center()
+        .child(track_style(div(), cx.theme()).children(track_marks(
             parameter,
             &visual,
             value,
             cx.theme(),
             None,
-        )),
-    )
+        )))
 }

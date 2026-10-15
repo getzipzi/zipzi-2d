@@ -210,7 +210,7 @@ impl Render for ParameterGroupForm {
         {
             body = body.child(
                 div().text_xs().child(label.clone()).child(
-                    Input::new(&self.inputs[i])
+                    crate::ui::compact::input(Input::new(&self.inputs[i]))
                         .id(if i == 0 {
                             "parameter-group-name"
                         } else {
@@ -243,7 +243,7 @@ impl Render for ParameterGroupForm {
         })
         .when(self.session.needs_reload(cx), |body| {
             body.child(
-                Button::new("parameter-management-reload")
+                crate::ui::compact::button(Button::new("parameter-management-reload"))
                     .ghost()
                     .label(t!("parameter.reload"))
                     .on_click(cx.listener(|this, _, window, cx| {

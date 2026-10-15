@@ -1,6 +1,39 @@
 use super::{document_fixture, setup_with_document};
 use editor_core::{AnimationEvaluator, CommandId};
-use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
+use gpui_kit::{AppContext as _, TestAppContext, prelude::*, test::TestWindowExt};
+
+#[gpui_kit::test]
+fn motion_and_expression_rows_share_compact_height_at_every_ui_scale(cx: &mut TestAppContext) {
+    use crate::settings::{Settings, UiScale};
+    use gpui_kit::component::ThemeMode;
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    for scale in UiScale::ALL {
+        cx.update_window(harness.window, |_, window, cx| {
+            cx.update_global::<Settings, _>(|settings, _| settings.set_ui_scale(scale).unwrap());
+            crate::theme::change(ThemeMode::Dark, cx);
+            harness.view.update(cx, |view, cx| {
+                view.run_command(CommandId::AnimationWorkspace, window, cx);
+                cx.notify();
+            });
+            window.refresh();
+            window.render_frame(cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            for kind in ["animation-motion", "animation-expression"] {
+                let height = window.find((kind, 0usize)).bounds().size.height.as_f32();
+                assert!(
+                    (height - 22. * scale.factor()).abs() <= 1.,
+                    "{kind}: {height}"
+                );
+            }
+        })
+        .unwrap();
+    }
+}
 
 fn reveal_property(
     window: &mut gpui_kit::Window,

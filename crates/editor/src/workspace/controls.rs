@@ -1,75 +1,20 @@
-use crate::{EditorView, t};
+use crate::{EditorView, t, ui::compact};
 use editor_core::{CommandId, WorkspaceKind};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, IconName, Sizable, WindowExt,
+    ActiveTheme, Disableable, IconName,
     button::{Button, ButtonVariants},
     menu::DropdownMenu,
 };
 use gpui_kit::{prelude::*, *};
 
-/// Isolate control hover redraws from document panel observers.
-pub struct TopBar {
-    owner: WeakEntity<EditorView>,
-    _observe: Subscription,
-}
+pub(super) const WORKSPACE_SWITCHER_HEIGHT: f32 = 24.;
+pub(super) const WORKSPACE_SWITCHER_WIDTH: f32 = 160.;
 
-impl TopBar {
-    pub fn new(owner: WeakEntity<EditorView>, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self {
-            _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
-            owner,
-        })
-    }
-}
-
-impl Render for TopBar {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let Some(owner) = self.owner.upgrade() else {
-            return div().into_any_element();
-        };
-        let modal = owner.read(cx).modal || window.has_active_dialog(cx);
-        render_top_bar(&owner, modal, window, cx).into_any_element()
-    }
-}
-
-fn render_top_bar(
-    owner: &Entity<EditorView>,
-    modal: bool,
-    window: &mut Window,
-    cx: &mut App,
-) -> impl IntoElement {
-    div()
-        .id("workspace-top-bar")
-        .test_support()
-        .h(px(38.))
-        .w_full()
-        .flex_shrink_0()
-        .flex()
-        .items_center()
-        .bg(cx.theme().background)
-        .border_b_1()
-        .border_color(cx.theme().border)
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .child(render_workspace_switcher(owner, modal, window, cx)),
-        )
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .flex()
-                .justify_end()
-                .child(div().mr_2().child(render_more_menu(owner, modal))),
-        )
-}
-
-fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl IntoElement {
-    Button::new("workspace-layout-menu")
-        .icon(IconName::Ellipsis)
-        .small()
+pub(super) fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl IntoElement {
+    compact::button(Button::new("workspace-layout-menu"))
         .ghost()
+        .icon(IconName::Ellipsis)
+        .accessibility_label(t!("dock.layout_actions"))
         .tooltip(t!("dock.layout_actions"))
         .disabled(modal)
         .dropdown_menu({
@@ -90,10 +35,48 @@ fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl IntoElement
                     )
                     .separator();
                 }
-                menu.menu(
-                    t!("menu.reset_layout"),
-                    Box::new(crate::actions::RunCommand {
-                        id: CommandId::ResetLayout,
+                let scale = cx.global::<crate::settings::Settings>().ui_scale;
+                let scale_owner = owner.clone();
+                menu = menu
+                    .submenu(t!("editor.ui_scale"), window, cx, move |mut menu, _, _| {
+                        for choice in crate::settings::UiScale::ALL {
+                            let owner = scale_owner.clone();
+                            menu = menu.item(
+                                gpui_kit::component::menu::PopupMenuItem::new(choice.label())
+                                    .checked(choice == scale)
+                                    .on_click(move |_, window, cx| {
+                                        let result = cx
+                                            .update_global::<crate::settings::Settings, _>(
+                                                |settings, _| settings.set_ui_scale(choice),
+                                            );
+                                        if let Err(error) = result {
+                                            _ = owner.update(cx, |owner, cx| {
+                                                owner.edit_error = Some(error.to_string());
+                                                cx.notify();
+                                            });
+                                            return;
+                                        }
+                                        let mode = cx.theme().mode;
+                                        crate::theme::change(mode, cx);
+                                        window.refresh();
+                                    }),
+                            );
+                        }
+                        menu
+                    })
+                    .separator();
+                let reset_owner = owner.clone();
+                menu.item(
+                    gpui_kit::component::menu::PopupMenuItem::element(|_, _| {
+                        div()
+                            .id("workspace-reset-layout")
+                            .test_support()
+                            .child(t!("menu.reset_layout"))
+                    })
+                    .on_click(move |_, window, cx| {
+                        _ = reset_owner.update(cx, |owner, cx| {
+                            owner.run_command(CommandId::ResetLayout, window, cx)
+                        });
                     }),
                 )
             }
@@ -101,7 +84,8 @@ fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl IntoElement
         .anchor(Anchor::TopRight)
 }
 
-fn render_workspace_switcher(
+pub(super) fn render_workspace_switcher(
+    view: &EditorView,
     owner: &Entity<EditorView>,
     modal: bool,
     window: &mut Window,
@@ -109,10 +93,9 @@ fn render_workspace_switcher(
 ) -> impl IntoElement {
     use gpui_kit::base::{Tab, Tabs, spring};
 
-    // A 196px control with a 1px frame, 2px inset and 2px segment gap.
-    const SEGMENT_WIDTH: f32 = 93.;
+    // Two segments with a 2px outer inset and a 2px gap.
+    const SEGMENT_WIDTH: f32 = (WORKSPACE_SWITCHER_WIDTH - 6.) / 2.;
     const SEGMENT_STEP: f32 = SEGMENT_WIDTH + 2.;
-    let view = owner.read(cx);
     let workspace = view.editor.workspace();
     let modes = [
         (
@@ -131,15 +114,12 @@ fn render_workspace_switcher(
         (kind, command, id, enabled)
     });
     let disabled = modes.iter().all(|(_, _, _, enabled)| !enabled);
-    let primary = cx.theme().primary;
     let foreground = cx.theme().foreground;
     let muted = cx.theme().muted_foreground;
-    let surface = cx.theme().tab_bar;
-    let border = cx.theme().border;
     let dark = cx.theme().is_dark();
     let indicator_left = spring(
         "workspace-mode-indicator",
-        px(2. + workspace.index() as f32 * SEGMENT_STEP),
+        compact::scaled(2. + workspace.index() as f32 * SEGMENT_STEP, cx),
         cx.theme().motion_tokens().spring_move,
         window,
         cx,
@@ -151,32 +131,27 @@ fn render_workspace_switcher(
         .flex()
         .flex_shrink_0()
         .items_center()
-        .px_2()
         .child(
             Tabs::new("workspace-mode-tabs")
                 .relative()
                 .flex()
                 .items_center()
-                .w(px(196.))
-                .h(px(28.))
-                .p(px(2.))
-                .gap(px(2.))
-                .rounded(px(6.))
-                .border_1()
-                .border_color(border)
-                .bg(surface)
+                .w(crate::ui::compact::rem(WORKSPACE_SWITCHER_WIDTH))
+                .h(crate::ui::compact::rem(WORKSPACE_SWITCHER_HEIGHT))
+                .p(crate::ui::compact::rem(2.))
+                .gap(crate::ui::compact::rem(2.))
+                .rounded(crate::ui::compact::rem(compact::RADIUS))
+                .border_0()
                 .when(disabled, |tabs| tabs.opacity(0.5))
                 .child(
                     div()
                         .absolute()
                         .left(indicator_left)
-                        .top(px(2.))
-                        .w(px(SEGMENT_WIDTH))
-                        .h(px(22.))
-                        .rounded(px(4.))
-                        .bg(primary.opacity(if dark { 0.18 } else { 0.09 }))
-                        .border_1()
-                        .border_color(primary.opacity(if dark { 0.4 } else { 0.25 })),
+                        .top(crate::ui::compact::rem(2.))
+                        .w(crate::ui::compact::rem(SEGMENT_WIDTH))
+                        .h(crate::ui::compact::rem(20.))
+                        .rounded(crate::ui::compact::rem(2.))
+                        .bg(foreground.opacity(if dark { 0.08 } else { 0.07 })),
                 )
                 .children(modes.into_iter().map(|(kind, command, id, enabled)| {
                     let selected = workspace == kind;
@@ -185,9 +160,9 @@ fn render_workspace_switcher(
                         .relative()
                         .flex_1()
                         .h_full()
-                        .rounded(px(4.))
+                        .rounded(crate::ui::compact::rem(2.))
                         .text_xs()
-                        .text_color(if selected { primary } else { muted })
+                        .text_color(if selected { foreground } else { muted })
                         .font_weight(if selected {
                             FontWeight::SEMIBOLD
                         } else {

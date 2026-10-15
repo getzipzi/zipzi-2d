@@ -81,7 +81,7 @@ fn invalid_bound_counts_and_cancel_leave_mesh_unchanged(cx: &mut TestAppContext)
     let harness = setup_with_document(cx, doc, assets);
     open(&harness, cx);
     // Existing deformation bindings cannot use alpha generation: default to grid.
-    cx.update_window(harness.window, |_, window, cx| {
+    cx.update_window(harness.window, |_, window, _cx| {
         assert!(window.find("mesh-generation-columns").visible());
         assert!(window.try_find("mesh-generation-outside-spacing").is_none());
     })
@@ -236,6 +236,53 @@ fn changed_inputs_remove_old_preview_until_valid_again(cx: &mut TestAppContext) 
         assert_eq!(view.editor.document().unwrap().layers()[0].vertices, 25);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
     });
+}
+
+#[gpui_kit::test]
+fn scaled_generator_fits_the_window_and_keeps_preview_actions_accessible(cx: &mut TestAppContext) {
+    use crate::settings::{Settings, UiScale};
+    use gpui_kit::{prelude::*, px, size};
+    let (doc, assets) = document_fixture::rectangle_document(false).unwrap();
+    let harness = setup_with_document(cx, doc, assets);
+    open_grid(&harness, cx);
+    for scale in UiScale::ALL {
+        cx.update_window(harness.window, |_, window, cx| {
+            cx.update_global::<Settings, _>(|settings, _| settings.set_ui_scale(scale).unwrap());
+            crate::theme::change(gpui_kit::component::ThemeMode::Dark, cx);
+            window.refresh();
+        })
+        .unwrap();
+        for (width, height) in [(800., 480.), (900., 620.), (1100., 740.)] {
+            cx.simulate_window_resize(harness.window, size(px(width), px(height)));
+            settle(cx);
+            cx.update_window(harness.window, |_, window, cx| {
+                window.render_frame(cx);
+                let form = window.find("mesh-generation-form").bounds();
+                let preview = window.find("mesh-generation-preview").bounds();
+                let settings = window.find("mesh-generation-settings").bounds();
+                assert!(
+                    preview.right() <= form.right() + px(1.),
+                    "preview overflows form at {scale:?}: {preview:?} in {form:?}"
+                );
+                assert!(settings.right() <= preview.left());
+                for id in [
+                    "mesh-generation-preview",
+                    "mesh-generation-submit",
+                    "mesh-generation-cancel",
+                ] {
+                    let bounds = window.find(id).bounds();
+                    assert!(
+                        bounds.left() >= px(0.)
+                            && bounds.top() >= px(0.)
+                            && bounds.right() <= px(width)
+                            && bounds.bottom() <= px(height),
+                        "{id} outside {width}x{height} at {scale:?}: {bounds:?}"
+                    );
+                }
+            })
+            .unwrap();
+        }
+    }
 }
 
 #[gpui_kit::test]

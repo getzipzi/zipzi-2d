@@ -74,6 +74,14 @@ fn number_slide_is_relative_precise_clamped_and_stops_on_release(cx: &mut TestAp
                 .find(format!("parameter-value-{id}"))
                 .bounds()
                 .center();
+            let row = window.find(format!("parameter-row-{id}")).bounds();
+            let field = window
+                .within(format!("parameter-value-{id}"))
+                .find("slide-number-input")
+                .bounds();
+            assert_eq!(field.size.height, px(18.));
+            assert_eq!(field.top() - row.top(), px(2.));
+            assert_eq!(row.bottom() - field.bottom(), px(2.));
             press(window, origin, cx);
             origin
         })

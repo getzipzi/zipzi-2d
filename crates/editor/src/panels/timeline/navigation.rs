@@ -53,7 +53,7 @@ impl Timeline {
             .editor
             .timeline_rows()
             .map_or(0, |rows| rows.len()) as f64
-            * ROW as f64
+            * self.row_height() as f64
             - f64::from(height))
         .max(0.);
         let scroll = if curve_pan {
@@ -63,7 +63,8 @@ impl Timeline {
         };
         let vertical = (scroll - state.scroll) as f32;
         let value_shift = if curve_pan {
-            y_value(dy, self.value_range, height) - y_value(0., self.value_range, height)
+            y_value(dy, self.value_range, height, self.row_height())
+                - y_value(0., self.value_range, height, self.row_height())
         } else {
             0.
         };
@@ -72,13 +73,15 @@ impl Timeline {
         }
         let old_range = self.value_range;
         self.value_range = (old_range.0 + value_shift, old_range.1 + value_shift);
+        let row_height = self.row_height();
         let move_origin = |origin: &mut Point<f32>| {
             origin.x -= horizontal;
             if curve_pan {
                 origin.y = value_y(
-                    y_value(origin.y, old_range, height),
+                    y_value(origin.y, old_range, height, row_height),
                     self.value_range,
                     height,
+                    row_height,
                 );
             } else if state.mode == TimelineDisplayMode::Overview {
                 origin.y -= vertical;
@@ -202,6 +205,7 @@ pub(super) fn marquee_selection(
     range: (f64, f64),
     width: f32,
     height: f32,
+    row_height: f32,
 ) -> (Vec<TimelineKeyRef>, Vec<String>) {
     let a = x_time(origin.x, state.time_range, width);
     let b = x_time(current.x, state.time_range, width);
@@ -212,7 +216,7 @@ pub(super) fn marquee_selection(
         let top = origin.y.min(current.y) as f64 + state.scroll;
         let bottom = origin.y.max(current.y) as f64 + state.scroll;
         for (index, row) in rows.iter().enumerate() {
-            let y = index as f64 * ROW as f64 + ROW as f64 / 2.;
+            let y = index as f64 * row_height as f64 + row_height as f64 / 2.;
             if y < top || y > bottom {
                 continue;
             }
@@ -239,8 +243,8 @@ pub(super) fn marquee_selection(
             }
         }
     } else {
-        let a = y_value(origin.y, range, height);
-        let b = y_value(current.y, range, height);
+        let a = y_value(origin.y, range, height, row_height);
+        let b = y_value(current.y, range, height, row_height);
         let values = a.min(b)..=a.max(b);
         for track in selected_tracks(projection, state) {
             let scale = track_range(projection, &track.id);
@@ -258,7 +262,12 @@ pub(super) fn marquee_selection(
                     .map(|key| key.reference.clone()),
             );
         }
-        if values.contains(&y_value(height - ROW / 2., range, height)) {
+        if values.contains(&y_value(
+            height - row_height / 2.,
+            range,
+            height,
+            row_height,
+        )) {
             events.extend(
                 projection
                     .events

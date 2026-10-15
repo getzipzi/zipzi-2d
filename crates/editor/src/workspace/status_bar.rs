@@ -1,6 +1,8 @@
-use crate::EditorView;
-use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable, WindowExt};
+use crate::{EditorView, ui::compact};
+use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable};
 use gpui_kit::{prelude::*, *};
+
+const STATUS_LINE_HEIGHT: f32 = compact::CAPTION * 1.5;
 
 pub struct StatusBar {
     owner: WeakEntity<EditorView>,
@@ -17,17 +19,15 @@ impl StatusBar {
 }
 
 impl Render for StatusBar {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
-        let modal = owner.read(cx).modal || window.has_active_dialog(cx);
-        let zoom = super::zoom_bar::render_zoom_bar(&owner, modal, cx);
-        render_status_bar(owner.read(cx), zoom, cx).into_any_element()
+        render_status_bar(owner.read(cx), cx).into_any_element()
     }
 }
 
-fn render_status_bar(view: &EditorView, zoom: impl IntoElement, cx: &App) -> impl IntoElement {
+fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
     let theme = cx.theme();
     let error = view
         .edit_error
@@ -40,20 +40,24 @@ fn render_status_bar(view: &EditorView, zoom: impl IntoElement, cx: &App) -> imp
     div()
         .id("app-status-bar")
         .test_support()
-        .h(px(28.))
+        .pt_0()
+        .pb(compact::rem(
+            (compact::STATUS_BAR - STATUS_LINE_HEIGHT) / 2.,
+        ))
         .w_full()
         .flex_shrink_0()
-        .bg(theme.background)
-        .border_t_1()
-        .border_color(theme.border)
+        .bg(compact::workspace(cx))
         .flex()
         .items_center()
-        .gap_3()
-        .px_3()
-        .text_xs()
+        .gap(crate::ui::compact::rem(compact::PADDING))
+        .px(compact::chrome_inset(cx))
+        .text_size(crate::ui::compact::rem(compact::CAPTION))
+        .line_height(compact::rem(STATUS_LINE_HEIGHT))
         // Left side: status message
         .child(
             div()
+                .id("app-status-message")
+                .test_support()
                 .flex()
                 .flex_1()
                 .min_w_0()
@@ -81,7 +85,7 @@ fn render_status_bar(view: &EditorView, zoom: impl IntoElement, cx: &App) -> imp
                 .flex()
                 .min_w_0()
                 .items_center()
-                .gap_3()
+                .gap(crate::ui::compact::rem(compact::PADDING))
                 .text_color(theme.muted_foreground)
                 .when_some(selected_layer, |e, layer| {
                     e.child(div().overflow_hidden().text_ellipsis().child(format!(
@@ -90,5 +94,4 @@ fn render_status_bar(view: &EditorView, zoom: impl IntoElement, cx: &App) -> imp
                     )))
                 }),
         )
-        .child(zoom)
 }

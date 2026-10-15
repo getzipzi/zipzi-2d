@@ -9,6 +9,16 @@ impl Timeline {
             .timeline_view()
             .cloned()
             .unwrap_or_default();
+        let preview_mode = owner
+            .read(cx)
+            .editor
+            .animation()
+            .map_or(AnimationPreviewMode::Editing, |a| a.preview_mode);
+        let looping = owner
+            .read(cx)
+            .editor
+            .animation()
+            .is_some_and(|a| a.preview_loop);
         let allowed = self.allowed(window, cx);
         let editable = self.editable(window, cx);
         let actions = [
@@ -110,12 +120,15 @@ impl Timeline {
                 allowed,
             ),
         ];
+        let mut edit_buttons = Vec::new();
+        let mut view_buttons = Vec::new();
         let mut tools = div()
             .id("timeline-tools")
             .test_support()
             .flex()
             .items_center()
-            .gap(px(2.))
+            .gap(compact::rem(compact::GAP * 3.))
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .flex_shrink_0();
         for (id, icon, label, selected, enabled) in &actions {
             if !self.header_compact
@@ -123,38 +136,65 @@ impl Timeline {
             {
                 continue;
             }
-            if self.header_compact && !matches!(*id, "timeline-pan" | "timeline-inspector-toggle") {
+            if self.header_tiny
+                || (self.header_compact
+                    && !matches!(*id, "timeline-pan" | "timeline-inspector-toggle"))
+            {
                 continue;
             }
             let id = *id;
-            tools = tools.child(
-                Button::new(id)
-                    .small()
-                    .when(self.header_compact, |button| button.xsmall())
-                    .ghost()
-                    .icon(*icon)
-                    .accessibility_label(label.clone())
-                    .tooltip(label.clone())
-                    .selected(*selected)
-                    .disabled(!enabled)
-                    .on_click(
-                        cx.listener(move |this, _, window, cx| this.activate_tool(id, window, cx)),
-                    ),
-            );
+            let button = compact::header_button(Button::new(id).selected(*selected).when(
+                !matches!(
+                    id,
+                    "timeline-previous-frame"
+                        | "timeline-next-frame"
+                        | "timeline-fit"
+                        | "timeline-add-event"
+                        | "timeline-delete"
+                ),
+                |button| button.toggled(*selected),
+            ))
+            .icon(*icon)
+            .accessibility_label(label.clone())
+            .tooltip(label.clone())
+            .selected(*selected)
+            .disabled(!enabled)
+            .on_click(cx.listener(move |this, _, window, cx| this.activate_tool(id, window, cx)));
+            if matches!(
+                id,
+                "timeline-snap" | "timeline-add-event" | "timeline-delete"
+            ) {
+                edit_buttons.push(button);
+            } else {
+                view_buttons.push(button);
+            }
         }
+        tools = tools
+            .child(compact::group(
+                "timeline-edit-tools",
+                t!("timeline.edit_group"),
+                Axis::Horizontal,
+                edit_buttons,
+            ))
+            .child(compact::group(
+                "timeline-view-tools",
+                t!("timeline.view_group"),
+                Axis::Horizontal,
+                view_buttons,
+            ));
         if self.header_compact {
             let weak = cx.weak_entity();
+            let tiny = self.header_tiny;
             tools = tools.child(
-                Button::new("timeline-more")
-                    .xsmall()
-                    .ghost()
+                compact::header_button(Button::new("timeline-more"))
                     .icon(IconName::Ellipsis)
                     .accessibility_label(t!("timeline.more_tools").into_owned())
                     .tooltip(t!("timeline.more_tools"))
                     .disabled(!allowed)
                     .dropdown_menu(move |mut menu, _, _| {
                         for (id, icon, label, selected, enabled) in &actions {
-                            if matches!(*id, "timeline-pan" | "timeline-inspector-toggle") {
+                            if !tiny && matches!(*id, "timeline-pan" | "timeline-inspector-toggle")
+                            {
                                 continue;
                             }
                             let id = *id;
@@ -179,6 +219,53 @@ impl Timeline {
                                 }),
                             );
                         }
+                        if tiny {
+                            for (id, label, command) in [
+                                ("timeline-start", t!("timeline.jump_start"), "start"),
+                                (
+                                    "timeline-previous-key",
+                                    t!("timeline.previous_key"),
+                                    "previous",
+                                ),
+                                ("timeline-next-key", t!("timeline.next_key"), "next"),
+                                ("timeline-end", t!("timeline.jump_end"), "end"),
+                                (
+                                    "animation-preview-loop",
+                                    t!("timeline.loop_playback"),
+                                    "loop",
+                                ),
+                                (
+                                    "animation-preview-mode",
+                                    t!("timeline.preview_effect"),
+                                    "preview",
+                                ),
+                            ] {
+                                let weak = weak.clone();
+                                let label = label.into_owned();
+                                menu = menu.item(
+                                    PopupMenuItem::element(move |_, _| {
+                                        div().id(id).test_support().child(label.clone())
+                                    })
+                                    .checked(
+                                        (command == "loop" && looping)
+                                            || (command == "preview"
+                                                && preview_mode == AnimationPreviewMode::Result),
+                                    )
+                                    .disabled(
+                                        !allowed
+                                            || (command == "loop"
+                                                && preview_mode != AnimationPreviewMode::Editing),
+                                    )
+                                    .on_click(
+                                        move |_, window, cx| {
+                                            _ = weak.update(cx, |this, cx| {
+                                                this.activate_tool(command, window, cx)
+                                            });
+                                        },
+                                    ),
+                                );
+                            }
+                        }
                         menu
                     }),
             );
@@ -193,6 +280,34 @@ impl Timeline {
         self.finish_number(cx);
         window.focus(&self.focus, cx);
         match id {
+            "start" | "previous" | "next" | "end" => self.key_command(id, window, cx),
+            "loop" | "preview" => {
+                _ = self.owner.update(cx, |owner, cx| {
+                    let Some(document) = owner.editor.active_id() else {
+                        return;
+                    };
+                    let Some(animation) = owner.editor.animation() else {
+                        return;
+                    };
+                    if id == "loop" && animation.preview_mode != AnimationPreviewMode::Editing {
+                        return;
+                    }
+                    let result = if id == "loop" {
+                        owner
+                            .editor
+                            .set_animation_preview_loop(document, !animation.preview_loop)
+                    } else {
+                        let mode = if animation.preview_mode == AnimationPreviewMode::Editing {
+                            AnimationPreviewMode::Result
+                        } else {
+                            AnimationPreviewMode::Editing
+                        };
+                        owner.editor.set_animation_preview_mode(document, mode)
+                    };
+                    owner.animation_anchor = None;
+                    owner.complete_edit(result, cx);
+                });
+            }
             "timeline-previous-frame" => self.key_command("left", window, cx),
             "timeline-next-frame" => self.key_command("right", window, cx),
             "timeline-view" => self.change_view(
@@ -263,15 +378,15 @@ impl Timeline {
             .top(px(top))
             .left_0()
             .w_full()
-            .h(px(ROW))
+            .h(px(self.row_height()))
             .flex()
             .items_center()
             .gap_1()
-            .pl(px(6. + row.depth as f32 * 12.))
+            .pl(compact::rem(6. + row.depth as f32 * 12.))
             .pr_1()
             .border_b_1()
             .border_color(cx.theme().border.opacity(0.4))
-            .when(selected, |e| e.bg(cx.theme().accent.opacity(0.18)))
+            .when(selected, |e| e.bg(cx.theme().primary.opacity(0.18)))
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
@@ -302,7 +417,7 @@ impl Timeline {
             element = element.child(
                 Button::new(SharedString::from(format!("timeline-toggle-{id:?}")))
                     .ghost()
-                    .small()
+                    .xsmall()
                     .icon(if expanded {
                         IconName::ChevronDown
                     } else {
@@ -338,7 +453,7 @@ impl Timeline {
                     .raw_value(&channel.id, row.track_id.as_deref(), time)
                     .unwrap_or(channel.default_value);
                 element = element.child(
-                    div().w(px(62.)).flex_shrink_0().child(
+                    div().w(compact::rem(62.)).flex_shrink_0().child(
                         self.number(
                             inspector::Field::RowValue(row.id.clone()),
                             value as f64,
@@ -365,7 +480,7 @@ impl Timeline {
                 let enabled = channel.editable && self.editable(window, cx);
                 element = element.child(
                     Button::new(SharedString::from(format!("timeline-insert-{:?}", row.id)))
-                        .small()
+                        .xsmall()
                         .ghost()
                         .label(if current.is_some() { "◆" } else { "◇" })
                         .disabled(!enabled)
@@ -404,7 +519,7 @@ impl Timeline {
                         "timeline-diagnostic-{:?}",
                         row.id
                     )))
-                    .small()
+                    .xsmall()
                     .ghost()
                     .label("!")
                     .tooltip(diagnostic),

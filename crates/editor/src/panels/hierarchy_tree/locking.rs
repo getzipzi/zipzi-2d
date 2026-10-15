@@ -2,7 +2,7 @@ use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ObjectRef};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Icon, Sizable, WindowExt,
+    ActiveTheme, Disableable, Icon, WindowExt,
     button::{Button, ButtonVariants},
     menu::{ContextMenuExt, PopupMenuItem},
 };
@@ -75,9 +75,11 @@ pub(super) fn button(
     let sources = state.locked_by.clone();
     let source_owner = owner.clone();
     let source_id = id.clone();
-    let trigger = Button::new(id).ghost().small().w(px(24.)).h(px(24.));
+    let trigger = crate::ui::compact::header_button(Button::new(id))
+        .ghost()
+        .w(crate::ui::compact::rem(crate::ui::compact::HEADER_CONTROL));
     div()
-        .w(px(24.))
+        .w(crate::ui::compact::rem(crate::ui::compact::HEADER_CONTROL))
         .h_full()
         .flex_shrink_0()
         .flex()

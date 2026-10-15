@@ -143,7 +143,7 @@ fn toolbar_resizes_without_losing_controls_input_or_accessible_names(cx: &mut Te
             let actions = window.find("actions-toolbar").bounds();
             let tree = window.find("tree-toolbar").bounds();
             assert_eq!(actions.size.width, px(width));
-            assert_eq!(actions.size.height, px(27.));
+            assert_eq!(actions.size.height, px(20.));
             assert_eq!(actions.size.height, tree.size.height);
             for (container, ids) in [
                 (actions, &["create", "groups"][..]),

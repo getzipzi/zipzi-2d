@@ -52,8 +52,6 @@ struct EditorView {
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
     status_bar: Entity<workspace::status_bar::StatusBar>,
-    top_bar: Entity<workspace::top_bar::TopBar>,
-    toolbar: workspace::toolbar::ToolbarRegistry,
     dev_session: Option<dev_session::DevSession>,
 }
 impl EditorView {
@@ -91,8 +89,6 @@ impl EditorView {
             gpu_device: None,
             _frames: None,
             status_bar: workspace::status_bar::StatusBar::new(cx.weak_entity(), cx),
-            top_bar: workspace::top_bar::TopBar::new(cx.weak_entity(), cx),
-            toolbar: workspace::toolbar::ToolbarRegistry::with_defaults(),
             dev_session: dev_session::DevSession::from_env(),
         };
         let entity = cx.weak_entity();
@@ -385,7 +381,7 @@ fn main() {
                         cx,
                     ))),
                     window_min_size: Some(size(px(800.), px(480.))),
-                    ..workspace::tab_bar::window_options()
+                    ..workspace::title_bar::window_options()
                 },
                 cx,
                 |window, cx| cx.new(|cx| EditorView::new(window, cx)),

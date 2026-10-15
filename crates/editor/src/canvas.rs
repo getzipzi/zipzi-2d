@@ -1,5 +1,8 @@
 //! Measured canvas, pointer ownership and overlay painting. Tool semantics live in core.
+mod deformer_bar;
 mod navigation;
+pub(crate) mod toolbar;
+mod zoom_bar;
 
 use super::*;
 use editor_core::{
@@ -14,6 +17,7 @@ use gpui_kit::component::{
 pub struct CanvasView {
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
+    pub(crate) toolbar: toolbar::ToolbarRegistry,
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
@@ -168,6 +172,7 @@ impl CanvasView {
             Self {
                 owner,
                 focus,
+                toolbar: toolbar::ToolbarRegistry::with_defaults(),
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 pan: None,
@@ -694,16 +699,14 @@ impl Render for CanvasView {
                 .absolute()
                 .size_full(),
             )
-            .child(workspace::toolbar::render_toolbar(
-                &owner,
-                &cx.entity(),
+            .child(toolbar::CanvasToolbar {
+                owner: owner.clone(),
+                canvas: cx.entity(),
                 modal,
-                cx,
-            ))
+                items: self.toolbar.items(),
+            })
             .when(modeling, |e| {
-                e.child(workspace::deformer_bar::render_deformer_bar(
-                    self, modal, cx,
-                ))
+                e.child(deformer_bar::render_deformer_bar(self, modal, cx))
             })
             .children(interaction_label.map(|label| {
                 div()
@@ -848,5 +851,24 @@ impl Render for CanvasView {
             })
             .child(body)
             .into_any_element()
+    }
+}
+
+impl crate::docking::header::PanelHeader for CanvasView {
+    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let Some(owner) = self.owner.upgrade() else {
+            return div().into_any_element();
+        };
+        let modal = owner.read(cx).modal || window.has_active_dialog(cx);
+        zoom_bar::CanvasZoomBar {
+            owner,
+            canvas: cx.entity(),
+            modal,
+        }
+        .into_any_element()
+    }
+
+    fn header_min_width(&self) -> Pixels {
+        px(126.)
     }
 }

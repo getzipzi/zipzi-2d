@@ -1,66 +1,109 @@
 use super::setup;
 use editor_core::CommandId;
-use gpui_kit::{AppContext as _, TestAppContext, point, px, test::TestWindowExt};
+use gpui_kit::{
+    AppContext as _, BorrowAppContext as _, TestAppContext, point, px, size, test::TestWindowExt,
+};
 
 #[gpui_kit::test]
-fn tabs_share_titlebar_and_leave_room_for_native_controls_and_dragging(cx: &mut TestAppContext) {
+fn titlebar_combines_projects_centered_workspace_and_more(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         let title = window.find("workspace-titlebar").bounds();
-        let tabs = window.find("global-document-tabs").bounds();
+        let project = window.find("project-select").bounds();
+        let switcher = window.find("workspace-switcher").bounds();
+        let more = window.find("workspace-layout-menu").bounds();
         let drag = window.find("window-titlebar-drag-region").bounds();
-        let first = harness.view.read(cx).editor.active_id().unwrap();
-        let tab = window.find(format!("tab-item-{first:?}")).bounds();
         assert_eq!(title.top(), px(0.));
-        assert!(tab.left() >= px(80.), "tabs must clear the traffic lights");
-        assert_eq!(tabs.top(), title.top() + px(1.));
-        assert!(tabs.bottom() <= title.bottom());
-        assert!(drag.size.width >= px(72.));
-        let entry = window.find("project-new-or-open").bounds();
-        assert!(entry.left() >= tab.right());
-        assert!(entry.right() <= drag.left());
-        assert!(drag.right() <= title.right());
-        assert!(title.bottom() <= window.find("workspace-top-bar").bounds().top());
+        assert!(
+            project.left() >= px(80.),
+            "project must clear traffic lights"
+        );
+        assert!(title.contains(&project.origin));
+        assert!(project.right() <= drag.left());
+        assert!(drag.size.width >= px(12.));
+        assert!(drag.right() <= switcher.left());
+        assert!((switcher.center().x - title.center().x).abs() <= px(0.5));
+        assert!((switcher.center().y - project.center().y).abs() <= px(0.5));
+        assert!(more.left() >= switcher.right());
+        assert!(more.right() <= title.right());
+        assert!(title.bottom() <= window.find("dock-area").bounds().top());
+        assert!(window.try_find("workspace-top-bar").is_none());
+        assert!(window.try_find("project-new-or-open").is_none());
 
         window.toggle_fullscreen();
         window.render_frame(cx);
-        assert!(window.find(format!("tab-item-{first:?}")).bounds().left() < tab.left());
+        assert!(window.find("project-select").bounds().left() < project.left());
+        assert!(
+            (window.find("workspace-switcher").bounds().center().x - title.center().x).abs()
+                <= px(0.5)
+        );
         window.toggle_fullscreen();
         window.render_frame(cx);
         assert_eq!(
-            window.find(format!("tab-item-{first:?}")).bounds().left(),
-            tab.left()
+            window.find("project-select").bounds().left(),
+            project.left()
         );
     })
     .unwrap();
 }
 
 #[gpui_kit::test]
-fn tab_click_double_click_drag_and_close_do_not_trigger_window_drag(cx: &mut TestAppContext) {
+fn project_menu_switches_closes_and_does_not_trigger_window_drag(cx: &mut TestAppContext) {
     let harness = setup(cx);
+    let (first, second) = cx
+        .update_window(harness.window, |_, window, cx| {
+            let first = harness.view.read(cx).editor.active_id().unwrap();
+            harness
+                .view
+                .update(cx, |view, cx| view.run_command(CommandId::New, window, cx));
+            (first, harness.view.read(cx).editor.active_id().unwrap())
+        })
+        .unwrap();
+    for id in [first, second] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click("project-select", cx);
+            window.click(format!("project-select-{id:?}"), cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        assert_eq!(
+            harness
+                .view
+                .read_with(cx, |view, _| view.editor.active_id()),
+            Some(id)
+        );
+    }
     cx.update_window(harness.window, |_, window, cx| {
-        let first = harness.view.read(cx).editor.active_id().unwrap();
-        harness
-            .view
-            .update(cx, |view, cx| view.run_command(CommandId::New, window, cx));
-        let second = harness.view.read(cx).editor.active_id().unwrap();
-        window.click(format!("tab-item-{first:?}"), cx);
-        assert_eq!(harness.view.read(cx).editor.active_id(), Some(first));
-        window.double_click(format!("tab-item-{second:?}"), cx);
-        assert_eq!(harness.view.read(cx).editor.active_id(), Some(second));
-        let from = window.find(format!("tab-item-{first:?}")).bounds().center();
-        // TestWindow::start_window_move is unimplemented and panics. This real
-        // pointer sequence also guards against arming a titlebar window drag.
-        window.drag(from, from + point(px(20.), px(0.)), cx);
-        window.click(format!("tab-close-{second:?}"), cx);
+        window.click("project-select", cx);
+        window.click("project-close", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, _, cx| {
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
         assert_eq!(harness.view.read(cx).editor.active_id(), Some(first));
     })
     .unwrap();
+    for id in [
+        "project-select",
+        "workspace-modeling",
+        "workspace-layout-menu",
+    ] {
+        cx.update_window(harness.window, |_, window, cx| {
+            // TestWindow panics if a control arms TitleBar's window drag handler.
+            let from = window.find(id).bounds().center();
+            window.drag(from, from + point(px(20.), px(0.)), cx);
+            window.press("escape", cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+    }
 }
 
 #[gpui_kit::test]
-fn overflowing_project_tabs_keep_a_visible_window_drag_region(cx: &mut TestAppContext) {
+fn many_projects_fit_at_minimum_width_and_every_ui_scale(cx: &mut TestAppContext) {
+    use crate::settings::{Settings, UiScale};
+    use gpui_kit::component::ThemeMode;
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
@@ -69,25 +112,45 @@ fn overflowing_project_tabs_keep_a_visible_window_drag_region(cx: &mut TestAppCo
             }
             view.refresh_document(window, cx);
         });
-        window.render_frame(cx);
-        let title = window.find("workspace-titlebar").bounds();
-        let drag = window.find("window-titlebar-drag-region").bounds();
-        assert!(window.find("project-new-or-open").visible());
-        assert!(window.find("project-new-or-open").bounds().right() <= drag.left());
-        assert!(
-            window.find("window-titlebar-drag-region").visible(),
-            "title={title:?}, drag={drag:?}, tabs={:?}",
-            window.find("global-document-tabs").bounds()
-        );
-        assert_eq!(drag.size.width, px(72.));
-        assert!(drag.right() <= title.right());
-        assert_eq!(title.size.width, px(1100.));
     })
     .unwrap();
+    for width in [800., 1100.] {
+        cx.simulate_window_resize(harness.window, size(px(width), px(740.)));
+        for scale in UiScale::ALL {
+            cx.update_window(harness.window, |_, window, cx| {
+                cx.update_global::<Settings, _>(|settings, _| {
+                    settings.set_ui_scale(scale).unwrap()
+                });
+                crate::theme::change(ThemeMode::Dark, cx);
+                window.refresh();
+                window.render_frame(cx);
+                let title = window.find("workspace-titlebar").bounds();
+                let drag = window.find("window-titlebar-drag-region").bounds();
+                let project = window.find("project-select").bounds();
+                let switcher = window.find("workspace-switcher").bounds();
+                let more = window.find("workspace-layout-menu").bounds();
+                assert!(window.find("project-select").visible());
+                assert!(project.size.width >= px(100.));
+                assert!(
+                    project.right() <= drag.left(),
+                    "project={project:?}, drag={drag:?}, scale={scale:?}, width={width}"
+                );
+                assert!(drag.size.width + px(0.5) >= px(12. * scale.factor()));
+                assert!(drag.right() <= switcher.left());
+                assert!((switcher.center().x - title.center().x).abs() <= px(0.5));
+                assert!(more.left() >= switcher.right());
+                assert!(more.right() <= title.right());
+                assert!(switcher.top() >= title.top());
+                assert!(switcher.bottom() <= title.bottom());
+                assert_eq!(title.size.width, px(width));
+            })
+            .unwrap();
+        }
+    }
 }
 
 #[gpui_kit::test]
-fn persistent_project_menu_creates_and_opens_from_an_empty_window(cx: &mut TestAppContext) {
+fn project_select_creates_and_opens_from_an_empty_window(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
@@ -95,20 +158,26 @@ fn persistent_project_menu_creates_and_opens_from_an_empty_window(cx: &mut TestA
         });
         window.render_frame(cx);
         assert_eq!(harness.view.read(cx).editor.document_count(), 0);
-        assert!(window.find("project-new-or-open").visible());
-        window.click("project-new-or-open", cx);
-        window.within("popup-menu").click(0usize, cx);
+        assert!(window.find("project-select").visible());
+        assert_ne!(window.find("project-select").disabled(), Some(true));
+        assert!(window.try_find("project-select-modified").is_none());
+        window.click("project-select", cx);
+        assert!(window.try_find("project-close").is_none());
+        window.click("project-new", cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
-        let id = harness.view.read(cx).editor.active_id().unwrap();
-        window.click(format!("tab-close-{id:?}"), cx);
+        window.click("project-select", cx);
+        window.click("project-close", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         assert_eq!(harness.view.read(cx).editor.document_count(), 0);
-        assert!(window.find("project-new-or-open").visible());
-        window.click("project-new-or-open", cx);
-        window.within("popup-menu").click(1usize, cx);
+        window.click("project-select", cx);
+        window.click("project-open", cx);
     })
     .unwrap();
     assert!(cx.did_prompt_for_paths());
@@ -116,9 +185,55 @@ fn persistent_project_menu_creates_and_opens_from_an_empty_window(cx: &mut TestA
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(window.find("project-new-or-open").visible());
+        assert!(window.find("project-select").visible());
         assert!(!harness.view.read(cx).modal);
         assert_eq!(harness.view.read(cx).editor.document_count(), 0);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn modified_project_keeps_its_indicator_and_close_confirmation(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(editor_core::EditorCommand::CreateParameter(
+                    editor_core::NewParameter {
+                        name: "Test".into(),
+                        runtime_id: "ParamTest".into(),
+                        minimum: -1.,
+                        maximum: 1.,
+                        default_value: 0.,
+                        ..Default::default()
+                    },
+                ))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        assert!(harness.view.read(cx).editor.document().unwrap().modified());
+        assert!(window.find("project-select-modified").visible());
+        window.click("project-select", cx);
+        window.click("project-close", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(harness.view.read(cx).modal);
+        window.click("project-select", cx);
+        assert!(window.try_find("popup-menu").is_none());
+        assert_eq!(harness.view.read(cx).editor.document_count(), 1);
+    })
+    .unwrap();
+    cx.simulate_prompt_answer("Cancel");
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(!harness.view.read(cx).modal);
+        assert!(window.find("project-select-modified").visible());
+        assert_eq!(harness.view.read(cx).editor.document_count(), 1);
     })
     .unwrap();
 }

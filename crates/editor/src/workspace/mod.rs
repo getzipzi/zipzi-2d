@@ -1,8 +1,5 @@
-pub mod deformer_bar;
+mod controls;
 pub mod status_bar;
-pub mod tab_bar;
-pub mod toolbar;
-pub mod top_bar;
-pub mod zoom_bar;
+pub mod title_bar;
 
-pub use tab_bar::render_tab_bar;
+pub use title_bar::render_title_bar;

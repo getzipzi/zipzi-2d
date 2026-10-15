@@ -1,3 +1,4 @@
+pub(crate) mod compact;
 pub(crate) mod form_dialog;
 pub(crate) mod mesh_generation;
 mod mesh_preview;
@@ -46,12 +47,11 @@ impl Render for EditorView {
             .flex_col()
             .bg(theme.background)
             .text_color(theme.foreground)
-            .text_sm()
+            .text_size(compact::rem(compact::BODY))
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 this.filter_repeat(event, window, cx)
             }))
-            .child(workspace::render_tab_bar(self, modal, window, cx))
-            .child(self.top_bar.clone())
+            .child(workspace::render_title_bar(self, modal, window, cx))
             .children(
                 self.dock
                     .as_ref()

@@ -1,5 +1,5 @@
 //! Independent Dock identities backed by the same document projection and context.
-use crate::{EditorView, t};
+use crate::{EditorView, t, ui::compact};
 use editor_core::{DocumentId, EditorCommand, ObjectIndex, ObjectKind, ObjectRef, RelationKind};
 use gpui_kit::base::ElementExt as _;
 use gpui_kit::component::{
@@ -190,7 +190,29 @@ impl DocumentPanel {
                 })
             })
             .cursor_pointer()
-            .child(format!("{name} · {:?}", r.kind))
+            .when(
+                matches!(
+                    self.kind,
+                    DocumentPanelKind::Motions | DocumentPanelKind::Expressions
+                ),
+                |row| {
+                    row.h(compact::rem(compact::ROW))
+                        .py_0()
+                        .border_0()
+                        .flex()
+                        .items_center()
+                        .gap(compact::rem(compact::PADDING))
+                        .overflow_hidden()
+                        .whitespace_nowrap()
+                },
+            )
+            .child(
+                div()
+                    .min_w_0()
+                    .flex_1()
+                    .truncate()
+                    .child(format!("{name} · {:?}", r.kind)),
+            )
             .when(!detail.is_empty(), |s| {
                 s.child(div().text_color(theme.muted_foreground).child(detail))
             })
