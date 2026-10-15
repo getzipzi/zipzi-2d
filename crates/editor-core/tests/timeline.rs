@@ -610,7 +610,7 @@ fn first_write_creates_only_current_key_and_candidates_are_detached_cancelable()
     let first_frame = evaluator.evaluate(&first, |_, _| true)?;
     assert_eq!(first_frame.snapshot.parameters[&id(3)], 0.8);
     e.update_timeline_edit(d, e.timeline_edit().unwrap().identity, write(3, None, 0.9))?;
-    assert!(!e.present_animation(first_frame.identity, first_frame.snapshot));
+    assert!(e.present_animation(first_frame.identity, first_frame.snapshot));
     let candidate = e.timeline_edit().unwrap().candidate.clip();
     let track = candidate.tracks.last().unwrap();
     assert_eq!(track.keys().count(), 1);
@@ -1319,7 +1319,7 @@ fn viewport_pose_cache_tracks_candidate_revisions_cancel_commit_and_undo() -> an
             &candidate.scene.viewport_frame,
             &panned.scene.viewport_frame
         ));
-        assert!(!e.present_animation(candidate.identity, candidate.snapshot));
+        assert!(e.present_animation(candidate.identity, candidate.snapshot));
         assert!(e.present_animation(panned.identity, panned.snapshot));
     }
     e.cancel_timeline_edit();
@@ -1331,6 +1331,86 @@ fn viewport_pose_cache_tracks_candidate_revisions_cancel_commit_and_undo() -> an
     e.execute(EditorCommand::Undo)?;
     let restored = evaluate(&mut e, &mut evaluator)?;
     assert_eq!(restored.snapshot.parameters[&id(2)], 0.5);
+    Ok(())
+}
+
+#[test]
+fn continuous_candidate_updates_present_inflight_frames_without_rewinding_or_crossing_edits()
+-> anyhow::Result<()> {
+    for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
+        let (mut editor, _assets) = fixture(false, false)?;
+        let document = editor.active_id().unwrap();
+        editor.set_animation_preview_mode(document, mode)?;
+        editor.seek_timeline(document, 0.6)?;
+        let mut evaluator = AnimationEvaluator::default();
+        let before_edit = evaluate(&mut editor, &mut evaluator)?;
+        let token = editor.begin_timeline_edit(document, "Continuous scrub")?;
+        editor.update_timeline_edit(document, token, write(2, None, 0.7))?;
+        let mut pending = evaluate(&mut editor, &mut evaluator)?;
+        let first = pending.clone();
+        assert!(!editor.accepts_animation(before_edit.identity));
+        for sample in 1..=24 {
+            editor.update_timeline_edit(
+                document,
+                token,
+                write(2, None, 0.7 + sample as f32 * 0.01),
+            )?;
+            let newer = evaluate(&mut editor, &mut evaluator)?;
+            assert!(newer.identity.request > pending.identity.request);
+            assert!(editor.animation_request().is_none());
+            // Input always gets ahead of the async result, just as in the
+            // native drag that used to reject every frame for seconds.
+            assert!(editor.accepts_animation(pending.identity));
+            assert!(editor.present_animation(pending.identity, pending.snapshot.clone()));
+            assert_eq!(
+                editor.animation().unwrap().presented.as_ref(),
+                Some(&pending.snapshot)
+            );
+            assert!(!editor.present_animation(pending.identity, pending.snapshot));
+            pending = newer;
+        }
+        assert!(editor.present_animation(pending.identity, pending.snapshot.clone()));
+        assert!(!editor.present_animation(first.identity, first.snapshot));
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+
+        // A failed intermediate revision must not stop the valid current one.
+        editor.update_timeline_edit(document, token, write(2, None, 1.1))?;
+        let obsolete = evaluate(&mut editor, &mut evaluator)?;
+        editor.update_timeline_edit(document, token, write(2, None, 1.2))?;
+        let latest = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.accepts_animation(obsolete.identity));
+        editor.fail_animation(
+            obsolete.identity,
+            AnimationFailure::Other("obsolete failure".into()),
+        );
+        assert!(editor.animation().unwrap().error.is_none());
+        let mut future = latest.identity;
+        future.candidate.as_mut().unwrap().revision += 1;
+        assert!(!editor.accepts_animation(future));
+
+        editor.cancel_timeline_edit();
+        assert!(!editor.accepts_animation(obsolete.identity));
+        assert!(!editor.present_animation(latest.identity, latest.snapshot.clone()));
+        let restored = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(restored.identity, restored.snapshot));
+        let next = editor.begin_timeline_edit(document, "Next scrub")?;
+        editor.update_timeline_edit(document, next, write(2, None, 1.3))?;
+        let current = evaluate(&mut editor, &mut evaluator)?;
+        assert!(!editor.present_animation(latest.identity, latest.snapshot));
+        assert!(editor.present_animation(current.identity, current.snapshot));
+        editor.finish_timeline_edit(document, next)?;
+        assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(
+            editor
+                .timeline_projection()
+                .unwrap()
+                .key(&key(11))
+                .unwrap()
+                .value,
+            0.5
+        );
+    }
     Ok(())
 }
 

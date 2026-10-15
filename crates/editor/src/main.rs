@@ -162,7 +162,30 @@ impl EditorView {
                                         .editor
                                         .present_animation(state.identity, state.snapshot.clone())
                                     {
-                                        frame_trace::emit(frame.trace_id, "rejected", &[]);
+                                        frame_trace::emit(
+                                            frame.trace_id,
+                                            "rejected",
+                                            &[
+                                                (
+                                                    "viewport_matches",
+                                                    (this.editor.animation_viewport_revision()
+                                                        == Some(state.identity.viewport_revision))
+                                                        as u64,
+                                                ),
+                                                (
+                                                    "recipe_matches",
+                                                    this.editor.accepts_animation(state.identity)
+                                                        as u64,
+                                                ),
+                                                (
+                                                    "candidate_matches",
+                                                    this.editor.animation().is_some_and(|a| {
+                                                        a.candidate == state.identity.candidate
+                                                    })
+                                                        as u64,
+                                                ),
+                                            ],
+                                        );
                                         return;
                                     }
                                     frame_trace::emit(frame.trace_id, "accepted", &[]);

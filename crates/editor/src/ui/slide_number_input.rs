@@ -67,6 +67,7 @@ pub(crate) struct SlideNumberInput {
     drag: Option<Drag>,
     truncate_to_integer: bool,
     sliding_value_format: fn(f64) -> String,
+    ignore_mouse_move: Option<fn() -> bool>,
     _observe: Subscription,
     _activation: Subscription,
 }
@@ -95,6 +96,7 @@ impl SlideNumberInput {
             drag: None,
             truncate_to_integer: false,
             sliding_value_format: |value| (value as f32).to_string(),
+            ignore_mouse_move: None,
         }
     }
 
@@ -144,6 +146,13 @@ impl SlideNumberInput {
         self.drag.as_ref().is_some_and(|drag| drag.sliding)
     }
 
+    /// Isolate injected drags from unrelated native hover moves in benchmarks.
+    /// Normal editor and playground controls leave this unset.
+    #[allow(dead_code)]
+    pub(crate) fn ignore_mouse_moves_when(&mut self, predicate: Option<fn() -> bool>) {
+        self.ignore_mouse_move = predicate;
+    }
+
     /// Stop an owning transaction without emitting a new numeric edit.
     #[allow(dead_code)]
     pub(crate) fn reset_drag(&mut self, cx: &mut Context<Self>) {
@@ -179,6 +188,9 @@ impl SlideNumberInput {
     }
 
     fn move_drag(&mut self, event: &MouseMoveEvent, cx: &mut Context<Self>) -> bool {
+        if self.ignore_mouse_move.is_some_and(|ignore| ignore()) {
+            return false;
+        }
         let Some(drag) = &mut self.drag else {
             return false;
         };

@@ -79,6 +79,27 @@ pub(super) struct ChannelSlider {
     _events: Subscription,
 }
 impl Timeline {
+    pub(crate) fn benchmark_number(
+        &self,
+        projection: &TimelineProjection,
+        cx: &App,
+    ) -> Option<(Point<Pixels>, Entity<SlideNumberInput>)> {
+        let channel = projection
+            .channels
+            .iter()
+            .find(|channel| channel.runtime_id == "ParamAngleX")?;
+        projection
+            .rows
+            .iter()
+            .filter(|row| row.channel.as_ref() == Some(&channel.id))
+            .find_map(|row| {
+                let control = self.fields.get(&Field::RowValue(row.id.clone()))?;
+                let bounds = control.input.read(cx).input_bounds();
+                (bounds.size.width > px(0.) && bounds.size.height > px(0.))
+                    .then(|| (bounds.center(), control.number.clone()))
+            })
+    }
+
     fn template(&self, field: &Field, cx: &App) -> Option<TimelineCommand> {
         let owner = self.owner.upgrade()?;
         let view = owner.read(cx);

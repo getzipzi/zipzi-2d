@@ -141,6 +141,7 @@ pub fn init() -> anyhow::Result<()> {
                 "model": config.map(|c| c.model.display().to_string()),
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
                 "parameters_only": config.map(|c| c.parameters_only),
+                "animation_drag": std::env::var("KASANE_BENCH_ANIMATION_DRAG").ok(),
                 "workloads": config.map(|c| if c.animation { vec![9] } else if c.deformations { vec![5, 6, 7, 8] }
                     else if c.parameters_only { vec![4] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),

@@ -184,6 +184,7 @@ pub struct AnimationIdentity {
     pub request: u64,
     pub acceptance_floor: u64,
     pub viewport_revision: u64,
+    pub canvas_metrics: crate::CanvasMetrics,
     pub time: f32,
     pub preview_mode: AnimationPreviewMode,
     pub candidate: Option<TimelineCandidateIdentity>,
@@ -206,6 +207,7 @@ impl AnimationRequest {
             request: other.identity.request,
             acceptance_floor: other.identity.acceptance_floor,
             viewport_revision: other.identity.viewport_revision,
+            canvas_metrics: other.identity.canvas_metrics,
             ..self.identity
         } == other.identity
             && Arc::ptr_eq(&self.source, &other.source)
@@ -250,6 +252,7 @@ impl AnimationEvaluator {
                 frame.identity.request = request.identity.request;
                 frame.identity.acceptance_floor = request.identity.acceptance_floor;
                 frame.identity.viewport_revision = request.identity.viewport_revision;
+                frame.identity.canvas_metrics = request.identity.canvas_metrics;
                 return Ok(frame);
             }
         }
@@ -410,7 +413,7 @@ pub struct AnimationSession {
     pub model_generation: u64,
     pub preview_generation: u64,
     pub(crate) source: Option<Arc<AnimationSource>>,
-    requested: Option<(u64, u64, f32)>,
+    requested: Option<AnimationIdentity>,
     floor: u64,
     shown: u64,
     scrubbing: bool,
@@ -452,9 +455,18 @@ impl AnimationSession {
         self.barrier();
     }
     pub(crate) fn set_candidate(&mut self, candidate: Option<TimelineCandidateIdentity>) {
-        self.pause();
+        // Revisions inside one edit are successive preview targets, not new
+        // acceptance epochs. Let in-flight work make progress while input keeps
+        // replacing the queued target. Begin, commit and cancel remain barriers.
+        let continuing = self
+            .candidate
+            .zip(candidate)
+            .is_some_and(|(old, new)| old.edit == new.edit && old.revision <= new.revision);
+        if !continuing {
+            self.pause();
+            self.preview_generation += 1;
+        }
         self.candidate = candidate;
-        self.preview_generation += 1;
         self.source = None;
         self.error = None;
     }
@@ -466,7 +478,7 @@ impl AnimationSession {
         self.scrubbing = false;
         self.floor = self.floor.max(
             self.requested
-                .map_or(self.shown + 1, |(sequence, _, _)| sequence + 1),
+                .map_or(self.shown + 1, |previous| previous.request + 1),
         );
         self.requested = None;
     }
@@ -568,14 +580,20 @@ impl AnimationSession {
     }
     fn accepts(&self, id: AnimationIdentity) -> bool {
         id.model_generation == self.model_generation
-            && id.candidate == self.candidate
+            && (id.candidate == self.candidate
+                || id
+                    .candidate
+                    .zip(self.candidate)
+                    .is_some_and(|(frame, current)| {
+                        frame.edit == current.edit && frame.revision <= current.revision
+                    }))
             && id.preview_mode == self.preview_mode
             && id.preview_generation == self.preview_generation
             && id.request >= self.floor
             && id.request > self.shown
             && self
                 .requested
-                .is_some_and(|(latest, _, _)| id.request <= latest)
+                .is_some_and(|latest| id.request <= latest.request)
             && ((self.preview_mode == AnimationPreviewMode::Editing && self.preview_loop)
                 || self.scrubbing
                 || self
@@ -999,33 +1017,36 @@ impl Editor {
             source
         };
         let animation = &mut session.animation;
-        if animation
-            .requested
-            .is_some_and(|(_, view, time)| view == viewport && time == animation.time)
-        {
+        if animation.requested.is_some_and(|previous| {
+            previous.viewport_revision == viewport
+                && previous.time == animation.time
+                && previous.candidate == animation.candidate
+        }) {
             return None;
         }
         // Monotonic across barriers and recipe changes, including repeated seeks to zero.
         let sequence = animation.floor.max(
             animation
                 .requested
-                .map_or(animation.shown + 1, |(r, _, _)| r + 1),
+                .map_or(animation.shown + 1, |previous| previous.request + 1),
         );
-        animation.requested = Some((sequence, viewport, animation.time));
+        let identity = AnimationIdentity {
+            document,
+            workspace: WorkspaceKind::Animation,
+            workspace_revision,
+            model_generation: animation.model_generation,
+            preview_generation: animation.preview_generation,
+            request: sequence,
+            acceptance_floor: animation.floor,
+            viewport_revision: viewport,
+            canvas_metrics: metrics,
+            time: animation.time,
+            preview_mode: animation.preview_mode,
+            candidate: animation.candidate,
+        };
+        animation.requested = Some(identity);
         Some(AnimationRequest {
-            identity: AnimationIdentity {
-                document,
-                workspace: WorkspaceKind::Animation,
-                workspace_revision,
-                model_generation: animation.model_generation,
-                preview_generation: animation.preview_generation,
-                request: sequence,
-                acceptance_floor: animation.floor,
-                viewport_revision: viewport,
-                time: animation.time,
-                preview_mode: animation.preview_mode,
-                candidate: animation.candidate,
-            },
+            identity,
             source,
             motion: animation.motion.clone(),
             expressions: animation.expressions.clone(),
@@ -1063,7 +1084,14 @@ impl Editor {
         if !self.accepts_animation(identity) {
             return false;
         }
-        if self.animation_viewport_revision() != Some(identity.viewport_revision) {
+        // Navigation may advance while a frame is in flight. Its texture still
+        // represents a valid intermediate view; request order prevents rollback.
+        // A resized surface, however, must never adopt the old-sized texture.
+        if self
+            .animation_viewport_revision()
+            .is_none_or(|current| identity.viewport_revision > current)
+            || identity.canvas_metrics != self.canvas_metrics()
+        {
             return false;
         }
         let animation = &mut self.active_session_mut().unwrap().animation;
@@ -1096,7 +1124,13 @@ impl Editor {
         true
     }
     pub fn fail_animation(&mut self, identity: AnimationIdentity, error: AnimationFailure) {
-        if self.accepts_animation(identity) {
+        // Intermediate successful frames are useful, but an obsolete candidate's
+        // failure must not poison a newer, potentially valid target.
+        if self.accepts_animation(identity)
+            && self
+                .animation()
+                .is_some_and(|a| a.candidate == identity.candidate)
+        {
             let animation = &mut self.active_session_mut().unwrap().animation;
             animation.playing = false;
             animation.error = Some(error);

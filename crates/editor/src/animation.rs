@@ -30,7 +30,7 @@ pub struct AnimationWorker {
         u64,
         u64,
         editor_core::AnimationPreviewMode,
-        Option<editor_core::TimelineCandidateIdentity>,
+        Option<u64>,
     )>,
 }
 pub struct ResultFrame {
@@ -127,7 +127,9 @@ impl AnimationWorker {
             id.preview_generation,
             id.acceptance_floor,
             id.preview_mode,
-            id.candidate,
+            // A live edit replaces queued revisions without cancelling the
+            // revision already being evaluated. Commit/cancel changes the epoch.
+            id.candidate.map(|candidate| candidate.edit),
         );
         let (lock, ready) = &*self.shared;
         let mut inbox = lock.lock().unwrap();
@@ -249,6 +251,7 @@ impl EditorView {
             .editor
             .animation_viewport_revision()
             .unwrap_or(identity.viewport_revision);
+        identity.canvas_metrics = transform.metrics;
         let state = Presentation {
             identity,
             snapshot: evaluated.snapshot,
@@ -330,6 +333,78 @@ mod tests {
     use super::{
         AnimationEvaluated, AnimationIdentity, AnimationWorker, Duration, Instant, WorkspaceKind,
     };
+    #[test]
+    fn worker_keeps_candidate_work_alive_until_the_edit_ends() -> anyhow::Result<()> {
+        use editor_core::{AnimationPreviewMode, CanvasMetrics, Editor, TimelineCommand};
+        use std::sync::atomic::Ordering;
+        let (document, _assets) = crate::headless_tests::document_fixture::animation_document()?;
+        let mut editor = Editor::from_document(document);
+        editor.set_workspace(WorkspaceKind::Animation)?;
+        let doc = editor.active_id().unwrap();
+        editor.set_canvas_metrics(CanvasMetrics {
+            width: 256.,
+            height: 256.,
+            scale_factor: 1.,
+        });
+        let motion = editor.document().unwrap().motion_resources()[0]
+            .selection
+            .clone();
+        editor.select_motion(doc, motion)?;
+        let (mut worker, receiver) = AnimationWorker::start();
+        for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
+            editor.set_animation_preview_mode(doc, mode)?;
+            let projection = editor.timeline_projection().unwrap();
+            let row = projection
+                .rows
+                .iter()
+                .find(|row| row.channel.is_some() && row.track_id.is_some())
+                .unwrap();
+            let token = editor.begin_timeline_edit(doc, "Worker scrub")?;
+            worker.send(editor.animation_request().unwrap());
+            let epoch = worker.cancellation.load(Ordering::Acquire);
+            let mut latest = None;
+            for sample in 1..=24 {
+                editor.update_timeline_edit(
+                    doc,
+                    token,
+                    TimelineCommand::WriteValue {
+                        channel: row.channel.clone().unwrap(),
+                        track_id: row.track_id.clone(),
+                        selected_key: None,
+                        value: sample as f32 * 0.01,
+                    },
+                )?;
+                let request = editor.animation_request().unwrap();
+                latest = Some(request.identity);
+                worker.send(request);
+                assert_eq!(
+                    worker.cancellation.load(Ordering::Acquire),
+                    epoch,
+                    "continuous input cancelled the in-flight candidate"
+                );
+            }
+            let deadline = Instant::now() + Duration::from_secs(10);
+            loop {
+                if let Ok(frame) = receiver.try_recv() {
+                    if Some(frame.identity) == latest {
+                        let result = frame.result?;
+                        assert!(editor.present_animation(result.identity, result.snapshot));
+                        break;
+                    }
+                }
+                anyhow::ensure!(
+                    Instant::now() < deadline,
+                    "latest candidate was never delivered"
+                );
+                std::thread::sleep(Duration::from_millis(2));
+            }
+            editor.cancel_timeline_edit();
+            worker.send(editor.animation_request().unwrap());
+            assert!(worker.cancellation.load(Ordering::Acquire) > epoch);
+        }
+        Ok(())
+    }
+
     #[test]
     fn worker_cancels_obsolete_recipe_and_delivers_latest_target_after_suspension()
     -> anyhow::Result<()> {

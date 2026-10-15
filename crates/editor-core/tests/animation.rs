@@ -35,6 +35,63 @@ fn evaluate(
 }
 
 #[test]
+fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 0)?;
+    let document = editor.active_id().unwrap();
+    let mut evaluator = AnimationEvaluator::default();
+    for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
+        editor.set_animation_preview_mode(document, mode)?;
+        editor.seek_timeline(document, 0.4)?;
+        let mut pending = evaluate(&mut editor, &mut evaluator)?;
+        let first = pending.clone();
+        for step in 0..24 {
+            if step % 2 == 0 {
+                editor.pan_by(CanvasPoint { x: 4., y: -2. });
+            } else {
+                editor.set_zoom_at(editor.view().zoom * 1.01, None);
+            }
+            let newer = evaluate(&mut editor, &mut evaluator)?;
+            assert!(newer.identity.viewport_revision > pending.identity.viewport_revision);
+            assert!(editor.present_animation(pending.identity, pending.snapshot.clone()));
+            assert!(std::sync::Arc::ptr_eq(&first.snapshot, &pending.snapshot));
+            pending = newer;
+        }
+        assert!(editor.present_animation(pending.identity, pending.snapshot.clone()));
+        assert!(!editor.present_animation(first.identity, first.snapshot));
+        for metrics in [
+            CanvasMetrics {
+                width: 720.,
+                height: 480.,
+                scale_factor: 1.,
+            },
+            CanvasMetrics {
+                width: 720.,
+                height: 480.,
+                scale_factor: 2.,
+            },
+        ] {
+            editor.pan_by(CanvasPoint { x: 1., y: 0. });
+            let old_size = evaluate(&mut editor, &mut evaluator)?;
+            editor.set_canvas_metrics(metrics);
+            // The CPU pose remains usable, but a GPU frame for the old
+            // dimensions or scale must not be adopted by the resized canvas.
+            assert!(editor.accepts_animation(old_size.identity));
+            assert!(!editor.present_animation(old_size.identity, old_size.snapshot));
+            let resized = evaluate(&mut editor, &mut evaluator)?;
+            assert_eq!(resized.identity.canvas_metrics, metrics);
+            assert!(std::sync::Arc::ptr_eq(&pending.snapshot, &resized.snapshot));
+            let mut future = resized.identity;
+            future.viewport_revision += 1;
+            assert!(!editor.present_animation(future, resized.snapshot.clone()));
+            assert!(editor.present_animation(resized.identity, resized.snapshot));
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation()
 -> anyhow::Result<()> {
     use std::sync::Arc;
@@ -808,6 +865,7 @@ fn continuous_frames_do_not_starve_and_barriers_reject_late_frames() -> anyhow::
     let old_view = editor.animation_request().unwrap();
     let result = evaluator.evaluate(&old_view, |_, _| true)?;
     editor.pan_by(CanvasPoint { x: 1., y: 0. });
+    assert!(editor.present_animation(result.identity, result.snapshot.clone()));
     assert!(!editor.present_animation(result.identity, result.snapshot));
     Ok(())
 }

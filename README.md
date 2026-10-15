@@ -70,6 +70,9 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeli
 ./scripts/timeline-benchmark.sh target/timeline-benchmark-run 600
 # Timeline channel-number scrubbing, CPU/GPU stages and authoring comparison:
 ./scripts/timeline-number-benchmark.sh target/timeline-number-benchmark-run 96
+# Continuous Animation workspace drags in a native window (no per-input frame wait):
+KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=canvas ./scripts/window-benchmark.sh MODEL target/animation-canvas-drag 2400 240
+KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-benchmark.sh MODEL target/animation-number-drag 2400 240
 ```
 
 ## References
