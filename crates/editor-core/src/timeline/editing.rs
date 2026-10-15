@@ -1,7 +1,7 @@
 use super::*;
 use crate::{AnimationSource, DocumentId, DocumentSession, Editor, MotionSelection};
 use anyhow::{Result, ensure};
-use kasane_core::document::{MotionClip, MotionEvent, MotionKey, MotionPoint, MotionTrack};
+use kasane_core::document::{MotionEvent, MotionKey, MotionPoint, MotionTrack};
 use kasane_sdk::{
     MotionBezierHandle, MotionClipCandidate, MotionInterpolation, MotionKeyMove, Version,
 };
@@ -95,9 +95,9 @@ pub struct TimelineEdit {
     pub base_version: Version,
     pub local_time: f64,
     pub candidate: MotionClipCandidate,
-    original: MotionClip,
     original_candidate: MotionClipCandidate,
     original_projection: Arc<TimelineProjection>,
+    original_keys: HashSet<String>,
     source: Arc<AnimationSource>,
     target: Option<String>,
     track_id: String,
@@ -644,12 +644,17 @@ impl Editor {
             edit: session.timeline.next_edit,
             revision: 0,
         };
+        let original_keys = original
+            .tracks
+            .iter()
+            .flat_map(|track| track.keys().map(|key| key.id.clone()))
+            .collect();
         session.timeline.edit = Some(TimelineEdit {
             identity,
             base_version: source.snapshot.version(),
-            original,
             original_candidate: candidate.clone(),
             original_projection,
+            original_keys,
             source,
             candidate,
             local_time: f64::from(session.animation.edit_time),
@@ -678,6 +683,7 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?
             .view
             .snap;
+        let previous_projection = session.timeline.current().unwrap().projection.clone();
         let edit = session
             .timeline
             .edit
@@ -702,36 +708,45 @@ impl Editor {
         edit.target = Some(target);
         if candidate != edit.candidate {
             let source = Arc::new(AnimationSource {
-                snapshot: edit.source.snapshot.with_motion_candidate(&candidate)?,
+                snapshot: edit.source.snapshot.clone(),
                 textures: edit.source.textures.clone(),
+                candidate: Some(Arc::new(candidate.clone())),
+                materialized: Default::default(),
             });
-            let projection = Arc::new(TimelineProjection::from_clip(
-                &session.document,
-                candidate.clip(),
-            )?);
-            let old_keys: HashSet<_> = edit
-                .original
-                .tracks
-                .iter()
-                .flat_map(|track| track.keys().map(|key| key.id.as_str()))
-                .collect();
-            let added: Vec<_> = projection
-                .tracks
-                .values()
-                .flat_map(|track| &track.keys)
-                .filter(|key| !old_keys.contains(key.reference.key_id.as_str()))
-                .map(|key| key.reference.clone())
-                .collect();
+            let incremental = matches!(command, TimelineCommand::WriteValue { .. })
+                .then(|| {
+                    previous_projection.with_value_changes(edit.candidate.clip(), candidate.clip())
+                })
+                .flatten();
+            let projection = Arc::new(match incremental {
+                Some(projection) => projection,
+                None => TimelineProjection::from_clip(&session.document, candidate.clip())?,
+            });
+            let same_rows = Arc::ptr_eq(&previous_projection.rows, &projection.rows);
+            let added: Vec<_> = if same_rows {
+                vec![]
+            } else {
+                projection
+                    .tracks
+                    .values()
+                    .flat_map(|track| &track.keys)
+                    .filter(|key| !edit.original_keys.contains(key.reference.key_id.as_str()))
+                    .map(|key| key.reference.clone())
+                    .collect()
+            };
             edit.candidate = candidate;
             edit.identity.revision += 1;
             session.animation.set_candidate(Some(edit.identity));
             session.animation.source = Some(source);
             let state = session.timeline.current_mut().unwrap();
             state.projection = projection;
-            if added.is_empty() {
-                state.refresh_visible();
-            } else {
-                state.reveal(&added);
+            // Value changes do not change filtering, hierarchy or selection.
+            if !same_rows {
+                if added.is_empty() {
+                    state.refresh_visible();
+                } else {
+                    state.reveal(&added);
+                }
             }
         }
         Ok(session.timeline.edit.as_ref().unwrap().identity)

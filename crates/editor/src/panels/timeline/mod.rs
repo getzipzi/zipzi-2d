@@ -400,7 +400,7 @@ impl Timeline {
                 for key in keys {
                     view.keys.insert(key.clone());
                     let mut parents = Vec::<&TimelineRow>::new();
-                    for row in &projection.rows {
+                    for row in projection.rows.iter() {
                         while parents
                             .last()
                             .is_some_and(|parent| parent.depth >= row.depth)

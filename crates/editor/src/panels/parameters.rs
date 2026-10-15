@@ -13,7 +13,9 @@ use track::parameter_track;
 use super::group_header;
 use super::sorting::{self, SortItem, SortState};
 use super::toolbar::PanelToolbar;
-use crate::ui::slide_number_input::{SlideNumberChange, SlideNumberInput, SlideNumberOptions};
+use crate::ui::slide_number_input::{
+    SlideNumberChange, SlideNumberInput, SlideNumberOptions, format_one_decimal,
+};
 use crate::{EditorView, t};
 use editor_core::{DocumentId, EditorCommand, ParameterValue, ParameterVisual};
 use gpui_kit::assets::IconName;
@@ -47,16 +49,7 @@ struct ParameterRow {
 }
 
 fn format_value(value: f32) -> String {
-    // Truncate the shortest decimal representation, avoiding binary float
-    // artifacts (for example, 0.7 must stay 0.7). Preview values keep their precision.
-    let text = value.to_string();
-    let (whole, fraction) = text.split_once('.').unwrap_or((&text, "0"));
-    let decimal = fraction.chars().next().unwrap_or('0');
-    if whole == "-0" && decimal == '0' {
-        "0.0".into()
-    } else {
-        format!("{whole}.{decimal}")
-    }
+    format_one_decimal(value as f64)
 }
 
 fn slide_number_options(parameter: &ParameterValue, disabled: bool) -> SlideNumberOptions {
@@ -287,6 +280,7 @@ impl ParametersPanel {
                             window,
                             cx,
                         )
+                        .format_sliding_value(format_one_decimal)
                     });
                     let view = cx.new(|cx| ParameterRowView {
                         panel: panel.clone(),

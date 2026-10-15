@@ -1071,6 +1071,7 @@ fn cached_tracks_are_not_repainted_for_clock_only_updates(cx: &mut TestAppContex
 
 #[gpui_kit::test]
 fn committing_on_blur_keeps_the_next_field_focused_and_uses_the_new_asset(cx: &mut TestAppContext) {
+    use gpui_kit::component::{WindowExt, input::AnyInputState};
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
     let key = cx
@@ -1135,6 +1136,50 @@ fn committing_on_blur_keeps_the_next_field_focused_and_uses_the_new_asset(cx: &m
         assert!(view.editor.timeline_edit().is_none());
         assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
     });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click(format!("timeline-number-KeyValue({key:?})"), cx);
+        let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
+            panic!("key value input not focused")
+        };
+        assert_eq!(input.read(cx).value().as_ref(), "0.2");
+        window.blur(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let origin = window
+            .find(format!("timeline-number-KeyValue({key:?})"))
+            .bounds()
+            .center();
+        // The scrub must start at the precise 0.25, rather than the displayed 0.2.
+        press(window, origin, cx);
+        slide(window, origin + point(px(20.), px(0.)), false, cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert!(view.editor.timeline_edit().is_some());
+        let projection = view.editor.timeline_projection().unwrap();
+        let actual = projection.key(&key).unwrap().value;
+        assert!((actual - 0.3).abs() < 0.00001, "scrub value = {actual}");
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("escape", cx);
+        window.render_frame(cx);
+        let view = harness.view.read(cx);
+        assert_eq!(
+            view.editor
+                .timeline_projection()
+                .unwrap()
+                .key(&key)
+                .unwrap()
+                .value,
+            0.25
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
+    })
+    .unwrap();
 }
 
 #[gpui_kit::test]

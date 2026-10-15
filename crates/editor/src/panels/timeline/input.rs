@@ -185,7 +185,8 @@ impl Timeline {
                 let result = owner
                     .editor
                     .update_timeline_edit(target.document, token, command);
-                owner.redraw(cx);
+                owner.request_preview();
+                owner.sync_animation_clock(cx);
                 result
             })
             .ok();
@@ -468,7 +469,7 @@ impl Timeline {
                     move |view| {
                         view.keys = selected.into_iter().collect();
                         view.events = selected_events.into_iter().collect();
-                        for row in &projection.rows {
+                        for row in projection.rows.iter() {
                             if row.keys.iter().any(|key| view.keys.contains(key)) {
                                 view.channels.insert(row.id.clone());
                             }

@@ -43,7 +43,7 @@ pub struct TimelineBezierHandles {
     pub horizontal_editable: bool,
     pub value_editable: bool,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TimelineTrack {
     pub id: String,
     pub channel: TimelineChannelId,
@@ -89,7 +89,7 @@ impl TimelineRow {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TimelineProjection {
     pub clip_id: String,
     pub duration: f64,
@@ -97,13 +97,53 @@ pub struct TimelineProjection {
     pub fps: f32,
     pub restricted_beziers: bool,
     pub editable: bool,
-    pub channels: Vec<TimelineChannel>,
-    pub tracks: HashMap<String, TimelineTrack>,
+    pub channels: Arc<Vec<TimelineChannel>>,
+    pub tracks: HashMap<String, Arc<TimelineTrack>>,
     pub events: Vec<MotionEvent>,
-    pub rows: Vec<TimelineRow>,
+    pub rows: Arc<Vec<TimelineRow>>,
 }
 
 impl TimelineProjection {
+    /// Numeric channel edits keep key identities, times and row layout intact.
+    /// Share that structure and every unchanged track with earlier projections.
+    pub(crate) fn with_value_changes(
+        &self,
+        previous: &MotionClip,
+        next: &MotionClip,
+    ) -> Option<Self> {
+        if previous.id != next.id
+            || previous.tracks.len() != next.tracks.len()
+            || previous.restricted_beziers != next.restricted_beziers
+        {
+            return None;
+        }
+        let mut result = self.clone();
+        for (before, track) in previous.tracks.iter().zip(&next.tracks) {
+            if before.id != track.id || before.target != track.target {
+                return None;
+            }
+            if before.initial == track.initial && Arc::ptr_eq(&before.segments, &track.segments) {
+                continue;
+            }
+            let existing = self.tracks.get(&track.id)?;
+            let points: Vec<_> = track.keys().collect();
+            if points.len() != existing.keys.len()
+                || points.iter().zip(&existing.keys).any(|(point, key)| {
+                    point.id != key.reference.key_id || f64::from(point.time) != key.time
+                })
+            {
+                return None;
+            }
+            let mut changed = (**existing).clone();
+            for (point, key) in points.iter().zip(&mut changed.keys) {
+                key.value = point.value;
+            }
+            changed.curve = CompiledCurve::from(track);
+            result.tracks.insert(track.id.clone(), Arc::new(changed));
+        }
+        Some(result)
+    }
+
     pub fn new(document: &crate::Document, clip_id: &str) -> Result<Self> {
         let clip = document
             .motion_definition(clip_id)
@@ -119,10 +159,10 @@ impl TimelineProjection {
             fps: clip.fps,
             restricted_beziers: clip.restricted_beziers,
             editable: !clip.has_extensions(),
-            channels: vec![],
+            channels: Arc::new(vec![]),
             tracks: HashMap::new(),
             events: clip.events.clone(),
-            rows: vec![],
+            rows: Arc::new(vec![]),
         };
         let parameters = document.parameters();
         for parameter in &parameters {
@@ -228,8 +268,7 @@ impl TimelineProjection {
                 .collect();
             result.display_end = result.display_end.max(f64::from(all.last().unwrap().time));
             if monotonic.iter().any(|value| !value) {
-                result
-                    .channels
+                Arc::make_mut(&mut result.channels)
                     .iter_mut()
                     .find(|c| c.id == channel)
                     .unwrap()
@@ -238,7 +277,7 @@ impl TimelineProjection {
             }
             result.tracks.insert(
                 track.id.clone(),
-                TimelineTrack {
+                Arc::new(TimelineTrack {
                     id: track.id.clone(),
                     channel,
                     key_indices: keys
@@ -249,7 +288,7 @@ impl TimelineProjection {
                     keys,
                     editable,
                     curve: CompiledCurve::from(track),
-                },
+                }),
             );
         }
         let layout =
@@ -258,7 +297,7 @@ impl TimelineProjection {
             match row {
                 crate::ParameterRow::Group {
                     id, name, depth, ..
-                } => result.rows.push(TimelineRow::group(
+                } => Arc::make_mut(&mut result.rows).push(TimelineRow::group(
                     TimelineRowId::Group(id.clone()),
                     name.clone(),
                     *depth,
@@ -291,7 +330,7 @@ impl TimelineProjection {
                 .map(|c| c.id.clone())
                 .collect();
             if !ids.is_empty() {
-                result.rows.push(TimelineRow::group(
+                Arc::make_mut(&mut result.rows).push(TimelineRow::group(
                     TimelineRowId::Category(category),
                     name.into(),
                     0,
@@ -301,7 +340,7 @@ impl TimelineProjection {
                 }
             }
         }
-        result.rows.push(TimelineRow::group(
+        Arc::make_mut(&mut result.rows).push(TimelineRow::group(
             TimelineRowId::Events,
             "Events".into(),
             0,
@@ -332,7 +371,7 @@ impl TimelineProjection {
             .filter(|track| TimelineChannelId::from_target(&track.target) == id)
             .map(|track| track.id.clone())
             .collect();
-        self.channels.push(TimelineChannel {
+        Arc::make_mut(&mut self.channels).push(TimelineChannel {
             id,
             name,
             runtime_id,
@@ -345,6 +384,7 @@ impl TimelineProjection {
     }
     fn append_channel(&mut self, id: &TimelineChannelId, depth: usize) {
         let channel = self.channel(id).unwrap();
+        let name = channel.name.clone();
         let tracks = channel.tracks.clone();
         let track_id = (tracks.len() == 1).then(|| tracks[0].clone());
         let keys = track_id.as_ref().map_or_else(Vec::new, |id| {
@@ -354,9 +394,9 @@ impl TimelineProjection {
                 .map(|k| k.reference.clone())
                 .collect()
         });
-        self.rows.push(TimelineRow {
+        Arc::make_mut(&mut self.rows).push(TimelineRow {
             id: TimelineRowId::Channel(id.clone()),
-            name: channel.name.clone(),
+            name,
             depth,
             channel: Some(id.clone()),
             track_id,
@@ -365,7 +405,7 @@ impl TimelineProjection {
         });
         if tracks.len() > 1 {
             for (index, track) in tracks.into_iter().enumerate() {
-                self.rows.push(TimelineRow {
+                Arc::make_mut(&mut self.rows).push(TimelineRow {
                     id: TimelineRowId::Track(track.clone()),
                     name: format!("Track {}", index + 1),
                     depth: depth + 1,

@@ -238,7 +238,17 @@ impl EditorView {
     fn notify_animation(&self, cx: &mut Context<Self>) {
         self.notify_canvas(cx);
         if let Some(dock) = &self.dock {
-            App::notify(cx, dock.timeline.entity_id());
+            // A paused raw candidate is already shown by the editing controls.
+            // Adopting its canvas texture does not change the Timeline UI.
+            let editing_candidate = self.editor.timeline_edit().is_some()
+                && self.editor.animation().is_some_and(|a| {
+                    !a.playing
+                        && a.error.is_none()
+                        && a.preview_mode == editor_core::AnimationPreviewMode::Editing
+                });
+            if !editing_candidate {
+                App::notify(cx, dock.timeline.entity_id());
+            }
             App::notify(cx, dock.animation_info.entity_id());
             App::notify(cx, dock.animation_parameters.entity_id());
             for kind in [

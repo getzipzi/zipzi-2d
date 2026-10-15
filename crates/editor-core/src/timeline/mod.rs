@@ -166,7 +166,7 @@ impl TimelineClipState {
     fn reveal(&mut self, keys: &[TimelineKeyRef]) {
         let mut ancestors: Vec<&TimelineRow> = Vec::new();
         let mut channels = BTreeSet::new();
-        for row in &self.projection.rows {
+        for row in self.projection.rows.iter() {
             while ancestors
                 .last()
                 .is_some_and(|parent| parent.depth >= row.depth)

@@ -178,7 +178,7 @@ pub(super) fn selected_tracks<'a>(
     state: &TimelineViewState,
 ) -> Vec<&'a TimelineTrack> {
     let mut tracks = vec![];
-    for row in &projection.rows {
+    for row in projection.rows.iter() {
         if state.channels.contains(&row.id) {
             if let Some(id) = &row.track_id {
                 if !tracks.iter().any(|track: &&TimelineTrack| track.id == *id) {
@@ -651,7 +651,9 @@ impl TracksLayer {
         );
         let hint = t!("timeline.select_curves");
         let same = self.input.as_ref().is_some_and(|old| {
-            Arc::ptr_eq(&old.projection, &projection)
+            (Arc::ptr_eq(&old.projection, &projection)
+                || (state.mode == TimelineDisplayMode::Overview
+                    && Arc::ptr_eq(&old.projection.rows, &projection.rows)))
                 && old.state.time_range == state.time_range
                 && old.state.scroll == state.scroll
                 && old.state.mode == state.mode
@@ -753,7 +755,11 @@ fn paint_scene(
 ) {
     cache.paints += 1;
     let key = SceneKey {
-        projection: Arc::as_ptr(projection) as usize,
+        projection: if state.mode == TimelineDisplayMode::Overview {
+            Arc::as_ptr(&projection.rows) as usize
+        } else {
+            Arc::as_ptr(projection) as usize
+        },
         rows: rows.as_ptr() as usize,
         size: bounds.size,
         time: state.time_range,

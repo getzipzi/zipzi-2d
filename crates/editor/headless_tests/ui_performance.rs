@@ -4,6 +4,134 @@ use super::{setup, setup_with_document};
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 
+#[gpui_kit::test]
+fn timeline_channel_scrubs_reuse_overview_and_do_not_notify_the_editor_owner(
+    cx: &mut TestAppContext,
+) {
+    use super::{
+        document_fixture,
+        slide_number_input::{press, release, slide},
+    };
+    use gpui_kit::{point, px};
+    use std::{cell::Cell, rc::Rc};
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    let (timeline, origin, key) = cx
+        .update_window(harness.window, |_, window, cx| {
+            window.activate_window();
+            window.click("workspace-animation", cx);
+            window.render_frame(cx);
+            window.click(("animation-motion", 0usize), cx);
+            window.render_frame(cx);
+            let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
+            let row = projection
+                .rows
+                .iter()
+                .find(|row| row.track_id.is_some() && !row.keys.is_empty())
+                .unwrap();
+            let origin = window
+                .within("timeline-rows")
+                .find(format!("timeline-number-RowValue({:?})", row.id))
+                .bounds()
+                .center();
+            let timeline = harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .timeline
+                .clone();
+            press(window, origin, cx);
+            (timeline, origin, row.keys[0].clone())
+        })
+        .unwrap();
+    cx.run_until_parked();
+    let notifications = Rc::new(Cell::new(0));
+    let observed = notifications.clone();
+    let _observe =
+        cx.update(|cx| cx.observe(&harness.view, move |_, _| observed.set(observed.get() + 1)));
+    let before = timeline.read_with(cx, |timeline, _| {
+        (
+            timeline.renders(),
+            timeline.scene_builds(),
+            timeline.scene_paints(),
+        )
+    });
+    for sample in 1..=12 {
+        cx.update_window(harness.window, |_, window, cx| {
+            slide(
+                window,
+                origin + point(px(sample as f32 * 8.), px(0.)),
+                false,
+                cx,
+            );
+        })
+        .unwrap();
+        cx.update_window(harness.window, |_, window, cx| window.draw(cx).clear(cx))
+            .unwrap();
+    }
+    let after = timeline.read_with(cx, |timeline, _| {
+        (
+            timeline.renders(),
+            timeline.scene_builds(),
+            timeline.scene_paints(),
+        )
+    });
+    assert_eq!(
+        notifications.get(),
+        0,
+        "candidate updates notified unrelated editor views"
+    );
+    assert!(
+        after.0 - before.0 <= 13,
+        "{} Timeline renders for 12 moves",
+        after.0 - before.0
+    );
+    assert_eq!(
+        after.1, before.1,
+        "value-only edits rebuilt the overview scene"
+    );
+    assert!(
+        after.2 - before.2 <= 1,
+        "static overview was repainted repeatedly"
+    );
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.timeline_edit().unwrap().identity.revision, 12);
+        assert!(
+            (view
+                .editor
+                .timeline_projection()
+                .unwrap()
+                .key(&key)
+                .unwrap()
+                .value
+                - 0.24)
+                .abs()
+                < 0.00001
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("escape", cx);
+        release(window, origin, cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert!(view.editor.timeline_edit().is_none());
+        assert_eq!(
+            view.editor
+                .timeline_projection()
+                .unwrap()
+                .key(&key)
+                .unwrap()
+                .value,
+            0.
+        );
+    });
+}
+
 /// New preview frames must not trigger a second frame just to repaint an
 /// unchanged zoom readout in the separately observed dock header.
 #[gpui_kit::test]

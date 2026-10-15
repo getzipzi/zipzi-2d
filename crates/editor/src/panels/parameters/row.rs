@@ -31,6 +31,7 @@ pub fn track() -> Div {
         .items_center()
         .flex_1()
         .min_w(crate::ui::compact::rem(48.))
+        .mr(crate::ui::compact::rem(compact::GAP * 2.))
         .px(crate::ui::compact::rem(4.))
         .h(crate::ui::compact::rem(compact::ROW))
 }

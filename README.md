@@ -68,6 +68,8 @@ env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact-popups cargo test 
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeline_acceptance
 # Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:
 ./scripts/timeline-benchmark.sh target/timeline-benchmark-run 600
+# Timeline channel-number scrubbing, CPU/GPU stages and authoring comparison:
+./scripts/timeline-number-benchmark.sh target/timeline-number-benchmark-run 96
 ```
 
 ## References

@@ -127,8 +127,10 @@ impl Document {
     }
     pub(crate) fn animation_source(&self) -> crate::AnimationSource {
         crate::AnimationSource {
-            snapshot: self.session.read_snapshot(),
+            snapshot: Arc::new(self.session.read_snapshot()),
             textures: self.textures.clone(),
+            candidate: None,
+            materialized: Default::default(),
         }
     }
     pub fn new_blank() -> Result<Self> {

@@ -9,6 +9,19 @@ use gpui_kit::{prelude::*, *};
 const DRAG_THRESHOLD: f32 = 3.;
 const PIXELS_PER_STEP: f64 = 8.;
 
+/// Truncate the shortest decimal text, preserving authored f32 values like 0.7.
+#[allow(dead_code)]
+pub(crate) fn format_one_decimal(value: f64) -> String {
+    let text = (value as f32).to_string();
+    let (whole, fraction) = text.split_once('.').unwrap_or((&text, "0"));
+    let decimal = fraction.chars().next().unwrap_or('0');
+    if whole == "-0" && decimal == '0' {
+        "0.0".into()
+    } else {
+        format!("{whole}.{decimal}")
+    }
+}
+
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct SlideNumberOptions {
     pub value: f64,
@@ -53,6 +66,7 @@ pub(crate) struct SlideNumberInput {
     focus: FocusHandle,
     drag: Option<Drag>,
     truncate_to_integer: bool,
+    sliding_value_format: fn(f64) -> String,
     _observe: Subscription,
     _activation: Subscription,
 }
@@ -80,6 +94,7 @@ impl SlideNumberInput {
             focus: cx.focus_handle().tab_stop(false),
             drag: None,
             truncate_to_integer: false,
+            sliding_value_format: |value| (value as f32).to_string(),
         }
     }
 
@@ -87,6 +102,13 @@ impl SlideNumberInput {
     #[allow(dead_code)]
     pub fn truncate_to_integer(mut self) -> Self {
         self.truncate_to_integer = true;
+        self
+    }
+
+    /// Format the drag display without changing the emitted numeric value.
+    #[allow(dead_code)]
+    pub fn format_sliding_value(mut self, format: fn(f64) -> String) -> Self {
+        self.sliding_value_format = format;
         self
     }
 
@@ -98,12 +120,22 @@ impl SlideNumberInput {
     ) {
         let label = label.into();
         if self.options != options || self.label != label {
+            // The caller may round the emitted f64 to its stored f32. Updating
+            // that authoritative value must not schedule another frame when
+            // the text already on screen is identical.
+            let repaint = self.label != label
+                || self.options.disabled != options.disabled
+                || (self.is_sliding()
+                    && (self.sliding_value_format)(self.options.value)
+                        != (self.sliding_value_format)(options.value));
             self.options = options;
             self.label = label;
             if options.disabled {
                 self.drag = None;
             }
-            cx.notify();
+            if repaint {
+                cx.notify();
+            }
         }
     }
 
@@ -155,6 +187,7 @@ impl SlideNumberInput {
             cx.notify();
             return false;
         }
+        let started = !drag.sliding;
         if !drag.sliding {
             if (event.position.x - drag.origin.x).abs() < px(DRAG_THRESHOLD) {
                 return true;
@@ -189,11 +222,18 @@ impl SlideNumberInput {
                 self.options.max,
             )
         };
-        if value != self.options.value {
+        let changed = value != self.options.value;
+        let repaint = started
+            || (changed
+                && (self.sliding_value_format)(self.options.value)
+                    != (self.sliding_value_format)(value));
+        if changed {
             self.options.value = value;
             cx.emit(SlideNumberChange(value));
         }
-        cx.notify();
+        if repaint {
+            cx.notify();
+        }
         true
     }
 
@@ -266,31 +306,36 @@ impl Render for SlideNumberInput {
                     cx.stop_propagation();
                 }
             }))
-            .child(
-                NumberInput::new(&self.input)
-                    .w_full()
-                    .h_full()
-                    .disabled(disabled)
-                    .decrement_button(|button| button.hidden())
-                    .increment_button(|button| button.hidden())
-                    .input(
-                        compact::input(Input::new(&self.input))
-                            .map(|input| Styled::h(input, compact::rem(compact::NUMBER_CONTROL)))
-                            .line_height(compact::rem(14.))
-                            .text_align(TextAlign::Right)
-                            .font_family(".AppleSystemUIFontMonospaced")
-                            .disabled(disabled)
-                            .aria_label(self.label.clone()),
-                    ),
-            )
+            // The drag surface replaces the editor: its translucent background
+            // cannot hide the editor's text underneath it.
+            .when(!sliding, |element| {
+                element.child(
+                    NumberInput::new(&self.input)
+                        .w_full()
+                        .h_full()
+                        .disabled(disabled)
+                        .decrement_button(|button| button.hidden())
+                        .increment_button(|button| button.hidden())
+                        .input(
+                            compact::input(Input::new(&self.input))
+                                .map(|input| {
+                                    Styled::h(input, compact::rem(compact::NUMBER_CONTROL))
+                                })
+                                .line_height(compact::rem(14.))
+                                .text_align(TextAlign::Right)
+                                .font_family(".AppleSystemUIFontMonospaced")
+                                .disabled(disabled)
+                                .aria_label(self.label.clone()),
+                        ),
+                )
+            })
             .when(!editing, |element| {
                 element.child(
                     div()
                         .id("slide-number-surface")
                         .absolute()
                         .inset_0()
-                        // Show fine adjustments while dragging; the idle text retains
-                        // the caller's compact formatting.
+                        // The caller controls drag formatting separately from precision.
                         .when(sliding, |surface| {
                             surface
                                 .bg(theme.input_background())
@@ -305,7 +350,7 @@ impl Render for SlideNumberInput {
                                 .font_family(".AppleSystemUIFontMonospaced")
                                 .text_color(theme.foreground)
                                 .overflow_hidden()
-                                .child((self.options.value as f32).to_string())
+                                .child((self.sliding_value_format)(self.options.value))
                         })
                         .cursor(if disabled {
                             CursorStyle::Arrow

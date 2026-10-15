@@ -5,7 +5,10 @@ use crate::{
 };
 use anyhow::{Result, ensure};
 use kasane_sdk::{AuthoringSnapshot, ExpressionTransition, MotionPreview, MotionSnapshot};
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::{Arc, OnceLock},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MotionSelection {
@@ -147,8 +150,28 @@ impl Document {
 }
 
 pub struct AnimationSource {
-    pub snapshot: AuthoringSnapshot,
+    /// Immutable committed model shared by all revisions of a gesture.
+    pub snapshot: Arc<AuthoringSnapshot>,
     pub textures: Arc<[SceneTexture]>,
+    /// Validated motion overlay; the base document remains unchanged.
+    pub candidate: Option<Arc<kasane_sdk::MotionClipCandidate>>,
+    pub(crate) materialized: OnceLock<Arc<AuthoringSnapshot>>,
+}
+
+impl AnimationSource {
+    /// Result playback needs a document containing the candidate. Raw editing
+    /// samples its curve overlay directly and shares the immutable model.
+    pub fn materialized_snapshot(&self) -> Result<Arc<AuthoringSnapshot>> {
+        let Some(candidate) = &self.candidate else {
+            return Ok(self.snapshot.clone());
+        };
+        if let Some(snapshot) = self.materialized.get() {
+            return Ok(snapshot.clone());
+        }
+        let snapshot = Arc::new(self.snapshot.with_motion_candidate(candidate)?);
+        let _ = self.materialized.set(snapshot);
+        Ok(self.materialized.get().unwrap().clone())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -245,7 +268,6 @@ impl AnimationEvaluator {
             if self.identity.is_none_or(|previous| {
                 previous.document != id.document
                     || previous.model_generation != id.model_generation
-                    || previous.candidate != id.candidate
                     || previous.preview_mode != id.preview_mode
             }) {
                 self.editing = Some(kasane_sdk::MotionEditingPreview::new(
@@ -257,13 +279,27 @@ impl AnimationEvaluator {
                 anyhow::bail!(kasane_sdk::AnimationError::SeekCancelled);
             }
             let preview = self.editing.as_mut().unwrap();
-            preview.sample(
-                request
-                    .motion
-                    .as_ref()
-                    .map(|motion| motion.clip_id.as_str()),
-                id.time,
-            )?;
+            let clip = request
+                .motion
+                .as_ref()
+                .map(|motion| {
+                    request
+                        .source
+                        .candidate
+                        .as_ref()
+                        .filter(|candidate| candidate.clip().id == motion.clip_id)
+                        .map(|candidate| candidate.clip())
+                        .or_else(|| {
+                            request
+                                .source
+                                .snapshot
+                                .document()
+                                .get_motion(&motion.clip_id)
+                        })
+                        .ok_or_else(|| anyhow::anyhow!("Missing motion {}", motion.clip_id))
+                })
+                .transpose()?;
+            preview.sample_clip(clip, id.time)?;
             let frame = Arc::new(preview.evaluate_drawables()?);
             if !progress(1, 1) {
                 anyhow::bail!(kasane_sdk::AnimationError::SeekCancelled);
@@ -299,7 +335,8 @@ impl AnimationEvaluator {
             })
         };
         if !reusable {
-            let mut preview = MotionPreview::new(request.source.snapshot.document());
+            let snapshot = request.source.materialized_snapshot()?;
+            let mut preview = MotionPreview::new(snapshot.document());
             let version = request.source.snapshot.version();
             preview.bind_session_identity(version.session_id, version.generation);
             if let Some(motion) = &request.motion {

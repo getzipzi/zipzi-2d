@@ -1,5 +1,7 @@
 use super::*;
-use crate::ui::slide_number_input::{SlideNumberChange, SlideNumberInput, SlideNumberOptions};
+use crate::ui::slide_number_input::{
+    SlideNumberChange, SlideNumberInput, SlideNumberOptions, format_one_decimal,
+};
 use gpui_kit::component::slider::{Slider, SliderEvent, SliderState, SliderValue};
 use kasane_sdk::MotionInterpolation;
 
@@ -17,6 +19,14 @@ pub(super) enum Field {
     Scale,
 }
 impl Field {
+    fn value_format(&self) -> fn(f64) -> String {
+        match self {
+            Self::RowValue(_) | Self::KeyValue(_) => format_one_decimal,
+            Self::Scale => |value| value.to_string(),
+            _ => |value| (value as f32).to_string(),
+        }
+    }
+
     fn number_options(
         &self,
         value: f64,
@@ -134,6 +144,7 @@ impl Timeline {
         &mut self,
         field: &Field,
         value: String,
+        numeric_value: f64,
         range: (f64, f64),
         disabled: bool,
         window: &mut Window,
@@ -150,10 +161,11 @@ impl Timeline {
                 SlideNumberInput::new(
                     input.clone(),
                     t!("timeline.value").into_owned(),
-                    field.number_options(value.parse().unwrap_or(0.), range, fps, disabled),
+                    field.number_options(numeric_value, range, fps, disabled),
                     window,
                     cx,
                 )
+                .format_sliding_value(field.value_format())
             });
             let slide_field = field.clone();
             let slide = cx.subscribe_in(
@@ -273,7 +285,7 @@ impl Timeline {
         control.number.update(cx, |number, cx| {
             number.configure(
                 t!("timeline.value").into_owned(),
-                field.number_options(value.parse().unwrap_or(0.), range, fps, disabled),
+                field.number_options(numeric_value, range, fps, disabled),
                 cx,
             )
         });
@@ -287,12 +299,8 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let text = if matches!(field, Field::Scale) {
-            value.to_string()
-        } else {
-            (value as f32).to_string()
-        };
-        self.ensure_field(&field, text, range, disabled, window, cx);
+        let text = (field.value_format())(value);
+        self.ensure_field(&field, text, value, range, disabled, window, cx);
         div()
             .id(SharedString::from(format!("timeline-number-{field:?}")))
             .test_support()
@@ -338,11 +346,10 @@ impl Timeline {
             };
             let token = self
                 .owner
-                .update(cx, |owner, cx| {
+                .update(cx, |owner, _| {
                     let token = owner
                         .editor
                         .begin_timeline_edit(target.document, "Edit motion value");
-                    owner.redraw(cx);
                     token
                 })
                 .ok()
@@ -750,7 +757,15 @@ impl Timeline {
                         cx,
                     ));
                 let field = Field::EventValue(id.clone());
-                self.ensure_field(&field, event.value.clone(), (0., 1.), disabled, window, cx);
+                self.ensure_field(
+                    &field,
+                    event.value.clone(),
+                    0.,
+                    (0., 1.),
+                    disabled,
+                    window,
+                    cx,
+                );
                 content = content
                     .child(div().child(t!("timeline.event_value")))
                     .child(

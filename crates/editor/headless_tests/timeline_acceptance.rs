@@ -20,6 +20,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[path = "timeline_acceptance/number_probe.rs"]
+mod number_probe;
+
 fn update<T>(
     h: &mut Harness,
     f: impl FnOnce(&mut crate::EditorView, &mut Window, &mut gpui_kit::Context<crate::EditorView>) -> T,
@@ -449,7 +452,8 @@ fn result_parity(h: &mut Harness) -> anyhow::Result<()> {
             view.redraw(cx);
             Ok(request)
         })??;
-        let mut sdk = kasane_sdk::MotionPreview::new(request.source.snapshot.document());
+        let mut sdk =
+            kasane_sdk::MotionPreview::new(request.source.materialized_snapshot()?.document());
         let motion = request.motion.as_ref().unwrap();
         if let Some((group, index)) = &motion.entry {
             sdk.schedule_motion_entry(group, *index, 0.)?;
@@ -1148,7 +1152,16 @@ pub(super) fn run() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("target/timeline-acceptance"));
     std::fs::create_dir_all(&output)?;
-    let (_assets, path, source_info) = variants(&source.canonicalize()?)?;
+    if std::env::var_os("KASANE_TIMELINE_NUMBER_PROBE").is_some() {
+        crate::benchmark::init()?;
+    }
+    let source_probe = std::env::var("KASANE_TIMELINE_NUMBER_PROBE").is_ok_and(|v| v == "source");
+    let (_assets, path, source_info) = if source_probe {
+        (None, source.canonicalize()?, json!({"model":source}))
+    } else {
+        let (assets, path, info) = variants(&source.canonicalize()?)?;
+        (Some(assets), path, info)
+    };
     eprintln!("Timeline acceptance: importing real curves and dense variants");
     let (document, notices) = Document::import_model3(&path)?;
     let mut h = Harness::new()?;
@@ -1160,6 +1173,16 @@ pub(super) fn run() -> anyhow::Result<()> {
     command(&mut h, CommandId::AnimationWorkspace)?;
     command(&mut h, CommandId::FitView)?;
     drain(&mut h)?;
+    if std::env::var_os("KASANE_TIMELINE_NUMBER_PROBE").is_some() {
+        let report = number_probe::run(&mut h, samples)?;
+        std::fs::write(
+            output.join("number-probe.json"),
+            serde_json::to_vec_pretty(&report)?,
+        )?;
+        println!("Timeline number probe: {}", output.display());
+        crate::benchmark::finish();
+        return Ok(());
+    }
     eprintln!("Timeline acceptance: imported edge cases");
     let edges = edges(&mut h)?;
     eprintln!("Timeline acceptance: real motion input, cancellation and playback");
