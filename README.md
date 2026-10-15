@@ -78,3 +78,8 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeli
 ```
 
 App bundles are saved to `target/`.
+
+## License
+
+Kasane Editor is licensed under the [GNU General Public License, version 3 only](LICENSE).
+Third-party code in `vendor/` retains its respective licenses.

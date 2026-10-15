@@ -33,6 +33,7 @@ binary="target/$profile/$package"
 app="$PWD/target/$name.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$binary" "$app/Contents/MacOS/$package"
+cp LICENSE "$app/Contents/Resources/LICENSE"
 if [ -f "$icon_asset" ]; then
   cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
 fi

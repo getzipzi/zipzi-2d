@@ -228,6 +228,7 @@ case "${2:-watch}" in
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
     cp "target/debug/$package" "$executable.new.$$"
     mv "$executable.new.$$" "$executable"
+    cp LICENSE "$app/Contents/Resources/LICENSE"
     if [ -f "$icon_asset" ]; then
       cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
     fi
