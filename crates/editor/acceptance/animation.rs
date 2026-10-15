@@ -1,31 +1,16 @@
 //! Local licensed assets supplement the portable deterministic fixtures.
-use crate::screenshots::Harness;
+use super::harness::{Harness, command, update};
 use anyhow::{Context as _, ensure};
 use editor_core::{
     AnimationEvaluator, CommandId, EditorCommand, LoadRequest, ObjectKind, ObjectRef, WorkspaceKind,
 };
-use gpui_kit::{AppContext as _, frame_trace, test::TestWindowExt};
+use gpui_kit::{frame_trace, test::TestWindowExt};
 use serde_json::json;
 use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
-fn update<T>(
-    h: &mut Harness,
-    f: impl FnOnce(
-        &mut crate::EditorView,
-        &mut gpui_kit::Window,
-        &mut gpui_kit::Context<crate::EditorView>,
-    ) -> T,
-) -> anyhow::Result<T> {
-    Ok(h.cx.update_window(h.window, |_, window, cx| {
-        h.view.update(cx, |view, cx| f(view, window, cx))
-    })?)
-}
-fn command(h: &mut Harness, command: CommandId) -> anyhow::Result<()> {
-    update(h, |view, window, cx| view.run_command(command, window, cx))
-}
 fn clock(h: &mut Harness, time: f32) -> anyhow::Result<()> {
     update(h, |view, _, cx| -> anyhow::Result<()> {
         if !view.editor.animation().unwrap().playing {
@@ -469,7 +454,7 @@ fn model(
     Ok(result)
 }
 
-pub(super) fn run() -> anyhow::Result<()> {
+pub(super) fn run(paths: Vec<PathBuf>) -> anyhow::Result<()> {
     ensure!(
         std::env::var_os("KASANE_DEV_SESSION_DIR").is_none(),
         "unset KASANE_DEV_SESSION_DIR"
@@ -485,26 +470,21 @@ pub(super) fn run() -> anyhow::Result<()> {
         .transpose()?
         .unwrap_or(0);
     ensure!(samples <= 3600, "sample count too large");
-    let paths = std::env::args()
-        .skip(1)
-        .filter(|s| !s.starts_with('-'))
-        .map(PathBuf::from)
-        .collect::<Vec<_>>();
-    let paths = if paths.is_empty() {
-        vec![
+    let paths = super::assets::available(
+        (!paths.is_empty()).then_some(paths),
+        &[
             root.join("models/local/mao/runtime/mao_pro.model3.json"),
             root.join("models/local/Shirousagi/Shirousagi.model3.json"),
             root.join("models/local/heijiao/heijiao.model3.json"),
-        ]
-    } else {
-        paths
-    };
+        ],
+        std::env::var_os("KASANE_ANIMATION_REQUIRE_ASSET").is_some(),
+    )?;
+    if paths.is_empty() {
+        println!("SKIP Animation real-asset acceptance: no local models found");
+        return Ok(());
+    }
     let mut results = Vec::new();
     for (index, path) in paths.iter().enumerate() {
-        if !path.exists() {
-            eprintln!("SKIP local licensed model: {}", path.display());
-            continue;
-        }
         results.push(
             model(path, index, &output, samples)
                 .with_context(|| format!("acceptance: {}", path.display()))?,

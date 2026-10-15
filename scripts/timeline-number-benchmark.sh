@@ -23,6 +23,6 @@ export KASANE_TIMELINE_OUTPUT="$output" KASANE_TIMELINE_SAMPLES="$samples"
 export KASANE_TIMELINE_REQUIRE_ASSET=1
 export KASANE_TIMELINE_NUMBER_PROBE="${KASANE_TIMELINE_NUMBER_PROBE:-source}"
 export KASANE_FRAME_TRACE="$output/trace.jsonl"
-cargo test --locked --release -p kasane-editor --test timeline_acceptance > "$output/run.log" 2>&1
+cargo test --locked --release -p kasane-editor --features test-support --test timeline_acceptance > "$output/run.log" 2>&1
 python3 scripts/animation-trace-report.py "$output/trace.jsonl" > "$output/trace-summary.json"
 cat "$output/number-probe.json"

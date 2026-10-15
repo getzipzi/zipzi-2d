@@ -43,7 +43,7 @@ struct Target {
 
 pub struct Timeline {
     ui_scale: f32,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     renders: u64,
     owner: WeakEntity<EditorView>,
     focus: FocusHandle,
@@ -96,7 +96,7 @@ impl Timeline {
             let search =
                 cx.new(|cx| InputState::new(window, cx).placeholder(t!("timeline.search")));
             Self {
-                #[cfg(test)]
+                #[cfg(any(test, feature = "test-support"))]
                 renders: 0,
                 ui_scale: compact::scale(cx),
                 tracks: cx.new(|_| drawing::TracksLayer::new(scene.clone())),
@@ -503,9 +503,8 @@ impl Timeline {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl Timeline {
-    #[allow(dead_code)] // Used by the real Metal acceptance harness.
     pub(crate) fn renders(&self) -> u64 {
         self.renders
     }
@@ -515,6 +514,7 @@ impl Timeline {
     pub(crate) fn scene_builds(&self) -> u64 {
         self.scene.borrow().builds
     }
+    #[cfg(test)]
     pub(crate) fn handle_position(&self, key: &TimelineKeyRef) -> Option<Point<Pixels>> {
         self.scene
             .borrow()
@@ -530,6 +530,7 @@ impl Timeline {
                 _ => None,
             })
     }
+    #[cfg(test)]
     pub(crate) fn pointer_active(&self) -> bool {
         self.gesture.is_some()
     }
@@ -690,7 +691,7 @@ impl crate::docking::header::PanelHeader for Timeline {
 
 impl Render for Timeline {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         {
             self.renders += 1;
         }

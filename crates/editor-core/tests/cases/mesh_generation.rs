@@ -1,6 +1,6 @@
+use super::support;
 use editor_core::*;
 use kasane_core::{DeltaKeyforms, Vec2};
-mod support;
 
 fn id(n: u128) -> String {
     uuid::Uuid::from_u128(n).to_string()

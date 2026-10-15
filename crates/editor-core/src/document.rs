@@ -1,7 +1,7 @@
 use crate::{SceneSnapshot, SceneTexture, TreeNode, TreeNodeKind, tree::nest_nodes};
 use anyhow::{Result, anyhow, ensure};
 use kasane_core::{Canvas, Mesh, ParameterKind, Vec2, preview::PreviewState};
-use kasane_sdk::{AuthoringSession, EditSession, SaveReceipt};
+use kasane_sdk::{AuthoringSession, EditReceipt, EditSession, SaveReceipt, SdkError};
 use std::collections::HashMap;
 use std::{
     path::Path,
@@ -1136,23 +1136,21 @@ impl Document {
     }
 
     pub fn undo(&mut self) -> Result<()> {
-        self.finish_edit()?;
-        let before = self.evaluation_revision();
-        let state = self.model().editor_state().clone();
-        self.session.undo()?;
-        self.refresh_textures()?;
-        self.reconcile_parameter_preview()?;
-        self.after_history(
-            before != self.evaluation_revision() || state == *self.model().editor_state(),
-        );
-        Ok(())
+        self.apply_history(AuthoringSession::undo)
     }
 
     pub fn redo(&mut self) -> Result<()> {
+        self.apply_history(AuthoringSession::redo)
+    }
+
+    fn apply_history(
+        &mut self,
+        change: fn(&mut AuthoringSession) -> Result<EditReceipt, SdkError>,
+    ) -> Result<()> {
         self.finish_edit()?;
         let before = self.evaluation_revision();
         let state = self.model().editor_state().clone();
-        self.session.redo()?;
+        change(&mut self.session)?;
         self.refresh_textures()?;
         self.reconcile_parameter_preview()?;
         self.after_history(

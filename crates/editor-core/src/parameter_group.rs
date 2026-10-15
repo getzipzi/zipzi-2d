@@ -58,13 +58,12 @@ impl Document {
         }
         ensure!(!draft.name.trim().is_empty(), E::GroupNameRequired);
         ensure!(!draft.runtime_id.trim().is_empty(), E::GroupIdRequired);
-        let groups: Vec<_> = self
+        let groups = self
             .model()
             .display_info()
             .parameter_groups
-            .iter()
-            .flatten()
-            .collect();
+            .as_deref()
+            .unwrap_or_default();
         ensure!(
             !groups
                 .iter()

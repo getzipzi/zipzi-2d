@@ -22,8 +22,9 @@ fi
 } > "$output/environment.txt"
 unset MTL_HUD_ENABLED KASANE_DEV_SESSION_DIR KASANE_WINDOW_BENCH
 export KASANE_ANIMATION_OUTPUT="$output"
+export KASANE_ANIMATION_REQUIRE_ASSET=1
 export KASANE_ANIMATION_SAMPLES="$samples"
 export KASANE_FRAME_TRACE="$output/trace.jsonl"
-cargo test --locked --release -p kasane-editor --test animation_acceptance -- "$@" > "$output/run.log" 2>&1
+cargo test --locked --release -p kasane-editor --features test-support --test animation_acceptance -- "$@" > "$output/run.log" 2>&1
 python3 scripts/animation-trace-report.py "$output/trace.jsonl" > "$output/summary.json"
 cat "$output/summary.json"

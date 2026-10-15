@@ -42,30 +42,37 @@ the editor's UI scale.
 
 ## Test
 
-The full suite requires macOS and Metal.
+The full suite requires macOS and Metal. The test script checks formatting,
+Python tooling, Rust behavior, and native acceptance. Native acceptance uses the
+production application library with the `test-support` feature; headless UI unit
+tests live in the library target.
 
 ```sh
-cargo test --locked --workspace
-cargo fmt --all -- --check
+./scripts/test.sh
 ```
+
+Licensed model acceptance discovers optional assets under `models/local/` and
+reports a skip when none are available. Explicit model paths must exist. Set
+`KASANE_ANIMATION_REQUIRE_ASSET=1` or `KASANE_TIMELINE_REQUIRE_ASSET=1` to require
+local assets, including in benchmark runs.
 
 Run UI tests or capture screenshots:
 
 ```sh
-cargo test --locked -p kasane-editor --bin kasane-editor headless_tests
+cargo test --locked -p kasane-editor --lib headless_tests
 # Focused work-count regressions for canvas redraws and property-list virtualization:
-cargo test --locked -p kasane-editor --bin kasane-editor headless_tests::ui_performance
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test headless_screenshot
+cargo test --locked -p kasane-editor --lib headless_tests::ui_performance
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Focused Timeline views and candidate/cancel pixel verification:
-env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --test headless_screenshot
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Title bar project switching and empty states:
-env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=titlebar cargo test --locked -p kasane-editor --test headless_screenshot
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=titlebar cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Compact layout, UI scale, and opaque Metal corner pixel checks:
-env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact cargo test --locked -p kasane-editor --test headless_screenshot
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Compact menus, submenus and plain/searchable Selects at every UI scale:
-env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact-popups cargo test --locked -p kasane-editor --test headless_screenshot
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact-popups cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Imported motion edge cases, editing and canvas navigation acceptance (local Mao asset):
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --test timeline_acceptance
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --features test-support --test timeline_acceptance
 # Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:
 ./scripts/timeline-benchmark.sh target/timeline-benchmark-run 600
 # Timeline channel-number scrubbing, CPU/GPU stages and authoring comparison:

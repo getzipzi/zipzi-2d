@@ -23,5 +23,5 @@ unset MTL_HUD_ENABLED KASANE_DEV_SESSION_DIR KASANE_WINDOW_BENCH
 export KASANE_TIMELINE_OUTPUT="$output"
 export KASANE_TIMELINE_SAMPLES="$samples"
 export KASANE_TIMELINE_REQUIRE_ASSET=1
-cargo test --locked --release -p kasane-editor --test timeline_acceptance > "$output/run.log" 2>&1
+cargo test --locked --release -p kasane-editor --features test-support --test timeline_acceptance > "$output/run.log" 2>&1
 cat "$output/results.json"

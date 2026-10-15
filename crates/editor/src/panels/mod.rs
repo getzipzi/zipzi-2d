@@ -14,7 +14,7 @@ pub use parameters::ParametersPanel;
 pub use properties::PropertiesPanel;
 
 pub mod document_panel;
-pub use document_panel::{DocumentPanel, DocumentPanelKind};
+pub use document_panel::DocumentPanel;
 
 pub(crate) mod animation_feedback;
 pub mod animation_panel;

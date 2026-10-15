@@ -1,15 +1,13 @@
 //! Licensed source assets stay untouched. Stress variants exist only in a temporary directory.
-use crate::screenshots::Harness;
+use super::harness::{Harness, command, update};
 use anyhow::{Context as _, ensure};
 use editor_core::{
-    AnimationEvaluator, AnimationPreviewMode, CommandId, Document, Editor, LoadRequest,
-    TimelineChannelId, TimelineCommand, TimelineDisplayMode, TimelineKeyRef, TimelineRowId,
-    WorkspaceKind,
+    AnimationEvaluator, AnimationPreviewMode, CommandId, Document, Editor, TimelineChannelId,
+    TimelineCommand, TimelineDisplayMode, TimelineRowId, WorkspaceKind,
 };
 use gpui_kit::{
-    App, AppContext as _, InputEvent as _, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, Pixels, Point, ScrollDelta, ScrollWheelEvent, Window, point, px,
-    test::TestWindowExt,
+    InputEvent as _, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels,
+    Point, ScrollDelta, ScrollWheelEvent, Window, point, px, test::TestWindowExt,
 };
 use kasane_core::document::{MotionClip, MotionPoint};
 use kasane_sdk::{CompiledCurve, CompiledSegment, sample_motion_curve};
@@ -20,20 +18,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[path = "timeline_acceptance/number_probe.rs"]
 mod number_probe;
 
-fn update<T>(
-    h: &mut Harness,
-    f: impl FnOnce(&mut crate::EditorView, &mut Window, &mut gpui_kit::Context<crate::EditorView>) -> T,
-) -> anyhow::Result<T> {
-    Ok(h.cx.update_window(h.window, |_, window, cx| {
-        h.view.update(cx, |view, cx| f(view, window, cx))
-    })?)
-}
-fn command(h: &mut Harness, id: CommandId) -> anyhow::Result<()> {
-    update(h, |view, window, cx| view.run_command(id, window, cx))
-}
 fn pump(h: &mut Harness) -> anyhow::Result<()> {
     h.cx.run_until_parked();
     h.cx.update_window(h.window, |_, window, cx| {
@@ -1131,17 +1117,15 @@ pub(super) fn run() -> anyhow::Result<()> {
         "unset KASANE_DEV_SESSION_DIR"
     );
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let source = std::env::var_os("KASANE_TIMELINE_MODEL")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("models/local/mao/runtime/mao_pro.model3.json"));
-    if !source.exists() {
-        ensure!(
-            std::env::var_os("KASANE_TIMELINE_REQUIRE_ASSET").is_none(),
-            "required licensed model missing"
-        );
-        println!("SKIP Timeline real-asset acceptance: {}", source.display());
+    let sources = super::assets::available(
+        std::env::var_os("KASANE_TIMELINE_MODEL").map(|path| vec![PathBuf::from(path)]),
+        &[root.join("models/local/mao/runtime/mao_pro.model3.json")],
+        std::env::var_os("KASANE_TIMELINE_REQUIRE_ASSET").is_some(),
+    )?;
+    let Some(source) = sources.first() else {
+        println!("SKIP Timeline real-asset acceptance: no local model found");
         return Ok(());
-    }
+    };
     let samples = std::env::var("KASANE_TIMELINE_SAMPLES")
         .ok()
         .map(|s| s.parse::<usize>())

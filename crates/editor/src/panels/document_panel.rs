@@ -1,6 +1,8 @@
 //! Independent Dock identities backed by the same document projection and context.
 use crate::{EditorView, t, ui::compact};
-use editor_core::{DocumentId, EditorCommand, ObjectIndex, ObjectKind, ObjectRef, RelationKind};
+use editor_core::{
+    DocumentId, EditorCommand, ObjectIndex, ObjectKind, ObjectRef, PanelKind, RelationKind,
+};
 use gpui_kit::base::ElementExt as _;
 use gpui_kit::component::{
     ActiveTheme, WindowExt,
@@ -9,81 +11,26 @@ use gpui_kit::component::{
 use gpui_kit::{prelude::*, *};
 use std::sync::Arc;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum DocumentPanelKind {
-    DrawOrder,
-    Relations,
-    Keyforms,
-    BlendShapes,
-    Glue,
-    Motions,
-    Expressions,
-    Physics,
-    Pose,
-    Resources,
-}
-impl DocumentPanelKind {
-    pub const ALL: [Self; 10] = [
-        Self::DrawOrder,
-        Self::Relations,
-        Self::Keyforms,
-        Self::BlendShapes,
-        Self::Glue,
-        Self::Motions,
-        Self::Expressions,
-        Self::Physics,
-        Self::Pose,
-        Self::Resources,
-    ];
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::DrawOrder => "DrawOrder",
-            Self::Relations => "Relations",
-            Self::Keyforms => "Keyforms",
-            Self::BlendShapes => "BlendShapes",
-            Self::Glue => "Glue",
-            Self::Motions => "Motions",
-            Self::Expressions => "Expressions",
-            Self::Physics => "Physics",
-            Self::Pose => "Pose",
-            Self::Resources => "Resources",
-        }
-    }
-    pub fn title(self) -> SharedString {
-        match self {
-            Self::DrawOrder => t!("editor.draw_order"),
-            Self::Relations => t!("editor.relations"),
-            Self::Keyforms => t!("editor.keyforms"),
-            Self::BlendShapes => t!("editor.blend_shapes"),
-            Self::Glue => t!("editor.glue"),
-            Self::Motions => t!("editor.motions"),
-            Self::Expressions => t!("editor.expressions"),
-            Self::Physics => t!("editor.physics"),
-            Self::Pose => t!("editor.pose"),
-            Self::Resources => t!("editor.resources"),
-        }
-        .into()
-    }
-    fn includes(self, kind: ObjectKind) -> bool {
-        use ObjectKind as K;
-        match self {
-            Self::BlendShapes => matches!(
-                kind,
-                K::BlendBinding | K::BlendKeyTable | K::BlendConstraint
-            ),
-            Self::Glue => kind == K::Glue,
-            Self::Motions => matches!(kind, K::MotionGroup | K::Motion | K::MotionTrack),
-            Self::Expressions => kind == K::Expression,
-            Self::Physics => matches!(kind, K::Physics | K::PhysicsGroup),
-            Self::Pose => matches!(kind, K::Pose | K::PoseGroup | K::PoseEntry),
-            Self::Resources => matches!(kind, K::Texture | K::Attachment),
-            _ => false,
-        }
+fn includes(panel: PanelKind, kind: ObjectKind) -> bool {
+    use ObjectKind as K;
+    match panel {
+        PanelKind::BlendShapes => matches!(
+            kind,
+            K::BlendBinding | K::BlendKeyTable | K::BlendConstraint
+        ),
+        PanelKind::Glue => kind == K::Glue,
+        PanelKind::Motions => matches!(kind, K::MotionGroup | K::Motion | K::MotionTrack),
+        PanelKind::Expressions => kind == K::Expression,
+        PanelKind::Physics => matches!(kind, K::Physics | K::PhysicsGroup),
+        PanelKind::Pose => matches!(kind, K::Pose | K::PoseGroup | K::PoseEntry),
+        PanelKind::Resources => matches!(kind, K::Texture | K::Attachment),
+        _ => false,
     }
 }
+
 pub struct DocumentPanel {
     owner: WeakEntity<EditorView>,
-    pub kind: DocumentPanelKind,
+    pub kind: PanelKind,
     focus: FocusHandle,
     _observe: Subscription,
     _activation: Subscription,
@@ -96,7 +43,7 @@ pub struct DocumentPanel {
 impl DocumentPanel {
     pub fn new(
         owner: WeakEntity<EditorView>,
-        kind: DocumentPanelKind,
+        kind: PanelKind,
         window: &mut Window,
         cx: &mut App,
     ) -> Entity<Self> {
@@ -191,10 +138,7 @@ impl DocumentPanel {
             })
             .cursor_pointer()
             .when(
-                matches!(
-                    self.kind,
-                    DocumentPanelKind::Motions | DocumentPanelKind::Expressions
-                ),
+                matches!(self.kind, PanelKind::Motions | PanelKind::Expressions),
                 |row| {
                     row.h(compact::rem(compact::ROW))
                         .py_0()
@@ -499,7 +443,7 @@ impl BasePanel for DocumentPanel {
 }
 impl Panel for DocumentPanel {
     fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        self.kind.title()
+        SharedString::from(t!(self.kind.label()).into_owned())
     }
 }
 impl crate::docking::header::PanelHeader for DocumentPanel {
@@ -555,11 +499,11 @@ impl Render for DocumentPanel {
             .flex()
             .flex_col()
             .w_full();
-        if self.kind == DocumentPanelKind::Keyforms {
+        if self.kind == PanelKind::Keyforms {
             body = body
                 .h_full()
                 .child(self.keyforms(index, context, parameters, document, disabled, cx));
-        } else if self.kind == DocumentPanelKind::Relations {
+        } else if self.kind == PanelKind::Relations {
             if let Some(r) = context.inspected.as_ref() {
                 body = body.child(
                     div()
@@ -617,7 +561,7 @@ impl Render for DocumentPanel {
             } else {
                 body = body.child(t!("editor.choose_object"));
             }
-        } else if self.kind == DocumentPanelKind::DrawOrder {
+        } else if self.kind == PanelKind::DrawOrder {
             body = body.child(div().p_2().child(t!("editor.draw_order_direction")));
             // The scene cache is evaluated by core/preview, independent of panel visibility.
             if let Some(frame) = state.editor.evaluated_frame() {
@@ -677,7 +621,7 @@ impl Render for DocumentPanel {
             let references: Vec<_> = index
                 .objects
                 .iter()
-                .filter(|x| self.kind.includes(x.reference.kind))
+                .filter(|x| includes(self.kind, x.reference.kind))
                 .map(|x| x.reference.clone())
                 .collect();
             let allowed: std::collections::HashSet<_> = references.iter().cloned().collect();

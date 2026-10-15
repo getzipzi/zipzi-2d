@@ -45,7 +45,7 @@ The small structural regression group is available when relevant and is also par
 of the normal editor test suite:
 
 ```sh
-cargo test --locked -p kasane-editor --bin kasane-editor headless_tests::ui_performance
+cargo test --locked -p kasane-editor --lib headless_tests::ui_performance
 ```
 
 For benchmarks, keep model, viewport, UI scale, and input workload comparable.

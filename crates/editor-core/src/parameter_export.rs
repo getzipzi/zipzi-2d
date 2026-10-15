@@ -1,9 +1,6 @@
 //! Read-only export preflight for parameter namespace edits.
 use crate::{Document, EditorCommand};
-use kasane_core::{
-    Parameter,
-    document::{CdiParameterEntry, CdiParameterGroup},
-};
+use kasane_core::document::{CdiParameterEntry, CdiParameterGroup};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParameterExportDiagnostic {
@@ -27,17 +24,7 @@ impl Document {
                     EditorCommand::UpdateParameter { id, .. } => id.clone(),
                     _ => uuid::Uuid::new_v4().to_string(),
                 };
-                let p = Parameter {
-                    id: id.clone(),
-                    name: draft.name.trim().into(),
-                    runtime_id: draft.runtime_id.trim().into(),
-                    minimum: draft.minimum,
-                    maximum: draft.maximum,
-                    default_value: draft.default_value,
-                    decimal_places: draft.decimal_places,
-                    kind: draft.kind,
-                    repeat: draft.repeat,
-                };
+                let p = draft.parameter(&id);
                 if matches!(command, EditorCommand::UpdateParameter { .. }) {
                     candidate.replace_parameter(p).status
                 } else {

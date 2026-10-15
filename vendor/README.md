@@ -26,7 +26,7 @@
 ```sh
 git apply --reverse --check vendor/kit-workspace.patch
 git apply --reverse --check vendor/compact-menu.patch
-cargo test --locked -p kasane-editor --bin kasane-editor headless_tests::compact_popups
+cargo test --locked -p kasane-editor --lib headless_tests::compact_popups
 ```
 
 原生 Metal 集成涉及 **11 个文件（10 个源码文件 + 1 个依赖清单），新增 495 行、删除 13 行**，差异见 [native-metal.patch](native-metal.patch)。此外，Fast 缓存边界修复涉及 `fast/retained.rs` 和 `fast/splice.rs` 两个文件，独立保存为 [cache-boundary.patch](cache-boundary.patch)；虚拟列表高度估计修复涉及 `elements/list.rs`，保存为 [list-height-estimates.patch](list-height-estimates.patch)。合计修改/新增 14 个文件，其余保持发布版本原样。
@@ -75,7 +75,7 @@ core 定义绘制与平台接口，macOS 负责窗口到 renderer 的转发，Ap
 [原生合成测试](../crates/editor/tests/native_metal.rs) 验证 RGBA/BGRA、透明背景、文档与元素透明度叠加、裁剪、UI 遮挡、隐藏、旧帧保留、尺寸变化及缩放。中间不回读；只回读最终结果做断言。窗口交互由用户验证。
 
 ```sh
-cargo test --locked --workspace
+./scripts/test.sh
 # 检查全部补丁能否从当前文件反向应用，不修改文件：
 git apply --reverse --check vendor/native-metal.patch
 git apply --reverse --check vendor/cache-boundary.patch

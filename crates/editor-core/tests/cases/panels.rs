@@ -1,3 +1,4 @@
+use super::support;
 use editor_core::{Document, Editor, EditorCommand, ObjectKind as K, ObjectRef, RelationKind as R};
 use kasane_core::{
     BindingAxis, Canvas, Parameter, Part, PartKeyform, RotationTransform, SceneBinding, SceneTrack,
@@ -6,8 +7,6 @@ use kasane_core::{
 use kasane_sdk::AuthoringSession;
 use std::sync::Arc;
 use uuid::Uuid;
-#[allow(dead_code)]
-mod support;
 fn id() -> String {
     Uuid::new_v4().to_string()
 }

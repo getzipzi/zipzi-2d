@@ -200,17 +200,7 @@ impl DocumentSession {
                 | EditorCommand::Navigate(_)
                 | EditorCommand::NavigateBack
         );
-        let context_only = matches!(
-            &command,
-            EditorCommand::Select(_)
-                | EditorCommand::SelectObjects(_)
-                | EditorCommand::SelectCanvasObjects(_)
-                | EditorCommand::SelectObject(_)
-                | EditorCommand::OpenBinding(_)
-                | EditorCommand::Navigate(_)
-                | EditorCommand::NavigateBack
-                | EditorCommand::FocusParameter(_)
-        );
+        let context_only = selection || matches!(&command, EditorCommand::FocusParameter(_));
         let invalidate =
             !(context_only || matches!(&command, EditorCommand::FinishEdit)) || had_pending;
         let result = match command {

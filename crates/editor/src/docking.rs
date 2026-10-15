@@ -120,10 +120,8 @@ pub struct DockWorkspace {
     pub mesh_tree: Entity<crate::panels::MeshTreePanel>,
     pub deformer_tree: Entity<crate::panels::DeformerTreePanel>,
     pub parameters: Entity<crate::panels::ParametersPanel>,
-    pub document_panels: std::collections::HashMap<
-        crate::panels::DocumentPanelKind,
-        Entity<crate::panels::DocumentPanel>,
-    >,
+    pub document_panels:
+        std::collections::HashMap<editor_core::PanelKind, Entity<crate::panels::DocumentPanel>>,
     panels: Rc<PanelViews>,
     pub last_valid: DockAreaState,
     pending_layout_measurement: bool,
@@ -195,24 +193,21 @@ impl DockWorkspace {
         let deformer_tree =
             crate::panels::DeformerTreePanel::new(owner.clone(), thumbnails, window, cx);
         let parameters = crate::panels::ParametersPanel::new(owner.clone(), window, cx);
-        use crate::panels::animation_panel::{AnimationPanel, AnimationPanelKind};
-        let animation_motions = AnimationPanel::new(owner.clone(), AnimationPanelKind::Motions, cx);
+        use crate::panels::animation_panel::AnimationPanel;
+        let animation_motions = AnimationPanel::new(owner.clone(), PanelKind::AnimationMotions, cx);
         let animation_expressions =
-            AnimationPanel::new(owner.clone(), AnimationPanelKind::Expressions, cx);
-        let animation_info = AnimationPanel::new(owner.clone(), AnimationPanelKind::Info, cx);
+            AnimationPanel::new(owner.clone(), PanelKind::AnimationExpressions, cx);
+        let animation_info = AnimationPanel::new(owner.clone(), PanelKind::AnimationInfo, cx);
         let animation_parameters =
-            AnimationPanel::new(owner.clone(), AnimationPanelKind::Parameters, cx);
+            AnimationPanel::new(owner.clone(), PanelKind::AnimationParameters, cx);
 
         let animation_inspectors: HashMap<_, _> = [
-            (
-                PanelKind::AnimationProperties,
-                AnimationPanelKind::Properties,
-            ),
-            (PanelKind::AnimationPhysics, AnimationPanelKind::Physics),
-            (PanelKind::AnimationPose, AnimationPanelKind::Pose),
+            PanelKind::AnimationProperties,
+            PanelKind::AnimationPhysics,
+            PanelKind::AnimationPose,
         ]
         .into_iter()
-        .map(|(id, kind)| (id, AnimationPanel::new(owner.clone(), kind, cx)))
+        .map(|kind| (kind, AnimationPanel::new(owner.clone(), kind, cx)))
         .collect();
         let mut panels: PanelViews = animation_inspectors
             .iter()
@@ -240,10 +235,10 @@ impl DockWorkspace {
         }
 
         let mut document_panels = std::collections::HashMap::new();
-        for kind in crate::panels::DocumentPanelKind::ALL {
+        for kind in PanelKind::DOCUMENT_PANELS {
             let panel = crate::panels::DocumentPanel::new(owner.clone(), kind, window, cx);
             let handle = panel_handle(panel.clone());
-            panels.insert(PanelKind::from_name(kind.name()).unwrap(), handle);
+            panels.insert(kind, handle);
             document_panels.insert(kind, panel);
         }
         let mut headers = header::PanelHeaders::new();
@@ -263,7 +258,7 @@ impl DockWorkspace {
         header::register(&mut headers, &animation_info, cx);
         header::register(
             &mut headers,
-            &document_panels[&crate::panels::DocumentPanelKind::Relations],
+            &document_panels[&editor_core::PanelKind::Relations],
             cx,
         );
         let headers = Rc::new(headers);

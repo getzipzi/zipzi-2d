@@ -100,7 +100,7 @@ pub(super) struct Properties {
     key: Option<Key>,
     rows: Arc<[Row]>,
     scroll: ListState,
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     builds: u64,
 }
 impl Default for Properties {
@@ -109,7 +109,7 @@ impl Default for Properties {
             key: None,
             rows: Arc::from([]),
             scroll: ListState::new(0, ListAlignment::Top, px(16.)),
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             builds: 0,
         }
     }
@@ -157,7 +157,7 @@ impl AnimationPanel {
                 .scroll
                 .reset_with_uniform_height(self.properties.rows.len(), px(36.));
             self.properties.key = Some(key);
-            #[cfg(test)]
+            #[cfg(any(test, feature = "test-support"))]
             {
                 self.properties.builds += 1;
             }
@@ -175,8 +175,7 @@ impl AnimationPanel {
             .into_any_element()
     }
 
-    #[cfg(test)]
-    #[allow(dead_code)] // The real Metal acceptance harness checks cache reuse.
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn properties_cache_stats(&self) -> (u64, usize) {
         (self.properties.builds, self.properties.rows.len())
     }

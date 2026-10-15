@@ -12,43 +12,11 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 
-#[derive(Clone, Copy)]
-pub enum AnimationPanelKind {
-    Motions,
-    Expressions,
-    Info,
-    Parameters,
-    Properties,
-    Physics,
-    Pose,
-}
-impl AnimationPanelKind {
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Motions => "AnimationMotions",
-            Self::Expressions => "AnimationExpressions",
-            Self::Info => "AnimationInfo",
-            Self::Parameters => "AnimationParameters",
-            Self::Properties => "AnimationProperties",
-            Self::Physics => "AnimationPhysics",
-            Self::Pose => "AnimationPose",
-        }
-    }
-    fn label(self) -> &'static str {
-        match self {
-            Self::Motions => "editor.motions",
-            Self::Expressions => "editor.expressions",
-            Self::Info => "workspace.info",
-            Self::Parameters => "workspace.parameters",
-            Self::Properties => "editor.properties",
-            Self::Physics => "editor.physics",
-            Self::Pose => "editor.pose",
-        }
-    }
-}
+use editor_core::PanelKind;
+
 pub struct AnimationPanel {
     owner: WeakEntity<EditorView>,
-    kind: AnimationPanelKind,
+    kind: PanelKind,
     focus: FocusHandle,
     _observe: Subscription,
     resources: resources::ResourceList,
@@ -56,11 +24,7 @@ pub struct AnimationPanel {
     properties: properties::Properties,
 }
 impl AnimationPanel {
-    pub fn new(
-        owner: WeakEntity<EditorView>,
-        kind: AnimationPanelKind,
-        cx: &mut App,
-    ) -> Entity<Self> {
+    pub fn new(owner: WeakEntity<EditorView>, kind: PanelKind, cx: &mut App) -> Entity<Self> {
         cx.new(|cx| Self {
             resources: resources::ResourceList::default(),
             parameters: parameters::PreviewParameters::default(),
@@ -144,9 +108,9 @@ impl Panel for AnimationPanel {
     fn inner_padding(&self, _: &App) -> bool {
         !matches!(
             self.kind,
-            AnimationPanelKind::Motions
-                | AnimationPanelKind::Expressions
-                | AnimationPanelKind::Parameters
+            PanelKind::AnimationMotions
+                | PanelKind::AnimationExpressions
+                | PanelKind::AnimationParameters
         )
     }
 
@@ -156,7 +120,7 @@ impl Panel for AnimationPanel {
 }
 impl crate::docking::header::PanelHeader for AnimationPanel {
     fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        if matches!(self.kind, AnimationPanelKind::Info) {
+        if matches!(self.kind, PanelKind::AnimationInfo) {
             self.render_info_header(window, cx)
         } else {
             self.render_header_toolbar(window, cx)
@@ -168,14 +132,14 @@ impl Render for AnimationPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if matches!(
             self.kind,
-            AnimationPanelKind::Motions | AnimationPanelKind::Expressions
+            PanelKind::AnimationMotions | PanelKind::AnimationExpressions
         ) {
             return self.render_resources(window, cx);
         }
-        if matches!(self.kind, AnimationPanelKind::Parameters) {
+        if matches!(self.kind, PanelKind::AnimationParameters) {
             return self.render_parameters(cx);
         }
-        if matches!(self.kind, AnimationPanelKind::Properties) {
+        if matches!(self.kind, PanelKind::AnimationProperties) {
             return self.render_properties(cx);
         }
         let Some(owner) = self.owner.upgrade() else {
@@ -200,15 +164,15 @@ impl Render for AnimationPanel {
             .gap_2()
             .text_xs();
         match self.kind {
-            AnimationPanelKind::Expressions | AnimationPanelKind::Motions => unreachable!(),
-            AnimationPanelKind::Properties => unreachable!(),
-            AnimationPanelKind::Physics => {
+            PanelKind::AnimationExpressions | PanelKind::AnimationMotions => unreachable!(),
+            PanelKind::AnimationProperties => unreachable!(),
+            PanelKind::AnimationPhysics => {
                 content = inspectors::physics(content.gap_1(), document, snapshot, cx);
             }
-            AnimationPanelKind::Pose => {
+            PanelKind::AnimationPose => {
                 content = inspectors::pose(content.gap_1(), document, snapshot, cx);
             }
-            AnimationPanelKind::Info => {
+            PanelKind::AnimationInfo => {
                 let status = if animation.error.is_some() {
                     t!("workspace.failed")
                 } else if animation.playing {
@@ -320,7 +284,7 @@ impl Render for AnimationPanel {
                     }
                 }
             }
-            AnimationPanelKind::Parameters => unreachable!(),
+            _ => unreachable!("invalid animation panel kind"),
         }
         content
             .test_support()

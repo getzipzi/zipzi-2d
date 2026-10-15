@@ -6,6 +6,7 @@ license.workspace = true
 
 [features]
 debug-tools = ["dep:gpui-fps"]
+test-support = ["gpui-kit/test-support", "dep:tempfile", "dep:uuid", "image/png"]
 
 [dependencies]
 serde.workspace = true
@@ -23,6 +24,13 @@ async-channel.workspace = true
 image = { version = "0.25.10", default-features = false }
 metal.workspace = true
 objc2.workspace = true
+tempfile = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
+
+[[bin]]
+name = "kasane-editor"
+path = "src/main.rs"
+test = false
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"
@@ -41,13 +49,16 @@ image = { version = "0.25.10", default-features = false, features = ["png"] }
 name = "headless_screenshot"
 path = "tests/headless_screenshot.rs"
 harness = false
+required-features = ["test-support"]
 
 [[test]]
 name = "animation_acceptance"
 path = "tests/animation_acceptance.rs"
 harness = false
+required-features = ["test-support"]
 
 [[test]]
 name = "timeline_acceptance"
 path = "tests/timeline_acceptance.rs"
 harness = false
+required-features = ["test-support"]

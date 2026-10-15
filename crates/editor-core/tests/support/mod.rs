@@ -1,4 +1,4 @@
-use editor_core::Document;
+use editor_core::{CanvasFrame, Document, Editor, ObjectKind, ObjectRef};
 use kasane_core::{Canvas, Mesh, Vec2};
 use kasane_sdk::{AuthoringSession, prepare_png_asset};
 use tempfile::TempDir;
@@ -7,6 +7,18 @@ use uuid::Uuid;
 mod rectangle;
 #[allow(unused_imports)]
 pub use rectangle::{alpha_document, rectangle_document};
+
+#[allow(dead_code)]
+pub fn object(kind: ObjectKind, n: u128) -> ObjectRef {
+    ObjectRef::new(kind, Uuid::from_u128(n).to_string())
+}
+
+#[allow(dead_code)]
+pub fn present_canvas(editor: &mut Editor) -> anyhow::Result<CanvasFrame> {
+    let frame = editor.preview()?.canvas.unwrap();
+    assert!(editor.present_frame(frame.clone()));
+    Ok(frame)
+}
 
 pub fn sample_document() -> anyhow::Result<(Document, TempDir)> {
     sample_document_with_options(false, false)

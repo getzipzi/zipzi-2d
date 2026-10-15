@@ -1,9 +1,8 @@
+use super::support;
 use editor_core::{
     Document, Editor, EditorCommand, NewParameter, ObjectKind, ObjectRef, ParameterGroupDraft,
 };
 use kasane_core::ParameterKind;
-#[allow(dead_code)]
-mod support;
 fn group(name: &str, parent: Option<String>) -> ParameterGroupDraft {
     ParameterGroupDraft {
         name: name.into(),

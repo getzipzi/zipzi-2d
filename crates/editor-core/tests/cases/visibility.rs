@@ -1,10 +1,5 @@
+use super::support::{self, object};
 use editor_core::*;
-#[allow(dead_code)]
-mod support;
-
-fn object(kind: ObjectKind, n: u128) -> ObjectRef {
-    ObjectRef::new(kind, uuid::Uuid::from_u128(n).to_string())
-}
 
 fn visible(nodes: &[TreeNode], id: &str) -> Option<bool> {
     nodes.iter().find_map(|node| {

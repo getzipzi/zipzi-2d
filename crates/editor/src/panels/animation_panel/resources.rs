@@ -87,7 +87,7 @@ impl AnimationPanel {
                 a.preview_mode
             });
         let disabled = state.modal || state.editor.is_busy() || dialog;
-        let motion_panel = matches!(self.kind, AnimationPanelKind::Motions);
+        let motion_panel = matches!(self.kind, PanelKind::AnimationMotions);
         let prefix = if motion_panel {
             "animation-motion"
         } else {
@@ -206,7 +206,7 @@ impl AnimationPanel {
         let animation = state.editor.animation().unwrap();
         let preview_mode = animation.preview_mode;
         let disabled = state.modal || state.editor.is_busy() || dialog;
-        let motion_panel = matches!(self.kind, AnimationPanelKind::Motions);
+        let motion_panel = matches!(self.kind, PanelKind::AnimationMotions);
         let prefix = if motion_panel {
             "animation-motion"
         } else {

@@ -63,6 +63,29 @@ impl PanelSpec {
     }
 }
 impl PanelKind {
+    pub const DOCUMENT_PANELS: [Self; 10] = [
+        Self::DrawOrder,
+        Self::Relations,
+        Self::Keyforms,
+        Self::BlendShapes,
+        Self::Glue,
+        Self::Motions,
+        Self::Expressions,
+        Self::Physics,
+        Self::Pose,
+        Self::Resources,
+    ];
+
+    pub fn name(self) -> &'static str {
+        self.spec().name
+    }
+
+    pub fn label(self) -> &'static str {
+        self.spec()
+            .command
+            .map_or("dock.canvas", |command| command.spec().label)
+    }
+
     pub fn spec(self) -> &'static PanelSpec {
         PANELS.iter().find(|spec| spec.kind == self).unwrap()
     }

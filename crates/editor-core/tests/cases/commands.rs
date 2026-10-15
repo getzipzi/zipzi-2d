@@ -1,5 +1,5 @@
+use super::support;
 use editor_core::*;
-mod support;
 #[test]
 fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Result<()> {
     let (doc, dir) = support::sample_document()?;

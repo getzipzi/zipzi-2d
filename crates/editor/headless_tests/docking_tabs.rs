@@ -1,6 +1,6 @@
 //! Exercise editor-owned tab chrome through the dock's real callbacks.
 use super::setup;
-use crate::panels::DocumentPanelKind;
+use editor_core::PanelKind;
 use gpui_kit::component::dock::{DockLayout, DockPlacement, PaneRef, PanelId, panel_handle};
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, px};
@@ -45,7 +45,7 @@ fn panel_selector_switches_and_context_menu_closes_only_the_active_panel(cx: &mu
         (
             dock.area.clone(),
             PanelId::from(dock.mesh_tree.entity_id()),
-            PanelId::from(dock.document_panels[&DocumentPanelKind::DrawOrder].entity_id()),
+            PanelId::from(dock.document_panels[&PanelKind::DrawOrder].entity_id()),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -146,7 +146,7 @@ fn selector_keeps_every_grouped_panel_reachable_without_a_tab_strip(cx: &mut Tes
         let (area, last) = harness.view.update(cx, |view, cx| {
             let dock = view.dock.as_ref().unwrap();
             let mut layout = DockLayout::tabs();
-            for kind in DocumentPanelKind::ALL {
+            for kind in PanelKind::DOCUMENT_PANELS {
                 layout = layout.panel_view(panel_handle(dock.document_panels[&kind].clone()), cx);
             }
             let layout = DockLayout::h_split().child(layout, Some(px(240.))).child(
@@ -157,14 +157,14 @@ fn selector_keeps_every_grouped_panel_reachable_without_a_tab_strip(cx: &mut Tes
                 .update(cx, |area, cx| area.set_center(layout, window, cx));
             (
                 dock.area.clone(),
-                PanelId::from(dock.document_panels[&DocumentPanelKind::Resources].entity_id()),
+                PanelId::from(dock.document_panels[&PanelKind::Resources].entity_id()),
             )
         });
         window.render_frame(cx);
         assert!(window.try_find("editor-dock-tabs-scroll").is_none());
         window.click(selector(&area, last, cx), cx);
         window.render_frame(cx);
-        for kind in DocumentPanelKind::ALL {
+        for kind in PanelKind::DOCUMENT_PANELS {
             let id = PanelId::from(
                 harness.view.read(cx).dock.as_ref().unwrap().document_panels[&kind].entity_id(),
             );
@@ -186,7 +186,7 @@ fn active_panel_drags_from_tab_and_full_header_between_groups(cx: &mut TestAppCo
         let dock = view.dock.as_ref().unwrap();
         (
             dock.area.clone(),
-            PanelId::from(dock.document_panels[&DocumentPanelKind::DrawOrder].entity_id()),
+            PanelId::from(dock.document_panels[&PanelKind::DrawOrder].entity_id()),
             PanelId::from(dock.properties.entity_id()),
             PanelId::from(dock.mesh_tree.entity_id()),
         )
@@ -300,8 +300,8 @@ fn collapsed_bottom_selector_reopens_the_selected_panel(cx: &mut TestAppContext)
     cx.update_window(harness.window, |_, window, cx| {
         let (area, resources, physics) = harness.view.update(cx, |view, cx| {
             let dock = view.dock.as_ref().unwrap();
-            let resources = dock.document_panels[&DocumentPanelKind::Resources].clone();
-            let physics = dock.document_panels[&DocumentPanelKind::Physics].clone();
+            let resources = dock.document_panels[&PanelKind::Resources].clone();
+            let physics = dock.document_panels[&PanelKind::Physics].clone();
             let layout = DockLayout::tabs()
                 .panel_view(panel_handle(resources.clone()), cx)
                 .panel_view(panel_handle(physics.clone()), cx);
@@ -711,7 +711,7 @@ fn first_row_owns_tree_controls_and_preserves_search_when_switching(cx: &mut Tes
         (
             dock.area.clone(),
             PanelId::from(dock.mesh_tree.entity_id()),
-            PanelId::from(dock.document_panels[&DocumentPanelKind::DrawOrder].entity_id()),
+            PanelId::from(dock.document_panels[&PanelKind::DrawOrder].entity_id()),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -896,8 +896,7 @@ fn canvas_in_a_side_dock_remains_a_valid_target_for_new_panels(cx: &mut TestAppC
                     .find_panel_node(PanelId::from(dock.active_canvas().entity_id()))
                     .is_some()
             );
-            let keyforms =
-                PanelId::from(dock.document_panels[&DocumentPanelKind::Keyforms].entity_id());
+            let keyforms = PanelId::from(dock.document_panels[&PanelKind::Keyforms].entity_id());
             assert!(right.find_panel_node(keyforms).is_some());
             crate::docking::validate_layout(&area.dump(cx), WorkspaceKind::Modeling).unwrap();
         });

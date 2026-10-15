@@ -1,0 +1,37 @@
+//! Core behavior suites share one set of SDK fixtures.
+mod support;
+
+#[path = "cases/animation.rs"]
+mod animation;
+#[path = "cases/canvas.rs"]
+mod canvas;
+#[path = "cases/canvas_objects.rs"]
+mod canvas_objects;
+#[path = "cases/commands.rs"]
+mod commands;
+#[path = "cases/document.rs"]
+mod document;
+#[path = "cases/editor.rs"]
+mod editor;
+#[path = "cases/locks.rs"]
+mod locks;
+#[path = "cases/mesh_generation.rs"]
+mod mesh_generation;
+#[path = "cases/mesh_thumbnails.rs"]
+mod mesh_thumbnails;
+#[path = "cases/panels.rs"]
+mod panels;
+#[path = "cases/parameter_creation.rs"]
+mod parameter_creation;
+#[path = "cases/parameter_management.rs"]
+mod parameter_management;
+#[path = "cases/psd_import.rs"]
+mod psd_import;
+#[path = "cases/sorting.rs"]
+mod sorting;
+#[path = "cases/timeline.rs"]
+mod timeline;
+#[path = "cases/visibility.rs"]
+mod visibility;
+#[path = "cases/workspaces.rs"]
+mod workspaces;

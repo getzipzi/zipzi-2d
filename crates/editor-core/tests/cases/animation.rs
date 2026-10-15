@@ -1,6 +1,5 @@
+use super::support;
 use editor_core::*;
-#[allow(dead_code)]
-mod support;
 
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (document, assets) = support::animation_document()?;

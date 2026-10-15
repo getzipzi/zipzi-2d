@@ -217,17 +217,7 @@ impl Document {
         self.finish_edit()?;
         let id = uuid::Uuid::new_v4().to_string();
         self.session.edit("New parameter", None, |edit| {
-            edit.create_parameter(Parameter {
-                id: id.clone(),
-                runtime_id: draft.runtime_id.trim().into(),
-                name: draft.name.trim().into(),
-                minimum: draft.minimum,
-                maximum: draft.maximum,
-                default_value: draft.default_value,
-                decimal_places: draft.decimal_places,
-                kind: draft.kind,
-                repeat: draft.repeat,
-            })?;
+            edit.create_parameter(draft.parameter(&id))?;
             edit.set_parameter_group(&id, draft.group_id.as_deref())
         })?;
         self.session.drain_events();
@@ -245,7 +235,7 @@ pub type ParameterDraft = NewParameter;
 pub type ParameterValidationError = ParameterCreateError;
 
 impl NewParameter {
-    fn parameter(&self, id: &str) -> Parameter {
+    pub(crate) fn parameter(&self, id: &str) -> Parameter {
         Parameter {
             id: id.into(),
             name: self.name.trim().into(),

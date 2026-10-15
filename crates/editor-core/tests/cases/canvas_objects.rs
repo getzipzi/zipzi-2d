@@ -1,16 +1,11 @@
+use super::support::{self, present_canvas as shown};
 use editor_core::*;
 use kasane_core::{
     Vec2,
     evaluation::{OffscreenFrame, RenderCommand},
 };
 use std::sync::Arc;
-#[allow(dead_code)]
-mod support;
-fn shown(editor: &mut Editor) -> anyhow::Result<CanvasFrame> {
-    let frame = editor.preview()?.canvas.unwrap();
-    assert!(editor.present_frame(frame.clone()));
-    Ok(frame)
-}
+
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document_with_two_layers()?;
     let mut editor = Editor::from_document(doc);
@@ -486,7 +481,7 @@ fn rich_document_with_canvas(
     use kasane_sdk::{AuthoringSession, prepare_png_asset};
     let dir = tempfile::tempdir()?;
     let asset_path = dir.path().join("a.png");
-    std::fs::write(&asset_path, include_bytes!("fixtures/accent.png"))?;
+    std::fs::write(&asset_path, include_bytes!("../fixtures/accent.png"))?;
     let id = |n| uuid::Uuid::from_u128(n).to_string();
     let mut s = AuthoringSession::new(&id(1), canvas)?;
     s.edit("fixture", None, |e| {

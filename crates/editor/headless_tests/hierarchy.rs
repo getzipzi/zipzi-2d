@@ -342,7 +342,7 @@ fn default_layout_has_independent_document_panels(cx: &mut TestAppContext) {
         );
         assert_eq!(columns[2].children[1].children[0].panel_name, "Parameters");
         let keyforms = gpui_kit::component::dock::PanelId::from(
-            dock.document_panels[&crate::panels::DocumentPanelKind::Keyforms].entity_id(),
+            dock.document_panels[&editor_core::PanelKind::Keyforms].entity_id(),
         );
         assert!(dock.area.read(cx).panel(keyforms).is_none());
         assert_eq!(dock.document_panels.len(), 10);

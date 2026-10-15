@@ -33,9 +33,7 @@ use gpui_kit::{
     point, px, size,
 };
 
-#[path = "../../editor-core/tests/support/mod.rs"]
-#[allow(dead_code)]
-pub(crate) mod document_fixture;
+pub(crate) use crate::test_fixture as document_fixture;
 
 struct Harness {
     window: AnyWindowHandle,

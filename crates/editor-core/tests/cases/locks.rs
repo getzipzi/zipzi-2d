@@ -1,10 +1,7 @@
+use super::support::{self, object};
 use editor_core::*;
 use std::sync::Arc;
-#[allow(dead_code)]
-mod support;
-fn object(kind: ObjectKind, n: u128) -> ObjectRef {
-    ObjectRef::new(kind, uuid::Uuid::from_u128(n).to_string())
-}
+
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document_with_two_layers()?;
     let mut editor = Editor::from_document(doc);
@@ -13,8 +10,7 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
         height: 512.,
         scale_factor: 1.,
     });
-    let frame = editor.preview()?.canvas.unwrap();
-    assert!(editor.present_frame(frame));
+    support::present_canvas(&mut editor)?;
     Ok((editor, dir))
 }
 #[test]

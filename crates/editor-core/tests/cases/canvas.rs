@@ -1,5 +1,5 @@
+use super::support::{self, present_canvas as present};
 use editor_core::*;
-mod support;
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document()?;
     let mut editor = Editor::from_document(doc);
@@ -11,11 +11,7 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     present(&mut editor)?;
     Ok((editor, dir))
 }
-fn present(editor: &mut Editor) -> anyhow::Result<()> {
-    let frame = editor.preview()?.canvas.unwrap();
-    assert!(editor.present_frame(frame));
-    Ok(())
-}
+
 fn down(editor: &mut Editor, p: CanvasPoint, shift: bool) -> anyhow::Result<()> {
     editor.canvas_input(CanvasInput::Down { point: p, shift })?;
     Ok(())

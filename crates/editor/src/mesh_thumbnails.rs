@@ -184,8 +184,9 @@ impl MeshThumbnails {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl MeshThumbnails {
+    #[cfg(test)]
     pub(crate) fn cached_image(&self, id: &str) -> Option<Arc<RenderImage>> {
         self.entries.get(id)?.image.clone()
     }

@@ -18,6 +18,7 @@ class DevLifecycle(unittest.TestCase):
         (self.root / "scripts").mkdir(parents=True)
         (self.root.parent / "kasane-2d/modules").mkdir(parents=True)
         shutil.copy(SCRIPT, self.root / "scripts/dev.sh")
+        (self.root / "LICENSE").write_text("Dev lifecycle fixture license\n")
         (self.root / "target/debug").mkdir(parents=True)
         # Copying an Apple platform-signed /bin/sleep is killed by macOS code
         # signing. Build a tiny, owned stand-in with normal process semantics.
@@ -89,8 +90,11 @@ while True:
         output = p.communicate(timeout=15)[0]
         return p.returncode, output
 
-    def run_reload(self, **env):
-        return self.result(self.start(**env))
+    def run_reload(self, *, expected=0, **env):
+        code, output = self.result(self.start(**env))
+        if expected is not None:
+            self.assertEqual(code, expected, output)
+        return code, output
 
     def wait_for(self, condition):
         deadline = time.monotonic()+5
@@ -115,10 +119,10 @@ while True:
         self.temp.cleanup()
 
     def test_sequential_reload_stops_previous_and_publishes_private_readiness(self):
-        self.assertEqual(self.run_reload()[0],0)
+        self.run_reload()
         first=int(self.pid_file.read_text())
         self.assertTrue(self.alive(first))
-        self.assertEqual(self.run_reload()[0],0)
+        self.run_reload()
         second=int(self.pid_file.read_text())
         self.assertNotEqual(first,second)
         self.assertFalse(self.alive(first))
@@ -128,9 +132,9 @@ while True:
         self.assertTrue(all('.launch.' in p for p in ready))
 
     def test_failed_build_keeps_existing_app(self):
-        self.assertEqual(self.run_reload()[0],0)
+        self.run_reload()
         pid=int(self.pid_file.read_text())
-        self.assertNotEqual(self.run_reload(BUILD_FAIL='1')[0],0)
+        self.run_reload(expected=1, BUILD_FAIL='1')
         self.assertTrue(self.alive(pid))
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
 
@@ -138,12 +142,13 @@ while True:
         (self.root/'hold-build').touch()
         first=self.start()
         self.wait_for(lambda:(self.root/'build-started').exists())
-        code,output=self.run_reload()
+        code,output=self.run_reload(expected=None)
         self.assertNotEqual(code,0)
         self.assertIn('already running',output)
         self.assertFalse((self.root/'launches').exists())
         (self.root/'hold-build').unlink()
-        self.assertEqual(self.result(first)[0],0)
+        code,output=self.result(first)
+        self.assertEqual(code,0,output)
 
     def test_second_watcher_is_rejected(self):
         self.start('watch')
@@ -153,7 +158,7 @@ while True:
         self.assertIn('already running',output)
 
     def test_watcher_survives_restart_gap_but_stops_when_app_is_closed(self):
-        self.assertEqual(self.run_reload()[0],0)
+        self.run_reload()
         first=int(self.pid_file.read_text())
         watcher=self.start('watch',READY_DELAY='1.2')
         self.wait_for(lambda:(self.root/'target/dev-kasane-editor.watch.lock/owner').exists())
@@ -168,40 +173,40 @@ while True:
         self.assertFalse((self.root/'target/dev-kasane-editor.watch.lock').exists())
 
     def test_lost_pid_does_not_spawn_or_kill_untracked_instance(self):
-        self.assertEqual(self.run_reload()[0],0)
+        self.run_reload()
         pid=int(self.pid_file.read_text())
         self.pid_file.unlink()
-        code,output=self.run_reload()
+        code,output=self.run_reload(expected=None)
         self.assertNotEqual(code,0)
         self.assertIn('Untracked',output)
         self.assertTrue(self.alive(pid))
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
 
     def test_old_instance_refusing_term_blocks_new_launch(self):
-        self.assertEqual(self.run_reload(IGNORE_TERM='1')[0],0)
+        self.run_reload(IGNORE_TERM='1')
         pid=int(self.pid_file.read_text())
-        code,output=self.run_reload()
+        code,output=self.run_reload(expected=None)
         self.assertNotEqual(code,0)
         self.assertIn('did not exit',output)
         self.assertTrue(self.alive(pid))
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
 
     def test_readiness_timeout_does_not_accumulate_instances(self):
-        self.assertNotEqual(self.run_reload(NO_READY='1')[0],0)
-        code,output=self.run_reload()
+        self.run_reload(expected=1, NO_READY='1')
+        code,output=self.run_reload(expected=None)
         self.assertNotEqual(code,0)
         self.assertIn('Untracked',output)
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
 
     def test_late_pid_after_timeout_is_recovered_on_next_reload(self):
-        code,output=self.run_reload(READY_DELAY='6.5')
+        code,output=self.run_reload(expected=None, READY_DELAY='6.5')
         self.assertNotEqual(code,0,output)
         pid=int((self.root/'test-pids').read_text())
         pending=Path((self.root/'launches').read_text().strip())
         self.assertTrue(pending.exists())
         self.wait_for(lambda:pending.exists() and pending.stat().st_size > 0)
         self.assertEqual(int(pending.read_text()),pid)
-        code,output=self.run_reload()
+        code,output=self.run_reload(expected=None)
         self.assertEqual(code,0,output)
         self.assertIn('Recovered',output)
         self.assertFalse(self.alive(pid))
@@ -217,13 +222,13 @@ while True:
         self.assertNotEqual(self.result(reload)[0],0)
         self.assertTrue(pending.exists())
         self.wait_for(lambda:pending.exists() and pending.stat().st_size > 0)
-        code,output=self.run_reload()
+        code,output=self.run_reload(expected=None)
         self.assertEqual(code,0,output)
         self.assertIn('Recovered',output)
         self.assertFalse(self.alive(pid))
 
     def test_multiple_tracked_instances_are_preserved(self):
-        self.assertEqual(self.run_reload()[0],0)
+        self.run_reload()
         first=int(self.pid_file.read_text())
         pending=self.pid_file.with_name(self.pid_file.name+'.launch.extra')
         exe=(self.root/'target/Kasane Editor Dev.app/Contents/MacOS/kasane-editor').resolve()
@@ -231,7 +236,7 @@ while True:
                                stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
         self.children.append(extra)
         self.wait_for(lambda:pending.exists() and pending.stat().st_size > 0)
-        code,output=self.run_reload()
+        code,output=self.run_reload(expected=None)
         self.assertNotEqual(code,0,output)
         self.assertIn('Multiple tracked',output)
         self.assertTrue(self.alive(first))

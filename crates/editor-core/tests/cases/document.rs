@@ -1,5 +1,5 @@
+use super::support;
 use editor_core::{Document, TreeNodeKind};
-mod support;
 
 #[test]
 fn cached_dirty_state_tracks_preview_revert_save_and_history() -> anyhow::Result<()> {

@@ -1,5 +1,5 @@
+use super::support;
 use editor_core::{CloseDisposition, CommandId, Editor, EditorCommand, LoadRequest};
-mod support;
 use support::sample_document;
 
 #[test]

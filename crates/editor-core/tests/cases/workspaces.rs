@@ -1,5 +1,5 @@
+use super::support;
 use editor_core::*;
-mod support;
 
 fn assert_view(actual: ViewState, expected: ViewState) {
     assert_eq!(actual.zoom, expected.zoom);

@@ -1,5 +1,4 @@
-#[allow(dead_code)]
-mod support;
+use super::support;
 
 #[test]
 fn texture_regions_ignore_pose_appearance_and_names() -> anyhow::Result<()> {

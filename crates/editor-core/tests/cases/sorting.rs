@@ -1,9 +1,8 @@
+use super::support;
 use editor_core::{
     Document, Editor, EditorCommand, ObjectKind, ObjectRef, ParameterDestination, ReorderPosition,
 };
 use uuid::Uuid;
-#[allow(dead_code)]
-mod support;
 
 fn id(value: u128) -> String {
     Uuid::from_u128(value).to_string()
