@@ -4,6 +4,63 @@ use kasane_core::document::MotionSegment;
 use std::{collections::HashSet, sync::Arc};
 
 #[test]
+fn result_fade_masks_zero_time_candidate_but_editing_samples_it_directly() -> anyhow::Result<()> {
+    for mode in [AnimationPreviewMode::Result, AnimationPreviewMode::Editing] {
+        let (mut editor, _assets) = fixture(false, false)?;
+        let document = editor.active_id().unwrap();
+        editor.set_animation_preview_mode(document, mode)?;
+        editor.execute_timeline(
+            document,
+            TimelineCommand::SetKey {
+                key: key(10),
+                time: 0.,
+                value: -0.8,
+            },
+        )?;
+        editor.seek_timeline(document, 0.)?;
+        let mut evaluator = AnimationEvaluator::default();
+        let before = evaluate(&mut editor, &mut evaluator)?;
+        let command = TimelineCommand::WriteValue {
+            channel: TimelineChannelId::Parameter(id(2)),
+            track_id: Some(id(8)),
+            selected_key: Some(key(10)),
+            value: 0.8,
+        };
+        let token = editor.begin_timeline_edit(document, "Initial key")?;
+        editor.update_timeline_edit(document, token, command.clone())?;
+        let candidate = evaluate(&mut editor, &mut evaluator)?;
+        assert_eq!(
+            editor.timeline_edit().unwrap().candidate.clip().tracks[0]
+                .initial
+                .value,
+            0.8
+        );
+        if mode == AnimationPreviewMode::Result {
+            assert_eq!(before.snapshot.parameters[&id(2)], 0.);
+            assert_eq!(candidate.snapshot.parameters, before.snapshot.parameters);
+        } else {
+            assert!((before.snapshot.parameters[&id(2)] + 0.8).abs() < 0.00001);
+            assert!((candidate.snapshot.parameters[&id(2)] - 0.8).abs() < 0.00001);
+        }
+        // At a positive blend weight, the same candidate reaches Full Effect.
+        // Seeking cancels a live gesture, so start a fresh edit at that time.
+        editor.seek_timeline(document, 0.3)?;
+        let original = evaluate(&mut editor, &mut evaluator)?;
+        let token = editor.begin_timeline_edit(document, "Initial key after fade begins")?;
+        editor.update_timeline_edit(document, token, command)?;
+        let blended = evaluate(&mut editor, &mut evaluator)?;
+        editor.cancel_timeline_edit();
+        let restored = evaluate(&mut editor, &mut evaluator)?;
+        assert_ne!(
+            blended.snapshot.parameters[&id(2)],
+            restored.snapshot.parameters[&id(2)]
+        );
+        assert_eq!(restored.snapshot.parameters, original.snapshot.parameters);
+    }
+    Ok(())
+}
+
+#[test]
 fn paste_collision_on_second_track_rolls_back_the_entire_batch() -> anyhow::Result<()> {
     let (mut e, _temp) = fixture(false, false)?;
     let d = e.active_id().unwrap();

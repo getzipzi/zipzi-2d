@@ -1,7 +1,7 @@
 use super::super::harness::{Harness, command, update};
 use super::common::{clip, drain, elapsed, pointer, pump, select, stats};
 use anyhow::{Context as _, ensure};
-use editor_core::{CommandId, TimelineDisplayMode, TimelineRowId};
+use editor_core::{CommandId, TimelineChannelId, TimelineDisplayMode, TimelineRowId};
 use gpui_kit::{InputEvent as _, ScrollDelta, ScrollWheelEvent, point, px, test::TestWindowExt};
 use serde_json::{Value, json};
 use std::{
@@ -62,7 +62,36 @@ pub(crate) fn performance(
         .context("no editable channel")?;
     // Later duplicate tracks overwrite earlier tracks in SDK order.
     let track = &projection.tracks[chosen.tracks.last().unwrap()];
-    let key = track.keys[0].reference.clone();
+    let resource = h.view.read_with(&h.cx, |v, _| {
+        let motion = v.editor.animation().unwrap().motion.as_ref().unwrap();
+        v.editor
+            .document()
+            .unwrap()
+            .animation_catalog()
+            .motions
+            .iter()
+            .find(|resource| resource.selection == *motion)
+            .unwrap()
+            .clone()
+    });
+    let definition = original.tracks.iter().find(|t| t.id == track.id).unwrap();
+    let fade_in = definition.fade_in.unwrap_or(resource.fade_in).max(0.);
+    let fade_out = definition.fade_out.unwrap_or(resource.fade_out).max(0.);
+    // Full Effect has zero motion weight at t=0 when fading in. Editing
+    // that first key is valid, but cannot prove candidate pixel delivery.
+    let sample_key = track
+        .keys
+        .iter()
+        .find(|key| {
+            key.time > f64::from(fade_in)
+                && key.time < f64::from(original.duration - fade_out)
+                && chosen.range.is_none_or(|(_, max)| key.value < max)
+        })
+        .context("no key outside motion fades with room for an upward drag")?;
+    let key = sample_key.reference.clone();
+    let TimelineChannelId::Parameter(parameter) = &chosen.id else {
+        anyhow::bail!("pixel drag requires a resolved parameter channel");
+    };
     update(h, |view, _, cx| -> anyhow::Result<()> {
         let doc = view.editor.active_id().unwrap();
         view.editor.update_timeline_view(doc, |v| {
@@ -74,14 +103,17 @@ pub(crate) fn performance(
                 TimelineRowId::Channel(chosen.id.clone()),
             ]
             .into();
-            v.time_range = (0., 0.1);
+            v.time_range = (sample_key.time - 0.05, sample_key.time + 0.05);
             v.snap = false;
         })?;
-        view.editor.seek_timeline(doc, track.keys[0].time as f32)?;
+        view.editor.seek_timeline(doc, sample_key.time as f32)?;
         view.redraw(cx);
         Ok(())
     })??;
     let before = h.capture()?;
+    let before_snapshot = h.view.read_with(&h.cx, |v, _| {
+        v.editor.animation().unwrap().presented.clone().unwrap()
+    });
     let before_canvas = h.canvas_image(&before)?;
     before.save(output.join(format!("{variant}-before.png")))?;
     let origin = h
@@ -94,7 +126,7 @@ pub(crate) fn performance(
                 .read(cx)
                 .key_position(&key)
         })
-        .context("dense key not rendered")?
+        .context("drag key not rendered")?
         + point(px(0.5), px(0.));
     let history = h
         .view
@@ -116,10 +148,26 @@ pub(crate) fn performance(
         ensure!(clip(h) == original, "candidate mutated the asset");
     }
     let changed = h.capture()?;
+    ensure!(
+        h.view.read_with(&h.cx, |v, _| {
+            v.editor
+                .animation()
+                .unwrap()
+                .presented
+                .as_ref()
+                .unwrap()
+                .parameters
+                .get(parameter)
+                != before_snapshot.parameters.get(parameter)
+        }),
+        "{variant} key drag did not change the evaluated parameter at t={}",
+        sample_key.time
+    );
     changed.save(output.join(format!("{variant}-candidate.png")))?;
     ensure!(
         h.canvas_image(&changed)? != before_canvas,
-        "native dense drag did not change presented pixels"
+        "native {variant} drag did not change presented pixels at t={}",
+        sample_key.time
     );
     h.cx.update_window(h.window, |_, w, cx| w.press("escape", cx))?;
     pointer(h, origin, 2)?;
@@ -262,6 +310,6 @@ pub(crate) fn performance(
         "navigation/playback mutated dense clip"
     );
     Ok(
-        json!({"tracks":projection.tracks.len(),"keys":projection.tracks.values().map(|t|t.keys.len()).sum::<usize>(),"scroll_dispatch_draw":stats(&scroll),"drag_dispatch":stats(&drag_dispatch),"drag_dispatch_to_current_metal_draw":stats(&drag),"seek_to_current_metal_draw":stats(&seeks),"burst":{"requests":samples,"dispatch_and_drain_ms":burst_ms,"final_time":final_time},"playback":{"requests":samples,"observed_frames":observed,"wall_seconds":start.elapsed().as_secs_f64(),"max_lag_seconds":max_lag,"static_scene_rebuilds":after_builds-builds,"static_scene_repaints":after_paints-paints},"candidate_cancel_pixels_restored":true,"inflight_cancel_to_current_metal_draw_ms":cancel_ms,"one_drag_one_undo":true}),
+        json!({"drag_probe":{"channel":chosen.runtime_id,"time":sample_key.time,"fade_in":fade_in,"fade_out":fade_out,"evaluated_parameter_changed":true},"tracks":projection.tracks.len(),"keys":projection.tracks.values().map(|t|t.keys.len()).sum::<usize>(),"scroll_dispatch_draw":stats(&scroll),"drag_dispatch":stats(&drag_dispatch),"drag_dispatch_to_current_metal_draw":stats(&drag),"seek_to_current_metal_draw":stats(&seeks),"burst":{"requests":samples,"dispatch_and_drain_ms":burst_ms,"final_time":final_time},"playback":{"requests":samples,"observed_frames":observed,"wall_seconds":start.elapsed().as_secs_f64(),"max_lag_seconds":max_lag,"static_scene_rebuilds":after_builds-builds,"static_scene_repaints":after_paints-paints},"candidate_cancel_pixels_restored":true,"inflight_cancel_to_current_metal_draw_ms":cancel_ms,"one_drag_one_undo":true}),
     )
 }

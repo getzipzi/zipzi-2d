@@ -30,6 +30,8 @@
 
 第四批验证：core 275 passed（1 ignored），UI 247 passed（启用 test-support 后 249 passed，1 ignored），生产配置 `cargo check --locked -p kasane-editor`、格式与 diff 检查通过。新增 core 回归覆盖共享求值、实例请求与命中几何、慢实例接受中间候选帧、悬停／框选 overlay 的 binding 归属，以及无 UI token 的领域输入在隐藏／销毁时取消；headless 回归覆盖实际焦点目标和实例错误隔离。双 Modeling 与双 Animation 使用生产 worker 的原生 Metal 场景通过，移动左侧时右侧区域均为 0 像素变化，右侧 GPU 请求号不变；连续双实例导航最终均呈现最新投影。Timeline overview、curves、候选与取消恢复专项截图通过。最终完整脚本通过 Python、core、UI、三份真实模型 Animation 验收、默认及双视图截图、前置 Metal 与 overlay 检查，仍停在已独立确认的 Mao Timeline `native dense drag did not change presented pixels` 断言。产品布局未开放复制 viewport；悬停快捷键路由仍不属于本批已验证能力。
 
+Mao Timeline 基线问题已定位为验收取样错误：Full Effect 模式在 `t=0` 的淡入权重为零，候选关键帧已从 0 变为 9.024，但最终参数与像素理应保持不变。原生拖动验收改为选择有效淡入结束后、淡出开始前且仍可向上修改的关键帧，保留重复轨道顺序及像素变化／取消精确恢复断言，并增加最终参数变化检查与报告中的取样时间、淡入／淡出信息。core 回归覆盖 Full Effect 零时刻屏蔽候选、Editing 直接采样候选，以及正权重时的候选变化和取消恢复。Mao Natural／Dense 专项原生验收与 42 项 Timeline core 测试通过。修复后 `./scripts/test.sh` 完整通过：Python 28 项、core 276 passed（1 ignored）、UI 249 passed（1 ignored）、三份真实模型 Animation 验收、默认及双视图截图、Metal／overlay 检查、Mao Timeline 全流程及 doc-tests；上述历史基线失败已解除。
+
 后续尚待完成：悬停路由、Timeline panel 实例身份、窗口捕获与参数对话框生命周期的进一步收敛，以及属性面板的显式检视来源。当前局部快捷键仍使用 GPUI 焦点上下文；多实例呈现通过测试专用场景接入生产的 surface、内容执行器和 Metal 执行器，产品仍保留各 workspace 的唯一主视图，不增加复制入口。坐标命名与网格对话框组件归并尚未完成；平台策略测试不代表 Windows / Linux 宿主及原生键盘验收已完成。
 
 将当前随 workspace 改变行为的 `CanvasView` 拆成独立 viewport panel，由 workspace 组合面板。各 viewport 明确拥有自己的内容来源、工具和输入行为，共享绘制与导航基础组件。同时重构 Command、快捷键、编辑会话与生命周期，为后续扩展提供明确边界。
