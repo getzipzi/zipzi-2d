@@ -19,6 +19,74 @@ fn pair(editor: &mut Editor, kind: ViewportKind) -> [ViewportBinding; 2] {
 }
 
 #[test]
+fn cancel_command_only_releases_its_target_viewport() -> anyhow::Result<()> {
+    let (document, _assets) = support::sample_document()?;
+    let mut editor = Editor::from_document(document);
+    let [a, b] = pair(&mut editor, ViewportKind::Modeling);
+    let frame = editor.preview_for(a)?.canvas.unwrap();
+    assert!(editor.present_frame(frame));
+    let original = editor.document().unwrap().selected_vertex_positions();
+    let point = editor.overlay_for_viewport(a).vertices[0].position;
+    let token = editor.begin_viewport_interaction(a, ViewportInteractionKind::Modeling)?;
+    editor.canvas_interaction_input(
+        token,
+        CanvasInput::Down {
+            point,
+            shift: false,
+        },
+    )?;
+    editor.canvas_interaction_input(
+        token,
+        CanvasInput::Move {
+            point: CanvasPoint {
+                x: point.x + 20.,
+                y: point.y,
+            },
+            left_down: true,
+        },
+    )?;
+    let candidate = editor.document().unwrap().selected_vertex_positions();
+    assert_ne!(candidate, original);
+    editor.dispatch(editor.command_for_viewport(
+        CommandId::CancelGesture,
+        b,
+        CommandSource::Shortcut,
+    ))?;
+    assert!(editor.viewport_interaction_valid(token));
+    assert_eq!(
+        editor.document().unwrap().selected_vertex_positions(),
+        candidate
+    );
+    editor.dispatch(editor.command_for_viewport(
+        CommandId::CancelGesture,
+        a,
+        CommandSource::Shortcut,
+    ))?;
+    assert!(!editor.viewport_interaction_active());
+    assert_eq!(
+        editor.document().unwrap().selected_vertex_positions(),
+        original
+    );
+
+    // Core dispatch must also release navigation without depending on UI cleanup.
+    let pan = editor.begin_viewport_interaction(a, ViewportInteractionKind::Navigation)?;
+    editor.dispatch(editor.command_for_viewport(
+        CommandId::CancelGesture,
+        b,
+        CommandSource::Direct,
+    ))?;
+    assert!(editor.viewport_interaction_valid(pan));
+    editor.dispatch(editor.command_for_viewport(
+        CommandId::CancelGesture,
+        a,
+        CommandSource::Direct,
+    ))?;
+    assert!(!editor.viewport_interaction_active());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
 fn modeling_instances_share_content_but_keep_requests_images_and_hit_geometry_independent()
 -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document()?;

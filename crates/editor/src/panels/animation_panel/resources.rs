@@ -171,7 +171,11 @@ impl AnimationPanel {
                 .child(t!("editor.welcome"))
                 .into_any_element();
         };
-        let catalog = state.editor.document().unwrap().animation_catalog();
+        // The tab remains open while its session is owned by the save worker.
+        let Some(document) = state.editor.document() else {
+            return div().into_any_element();
+        };
+        let catalog = document.animation_catalog();
         let animation = state.editor.animation().unwrap();
         let preview_mode = animation.preview_mode;
         let disabled = state.modal || state.editor.is_busy() || dialog;

@@ -96,7 +96,7 @@ impl EditorView {
                     && (self.editor.is_busy()
                         || self
                             .editor
-                            .viewport_binding_valid(frame.state.viewport.binding))
+                            .can_display_animation_viewport(frame.state.viewport))
             })
     }
     pub(crate) fn modeling_frame(&self) -> Option<&preview::Presented> {
@@ -333,7 +333,12 @@ impl EditorView {
                 self.render_animation(content, frame_trace::next_id());
             }
         } else if let Some(worker) = &mut self.animation_worker {
-            worker.suspend();
+            if worker.suspend() {
+                // The cancelled request must not suppress its replacement when
+                // a hidden viewport returns before any content was delivered.
+                self.editor.invalidate_animation_requests();
+                self.animation_content = None;
+            }
         }
     }
     pub(crate) fn send_viewport_request(&mut self, request: preview::Request) {

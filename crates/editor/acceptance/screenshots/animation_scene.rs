@@ -81,6 +81,41 @@ pub(crate) fn animation_replacement_keeps_canvas(harness: &mut Harness) -> anyho
             );
         });
     }
+    // Saving moves the session out of core and clears live viewport bindings.
+    // The frozen image must still be painted throughout that ownership gap.
+    let path = harness._assets.path().join("animation-save");
+    let save = harness.cx.update_window(harness.window, |_, window, cx| {
+        let save = harness.view.update(cx, |view, cx| {
+            let id = view.editor.active_id().unwrap();
+            let save = view.editor.prepare_save(id, &path, false).unwrap();
+            cx.notify();
+            save
+        });
+        window.render_frame(cx);
+        save
+    })?;
+    let saving = harness.cx.capture_screenshot(harness.window)?;
+    let center = |image: image::RgbaImage| {
+        image::imageops::crop_imm(
+            &image,
+            image.width() / 4,
+            image.height() / 4,
+            image.width() / 2,
+            image.height() / 2,
+        )
+        .to_image()
+    };
+    anyhow::ensure!(
+        center(harness.canvas_image(&before)?) == center(harness.canvas_image(&saving)?),
+        "Saving cleared the frozen Animation viewport image"
+    );
+    let mut completion = save.run();
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.editor.finish_save(&mut completion).unwrap();
+            view.refresh_document(window, cx);
+        });
+    })?;
     Ok(())
 }
 

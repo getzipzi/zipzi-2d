@@ -10,6 +10,33 @@ fn run(editor: &mut Editor, id: CommandId) -> anyhow::Result<()> {
 }
 
 #[test]
+fn timeline_commands_follow_editing_context_independently_of_layout() -> anyhow::Result<()> {
+    let (mut editor, _temp) = fixture(false, false)?;
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    editor.set_editing_context(EditingContext::Animation)?;
+    let document = editor.active_id().unwrap();
+    editor.update_timeline_view(document, |view| {
+        view.keys.insert(key(11));
+    })?;
+    run(&mut editor, CommandId::TimelineCopy)?;
+    run(&mut editor, CommandId::TimelineNextFrame)?;
+    run(&mut editor, CommandId::TimelineDelete)?;
+    assert!(
+        editor
+            .timeline_projection()
+            .unwrap()
+            .key(&key(11))
+            .is_none()
+    );
+    assert_eq!(editor.workspace(), WorkspaceKind::Modeling);
+    let saved = editor.command(CommandId::TimelineNextFrame);
+    editor.set_editing_context(EditingContext::Modeling)?;
+    assert!(!editor.command_available(saved));
+    assert!(!editor.command_available(editor.command(CommandId::TimelineNextFrame)));
+    Ok(())
+}
+
+#[test]
 fn user_navigation_commands_seek_and_reveal_without_creating_history() -> anyhow::Result<()> {
     let (mut editor, _temp) = fixture(false, false)?;
     run(&mut editor, CommandId::TimelineStart)?;

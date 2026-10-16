@@ -68,6 +68,13 @@ impl Editor {
             session.animation.playback.barrier();
         }
     }
+    /// Cancel outstanding evaluation results without ending playback or a
+    /// Timeline scrub when the last animation viewport becomes hidden.
+    pub fn invalidate_animation_requests(&mut self) {
+        if let Some(session) = self.active_session_mut() {
+            session.animation.playback.frames.barrier();
+        }
+    }
     pub fn animation_playable(&self) -> bool {
         self.animation().is_some_and(|a| {
             if a.preview_mode == AnimationPreviewMode::Editing && a.motion.is_none() {

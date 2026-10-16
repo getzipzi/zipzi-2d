@@ -757,7 +757,16 @@ impl Editor {
                 command.document().unwrap(),
                 EditorCommand::ToggleAncestorDeformers,
             )?,
-            CancelGesture => self.cancel_gesture(),
+            CancelGesture => {
+                let binding = viewport.unwrap();
+                if let Some(token) = self
+                    .viewport_interaction
+                    .filter(|token| token.binding == binding)
+                {
+                    self.cancel_viewport_interaction(token);
+                }
+                self.cancel_gesture_for(binding);
+            }
             _ => return Ok(CommandEffect::Host(command)),
         }
         Ok(CommandEffect::Done)

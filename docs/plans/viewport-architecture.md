@@ -32,6 +32,8 @@
 
 Mao Timeline 基线问题已定位为验收取样错误：Full Effect 模式在 `t=0` 的淡入权重为零，候选关键帧已从 0 变为 9.024，但最终参数与像素理应保持不变。原生拖动验收改为选择有效淡入结束后、淡出开始前且仍可向上修改的关键帧，保留重复轨道顺序及像素变化／取消精确恢复断言，并增加最终参数变化检查与报告中的取样时间、淡入／淡出信息。core 回归覆盖 Full Effect 零时刻屏蔽候选、Editing 直接采样候选，以及正权重时的候选变化和取消恢复。Mao Natural／Dense 专项原生验收与 42 项 Timeline core 测试通过。修复后 `./scripts/test.sh` 完整通过：Python 28 项、core 276 passed（1 ignored）、UI 249 passed（1 ignored）、三份真实模型 Animation 验收、默认及双视图截图、Metal／overlay 检查、Mao Timeline 全流程及 doc-tests；上述历史基线失败已解除。
 
+本轮代码审查（`a93597e` 至 `17a6e7a`，含起点）：修复最后一个 Animation viewport 隐藏时取消求值却保留请求去重记录、导致恢复可见后缺帧的问题；取消求值仅更新请求屏障，不结束 Timeline 正在进行的 scrub。`CancelGesture` 按目标 binding 取消建模或导航捕获，不再撤销另一实例的手势。Timeline 命令与 panel 生命周期改为检查 EditingContext，解除对 workspace 布局的残余依赖。Animation 冻结图片的显示校验归入统一访问入口，保存期间不再因实时 binding 失效而清空图片；原生保存回归同时发现并修复资源面板在 session 移入保存任务后 unwrap 空文档的已有崩溃。新增 core、headless 和原生像素回归；`./scripts/test.sh` 完整通过（Python 28 项、core 278 passed／1 ignored、UI 250 passed／1 ignored、三份本地模型 Animation、默认及双视图截图、Metal／overlay、Mao Timeline 和 doc-tests）。
+
 后续尚待完成：悬停路由、Timeline panel 实例身份、窗口捕获与参数对话框生命周期的进一步收敛，以及属性面板的显式检视来源。当前局部快捷键仍使用 GPUI 焦点上下文；多实例呈现通过测试专用场景接入生产的 surface、内容执行器和 Metal 执行器，产品仍保留各 workspace 的唯一主视图，不增加复制入口。坐标命名与网格对话框组件归并尚未完成；平台策略测试不代表 Windows / Linux 宿主及原生键盘验收已完成。
 
 将当前随 workspace 改变行为的 `CanvasView` 拆成独立 viewport panel，由 workspace 组合面板。各 viewport 明确拥有自己的内容来源、工具和输入行为，共享绘制与导航基础组件。同时重构 Command、快捷键、编辑会话与生命周期，为后续扩展提供明确边界。

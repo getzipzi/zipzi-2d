@@ -14,7 +14,7 @@ use editor_core::{
     AnimationPreviewMode, DocumentId, TimelineCandidateIdentity, TimelineCategory, TimelineChannel,
     TimelineCommand, TimelineDiagnostic, TimelineDisplayMode, TimelineFilter, TimelineKeyRef,
     TimelineProjection, TimelineRow, TimelineRowId, TimelineTrack, TimelineViewState,
-    WorkspaceKind, timeline_time,
+    timeline_time,
 };
 use gpui_kit::assets::IconName;
 use gpui_kit::base::ElementExt;

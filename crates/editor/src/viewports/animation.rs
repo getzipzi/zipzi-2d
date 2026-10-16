@@ -36,11 +36,9 @@ impl AnimationViewport {
         })
     }
     fn content(owner: &EditorView, viewport: editor_core::ViewportId) -> SurfaceContent {
-        let frame = owner.animation_frame_for(viewport).filter(|f| {
-            owner
-                .editor
-                .can_display_animation_viewport(f.state.viewport)
-        });
+        // The shared image accessor also admits this document's frozen image
+        // while saving, when core deliberately has no live viewport binding.
+        let frame = owner.animation_frame_for(viewport);
         SurfaceContent {
             image: frame.map(|f| (f.image.clone(), f.state.transform.metrics)),
             overlay: Default::default(),

@@ -18,7 +18,7 @@ impl Timeline {
         let owner = self.owner.upgrade()?;
         let view = owner.read(cx);
         let animation = view.editor.animation()?;
-        (view.editor.workspace() == WorkspaceKind::Animation
+        (view.editor.editing_context() == Some(editor_core::EditingContext::Animation)
             && !view.modal
             && !view.editor.is_busy()
             && !view.editor.exiting())

@@ -7,6 +7,68 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+fn hiding_animation_during_evaluation_reissues_content_when_shown(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    harness.view.update(cx, |view, _| {
+        view.editor.set_workspace(WorkspaceKind::Animation).unwrap();
+        let viewport = view.viewport_slots[1];
+        view.editor.set_viewport_visible(viewport, true);
+        view.editor.set_viewport_metrics(
+            viewport,
+            editor_core::CanvasMetrics {
+                width: 512.,
+                height: 512.,
+                scale_factor: 1.,
+            },
+        );
+        let motion = view.editor.document().unwrap().motion_resources()[0]
+            .selection
+            .clone();
+        view.editor
+            .select_motion(view.editor.active_id().unwrap(), motion)
+            .unwrap();
+        view.editor
+            .scrub_timeline(view.editor.active_id().unwrap(), 0.5)
+            .unwrap();
+        let request = view.editor.animation_request().unwrap();
+        let old = request.identity;
+        // Hold the result receiver so this models hiding before CPU completion
+        // is delivered, regardless of how fast the worker runs.
+        let (mut worker, _results) = crate::animation::AnimationWorker::start();
+        worker.send(request);
+        view.animation_worker = Some(worker);
+        view.animation_content = None;
+        view.editor.set_viewport_visible(viewport, false);
+        view.request_preview_for_input(0);
+        view.editor.set_viewport_visible(viewport, true);
+        let replacement = view
+            .editor
+            .animation_request()
+            .expect("cancelled content must be retried");
+        assert!(replacement.identity.request > old.request);
+        assert!(!view.editor.accepts_animation(old));
+        assert!(view.editor.accepts_animation(replacement.identity));
+        // Repeated hidden redraws do not keep advancing the cancellation epoch.
+        view.editor.set_viewport_visible(viewport, false);
+        view.request_preview_for_input(0);
+        view.editor.set_viewport_visible(viewport, true);
+        assert!(view.editor.animation_request().is_none());
+        assert!(view.editor.accepts_animation(replacement.identity));
+        // Hiding a viewport must not end a scrub owned by Timeline. Its next
+        // sample stays in the same acceptance epoch, allowing intermediate frames.
+        view.editor
+            .scrub_timeline(view.editor.active_id().unwrap(), 0.6)
+            .unwrap();
+        let next = view.editor.animation_request().unwrap();
+        assert_eq!(
+            next.identity.acceptance_floor,
+            replacement.identity.acceptance_floor
+        );
+    });
+}
+
+#[gpui_kit::test]
 fn preview_modes_and_preview_loop_are_session_controls(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);

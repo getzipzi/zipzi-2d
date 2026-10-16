@@ -1,12 +1,15 @@
 //! User commands share the same execution path across shortcuts and controls.
 //! Parameterized candidate operations remain in the Timeline editing module.
-use crate::{CommandId, DocumentId, Editor, TimelinePasteTarget, WorkspaceKind};
+use crate::{CommandId, DocumentId, EditingContext, Editor, TimelinePasteTarget};
 use anyhow::{Result, bail};
 
 impl Editor {
     pub(super) fn timeline_command_enabled(&self, id: CommandId) -> bool {
         use CommandId::*;
-        if self.workspace() != WorkspaceKind::Animation || self.is_busy() || self.exiting() {
+        if self.editing_context() != Some(EditingContext::Animation)
+            || self.is_busy()
+            || self.exiting()
+        {
             return false;
         }
         let Some(projection) = self.timeline_projection() else {

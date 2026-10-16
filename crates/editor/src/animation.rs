@@ -156,9 +156,11 @@ impl AnimationWorker {
         );
         ready.notify_one();
     }
-    pub fn suspend(&mut self) {
+    /// Return whether an evaluation epoch was cancelled, so the caller can
+    /// invalidate its request bookkeeping before the viewport becomes visible.
+    pub fn suspend(&mut self) -> bool {
         if self.key.take().is_none() {
-            return;
+            return false;
         }
         let (lock, ready) = &*self.shared;
         let mut inbox = lock.lock().unwrap();
@@ -167,6 +169,7 @@ impl AnimationWorker {
             frame_trace::emit(trace_id, "animation_cancelled", &[]);
         }
         ready.notify_one();
+        true
     }
 }
 impl Drop for AnimationWorker {
