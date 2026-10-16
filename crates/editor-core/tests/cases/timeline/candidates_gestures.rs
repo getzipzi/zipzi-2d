@@ -4,6 +4,34 @@ use kasane_core::document::MotionSegment;
 use std::{collections::HashSet, sync::Arc};
 
 #[test]
+fn scrub_cancellation_checks_owner_and_invalidates_in_flight_samples() -> anyhow::Result<()> {
+    let (mut editor, _assets) = fixture(false, false)?;
+    let first = TimelineId::new();
+    let second = TimelineId::new();
+    editor.set_timeline_visible(first, true);
+    editor.set_timeline_visible(second, true);
+    let a = editor.timeline_binding(first).unwrap();
+    let b = editor.timeline_binding(second).unwrap();
+    editor.scrub_timeline_for(a, 0.3)?;
+    editor.scrub_timeline_for(b, 0.5)?;
+    let in_flight = editor.animation_request().unwrap().identity;
+    assert!(!editor.cancel_timeline_scrub_for(a));
+    assert!(editor.timeline_scrub_owned(b));
+    assert!(editor.animation_request().is_none());
+    assert!(editor.cancel_timeline_scrub_for(b));
+    let final_sample = editor.animation_request().unwrap().identity;
+    assert_eq!(final_sample.time, in_flight.time);
+    assert!(final_sample.acceptance_floor > in_flight.request);
+    assert!(!editor.timeline_scrub_owned(b));
+    assert!(!editor.cancel_timeline_scrub_for(b));
+    editor.scrub_timeline_for(a, 0.4)?;
+    editor.toggle_animation()?;
+    assert!(!editor.cancel_timeline_scrub_for(a));
+    assert!(editor.animation().unwrap().playing);
+    Ok(())
+}
+
+#[test]
 fn panel_bindings_isolate_candidate_and_scrub_lifecycles() -> anyhow::Result<()> {
     let (mut editor, _assets) = fixture(false, false)?;
     let first = TimelineId::new();

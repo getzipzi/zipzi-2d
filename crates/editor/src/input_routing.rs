@@ -132,36 +132,29 @@ impl EditorView {
         let contexts = window.context_stack();
         if contexts.iter().any(|c| {
             c.contains("PopupMenu")
+                || c.contains("Popover")
                 || c.contains("AppMenuBar")
                 || c.contains("Select")
                 || c.contains("SearchPanel")
         }) {
             return;
         }
+        // Kit drags (sliders, sorting, docking) and focused number scrubs own
+        // their cancellation/navigation keys even after the pointer leaves them.
+        if cx.has_active_drag() || contexts.iter().any(|c| c.contains("KasaneControlCapture")) {
+            return;
+        }
         let text =
             self.has_focused_input(window, cx) || contexts.iter().any(|c| c.contains("Input"));
         let capture = self.captured_target(cx);
-        if event.keystroke.key == "escape" && capture.is_some() {
-            match capture.unwrap() {
-                LocalTarget::Panel(_) => unreachable!("plain panels never capture editing"),
-                LocalTarget::Viewport(binding) => self.run_invocation(
-                    self.command_at(
-                        CommandId::CancelGesture,
-                        Some(LocalTarget::Viewport(binding)),
-                    ),
-                    window,
-                    cx,
-                ),
-                LocalTarget::Timeline(_) => {
-                    let timeline = self.dock.as_ref().unwrap().timeline.clone();
-                    let (document, token) =
-                        timeline.update(cx, |timeline, cx| timeline.cancel_local(window, cx));
-                    if let (Some(document), Some(token)) = (document, token) {
-                        self.editor.cancel_timeline_edit_for(document, token);
-                    }
-                    self.redraw(cx);
-                }
-            }
+        // Timeline's local edit cancellation is also used by its focused controls.
+        // Viewport cancellation goes through the configured command binding below.
+        if event.keystroke.key == "escape" && matches!(capture, Some(LocalTarget::Timeline(_))) {
+            let timeline = self.dock.as_ref().unwrap().timeline.clone();
+            let cancellation =
+                timeline.update(cx, |timeline, cx| timeline.cancel_local(window, cx));
+            cancellation.apply(self);
+            self.redraw(cx);
             cx.stop_propagation();
             return;
         }

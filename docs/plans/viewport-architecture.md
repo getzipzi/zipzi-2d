@@ -40,6 +40,8 @@ Mao Timeline 基线问题已定位为验收取样错误：Full Effect 模式在 
 
 第五批验证：悬停路由、文本／菜单优先级、离窗清理、跨 viewport 捕获、辅助面板区域以及旧参数对话框拒绝提交的回归通过；Timeline 多实例 core 回归覆盖隐藏、重建、候选所有权和 scrub 所有权，真实 entity 销毁回归确认注销旧 binding。生产配置编译和 Timeline overview／curves／候选／取消恢复的 Metal 截图通过。`./scripts/test.sh` 完整通过，包含 Python 28 项、core、UI、三份真实模型 Animation 验收、默认及双视图截图、Metal／overlay、Mao Timeline 全流程与 doc-tests。最后的窗口失焦草稿保持、Timeline 销毁解绑收尾后，再次通过生产配置编译、完整 core（280 passed，1 ignored）与启用 test-support 的完整 UI（256 passed，1 ignored）回归。
 
+后续代码审查（`25f7ad4`）：修复 viewport 工具栏遮挡自身输入区域而导致悬停快捷键失效；普通 Popover、Kit 拖动和数值拖动保留键盘优先级，鼠标跨入画布后不会触发视图命令或丢失 Escape；viewport 捕获的取消键遵循用户配置。Timeline 的立即取消和延迟停用共用携带 binding、候选 token 和 scrub 状态的清理结果，Escape 会结束核心 scrub 并建立帧接受屏障，旧停用回调不会暂停后续播放或其他 panel 的 scrub；重复停用仍完成原操作清理，失去所有权的 Seek 不再继续处理移动与释放。新增 1 项 core 和 6 项 UI 回归。`./scripts/test.sh` 完整通过（Python 28 项、core 281 passed／1 ignored、UI 262 passed／1 ignored、三份本地模型 Animation、默认及双视图截图、Metal／overlay、Mao Timeline 和 doc-tests）；最后的停用幂等性调整后，再次通过完整 UI 与原生 Timeline 验收。
+
 本方案剩余代码项已接入。多实例呈现通过测试专用场景接入生产的 surface、内容执行器和 Metal 执行器，产品保持各 workspace 的唯一主视图。平台策略、菜单加速键和 headless 字符输入回归不代表 Windows／Linux 宿主或真实操作系统的键盘布局切换、IME、dead key 与 AltGr 验收；这些原生交互仍须在对应平台运行后验证。
 
 将当前随 workspace 改变行为的 `CanvasView` 拆成独立 viewport panel，由 workspace 组合面板。各 viewport 明确拥有自己的内容来源、工具和输入行为，共享绘制与导航基础组件。同时重构 Command、快捷键、编辑会话与生命周期，为后续扩展提供明确边界。

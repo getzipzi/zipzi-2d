@@ -8,6 +8,29 @@ use super::*;
 struct DragOwner(Option<(AnyWindowHandle, editor_core::TimelineBinding, u64)>);
 impl Global for DragOwner {}
 
+pub(crate) struct InteractionCancellation {
+    binding: Option<editor_core::TimelineBinding>,
+    token: Option<TimelineCandidateIdentity>,
+    seeking: bool,
+}
+impl InteractionCancellation {
+    pub(crate) fn apply(self, owner: &mut EditorView) {
+        let Some(binding) = self.binding else {
+            return;
+        };
+        if let Some(token) = self.token {
+            if owner.editor.timeline_edit_owned(binding, token) {
+                owner
+                    .editor
+                    .cancel_timeline_edit_for(binding.document, token);
+            }
+        }
+        if self.seeking && owner.editor.cancel_timeline_scrub_for(binding) {
+            owner.animation_anchor = None;
+        }
+    }
+}
+
 impl Timeline {
     pub(super) fn claim_number_drag(
         &self,
@@ -164,7 +187,11 @@ impl Timeline {
         }
     }
 
-    fn discard_stale_interactions(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn discard_stale_interactions(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let active = self.owner.upgrade().and_then(|owner| {
             owner
                 .read(cx)
@@ -187,6 +214,12 @@ impl Timeline {
             .as_ref()
             .and_then(input::Gesture::token)
             .is_some_and(|token| active != Some(token.edit))
+            || (matches!(self.gesture, Some(input::Gesture::Seek))
+                && !self.owner.upgrade().is_some_and(|owner| {
+                    self.context.as_ref().is_some_and(|target| {
+                        owner.read(cx).editor.timeline_scrub_owned(target.binding)
+                    })
+                }))
         {
             self.gesture = None;
             self.edge_scroll = None;
@@ -214,14 +247,19 @@ impl Timeline {
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> (Option<DocumentId>, Option<TimelineCandidateIdentity>) {
-        self.activity.set(self.activity.get() + 1);
+    ) -> InteractionCancellation {
+        // Only starting a new interaction supersedes deferred cleanup. Repeated
+        // deactivation must still deliver the first operation's cancellation.
         let token = self
             .gesture
             .as_ref()
             .and_then(input::Gesture::token)
             .or_else(|| self.number_edit.as_ref().map(|edit| edit.token));
-        let document = self.context.as_ref().map(|target| target.document);
+        let cancellation = InteractionCancellation {
+            binding: self.context.as_ref().map(|target| target.binding),
+            token,
+            seeking: matches!(self.gesture, Some(input::Gesture::Seek)),
+        };
         if let Some(token) = token {
             self.release_number_drag(token, window, cx);
         }
@@ -231,15 +269,13 @@ impl Timeline {
         self.reset_number_drags(cx);
         self.error = None;
         cx.notify();
-        (document, token)
+        cancellation
     }
 
     pub(crate) fn cancel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let (document, token) = self.cancel_local(window, cx);
+        let cancellation = self.cancel_local(window, cx);
         let _ = self.owner.update(cx, |owner, cx| {
-            if let (Some(document), Some(token)) = (document, token) {
-                owner.editor.cancel_timeline_edit_for(document, token);
-            }
+            cancellation.apply(owner);
             owner.redraw(cx);
         });
         cx.notify();
@@ -257,48 +293,21 @@ impl Timeline {
     }
 
     pub(crate) fn deactivate(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let token = self
-            .gesture
-            .as_ref()
-            .and_then(input::Gesture::token)
-            .or_else(|| self.number_edit.as_ref().map(|edit| edit.token));
-        let seeking = matches!(self.gesture, Some(input::Gesture::Seek));
-        if let Some(token) = token {
-            self.release_number_drag(token, window, cx);
-        }
-        self.gesture = None;
-        self.edge_scroll = None;
-        self.number_edit = None;
-        for field in self.fields.values() {
-            field.number.update(cx, |number, cx| number.reset_drag(cx));
-        }
-        if token.is_none() && !seeking {
+        let cancellation = self.cancel_local(window, cx);
+        if cancellation.token.is_none() && !cancellation.seeking {
             return;
         }
         let owner = self.owner.clone();
-        let document = self.context.as_ref().map(|target| target.document);
-        let binding = self.context.as_ref().map(|target| target.binding);
         let activity = self.activity.clone();
         let generation = activity.get();
         // Dock callbacks may run inside an EditorView update. Resolve the owner
         // after it is released, and never cancel a newer gesture or another tab.
         cx.defer(move |cx| {
             let _ = owner.update(cx, |owner, cx| {
-                if owner.editor.active_id() != document {
-                    return;
-                }
                 if activity.get() != generation {
                     return;
                 }
-                if let (Some(document), Some(token)) = (document, token) {
-                    owner.editor.cancel_timeline_edit_for(document, token);
-                }
-                if seeking
-                    && binding.is_some_and(|binding| owner.editor.timeline_binding_valid(binding))
-                {
-                    owner.editor.pause_animation();
-                    owner.animation_anchor = None;
-                }
+                cancellation.apply(owner);
                 owner.redraw(cx);
             });
         });

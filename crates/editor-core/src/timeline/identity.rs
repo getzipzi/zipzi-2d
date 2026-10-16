@@ -131,6 +131,22 @@ impl Editor {
         self.timeline_scrub_owner = Some(binding);
         Ok(())
     }
+    pub fn timeline_scrub_owned(&self, binding: TimelineBinding) -> bool {
+        self.timeline_binding_valid(binding)
+            && self.timeline_scrub_owner == Some(binding)
+            && self
+                .animation()
+                .is_some_and(|animation| animation.is_scrubbing())
+    }
+    /// End only this panel's current scrub. A deferred cleanup must not pause
+    /// playback or a scrub subsequently started by another panel.
+    pub fn cancel_timeline_scrub_for(&mut self, binding: TimelineBinding) -> bool {
+        if !self.timeline_scrub_owned(binding) {
+            return false;
+        }
+        self.pause_animation();
+        true
+    }
     pub fn seek_timeline_for(&mut self, binding: TimelineBinding, time: f32) -> Result<()> {
         ensure!(
             self.timeline_binding_valid(binding),

@@ -2,6 +2,9 @@
 use super::*;
 
 impl AnimationSession {
+    pub(crate) fn is_scrubbing(&self) -> bool {
+        self.scrubbing
+    }
     /// Last SDK result coordinates, retained while inspecting raw clip values.
     pub fn result_playback_position(&self) -> Option<&kasane_sdk::MotionPlaybackPosition> {
         self.result_position.as_ref()

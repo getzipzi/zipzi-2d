@@ -8,6 +8,77 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+fn captured_viewport_respects_the_configured_cancel_binding(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, MouseDownEvent};
+    let h = setup(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        for binding in &mut cx.global_mut::<crate::settings::Settings>().bindings {
+            if binding.command == CommandId::CancelGesture {
+                binding.key = "alt-x".into();
+            }
+        }
+        window.dispatch_event(
+            MouseDownEvent {
+                position: window.find("canvas-body").bounds().center(),
+                button: MouseButton::Middle,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(h.view.read(cx).editor.viewport_interaction_active());
+        window.press("escape", cx);
+        assert!(h.view.read(cx).editor.viewport_interaction_active());
+        window.press("alt-x", cx);
+        assert!(!h.view.read(cx).editor.viewport_interaction_active());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn popover_keeps_keyboard_priority_when_pointer_returns_to_viewport(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("mesh-tree-filter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.context_stack().iter().any(|c| c.contains("Popover")));
+        let before = h.view.read(cx).editor.view();
+        window.hover("canvas-body", cx);
+        window.press("cmd-=", cx);
+        assert_eq!(h.view.read(cx).editor.view(), before);
+        window.press("escape", cx);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn viewport_toolbar_retains_local_shortcut_and_menu_target(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.hover("tool_hand", cx);
+        let before = h.view.read(cx).editor.view().zoom;
+        assert!(matches!(
+            h.view.read(cx).hovered_target(window, cx),
+            Some(crate::input_routing::LocalTarget::Viewport(_))
+        ));
+        window.press("cmd-=", cx);
+        assert_eq!(h.view.read(cx).editor.view().zoom, before + 0.25);
+        assert!(
+            h.view
+                .read(cx)
+                .viewport_command(CommandId::ZoomIn, CommandSource::NativeMenu)
+                .document()
+                .is_some()
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn hover_switches_instances_without_focus_and_exit_has_no_fallback(cx: &mut TestAppContext) {
     let h = setup(cx);
     cx.update_window(h.window, |_, window, cx| {

@@ -82,9 +82,13 @@ impl Timeline {
             return false;
         }
         self.gesture.as_ref().is_some_and(|gesture| {
-            gesture
-                .token()
-                .is_none_or(|token| editor.timeline_edit_owned(binding, token))
+            if matches!(gesture, input::Gesture::Seek) {
+                editor.timeline_scrub_owned(binding)
+            } else {
+                gesture
+                    .token()
+                    .is_none_or(|token| editor.timeline_edit_owned(binding, token))
+            }
         }) || self
             .number_edit
             .as_ref()

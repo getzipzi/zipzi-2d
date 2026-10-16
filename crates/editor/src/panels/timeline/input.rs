@@ -364,6 +364,7 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.discard_stale_interactions(window, cx);
         if self.gesture.is_none() {
             return;
         }
@@ -524,6 +525,7 @@ impl Timeline {
         cx.stop_propagation();
     }
     pub(super) fn release_pointer(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.discard_stale_interactions(window, cx);
         self.edge_scroll = None;
         if !self.allowed(window, cx) {
             if self.gesture.is_some() || self.number_edit.is_some() {

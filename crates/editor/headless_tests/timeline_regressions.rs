@@ -19,6 +19,70 @@ fn animation(cx: &mut TestAppContext) -> Harness {
 }
 
 #[gpui_kit::test]
+fn escape_ends_playhead_scrubbing(cx: &mut TestAppContext) {
+    let harness = animation(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let position = window.find("timeline-ruler").bounds().center();
+        press(window, position, cx);
+        let timeline = harness
+            .view
+            .read(cx)
+            .dock
+            .as_ref()
+            .unwrap()
+            .timeline
+            .clone();
+        let binding = harness
+            .view
+            .read(cx)
+            .editor
+            .timeline_binding(timeline.read(cx).id)
+            .unwrap();
+        assert!(harness.view.read(cx).editor.timeline_scrub_owned(binding));
+        window.press("escape", cx);
+        assert!(!timeline.read(cx).pointer_active());
+        assert!(!harness.view.read(cx).editor.timeline_scrub_owned(binding));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn deferred_scrub_deactivation_is_idempotent_and_preserves_new_playback(cx: &mut TestAppContext) {
+    for restart in [false, true] {
+        let harness = animation(cx);
+        let binding = cx
+            .update_window(harness.window, |_, window, cx| {
+                let position = window.find("timeline-ruler").bounds().center();
+                press(window, position, cx);
+                let timeline = harness
+                    .view
+                    .read(cx)
+                    .dock
+                    .as_ref()
+                    .unwrap()
+                    .timeline
+                    .clone();
+                harness.view.update(cx, |view, cx| {
+                    let binding = view.editor.timeline_binding(timeline.read(cx).id).unwrap();
+                    assert!(view.editor.timeline_scrub_owned(binding));
+                    timeline.update(cx, |timeline, cx| timeline.deactivate(window, cx));
+                    timeline.update(cx, |timeline, cx| timeline.deactivate(window, cx));
+                    if restart {
+                        view.editor.toggle_animation().unwrap();
+                    }
+                    binding
+                })
+            })
+            .unwrap();
+        cx.run_until_parked();
+        harness.view.read_with(cx, |view, _| {
+            assert!(!view.editor.timeline_scrub_owned(binding));
+            assert_eq!(view.editor.animation().unwrap().playing, restart);
+        });
+    }
+}
+
+#[gpui_kit::test]
 fn deferred_deactivation_preserves_a_newer_edit(cx: &mut TestAppContext) {
     let harness = animation(cx);
     let (document, replacement, key) = cx

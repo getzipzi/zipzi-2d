@@ -274,7 +274,6 @@ impl Render for ViewportSurface {
                 e.cursor(cursor)
             })
             .relative()
-            .child(self.input_region.marker())
             .flex_1()
             .min_h_0()
             .w_full()
@@ -361,6 +360,9 @@ impl Render for ViewportSurface {
                     .text_color(muted)
                     .child(label)
             }))
+            // Include our own occluding toolbar/controls in the viewport region.
+            // Later popup layers can still occlude the entire region.
+            .child(self.input_region.marker())
             .map(|e| {
                 if let Some(handler) = self.object_menu {
                     e.context_menu(move |menu, window, cx| {

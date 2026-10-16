@@ -63,6 +63,48 @@ fn value(harness: &Harness, cx: &mut TestAppContext) -> f32 {
 }
 
 #[gpui_kit::test]
+fn number_drag_keeps_escape_and_blocks_viewport_commands_outside_its_panel(
+    cx: &mut TestAppContext,
+) {
+    let (document, assets) =
+        document_fixture::sample_document_with_nonuniform_parameter_keys().unwrap();
+    let id = document.parameters()[0].id.clone();
+    let original = document.parameters()[0].value;
+    let harness = setup_with_document(cx, document, assets);
+    let (origin, destination, view_before) = cx
+        .update_window(harness.window, |_, window, cx| {
+            let origin = window
+                .find(format!("parameter-value-{id}"))
+                .bounds()
+                .center();
+            let destination = window.find("canvas-body").bounds().center() + point(px(80.), px(0.));
+            let view_before = harness.view.read(cx).editor.view();
+            press(window, origin, cx);
+            (origin, destination, view_before)
+        })
+        .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        slide(window, origin + point(px(20.), px(0.)), false, cx);
+    })
+    .unwrap();
+    assert_ne!(value(&harness, cx), original);
+    cx.update_window(harness.window, |_, window, cx| {
+        slide(window, destination, false, cx);
+        window.press("cmd-=", cx);
+        assert_eq!(harness.view.read(cx).editor.view(), view_before);
+        window.press("escape", cx);
+    })
+    .unwrap();
+    assert_eq!(value(&harness, cx), original);
+    cx.update_window(harness.window, |_, window, cx| {
+        slide(window, destination + point(px(40.), px(0.)), false, cx);
+        release(window, destination, cx);
+    })
+    .unwrap();
+    assert_eq!(value(&harness, cx), original);
+}
+
+#[gpui_kit::test]
 fn number_slide_is_relative_precise_clamped_and_stops_on_release(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
     let id = document.parameters()[0].id.clone();
