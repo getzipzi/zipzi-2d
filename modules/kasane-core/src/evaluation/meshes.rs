@@ -3,10 +3,7 @@ use crate::types::{Appearance, DeltaKeyforms, Status, Vec2};
 
 use super::evaluator::EvalContext;
 use super::prepared::PreparedEvaluation;
-use super::selection::{
-    blend_appearance, blend_positions, default_selection, evaluate_blend_binding,
-    inherit_appearance,
-};
+use super::selection::{blend_appearance, blend_positions, default_selection, inherit_appearance};
 use super::transforms::f32_to_i32;
 
 pub(super) fn evaluate(
@@ -17,6 +14,7 @@ pub(super) fn evaluate(
     let asset_slots = &prepared.assets;
     for (mesh_index, id) in doc.mesh_order().iter().enumerate() {
         let mesh = doc.get_mesh(id).unwrap();
+        let (part_slot, parent_slot) = prepared.mesh_parents[mesh_index];
         let d = &mut state.frame.drawables[mesh_index];
         d.id.clone_from(id);
         d.runtime_id.clone_from(&mesh.runtime_id);
@@ -42,9 +40,8 @@ pub(super) fn evaluate(
         }
 
         d.visible = mesh.enabled
-            && (mesh.part_id.is_empty() || state.enabled_parts[&mesh.part_id])
-            && (mesh.deformer_id.is_empty()
-                || state.transforms[prepared.transform_slots[&mesh.deformer_id]].enabled);
+            && part_slot.is_none_or(|slot| state.enabled_parts[slot])
+            && parent_slot.is_none_or(|slot| state.transforms[slot].enabled);
 
         let b = doc.binding_for_mesh(id);
         let selection = prepared.mesh_selections[mesh_index].map(|slot| &state.selections[slot]);
@@ -85,16 +82,18 @@ pub(super) fn evaluate(
                 order = sum;
             }
 
-            let bs_list = doc.blend_bindings_for_target(id);
-            if !bs_list.is_empty() {
+            let mut bs_list = doc.iter_blend_bindings_for_target(id).peekable();
+            if bs_list.peek().is_some() {
                 order = f32_to_i32(order + 0.001) as f32;
                 for bs in bs_list {
                     if let DeltaKeyforms::Mesh(ref forms) = bs.keyforms {
-                        let selection = evaluate_blend_binding(doc, state.values, bs);
+                        let selection = state.blend_selections
+                            [prepared.blend_binding_selections[&bs.id]]
+                            .as_slice();
                         let has_multiply =
                             selection.iter().all(|(i, _)| forms[*i].multiply.is_some());
                         let has_screen = selection.iter().all(|(i, _)| forms[*i].screen.is_some());
-                        for (kf_idx, eff_w) in selection {
+                        for &(kf_idx, eff_w) in selection {
                             if kf_idx < forms.len() {
                                 let f = &forms[kf_idx];
                                 for (p, dp) in d.positions.iter_mut().zip(&f.positions) {
@@ -139,8 +138,8 @@ pub(super) fn evaluate(
                 }
             }
 
-            if !mesh.deformer_id.is_empty() {
-                let parent = &state.transforms[prepared.transform_slots[&mesh.deformer_id]];
+            if let Some(parent) = parent_slot {
+                let parent = &state.transforms[parent];
                 inherit_appearance(&mut appearance, &parent.appearance);
                 parent.apply(&mut d.positions);
             }

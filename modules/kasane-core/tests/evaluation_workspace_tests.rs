@@ -432,3 +432,131 @@ fn prepared_selection_tracks_precision_axes_and_restored_documents() {
     assert!(evaluator.evaluate(&doc, &values, &mut frame).is_ok());
     assert_eq!(frame.drawables, interpolated.drawables);
 }
+
+#[test]
+fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraints() {
+    let mut doc = document(2);
+    assert!(doc
+        .create_transform(Transform {
+            id: id(30),
+            ..Default::default()
+        })
+        .status
+        .is_ok());
+    assert!(doc
+        .create_transform(Transform {
+            id: id(31),
+            parent_id: Some(id(30).into()),
+            data: TransformData::Warp(WarpTransform {
+                rows: 1,
+                columns: 1,
+                quad: false,
+                bezier: None,
+                points: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(1., 0.),
+                    Vec2::new(0., 1.),
+                    Vec2::new(1., 1.)
+                ],
+            }),
+            ..Default::default()
+        })
+        .status
+        .is_ok());
+    for (n, kind) in [(20, ParameterKind::BlendShape), (21, ParameterKind::Normal)] {
+        assert!(doc
+            .create_parameter(Parameter {
+                id: id(n),
+                kind,
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+    }
+    assert!(doc
+        .create_blend_key_table(BlendShapeKeyTable {
+            id: id(22),
+            parameter_id: id(20),
+            keys: vec![0., 1.],
+            base_key_idx: 0,
+        })
+        .status
+        .is_ok());
+    let mut constraint = BlendShapeConstraint {
+        id: id(23),
+        parameter_id: id(21),
+        keys: vec![0., 1.],
+        weights: vec![0., 1.],
+    };
+    assert!(doc
+        .create_blend_constraint(constraint.clone())
+        .status
+        .is_ok());
+    for n in [3, 4] {
+        assert!(doc
+            .create_blend_binding(BlendShapeBinding {
+                id: id(n + 40),
+                target_id: id(n),
+                target_kind: BlendShapeTargetKind::Mesh,
+                key_table_id: id(22),
+                constraint_ids: vec![id(23)],
+                keyforms: DeltaKeyforms::Mesh(vec![
+                    DeltaMeshKeyform {
+                        positions: vec![Vec2::default(); 3],
+                        ..Default::default()
+                    },
+                    DeltaMeshKeyform {
+                        positions: vec![Vec2::new(100., 0.); 3],
+                        ..Default::default()
+                    },
+                ]),
+            })
+            .status
+            .is_ok());
+    }
+    let original = doc.clone();
+    let mut evaluator = FrameEvaluator::default();
+    let mut frame = DrawableFrame::default();
+    let samples: Vec<PreviewValues> = [0., 0.25, 0.5, 1.]
+        .into_iter()
+        .map(|v| [(id(20), v), (id(21), 0.5)].into())
+        .collect();
+    for _ in 0..3 {
+        for sample in &samples {
+            assert!(evaluator.evaluate(&doc, sample, &mut frame).is_ok());
+        }
+    }
+    let count = allocations(|| {
+        for sample in &samples {
+            assert!(evaluator.evaluate(&doc, sample, &mut frame).is_ok());
+        }
+    });
+    assert_eq!(
+        count, 0,
+        "Warmed Warp/Rotation and constrained BlendShapes must reuse storage"
+    );
+    let initial = frame.clone();
+    // Same table/constraint shared by both meshes; a constraint edit must
+    // invalidate compiled samples even when reusing the same evaluator.
+    constraint.weights = vec![1., 1.];
+    assert!(doc.replace_blend_constraint(constraint).status.is_ok());
+    assert!(evaluator.evaluate(&doc, &samples[3], &mut frame).is_ok());
+    assert!(
+        (frame.drawables[0].positions[0].x - initial.drawables[0].positions[0].x - 0.5).abs()
+            < 1e-6
+    );
+    assert_eq!(frame.drawables[0].positions, frame.drawables[1].positions);
+    doc.restore_from(&original);
+    assert!(evaluator.evaluate(&doc, &samples[3], &mut frame).is_ok());
+    assert_eq!(frame.drawables, initial.drawables);
+    assert_eq!(frame.deformers, initial.deformers);
+    // Reusing the evaluator for another document must not retain graph slots.
+    let other = document(1);
+    assert!(evaluator
+        .evaluate(&other, &PreviewValues::new(), &mut frame)
+        .is_ok());
+    assert!(frame.deformers.is_empty());
+    assert_eq!(frame.drawables.len(), 1);
+}

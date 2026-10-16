@@ -102,7 +102,7 @@ pub struct DrawableFrame {
     pub deformers: Vec<EvaluatedDeformer>,
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct EvaluatedDeformer {
     pub id: String,
     pub enabled: bool,

@@ -2,8 +2,7 @@ use crate::document::Document;
 use crate::types::{DeltaKeyforms, Status};
 
 use super::evaluator::EvalContext;
-use super::prepared::PreparedEvaluation;
-use super::selection::evaluate_blend_binding;
+use super::prepared::{DrawItemSource, PreparedEvaluation};
 use super::types::OffscreenFrame;
 
 pub(super) fn evaluate(
@@ -12,10 +11,8 @@ pub(super) fn evaluate(
     state: &mut EvalContext<'_>,
 ) -> Status {
     let groups = &prepared.groups;
-    let totals = &prepared.totals;
-    let slots = &prepared.meshes;
     state.orders.clear();
-    state.orders.resize(prepared.order_slots.len(), 0);
+    state.orders.resize(prepared.order_count, 0);
     state.offscreen_orders.clear();
     state
         .offscreen_orders
@@ -24,12 +21,15 @@ pub(super) fn evaluate(
         state.items.clear();
         state
             .items
-            .extend(group.items.iter().enumerate().map(|(item_slot, id)| {
-                let (order, enabled) = if let Some(&slot) = slots.get(id.as_str()) {
-                    let d = &state.frame.drawables[slot];
-                    (d.draw_order, d.enabled)
-                } else {
-                    (state.part_orders[id], state.enabled_parts[id])
+            .extend(group.items.iter().enumerate().map(|(item_slot, item)| {
+                let (order, enabled) = match item.source {
+                    DrawItemSource::Mesh(slot) => {
+                        let d = &state.frame.drawables[slot];
+                        (d.draw_order, d.enabled)
+                    }
+                    DrawItemSource::Part(slot) => {
+                        (state.part_orders[slot], state.enabled_parts[slot])
+                    }
                 };
                 (
                     item_slot,
@@ -43,26 +43,29 @@ pub(super) fn evaluate(
         state
             .items
             .sort_unstable_by_key(|&(slot, order)| (order, slot));
-        let mut rank = state.orders[prepared.order_slots[&group.owner]];
+        let mut rank = state.orders[group.owner];
         for &(item_slot, _) in state.items.iter() {
-            let id = group.items[item_slot].as_str();
-            if let Some(os) = doc.offscreen_for_part(id) {
-                state.offscreen_orders[prepared.offscreen_slots[&os.id]] = rank;
+            let item = &group.items[item_slot];
+            if let Some(slot) = item.offscreen {
+                state.offscreen_orders[slot] = rank;
                 rank += 1;
             }
-            state.orders[prepared.order_slots[id]] = rank;
-            rank += totals.get(id).copied().unwrap_or(1) as i32;
+            state.orders[item.order_slot] = rank;
+            rank += item.descendants;
         }
     }
-    for d in &mut state.frame.drawables {
-        d.render_order = state.orders[prepared.order_slots[&d.id]];
+    for (slot, d) in state.frame.drawables.iter_mut().enumerate() {
+        d.render_order = state.orders[slot];
     }
 
     for os_id in doc.offscreen_order() {
         if let Some(os) = doc.get_offscreen(os_id) {
             let part_id = &os.part_id;
-            let owner_enabled =
-                os.enabled && state.enabled_parts.get(part_id).copied().unwrap_or(false);
+            let owner_enabled = os.enabled
+                && prepared
+                    .part_slots
+                    .get(part_id)
+                    .is_some_and(|&slot| state.enabled_parts[slot]);
             let mut opacity = 0.0f32;
             let mut mul_color = [1.0f32, 1.0, 1.0, 1.0];
             let mut scr_color = [0.0f32, 0.0, 0.0, 1.0];
@@ -131,9 +134,12 @@ pub(super) fn evaluate(
                 }
 
                 // Apply blendshapes
-                for bs in doc.blend_bindings_for_target(os_id) {
+                for bs in doc.iter_blend_bindings_for_target(os_id) {
                     if let DeltaKeyforms::Offscreen(ref forms) = bs.keyforms {
-                        for (kf_idx, eff_w) in evaluate_blend_binding(doc, state.values, bs) {
+                        for &(kf_idx, eff_w) in state.blend_selections
+                            [prepared.blend_binding_selections[&bs.id]]
+                            .as_slice()
+                        {
                             if kf_idx < forms.len() {
                                 let df = &forms[kf_idx];
                                 opacity += df.opacity * eff_w;

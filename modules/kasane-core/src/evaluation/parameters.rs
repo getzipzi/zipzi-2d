@@ -1,7 +1,7 @@
 use crate::document::Document;
 use crate::types::Status;
 
-use super::evaluator::{set_value, EvalContext};
+use super::evaluator::EvalContext;
 use super::types::{Drawable, EvaluatedParameter};
 
 pub(super) fn evaluate(
@@ -22,7 +22,6 @@ pub(super) fn evaluate(
         .drawables
         .resize_with(doc.mesh_order().len(), Drawable::default);
 
-    state.values.retain(|id, _| doc.get_parameter(id).is_some());
     for (parameter_slot, id) in doc.parameter_order().iter().enumerate() {
         let p = doc.get_parameter(id).unwrap();
         let requested = preview.get(id).copied().unwrap_or(p.default_value);
@@ -60,7 +59,6 @@ pub(super) fn evaluate(
         sample.requested = requested;
         sample.value = v;
         sample.clamped = clamped;
-        set_value(state.values, id, v);
     }
     Status::ok()
 }

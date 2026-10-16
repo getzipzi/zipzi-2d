@@ -194,13 +194,19 @@ impl Document {
     }
 
     pub fn blend_bindings_for_target(&self, target_id: &str) -> Vec<&BlendShapeBinding> {
+        self.iter_blend_bindings_for_target(target_id).collect()
+    }
+
+    pub(crate) fn iter_blend_bindings_for_target(
+        &self,
+        target_id: &str,
+    ) -> impl Iterator<Item = &BlendShapeBinding> {
         self.lookup()
             .blend_bindings
             .get(target_id)
             .into_iter()
             .flatten()
             .map(|id| &self.content.blend_bindings[id])
-            .collect()
     }
 
     pub(super) fn validate_blend_binding(&self, b: &BlendShapeBinding) -> Status {

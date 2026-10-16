@@ -1,18 +1,17 @@
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use crate::document::Document;
 use crate::types::Status;
 
-use super::selection::Selection;
+use super::selection::{BlendSelection, Selection};
 use super::transforms::TransformState;
 use super::types::{DrawableFrame, PreviewValues};
 
 pub(super) struct EvalContext<'a> {
     pub(super) frame: &'a mut DrawableFrame,
-    pub(super) values: &'a mut HashMap<String, f32>,
-    pub(super) enabled_parts: &'a mut HashMap<String, bool>,
-    pub(super) part_orders: &'a mut HashMap<String, i32>,
+    pub(super) blend_selections: &'a mut Vec<BlendSelection>,
+    pub(super) enabled_parts: &'a mut Vec<bool>,
+    pub(super) part_orders: &'a mut Vec<i32>,
     pub(super) selections: &'a mut Vec<Selection>,
     pub(super) transforms: &'a mut Vec<TransformState>,
     pub(super) points: &'a mut Vec<crate::types::Vec2>,
@@ -27,9 +26,9 @@ pub(super) struct EvalContext<'a> {
 #[derive(Debug, Default)]
 pub struct FrameEvaluator {
     scratch: DrawableFrame,
-    values: HashMap<String, f32>,
-    enabled_parts: HashMap<String, bool>,
-    part_orders: HashMap<String, i32>,
+    blend_selections: Vec<BlendSelection>,
+    enabled_parts: Vec<bool>,
+    part_orders: Vec<i32>,
     selections: Vec<Selection>,
     transforms: Vec<TransformState>,
     points: Vec<crate::types::Vec2>,
@@ -129,14 +128,6 @@ pub fn evaluate_frame_including_hidden(
     Status::ok()
 }
 
-pub(super) fn set_value<T>(map: &mut HashMap<String, T>, id: &str, value: T) {
-    if let Some(slot) = map.get_mut(id) {
-        *slot = value;
-    } else {
-        map.insert(id.to_owned(), value);
-    }
-}
-
 fn evaluate_into(
     doc: &Document,
     preview: &PreviewValues,
@@ -155,7 +146,7 @@ fn evaluate_into(
     }
     let FrameEvaluator {
         scratch: frame,
-        values,
+        blend_selections,
         enabled_parts,
         part_orders,
         selections,
@@ -186,7 +177,7 @@ fn evaluate_into(
 
     let mut state = EvalContext {
         frame,
-        values,
+        blend_selections,
         enabled_parts,
         part_orders,
         selections,
@@ -211,6 +202,16 @@ fn evaluate_into(
         .resize_with(prepared.selections.len(), Selection::default);
     for (axes, selection) in prepared.selections.iter().zip(state.selections.iter_mut()) {
         super::selection::select_prepared(&state.frame.parameters, axes, selection);
+    }
+    state
+        .blend_selections
+        .resize_with(prepared.blend_selections.len(), BlendSelection::default);
+    for (input, selection) in prepared
+        .blend_selections
+        .iter()
+        .zip(state.blend_selections.iter_mut())
+    {
+        selection.sample(input, &state.frame.parameters);
     }
     record_stage!(selections);
     super::parts::evaluate(doc, prepared, &mut state);

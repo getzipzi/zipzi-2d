@@ -1,20 +1,17 @@
 use crate::document::Document;
 
-use super::evaluator::{set_value, EvalContext};
+use super::evaluator::EvalContext;
 use super::prepared::PreparedEvaluation;
-use super::selection::evaluate_blend_binding;
 use super::transforms::f32_to_i32;
 use crate::types::DeltaKeyforms;
 
 pub(super) fn evaluate(doc: &Document, prepared: &PreparedEvaluation, state: &mut EvalContext<'_>) {
-    state
-        .enabled_parts
-        .retain(|id, _| doc.get_part(id).is_some());
-    state.part_orders.retain(|id, _| doc.get_part(id).is_some());
-    for id in &prepared.parts {
+    state.enabled_parts.resize(prepared.parts.len(), false);
+    state.part_orders.resize(prepared.parts.len(), 0);
+    for (slot, id) in prepared.parts.iter().enumerate() {
         let p = doc.get_part(id).unwrap();
-        let mut enabled =
-            p.enabled && (p.parent_id.is_empty() || state.enabled_parts[&p.parent_id]);
+        let mut enabled = p.enabled
+            && prepared.part_parents[slot].is_none_or(|parent| state.enabled_parts[parent]);
         let mut order = p.draw_order;
         if let Some(b) = doc.binding_for_scene(id) {
             let s = &state.selections[prepared.scene_selections[id]];
@@ -26,12 +23,14 @@ pub(super) fn evaluate(doc: &Document, prepared: &PreparedEvaluation, state: &mu
                 }
             }
         }
-        let bs_list = doc.blend_bindings_for_target(id);
-        if !bs_list.is_empty() {
+        let mut bs_list = doc.iter_blend_bindings_for_target(id).peekable();
+        if bs_list.peek().is_some() {
             order = f32_to_i32(order + 0.001) as f32;
             for bs in bs_list {
                 if let DeltaKeyforms::Part(ref forms) = bs.keyforms {
-                    for (kf_idx, eff_w) in evaluate_blend_binding(doc, state.values, bs) {
+                    for &(kf_idx, eff_w) in
+                        state.blend_selections[prepared.blend_binding_selections[&bs.id]].as_slice()
+                    {
                         if kf_idx < forms.len() {
                             order += forms[kf_idx].draw_order * eff_w;
                         }
@@ -40,7 +39,7 @@ pub(super) fn evaluate(doc: &Document, prepared: &PreparedEvaluation, state: &mu
             }
             order = f32_to_i32((order + 0.001).clamp(0.0, 1000.0)) as f32;
         }
-        set_value(state.enabled_parts, id, enabled);
-        set_value(state.part_orders, id, f32_to_i32(order + 0.001));
+        state.enabled_parts[slot] = enabled;
+        state.part_orders[slot] = f32_to_i32(order + 0.001);
     }
 }

@@ -157,6 +157,71 @@ fn evaluate_constraint(c: &BlendShapeConstraint, val: f32) -> f32 {
     c.weights[idx] * (1.0 - t) + c.weights[idx + 1] * t
 }
 
+/// A one-dimensional BlendShape table selects at most two non-base keys.
+#[derive(Debug, Clone, Default)]
+pub(super) struct BlendSelection {
+    entries: [(usize, f32); 2],
+    len: usize,
+}
+
+impl BlendSelection {
+    pub(super) fn as_slice(&self) -> &[(usize, f32)] {
+        &self.entries[..self.len]
+    }
+
+    pub(super) fn sample(
+        &mut self,
+        input: &super::prepared::BlendSelectionInput,
+        parameters: &[super::types::EvaluatedParameter],
+    ) {
+        self.len = 0;
+        if input.keys.len() < 2 {
+            return;
+        }
+        let value = parameters[input.parameter].value;
+        let mut index = 0;
+        let mut weight = 0.0;
+        if value > input.keys[0] {
+            while index + 1 < input.keys.len() && value >= input.keys[index + 1] {
+                index += 1;
+            }
+            if index < input.keys.len() - 1 {
+                let span = input.keys[index + 1] - input.keys[index];
+                if span > 0.0 {
+                    weight = (value - input.keys[index]) / span;
+                }
+            }
+        }
+        let mut constraint_weight = 1.0f32;
+        for (slot, constraint) in &input.constraints {
+            constraint_weight =
+                constraint_weight.min(evaluate_constraint(constraint, parameters[*slot].value));
+        }
+        if constraint_weight == 0.0 {
+            return;
+        }
+        let mut push = |index, weight: f32| {
+            let weight = weight * constraint_weight;
+            if weight != 0.0 {
+                self.entries[self.len] = (index, weight);
+                self.len += 1;
+            }
+        };
+        if weight != 0.0 && index == input.base_key {
+            push(index + 1, weight);
+        } else if weight == 0.0 {
+            if index != input.base_key {
+                push(index, 1.0);
+            }
+        } else {
+            push(index, 1.0 - weight);
+            if index + 1 != input.base_key {
+                push(index + 1, weight);
+            }
+        }
+    }
+}
+
 pub fn evaluate_blend_binding(
     doc: &Document,
     values: &HashMap<String, f32>,
@@ -257,25 +322,45 @@ where
         if raw.len() != size {
             return Err(Status::error("INVALID_LENGTH", "keyform positions"));
         }
-        for (target, p) in out.iter_mut().zip(raw) {
-            let q = if parent.is_empty() {
-                Vec2::new(
-                    ((p.x as f64 - canvas.origin.x as f64) / canvas.pixels_per_unit as f64) as f32,
-                    ((canvas.origin.y as f64 - p.y as f64) / canvas.pixels_per_unit as f64) as f32,
-                )
-            } else {
-                *p
-            };
-            if !q.x.is_finite() || !q.y.is_finite() {
-                return Err(Status::error(
-                    "NON_FINITE",
-                    "Position conversion overflows float32",
-                ));
-            }
+        // Keep validation, but reduce its result without a per-vertex exit.
+        // Separating root conversion and zero weights lets the local-space
+        // accumulation vectorize without changing the order across keyforms.
+        let mut finite = true;
+        if parent.is_empty() {
+            let ox = canvas.origin.x as f64;
+            let oy = canvas.origin.y as f64;
+            let ppu = canvas.pixels_per_unit as f64;
             if weight != 0.0 {
-                target.x += q.x * weight;
-                target.y += q.y * weight;
+                for (target, p) in out.iter_mut().zip(raw) {
+                    let x = ((p.x as f64 - ox) / ppu) as f32;
+                    let y = ((oy - p.y as f64) / ppu) as f32;
+                    finite &= x.is_finite() & y.is_finite();
+                    target.x += x * weight;
+                    target.y += y * weight;
+                }
+            } else {
+                for p in raw {
+                    let x = ((p.x as f64 - ox) / ppu) as f32;
+                    let y = ((oy - p.y as f64) / ppu) as f32;
+                    finite &= x.is_finite() & y.is_finite();
+                }
             }
+        } else if weight != 0.0 {
+            for (target, p) in out.iter_mut().zip(raw) {
+                finite &= p.x.is_finite() & p.y.is_finite();
+                target.x += p.x * weight;
+                target.y += p.y * weight;
+            }
+        } else {
+            for p in raw {
+                finite &= p.x.is_finite() & p.y.is_finite();
+            }
+        }
+        if !finite {
+            return Err(Status::error(
+                "NON_FINITE",
+                "Position conversion overflows float32",
+            ));
         }
     }
     let status = validate_positions(out);
@@ -290,6 +375,239 @@ mod selection_tests {
     use super::*;
     use crate::keyforms::{key_combinations, KeyAxis};
     use crate::{BindingAxis, Parameter};
+
+    fn reference_blend_positions<'a, F>(
+        doc: &Document,
+        parent: &str,
+        s: &Selection,
+        mut get: F,
+        out: &mut Vec<Vec2>,
+    ) -> Result<(), Status>
+    where
+        F: FnMut(usize) -> &'a [Vec2],
+    {
+        if !parent.is_empty() && doc.get_transform(parent).is_none() {
+            return Err(Status::error("MISSING_TRANSFORM", parent));
+        }
+        let size = s.indices.first().map(|&i| get(i).len()).unwrap_or(0);
+        if size > (i32::MAX as usize) / 2 {
+            return Err(Status::error("CAPACITY", "positions"));
+        }
+        out.clear();
+        out.resize(size, Vec2::default());
+        let canvas = doc.canvas();
+        for (&index, &weight) in s.indices.iter().zip(&s.weights) {
+            let raw = get(index);
+            if raw.len() != size {
+                return Err(Status::error("INVALID_LENGTH", "keyform positions"));
+            }
+            for (target, p) in out.iter_mut().zip(raw) {
+                let q = if parent.is_empty() {
+                    Vec2::new(
+                        ((p.x as f64 - canvas.origin.x as f64) / canvas.pixels_per_unit as f64)
+                            as f32,
+                        ((canvas.origin.y as f64 - p.y as f64) / canvas.pixels_per_unit as f64)
+                            as f32,
+                    )
+                } else {
+                    *p
+                };
+                if !q.x.is_finite() || !q.y.is_finite() {
+                    return Err(Status::error(
+                        "NON_FINITE",
+                        "Position conversion overflows float32",
+                    ));
+                }
+                if weight != 0.0 {
+                    target.x += q.x * weight;
+                    target.y += q.y * weight;
+                }
+            }
+        }
+        let status = validate_positions(out);
+        if !status.is_ok() {
+            return Err(status);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn position_blending_matches_scalar_bits_and_errors() {
+        let id = |n| format!("{n:08x}-1111-4111-8111-111111111111");
+        let mut seed = 123456789u32;
+        let mut rows = vec![Vec::new(); 3];
+        for row in &mut rows {
+            for _ in 0..257 {
+                seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+                let x = (seed as i32) as f32 * 0.00001;
+                seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+                row.push(Vec2::new(x, (seed as i32) as f32 * 0.00001));
+            }
+        }
+        for ppu in [1.0, 100.0, f32::MIN_POSITIVE] {
+            let mut doc = Document::new();
+            assert!(doc
+                .initialize(
+                    id(1),
+                    crate::Canvas::new(640., 480., Vec2::new(320., 240.), ppu)
+                )
+                .is_ok());
+            assert!(doc
+                .create_transform(crate::Transform {
+                    id: id(2),
+                    ..Default::default()
+                })
+                .status
+                .is_ok());
+            for parent in [String::new(), id(2)] {
+                for weights in [
+                    vec![0.125, 0.375, 0.5],
+                    vec![1., 0., -0.],
+                    vec![0., 0., 0.],
+                    vec![1., 1., 1.],
+                ] {
+                    let selection = Selection {
+                        indices: vec![0, 1, 2],
+                        weights,
+                        enabled: true,
+                    };
+                    for exceptional in [
+                        None,
+                        Some(f32::MAX),
+                        Some(f32::INFINITY),
+                        Some(f32::NAN),
+                        Some(-0.0),
+                    ] {
+                        let mut data = rows.clone();
+                        if let Some(value) = exceptional {
+                            data[1][128].x = value;
+                        }
+                        let mut expected = Vec::new();
+                        let mut actual = Vec::new();
+                        let reference = reference_blend_positions(
+                            &doc,
+                            &parent,
+                            &selection,
+                            |i| &data[i],
+                            &mut expected,
+                        );
+                        let result =
+                            blend_positions(&doc, &parent, &selection, |i| &data[i], &mut actual);
+                        assert_eq!(result, reference);
+                        if result.is_ok() {
+                            let bits = |positions: &[Vec2]| {
+                                positions
+                                    .iter()
+                                    .map(|p| [p.x.to_bits(), p.y.to_bits()])
+                                    .collect::<Vec<_>>()
+                            };
+                            assert_eq!(
+                                bits(&actual),
+                                bits(&expected),
+                                "parent={parent}, ppu={ppu}, weights={:?}",
+                                selection.weights
+                            );
+                        }
+                    }
+                    let mut truncated = rows.clone();
+                    truncated[1].pop();
+                    let mut expected = Vec::new();
+                    let mut actual = Vec::new();
+                    assert_eq!(
+                        blend_positions(&doc, &parent, &selection, |i| &truncated[i], &mut actual),
+                        reference_blend_positions(
+                            &doc,
+                            &parent,
+                            &selection,
+                            |i| &truncated[i],
+                            &mut expected
+                        )
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn compiled_blend_selection_matches_reference_at_keys_and_constraints() {
+        use crate::{BlendShapeKeyTable, BlendShapeTargetKind, DeltaKeyforms, ParameterKind};
+        let id = |n| format!("{n:08x}-1111-4111-8111-111111111111");
+        let mut doc = Document::new();
+        assert!(doc
+            .initialize(id(1), crate::Canvas::new(100., 100., Vec2::default(), 1.))
+            .is_ok());
+        for (n, kind) in [(2, ParameterKind::BlendShape), (3, ParameterKind::Normal)] {
+            assert!(doc
+                .create_parameter(Parameter {
+                    id: id(n),
+                    kind,
+                    minimum: -10.,
+                    maximum: 10.,
+                    ..Default::default()
+                })
+                .status
+                .is_ok());
+        }
+        let constraint = BlendShapeConstraint {
+            id: id(5),
+            parameter_id: id(3),
+            keys: vec![-1., 0., 1.],
+            weights: vec![0., 0.75, 1.],
+        };
+        assert!(doc
+            .create_blend_constraint(constraint.clone())
+            .status
+            .is_ok());
+        let mut table = BlendShapeKeyTable {
+            id: id(4),
+            parameter_id: id(2),
+            keys: vec![0.],
+            base_key_idx: 0,
+        };
+        assert!(doc.create_blend_key_table(table.clone()).status.is_ok());
+        let binding = BlendShapeBinding {
+            id: id(6),
+            target_id: id(7),
+            target_kind: BlendShapeTargetKind::Mesh,
+            key_table_id: id(4),
+            constraint_ids: vec![id(5)],
+            keyforms: DeltaKeyforms::Mesh(vec![]),
+        };
+        let mut selection = BlendSelection::default();
+        for count in 1..=5 {
+            table.keys = (0..count).map(|i| i as f32 - 2.).collect();
+            for base in 0..count {
+                table.base_key_idx = base;
+                assert!(doc.replace_blend_key_table(table.clone()).status.is_ok());
+                let input = super::super::prepared::BlendSelectionInput {
+                    parameter: 0,
+                    keys: table.keys.clone(),
+                    base_key: base,
+                    constraints: vec![(1, constraint.clone())],
+                };
+                for value in [-3., -2., -1.99999, -1.5, -1., -0.1, 0., 0.75, 1., 2., 3.] {
+                    for constraint_value in [-2., -1., -0.5, 0., 0.5, 1., 2.] {
+                        selection.sample(
+                            &input,
+                            &[
+                                super::super::types::EvaluatedParameter {
+                                    value,
+                                    ..Default::default()
+                                },
+                                super::super::types::EvaluatedParameter {
+                                    value: constraint_value,
+                                    ..Default::default()
+                                },
+                            ],
+                        );
+                        let values = [(id(2), value), (id(3), constraint_value)].into();
+                        assert_eq!(selection.as_slice(), evaluate_blend_binding(&doc, &values, &binding),
+                            "count={count}, base={base}, value={value}, constraint={constraint_value}");
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn sparse_selection_matches_cartesian_reference() {

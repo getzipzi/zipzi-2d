@@ -232,7 +232,7 @@ pub fn warp_extrap_cell(
         } else {
             cell.p00 = v2_load(pos, (row * stride + col) as usize);
             cell.p10 = cen.add(du.scale(3.0)).add(dv);
-            cell.p01 = cen.add(du.scale(3.0)).add(du);
+            cell.p01 = cen.add(dv.scale(3.0)).add(du);
             cell.p11 = cen.add(du.scale(3.0).add(dv.scale(3.0)));
         }
     }
@@ -469,4 +469,71 @@ where
 
     *inout_origin = transform(origin);
     angle_adj
+}
+
+#[cfg(test)]
+mod extrapolation_tests {
+    use super::*;
+
+    #[test]
+    fn affine_warp_matches_analytic_transform_in_every_exterior_region() {
+        // An affine lattice must reproduce the same transform both inside
+        // and outside the grid, including all virtual-cell corners.
+        for (rows, cols) in [(1, 1), (2, 3)] {
+            for quad in [false, true] {
+                for skewed in [false, true] {
+                    let map = |u: f32, v: f32| {
+                        if skewed {
+                            PsmVec2::new(2.0 * u + 0.5 * v + 0.25, -0.5 * u + 3.0 * v - 1.0)
+                        } else {
+                            PsmVec2::new(u, v)
+                        }
+                    };
+                    let mut grid = Vec::new();
+                    for y in 0..=rows {
+                        for x in 0..=cols {
+                            let p = map(x as f32 / cols as f32, y as f32 / rows as f32);
+                            grid.extend([p.x, p.y]);
+                        }
+                    }
+                    let samples = [
+                        -3.0, -2.0, -1.75, -0.25, 0.0, 0.25, 0.75, 1.0, 1.25, 1.75, 3.0, 4.0,
+                    ];
+                    let inputs: Vec<f32> = samples
+                        .iter()
+                        .flat_map(|&u| samples.iter().flat_map(move |&v| [u, v]))
+                        .collect();
+                    let mut outputs = vec![0.0; inputs.len()];
+                    warp_points(
+                        rows,
+                        cols,
+                        quad,
+                        &grid,
+                        &inputs,
+                        &mut outputs,
+                        inputs.len() / 2,
+                    );
+                    let mut in_place: Vec<_> = inputs
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
+                        .map(|p| crate::types::Vec2::new(p[0], p[1]))
+                        .collect();
+                    warp_points_in_place(rows, cols, quad, &grid, &mut in_place);
+                    for ((input, output), actual) in inputs
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
+                        .zip(outputs.as_chunks::<2>().0)
+                        .zip(in_place)
+                    {
+                        let expected = map(input[0], input[1]);
+                        assert!((output[0] - expected.x).abs() < 2e-5 && (output[1] - expected.y).abs() < 2e-5,
+                            "rows={rows} cols={cols} quad={quad} input={input:?} output={output:?} expected={expected:?}");
+                        assert_eq!([actual.x, actual.y], [output[0], output[1]]);
+                    }
+                }
+            }
+        }
+    }
 }

@@ -9,8 +9,7 @@ use crate::types::{Appearance, DeltaKeyforms, Status, Transform, TransformKind, 
 use super::evaluator::EvalContext;
 use super::prepared::PreparedEvaluation;
 use super::selection::{
-    blend_appearance, blend_positions, default_selection, evaluate_blend_binding,
-    inherit_appearance, RuntimeRotationPose,
+    blend_appearance, blend_positions, default_selection, inherit_appearance, RuntimeRotationPose,
 };
 use super::types::to_parent_origin;
 
@@ -110,12 +109,16 @@ pub(super) fn evaluate(
     prepared: &PreparedEvaluation,
     state: &mut EvalContext<'_>,
 ) -> crate::types::Status {
-    state.frame.deformers.clear();
+    state
+        .frame
+        .deformers
+        .resize_with(prepared.transforms.len(), Default::default);
     state
         .transforms
         .resize_with(prepared.transforms.len(), TransformState::default);
     for (transform_slot, id) in prepared.transforms.iter().enumerate() {
         let t = doc.get_transform(id).unwrap();
+        let (part_slot, parent_slot) = prepared.transform_parents[transform_slot];
         let mut transform_state = std::mem::take(&mut state.transforms[transform_slot]);
         transform_state.points.clear();
         transform_state = TransformState {
@@ -124,7 +127,7 @@ pub(super) fn evaluate(
             points: transform_state.points,
             appearance: t.appearance,
             inherited_scale: 1.0,
-            enabled: t.enabled && (t.part_id.is_none() || state.enabled_parts[t.part()]),
+            enabled: t.enabled && part_slot.is_none_or(|slot| state.enabled_parts[slot]),
         };
         state.points.clear();
         if let Some(w) = t.warp() {
@@ -139,9 +142,8 @@ pub(super) fn evaluate(
         if let Some(sel) = selection {
             transform_state.enabled &= sel.enabled;
         }
-        if !t.parent_id.is_none() {
-            transform_state.enabled &=
-                state.transforms[prepared.transform_slots[t.parent()]].enabled;
+        if let Some(parent) = parent_slot {
+            transform_state.enabled &= state.transforms[parent].enabled;
         }
 
         if transform_state.enabled || state.include_hidden_geometry {
@@ -197,17 +199,19 @@ pub(super) fn evaluate(
                 transform_state.pose.origin = origin;
             }
 
-            let bs_list = doc.blend_bindings_for_target(id);
-            if !bs_list.is_empty() {
+            let mut bs_list = doc.iter_blend_bindings_for_target(id).peekable();
+            if bs_list.peek().is_some() {
                 for bs in bs_list {
                     match (&bs.keyforms, t.kind()) {
                         (DeltaKeyforms::Warp(ref forms), TransformKind::Warp) => {
-                            let selection = evaluate_blend_binding(doc, state.values, bs);
+                            let selection = state.blend_selections
+                                [prepared.blend_binding_selections[&bs.id]]
+                                .as_slice();
                             let has_multiply =
                                 selection.iter().all(|(i, _)| forms[*i].multiply.is_some());
                             let has_screen =
                                 selection.iter().all(|(i, _)| forms[*i].screen.is_some());
-                            for (kf_idx, eff_w) in selection {
+                            for &(kf_idx, eff_w) in selection {
                                 if kf_idx < forms.len() {
                                     let f = &forms[kf_idx];
                                     for (p, dp) in state.points.iter_mut().zip(&f.points) {
@@ -244,12 +248,14 @@ pub(super) fn evaluate(
                             }
                         }
                         (DeltaKeyforms::Rotation(ref forms), TransformKind::Rotation) => {
-                            let selection = evaluate_blend_binding(doc, state.values, bs);
+                            let selection = state.blend_selections
+                                [prepared.blend_binding_selections[&bs.id]]
+                                .as_slice();
                             let has_multiply =
                                 selection.iter().all(|(i, _)| forms[*i].multiply.is_some());
                             let has_screen =
                                 selection.iter().all(|(i, _)| forms[*i].screen.is_some());
-                            for (kf_idx, eff_w) in selection {
+                            for &(kf_idx, eff_w) in selection {
                                 if kf_idx < forms.len() {
                                     let f = &forms[kf_idx];
                                     if let Some(d_orig) = f.origin {
@@ -317,8 +323,8 @@ pub(super) fn evaluate(
                 1.0
             };
 
-            if !t.parent_id.is_none() {
-                let parent = &state.transforms[prepared.transform_slots[t.parent()]];
+            if let Some(parent) = parent_slot {
+                let parent = &state.transforms[parent];
                 inherit_appearance(&mut transform_state.appearance, &parent.appearance);
                 if t.kind() == TransformKind::Warp {
                     parent.apply(state.points);
@@ -348,22 +354,27 @@ pub(super) fn evaluate(
                 return Status::error(s.code, format!("{}.evaluated_points", id));
             }
         }
-        let points = if t.kind() == TransformKind::Warp {
-            transform_state
-                .points
-                .chunks_exact(2)
-                .map(|p| Vec2::new(p[0], p[1]))
-                .collect()
+        let deformer = &mut state.frame.deformers[transform_slot];
+        deformer.id.clone_from(id);
+        deformer.enabled = transform_state.enabled;
+        deformer.points.clear();
+        if t.kind() == TransformKind::Warp {
+            deformer.points.extend(
+                transform_state
+                    .points
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|p| Vec2::new(p[0], p[1])),
+            );
         } else {
-            let mut points = vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)];
-            transform_state.apply(&mut points);
-            points
-        };
-        state.frame.deformers.push(super::types::EvaluatedDeformer {
-            id: id.clone(),
-            enabled: transform_state.enabled,
-            points,
-        });
+            deformer.points.extend_from_slice(&[
+                Vec2::new(0., 0.),
+                Vec2::new(1., 0.),
+                Vec2::new(0., 1.),
+            ]);
+            transform_state.apply(&mut deformer.points);
+        }
         state.transforms[transform_slot] = transform_state;
     }
     Status::ok()

@@ -4,7 +4,6 @@ use crate::types::{DeltaKeyforms, Status, Vec2};
 
 use super::evaluator::EvalContext;
 use super::prepared::PreparedEvaluation;
-use super::selection::evaluate_blend_binding;
 
 pub(super) fn evaluate(
     doc: &Document,
@@ -16,7 +15,7 @@ pub(super) fn evaluate(
     if !glue_order.is_empty() {
         let mesh_slots = &prepared.meshes;
 
-        for gid in glue_order {
+        for (glue_slot, gid) in glue_order.iter().enumerate() {
             if let Some(glue) = doc.get_glue(gid) {
                 let mut intensity = if let Some(binding) = &glue.binding {
                     let selection = &state.selections[prepared.scene_selections[gid]];
@@ -30,11 +29,14 @@ pub(super) fn evaluate(
                     glue.intensity
                 };
 
-                let bs_list = doc.blend_bindings_for_target(gid);
-                if !bs_list.is_empty() {
+                let mut bs_list = doc.iter_blend_bindings_for_target(gid).peekable();
+                if bs_list.peek().is_some() {
                     for bs in bs_list {
                         if let DeltaKeyforms::Glue(ref forms) = bs.keyforms {
-                            for (kf_idx, eff_w) in evaluate_blend_binding(doc, state.values, bs) {
+                            for &(kf_idx, eff_w) in state.blend_selections
+                                [prepared.blend_binding_selections[&bs.id]]
+                                .as_slice()
+                            {
                                 if kf_idx < forms.len() {
                                     intensity += forms[kf_idx].intensity * eff_w;
                                 }
@@ -56,15 +58,9 @@ pub(super) fn evaluate(
                     None => continue,
                 };
 
-                for pair in &glue.pairs {
-                    let idx_a = match doc.vertex_slot(&glue.mesh_a_id, pair.vertex_a) {
-                        Some(idx) => idx,
-                        None => continue,
-                    };
-                    let idx_b = match doc.vertex_slot(&glue.mesh_b_id, pair.vertex_b) {
-                        Some(idx) => idx,
-                        None => continue,
-                    };
+                for (pair, slots) in glue.pairs.iter().zip(&prepared.glue_vertices[glue_slot]) {
+                    let Some(slots) = slots else { continue };
+                    let (idx_a, idx_b) = (slots.a, slots.b);
 
                     let len_a = state.frame.drawables[slot_a].positions.len();
                     let len_b = state.frame.drawables[slot_b].positions.len();
