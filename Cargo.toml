@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/editor", "crates/editor-core", "crates/editor-render", "crates/component-playground"]
+members = ["crates/editor", "crates/editor-core", "crates/editor-render"]
 resolver = "3"
 exclude = ["vendor/gpui-fast", "vendor/gpui-fast-macos", "vendor/gpui-fast-apple", "vendor/gpui-kit"]
 

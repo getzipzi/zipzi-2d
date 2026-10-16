@@ -465,7 +465,7 @@ impl Document {
     fn sorted(&mut self) {
         self.session.drain_events();
         self.pristine_blank = false;
-        self.projection_revision += 1;
+        self.invalidate_projection(false);
     }
 }
 

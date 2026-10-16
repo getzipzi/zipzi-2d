@@ -2,6 +2,11 @@
 //! Measures GPUI dispatch, CPU stages and current Metal draw, not compositor FPS.
 use super::*;
 use crate::frame_trace;
+use anyhow::{Context as _, ensure};
+use editor_core::{AnimationEvaluator, AnimationPreviewMode, TimelineCommand, TimelineDisplayMode};
+use gpui_kit::{point, px, test::TestWindowExt};
+use serde_json::Value;
+use std::time::{Duration, Instant};
 
 pub(super) fn run(h: &mut Harness, samples: usize) -> anyhow::Result<Value> {
     let mut reports = serde_json::Map::new();

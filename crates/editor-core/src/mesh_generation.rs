@@ -194,10 +194,7 @@ impl Document {
         let mesh = self
             .mesh(&object.id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
-        let texture = self
-            .texture_slots
-            .get(&mesh.texture_asset_id)
-            .map(|&slot| self.textures[slot].clone());
+        let texture = self.textures.get(&mesh.texture_asset_id).cloned();
         Ok(MeshGenerationSource {
             target: object.clone(),
             revision: self.mesh_generation_revision(),
@@ -336,7 +333,7 @@ impl Document {
             .mesh(&object.id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
         ensure!(
-            self.texture_slots.contains_key(&mesh.texture_asset_id),
+            self.textures.contains(&mesh.texture_asset_id),
             "Missing source texture"
         );
         ensure!(

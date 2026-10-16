@@ -21,13 +21,8 @@ Watch source changes and rebuild automatically:
 ```sh
 brew install watchexec
 ./scripts/dev.sh
-./scripts/dev.sh playground  # Component playground
 ```
 
-The playground opens the Compact sample by default, using the editor's shared
-styles and number input. It includes Chinese/English labels, button states,
-search, property rows, and a panel-spacing prototype; use the theme button to
-compare dark and light appearances and the UI scale button for 100%, 110%, and 125%.
 The title bar combines a project dropdown (including New/Open and Close), a centered
 workspace switcher, and a workspace menu (the top-right ellipsis) with UI scale.
 The project dropdown remains available when no project is open.
@@ -92,7 +87,6 @@ KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-ben
 
 ```sh
 ./scripts/build-app.sh
-./scripts/build-app.sh playground
 ```
 
 App bundles are saved to `target/`.

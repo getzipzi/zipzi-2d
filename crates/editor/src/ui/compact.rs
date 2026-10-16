@@ -1,5 +1,4 @@
 //! Editor density in logical pixels. Keep Kit's 16px rem baseline intact.
-//! This module is also compiled by the component playground.
 use gpui_kit::component::{
     ActiveTheme, Selectable, Sizable, Theme,
     button::{Button, ButtonVariant, ButtonVariants},

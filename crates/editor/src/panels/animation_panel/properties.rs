@@ -176,6 +176,7 @@ impl AnimationPanel {
     }
 
     #[cfg(any(test, feature = "test-support"))]
+    #[allow(dead_code)]
     pub(crate) fn properties_cache_stats(&self) -> (u64, usize) {
         (self.properties.builds, self.properties.rows.len())
     }

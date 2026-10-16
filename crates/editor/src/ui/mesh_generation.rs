@@ -16,15 +16,10 @@ use gpui_kit::component::{
     select::{Select, SelectEvent, SelectItem, SelectState},
 };
 use gpui_kit::{prelude::*, *};
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    rc::Rc,
-    sync::{
-        Arc,
-        atomic::{AtomicU64, Ordering},
-    },
-};
+use std::sync::Arc;
+mod generation;
+mod validation;
+mod view;
 
 #[derive(Clone)]
 struct AlgorithmChoice {
@@ -70,65 +65,11 @@ impl SelectItem for AlgorithmChoice {
 }
 
 /// Presentation data is built on a worker, never by mutating the live document.
-struct Candidate {
-    plan: Arc<MeshGenerationPreview>,
-    edges: Arc<[([f32; 2], [f32; 2])]>,
-    source_size: [f32; 2],
-    renderer: Option<super::mesh_preview::MeshPreview>,
-}
-impl Candidate {
-    fn new(
-        plan: MeshGenerationPreview,
-        texture: Option<editor_core::SceneTexture>,
-        gpu: Option<SharedMetalContext>,
-        preview_cache: super::mesh_preview::MeshPreviewCache,
-    ) -> anyhow::Result<Self> {
-        let geometry = plan.geometry();
-        let [a, c] = plan.source_bounds();
-        let (min_x, min_y, width, height) = (a.x, a.y, c.x - a.x, c.y - a.y);
-        let points: HashMap<_, _> = geometry
-            .vertex_ids
-            .iter()
-            .copied()
-            .zip(
-                geometry
-                    .positions
-                    .iter()
-                    .map(|p| [(p.x - min_x) / width, (p.y - min_y) / height]),
-            )
-            .collect();
-        let mut seen = HashSet::new();
-        let mut edges = Vec::new();
-        for triangle in &geometry.triangles {
-            for i in 0..3 {
-                let (a, b) = (triangle[i], triangle[(i + 1) % 3]);
-                if seen.insert((a.min(b), a.max(b))) {
-                    edges.push((points[&a], points[&b]));
-                }
-            }
-        }
-        let scene = texture.map(|texture| plan.scene(texture));
-        let renderer = scene
-            .map(|scene| super::mesh_preview::MeshPreview::prepare(scene, gpu, preview_cache))
-            .transpose()?;
-        Ok(Self {
-            renderer,
-            plan: Arc::new(plan),
-            edges: edges.into(),
-            source_size: [width, height],
-        })
-    }
-}
-
 pub(crate) struct MeshGenerationForm {
     owner: WeakEntity<EditorView>,
     document: DocumentId,
     revision: u64,
     target: ObjectRef,
-    source: Arc<MeshGenerationSource>,
-    gpu: Option<SharedMetalContext>,
-    preview_cache: super::mesh_preview::MeshPreviewCache,
-    latest_request: Arc<AtomicU64>,
     name: String,
     square: bool,
     algorithm: Entity<SelectState<Vec<AlgorithmChoice>>>,
@@ -141,12 +82,7 @@ pub(crate) struct MeshGenerationForm {
     remove_faint_islands: bool,
     dialog: FormDialogState,
     validation: anyhow::Result<MeshGenerationOptions>,
-    requested: Option<MeshGenerationOptions>,
-    candidate: Option<Arc<Candidate>>,
-    task: Option<Task<()>>,
-    request_id: u64,
-    painter: Option<PreviewPainter>,
-    painted: bool,
+    preview: generation::PreviewGeneration,
     viewport: Entity<PreviewViewport>,
     _subscriptions: Vec<Subscription>,
 }
@@ -331,13 +267,13 @@ impl MeshGenerationForm {
             subscriptions.push(cx.subscribe(
                 &viewport,
                 |this: &mut Self, _, status: &PreviewPaintStatus, cx| {
-                    if status.0 != this.request_id || this.candidate.is_none() {
+                    if !this.preview.accepts_paint(status.0) {
                         return;
                     }
                     match &status.1 {
-                        Ok(()) => this.painted = true,
+                        Ok(()) => this.preview.set_painted(true),
                         Err(error) => {
-                            this.painted = false;
+                            this.preview.set_painted(false);
                             this.dialog.error = Some(error.clone());
                         }
                     }
@@ -350,10 +286,7 @@ impl MeshGenerationForm {
                 document,
                 revision,
                 target,
-                source,
-                gpu: window.metal_context(),
-                preview_cache: Default::default(),
-                latest_request: Default::default(),
+                preview: generation::PreviewGeneration::new(source, window.metal_context()),
                 name,
                 square,
                 algorithm,
@@ -370,12 +303,6 @@ impl MeshGenerationForm {
                 } else {
                     MeshGenerationOptions::Grid(defaults)
                 }),
-                requested: None,
-                candidate: None,
-                task: None,
-                request_id: 0,
-                painter: None,
-                painted: false,
                 viewport,
                 _subscriptions: subscriptions,
             }
@@ -393,172 +320,6 @@ impl MeshGenerationForm {
         };
         form_dialog::open(form, options, window, cx);
         Ok(())
-    }
-
-    fn validate(&self, cx: &App) -> anyhow::Result<MeshGenerationOptions> {
-        let owner = self
-            .owner
-            .upgrade()
-            .ok_or_else(|| anyhow::anyhow!(t!("mesh_generation.stale")))?;
-        let state = owner.read(cx);
-        anyhow::ensure!(
-            state.editor.active_id() == Some(self.document)
-                && !state.modal
-                && !state.editor.is_busy()
-                && !state.editor.exiting(),
-            t!("mesh_generation.stale")
-        );
-        let doc = state.editor.document().unwrap();
-        anyhow::ensure!(
-            doc.mesh_generation_revision() == self.revision && !doc.has_pending_edit(),
-            t!("mesh_generation.stale")
-        );
-        anyhow::ensure!(
-            !doc.object_state(&self.target).locked(),
-            t!("mesh_generation.locked")
-        );
-        if self.is_alpha(cx) {
-            anyhow::ensure!(
-                self.source.alpha_error().is_none(),
-                "{}",
-                self.source.alpha_error().unwrap_or_default()
-            );
-            let values: Vec<_> = self
-                .alpha_inputs
-                .iter()
-                .map(|input| input.read(cx).value())
-                .collect();
-            let invalid = || anyhow::anyhow!(t!("mesh_generation.invalid_alpha"));
-            let number = |i: usize| truncated_number(&values[i]).ok_or_else(invalid);
-            let options = AlphaMeshOptions {
-                outside_spacing: number(0)?,
-                inside_spacing: number(1)?,
-                outside_margin: number(2)?,
-                inside_margin: number(3)?,
-                minimum_margin: number(4)?,
-                minimum_boundary_points: number(5)?.to_string().parse().map_err(|_| invalid())?,
-                alpha_threshold: number(6)?.to_string().parse().map_err(|_| invalid())?,
-                preserve_holes: self.preserve_holes,
-                clip_to_image: false,
-                remove_faint_islands: self.remove_faint_islands,
-                ..AlphaMeshOptions::default()
-            };
-            options.validate().map_err(|_| invalid())?;
-            return Ok(MeshGenerationOptions::Alpha(options));
-        }
-        let parse = |i: usize| {
-            truncated_number(&self.inputs[i].read(cx).value())
-                .and_then(|value| value.to_string().parse::<usize>().ok())
-                .ok_or_else(|| anyhow::anyhow!(t!("mesh_generation.invalid_counts")))
-        };
-        let options = MeshGridOptions {
-            columns: parse(0)?,
-            rows: parse(1)?,
-        };
-        options
-            .validate()
-            .map_err(|_| anyhow::anyhow!(t!("mesh_generation.invalid_counts")))?;
-        anyhow::ensure!(
-            !self.square || options.columns == options.rows,
-            t!("mesh_generation.square_required")
-        );
-        doc.validate_mesh_grid(&self.target, options)?;
-        Ok(MeshGenerationOptions::Grid(options))
-    }
-
-    fn refresh(&mut self, cx: &mut Context<Self>) {
-        self.validation = self.validate(cx);
-        let options = self.validation.as_ref().ok().copied();
-        if self.requested != options {
-            self.request_id += 1;
-            self.latest_request
-                .store(self.request_id, Ordering::Relaxed);
-            self.candidate = None;
-            self.painter = None;
-            self.painted = false;
-            self.requested = options;
-        }
-        if self.task.is_none() && self.candidate.is_none() && self.dialog.error.is_none() {
-            self.start_generation(cx);
-        }
-        self.dialog.set_validation(
-            self.validation.is_ok() && self.candidate.is_some() && self.painted,
-            true,
-        );
-        let content = self.candidate.as_ref().map(|c| PreviewContent {
-            source_size: c.source_size,
-            painter: self.painter.clone(),
-            request: self.request_id,
-            edges: c.edges.clone(),
-        });
-        let message = if self.validation.is_ok() && self.dialog.error.is_none() {
-            t!("mesh_generation.preparing")
-        } else {
-            t!("mesh_generation.no_preview")
-        };
-        self.viewport.update(cx, |viewport, cx| {
-            viewport.set_content(content, message.into(), cx)
-        });
-    }
-
-    fn start_generation(&mut self, cx: &mut Context<Self>) {
-        let Some(options) = self.requested else {
-            return;
-        };
-        if self.dialog.closed() {
-            return;
-        }
-        let request = self.request_id;
-        let source = self.source.clone();
-        let gpu = self.gpu.clone();
-        let preview_cache = self.preview_cache.clone();
-        let latest_request = self.latest_request.clone();
-        let executor = cx.background_executor().clone();
-        let timer = executor.timer(std::time::Duration::from_millis(100));
-        let background = executor.spawn(async move {
-            timer.await;
-            // Coalesce changes during the debounce and skip GPU work for results
-            // superseded while the CPU generator was running.
-            if latest_request.load(Ordering::Relaxed) != request {
-                return None;
-            }
-            let plan = source.generate(options);
-            if latest_request.load(Ordering::Relaxed) != request {
-                return None;
-            }
-            Some(plan.and_then(|plan| {
-                objc2::rc::autoreleasepool(|_| {
-                    Candidate::new(plan, source.texture.clone(), gpu, preview_cache)
-                })
-            }))
-        });
-        self.task = Some(cx.spawn(async move |this, cx| {
-            let result = background.await;
-            _ = this.update(cx, |this, cx| {
-                this.task = None;
-                if this.dialog.closed() {
-                    return;
-                }
-                if this.request_id == request {
-                    match result.expect("Current generation must produce a result") {
-                        Ok(mut candidate) => {
-                            this.dialog.edited();
-                            this.painter = candidate.renderer.take().map(|mut renderer| {
-                                Rc::new(RefCell::new(
-                                    move |bounds, content, window: &mut Window| {
-                                        renderer.paint(bounds, content, window)
-                                    },
-                                )) as PreviewPainter
-                            });
-                            this.candidate = Some(Arc::new(candidate));
-                        }
-                        Err(error) => this.dialog.error = Some(error.to_string()),
-                    }
-                }
-                this.refresh(cx);
-                cx.notify();
-            });
-        }));
     }
 
     fn is_alpha(&self, cx: &App) -> bool {
@@ -606,13 +367,13 @@ impl FormDialogView for MeshGenerationForm {
     }
     fn submit(&mut self, _: &mut Window, cx: &mut Context<Self>) -> anyhow::Result<()> {
         let options = self.validate(cx)?;
-        anyhow::ensure!(self.painted, t!("mesh_generation.preparing"));
-        let candidate = self
-            .candidate
-            .as_ref()
-            .filter(|c| c.plan.options() == options)
+        anyhow::ensure!(self.preview.painted(), t!("mesh_generation.preparing"));
+        let plan = self
+            .preview
+            .plan()
+            .filter(|plan| plan.options() == options)
             .ok_or_else(|| anyhow::anyhow!(t!("mesh_generation.preparing")))?;
-        let plan = candidate.plan.clone();
+        let plan = plan.clone();
         self.owner.upgrade().unwrap().update(cx, |owner, cx| {
             owner
                 .editor
@@ -668,274 +429,4 @@ fn alpha_presets() -> [AlphaMeshOptions; 3] {
         remove_faint_islands: true,
         ..options
     })
-}
-
-impl Render for MeshGenerationForm {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let side = preview_side(window, cx);
-        let mut settings = div()
-            .id("mesh-generation-settings")
-            .test_support()
-            .flex()
-            .flex_col()
-            .gap_3()
-            .w(crate::ui::compact::rem(240.))
-            .flex_shrink_0()
-            .max_h(crate::ui::compact::rem(side + 36.))
-            .overflow_y_scroll()
-            .child(
-                div()
-                    .text_size(crate::ui::compact::rem(crate::ui::compact::BODY))
-                    .font_weight(FontWeight::MEDIUM)
-                    .truncate()
-                    .child(self.name.clone()),
-            )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_1()
-                    .text_xs()
-                    .child(t!("mesh_generation.algorithm"))
-                    .child(
-                        div().flex_shrink_0().child(
-                            crate::ui::compact::select(Select::new(&self.algorithm))
-                                .id("mesh-generation-algorithm")
-                                .accessibility_label(t!("mesh_generation.algorithm"))
-                                .w_full(),
-                        ),
-                    ),
-            );
-        if self.is_alpha(cx) {
-            let mut presets = div().flex().gap_1();
-            for (i, (id, label)) in [
-                ("mesh-generation-alpha-light", t!("mesh_generation.light")),
-                (
-                    "mesh-generation-alpha-standard",
-                    t!("mesh_generation.standard"),
-                ),
-                ("mesh-generation-alpha-heavy", t!("mesh_generation.heavy")),
-            ]
-            .into_iter()
-            .enumerate()
-            {
-                let selected = self.validation.as_ref().ok()
-                    == Some(&MeshGenerationOptions::Alpha(alpha_presets()[i]));
-                presets =
-                    presets.child(
-                        crate::ui::compact::button(Button::new(id))
-                            .label(label)
-                            .when(selected, |b| b.primary())
-                            .on_click(cx.listener(move |this, _, window, cx| {
-                                this.alpha_preset(i, window, cx)
-                            })),
-                    );
-            }
-            settings = settings.child(presets).child(
-                div()
-                    .text_xs()
-                    .text_color(cx.theme().muted_foreground)
-                    .child(t!("mesh_generation.pixel_units")),
-            );
-            for (i, (id, label)) in [
-                (
-                    "mesh-generation-outside-spacing",
-                    t!("mesh_generation.outside_spacing"),
-                ),
-                (
-                    "mesh-generation-inside-spacing",
-                    t!("mesh_generation.inside_spacing"),
-                ),
-                (
-                    "mesh-generation-outside-margin",
-                    t!("mesh_generation.outside_margin"),
-                ),
-                (
-                    "mesh-generation-inside-margin",
-                    t!("mesh_generation.inside_margin"),
-                ),
-                (
-                    "mesh-generation-minimum-margin",
-                    t!("mesh_generation.minimum_margin"),
-                ),
-                (
-                    "mesh-generation-boundary-points",
-                    t!("mesh_generation.boundary_points"),
-                ),
-                (
-                    "mesh-generation-alpha-threshold",
-                    t!("mesh_generation.alpha_threshold"),
-                ),
-            ]
-            .into_iter()
-            .enumerate()
-            {
-                let options =
-                    self.alpha_fields[i].options(&self.alpha_inputs[i], self.dialog.closed(), cx);
-                self.alpha_numbers[i]
-                    .update(cx, |input, cx| input.configure(label.clone(), options, cx));
-                settings = settings.child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap_2()
-                        .flex_shrink_0()
-                        .child(div().flex_1().text_xs().child(label.clone()))
-                        .child(
-                            div()
-                                .w(crate::ui::compact::rem(76.))
-                                .id(id)
-                                .test_support()
-                                .aria_label(label)
-                                .child(self.alpha_numbers[i].clone()),
-                        ),
-                );
-            }
-            settings = settings.child(
-                Checkbox::new("mesh-generation-remove-faint-islands")
-                    .small()
-                    .label(t!("mesh_generation.remove_faint_islands").to_string())
-                    .checked(self.remove_faint_islands)
-                    .on_click(cx.listener(|this, value: &bool, _, cx| {
-                        this.remove_faint_islands = *value;
-                        this.dialog.edited();
-                        this.refresh(cx);
-                        cx.notify();
-                    })),
-            );
-            settings = settings.child(
-                Checkbox::new("mesh-generation-preserve-holes")
-                    .small()
-                    .label(t!("mesh_generation.preserve_holes").to_string())
-                    .checked(self.preserve_holes)
-                    .on_click(cx.listener(|this, value: &bool, _, cx| {
-                        this.preserve_holes = *value;
-                        this.dialog.edited();
-                        this.refresh(cx);
-                        cx.notify();
-                    })),
-            );
-        } else {
-            let mut presets = div().flex().gap_1();
-            for (id, label, count) in [
-                ("mesh-generation-sparse", t!("mesh_generation.sparse"), 4),
-                ("mesh-generation-medium", t!("mesh_generation.medium"), 8),
-                ("mesh-generation-dense", t!("mesh_generation.dense"), 16),
-            ] {
-                let selected = self.validation.as_ref().ok()
-                    == Some(&MeshGenerationOptions::Grid(MeshGridOptions {
-                        columns: count,
-                        rows: count,
-                    }));
-                presets = presets.child(
-                    crate::ui::compact::button(Button::new(id))
-                        .label(label)
-                        .when(selected, |b| b.primary())
-                        .on_click(
-                            cx.listener(move |this, _, window, cx| this.preset(count, window, cx)),
-                        ),
-                );
-            }
-            settings = settings.child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_1()
-                    .child(div().text_xs().child(t!("mesh_generation.presets")))
-                    .child(presets),
-            );
-            let mut counts = div().flex().gap_2();
-            for (i, label) in [t!("mesh_generation.columns"), t!("mesh_generation.rows")]
-                .into_iter()
-                .enumerate()
-            {
-                let options = GRID_FIELD.options(&self.inputs[i], self.dialog.closed(), cx);
-                self.numbers[i].update(cx, |input, cx| input.configure(label.clone(), options, cx));
-                counts = counts.child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .text_xs()
-                        .child(label.clone())
-                        .child(
-                            div()
-                                .id(if i == 0 {
-                                    "mesh-generation-columns"
-                                } else {
-                                    "mesh-generation-rows"
-                                })
-                                .test_support()
-                                .aria_label(label)
-                                .child(self.numbers[i].clone()),
-                        ),
-                );
-            }
-            settings = settings.child(counts).when(self.square, |v| {
-                v.child(
-                    div()
-                        .text_xs()
-                        .text_color(cx.theme().muted_foreground)
-                        .child(t!("mesh_generation.square_required")),
-                )
-            });
-            if self.source.alpha_error().is_some() {
-                settings = settings.child(
-                    div()
-                        .text_xs()
-                        .text_color(cx.theme().muted_foreground)
-                        .child(t!("mesh_generation.alpha_requirements")),
-                );
-            }
-        }
-        if let Some(candidate) = &self.candidate {
-            let geometry = candidate.plan.geometry();
-            settings = settings.child(
-                div()
-                    .id("mesh-generation-counts")
-                    .test_support()
-                    .pt_3()
-                    .border_t_1()
-                    .border_color(cx.theme().border)
-                    .text_xs()
-                    .text_color(cx.theme().muted_foreground)
-                    .child(t!(
-                        "mesh_generation.counts",
-                        vertices = geometry.positions.len(),
-                        triangles = geometry.triangles.len()
-                    )),
-            );
-        }
-        settings = settings.when_some(
-            self.dialog
-                .error
-                .clone()
-                .or_else(|| self.validation.as_ref().err().map(ToString::to_string)),
-            |v, error| {
-                v.child(
-                    div()
-                        .id("mesh-generation-error")
-                        .test_support()
-                        .text_xs()
-                        .text_color(cx.theme().danger)
-                        .child(error),
-                )
-            },
-        );
-        div()
-            .id("mesh-generation-form")
-            .test_support()
-            .track_focus(&self.dialog.focus)
-            .flex()
-            .gap_4()
-            .child(settings)
-            .child(
-                div()
-                    .id("mesh-generation-preview")
-                    .test_support()
-                    .w(crate::ui::compact::rem(side))
-                    .h(crate::ui::compact::rem(side + 36.))
-                    .flex_shrink_0()
-                    .child(self.viewport.clone()),
-            )
-    }
 }

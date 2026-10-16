@@ -19,6 +19,96 @@ fn animation(cx: &mut TestAppContext) -> Harness {
 }
 
 #[gpui_kit::test]
+fn deferred_deactivation_preserves_a_newer_edit(cx: &mut TestAppContext) {
+    let harness = animation(cx);
+    let (document, replacement, key) = cx
+        .update_window(harness.window, |_, window, cx| {
+            let timeline = harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .timeline
+                .clone();
+            let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
+            let key = projection.tracks.values().next().unwrap().keys[0]
+                .reference
+                .clone();
+            let time = projection.key(&key).unwrap().time;
+            let origin = timeline.read(cx).key_position(&key).unwrap() + point(px(2.), px(0.));
+            press(window, origin, cx);
+            slide(window, origin + point(px(40.), px(0.)), false, cx);
+
+            // Dock callbacks run while the owner is borrowed. A replacement
+            // edit can arrive before their deferred cancellation is delivered.
+            harness.view.update(cx, |view, cx| {
+                let original = view.editor.timeline_edit().unwrap().identity;
+                timeline.update(cx, |timeline, cx| timeline.deactivate(window, cx));
+                view.editor.cancel_timeline_edit();
+                let document = view.editor.active_id().unwrap();
+                let replacement = view
+                    .editor
+                    .begin_timeline_edit(document, "Replacement")
+                    .unwrap();
+                assert_ne!(original.edit, replacement.edit);
+                view.editor
+                    .update_timeline_edit(
+                        document,
+                        replacement,
+                        TimelineCommand::SetKey {
+                            key: key.clone(),
+                            time,
+                            value: 0.75,
+                        },
+                    )
+                    .unwrap();
+                (document, replacement, key)
+            })
+        })
+        .unwrap();
+    cx.run_until_parked();
+    harness.view.update(cx, |view, cx| {
+        assert_eq!(
+            view.editor.timeline_edit().unwrap().identity.edit,
+            replacement.edit
+        );
+        assert_eq!(
+            view.editor
+                .timeline_projection()
+                .unwrap()
+                .key(&key)
+                .unwrap()
+                .value,
+            0.75
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        assert!(
+            !view
+                .dock
+                .as_ref()
+                .unwrap()
+                .timeline
+                .read(cx)
+                .pointer_active()
+        );
+        view.editor
+            .finish_timeline_edit(document, replacement)
+            .unwrap();
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+        assert_eq!(
+            view.editor
+                .timeline_projection()
+                .unwrap()
+                .key(&key)
+                .unwrap()
+                .value,
+            0.75
+        );
+    });
+}
+
+#[gpui_kit::test]
 fn motion_property_scrubs_use_unit_steps_and_commit_once(cx: &mut TestAppContext) {
     let harness = animation(cx);
     cx.update_window(harness.window, |_, window, cx| {

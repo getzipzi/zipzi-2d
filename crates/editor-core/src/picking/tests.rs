@@ -1,6 +1,8 @@
-use super::*;
+use super::CanvasScene;
+use crate::{Document, ModelPoint};
 use kasane_core::{Canvas, Mesh, Vec2};
 use kasane_sdk::{AuthoringSession, prepare_png_asset};
+use std::sync::Arc;
 
 fn fixture() -> anyhow::Result<(Document, tempfile::TempDir)> {
     let directory = tempfile::tempdir()?;

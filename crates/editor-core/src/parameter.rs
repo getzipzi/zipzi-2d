@@ -222,7 +222,7 @@ impl Document {
         })?;
         self.session.drain_events();
         self.pristine_blank = false;
-        self.projection_revision += 1;
+        self.invalidate_projection(false);
         let index = self.object_index();
         self.context.reconcile(&index);
         self.focus_parameter(&id)?;
@@ -398,7 +398,7 @@ impl Document {
     pub(super) fn parameter_management_changed(&mut self) -> Result<()> {
         self.session.drain_events();
         self.pristine_blank = false;
-        self.projection_revision += 1;
+        self.invalidate_projection(false);
         self.reconcile_parameter_preview()?;
         self.context.reconcile(&self.object_index());
         Ok(())

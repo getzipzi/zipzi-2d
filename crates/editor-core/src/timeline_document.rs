@@ -17,7 +17,7 @@ impl Document {
         self.session.drain_events();
         if receipt.changed {
             self.pristine_blank = false;
-            self.projection_revision += 1;
+            self.invalidate_projection(false);
         }
         Ok(())
     }
@@ -54,7 +54,7 @@ impl Document {
         })?;
         self.session.drain_events();
         self.pristine_blank = false;
-        self.projection_revision += 1;
+        self.invalidate_projection(false);
         Ok(id)
     }
 }

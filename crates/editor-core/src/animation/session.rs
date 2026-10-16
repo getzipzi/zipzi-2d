@@ -1,0 +1,158 @@
+//! Playback state transitions and reconciliation after document edits.
+use super::*;
+
+impl AnimationSession {
+    /// Last SDK result coordinates, retained while inspecting raw clip values.
+    pub fn result_playback_position(&self) -> Option<&kasane_sdk::MotionPlaybackPosition> {
+        self.result_position.as_ref()
+    }
+    pub(crate) fn new(document: &Document) -> Self {
+        Self {
+            motion: None,
+            expression: None,
+            expressions: Vec::new(),
+            time: 0.,
+            edit_time: 0.,
+            head_located: true,
+            preview_mode: AnimationPreviewMode::Editing,
+            preview_loop: false,
+            candidate: None,
+            result_position: None,
+            playing: false,
+            loop_position: false,
+            presented: None,
+            error: None,
+            model_generation: document.model_generation(),
+            preview_generation: 1,
+            source: None,
+            frames: provenance::FrameSequence::default(),
+            scrubbing: false,
+        }
+    }
+    pub(crate) fn pause(&mut self) {
+        self.playing = false;
+        // An explicit pause needs a fresh request even at an unchanged time.
+        // Requests already in flight cannot replace this target frame.
+        self.barrier();
+    }
+    pub(crate) fn set_candidate(&mut self, candidate: Option<TimelineCandidateIdentity>) {
+        // Revisions inside one edit are successive preview targets, not new
+        // acceptance epochs. Let in-flight work make progress while input keeps
+        // replacing the queued target. Begin, commit and cancel remain barriers.
+        let continuing = self
+            .candidate
+            .zip(candidate)
+            .is_some_and(|(old, new)| old.edit == new.edit && old.revision <= new.revision);
+        if !continuing {
+            self.pause();
+            self.preview_generation += 1;
+        }
+        self.candidate = candidate;
+        self.source = None;
+        self.error = None;
+    }
+    pub(super) fn barrier(&mut self) {
+        if self.scrubbing {
+            // A completed drag sample can be ahead of the final pointer target.
+            self.presented = None;
+        }
+        self.scrubbing = false;
+        self.frames.barrier();
+    }
+    pub(super) fn rebuild(&mut self) {
+        self.pause();
+        self.preview_generation += 1;
+        self.presented = None;
+        self.error = None;
+    }
+    pub(super) fn new_run(&mut self) {
+        self.edit_time = 0.;
+        self.head_located = true;
+        self.result_position = None;
+        self.loop_position = false;
+        self.expressions.clear();
+        if let Some(id) = &self.expression {
+            self.expressions.push(ExpressionTrigger {
+                expression_id: id.clone(),
+                time: 0.,
+                transition: ExpressionTransition::Fade,
+            });
+        }
+        self.rebuild();
+    }
+    pub(super) fn locate(&mut self, time: f32) {
+        self.head_located = true;
+        self.loop_position = false;
+        self.time = time;
+        self.pause();
+        // Permit a backward frame in this recipe without dropping the SDK seek cache.
+        self.presented = None;
+        self.error = None;
+    }
+    pub(crate) fn reconcile(&mut self, document: &Document) {
+        let generation = document.model_generation();
+        if generation == self.model_generation {
+            return;
+        }
+        self.model_generation = generation;
+        self.source = None;
+        self.rebuild();
+        if self.motion.is_none() && self.expression.is_none() && self.expressions.is_empty() {
+            return;
+        }
+        let catalog = document.animation_catalog();
+        if let Some(selection) = &self.motion {
+            if let Some(resource) = catalog.motions.iter().find(|r| &r.selection == selection) {
+                self.time = if !resource.playable() {
+                    0.
+                } else if self.preview_mode == AnimationPreviewMode::Editing {
+                    // Raw preview uses clip-local time, including imported tail keys.
+                    let end = document
+                        .motion_definition(&selection.clip_id)
+                        .unwrap()
+                        .tracks
+                        .iter()
+                        .map(|track| {
+                            track
+                                .segments
+                                .last()
+                                .map_or(track.initial.time, |s| s.end().time)
+                        })
+                        .fold(resource.duration, f32::max);
+                    self.edit_time.min(end)
+                } else if resource.looping && !self.loop_position {
+                    // A looping preview's clock includes completed cycles and
+                    // timestamps the expression schedule and physics history.
+                    self.time
+                } else {
+                    self.time.min(resource.duration)
+                };
+                if self.preview_mode == AnimationPreviewMode::Editing {
+                    self.edit_time = self.time;
+                } else if !resource.looping {
+                    self.edit_time = self.edit_time.min(resource.duration);
+                }
+            } else {
+                self.motion = None;
+                self.time = 0.;
+                self.edit_time = 0.;
+                self.error = Some(AnimationFailure::MotionRemoved);
+            }
+        }
+        let valid = |id: &str| {
+            catalog
+                .expressions
+                .iter()
+                .any(|r| r.id == id && r.unresolved_targets.is_empty())
+        };
+        let before = self.expressions.len();
+        self.expressions
+            .retain(|trigger| valid(&trigger.expression_id));
+        if self.expression.as_ref().is_some_and(|id| !valid(id)) {
+            self.expression = None;
+            self.error = Some(AnimationFailure::ExpressionUnavailable);
+        } else if before != self.expressions.len() {
+            self.error = Some(AnimationFailure::TriggersRemoved);
+        }
+    }
+}

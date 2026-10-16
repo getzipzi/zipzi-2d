@@ -233,7 +233,7 @@ impl Document {
             .edit(label, None, |edit| edit.replace_editor_state(state))?;
         self.session.drain_events();
         if receipt.changed {
-            self.projection_revision += 1;
+            self.invalidate_projection(false);
             self.pristine_blank = false;
         }
         Ok(())

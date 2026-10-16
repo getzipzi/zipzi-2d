@@ -112,13 +112,24 @@ pub struct Document {
     pub(crate) animation_catalog: std::sync::Mutex<Option<(u64, Arc<crate::AnimationCatalog>)>>,
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
     pending: Option<PendingEdit>,
-    textures: Arc<[SceneTexture]>,
-    texture_slots: HashMap<String, usize>,
-    texture_assets: HashMap<String, kasane_core::ImageAsset>,
+    textures: textures::DocumentTextures,
     pristine_blank: bool,
 }
 
+mod edits;
+mod projection;
+mod textures;
+
 impl Document {
+    /// Presentation indexes use the projection revision as their cache key.
+    /// Topology also has an unversioned cache and must be cleared explicitly.
+    fn invalidate_projection(&mut self, topology_changed: bool) {
+        self.projection_revision += 1;
+        if topology_changed {
+            self.canvas_topology.get_mut().unwrap().take();
+        }
+    }
+
     pub fn model_generation(&self) -> u64 {
         // SDK generation identifies project replacement; revision advances on
         // every committed content change, including checkpoint Undo / Redo.
@@ -128,7 +139,7 @@ impl Document {
     pub(crate) fn animation_source(&self) -> crate::AnimationSource {
         crate::AnimationSource {
             snapshot: Arc::new(self.session.read_snapshot()),
-            textures: self.textures.clone(),
+            textures: self.textures.snapshot(),
             candidate: None,
             materialized: Default::default(),
         }
@@ -188,14 +199,9 @@ impl Document {
     }
 
     fn from_session(session: AuthoringSession) -> Result<Self> {
-        let textures = Self::load_textures(&session)?;
+        let textures = textures::DocumentTextures::new(&session)?;
         let selected = session.mesh_ids().first().cloned();
         let projection = Arc::new(crate::ObjectIndex::build(session.document()));
-        let texture_assets = session
-            .asset_ids()
-            .iter()
-            .filter_map(|id| session.asset(id).map(|a| (id.clone(), a)))
-            .collect();
         Ok(Self {
             session,
             import_name: None,
@@ -220,73 +226,13 @@ impl Document {
             canvas_topology: std::sync::Mutex::new(None),
             selected,
             pending: None,
-            texture_slots: textures
-                .iter()
-                .enumerate()
-                .map(|(i, t)| (t.asset_id.clone(), i))
-                .collect(),
-            texture_assets,
             textures,
             pristine_blank: false,
         })
     }
 
-    fn load_textures(session: &AuthoringSession) -> Result<Arc<[SceneTexture]>> {
-        session
-            .asset_ids()
-            .iter()
-            .map(|id| {
-                let data = session.read_texture(id)?;
-                Ok(SceneTexture {
-                    asset_id: id.clone(),
-                    cache_key: data.cache_key,
-                    width: data.width,
-                    height: data.height,
-                    rgba: data.rgba,
-                })
-            })
-            .collect::<Result<Vec<_>>>()
-            .map(Into::into)
-    }
-
     fn refresh_textures(&mut self) -> Result<()> {
-        let assets: HashMap<_, _> = self
-            .session
-            .asset_ids()
-            .iter()
-            .filter_map(|id| self.session.asset(id).map(|a| (id.clone(), a)))
-            .collect();
-        if assets == self.texture_assets {
-            return Ok(());
-        }
-        let textures = self
-            .session
-            .asset_ids()
-            .iter()
-            .map(|id| {
-                if assets.get(id) == self.texture_assets.get(id)
-                    && let Some(&slot) = self.texture_slots.get(id)
-                {
-                    return Ok(self.textures[slot].clone());
-                }
-                let data = self.session.read_texture(id)?;
-                Ok(SceneTexture {
-                    asset_id: id.clone(),
-                    cache_key: data.cache_key,
-                    width: data.width,
-                    height: data.height,
-                    rgba: data.rgba,
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
-        self.texture_slots = textures
-            .iter()
-            .enumerate()
-            .map(|(i, t)| (t.asset_id.clone(), i))
-            .collect();
-        self.textures = textures.into();
-        self.texture_assets = assets;
-        Ok(())
+        self.textures.refresh(&self.session)
     }
 
     pub fn save(&mut self, path: &Path) -> Result<SaveReceipt> {
@@ -352,180 +298,6 @@ impl Document {
             .collect()
     }
 
-    pub fn parameters(&self) -> Vec<ParameterValue> {
-        let groups: HashMap<_, _> = self
-            .model()
-            .display_info()
-            .parameters
-            .iter()
-            .flatten()
-            .filter_map(|entry| match entry {
-                kasane_core::document::CdiParameterEntry::Resolved {
-                    parameter_id,
-                    group_id,
-                    ..
-                } => Some((parameter_id.as_str(), group_id.clone())),
-                _ => None,
-            })
-            .collect();
-        sorting::ordered_parameter_ids(self.model())
-            .iter()
-            .filter_map(|id| {
-                let parameter = self.session.parameter(id)?;
-                Some(ParameterValue {
-                    id: id.clone(),
-                    group_id: groups.get(id.as_str()).cloned().flatten(),
-                    name: if parameter.name.is_empty() {
-                        parameter.runtime_id
-                    } else {
-                        parameter.name
-                    },
-                    minimum: parameter.minimum,
-                    maximum: parameter.maximum,
-                    default_value: parameter.default_value,
-                    value: self
-                        .session
-                        .preview_values()
-                        .get(id)
-                        .copied()
-                        .unwrap_or(parameter.default_value),
-                    decimal_places: parameter.decimal_places.clamp(0, 9) as usize,
-                })
-            })
-            .collect()
-    }
-
-    pub fn parameter_model_revision(&self) -> u64 {
-        self.projection_revision
-    }
-
-    pub fn parameter_visuals(&self) -> HashMap<String, ParameterVisual> {
-        let mut visuals = self.parameter_visuals_for_targets(
-            &self
-                .context
-                .selections
-                .iter()
-                .map(|r| r.id.clone())
-                .collect::<Vec<_>>(),
-        );
-        if let Some(b) = self
-            .context
-            .active_binding
-            .as_ref()
-            .and_then(|r| self.object_index().binding(r).cloned())
-        {
-            for axis in &b.axes {
-                if let Some(v) = visuals.get_mut(&axis.parameter_id) {
-                    v.keys = axis
-                        .keys
-                        .iter()
-                        .map(|&value| ParameterKey {
-                            value,
-                            selected: true,
-                            partial: false,
-                            targets: vec![b.target.id.clone()],
-                            base: false,
-                        })
-                        .collect();
-                }
-            }
-        }
-        visuals
-    }
-
-    /// Aggregate keys for an explicit selection without losing target coverage.
-    pub fn parameter_visuals_for_targets(
-        &self,
-        selected_targets: &[String],
-    ) -> HashMap<String, ParameterVisual> {
-        let selected_targets: std::collections::HashSet<_> = selected_targets.iter().collect();
-        let model = self.model();
-        let mut visuals: HashMap<_, _> = self
-            .session
-            .parameter_ids()
-            .iter()
-            .filter_map(|id| {
-                let p = model.get_parameter(id)?;
-                Some((
-                    id.clone(),
-                    ParameterVisual {
-                        kind: p.kind,
-                        repeat: p.repeat,
-                        keys: Vec::new(),
-                    },
-                ))
-            })
-            .collect();
-        let mut add_axis = |parameter_id: &str, values: &[f32], target: &str, base: Option<f32>| {
-            if let Some(visual) = visuals.get_mut(parameter_id) {
-                for &value in values {
-                    if let Some(key) = visual.keys.iter_mut().find(|key| key.value == value) {
-                        if !key.targets.iter().any(|id| id == target) {
-                            key.targets.push(target.to_owned());
-                        }
-                        key.base |= base == Some(value);
-                    } else {
-                        visual.keys.push(ParameterKey {
-                            value,
-                            selected: false,
-                            partial: false,
-                            targets: vec![target.to_owned()],
-                            base: base == Some(value),
-                        });
-                    }
-                }
-            }
-        };
-        for id in model.binding_order() {
-            if let Some(binding) = model.get_binding(id) {
-                for axis in &binding.axes {
-                    add_axis(&axis.parameter_id, &axis.keys, &binding.mesh_id, None);
-                }
-            }
-        }
-        for id in model.scene_binding_order() {
-            if let Some(binding) = model.get_scene_binding(id) {
-                for axis in &binding.axes {
-                    add_axis(&axis.parameter_id, &axis.keys, binding.target_id(), None);
-                }
-            }
-        }
-        for id in model.glue_order() {
-            if let Some(binding) = model.get_glue(id).and_then(|glue| glue.binding.as_ref()) {
-                for axis in &binding.axes {
-                    add_axis(&axis.parameter_id, &axis.keys, id, None);
-                }
-            }
-        }
-        // A key table alone is not an object binding (it can exist unused).
-        for id in model.blend_binding_order() {
-            if let Some(binding) = model.get_blend_binding(id) {
-                if let Some(table) = model.get_blend_key_table(&binding.key_table_id) {
-                    add_axis(
-                        &table.parameter_id,
-                        &table.keys,
-                        &binding.target_id,
-                        table.keys.get(table.base_key_idx).copied(),
-                    );
-                }
-            }
-        }
-        for visual in visuals.values_mut() {
-            for key in &mut visual.keys {
-                key.targets.sort();
-                let count = key
-                    .targets
-                    .iter()
-                    .filter(|id| selected_targets.contains(id))
-                    .count();
-                key.selected = count > 0;
-                key.partial = count > 0 && count < selected_targets.len();
-            }
-            visual.keys.sort_by(|a, b| a.value.total_cmp(&b.value));
-        }
-        visuals
-    }
-
     pub fn preview_revision(&self) -> u64 {
         self.preview_revision
     }
@@ -570,135 +342,8 @@ impl Document {
     /// Static source-art crop and UV footprint; never evaluates posed geometry.
     pub fn mesh_texture_region(&self, id: &str) -> Option<crate::MeshTextureRegion> {
         let mesh = self.session.document().get_mesh(id)?;
-        let texture = &self.textures[*self.texture_slots.get(&mesh.texture_asset_id)?];
+        let texture = self.textures.get(&mesh.texture_asset_id)?;
         crate::MeshTextureRegion::new(texture, mesh)
-    }
-
-    pub fn mesh_tree(&self) -> Vec<TreeNode> {
-        self.structure_tree(false)
-    }
-    pub fn deformer_tree(&self) -> Vec<TreeNode> {
-        self.structure_tree(true)
-    }
-    fn structure_tree(&self, deformer: bool) -> Vec<TreeNode> {
-        use crate::{ObjectKind as K, RelationKind as R};
-        let index = self.object_index();
-        let mut nodes = Vec::new();
-        let mut references = Vec::new();
-        for x in &index.objects {
-            if x.diagnostic.is_some() {
-                continue;
-            }
-            let kind = match x.reference.kind {
-                K::Part if !deformer => TreeNodeKind::Part,
-                K::Mesh => TreeNodeKind::Mesh,
-                K::Deformer => match self
-                    .model()
-                    .get_transform(&x.reference.id)
-                    .map(|t| t.kind())
-                {
-                    Some(kasane_core::TransformKind::Rotation) => TreeNodeKind::RotationDeformer,
-                    _ => TreeNodeKind::WarpDeformer,
-                },
-                K::Offscreen if !deformer => TreeNodeKind::Offscreen,
-                _ => continue,
-            };
-            let mut node = TreeNode::new(x.reference.id.clone(), x.name.clone(), kind);
-            node.visible = Some(
-                !self
-                    .model()
-                    .editor_state()
-                    .get(&x.reference.id)
-                    .hidden_in_editor,
-            );
-            if kind == TreeNodeKind::Mesh {
-                node.triangles = self.model().get_mesh(&node.id).map(|m| m.triangles.len());
-            }
-            references.push(x.reference.clone());
-            nodes.push(node);
-        }
-        let slots: HashMap<_, _> = references.iter().enumerate().map(|(i, r)| (r, i)).collect();
-        let relation = if deformer {
-            R::DeformParent
-        } else {
-            R::PartOwner
-        };
-        let mut parents = Vec::new();
-        let mut unowned = Vec::new();
-        let mut broken = Vec::new();
-        for (i, r) in references.iter().enumerate() {
-            let edge = index.outgoing(r).find(|e| e.kind == relation);
-            let parent = edge.and_then(|e| slots.get(&e.target)).copied();
-            if let Some(e) = edge.filter(|_| parent.is_none()) {
-                nodes[i].diagnostic = Some(format!("Missing parent: {}", e.target.id));
-                broken.push(i);
-            } else if parent.is_none()
-                && (r.kind == K::Mesh
-                    || (!deformer && matches!(r.kind, K::Deformer | K::Offscreen)))
-            {
-                unowned.push(i);
-            }
-            parents.push(parent);
-        }
-        for i in 0..nodes.len() {
-            let mut visited = std::collections::HashSet::new();
-            let mut cursor = Some(i);
-            while let Some(j) = cursor {
-                if !visited.insert(j) {
-                    nodes[i].diagnostic = Some("Parent cycle".into());
-                    broken.push(i);
-                    break;
-                }
-                cursor = parents[j];
-            }
-        }
-        let mut add_group = |id: &str, name: &str, items: &[usize], nodes: &mut Vec<TreeNode>| {
-            if !items.is_empty() {
-                let slot = nodes.len();
-                nodes.push(TreeNode::new(id.into(), name.into(), TreeNodeKind::Group));
-                for &i in items {
-                    parents[i] = Some(slot);
-                }
-                parents.push(None);
-            }
-        };
-        unowned.retain(|i| !broken.contains(i));
-        add_group(
-            "unowned",
-            if deformer {
-                "No deformer parent"
-            } else {
-                "Unassigned to Part"
-            },
-            &unowned,
-            &mut nodes,
-        );
-        add_group(
-            "invalid",
-            "Missing references / cycles",
-            &broken,
-            &mut nodes,
-        );
-        let mut tree = nest_nodes(nodes, parents);
-        let order = self.model().hierarchy_order();
-        let ids = if deformer {
-            &order.deformation
-        } else {
-            &order.organization
-        };
-        let ranks: HashMap<_, _> = ids
-            .iter()
-            .enumerate()
-            .map(|(i, id)| (id.as_str(), i))
-            .collect();
-        fn sort(nodes: &mut [TreeNode], ranks: &HashMap<&str, usize>) {
-            nodes.sort_by_key(|node| ranks.get(node.id.as_str()).copied().unwrap_or(usize::MAX));
-            for node in nodes {
-                sort(&mut node.children, ranks);
-            }
-        }
-        sort(&mut tree, &ranks);
-        tree
     }
 
     pub fn selected_layer(&self) -> Option<Layer> {
@@ -785,8 +430,7 @@ impl Document {
         self.session.drain_events();
         if changed {
             self.pristine_blank = false;
-            self.projection_revision += 1;
-            self.canvas_topology.get_mut().unwrap().take();
+            self.invalidate_projection(true);
         }
         let index = self.object_index();
         self.context.reconcile(&index);
@@ -926,37 +570,6 @@ impl Document {
         self.set_preview_parameters(&values)
     }
 
-    fn begin_gesture(&mut self, kind: Gesture) -> Result<()> {
-        self.ensure_editable(&self.context.selections)?;
-        if self
-            .pending
-            .as_ref()
-            .is_some_and(|pending| pending.kind == kind)
-        {
-            return Ok(());
-        }
-        self.finish_edit()?;
-        let original = self
-            .selected
-            .as_deref()
-            .and_then(|id| self.session.mesh(id))
-            .ok_or_else(|| anyhow!("Select a layer first"))?;
-        let label = match kind {
-            Gesture::Rename => "Rename layer",
-            Gesture::Opacity => "Change opacity",
-            Gesture::Controls => "Edit canvas controls",
-        };
-        self.pending = Some(PendingEdit {
-            kind,
-            original: crate::control_edit::EditOriginal::Mesh(original),
-            edit: self.session.begin_owned_edit(label, None)?,
-            preview: PreviewState::default(),
-            changed: OnceLock::new(),
-            topology_changed: false,
-        });
-        Ok(())
-    }
-
     pub fn selected_vertex_positions(&self) -> Vec<(kasane_core::VertexId, crate::ModelPoint)> {
         self.selected
             .as_deref()
@@ -973,83 +586,6 @@ impl Document {
             })
             .unwrap_or_default()
     }
-    pub(crate) fn begin_control_edit(
-        &mut self,
-        targets: &[crate::control_edit::ControlEdit],
-    ) -> Result<()> {
-        self.ensure_editable(&self.context.selections)?;
-        self.ensure_editable(&targets.iter().map(|t| t.object.clone()).collect::<Vec<_>>())?;
-        self.finish_edit()?;
-        self.pending = Some(PendingEdit {
-            kind: Gesture::Controls,
-            original: crate::control_edit::EditOriginal::Batch(
-                targets.iter().map(|t| t.original.clone()).collect(),
-            ),
-            edit: self
-                .session
-                .begin_owned_edit("Edit canvas controls", None)?,
-            preview: PreviewState::default(),
-            changed: OnceLock::new(),
-            topology_changed: false,
-        });
-        Ok(())
-    }
-    pub(crate) fn preview_control_edit(
-        &mut self,
-        targets: &[crate::control_edit::ControlEdit],
-        selected: &[crate::ComponentRef],
-        change: crate::control_edit::ControlChange,
-    ) -> Result<()> {
-        let pending = self
-            .pending
-            .as_mut()
-            .ok_or_else(|| anyhow!("No canvas edit"))?;
-        ensure!(pending.kind == Gesture::Controls, "Another edit is active");
-        pending.changed.take();
-        let previous_revision = self.projection_revision;
-        self.projection_revision += 1;
-        for target in targets {
-            let ids = selected
-                .iter()
-                .filter(|c| c.object == target.object)
-                .map(|c| c.id)
-                .collect::<Vec<_>>();
-            let shape = || {
-                pending
-                    .edit
-                    .candidate_document()
-                    .get_transform(&target.object.id)
-                    .and_then(|t| t.warp())
-                    .map(|w| (w.rows, w.columns))
-            };
-            let before = shape();
-            target.preview(&mut pending.edit, &ids, change)?;
-            let after = pending
-                .edit
-                .candidate_document()
-                .get_transform(&target.object.id)
-                .and_then(|t| t.warp())
-                .map(|w| (w.rows, w.columns));
-            if before != after {
-                pending.topology_changed = true;
-                self.canvas_topology.get_mut().unwrap().take();
-            }
-        }
-        if let Some((revision, index)) = self.object_index.get_mut().unwrap() {
-            if *revision == previous_revision {
-                for target in targets {
-                    if target.object.kind == crate::ObjectKind::Deformer {
-                        Arc::make_mut(index)
-                            .refresh_deformer(pending.edit.candidate_document(), &target.object);
-                    }
-                }
-                // Mesh positions and keyform poses are not index properties;
-                // axes, keys, topology IDs and relation edges remain unchanged.
-                *revision = self.projection_revision;
-            }
-        }
-        Ok(())
-    }
     pub fn geometry(&self, scene: &SceneSnapshot) -> Arc<crate::CanvasScene> {
         Arc::new(crate::CanvasScene::new(self, scene.clone()))
     }
@@ -1064,115 +600,9 @@ impl Document {
             .clone()
     }
 
-    pub fn preview_name(&mut self, name: &str) -> Result<()> {
-        self.begin_gesture(Gesture::Rename)?;
-        self.canvas_topology.get_mut().unwrap().take();
-        let pending = self.pending.as_mut().unwrap();
-        pending.changed.take();
-        self.projection_revision += 1;
-        let result = pending.edit.rename_mesh(pending.original.id(), name);
-        if result.is_err() {
-            self.pending = None;
-        }
-        Ok(result?)
-    }
-
-    pub fn preview_opacity(&mut self, opacity: f32) -> Result<()> {
-        ensure!(
-            opacity.is_finite() && (0.0..=1.0).contains(&opacity),
-            "Opacity must be between 0 and 1"
-        );
-        self.begin_gesture(Gesture::Opacity)?;
-        let pending = self.pending.as_mut().unwrap();
-        pending.changed.take();
-        self.projection_revision += 1;
-        let result = pending
-            .edit
-            .set_mesh_opacity(pending.original.id(), opacity);
-        if result.is_err() {
-            self.pending = None;
-        }
-        Ok(result?)
-    }
-
-    fn pending_changed(&self) -> bool {
-        self.pending.as_ref().is_some_and(|pending| {
-            *pending.changed.get_or_init(|| {
-                !pending
-                    .original
-                    .unchanged(pending.edit.candidate_document())
-            })
-        })
-    }
-
-    pub fn finish_edit(&mut self) -> Result<()> {
-        let changed = self.pending_changed();
-        if let Some(pending) = self.pending.take() {
-            self.projection_revision += 1;
-            if pending.kind == Gesture::Rename || pending.topology_changed {
-                self.canvas_topology.get_mut().unwrap().take();
-            }
-            if changed {
-                pending.edit.commit_to(&mut self.session)?;
-                self.session.drain_events();
-                self.pristine_blank = false;
-            }
-        }
-        Ok(())
-    }
-
-    pub fn cancel_edit(&mut self) {
-        if let Some(pending) = self.pending.take() {
-            self.projection_revision += 1;
-            if pending.kind == Gesture::Rename || pending.topology_changed {
-                self.canvas_topology.get_mut().unwrap().take();
-            }
-        }
-    }
-
     pub fn deformer_controls_visible(&self, id: &str) -> bool {
         self.object_state(&crate::ObjectRef::new(crate::ObjectKind::Deformer, id))
             .visible()
-    }
-
-    pub fn undo(&mut self) -> Result<()> {
-        self.apply_history(AuthoringSession::undo)
-    }
-
-    pub fn redo(&mut self) -> Result<()> {
-        self.apply_history(AuthoringSession::redo)
-    }
-
-    fn apply_history(
-        &mut self,
-        change: fn(&mut AuthoringSession) -> Result<EditReceipt, SdkError>,
-    ) -> Result<()> {
-        self.finish_edit()?;
-        let before = self.evaluation_revision();
-        let state = self.model().editor_state().clone();
-        change(&mut self.session)?;
-        self.refresh_textures()?;
-        self.reconcile_parameter_preview()?;
-        self.after_history(
-            before != self.evaluation_revision() || state == *self.model().editor_state(),
-        );
-        Ok(())
-    }
-
-    fn after_history(&mut self, topology_changed: bool) {
-        self.projection_revision += 1;
-        if topology_changed {
-            self.canvas_topology.get_mut().unwrap().take();
-        }
-        self.session.drain_events();
-        let index = self.object_index();
-        self.context.reconcile(&index);
-        self.selected = self
-            .context
-            .selection
-            .as_ref()
-            .filter(|r| r.kind == crate::ObjectKind::Mesh)
-            .map(|r| r.id.clone());
     }
 
     pub fn snapshot(&mut self) -> Result<SceneSnapshot> {
@@ -1197,7 +627,7 @@ impl Document {
             model_opacity: 1.,
             runtime_frame: frame,
             viewport_frame,
-            textures: self.textures.clone(),
+            textures: self.textures.snapshot(),
         })
     }
 }

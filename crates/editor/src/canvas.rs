@@ -1,5 +1,9 @@
 //! Measured canvas, pointer ownership and overlay painting. Tool semantics live in core.
+mod context_menu;
 mod deformer_bar;
+mod input;
+mod painting;
+use painting::CanvasOverlay;
 mod navigation;
 pub(crate) mod toolbar;
 mod zoom_bar;
@@ -24,82 +28,6 @@ pub struct CanvasView {
     wheel_zoom: Option<navigation::WheelZoom>,
     zoom_frame_pending: bool,
     _subscriptions: Vec<Subscription>,
-}
-
-#[derive(Default)]
-struct CanvasOverlay {
-    device: Option<metal::Device>,
-    renderer: Option<editor_render::MetalOverlayRenderer>,
-    error: Option<String>,
-}
-impl CanvasOverlay {
-    fn paint(
-        &mut self,
-        bounds: Bounds<Pixels>,
-        overlay: &editor_core::OverlaySnapshot,
-        style: editor_render::OverlayStyle,
-        pass: editor_render::OverlayPass,
-        window: &mut Window,
-    ) -> anyhow::Result<()> {
-        anyhow::ensure!(benchmark::metal_mesh_overlay(), "GPUI diagnostic override");
-        let gpu = window
-            .metal_context()
-            .ok_or_else(|| anyhow::anyhow!("Metal context unavailable"))?;
-        let scale = window.scale_factor();
-        if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
-            return Ok(());
-        }
-        let origin = [bounds.origin.x.as_f32(), bounds.origin.y.as_f32()];
-        let texture_origin = origin.map(|v| (v * scale).floor());
-        let extent = [
-            ((bounds.right().as_f32() * scale).ceil() - texture_origin[0]) as u32,
-            ((bounds.bottom().as_f32() * scale).ceil() - texture_origin[1]) as u32,
-        ];
-        let viewport = editor_render::OverlayViewport {
-            extent,
-            scale,
-            origin,
-        };
-        if let Some(image) = self
-            .renderer(&gpu.device)?
-            .draw_pass(&gpu.queue, viewport, overlay, style, pass)?
-        {
-            // Preserve physical pixel size when logical bounds are fractional.
-            window.paint_surface(
-                Bounds::new(
-                    point(px(texture_origin[0] / scale), px(texture_origin[1] / scale)),
-                    size(px(extent[0] as f32 / scale), px(extent[1] as f32 / scale)),
-                ),
-                SurfaceSource::MetalTexture(image),
-            );
-        }
-        Ok(())
-    }
-
-    fn renderer(
-        &mut self,
-        device: &metal::Device,
-    ) -> anyhow::Result<&mut editor_render::MetalOverlayRenderer> {
-        if self
-            .device
-            .as_ref()
-            .is_none_or(|old| !std::ptr::eq(old.as_ref(), device.as_ref()))
-        {
-            self.device = Some(device.clone());
-            self.renderer = None;
-            self.error = None;
-            match editor_render::MetalOverlayRenderer::new(device.clone()) {
-                Ok(renderer) => self.renderer = Some(renderer),
-                Err(error) => {
-                    eprintln!("Mesh overlay initialization failed; using GPUI: {error}");
-                    self.error = Some(error.to_string());
-                }
-            }
-        }
-        self.renderer.as_mut().ok_or_else(|| {
-            anyhow::anyhow!("{}", self.error.as_deref().unwrap_or("Overlay unavailable"))
-        })
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -201,140 +129,6 @@ impl CanvasView {
         self.wheel_zoom = None;
         self.pan = None;
     }
-    fn cancel(&mut self, cx: &mut Context<Self>) {
-        self.cancel_pointer();
-        let _ = self.owner.update(cx, |owner, cx| {
-            owner.editor.cancel_gesture();
-            owner.redraw(cx);
-        });
-    }
-    fn local(&self, p: Point<Pixels>) -> CanvasPoint {
-        CanvasPoint {
-            x: (p.x - self.bounds.origin.x).as_f32(),
-            y: (p.y - self.bounds.origin.y).as_f32(),
-        }
-    }
-    fn input(&mut self, input: CanvasInput, window: &mut Window, cx: &mut Context<Self>) {
-        if matches!(input, CanvasInput::Down { .. }) {
-            self.wheel_zoom = None;
-        }
-        if window.has_active_dialog(cx) {
-            self.cancel(cx);
-            return;
-        }
-        let _ = self.owner.update(cx, |owner, cx| {
-            if owner.modal || owner.editor.is_busy() {
-                return;
-            }
-            if !owner
-                .editor
-                .has_presented_frame(owner.frame.as_ref().map(|f| f.canvas.version))
-            {
-                // A revisited tab can retain geometry before its image arrives.
-                // Never hit-test controls that the user cannot yet see.
-                owner.editor.cancel_gesture();
-                owner.redraw(cx);
-                return;
-            }
-            let moving = matches!(input, CanvasInput::Move { .. } | CanvasInput::Leave);
-            match owner.editor.canvas_input(input) {
-                Ok(changed) => {
-                    if matches!(input, CanvasInput::Down { .. }) {
-                        owner.edit_error = None;
-                    }
-                    if changed {
-                        if moving {
-                            owner.redraw_canvas(cx);
-                        } else {
-                            owner.redraw(cx);
-                        }
-                    } else {
-                        if moving {
-                            owner.notify_canvas(cx);
-                        } else {
-                            cx.notify();
-                        }
-                    }
-                }
-                Err(e) => {
-                    owner.edit_error = Some(e.to_string());
-                    owner.redraw(cx);
-                }
-            }
-        });
-    }
-    fn moved(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {
-        if benchmark::ignore_native_mouse_move() {
-            return;
-        }
-        if window.has_active_dialog(cx) {
-            self.cancel(cx);
-            return;
-        }
-        if let Some(PanGesture {
-            position,
-            button,
-            document,
-            workspace_revision,
-        }) = self.pan
-        {
-            if self.owner.upgrade().is_none_or(|o| {
-                let editor = &o.read(cx).editor;
-                editor.active_id() != document || editor.workspace_revision() != workspace_revision
-            }) {
-                self.pan = None;
-                cx.notify();
-                return;
-            }
-            if event.pressed_button != Some(button) {
-                self.pan = None;
-                cx.notify();
-                return;
-            }
-            let delta = CanvasPoint {
-                x: (event.position.x - position.x).as_f32(),
-                y: (event.position.y - position.y).as_f32(),
-            };
-            if delta.x == 0. && delta.y == 0. {
-                return;
-            }
-            self.pan = Some(PanGesture {
-                position: event.position,
-                button,
-                document,
-                workspace_revision,
-            });
-            let _ = self.owner.update(cx, |owner, cx| {
-                if !owner.modal {
-                    owner.editor.pan_by(delta);
-                    owner.redraw_canvas(cx);
-                }
-            });
-        } else {
-            self.input(
-                CanvasInput::Move {
-                    point: self.local(event.position),
-                    left_down: event.pressed_button == Some(MouseButton::Left),
-                },
-                window,
-                cx,
-            );
-        }
-    }
-    fn pointer_up(&mut self, event: &MouseUpEvent, window: &mut Window, cx: &mut Context<Self>) {
-        if self.pan.is_some_and(|pan| pan.button == event.button) {
-            self.pan = None;
-            cx.notify();
-        } else if self.pan.is_none() && event.button == MouseButton::Left {
-            self.input(
-                CanvasInput::Up {
-                    point: self.local(event.position),
-                },
-                window,
-                cx,
-            );
-        }
-    }
 }
 impl EventEmitter<PanelEvent> for CanvasView {}
 impl Focusable for CanvasView {
@@ -425,14 +219,9 @@ impl Render for CanvasView {
         });
         let capture = self.pan.is_some() || state.editor.gesture_active();
         let palette = crate::canvas_overlay::Palette::new(cx.theme().is_dark());
-        let primary = palette.selected;
         let muted = cx.theme().muted_foreground;
         let foreground = cx.theme().foreground;
         let background = cx.theme().background;
-        let view = cx.entity();
-        let measure = view.clone();
-        let mouse = view.clone();
-        let overlay_renderer = self.overlay_renderer.clone();
         let menu_owner = owner.downgrade();
         let menu_canvas = cx.weak_entity();
         let body = div()
@@ -461,103 +250,7 @@ impl Render for CanvasView {
             .when(!modal && self.pan.is_none() && hand_tool, |e| {
                 e.cursor_grab()
             })
-            .on_mouse_down(
-                MouseButton::Left,
-                cx.listener(|this, event: &MouseDownEvent, window, cx| {
-                    if window.has_active_dialog(cx)
-                        || this
-                            .owner
-                            .upgrade()
-                            .is_none_or(|o| o.read(cx).modal || o.read(cx).editor.is_busy())
-                    {
-                        return;
-                    }
-                    window.focus(&this.focus, cx);
-                    if this.hand_tool(cx) {
-                        this.cancel(cx);
-                        this.pan = Some(PanGesture {
-                            position: event.position,
-                            button: MouseButton::Left,
-                            document: this
-                                .owner
-                                .upgrade()
-                                .and_then(|o| o.read(cx).editor.active_id()),
-                            workspace_revision: this
-                                .owner
-                                .upgrade()
-                                .map_or(0, |o| o.read(cx).editor.workspace_revision()),
-                        });
-                        cx.notify();
-                        return;
-                    }
-                    this.input(
-                        CanvasInput::Down {
-                            point: this.local(event.position),
-                            shift: event.modifiers.shift,
-                        },
-                        window,
-                        cx,
-                    );
-                }),
-            )
-            .on_mouse_down(
-                MouseButton::Middle,
-                cx.listener(|this, event: &MouseDownEvent, window, cx| {
-                    if window.has_active_dialog(cx)
-                        || this
-                            .owner
-                            .upgrade()
-                            .is_none_or(|o| o.read(cx).modal || o.read(cx).editor.is_busy())
-                    {
-                        return;
-                    }
-                    window.focus(&this.focus, cx);
-                    this.cancel(cx);
-                    this.pan = Some(PanGesture {
-                        position: event.position,
-                        button: MouseButton::Middle,
-                        document: this
-                            .owner
-                            .upgrade()
-                            .and_then(|o| o.read(cx).editor.active_id()),
-                        workspace_revision: this
-                            .owner
-                            .upgrade()
-                            .map_or(0, |o| o.read(cx).editor.workspace_revision()),
-                    });
-                    cx.notify();
-                }),
-            )
-            .on_mouse_up(
-                MouseButton::Left,
-                cx.listener(|this, event: &MouseUpEvent, window, cx| {
-                    this.pointer_up(event, window, cx);
-                }),
-            )
-            .on_mouse_up(
-                MouseButton::Middle,
-                cx.listener(|this, event: &MouseUpEvent, window, cx| {
-                    this.pointer_up(event, window, cx);
-                }),
-            )
-            .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, window, cx| {
-                this.scroll(event, window, cx);
-            }))
-            .on_pinch(cx.listener(|this, event: &PinchEvent, window, cx| {
-                this.pinch(event, window, cx);
-            }))
-            .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
-                if !hovered && this.pan.is_none() {
-                    this.input(CanvasInput::Leave, window, cx);
-                }
-            }))
-            .on_mouse_move(
-                cx.listener(move |this, event: &MouseMoveEvent, window, cx| {
-                    if !capture {
-                        this.moved(event, window, cx);
-                    }
-                }),
-            )
+            .map(|element| self.bind_input(element, capture, cx))
             .children(image.map(|(image, metrics)| {
                 div()
                     .absolute()
@@ -583,122 +276,7 @@ impl Render for CanvasView {
                 )
             })
             .children(error.map(|e| div().absolute().p_4().child(e)))
-            .child(
-                canvas(
-                    move |bounds, window, cx| {
-                        measure.update(cx, |this, cx| {
-                            let metrics = CanvasMetrics {
-                                width: bounds.size.width.as_f32(),
-                                height: bounds.size.height.as_f32(),
-                                scale_factor: if window.is_visible() {
-                                    window.scale_factor()
-                                } else {
-                                    0.
-                                },
-                            };
-                            this.bounds = bounds;
-                            let _ = this.owner.update(cx, |owner, cx| {
-                                if owner.editor.canvas_metrics() != metrics {
-                                    let editing = owner.editor.gesture_active();
-                                    owner.editor.set_canvas_metrics(metrics);
-                                    if editing {
-                                        // Resizing cancels an authoring gesture; its
-                                        // rollback must also reach document panels.
-                                        owner.redraw(cx);
-                                    } else {
-                                        owner.redraw_canvas(cx);
-                                    }
-                                }
-                            });
-                        });
-                    },
-                    move |bounds, _, window, _cx| {
-                        let result = overlay_renderer.borrow_mut().paint(
-                            bounds,
-                            &overlay,
-                            palette.metal(),
-                            editor_render::OverlayPass::Edges,
-                            window,
-                        );
-                        // Preserve editing visibility if shader/device setup is unavailable.
-                        if result.is_err() {
-                            let to_window =
-                                |p: CanvasPoint| bounds.origin + point(px(p.x), px(p.y));
-                            if benchmark::batch_mesh_edges() {
-                                mesh_edges::paint_edges(&overlay.lines, bounds.origin, |path| {
-                                    window.paint_path(path, palette.mesh.opacity(0.45));
-                                });
-                            } else {
-                                for (a, b) in &overlay.lines {
-                                    let mut path = PathBuilder::stroke(px(1.));
-                                    path.move_to(to_window(*a));
-                                    path.line_to(to_window(*b));
-                                    if let Ok(path) = path.build() {
-                                        window.paint_path(path, palette.mesh.opacity(0.45));
-                                    }
-                                }
-                            }
-                        }
-                        crate::canvas_overlay::paint_lines(&overlay, bounds, palette, window);
-                        let marker_result = overlay_renderer.borrow_mut().paint(
-                            bounds,
-                            &overlay,
-                            palette.metal(),
-                            editor_render::OverlayPass::Vertices,
-                            window,
-                        );
-                        crate::canvas_overlay::paint_markers(
-                            &overlay,
-                            bounds.origin,
-                            palette,
-                            marker_result.is_err(),
-                            window,
-                        );
-                        if let Some((a, b)) = overlay.marquee {
-                            let rect = Bounds::new(
-                                bounds.origin + point(px(a.x.min(b.x)), px(a.y.min(b.y))),
-                                size(px((b.x - a.x).abs()), px((b.y - a.y).abs())),
-                            );
-                            window.paint_quad(fill(rect, primary.opacity(0.12)));
-                            let p = |x, y| CanvasPoint { x, y };
-                            mesh_edges::paint_edges(
-                                &[
-                                    (a, p(b.x, a.y)),
-                                    (p(b.x, a.y), b),
-                                    (b, p(a.x, b.y)),
-                                    (p(a.x, b.y), a),
-                                ],
-                                bounds.origin,
-                                |path| window.paint_path(path, primary),
-                            );
-                        }
-                        if capture {
-                            let mouse = mouse.clone();
-                            window.on_mouse_event(
-                                move |event: &MouseMoveEvent, phase, window, cx| {
-                                    if phase == DispatchPhase::Capture {
-                                        mouse.update(cx, |this, cx| this.moved(event, window, cx));
-                                        cx.stop_propagation();
-                                    }
-                                },
-                            );
-                            let view = view.clone();
-                            window.on_mouse_event(
-                                move |event: &MouseUpEvent, phase, window, cx| {
-                                    if phase == DispatchPhase::Capture {
-                                        view.update(cx, |this, cx| {
-                                            this.pointer_up(event, window, cx);
-                                        });
-                                        cx.stop_propagation();
-                                    }
-                                },
-                            );
-                        }
-                    },
-                )
-                .absolute()
-                .size_full(),
-            )
+            .child(self.overlay_element(overlay, palette, capture, cx))
             .child(toolbar::CanvasToolbar {
                 owner: owner.clone(),
                 canvas: cx.entity(),
@@ -749,96 +327,8 @@ impl Render for CanvasView {
                     .text_color(muted)
                     .child(label)
             }))
-            .context_menu(move |mut menu, window, cx| {
-                menu = crate::ui::compact::menu(menu);
-                let Some(owner) = menu_owner.upgrade() else {
-                    return menu;
-                };
-                let Some(canvas) = menu_canvas.upgrade() else {
-                    return menu;
-                };
-                if window.has_active_dialog(cx) {
-                    return menu;
-                }
-                let state = owner.read(cx);
-                if state.modal
-                    || state.editor.is_busy()
-                    || state.editor.workspace() != WorkspaceKind::Modeling
-                {
-                    return menu;
-                }
-                let point = canvas.read(cx).local(window.mouse_position());
-                let candidates = state
-                    .editor
-                    .pick_candidates(point, state.frame.as_ref().map(|f| f.canvas.version));
-                let document = state.editor.active_id();
-                let workspace_revision = state.editor.workspace_revision();
-                let visibility = state.editor.deformer_visibility();
-                if candidates.is_empty() {
-                    menu = menu
-                        .item(PopupMenuItem::new(t!("editor.no_canvas_objects")).disabled(true));
-                }
-                for candidate in candidates {
-                    let owner = owner.downgrade();
-                    let canvas = canvas.downgrade();
-                    menu =
-                        menu.item(PopupMenuItem::new(candidate.label).on_click(
-                            move |_, window, cx| {
-                                let Some(owner) = owner.upgrade() else {
-                                    return;
-                                };
-                                owner.update(cx, |owner, cx| {
-                                    if owner.editor.workspace_revision() != workspace_revision
-                                        || owner.editor.active_id() != document
-                                        || owner.editor.workspace() != WorkspaceKind::Modeling
-                                        || owner.modal
-                                        || owner.editor.is_busy()
-                                    {
-                                        return;
-                                    }
-                                    let result =
-                                        owner.editor.execute(EditorCommand::SelectCanvasObjects(
-                                            vec![candidate.object.clone()],
-                                        ));
-                                    owner.complete_edit(result, cx);
-                                });
-                                if let Some(canvas) = canvas.upgrade() {
-                                    let focus = canvas.read(cx).focus.clone();
-                                    // Let menu dismissal finish before returning keyboard input.
-                                    window.defer(cx, move |window, cx| window.focus(&focus, cx));
-                                }
-                            },
-                        ));
-                }
-                menu = menu.separator();
-                for (command, checked) in [
-                    (CommandId::ToggleAncestorDeformers, visibility.ancestors),
-                    (CommandId::ToggleDeformers, visibility.all),
-                ] {
-                    let owner = owner.downgrade();
-                    let canvas = canvas.downgrade();
-                    menu = menu.item(
-                        PopupMenuItem::new(t!(command.spec().label).into_owned())
-                            .checked(checked)
-                            .on_click(move |_, window, cx| {
-                                if let Some(owner) = owner.upgrade() {
-                                    owner.update(cx, |owner, cx| {
-                                        if owner.editor.active_id() == document
-                                            && owner.editor.workspace_revision()
-                                                == workspace_revision
-                                        {
-                                            owner.run_command(command, window, cx);
-                                        }
-                                    });
-                                }
-                                if let Some(canvas) = canvas.upgrade() {
-                                    let focus = canvas.read(cx).focus.clone();
-                                    window.defer(cx, move |window, cx| window.focus(&focus, cx));
-                                }
-                            }),
-                    );
-                }
-                menu
+            .context_menu(move |menu, window, cx| {
+                Self::object_menu(&menu_owner, &menu_canvas, menu, window, cx)
             });
         div()
             .size_full()

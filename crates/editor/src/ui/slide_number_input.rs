@@ -147,7 +147,7 @@ impl SlideNumberInput {
     }
 
     /// Isolate injected drags from unrelated native hover moves in benchmarks.
-    /// Normal editor and playground controls leave this unset.
+    /// Normal editor controls leave this unset.
     #[allow(dead_code)]
     pub(crate) fn ignore_mouse_moves_when(&mut self, predicate: Option<fn() -> bool>) {
         self.ignore_mouse_move = predicate;

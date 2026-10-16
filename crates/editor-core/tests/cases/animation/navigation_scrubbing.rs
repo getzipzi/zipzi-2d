@@ -1,0 +1,248 @@
+use super::common::*;
+use editor_core::*;
+
+#[test]
+fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 0)?;
+    let document = editor.active_id().unwrap();
+    let mut evaluator = AnimationEvaluator::default();
+    for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
+        editor.set_animation_preview_mode(document, mode)?;
+        editor.seek_timeline(document, 0.4)?;
+        let mut pending = evaluate(&mut editor, &mut evaluator)?;
+        let first = pending.clone();
+        for step in 0..24 {
+            if step % 2 == 0 {
+                editor.pan_by(CanvasPoint { x: 4., y: -2. });
+            } else {
+                editor.set_zoom_at(editor.view().zoom * 1.01, None);
+            }
+            let newer = evaluate(&mut editor, &mut evaluator)?;
+            assert!(newer.identity.viewport_revision > pending.identity.viewport_revision);
+            assert!(editor.present_animation(pending.identity, pending.snapshot.clone()));
+            assert!(std::sync::Arc::ptr_eq(&first.snapshot, &pending.snapshot));
+            pending = newer;
+        }
+        assert!(editor.present_animation(pending.identity, pending.snapshot.clone()));
+        assert!(!editor.present_animation(first.identity, first.snapshot));
+        for metrics in [
+            CanvasMetrics {
+                width: 720.,
+                height: 480.,
+                scale_factor: 1.,
+            },
+            CanvasMetrics {
+                width: 720.,
+                height: 480.,
+                scale_factor: 2.,
+            },
+        ] {
+            editor.pan_by(CanvasPoint { x: 1., y: 0. });
+            let old_size = evaluate(&mut editor, &mut evaluator)?;
+            editor.set_canvas_metrics(metrics);
+            // The CPU pose remains usable, but a GPU frame for the old
+            // dimensions or scale must not be adopted by the resized canvas.
+            assert!(editor.accepts_animation(old_size.identity));
+            assert!(!editor.present_animation(old_size.identity, old_size.snapshot));
+            let resized = evaluate(&mut editor, &mut evaluator)?;
+            assert_eq!(resized.identity.canvas_metrics, metrics);
+            assert!(std::sync::Arc::ptr_eq(&pending.snapshot, &resized.snapshot));
+            let mut future = resized.identity;
+            future.viewport_revision += 1;
+            assert!(!editor.present_animation(future, resized.snapshot.clone()));
+            assert!(editor.present_animation(resized.identity, resized.snapshot));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation()
+-> anyhow::Result<()> {
+    use std::sync::Arc;
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 2)?;
+    let document = editor.active_id().unwrap();
+    let mut evaluator = AnimationEvaluator::default();
+    for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
+        editor.set_animation_preview_mode(document, mode)?;
+        editor.seek_timeline(document, 0.35)?;
+        let original = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(original.identity, original.snapshot.clone()));
+        for step in 0..16 {
+            match step % 3 {
+                0 => editor.pan_by(CanvasPoint { x: 3., y: -2. }),
+                1 => editor.set_zoom_at(editor.view().zoom * 1.01, None),
+                _ => editor.set_canvas_metrics(CanvasMetrics {
+                    width: 512. + step as f32,
+                    height: 512.,
+                    scale_factor: 1.,
+                }),
+            }
+            let request = editor.animation_request().unwrap();
+            let frame = evaluator.evaluate(&request, |done, total| {
+                assert_eq!((done, total), (0, 0));
+                true
+            })?;
+            assert!(Arc::ptr_eq(&original.snapshot, &frame.snapshot));
+            assert!(Arc::ptr_eq(
+                &original.scene.viewport_frame,
+                &frame.scene.viewport_frame
+            ));
+            assert_eq!(frame.identity.request, request.identity.request);
+            assert_eq!(
+                frame.identity.viewport_revision,
+                request.identity.viewport_revision
+            );
+            assert!(!editor.present_animation(original.identity, original.snapshot.clone()));
+            assert!(editor.present_animation(frame.identity, frame.snapshot));
+        }
+        editor.invalidate_animation();
+        let request = editor.animation_request().unwrap();
+        assert!(evaluator.evaluate(&request, |_, _| false).is_err());
+        let frame = evaluator.evaluate(&request, |_, _| true)?;
+        assert!(Arc::ptr_eq(&original.snapshot, &frame.snapshot));
+        assert_eq!(
+            frame.identity.acceptance_floor,
+            request.identity.acceptance_floor
+        );
+        assert!(editor.present_animation(frame.identity, frame.snapshot));
+
+        editor.seek_timeline(document, 0.4)?;
+        let later = evaluate(&mut editor, &mut evaluator)?;
+        assert!(!Arc::ptr_eq(&original.snapshot, &later.snapshot));
+        editor.select_motion(
+            document,
+            editor.document().unwrap().motion_resources()[0]
+                .selection
+                .clone(),
+        )?;
+        let selected = evaluate(&mut editor, &mut evaluator)?;
+        assert!(!Arc::ptr_eq(&later.snapshot, &selected.snapshot));
+    }
+    Ok(())
+}
+
+#[test]
+fn completed_pose_cache_does_not_hide_expression_recipe_changes() -> anyhow::Result<()> {
+    use std::sync::Arc;
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 2)?;
+    editor.seek_timeline(editor.active_id().unwrap(), 0.5)?;
+    let mut evaluator = AnimationEvaluator::default();
+    let before = evaluate(&mut editor, &mut evaluator)?;
+    expression(&mut editor, 0)?;
+    let request = editor.animation_request().unwrap();
+    let after = evaluator.evaluate(&request, |_, _| true)?;
+    let cold = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+    assert!(!Arc::ptr_eq(&before.snapshot, &after.snapshot));
+    assert_eq!(after.snapshot, cold.snapshot);
+    Ok(())
+}
+
+#[test]
+fn scrubbing_presents_completed_samples_and_release_rejects_old_targets() -> anyhow::Result<()> {
+    for motion in [0, 2] {
+        let (mut editor, _assets) = setup()?;
+        select(&mut editor, motion)?;
+        let document = editor.active_id().unwrap();
+        let mut evaluator = AnimationEvaluator::default();
+        editor.scrub_animation(document, 0.8)?;
+        let first = evaluate(&mut editor, &mut evaluator)?;
+        editor.scrub_animation(document, 0.2)?;
+        let backward = evaluate(&mut editor, &mut evaluator)?;
+        assert_eq!(
+            first.identity.preview_generation,
+            backward.identity.preview_generation
+        );
+        assert_eq!(
+            first.identity.acceptance_floor,
+            backward.identity.acceptance_floor
+        );
+        // CPU and GPU completion can both lag behind the pointer.
+        assert!(editor.accepts_animation(first.identity));
+        assert!(editor.present_animation(first.identity, first.snapshot));
+        editor.scrub_animation(document, 0.6)?;
+        let pending = editor.animation_request().unwrap();
+        assert!(editor.present_animation(backward.identity, backward.snapshot));
+        assert_eq!(
+            editor.animation().unwrap().presented.as_ref().unwrap().time,
+            0.2
+        );
+        assert!(!editor.accepts_animation(first.identity));
+        editor.seek_animation(document, 0.4)?;
+        assert!(!editor.accepts_animation(pending.identity));
+        let released = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(released.identity, released.snapshot));
+        assert_eq!(
+            editor.animation().unwrap().presented.as_ref().unwrap().time,
+            0.4
+        );
+        assert!(!editor.animation().unwrap().playing);
+    }
+    Ok(())
+}
+
+#[test]
+fn interrupting_a_backward_scrub_does_not_block_the_final_lower_frame() -> anyhow::Result<()> {
+    for resume in [false, true] {
+        let (mut editor, _assets) = setup()?;
+        select(&mut editor, 0)?;
+        let document = editor.active_id().unwrap();
+        let mut evaluator = AnimationEvaluator::default();
+        editor.scrub_animation(document, 1.5)?;
+        let shown = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(shown.identity, shown.snapshot));
+        editor.scrub_animation(document, 0.2)?;
+        let obsolete = editor.animation_request().unwrap();
+        if resume {
+            editor.toggle_animation()?;
+        } else {
+            editor.pause_animation();
+        }
+        assert!(!editor.accepts_animation(obsolete.identity));
+        let lower = evaluate(&mut editor, &mut evaluator)?;
+        assert!(editor.present_animation(lower.identity, lower.snapshot));
+        assert_eq!(
+            editor.animation().unwrap().presented.as_ref().unwrap().time,
+            0.2
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn continuous_frames_do_not_starve_and_barriers_reject_late_frames() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    select(&mut editor, 2)?;
+    editor.toggle_animation()?;
+    let mut evaluator = AnimationEvaluator::default();
+    editor.advance_animation_clock(0.5);
+    let older = evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
+    editor.advance_animation_clock(0.6);
+    let newer = editor.animation_request().unwrap();
+    assert!(editor.present_animation(older.identity, older.snapshot.clone()));
+    assert!(!editor.present_animation(older.identity, older.snapshot));
+    editor.pause_animation();
+    assert!(!editor.accepts_animation(newer.identity));
+    let paused = evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
+    assert!(editor.present_animation(paused.identity, paused.snapshot));
+    assert_eq!(
+        editor.animation().unwrap().presented.as_ref().unwrap().time,
+        0.5
+    );
+    editor.rewind_animation()?;
+    let zero = evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
+    assert!(editor.present_animation(zero.identity, zero.snapshot));
+    let request = editor.animation_request();
+    assert!(request.is_none());
+    editor.pan_by(CanvasPoint { x: 5., y: 2. });
+    let old_view = editor.animation_request().unwrap();
+    let result = evaluator.evaluate(&old_view, |_, _| true)?;
+    editor.pan_by(CanvasPoint { x: 1., y: 0. });
+    assert!(editor.present_animation(result.identity, result.snapshot.clone()));
+    assert!(!editor.present_animation(result.identity, result.snapshot));
+    Ok(())
+}

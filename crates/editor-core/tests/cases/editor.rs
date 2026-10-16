@@ -168,9 +168,29 @@ fn save_moves_the_same_session_to_a_thread_and_freezes_only_its_document() -> an
     let first = editor.active_id().unwrap();
     editor.execute(EditorCommand::PreviewName("Saved".into()))?;
     editor.zoom_by(0.5);
+    let mesh_tree = editor.mesh_tree();
+    let deformer_tree = editor.deformer_tree();
+    let layer_names: Vec<_> = editor
+        .layers()
+        .into_iter()
+        .map(|layer| (layer.id, layer.name))
+        .collect();
+    let selected = editor.selected_layer_id().map(str::to_owned);
     let output = tempfile::tempdir()?;
     let task = editor.prepare_save(first, &output.path().join("saved"), false)?;
     assert!(editor.is_busy());
+    assert!(editor.document().is_none());
+    assert_eq!(editor.mesh_tree(), mesh_tree);
+    assert_eq!(editor.deformer_tree(), deformer_tree);
+    assert_eq!(
+        editor
+            .layers()
+            .into_iter()
+            .map(|layer| (layer.id, layer.name))
+            .collect::<Vec<_>>(),
+        layer_names
+    );
+    assert_eq!(editor.selected_layer_id(), selected.as_deref());
     assert!(editor.execute_for(first, EditorCommand::Undo).is_err());
     assert_eq!(editor.selected_layer().unwrap().name, "Saved");
     assert_eq!(editor.view().zoom, 1.5);

@@ -10,6 +10,10 @@ use std::{
     path::{Path, PathBuf},
 };
 use uuid::Uuid;
+mod entry;
+mod io;
+use entry::{DeferredClose, Entry};
+pub use io::{LoadCompletion, LoadTask, SaveCompletion, SaveTask};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DocumentId(Uuid);
@@ -39,95 +43,6 @@ impl DocumentSummary {
         }
     }
 }
-struct Entry {
-    id: DocumentId,
-    workspace: WorkspaceKind,
-    session: Option<DocumentSession>,
-    frozen: DocumentSummary,
-    frozen_layers: Vec<Layer>,
-    frozen_selected: Option<Layer>,
-    frozen_mesh_tree: Vec<TreeNode>,
-    frozen_deformer_tree: Vec<TreeNode>,
-    views: [ViewState; 2],
-    saving: Option<(OperationId, PathBuf)>,
-    close_after_save: Option<DeferredClose>,
-}
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum DeferredClose {
-    Document,
-    Exit,
-}
-impl Entry {
-    fn summary(&self) -> DocumentSummary {
-        self.session.as_ref().map_or_else(
-            || self.frozen.clone(),
-            |s| DocumentSummary::read(self.id, s),
-        )
-    }
-}
-
-/// Non-cloneable ownership envelopes prevent duplicate completion delivery.
-pub struct LoadTask {
-    id: DocumentId,
-    operation: OperationId,
-    request: LoadRequest,
-}
-pub struct LoadCompletion {
-    id: DocumentId,
-    operation: OperationId,
-    result: Result<(Document, Vec<String>)>,
-}
-impl LoadTask {
-    pub fn run(self) -> LoadCompletion {
-        let Self {
-            id,
-            operation,
-            request,
-        } = self;
-        // GPUI's background executor uses libdispatch workers with small stacks.
-        // MOC3 validation and decoding can exceed that stack for real models.
-        // Keep the whole load off the executor worker to avoid the observed
-        // stack overflow during import.
-        let result = std::thread::Builder::new()
-            .name("kasane-document-load".into())
-            .stack_size(8 * 1024 * 1024)
-            .spawn(move || request.load())
-            .map_err(anyhow::Error::from)
-            .and_then(|worker| {
-                worker
-                    .join()
-                    .map_err(|_| anyhow!("Document load worker panicked"))?
-            });
-        LoadCompletion {
-            id,
-            operation,
-            result,
-        }
-    }
-}
-pub struct SaveTask {
-    id: DocumentId,
-    operation: OperationId,
-    session: DocumentSession,
-    path: PathBuf,
-}
-pub struct SaveCompletion {
-    id: DocumentId,
-    operation: OperationId,
-    returned: Option<(DocumentSession, Result<SaveReceipt>)>,
-}
-impl SaveTask {
-    /// Both success and SDK errors return the same session, including its history.
-    pub fn run(mut self) -> SaveCompletion {
-        let result = self.session.save(&self.path);
-        SaveCompletion {
-            id: self.id,
-            operation: self.operation,
-            returned: Some((self.session, result)),
-        }
-    }
-}
-
 pub struct Editor {
     workspace: WorkspaceKind,
     workspace_revision: u64,
@@ -145,11 +60,11 @@ impl Editor {
     pub(crate) fn active_session(&self) -> Option<&DocumentSession> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|entry| entry.session.as_ref())
+            .and_then(|entry| entry.session())
     }
     pub(crate) fn active_session_mut(&mut self) -> Option<&mut DocumentSession> {
         let id = self.active?;
-        self.entry_mut(id).ok()?.session.as_mut()
+        self.entry_mut(id).ok()?.session_mut()
     }
     pub fn new() -> Result<Self> {
         Ok(Self::from_document(Document::new_blank()?))
@@ -189,19 +104,7 @@ impl Editor {
         self.pause_animation();
         let mut session = DocumentSession::from_document(document);
         session.set_workspace(self.workspace);
-        self.documents.push(Entry {
-            id,
-            workspace: self.workspace,
-            frozen: DocumentSummary::read(id, &session),
-            frozen_layers: Vec::new(),
-            frozen_selected: None,
-            frozen_mesh_tree: Vec::new(),
-            frozen_deformer_tree: Vec::new(),
-            views: WorkspaceKind::ALL.map(|kind| session.view_for(kind)),
-            session: Some(session),
-            saving: None,
-            close_after_save: None,
-        });
+        self.documents.push(Entry::new(id, self.workspace, session));
         self.active = Some(id);
         self.displayed_request = None;
         self.requested_scene = None;
@@ -242,7 +145,7 @@ impl Editor {
         if let Some(id) = self.active {
             let entry = self.entry_mut(id)?;
             entry.workspace = workspace;
-            if let Some(session) = &mut entry.session {
+            if let Some(session) = entry.session_mut() {
                 session.set_workspace(workspace);
             }
         }
@@ -277,87 +180,54 @@ impl Editor {
     pub fn document(&self) -> Option<&Document> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .map(DocumentSession::document)
     }
     pub fn layers(&self) -> Vec<Layer> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .map_or_else(Vec::new, |entry| {
-                entry
-                    .session
-                    .as_ref()
-                    .map_or_else(|| entry.frozen_layers.clone(), |s| s.document().layers())
-            })
+            .map_or_else(Vec::new, Entry::layers)
     }
     /// Changes only with document edits, not selection or viewport movement.
     pub fn tree_revision(&self) -> Option<u64> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|entry| entry.session.as_ref())
+            .and_then(|entry| entry.session())
             .map(|session| session.document().parameter_model_revision())
     }
 
     pub fn mesh_tree(&self) -> Vec<TreeNode> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .map_or_else(Vec::new, |entry| {
-                entry.session.as_ref().map_or_else(
-                    || entry.frozen_mesh_tree.clone(),
-                    |session| session.document().mesh_tree(),
-                )
-            })
+            .map_or_else(Vec::new, Entry::mesh_tree)
     }
     pub fn deformer_tree(&self) -> Vec<TreeNode> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .map_or_else(Vec::new, |entry| {
-                entry.session.as_ref().map_or_else(
-                    || entry.frozen_deformer_tree.clone(),
-                    |session| session.document().deformer_tree(),
-                )
-            })
+            .map_or_else(Vec::new, Entry::deformer_tree)
     }
     pub fn selected_layer_id(&self) -> Option<&str> {
-        let entry = self.entry(self.active?).ok()?;
-        match &entry.session {
-            Some(session) => session.document().selected_id(),
-            None => entry
-                .frozen_selected
-                .as_ref()
-                .map(|layer| layer.id.as_str()),
-        }
+        self.entry(self.active?).ok()?.selected_layer_id()
     }
-
     pub fn selected_layer(&self) -> Option<Layer> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|entry| {
-                entry.session.as_ref().map_or_else(
-                    || entry.frozen_selected.clone(),
-                    |s| s.document().selected_layer(),
-                )
-            })
+            .and_then(Entry::selected_layer)
     }
     pub fn evaluated_frame(&self) -> Option<std::sync::Arc<kasane_core::DrawableFrame>> {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .and_then(DocumentSession::evaluated_frame)
     }
     pub fn view(&self) -> ViewState {
-        let workspace = self.workspace;
         self.active
             .and_then(|id| self.entry(id).ok())
-            .map_or_else(ViewState::default, |e| {
-                e.session
-                    .as_ref()
-                    .map_or(e.views[workspace.index()], DocumentSession::view)
-            })
+            .map_or_else(ViewState::default, |entry| entry.view(self.workspace))
     }
     pub fn is_busy(&self) -> bool {
         self.active
-            .is_some_and(|id| self.entry(id).is_ok_and(|e| e.saving.is_some()))
+            .is_some_and(|id| self.entry(id).is_ok_and(|e| e.saving().is_some()))
     }
     pub fn can_undo(&self) -> bool {
         self.timeline_edit().is_some()
@@ -404,8 +274,7 @@ impl Editor {
         }
         let result = self
             .entry_mut(id)?
-            .session
-            .as_mut()
+            .session_mut()
             .ok_or_else(|| anyhow!("Document is saving"))?
             .execute(command);
         result
@@ -419,7 +288,7 @@ impl Editor {
         self.cancel_timeline_edit();
         self.pause_animation();
         if let Some(previous) = self.active {
-            if self.entry(previous)?.session.is_some() {
+            if self.entry(previous)?.session().is_some() {
                 self.execute_for(previous, EditorCommand::FinishEdit)?;
             }
         }
@@ -441,240 +310,11 @@ impl Editor {
         Some(self.documents[(index + if forward { 1 } else { count - 1 }) % count].id)
     }
     /// A duplicate open activates its existing tab without rereading disk.
-    pub fn prepare_load(&mut self, request: LoadRequest) -> Result<Option<LoadTask>> {
-        ensure!(!self.exiting, "Workspace is closing");
-        let identity = match &request {
-            LoadRequest::Open(path) => Some(project_identity(path)?),
-            _ => None,
-        };
-        if matches!(request, LoadRequest::Open(_)) {
-            if let Some(identity) = &identity {
-                if let Some(id) = self.find_path(identity, None)? {
-                    self.activate(id)?;
-                    return Ok(None);
-                }
-            }
-        }
-        if let Some(identity) = &identity {
-            ensure!(
-                !self
-                    .loads
-                    .values()
-                    .any(|(_, p)| p.as_ref() == Some(identity)),
-                "Project is already loading"
-            );
-        }
-        if self.active.is_some() && !self.is_busy() {
-            self.cancel_timeline_edit();
-            self.execute(EditorCommand::FinishEdit)?;
-        }
-        let id = DocumentId(Uuid::new_v4());
-        let operation = OperationId(Uuid::new_v4());
-        self.loads.insert(operation, (id, identity));
-        Ok(Some(LoadTask {
-            id,
-            operation,
-            request,
-        }))
-    }
-    pub fn finish_load(&mut self, completion: LoadCompletion) -> Result<Vec<String>> {
-        ensure!(
-            self.loads
-                .get(&completion.operation)
-                .is_some_and(|(id, _)| *id == completion.id),
-            "Unknown load completion"
-        );
-        self.loads.remove(&completion.operation);
-        let (document, notices) = completion.result?;
-        if let Some(path) = document.path() {
-            if let Some(id) = self.find_path(&project_identity(path)?, None)? {
-                self.activate(id)?;
-                return Ok(notices);
-            }
-        }
-        // A user may have edited the old tab while loading.
-        if self.active.is_some() && !self.is_busy() {
-            self.cancel_timeline_edit();
-            self.execute(EditorCommand::FinishEdit)?;
-        }
-        self.insert_with_id(completion.id, document);
-        Ok(notices)
-    }
-    fn find_path(&self, identity: &Path, except: Option<DocumentId>) -> Result<Option<DocumentId>> {
-        for entry in &self.documents {
-            if Some(entry.id) == except {
-                continue;
-            }
-            if entry.saving.as_ref().is_some_and(|(_, p)| p == identity) {
-                return Ok(Some(entry.id));
-            }
-            if let Some(path) = entry.summary().path {
-                if project_identity(&path)? == identity {
-                    return Ok(Some(entry.id));
-                }
-            }
-        }
-        Ok(None)
-    }
-    fn ensure_available_path(&self, id: Option<DocumentId>, path: &Path) -> Result<PathBuf> {
-        let identity = project_identity(path)?;
-        ensure!(
-            self.find_path(&identity, id)?.is_none(),
-            "Project belongs to another open document"
-        );
-        ensure!(
-            !self
-                .loads
-                .values()
-                .any(|(_, p)| p.as_ref() == Some(&identity)),
-            "Project is loading"
-        );
-        Ok(identity)
-    }
-    pub fn prepare_save(
-        &mut self,
-        id: DocumentId,
-        path: &Path,
-        close_after: bool,
-    ) -> Result<SaveTask> {
-        let identity = self.ensure_available_path(Some(id), path)?;
-        if let Some(session) = &mut self.entry_mut(id)?.session {
-            session.animation.pause();
-        }
-        self.execute_for(id, EditorCommand::FinishEdit)?;
-        let operation = OperationId(Uuid::new_v4());
-        let close_reason = if self.exiting {
-            DeferredClose::Exit
-        } else {
-            DeferredClose::Document
-        };
-        let entry = self.entry_mut(id)?;
-        entry.frozen = entry.summary();
-        entry.views = WorkspaceKind::ALL.map(|kind| entry.session.as_ref().unwrap().view_for(kind));
-        entry.frozen_layers = entry.session.as_ref().unwrap().document().layers();
-        entry.frozen_selected = entry.session.as_ref().unwrap().document().selected_layer();
-        entry.frozen_mesh_tree = entry.session.as_ref().unwrap().document().mesh_tree();
-        entry.frozen_deformer_tree = entry.session.as_ref().unwrap().document().deformer_tree();
-        let session = entry.session.take().unwrap();
-        entry.saving = Some((operation, identity));
-        entry.close_after_save = close_after.then_some(close_reason);
-        Ok(SaveTask {
-            id,
-            operation,
-            session,
-            path: path.to_owned(),
-        })
-    }
-    /// Rejected delivery leaves the envelope intact so its owner can recover it.
-    pub fn finish_save(&mut self, completion: &mut SaveCompletion) -> Result<SaveReceipt> {
-        let entry = self.entry_mut(completion.id)?;
-        ensure!(
-            entry
-                .saving
-                .as_ref()
-                .is_some_and(|(id, _)| *id == completion.operation),
-            "Unknown save completion"
-        );
-        let (mut session, result) = completion
-            .returned
-            .take()
-            .ok_or_else(|| anyhow!("Save completion was already delivered"))?;
-        // Metrics/device state may change on the UI while the session is saving.
-        // Also replace any pending preview rejected while it was on the worker.
-        session.viewport_revision += 1;
-        session.set_workspace(entry.workspace);
-        entry.session = Some(session);
-        entry.frozen_layers.clear();
-        entry.frozen_selected = None;
-        entry.frozen_mesh_tree.clear();
-        entry.frozen_deformer_tree.clear();
-        entry.saving = None;
-        let close = std::mem::take(&mut entry.close_after_save);
-        match result {
-            Ok(receipt) => {
-                if close.is_some() {
-                    self.close_document(completion.id, false)?;
-                }
-                Ok(receipt)
-            }
-            Err(error) => {
-                self.cancel_exit();
-                Err(error)
-            }
-        }
-    }
-    pub fn close_disposition(&self, id: DocumentId) -> Result<CloseDisposition> {
-        let entry = self.entry(id)?;
-        Ok(if entry.saving.is_some() {
-            CloseDisposition::Busy
-        } else if entry.summary().modified {
-            CloseDisposition::NeedsConfirmation
-        } else {
-            CloseDisposition::Ready
-        })
-    }
-    pub fn close_document(&mut self, id: DocumentId, discard: bool) -> Result<bool> {
-        if let Some(s) = &mut self.entry_mut(id)?.session {
-            s.animation.pause();
-            s.cancel_gesture();
-        }
-        let disposition = self.close_disposition(id)?;
-        if disposition == CloseDisposition::Busy {
-            let reason = if self.exiting {
-                DeferredClose::Exit
-            } else {
-                DeferredClose::Document
-            };
-            // Exit must not overwrite an independently requested document close.
-            self.entry_mut(id)?.close_after_save.get_or_insert(reason);
-            return Ok(false);
-        }
-        ensure!(
-            discard || disposition == CloseDisposition::Ready,
-            "Document needs a save decision"
-        );
-        let index = self.documents.iter().position(|e| e.id == id).unwrap();
-        self.documents.remove(index);
-        if self.active == Some(id) {
-            self.active = self
-                .documents
-                .get(index.min(self.documents.len().saturating_sub(1)))
-                .map(|e| e.id);
-            self.restore_active_workspace();
-            self.invalidate_animation();
-            self.displayed_request = None;
-        }
-        Ok(true)
-    }
-    pub fn request_exit(&mut self) -> Result<()> {
-        ensure!(self.loads.is_empty(), "Wait for project loading to finish");
-        self.exiting = true;
-        for entry in &mut self.documents {
-            if let Some(session) = &mut entry.session {
-                session.animation.pause();
-            }
-        }
-        Ok(())
-    }
-    pub fn cancel_exit(&mut self) {
-        self.exiting = false;
-        for entry in &mut self.documents {
-            if entry.close_after_save == Some(DeferredClose::Exit) {
-                entry.close_after_save = None;
-            }
-        }
-    }
-    pub fn exiting(&self) -> bool {
-        self.exiting
-    }
-    pub fn next_close(&self) -> Option<DocumentId> {
-        self.documents.first().map(|e| e.id)
-    }
     pub fn zoom_at(&mut self, delta: f32, focus: Option<crate::CanvasPoint>) {
         let metrics = self.metrics;
         if let Some(id) = self.active
             && let Ok(entry) = self.entry_mut(id)
-            && let Some(session) = &mut entry.session
+            && let Some(session) = entry.session_mut()
         {
             session.zoom_at(delta, focus, metrics);
         }
@@ -687,7 +327,7 @@ impl Editor {
         let metrics = self.metrics;
         if let Some(id) = self.active
             && let Ok(entry) = self.entry_mut(id)
-            && let Some(session) = &mut entry.session
+            && let Some(session) = entry.session_mut()
         {
             session.set_zoom_at(zoom, focus, metrics);
         }
@@ -695,7 +335,7 @@ impl Editor {
     pub fn reset_view(&mut self) {
         if let Some(id) = self.active {
             if let Ok(entry) = self.entry_mut(id) {
-                if let Some(session) = &mut entry.session {
+                if let Some(session) = entry.session_mut() {
                     session.reset_view();
                 }
             }
@@ -712,7 +352,7 @@ impl Editor {
         }
     }
     pub fn prepare_close(&mut self, id: DocumentId) -> Result<CloseDisposition> {
-        if let Some(s) = &mut self.entry_mut(id)?.session {
+        if let Some(s) = self.entry_mut(id)?.session_mut() {
             s.cancel_timeline_edit();
             s.animation.pause();
             s.execute(EditorCommand::FinishEdit)?;
@@ -725,7 +365,7 @@ impl Editor {
         }
         self.metrics = metrics;
         for entry in &mut self.documents {
-            if let Some(session) = &mut entry.session {
+            if let Some(session) = entry.session_mut() {
                 session.cancel_gesture();
                 session.viewport_revision += 1;
             }
@@ -739,7 +379,7 @@ impl Editor {
     pub fn pan_by(&mut self, delta: crate::CanvasPoint) {
         if let Some(id) = self.active {
             if let Ok(entry) = self.entry_mut(id) {
-                if let Some(s) = &mut entry.session {
+                if let Some(s) = entry.session_mut() {
                     s.pan_by(delta);
                 }
             }
@@ -748,13 +388,13 @@ impl Editor {
     pub fn active_tool(&self) -> crate::ToolId {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .map_or(crate::ToolId::Select, DocumentSession::active_tool)
     }
     pub fn deformer_visibility(&self) -> crate::DeformerVisibility {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .map_or(crate::DeformerVisibility::default(), |s| {
                 s.tools.deformer_visibility
             })
@@ -762,13 +402,13 @@ impl Editor {
     pub fn deformer_grid(&self) -> bool {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .is_some_and(|s| s.tools.deformer_grid)
     }
     pub fn warp_fine(&self) -> bool {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .is_some_and(|s| s.tools.warp_fine)
     }
     pub fn pick_candidates(
@@ -785,7 +425,7 @@ impl Editor {
         let Some(s) = self
             .active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
         else {
             return Vec::new();
         };
@@ -805,15 +445,14 @@ impl Editor {
         let metrics = self.metrics;
         let id = self.active.ok_or_else(|| anyhow!("No active document"))?;
         self.entry_mut(id)?
-            .session
-            .as_mut()
+            .session_mut()
             .ok_or_else(|| anyhow!("Document is saving"))?
             .input(input, metrics)
     }
     pub fn cancel_gesture(&mut self) {
         if let Some(id) = self.active {
             if let Ok(e) = self.entry_mut(id) {
-                if let Some(s) = &mut e.session {
+                if let Some(s) = e.session_mut() {
                     s.cancel_gesture();
                 }
             }
@@ -822,19 +461,19 @@ impl Editor {
     pub fn gesture_active(&self) -> bool {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .is_some_and(|s| s.tools.dragging())
     }
     pub fn overlay(&self) -> crate::OverlaySnapshot {
         self.active
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .map_or_else(crate::OverlaySnapshot::default, |s| s.overlay())
     }
     pub fn evaluation_count(&self) -> u64 {
         self.documents
             .iter()
-            .filter_map(|e| e.session.as_ref())
+            .filter_map(|e| e.session())
             .map(|s| s.evaluations)
             .sum()
     }
@@ -846,7 +485,7 @@ impl Editor {
         self.active
             .filter(|id| *id == frame.document)
             .and_then(|id| self.entry(id).ok())
-            .and_then(|e| e.session.as_ref())
+            .and_then(|e| e.session())
             .is_some_and(|s| {
                 s.displayed
                     .as_ref()
@@ -872,7 +511,7 @@ impl Editor {
         if !self.metrics.visible() || self.is_busy() {
             return Ok(None);
         }
-        let s = self.entry(id)?.session.as_ref().unwrap();
+        let s = self.entry(id)?.session().unwrap();
         if self.requested_scene == Some((id, s.scene_revision, s.viewport_revision)) {
             return Ok(None);
         }
@@ -889,8 +528,7 @@ impl Editor {
         let revision = self.revision;
         let session = self
             .entry_mut(id)?
-            .session
-            .as_mut()
+            .session_mut()
             .ok_or_else(|| anyhow!("Document is saving"))?;
         session.fit_default_view(metrics);
         let (scene, geometry) = session.scene()?;
@@ -927,7 +565,7 @@ impl Editor {
                     && self
                         .entry(id)
                         .ok()
-                        .and_then(|e| e.session.as_ref())
+                        .and_then(|e| e.session())
                         .is_some_and(|s| {
                             self.requested_scene
                                 == Some((id, s.scene_revision, s.viewport_revision))
@@ -948,7 +586,7 @@ impl Editor {
         let Ok(entry) = self.entry_mut(frame.version.document) else {
             return false;
         };
-        let Some(s) = &mut entry.session else {
+        let Some(s) = entry.session_mut() else {
             return false;
         };
         // Completed views and control-edit poses may lag the pointer. Their
@@ -967,33 +605,4 @@ impl Editor {
         s.displayed = Some(frame);
         true
     }
-}
-
-/// SDK directory/manifest aliases share an identity. Resolve existing ancestors so
-/// new Save As paths and symlinked parent directories are normalized as well.
-fn project_identity(path: &Path) -> Result<PathBuf> {
-    let manifest = kasane_project::project_manifest(path);
-    let absolute = if manifest.is_absolute() {
-        manifest
-    } else {
-        std::env::current_dir()?.join(manifest)
-    };
-    let mut resolved = PathBuf::new();
-    for component in absolute.components() {
-        match component {
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                resolved.pop();
-            }
-            other => {
-                resolved.push(other.as_os_str());
-                match std::fs::symlink_metadata(&resolved) {
-                    Ok(_) => resolved = resolved.canonicalize()?,
-                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-                    Err(error) => return Err(error.into()),
-                }
-            }
-        }
-    }
-    Ok(resolved)
 }

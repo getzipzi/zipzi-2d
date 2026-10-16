@@ -18,7 +18,7 @@ The workspace enables `gpui-fast` on both GPUI Kit and the optional FPS monitor.
 The three local Fast patches preserve native Metal surfaces, shared queues,
 headless rendering, and frame tracing. Kit also retains upstream `gpui-pre`
 0.3.9 dependencies in its graph; its Fast feature selects the Fast re-exports
-used by the editor and playground. Test renderers use `gpui-fast-apple` too.
+used by the editor. Test renderers use `gpui-fast-apple` too.
 
 The Fast backend and local cache-boundary fix are the accepted default.
 See the [old Kit comparison and adoption decision](docs/gpui-kit-old-vs-fast.md)

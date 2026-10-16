@@ -8,14 +8,8 @@ case "${1:-editor}" in
     bundle_id="dev.kasane.editor"
     icon_asset="assets/kasane-editor-icon-vector.icns"
     ;;
-  playground)
-    package="component-playground"
-    name="Kasane Component Playground"
-    bundle_id="dev.kasane.component-playground"
-    icon_asset="assets/AppIcon.icns"
-    ;;
   *)
-    printf 'usage: %s [editor|playground] [release|debug]\n' "$0" >&2
+    printf 'usage: %s [editor] [release|debug]\n' "$0" >&2
     exit 2
     ;;
 esac
@@ -24,7 +18,7 @@ case "$profile" in
   release) cargo_profile="release" ;;
   debug) cargo_profile="dev" ;;
   *)
-    printf 'usage: %s [editor|playground] [release|debug]\n' "$0" >&2
+    printf 'usage: %s [editor] [release|debug]\n' "$0" >&2
     exit 2
     ;;
 esac
