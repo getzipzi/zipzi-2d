@@ -1,6 +1,6 @@
 use super::support;
 use editor_core::{
-    Document, Editor, EditorCommand, ObjectKind, ObjectRef, ParameterDestination, ReorderPosition,
+    Document, EditorCommand, ObjectKind, ObjectRef, ParameterDestination, ReorderPosition,
 };
 use uuid::Uuid;
 
@@ -149,7 +149,7 @@ fn invalid_moves_and_noops_preserve_redo_and_document_identity() -> anyhow::Resu
     )?;
     assert_eq!(document.parameters(), before);
     assert_eq!(document.history_lengths(), history);
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let first = editor.active_id().unwrap();
     editor.new_document()?;
     assert!(

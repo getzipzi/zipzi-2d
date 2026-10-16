@@ -13,7 +13,7 @@ fn combined_physics_pose_expression_replay_matches_continuous_and_cancelled_seek
         .unwrap()
         .id
         .clone();
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {
@@ -84,7 +84,7 @@ fn local_model3_live_expression_switch_reuses_physics_history() -> anyhow::Resul
         .iter()
         .find(|motion| motion.looping && motion.playable())
         .unwrap();
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {
@@ -140,7 +140,7 @@ fn local_model3_motion_uses_imported_physics_and_default_runtime_baseline() -> a
     let (document, _) = Document::import_model3(&path)?;
     let modified = document.modified();
     let history = document.history_lengths();
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {
@@ -241,7 +241,7 @@ fn catalog_preserves_registration_fades_and_reuses_only_the_current_model_revisi
 #[test]
 fn diagnostics_are_available_before_play_and_do_not_duplicate_sdk_coverage() -> anyhow::Result<()> {
     let (document, _assets) = support::diagnostic_animation_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {

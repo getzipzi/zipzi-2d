@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 pub(super) fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document_with_two_layers()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     // Fixed pixel/source-unit assertions use an explicit 100% view.
     editor.reset_view();
     editor.set_canvas_metrics(CanvasMetrics {
@@ -126,7 +126,7 @@ pub(super) fn deformer_editor(
 ) -> anyhow::Result<(Editor, tempfile::TempDir, ObjectRef)> {
     let (doc, dir, warp, rotate, _) = rich_document()?;
     let object = ObjectRef::new(ObjectKind::Deformer, if rotation { rotate } else { warp });
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     // Drag distances below are calibrated at 100% on a 2x display.
     editor.reset_view();
     editor.set_canvas_metrics(CanvasMetrics {
@@ -273,7 +273,7 @@ pub(super) fn bound_deformer_editor(
         Ok(())
     })?;
     let saved = session.save_project(&dir.path().join("bound"), None)?;
-    let mut editor = Editor::from_document(Document::open(&saved.manifest)?);
+    let mut editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
     let object = ObjectRef::new(ObjectKind::Deformer, id(23));
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,

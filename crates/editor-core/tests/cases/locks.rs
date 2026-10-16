@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document_with_two_layers()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,

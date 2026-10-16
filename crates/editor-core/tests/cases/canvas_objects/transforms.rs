@@ -195,7 +195,7 @@ fn warp_controls_align_with_mesh_after_canvas_y_reversal() -> anyhow::Result<()>
         canvas.flag = flag;
         let (doc, _dir, warp, _, _) = rich_document_with_canvas(canvas)?;
         let mesh = doc.context().selection.clone().unwrap();
-        let mut editor = Editor::from_document(doc);
+        let mut editor = crate::support::editor_from_document(doc);
         editor.set_canvas_metrics(CanvasMetrics {
             width: 700.,
             height: 510.,
@@ -258,7 +258,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
     canvas.flag = 0;
     let (doc, _dir, warp, rotation, _) = rich_document_with_canvas(canvas)?;
     let mesh = doc.context().selection.clone().unwrap();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 640.,
         height: 560.,
@@ -343,7 +343,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
 fn pose_updates_share_topology_but_publish_independent_positions() -> anyhow::Result<()> {
     let (doc, _dir) = support::sample_document_with_binding(true)?;
     let parameter_id = doc.parameters()[0].id.clone();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -514,7 +514,7 @@ fn opacity_reuses_positions_with_fresh_picking_visibility_and_history() -> anyho
 fn canvas_metadata_refreshes_on_rename_cancel_property_edit_and_history() -> anyhow::Result<()> {
     let (doc, _dir, warp, _, _) = rich_document()?;
     let mesh = doc.context().selection.clone().unwrap();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,

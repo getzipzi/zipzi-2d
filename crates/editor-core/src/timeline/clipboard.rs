@@ -245,12 +245,14 @@ impl crate::Editor {
     pub(crate) fn timeline_clipboard_available(&self) -> bool {
         self.active_session().is_some_and(|session| {
             session
+                .animation
                 .timeline
                 .clipboard
                 .as_ref()
                 .is_some_and(|clipboard| {
                     Some(clipboard.document) == self.active_id()
                         && session
+                            .animation
                             .timeline
                             .current()
                             .is_some_and(|state| state.projection.clip_id == clipboard.clip_id)
@@ -261,7 +263,7 @@ impl crate::Editor {
     /// Only a single copied track may be redirected to the selected channel.
     pub fn timeline_clipboard_can_retarget(&self) -> bool {
         self.active_session()
-            .and_then(|session| session.timeline.clipboard.as_ref())
+            .and_then(|session| session.animation.timeline.clipboard.as_ref())
             .is_some_and(|clipboard| clipboard.tracks.len() == 1)
     }
 
@@ -270,6 +272,7 @@ impl crate::Editor {
         self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
         let state = session
+            .animation
             .timeline
             .current()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
@@ -282,7 +285,7 @@ impl crate::Editor {
             &state.view.keys,
         )?;
         let count = clipboard.tracks.iter().map(|track| track.keys.len()).sum();
-        session.timeline.clipboard = Some(clipboard);
+        session.animation.timeline.clipboard = Some(clipboard);
         Ok(count)
     }
     pub fn paste_timeline(
@@ -294,11 +297,13 @@ impl crate::Editor {
         self.cancel_timeline_edit();
         let session = self.active_session().unwrap();
         let clipboard = session
+            .animation
             .timeline
             .clipboard
             .clone()
             .ok_or_else(|| anyhow::anyhow!("Timeline clipboard is empty"))?;
         let state = session
+            .animation
             .timeline
             .current()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
@@ -306,13 +311,14 @@ impl crate::Editor {
             document,
             &session.document,
             &state.projection,
-            f64::from(session.animation.edit_time),
+            f64::from(session.animation.playback.edit_time),
             state.view.snap,
             target.as_ref(),
         )?;
         let gesture = self.begin_timeline_edit(document, "Paste motion keys")?;
         self.active_session_mut()
             .unwrap()
+            .animation
             .timeline
             .edit
             .as_mut()
@@ -330,6 +336,7 @@ impl crate::Editor {
         let state = self
             .active_session_mut()
             .unwrap()
+            .animation
             .timeline
             .current_mut()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;

@@ -5,7 +5,7 @@ use support::sample_document;
 #[test]
 fn parameter_preview_is_transient_and_survives_document_switch() -> anyhow::Result<()> {
     let (document, _source) = support::sample_document_with_binding(true)?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let first = editor.active_id().unwrap();
     let parameter = editor.document().unwrap().parameters().remove(0);
     let history = editor.document().unwrap().history_lengths();
@@ -56,7 +56,7 @@ fn load(editor: &mut Editor, path: &std::path::Path) -> anyhow::Result<()> {
 #[test]
 fn zoom_stays_within_four_to_thirty_two_hundred_percent() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
 
     editor.zoom_by(-100.0);
     assert_eq!(editor.view().zoom, 0.04);
@@ -74,7 +74,7 @@ fn zoom_stays_within_four_to_thirty_two_hundred_percent() -> anyhow::Result<()> 
 #[test]
 fn tabs_preserve_selection_history_view_and_pending_property_edits() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let first = editor.active_id().unwrap();
     let selected = editor.document().unwrap().selected_id().unwrap().to_owned();
     editor.execute(EditorCommand::PreviewName("First".into()))?;
@@ -105,7 +105,7 @@ fn tabs_preserve_selection_history_view_and_pending_property_edits() -> anyhow::
 fn failed_and_duplicate_opens_preserve_the_existing_session() -> anyhow::Result<()> {
     let (document, source) = sample_document()?;
     let path = document.path().unwrap().to_owned();
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let id = editor.active_id();
     editor.execute(EditorCommand::PreviewOpacity(0.4))?;
     editor.zoom_by(0.75);
@@ -135,7 +135,7 @@ fn same_model_uuid_in_two_files_has_distinct_document_identity() -> anyhow::Resu
     let original = document.path().unwrap().to_owned();
     let output = tempfile::tempdir()?;
     let copy = document.save(&output.path().join("copy"))?.manifest;
-    let mut editor = Editor::empty();
+    let mut editor = crate::support::empty_editor();
     load(&mut editor, &original)?;
     let first = editor.active_id().unwrap();
     load(&mut editor, &copy)?;
@@ -165,7 +165,7 @@ fn save_moves_the_same_session_to_a_thread_and_freezes_only_its_document() -> an
     assert_send::<editor_core::SaveTask>();
     assert_send::<editor_core::SaveCompletion>();
     let (document, _source) = sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let first = editor.active_id().unwrap();
     editor.execute(EditorCommand::PreviewName("Saved".into()))?;
     editor.zoom_by(0.5);
@@ -220,7 +220,7 @@ fn save_moves_the_same_session_to_a_thread_and_freezes_only_its_document() -> an
 #[test]
 fn failed_save_returns_history_and_cancels_dependent_close_and_exit() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let id = editor.active_id().unwrap();
     editor.execute(EditorCommand::PreviewName("Keep me".into()))?;
     let output = tempfile::tempdir()?;
@@ -251,7 +251,7 @@ fn failed_save_returns_history_and_cancels_dependent_close_and_exit() -> anyhow:
 #[test]
 fn close_waits_for_save_and_last_close_leaves_an_empty_workspace() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let id = editor.active_id().unwrap();
     editor.execute(EditorCommand::PreviewName("Close me".into()))?;
     assert!(editor.close_document(id, false).is_err());
@@ -274,7 +274,7 @@ fn close_waits_for_save_and_last_close_leaves_an_empty_workspace() -> anyhow::Re
 fn previews_and_load_completions_never_target_the_tab_active_at_completion() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
     let path = document.path().unwrap().to_owned();
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let original = editor.preview()?;
     let first = editor.active_id().unwrap();
     editor.new_document()?;
@@ -284,13 +284,13 @@ fn previews_and_load_completions_never_target_the_tab_active_at_completion() -> 
     editor.activate(first)?;
     assert!(!editor.accepts_preview(latest.revision));
     assert!(!editor.accepts_preview(original.revision));
-    let mut other = Editor::empty();
+    let mut other = crate::support::empty_editor();
     let task = other
         .prepare_load(LoadRequest::Open(path.clone()))?
         .unwrap();
     assert!(editor.finish_load(task.run()).is_err());
     assert_eq!(editor.documents().len(), 2);
-    let mut loading = Editor::empty();
+    let mut loading = crate::support::empty_editor();
     let task = loading.prepare_load(LoadRequest::Open(path))?.unwrap();
     loading.new_document()?;
     loading.finish_load(task.run())?;
@@ -305,7 +305,7 @@ fn previews_and_load_completions_never_target_the_tab_active_at_completion() -> 
 #[test]
 fn in_flight_save_reserves_its_destination_against_other_tabs() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let first = editor.active_id().unwrap();
     let output = tempfile::tempdir()?;
     let path = output.path().join("saved");
@@ -329,8 +329,8 @@ fn in_flight_save_reserves_its_destination_against_other_tabs() -> anyhow::Resul
 fn misdelivered_save_can_be_returned_to_its_owner_without_losing_the_session() -> anyhow::Result<()>
 {
     let (document, _source) = sample_document()?;
-    let mut owner = Editor::from_document(document);
-    let mut wrong_workspace = Editor::new()?;
+    let mut owner = crate::support::editor_from_document(document);
+    let mut wrong_workspace = crate::support::new_editor()?;
     let id = owner.active_id().unwrap();
     owner.execute(EditorCommand::PreviewName("Survives".into()))?;
     let output = tempfile::tempdir()?;
@@ -358,7 +358,7 @@ fn symlinked_project_directory_and_pending_save_aliases_share_identity() -> anyh
     let alias = alias_root.path().join("source");
     std::os::unix::fs::symlink(source.path(), &alias)?;
     let relative = path.strip_prefix(source.path().canonicalize()?)?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let first = editor.active_id();
     editor.new_document()?;
     load(&mut editor, &alias.join(relative))?;
@@ -378,7 +378,7 @@ fn symlinked_project_directory_and_pending_save_aliases_share_identity() -> anyh
 #[test]
 fn saving_a_background_document_does_not_invalidate_the_active_preview() -> anyhow::Result<()> {
     let (document, _source) = sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     let first = editor.active_id().unwrap();
     editor.execute(EditorCommand::PreviewName("Background".into()))?;
     editor.new_document()?;
@@ -394,7 +394,7 @@ fn saving_a_background_document_does_not_invalidate_the_active_preview() -> anyh
 #[test]
 fn save_completion_resubmits_a_preview_rejected_while_saving() -> anyhow::Result<()> {
     let (document, dir) = sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     editor.set_canvas_metrics(editor_core::CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -417,7 +417,7 @@ fn save_completion_resubmits_a_preview_rejected_while_saving() -> anyhow::Result
 fn cancelling_exit_revokes_only_exit_owned_deferred_closes() -> anyhow::Result<()> {
     for explicit_close in [false, true] {
         let (document, dir) = sample_document()?;
-        let mut editor = Editor::from_document(document);
+        let mut editor = crate::support::editor_from_document(document);
         let id = editor.active_id().unwrap();
         let task = editor.prepare_save(id, &dir.path().join("saved"), false)?;
         if explicit_close {
@@ -434,7 +434,7 @@ fn cancelling_exit_revokes_only_exit_owned_deferred_closes() -> anyhow::Result<(
 
 #[test]
 fn empty_workspace_starts_without_documents_and_is_not_busy() -> anyhow::Result<()> {
-    let mut editor = Editor::empty();
+    let mut editor = crate::support::empty_editor();
     assert!(editor.documents().is_empty());
     assert!(editor.active_id().is_none());
     assert!(!editor.is_busy());

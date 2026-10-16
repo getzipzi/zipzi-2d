@@ -15,7 +15,7 @@ fn visible(nodes: &[TreeNode], id: &str) -> Option<bool> {
 fn all_scene_objects_support_visibility_under_locks_with_history_and_persistence()
 -> anyhow::Result<()> {
     let (doc, dir) = support::sample_document_with_scene_objects()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     let mesh = ObjectRef::new(ObjectKind::Mesh, editor.layers()[0].id.clone());
     let selection = editor.document().unwrap().context().selections.clone();
     for target in [

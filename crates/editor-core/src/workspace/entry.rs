@@ -4,6 +4,7 @@ use super::*;
 pub(super) struct Entry {
     pub(super) id: DocumentId,
     pub(super) workspace: WorkspaceKind,
+    pub(super) context: crate::EditingContext,
     state: EntryState,
 }
 enum EntryState {
@@ -22,7 +23,7 @@ struct FrozenDocument {
     selected: Option<Layer>,
     mesh_tree: Vec<TreeNode>,
     deformer_tree: Vec<TreeNode>,
-    views: [ViewState; 2],
+    views: HashMap<crate::ViewportId, crate::ViewportState>,
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum DeferredClose {
@@ -34,11 +35,20 @@ impl Entry {
         Self {
             id,
             workspace,
+            context: workspace.into(),
             state: EntryState::Ready(session),
         }
     }
-    pub(super) fn restore_session(&mut self, session: DocumentSession) -> Option<DeferredClose> {
+    pub(super) fn restore_session(
+        &mut self,
+        mut session: DocumentSession,
+    ) -> Option<DeferredClose> {
         let close = self.saving().and_then(|saving| saving.close_after_save);
+        if let Some(saving) = self.saving() {
+            for (&id, &state) in &saving.frozen.views {
+                session.views.entry(id).or_insert(state);
+            }
+        }
         self.state = EntryState::Ready(session);
         close
     }
@@ -82,7 +92,7 @@ impl Entry {
             selected: session.document().selected_layer(),
             mesh_tree: session.document().mesh_tree(),
             deformer_tree: session.document().deformer_tree(),
-            views: WorkspaceKind::ALL.map(|kind| session.view_for(kind)),
+            views: session.views.clone(),
         };
         let state = std::mem::replace(
             &mut self.state,
@@ -138,10 +148,23 @@ impl Entry {
             EntryState::Saving(saving) => saving.frozen.selected.clone(),
         }
     }
-    pub(super) fn view(&self, workspace: WorkspaceKind) -> ViewState {
+    pub(super) fn viewport_state(
+        &self,
+        viewport: crate::ViewportId,
+    ) -> Option<crate::ViewportState> {
         match &self.state {
-            EntryState::Ready(session) => session.view(),
-            EntryState::Saving(saving) => saving.frozen.views[workspace.index()],
+            EntryState::Ready(session) => session.views.get(&viewport).copied(),
+            EntryState::Saving(saving) => saving.frozen.views.get(&viewport).copied(),
+        }
+    }
+    pub(super) fn ensure_viewport_state(&mut self, viewport: crate::ViewportId) {
+        match &mut self.state {
+            EntryState::Ready(session) => {
+                session.views.entry(viewport).or_default();
+            }
+            EntryState::Saving(saving) => {
+                saving.frozen.views.entry(viewport).or_default();
+            }
         }
     }
 }

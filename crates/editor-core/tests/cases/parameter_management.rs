@@ -1,6 +1,6 @@
 use super::support;
 use editor_core::{
-    Document, Editor, EditorCommand, NewParameter, ObjectKind, ObjectRef, ParameterGroupDraft,
+    Document, EditorCommand, NewParameter, ObjectKind, ObjectRef, ParameterGroupDraft,
 };
 use kasane_core::ParameterKind;
 fn group(name: &str, parent: Option<String>) -> ParameterGroupDraft {
@@ -184,7 +184,7 @@ fn all_management_commands_reject_stale_document() -> anyhow::Result<()> {
     let g = doc.create_parameter_group(group("Face", None), doc.parameter_model_revision())?;
     let draft = doc.parameter_draft(&p)?;
     let version = doc.parameter_model_revision();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     let old = editor.active_id().unwrap();
     editor.new_document()?;
     for command in [

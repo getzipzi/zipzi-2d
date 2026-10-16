@@ -13,6 +13,7 @@ use uuid::Uuid;
 mod entry;
 mod io;
 mod lifecycle;
+mod navigation;
 use entry::{DeferredClose, Entry};
 pub use io::{LoadCompletion, LoadTask, SaveCompletion, SaveTask};
 pub use lifecycle::EditingLifecycle;
@@ -59,7 +60,6 @@ pub struct Editor {
     displayed_request: Option<(DocumentId, u64)>,
     presentation_floor: u64,
     exiting: bool,
-    metrics: crate::CanvasMetrics,
     requested_scene: Option<(DocumentId, u64, u64)>,
 }
 impl Editor {
@@ -90,7 +90,6 @@ impl Editor {
             displayed_request: None,
             presentation_floor: 0,
             exiting: false,
-            metrics: crate::CanvasMetrics::default(),
             requested_scene: None,
         }
     }
@@ -112,7 +111,9 @@ impl Editor {
     fn insert_with_id(&mut self, id: DocumentId, document: Document) -> DocumentId {
         self.pause_animation();
         let mut session = DocumentSession::from_document(document);
-        session.set_workspace(self.workspace);
+        for viewport in self.registered_viewports() {
+            session.views.entry(viewport).or_default();
+        }
         self.documents.push(Entry::new(id, self.workspace, session));
         self.context_generation += 1;
         self.active = Some(id);
@@ -139,6 +140,20 @@ impl Editor {
     pub fn workspace(&self) -> WorkspaceKind {
         self.workspace
     }
+    pub fn editing_context(&self) -> Option<crate::EditingContext> {
+        Some(self.entry(self.active?).ok()?.context)
+    }
+    pub fn set_editing_context(&mut self, context: crate::EditingContext) -> Result<()> {
+        let id = self.active.ok_or_else(|| anyhow!("No active document"))?;
+        if self.entry(id)?.context == context {
+            return Ok(());
+        }
+        ensure!(!self.exiting(), "Workspace is closing");
+        self.end_editing(id, EditingLifecycle::ContextChange)?;
+        self.entry_mut(id)?.context = context;
+        self.invalidate_primary_presentation();
+        Ok(())
+    }
     pub fn workspace_revision(&self) -> u64 {
         self.workspace_revision
     }
@@ -146,7 +161,11 @@ impl Editor {
     /// changing modes. View revisions also reject frames from the old mode.
     pub fn set_workspace(&mut self, workspace: WorkspaceKind) -> Result<()> {
         if self.workspace == workspace {
-            return Ok(());
+            return if self.active.is_some() {
+                self.set_editing_context(workspace.into())
+            } else {
+                Ok(())
+            };
         }
         ensure!(!self.exiting(), "Workspace is closing");
         if let Some(id) = self.active.filter(|_| !self.is_busy()) {
@@ -155,9 +174,7 @@ impl Editor {
         if let Some(id) = self.active {
             let entry = self.entry_mut(id)?;
             entry.workspace = workspace;
-            if let Some(session) = entry.session_mut() {
-                session.set_workspace(workspace);
-            }
+            entry.context = workspace.into();
         }
         self.update_workspace(workspace);
         Ok(())
@@ -170,8 +187,7 @@ impl Editor {
         self.context_generation += 1;
         self.workspace_revision += 1;
         self.refresh_viewport_bindings();
-        self.invalidate_preview();
-        self.presentation_floor = self.revision + 1;
+        self.invalidate_primary_presentation();
     }
     fn restore_active_workspace(&mut self) {
         if let Some(entry) = self.active.and_then(|id| self.entry(id).ok()) {
@@ -233,9 +249,10 @@ impl Editor {
             .and_then(DocumentSession::evaluated_frame)
     }
     pub fn view(&self) -> ViewState {
-        self.active
-            .and_then(|id| self.entry(id).ok())
-            .map_or_else(ViewState::default, |entry| entry.view(self.workspace))
+        self.active_id()
+            .zip(self.primary_viewport_id())
+            .and_then(|(document, viewport)| self.viewport_state(document, viewport))
+            .map_or_else(ViewState::default, |state| state.view)
     }
     pub fn is_busy(&self) -> bool {
         self.active
@@ -260,6 +277,17 @@ impl Editor {
         )
     }
     pub fn execute_for(&mut self, id: DocumentId, command: EditorCommand) -> Result<()> {
+        ensure!(
+            self.entry(id)?.context == crate::EditingContext::Modeling
+                || matches!(
+                    command,
+                    EditorCommand::Undo
+                        | EditorCommand::Redo
+                        | EditorCommand::FinishEdit
+                        | EditorCommand::CancelEdit
+                ),
+            "Modeling commands are unavailable in Animation"
+        );
         if matches!(
             &command,
             EditorCommand::CreateParameter(_)
@@ -319,83 +347,9 @@ impl Editor {
         let count = self.documents.len();
         Some(self.documents[(index + if forward { 1 } else { count - 1 }) % count].id)
     }
-    /// A duplicate open activates its existing tab without rereading disk.
-    pub fn zoom_at(&mut self, delta: f32, focus: Option<crate::CanvasPoint>) {
-        let metrics = self.metrics;
-        if let Some(id) = self.active
-            && let Ok(entry) = self.entry_mut(id)
-            && let Some(session) = entry.session_mut()
-        {
-            session.zoom_at(delta, focus, metrics);
-        }
-    }
-    pub fn zoom_by(&mut self, delta: f32) {
-        self.zoom_at(delta, None);
-    }
-    /// Set an absolute zoom while keeping the model point beneath `focus` fixed.
-    pub fn set_zoom_at(&mut self, zoom: f32, focus: Option<crate::CanvasPoint>) {
-        let metrics = self.metrics;
-        if let Some(id) = self.active
-            && let Ok(entry) = self.entry_mut(id)
-            && let Some(session) = entry.session_mut()
-        {
-            session.set_zoom_at(zoom, focus, metrics);
-        }
-    }
-    pub fn reset_view(&mut self) {
-        if let Some(id) = self.active {
-            if let Ok(entry) = self.entry_mut(id) {
-                if let Some(session) = entry.session_mut() {
-                    session.reset_view();
-                }
-            }
-        }
-    }
-    pub fn invalidate_preview(&mut self) {
-        self.requested_scene = None;
-        self.displayed_request = None;
-    }
-    pub fn fit_view(&mut self) {
-        let metrics = self.metrics;
-        if let Some(session) = self.active_session_mut() {
-            session.fit_view(metrics);
-        }
-    }
     pub fn prepare_close(&mut self, id: DocumentId) -> Result<CloseDisposition> {
         self.end_editing(id, EditingLifecycle::Close)?;
         self.close_disposition(id)
-    }
-    pub fn set_canvas_metrics(&mut self, metrics: crate::CanvasMetrics) {
-        if self.metrics == metrics {
-            return;
-        }
-        if let Some(token) = self
-            .viewport_interaction
-            .filter(|token| token.kind == crate::ViewportInteractionKind::Modeling)
-        {
-            self.cancel_viewport_interaction(token);
-        }
-        self.metrics = metrics;
-        for entry in &mut self.documents {
-            if let Some(session) = entry.session_mut() {
-                session.cancel_gesture();
-                session.viewport_revision += 1;
-            }
-        }
-        self.displayed_request = None;
-        self.requested_scene = None;
-    }
-    pub fn canvas_metrics(&self) -> crate::CanvasMetrics {
-        self.metrics
-    }
-    pub fn pan_by(&mut self, delta: crate::CanvasPoint) {
-        if let Some(id) = self.active {
-            if let Ok(entry) = self.entry_mut(id) {
-                if let Some(s) = entry.session_mut() {
-                    s.pan_by(delta);
-                }
-            }
-        }
     }
     pub fn active_tool(&self) -> crate::ToolId {
         self.active
@@ -408,20 +362,20 @@ impl Editor {
             .and_then(|id| self.entry(id).ok())
             .and_then(|e| e.session())
             .map_or(crate::DeformerVisibility::default(), |s| {
-                s.tools.deformer_visibility
+                s.modeling.tools.deformer_visibility
             })
     }
     pub fn deformer_grid(&self) -> bool {
         self.active
             .and_then(|id| self.entry(id).ok())
             .and_then(|e| e.session())
-            .is_some_and(|s| s.tools.deformer_grid)
+            .is_some_and(|s| s.modeling.tools.deformer_grid)
     }
     pub fn warp_fine(&self) -> bool {
         self.active
             .and_then(|id| self.entry(id).ok())
             .and_then(|e| e.session())
-            .is_some_and(|s| s.tools.warp_fine)
+            .is_some_and(|s| s.modeling.tools.warp_fine)
     }
     pub fn pick_candidates(
         &self,
@@ -448,18 +402,26 @@ impl Editor {
             point,
             frame.transform,
             &s.document().context().selections,
-            s.tools.active,
-            s.tools.deformer_visibility,
+            s.modeling.tools.active,
+            s.modeling.tools.deformer_visibility,
             &s.document().object_state_index(),
         )
     }
     pub fn canvas_input(&mut self, input: crate::CanvasInput) -> Result<bool> {
-        let metrics = self.metrics;
-        let id = self.active.ok_or_else(|| anyhow!("No active document"))?;
-        self.entry_mut(id)?
+        if self.editing_context() != Some(crate::EditingContext::Modeling) {
+            return Ok(false);
+        }
+        let binding = self
+            .primary_viewport_binding()
+            .filter(|binding| {
+                binding.kind == crate::ViewportKind::Modeling
+                    && self.viewport_binding_valid(*binding)
+            })
+            .ok_or_else(|| anyhow!("No available Modeling viewport"))?;
+        self.entry_mut(binding.document)?
             .session_mut()
             .ok_or_else(|| anyhow!("Document is saving"))?
-            .input(input, metrics)
+            .input(binding.viewport, input)
     }
     pub fn cancel_gesture(&mut self) {
         if self
@@ -480,9 +442,12 @@ impl Editor {
         self.active
             .and_then(|id| self.entry(id).ok())
             .and_then(|e| e.session())
-            .is_some_and(|s| s.tools.dragging())
+            .is_some_and(|s| s.modeling.tools.dragging())
     }
     pub fn overlay(&self) -> crate::OverlaySnapshot {
+        if self.workspace != WorkspaceKind::Modeling {
+            return Default::default();
+        }
         self.active
             .and_then(|id| self.entry(id).ok())
             .and_then(|e| e.session())
@@ -518,40 +483,53 @@ impl Editor {
         }
     }
     pub fn preview_if_needed(&mut self) -> Result<Option<EditorPreview>> {
+        let Some(viewport) = self.primary_viewport_id() else {
+            return Ok(None);
+        };
         // Runtime frames are supplied by the animation executor in phase two.
         // Never expose the Modeling pose or editor visibility as an animation frame.
-        if self.workspace != WorkspaceKind::Modeling {
+        if self.workspace != WorkspaceKind::Modeling
+            || self.editing_context() != Some(crate::EditingContext::Modeling)
+        {
             return Ok(None);
         }
         let Some(id) = self.active else {
             return Ok(None);
         };
-        if !self.metrics.visible() || self.is_busy() {
+        if !self.canvas_metrics().visible() || self.is_busy() {
             return Ok(None);
         }
         let s = self.entry(id)?.session().unwrap();
-        if self.requested_scene == Some((id, s.scene_revision, s.viewport_revision)) {
+        if self.requested_scene == Some((id, s.scene_revision, s.view_state(viewport).revision)) {
             return Ok(None);
         }
         self.preview().map(Some)
     }
     pub fn preview(&mut self) -> Result<EditorPreview> {
+        let viewport = self
+            .primary_viewport_id()
+            .ok_or_else(|| anyhow!("No primary viewport"))?;
         ensure!(
-            self.workspace == WorkspaceKind::Modeling,
-            "Animation preview is not connected yet"
+            self.workspace == WorkspaceKind::Modeling
+                && self.editing_context() == Some(crate::EditingContext::Modeling),
+            "Modeling presentation is unavailable in this context"
         );
         let id = self.active.ok_or_else(|| anyhow!("No active document"))?;
-        let metrics = self.metrics;
+        let metrics = self.canvas_metrics();
         self.revision += 1;
         let revision = self.revision;
         let session = self
             .entry_mut(id)?
             .session_mut()
             .ok_or_else(|| anyhow!("Document is saving"))?;
-        session.fit_default_view(metrics);
+        session.fit_default_view(viewport, metrics);
         let (scene, geometry) = session.scene()?;
-        let view = session.view();
-        let versions = (id, session.scene_revision, session.viewport_revision);
+        let view = session.view_state(viewport).view;
+        let versions = (
+            id,
+            session.scene_revision,
+            session.view_state(viewport).revision,
+        );
         let canvas = crate::ViewportTransform::new(scene.viewport_frame.canvas, metrics, view).map(
             |transform| crate::CanvasFrame {
                 version: crate::FrameVersion {
@@ -577,6 +555,9 @@ impl Editor {
         })
     }
     pub fn accepts_preview(&self, revision: u64) -> bool {
+        let Some(viewport) = self.primary_viewport_id() else {
+            return false;
+        };
         self.workspace == WorkspaceKind::Modeling
             && self.active.is_some_and(|id| {
                 self.displayed_request == Some((id, revision))
@@ -586,18 +567,21 @@ impl Editor {
                         .and_then(|e| e.session())
                         .is_some_and(|s| {
                             self.requested_scene
-                                == Some((id, s.scene_revision, s.viewport_revision))
+                                == Some((id, s.scene_revision, s.view_state(viewport).revision))
                         })
             })
     }
     pub fn present_frame(&mut self, frame: crate::CanvasFrame) -> bool {
+        let Some(viewport) = self.primary_viewport_id() else {
+            return false;
+        };
         if self.workspace != WorkspaceKind::Modeling
             || self.active != Some(frame.version.document)
             || frame.version.request < self.presentation_floor
             || !self.displayed_request.is_some_and(|(id, latest)| {
                 id == frame.version.document && frame.version.request <= latest
             })
-            || frame.transform.metrics != self.metrics
+            || frame.transform.metrics != self.canvas_metrics()
         {
             return false;
         }
@@ -612,8 +596,8 @@ impl Editor {
         // same drag, but reject poses from before it or after it is cancelled.
         if frame.version.scene > s.scene_revision
             || (s.scene_revision != frame.version.scene
-                && !s.tools.accepts_drag_frame(frame.version))
-            || s.viewport_revision < frame.version.viewport
+                && !s.modeling.tools.accepts_drag_frame(frame.version))
+            || s.view_state(viewport).revision < frame.version.viewport
             || s.displayed
                 .as_ref()
                 .is_some_and(|shown| shown.version.request >= frame.version.request)

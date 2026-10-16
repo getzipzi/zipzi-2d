@@ -155,7 +155,7 @@ fn surface_marquee_uses_original_component_selection_and_shift() -> anyhow::Resu
 fn hit_test_miss_clears_objects_and_components_even_with_shift() -> anyhow::Result<()> {
     let (doc, _dir, warp, rotation, _) = rich_document()?;
     let mesh = doc.context().selection.clone().unwrap();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.reset_view();
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
@@ -375,7 +375,7 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     let (doc, _dir) = support::sample_document_with_binding(true)?;
     let base = doc.selected_vertex_positions();
     let param = doc.parameters()[0].id.clone();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,

@@ -6,7 +6,7 @@ use editor_core::*;
 fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidates()
 -> anyhow::Result<()> {
     let (doc, _dir, warp, rotation, part) = rich_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -111,7 +111,7 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
 #[test]
 fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::Result<()> {
     let (doc, _dir, warp, _, _) = rich_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -171,7 +171,7 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
 #[test]
 fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> anyhow::Result<()> {
     let (doc, _dir, warp, rotation, _) = rich_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -243,7 +243,7 @@ fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> an
 fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Result<()> {
     let (doc, _dir, warp, _, _) = rich_document()?;
     let mesh = doc.context().selection.clone().unwrap();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.reset_view();
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
@@ -300,7 +300,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
 #[test]
 fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> {
     let (doc, _dir, _, rotation, _) = rich_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,

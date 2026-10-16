@@ -194,8 +194,9 @@ impl Editor {
             .ok_or_else(|| anyhow!("Save completion was already delivered"))?;
         // Metrics/device state may change on the UI while the session is saving.
         // Also replace any pending preview rejected while it was on the worker.
-        session.viewport_revision += 1;
-        session.set_workspace(entry.workspace);
+        for state in session.views.values_mut() {
+            state.revision += 1;
+        }
         let close = entry.restore_session(session);
         if self.active == Some(completion.id) {
             self.context_generation += 1;
@@ -226,7 +227,7 @@ impl Editor {
     }
     pub fn close_document(&mut self, id: DocumentId, discard: bool) -> Result<bool> {
         if let Some(s) = self.entry_mut(id)?.session_mut() {
-            s.animation.pause();
+            s.animation.playback.pause();
             s.cancel_gesture();
         }
         let disposition = self.close_disposition(id)?;
@@ -272,7 +273,7 @@ impl Editor {
         self.refresh_viewport_bindings();
         for entry in &mut self.documents {
             if let Some(session) = entry.session_mut() {
-                session.animation.pause();
+                session.animation.playback.pause();
             }
         }
         Ok(())

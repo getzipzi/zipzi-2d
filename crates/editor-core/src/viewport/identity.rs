@@ -43,6 +43,7 @@ struct Registration {
     kind: ViewportKind,
     binding: Option<ViewportBinding>,
     enabled: bool,
+    metrics: crate::CanvasMetrics,
 }
 #[derive(Default)]
 pub(crate) struct ViewportRegistry {
@@ -53,11 +54,8 @@ pub(crate) struct ViewportRegistry {
 impl ViewportRegistry {
     fn refresh(&mut self, document: Option<DocumentId>, workspace: WorkspaceKind) {
         for (&viewport, entry) in &mut self.registrations {
-            let document = document.filter(|_| {
-                entry.enabled
-                    && entry.kind == ViewportKind::from(workspace)
-                    && self.primary.get(&entry.kind) == Some(&viewport)
-            });
+            let document =
+                document.filter(|_| entry.enabled && entry.kind == ViewportKind::from(workspace));
             if entry.binding.map(|binding| binding.document) == document {
                 continue;
             }
@@ -85,13 +83,8 @@ pub struct ViewportInteractionToken {
 }
 
 impl Editor {
-    /// Transitional primary slots address the existing single surface. Other
-    /// instances will become executable once presentation/state are separated.
-    pub fn register_primary_viewport(
-        &mut self,
-        viewport: ViewportId,
-        kind: ViewportKind,
-    ) -> Result<()> {
+    /// Register an instance independently of the primary presentation bridge.
+    pub fn register_viewport(&mut self, viewport: ViewportId, kind: ViewportKind) -> Result<()> {
         if let Some(entry) = self.viewports.registrations.get(&viewport) {
             ensure!(entry.kind == kind, "A viewport's kind cannot change");
         } else {
@@ -101,25 +94,66 @@ impl Editor {
                     kind,
                     binding: None,
                     enabled: true,
+                    metrics: Default::default(),
                 },
             );
         }
-        if self
-            .viewports
-            .primary
-            .get(&kind)
-            .is_some_and(|id| *id != viewport)
-        {
-            if let Some(token) = self
-                .viewport_interaction
-                .filter(|token| token.binding.kind == kind)
-            {
-                self.cancel_viewport_interaction(token);
-            }
-        }
-        self.viewports.primary.insert(kind, viewport);
+        self.ensure_viewport_states(viewport);
         self.refresh_viewport_bindings();
         Ok(())
+    }
+    pub fn register_primary_viewport(
+        &mut self,
+        viewport: ViewportId,
+        kind: ViewportKind,
+    ) -> Result<()> {
+        self.register_viewport(viewport, kind)?;
+        let previous = self.viewports.primary.insert(kind, viewport);
+        if previous != Some(viewport) {
+            self.set_viewport_visible(viewport, true);
+            if let Some(previous) = previous {
+                self.set_viewport_visible(previous, false);
+            }
+            if kind == ViewportKind::from(self.workspace()) {
+                self.invalidate_primary_presentation();
+            }
+        }
+        self.refresh_viewport_bindings();
+        Ok(())
+    }
+    pub fn primary_viewport_id(&self) -> Option<ViewportId> {
+        self.viewports
+            .primary
+            .get(&ViewportKind::from(self.workspace()))
+            .copied()
+    }
+    pub fn viewport_metrics(&self, viewport: ViewportId) -> Option<crate::CanvasMetrics> {
+        self.viewports
+            .registrations
+            .get(&viewport)
+            .map(|entry| entry.metrics)
+    }
+    pub fn set_viewport_metrics(&mut self, viewport: ViewportId, metrics: crate::CanvasMetrics) {
+        let Some(entry) = self.viewports.registrations.get_mut(&viewport) else {
+            return;
+        };
+        if entry.metrics == metrics {
+            return;
+        }
+        entry.metrics = metrics;
+        if let Some(token) = self.viewport_interaction.filter(|token| {
+            token.binding.viewport == viewport && token.kind == ViewportInteractionKind::Modeling
+        }) {
+            self.cancel_viewport_interaction(token);
+        }
+        self.invalidate_viewport_state(viewport);
+        if self.primary_viewport_id() == Some(viewport) {
+            self.cancel_gesture();
+            self.invalidate_preview();
+        }
+    }
+    pub(crate) fn registered_viewports(&self) -> Vec<ViewportId> {
+        self.viewports.registrations.keys().copied().collect()
     }
     pub fn unregister_viewport(&mut self, viewport: ViewportId) {
         if let Some(token) = self
@@ -131,6 +165,9 @@ impl Editor {
         if let Some(entry) = self.viewports.registrations.remove(&viewport) {
             if self.viewports.primary.get(&entry.kind) == Some(&viewport) {
                 self.viewports.primary.remove(&entry.kind);
+                if entry.kind == ViewportKind::from(self.workspace()) {
+                    self.invalidate_primary_presentation();
+                }
             }
         }
     }
@@ -197,8 +234,11 @@ impl Editor {
             "Viewport binding changed"
         );
         ensure!(
-            kind == ViewportInteractionKind::Navigation || binding.kind == ViewportKind::Modeling,
-            "Modeling interaction requires a Modeling viewport"
+            kind == ViewportInteractionKind::Navigation
+                || (binding.kind == ViewportKind::Modeling
+                    && self.editing_context() == Some(crate::EditingContext::Modeling)
+                    && self.primary_viewport_id() == Some(binding.viewport)),
+            "Modeling interaction requires the primary Modeling presentation"
         );
         if let Some(previous) = self.viewport_interaction {
             self.cancel_viewport_interaction(previous);
@@ -255,8 +295,13 @@ impl Editor {
             "Viewport binding changed"
         );
         ensure!(
-            binding.kind == ViewportKind::Modeling,
+            binding.kind == ViewportKind::Modeling
+                && self.editing_context() == Some(crate::EditingContext::Modeling),
             "Viewport does not support Modeling input"
+        );
+        ensure!(
+            self.primary_viewport_id() == Some(binding.viewport),
+            "Modeling presentation is only available for the primary viewport"
         );
         self.canvas_input(input)
     }

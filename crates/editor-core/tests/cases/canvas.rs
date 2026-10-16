@@ -2,7 +2,7 @@ use super::support::{self, present_canvas as present};
 use editor_core::*;
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,

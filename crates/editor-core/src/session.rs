@@ -1,46 +1,43 @@
-use crate::scene::{MAX_ZOOM, MIN_ZOOM};
 use crate::{
-    CanvasFrame, CanvasMetrics, CanvasPoint, CanvasScene, Document, EditorCommand, OverlaySnapshot,
-    SceneSnapshot, ToolController, ViewState, WorkspaceKind,
+    CanvasFrame, CanvasMetrics, CanvasScene, Document, EditorCommand, OverlaySnapshot,
+    SceneSnapshot, ViewportId, ViewportState,
 };
 use anyhow::{Result, ensure};
 use kasane_sdk::SaveReceipt;
-use std::{path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
+
+use crate::editing_context::{AnimationContext, ModelingContext};
 
 pub struct DocumentSession {
-    pub animation: crate::AnimationSession,
-    pub(crate) timeline: crate::timeline::TimelineSession,
+    pub(crate) modeling: ModelingContext,
+    pub(crate) animation: AnimationContext,
     pub(crate) document: Document,
-    views: [ViewState; 2],
-    workspace: WorkspaceKind,
-    default_fit: [bool; 2],
+    pub(crate) views: HashMap<ViewportId, ViewportState>,
     pub scene_revision: u64,
-    pub viewport_revision: u64,
     cache: Option<SceneSnapshot>,
     geometry: Option<Arc<CanvasScene>>,
     previous_geometry: Option<Arc<CanvasScene>>,
     appearance_geometry: Option<Arc<CanvasScene>>,
+    // The existing primary Modeling presentation bridge, until surface queues split.
     pub displayed: Option<CanvasFrame>,
-    pub tools: ToolController,
     pub evaluations: u64,
 }
 impl DocumentSession {
     pub fn from_document(document: Document) -> Self {
         Self {
-            animation: crate::AnimationSession::new(&document),
-            timeline: Default::default(),
+            animation: AnimationContext {
+                playback: crate::AnimationSession::new(&document),
+                timeline: Default::default(),
+            },
+            modeling: Default::default(),
             document,
-            views: [ViewState::default(); 2],
-            workspace: WorkspaceKind::default(),
-            default_fit: [true; 2],
+            views: HashMap::new(),
             scene_revision: 1,
-            viewport_revision: 1,
             cache: None,
             geometry: None,
             previous_geometry: None,
             appearance_geometry: None,
             displayed: None,
-            tools: ToolController::default(),
             evaluations: 0,
         }
     }
@@ -49,6 +46,7 @@ impl DocumentSession {
     }
     pub(crate) fn reconcile_animation(&mut self) {
         if self
+            .animation
             .timeline
             .edit
             .as_ref()
@@ -56,10 +54,11 @@ impl DocumentSession {
         {
             self.cancel_timeline_edit();
         }
-        self.animation.reconcile(&self.document);
-        self.timeline.reconcile(
+        self.animation.playback.reconcile(&self.document);
+        self.animation.timeline.reconcile(
             &self.document,
             self.animation
+                .playback
                 .motion
                 .as_ref()
                 .map(|motion| motion.clip_id.as_str()),
@@ -70,55 +69,24 @@ impl DocumentSession {
             .as_ref()
             .map(|scene| scene.viewport_frame.clone())
     }
-    pub(crate) fn fit_default_view(&mut self, metrics: CanvasMetrics) {
-        // Layout can settle over several measurements (for example, when the
-        // Timeline dock opens). Keep the default fitted until the user navigates.
-        if self.default_fit[self.workspace.index()] {
-            self.fit_view(metrics);
+    pub(crate) fn fit_default_view(&mut self, viewport: ViewportId, metrics: CanvasMetrics) {
+        if self.views.entry(viewport).or_default().default_fit {
+            self.fit_view(viewport, metrics);
         }
     }
-    pub fn view(&self) -> ViewState {
-        self.view_for(self.workspace)
-    }
-    pub fn fit_view(&mut self, metrics: CanvasMetrics) {
-        let canvas = self.document.model().canvas();
-        if !metrics.visible() || canvas.width <= 0. || canvas.height <= 0. || self.tools.dragging()
-        {
-            return;
+    pub(crate) fn fit_view(&mut self, viewport: ViewportId, metrics: CanvasMetrics) {
+        if !self.modeling.tools.dragging() {
+            self.views
+                .entry(viewport)
+                .or_default()
+                .fit(self.document.canvas(), metrics);
         }
-        let fitted = ViewState {
-            zoom: ((metrics.width / canvas.width).min(metrics.height / canvas.height)
-                * metrics.scale_factor
-                * 0.9)
-                .clamp(MIN_ZOOM, MAX_ZOOM),
-            pan: CanvasPoint::default(),
-        };
-        let view = &mut self.views[self.workspace.index()];
-        if view.zoom == fitted.zoom && view.pan == fitted.pan {
-            return;
-        }
-        *view = fitted;
-        self.viewport_revision += 1;
     }
-    pub fn view_for(&self, workspace: WorkspaceKind) -> ViewState {
-        self.views[workspace.index()]
-    }
-    pub fn set_workspace(&mut self, workspace: WorkspaceKind) {
-        if self.workspace == workspace {
-            return;
-        }
-        self.cancel_gesture();
-        self.cancel_timeline_edit();
-        self.workspace = workspace;
-        self.animation.pause();
-        self.viewport_revision += 1;
-        self.displayed = None;
+    pub(crate) fn view_state(&self, viewport: ViewportId) -> ViewportState {
+        self.views[&viewport]
     }
     pub fn active_tool(&self) -> crate::ToolId {
-        match self.workspace {
-            WorkspaceKind::Modeling => self.tools.active,
-            WorkspaceKind::Animation => crate::ToolId::Hand,
-        }
+        self.modeling.tools.active
     }
     fn invalidate_scene(&mut self) {
         self.scene_revision += 1;
@@ -128,27 +96,15 @@ impl DocumentSession {
             .take()
             .or_else(|| self.previous_geometry.take());
         self.appearance_geometry = None;
-        self.tools.reconcile(&self.document);
+        self.modeling.tools.reconcile(&self.document);
     }
     pub fn cancel_gesture(&mut self) {
-        if self.tools.cancel(&mut self.document) {
+        if self.modeling.tools.cancel(&mut self.document) {
             self.invalidate_scene();
         }
     }
     pub fn execute(&mut self, command: EditorCommand) -> Result<()> {
-        ensure!(
-            self.workspace == WorkspaceKind::Modeling
-                || matches!(
-                    command,
-                    EditorCommand::Undo
-                        | EditorCommand::Redo
-                        | EditorCommand::FinishEdit
-                        | EditorCommand::CancelEdit
-                        | EditorCommand::SetTool(crate::ToolId::Hand)
-                ),
-            "Modeling commands are unavailable in Animation"
-        );
-        if self.timeline.edit.is_some() {
+        if self.animation.timeline.edit.is_some() {
             match command {
                 EditorCommand::Undo | EditorCommand::Redo | EditorCommand::CancelEdit => {
                     self.cancel_timeline_edit();
@@ -157,11 +113,6 @@ impl DocumentSession {
                 EditorCommand::FinishEdit => self.finish_timeline_edit()?,
                 _ => self.cancel_timeline_edit(),
             }
-        }
-        if self.workspace == WorkspaceKind::Animation
-            && matches!(command, EditorCommand::SetTool(crate::ToolId::Hand))
-        {
-            return Ok(());
         }
         self.cancel_gesture();
         let reusable = if matches!(
@@ -267,7 +218,7 @@ impl DocumentSession {
                 .document
                 .reorder_parameter_group(&source, &target, position),
             EditorCommand::SetTool(tool) => {
-                self.tools.set_tool(tool, &mut self.document);
+                self.modeling.tools.set_tool(tool, &mut self.document);
                 return Ok(());
             }
             EditorCommand::GenerateMeshGrid {
@@ -279,24 +230,25 @@ impl DocumentSession {
                     .document
                     .generate_mesh_grid(&object, options, expected_revision);
                 if result.is_ok() {
-                    self.tools.clear();
+                    self.modeling.tools.clear();
                 }
                 result
             }
             EditorCommand::ApplyMeshGeneration(preview) => {
                 let result = self.document.apply_mesh_generation(&preview);
                 if result.is_ok() {
-                    self.tools.clear();
+                    self.modeling.tools.clear();
                 }
                 result
             }
             EditorCommand::ToggleDeformers => {
-                self.tools.deformer_visibility.all = !self.tools.deformer_visibility.all;
+                self.modeling.tools.deformer_visibility.all =
+                    !self.modeling.tools.deformer_visibility.all;
                 return Ok(());
             }
             EditorCommand::ToggleAncestorDeformers => {
-                self.tools.deformer_visibility.ancestors =
-                    !self.tools.deformer_visibility.ancestors;
+                self.modeling.tools.deformer_visibility.ancestors =
+                    !self.modeling.tools.deformer_visibility.ancestors;
                 return Ok(());
             }
             EditorCommand::SelectObjects(objects) => self.document.select_objects(objects),
@@ -307,12 +259,12 @@ impl DocumentSession {
                 self.document.set_objects_locked(&objects, locked)
             }
             EditorCommand::ToggleWarpFine => {
-                self.tools.warp_fine = !self.tools.warp_fine;
-                self.tools.clear();
+                self.modeling.tools.warp_fine = !self.modeling.tools.warp_fine;
+                self.modeling.tools.clear();
                 return Ok(());
             }
             EditorCommand::ToggleDeformerGrid => {
-                self.tools.deformer_grid = !self.tools.deformer_grid;
+                self.modeling.tools.deformer_grid = !self.modeling.tools.deformer_grid;
                 return Ok(());
             }
             EditorCommand::AdjustDeformer { object, adjustment } => {
@@ -353,7 +305,7 @@ impl DocumentSession {
             EditorCommand::Redo => self.document.redo(),
         };
         if selection || lock_or_history {
-            self.tools.clear();
+            self.modeling.tools.clear();
         }
         // Editor lock edits are standalone transactions. Other metadata history
         // (for example names) must refresh labels captured in canvas topology.
@@ -378,59 +330,6 @@ impl DocumentSession {
     pub fn save(&mut self, path: &Path) -> Result<SaveReceipt> {
         self.document.save(path)
     }
-    pub fn zoom_at(&mut self, delta: f32, focus: Option<CanvasPoint>, metrics: CanvasMetrics) {
-        if delta.is_finite() {
-            self.set_zoom_at(
-                (self.view().zoom + delta).clamp(MIN_ZOOM, MAX_ZOOM),
-                focus,
-                metrics,
-            );
-        }
-    }
-    pub fn set_zoom_at(&mut self, zoom: f32, focus: Option<CanvasPoint>, metrics: CanvasMetrics) {
-        if !self.tools.dragging() && zoom.is_finite() {
-            self.default_fit[self.workspace.index()] = false;
-            let view = &mut self.views[self.workspace.index()];
-            let old_zoom = view.zoom;
-            let new_zoom = zoom.clamp(MIN_ZOOM, MAX_ZOOM);
-            if new_zoom != old_zoom {
-                if metrics.visible() && old_zoom > 0. {
-                    let k = new_zoom / old_zoom;
-                    let anchor = focus.unwrap_or(CanvasPoint {
-                        x: metrics.width / 2.0,
-                        y: metrics.height / 2.0,
-                    });
-                    if anchor.x.is_finite() && anchor.y.is_finite() {
-                        let vx = anchor.x - metrics.width / 2.0;
-                        let vy = anchor.y - metrics.height / 2.0;
-                        view.pan.x += (1.0 - k) * (vx - view.pan.x);
-                        view.pan.y += (1.0 - k) * (vy - view.pan.y);
-                    }
-                }
-                view.zoom = new_zoom;
-                self.viewport_revision += 1;
-            }
-        }
-    }
-    pub fn pan_by(&mut self, delta: CanvasPoint) {
-        if !self.tools.dragging()
-            && delta.x.is_finite()
-            && delta.y.is_finite()
-            && (delta.x != 0. || delta.y != 0.)
-        {
-            self.default_fit[self.workspace.index()] = false;
-            self.views[self.workspace.index()].pan.x += delta.x;
-            self.views[self.workspace.index()].pan.y += delta.y;
-            self.viewport_revision += 1;
-        }
-    }
-    pub fn reset_view(&mut self) {
-        if !self.tools.dragging() {
-            self.default_fit[self.workspace.index()] = false;
-            self.views[self.workspace.index()] = ViewState::default();
-            self.viewport_revision += 1;
-        }
-    }
     pub fn scene(&mut self) -> Result<(SceneSnapshot, Arc<CanvasScene>)> {
         if self.cache.is_none() {
             let scene = self.document.snapshot()?;
@@ -453,20 +352,14 @@ impl DocumentSession {
         ))
     }
     pub fn overlay(&self) -> OverlaySnapshot {
-        if self.workspace != WorkspaceKind::Modeling {
-            return OverlaySnapshot::default();
-        }
         let Some(frame) = &self.displayed else {
             return OverlaySnapshot::default();
         };
-        self.tools.overlay(&self.document, frame)
+        self.modeling.tools.overlay(&self.document, frame)
     }
-    pub fn input(&mut self, event: crate::CanvasInput, _metrics: CanvasMetrics) -> Result<bool> {
-        if self.workspace != WorkspaceKind::Modeling {
-            return Ok(false);
-        }
+    pub fn input(&mut self, viewport: ViewportId, event: crate::CanvasInput) -> Result<bool> {
         if matches!(event, crate::CanvasInput::Cancel) {
-            let was = self.tools.dragging();
+            let was = self.modeling.tools.dragging();
             self.cancel_gesture();
             return Ok(was);
         }
@@ -476,12 +369,12 @@ impl DocumentSession {
         if matches!(event, crate::CanvasInput::Down { .. }) {
             ensure!(
                 frame.version.scene == self.scene_revision
-                    && frame.version.viewport == self.viewport_revision,
+                    && frame.version.viewport == self.view_state(viewport).revision,
                 "Wait for the current model frame"
             );
             self.document.finish_edit()?;
         }
-        let result = self.tools.input(&mut self.document, &frame, event);
+        let result = self.modeling.tools.input(&mut self.document, &frame, event);
         if result.as_ref().is_ok_and(|changed| *changed) || result.is_err() {
             self.invalidate_scene();
         }

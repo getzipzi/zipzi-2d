@@ -440,23 +440,23 @@ impl TimelineEdit {
 
 impl DocumentSession {
     pub(crate) fn cancel_timeline_edit(&mut self) {
-        if self.timeline.edit.take().is_some() {
-            if let Some(state) = self.timeline.current_mut() {
+        if self.animation.timeline.edit.take().is_some() {
+            if let Some(state) = self.animation.timeline.current_mut() {
                 state.generation = 0;
             }
-            self.animation.set_candidate(None);
+            self.animation.playback.set_candidate(None);
             self.reconcile_animation();
         }
     }
     pub(crate) fn finish_timeline_edit(&mut self) -> Result<()> {
-        if let Some(edit) = self.timeline.edit.take() {
+        if let Some(edit) = self.animation.timeline.edit.take() {
             let result = self.document.commit_timeline_candidate(
                 edit.candidate,
                 edit.base_version,
                 &edit.label,
             );
-            self.animation.set_candidate(None);
-            if let Some(state) = self.timeline.current_mut() {
+            self.animation.playback.set_candidate(None);
+            if let Some(state) = self.animation.timeline.current_mut() {
                 state.generation = 0;
             }
             self.reconcile_animation();
@@ -469,19 +469,27 @@ impl DocumentSession {
 impl Editor {
     pub fn timeline_projection(&self) -> Option<Arc<TimelineProjection>> {
         self.active_session()?
+            .animation
             .timeline
             .current()
             .map(|state| state.projection.clone())
     }
     pub fn timeline_view(&self) -> Option<&TimelineViewState> {
-        Some(&self.active_session()?.timeline.current()?.view)
+        Some(&self.active_session()?.animation.timeline.current()?.view)
     }
     /// Share the cached visible layout with UI render closures without cloning keys.
     pub fn timeline_visible_rows(&self) -> Option<Arc<[TimelineRow]>> {
-        Some(self.active_session()?.timeline.current()?.visible.clone())
+        Some(
+            self.active_session()?
+                .animation
+                .timeline
+                .current()?
+                .visible
+                .clone(),
+        )
     }
     pub fn timeline_rows(&self) -> Option<&[TimelineRow]> {
-        Some(&self.active_session()?.timeline.current()?.visible)
+        Some(&self.active_session()?.animation.timeline.current()?.visible)
     }
     /// Acknowledge a UI reveal without ending the candidate that requested it.
     pub fn acknowledge_timeline_reveal(
@@ -495,7 +503,13 @@ impl Editor {
             scroll.is_finite() && scroll >= 0.,
             "Invalid timeline scroll"
         );
-        if let Some(state) = self.active_session_mut().unwrap().timeline.current_mut() {
+        if let Some(state) = self
+            .active_session_mut()
+            .unwrap()
+            .animation
+            .timeline
+            .current_mut()
+        {
             if state.view.reveal_row.as_ref() == Some(row) {
                 state.view.scroll = scroll;
                 state.view.reveal_row = None;
@@ -504,7 +518,7 @@ impl Editor {
         Ok(())
     }
     pub fn timeline_edit(&self) -> Option<&TimelineEdit> {
-        self.active_session()?.timeline.edit.as_ref()
+        self.active_session()?.animation.timeline.edit.as_ref()
     }
     /// Delayed panel callbacks may only cancel the candidate they started.
     pub fn cancel_timeline_edit_for(
@@ -536,6 +550,7 @@ impl Editor {
         let state = self
             .active_session()
             .unwrap()
+            .animation
             .timeline
             .current()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
@@ -553,6 +568,7 @@ impl Editor {
         let state = self
             .active_session_mut()
             .unwrap()
+            .animation
             .timeline
             .current_mut()
             .unwrap();
@@ -587,6 +603,7 @@ impl Editor {
         let state = self
             .active_session_mut()
             .unwrap()
+            .animation
             .timeline
             .current_mut()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
@@ -626,11 +643,12 @@ impl Editor {
         let session = self.active_session_mut().unwrap();
         session.document.finish_edit()?;
         session.reconcile_animation();
-        if !session.animation.head_located {
-            if let Some(frame) = &session.animation.presented {
-                session.animation.time = frame.time;
-                session.animation.edit_time = session
+        if !session.animation.playback.head_located {
+            if let Some(frame) = &session.animation.playback.presented {
+                session.animation.playback.time = frame.time;
+                session.animation.playback.edit_time = session
                     .animation
+                    .playback
                     .motion
                     .as_ref()
                     .and_then(|motion| {
@@ -642,22 +660,29 @@ impl Editor {
                     .map_or(frame.time, |position| position.local_time);
             }
         }
-        if session.animation.preview_mode == AnimationPreviewMode::Editing {
-            session.animation.time = session.animation.edit_time;
+        if session.animation.playback.preview_mode == AnimationPreviewMode::Editing {
+            session.animation.playback.time = session.animation.playback.edit_time;
         }
-        session.animation.head_located = true;
+        session.animation.playback.head_located = true;
         let clip_id = session
+            .animation
             .timeline
             .active
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
         let original = session.document.motion_definition(clip_id).unwrap().clone();
         let candidate = MotionClipCandidate::new(session.document.model(), original.clone())?;
-        let original_projection = session.timeline.current().unwrap().projection.clone();
+        let original_projection = session
+            .animation
+            .timeline
+            .current()
+            .unwrap()
+            .projection
+            .clone();
         let source = Arc::new(session.document.animation_source());
-        session.timeline.next_edit += 1;
+        session.animation.timeline.next_edit += 1;
         let identity = TimelineCandidateIdentity {
-            edit: session.timeline.next_edit,
+            edit: session.animation.timeline.next_edit,
             revision: 0,
         };
         let original_keys = original
@@ -665,7 +690,7 @@ impl Editor {
             .iter()
             .flat_map(|track| track.keys().map(|key| key.id.clone()))
             .collect();
-        session.timeline.edit = Some(TimelineEdit {
+        session.animation.timeline.edit = Some(TimelineEdit {
             identity,
             base_version: source.snapshot.version(),
             original_candidate: candidate.clone(),
@@ -673,14 +698,14 @@ impl Editor {
             original_keys,
             source,
             candidate,
-            local_time: f64::from(session.animation.edit_time),
+            local_time: f64::from(session.animation.playback.edit_time),
             target: None,
             track_id: uuid::Uuid::new_v4().to_string(),
             key_id: uuid::Uuid::new_v4().to_string(),
             event_id: uuid::Uuid::new_v4().to_string(),
             label: label.into(),
         });
-        session.animation.set_candidate(Some(identity));
+        session.animation.playback.set_candidate(Some(identity));
         Ok(identity)
     }
     /// Keep the gesture token returned by begin across updates. Only its edit ID
@@ -694,13 +719,21 @@ impl Editor {
         self.ensure_animation_target(document)?;
         let session = self.active_session_mut().unwrap();
         let snap = session
+            .animation
             .timeline
             .current()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?
             .view
             .snap;
-        let previous_projection = session.timeline.current().unwrap().projection.clone();
+        let previous_projection = session
+            .animation
+            .timeline
+            .current()
+            .unwrap()
+            .projection
+            .clone();
         let edit = session
+            .animation
             .timeline
             .edit
             .as_mut()
@@ -752,9 +785,12 @@ impl Editor {
             };
             edit.candidate = candidate;
             edit.identity.revision += 1;
-            session.animation.set_candidate(Some(edit.identity));
-            session.animation.source = Some(source);
-            let state = session.timeline.current_mut().unwrap();
+            session
+                .animation
+                .playback
+                .set_candidate(Some(edit.identity));
+            session.animation.playback.source = Some(source);
+            let state = session.animation.timeline.current_mut().unwrap();
             state.projection = projection;
             // Value changes do not change filtering, hierarchy or selection.
             if !same_rows {
@@ -765,7 +801,7 @@ impl Editor {
                 }
             }
         }
-        Ok(session.timeline.edit.as_ref().unwrap().identity)
+        Ok(session.animation.timeline.edit.as_ref().unwrap().identity)
     }
     pub fn finish_timeline_edit(
         &mut self,

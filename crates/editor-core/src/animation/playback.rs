@@ -10,7 +10,7 @@ impl Editor {
         self.ensure_animation_target(document)?;
         self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
-        let animation = &mut session.animation;
+        let animation = &mut session.animation.playback;
         if animation.preview_mode == mode {
             return Ok(());
         }
@@ -35,7 +35,7 @@ impl Editor {
         } else {
             local
         };
-        session.timeline.binding_generation += 1;
+        session.animation.timeline.binding_generation += 1;
         animation.preview_mode = mode;
         animation.head_located = true;
         animation.time = time;
@@ -50,17 +50,22 @@ impl Editor {
     ) -> Result<()> {
         self.ensure_animation_target(document)?;
         self.cancel_timeline_edit();
-        let animation = &mut self.active_session_mut().unwrap().animation;
+        let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.preview_loop = looping;
         animation.pause();
         Ok(())
     }
     pub fn animation_viewport_revision(&self) -> Option<u64> {
-        self.active_session().map(|s| s.viewport_revision)
+        self.active_id()
+            .zip(self.primary_viewport_id())
+            .and_then(|(document, viewport)| {
+                self.viewport_state(document, viewport)
+                    .map(|state| state.revision)
+            })
     }
     pub fn invalidate_animation(&mut self) {
         if let Some(session) = self.active_session_mut() {
-            session.animation.barrier();
+            session.animation.playback.barrier();
         }
     }
     pub fn animation_playable(&self) -> bool {
@@ -81,7 +86,8 @@ impl Editor {
         })
     }
     pub fn animation(&self) -> Option<&AnimationSession> {
-        self.active_session().map(|session| &session.animation)
+        self.active_session()
+            .map(|session| &session.animation.playback)
     }
     pub fn select_motion(
         &mut self,
@@ -100,9 +106,9 @@ impl Editor {
                 .any(|r| r.selection == selection),
             "Motion registration no longer exists"
         );
-        session.animation.motion = Some(selection);
-        session.animation.time = 0.;
-        session.animation.new_run();
+        session.animation.playback.motion = Some(selection);
+        session.animation.playback.time = 0.;
+        session.animation.playback.new_run();
         session.reconcile_animation();
         Ok(())
     }
@@ -121,7 +127,7 @@ impl Editor {
             "Unresolved expression targets: {}",
             resource.unresolved_targets.join(", ")
         );
-        let animation = &mut session.animation;
+        let animation = &mut session.animation.playback;
         if animation.expression.as_ref() == Some(&expression_id)
             && animation
                 .expressions
@@ -162,7 +168,7 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
         self.cancel_timeline_edit();
-        let animation = &mut self.active_session_mut().unwrap().animation;
+        let animation = &mut self.active_session_mut().unwrap().animation.playback;
         let playing = animation.playing;
         animation.expression = None;
         animation.expressions.clear();
@@ -176,7 +182,7 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
         self.cancel_timeline_edit();
-        let animation = &mut self.active_session_mut().unwrap().animation;
+        let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.motion = None;
         animation.expression = None;
         animation.expressions.clear();
@@ -213,13 +219,15 @@ impl Editor {
         let catalog = session.document().animation_catalog();
         let motion = session
             .animation
+            .playback
             .motion
             .as_ref()
             .and_then(|selection| catalog.motions.iter().find(|r| &r.selection == selection))
             .filter(|r| r.playable())
             .ok_or_else(|| anyhow::anyhow!("Select a seekable motion"))?;
-        let animation = &mut session.animation;
+        let animation = &mut session.animation.playback;
         let max_time = session
+            .animation
             .timeline
             .current()
             .map_or(motion.duration, |state| state.projection.display_end as f32);
@@ -262,16 +270,14 @@ impl Editor {
     }
     pub fn pause_animation(&mut self) {
         if let Some(session) = self.active_session_mut() {
-            if session.animation.playing || session.animation.scrubbing {
-                if let Some(frame) = session
-                    .animation
-                    .presented
-                    .as_ref()
-                    .filter(|_| session.animation.playing && !session.animation.scrubbing)
-                {
-                    session.animation.time = frame.time;
-                    session.animation.edit_time = session
+            if session.animation.playback.playing || session.animation.playback.scrubbing {
+                if let Some(frame) = session.animation.playback.presented.as_ref().filter(|_| {
+                    session.animation.playback.playing && !session.animation.playback.scrubbing
+                }) {
+                    session.animation.playback.time = frame.time;
+                    session.animation.playback.edit_time = session
                         .animation
+                        .playback
                         .motion
                         .as_ref()
                         .and_then(|motion| {
@@ -282,7 +288,7 @@ impl Editor {
                         })
                         .map_or(frame.time, |position| position.local_time);
                 }
-                session.animation.pause();
+                session.animation.playback.pause();
             }
         }
     }
@@ -300,10 +306,11 @@ impl Editor {
         let catalog = session.document().animation_catalog();
         let motion = session
             .animation
+            .playback
             .motion
             .as_ref()
             .and_then(|selection| catalog.motions.iter().find(|r| &r.selection == selection));
-        let animation = &mut session.animation;
+        let animation = &mut session.animation.playback;
         if animation.playing {
             animation.pause();
             return Ok(());
@@ -341,7 +348,7 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
         self.cancel_timeline_edit();
-        let animation = &mut self.active_session_mut().unwrap().animation;
+        let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.locate(0.);
         animation.edit_time = 0.;
         animation.result_position = None;
@@ -353,11 +360,13 @@ impl Editor {
         }
         if let Some(session) = self.active_session_mut() {
             let catalog = session.document().animation_catalog();
-            let motion =
-                session.animation.motion.as_ref().and_then(|selection| {
-                    catalog.motions.iter().find(|r| &r.selection == selection)
-                });
-            let animation = &mut session.animation;
+            let motion = session
+                .animation
+                .playback
+                .motion
+                .as_ref()
+                .and_then(|selection| catalog.motions.iter().find(|r| &r.selection == selection));
+            let animation = &mut session.animation.playback;
             if !animation.playing {
                 return;
             }
@@ -389,7 +398,7 @@ impl Editor {
     }
     pub(crate) fn ensure_animation_target(&self, document: DocumentId) -> Result<()> {
         ensure!(
-            self.workspace() == WorkspaceKind::Animation
+            self.editing_context() == Some(crate::EditingContext::Animation)
                 && self.active_id() == Some(document)
                 && !self.is_busy()
                 && !self.exiting(),
@@ -399,23 +408,27 @@ impl Editor {
     }
     pub fn animation_request(&mut self) -> Option<AnimationRequest> {
         let document = self.active_id()?;
-        if self.ensure_animation_target(document).is_err() || !self.canvas_metrics().visible() {
+        if self.workspace() != WorkspaceKind::Animation
+            || self.ensure_animation_target(document).is_err()
+            || !self.canvas_metrics().visible()
+        {
             return None;
         }
         let workspace_revision = self.workspace_revision();
         let metrics = self.canvas_metrics();
+        let viewport_id = self.primary_viewport_id()?;
         let session = self.active_session_mut()?;
-        session.fit_default_view(metrics);
+        session.fit_default_view(viewport_id, metrics);
         session.reconcile_animation();
-        let viewport = session.viewport_revision;
-        let source = if let Some(source) = &session.animation.source {
+        let viewport = session.view_state(viewport_id).revision;
+        let source = if let Some(source) = &session.animation.playback.source {
             source.clone()
         } else {
             let source = Arc::new(session.document().animation_source());
-            session.animation.source = Some(source.clone());
+            session.animation.playback.source = Some(source.clone());
             source
         };
-        let animation = &mut session.animation;
+        let animation = &mut session.animation.playback;
         if animation.frames.latest().is_some_and(|previous| {
             previous.viewport_revision == viewport
                 && previous.time == animation.time

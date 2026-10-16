@@ -36,10 +36,9 @@ impl WheelZoom {
             && !owner.editor.is_busy()
             && !owner.editor.gesture_active()
             && owner.editor.viewport_binding_valid(self.binding)
-            && owner.editor.canvas_metrics() == self.metrics
+            && owner.editor.viewport_metrics(self.binding.viewport) == Some(self.metrics)
             && bounds == self.bounds
-            && owner.editor.view().zoom == self.expected.zoom
-            && owner.editor.view().pan == self.expected.pan
+            && owner.editor.viewport_view(self.binding) == Some(self.expected)
     }
 
     fn sample(&self, now: Instant) -> (f32, bool) {
@@ -88,25 +87,21 @@ impl CanvasView {
         let animate = !precise && !cx.reduce_motion();
         let owner = self.owner.clone();
         let _ = owner.update(cx, |owner, cx| {
-            if owner.modal
-                || owner.editor.is_busy()
-                || owner.editor.gesture_active()
-                || self.binding(&owner.editor).is_none()
-            {
+            if owner.modal || owner.editor.is_busy() || owner.editor.gesture_active() {
                 self.wheel_zoom = None;
                 return;
             }
+            let Some(binding) = self.binding(&owner.editor) else {
+                return;
+            };
             cx.stop_propagation();
             if !pan && delta.y == 0. {
                 return;
             }
-            let before = owner.editor.view();
+            let before = owner.editor.viewport_view(binding).unwrap();
             if pan {
-                owner.editor.pan_by(delta);
+                let _ = owner.editor.pan_viewport(binding, delta);
             } else if animate {
-                let Some(binding) = self.binding(&owner.editor) else {
-                    return;
-                };
                 let base = self
                     .wheel_zoom
                     .as_ref()
@@ -119,7 +114,7 @@ impl CanvasView {
                 self.wheel_zoom = (target != before.zoom).then_some(WheelZoom {
                     binding,
                     bounds: self.bounds,
-                    metrics: owner.editor.canvas_metrics(),
+                    metrics: owner.editor.viewport_metrics(binding.viewport).unwrap(),
                     expected: before,
                     anchor,
                     from: before.zoom,
@@ -130,11 +125,13 @@ impl CanvasView {
                 });
             } else {
                 self.wheel_zoom = None;
-                owner
-                    .editor
-                    .set_zoom_at(scroll_zoom(before.zoom, delta.y / 16.), Some(anchor));
+                let _ = owner.editor.set_viewport_zoom(
+                    binding,
+                    scroll_zoom(before.zoom, delta.y / 16.),
+                    Some(anchor),
+                );
             }
-            if owner.editor.view().zoom != before.zoom || owner.editor.view().pan != before.pan {
+            if owner.editor.viewport_view(binding) != Some(before) {
                 owner.redraw_canvas(cx);
             }
         });
@@ -173,9 +170,12 @@ impl CanvasView {
             } else {
                 zoom.sample(now)
             };
-            let before = owner.editor.view();
-            owner.editor.set_zoom_at(next, Some(zoom.anchor));
-            zoom.expected = owner.editor.view();
+            let binding = zoom.binding;
+            let before = owner.editor.viewport_view(binding).unwrap();
+            let _ = owner
+                .editor
+                .set_viewport_zoom(binding, next, Some(zoom.anchor));
+            zoom.expected = owner.editor.viewport_view(binding).unwrap();
             if zoom.expected.zoom != before.zoom || zoom.expected.pan != before.pan {
                 owner.redraw_canvas_for_input(cx, zoom.input);
             }
@@ -206,18 +206,19 @@ impl CanvasView {
         let anchor = self.local(event.position);
         let owner = self.owner.clone();
         let _ = owner.update(cx, |owner, cx| {
-            if owner.modal
-                || owner.editor.is_busy()
-                || owner.editor.gesture_active()
-                || self.binding(&owner.editor).is_none()
-            {
+            if owner.modal || owner.editor.is_busy() || owner.editor.gesture_active() {
                 return;
             }
-            let before = owner.editor.view();
-            owner
-                .editor
-                .set_zoom_at(before.zoom * (1. + event.delta), Some(anchor));
-            if owner.editor.view().zoom != before.zoom || owner.editor.view().pan != before.pan {
+            let Some(binding) = self.binding(&owner.editor) else {
+                return;
+            };
+            let before = owner.editor.viewport_view(binding).unwrap();
+            let _ = owner.editor.set_viewport_zoom(
+                binding,
+                before.zoom * (1. + event.delta),
+                Some(anchor),
+            );
+            if owner.editor.viewport_view(binding) != Some(before) {
                 owner.redraw_canvas(cx);
             }
             cx.stop_propagation();

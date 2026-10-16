@@ -108,6 +108,7 @@ impl Editor {
     pub fn can_display_animation_image(&self, identity: AnimationIdentity) -> bool {
         identity.workspace == WorkspaceKind::Animation
             && self.workspace() == WorkspaceKind::Animation
+            && self.editing_context() == Some(crate::EditingContext::Animation)
             && self.workspace_revision() == identity.workspace_revision
             && self.active_id() == Some(identity.document)
             && self.animation().is_some_and(|a| {
@@ -119,6 +120,7 @@ impl Editor {
     pub fn accepts_animation(&self, identity: AnimationIdentity) -> bool {
         self.workspace() == identity.workspace
             && self.workspace() == WorkspaceKind::Animation
+            && self.editing_context() == Some(crate::EditingContext::Animation)
             && self.workspace_revision() == identity.workspace_revision
             && self.active_id() == Some(identity.document)
             && !self.is_busy()
@@ -145,7 +147,7 @@ impl Editor {
         {
             return false;
         }
-        let animation = &mut self.active_session_mut().unwrap().animation;
+        let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.frames.shown = identity.request;
         if animation.preview_mode == AnimationPreviewMode::Result {
             animation.result_position = animation
@@ -182,7 +184,7 @@ impl Editor {
                 .animation()
                 .is_some_and(|a| a.candidate == identity.candidate)
         {
-            let animation = &mut self.active_session_mut().unwrap().animation;
+            let animation = &mut self.active_session_mut().unwrap().animation.playback;
             animation.playing = false;
             animation.error = Some(error);
         }

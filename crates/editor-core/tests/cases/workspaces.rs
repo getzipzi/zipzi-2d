@@ -8,7 +8,7 @@ fn assert_view(actual: ViewState, expected: ViewState) {
 
 #[test]
 fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow::Result<()> {
-    let mut editor = Editor::new()?;
+    let mut editor = crate::support::new_editor()?;
     support::attach_viewports(&mut editor);
     let first = editor.active_id().unwrap();
     let second = editor.new_document()?;
@@ -21,7 +21,7 @@ fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow:
     assert_eq!(editor.workspace(), WorkspaceKind::Modeling);
     editor.activate(second)?;
     assert_eq!(editor.workspace(), WorkspaceKind::Animation);
-    assert_eq!(editor.active_tool(), ToolId::Hand);
+    assert_eq!(editor.active_tool(), ToolId::Select);
     // Closing after an asynchronous save must restore the surviving tab's mode.
     let save = editor.prepare_save(second, &output.path().join("second"), true)?;
     editor.finish_save(&mut save.run())?;
@@ -37,7 +37,7 @@ fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow:
 
 #[test]
 fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Result<()> {
-    let mut editor = Editor::new()?;
+    let mut editor = crate::support::new_editor()?;
     support::attach_viewports(&mut editor);
     let first = editor.active_id().unwrap();
     // An unmeasured canvas must not consume the default Fit behavior.
@@ -117,7 +117,7 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
 
 #[test]
 fn fit_view_uses_canvas_and_display_scale_without_changing_other_views() -> anyhow::Result<()> {
-    let mut editor = Editor::new()?;
+    let mut editor = crate::support::new_editor()?;
     support::attach_viewports(&mut editor);
     assert!(!editor.command_available(editor.command(CommandId::FitView)));
     let first = editor.active_id().unwrap();
@@ -157,7 +157,7 @@ fn fit_view_uses_canvas_and_display_scale_without_changing_other_views() -> anyh
 fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views()
 -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document_with_binding(true)?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     support::attach_viewports(&mut editor);
     let first = editor.active_id().unwrap();
     let parameter = editor.document().unwrap().parameters()[0].id.clone();
@@ -175,7 +175,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
 
     editor.set_workspace(WorkspaceKind::Animation)?;
     assert_view(editor.view(), ViewState::default());
-    assert_eq!(editor.active_tool(), ToolId::Hand);
+    assert_eq!(editor.active_tool(), ToolId::Glue);
     editor.zoom_by(-0.5);
     editor.pan_by(CanvasPoint { x: -8., y: 40. });
     let animation = editor.view();
@@ -251,7 +251,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
 #[test]
 fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     support::attach_viewports(&mut editor);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
@@ -301,7 +301,7 @@ fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> any
 #[test]
 fn switching_commits_properties_and_shared_undo_remains_available() -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     support::attach_viewports(&mut editor);
     let original = editor.document().unwrap().selected_layer().unwrap().name;
     editor.execute(EditorCommand::PreviewName("Changed".into()))?;
@@ -326,7 +326,7 @@ fn switching_commits_properties_and_shared_undo_remains_available() -> anyhow::R
 fn save_completion_keeps_both_views_and_uses_the_current_workspace() -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document()?;
     let output = tempfile::tempdir()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     support::attach_viewports(&mut editor);
     editor.zoom_by(1.);
     let modeling = editor.view();
@@ -351,7 +351,7 @@ fn save_completion_keeps_both_views_and_uses_the_current_workspace() -> anyhow::
 
 #[test]
 fn play_pause_has_one_non_repeating_space_binding_in_both_modes() -> anyhow::Result<()> {
-    let mut editor = Editor::new()?;
+    let mut editor = crate::support::new_editor()?;
     support::attach_viewports(&mut editor);
     let play = CommandId::PlayPause.spec();
     assert_eq!(play.keys, &["space"]);

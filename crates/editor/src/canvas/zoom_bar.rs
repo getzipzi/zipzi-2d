@@ -23,7 +23,13 @@ pub(super) fn state(
     modal: bool,
 ) -> (i32, [bool; 3]) {
     (
-        (owner.editor.view().zoom * 100.0).round() as i32,
+        (canvas
+            .binding(&owner.editor)
+            .and_then(|binding| owner.editor.viewport_view(binding))
+            .unwrap_or_default()
+            .zoom
+            * 100.0)
+            .round() as i32,
         ZOOM_ACTIONS.map(|(_, command, _)| {
             !modal
                 && owner.editor.command_available(canvas.command(

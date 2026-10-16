@@ -773,6 +773,10 @@ fn check_animation_opacity(
                 },
             )?;
             let mut editor = Editor::from_document(Document::open(&manifest)?);
+            editor.register_primary_viewport(
+                editor_core::ViewportId::new(),
+                editor_core::ViewportKind::Animation,
+            )?;
             editor.set_workspace(WorkspaceKind::Animation)?;
             editor.set_canvas_metrics(CanvasMetrics {
                 width: 256.,

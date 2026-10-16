@@ -50,7 +50,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
         reopened.object_index().get(&object).unwrap().properties["warp"]["bezier"],
         stored
     );
-    let mut reopened = Editor::from_document(reopened);
+    let mut reopened = crate::support::editor_from_document(reopened);
     reopened.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -175,7 +175,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
         let id = editor.active_id().unwrap();
         let task = editor.prepare_save(id, &dir.path().join("bezier-bound"), false)?;
         let receipt = editor.finish_save(&mut task.run())?;
-        let mut reopened = Editor::from_document(Document::open(&receipt.manifest)?);
+        let mut reopened = crate::support::editor_from_document(Document::open(&receipt.manifest)?);
         reopened.set_canvas_metrics(CanvasMetrics {
             width: 512.,
             height: 512.,
@@ -202,7 +202,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
 #[test]
 fn overlay_keeps_control_identity_and_reference_deformers_quiet() -> anyhow::Result<()> {
     let (doc, _dir, warp, rotation, _) = rich_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -279,7 +279,7 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
             })
         })?;
         sdk.save_project(&receipt.manifest, None)?;
-        let mut editor = Editor::from_document(Document::open(&receipt.manifest)?);
+        let mut editor = crate::support::editor_from_document(Document::open(&receipt.manifest)?);
         editor.set_canvas_metrics(CanvasMetrics {
             width: 512.,
             height: 512.,
@@ -336,7 +336,7 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
 #[test]
 fn mesh_drag_reuses_binding_index_without_mutating_retained_snapshots() -> anyhow::Result<()> {
     let (doc, _dir) = support::sample_document_with_binding(true)?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -429,7 +429,7 @@ fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -
 #[test]
 fn locked_deformer_has_only_read_only_lines_and_blocks_control_adjustments() -> anyhow::Result<()> {
     let (doc, _dir, warp, _, _) = rich_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,

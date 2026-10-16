@@ -3,7 +3,7 @@ use editor_core::*;
 #[test]
 fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Result<()> {
     let (doc, dir) = support::sample_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     editor.execute(EditorCommand::SetObjectVisible {
         object: editor
@@ -41,7 +41,7 @@ fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Res
 #[test]
 fn visibility_targets_the_clicked_layer_without_changing_selection() -> anyhow::Result<()> {
     let (doc, _dir) = support::sample_document_with_two_layers()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     let selected = editor.document().unwrap().selected_id().unwrap().to_owned();
     let second = editor
@@ -215,7 +215,7 @@ fn tree_cache_revision_and_visibility_follow_edits_not_navigation() -> anyhow::R
         })
     }
     let (doc, _dir) = support::sample_document_with_two_layers()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     let id = editor
         .layers()

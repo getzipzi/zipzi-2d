@@ -114,7 +114,12 @@ impl RenderOnce for CanvasToolbar {
                     .iter()
                     .filter(|item| {
                         item.command == CommandId::HandTool
-                            || view.editor.workspace() == editor_core::WorkspaceKind::Modeling
+                            || canvas
+                                .read(cx)
+                                .binding(&view.editor)
+                                .is_some_and(|binding| {
+                                    binding.kind == editor_core::ViewportKind::Modeling
+                                })
                     })
                     .map(|item| {
                         let command = item.command;

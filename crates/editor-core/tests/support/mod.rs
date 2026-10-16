@@ -569,3 +569,20 @@ pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
     session.save_project(&path, None)?;
     Ok((Document::open(&path)?, assets))
 }
+
+#[allow(dead_code)]
+pub fn editor_from_document(document: Document) -> Editor {
+    let mut editor = Editor::from_document(document);
+    attach_viewports(&mut editor);
+    editor
+}
+#[allow(dead_code)]
+pub fn new_editor() -> anyhow::Result<Editor> {
+    Ok(editor_from_document(Document::new_blank()?))
+}
+#[allow(dead_code)]
+pub fn empty_editor() -> Editor {
+    let mut editor = Editor::empty();
+    attach_viewports(&mut editor);
+    editor
+}

@@ -339,6 +339,10 @@ mod tests {
         use std::sync::atomic::Ordering;
         let (document, _assets) = crate::headless_tests::document_fixture::animation_document()?;
         let mut editor = Editor::from_document(document);
+        editor.register_primary_viewport(
+            editor_core::ViewportId::new(),
+            editor_core::ViewportKind::Animation,
+        )?;
         editor.set_workspace(WorkspaceKind::Animation)?;
         let doc = editor.active_id().unwrap();
         editor.set_canvas_metrics(CanvasMetrics {
@@ -410,6 +414,10 @@ mod tests {
     -> anyhow::Result<()> {
         let (document, _assets) = crate::headless_tests::document_fixture::animation_document()?;
         let mut editor = editor_core::Editor::from_document(document);
+        editor.register_primary_viewport(
+            editor_core::ViewportId::new(),
+            editor_core::ViewportKind::Animation,
+        )?;
         editor.set_workspace(WorkspaceKind::Animation)?;
         editor.set_animation_preview_mode(
             editor.active_id().unwrap(),

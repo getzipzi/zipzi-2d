@@ -502,12 +502,12 @@ impl Editor {
     }
     pub fn timeline_command_target(&self) -> Option<TimelineCommandTarget> {
         let session = self.active_session()?;
-        (self.workspace() == crate::WorkspaceKind::Animation
-            && session.timeline.current().is_some())
+        (self.editing_context() == Some(crate::EditingContext::Animation)
+            && session.animation.timeline.current().is_some())
         .then(|| TimelineCommandTarget {
             document: self.active_id().unwrap(),
             context_generation: self.context_generation,
-            timeline_generation: session.timeline.binding_generation,
+            timeline_generation: session.animation.timeline.binding_generation,
             model_generation: session.document().model_generation(),
         })
     }
@@ -544,13 +544,15 @@ impl Editor {
     /// Shared UI state. Dispatch always queries it again before executing.
     pub fn command_state(&self, command: Command) -> CommandState {
         use CommandId::*;
+        let animation_navigation = matches!(command.target,
+            CommandTarget::Viewport(binding) if binding.kind == crate::ViewportKind::Animation);
         let checked = match command.id {
             ModelingWorkspace => self.workspace() == crate::WorkspaceKind::Modeling,
             AnimationWorkspace => self.workspace() == crate::WorkspaceKind::Animation,
             PlayPause => self.animation().is_some_and(|animation| animation.playing),
-            SelectTool => self.active_tool() == crate::ToolId::Select,
-            GlueTool => self.active_tool() == crate::ToolId::Glue,
-            HandTool => self.active_tool() == crate::ToolId::Hand,
+            SelectTool => !animation_navigation && self.active_tool() == crate::ToolId::Select,
+            GlueTool => !animation_navigation && self.active_tool() == crate::ToolId::Glue,
+            HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,
             ToggleDeformers => self.deformer_visibility().all,
             ToggleAncestorDeformers => self.deformer_visibility().ancestors,
             _ => false,
@@ -600,8 +602,23 @@ impl Editor {
             return false;
         }
         let modeling = match command.target {
-            CommandTarget::Viewport(binding) => binding.kind == crate::ViewportKind::Modeling,
-            _ => self.workspace() == crate::WorkspaceKind::Modeling,
+            CommandTarget::Viewport(binding) => {
+                binding.kind == crate::ViewportKind::Modeling
+                    && self.editing_context() == Some(crate::EditingContext::Modeling)
+            }
+            _ => self.editing_context() == Some(crate::EditingContext::Modeling),
+        };
+        let animation_navigation = matches!(command.target,
+            CommandTarget::Viewport(binding) if binding.kind == crate::ViewportKind::Animation);
+        let view = match command.target {
+            CommandTarget::Viewport(binding) => self.viewport_view(binding).unwrap_or_default(),
+            _ => self.view(),
+        };
+        let metrics = match command.target {
+            CommandTarget::Viewport(binding) => {
+                self.viewport_metrics(binding.viewport).unwrap_or_default()
+            }
+            _ => self.canvas_metrics(),
         };
         if command.id.spec().scope == CommandScope::Timeline {
             return target && self.timeline_command_enabled(command.id);
@@ -673,21 +690,12 @@ impl Editor {
                     && !self.gesture_active()
                     && self.document().is_some_and(|d| d.has_pending_edit())
             }
-            ZoomIn => {
-                target && !self.is_busy() && !self.gesture_active() && self.view().zoom < MAX_ZOOM
-            }
-            ZoomOut => {
-                target && !self.is_busy() && !self.gesture_active() && self.view().zoom > MIN_ZOOM
-            }
+            ZoomIn => target && !self.is_busy() && !self.gesture_active() && view.zoom < MAX_ZOOM,
+            ZoomOut => target && !self.is_busy() && !self.gesture_active() && view.zoom > MIN_ZOOM,
             ResetView => target && !self.is_busy() && !self.gesture_active(),
-            FitView => {
-                target
-                    && !self.is_busy()
-                    && !self.gesture_active()
-                    && self.canvas_metrics().visible()
-            }
+            FitView => target && !self.is_busy() && !self.gesture_active() && metrics.visible(),
             CancelGesture => target && !self.is_busy(),
-            HandTool => target && !self.is_busy(),
+            HandTool => target && !self.is_busy() && (modeling || animation_navigation),
             _ => modeling && target && !self.is_busy(),
         }
     }
@@ -698,6 +706,10 @@ impl Editor {
             self.command_state(command).disabled_reason
         );
         use CommandId::*;
+        let viewport = match command.target {
+            CommandTarget::Viewport(binding) => Some(binding),
+            _ => None,
+        };
         match command.id {
             id if id.spec().scope == CommandScope::Timeline => {
                 self.dispatch_timeline_command(command.document().unwrap(), id)?;
@@ -720,10 +732,16 @@ impl Editor {
             CancelProperty => {
                 self.execute_for(command.document().unwrap(), EditorCommand::CancelEdit)?
             }
-            ZoomIn => self.zoom_by(0.25),
-            ZoomOut => self.zoom_by(-0.25),
-            ResetView => self.reset_view(),
-            FitView => self.fit_view(),
+            ZoomIn => self.zoom_viewport(viewport.unwrap(), 0.25, None)?,
+            ZoomOut => self.zoom_viewport(viewport.unwrap(), -0.25, None)?,
+            ResetView => self.reset_viewport(viewport.unwrap())?,
+            FitView => self.fit_viewport(viewport.unwrap())?,
+            HandTool
+                if viewport
+                    .is_some_and(|binding| binding.kind == crate::ViewportKind::Animation) =>
+            {
+                // Animation exposes navigation without changing the document's Modeling tool.
+            }
             SelectTool | GlueTool | HandTool => {
                 let tool = match command.id {
                     SelectTool => crate::ToolId::Select,

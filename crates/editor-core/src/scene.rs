@@ -80,7 +80,7 @@ impl crate::Document {
 }
 
 /// Editor viewport state. Never saved to the model or recorded in SDK history.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ViewState {
     /// Physical display pixels per source pixel; 1.0 is actual pixel size (100%).
     pub zoom: f32,

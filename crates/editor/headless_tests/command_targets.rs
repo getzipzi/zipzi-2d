@@ -144,3 +144,53 @@ fn switching_dock_tabs_unbinds_hidden_viewports_and_rejects_old_menus(cx: &mut T
         assert_eq!(view.editor.view().zoom, zoom);
     });
 }
+
+#[gpui_kit::test]
+fn targeted_navigation_actions_update_only_their_instance(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let (command, primary, second, document) = cx
+        .update_window(harness.window, |_, _, cx| {
+            harness.view.update(cx, |view, _| {
+                let primary = view.editor.primary_viewport_binding().unwrap();
+                let second = editor_core::ViewportId::new();
+                view.editor
+                    .register_viewport(second, editor_core::ViewportKind::Modeling)
+                    .unwrap();
+                let binding = view.editor.viewport_binding(second).unwrap();
+                let command = view.editor.command_for_viewport(
+                    CommandId::ZoomIn,
+                    binding,
+                    CommandSource::Toolbar,
+                );
+                (
+                    command,
+                    view.editor
+                        .viewport_state(primary.document, primary.viewport)
+                        .unwrap(),
+                    second,
+                    primary.document,
+                )
+            })
+        })
+        .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.dispatch_action(Box::new(RunCommand::targeted(command)), cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let current = view.editor.primary_viewport_binding().unwrap();
+        assert_eq!(
+            view.editor.viewport_state(document, current.viewport),
+            Some(primary)
+        );
+        assert_eq!(
+            view.editor
+                .viewport_state(document, second)
+                .unwrap()
+                .view
+                .zoom,
+            1.25
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+}

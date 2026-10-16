@@ -3,7 +3,7 @@ use editor_core::*;
 
 pub(super) fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (document, assets) = support::animation_document()?;
-    let mut editor = Editor::from_document(document);
+    let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
     editor.set_canvas_metrics(CanvasMetrics {

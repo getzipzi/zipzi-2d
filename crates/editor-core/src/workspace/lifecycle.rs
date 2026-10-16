@@ -14,7 +14,7 @@ impl Editor {
     pub fn end_editing(&mut self, document: DocumentId, reason: EditingLifecycle) -> Result<()> {
         let session = self.entry_mut(document)?.session_mut();
         if let Some(session) = session {
-            session.animation.pause();
+            session.animation.playback.pause();
             match reason {
                 EditingLifecycle::BlockingUi | EditingLifecycle::WindowDeactivated => {
                     session.cancel_gesture();

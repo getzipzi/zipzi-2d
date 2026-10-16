@@ -1,7 +1,6 @@
 use super::support;
 use editor_core::{
-    Document, Editor, EditorCommand, NewParameter, ObjectKind, ObjectRef,
-    ParameterCreateError as Error,
+    Document, EditorCommand, NewParameter, ObjectKind, ObjectRef, ParameterCreateError as Error,
 };
 use kasane_core::{
     Canvas, Parameter, ParameterKind, Vec2,
@@ -309,7 +308,7 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
 
 #[test]
 fn creation_command_rejects_stale_document_and_busy_target() -> anyhow::Result<()> {
-    let mut editor = Editor::from_document(Document::new_blank()?);
+    let mut editor = crate::support::editor_from_document(Document::new_blank()?);
     let first = editor.active_id().unwrap();
     let command = editor.command(editor_core::CommandId::CreateParameter);
     assert!(editor.command_available(command));

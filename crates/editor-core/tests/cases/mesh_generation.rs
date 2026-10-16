@@ -33,7 +33,7 @@ fn present(editor: &mut Editor, vertices: usize, triangles: usize) -> anyhow::Re
 #[test]
 fn generation_rebuilds_canvas_and_survives_history_and_save() -> anyhow::Result<()> {
     let (doc, dir) = support::rectangle_document(false)?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
@@ -70,7 +70,7 @@ fn generation_rebuilds_canvas_and_survives_history_and_save() -> anyhow::Result<
 #[test]
 fn bound_generation_migrates_keyforms_blends_and_glue_atomically() -> anyhow::Result<()> {
     let (doc, dir) = support::rectangle_document(true)?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     assert!(
         editor
@@ -112,7 +112,7 @@ fn bound_generation_migrates_keyforms_blends_and_glue_atomically() -> anyhow::Re
 #[test]
 fn generation_rejects_stale_locked_unsupported_and_invalid_targets() -> anyhow::Result<()> {
     let (doc, _dir) = support::rectangle_document(false)?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     let version = editor.document().unwrap().mesh_generation_revision();
     for (columns, rows) in [(0, 4), (4, 0), (256, 256), (usize::MAX, 1)] {
@@ -150,11 +150,11 @@ fn generation_rejects_stale_locked_unsupported_and_invalid_targets() -> anyhow::
             .is_err()
     );
     let (doc, _dir) = support::sample_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     assert!(editor.command_available(editor.command(CommandId::GenerateMesh)));
     let (doc, _dir) = support::sample_document_with_two_layers()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     assert!(!editor.command_available(editor.command(CommandId::GenerateMesh)));
     Ok(())
@@ -204,7 +204,7 @@ fn previews_are_isolated_repeatable_and_match_application() -> anyhow::Result<()
 #[test]
 fn snapshot_preview_keeps_binding_constraints_and_rejects_stale_apply() -> anyhow::Result<()> {
     let (doc, _dir) = support::rectangle_document(true)?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     let source = editor.document().unwrap().mesh_generation_source(&mesh())?;
     assert!(
@@ -239,7 +239,7 @@ fn snapshot_preview_keeps_binding_constraints_and_rejects_stale_apply() -> anyho
 fn alpha_preview_maps_source_pixels_and_survives_regeneration_history_and_save()
 -> anyhow::Result<()> {
     let (doc, dir) = support::alpha_document()?;
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
     let source = editor.document().unwrap().mesh_generation_source(&mesh())?;
     assert!(source.alpha_error().is_none());

@@ -1,5 +1,5 @@
 use super::support;
-use editor_core::{Document, Editor, EditorCommand, ObjectKind as K, ObjectRef, RelationKind as R};
+use editor_core::{Document, EditorCommand, ObjectKind as K, ObjectRef, RelationKind as R};
 use kasane_core::{
     BindingAxis, Canvas, Parameter, Part, PartKeyform, RotationTransform, SceneBinding, SceneTrack,
     Transform, TransformData,
@@ -232,7 +232,7 @@ fn context_navigation_is_per_document_and_does_not_reevaluate_scene() -> anyhow:
     let (doc, _) = support::sample_document_with_binding(true)?;
     let binding = doc.object_index().bindings[0].reference.clone();
     let p = doc.parameters()[0].id.clone();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     let original = editor.active_id().unwrap();
     editor.preview()?;
     let count = editor.evaluation_count();
@@ -444,7 +444,7 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
 fn repeated_keyform_preview_and_unchanged_scalar_edits_are_noops() -> anyhow::Result<()> {
     let (doc, _) = support::sample_document_with_binding(true)?;
     let binding = doc.object_index().bindings[0].reference.clone();
-    let mut editor = Editor::from_document(doc);
+    let mut editor = crate::support::editor_from_document(doc);
     editor.execute(EditorCommand::OpenBinding(binding.clone()))?;
     editor.execute(EditorCommand::PreviewKeyform {
         binding: binding.clone(),

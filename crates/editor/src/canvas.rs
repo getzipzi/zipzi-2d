@@ -173,7 +173,10 @@ impl CanvasView {
             .map_or(ToolId::Select, |owner| owner.read(cx).editor.active_tool())
     }
     pub fn hand_tool(&self, cx: &App) -> bool {
-        self.active_tool(cx) == ToolId::Hand
+        self.owner.upgrade().is_some_and(|owner| {
+            self.binding(&owner.read(cx).editor)
+                .is_some_and(|binding| binding.kind == editor_core::ViewportKind::Animation)
+        }) || self.active_tool(cx) == ToolId::Hand
     }
     pub fn cancel_pointer(&mut self) -> Option<editor_core::ViewportInteractionToken> {
         let token = self
@@ -255,7 +258,7 @@ impl Render for CanvasView {
                 label.clone()
             }
         });
-        let hand_tool = state.editor.active_tool() == ToolId::Hand;
+        let hand_tool = !modeling || state.editor.active_tool() == ToolId::Hand;
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
         if modal {

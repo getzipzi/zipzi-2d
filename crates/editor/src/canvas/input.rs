@@ -172,7 +172,7 @@ impl CanvasView {
             });
             let _ = self.owner.update(cx, |owner, cx| {
                 if !owner.modal {
-                    owner.editor.pan_by(delta);
+                    let _ = owner.editor.pan_viewport(token.binding, delta);
                     owner.redraw_canvas(cx);
                 }
             });

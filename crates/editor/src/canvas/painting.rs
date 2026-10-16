@@ -104,9 +104,12 @@ impl CanvasView {
                     };
                     this.bounds = bounds;
                     let _ = this.owner.update(cx, |owner, cx| {
-                        if owner.editor.canvas_metrics() != metrics {
+                        let Some(binding) = this.binding(&owner.editor) else {
+                            return;
+                        };
+                        if owner.editor.viewport_metrics(binding.viewport) != Some(metrics) {
                             let editing = owner.editor.gesture_active();
-                            owner.editor.set_canvas_metrics(metrics);
+                            owner.editor.set_viewport_metrics(binding.viewport, metrics);
                             if editing {
                                 // Resizing cancels an authoring gesture; its
                                 // rollback must also reach document panels.
