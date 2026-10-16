@@ -1,5 +1,5 @@
 use crate::{EditorView, t, ui::compact};
-use editor_core::{CommandId, ToolId};
+use editor_core::CommandId;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable,
@@ -9,19 +9,12 @@ use gpui_kit::{prelude::*, *};
 
 const TOOL_BUTTON_SIZE: f32 = 28.;
 
-pub(crate) type ToolbarAction = fn(&mut EditorView, &mut Window, &mut Context<EditorView>);
-pub(crate) type ToolbarSelected = fn(&EditorView, &App) -> bool;
-pub(crate) type ToolbarEnabled = fn(&EditorView, bool, &App) -> bool;
-
 /// One button's appearance and behavior. Items render in registration order.
 #[derive(Clone, Copy)]
 pub(crate) struct ToolbarItemConfig {
     pub id: &'static str,
     pub icon: IconName,
-    pub tooltip_key: &'static str,
-    pub selected: ToolbarSelected,
-    pub enabled: ToolbarEnabled,
-    pub action: Option<ToolbarAction>,
+    pub command: CommandId,
 }
 
 #[derive(Default)]
@@ -40,36 +33,22 @@ impl ToolbarRegistry {
             ToolbarItemConfig {
                 id: "tool_select",
                 icon: IconName::MousePointer,
-                tooltip_key: "editor.tool_select",
-                selected: select_selected,
-                enabled: |view, modal, cx| command_enabled(view, modal, cx, CommandId::SelectTool),
-                action: Some(select_tool),
+                command: CommandId::SelectTool,
             },
             ToolbarItemConfig {
                 id: "tool_glue",
                 icon: IconName::Link,
-                tooltip_key: "editor.tool_glue",
-                selected: glue_selected,
-                enabled: |view, modal, cx| command_enabled(view, modal, cx, CommandId::GlueTool),
-                action: Some(glue_tool),
+                command: CommandId::GlueTool,
             },
             ToolbarItemConfig {
                 id: "tool_hand",
                 icon: IconName::Hand,
-                tooltip_key: "editor.tool_hand",
-                selected: hand_selected,
-                enabled: |view, modal, cx| command_enabled(view, modal, cx, CommandId::HandTool),
-                action: Some(hand_tool),
+                command: CommandId::HandTool,
             },
             ToolbarItemConfig {
                 id: "tool_generate_mesh",
                 icon: IconName::Grid2x2,
-                tooltip_key: "editor.tool_generate_mesh",
-                selected: |_, _| false,
-                enabled: |view, modal, cx| {
-                    command_enabled(view, modal, cx, CommandId::GenerateMesh)
-                },
-                action: Some(generate_mesh),
+                command: CommandId::GenerateMesh,
             },
         ] {
             registry.register(item).unwrap();
@@ -78,7 +57,11 @@ impl ToolbarRegistry {
     }
 
     pub(crate) fn register(&mut self, item: ToolbarItemConfig) -> Result<(), &'static str> {
-        if self.items.iter().any(|registered| registered.id == item.id) {
+        if self
+            .items
+            .iter()
+            .any(|registered| registered.id == item.id || registered.command == item.command)
+        {
             return Err("toolbar item id is already registered");
         }
         self.items.push(item);
@@ -130,13 +113,14 @@ impl RenderOnce for CanvasToolbar {
                 items
                     .iter()
                     .filter(|item| {
-                        item.id == "tool_hand"
+                        item.command == CommandId::HandTool
                             || view.editor.workspace() == editor_core::WorkspaceKind::Modeling
                     })
                     .map(|item| {
-                        let action = item.action;
-                        let selected = (item.selected)(view, cx);
-                        let enabled = (item.enabled)(view, modal, cx);
+                        let command = item.command;
+                        let state = view.editor.command_state(view.editor.command(command));
+                        let selected = state.checked;
+                        let enabled = !modal && state.enabled;
                         let border = if selected {
                             cx.theme().primary
                         } else {
@@ -145,7 +129,7 @@ impl RenderOnce for CanvasToolbar {
                         let owner = owner.clone();
                         let canvas = canvas.clone();
                         compact::button(Button::new(item.id))
-                            .when(item.id != "tool_generate_mesh", |button| {
+                            .when(item.command != CommandId::GenerateMesh, |button| {
                                 compact::toggle(button, selected)
                             })
                             .small()
@@ -169,8 +153,8 @@ impl RenderOnce for CanvasToolbar {
                             .border_color(border)
                             .bg(if selected { selected_surface } else { surface })
                             .icon(item.icon)
-                            .accessibility_label(t!(item.tooltip_key).into_owned())
-                            .tooltip(t!(item.tooltip_key))
+                            .accessibility_label(t!(item.command.spec().label).into_owned())
+                            .tooltip(t!(item.command.spec().label))
                             .disabled(!enabled)
                             .on_click(move |_, window, cx| {
                                 let id = canvas.entity_id();
@@ -181,37 +165,10 @@ impl RenderOnce for CanvasToolbar {
                                         dock.activate_canvas(id);
                                     }
                                 });
-                                if let Some(action) = action {
-                                    owner.update(cx, |view, cx| action(view, window, cx));
-                                }
+                                owner.update(cx, |view, cx| view.run_command(command, window, cx));
                             })
                     })
                     .collect::<Vec<_>>(),
             ))
     }
-}
-
-fn select_selected(view: &EditorView, _: &App) -> bool {
-    view.editor.active_tool() == ToolId::Select
-}
-fn glue_selected(view: &EditorView, _: &App) -> bool {
-    view.editor.active_tool() == ToolId::Glue
-}
-fn hand_selected(view: &EditorView, _: &App) -> bool {
-    view.editor.active_tool() == ToolId::Hand
-}
-fn command_enabled(view: &EditorView, modal: bool, _: &App, command: CommandId) -> bool {
-    !modal && view.editor.command_available(view.editor.command(command))
-}
-fn generate_mesh(view: &mut EditorView, window: &mut Window, cx: &mut Context<EditorView>) {
-    view.run_command(CommandId::GenerateMesh, window, cx);
-}
-fn select_tool(view: &mut EditorView, window: &mut Window, cx: &mut Context<EditorView>) {
-    view.run_command(CommandId::SelectTool, window, cx);
-}
-fn glue_tool(view: &mut EditorView, window: &mut Window, cx: &mut Context<EditorView>) {
-    view.run_command(CommandId::GlueTool, window, cx);
-}
-fn hand_tool(view: &mut EditorView, window: &mut Window, cx: &mut Context<EditorView>) {
-    view.run_command(CommandId::HandTool, window, cx);
 }

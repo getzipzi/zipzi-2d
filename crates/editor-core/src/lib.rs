@@ -42,9 +42,11 @@ mod panels;
 pub use panels::*;
 
 mod commands;
+mod keyboard;
 mod recent_files;
 mod settings;
 pub use commands::*;
+pub use keyboard::*;
 pub use recent_files::*;
 pub use settings::*;
 

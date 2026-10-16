@@ -71,32 +71,14 @@ impl Timeline {
                     }
                 },
             ))
-            .on_action(cx.listener(|this, _: &input::DeleteKeys, window, cx| {
-                this.key_command("delete", window, cx)
-            }))
-            .on_action(cx.listener(|this, _: &input::CopyKeys, window, cx| {
-                this.key_command("copy", window, cx)
-            }))
-            .on_action(cx.listener(|this, _: &input::PasteKeys, window, cx| {
-                this.key_command("paste", window, cx)
-            }))
-            .on_action(cx.listener(|this, _: &input::FrameLeft, window, cx| {
-                this.key_command("left", window, cx)
-            }))
-            .on_action(cx.listener(|this, _: &input::FrameRight, window, cx| {
-                this.key_command("right", window, cx)
-            }))
-            .on_action(cx.listener(|this, _: &input::PreviousKey, window, cx| {
-                this.key_command("previous", window, cx)
-            }))
-            .on_action(cx.listener(|this, _: &input::NextKey, window, cx| {
-                this.key_command("next", window, cx)
-            }))
-            .on_action(cx.listener(|this, _: &input::Start, window, cx| {
-                this.key_command("start", window, cx)
-            }))
             .on_action(
-                cx.listener(|this, _: &input::End, window, cx| this.key_command("end", window, cx)),
+                cx.listener(|this, action: &crate::actions::RunCommand, window, cx| {
+                    if action.id.spec().scope == editor_core::CommandScope::Timeline {
+                        this.user_command(action.id, window, cx);
+                    } else {
+                        cx.propagate();
+                    }
+                }),
             )
     }
 }

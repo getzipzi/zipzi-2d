@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct MenuState {
-    pub commands: Vec<bool>,
+    pub commands: Vec<editor_core::CommandState>,
     pub text: bool,
     pub modal: bool,
     pub recent_files: Vec<PathBuf>,
@@ -105,7 +105,7 @@ impl EditorView {
             deformer_visibility: self.editor.deformer_visibility(),
             commands: COMMANDS
                 .iter()
-                .map(|s| !modal && self.editor.command_available(self.editor.command(s.id)))
+                .map(|s| self.editor.command_state(self.editor.command(s.id)))
                 .collect(),
             text,
             modal,
@@ -136,21 +136,10 @@ impl EditorView {
                 .items(items)
         };
         let item = |id: CommandId| {
+            let state = self.editor.command_state(self.editor.command(id));
             MenuItem::action(t!(id.spec().label).into_owned(), RunCommand { id })
-                .disabled(modal || !self.editor.command_available(self.editor.command(id)))
-                .checked(match id {
-                    CommandId::ModelingWorkspace => {
-                        self.editor.workspace() == editor_core::WorkspaceKind::Modeling
-                    }
-                    CommandId::AnimationWorkspace => {
-                        self.editor.workspace() == editor_core::WorkspaceKind::Animation
-                    }
-                    CommandId::ToggleAncestorDeformers => {
-                        self.editor.deformer_visibility().ancestors
-                    }
-                    CommandId::ToggleDeformers => self.editor.deformer_visibility().all,
-                    _ => false,
-                })
+                .disabled(modal || !state.enabled)
+                .checked(state.checked)
         };
         let edit = if text {
             vec![

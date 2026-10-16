@@ -20,6 +20,13 @@ Document Undo/Redo uses `kasane-sdk::AuthoringSession` checkpoint history.
 Gestures preview isolated candidates and commit one history step. Selection,
 tools, and viewport state stay in the editor; text inputs use GPUI Kit history.
 
+Editor and Timeline shortcuts share `keybindings.json` and the shortcut help.
+Use `secondary` for Command on macOS or Control on Windows/Linux. Each override
+may specify `platform` (`macos`, `windows`, or `linux`); platform overrides replace
+common overrides, and an empty `keys` array unbinds a command. Timeline and viewport
+bindings may reuse keys in their separate contexts. Invalid settings fall back to
+the last valid configuration.
+
 Watch source changes and rebuild automatically:
 
 ```sh

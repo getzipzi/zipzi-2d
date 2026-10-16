@@ -360,3 +360,124 @@ fn modal_cancels_a_candidate_and_late_pointer_events_do_not_restart_it(cx: &mut 
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn rebound_timeline_commands_replace_defaults_and_ignore_repeated_writes(cx: &mut TestAppContext) {
+    use editor_core::{ShortcutOverride, ShortcutOverrides};
+    use gpui_kit::InputEvent as _;
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        window.render_frame(cx);
+        let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
+        let key = projection.tracks.values().next().unwrap().keys[0]
+            .reference
+            .clone();
+        let position = harness
+            .view
+            .read(cx)
+            .dock
+            .as_ref()
+            .unwrap()
+            .timeline
+            .read(cx)
+            .key_position(&key)
+            .unwrap()
+            + point(px(2.), px(0.));
+        press(window, position, cx);
+        release(window, position, cx);
+        window.render_frame(cx);
+        let store = cx.global::<crate::settings::Settings>().store.clone();
+        store
+            .write(
+                "keybindings.json",
+                &ShortcutOverrides {
+                    bindings: [
+                        (CommandId::TimelineCopy, "v"),
+                        (CommandId::TimelinePaste, "p"),
+                        (CommandId::TimelineNextFrame, "l"),
+                        (CommandId::TimelineDelete, "shift-backspace"),
+                    ]
+                    .into_iter()
+                    .map(|(command, key)| ShortcutOverride {
+                        command,
+                        keys: vec![key.into()],
+                        platform: None,
+                    })
+                    .collect(),
+                },
+            )
+            .unwrap();
+        crate::keybindings::reload(cx);
+        assert!(cx.global::<crate::settings::Settings>().notices.is_empty());
+        let before = harness.view.read(cx).editor.animation().unwrap().edit_time;
+        window.press("cmd-c", cx);
+        assert!(
+            !harness.view.read(cx).editor.command_available(
+                harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .command(CommandId::TimelinePaste)
+            )
+        );
+        window.press("right", cx);
+        assert_eq!(
+            harness.view.read(cx).editor.animation().unwrap().edit_time,
+            before
+        );
+        window.press("v", cx);
+        for _ in 0..30 {
+            window.press("l", cx);
+        }
+        window.press("p", cx);
+        window.render_frame(cx);
+        let keys = |cx: &gpui_kit::App| {
+            harness
+                .view
+                .read(cx)
+                .editor
+                .timeline_projection()
+                .unwrap()
+                .tracks[&key.track_id]
+                .keys
+                .len()
+        };
+        assert_eq!(keys(cx), 3);
+        let history = harness
+            .view
+            .read(cx)
+            .editor
+            .document()
+            .unwrap()
+            .history_lengths();
+        window.dispatch_event(
+            gpui_kit::KeyDownEvent {
+                keystroke: gpui_kit::Keystroke::parse("p").unwrap(),
+                is_held: true,
+                prefer_character_input: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            history
+        );
+        assert_eq!(keys(cx), 3);
+        window.press("backspace", cx);
+        assert_eq!(keys(cx), 3);
+        window.press("shift-backspace", cx);
+        assert_eq!(keys(cx), 2);
+    })
+    .unwrap();
+}

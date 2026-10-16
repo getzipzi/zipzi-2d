@@ -2,36 +2,6 @@ use super::drawing::{Hit, track_range, x_time, y_value};
 use super::*;
 use kasane_sdk::MotionBezierHandle;
 
-// Native text editing has priority through the Input context.
-actions!(
-    timeline,
-    [
-        DeleteKeys,
-        CopyKeys,
-        PasteKeys,
-        FrameLeft,
-        FrameRight,
-        PreviousKey,
-        NextKey,
-        Start,
-        End
-    ]
-);
-pub(super) fn bind_keys(cx: &mut App) {
-    let scope = Some("KasaneTimeline && !Input && !KasaneModal");
-    cx.bind_keys([
-        KeyBinding::new("backspace", DeleteKeys, scope),
-        KeyBinding::new("delete", DeleteKeys, scope),
-        KeyBinding::new("cmd-c", CopyKeys, scope),
-        KeyBinding::new("cmd-v", PasteKeys, scope),
-        KeyBinding::new("left", FrameLeft, scope),
-        KeyBinding::new("right", FrameRight, scope),
-        KeyBinding::new("cmd-left", PreviousKey, scope),
-        KeyBinding::new("cmd-right", NextKey, scope),
-        KeyBinding::new("shift-left", Start, scope),
-        KeyBinding::new("shift-right", End, scope),
-    ]);
-}
 pub(super) enum Gesture {
     Pan {
         last: Point<f32>,
@@ -227,7 +197,7 @@ impl Timeline {
             .timeline_view()
             .cloned()
             .unwrap_or_default();
-        let additive = event.modifiers.shift || event.modifiers.platform;
+        let additive = event.modifiers.shift || event.modifiers.secondary();
         match hit {
             Some(Err(())) => {
                 self.error = Some(t!("timeline.ambiguous").into_owned());
@@ -602,7 +572,7 @@ impl Timeline {
             return;
         };
         let mut moved = false;
-        if event.modifiers.platform {
+        if event.modifiers.secondary() {
             if self.gesture.is_some() {
                 return;
             }
@@ -656,107 +626,20 @@ impl Timeline {
             cx.stop_propagation();
         }
     }
-    pub(super) fn key_command(
+    pub(super) fn user_command(
         &mut self,
-        command: &str,
+        command: editor_core::CommandId,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         if !self.allowed(window, cx) || window.has_focused_input(cx) {
             return;
         }
-        let Some(target) = self.target(cx) else {
-            return;
-        };
         self.finish_number(cx);
-        match command {
-            "delete" | "copy" | "paste" => {
-                if command != "copy" && !self.editable(window, cx) {
-                    return;
-                }
-                let _ = self.owner.update(cx, |owner, cx| {
-                    let result = match command {
-                        "delete" => owner.editor.delete_timeline_selection(target.document),
-                        "copy" => owner
-                            .editor
-                            .copy_timeline_selection(target.document)
-                            .map(|_| ()),
-                        _ => {
-                            let selected = owner.editor.timeline_view().and_then(|state| {
-                                (owner.editor.timeline_clipboard_can_retarget()
-                                    && state.channels.len() == 1)
-                                    .then(|| state.channels.first().unwrap())
-                            });
-                            let paste = selected
-                                .and_then(|id| {
-                                    owner
-                                        .editor
-                                        .timeline_rows()?
-                                        .iter()
-                                        .find(|row| &row.id == id)
-                                })
-                                .and_then(|row| {
-                                    row.channel.clone().map(|channel| TimelinePasteTarget {
-                                        channel,
-                                        track_id: row.track_id.clone(),
-                                    })
-                                });
-                            owner.editor.paste_timeline(target.document, paste)
-                        }
-                    };
-                    owner.complete_edit(result, cx);
-                });
-            }
-            _ => {
-                let _ = self.owner.update(cx, |owner, cx| {
-                    let Some(projection) = owner.editor.timeline_projection() else {
-                        return;
-                    };
-                    let time = owner.editor.animation().unwrap().edit_time as f64;
-                    let keys = || {
-                        projection
-                            .rows
-                            .iter()
-                            .filter_map(|row| row.track_id.as_ref())
-                            .flat_map(|id| &projection.tracks[id].keys)
-                    };
-                    let destination = match command {
-                        "previous" => keys()
-                            .filter(|key| key.time < time)
-                            .max_by(|a, b| a.time.total_cmp(&b.time)),
-                        "next" => keys()
-                            .filter(|key| key.time > time)
-                            .min_by(|a, b| a.time.total_cmp(&b.time)),
-                        _ => None,
-                    };
-                    let next = match command {
-                        "start" => 0.,
-                        "end" => projection.duration,
-                        "left" => f64::from(time as f32 - 1. / projection.fps),
-                        "right" => f64::from(time as f32 + 1. / projection.fps),
-                        "previous" => destination.map_or(0., |key| key.time),
-                        _ => destination.map_or(projection.duration, |key| key.time),
-                    }
-                    .clamp(0., projection.display_end);
-                    let result = owner
-                        .editor
-                        .seek_timeline(target.document, next as f32)
-                        .and_then(|_| {
-                            if let Some(key) = destination {
-                                owner
-                                    .editor
-                                    .reveal_timeline_keys(target.document, &[key.reference.clone()])
-                            } else {
-                                owner.editor.update_timeline_view(target.document, |view| {
-                                    view.reveal_time(next)
-                                })
-                            }
-                        });
-                    owner.animation_anchor = None;
-                    owner.complete_edit(result, cx);
-                });
-            }
-        }
+        let _ = self
+            .owner
+            .update(cx, |owner, cx| owner.run_command(command, window, cx));
+        // A matched but disabled local command is consumed by its originating panel.
         cx.stop_propagation();
     }
 }

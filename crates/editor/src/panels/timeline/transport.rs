@@ -4,6 +4,7 @@ use gpui_kit::component::Icon;
 
 impl Timeline {
     pub(super) fn toolbar(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let allowed = self.allowed(window, cx);
         let owner = self.owner.upgrade().unwrap();
         let view = owner.read(cx);
         let animation = view.editor.animation();
@@ -32,9 +33,6 @@ impl Timeline {
         } else {
             animation.map_or(0., |a| a.edit_time)
         };
-        let play_enabled = view
-            .editor
-            .command_available(view.editor.command(CommandId::PlayPause));
         let name = resource.as_ref().map_or_else(
             || t!("timeline.select_motion").into_owned(),
             |r| r.name.clone(),
@@ -52,31 +50,29 @@ impl Timeline {
             time_label.clone()
         };
         let asset_loop = resource.as_ref().is_some_and(|r| r.looping);
-        let allowed = self.allowed(window, cx);
-        let seek_enabled = allowed && resource.as_ref().is_some_and(|r| r.playable());
         let mut transport = Vec::new();
         for (id, command, icon, hint) in [
             (
                 "timeline-start",
-                "start",
+                CommandId::TimelineStart,
                 IconName::SkipBack,
                 t!("timeline.jump_start"),
             ),
             (
                 "timeline-previous-key",
-                "previous",
+                CommandId::TimelinePreviousKey,
                 IconName::ChevronsLeft,
                 t!("timeline.previous_key"),
             ),
             (
                 "timeline-previous-frame",
-                "left",
+                CommandId::TimelinePreviousFrame,
                 IconName::ChevronLeft,
                 t!("timeline.previous_frame"),
             ),
             (
                 "animation-play-pause",
-                "play",
+                CommandId::PlayPause,
                 if playing {
                     IconName::Pause
                 } else {
@@ -86,49 +82,58 @@ impl Timeline {
             ),
             (
                 "timeline-next-frame",
-                "right",
+                CommandId::TimelineNextFrame,
                 IconName::ChevronRight,
                 t!("timeline.next_frame"),
             ),
             (
                 "timeline-next-key",
-                "next",
+                CommandId::TimelineNextKey,
                 IconName::ChevronsRight,
                 t!("timeline.next_key"),
             ),
             (
                 "timeline-end",
-                "end",
+                CommandId::TimelineEnd,
                 IconName::SkipForward,
                 t!("timeline.jump_end"),
             ),
         ] {
-            if (self.header_tiny && command != "play")
-                || (self.header_compact && matches!(command, "left" | "right"))
+            if (self.header_tiny && command != CommandId::PlayPause)
+                || (self.header_compact
+                    && matches!(
+                        command,
+                        CommandId::TimelinePreviousFrame | CommandId::TimelineNextFrame
+                    ))
             {
                 continue;
             }
             transport.push(
-                compact::header_button(Button::new(id).when(command == "play", |button| {
-                    button.selected(playing).toggled(playing)
-                }))
+                compact::header_button(
+                    Button::new(id).when(command == CommandId::PlayPause, |button| {
+                        button.selected(playing).toggled(playing)
+                    }),
+                )
                 .icon(icon)
                 .accessibility_label(hint.clone().into_owned())
                 .tooltip(hint)
-                .disabled(if command == "play" {
-                    !allowed || !play_enabled
-                } else {
-                    !seek_enabled
-                })
+                .disabled(
+                    !allowed
+                        || !owner
+                            .read(cx)
+                            .editor
+                            .command_state(owner.read(cx).editor.command(command))
+                            .enabled,
+                )
                 .on_click(cx.listener(move |this, _, window, cx| {
                     this.finish_number(cx);
                     window.focus(&this.focus, cx);
-                    if command == "play" {
+                    if command == CommandId::PlayPause {
                         let _ = this.owner.update(cx, |owner, cx| {
                             owner.run_command(CommandId::PlayPause, window, cx)
                         });
                     } else {
-                        this.key_command(command, window, cx);
+                        this.user_command(command, window, cx);
                     }
                 })),
             );

@@ -13,8 +13,8 @@ use crate::{EditorView, t, ui::compact};
 use editor_core::{
     AnimationPreviewMode, DocumentId, TimelineCandidateIdentity, TimelineCategory, TimelineChannel,
     TimelineCommand, TimelineDiagnostic, TimelineDisplayMode, TimelineFilter, TimelineKeyRef,
-    TimelinePasteTarget, TimelineProjection, TimelineRow, TimelineRowId, TimelineTrack,
-    TimelineViewState, WorkspaceKind, timeline_time,
+    TimelineProjection, TimelineRow, TimelineRowId, TimelineTrack, TimelineViewState,
+    WorkspaceKind, timeline_time,
 };
 use gpui_kit::assets::IconName;
 use gpui_kit::base::ElementExt;
@@ -69,10 +69,6 @@ pub struct Timeline {
     _search_events: Subscription,
     _observe: Subscription,
     _activation: Subscription,
-}
-
-pub(crate) fn init(cx: &mut App) {
-    input::bind_keys(cx);
 }
 
 impl Timeline {

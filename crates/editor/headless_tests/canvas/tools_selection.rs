@@ -151,6 +151,18 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
                 .read_with(cx, |view, _| view.editor.active_tool()),
             editor_core::ToolId::Glue
         );
+        window.render_frame(cx);
+        harness.view.read_with(cx, |view, _| {
+            let checked = |id| {
+                view.menu_state.commands[editor_core::COMMANDS
+                    .iter()
+                    .position(|spec| spec.id == id)
+                    .unwrap()]
+                .checked
+            };
+            assert!(checked(editor_core::CommandId::GlueTool));
+            assert!(!checked(editor_core::CommandId::SelectTool));
+        });
     })
     .unwrap();
 }

@@ -418,6 +418,8 @@ seek_cancelled = "The previous seek was cancelled."
 evaluation_failed = "Evaluation failed: %{detail}"
 
 [timeline]
+copy = "Copy keys"
+paste = "Paste keys"
 playback_group = "Playback"
 edit_group = "Edit"
 view_group = "View"

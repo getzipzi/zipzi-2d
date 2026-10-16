@@ -66,13 +66,14 @@ impl Settings {
         Self::from_store(ConfigStore::new(root), cx.keyboard_mapper().as_ref())
     }
     pub fn from_store(store: ConfigStore, mapper: &dyn PlatformKeyboardMapper) -> Self {
+        let policy = keyboard_policy();
         let normalize = |key: &str| normalize_key(key, mapper);
         let mut notices = Vec::new();
         let requested = store
             .read::<ShortcutOverrides>("keybindings.json")
             .and_then(|config| {
                 let config = config.unwrap_or_default();
-                let effective = config.resolve(normalize)?;
+                let effective = config.resolve(&policy, normalize)?;
                 Ok((config, effective))
             });
         let bindings = match requested {
@@ -88,10 +89,10 @@ impl Settings {
                     .read::<ShortcutOverrides>("keybindings.last-good.json")
                     .ok()
                     .flatten()
-                    .and_then(|c| c.resolve(normalize).ok())
+                    .and_then(|c| c.resolve(&policy, normalize).ok())
                     .unwrap_or_else(|| {
                         ShortcutOverrides::default()
-                            .resolve(normalize)
+                            .resolve(&policy, normalize)
                             .expect("valid defaults")
                     })
             }
@@ -172,6 +173,17 @@ impl Settings {
         self.recent_files.clear();
         self.store.write("recent-files.json", &self.recent_files)
     }
+}
+
+pub fn keyboard_policy() -> editor_core::KeyboardPolicy {
+    use editor_core::ShortcutPlatform;
+    editor_core::KeyboardPolicy::for_platform(if cfg!(target_os = "macos") {
+        ShortcutPlatform::Macos
+    } else if cfg!(target_os = "windows") {
+        ShortcutPlatform::Windows
+    } else {
+        ShortcutPlatform::Linux
+    })
 }
 
 pub fn normalize_key(key: &str, mapper: &dyn PlatformKeyboardMapper) -> anyhow::Result<String> {
@@ -258,10 +270,12 @@ mod tests {
         let valid = ShortcutOverrides {
             bindings: vec![
                 ShortcutOverride {
+                    platform: None,
                     command: CommandId::Open,
                     keys: vec!["cmd-alt-o".into()],
                 },
                 ShortcutOverride {
+                    platform: None,
                     command: CommandId::Save,
                     keys: vec![],
                 },
@@ -273,6 +287,7 @@ mod tests {
         assert!(!first.bindings.iter().any(|b| b.command == CommandId::Save));
         let conflict = ShortcutOverrides {
             bindings: vec![ShortcutOverride {
+                platform: None,
                 command: CommandId::Open,
                 keys: vec!["cmd-s".into()],
             }],
@@ -319,25 +334,33 @@ mod tests {
         assert!(normalize_key("cmd-unicorn", &DummyKeyboardMapper).is_err());
         let config = ShortcutOverrides {
             bindings: vec![ShortcutOverride {
+                platform: None,
                 command: CommandId::Open,
                 keys: vec!["secondary-s".into()],
             }],
         };
         assert!(
             config
-                .resolve(|s| normalize_key(s, &DummyKeyboardMapper))
+                .resolve(&super::keyboard_policy(), |s| normalize_key(
+                    s,
+                    &DummyKeyboardMapper
+                ))
                 .is_err()
         );
         for key in ["a", "cmd-c", "ctrl-a"] {
             let config = ShortcutOverrides {
                 bindings: vec![ShortcutOverride {
+                    platform: None,
                     command: CommandId::CancelProperty,
                     keys: vec![key.into()],
                 }],
             };
             assert!(
                 config
-                    .resolve(|s| normalize_key(s, &DummyKeyboardMapper))
+                    .resolve(&super::keyboard_policy(), |s| normalize_key(
+                        s,
+                        &DummyKeyboardMapper
+                    ))
                     .is_err()
             );
         }

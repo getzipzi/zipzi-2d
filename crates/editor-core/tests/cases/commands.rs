@@ -80,55 +80,79 @@ fn visibility_targets_the_clicked_layer_without_changing_selection() -> anyhow::
 #[test]
 fn shortcut_override_is_atomic_and_allows_disjoint_contexts() -> anyhow::Result<()> {
     let normalize = |s: &str| Ok(s.to_lowercase());
-    let defaults = ShortcutOverrides::default().resolve(normalize)?;
+    let defaults = ShortcutOverrides::default().resolve(
+        &KeyboardPolicy::for_platform(ShortcutPlatform::Macos),
+        normalize,
+    )?;
     let overrides = ShortcutOverrides {
         bindings: vec![
             ShortcutOverride {
+                platform: None,
                 command: CommandId::Open,
                 keys: vec!["cmd-alt-o".into()],
             },
             ShortcutOverride {
+                platform: None,
                 command: CommandId::Save,
                 keys: vec![],
             },
         ],
     };
-    let resolved = overrides.resolve(normalize)?;
+    let resolved = overrides.resolve(
+        &KeyboardPolicy::for_platform(ShortcutPlatform::Macos),
+        normalize,
+    )?;
     assert_eq!(
         resolved
             .iter()
             .filter(|b| b.command == CommandId::Open)
             .map(|b| b.key.as_str())
             .collect::<Vec<_>>(),
-        ["cmd-alt-o"]
+        ["alt-cmd-o"]
     );
     assert!(!resolved.iter().any(|b| b.command == CommandId::Save));
     assert_eq!(defaults.iter().filter(|b| b.key == "escape").count(), 2);
     let conflict = ShortcutOverrides {
         bindings: vec![ShortcutOverride {
+            platform: None,
             command: CommandId::Open,
             keys: vec!["cmd-s".into()],
         }],
     };
-    assert!(conflict.resolve(normalize).is_err());
+    assert!(
+        conflict
+            .resolve(
+                &KeyboardPolicy::for_platform(ShortcutPlatform::Macos),
+                normalize
+            )
+            .is_err()
+    );
     assert!(
         ShortcutOverrides {
             bindings: vec![ShortcutOverride {
+                platform: None,
                 command: CommandId::Open,
                 keys: vec!["a".into()]
             }]
         }
-        .resolve(normalize)
+        .resolve(
+            &KeyboardPolicy::for_platform(ShortcutPlatform::Macos),
+            normalize
+        )
         .is_err()
     );
     assert!(
         ShortcutOverrides {
             bindings: vec![ShortcutOverride {
+                platform: None,
                 command: CommandId::Open,
                 keys: vec!["cmd-k cmd-o".into()]
             }]
         }
-        .resolve(normalize)
+        .resolve(
+            &KeyboardPolicy::for_platform(ShortcutPlatform::Macos),
+            normalize
+        )
         .is_err()
     );
     Ok(())
@@ -139,6 +163,7 @@ fn versioned_preferences_roundtrip_reject_corruption_and_unknown_commands() -> a
     let store = ConfigStore::new(dir.path());
     let config = ShortcutOverrides {
         bindings: vec![ShortcutOverride {
+            platform: None,
             command: CommandId::Open,
             keys: vec![],
         }],

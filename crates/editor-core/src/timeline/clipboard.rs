@@ -242,6 +242,22 @@ impl TimelineClipboard {
 }
 
 impl crate::Editor {
+    pub(crate) fn timeline_clipboard_available(&self) -> bool {
+        self.active_session().is_some_and(|session| {
+            session
+                .timeline
+                .clipboard
+                .as_ref()
+                .is_some_and(|clipboard| {
+                    Some(clipboard.document) == self.active_id()
+                        && session
+                            .timeline
+                            .current()
+                            .is_some_and(|state| state.projection.clip_id == clipboard.clip_id)
+                })
+        })
+    }
+
     /// Only a single copied track may be redirected to the selected channel.
     pub fn timeline_clipboard_can_retarget(&self) -> bool {
         self.active_session()

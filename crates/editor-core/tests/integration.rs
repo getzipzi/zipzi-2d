@@ -13,6 +13,8 @@ mod commands;
 mod document;
 #[path = "cases/editor.rs"]
 mod editor;
+#[path = "cases/keyboard.rs"]
+mod keyboard;
 #[path = "cases/locks.rs"]
 mod locks;
 #[path = "cases/mesh_generation.rs"]

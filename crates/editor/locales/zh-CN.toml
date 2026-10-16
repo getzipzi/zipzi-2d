@@ -417,6 +417,8 @@ seek_cancelled = "上一次定位已取消。"
 evaluation_failed = "求值失败：%{detail}"
 
 [timeline]
+copy = "复制关键帧"
+paste = "粘贴关键帧"
 playback_group = "播放"
 edit_group = "编辑"
 view_group = "视图"

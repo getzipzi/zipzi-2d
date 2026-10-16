@@ -3,6 +3,7 @@ use crate::scene::{MAX_ZOOM, MIN_ZOOM};
 use crate::{DocumentId, Editor, EditorCommand};
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
+mod timeline;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CommandId {
@@ -24,6 +25,24 @@ pub enum CommandId {
     AnimationParameters,
     #[serde(rename = "panel.animation-timeline")]
     AnimationTimeline,
+    #[serde(rename = "timeline.delete")]
+    TimelineDelete,
+    #[serde(rename = "timeline.copy")]
+    TimelineCopy,
+    #[serde(rename = "timeline.paste")]
+    TimelinePaste,
+    #[serde(rename = "timeline.previous-frame")]
+    TimelinePreviousFrame,
+    #[serde(rename = "timeline.next-frame")]
+    TimelineNextFrame,
+    #[serde(rename = "timeline.previous-key")]
+    TimelinePreviousKey,
+    #[serde(rename = "timeline.next-key")]
+    TimelineNextKey,
+    #[serde(rename = "timeline.start")]
+    TimelineStart,
+    #[serde(rename = "timeline.end")]
+    TimelineEnd,
     #[serde(rename = "file.new")]
     New,
     #[serde(rename = "file.open")]
@@ -123,11 +142,26 @@ pub enum CommandId {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CommandScope {
-    Workspace,
+    Window,
     Document,
-    Canvas,
+    Viewport,
+    Timeline,
     Property,
 }
+impl CommandScope {
+    pub fn overlaps(self, other: Self) -> bool {
+        use CommandScope::*;
+        self == other
+            || matches!(
+                (self, other),
+                (Window, _)
+                    | (_, Window)
+                    | (Document, Viewport | Timeline)
+                    | (Viewport | Timeline, Document)
+            )
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct CommandSpec {
     pub id: CommandId,
@@ -140,20 +174,8 @@ macro_rules! specs { ($(($id:ident,$label:literal,$scope:ident,$repeat:literal,[
     pub const COMMANDS: &[CommandSpec] = &[$(CommandSpec { id: CommandId::$id, label:$label, scope:CommandScope::$scope, repeat:$repeat, keys:&[$($key),*] }),*];
 }; }
 specs![
-    (
-        ModelingWorkspace,
-        "workspace.modeling",
-        Workspace,
-        false,
-        []
-    ),
-    (
-        AnimationWorkspace,
-        "workspace.animation",
-        Workspace,
-        false,
-        []
-    ),
+    (ModelingWorkspace, "workspace.modeling", Window, false, []),
+    (AnimationWorkspace, "workspace.animation", Window, false, []),
     (
         PlayPause,
         "workspace.play_pause",
@@ -176,33 +198,96 @@ specs![
         false,
         []
     ),
-    (AnimationInfo, "workspace.info", Workspace, false, []),
-    (AnimationTimeline, "timeline.title", Workspace, false, []),
+    (AnimationInfo, "workspace.info", Window, false, []),
+    (AnimationTimeline, "timeline.title", Window, false, []),
     (
         AnimationParameters,
         "workspace.parameters",
-        Workspace,
+        Window,
         false,
         []
     ),
-    (New, "menu.new", Workspace, false, ["cmd-n"]),
-    (Open, "menu.open", Workspace, false, ["cmd-o"]),
-    (ImportModel3, "menu.import_model3", Workspace, false, []),
-    (ImportPsd, "menu.import_psd", Workspace, false, []),
-    (Save, "menu.save", Workspace, false, ["cmd-s"]),
-    (SaveAs, "menu.save_as", Workspace, false, ["cmd-shift-s"]),
-    (Close, "menu.close_document", Workspace, false, ["cmd-w"]),
-    (Quit, "app.quit", Workspace, false, ["cmd-q"]),
+    (
+        TimelineDelete,
+        "timeline.delete",
+        Timeline,
+        false,
+        ["backspace", "delete"]
+    ),
+    (
+        TimelineCopy,
+        "timeline.copy",
+        Timeline,
+        false,
+        ["secondary-c"]
+    ),
+    (
+        TimelinePaste,
+        "timeline.paste",
+        Timeline,
+        false,
+        ["secondary-v"]
+    ),
+    (
+        TimelinePreviousFrame,
+        "timeline.previous_frame",
+        Timeline,
+        true,
+        ["left"]
+    ),
+    (
+        TimelineNextFrame,
+        "timeline.next_frame",
+        Timeline,
+        true,
+        ["right"]
+    ),
+    (
+        TimelinePreviousKey,
+        "timeline.previous_key",
+        Timeline,
+        true,
+        ["secondary-left"]
+    ),
+    (
+        TimelineNextKey,
+        "timeline.next_key",
+        Timeline,
+        true,
+        ["secondary-right"]
+    ),
+    (
+        TimelineStart,
+        "timeline.jump_start",
+        Timeline,
+        false,
+        ["shift-left"]
+    ),
+    (
+        TimelineEnd,
+        "timeline.jump_end",
+        Timeline,
+        false,
+        ["shift-right"]
+    ),
+    (New, "menu.new", Window, false, ["secondary-n"]),
+    (Open, "menu.open", Window, false, ["secondary-o"]),
+    (ImportModel3, "menu.import_model3", Window, false, []),
+    (ImportPsd, "menu.import_psd", Window, false, []),
+    (Save, "menu.save", Window, false, ["secondary-s"]),
+    (SaveAs, "menu.save_as", Window, false, ["secondary-shift-s"]),
+    (Close, "menu.close_document", Window, false, ["secondary-w"]),
+    (Quit, "app.quit", Window, false, ["secondary-q"]),
     (
         Previous,
         "menu.previous_document",
-        Workspace,
+        Window,
         false,
         ["ctrl-shift-tab"]
     ),
-    (Next, "menu.next_document", Workspace, false, ["ctrl-tab"]),
-    (Undo, "menu.undo", Document, false, ["cmd-z"]),
-    (Redo, "menu.redo", Document, false, ["cmd-shift-z"]),
+    (Next, "menu.next_document", Window, false, ["ctrl-tab"]),
+    (Undo, "menu.undo", Document, false, ["secondary-z"]),
+    (Redo, "menu.redo", Document, false, ["secondary-shift-z"]),
     (CreateParameter, "parameter.new", Document, false, []),
     (EditParameter, "parameter.edit", Document, false, []),
     (DeleteParameter, "parameter.delete", Document, false, []),
@@ -241,52 +326,70 @@ specs![
         false,
         ["escape"]
     ),
-    (ZoomIn, "menu.zoom_in", Document, true, ["cmd-=", "cmd-+"]),
-    (ZoomOut, "menu.zoom_out", Document, true, ["cmd--"]),
-    (ResetView, "menu.reset_view", Document, false, ["cmd-0"]),
-    (FitView, "menu.fit_view", Document, false, []),
-    (SelectTool, "editor.tool_select", Canvas, false, ["v"]),
+    (
+        ZoomIn,
+        "menu.zoom_in",
+        Viewport,
+        true,
+        ["secondary-=", "secondary-+"]
+    ),
+    (ZoomOut, "menu.zoom_out", Viewport, true, ["secondary--"]),
+    (
+        ResetView,
+        "menu.reset_view",
+        Viewport,
+        false,
+        ["secondary-0"]
+    ),
+    (FitView, "menu.fit_view", Viewport, false, []),
+    (SelectTool, "editor.tool_select", Viewport, false, ["v"]),
     (
         GenerateMesh,
         "editor.tool_generate_mesh",
-        Canvas,
+        Viewport,
         false,
         ["shift-m"]
     ),
-    (GlueTool, "editor.tool_glue", Canvas, false, ["g"]),
-    (HandTool, "editor.tool_hand", Canvas, false, ["h"]),
-    (ToggleDeformers, "editor.show_deformers", Canvas, false, []),
+    (GlueTool, "editor.tool_glue", Viewport, false, ["g"]),
+    (HandTool, "editor.tool_hand", Viewport, false, ["h"]),
+    (
+        ToggleDeformers,
+        "editor.show_deformers",
+        Viewport,
+        false,
+        []
+    ),
     (
         ToggleAncestorDeformers,
         "editor.show_ancestor_deformers",
-        Canvas,
+        Viewport,
         false,
         []
     ),
     (
         CancelGesture,
         "menu.cancel_gesture",
-        Canvas,
+        Viewport,
         false,
         ["escape"]
     ),
-    (MeshTree, "editor.mesh_tree", Workspace, false, []),
-    (Deformers, "editor.deformer_tree", Workspace, false, []),
-    (Parameters, "editor.parameters", Workspace, false, []),
-    (Properties, "editor.properties", Workspace, false, []),
-    (DrawOrder, "editor.draw_order", Workspace, false, []),
-    (Relations, "editor.relations", Workspace, false, []),
-    (Keyforms, "editor.keyforms", Workspace, false, []),
-    (BlendShapes, "editor.blend_shapes", Workspace, false, []),
-    (Glue, "editor.glue", Workspace, false, []),
-    (Motions, "editor.motions", Workspace, false, []),
-    (Expressions, "editor.expressions", Workspace, false, []),
-    (Physics, "editor.physics", Workspace, false, []),
-    (Pose, "editor.pose", Workspace, false, []),
-    (Resources, "editor.resources", Workspace, false, []),
-    (ResetLayout, "menu.reset_layout", Workspace, false, []),
-    (ResetShortcuts, "menu.reset_shortcuts", Workspace, false, []),
-    (ShowShortcuts, "menu.shortcuts", Workspace, false, []),
+    (MeshTree, "editor.mesh_tree", Window, false, []),
+    (Deformers, "editor.deformer_tree", Window, false, []),
+    (Parameters, "editor.parameters", Window, false, []),
+    (Properties, "editor.properties", Window, false, []),
+    (DrawOrder, "editor.draw_order", Window, false, []),
+    (Relations, "editor.relations", Window, false, []),
+    (Keyforms, "editor.keyforms", Window, false, []),
+    (BlendShapes, "editor.blend_shapes", Window, false, []),
+    (Glue, "editor.glue", Window, false, []),
+    (Motions, "editor.motions", Window, false, []),
+    (Expressions, "editor.expressions", Window, false, []),
+    (Physics, "editor.physics", Window, false, []),
+    (Pose, "editor.pose", Window, false, []),
+    (Resources, "editor.resources", Window, false, []),
+    (ResetLayout, "menu.reset_layout", Window, false, []),
+    (ResetShortcuts, "menu.reset_shortcuts", Window, false, []),
+    (ShowShortcuts, "menu.shortcuts", Window, false, []),
 ];
 impl CommandId {
     pub fn spec(self) -> &'static CommandSpec {
@@ -298,6 +401,21 @@ pub struct Command {
     pub id: CommandId,
     pub document: Option<DocumentId>,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CommandDisabledReason {
+    InvalidDocument,
+    Closing,
+    Busy,
+    UnavailableInContext,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CommandState {
+    pub enabled: bool,
+    pub checked: bool,
+    pub disabled_reason: Option<CommandDisabledReason>,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum CommandEffect {
     Done,
@@ -310,7 +428,43 @@ impl Editor {
             document: self.active_id(),
         }
     }
+    /// Shared UI state. Dispatch always queries it again before executing.
+    pub fn command_state(&self, command: Command) -> CommandState {
+        use CommandId::*;
+        let checked = match command.id {
+            ModelingWorkspace => self.workspace() == crate::WorkspaceKind::Modeling,
+            AnimationWorkspace => self.workspace() == crate::WorkspaceKind::Animation,
+            PlayPause => self.animation().is_some_and(|animation| animation.playing),
+            SelectTool => self.active_tool() == crate::ToolId::Select,
+            GlueTool => self.active_tool() == crate::ToolId::Glue,
+            HandTool => self.active_tool() == crate::ToolId::Hand,
+            ToggleDeformers => self.deformer_visibility().all,
+            ToggleAncestorDeformers => self.deformer_visibility().ancestors,
+            _ => false,
+        };
+        let disabled_reason = if self.command_enabled(command) {
+            None
+        } else if command.id.spec().scope != CommandScope::Window
+            && (command.document.is_none() || command.document != self.active_id())
+        {
+            Some(CommandDisabledReason::InvalidDocument)
+        } else if self.exiting() {
+            Some(CommandDisabledReason::Closing)
+        } else if self.is_busy() {
+            Some(CommandDisabledReason::Busy)
+        } else {
+            Some(CommandDisabledReason::UnavailableInContext)
+        };
+        CommandState {
+            enabled: disabled_reason.is_none(),
+            checked,
+            disabled_reason,
+        }
+    }
     pub fn command_available(&self, command: Command) -> bool {
+        self.command_state(command).enabled
+    }
+    fn command_enabled(&self, command: Command) -> bool {
         use CommandId::*;
         if crate::PANELS
             .iter()
@@ -321,6 +475,9 @@ impl Editor {
         }
         let target = command.document.is_some() && command.document == self.active_id();
         let modeling = self.workspace() == crate::WorkspaceKind::Modeling;
+        if command.id.spec().scope == CommandScope::Timeline {
+            return target && self.timeline_command_enabled(command.id);
+        }
         match command.id {
             ModelingWorkspace | AnimationWorkspace => !self.exiting(),
             PlayPause => {
@@ -409,10 +566,14 @@ impl Editor {
     pub fn dispatch(&mut self, command: Command) -> Result<CommandEffect> {
         ensure!(
             self.command_available(command),
-            "Command is unavailable for this document"
+            "Command is unavailable: {:?}",
+            self.command_state(command).disabled_reason
         );
         use CommandId::*;
         match command.id {
+            id if id.spec().scope == CommandScope::Timeline => {
+                self.dispatch_timeline_command(command.document.unwrap(), id)?;
+            }
             PlayPause => self.toggle_animation()?,
             RewindAnimation => self.rewind_animation()?,
             ClearExpression => self.clear_expression()?,

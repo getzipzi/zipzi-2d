@@ -213,10 +213,7 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
             let item = ToolbarItemConfig {
                 id: "registered-toolbar-item",
                 icon: IconName::Hand,
-                tooltip_key: "editor.tool_hand",
-                selected: |_, _| false,
-                enabled: |_, modal, _| !modal,
-                action: None,
+                command: editor_core::CommandId::ToggleDeformers,
             };
             view.dock
                 .as_ref()

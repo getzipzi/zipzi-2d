@@ -21,7 +21,7 @@ impl Timeline {
             .is_some_and(|a| a.preview_loop);
         let allowed = self.allowed(window, cx);
         let editable = self.editable(window, cx);
-        let actions = [
+        let mut actions = [
             (
                 "timeline-previous-frame",
                 IconName::ChevronLeft,
@@ -120,6 +120,16 @@ impl Timeline {
                 allowed,
             ),
         ];
+        for (id, _, _, _, enabled) in &mut actions {
+            if let Some(command) = tool_command(id) {
+                *enabled = allowed
+                    && owner
+                        .read(cx)
+                        .editor
+                        .command_state(owner.read(cx).editor.command(command))
+                        .enabled;
+            }
+        }
         let mut edit_buttons = Vec::new();
         let mut view_buttons = Vec::new();
         let mut tools = div()
@@ -191,7 +201,7 @@ impl Timeline {
                     .accessibility_label(t!("timeline.more_tools").into_owned())
                     .tooltip(t!("timeline.more_tools"))
                     .disabled(!allowed)
-                    .dropdown_menu(move |mut menu, _, _| {
+                    .dropdown_menu(move |mut menu, _, cx| {
                         menu = crate::ui::compact::menu(menu);
                         for (id, icon, label, selected, enabled) in &actions {
                             if !tiny && matches!(*id, "timeline-pan" | "timeline-inspector-toggle")
@@ -254,6 +264,15 @@ impl Timeline {
                                     )
                                     .disabled(
                                         !allowed
+                                            || tool_command(command).is_some_and(|id| {
+                                                !owner
+                                                    .read(cx)
+                                                    .editor
+                                                    .command_state(
+                                                        owner.read(cx).editor.command(id),
+                                                    )
+                                                    .enabled
+                                            })
                                             || (command == "loop"
                                                 && preview_mode != AnimationPreviewMode::Editing),
                                     )
@@ -280,8 +299,11 @@ impl Timeline {
         }
         self.finish_number(cx);
         window.focus(&self.focus, cx);
+        if let Some(command) = tool_command(id) {
+            self.user_command(command, window, cx);
+            return;
+        }
         match id {
-            "start" | "previous" | "next" | "end" => self.key_command(id, window, cx),
             "loop" | "preview" => {
                 _ = self.owner.update(cx, |owner, cx| {
                     let Some(document) = owner.editor.active_id() else {
@@ -309,8 +331,6 @@ impl Timeline {
                     owner.complete_edit(result, cx);
                 });
             }
-            "timeline-previous-frame" => self.key_command("left", window, cx),
-            "timeline-next-frame" => self.key_command("right", window, cx),
             "timeline-view" => self.change_view(
                 |view| {
                     view.mode = if view.mode == TimelineDisplayMode::Curves {
@@ -337,7 +357,6 @@ impl Timeline {
             }
             "timeline-inspector-toggle" => self.inspector_open = Some(!self.inspector_visible()),
             "timeline-add-event" => self.add_event(window, cx),
-            "timeline-delete" => self.key_command("delete", window, cx),
             _ => unreachable!(),
         }
         cx.notify();
@@ -396,7 +415,7 @@ impl Timeline {
                     }
                     window.focus(&this.focus, cx);
                     let id = id.clone();
-                    let additive = event.modifiers.shift || event.modifiers.platform;
+                    let additive = event.modifiers.shift || event.modifiers.secondary();
                     this.finish_number(cx);
                     this.change_view(
                         move |view| {
@@ -529,4 +548,18 @@ impl Timeline {
         }
         element.into_any_element()
     }
+}
+
+fn tool_command(id: &str) -> Option<editor_core::CommandId> {
+    use editor_core::CommandId::*;
+    Some(match id {
+        "start" => TimelineStart,
+        "previous" => TimelinePreviousKey,
+        "next" => TimelineNextKey,
+        "end" => TimelineEnd,
+        "timeline-previous-frame" => TimelinePreviousFrame,
+        "timeline-next-frame" => TimelineNextFrame,
+        "timeline-delete" => TimelineDelete,
+        _ => return None,
+    })
 }

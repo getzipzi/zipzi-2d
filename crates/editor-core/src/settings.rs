@@ -1,5 +1,5 @@
 //! Versioned application preferences. No model path or SDK history is involved.
-use crate::{COMMANDS, CommandId, CommandScope};
+use crate::{COMMANDS, CommandId, CommandScope, KeyboardPolicy, ShortcutPlatform};
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{
@@ -17,6 +17,8 @@ pub struct ShortcutOverrides {
 pub struct ShortcutOverride {
     pub command: CommandId,
     pub keys: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platform: Option<ShortcutPlatform>,
 }
 #[derive(Clone, Debug)]
 pub struct EffectiveBinding {
@@ -24,24 +26,54 @@ pub struct EffectiveBinding {
     pub key: String,
 }
 impl ShortcutOverrides {
-    /// Parse/normalize through the host platform. Validation is all-or-nothing.
+    /// Common defaults, platform additions, common overrides, then platform
+    /// overrides. Validation is atomic; normalized runtime keys are never saved.
     pub fn resolve(
         &self,
+        policy: &KeyboardPolicy,
         normalize: impl Fn(&str) -> Result<String>,
     ) -> Result<Vec<EffectiveBinding>> {
+        let normalize = |key: &str| normalize(&policy.expand(key));
         let mut overrides = HashMap::new();
         for binding in &self.bindings {
             ensure!(
-                overrides.insert(binding.command, &binding.keys).is_none(),
-                "Duplicate command override"
+                overrides
+                    .insert((binding.command, binding.platform), &binding.keys)
+                    .is_none(),
+                "Duplicate command override for {:?} ({:?})",
+                binding.command,
+                binding.platform
             );
         }
+        let reserved = policy
+            .reserved
+            .iter()
+            .map(|key| normalize(key))
+            .collect::<Result<HashSet<_>>>()?;
+        let text_editing = policy
+            .text_editing
+            .iter()
+            .map(|key| normalize(key))
+            .collect::<Result<HashSet<_>>>()?;
         let mut result: Vec<EffectiveBinding> = Vec::new();
         for spec in COMMANDS {
             let keys = overrides
-                .get(&spec.id)
-                .map(|k| k.iter().map(String::as_str).collect::<Vec<_>>())
-                .unwrap_or_else(|| spec.keys.to_vec());
+                .get(&(spec.id, Some(policy.platform)))
+                .or_else(|| overrides.get(&(spec.id, None)))
+                .map(|keys| keys.iter().map(String::as_str).collect::<Vec<_>>())
+                .unwrap_or_else(|| {
+                    spec.keys
+                        .iter()
+                        .copied()
+                        .chain(
+                            policy
+                                .additional_defaults
+                                .iter()
+                                .filter(|(command, _)| *command == spec.id)
+                                .map(|(_, key)| *key),
+                        )
+                        .collect()
+                });
             let mut own = HashSet::new();
             for key in keys {
                 ensure!(
@@ -55,55 +87,29 @@ impl ShortcutOverrides {
                     spec.id
                 );
                 ensure!(
-                    !["cmd-h", "alt-cmd-h", "cmd-alt-h", "cmd-m"].contains(&key.as_str()),
+                    !reserved.contains(&key),
                     "Shortcut conflicts with a platform command: {key}"
                 );
-                if matches!(spec.scope, CommandScope::Workspace | CommandScope::Property) {
+                if matches!(spec.scope, CommandScope::Window | CommandScope::Property) {
                     ensure!(
-                        ![
-                            "cmd-z",
-                            "cmd-shift-z",
-                            "cmd-c",
-                            "cmd-v",
-                            "cmd-x",
-                            "cmd-a",
-                            "ctrl-a",
-                            "ctrl-e",
-                            "ctrl-b",
-                            "ctrl-f",
-                            "ctrl-p",
-                            "ctrl-n",
-                            "ctrl-d",
-                            "ctrl-h",
-                            "ctrl-k",
-                            "ctrl-y",
-                            "ctrl-t"
-                        ]
-                        .contains(&key.as_str()),
+                        !text_editing.contains(&key),
                         "Shortcut conflicts with text editing: {key}"
                     );
-                }
-                if matches!(spec.scope, CommandScope::Workspace | CommandScope::Property) {
                     ensure!(
                         (spec.scope == CommandScope::Property
                             && ["enter", "escape"].contains(&key.as_str()))
-                            || key.contains("cmd-")
-                            || key.contains("ctrl-")
-                            || (key
+                            || key
+                                .split('-')
+                                .any(|part| ["cmd", "super", "win", "ctrl"].contains(&part))
+                            || key
                                 .strip_prefix('f')
                                 .and_then(|n| n.parse::<u8>().ok())
-                                .is_some_and(|n| (1..=24).contains(&n))),
+                                .is_some_and(|n| (1..=24).contains(&n)),
                         "Shortcut would intercept text: {key}"
                     );
                 }
                 for other in &result {
-                    let a = other.command.spec().scope;
-                    let b = spec.scope;
-                    let overlap = a == b
-                        || a == CommandScope::Workspace
-                        || b == CommandScope::Workspace
-                        || (a != CommandScope::Property && b != CommandScope::Property);
-                    if other.key == key && overlap {
+                    if other.key == key && other.command.spec().scope.overlaps(spec.scope) {
                         bail!(
                             "Shortcut conflict: {key} ({:?}, {:?})",
                             other.command,

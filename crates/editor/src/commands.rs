@@ -27,6 +27,12 @@ impl EditorView {
                         | CommandId::RewindAnimation
                         | CommandId::ResetAnimation
                         | CommandId::ClearExpression
+                        | CommandId::TimelinePreviousFrame
+                        | CommandId::TimelineNextFrame
+                        | CommandId::TimelinePreviousKey
+                        | CommandId::TimelineNextKey
+                        | CommandId::TimelineStart
+                        | CommandId::TimelineEnd
                 ) {
                     self.animation_anchor = None;
                 }
