@@ -13,6 +13,11 @@ Python wheel (kasane.Session) → kasane-sdk → kasane-core / kasane-project / 
 
 `kasane-sdk` 提供隔离编辑、版本检查、undo/redo、导入、工程保存和 MOC3 导出；Python wheel 暴露脚本入口。`kasane-sdk-observe` 从已发布或未发布的会话制作只读快照，通过 `kasane-project` 读取并验证图像资源，再由 macOS 上的原生 `kasane-render-metal` 或其他平台的 `kasane-render-wgpu` 输出帧与诊断资料。两个后端复用 `kasane-render` 的场景规划与 CPU 几何处理。
 
+文档 Undo/Redo 统一由 `kasane-sdk::AuthoringSession` 的检查点历史管理。
+`kasane-core` 提供完整持久内容的检查点、候选发布和恢复；`kasane-project::DocumentSession`
+负责工程与资源读写，不保存历史栈。交互编辑在隔离候选中预览，提交时生成一个历史步骤；
+取消、无变化或失败的编辑保留原有 redo 分支，保存由 SDK 协调历史资源路径与已保存基线。
+
 ## SDK 与 Python 包的职责
 
 `kasane-python` 是一个发行包，内部同时包含 PyO3 Rust 扩展和纯 Python 代码；它不是与 `kasane-sdk` 并列的第二套工程内核。区分代码位置时看**谁拥有规则、谁会使用规则**，不以实现语言或文件长度决定。

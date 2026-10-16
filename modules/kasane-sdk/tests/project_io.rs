@@ -329,6 +329,159 @@ fn session(texture: &Path, with_mesh: bool) -> AuthoringSession {
 }
 
 #[test]
+fn mixed_gesture_commits_one_checkpoint_and_tracks_saved_baselines() {
+    let temp = TempDir::new();
+    let mut sdk = session(&temp.png("texture.png", 10), true);
+    let path = temp.path("project");
+    sdk.save_project(&path, None).unwrap();
+    let original = sdk.document().clone();
+    let original_mesh = sdk.mesh(MESH).unwrap();
+    let before = sdk.version();
+    let history = sdk.history_lengths();
+    sdk.drain_events();
+
+    let mut gesture = sdk.begin_owned_edit("drag and rename", None).unwrap();
+    for step in 1..100 {
+        gesture.rename_mesh(MESH, format!("name{step}")).unwrap();
+        gesture
+            .update_positions(MESH, &[0], &[Vec2::new(step as f32, 1.)])
+            .unwrap();
+    }
+    // Canvas and opacity used to be barriers in the field-based history.
+    let canvas = Canvas::new(200., 150., Vec2::new(50., 50.), 10.);
+    gesture.replace_canvas(canvas).unwrap();
+    gesture.set_mesh_opacity(MESH, 0.4).unwrap();
+    assert!(sdk.document().same_content(&original));
+    assert_eq!(sdk.version(), before);
+    assert_eq!(sdk.history_lengths(), history);
+    assert!(!sdk.modified());
+    assert!(sdk.drain_events().is_empty());
+
+    gesture.commit_to(&mut sdk).unwrap();
+    let edited = sdk.document().clone();
+    assert_eq!(sdk.version().revision, before.revision + 1);
+    assert_eq!(sdk.history_lengths(), (history.0 + 1, 0));
+    assert_eq!(sdk.drain_events().len(), 1);
+    assert_eq!(sdk.mesh(MESH).unwrap().name, "name99");
+    assert_eq!(
+        sdk.mesh(MESH).unwrap().base_positions[0],
+        Vec2::new(99., 1.)
+    );
+    assert_eq!(sdk.mesh(MESH).unwrap().appearance.opacity, 0.4);
+    assert_eq!(sdk.canvas(), canvas);
+
+    sdk.undo().unwrap();
+    assert_eq!(sdk.mesh(MESH).unwrap(), original_mesh);
+    assert!(sdk.document().same_content(&original));
+    assert!(!sdk.modified());
+    sdk.redo().unwrap();
+    assert!(sdk.document().same_content(&edited));
+    assert!(sdk.modified());
+
+    sdk.save_project(&path, None).unwrap();
+    sdk.undo().unwrap();
+    assert!(sdk.modified());
+    sdk.redo().unwrap();
+    assert!(!sdk.modified());
+    assert!(sdk.diagnose_resources().is_empty());
+}
+
+#[test]
+fn cancelled_reverted_and_failed_mixed_edits_preserve_redo() {
+    let temp = TempDir::new();
+    let mut sdk = session(&temp.png("texture.png", 10), true);
+    sdk.save_project(&temp.path("project"), None).unwrap();
+    sdk.edit("rename", None, |edit| edit.rename_mesh(MESH, "redo name"))
+        .unwrap();
+    sdk.undo().unwrap();
+    let version = sdk.version();
+    let history = sdk.history_lengths();
+    let original = sdk.document().clone();
+    let mesh = sdk.mesh(MESH).unwrap();
+    sdk.drain_events();
+
+    let mut cancelled = sdk.begin_owned_edit("cancel", None).unwrap();
+    cancelled.rename_mesh(MESH, "discarded").unwrap();
+    cancelled.set_mesh_opacity(MESH, 0.2).unwrap();
+    cancelled
+        .update_positions(MESH, &[0], &[Vec2::new(20., 1.)])
+        .unwrap();
+    drop(cancelled);
+
+    let (_, noop) = sdk
+        .edit("return to origin", None, |edit| {
+            edit.rename_mesh(MESH, "temporary")?;
+            edit.set_mesh_opacity(MESH, 0.2)?;
+            edit.update_positions(MESH, &[0], &[Vec2::new(20., 1.)])?;
+            edit.rename_mesh(MESH, &mesh.name)?;
+            edit.set_mesh_opacity(MESH, mesh.appearance.opacity)?;
+            edit.update_positions(MESH, &[0], &[mesh.base_positions[0]])
+        })
+        .unwrap();
+    assert!(!noop.changed);
+
+    let failure = sdk
+        .edit("invalid batch", None, |edit| {
+            edit.rename_mesh(MESH, "must roll back")?;
+            edit.set_mesh_opacity(MESH, 0.2)?;
+            edit.update_positions(MESH, &[0, 999], &[Vec2::new(30., 1.); 2])
+        })
+        .unwrap_err();
+    assert_eq!(failure.code.as_ref(), "MISSING_VERTEX");
+    assert_eq!(sdk.version(), version);
+    assert_eq!(sdk.history_lengths(), history);
+    assert!(sdk.document().same_content(&original));
+    assert!(!sdk.modified());
+    assert!(sdk.drain_events().is_empty());
+    sdk.redo().unwrap();
+    assert_eq!(sdk.mesh(MESH).unwrap().name, "redo name");
+    sdk.undo().unwrap();
+    sdk.edit("new branch", None, |edit| edit.set_mesh_opacity(MESH, 0.5))
+        .unwrap();
+    assert_eq!(sdk.history_lengths().1, 0);
+}
+
+#[test]
+fn publication_failure_preserves_checkpoint_history_and_saved_baseline() {
+    let temp = TempDir::new();
+    let path = temp.path("project");
+    let mut saved = session(&temp.png("texture.png", 10), true);
+    saved.save_project(&path, None).unwrap();
+    let original = saved.mesh(MESH).unwrap();
+    let manifest = fs::read(saved.project_path().unwrap()).unwrap();
+    let mut sdk =
+        AuthoringSession::with_filesystem(DOCUMENT, saved.canvas(), Arc::new(FailPsdPublish))
+            .unwrap();
+    sdk.open_project(&path, None).unwrap();
+    sdk.edit("unsaved", None, |edit| {
+        edit.rename_mesh(MESH, "unsaved")?;
+        edit.set_mesh_opacity(MESH, 0.4)
+    })
+    .unwrap();
+    let version = sdk.version();
+    let history = sdk.history_lengths();
+    sdk.drain_events();
+
+    assert_eq!(
+        sdk.save_project(&path, None).unwrap_err().code.as_ref(),
+        "PROJECT_IO"
+    );
+    assert_eq!(sdk.version(), version);
+    assert_eq!(sdk.history_lengths(), history);
+    assert!(sdk.modified());
+    assert!(sdk.drain_events().is_empty());
+    assert_eq!(fs::read(sdk.project_path().unwrap()).unwrap(), manifest);
+    sdk.undo().unwrap();
+    assert_eq!(sdk.mesh(MESH).unwrap(), original);
+    assert!(!sdk.modified());
+    sdk.redo().unwrap();
+    assert_eq!(sdk.mesh(MESH).unwrap().name, "unsaved");
+    assert_eq!(sdk.mesh(MESH).unwrap().appearance.opacity, 0.4);
+    assert!(sdk.modified());
+    assert!(sdk.diagnose_resources().is_empty());
+}
+
+#[test]
 fn save_relocates_unhashed_history_and_redo_reaches_saved_baseline() {
     let temp = TempDir::new();
     let texture = temp.png("a.png", 10);

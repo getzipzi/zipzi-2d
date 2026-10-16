@@ -517,9 +517,7 @@ impl Document {
                 referrers: Vec::new(),
             };
         }
-        let before = std::mem::replace(&mut mesh.name, name);
-        let result = self.changed(ChangeKind::Metadata, vec![id.to_string()], Vec::new());
-        self.receipt.0 = Some(crate::history::EditDelta::name(id, before));
-        result
+        mesh.name = name;
+        self.changed(ChangeKind::Metadata, vec![id.to_string()], Vec::new())
     }
 }

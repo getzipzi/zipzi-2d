@@ -106,18 +106,12 @@ impl Document {
             }
         }
 
-        let mut delta = crate::history::EditDelta::default();
         let mut changed_meshes = Vec::new();
         let mut changed_mesh_set = HashSet::new();
         let mut object_ids = Vec::new();
 
         for write in positions {
             let mesh = self.content.meshes.get_mut(&write.mesh_id).unwrap();
-            delta.vertex(
-                &write.mesh_id,
-                mesh.vertex_ids[write.slot],
-                mesh.base_positions[write.slot],
-            );
             mesh.base_positions[write.slot] = write.after;
             if changed_mesh_set.insert(write.mesh_id.clone()) {
                 changed_meshes.push(write.mesh_id.clone());
@@ -126,8 +120,7 @@ impl Document {
         let saw_positions = !changed_meshes.is_empty();
         for (mesh_id, name) in names {
             let mesh = self.content.meshes.get_mut(&mesh_id).unwrap();
-            let before = std::mem::replace(&mut mesh.name, name);
-            delta.merge(crate::history::EditDelta::name(&mesh_id, before));
+            mesh.name = name;
             if changed_mesh_set.insert(mesh_id.clone()) {
                 changed_meshes.push(mesh_id.clone());
             }
@@ -147,9 +140,7 @@ impl Document {
         } else {
             ChangeKind::Metadata
         };
-        let result = self.changed(kind, changed_meshes, object_ids);
-        self.receipt.0 = Some(delta);
-        result
+        self.changed(kind, changed_meshes, object_ids)
     }
 
     pub fn cancel_transaction(&mut self) -> Status {

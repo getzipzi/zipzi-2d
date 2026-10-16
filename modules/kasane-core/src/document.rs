@@ -71,7 +71,6 @@ pub struct Document {
     batch_build_active: bool,
     transaction_active: bool,
     staged_edits: Vec<DocumentEdit>,
-    receipt: crate::history::Receipt,
 
     mesh_runtime_ids: HashMap<String, String>,
     vertex_slots: HashMap<String, HashMap<VertexId, usize>>,
@@ -224,84 +223,6 @@ impl Document {
         self.revision
     }
 
-    pub fn take_edit_delta(&mut self) -> Option<crate::history::EditDelta> {
-        self.receipt.0.take()
-    }
-
-    pub(crate) fn remove_unchanged_history_fields(&self, delta: &mut crate::history::EditDelta) {
-        use crate::history::{Field, Value};
-        delta.values.retain(|key, value| match (key, value) {
-            (Field::MeshName(id), Value::Name(name)) => {
-                self.get_mesh(id).is_none_or(|m| m.name != *name)
-            }
-            (Field::Vertex(id, vertex), Value::Position(position)) => {
-                self.get_mesh(id).and_then(|m| {
-                    self.vertex_slots
-                        .get(id)?
-                        .get(vertex)
-                        .map(|&slot| m.base_positions[slot])
-                }) != Some(*position)
-            }
-            _ => true,
-        });
-    }
-
-    pub(crate) fn replay_history(&mut self, delta: &mut crate::history::EditDelta) -> EditResult {
-        use crate::history::{Field, Value};
-        // Validate every target before the first swap; failure cannot partially replay an action.
-        for (key, value) in &delta.values {
-            let valid = match (key, value) {
-                (Field::MeshName(id), Value::Name(_)) => self.content.meshes.contains_key(id),
-                (Field::Vertex(id, vertex), Value::Position(_)) => self
-                    .vertex_slots
-                    .get(id)
-                    .is_some_and(|s| s.contains_key(vertex)),
-                _ => false,
-            };
-            if !valid {
-                return self.failed(Status::error(
-                    "STALE_HISTORY",
-                    "History target is no longer available",
-                ));
-            }
-        }
-        self.remove_unchanged_history_fields(delta);
-        if delta.values.is_empty() {
-            return self.failed(Status::ok());
-        }
-        let mut meshes = Vec::new();
-        let mut positions = false;
-        for (key, value) in &mut delta.values {
-            match (key, value) {
-                (Field::MeshName(id), Value::Name(name)) => {
-                    std::mem::swap(&mut self.content.meshes.get_mut(id).unwrap().name, name);
-                    meshes.push(id.clone());
-                }
-                (Field::Vertex(id, vertex), Value::Position(position)) => {
-                    let slot = self.vertex_slots[id][vertex];
-                    std::mem::swap(
-                        &mut self.content.meshes.get_mut(id).unwrap().base_positions[slot],
-                        position,
-                    );
-                    positions = true;
-                    meshes.push(id.clone());
-                }
-                _ => unreachable!(),
-            }
-        }
-        meshes.sort();
-        meshes.dedup();
-        self.changed(
-            if positions {
-                ChangeKind::Positions
-            } else {
-                ChangeKind::Metadata
-            },
-            meshes,
-            Vec::new(),
-        )
-    }
-
     pub fn same_content(&self, other: &Document) -> bool {
         self.content == other.content
     }
@@ -368,7 +289,6 @@ impl Document {
         self.batch_build_active = false;
         self.lookup.take();
         self.prepared.take();
-        self.receipt.0 = None;
         self.revision = 1;
         self.evaluation_revision = 1;
         Status::ok()
@@ -474,7 +394,6 @@ impl Document {
         if kind != ChangeKind::Metadata {
             self.evaluation_revision = self.revision;
         }
-        self.receipt.0 = None;
         EditResult {
             status: Status::ok(),
             changes: ChangeSet {

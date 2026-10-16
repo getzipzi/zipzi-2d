@@ -299,7 +299,7 @@ fn test_core_lifecycle_and_topology() {
         Vec2::new(20.0, 25.0)
     );
 
-    // Different edit kinds share the same atomic boundary and inverse receipt.
+    // Different edit kinds share the same atomic boundary and change set.
     assert!(doc.begin_transaction().is_ok());
     assert!(doc
         .stage_edit(DocumentEdit::MeshName {

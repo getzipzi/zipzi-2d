@@ -28,7 +28,7 @@
 | [Document Bridge](../modules/kasane-godot/src/document_bridge.rs) 是 Godot 门面，包含 generation、object epoch、预览缓存、变更发布和分模块编辑入口 | 用作能力清单；不迁移 Godot 类型和主线程约束 |
 | [Document](../modules/kasane-core/src/document.rs) 已独立于引擎，领域操作在 `document/` 下 | 复用验证和求值；不在 Python 再实现一套规则 |
 | [DocumentSession](../modules/kasane-project/src/store.rs) 拥有文档、历史、manifest 路径和保存基线 | SDK 可以持有它；需明确 SDK 与旧 history 的单一所有权 |
-| [History](../modules/kasane-core/src/history.rs) 的 delta 仅支持 `MeshName` 和 `Vertex`；无 receipt 的编辑触发 `HISTORY_UNSUPPORTED_EDIT` 并清空历史 | 不能声称现有 begin/end action 已能撤销创建对象、绑定或资源替换 |
+| 当时 core `History` 的 delta 仅支持 `MeshName` 和 `Vertex`；无 receipt 的编辑触发 `HISTORY_UNSUPPORTED_EDIT` 并清空历史 | 不能声称现有 begin/end action 已能撤销创建对象、绑定或资源替换 |
 | [transaction](../modules/kasane-core/src/document/transactions.rs) 仅暂存顶点位置和 mesh 名称；其它修改在 transaction 激活时被阻止 | SDK 的完整原子编辑必须新实现，不能简单包装旧 transaction |
 | `Document::restore_from` 保留当前 saved baseline，并推进 revision；`Document::clone` 同时涉及派生缓存和 saved content | 新增不含缓存/历史/保存基线的内容 checkpoint，避免直接深拷贝完整 Session |
 | [PreviewState](../modules/kasane-core/src/preview.rs) 用 generation、evaluation revision、preview revision 缓存不可变帧 | 延续区分；普通 metadata 修改可能复用较早求值帧 |

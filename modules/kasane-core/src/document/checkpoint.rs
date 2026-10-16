@@ -233,7 +233,6 @@ impl Document {
             self.lookup.take();
             self.prepared.take();
         }
-        self.receipt.0 = None;
     }
 
     fn advance_checkpoint_revision(&mut self, evaluation_changed: bool) {
@@ -243,6 +242,5 @@ impl Document {
             self.lookup.take();
             self.prepared.take();
         }
-        self.receipt.0 = None;
     }
 }

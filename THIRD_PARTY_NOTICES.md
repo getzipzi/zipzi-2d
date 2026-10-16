@@ -13,10 +13,3 @@ upstream works retain their original copyrights and license terms.
 Copyright (c) 2026 Sakura Motion Project.
 
 PurismCore is distributed under the MIT License included in that submodule.
-
-Copyright (c) 2025-2026 undoredo contributors.
-Used under the MIT option of its MIT OR Apache-2.0 license.
-The upstream MIT license text is included in [licenses/undoredo-MIT.txt](licenses/undoredo-MIT.txt).
-The adaptation specializes recording for Kasane fields, uses value swapping
-for playback, and adds bounded linear history; it does not depend on the
-upstream crate, maplike, or its derive macros.

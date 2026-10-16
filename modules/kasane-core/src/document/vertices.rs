@@ -106,22 +106,14 @@ impl Document {
             };
         }
 
-        let mut history = crate::history::EditDelta::default();
         for delta in deltas {
             let mesh = self.content.meshes.get_mut(&delta.mesh_id).unwrap();
             for (slot, after) in delta.slots.into_iter().zip(delta.after) {
-                history.vertex(
-                    &delta.mesh_id,
-                    mesh.vertex_ids[slot],
-                    mesh.base_positions[slot],
-                );
                 mesh.base_positions[slot] = after;
             }
         }
 
-        let result = self.changed(ChangeKind::Positions, changed_meshes, Vec::new());
-        self.receipt.0 = Some(history);
-        result
+        self.changed(ChangeKind::Positions, changed_meshes, Vec::new())
     }
 
     pub fn apply_vertex_position_updates_at_revision(

@@ -21,8 +21,8 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
+/// Project persistence and resource state. Authoring history belongs to the SDK.
 pub struct DocumentSession {
-    history: kasane_core::history::History,
     store: DocumentStore,
     document: Document,
     manifest: PathBuf,
@@ -34,8 +34,7 @@ impl DocumentSession {
         Self::with_filesystem(Arc::new(NativeFileSystem))
     }
 
-    /// Start an in-memory authoring session. SDK edits use a separate, complete
-    /// checkpoint history; legacy delta history remains empty on this path.
+    /// Start an in-memory project session. The SDK owns authoring history.
     pub fn from_authoring_document(document: Document) -> Self {
         let mut session = Self::new();
         session.reset_authoring_document(document);
@@ -54,33 +53,20 @@ impl DocumentSession {
     /// Replace an SDK document while retaining the configured publication backend.
     pub fn reset_authoring_document(&mut self, document: Document) {
         self.store.clear_memory_assets();
-        self.history.clear(document.revision(), None);
         self.document = document;
         self.manifest = PathBuf::new();
         self.manifest_sha256.clear();
     }
 
-    /// The sole SDK publication boundary. It never records a legacy delta.
+    /// Publish an SDK candidate while retaining the saved baseline.
     pub fn publish_authoring_candidate(
         &mut self,
         candidate: Document,
         kind: kasane_core::ChangeKind,
         identity_changed: bool,
     ) -> Result<bool, Status> {
-        if self.history.active() {
-            return Err(Status::error(
-                "ACTION_ACTIVE",
-                "Finish the legacy action first",
-            ));
-        }
-        let changed = self
-            .document
-            .publish_candidate(candidate, kind, identity_changed)?;
-        if changed {
-            self.history
-                .clear(self.document.revision(), Some("HISTORY_EXTERNAL_EDIT"));
-        }
-        Ok(changed)
+        self.document
+            .publish_candidate(candidate, kind, identity_changed)
     }
 
     /// Restore a complete SDK checkpoint, retaining manifest and saved baseline.
@@ -88,54 +74,16 @@ impl DocumentSession {
         &mut self,
         checkpoint: &mut kasane_core::document::DocumentCheckpoint,
     ) -> Result<(), Status> {
-        self.document.exchange_checkpoint(checkpoint)?;
-        self.history
-            .clear(self.document.revision(), Some("HISTORY_EXTERNAL_EDIT"));
-        Ok(())
+        self.document.exchange_checkpoint(checkpoint)
     }
 
     pub fn with_filesystem(filesystem: Arc<dyn FileSystem>) -> Self {
         Self {
-            history: kasane_core::history::History::default(),
             store: DocumentStore::with_filesystem(filesystem),
             document: Document::new(),
             manifest: PathBuf::new(),
             manifest_sha256: String::new(),
         }
-    }
-
-    pub fn history(&self) -> &kasane_core::history::History {
-        &self.history
-    }
-
-    pub fn record_edit(&mut self, edit: &kasane_core::EditResult) {
-        self.history.record(&mut self.document, edit);
-    }
-
-    /// Engine-independent entry point for a single recorded edit.
-    pub fn edit(
-        &mut self,
-        operation: impl FnOnce(&mut Document) -> kasane_core::EditResult,
-    ) -> kasane_core::EditResult {
-        let result = operation(&mut self.document);
-        self.record_edit(&result);
-        result
-    }
-
-    pub fn begin_action(&mut self, label: String) -> Status {
-        self.history.begin(&self.document, label)
-    }
-    pub fn end_action(&mut self) -> Status {
-        self.history.end(&self.document)
-    }
-    pub fn cancel_action(&mut self) -> kasane_core::EditResult {
-        self.history.cancel(&mut self.document)
-    }
-    pub fn undo(&mut self) -> kasane_core::EditResult {
-        self.history.undo(&mut self.document)
-    }
-    pub fn redo(&mut self) -> kasane_core::EditResult {
-        self.history.redo(&mut self.document)
     }
 
     pub fn document(&self) -> &Document {
@@ -166,7 +114,6 @@ impl DocumentSession {
             let s = snapshot.unwrap();
             self.store.clear_memory_assets();
             self.document = s.document;
-            self.history.clear(self.document.revision(), None);
             self.manifest = s.manifest;
             self.manifest_sha256 = s.manifest_sha256;
         }
@@ -176,7 +123,7 @@ impl DocumentSession {
     /// Atomically open a document for the SDK, including final graph validation.
     /// Resource diagnostics are returned separately and do not reject an editable project.
     pub fn open_authoring(&mut self, path: &Path) -> ProjectResult {
-        if self.history.active() || self.document.transaction_active() {
+        if self.document.transaction_active() {
             return ProjectResult::failed("EDIT_ACTIVE", "Finish the active edit first");
         }
         let (result, snapshot) = self.store.open(path);
@@ -189,20 +136,12 @@ impl DocumentSession {
         }
         self.store.clear_memory_assets();
         self.document = snapshot.document;
-        self.history.clear(self.document.revision(), None);
         self.manifest = snapshot.manifest;
         self.manifest_sha256 = snapshot.manifest_sha256;
         result
     }
 
     pub fn save(&mut self, path: &Path) -> ProjectResult {
-        if self.history.active() {
-            return ProjectResult::failed(
-                "ACTION_ACTIVE",
-                "End or cancel the active action before saving",
-            );
-        }
-        let before_revision = self.document.revision();
         if self.document.transaction_active() {
             return ProjectResult::failed("TRANSACTION_ACTIVE", "Commit or cancel first");
         }
@@ -222,8 +161,6 @@ impl DocumentSession {
         if result.status.is_ok() {
             let s = snapshot.unwrap();
             self.document = s.document;
-            self.history
-                .saved(before_revision, self.document.revision());
             self.manifest = s.manifest;
             self.manifest_sha256 = s.manifest_sha256;
         }
@@ -242,7 +179,6 @@ impl DocumentSession {
             let s = snapshot.unwrap();
             self.store.clear_memory_assets();
             self.document = s.document;
-            self.history.clear(self.document.revision(), None);
             self.manifest = s.manifest;
             self.manifest_sha256 = s.manifest_sha256;
         }
@@ -255,7 +191,7 @@ impl DocumentSession {
         &mut self,
         path: &Path,
     ) -> (ProjectResult, Option<ImportReport>) {
-        if self.history.active() || self.document.transaction_active() {
+        if self.document.transaction_active() {
             return (
                 ProjectResult::failed("EDIT_ACTIVE", "Finish the active edit first"),
                 None,
@@ -271,7 +207,6 @@ impl DocumentSession {
         }
         self.store.clear_memory_assets();
         self.document = snapshot.document;
-        self.history.clear(self.document.revision(), None);
         self.manifest = snapshot.manifest;
         self.manifest_sha256 = snapshot.manifest_sha256;
         (result, report)
@@ -293,7 +228,6 @@ impl DocumentSession {
             let s = snapshot.unwrap();
             self.store.clear_memory_assets();
             self.document = s.document;
-            self.history.clear(self.document.revision(), None);
             self.manifest = s.manifest;
             self.manifest_sha256 = s.manifest_sha256;
         }
@@ -306,7 +240,7 @@ impl DocumentSession {
         moc3_path: &Path,
         texture_map: &HashMap<usize, PathBuf>,
     ) -> (ProjectResult, Option<ImportReport>) {
-        if self.history.active() || self.document.transaction_active() {
+        if self.document.transaction_active() {
             return (
                 ProjectResult::failed("EDIT_ACTIVE", "Finish the active edit first"),
                 None,
@@ -322,7 +256,6 @@ impl DocumentSession {
         }
         self.store.clear_memory_assets();
         self.document = snapshot.document;
-        self.history.clear(self.document.revision(), None);
         self.manifest = snapshot.manifest;
         self.manifest_sha256 = snapshot.manifest_sha256;
         (result, report)
@@ -335,7 +268,7 @@ impl DocumentSession {
         source: &Path,
         destination: &Path,
     ) -> (ProjectResult, Option<PsdImportReport>) {
-        if self.history.active() || self.document.transaction_active() {
+        if self.document.transaction_active() {
             return (
                 ProjectResult::failed("EDIT_ACTIVE", "Finish the active edit first"),
                 None,
@@ -348,7 +281,6 @@ impl DocumentSession {
         let snapshot = snapshot.expect("successful PSD import has a snapshot");
         self.store.clear_memory_assets();
         self.document = snapshot.document;
-        self.history.clear(self.document.revision(), None);
         self.manifest = snapshot.manifest;
         self.manifest_sha256 = snapshot.manifest_sha256;
         (result, report)
@@ -360,7 +292,7 @@ impl DocumentSession {
         &mut self,
         source: &Path,
     ) -> (ProjectResult, Option<PsdImportReport>) {
-        if self.history.active() || self.document.transaction_active() {
+        if self.document.transaction_active() {
             return (
                 ProjectResult::failed("EDIT_ACTIVE", "Finish the active edit first"),
                 None,
@@ -406,7 +338,6 @@ impl DocumentSession {
             .lock()
             .unwrap_or_else(|p| p.into_inner()) = assets;
         self.document = document;
-        self.history.clear(self.document.revision(), None);
         self.manifest = PathBuf::new();
         self.manifest_sha256.clear();
         let result = ProjectResult {
