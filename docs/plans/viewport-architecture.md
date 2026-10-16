@@ -1,6 +1,6 @@
 # Viewport 与编辑器基础设施重构方案
 
-日期：2026-10-16。状态：实施中（具体 viewport 与多实例呈现已落地）。
+日期：2026-10-16。状态：实现完成（macOS 自动化验收通过；原生输入法及其他平台验收范围见下文）。
 
 当前已落地：
 
@@ -19,7 +19,11 @@
 - 两种具体 viewport 直接实现 `Render`、`Panel`、`PanelHeader`，分别声明内容、工具、输入、菜单和建模装饰。共享 `ViewportSurface` 与 `ViewportNavigation` 不读取 workspace 选择行为；docking 工厂、标题、布局校验和截图入口使用具体 panel 名称。布局版本更新为 Modeling 5、Animation 6，旧 Canvas 布局恢复默认，不提供迁移。
 - Modeling 求值与只读几何按文档共享，`FrameVersion` 携带完整 binding，各实例独立保存请求序号和已呈现几何。`AnimationIdentity` 只记录内容求值身份，导航与尺寸移入 `AnimationViewportIdentity`；一次动画求值结果可以供多个实例分别投影，导航不重新发起 SDK 求值。
 - 单个 Metal 执行器的请求改为按 ViewportId 合并并按 owner FIFO 调度；结果 mailbox 同样按实例合并且不阻塞生产者。图片、错误和统计按实例保存，保存冻结图片也按文档／实例保留。绑定失效会释放命中帧、取消该实例排队请求，并拒绝旧结果；隐藏后重新打开会主动申请新帧。
-- 窗口可见性与激活生命周期由 root 统一处理一次。按钮和菜单保存明确目标；局部快捷键仍采用 GPUI 焦点，但会解析实际获得焦点的实例，长按过滤与执行使用该实例。原生菜单保存这个上下文，失效的旧目标不转投另一视图。
+- [窗口输入路由](../../crates/editor/src/input_routing.rs) 按当前渲染帧的区域 hitbox 解析悬停与捕获，涵盖 viewport、Timeline 与辅助面板，裁剪、遮挡、标签切换后重新命中；离窗清除普通目标。悬停不转移焦点，文本、数值、菜单及字符输入保持控件优先级。业务快捷键在窗口入口只解析一次，用同一 Command 检查重复和执行；GPUI keymap 保留菜单加速键显示以及控件 Enter／Escape，不再重复分发业务键。
+- Timeline 使用独立的 `TimelineId`／`TimelineBinding`，命令、候选与 scrub 记录实例身份。隐藏／重建使旧绑定失效，只取消该实例的候选或 scrub；数值拖动的全局 UI 捕获按窗口、binding 和候选 edit ID 登记、释放。延迟停用回调同时核对活动代数和领域 token。
+- [panel 生命周期](../../crates/editor/src/panel_lifecycle.rs) 统一窗口激活、可见性与实例注册协调；关闭、保存、上下文切换及阻塞 UI 仍调用 core 的 `EditingLifecycle`。参数和网格对话框保存 `EditingContextToken`，文档切走再返回不能复活旧提交，领域版本校验继续保留；窗口暂时失焦只释放交互捕获，不使同一上下文中的对话框草稿失效。
+- [Inspection](../../crates/editor-core/src/inspection.rs) 显式区分 Modeling 的对象／主对象和 Animation 的资源／channel／key 来源，携带 DocumentId 与上下文 token；属性面板读取活动编辑上下文，不用显示名称或列表位置引用对象。
+- 导航尺寸和逻辑像素点统一为 `ViewportMetrics`／`ViewportPoint`，源像素仍使用 `ModelPoint`，SDK 归一化点与对象局部点在边界转换。网格对话框图片组件归并为 `MeshGenerationPreview`，与编辑器视图共用 `ViewState::zoom_about` 的锚点缩放数学。
 
 
 第一批验证：`cargo test --locked -p editor-core`（255 passed，1 ignored）、`cargo test --locked -p kasane-editor --lib`（238 passed，1 ignored）和格式检查通过。`./scripts/test.sh` 的 Python、core、headless、截图与前置 Metal 检查通过，但本地 Mao 模型的 `timeline_acceptance` 在 Natural 手势阶段报告 `native dense drag did not change presented pixels`；修改前的 HEAD `0f56a72` 在相同依赖和模型上独立复现同一失败，完整测试尚未全绿。
@@ -34,7 +38,9 @@ Mao Timeline 基线问题已定位为验收取样错误：Full Effect 模式在 
 
 本轮代码审查（`a93597e` 至 `17a6e7a`，含起点）：修复最后一个 Animation viewport 隐藏时取消求值却保留请求去重记录、导致恢复可见后缺帧的问题；取消求值仅更新请求屏障，不结束 Timeline 正在进行的 scrub。`CancelGesture` 按目标 binding 取消建模或导航捕获，不再撤销另一实例的手势。Timeline 命令与 panel 生命周期改为检查 EditingContext，解除对 workspace 布局的残余依赖。Animation 冻结图片的显示校验归入统一访问入口，保存期间不再因实时 binding 失效而清空图片；原生保存回归同时发现并修复资源面板在 session 移入保存任务后 unwrap 空文档的已有崩溃。新增 core、headless 和原生像素回归；`./scripts/test.sh` 完整通过（Python 28 项、core 278 passed／1 ignored、UI 250 passed／1 ignored、三份本地模型 Animation、默认及双视图截图、Metal／overlay、Mao Timeline 和 doc-tests）。
 
-后续尚待完成：悬停路由、Timeline panel 实例身份、窗口捕获与参数对话框生命周期的进一步收敛，以及属性面板的显式检视来源。当前局部快捷键仍使用 GPUI 焦点上下文；多实例呈现通过测试专用场景接入生产的 surface、内容执行器和 Metal 执行器，产品仍保留各 workspace 的唯一主视图，不增加复制入口。坐标命名与网格对话框组件归并尚未完成；平台策略测试不代表 Windows / Linux 宿主及原生键盘验收已完成。
+第五批验证：悬停路由、文本／菜单优先级、离窗清理、跨 viewport 捕获、辅助面板区域以及旧参数对话框拒绝提交的回归通过；Timeline 多实例 core 回归覆盖隐藏、重建、候选所有权和 scrub 所有权，真实 entity 销毁回归确认注销旧 binding。生产配置编译和 Timeline overview／curves／候选／取消恢复的 Metal 截图通过。`./scripts/test.sh` 完整通过，包含 Python 28 项、core、UI、三份真实模型 Animation 验收、默认及双视图截图、Metal／overlay、Mao Timeline 全流程与 doc-tests。最后的窗口失焦草稿保持、Timeline 销毁解绑收尾后，再次通过生产配置编译、完整 core（280 passed，1 ignored）与启用 test-support 的完整 UI（256 passed，1 ignored）回归。
+
+本方案剩余代码项已接入。多实例呈现通过测试专用场景接入生产的 surface、内容执行器和 Metal 执行器，产品保持各 workspace 的唯一主视图。平台策略、菜单加速键和 headless 字符输入回归不代表 Windows／Linux 宿主或真实操作系统的键盘布局切换、IME、dead key 与 AltGr 验收；这些原生交互仍须在对应平台运行后验证。
 
 将当前随 workspace 改变行为的 `CanvasView` 拆成独立 viewport panel，由 workspace 组合面板。各 viewport 明确拥有自己的内容来源、工具和输入行为，共享绘制与导航基础组件。同时重构 Command、快捷键、编辑会话与生命周期，为后续扩展提供明确边界。
 
@@ -60,11 +66,11 @@ Mao Timeline 基线问题已定位为验收取样错误：Full Effect 模式在 
 | [呈现状态](../../crates/editor-core/src/viewport/presentation.rs) 按实例保存请求与命中帧 | 有序中间帧仍可接受；切换、隐藏与重建核验 binding |
 | [ViewportPanels](../../crates/editor/src/docking/viewports.rs) 区分具体 panel 与内部 surface 的 entity 身份 | 注册工厂和标题使用具体 panel，测试可同时创建同种实例 |
 | [预览渲染队列](../../crates/editor/src/preview.rs) 按 viewport 合并请求与结果 | 共享 Metal 执行器，实例之间不覆盖排队结果 |
-| [快捷键](../../crates/editor/src/keybindings.rs) 使用 `KasaneViewport` 焦点上下文及实际 focus handle | 悬停路由仍待接入 |
+| [快捷键安装](../../crates/editor/src/keybindings.rs) 与 [窗口路由](../../crates/editor/src/input_routing.rs) 分开 | 当前可见 hitbox 决定局部目标，真实控件焦点负责控件输入 |
 | [Panel catalog](../../crates/editor-core/src/panels.rs) 与 [布局校验](../../crates/editor/src/docking/layout.rs) 声明各 workspace 的必需具体 viewport | 产品布局保持唯一主视图，旧版本恢复默认 |
 
 
-现有 [PreviewViewport](../../crates/editor/src/ui/preview_viewport.rs) 是网格生成对话框使用的图片与线段预览组件，使用归一化内容坐标。抽取公共组件时评估其导航和绘制代码的复用，保留现有对话框行为。
+[MeshGenerationPreview](../../crates/editor/src/ui/mesh_generation_preview.rs) 是网格生成对话框的图片与线段预览组件，内容使用归一化坐标，在绘制边界转换为 ViewportPoint；与 ViewportState 共用锚点缩放数学，保留对话框自己的图片、平移与 wireframe 状态。
 
 ## 统一命名
 
@@ -85,9 +91,9 @@ Mao Timeline 基线问题已定位为验收取样错误：Full Effect 模式在 
 
 这些类型直接实现 GPUI `Render` 和 docking `Panel`，名称不再附加 `View` 或 `Panel`。
 
-共享组件使用 `ViewportSurface`、`ViewportNavigation`、`ViewportState` 和 `ViewportId`。现有对话框 `PreviewViewport` 在归并时明确命名为 `MeshGenerationPreview`，或由对话框组合共享组件实现。仅在实际抽取时完成该重命名。
+共享组件使用 `ViewportSurface`、`ViewportNavigation`、`ViewportState` 和 `ViewportId`。对话框组件 `MeshGenerationPreview` 共用 core 导航数学，保持独立的内容坐标与绘制资源。
 
-逐项检查旧 `Canvas…` 名称：视图尺寸使用 `ViewportMetrics`，视图内逻辑像素点使用 `ViewportPoint`，文档画布概念保留 `Canvas`。现有 `CanvasPoint` 有多个坐标用途，应按调用语义拆分，避免统一替换后继续混用屏幕坐标、内容坐标与对象局部坐标。
+逐项检查旧 `Canvas…` 名称：视图尺寸使用 `ViewportMetrics`，视图内逻辑像素点使用 `ViewportPoint`，文档画布概念保留 `Canvas`。已检查旧 CanvasPoint 的用途：显示几何、命中、overlay、pan 和 UI 边界使用 ViewportPoint；文档源像素使用 ModelPoint，SDK Vec2 与对象局部坐标保留独立转换。`ViewportTransform::to_viewport` 明确标识输出坐标。
 
 ## Panel 与 workspace 组合
 
@@ -214,11 +220,11 @@ DocumentId + ViewportId + binding_generation
 
 | 优先级 | 重构项 | 当前依据与实施结果 |
 | --- | --- | --- |
-| 必须先做 | Command 与快捷键上下文 | [Command](../../crates/editor-core/src/commands.rs) 仅携带命令 ID 和文档；增加明确的 panel / viewport 目标、统一状态查询及调用来源 |
+| 必须先做 | Command 与快捷键上下文 | [Command](../../crates/editor-core/src/commands.rs) 携带明确 viewport / Timeline panel 目标、统一状态查询及调用来源，窗口入口解析悬停与捕获 |
 | 必须先做 | 编辑会话与布局分离 | [DocumentSession](../../crates/editor-core/src/session.rs) 已移除 workspace；Modeling、Animation 编辑上下文与实例导航状态已分离 |
 | 必须先做 | 交互归属与编辑生命周期 | [Modeling 输入](../../crates/editor/src/viewports/modeling.rs)、[Timeline](../../crates/editor/src/panels/timeline/lifecycle.rs) 和对话框分别维护取消规则；统一身份核验、捕获释放与提交取消边界 |
 | 与实例隔离一起做 | 内容求值与视图呈现分离 | [AnimationIdentity](../../crates/editor-core/src/animation/provenance.rs) 已去除导航信息；AnimationViewportIdentity 与 Modeling FrameVersion 明确包含实例呈现身份，共享可复用求值结果 |
-| 与实例隔离一起做 | 选择与检视来源 | [PanelContext](../../crates/editor-core/src/objects/context.rs) 同时维护对象选择、inspected 与导航；明确各编辑上下文的选择以及属性面板的检视来源 |
+| 与实例隔离一起做 | 选择与检视来源 | [PanelContext](../../crates/editor-core/src/objects/context.rs) 保留对象选择与导航，Inspection 显式提供各编辑上下文的检视来源 |
 | 与实例隔离一起做 | Panel 注册与生命周期 | [DockWorkspace](../../crates/editor/src/docking.rs) 包含大量具体 entity 和类型分支；统一注册元数据、实例查询和可见性回调 |
 | 与实例隔离一起做 | 保存期间的会话状态 | [FrozenDocument](../../crates/editor-core/src/workspace/entry.rs) 已冻结按 ViewportId 保存的状态映射；保存成功、失败与后台完成均覆盖恢复验证 |
 | 随功能逐步收敛 | 变更通知和根视图职责 | [EditorView](../../crates/editor/src/lib.rs) 手动分发刷新并管理全部帧；提取具体职责，按变更种类通知受影响的实例 |
@@ -296,7 +302,7 @@ Panel 注册统一声明名称、可用 workspace、默认位置、是否必需�
 
 逐步将手写的 `redraw`、`redraw_canvas` 和指定 panel 通知归并为明确变更结果，例如文档内容、选择、检视目标、某 viewport 导航和布局变化。根据依赖只更新相关内容和面板：悬停 overlay 不触发模型求值；单个 viewport 平移只刷新自身图像；文档候选变化更新依赖该候选的可见视图和面板。
 
-从 EditorView 提取呈现调度、输入路由和 panel 生命周期协调三个具体职责。GPUI 继续承担响应式通知，不另外引入全局事件总线或通用响应式框架。工作量回归测试验证实际求值、渲染与刷新次数。
+已从 EditorView 提取 [呈现调度](../../crates/editor/src/presentation.rs)、[输入路由](../../crates/editor/src/input_routing.rs) 和 [panel 生命周期协调](../../crates/editor/src/panel_lifecycle.rs) 三个具体职责。GPUI 继续承担响应式通知，不另外引入全局事件总线或通用响应式框架。工作量回归测试验证实际求值、渲染与刷新次数。
 
 ## 实施步骤
 

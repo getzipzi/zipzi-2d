@@ -26,6 +26,7 @@ impl Timeline {
                     .zip(release_target.as_ref())
                     .is_some_and(|(a, b)| {
                         a.document == b.document
+                            && a.binding == b.binding
                             && a.workspace == b.workspace
                             && a.clip == b.clip
                             && a.mode == b.mode
@@ -85,12 +86,14 @@ impl Timeline {
                 cx.listener(|this, action: &crate::actions::RunCommand, window, cx| {
                     if action.id.spec().scope == editor_core::CommandScope::Timeline {
                         let command = action.invocation.or_else(|| {
-                            this.owner.upgrade().map(|owner| {
-                                owner
-                                    .read(cx)
-                                    .editor
-                                    .command(action.id)
-                                    .with_source(editor_core::CommandSource::Shortcut)
+                            this.target(cx).and_then(|target| {
+                                this.owner.upgrade().map(|owner| {
+                                    owner.read(cx).editor.command_for_timeline(
+                                        action.id,
+                                        target.binding,
+                                        editor_core::CommandSource::Direct,
+                                    )
+                                })
                             })
                         });
                         if let Some(command) = command {
@@ -220,6 +223,7 @@ impl Render for Timeline {
                 }
             });
         let mut panel = self.interactive_frame(panel, cx);
+        panel = panel.child(self.input_region.marker());
         let weak = cx.weak_entity();
         panel = panel.child(
             canvas(

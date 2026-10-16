@@ -226,7 +226,7 @@ fn tree_cache_revision_and_visibility_follow_edits_not_navigation() -> anyhow::R
     let revision = editor.tree_revision();
     editor.execute(EditorCommand::Select(id.clone()))?;
     editor.zoom_by(0.1);
-    editor.pan_by(CanvasPoint { x: 10., y: 10. });
+    editor.pan_by(ViewportPoint { x: 10., y: 10. });
     assert_eq!(editor.tree_revision(), revision);
     assert_eq!(editor.selected_layer_id(), Some(id.as_str()));
     editor.execute(EditorCommand::SetObjectVisible {

@@ -10,14 +10,14 @@ struct KitBindings(Vec<KeyBinding>);
 impl Global for KitBindings {}
 fn scope(scope: CommandScope) -> &'static str {
     match scope {
-        CommandScope::Window => "KasaneEditor && !KasaneModal",
-        CommandScope::Document => "KasaneEditor && !Input && !KasaneModal",
-        CommandScope::Viewport => "KasaneViewport && !Input && !KasaneModal",
-        CommandScope::Timeline => "KasaneTimeline && !Input && !KasaneModal",
         CommandScope::Property => "(KasaneEditor > Input) && !KasaneModal",
+        _ => "KasaneShortcutDisplay",
     }
 }
 fn install(cx: &mut App) {
+    // Keep action bindings for native accelerators/help. Window routing resolves
+    // business keys once from hover/capture and receives the real repeat flag.
+    // Only property Enter/Escape participate in GPUI's focused control keymap.
     let bindings = cx
         .global::<settings::Settings>()
         .bindings
@@ -103,45 +103,6 @@ pub(super) fn show(window: &mut Window, cx: &mut App) {
     });
 }
 
-impl EditorView {
-    /// Only suppress repeats for resolved editor bindings; normal input still goes through GPUI.
-    pub(super) fn filter_repeat(
-        &mut self,
-        event: &KeyDownEvent,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if !event.is_held || self.modal || window.has_active_dialog(cx) {
-            return;
-        }
-        let text = self.has_focused_input(window, cx);
-        let canvas = self.focused_viewport_id(window, cx).is_some();
-        let timeline = self
-            .dock
-            .as_ref()
-            .is_some_and(|dock| dock.timeline.focus_handle(cx).is_focused(window));
-        if cx.global::<settings::Settings>().bindings.iter().any(|b| {
-            event
-                .keystroke
-                .should_match(&KeybindingKeystroke::new_with_mapper(
-                    Keystroke::parse(&b.key).expect("validated binding"),
-                    false,
-                    cx.keyboard_mapper().as_ref(),
-                ))
-                && !b.command.spec().repeat
-                && match b.command.spec().scope {
-                    CommandScope::Window => true,
-                    CommandScope::Document => !text,
-                    CommandScope::Viewport => canvas && !text,
-                    CommandScope::Timeline => timeline && !text,
-                    CommandScope::Property => text,
-                }
-        }) {
-            cx.stop_propagation();
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{RunCommand, scope};
@@ -195,18 +156,18 @@ mod tests {
                 .len()
         };
         assert_eq!(find("cmd-o", "KasaneEditor"), 0);
-        assert_eq!(find("cmd-alt-o", "KasaneEditor > Input"), 1);
+        assert_eq!(find("cmd-alt-o", "KasaneEditor > Input"), 0);
         assert_eq!(find("v", "KasaneEditor > Input"), 0);
         assert_eq!(find("cmd-z", "KasaneEditor > Input"), 0);
         assert_eq!(find("space", "KasaneEditor > Input"), 0);
-        assert_eq!(find("space", "KasaneEditor"), 1);
-        assert_eq!(find("space", "KasaneEditor > KasaneViewport"), 1);
+        assert_eq!(find("space", "KasaneEditor"), 0);
+        assert_eq!(find("space", "KasaneEditor > KasaneViewport"), 0);
         assert_eq!(find("space", "KasaneEditor KasaneModal"), 0);
-        assert_eq!(find("v", "KasaneEditor > KasaneViewport"), 1);
-        assert_eq!(find("cmd-c", "KasaneEditor > KasaneTimeline"), 1);
+        assert_eq!(find("v", "KasaneEditor > KasaneViewport"), 0);
+        assert_eq!(find("cmd-c", "KasaneEditor > KasaneTimeline"), 0);
         assert_eq!(find("cmd-c", "KasaneEditor > KasaneViewport"), 0);
         assert_eq!(find("cmd-c", "KasaneEditor > KasaneTimeline > Input"), 0);
-        assert_eq!(find("left", "KasaneEditor > KasaneTimeline"), 1);
+        assert_eq!(find("left", "KasaneEditor > KasaneTimeline"), 0);
         assert_eq!(find("left", "KasaneEditor > KasaneViewport"), 0);
         assert_eq!(find("left", "KasaneEditor KasaneModal > KasaneTimeline"), 0);
         assert_eq!(find("cmd-s", "KasaneEditor KasaneModal"), 0);
@@ -228,7 +189,7 @@ mod tests {
         );
         assert_eq!(find("enter", "KasaneEditor KasaneModal > Input"), 1);
         assert_eq!(find("v", "KasaneEditor > KasaneViewport > Input"), 0);
-        assert_eq!(find("escape", "KasaneEditor > KasaneViewport"), 1);
+        assert_eq!(find("escape", "KasaneEditor > KasaneViewport"), 0);
         assert_eq!(
             keymap
                 .bindings_for_action(&RunCommand::new(CommandId::Open))

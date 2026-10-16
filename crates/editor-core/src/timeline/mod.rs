@@ -3,6 +3,9 @@ mod projection;
 pub use projection::*;
 mod editing;
 pub use editing::*;
+mod identity;
+pub(crate) use identity::TimelinePanels;
+pub use identity::*;
 mod clipboard;
 pub use clipboard::TimelinePasteTarget;
 

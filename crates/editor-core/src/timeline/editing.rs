@@ -91,6 +91,7 @@ impl TimelineCommand {
 }
 
 pub struct TimelineEdit {
+    pub owner: Option<crate::TimelineBinding>,
     pub identity: TimelineCandidateIdentity,
     pub base_version: Version,
     pub local_time: f64,
@@ -691,6 +692,7 @@ impl Editor {
             .flat_map(|track| track.keys().map(|key| key.id.clone()))
             .collect();
         session.animation.timeline.edit = Some(TimelineEdit {
+            owner: None,
             identity,
             base_version: source.snapshot.version(),
             original_candidate: candidate.clone(),

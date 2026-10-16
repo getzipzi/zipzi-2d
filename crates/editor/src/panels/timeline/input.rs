@@ -72,6 +72,7 @@ impl Timeline {
             return;
         }
         self.finish_number(cx);
+        self.activity.set(self.activity.get() + 1);
         window.focus(&self.focus, cx);
         self.gesture = Some(Gesture::Seek);
         self.seek_at(event.position, true, cx);
@@ -108,9 +109,9 @@ impl Timeline {
             .clamp(0., max);
             let result = timeline_time(time, projection.fps, state.snap).and_then(|time| {
                 if scrub {
-                    owner.editor.scrub_timeline(target.document, time)
+                    owner.editor.scrub_timeline_for(target.binding, time)
                 } else {
-                    owner.editor.seek_timeline(target.document, time)
+                    owner.editor.seek_timeline_for(target.binding, time)
                 }
             });
             owner.animation_anchor = None;
@@ -124,7 +125,7 @@ impl Timeline {
             .update(cx, |owner, cx| {
                 let token = owner
                     .editor
-                    .begin_timeline_edit(target.document, "Edit motion");
+                    .begin_timeline_edit_for(target.binding, "Edit motion");
                 owner.redraw(cx);
                 token
             })
@@ -152,6 +153,9 @@ impl Timeline {
         let result = self
             .owner
             .update(cx, |owner, cx| {
+                if !owner.editor.timeline_edit_owned(target.binding, token) {
+                    return Ok(token);
+                }
                 let result = owner
                     .editor
                     .update_timeline_edit(target.document, token, command);
@@ -177,6 +181,7 @@ impl Timeline {
             return;
         }
         self.finish_number(cx);
+        self.activity.set(self.activity.get() + 1);
         window.focus(&self.focus, cx);
         let local = self.local(event.position);
         let hit = self
@@ -548,6 +553,9 @@ impl Timeline {
             return;
         };
         let _ = self.owner.update(cx, |owner, cx| {
+            if !owner.editor.timeline_edit_owned(target.binding, token) {
+                return;
+            }
             let result = owner.editor.finish_timeline_edit(target.document, token);
             owner.complete_edit(result, cx);
         });
@@ -636,12 +644,15 @@ impl Timeline {
             return;
         }
         self.finish_number(cx);
+        let Some(target) = self.target(cx) else {
+            return;
+        };
         let command = self.owner.upgrade().map(|owner| {
-            owner
-                .read(cx)
-                .editor
-                .command(id)
-                .with_source(editor_core::CommandSource::Toolbar)
+            owner.read(cx).editor.command_for_timeline(
+                id,
+                target.binding,
+                editor_core::CommandSource::Toolbar,
+            )
         });
         if let Some(command) = command {
             self.user_invocation(command, window, cx);

@@ -14,8 +14,8 @@ impl ViewportSurface {
             }
         });
     }
-    pub(super) fn local(&self, p: Point<Pixels>) -> CanvasPoint {
-        CanvasPoint {
+    pub(super) fn local(&self, p: Point<Pixels>) -> ViewportPoint {
+        ViewportPoint {
             x: (p.x - self.bounds.origin.x).as_f32(),
             y: (p.y - self.bounds.origin.y).as_f32(),
         }
@@ -63,7 +63,7 @@ impl ViewportSurface {
                 cx.notify();
                 return;
             }
-            let delta = CanvasPoint {
+            let delta = ViewportPoint {
                 x: (event.position.x - position.x).as_f32(),
                 y: (event.position.y - position.y).as_f32(),
             };

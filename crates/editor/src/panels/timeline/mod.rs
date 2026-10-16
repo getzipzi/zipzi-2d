@@ -36,6 +36,9 @@ const COMPACT_WIDTH: f32 = 900.;
 const COMPACT_LEFT: f32 = 160.;
 
 pub struct Timeline {
+    pub(crate) id: editor_core::TimelineId,
+    pub(crate) input_region: crate::input_routing::InputRegion,
+    activity: Rc<Cell<u64>>,
     ui_scale: f32,
     #[cfg(any(test, feature = "test-support"))]
     renders: u64,
@@ -68,10 +71,25 @@ pub struct Timeline {
     error: Option<String>,
     _search_events: Subscription,
     _observe: Subscription,
-    _activation: Subscription,
 }
 
 impl Timeline {
+    pub(crate) fn capturing(&self, editor: &editor_core::Editor) -> bool {
+        let Some(binding) = self.context.as_ref().map(|target| target.binding) else {
+            return false;
+        };
+        if !editor.timeline_binding_valid(binding) {
+            return false;
+        }
+        self.gesture.as_ref().is_some_and(|gesture| {
+            gesture
+                .token()
+                .is_none_or(|token| editor.timeline_edit_owned(binding, token))
+        }) || self
+            .number_edit
+            .as_ref()
+            .is_some_and(|edit| editor.timeline_edit_owned(binding, edit.token))
+    }
     fn row_height(&self) -> f32 {
         ROW * self.ui_scale
     }
@@ -82,10 +100,24 @@ impl Timeline {
 
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
+            cx.on_release(|this: &mut Self, cx| {
+                let panel = this.id;
+                let owner = this.owner.clone();
+                cx.defer(move |cx| {
+                    let _ = owner.update(cx, |owner, cx| {
+                        owner.editor.unregister_timeline(panel);
+                        owner.redraw(cx);
+                    });
+                });
+            })
+            .detach();
             let scene = Rc::new(std::cell::RefCell::new(drawing::SceneCache::default()));
             let search =
                 cx.new(|cx| InputState::new(window, cx).placeholder(t!("timeline.search")));
             Self {
+                id: editor_core::TimelineId::new(),
+                input_region: Default::default(),
+                activity: Default::default(),
                 #[cfg(any(test, feature = "test-support"))]
                 renders: 0,
                 ui_scale: compact::scale(cx),
@@ -108,13 +140,6 @@ impl Timeline {
                         cx.notify();
                     },
                 ),
-                _activation: cx.observe_window_activation(window, |this, window, cx| {
-                    if !window.is_window_active()
-                        && (this.gesture.is_some() || this.number_edit.is_some())
-                    {
-                        this.cancel(window, cx);
-                    }
-                }),
                 owner,
                 focus: cx.focus_handle(),
                 search,

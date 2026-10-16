@@ -279,7 +279,7 @@ fn middle_button_trackpad_and_hand_navigation_work_in_both_workspaces(cx: &mut T
             harness.view.read_with(cx, |view, _| {
                 assert_eq!(
                     view.editor.view().pan,
-                    editor_core::CanvasPoint { x: 62., y: 23. }
+                    editor_core::ViewportPoint { x: 62., y: 23. }
                 );
                 assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
                 assert!(!view.editor.document().unwrap().modified());
@@ -341,7 +341,7 @@ fn old_pan_and_wheel_callbacks_cannot_continue_after_switching(cx: &mut TestAppC
         );
         assert_eq!(
             harness.view.read(cx).editor.view().pan,
-            editor_core::CanvasPoint::default()
+            editor_core::ViewportPoint::default()
         );
     })
     .unwrap();
@@ -616,7 +616,7 @@ fn modal_blocks_space_workspace_switch_and_clears_pan_capture(cx: &mut TestAppCo
         );
         assert_eq!(
             harness.view.read(cx).editor.view().pan,
-            editor_core::CanvasPoint::default()
+            editor_core::ViewportPoint::default()
         );
     })
     .unwrap();

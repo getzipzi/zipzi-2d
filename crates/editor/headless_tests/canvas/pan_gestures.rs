@@ -120,7 +120,10 @@ fn space_never_enters_temporary_hand_and_repeats_are_suppressed(cx: &mut TestApp
             cx,
         );
         harness.view.read_with(cx, |view, _| {
-            assert_eq!(view.editor.view().pan, editor_core::CanvasPoint::default());
+            assert_eq!(
+                view.editor.view().pan,
+                editor_core::ViewportPoint::default()
+            );
             assert_eq!(
                 view.editor.workspace(),
                 editor_core::WorkspaceKind::Modeling
@@ -152,7 +155,10 @@ fn space_after_document_switch_does_not_pan(cx: &mut TestAppContext) {
         let from = window.find("canvas-body").bounds().center();
         window.drag(from, from + point(px(20.), px(0.)), cx);
         harness.view.read_with(cx, |view, _| {
-            assert_eq!(view.editor.view().pan, editor_core::CanvasPoint::default());
+            assert_eq!(
+                view.editor.view().pan,
+                editor_core::ViewportPoint::default()
+            );
             assert_eq!(
                 view.editor.workspace(),
                 editor_core::WorkspaceKind::Modeling
@@ -419,12 +425,12 @@ fn trackpad_pinch_scales_relative_to_zoom_and_preserves_pointer_anchor(cx: &mut 
         harness.view.update(cx, |view, cx| {
             view.editor.set_zoom_at(2., None);
             view.editor
-                .pan_by(editor_core::CanvasPoint { x: 37., y: -12. });
+                .pan_by(editor_core::ViewportPoint { x: 37., y: -12. });
             cx.notify();
         });
         window.render_frame(cx);
         let bounds = window.find("canvas-body").bounds();
-        let anchor = editor_core::CanvasPoint { x: 100., y: 100. };
+        let anchor = editor_core::ViewportPoint { x: 100., y: 100. };
         let position = bounds.origin + point(px(anchor.x), px(anchor.y));
         let model_point = harness.view.update(cx, |view, _| {
             view.editor
@@ -466,7 +472,7 @@ fn trackpad_pinch_scales_relative_to_zoom_and_preserves_pointer_anchor(cx: &mut 
                     .canvas
                     .unwrap()
                     .transform
-                    .to_canvas(model_point);
+                    .to_viewport(model_point);
                 assert!((after.x - anchor.x).abs() < 1e-3, "x drifted: {after:?}");
                 assert!((after.y - anchor.y).abs() < 1e-3, "y drifted: {after:?}");
                 assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
@@ -500,7 +506,7 @@ fn control_or_command_trackpad_scroll_zooms_at_pointer(cx: &mut TestAppContext) 
         harness.view.update(cx, |view, _| {
             view.editor.set_zoom_at(2., None);
         });
-        let anchor = editor_core::CanvasPoint { x: 100., y: 100. };
+        let anchor = editor_core::ViewportPoint { x: 100., y: 100. };
         let position =
             window.find("canvas-body").bounds().origin + point(px(anchor.x), px(anchor.y));
         for modifiers in [
@@ -545,7 +551,7 @@ fn control_or_command_trackpad_scroll_zooms_at_pointer(cx: &mut TestAppContext) 
                     .canvas
                     .unwrap()
                     .transform
-                    .to_canvas(model_point);
+                    .to_viewport(model_point);
                 assert!((after.x - anchor.x).abs() < 1e-3);
                 assert!((after.y - anchor.y).abs() < 1e-3);
             });

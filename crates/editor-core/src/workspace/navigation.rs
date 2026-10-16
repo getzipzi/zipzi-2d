@@ -34,7 +34,7 @@ impl Editor {
     fn navigate_viewport(
         &mut self,
         binding: crate::ViewportBinding,
-        update: impl FnOnce(&mut crate::ViewportState, crate::CanvasMetrics),
+        update: impl FnOnce(&mut crate::ViewportState, crate::ViewportMetrics),
     ) -> Result<()> {
         ensure!(
             self.viewport_binding_valid(binding),
@@ -50,7 +50,7 @@ impl Editor {
         &mut self,
         binding: crate::ViewportBinding,
         delta: f32,
-        focus: Option<crate::CanvasPoint>,
+        focus: Option<crate::ViewportPoint>,
     ) -> Result<()> {
         self.navigate_viewport(binding, |state, metrics| {
             state.set_zoom(state.view.zoom + delta, focus, metrics)
@@ -60,7 +60,7 @@ impl Editor {
         &mut self,
         binding: crate::ViewportBinding,
         zoom: f32,
-        focus: Option<crate::CanvasPoint>,
+        focus: Option<crate::ViewportPoint>,
     ) -> Result<()> {
         self.navigate_viewport(binding, |state, metrics| {
             state.set_zoom(zoom, focus, metrics)
@@ -69,7 +69,7 @@ impl Editor {
     pub fn pan_viewport(
         &mut self,
         binding: crate::ViewportBinding,
-        delta: crate::CanvasPoint,
+        delta: crate::ViewportPoint,
     ) -> Result<()> {
         self.navigate_viewport(binding, |state, _| state.pan(delta))
     }
@@ -88,7 +88,7 @@ impl Editor {
             }
         })
     }
-    pub fn zoom_at(&mut self, delta: f32, focus: Option<crate::CanvasPoint>) {
+    pub fn zoom_at(&mut self, delta: f32, focus: Option<crate::ViewportPoint>) {
         if let Some(binding) = self.primary_viewport_binding() {
             let _ = self.zoom_viewport(binding, delta, focus);
         }
@@ -96,7 +96,7 @@ impl Editor {
     pub fn zoom_by(&mut self, delta: f32) {
         self.zoom_at(delta, None);
     }
-    pub fn set_zoom_at(&mut self, zoom: f32, focus: Option<crate::CanvasPoint>) {
+    pub fn set_zoom_at(&mut self, zoom: f32, focus: Option<crate::ViewportPoint>) {
         if let Some(binding) = self.primary_viewport_binding() {
             let _ = self.set_viewport_zoom(binding, zoom, focus);
         }
@@ -123,17 +123,17 @@ impl Editor {
             }
         }
     }
-    pub fn set_canvas_metrics(&mut self, metrics: crate::CanvasMetrics) {
+    pub fn set_canvas_metrics(&mut self, metrics: crate::ViewportMetrics) {
         if let Some(viewport) = self.primary_viewport_id() {
             self.set_viewport_metrics(viewport, metrics);
         }
     }
-    pub fn canvas_metrics(&self) -> crate::CanvasMetrics {
+    pub fn canvas_metrics(&self) -> crate::ViewportMetrics {
         self.primary_viewport_id()
             .and_then(|viewport| self.viewport_metrics(viewport))
             .unwrap_or_default()
     }
-    pub fn pan_by(&mut self, delta: crate::CanvasPoint) {
+    pub fn pan_by(&mut self, delta: crate::ViewportPoint) {
         if let Some(binding) = self.primary_viewport_binding() {
             let _ = self.pan_viewport(binding, delta);
         }

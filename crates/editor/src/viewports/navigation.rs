@@ -27,9 +27,9 @@ pub(super) struct ViewportNavigation {
 pub(super) struct WheelZoom {
     binding: ViewportBinding,
     bounds: Bounds<Pixels>,
-    metrics: CanvasMetrics,
+    metrics: ViewportMetrics,
     expected: ViewState,
-    anchor: CanvasPoint,
+    anchor: ViewportPoint,
     from: f32,
     target: f32,
     direction: f32,
@@ -81,7 +81,7 @@ impl ViewportSurface {
             self.navigation.wheel_zoom = None;
         }
         let delta = event.delta.pixel_delta(px(16.));
-        let delta = CanvasPoint {
+        let delta = ViewportPoint {
             x: delta.x.as_f32(),
             y: delta.y.as_f32(),
         };

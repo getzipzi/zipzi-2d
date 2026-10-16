@@ -76,13 +76,14 @@ pub use animation::AnimationViewport;
 pub use modeling::ModelingViewport;
 
 use super::*;
-use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint, CommandId, EditorCommand, ToolId};
+use editor_core::{CanvasInput, CommandId, EditorCommand, ToolId, ViewportMetrics, ViewportPoint};
 use gpui_kit::component::{
     ActiveTheme, WindowExt,
     menu::{ContextMenuExt, PopupMenuItem},
 };
 
 pub struct ViewportSurface {
+    pub(crate) input_region: crate::input_routing::InputRegion,
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
     pub(crate) viewport: editor_core::ViewportId,
@@ -170,6 +171,7 @@ impl ViewportSurface {
                 }),
             ];
             Self {
+                input_region: Default::default(),
                 owner,
                 viewport,
                 kind,
@@ -272,6 +274,7 @@ impl Render for ViewportSurface {
                 e.cursor(cursor)
             })
             .relative()
+            .child(self.input_region.marker())
             .flex_1()
             .min_h_0()
             .w_full()
@@ -398,7 +401,7 @@ impl ViewportSurface {
 }
 
 pub(super) struct SurfaceContent {
-    image: Option<(preview::Image, CanvasMetrics)>,
+    image: Option<(preview::Image, ViewportMetrics)>,
     overlay: editor_core::OverlaySnapshot,
     error: Option<String>,
     hand_tool: bool,

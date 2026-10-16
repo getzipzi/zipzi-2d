@@ -1,12 +1,12 @@
 use super::form_dialog::{self, FormDialogOptions, FormDialogState, FormDialogView};
-use super::preview_viewport::{
-    PreviewContent, PreviewPaintStatus, PreviewPainter, PreviewViewport,
+use super::mesh_generation_preview::{
+    MeshGenerationPreview, PreviewContent, PreviewPaintStatus, PreviewPainter,
 };
 use super::slide_number_input::{SlideNumberChange, SlideNumberInput, SlideNumberOptions};
 use crate::{EditorView, t};
 use editor_core::{
     AlphaMeshOptions, CommandId, DocumentId, EditorCommand, MeshGenerationOptions,
-    MeshGenerationPreview, MeshGenerationSource, MeshGridOptions, ObjectRef,
+    MeshGenerationPreview as MeshGenerationPlan, MeshGenerationSource, MeshGridOptions, ObjectRef,
 };
 use gpui_kit::component::{
     ActiveTheme, IndexPath, Sizable, WindowExt,
@@ -66,6 +66,7 @@ impl SelectItem for AlgorithmChoice {
 
 /// Presentation data is built on a worker, never by mutating the live document.
 pub(crate) struct MeshGenerationForm {
+    context: editor_core::EditingContextToken,
     owner: WeakEntity<EditorView>,
     document: DocumentId,
     revision: u64,
@@ -83,7 +84,7 @@ pub(crate) struct MeshGenerationForm {
     dialog: FormDialogState,
     validation: anyhow::Result<MeshGenerationOptions>,
     preview: generation::PreviewGeneration,
-    viewport: Entity<PreviewViewport>,
+    viewport: Entity<MeshGenerationPreview>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -108,6 +109,14 @@ impl MeshGenerationForm {
                     .command_available(state.editor.command(CommandId::GenerateMesh)),
             t!("mesh_generation.stale")
         );
+        entity.update(cx, |view, cx| {
+            view.editor
+                .end_editing(document, editor_core::EditingLifecycle::BlockingUi)?;
+            view.redraw(cx);
+            Ok::<_, anyhow::Error>(())
+        })?;
+        let state = entity.read(cx);
+        let context = state.editor.editing_context_token().unwrap();
         let doc = state.editor.document().unwrap();
         let target = doc.mesh_generation_target()?;
         let source = Arc::new(doc.mesh_generation_source(&target)?);
@@ -263,7 +272,7 @@ impl MeshGenerationForm {
                     cx.notify();
                 }
             }));
-            let viewport = cx.new(PreviewViewport::new);
+            let viewport = cx.new(MeshGenerationPreview::new);
             subscriptions.push(cx.subscribe(
                 &viewport,
                 |this: &mut Self, _, status: &PreviewPaintStatus, cx| {
@@ -282,6 +291,7 @@ impl MeshGenerationForm {
                 },
             ));
             Self {
+                context,
                 owner,
                 document,
                 revision,

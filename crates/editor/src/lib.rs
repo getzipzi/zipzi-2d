@@ -14,10 +14,12 @@ mod docking;
 #[path = "../headless_tests/mod.rs"]
 mod headless_tests;
 mod i18n;
+mod input_routing;
 mod keybindings;
 mod menus;
 mod mesh_edges;
 mod mesh_thumbnails;
+mod panel_lifecycle;
 mod panels;
 mod presentation;
 mod preview;
@@ -38,6 +40,7 @@ use gpui_kit::{prelude::*, *};
 use rust_i18n::t;
 
 struct EditorView {
+    input_router: input_routing::InputRouter,
     focus: FocusHandle,
     modal: bool,
     focused_viewport: Option<editor_core::ViewportId>,
@@ -77,6 +80,7 @@ impl EditorView {
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut editor = Self {
+            input_router: Default::default(),
             focus,
             modal: false,
             focused_viewport: None,
@@ -116,38 +120,7 @@ impl EditorView {
                 })
                 .unwrap_or(true)
         });
-        editor.ui_subscriptions.push(cx.observe_window_visibility(
-            window,
-            |this, _, window, cx| {
-                if !window.is_visible() {
-                    if let Some(document) = this.editor.active_id() {
-                        let _ = this.editor.end_editing(
-                            document,
-                            editor_core::EditingLifecycle::WindowDeactivated,
-                        );
-                    }
-                    for viewport in this.viewport_slots {
-                        this.editor
-                            .set_viewport_metrics(viewport, Default::default());
-                    }
-                }
-                this.sync_viewport_visibility(window, cx);
-                this.redraw(cx);
-            },
-        ));
-        editor
-            .ui_subscriptions
-            .push(cx.observe_window_activation(window, |this, window, cx| {
-                if !window.is_window_active() {
-                    if let Some(document) = this.editor.active_id() {
-                        let _ = this.editor.end_editing(
-                            document,
-                            editor_core::EditingLifecycle::WindowDeactivated,
-                        );
-                    }
-                    this.redraw(cx);
-                }
-            }));
+        editor.connect_panel_lifecycle(window, cx);
         editor.sync_viewports();
         editor.init_dock(window, cx);
         if let Some(session) = &mut editor.dev_session {
@@ -175,55 +148,6 @@ impl EditorView {
             ] {
                 App::notify(cx, dock.document_panels[&kind].entity_id());
             }
-        }
-    }
-
-    fn sync_viewport_visibility(&mut self, window: &Window, cx: &App) -> bool {
-        let visible = self
-            .dock
-            .as_ref()
-            .map(|dock| dock.visible_viewports(cx))
-            .unwrap_or_default();
-        #[cfg(any(test, feature = "test-support"))]
-        let visible = self.viewport_scene.as_ref().map_or(visible, |scene| {
-            scene.instances.iter().map(|(id, _)| *id).collect()
-        });
-        let editing = self.editor.gesture_active();
-        let mut changed = false;
-        for viewport in self.editor.viewport_ids() {
-            let displayed = window.is_visible() && visible.contains(&viewport);
-            let before = self.editor.viewport_binding(viewport);
-            self.editor.set_viewport_visible(viewport, displayed);
-            changed |= before != self.editor.viewport_binding(viewport);
-            if !displayed {
-                self.viewport_frames.remove(&viewport);
-                if let Some(requests) = &self.requests {
-                    requests.cancel(viewport);
-                }
-            }
-        }
-        changed || (editing && !self.editor.gesture_active())
-    }
-
-    fn sync_viewports(&mut self) {
-        #[cfg(any(test, feature = "test-support"))]
-        if let Some(scene) = &self.viewport_scene {
-            for &(id, kind) in &scene.instances {
-                self.editor
-                    .register_viewport(id, kind)
-                    .expect("fixed viewport kind");
-            }
-        }
-        for (kind, viewport) in [
-            editor_core::ViewportKind::Modeling,
-            editor_core::ViewportKind::Animation,
-        ]
-        .into_iter()
-        .zip(self.viewport_slots)
-        {
-            self.editor
-                .register_primary_viewport(viewport, kind)
-                .expect("fixed viewport kind");
         }
     }
 

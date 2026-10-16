@@ -7,7 +7,7 @@ fn main() -> anyhow::Result<()> {
     for path in std::env::args().skip(1) {
         let document = Document::open(&Path::new(&path).canonicalize()?)?;
         let mut editor = Editor::from_document(document);
-        editor.set_canvas_metrics(CanvasMetrics {
+        editor.set_canvas_metrics(ViewportMetrics {
             width: 1200.,
             height: 800.,
             scale_factor: 2.,
@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
             let mut candidate_count = 0;
             for y in 0..8 {
                 for x in 0..12 {
-                    let p = CanvasPoint {
+                    let p = ViewportPoint {
                         x: 50. + x as f32 * 100.,
                         y: 50. + y as f32 * 100.,
                     };
@@ -85,7 +85,7 @@ fn main() -> anyhow::Result<()> {
             let Some((_, vertex)) = mesh.vertices.first() else {
                 continue;
             };
-            let start = frame.transform.to_canvas(*vertex);
+            let start = frame.transform.to_viewport(*vertex);
             assert!(matches!(frame.geometry.hit(start, frame.transform,
                 &editor.document().unwrap().context().selections, ToolId::Select, DeformerVisibility::default()),
                 Some(HitTarget::Component(ComponentRef { object, .. })) if object.id == mesh.id));
@@ -94,7 +94,7 @@ fn main() -> anyhow::Result<()> {
                 shift: false,
             })?;
             match editor.canvas_input(CanvasInput::Move {
-                point: CanvasPoint {
+                point: ViewportPoint {
                     x: start.x + 8.,
                     y: start.y + 5.,
                 },
@@ -143,7 +143,7 @@ fn main() -> anyhow::Result<()> {
                 shift: false,
             })?;
             let changed = editor.canvas_input(CanvasInput::Move {
-                point: CanvasPoint {
+                point: ViewportPoint {
                     x: point.x + 4.,
                     y: point.y - 4.,
                 },

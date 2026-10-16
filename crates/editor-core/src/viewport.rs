@@ -8,24 +8,26 @@ pub use presentation::AnimationViewportIdentity;
 pub(crate) use presentation::ViewportPresentation;
 pub use state::ViewportState;
 
-/// Window coordinates enter only at the UI boundary; core accepts canvas-local logical pixels.
+/// Window coordinates enter only at the UI boundary; core accepts viewport-local logical pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct CanvasPoint {
+pub struct ViewportPoint {
     pub x: f32,
     pub y: f32,
 }
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ModelPoint {
+    // Document source pixels, Y-down; SDK normalized and object-local points
+    // are converted at their respective boundaries before reaching this type.
     pub x: f32,
     pub y: f32,
 }
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct CanvasMetrics {
+pub struct ViewportMetrics {
     pub width: f32,
     pub height: f32,
     pub scale_factor: f32,
 }
-impl CanvasMetrics {
+impl ViewportMetrics {
     pub fn visible(self) -> bool {
         [self.width, self.height, self.scale_factor]
             .iter()
@@ -43,11 +45,11 @@ impl CanvasMetrics {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ViewportTransform {
     pub scale: f32,
-    pub offset: CanvasPoint,
-    pub metrics: CanvasMetrics,
+    pub offset: ViewportPoint,
+    pub metrics: ViewportMetrics,
 }
 impl ViewportTransform {
-    pub fn new(canvas: Canvas, metrics: CanvasMetrics, view: crate::ViewState) -> Option<Self> {
+    pub fn new(canvas: Canvas, metrics: ViewportMetrics, view: crate::ViewState) -> Option<Self> {
         if !metrics.visible()
             || !canvas.width.is_finite()
             || !canvas.height.is_finite()
@@ -63,20 +65,20 @@ impl ViewportTransform {
         }
         Some(Self {
             scale,
-            offset: CanvasPoint {
+            offset: ViewportPoint {
                 x: (metrics.width - canvas.width * scale) / 2. + view.pan.x,
                 y: (metrics.height - canvas.height * scale) / 2. + view.pan.y,
             },
             metrics,
         })
     }
-    pub fn to_canvas(self, p: ModelPoint) -> CanvasPoint {
-        CanvasPoint {
+    pub fn to_viewport(self, p: ModelPoint) -> ViewportPoint {
+        ViewportPoint {
             x: p.x * self.scale + self.offset.x,
             y: p.y * self.scale + self.offset.y,
         }
     }
-    pub fn to_model(self, p: CanvasPoint) -> ModelPoint {
+    pub fn to_model(self, p: ViewportPoint) -> ModelPoint {
         ModelPoint {
             x: (p.x - self.offset.x) / self.scale,
             y: (p.y - self.offset.y) / self.scale,

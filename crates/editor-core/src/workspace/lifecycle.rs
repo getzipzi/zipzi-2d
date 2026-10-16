@@ -10,8 +10,34 @@ pub enum EditingLifecycle {
     Save,
     Close,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EditingContextToken {
+    pub document: DocumentId,
+    generation: u64,
+}
 impl Editor {
+    pub(crate) fn advance_editing_context(&mut self) {
+        self.context_generation += 1;
+        self.editing_epoch += 1;
+    }
+    pub fn editing_context_token(&self) -> Option<EditingContextToken> {
+        self.active_id()
+            .filter(|_| !self.is_busy() && !self.exiting())
+            .map(|document| EditingContextToken {
+                document,
+                generation: self.editing_epoch,
+            })
+    }
+    pub fn editing_context_token_valid(&self, token: EditingContextToken) -> bool {
+        self.editing_context_token() == Some(token)
+    }
     pub fn end_editing(&mut self, document: DocumentId, reason: EditingLifecycle) -> Result<()> {
+        if self
+            .timeline_scrub_owner
+            .is_some_and(|binding| binding.document == document)
+        {
+            self.timeline_scrub_owner = None;
+        }
         let session = self.entry_mut(document)?.session_mut();
         if let Some(session) = session {
             session.animation.playback.pause();
@@ -36,7 +62,13 @@ impl Editor {
             self.viewport_interaction = None;
         }
         if self.active_id() == Some(document) {
-            self.context_generation += 1;
+            // Losing OS focus releases gestures, but keeps dialog drafts in the
+            // same document context. Their version guards still apply on return.
+            if reason == EditingLifecycle::WindowDeactivated {
+                self.context_generation += 1;
+            } else {
+                self.advance_editing_context();
+            }
             self.invalidate_viewport_bindings();
         }
         Ok(())

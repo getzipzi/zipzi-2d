@@ -19,7 +19,7 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
         .id;
     assert_eq!(editor.active_tool(), ToolId::Select);
     assert_eq!(editor.overlay().vertices.len(), 4);
-    let point = CanvasPoint { x: 256., y: 256. };
+    let point = ViewportPoint { x: 256., y: 256. };
     let selection = editor.document().unwrap().context().selections.clone();
     editor.canvas_input(CanvasInput::Down {
         point,
@@ -29,7 +29,7 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
     assert!(editor.overlay().marquee.is_none());
     // A small release displacement is still a click.
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint { x: 258., y: 256. },
+        point: ViewportPoint { x: 258., y: 256. },
     })?;
     assert_eq!(editor.document().unwrap().selected_id(), Some(top.as_str()));
     assert_eq!(
@@ -47,7 +47,7 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
     assert!(!editor.document().unwrap().has_pending_edit());
     assert!(editor.preview_if_needed()?.is_none());
     assert_eq!(editor.evaluation_count(), before);
-    click(&mut editor, CanvasPoint { x: 2., y: 2. }, false)?;
+    click(&mut editor, ViewportPoint { x: 2., y: 2. }, false)?;
     assert!(editor.document().unwrap().context().selections.is_empty());
     Ok(())
 }
@@ -61,7 +61,7 @@ fn surface_press_cancellation_preserves_selection_and_components() -> anyhow::Re
         let selection = editor.document().unwrap().context().selections.clone();
         let components = editor.document().unwrap().selected_vertex_positions();
         assert!(!components.is_empty());
-        let point = CanvasPoint { x: 256., y: 256. };
+        let point = ViewportPoint { x: 256., y: 256. };
         editor.canvas_input(CanvasInput::Down {
             point,
             shift: false,
@@ -91,8 +91,8 @@ fn object_marquee_can_start_on_an_unselected_surface() -> anyhow::Result<()> {
     for move_event in [false, true] {
         let (mut editor, _dir) = setup()?;
         editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
-        let point = CanvasPoint { x: 256., y: 256. };
-        let end = CanvasPoint { x: 505., y: 505. };
+        let point = ViewportPoint { x: 256., y: 256. };
+        let end = ViewportPoint { x: 505., y: 505. };
         editor.canvas_input(CanvasInput::Down {
             point,
             shift: false,
@@ -123,10 +123,10 @@ fn surface_marquee_uses_original_component_selection_and_shift() -> anyhow::Resu
         let vertex = editor.overlay().vertices[0].position;
         click(&mut editor, vertex, false)?;
         let selection = editor.document().unwrap().context().selections.clone();
-        let point = CanvasPoint { x: 256., y: 256. };
+        let point = ViewportPoint { x: 256., y: 256. };
         editor.canvas_input(CanvasInput::Down { point, shift })?;
         editor.canvas_input(CanvasInput::Move {
-            point: CanvasPoint { x: 280., y: 280. },
+            point: ViewportPoint { x: 280., y: 280. },
             left_down: true,
         })?;
         assert!(editor.overlay().marquee.is_some());
@@ -157,13 +157,13 @@ fn hit_test_miss_clears_objects_and_components_even_with_shift() -> anyhow::Resu
     let mesh = doc.context().selection.clone().unwrap();
     let mut editor = crate::support::editor_from_document(doc);
     editor.reset_view();
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
     });
     let frame = shown(&mut editor)?;
-    let miss = CanvasPoint { x: -100., y: -100. };
+    let miss = ViewportPoint { x: -100., y: -100. };
     for object in [
         mesh,
         ObjectRef::new(ObjectKind::Deformer, warp),
@@ -322,13 +322,13 @@ fn offscreen_plan_overrides_flat_rank_and_applies_group_alpha() -> anyhow::Resul
 #[test]
 fn shift_selection_and_marquee_share_document_selection_without_history() -> anyhow::Result<()> {
     let (mut editor, _) = setup()?;
-    click(&mut editor, CanvasPoint { x: 256., y: 256. }, true)?;
+    click(&mut editor, ViewportPoint { x: 256., y: 256. }, true)?;
     assert_eq!(editor.document().unwrap().context().selections.len(), 2);
-    click(&mut editor, CanvasPoint { x: 256., y: 256. }, true)?;
+    click(&mut editor, ViewportPoint { x: 256., y: 256. }, true)?;
     assert_eq!(editor.document().unwrap().context().selections.len(), 2);
-    click(&mut editor, CanvasPoint { x: 2., y: 2. }, false)?;
-    let a = CanvasPoint { x: 5., y: 5. };
-    let b = CanvasPoint { x: 505., y: 505. };
+    click(&mut editor, ViewportPoint { x: 2., y: 2. }, false)?;
+    let a = ViewportPoint { x: 5., y: 5. };
+    let b = ViewportPoint { x: 505., y: 505. };
     editor.canvas_input(CanvasInput::Down {
         point: a,
         shift: false,
@@ -356,7 +356,7 @@ fn tool_state_is_per_document_and_vertex_click_opens_no_candidate() -> anyhow::R
     })?;
     assert!(!editor.document().unwrap().has_pending_edit());
     editor.canvas_input(CanvasInput::Move {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: p.x + 1.,
             y: p.y,
         },
@@ -376,20 +376,20 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     let base = doc.selected_vertex_positions();
     let param = doc.parameters()[0].id.clone();
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
     });
     shown(&mut editor)?;
-    click(&mut editor, CanvasPoint { x: 256., y: 256. }, false)?;
+    click(&mut editor, ViewportPoint { x: 256., y: 256. }, false)?;
     let p = editor.overlay().vertices[0].position;
     editor.canvas_input(CanvasInput::Down {
         point: p,
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: p.x + 12.,
             y: p.y,
         },
@@ -422,7 +422,7 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     assert!(
         editor
             .canvas_input(CanvasInput::Up {
-                point: CanvasPoint {
+                point: ViewportPoint {
                     x: p.x + 20.,
                     y: p.y
                 }

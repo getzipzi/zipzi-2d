@@ -1,6 +1,6 @@
 //! Control display eligibility and viewport-dependent control points.
 use super::{CanvasScene, ControlGeometry, ControlKind};
-use crate::{CanvasPoint, DeformerVisibility, ObjectRef, ToolId, ViewportTransform};
+use crate::{DeformerVisibility, ObjectRef, ToolId, ViewportPoint, ViewportTransform};
 
 impl CanvasScene {
     pub fn control_visible(
@@ -25,17 +25,17 @@ impl CanvasScene {
                 })
     }
     /// Rotation axes scale with the viewport, independently of the authored pose scale.
-    pub fn control_points(&self, c: &ControlGeometry, t: ViewportTransform) -> Vec<CanvasPoint> {
-        let mut points: Vec<_> = c.points.iter().map(|p| t.to_canvas(*p)).collect();
+    pub fn control_points(&self, c: &ControlGeometry, t: ViewportTransform) -> Vec<ViewportPoint> {
+        let mut points: Vec<_> = c.points.iter().map(|p| t.to_viewport(*p)).collect();
         if c.kind == ControlKind::Rotation && points.len() >= 2 {
-            let d = CanvasPoint {
+            let d = ViewportPoint {
                 x: points[1].x - points[0].x,
                 y: points[1].y - points[0].y,
             };
             let length = d.x.hypot(d.y);
             if length > 1e-6 {
                 let axis_length = crate::deformer::ROTATION_AXIS_LENGTH * t.scale;
-                points[1] = CanvasPoint {
+                points[1] = ViewportPoint {
                     x: points[0].x + d.x / length * axis_length,
                     y: points[0].y + d.y / length * axis_length,
                 };

@@ -43,7 +43,7 @@ struct Registration {
     kind: ViewportKind,
     binding: Option<ViewportBinding>,
     enabled: bool,
-    metrics: crate::CanvasMetrics,
+    metrics: crate::ViewportMetrics,
     presentation: crate::ViewportPresentation,
 }
 #[derive(Default)]
@@ -126,13 +126,13 @@ impl Editor {
             .get(&ViewportKind::from(self.workspace()))
             .copied()
     }
-    pub fn viewport_metrics(&self, viewport: ViewportId) -> Option<crate::CanvasMetrics> {
+    pub fn viewport_metrics(&self, viewport: ViewportId) -> Option<crate::ViewportMetrics> {
         self.viewports
             .registrations
             .get(&viewport)
             .map(|entry| entry.metrics)
     }
-    pub fn set_viewport_metrics(&mut self, viewport: ViewportId, metrics: crate::CanvasMetrics) {
+    pub fn set_viewport_metrics(&mut self, viewport: ViewportId, metrics: crate::ViewportMetrics) {
         let Some(entry) = self.viewports.registrations.get_mut(&viewport) else {
             return;
         };
@@ -243,6 +243,7 @@ impl Editor {
             && !self.exiting()
     }
     pub(crate) fn invalidate_viewport_bindings(&mut self) {
+        self.invalidate_timeline_bindings();
         for entry in self.viewports.registrations.values_mut() {
             entry.binding = None;
             entry.presentation.invalidate();
@@ -252,7 +253,13 @@ impl Editor {
     pub fn viewport_interaction_active(&self) -> bool {
         self.viewport_interaction.is_some()
     }
+    pub fn viewport_interaction_binding(&self) -> Option<ViewportBinding> {
+        self.viewport_interaction
+            .filter(|token| self.viewport_interaction_valid(*token))
+            .map(|token| token.binding)
+    }
     pub(crate) fn refresh_viewport_bindings(&mut self) {
+        self.refresh_timeline_bindings();
         let document = self
             .active_id()
             .filter(|_| !self.is_busy() && !self.exiting());

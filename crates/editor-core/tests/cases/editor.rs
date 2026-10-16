@@ -395,7 +395,7 @@ fn saving_a_background_document_does_not_invalidate_the_active_preview() -> anyh
 fn save_completion_resubmits_a_preview_rejected_while_saving() -> anyhow::Result<()> {
     let (document, dir) = sample_document()?;
     let mut editor = crate::support::editor_from_document(document);
-    editor.set_canvas_metrics(editor_core::CanvasMetrics {
+    editor.set_canvas_metrics(editor_core::ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,

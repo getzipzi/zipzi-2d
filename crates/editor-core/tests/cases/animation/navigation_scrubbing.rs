@@ -20,7 +20,7 @@ fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes(
         let first = pending;
         for step in 0..24 {
             if step % 2 == 0 {
-                editor.pan_by(CanvasPoint { x: 4., y: -2. });
+                editor.pan_by(ViewportPoint { x: 4., y: -2. });
             } else {
                 editor.set_zoom_at(editor.view().zoom * 1.01, None);
             }
@@ -38,18 +38,18 @@ fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes(
         assert!(editor.present_animation_viewport(pending, content.snapshot.clone()));
         assert!(!editor.present_animation_viewport(first, content.snapshot.clone()));
         for metrics in [
-            CanvasMetrics {
+            ViewportMetrics {
                 width: 720.,
                 height: 480.,
                 scale_factor: 1.,
             },
-            CanvasMetrics {
+            ViewportMetrics {
                 width: 720.,
                 height: 480.,
                 scale_factor: 2.,
             },
         ] {
-            editor.pan_by(CanvasPoint { x: 1., y: 0. });
+            editor.pan_by(ViewportPoint { x: 1., y: 0. });
             let (old_size, _) = editor
                 .animation_viewport_request(binding, content.identity, canvas)
                 .unwrap();
@@ -90,9 +90,9 @@ fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation(
         assert!(editor.present_animation_viewport(first, original.snapshot.clone()));
         for step in 0..16 {
             match step % 3 {
-                0 => editor.pan_by(CanvasPoint { x: 3., y: -2. }),
+                0 => editor.pan_by(ViewportPoint { x: 3., y: -2. }),
                 1 => editor.set_zoom_at(editor.view().zoom * 1.01, None),
-                _ => editor.set_canvas_metrics(CanvasMetrics {
+                _ => editor.set_canvas_metrics(ViewportMetrics {
                     width: 512. + step as f32,
                     height: 512.,
                     scale_factor: 1.,
@@ -244,13 +244,13 @@ fn continuous_frames_do_not_starve_and_barriers_reject_late_frames() -> anyhow::
     assert!(editor.present_animation(zero.identity, zero.snapshot.clone()));
     let request = editor.animation_request();
     assert!(request.is_none());
-    editor.pan_by(CanvasPoint { x: 5., y: 2. });
+    editor.pan_by(ViewportPoint { x: 5., y: 2. });
     assert!(editor.animation_request().is_none());
     let binding = editor.primary_viewport_binding().unwrap();
     let (old_view, _) = editor
         .animation_viewport_request(binding, zero.identity, zero.scene.viewport_frame.canvas)
         .unwrap();
-    editor.pan_by(CanvasPoint { x: 1., y: 0. });
+    editor.pan_by(ViewportPoint { x: 1., y: 0. });
     assert!(editor.present_animation_viewport(old_view, zero.snapshot.clone()));
     assert!(!editor.present_animation_viewport(old_view, zero.snapshot));
     Ok(())

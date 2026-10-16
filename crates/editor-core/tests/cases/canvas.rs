@@ -3,7 +3,7 @@ use editor_core::*;
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document()?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 2.,
@@ -12,11 +12,11 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     Ok((editor, dir))
 }
 
-fn down(editor: &mut Editor, p: CanvasPoint, shift: bool) -> anyhow::Result<()> {
+fn down(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyhow::Result<()> {
     editor.canvas_input(CanvasInput::Down { point: p, shift })?;
     Ok(())
 }
-fn up(editor: &mut Editor, p: CanvasPoint) -> anyhow::Result<()> {
+fn up(editor: &mut Editor, p: ViewportPoint) -> anyhow::Result<()> {
     editor.canvas_input(CanvasInput::Up { point: p })?;
     Ok(())
 }
@@ -34,25 +34,25 @@ fn zoom_uses_actual_pixels_independent_of_viewport_and_display_scale() {
                 for zoom in [0.25, 1., 2.75] {
                     let transform = ViewportTransform::new(
                         canvas,
-                        CanvasMetrics {
+                        ViewportMetrics {
                             width: viewport_width,
                             height: viewport_height,
                             scale_factor: dpi,
                         },
                         ViewState {
                             zoom,
-                            pan: CanvasPoint { x: 13., y: -27. },
+                            pan: ViewportPoint { x: 13., y: -27. },
                         },
                     )
                     .unwrap();
-                    let origin = transform.to_canvas(ModelPoint::default());
-                    let corner = transform.to_canvas(ModelPoint {
+                    let origin = transform.to_viewport(ModelPoint::default());
+                    let corner = transform.to_viewport(ModelPoint {
                         x: width,
                         y: height,
                     });
                     assert!(((corner.x - origin.x) * dpi - width * zoom).abs() < 0.001);
                     assert!(((corner.y - origin.y) * dpi - height * zoom).abs() < 0.001);
-                    let center = transform.to_canvas(ModelPoint {
+                    let center = transform.to_viewport(ModelPoint {
                         x: width / 2.,
                         y: height / 2.,
                     });
@@ -71,21 +71,21 @@ fn coordinate_spaces_round_trip_at_multiple_display_scales() {
         for zoom in [0.25, 1., 2.75] {
             let t = ViewportTransform::new(
                 canvas,
-                CanvasMetrics {
+                ViewportMetrics {
                     width: 813.,
                     height: 517.,
                     scale_factor: dpi,
                 },
                 ViewState {
                     zoom,
-                    pan: CanvasPoint { x: 13., y: -27. },
+                    pan: ViewportPoint { x: 13., y: -27. },
                 },
             )
             .unwrap();
             let source =
                 ViewportTransform::evaluated_to_source(canvas, kasane_core::Vec2::new(-2., 1.));
             assert_eq!(source, ModelPoint { x: 120., y: 140. });
-            let round = t.to_model(t.to_canvas(source));
+            let round = t.to_model(t.to_viewport(source));
             assert!((round.x - source.x).abs() < 0.0001 && (round.y - source.y).abs() < 0.0001);
             assert_eq!(
                 t.metrics.physical_size().unwrap(),
@@ -93,7 +93,7 @@ fn coordinate_spaces_round_trip_at_multiple_display_scales() {
             );
         }
     }
-    assert!(!CanvasMetrics::default().visible());
+    assert!(!ViewportMetrics::default().visible());
 }
 #[test]
 fn hover_selection_and_viewport_reuse_the_evaluated_scene() -> anyhow::Result<()> {
@@ -110,12 +110,12 @@ fn hover_selection_and_viewport_reuse_the_evaluated_scene() -> anyhow::Result<()
     assert!(editor.preview_if_needed()?.is_none());
     editor.zoom_by(0.25);
     present(&mut editor)?;
-    editor.pan_by(CanvasPoint { x: 10., y: 15. });
+    editor.pan_by(ViewportPoint { x: 10., y: 15. });
     present(&mut editor)?;
     assert_eq!(editor.evaluation_count(), before);
-    editor.set_canvas_metrics(CanvasMetrics::default());
+    editor.set_canvas_metrics(ViewportMetrics::default());
     assert!(editor.preview_if_needed()?.is_none());
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 700.,
         height: 400.,
         scale_factor: 1.,
@@ -151,14 +151,14 @@ fn multi_vertex_drag_is_one_history_step_and_preserves_uv_topology() -> anyhow::
     down(&mut editor, start, false)?;
     for dx in [4., 12., 20.] {
         editor.canvas_input(CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: start.x + dx,
                 y: start.y + 10.,
             },
             left_down: true,
         })?;
     }
-    let final_point = CanvasPoint {
+    let final_point = ViewportPoint {
         x: start.x + 24.,
         y: start.y + 16.,
     };
@@ -202,7 +202,7 @@ fn returning_to_anchor_or_cancelling_keeps_redo_and_original_positions() -> anyh
     let start = editor.overlay().vertices[0].position;
     down(&mut editor, start, false)?;
     editor.canvas_input(CanvasInput::Move {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: start.x + 27.25,
             y: start.y - 8.,
         },
@@ -213,7 +213,7 @@ fn returning_to_anchor_or_cancelling_keeps_redo_and_original_positions() -> anyh
     present(&mut editor)?;
     down(&mut editor, start, false)?;
     editor.canvas_input(CanvasInput::Move {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: start.x + 40.,
             y: start.y,
         },
@@ -239,7 +239,7 @@ fn switch_save_close_and_tool_commands_cancel_canvas_candidates() -> anyhow::Res
         let p = editor.overlay().vertices[0].position;
         down(&mut editor, p, false)?;
         editor.canvas_input(CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: p.x + 20.,
                 y: p.y,
             },
@@ -286,7 +286,7 @@ fn completed_views_progress_monotonically_with_matching_geometry() -> anyhow::Re
         "completed frames cannot move backwards"
     );
     let shown = editor.overlay().vertices[0].position;
-    editor.pan_by(CanvasPoint { x: 30., y: 0. });
+    editor.pan_by(ViewportPoint { x: 30., y: 0. });
     let pending = editor.preview()?.canvas.unwrap();
     assert_eq!(
         editor.overlay().vertices[0].position,
@@ -307,7 +307,7 @@ fn continuous_control_drag_presents_completed_poses_without_changing_its_target(
     let (mut editor, _dir) = setup()?;
     let before_drag = editor.preview()?.canvas.unwrap();
     let start = editor.overlay().vertices[0].position;
-    let at = |x| CanvasPoint {
+    let at = |x| ViewportPoint {
         x: start.x + x,
         y: start.y,
     };
@@ -364,7 +364,7 @@ fn delayed_control_poses_are_rejected_when_the_gesture_ends_or_is_replaced() -> 
         let mut frames = Vec::new();
         for x in [10., 20.] {
             editor.canvas_input(CanvasInput::Move {
-                point: CanvasPoint {
+                point: ViewportPoint {
                     x: start.x + x,
                     y: start.y,
                 },
@@ -377,7 +377,7 @@ fn delayed_control_poses_are_rejected_when_the_gesture_ends_or_is_replaced() -> 
             0 => editor.cancel_gesture(),
             1 => up(
                 &mut editor,
-                CanvasPoint {
+                ViewportPoint {
                     x: start.x + 30.,
                     y: start.y,
                 },
@@ -406,7 +406,7 @@ fn delayed_control_poses_are_rejected_when_the_gesture_ends_or_is_replaced() -> 
             // A later control gesture must not reopen the previous pose's lifetime.
             down(&mut editor, start, false)?;
             editor.canvas_input(CanvasInput::Move {
-                point: CanvasPoint {
+                point: ViewportPoint {
                     x: start.x + 5.,
                     y: start.y,
                 },
@@ -430,11 +430,11 @@ fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<(
     mesh.vertices[1].1 = p;
     mesh.vertices.reverse();
     frame.geometry = std::sync::Arc::new(geometry);
-    let hit = frame.transform.to_canvas(p);
+    let hit = frame.transform.to_viewport(p);
     assert!(editor.present_frame(frame));
     down(
         &mut editor,
-        CanvasPoint {
+        ViewportPoint {
             x: hit.x + 7.,
             y: hit.y,
         },
@@ -454,7 +454,7 @@ fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<(
     present(&mut editor)?;
     down(
         &mut editor,
-        CanvasPoint {
+        ViewportPoint {
             x: hit.x + 9.,
             y: hit.y,
         },
@@ -462,7 +462,7 @@ fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<(
     )?;
     up(
         &mut editor,
-        CanvasPoint {
+        ViewportPoint {
             x: hit.x + 9.,
             y: hit.y,
         },
@@ -499,13 +499,13 @@ fn invalid_drag_rolls_back_candidate_without_losing_redo() -> anyhow::Result<()>
         let start = editor.overlay().vertices[0].position;
         down(&mut editor, start, false)?;
         editor.canvas_input(CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: start.x + 20.,
                 y: start.y,
             },
             left_down: true,
         })?;
-        let point = CanvasPoint { x: f32::NAN, y: 0. };
+        let point = ViewportPoint { x: f32::NAN, y: 0. };
         let event = if release {
             CanvasInput::Up { point }
         } else {
@@ -534,7 +534,7 @@ fn saving_across_resize_requires_a_new_frame_before_hit_testing() -> anyhow::Res
     let point = editor.overlay().vertices[0].position;
     let id = editor.active_id().unwrap();
     let task = editor.prepare_save(id, &dir.path().join("saved"), false)?;
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 800.,
         height: 400.,
         scale_factor: 1.,
@@ -648,13 +648,13 @@ fn opacity_preview_refreshes_picking_and_preserves_undo() -> anyhow::Result<()> 
 fn zoom_at_preserves_model_point_under_mouse() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
     let t1 = editor.preview()?.canvas.unwrap().transform;
-    let mouse = CanvasPoint { x: 380., y: 190. };
+    let mouse = ViewportPoint { x: 380., y: 190. };
     let model_point = t1.to_model(mouse);
 
     // Zoom in at mouse
     editor.zoom_at(0.5, Some(mouse));
     let t2 = editor.preview()?.canvas.unwrap().transform;
-    let mouse_after = t2.to_canvas(model_point);
+    let mouse_after = t2.to_viewport(model_point);
     assert!(
         (mouse_after.x - mouse.x).abs() < 1e-3,
         "x drifted: {} vs {}",
@@ -669,11 +669,11 @@ fn zoom_at_preserves_model_point_under_mouse() -> anyhow::Result<()> {
     );
 
     // Zoom out at another mouse position
-    let mouse2 = CanvasPoint { x: 120., y: 450. };
+    let mouse2 = ViewportPoint { x: 120., y: 450. };
     let model_point2 = t2.to_model(mouse2);
     editor.zoom_at(-0.75, Some(mouse2));
     let t3 = editor.preview()?.canvas.unwrap().transform;
-    let mouse2_after = t3.to_canvas(model_point2);
+    let mouse2_after = t3.to_viewport(model_point2);
     assert!(
         (mouse2_after.x - mouse2.x).abs() < 1e-3,
         "x drifted: {} vs {}",
@@ -694,10 +694,10 @@ fn zoom_at_preserves_model_point_under_mouse() -> anyhow::Result<()> {
 fn zoom_by_preserves_viewport_center() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
     // Pan first so pan != 0
-    editor.pan_by(CanvasPoint { x: 50., y: -30. });
+    editor.pan_by(ViewportPoint { x: 50., y: -30. });
     let t1 = editor.preview()?.canvas.unwrap().transform;
     let metrics = editor.canvas_metrics();
-    let center = CanvasPoint {
+    let center = ViewportPoint {
         x: metrics.width / 2.,
         y: metrics.height / 2.,
     };
@@ -705,7 +705,7 @@ fn zoom_by_preserves_viewport_center() -> anyhow::Result<()> {
 
     editor.zoom_by(0.4);
     let t2 = editor.preview()?.canvas.unwrap().transform;
-    let center_after = t2.to_canvas(model_center);
+    let center_after = t2.to_viewport(model_center);
     assert!(
         (center_after.x - center.x).abs() < 1e-3,
         "center x drifted: {} vs {}",
@@ -725,13 +725,18 @@ fn zoom_by_preserves_viewport_center() -> anyhow::Result<()> {
 #[test]
 fn absolute_zoom_clamps_and_preserves_anchor_without_changing_history() -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
-    editor.pan_by(CanvasPoint { x: 37., y: -12. });
-    let anchor = CanvasPoint { x: 120., y: 90. };
+    editor.pan_by(ViewportPoint { x: 37., y: -12. });
+    let anchor = ViewportPoint { x: 120., y: 90. };
     let model = editor.preview()?.canvas.unwrap().transform.to_model(anchor);
     for (requested, expected) in [(2., 2.), (100., MAX_ZOOM), (0., MIN_ZOOM)] {
         editor.set_zoom_at(requested, Some(anchor));
         assert_eq!(editor.view().zoom, expected);
-        let after = editor.preview()?.canvas.unwrap().transform.to_canvas(model);
+        let after = editor
+            .preview()?
+            .canvas
+            .unwrap()
+            .transform
+            .to_viewport(model);
         assert!((after.x - anchor.x).abs() < 1e-3);
         assert!((after.y - anchor.y).abs() < 1e-3);
     }

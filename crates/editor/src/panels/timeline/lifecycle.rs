@@ -4,8 +4,49 @@
 //! owner is released. Keep those notification and cancellation boundaries distinct.
 use super::*;
 
+#[derive(Default)]
+struct DragOwner(Option<(AnyWindowHandle, editor_core::TimelineBinding, u64)>);
+impl Global for DragOwner {}
+
+impl Timeline {
+    pub(super) fn claim_number_drag(
+        &self,
+        token: TimelineCandidateIdentity,
+        window: &Window,
+        cx: &mut App,
+    ) {
+        if let Some(target) = &self.context {
+            cx.set_global(DragOwner(Some((
+                window.window_handle(),
+                target.binding,
+                token.edit,
+            ))));
+        }
+    }
+    fn release_number_drag(
+        &self,
+        token: TimelineCandidateIdentity,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let owner = self
+            .context
+            .as_ref()
+            .map(|target| (window.window_handle(), target.binding, token.edit));
+        if owner.is_some()
+            && cx
+                .try_global::<DragOwner>()
+                .is_some_and(|drag| drag.0 == owner)
+        {
+            cx.set_global(DragOwner::default());
+            cx.stop_active_drag(window);
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Target {
+    pub(super) binding: editor_core::TimelineBinding,
     pub(super) document: DocumentId,
     pub(super) workspace: u64,
     pub(super) model: u64,
@@ -18,11 +59,13 @@ impl Timeline {
         let owner = self.owner.upgrade()?;
         let view = owner.read(cx);
         let animation = view.editor.animation()?;
+        let binding = view.editor.timeline_binding(self.id)?;
         (view.editor.editing_context() == Some(editor_core::EditingContext::Animation)
             && !view.modal
             && !view.editor.is_busy()
             && !view.editor.exiting())
         .then(|| Target {
+            binding,
             document: view.editor.active_id().unwrap(),
             workspace: view.editor.workspace_revision(),
             model: animation.model_generation,
@@ -73,7 +116,7 @@ impl Timeline {
         let target = self.target(cx);
         if target != self.context {
             if let Some(edit) = self.number_edit.take() {
-                cx.stop_active_drag(window);
+                self.release_number_drag(edit.token, window, cx);
                 if let Some(control) = self.fields.get(&edit.field) {
                     control
                         .number
@@ -89,6 +132,7 @@ impl Timeline {
                 .zip(target.as_ref())
                 .is_some_and(|(old, new)| {
                     old.document == new.document
+                        && old.binding == new.binding
                         && old.workspace == new.workspace
                         && old.clip == new.clip
                         && old.mode == new.mode
@@ -133,9 +177,9 @@ impl Timeline {
             .as_ref()
             .is_some_and(|edit| active != Some(edit.token.edit))
         {
-            self.number_edit = None;
+            let edit = self.number_edit.take().unwrap();
             window.focus(&self.focus, cx);
-            cx.stop_active_drag(window);
+            self.release_number_drag(edit.token, window, cx);
             self.reset_number_drags(cx);
         }
         if self
@@ -166,20 +210,32 @@ impl Timeline {
         }
     }
 
-    pub(super) fn cancel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn cancel_local(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (Option<DocumentId>, Option<TimelineCandidateIdentity>) {
+        self.activity.set(self.activity.get() + 1);
         let token = self
             .gesture
             .as_ref()
             .and_then(input::Gesture::token)
             .or_else(|| self.number_edit.as_ref().map(|edit| edit.token));
         let document = self.context.as_ref().map(|target| target.document);
-        cx.stop_active_drag(window);
+        if let Some(token) = token {
+            self.release_number_drag(token, window, cx);
+        }
         self.gesture = None;
         self.edge_scroll = None;
         self.number_edit = None;
         self.reset_number_drags(cx);
         self.error = None;
+        cx.notify();
+        (document, token)
+    }
 
+    pub(crate) fn cancel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let (document, token) = self.cancel_local(window, cx);
         let _ = self.owner.update(cx, |owner, cx| {
             if let (Some(document), Some(token)) = (document, token) {
                 owner.editor.cancel_timeline_edit_for(document, token);
@@ -207,8 +263,8 @@ impl Timeline {
             .and_then(input::Gesture::token)
             .or_else(|| self.number_edit.as_ref().map(|edit| edit.token));
         let seeking = matches!(self.gesture, Some(input::Gesture::Seek));
-        if self.gesture.is_some() || self.number_edit.is_some() {
-            cx.stop_active_drag(window);
+        if let Some(token) = token {
+            self.release_number_drag(token, window, cx);
         }
         self.gesture = None;
         self.edge_scroll = None;
@@ -221,6 +277,9 @@ impl Timeline {
         }
         let owner = self.owner.clone();
         let document = self.context.as_ref().map(|target| target.document);
+        let binding = self.context.as_ref().map(|target| target.binding);
+        let activity = self.activity.clone();
+        let generation = activity.get();
         // Dock callbacks may run inside an EditorView update. Resolve the owner
         // after it is released, and never cancel a newer gesture or another tab.
         cx.defer(move |cx| {
@@ -228,10 +287,15 @@ impl Timeline {
                 if owner.editor.active_id() != document {
                     return;
                 }
+                if activity.get() != generation {
+                    return;
+                }
                 if let (Some(document), Some(token)) = (document, token) {
                     owner.editor.cancel_timeline_edit_for(document, token);
                 }
-                if seeking {
+                if seeking
+                    && binding.is_some_and(|binding| owner.editor.timeline_binding_valid(binding))
+                {
                     owner.editor.pause_animation();
                     owner.animation_anchor = None;
                 }

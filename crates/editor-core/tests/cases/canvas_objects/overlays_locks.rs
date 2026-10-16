@@ -15,7 +15,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
     drag(
         &mut editor,
         handle,
-        CanvasPoint {
+        ViewportPoint {
             x: handle.x,
             y: handle.y - 40.,
         },
@@ -51,7 +51,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
         stored
     );
     let mut reopened = crate::support::editor_from_document(reopened);
-    reopened.set_canvas_metrics(CanvasMetrics {
+    reopened.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 2.,
@@ -85,7 +85,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: point.x + 10.,
             y: point.y,
         },
@@ -118,7 +118,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
             .find(|h| h.round)
             .unwrap()
             .position;
-        let end = CanvasPoint {
+        let end = ViewportPoint {
             x: handle.x + 24.,
             y: handle.y - 20.,
         };
@@ -176,7 +176,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
         let task = editor.prepare_save(id, &dir.path().join("bezier-bound"), false)?;
         let receipt = editor.finish_save(&mut task.run())?;
         let mut reopened = crate::support::editor_from_document(Document::open(&receipt.manifest)?);
-        reopened.set_canvas_metrics(CanvasMetrics {
+        reopened.set_canvas_metrics(ViewportMetrics {
             width: 512.,
             height: 512.,
             scale_factor: 2.,
@@ -203,7 +203,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
 fn overlay_keeps_control_identity_and_reference_deformers_quiet() -> anyhow::Result<()> {
     let (doc, _dir, warp, rotation, _) = rich_document()?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 2.,
@@ -280,7 +280,7 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
         })?;
         sdk.save_project(&receipt.manifest, None)?;
         let mut editor = crate::support::editor_from_document(Document::open(&receipt.manifest)?);
-        editor.set_canvas_metrics(CanvasMetrics {
+        editor.set_canvas_metrics(ViewportMetrics {
             width: 512.,
             height: 512.,
             scale_factor: 2.,
@@ -337,7 +337,7 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
 fn mesh_drag_reuses_binding_index_without_mutating_retained_snapshots() -> anyhow::Result<()> {
     let (doc, _dir) = support::sample_document_with_binding(true)?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -352,7 +352,7 @@ fn mesh_drag_reuses_binding_index_without_mutating_retained_snapshots() -> anyho
     })?;
     for distance in [10., 20., 30.] {
         editor.canvas_input(CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: point.x + distance,
                 y: point.y,
             },
@@ -386,7 +386,7 @@ fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -
         for distance in [10., 20.] {
             let retained_properties = previous.get(&object).unwrap().properties.clone();
             editor.canvas_input(CanvasInput::Move {
-                point: CanvasPoint {
+                point: ViewportPoint {
                     x: start.x + distance,
                     y: start.y,
                 },
@@ -430,7 +430,7 @@ fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -
 fn locked_deformer_has_only_read_only_lines_and_blocks_control_adjustments() -> anyhow::Result<()> {
     let (doc, _dir, warp, _, _) = rich_document()?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -487,7 +487,7 @@ fn locked_mask_still_clips_unlocked_objects_in_canvas_candidates() -> anyhow::Re
     doc.set_objects_locked(&[ObjectRef::new(ObjectKind::Mesh, bottom)], true)?;
     let t = ViewportTransform::new(
         scene.source.viewport_frame.canvas,
-        CanvasMetrics {
+        ViewportMetrics {
             width: 512.,
             height: 512.,
             scale_factor: 1.,
@@ -497,7 +497,7 @@ fn locked_mask_still_clips_unlocked_objects_in_canvas_candidates() -> anyhow::Re
     .unwrap();
     let candidates = |x| {
         scene.candidates_with_locks(
-            t.to_canvas(ModelPoint { x, y: 128. }),
+            t.to_viewport(ModelPoint { x, y: 128. }),
             t,
             &[],
             ToolId::Select,

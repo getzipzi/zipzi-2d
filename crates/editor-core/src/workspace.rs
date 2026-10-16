@@ -17,7 +17,7 @@ mod navigation;
 mod presentation;
 use entry::{DeferredClose, Entry};
 pub use io::{LoadCompletion, LoadTask, SaveCompletion, SaveTask};
-pub use lifecycle::EditingLifecycle;
+pub use lifecycle::{EditingContextToken, EditingLifecycle};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DocumentId(Uuid);
@@ -50,10 +50,13 @@ impl DocumentSummary {
 pub struct Editor {
     workspace: WorkspaceKind,
     pub(crate) viewports: crate::ViewportRegistry,
+    pub(crate) timeline_panels: crate::TimelinePanels,
+    pub(crate) timeline_scrub_owner: Option<crate::TimelineBinding>,
     pub(crate) viewport_interaction: Option<crate::ViewportInteractionToken>,
     pub(crate) next_viewport_interaction: u64,
     workspace_revision: u64,
     pub(crate) context_generation: u64,
+    pub(crate) editing_epoch: u64,
     documents: Vec<Entry>,
     active: Option<DocumentId>,
     loads: HashMap<OperationId, (DocumentId, Option<PathBuf>)>,
@@ -76,10 +79,13 @@ impl Editor {
         Self {
             workspace: WorkspaceKind::default(),
             viewports: Default::default(),
+            timeline_panels: Default::default(),
+            timeline_scrub_owner: None,
             viewport_interaction: None,
             next_viewport_interaction: 0,
             workspace_revision: 0,
             context_generation: 0,
+            editing_epoch: 0,
             documents: Vec::new(),
             active: None,
             loads: HashMap::new(),
@@ -108,7 +114,7 @@ impl Editor {
             session.views.entry(viewport).or_default();
         }
         self.documents.push(Entry::new(id, self.workspace, session));
-        self.context_generation += 1;
+        self.advance_editing_context();
         self.active = Some(id);
         self.refresh_viewport_bindings();
         id
@@ -175,7 +181,7 @@ impl Editor {
             return;
         }
         self.workspace = workspace;
-        self.context_generation += 1;
+        self.advance_editing_context();
         self.workspace_revision += 1;
         self.refresh_viewport_bindings();
         self.invalidate_primary_presentation();
@@ -319,7 +325,7 @@ impl Editor {
         if let Some(previous) = self.active {
             self.end_editing(previous, EditingLifecycle::ContextChange)?;
         }
-        self.context_generation += 1;
+        self.advance_editing_context();
         self.active = Some(id);
         self.restore_active_workspace();
         self.refresh_viewport_bindings();

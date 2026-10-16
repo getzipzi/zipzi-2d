@@ -15,7 +15,7 @@ fn warp_and_rotation_drags_present_intermediate_geometry_before_the_latest_pose(
         let mut frames = Vec::new();
         for x in [10., 20., 30.] {
             editor.canvas_input(CanvasInput::Move {
-                point: CanvasPoint {
+                point: ViewportPoint {
                     x: start.x + x,
                     y: start.y,
                 },
@@ -31,13 +31,13 @@ fn warp_and_rotation_drags_present_intermediate_geometry_before_the_latest_pose(
             .iter()
             .find(|c| c.object == object)
             .unwrap();
-        let anchor = frames[0].transform.to_canvas(displayed.points[0]);
+        let anchor = frames[0].transform.to_viewport(displayed.points[0]);
         assert_eq!(editor.overlay().vertices[0].position, anchor);
         assert!((anchor.x - start.x - 10.).abs() < 0.01);
         assert!(editor.present_frame(frames[1].clone()));
         assert!(!editor.present_frame(frames[0].clone()));
         editor.canvas_input(CanvasInput::Up {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: start.x + 30.,
                 y: start.y,
             },
@@ -59,11 +59,11 @@ fn warp_marquee_preserves_object_and_moves_selected_controls_only() -> anyhow::R
     // Cross the grid's first row, starting outside the gizmo.
     drag(
         &mut editor,
-        CanvasPoint {
+        ViewportPoint {
             x: p.x - 35.,
             y: p.y - 10.,
         },
-        CanvasPoint {
+        ViewportPoint {
             x: p.x + 400.,
             y: p.y + 10.,
         },
@@ -86,7 +86,7 @@ fn warp_marquee_preserves_object_and_moves_selected_controls_only() -> anyhow::R
     drag(
         &mut editor,
         p,
-        CanvasPoint {
+        ViewportPoint {
             x: p.x + 20.,
             y: p.y + 10.,
         },
@@ -119,7 +119,7 @@ fn warp_gizmo_scales_all_points_and_cancels_as_one_edit() -> anyhow::Result<()> 
         .find(|(h, _)| *h == DeformerHandle::Scale(4))
         .unwrap()
         .1;
-    let end = CanvasPoint {
+    let end = ViewportPoint {
         x: start.x + 48. * frame.transform.scale,
         y: start.y + 20. * frame.transform.scale,
     };
@@ -171,14 +171,14 @@ fn warp_outer_edge_moves_without_selecting_descendant_mesh() -> anyhow::Result<(
         .unwrap();
     let gizmo = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
     let (a, b) = gizmo.outline[0];
-    let start = CanvasPoint {
+    let start = ViewportPoint {
         x: (a.x + b.x) / 2.,
         y: a.y,
     };
     drag(
         &mut editor,
         start,
-        CanvasPoint {
+        ViewportPoint {
             x: start.x + 20.,
             y: start.y - 16.,
         },
@@ -205,7 +205,7 @@ fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> 
         .unwrap();
     let gizmo = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
     let start = gizmo.handles[0].1;
-    let end = CanvasPoint {
+    let end = ViewportPoint {
         x: gizmo.center.x + 2. * (start.x - gizmo.center.x),
         y: gizmo.center.y + 2. * (start.y - gizmo.center.y),
     };
@@ -276,7 +276,7 @@ fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()>
         .find(|h| h.round)
         .unwrap()
         .position;
-    let bent = CanvasPoint {
+    let bent = ViewportPoint {
         x: start.x,
         y: start.y - 40.,
     };
@@ -342,7 +342,7 @@ fn subdivisions_are_opt_in_and_never_become_hit_targets() -> anyhow::Result<()> 
     let p = overlay
         .guide_lines
         .iter()
-        .map(|(a, b)| CanvasPoint {
+        .map(|(a, b)| ViewportPoint {
             x: (a.x + b.x) / 2.,
             y: (a.y + b.y) / 2.,
         })
@@ -409,7 +409,7 @@ fn unqueried_warp_snapshot_retains_keyform_and_parent_space_after_edits() -> any
         // Late selection of the retained frame must still hit its original anchor.
         assert_eq!(
             old.geometry.hit(
-                old.transform.to_canvas(before),
+                old.transform.to_viewport(before),
                 old.transform,
                 std::slice::from_ref(&object),
                 ToolId::Select,
@@ -521,20 +521,20 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
             for dpi in [1., 2.] {
                 let transform = ViewportTransform::new(
                     scene.source.viewport_frame.canvas,
-                    CanvasMetrics {
+                    ViewportMetrics {
                         width,
                         height: width,
                         scale_factor: dpi,
                     },
                     ViewState {
                         zoom,
-                        pan: CanvasPoint { x: 31., y: -19. },
+                        pan: ViewportPoint { x: 31., y: -19. },
                     },
                 )
                 .unwrap();
                 let points = scene.control_points(control, transform);
                 let gizmo = scene.deformer_gizmo(control, transform).unwrap();
-                let radius = |p: CanvasPoint| (p.x - gizmo.center.x).hypot(p.y - gizmo.center.y);
+                let radius = |p: ViewportPoint| (p.x - gizmo.center.x).hypot(p.y - gizmo.center.y);
                 assert!((radius(points[1]) * dpi - 540. * zoom).abs() < 0.001);
                 assert!((radius(gizmo.outline[0].0) * dpi - 280. * zoom).abs() < 0.001);
                 assert!((radius(gizmo.handles[0].1) * dpi - 400. * zoom).abs() < 0.001);

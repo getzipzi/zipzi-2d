@@ -1,7 +1,7 @@
 //! Native Metal preview adapter. No document editing or project IO lives here.
 mod overlay;
 use anyhow::{Result, anyhow, ensure};
-use editor_core::{CanvasMetrics, SceneSnapshot, ViewState, ViewportTransform};
+use editor_core::{SceneSnapshot, ViewState, ViewportMetrics, ViewportTransform};
 use kasane_core::Vec2;
 use kasane_render::texture::straight_rgba_mipmaps;
 use kasane_render::{Affine2, ViewportConfig};
@@ -73,7 +73,7 @@ impl MetalSceneRenderer {
         scene: &SceneSnapshot,
         view: ViewState,
     ) -> Result<metal::Texture> {
-        let metrics = CanvasMetrics {
+        let metrics = ViewportMetrics {
             width: config.width as f32,
             height: config.height as f32,
             scale_factor: 1.,
@@ -277,7 +277,7 @@ mod tests {
                     .into();
                 let transform = ViewportTransform::new(
                     scene.viewport_frame.canvas,
-                    CanvasMetrics {
+                    ViewportMetrics {
                         width: 1.,
                         height: 1.,
                         scale_factor: 1.,

@@ -407,6 +407,7 @@ pub enum CommandSource {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TimelineCommandTarget {
+    pub panel: Option<crate::TimelineBinding>,
     pub document: DocumentId,
     pub context_generation: u64,
     pub timeline_generation: u64,
@@ -505,6 +506,7 @@ impl Editor {
         (self.editing_context() == Some(crate::EditingContext::Animation)
             && session.animation.timeline.current().is_some())
         .then(|| TimelineCommandTarget {
+            panel: None,
             document: self.active_id().unwrap(),
             context_generation: self.context_generation,
             timeline_generation: session.animation.timeline.binding_generation,
@@ -512,7 +514,37 @@ impl Editor {
         })
     }
     pub fn timeline_command_target_valid(&self, target: TimelineCommandTarget) -> bool {
-        self.timeline_command_target() == Some(target) && !self.is_busy() && !self.exiting()
+        target
+            .panel
+            .is_none_or(|binding| self.timeline_binding_valid(binding))
+            && self.timeline_command_target()
+                == Some(TimelineCommandTarget {
+                    panel: None,
+                    ..target
+                })
+            && !self.is_busy()
+            && !self.exiting()
+    }
+    pub fn command_for_timeline(
+        &self,
+        id: CommandId,
+        binding: crate::TimelineBinding,
+        source: CommandSource,
+    ) -> Command {
+        Command {
+            id,
+            source,
+            target: self
+                .timeline_command_target()
+                .filter(|_| self.timeline_binding_valid(binding))
+                .map(|target| {
+                    CommandTarget::Timeline(TimelineCommandTarget {
+                        panel: Some(binding),
+                        ..target
+                    })
+                })
+                .unwrap_or(CommandTarget::Unavailable),
+        }
     }
     fn command_target_valid(&self, command: Command) -> bool {
         match (command.id.spec().scope, command.target) {

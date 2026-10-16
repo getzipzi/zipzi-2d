@@ -1,6 +1,6 @@
 //! Exercise the production edge builder through native Metal, without UI automation.
 #![cfg(target_os = "macos")]
-use editor_core::CanvasPoint;
+use editor_core::ViewportPoint;
 use gpui_apple::metal_renderer::MetalRenderer;
 use gpui_kit::{
     Bounds, ContentMask, DevicePixels, Path, PathBuilder, Pixels, Quad, Scene, point, px, rgba,
@@ -10,8 +10,8 @@ use gpui_kit::{
 #[path = "../src/mesh_edges.rs"]
 mod mesh_edges;
 
-fn p(x: f32, y: f32) -> CanvasPoint {
-    CanvasPoint { x, y }
+fn p(x: f32, y: f32) -> ViewportPoint {
+    ViewportPoint { x, y }
 }
 
 fn edges_scene(batched: bool, scale: f32, zoom: f32, alpha: u8) -> Scene {

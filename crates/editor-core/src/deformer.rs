@@ -1,5 +1,5 @@
 //! Screen-space manipulators. Painting and picking share the same geometry.
-use crate::{CanvasPoint, CanvasScene, ControlGeometry, ControlKind, ViewportTransform};
+use crate::{CanvasScene, ControlGeometry, ControlKind, ViewportPoint, ViewportTransform};
 
 // Model-space dimensions; the viewport supplies fit-to-canvas scale and zoom.
 pub(crate) const ROTATION_AXIS_LENGTH: f32 = 540.;
@@ -18,10 +18,10 @@ pub enum DeformerHandle {
 
 #[derive(Clone, Debug)]
 pub struct DeformerGizmo {
-    pub center: CanvasPoint,
+    pub center: ViewportPoint,
     pub bounds: [f32; 4],
-    pub outline: Vec<(CanvasPoint, CanvasPoint)>,
-    pub handles: Vec<(DeformerHandle, CanvasPoint)>,
+    pub outline: Vec<(ViewportPoint, ViewportPoint)>,
+    pub handles: Vec<(DeformerHandle, ViewportPoint)>,
 }
 
 impl CanvasScene {
@@ -36,7 +36,7 @@ impl CanvasScene {
         let points = self.control_points(c, t);
         let b =
             crate::picking::bounds(points.iter().map(|p| crate::ModelPoint { x: p.x, y: p.y }))?;
-        let p = |x, y| CanvasPoint { x, y };
+        let p = |x, y| ViewportPoint { x, y };
         if c.kind == ControlKind::Rotation {
             let [o, axis, ..] = points.as_slice() else {
                 return None;
@@ -102,16 +102,16 @@ impl CanvasScene {
 }
 
 impl DeformerGizmo {
-    pub fn scale_anchor(&self, index: u8) -> (CanvasPoint, CanvasPoint) {
+    pub fn scale_anchor(&self, index: u8) -> (ViewportPoint, ViewportPoint) {
         let [x0, y0, x1, y1] = self.bounds;
         let x = [0., 0.5, 1., 1., 1., 0.5, 0., 0.][index as usize];
         let y = [0., 0., 0., 0.5, 1., 1., 1., 0.5][index as usize];
         (
-            CanvasPoint {
+            ViewportPoint {
                 x: x0 + (x1 - x0) * x,
                 y: y0 + (y1 - y0) * y,
             },
-            CanvasPoint {
+            ViewportPoint {
                 x: x1 - (x1 - x0) * x,
                 y: y1 - (y1 - y0) * y,
             },
@@ -123,7 +123,7 @@ pub(crate) fn sample_grid(
     control: &ControlGeometry,
     (warp_rows, warp_columns, quad): (u32, u32, bool),
     transform: ViewportTransform,
-) -> Vec<(CanvasPoint, CanvasPoint)> {
+) -> Vec<(ViewportPoint, ViewportPoint)> {
     if warp_rows == 0
         || warp_columns == 0
         || control.points.len() != (warp_rows as usize + 1) * (warp_columns as usize + 1)
@@ -150,7 +150,7 @@ pub(crate) fn sample_grid(
     );
     let points: Vec<_> = output
         .chunks_exact(2)
-        .map(|p| transform.to_canvas(crate::ModelPoint { x: p[0], y: p[1] }))
+        .map(|p| transform.to_viewport(crate::ModelPoint { x: p[0], y: p[1] }))
         .collect();
     let mut lines = Vec::new();
     for r in 0..=rows {

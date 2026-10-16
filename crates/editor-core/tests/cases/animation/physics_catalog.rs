@@ -16,7 +16,7 @@ fn combined_physics_pose_expression_replay_matches_continuous_and_cancelled_seek
     let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 256.,
         height: 256.,
         scale_factor: 1.,
@@ -87,7 +87,7 @@ fn local_model3_live_expression_switch_reuses_physics_history() -> anyhow::Resul
     let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 640.,
         height: 480.,
         scale_factor: 1.,
@@ -143,7 +143,7 @@ fn local_model3_motion_uses_imported_physics_and_default_runtime_baseline() -> a
     let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 640.,
         height: 480.,
         scale_factor: 1.,
@@ -244,7 +244,7 @@ fn diagnostics_are_available_before_play_and_do_not_duplicate_sdk_coverage() -> 
     let mut editor = crate::support::editor_from_document(document);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_animation_preview_mode(editor.active_id().unwrap(), AnimationPreviewMode::Result)?;
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,

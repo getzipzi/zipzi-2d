@@ -1,4 +1,4 @@
-use editor_core::CanvasPoint;
+use editor_core::ViewportPoint;
 use gpui_kit::{Path, PathBuilder, Pixels, Point, point, px};
 
 // PathBuilder tessellates with u16 indices. Independent straight strokes use four
@@ -7,7 +7,7 @@ const EDGES_PER_PATH: usize = 4096;
 
 /// Paint equally styled mesh edges as disjoint subpaths, before vertex handles.
 pub fn paint_edges(
-    edges: &[(CanvasPoint, CanvasPoint)],
+    edges: &[(ViewportPoint, ViewportPoint)],
     origin: Point<Pixels>,
     paint: impl FnMut(Path<Pixels>),
 ) {
@@ -15,12 +15,12 @@ pub fn paint_edges(
 }
 
 pub fn paint_edges_with_width(
-    edges: &[(CanvasPoint, CanvasPoint)],
+    edges: &[(ViewportPoint, ViewportPoint)],
     origin: Point<Pixels>,
     width: f32,
     mut paint: impl FnMut(Path<Pixels>),
 ) {
-    let build = |edges: &[(CanvasPoint, CanvasPoint)]| {
+    let build = |edges: &[(ViewportPoint, ViewportPoint)]| {
         let mut path = PathBuilder::stroke(px(width));
         for (a, b) in edges {
             path.move_to(origin + point(px(a.x), px(a.y)));

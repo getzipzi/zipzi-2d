@@ -1,4 +1,4 @@
-use crate::ui::preview_viewport::{PreviewContent, PreviewPainter, PreviewViewport};
+use crate::ui::mesh_generation_preview::{MeshGenerationPreview, PreviewContent, PreviewPainter};
 use gpui_kit::{
     AnyWindowHandle, AppContext as _, Bounds, Entity, InputEvent as _, PinchEvent, Pixels,
     TestAppContext, WindowBounds, WindowOptions, point, px, size, test::TestWindowExt,
@@ -7,7 +7,7 @@ use std::{cell::RefCell, rc::Rc};
 
 type Painted = Rc<RefCell<Option<(Bounds<Pixels>, Bounds<Pixels>, f32)>>>;
 
-fn setup(cx: &mut TestAppContext) -> (AnyWindowHandle, Entity<PreviewViewport>, Painted) {
+fn setup(cx: &mut TestAppContext) -> (AnyWindowHandle, Entity<MeshGenerationPreview>, Painted) {
     let _editor = super::setup(cx);
     let painted: Painted = Rc::new(RefCell::new(None));
     let captured = painted.clone();
@@ -27,7 +27,7 @@ fn setup(cx: &mut TestAppContext) -> (AnyWindowHandle, Entity<PreviewViewport>, 
                 ..Default::default()
             },
             cx,
-            |_, cx| cx.new(PreviewViewport::new),
+            |_, cx| cx.new(MeshGenerationPreview::new),
         )
         .unwrap()
     });

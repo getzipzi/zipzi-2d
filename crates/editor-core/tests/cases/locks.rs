@@ -5,7 +5,7 @@ use std::sync::Arc;
 fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let (doc, dir) = support::sample_document_with_two_layers()?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -176,7 +176,7 @@ fn lock_undo_redo_reuse_frames_and_live_picking_skips_locked_top_surface() -> an
     assert!(editor.preview_if_needed()?.is_none());
     assert!(editor.overlay().vertices.is_empty());
     assert!(!editor.overlay().accent_lines.is_empty());
-    let point = CanvasPoint { x: 256., y: 256. };
+    let point = ViewportPoint { x: 256., y: 256. };
     let picks = editor.pick_candidates(point, Some(first.version));
     assert!(!picks.iter().any(|p| p.object == top));
     assert!(picks.iter().any(|p| p.object == lower));
@@ -229,7 +229,7 @@ fn locking_during_a_drag_cancels_unpublished_geometry_and_late_pointer_events() 
         point,
         shift: false,
     })?;
-    let moved = CanvasPoint {
+    let moved = ViewportPoint {
         x: point.x + 30.,
         y: point.y + 20.,
     };
@@ -266,11 +266,11 @@ fn rectangle_selection_never_adds_locked_objects_or_components() -> anyhow::Resu
     })?;
     editor.execute(EditorCommand::SelectObjects(objects))?;
     editor.canvas_input(CanvasInput::Down {
-        point: CanvasPoint { x: 0., y: 0. },
+        point: ViewportPoint { x: 0., y: 0. },
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint { x: 512., y: 512. },
+        point: ViewportPoint { x: 512., y: 512. },
     })?;
     assert!(editor.document().unwrap().context().selections.is_empty());
     assert!(editor.overlay().vertices.is_empty());

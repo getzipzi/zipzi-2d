@@ -142,6 +142,7 @@ impl Render for EditorDragPreview {
 }
 
 pub(super) struct EditorDockSkin {
+    regions: Rc<std::collections::HashMap<EntityId, crate::input_routing::InputRegion>>,
     component: Rc<DockSkin>,
     row_cached_panel: EntityId,
     headers: Rc<PanelHeaders>,
@@ -156,8 +157,10 @@ impl EditorDockSkin {
         headers: Rc<PanelHeaders>,
         area: WeakEntity<DockArea>,
         owner: WeakEntity<crate::EditorView>,
+        regions: std::collections::HashMap<EntityId, crate::input_routing::InputRegion>,
     ) -> Rc<Self> {
         Rc::new(Self {
+            regions: Rc::new(regions),
             component,
             row_cached_panel,
             headers,
@@ -254,6 +257,7 @@ impl DockAreaRenderer for EditorDockSkin {
 
     fn tab_group_renderer(&self) -> Rc<dyn TabGroupRenderer> {
         Rc::new(EditorTabGroupSkin {
+            regions: self.regions.clone(),
             component: self.component.tab_group_renderer(),
             row_cached_panel: self.row_cached_panel,
             headers: self.headers.clone(),
@@ -264,6 +268,7 @@ impl DockAreaRenderer for EditorDockSkin {
 }
 
 struct EditorTabGroupSkin {
+    regions: Rc<std::collections::HashMap<EntityId, crate::input_routing::InputRegion>>,
     component: Rc<dyn TabGroupRenderer>,
     row_cached_panel: EntityId,
     headers: Rc<PanelHeaders>,
@@ -720,6 +725,7 @@ impl TabGroupRenderer for EditorTabGroupSkin {
         if group.is_collapsed() {
             return Empty.into_any_element();
         }
+        let region = self.regions.get(&panel.entity_id()).cloned();
         let content = if panel.entity_id() != self.row_cached_panel {
             self.component.render_active_panel(panel, group, window, cx)
         } else {
@@ -777,6 +783,7 @@ impl TabGroupRenderer for EditorTabGroupSkin {
             .min_h_0()
             .child(content)
             .child(corners)
+            .when_some(region, |element, region| element.child(region.marker()))
             .into_any_element()
     }
 

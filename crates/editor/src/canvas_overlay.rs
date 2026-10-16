@@ -1,6 +1,6 @@
 //! Canvas-specific visual language, independent of the application accent.
 use crate::mesh_edges;
-use editor_core::{CanvasPoint, OverlaySnapshot, OverlayVertexKind};
+use editor_core::{OverlaySnapshot, OverlayVertexKind, ViewportPoint};
 use gpui_kit::{
     Bounds, Hsla, PathBuilder, Pixels, Point, Window, fill, point, px, rgb, rgba, size,
 };
@@ -62,7 +62,7 @@ pub(crate) fn paint_lines(
     p: Palette,
     window: &mut impl Painter,
 ) {
-    let mut lines = |edges: &[(CanvasPoint, CanvasPoint)], width, color| {
+    let mut lines = |edges: &[(ViewportPoint, ViewportPoint)], width, color| {
         mesh_edges::paint_edges_with_width(edges, bounds.origin, width, |path| {
             window.paint_path(path, color)
         });
@@ -106,10 +106,10 @@ pub(crate) fn paint_lines(
 
 /// Clip before subdivision: extreme zoom or offscreen pairs cannot allocate unbounded dashes.
 fn dashed_segments(
-    a: CanvasPoint,
-    b: CanvasPoint,
+    a: ViewportPoint,
+    b: ViewportPoint,
     extent: [f32; 2],
-) -> Vec<(CanvasPoint, CanvasPoint)> {
+) -> Vec<(ViewportPoint, ViewportPoint)> {
     let dx = b.x - a.x;
     let dy = b.y - a.y;
     let length = dx.hypot(dy);
@@ -142,7 +142,7 @@ fn dashed_segments(
     }
     let start = lo * length;
     let end = hi * length;
-    let position = |distance: f32| CanvasPoint {
+    let position = |distance: f32| ViewportPoint {
         x: a.x + dx * (distance / length),
         y: a.y + dy * (distance / length),
     };
@@ -289,7 +289,7 @@ pub(crate) fn paint_markers(
                 }
                 OverlayVertexKind::RotationCenter => {
                     marker(center, radius, true, v.selected, color, p, window);
-                    let q = |x, y| CanvasPoint {
+                    let q = |x, y| ViewportPoint {
                         x: v.position.x + x,
                         y: v.position.y + y,
                     };
@@ -357,7 +357,7 @@ mod tests {
     use super::*;
     #[test]
     fn glue_dashes_are_clipped_and_zero_length_pairs_have_no_line() {
-        let pt = |x, y| CanvasPoint { x, y };
+        let pt = |x, y| ViewportPoint { x, y };
         assert!(dashed_segments(pt(5., 5.), pt(5., 5.), [100., 100.]).is_empty());
         assert!(dashed_segments(pt(-10., -20.), pt(110., -20.), [100., 100.]).is_empty());
         let dashes = dashed_segments(pt(-1e6, 50.), pt(1e6, 50.), [100., 100.]);

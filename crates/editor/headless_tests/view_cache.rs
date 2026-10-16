@@ -423,6 +423,7 @@ fn editor_dock_preserves_row_caches_and_delegates_other_panel_caches(cx: &mut Te
                     container,
                     weak,
                     renderer: EditorTabGroupSkin {
+                        regions: Default::default(),
                         component: component.unwrap(),
                         row_cached_panel,
                         area: dock_area.downgrade(),

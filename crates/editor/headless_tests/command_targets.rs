@@ -225,7 +225,7 @@ fn viewport_render_failures_stay_with_their_owner_and_stale_errors_are_ignored(
             );
             assert!(view.viewport_error(ids[1]).is_none());
             view.editor
-                .pan_viewport(binding, editor_core::CanvasPoint { x: 3., y: 0. })
+                .pan_viewport(binding, editor_core::ViewportPoint { x: 3., y: 0. })
                 .unwrap();
             let newer = view.editor.preview_for(binding).unwrap();
             view.receive_viewport_frame(error(old.revision, "stale error"), cx);

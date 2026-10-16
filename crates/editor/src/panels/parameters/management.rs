@@ -35,8 +35,8 @@ impl EditorView {
         use editor_core::CommandId;
         let target = self
             .editor
-            .document()
-            .and_then(|d| d.context().inspected.as_ref())
+            .inspection(editor_core::EditingContext::Modeling)
+            .and_then(|source| source.object())
             .map(|r| r.id.clone());
         let action = match command.id {
             CommandId::CreateParameter => Some(ParameterAction::Create(None)),

@@ -6,7 +6,7 @@ mod overlay;
 
 use crate::control_edit::{ControlChange, ControlEdit};
 use crate::{
-    CanvasPoint, CanvasScene, ComponentRef, Document, HitTarget, ObjectKind, ObjectRef,
+    CanvasScene, ComponentRef, Document, HitTarget, ObjectKind, ObjectRef, ViewportPoint,
     ViewportTransform,
 };
 use std::sync::Arc;
@@ -42,14 +42,14 @@ pub struct CanvasFrame {
 }
 struct Press {
     version: FrameVersion,
-    point: CanvasPoint,
+    point: ViewportPoint,
     transform: ViewportTransform,
     scene: Arc<CanvasScene>,
     target: Option<HitTarget>,
     component_surface: bool,
     shift: bool,
     selection: Vec<ObjectRef>,
-    current: CanvasPoint,
+    current: ViewportPoint,
     dragged: bool,
     edit: Option<Vec<ControlEdit>>,
     last: Option<ControlChange>,
@@ -127,9 +127,17 @@ impl ToolController {
 }
 #[derive(Clone, Copy, Debug)]
 pub enum CanvasInput {
-    Down { point: CanvasPoint, shift: bool },
-    Move { point: CanvasPoint, left_down: bool },
-    Up { point: CanvasPoint },
+    Down {
+        point: ViewportPoint,
+        shift: bool,
+    },
+    Move {
+        point: ViewportPoint,
+        left_down: bool,
+    },
+    Up {
+        point: ViewportPoint,
+    },
     Cancel,
     Leave,
 }

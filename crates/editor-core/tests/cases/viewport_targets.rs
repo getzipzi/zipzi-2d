@@ -48,7 +48,7 @@ fn commands_require_registered_targets_and_fixed_viewport_capabilities() -> anyh
             .canvas_input_for(
                 binding,
                 CanvasInput::Down {
-                    point: CanvasPoint::default(),
+                    point: ViewportPoint::default(),
                     shift: false
                 }
             )
@@ -123,7 +123,7 @@ fn delayed_cancellation_cannot_cancel_a_new_modeling_candidate() -> anyhow::Resu
     let (doc, _dir) = support::sample_document()?;
     let mut editor = Editor::from_document(doc);
     let viewport = register(&mut editor, ViewportKind::Modeling);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 2.,
@@ -145,7 +145,7 @@ fn delayed_cancellation_cannot_cancel_a_new_modeling_candidate() -> anyhow::Resu
     editor.canvas_input_for(
         first.binding,
         CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: start.x + 20.,
                 y: start.y + 10.,
             },
@@ -172,7 +172,7 @@ fn delayed_cancellation_cannot_cancel_a_new_modeling_candidate() -> anyhow::Resu
     editor.canvas_input_for(
         second.binding,
         CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: start.x + 30.,
                 y: start.y + 15.,
             },
@@ -238,7 +238,7 @@ fn resizing_and_exit_do_not_leave_a_revivable_capture() -> anyhow::Result<()> {
         editor.viewport_binding(viewport).unwrap(),
         ViewportInteractionKind::Modeling,
     )?;
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 800.,
         height: 600.,
         scale_factor: 2.,

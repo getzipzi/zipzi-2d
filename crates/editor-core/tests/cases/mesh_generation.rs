@@ -35,7 +35,7 @@ fn generation_rebuilds_canvas_and_survives_history_and_save() -> anyhow::Result<
     let (doc, dir) = support::rectangle_document(false)?;
     let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,

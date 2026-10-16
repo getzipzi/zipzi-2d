@@ -8,14 +8,14 @@ use std::{
 };
 
 struct Candidate {
-    plan: Arc<MeshGenerationPreview>,
+    plan: Arc<MeshGenerationPlan>,
     edges: Arc<[([f32; 2], [f32; 2])]>,
     source_size: [f32; 2],
     renderer: Option<crate::ui::mesh_preview::MeshPreview>,
 }
 impl Candidate {
     fn new(
-        plan: MeshGenerationPreview,
+        plan: MeshGenerationPlan,
         texture: Option<editor_core::SceneTexture>,
         gpu: Option<SharedMetalContext>,
         preview_cache: crate::ui::mesh_preview::MeshPreviewCache,
@@ -127,7 +127,7 @@ impl PreviewGeneration {
     pub(super) fn painted(&self) -> bool {
         matches!(&self.state, GenerationState::Ready(preview) if preview.painted)
     }
-    pub(super) fn plan(&self) -> Option<&Arc<MeshGenerationPreview>> {
+    pub(super) fn plan(&self) -> Option<&Arc<MeshGenerationPlan>> {
         match &self.state {
             GenerationState::Ready(preview) => Some(&preview.candidate.plan),
             _ => None,

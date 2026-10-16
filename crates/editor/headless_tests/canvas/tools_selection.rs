@@ -61,7 +61,7 @@ fn losing_the_presented_frame_rolls_back_a_live_edit_and_notifies_observers(
         assert!(
             view.editor
                 .canvas_input(editor_core::CanvasInput::Move {
-                    point: editor_core::CanvasPoint {
+                    point: editor_core::ViewportPoint {
                         x: start.x - 24.,
                         y: start.y + 12.,
                     },
@@ -117,7 +117,7 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
                     .unwrap()
                     .canvas
                     .transform
-                    .to_canvas(editor_core::ModelPoint { x: 128., y: 128. }),
+                    .to_viewport(editor_core::ModelPoint { x: 128., y: 128. }),
             )
         });
         window.click_at("canvas-body", gpui_kit::point(px(point.x), px(point.y)), cx);

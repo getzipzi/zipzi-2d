@@ -17,11 +17,11 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
         .collect();
     editor.execute(EditorCommand::SelectObjects(selected))?;
     editor.canvas_input(CanvasInput::Down {
-        point: CanvasPoint { x: 1., y: 1. },
+        point: ViewportPoint { x: 1., y: 1. },
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint { x: 510., y: 510. },
+        point: ViewportPoint { x: 510., y: 510. },
     })?;
     assert_eq!(
         editor
@@ -39,7 +39,7 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: p.x + 20.,
             y: p.y + 10.,
         },
@@ -83,7 +83,7 @@ fn hidden_meshes_have_no_invisible_component_hit_targets() -> anyhow::Result<()>
     let scene = &frame.geometry;
     assert!(!matches!(
         scene.hit(
-            CanvasPoint { x: 0., y: 0. },
+            ViewportPoint { x: 0., y: 0. },
             frame.transform,
             &editor.document().unwrap().context().selections,
             ToolId::Select,
@@ -105,8 +105,8 @@ fn vertex_marquee_can_start_inside_selected_meshes_without_changing_objects() ->
         .collect();
     editor.execute(EditorCommand::SelectObjects(objects.clone()))?;
     let frame = shown(&mut editor)?;
-    let start = frame.transform.to_canvas(ModelPoint { x: 120., y: 120. });
-    let end = frame.transform.to_canvas(ModelPoint { x: 240., y: 240. });
+    let start = frame.transform.to_viewport(ModelPoint { x: 120., y: 120. });
+    let end = frame.transform.to_viewport(ModelPoint { x: 240., y: 240. });
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift: false,
@@ -175,11 +175,11 @@ fn invisible_offscreen_members_have_no_handles_and_are_excluded_from_marquee() -
     );
     editor.execute(EditorCommand::SetTool(ToolId::Select))?;
     editor.canvas_input(CanvasInput::Down {
-        point: CanvasPoint { x: 1., y: 1. },
+        point: ViewportPoint { x: 1., y: 1. },
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint { x: 510., y: 510. },
+        point: ViewportPoint { x: 510., y: 510. },
     })?;
     assert_eq!(
         editor.document().unwrap().context().selections,
@@ -196,13 +196,13 @@ fn warp_controls_align_with_mesh_after_canvas_y_reversal() -> anyhow::Result<()>
         let (doc, _dir, warp, _, _) = rich_document_with_canvas(canvas)?;
         let mesh = doc.context().selection.clone().unwrap();
         let mut editor = crate::support::editor_from_document(doc);
-        editor.set_canvas_metrics(CanvasMetrics {
+        editor.set_canvas_metrics(ViewportMetrics {
             width: 700.,
             height: 510.,
             scale_factor: 2.,
         });
         editor.zoom_by(0.5);
-        editor.pan_by(CanvasPoint { x: 17., y: -23. });
+        editor.pan_by(ViewportPoint { x: 17., y: -23. });
         let frame = shown(&mut editor)?;
         let control = frame
             .geometry
@@ -234,8 +234,8 @@ fn warp_controls_align_with_mesh_after_canvas_y_reversal() -> anyhow::Result<()>
                         x: p.x + c.x * w,
                         y: p.y + c.y * w,
                     });
-            let a = frame.transform.to_canvas(*p);
-            let b = frame.transform.to_canvas(expected);
+            let a = frame.transform.to_viewport(*p);
+            let b = frame.transform.to_viewport(expected);
             assert!(
                 (a.x - b.x).hypot(a.y - b.y) < 0.01,
                 "canvas flag {flag}: {a:?} != {b:?}"
@@ -245,7 +245,7 @@ fn warp_controls_align_with_mesh_after_canvas_y_reversal() -> anyhow::Result<()>
         editor.execute(EditorCommand::SetTool(ToolId::Select))?;
         let overlay = editor.overlay();
         for (vertex, expected) in overlay.vertices.iter().zip(&control.points) {
-            let expected = frame.transform.to_canvas(*expected);
+            let expected = frame.transform.to_viewport(*expected);
             assert!((vertex.position.x - expected.x).hypot(vertex.position.y - expected.y) < 0.001);
         }
     }
@@ -259,7 +259,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
     let (doc, _dir, warp, rotation, _) = rich_document_with_canvas(canvas)?;
     let mesh = doc.context().selection.clone().unwrap();
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 640.,
         height: 560.,
         scale_factor: 2.,
@@ -273,7 +273,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         let position = |f: &CanvasFrame| {
             if object.kind == ObjectKind::Mesh {
                 f.transform
-                    .to_canvas(f.geometry.mesh(&object.id).unwrap().vertices[0].1)
+                    .to_viewport(f.geometry.mesh(&object.id).unwrap().vertices[0].1)
             } else {
                 let c = f
                     .geometry
@@ -286,7 +286,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         };
         let frame = shown(&mut editor)?;
         let start = position(&frame);
-        let end = CanvasPoint {
+        let end = ViewportPoint {
             x: start.x + 8.,
             y: start.y + 12.,
         };
@@ -315,7 +315,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         .find(|c| c.object.id == rotation)
         .unwrap();
     let points = frame.geometry.control_points(c, frame.transform);
-    let end = CanvasPoint {
+    let end = ViewportPoint {
         x: points[0].x,
         y: points[0].y + (points[1].x - points[0].x).hypot(points[1].y - points[0].y),
     };
@@ -344,7 +344,7 @@ fn pose_updates_share_topology_but_publish_independent_positions() -> anyhow::Re
     let (doc, _dir) = support::sample_document_with_binding(true)?;
     let parameter_id = doc.parameters()[0].id.clone();
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -357,7 +357,7 @@ fn pose_updates_share_topology_but_publish_independent_positions() -> anyhow::Re
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: point.x + 20.,
             y: point.y,
         },
@@ -422,7 +422,7 @@ fn mesh_drag_reuses_unchanged_meshes_without_changing_old_frames() -> anyhow::Re
     })?;
     for dx in [20., 40.] {
         editor.canvas_input(CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: point.x + dx,
                 y: point.y,
             },
@@ -447,7 +447,7 @@ fn mesh_drag_reuses_unchanged_meshes_without_changing_old_frames() -> anyhow::Re
         let current = &edited.geometry.mesh(&selected.id).unwrap().vertices[0];
         assert_eq!(
             edited.geometry.hit(
-                edited.transform.to_canvas(current.1),
+                edited.transform.to_viewport(current.1),
                 edited.transform,
                 std::slice::from_ref(&selected),
                 ToolId::Select,
@@ -515,7 +515,7 @@ fn canvas_metadata_refreshes_on_rename_cancel_property_edit_and_history() -> any
     let (doc, _dir, warp, _, _) = rich_document()?;
     let mesh = doc.context().selection.clone().unwrap();
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,

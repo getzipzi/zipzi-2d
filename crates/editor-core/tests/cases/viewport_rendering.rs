@@ -8,7 +8,7 @@ fn pair(editor: &mut Editor, kind: ViewportKind) -> [ViewportBinding; 2] {
         editor.register_viewport(id, kind).unwrap();
         editor.set_viewport_metrics(
             id,
-            CanvasMetrics {
+            ViewportMetrics {
                 width: 512. + index as f32 * 100.,
                 height: 512.,
                 scale_factor: 2.,
@@ -38,7 +38,7 @@ fn cancel_command_only_releases_its_target_viewport() -> anyhow::Result<()> {
     editor.canvas_interaction_input(
         token,
         CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: point.x + 20.,
                 y: point.y,
             },
@@ -100,7 +100,7 @@ fn modeling_instances_share_content_but_keep_requests_images_and_hit_geometry_in
     assert_eq!(editor.evaluation_count(), 1);
     assert!(editor.present_frame(second.clone()));
     assert!(editor.present_frame(first.clone()));
-    editor.pan_viewport(a, CanvasPoint { x: 20., y: 10. })?;
+    editor.pan_viewport(a, ViewportPoint { x: 20., y: 10. })?;
     let moved = editor.preview_for_if_needed(a)?.unwrap().canvas.unwrap();
     assert!(editor.preview_for_if_needed(b)?.is_none());
     assert!(Arc::ptr_eq(&first.geometry, &moved.geometry));
@@ -121,7 +121,7 @@ fn modeling_instances_share_content_but_keep_requests_images_and_hit_geometry_in
     editor.canvas_interaction_input(
         token,
         CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: point.x + 20.,
                 y: point.y,
             },
@@ -179,7 +179,7 @@ fn animation_instances_reuse_one_content_evaluation_and_accept_independent_inter
         .unwrap();
     assert_eq!(first.content, second.content);
     assert_ne!(first.metrics, second.metrics);
-    editor.pan_viewport(a, CanvasPoint { x: 10., y: -5. })?;
+    editor.pan_viewport(a, ViewportPoint { x: 10., y: -5. })?;
     assert!(editor.animation_request().is_none());
     let (newer, _) = editor
         .animation_viewport_request(a, content.identity, canvas)
@@ -196,7 +196,7 @@ fn animation_instances_reuse_one_content_evaluation_and_accept_independent_inter
     assert!(editor.can_display_animation_viewport(second));
     editor.set_viewport_metrics(
         a.viewport,
-        CanvasMetrics {
+        ViewportMetrics {
             width: 900.,
             height: 400.,
             scale_factor: 1.,
@@ -275,14 +275,14 @@ fn hover_and_marquee_overlays_belong_to_their_instance_and_binding() -> anyhow::
     editor.canvas_interaction_input(
         token,
         CanvasInput::Down {
-            point: CanvasPoint { x: 5., y: 5. },
+            point: ViewportPoint { x: 5., y: 5. },
             shift: false,
         },
     )?;
     editor.canvas_interaction_input(
         token,
         CanvasInput::Move {
-            point: CanvasPoint { x: 60., y: 50. },
+            point: ViewportPoint { x: 60., y: 50. },
             left_down: true,
         },
     )?;
@@ -314,7 +314,7 @@ fn hiding_or_destroying_a_domain_input_owner_cancels_its_candidate_without_a_ui_
         editor.canvas_input_for(
             a,
             CanvasInput::Move {
-                point: CanvasPoint {
+                point: ViewportPoint {
                     x: point.x + 30.,
                     y: point.y,
                 },

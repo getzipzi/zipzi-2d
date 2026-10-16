@@ -114,6 +114,16 @@ impl DockWorkspace {
             cx,
         );
         let headers = Rc::new(headers);
+        let input_regions: HashMap<_, crate::input_routing::InputRegion> = panels
+            .keys()
+            .copied()
+            .filter(|kind| !kind.is_viewport() && *kind != PanelKind::AnimationTimeline)
+            .map(|kind| (kind, Default::default()))
+            .collect();
+        let regions = input_regions
+            .iter()
+            .map(|(kind, region)| (panels[kind].view().entity_id(), region.clone()))
+            .collect();
         let area = cx.new(|cx| {
             let skin = DockSkin::new(cx);
             DockArea::new(
@@ -128,6 +138,7 @@ impl DockWorkspace {
                 headers.clone(),
                 cx.weak_entity(),
                 owner.clone(),
+                regions,
             ))
         });
         let panels = Rc::new(panels);
@@ -154,8 +165,10 @@ impl DockWorkspace {
         let (writer, errors) = LayoutWriter::new(cx.global::<settings::Settings>().store.clone());
 
         let mut result = Self {
+            input_regions,
             area,
             viewports: viewports::ViewportPanels::new(modeling, animation, cx),
+            timeline_id: timeline.read(cx).id,
             timeline,
             animation_motions,
             animation_expressions,

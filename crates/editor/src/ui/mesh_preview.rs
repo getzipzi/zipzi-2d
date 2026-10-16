@@ -1,5 +1,5 @@
 //! Candidate texture rendering uses the same Metal mesh pipeline as the canvas.
-use editor_core::{CanvasMetrics, CanvasPoint, SceneSnapshot, ViewportTransform};
+use editor_core::{SceneSnapshot, ViewportMetrics, ViewportPoint, ViewportTransform};
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
 use gpui_kit::*;
 use std::sync::{Arc, Mutex};
@@ -68,8 +68,8 @@ impl MeshPreview {
                             .canvas
                             .width
                             .max(preview.scene.viewport_frame.canvas.height),
-                    offset: CanvasPoint::default(),
-                    metrics: CanvasMetrics {
+                    offset: ViewportPoint::default(),
+                    metrics: ViewportMetrics {
                         width: 1.,
                         height: 1.,
                         scale_factor: 1.,
@@ -91,7 +91,7 @@ impl MeshPreview {
             return Ok(());
         };
         let sf = window.scale_factor();
-        let metrics = CanvasMetrics {
+        let metrics = ViewportMetrics {
             width: bounds.size.width.as_f32(),
             height: bounds.size.height.as_f32(),
             scale_factor: sf,
@@ -116,7 +116,7 @@ impl MeshPreview {
         let offset = content.origin - bounds.origin;
         let transform = ViewportTransform {
             scale: content.size.width.as_f32() / self.scene.viewport_frame.canvas.width,
-            offset: CanvasPoint {
+            offset: ViewportPoint {
                 x: offset.x.as_f32(),
                 y: offset.y.as_f32(),
             },

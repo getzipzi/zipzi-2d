@@ -1,6 +1,6 @@
 use crate::{
-    CanvasFrame, CanvasMetrics, CanvasScene, Document, EditorCommand, OverlaySnapshot,
-    SceneSnapshot, ViewportId, ViewportState,
+    CanvasFrame, CanvasScene, Document, EditorCommand, OverlaySnapshot, SceneSnapshot, ViewportId,
+    ViewportMetrics, ViewportState,
 };
 use anyhow::{Result, ensure};
 use kasane_sdk::SaveReceipt;
@@ -66,12 +66,12 @@ impl DocumentSession {
             .as_ref()
             .map(|scene| scene.viewport_frame.clone())
     }
-    pub(crate) fn fit_default_view(&mut self, viewport: ViewportId, metrics: CanvasMetrics) {
+    pub(crate) fn fit_default_view(&mut self, viewport: ViewportId, metrics: ViewportMetrics) {
         if self.views.entry(viewport).or_default().default_fit {
             self.fit_view(viewport, metrics);
         }
     }
-    pub(crate) fn fit_view(&mut self, viewport: ViewportId, metrics: CanvasMetrics) {
+    pub(crate) fn fit_view(&mut self, viewport: ViewportId, metrics: ViewportMetrics) {
         if !self.modeling.tools.dragging() {
             self.views
                 .entry(viewport)

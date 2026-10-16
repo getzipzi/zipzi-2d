@@ -4,6 +4,85 @@ use kasane_core::document::MotionSegment;
 use std::{collections::HashSet, sync::Arc};
 
 #[test]
+fn panel_bindings_isolate_candidate_and_scrub_lifecycles() -> anyhow::Result<()> {
+    let (mut editor, _assets) = fixture(false, false)?;
+    let first = TimelineId::new();
+    let second = TimelineId::new();
+    editor.set_timeline_visible(first, true);
+    editor.set_timeline_visible(second, true);
+    let a = editor.timeline_binding(first).unwrap();
+    let b = editor.timeline_binding(second).unwrap();
+    let saved =
+        editor.command_for_timeline(CommandId::TimelineNextFrame, a, CommandSource::Toolbar);
+    let edit = editor.begin_timeline_edit_for(b, "Second panel")?;
+    editor.update_timeline_edit(b.document, edit, write(2, None, 0.7))?;
+    editor.set_timeline_visible(first, false);
+    assert!(editor.timeline_edit_owned(b, edit));
+    assert!(!editor.command_available(saved));
+    editor.set_timeline_visible(first, true);
+    assert_ne!(editor.timeline_binding(first), Some(a));
+    assert!(!editor.command_available(saved));
+    editor.set_timeline_visible(second, false);
+    assert!(editor.timeline_edit().is_none());
+    let a = editor.timeline_binding(first).unwrap();
+    editor.scrub_timeline_for(a, 0.3)?;
+    assert!(editor.animation_request().is_some());
+    editor.set_timeline_visible(second, true);
+    editor.set_timeline_visible(second, false);
+    assert!(editor.animation_request().is_none());
+    editor.set_timeline_visible(first, false);
+    assert!(editor.animation_request().is_some());
+    editor.set_timeline_visible(first, true);
+    let fresh = editor.timeline_binding(first).unwrap();
+    editor.unregister_timeline(first);
+    editor.set_timeline_visible(first, true);
+    assert_ne!(editor.timeline_binding(first), Some(fresh));
+    assert!(editor.scrub_timeline_for(fresh, 0.5).is_err());
+    let fresh = editor.timeline_binding(first).unwrap();
+    editor.scrub_timeline_for(fresh, 0.5)?;
+    editor.toggle_animation()?;
+    editor.set_timeline_visible(first, false);
+    assert!(
+        editor.animation().unwrap().playing,
+        "ending an old scrub must not pause new playback"
+    );
+    Ok(())
+}
+
+#[test]
+fn inspection_sources_and_dialog_tokens_survive_only_their_own_context() -> anyhow::Result<()> {
+    let (mut editor, _assets) = fixture(false, false)?;
+    let document = editor.active_id().unwrap();
+    editor.set_editing_context(EditingContext::Modeling)?;
+    let parameter = ObjectRef::new(ObjectKind::Parameter, id(3));
+    editor.execute(EditorCommand::Navigate(parameter.clone()))?;
+    let modeling = editor.inspection(EditingContext::Modeling).unwrap();
+    assert_eq!(modeling.object(), Some(parameter.clone()));
+    let token = editor.editing_context_token().unwrap();
+    editor.end_editing(document, EditingLifecycle::WindowDeactivated)?;
+    assert!(editor.editing_context_token_valid(token));
+    editor.set_editing_context(EditingContext::Animation)?;
+    assert!(!editor.editing_context_token_valid(token));
+    assert_eq!(
+        editor.active_inspection().unwrap().object(),
+        Some(ObjectRef::new(ObjectKind::Motion, id(4)))
+    );
+    assert_eq!(
+        editor
+            .inspection(EditingContext::Modeling)
+            .unwrap()
+            .object(),
+        Some(parameter)
+    );
+    let token = editor.editing_context_token().unwrap();
+    let other = editor.new_document()?;
+    editor.activate(document)?;
+    assert!(!editor.editing_context_token_valid(token));
+    assert_ne!(document, other);
+    Ok(())
+}
+
+#[test]
 fn result_fade_masks_zero_time_candidate_but_editing_samples_it_directly() -> anyhow::Result<()> {
     for mode in [AnimationPreviewMode::Result, AnimationPreviewMode::Editing] {
         let (mut editor, _assets) = fixture(false, false)?;
@@ -126,7 +205,7 @@ fn viewport_pose_cache_tracks_candidate_revisions_cancel_commit_and_undo() -> an
                 candidate.scene.viewport_frame.canvas,
             )
             .unwrap();
-        e.pan_by(CanvasPoint { x: 2., y: 3. });
+        e.pan_by(ViewportPoint { x: 2., y: 3. });
         assert!(e.animation_request().is_none());
         let (panned, _) = e
             .animation_viewport_request(
@@ -572,7 +651,7 @@ fn a_slower_animation_viewport_accepts_candidate_frames_after_its_peer_has_advan
     editor.register_viewport(second, ViewportKind::Animation)?;
     editor.set_viewport_metrics(
         second,
-        CanvasMetrics {
+        ViewportMetrics {
             width: 300.,
             height: 240.,
             scale_factor: 1.,

@@ -1,7 +1,8 @@
 //! Reproducible 120 Hz budget probe. CPU submission and GPU completion are
 //! measured separately; this is not a window/input-to-photon measurement.
 use editor_core::{
-    CanvasMetrics, CanvasPoint, Editor, EditorCommand, LoadRequest, ViewState, ViewportTransform,
+    Editor, EditorCommand, LoadRequest, ViewState, ViewportMetrics, ViewportPoint,
+    ViewportTransform,
 };
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
 use kasane_render_metal::metal;
@@ -20,7 +21,7 @@ fn main() -> anyhow::Result<()> {
         height,
         format: metal::MTLPixelFormat::RGBA8Unorm,
     };
-    let metrics = CanvasMetrics {
+    let metrics = ViewportMetrics {
         width: width as f32 / 2.,
         height: height as f32 / 2.,
         scale_factor: 2.,
@@ -51,7 +52,7 @@ fn main() -> anyhow::Result<()> {
                 } else {
                     1.
                 },
-                pan: CanvasPoint {
+                pan: ViewportPoint {
                     x: (sample as f32 * 0.13).sin() * 80.,
                     y: (sample as f32 * 0.07).cos() * 40.,
                 },

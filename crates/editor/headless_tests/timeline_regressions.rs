@@ -282,6 +282,7 @@ fn multi_track_shortcut_paste_ignores_single_channel_target(cx: &mut TestAppCont
             .focus_handle(cx);
         window.focus(&focus, cx);
         crate::keybindings::reset(cx).unwrap();
+        window.hover("timeline-graph", cx);
         window.press("cmd-c", cx);
         assert!(
             !harness
@@ -524,6 +525,7 @@ fn keyboard_navigation_reveals_hidden_keys_and_preserves_zoom(cx: &mut TestAppCo
             .focus_handle(cx);
         window.focus(&focus, cx);
         crate::keybindings::reset(cx).unwrap();
+        window.hover("timeline-graph", cx);
         window.press("cmd-right", cx);
         let view = harness.view.read(cx);
         assert_eq!(view.editor.animation().unwrap().edit_time, 2.);
@@ -599,7 +601,9 @@ fn key_list_reveals_keys_outside_the_time_range(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn shared_header_retains_timeline_keyboard_context(cx: &mut TestAppContext) {
+fn shared_header_preserves_control_focus_without_an_implicit_timeline_target(
+    cx: &mut TestAppContext,
+) {
     let harness = animation(cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.blur(cx);
@@ -616,10 +620,12 @@ fn shared_header_retains_timeline_keyboard_context(cx: &mut TestAppContext) {
             found,
             "transport remains reachable by keyboard in the shared header"
         );
+        window.hover("animation-preview-mode", cx);
         let before = harness.view.read(cx).editor.animation().unwrap().edit_time;
         window.press("right", cx);
         let after = harness.view.read(cx).editor.animation().unwrap().edit_time;
-        assert!((after - before - 1. / 60.).abs() < 1e-5);
+        assert_eq!(after, before);
+        assert_eq!(window.find("animation-preview-mode").focused(), Some(true));
     })
     .unwrap();
 }

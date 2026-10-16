@@ -32,6 +32,7 @@ impl EditorView {
     }
     pub(super) fn refresh_document(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.focused_viewport = None;
+        self.input_router.menu_target.set(None);
         self.sync_workspace_layout(window, cx);
         if let Some(dock) = &self.dock {
             for canvas in dock.viewport_surfaces() {

@@ -1,5 +1,5 @@
 //! Native Metal workload benchmark. No window, UI automation, second device or readback.
-use editor_core::{CanvasMetrics, Editor, LoadRequest, ViewState, ViewportTransform};
+use editor_core::{Editor, LoadRequest, ViewState, ViewportMetrics, ViewportTransform};
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
 use kasane_render_metal::metal;
 use std::{path::PathBuf, time::Instant};
@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     let samples: usize = args.next().unwrap_or_else(|| "30".into()).parse()?;
     let device = metal::Device::system_default().expect("Metal device");
     let queue = device.new_command_queue();
-    let metrics = CanvasMetrics {
+    let metrics = ViewportMetrics {
         width: 640.,
         height: 400.,
         scale_factor: 2.,

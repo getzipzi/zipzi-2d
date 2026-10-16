@@ -1,6 +1,6 @@
 //! Two real panels on the production CPU and Metal workers, with pixel isolation checks.
 use super::{Harness, common::save};
-use editor_core::{CanvasPoint, ViewportId, ViewportKind, WorkspaceKind};
+use editor_core::{ViewportId, ViewportKind, ViewportPoint, WorkspaceKind};
 use gpui_kit::{Bounds, Pixels, px, test::TestWindowExt};
 use image::RgbaImage;
 use std::{
@@ -150,7 +150,7 @@ pub(super) fn viewport_screenshots(directory: &Path) -> anyhow::Result<()> {
             h.view.update(cx, |view, cx| {
                 let binding = view.editor.viewport_binding(ids[0]).unwrap();
                 view.editor
-                    .pan_viewport(binding, CanvasPoint { x: 41., y: -23. })
+                    .pan_viewport(binding, ViewportPoint { x: 41., y: -23. })
                     .unwrap();
                 view.redraw_canvas(cx);
             })
@@ -213,7 +213,7 @@ pub(super) fn viewport_screenshots(directory: &Path) -> anyhow::Result<()> {
                         view.editor
                             .pan_viewport(
                                 view.editor.viewport_binding(id).unwrap(),
-                                CanvasPoint {
+                                ViewportPoint {
                                     x: delta,
                                     y: step as f32 * 0.1,
                                 },

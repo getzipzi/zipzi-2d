@@ -1,7 +1,7 @@
 //! Reusable image/line viewport. Content is normalized to [0, 1] in both axes;
 //! source pixel dimensions restore its proportions. Camera state is independent of content.
 use crate::t;
-use editor_core::{CanvasPoint, MAX_ZOOM, MIN_ZOOM};
+use editor_core::{MAX_ZOOM, MIN_ZOOM, ViewportPoint};
 use gpui_kit::component::{
     ActiveTheme, Sizable,
     button::{Button, ButtonVariants},
@@ -17,7 +17,7 @@ pub(crate) type PreviewPainter =
     Rc<RefCell<dyn FnMut(Bounds<Pixels>, Bounds<Pixels>, &mut Window) -> anyhow::Result<()>>>;
 #[derive(Clone, Debug)]
 pub(crate) struct PreviewPaintStatus(pub u64, pub Result<(), String>);
-impl EventEmitter<PreviewPaintStatus> for PreviewViewport {}
+impl EventEmitter<PreviewPaintStatus> for MeshGenerationPreview {}
 
 #[derive(Clone)]
 pub(crate) struct PreviewContent {
@@ -27,7 +27,7 @@ pub(crate) struct PreviewContent {
     pub edges: Arc<[([f32; 2], [f32; 2])]>,
 }
 
-pub(crate) struct PreviewViewport {
+pub(crate) struct MeshGenerationPreview {
     content: Option<PreviewContent>,
     painted: Rc<Cell<Option<(u64, bool)>>>,
     message: SharedString,
@@ -38,7 +38,7 @@ pub(crate) struct PreviewViewport {
     bounds: Rc<Cell<Bounds<Pixels>>>,
 }
 
-impl PreviewViewport {
+impl MeshGenerationPreview {
     pub fn new(_cx: &mut Context<Self>) -> Self {
         Self {
             content: None,
@@ -80,20 +80,44 @@ impl PreviewViewport {
         cx.notify();
     }
 
-    fn zoom_at(&mut self, factor: f32, anchor: Point<Pixels>, cx: &mut Context<Self>) {
+    fn zoom_at(
+        &mut self,
+        factor: f32,
+        anchor: Point<Pixels>,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) {
         if !factor.is_finite() || factor <= 0. {
             return;
         }
-        let next = (self.zoom * factor).clamp(MIN_ZOOM, MAX_ZOOM);
-        let ratio = next / self.zoom;
-        let offset = anchor - self.bounds.get().center();
-        self.pan = offset - (offset - self.pan) * ratio;
-        self.zoom = next;
+        let bounds = self.bounds.get();
+        let local = anchor - bounds.origin;
+        let mut view = editor_core::ViewState {
+            zoom: self.zoom,
+            pan: ViewportPoint {
+                x: self.pan.x.as_f32(),
+                y: self.pan.y.as_f32(),
+            },
+        };
+        view.zoom_about(
+            self.zoom * factor,
+            Some(ViewportPoint {
+                x: local.x.as_f32(),
+                y: local.y.as_f32(),
+            }),
+            editor_core::ViewportMetrics {
+                width: bounds.size.width.as_f32(),
+                height: bounds.size.height.as_f32(),
+                scale_factor: window.scale_factor(),
+            },
+        );
+        self.pan = point(px(view.pan.x), px(view.pan.y));
+        self.zoom = view.zoom;
         cx.notify();
     }
 }
 
-impl Render for PreviewViewport {
+impl Render for MeshGenerationPreview {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let measured = self.bounds.clone();
         let content = self.content.clone();
@@ -114,7 +138,7 @@ impl Render for PreviewViewport {
             .rounded_md()
             .bg(rgb(0x24272b))
             .cursor_grab()
-            .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, _, cx| {
+            .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, window, cx| {
                 match event.delta {
                     ScrollDelta::Pixels(delta)
                         if !event.modifiers.control && !event.modifiers.platform =>
@@ -130,14 +154,14 @@ impl Render for PreviewViewport {
                             ScrollDelta::Pixels(p) => p.y.as_f32() * 0.01,
                         };
                         if y.is_finite() {
-                            this.zoom_at(y.clamp(-4., 4.).exp(), event.position, cx);
+                            this.zoom_at(y.clamp(-4., 4.).exp(), event.position, window, cx);
                         }
                     }
                 }
                 cx.stop_propagation();
             }))
-            .on_pinch(cx.listener(|this, event: &PinchEvent, _, cx| {
-                this.zoom_at(1. + event.delta, event.position, cx);
+            .on_pinch(cx.listener(|this, event: &PinchEvent, window, cx| {
+                this.zoom_at(1. + event.delta, event.position, window, cx);
                 cx.stop_propagation();
             }))
             .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, _, cx| {
@@ -243,11 +267,11 @@ impl Render for PreviewViewport {
                                         .iter()
                                         .map(|(a, b)| {
                                             (
-                                                CanvasPoint {
+                                                ViewportPoint {
                                                     x: a[0] * width,
                                                     y: a[1] * height,
                                                 },
-                                                CanvasPoint {
+                                                ViewportPoint {
                                                     x: b[0] * width,
                                                     y: b[1] * height,
                                                 },
@@ -305,8 +329,8 @@ impl Render for PreviewViewport {
                             .small()
                             .label("−")
                             .tooltip(t!("preview_viewport.zoom_out"))
-                            .on_click(cx.listener(|this, _, _, cx| {
-                                this.zoom_at(1. / 1.25, this.bounds.get().center(), cx)
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.zoom_at(1. / 1.25, this.bounds.get().center(), window, cx)
                             })),
                     )
                     .child(
@@ -323,8 +347,8 @@ impl Render for PreviewViewport {
                             .small()
                             .label("+")
                             .tooltip(t!("preview_viewport.zoom_in"))
-                            .on_click(cx.listener(|this, _, _, cx| {
-                                this.zoom_at(1.25, this.bounds.get().center(), cx)
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.zoom_at(1.25, this.bounds.get().center(), window, cx)
                             })),
                     )
                     .child(

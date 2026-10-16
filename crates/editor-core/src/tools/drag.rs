@@ -1,11 +1,11 @@
 //! Drag preparation and candidate updates against the captured press frame.
 use super::ToolController;
 use crate::control_edit::{ControlChange, ControlEdit};
-use crate::{CanvasPoint, Document, HitTarget, ModelPoint};
+use crate::{Document, HitTarget, ModelPoint, ViewportPoint};
 use anyhow::{Result, ensure};
 
 impl ToolController {
-    pub(super) fn update(&mut self, document: &mut Document, point: CanvasPoint) -> Result<bool> {
+    pub(super) fn update(&mut self, document: &mut Document, point: ViewportPoint) -> Result<bool> {
         ensure!(
             point.x.is_finite() && point.y.is_finite(),
             "Invalid pointer position"

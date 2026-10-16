@@ -68,7 +68,7 @@ impl Editor {
     }
     pub fn pick_candidates(
         &self,
-        point: crate::CanvasPoint,
+        point: crate::ViewportPoint,
         image: Option<FrameVersion>,
     ) -> Vec<crate::PickCandidate> {
         let Some(version) = image.filter(|version| self.has_presented_frame(Some(*version))) else {

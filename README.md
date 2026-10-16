@@ -21,6 +21,9 @@ Gestures preview isolated candidates and commit one history step. Selection,
 tools, and viewport state stay in the editor; text inputs use GPUI Kit history.
 
 Editor and Timeline shortcuts share `keybindings.json` and the shortcut help.
+Local shortcuts follow the visible content under the pointer without moving
+keyboard focus. Text controls, menus, and captured gestures retain input priority;
+dock headers and window chrome do not reuse a previous viewport target.
 Use `secondary` for Command on macOS or Control on Windows/Linux. Each override
 may specify `platform` (`macos`, `windows`, or `linux`); platform overrides replace
 common overrides, and an empty `keys` array unbinds a command. Timeline and viewport

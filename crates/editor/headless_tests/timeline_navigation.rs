@@ -174,6 +174,7 @@ fn transport_buttons_and_shortcuts_share_endpoints_and_key_navigation(cx: &mut T
             .focus_handle(cx);
         window.focus(&focus, cx);
         crate::keybindings::reset(cx).unwrap();
+        window.hover("timeline-graph", cx);
         window.press("shift-right", cx);
         assert_eq!(
             harness.view.read(cx).editor.animation().unwrap().edit_time,

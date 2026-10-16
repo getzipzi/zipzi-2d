@@ -1,5 +1,5 @@
 //! Navigation belongs to a document and a runtime viewport, never a layout slot.
-use crate::{CanvasMetrics, CanvasPoint, MAX_ZOOM, MIN_ZOOM, ViewState};
+use crate::{MAX_ZOOM, MIN_ZOOM, ViewState, ViewportMetrics, ViewportPoint};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ViewportState {
@@ -17,7 +17,7 @@ impl Default for ViewportState {
     }
 }
 impl ViewportState {
-    pub(crate) fn fit(&mut self, canvas: kasane_core::Canvas, metrics: CanvasMetrics) {
+    pub(crate) fn fit(&mut self, canvas: kasane_core::Canvas, metrics: ViewportMetrics) {
         if !metrics.visible() || canvas.width <= 0. || canvas.height <= 0. {
             return;
         }
@@ -26,7 +26,7 @@ impl ViewportState {
                 * metrics.scale_factor
                 * 0.9)
                 .clamp(MIN_ZOOM, MAX_ZOOM),
-            pan: CanvasPoint::default(),
+            pan: ViewportPoint::default(),
         };
         if self.view.zoom != fitted.zoom || self.view.pan != fitted.pan {
             self.view = fitted;
@@ -36,35 +36,17 @@ impl ViewportState {
     pub(crate) fn set_zoom(
         &mut self,
         zoom: f32,
-        focus: Option<CanvasPoint>,
-        metrics: CanvasMetrics,
+        focus: Option<ViewportPoint>,
+        metrics: ViewportMetrics,
     ) {
-        if !zoom.is_finite() {
-            return;
-        }
-        self.default_fit = false;
-        let old_zoom = self.view.zoom;
-        let new_zoom = zoom.clamp(MIN_ZOOM, MAX_ZOOM);
-        if new_zoom == old_zoom {
-            return;
-        }
-        if metrics.visible() && old_zoom > 0. {
-            let k = new_zoom / old_zoom;
-            let anchor = focus.unwrap_or(CanvasPoint {
-                x: metrics.width / 2.,
-                y: metrics.height / 2.,
-            });
-            if anchor.x.is_finite() && anchor.y.is_finite() {
-                let vx = anchor.x - metrics.width / 2.;
-                let vy = anchor.y - metrics.height / 2.;
-                self.view.pan.x += (1. - k) * (vx - self.view.pan.x);
-                self.view.pan.y += (1. - k) * (vy - self.view.pan.y);
+        if zoom.is_finite() {
+            self.default_fit = false;
+            if self.view.zoom_about(zoom, focus, metrics) {
+                self.revision += 1;
             }
         }
-        self.view.zoom = new_zoom;
-        self.revision += 1;
     }
-    pub(crate) fn pan(&mut self, delta: CanvasPoint) {
+    pub(crate) fn pan(&mut self, delta: ViewportPoint) {
         if delta.x.is_finite() && delta.y.is_finite() && (delta.x != 0. || delta.y != 0.) {
             self.default_fit = false;
             self.view.pan.x += delta.x;
@@ -76,5 +58,37 @@ impl ViewportState {
         self.default_fit = false;
         self.view = ViewState::default();
         self.revision += 1;
+    }
+}
+
+impl ViewState {
+    /// Shared navigation math for editor surfaces and dialog previews. Points
+    /// are logical pixels relative to the viewport; zoom is physical pixels.
+    pub fn zoom_about(
+        &mut self,
+        zoom: f32,
+        focus: Option<ViewportPoint>,
+        metrics: ViewportMetrics,
+    ) -> bool {
+        if !zoom.is_finite() {
+            return false;
+        }
+        let next = zoom.clamp(MIN_ZOOM, MAX_ZOOM);
+        if next == self.zoom {
+            return false;
+        }
+        if metrics.visible() && self.zoom > 0. {
+            let ratio = next / self.zoom;
+            let anchor = focus.unwrap_or(ViewportPoint {
+                x: metrics.width / 2.,
+                y: metrics.height / 2.,
+            });
+            if anchor.x.is_finite() && anchor.y.is_finite() {
+                self.pan.x += (1. - ratio) * (anchor.x - metrics.width / 2. - self.pan.x);
+                self.pan.y += (1. - ratio) * (anchor.y - metrics.height / 2. - self.pan.y);
+            }
+        }
+        self.zoom = next;
+        true
     }
 }

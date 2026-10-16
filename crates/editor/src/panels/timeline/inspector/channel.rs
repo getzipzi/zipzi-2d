@@ -82,6 +82,9 @@ impl Timeline {
                                         true,
                                         cx,
                                     );
+                                    if let Some(edit) = &this.number_edit {
+                                        this.claim_number_drag(edit.token, window, cx);
+                                    }
                                     if matches!(event, SliderEvent::Release(_)) {
                                         this.finish_number(cx);
                                     }

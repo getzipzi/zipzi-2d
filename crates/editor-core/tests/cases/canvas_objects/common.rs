@@ -8,7 +8,7 @@ pub(super) fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let mut editor = crate::support::editor_from_document(doc);
     // Fixed pixel/source-unit assertions use an explicit 100% view.
     editor.reset_view();
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 2.,
@@ -16,7 +16,7 @@ pub(super) fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     shown(&mut editor)?;
     Ok((editor, dir))
 }
-pub(super) fn click(editor: &mut Editor, p: CanvasPoint, shift: bool) -> anyhow::Result<()> {
+pub(super) fn click(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyhow::Result<()> {
     editor.canvas_input(CanvasInput::Down { point: p, shift })?;
     editor.canvas_input(CanvasInput::Up { point: p })?;
     Ok(())
@@ -129,7 +129,7 @@ pub(super) fn deformer_editor(
     let mut editor = crate::support::editor_from_document(doc);
     // Drag distances below are calibrated at 100% on a 2x display.
     editor.reset_view();
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 2.,
@@ -141,8 +141,8 @@ pub(super) fn deformer_editor(
 }
 pub(super) fn drag(
     editor: &mut Editor,
-    start: CanvasPoint,
-    end: CanvasPoint,
+    start: ViewportPoint,
+    end: ViewportPoint,
     shift: bool,
 ) -> anyhow::Result<()> {
     editor.canvas_input(CanvasInput::Down {
@@ -275,7 +275,7 @@ pub(super) fn bound_deformer_editor(
     let saved = session.save_project(&dir.path().join("bound"), None)?;
     let mut editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
     let object = ObjectRef::new(ObjectKind::Deformer, id(23));
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 2.,

@@ -93,7 +93,7 @@ impl ViewportSurface {
         canvas(
             move |bounds, window, cx| {
                 measure.update(cx, |this, cx| {
-                    let metrics = CanvasMetrics {
+                    let metrics = ViewportMetrics {
                         width: bounds.size.width.as_f32(),
                         height: bounds.size.height.as_f32(),
                         scale_factor: if window.is_visible() {
@@ -131,7 +131,7 @@ impl ViewportSurface {
                 );
                 // Preserve editing visibility if shader/device setup is unavailable.
                 if result.is_err() {
-                    let to_window = |p: CanvasPoint| bounds.origin + point(px(p.x), px(p.y));
+                    let to_window = |p: ViewportPoint| bounds.origin + point(px(p.x), px(p.y));
                     if benchmark::batch_mesh_edges() {
                         mesh_edges::paint_edges(&overlay.lines, bounds.origin, |path| {
                             window.paint_path(path, palette.mesh.opacity(0.45));
@@ -168,7 +168,7 @@ impl ViewportSurface {
                         size(px((b.x - a.x).abs()), px((b.y - a.y).abs())),
                     );
                     window.paint_quad(fill(rect, primary.opacity(0.12)));
-                    let p = |x, y| CanvasPoint { x, y };
+                    let p = |x, y| ViewportPoint { x, y };
                     mesh_edges::paint_edges(
                         &[
                             (a, p(b.x, a.y)),

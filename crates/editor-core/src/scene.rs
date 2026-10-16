@@ -84,14 +84,14 @@ impl crate::Document {
 pub struct ViewState {
     /// Physical display pixels per source pixel; 1.0 is actual pixel size (100%).
     pub zoom: f32,
-    pub pan: crate::CanvasPoint,
+    pub pan: crate::ViewportPoint,
 }
 
 impl Default for ViewState {
     fn default() -> Self {
         Self {
             zoom: 1.0,
-            pan: crate::CanvasPoint::default(),
+            pan: crate::ViewportPoint::default(),
         }
     }
 }

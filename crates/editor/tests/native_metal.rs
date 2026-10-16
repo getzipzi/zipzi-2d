@@ -107,7 +107,7 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
 fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scales()
 -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
-        use editor_core::{CanvasMetrics, SceneTexture, ViewportTransform};
+        use editor_core::{SceneTexture, ViewportMetrics, ViewportTransform};
 
         let (mut document, _source) = support::rectangle_document(false)?;
         let mut snapshot = document.snapshot()?;
@@ -143,7 +143,7 @@ fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scal
                     };
                     let transform = ViewportTransform::new(
                         snapshot.viewport_frame.canvas,
-                        CanvasMetrics {
+                        ViewportMetrics {
                             width: side as f32 / dpi,
                             height: side as f32 / dpi,
                             scale_factor: dpi,
@@ -677,7 +677,7 @@ fn check_animation_opacity(
     actual_model: bool,
 ) -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
-        use editor_core::{AnimationEvaluator, CanvasMetrics, Editor, WorkspaceKind};
+        use editor_core::{AnimationEvaluator, Editor, ViewportMetrics, WorkspaceKind};
         use kasane_core::{Canvas, Vec2};
         use kasane_sdk_observe::{
             CanvasRoi, ObservationInput, Observer, ObserverConfig, RenderRequest,
@@ -778,7 +778,7 @@ fn check_animation_opacity(
                 editor_core::ViewportKind::Animation,
             )?;
             editor.set_workspace(WorkspaceKind::Animation)?;
-            editor.set_canvas_metrics(CanvasMetrics {
+            editor.set_canvas_metrics(ViewportMetrics {
                 width: 256.,
                 height: 256.,
                 scale_factor: 1.,
@@ -813,7 +813,7 @@ fn check_animation_opacity(
                 &scene,
                 editor_core::ViewportTransform::new(
                     scene.viewport_frame.canvas,
-                    CanvasMetrics {
+                    ViewportMetrics {
                         width: 256.,
                         height: 256.,
                         scale_factor: 1.,

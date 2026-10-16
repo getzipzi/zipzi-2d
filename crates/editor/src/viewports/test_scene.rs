@@ -16,6 +16,7 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) -> Vec<ViewportId> {
         self.focused_viewport = None;
+        self.input_router.menu_target.set(None);
         if let Some(previous) = self.viewport_scene.take() {
             for (id, _) in previous.instances {
                 self.editor.unregister_viewport(id);

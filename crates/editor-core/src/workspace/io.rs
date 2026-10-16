@@ -169,7 +169,7 @@ impl Editor {
         let entry = self.entry_mut(id)?;
         let session = entry.begin_save(operation, identity, close_after.then_some(close_reason))?;
         if self.active == Some(id) {
-            self.context_generation += 1;
+            self.advance_editing_context();
         }
         self.refresh_viewport_bindings();
         Ok(SaveTask {
@@ -199,7 +199,7 @@ impl Editor {
         }
         let close = entry.restore_session(session);
         if self.active == Some(completion.id) {
-            self.context_generation += 1;
+            self.advance_editing_context();
         }
         self.refresh_viewport_bindings();
         match result {
@@ -252,7 +252,7 @@ impl Editor {
         let index = self.documents.iter().position(|e| e.id == id).unwrap();
         self.documents.remove(index);
         if self.active == Some(id) {
-            self.context_generation += 1;
+            self.advance_editing_context();
             self.active = self
                 .documents
                 .get(index.min(self.documents.len().saturating_sub(1)))

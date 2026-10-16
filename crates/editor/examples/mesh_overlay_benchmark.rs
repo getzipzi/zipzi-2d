@@ -1,7 +1,7 @@
 //! Compare production GPUI edge batching against an experimental Metal overlay.
 //! Headless, one frame in flight, same device/queue, no timed readback/presentation.
 use anyhow::{Context as _, ensure};
-use editor_core::CanvasPoint;
+use editor_core::ViewportPoint;
 use gpui_apple::metal_renderer::MetalRenderer;
 use gpui_kit::{
     Bounds, ContentMask, DevicePixels, PaintSurface, Pixels, PrimitiveBatch, Quad, Scene,
@@ -70,8 +70,8 @@ impl Uniforms {
             ],
         }
     }
-    fn transform(&self, p: [f32; 2]) -> CanvasPoint {
-        CanvasPoint {
+    fn transform(&self, p: [f32; 2]) -> ViewportPoint {
+        ViewportPoint {
             x: (p[0] * self.stretch[0] + self.translation[0]) / SCALE,
             y: (p[1] * self.stretch[1] + self.translation[1]) / SCALE,
         }

@@ -188,6 +188,37 @@ fn stale_parameter_form_keeps_input_until_explicit_reload(cx: &mut TestAppContex
 }
 
 #[gpui_kit::test]
+fn returning_to_the_same_document_does_not_revive_a_parameter_dialog(cx: &mut TestAppContext) {
+    let mut doc = Document::new_blank().unwrap();
+    doc.create_parameter(NewParameter::default()).unwrap();
+    let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
+    run_command(&h, CommandId::EditParameter, cx);
+    fill(&h, "new-parameter-name", "Old context", cx);
+    let before = h.view.read_with(cx, |view, _| {
+        view.editor.document().unwrap().history_lengths()
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            let document = view.editor.active_id().unwrap();
+            view.editor.new_document().unwrap();
+            view.editor.activate(document).unwrap();
+            view.refresh_document(window, cx);
+        });
+        window.render_frame(cx);
+        window.click("new-parameter-create", cx);
+        assert!(window.has_active_dialog(cx));
+    })
+    .unwrap();
+    h.view.read_with(cx, |view, _| {
+        assert_ne!(
+            view.editor.document().unwrap().parameters()[0].name,
+            "Old context"
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), before);
+    });
+}
+
+#[gpui_kit::test]
 fn group_cancel_does_not_create_history(cx: &mut TestAppContext) {
     let h = blank(cx);
     click(&h, "new-parameter-group-action", cx);

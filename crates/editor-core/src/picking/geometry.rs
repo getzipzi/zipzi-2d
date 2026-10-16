@@ -1,5 +1,5 @@
 //! Pure geometry helpers shared by picking and canvas interaction.
-use crate::{CanvasPoint, ModelPoint};
+use crate::{ModelPoint, ViewportPoint};
 
 pub fn bounds(points: impl IntoIterator<Item = ModelPoint>) -> Option<[f32; 4]> {
     points
@@ -12,10 +12,10 @@ pub fn bounds(points: impl IntoIterator<Item = ModelPoint>) -> Option<[f32; 4]> 
             })
         })
 }
-pub fn distance2(a: CanvasPoint, b: CanvasPoint) -> f32 {
+pub fn distance2(a: ViewportPoint, b: ViewportPoint) -> f32 {
     (a.x - b.x).powi(2) + (a.y - b.y).powi(2)
 }
-pub fn segment_distance2(p: CanvasPoint, a: CanvasPoint, b: CanvasPoint) -> f32 {
+pub fn segment_distance2(p: ViewportPoint, a: ViewportPoint, b: ViewportPoint) -> f32 {
     let length = distance2(a, b);
     let k = if length > 0. {
         ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / length
@@ -25,7 +25,7 @@ pub fn segment_distance2(p: CanvasPoint, a: CanvasPoint, b: CanvasPoint) -> f32 
     .clamp(0., 1.);
     distance2(
         p,
-        CanvasPoint {
+        ViewportPoint {
             x: a.x + k * (b.x - a.x),
             y: a.y + k * (b.y - a.y),
         },

@@ -7,13 +7,13 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
 -> anyhow::Result<()> {
     let (doc, _dir, warp, rotation, part) = rich_document()?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
     });
     let f = shown(&mut editor)?;
-    let p = |x, y| f.transform.to_canvas(ModelPoint { x, y });
+    let p = |x, y| f.transform.to_viewport(ModelPoint { x, y });
     let scene = &f.geometry;
     let selection = &editor.document().unwrap().context().selections;
     assert!(
@@ -112,7 +112,7 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
 fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::Result<()> {
     let (doc, _dir, warp, _, _) = rich_document()?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -132,7 +132,7 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
             4,
             "only the selected mesh outline"
         );
-        let empty = frame.transform.to_canvas(ModelPoint { x: 32., y: 90. });
+        let empty = frame.transform.to_viewport(ModelPoint { x: 32., y: 90. });
         assert!(
             editor
                 .pick_candidates(empty, Some(frame.version))
@@ -172,7 +172,7 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
 fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> anyhow::Result<()> {
     let (doc, _dir, warp, rotation, _) = rich_document()?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -199,7 +199,7 @@ fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> an
     assert!(visible(&editor).is_empty());
     editor.dispatch(editor.command(CommandId::ToggleAncestorDeformers))?;
     assert_eq!(visible(&editor), [warp.clone()]);
-    let point = frame.transform.to_canvas(ModelPoint { x: 32., y: 90. });
+    let point = frame.transform.to_viewport(ModelPoint { x: 32., y: 90. });
     assert!(
         editor
             .pick_candidates(point, Some(frame.version))
@@ -245,7 +245,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     let mesh = doc.context().selection.clone().unwrap();
     let mut editor = crate::support::editor_from_document(doc);
     editor.reset_view();
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -257,7 +257,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: p.x + 19.2,
             y: p.y,
         },
@@ -277,7 +277,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: p.x + 10.,
             y: p.y,
         },
@@ -301,7 +301,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
 fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> {
     let (doc, _dir, _, rotation, _) = rich_document()?;
     let mut editor = crate::support::editor_from_document(doc);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -322,7 +322,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
     let points = frame.geometry.control_points(c, frame.transform);
     let center = points[0];
     let start = points[1];
-    let end = CanvasPoint {
+    let end = ViewportPoint {
         x: center.x,
         y: center.y - (start.x - center.x).hypot(start.y - center.y),
     };

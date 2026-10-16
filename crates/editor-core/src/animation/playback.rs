@@ -220,6 +220,7 @@ impl Editor {
         timeline: bool,
     ) -> Result<()> {
         self.ensure_animation_target(document)?;
+        self.timeline_scrub_owner = None;
         self.cancel_timeline_edit();
         ensure!(time.is_finite() && time >= 0., "Invalid animation time");
         let session = self.active_session_mut().unwrap();
@@ -276,6 +277,7 @@ impl Editor {
         Ok(())
     }
     pub fn pause_animation(&mut self) {
+        self.timeline_scrub_owner = None;
         if let Some(session) = self.active_session_mut() {
             if session.animation.playback.playing || session.animation.playback.scrubbing {
                 if let Some(frame) = session.animation.playback.presented.as_ref().filter(|_| {
@@ -300,6 +302,7 @@ impl Editor {
         }
     }
     pub fn toggle_animation(&mut self) -> Result<()> {
+        self.timeline_scrub_owner = None;
         let id = self
             .active_id()
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;

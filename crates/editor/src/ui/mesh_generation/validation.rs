@@ -9,7 +9,7 @@ impl MeshGenerationForm {
             .ok_or_else(|| anyhow::anyhow!(t!("mesh_generation.stale")))?;
         let state = owner.read(cx);
         anyhow::ensure!(
-            state.editor.active_id() == Some(self.document)
+            state.editor.editing_context_token_valid(self.context)
                 && !state.modal
                 && !state.editor.is_busy()
                 && !state.editor.exiting(),

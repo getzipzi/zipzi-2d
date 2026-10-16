@@ -1,6 +1,6 @@
 //! Pointer event dispatch, click selection, marquee selection, and edit completion.
 use super::{CanvasFrame, CanvasInput, Press, ToolController, ToolId};
-use crate::{CanvasPoint, ComponentRef, ControlKind, Document, HitTarget, ObjectKind, ObjectRef};
+use crate::{ComponentRef, ControlKind, Document, HitTarget, ObjectKind, ObjectRef, ViewportPoint};
 use anyhow::{Result, ensure};
 
 impl ToolController {
@@ -194,7 +194,7 @@ impl ToolController {
                                         .collect()
                                 };
                                 for (id, p) in points {
-                                    if in_rect(press.transform.to_canvas(p), press.point, point) {
+                                    if in_rect(press.transform.to_viewport(p), press.point, point) {
                                         let component = ComponentRef {
                                             object: c.object.clone(),
                                             id,
@@ -213,7 +213,7 @@ impl ToolController {
                                 }) {
                                     for (id, p) in &m.vertices {
                                         if in_rect(
-                                            press.transform.to_canvas(*p),
+                                            press.transform.to_viewport(*p),
                                             press.point,
                                             point,
                                         ) {
@@ -241,7 +241,7 @@ impl ToolController {
                                     && press.scene.mesh_visible(&m.id)
                                     && !m.vertices.is_empty()
                                     && m.vertices.iter().all(|(_, p)| {
-                                        in_rect(press.transform.to_canvas(*p), press.point, point)
+                                        in_rect(press.transform.to_viewport(*p), press.point, point)
                                     })
                                 {
                                     let r = ObjectRef::new(ObjectKind::Mesh, &m.id);
@@ -262,6 +262,6 @@ impl ToolController {
         }
     }
 }
-fn in_rect(p: CanvasPoint, a: CanvasPoint, b: CanvasPoint) -> bool {
+fn in_rect(p: ViewportPoint, a: ViewportPoint, b: ViewportPoint) -> bool {
     p.x >= a.x.min(b.x) && p.x <= a.x.max(b.x) && p.y >= a.y.min(b.y) && p.y <= a.y.max(b.y)
 }

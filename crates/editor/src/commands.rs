@@ -10,6 +10,41 @@ impl EditorView {
         id: CommandId,
         source: editor_core::CommandSource,
     ) -> Command {
+        if source == editor_core::CommandSource::NativeMenu {
+            match (id.spec().scope, self.input_router.menu_target.get()) {
+                (
+                    editor_core::CommandScope::Viewport,
+                    Some(crate::input_routing::LocalTarget::Viewport(binding)),
+                ) => return self.editor.command_for_viewport(id, binding, source),
+                (
+                    editor_core::CommandScope::Timeline,
+                    Some(crate::input_routing::LocalTarget::Timeline(binding)),
+                ) => return self.editor.command_for_timeline(id, binding, source),
+                (
+                    editor_core::CommandScope::Viewport | editor_core::CommandScope::Timeline,
+                    Some(_),
+                ) => {
+                    return Command {
+                        id,
+                        source,
+                        target: editor_core::CommandTarget::Unavailable,
+                    };
+                }
+                _ => {}
+            }
+        }
+        if id.spec().scope == editor_core::CommandScope::Timeline {
+            return self
+                .dock
+                .as_ref()
+                .and_then(|dock| self.editor.timeline_binding(dock.timeline_id))
+                .map(|binding| self.editor.command_for_timeline(id, binding, source))
+                .unwrap_or(Command {
+                    id,
+                    source,
+                    target: editor_core::CommandTarget::Unavailable,
+                });
+        }
         if id.spec().scope == editor_core::CommandScope::Viewport {
             if let Some(viewport) = self.focused_viewport {
                 return self
@@ -86,7 +121,9 @@ impl EditorView {
                             if let Some(token) = token {
                                 self.editor.cancel_viewport_interaction(token);
                             }
-                            window.focus(&surface.read(cx).focus_handle(cx), cx);
+                            if command.source != editor_core::CommandSource::Shortcut {
+                                window.focus(&surface.read(cx).focus_handle(cx), cx);
+                            }
                         }
                     }
                 }

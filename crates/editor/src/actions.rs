@@ -83,7 +83,7 @@ impl EditorView {
                         this.focused_viewport = Some(viewport);
                     }
                     let command = action.invocation.unwrap_or_else(|| {
-                        this.viewport_command(action.id, editor_core::CommandSource::Shortcut)
+                        this.viewport_command(action.id, editor_core::CommandSource::Direct)
                     });
                     this.run_invocation(command, window, cx)
                 }))

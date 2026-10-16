@@ -4,12 +4,14 @@ use crate::ui::form_dialog::FormDialogView;
 
 #[derive(Clone, PartialEq, Eq)]
 struct SourceState {
+    context: Option<editor_core::EditingContextToken>,
     document: Option<DocumentId>,
     revision: Option<u64>,
     available: bool,
 }
 
 pub(super) struct ParameterDialogSession {
+    context: editor_core::EditingContextToken,
     pub owner: WeakEntity<EditorView>,
     pub document: DocumentId,
     pub version: u64,
@@ -27,6 +29,13 @@ impl ParameterDialogSession {
             .unwrap()
             .parameter_model_revision();
         let mut session = Self {
+            context: owner
+                .upgrade()
+                .unwrap()
+                .read(cx)
+                .editor
+                .editing_context_token()
+                .unwrap(),
             owner,
             document,
             version,
@@ -40,6 +49,7 @@ impl ParameterDialogSession {
         let current = self.owner.upgrade().map(|owner| {
             let state = owner.read(cx);
             SourceState {
+                context: state.editor.editing_context_token(),
                 document: state.editor.active_id(),
                 revision: state
                     .editor
@@ -62,7 +72,7 @@ impl ParameterDialogSession {
             .ok_or_else(|| anyhow::anyhow!(t!("parameter.document_changed")))?;
         let state = owner.read(cx);
         anyhow::ensure!(
-            state.editor.active_id() == Some(self.document),
+            state.editor.editing_context_token_valid(self.context),
             t!("parameter.document_changed")
         );
         anyhow::ensure!(
@@ -165,7 +175,12 @@ impl ParametersPanel {
         let ok = owner.update(cx, |state, cx| {
             let result = state
                 .editor
-                .execute_for(document, EditorCommand::FinishEdit);
+                .execute_for(document, EditorCommand::FinishEdit)
+                .and_then(|_| {
+                    state
+                        .editor
+                        .end_editing(document, editor_core::EditingLifecycle::BlockingUi)
+                });
             let ok = result.is_ok();
             state.complete_edit(result, cx);
             ok

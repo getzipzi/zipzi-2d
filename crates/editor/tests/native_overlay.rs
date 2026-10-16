@@ -1,6 +1,6 @@
 //! Production overlay regression tests; no window or benchmark sampling.
 #![cfg(target_os = "macos")]
-use editor_core::{CanvasPoint, OverlaySnapshot, OverlayVertex};
+use editor_core::{OverlaySnapshot, OverlayVertex, ViewportPoint};
 use editor_render::{MetalOverlayRenderer, OverlayStyle, OverlayViewport};
 use gpui_apple::metal_renderer::MetalRenderer;
 use gpui_kit::{
@@ -10,8 +10,8 @@ use gpui_kit::{
 #[path = "../src/mesh_edges.rs"]
 mod mesh_edges;
 
-fn pt(x: f32, y: f32) -> CanvasPoint {
-    CanvasPoint { x, y }
+fn pt(x: f32, y: f32) -> ViewportPoint {
+    ViewportPoint { x, y }
 }
 fn geometry() -> OverlaySnapshot {
     OverlaySnapshot {

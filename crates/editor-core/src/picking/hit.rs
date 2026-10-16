@@ -4,14 +4,14 @@ use super::{
     segment_distance2,
 };
 use crate::{
-    CanvasPoint, DeformerVisibility, ObjectKind as K, ObjectRef, ToolId, ViewportTransform,
+    DeformerVisibility, ObjectKind as K, ObjectRef, ToolId, ViewportPoint, ViewportTransform,
 };
 use std::collections::HashSet;
 
 impl CanvasScene {
     pub fn hit(
         &self,
-        point: CanvasPoint,
+        point: ViewportPoint,
         t: ViewportTransform,
         selection: &[ObjectRef],
         tool: ToolId,
@@ -29,7 +29,7 @@ impl CanvasScene {
     }
     pub(crate) fn hit_with_mode(
         &self,
-        point: CanvasPoint,
+        point: ViewportPoint,
         t: ViewportTransform,
         selection: &[ObjectRef],
         tool: ToolId,
@@ -46,7 +46,7 @@ impl CanvasScene {
                 if r.kind == K::Mesh && !locks.is_locked(r) {
                     if let Some(mesh) = self.mesh(&r.id).filter(|_| self.mesh_visible(&r.id)) {
                         for (id, p) in &mesh.vertices {
-                            let distance = distance2(point, t.to_canvas(*p));
+                            let distance = distance2(point, t.to_viewport(*p));
                             if distance <= CONTROL_RADIUS * CONTROL_RADIUS {
                                 hits.push((distance, r.clone(), *id));
                             }
@@ -78,7 +78,7 @@ impl CanvasScene {
             if editing && c.kind == ControlKind::Warp {
                 let bezier = (!fine).then(|| self.bezier(&c.object.id)).flatten();
                 let candidates: Vec<_> = if let Some(b) = bezier {
-                    b.points().map(|(id, p)| (id, t.to_canvas(p))).collect()
+                    b.points().map(|(id, p)| (id, t.to_viewport(p))).collect()
                 } else {
                     points
                         .iter()
@@ -111,7 +111,7 @@ impl CanvasScene {
                 }
                 if let Some(bezier) = bezier {
                     if bezier.curves.iter().any(|(a, b)| {
-                        segment_distance2(point, t.to_canvas(*a), t.to_canvas(*b)) <= 25.
+                        segment_distance2(point, t.to_viewport(*a), t.to_viewport(*b)) <= 25.
                     }) {
                         object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
                     }
@@ -182,7 +182,7 @@ impl CanvasScene {
     }
     pub fn candidates(
         &self,
-        point: CanvasPoint,
+        point: ViewportPoint,
         t: ViewportTransform,
         selection: &[ObjectRef],
         tool: ToolId,
@@ -199,7 +199,7 @@ impl CanvasScene {
     }
     pub fn candidates_with_locks(
         &self,
-        point: CanvasPoint,
+        point: ViewportPoint,
         t: ViewportTransform,
         selection: &[ObjectRef],
         tool: ToolId,

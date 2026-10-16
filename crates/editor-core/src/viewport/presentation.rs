@@ -1,12 +1,12 @@
 //! Runtime presentation ownership. Document navigation is stored separately.
-use crate::{AnimationIdentity, CanvasFrame, CanvasMetrics, ViewportBinding};
+use crate::{AnimationIdentity, CanvasFrame, ViewportBinding, ViewportMetrics};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AnimationViewportIdentity {
     pub binding: ViewportBinding,
     pub content: AnimationIdentity,
     pub viewport_revision: u64,
-    pub metrics: CanvasMetrics,
+    pub metrics: ViewportMetrics,
     pub request: u64,
 }
 

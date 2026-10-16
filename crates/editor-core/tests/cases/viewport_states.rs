@@ -1,8 +1,8 @@
 use super::support;
 use editor_core::*;
 
-fn metrics(width: f32, height: f32, scale_factor: f32) -> CanvasMetrics {
-    CanvasMetrics {
+fn metrics(width: f32, height: f32, scale_factor: f32) -> ViewportMetrics {
+    ViewportMetrics {
         width,
         height,
         scale_factor,
@@ -37,7 +37,7 @@ fn same_kind_instances_keep_navigation_metrics_limits_and_revisions_independent(
     editor.set_viewport_zoom(binding, MAX_ZOOM, None)?;
     assert!(!editor.command_available(command(&editor, second, CommandId::ZoomIn)));
     assert!(editor.command_available(command(&editor, first, CommandId::ZoomIn)));
-    editor.pan_viewport(binding, CanvasPoint { x: 16., y: -9. })?;
+    editor.pan_viewport(binding, ViewportPoint { x: 16., y: -9. })?;
     editor.dispatch(command(&editor, second, CommandId::ZoomOut))?;
     assert_eq!(editor.viewport_state(document, first), Some(first_state));
     let manual = editor.viewport_state(document, second).unwrap();
@@ -47,7 +47,7 @@ fn same_kind_instances_keep_navigation_metrics_limits_and_revisions_independent(
     editor.set_viewport_visible(second, false);
     assert!(
         editor
-            .pan_viewport(binding, CanvasPoint { x: 100., y: 100. })
+            .pan_viewport(binding, ViewportPoint { x: 100., y: 100. })
             .is_err()
     );
     assert_eq!(editor.viewport_state(document, second), Some(manual));
@@ -77,7 +77,7 @@ fn document_switches_restore_each_instance_and_freeze_the_whole_map_during_save(
     editor.dispatch(command(&editor, a, CommandId::ZoomIn))?;
     editor.pan_viewport(
         editor.viewport_binding(b).unwrap(),
-        CanvasPoint { x: 7., y: 12. },
+        ViewportPoint { x: 7., y: 12. },
     )?;
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_canvas_metrics(metrics(512., 384., 1.));
@@ -95,7 +95,7 @@ fn document_switches_restore_each_instance_and_freeze_the_whole_map_during_save(
     let other = editor.new_document()?;
     editor.pan_viewport(
         editor.viewport_binding(b).unwrap(),
-        CanvasPoint { x: 99., y: -24. },
+        ViewportPoint { x: 99., y: -24. },
     )?;
     let other_state = editor.viewport_state(other, b).unwrap();
     editor.finish_save(&mut save.run())?;
@@ -190,7 +190,7 @@ fn resizing_another_instance_cannot_cancel_the_primary_modeling_candidate() -> a
     editor.canvas_interaction_input(
         token,
         CanvasInput::Move {
-            point: CanvasPoint {
+            point: ViewportPoint {
                 x: point.x + 20.,
                 y: point.y,
             },

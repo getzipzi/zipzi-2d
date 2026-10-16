@@ -336,7 +336,7 @@ mod tests {
     };
     #[test]
     fn worker_keeps_candidate_work_alive_until_the_edit_ends() -> anyhow::Result<()> {
-        use editor_core::{AnimationPreviewMode, CanvasMetrics, Editor, TimelineCommand};
+        use editor_core::{AnimationPreviewMode, Editor, TimelineCommand, ViewportMetrics};
         use std::sync::atomic::Ordering;
         let (document, _assets) = crate::headless_tests::document_fixture::animation_document()?;
         let mut editor = Editor::from_document(document);
@@ -346,7 +346,7 @@ mod tests {
         )?;
         editor.set_workspace(WorkspaceKind::Animation)?;
         let doc = editor.active_id().unwrap();
-        editor.set_canvas_metrics(CanvasMetrics {
+        editor.set_canvas_metrics(ViewportMetrics {
             width: 256.,
             height: 256.,
             scale_factor: 1.,
@@ -424,7 +424,7 @@ mod tests {
             editor.active_id().unwrap(),
             editor_core::AnimationPreviewMode::Result,
         )?;
-        editor.set_canvas_metrics(editor_core::CanvasMetrics {
+        editor.set_canvas_metrics(editor_core::ViewportMetrics {
             width: 256.,
             height: 256.,
             scale_factor: 1.,

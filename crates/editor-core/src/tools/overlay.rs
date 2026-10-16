@@ -2,15 +2,15 @@
 use super::{CanvasFrame, ToolController};
 use crate::control_edit::{ControlChange, ControlEdit};
 use crate::{
-    CanvasPoint, CanvasScene, ComponentRef, ControlKind, Document, HitTarget, ModelPoint,
-    ObjectKind, ObjectRef,
+    CanvasScene, ComponentRef, ControlKind, Document, HitTarget, ModelPoint, ObjectKind, ObjectRef,
+    ViewportPoint,
 };
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct OverlayVertex {
     pub id: u32,
-    pub position: CanvasPoint,
+    pub position: ViewportPoint,
     pub selected: bool,
     pub hovered: bool,
     pub kind: OverlayVertexKind,
@@ -25,14 +25,14 @@ pub enum OverlayVertexKind {
 }
 #[derive(Clone, Debug)]
 pub struct OverlayDeformer {
-    pub lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub selected: bool,
     pub hovered: bool,
 }
 /// Glue endpoints describe a relationship, not draggable components.
 #[derive(Clone, Debug)]
 pub struct OverlayGlue {
-    pub pairs: Vec<(CanvasPoint, CanvasPoint)>,
+    pub pairs: Vec<(ViewportPoint, ViewportPoint)>,
     pub selected: bool,
     pub hovered: bool,
 }
@@ -40,25 +40,25 @@ pub struct OverlayGlue {
 pub struct OverlaySnapshot {
     pub vertices: Vec<OverlayVertex>,
     /// Mesh topology; controls retain their own semantic line groups below.
-    pub lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub lines: Vec<(ViewportPoint, ViewportPoint)>,
     /// Selected mesh and group boundaries.
-    pub accent_lines: Vec<(CanvasPoint, CanvasPoint)>,
-    pub hover_lines: Vec<(CanvasPoint, CanvasPoint)>,
-    pub reference_lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub accent_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    pub hover_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    pub reference_lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub deformers: Vec<OverlayDeformer>,
     pub glues: Vec<OverlayGlue>,
-    pub marquee: Option<(CanvasPoint, CanvasPoint)>,
+    pub marquee: Option<(ViewportPoint, ViewportPoint)>,
     pub unavailable: Option<String>,
     pub target_label: Option<String>,
-    pub gizmo_lines: Vec<(CanvasPoint, CanvasPoint)>,
-    pub guide_lines: Vec<(CanvasPoint, CanvasPoint)>,
+    pub gizmo_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    pub guide_lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub handles: Vec<OverlayHandle>,
     pub interaction_label: Option<String>,
     pub active_handle: Option<crate::DeformerHandle>,
 }
 #[derive(Clone, Debug)]
 pub struct OverlayHandle {
-    pub position: CanvasPoint,
+    pub position: ViewportPoint,
     pub round: bool,
     pub hovered: bool,
     pub selected: bool,
@@ -91,12 +91,12 @@ impl ToolController {
                     out.accent_lines.extend(
                         m.boundary
                             .iter()
-                            .map(|(a, b)| (t.to_canvas(*a), t.to_canvas(*b))),
+                            .map(|(a, b)| (t.to_viewport(*a), t.to_viewport(*b))),
                     );
                     out.lines.extend(m.edges.iter().filter_map(|&(a, b)| {
                         Some((
-                            t.to_canvas(m.vertices.get(a)?.1),
-                            t.to_canvas(m.vertices.get(b)?.1),
+                            t.to_viewport(m.vertices.get(a)?.1),
+                            t.to_viewport(m.vertices.get(b)?.1),
                         ))
                     }));
                     if locks.is_locked(r) {
@@ -110,7 +110,7 @@ impl ToolController {
                         };
                         out.vertices.push(OverlayVertex {
                             id: *id,
-                            position: t.to_canvas(*p),
+                            position: t.to_viewport(*p),
                             selected: self.components.contains(&c),
                             hovered: hovered_target == Some(HitTarget::Component(c)),
                             kind: OverlayVertexKind::Mesh,
@@ -124,7 +124,7 @@ impl ToolController {
                     out.accent_lines.extend(
                         m.boundary
                             .iter()
-                            .map(|(a, b)| (t.to_canvas(*a), t.to_canvas(*b))),
+                            .map(|(a, b)| (t.to_viewport(*a), t.to_viewport(*b))),
                     );
                 }
                 if let Some([x0, y0, x1, y1]) = crate::picking::bounds(
@@ -134,8 +134,8 @@ impl ToolController {
                 ) {
                     add_rect(
                         &mut out.accent_lines,
-                        t.to_canvas(ModelPoint { x: x0, y: y0 }),
-                        t.to_canvas(ModelPoint { x: x1, y: y1 }),
+                        t.to_viewport(ModelPoint { x: x0, y: y0 }),
+                        t.to_viewport(ModelPoint { x: x1, y: y1 }),
                     );
                 }
             }
@@ -193,7 +193,7 @@ impl ToolController {
                                     out.reference_lines.extend(
                                         mesh.boundary
                                             .iter()
-                                            .map(|(a, b)| (t.to_canvas(*a), t.to_canvas(*b))),
+                                            .map(|(a, b)| (t.to_viewport(*a), t.to_viewport(*b))),
                                     );
                                 }
                             }
@@ -215,7 +215,7 @@ impl ToolController {
                     bezier
                         .curves
                         .iter()
-                        .map(|(a, b)| (t.to_canvas(*a), t.to_canvas(*b))),
+                        .map(|(a, b)| (t.to_viewport(*a), t.to_viewport(*b))),
                 );
                 for (i, p) in bezier.anchors.iter().enumerate() {
                     let id = crate::warp_bezier::component_id(i, 0);
@@ -225,7 +225,7 @@ impl ToolController {
                     };
                     out.vertices.push(OverlayVertex {
                         id,
-                        position: t.to_canvas(*p),
+                        position: t.to_viewport(*p),
                         selected: self.components.contains(&c),
                         hovered: hovered_target == Some(HitTarget::Component(c)),
                         kind: OverlayVertexKind::Warp,
@@ -236,9 +236,9 @@ impl ToolController {
                         object: control.object.clone(),
                         id: *id,
                     };
-                    out.gizmo_lines.push((t.to_canvas(*a), t.to_canvas(*b)));
+                    out.gizmo_lines.push((t.to_viewport(*a), t.to_viewport(*b)));
                     out.handles.push(OverlayHandle {
-                        position: t.to_canvas(*b),
+                        position: t.to_viewport(*b),
                         round: true,
                         selected: self.components.contains(&c),
                         hovered: hovered_target == Some(HitTarget::Component(c)),
@@ -248,8 +248,8 @@ impl ToolController {
                     out.guide_lines
                         .extend(control.edges.iter().filter_map(|&(a, b)| {
                             Some((
-                                t.to_canvas(*control.points.get(a)?),
-                                t.to_canvas(*control.points.get(b)?),
+                                t.to_viewport(*control.points.get(a)?),
+                                t.to_viewport(*control.points.get(b)?),
                             ))
                         }));
                 }
@@ -342,7 +342,7 @@ impl ToolController {
                 out.hover_lines.extend(
                     mesh.boundary
                         .iter()
-                        .map(|(a, b)| (t.to_canvas(*a), t.to_canvas(*b))),
+                        .map(|(a, b)| (t.to_viewport(*a), t.to_viewport(*b))),
                 );
             }
         }
@@ -395,8 +395,8 @@ fn describe_edit(
         Err(e) => out.unavailable = Some(e.to_string()),
     }
 }
-fn add_rect(lines: &mut Vec<(CanvasPoint, CanvasPoint)>, a: CanvasPoint, b: CanvasPoint) {
-    let c = CanvasPoint { x: b.x, y: a.y };
-    let d = CanvasPoint { x: a.x, y: b.y };
+fn add_rect(lines: &mut Vec<(ViewportPoint, ViewportPoint)>, a: ViewportPoint, b: ViewportPoint) {
+    let c = ViewportPoint { x: b.x, y: a.y };
+    let d = ViewportPoint { x: a.x, y: b.y };
     lines.extend([(a, c), (c, b), (b, d), (d, a)]);
 }

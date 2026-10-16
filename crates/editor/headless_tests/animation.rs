@@ -16,7 +16,7 @@ fn hiding_animation_during_evaluation_reissues_content_when_shown(cx: &mut TestA
         view.editor.set_viewport_visible(viewport, true);
         view.editor.set_viewport_metrics(
             viewport,
-            editor_core::CanvasMetrics {
+            editor_core::ViewportMetrics {
                 width: 512.,
                 height: 512.,
                 scale_factor: 1.,
@@ -259,7 +259,7 @@ fn navigation_keeps_playing_modal_and_workspace_switch_pause_and_panels_reopen(
         window.click("animation-play-pause", cx);
         harness.view.update(cx, |view, cx| {
             view.editor
-                .pan_by(editor_core::CanvasPoint { x: 12., y: 5. });
+                .pan_by(editor_core::ViewportPoint { x: 12., y: 5. });
             view.redraw_canvas(cx);
         });
         assert!(harness.view.read(cx).editor.animation().unwrap().playing);

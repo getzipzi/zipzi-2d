@@ -1,8 +1,8 @@
 pub(crate) mod compact;
 pub(crate) mod form_dialog;
 pub(crate) mod mesh_generation;
+pub(crate) mod mesh_generation_preview;
 mod mesh_preview;
-pub(crate) mod preview_viewport;
 pub(crate) mod slide_number_input;
 
 use super::*;
@@ -18,6 +18,7 @@ impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_viewports();
         self.sync_workspace_layout(window, cx);
+        self.sync_timeline_visibility(window, cx);
         if self.sync_viewport_visibility(window, cx) {
             self.redraw(cx);
         }
@@ -89,11 +90,12 @@ impl Render for EditorView {
             .text_color(theme.foreground)
             .text_size(compact::rem(compact::BODY))
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
-                this.filter_repeat(event, window, cx)
+                this.route_key(event, window, cx)
             }))
             .child(workspace::render_title_bar(self, modal, window, cx))
             .children(workspace)
             .child(self.status_bar.clone())
+            .child(self.pointer_observer(window, cx))
             .into_any_element()
     }
 }

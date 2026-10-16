@@ -50,13 +50,13 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
                 * metrics.scale_factor
                 * 0.9)
                 .clamp(0.04, 32.),
-            pan: CanvasPoint::default(),
+            pan: ViewportPoint::default(),
         }
     };
     for workspace in WorkspaceKind::ALL {
         editor.set_workspace(workspace)?;
         for (width, height, scale_factor) in [(800., 600., 1.), (420., 280., 2.)] {
-            editor.set_canvas_metrics(CanvasMetrics {
+            editor.set_canvas_metrics(ViewportMetrics {
                 width,
                 height,
                 scale_factor,
@@ -77,7 +77,7 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
         }
         // Explicit 100%, including a centered view, must survive later layouts.
         editor.reset_view();
-        editor.set_canvas_metrics(CanvasMetrics {
+        editor.set_canvas_metrics(ViewportMetrics {
             width: 600.,
             height: 450.,
             scale_factor: 2.,
@@ -101,9 +101,9 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
     assert_view(editor.view(), ViewState::default());
     editor.activate(second)?;
     editor.set_zoom_at(0.75, None);
-    editor.pan_by(CanvasPoint { x: 12., y: -8. });
+    editor.pan_by(ViewportPoint { x: 12., y: -8. });
     let manual = editor.view();
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 320.,
         height: 240.,
         scale_factor: 1.,
@@ -121,22 +121,22 @@ fn fit_view_uses_canvas_and_display_scale_without_changing_other_views() -> anyh
     support::attach_viewports(&mut editor);
     assert!(!editor.command_available(editor.command(CommandId::FitView)));
     let first = editor.active_id().unwrap();
-    editor.pan_by(CanvasPoint { x: 30., y: 40. });
+    editor.pan_by(ViewportPoint { x: 30., y: 40. });
     let modeling = editor.view();
     editor.set_workspace(WorkspaceKind::Animation)?;
     let canvas = editor.document().unwrap().canvas();
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 420.,
         height: 280.,
         scale_factor: 2.,
     });
-    editor.pan_by(CanvasPoint { x: 10., y: -40. });
+    editor.pan_by(ViewportPoint { x: 10., y: -40. });
     editor.dispatch(editor.command(CommandId::FitView))?;
     assert_view(
         editor.view(),
         ViewState {
             zoom: (420. / canvas.width).min(280. / canvas.height) * 2. * 0.9,
-            pan: CanvasPoint::default(),
+            pan: ViewportPoint::default(),
         },
     );
     let fitted = editor.view();
@@ -167,7 +167,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     })?;
     editor.execute(EditorCommand::SetTool(ToolId::Glue))?;
     editor.zoom_by(0.75);
-    editor.pan_by(CanvasPoint { x: 13., y: -21. });
+    editor.pan_by(ViewportPoint { x: 13., y: -21. });
     let modeling = editor.view();
     let history = editor.document().unwrap().history_lengths();
     let selection = editor.document().unwrap().context().selections.clone();
@@ -177,7 +177,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     assert_view(editor.view(), ViewState::default());
     assert_eq!(editor.active_tool(), ToolId::Glue);
     editor.zoom_by(-0.5);
-    editor.pan_by(CanvasPoint { x: -8., y: 40. });
+    editor.pan_by(ViewportPoint { x: -8., y: 40. });
     let animation = editor.view();
     assert!(
         editor
@@ -210,7 +210,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     let second = editor.new_document()?;
     assert_eq!(editor.workspace(), WorkspaceKind::Animation);
     assert_view(editor.view(), ViewState::default());
-    editor.pan_by(CanvasPoint { x: 101., y: 9. });
+    editor.pan_by(ViewportPoint { x: 101., y: 9. });
     let second_animation = editor.view();
     editor.set_workspace(WorkspaceKind::Modeling)?;
     assert!(!editor.command_available(editor.command(CommandId::AnimationTimeline)));
@@ -253,7 +253,7 @@ fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> any
     let (document, _assets) = support::sample_document()?;
     let mut editor = crate::support::editor_from_document(document);
     support::attach_viewports(&mut editor);
-    editor.set_canvas_metrics(CanvasMetrics {
+    editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
         scale_factor: 1.,
@@ -267,7 +267,7 @@ fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> any
         shift: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
-        point: CanvasPoint {
+        point: ViewportPoint {
             x: start.x + 20.,
             y: start.y,
         },
@@ -331,7 +331,7 @@ fn save_completion_keeps_both_views_and_uses_the_current_workspace() -> anyhow::
     editor.zoom_by(1.);
     let modeling = editor.view();
     editor.set_workspace(WorkspaceKind::Animation)?;
-    editor.pan_by(CanvasPoint { x: 14., y: 30. });
+    editor.pan_by(ViewportPoint { x: 14., y: 30. });
     let animation = editor.view();
     let save = editor.prepare_save(
         editor.active_id().unwrap(),

@@ -23,7 +23,7 @@ fn wheel_zoom_interpolates_proportionally_and_keeps_anchor_on_every_frame(cx: &m
     let count = notifications.clone();
     let _observe =
         cx.update(|cx| cx.observe(&harness.view, move |_, _| count.set(count.get() + 1)));
-    let anchor = editor_core::CanvasPoint { x: 120., y: 90. };
+    let anchor = editor_core::ViewportPoint { x: 120., y: 90. };
     let position = cx
         .update_window(harness.window, |_, window, _| {
             window.find("canvas-body").bounds().origin + point(px(anchor.x), px(anchor.y))
@@ -33,7 +33,7 @@ fn wheel_zoom_interpolates_proportionally_and_keeps_anchor_on_every_frame(cx: &m
         let model_point = harness.view.update(cx, |view, _| {
             view.editor.set_zoom_at(initial, None);
             view.editor
-                .pan_by(editor_core::CanvasPoint { x: 37., y: -12. });
+                .pan_by(editor_core::ViewportPoint { x: 37., y: -12. });
             view.editor
                 .preview()
                 .unwrap()
@@ -62,7 +62,7 @@ fn wheel_zoom_interpolates_proportionally_and_keeps_anchor_on_every_frame(cx: &m
                     .canvas
                     .unwrap()
                     .transform
-                    .to_canvas(model_point);
+                    .to_viewport(model_point);
                 assert!((after.x - anchor.x).abs() < 1e-3, "x drifted: {after:?}");
                 assert!((after.y - anchor.y).abs() < 1e-3, "y drifted: {after:?}");
             });
@@ -194,7 +194,7 @@ fn wheel_zoom_uses_the_new_pointer_anchor_when_retargeted(cx: &mut TestAppContex
         .unwrap();
     wheel(&harness, cx, bounds.center(), 1.);
     advance_zoom(&harness, cx, 20);
-    let anchor = editor_core::CanvasPoint { x: 90., y: 180. };
+    let anchor = editor_core::ViewportPoint { x: 90., y: 180. };
     let model = harness.view.update(cx, |view, _| {
         view.editor
             .preview()
@@ -219,7 +219,7 @@ fn wheel_zoom_uses_the_new_pointer_anchor_when_retargeted(cx: &mut TestAppContex
                 .canvas
                 .unwrap()
                 .transform
-                .to_canvas(model)
+                .to_viewport(model)
         });
         assert!((after.x - anchor.x).abs() < 1e-3);
         assert!((after.y - anchor.y).abs() < 1e-3);

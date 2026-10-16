@@ -44,6 +44,7 @@ impl EditorView {
             return;
         }
         self.focused_viewport = None;
+        self.input_router.menu_target.set(None);
         self.reset_viewport_images();
         self.animation_anchor = None;
         self.frozen_frames.clear();
@@ -107,6 +108,7 @@ impl EditorView {
                 if this.sync_viewport_visibility(window, cx) {
                     this.redraw(cx);
                 }
+                this.sync_timeline_visibility(window, cx);
                 let has_empty_dock = [
                     DockPlacement::Left,
                     DockPlacement::Right,

@@ -27,9 +27,11 @@ const REGIONS: [DockPlacement; 4] = [
 ];
 
 pub struct DockWorkspace {
+    pub(crate) input_regions: HashMap<PanelKind, crate::input_routing::InputRegion>,
     pub area: Entity<DockArea>,
     viewports: viewports::ViewportPanels,
     pub timeline: Entity<crate::panels::timeline::Timeline>,
+    pub timeline_id: editor_core::TimelineId,
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_info: Entity<crate::panels::animation_panel::AnimationPanel>,
@@ -97,7 +99,7 @@ impl DockWorkspace {
             .is_some()
     }
 
-    fn displayed(&self, kind: PanelKind, cx: &App) -> bool {
+    pub(crate) fn displayed(&self, kind: PanelKind, cx: &App) -> bool {
         let id = self.panels[&kind].panel_id(cx);
         self.panel_displayed(id, cx)
     }

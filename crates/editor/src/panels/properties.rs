@@ -80,10 +80,10 @@ impl PropertiesPanel {
             return div().into_any_element();
         };
         let index = doc.object_index();
-        let inspected = doc
-            .context()
-            .inspected
-            .clone()
+        let inspected = state
+            .editor
+            .active_inspection()
+            .and_then(|source| source.object())
             .unwrap_or_else(|| index.objects[0].reference.clone());
         let info = index.get(&inspected);
         let doc_ref = index.objects[0].reference.clone();
@@ -269,10 +269,10 @@ impl Render for PropertiesPanel {
             return root.into_any_element();
         };
         let index = doc.object_index();
-        let inspected = doc
-            .context()
-            .inspected
-            .clone()
+        let inspected = state
+            .editor
+            .active_inspection()
+            .and_then(|source| source.object())
             .unwrap_or_else(|| index.objects[0].reference.clone());
         let mut fields = index.get(&inspected).map_or_else(Vec::new, |info| {
             super::document_panel::property_rows(&info.properties)

@@ -1,6 +1,6 @@
 #![cfg(target_os = "macos")]
 
-use editor_core::{CanvasMetrics, CanvasPoint, Document, ViewState, ViewportTransform};
+use editor_core::{Document, ViewState, ViewportMetrics, ViewportPoint, ViewportTransform};
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
 use kasane_render_metal::{metal, read_rgba8};
 
@@ -30,7 +30,7 @@ fn mao_high_zoom_crops_masks_with_stable_pixels_after_panning() -> anyhow::Resul
                 let count = drawable.positions.len() as f32;
                 let x = drawable.positions.iter().map(|p| p.x).sum::<f32>() / count;
                 let y = drawable.positions.iter().map(|p| p.y).sum::<f32>() / count;
-                CanvasPoint {
+                ViewportPoint {
                     x: x * frame.canvas.pixels_per_unit + frame.canvas.origin.x,
                     y: frame.canvas.origin.y - y * frame.canvas.pixels_per_unit,
                 }
@@ -47,14 +47,14 @@ fn mao_high_zoom_crops_masks_with_stable_pixels_after_panning() -> anyhow::Resul
                 height,
                 format: metal::MTLPixelFormat::RGBA8Unorm,
             };
-            let metrics = CanvasMetrics {
+            let metrics = ViewportMetrics {
                 width: width as f32 / 2.,
                 height: height as f32 / 2.,
                 scale_factor: 2.,
             };
             for zoom in [1., 16., 20., 24., 32.] {
                 let capture = |renderer: &mut MetalSceneRenderer,
-                               pan: CanvasPoint|
+                               pan: ViewportPoint|
                  -> anyhow::Result<Vec<u8>> {
                     let transform =
                         ViewportTransform::new(frame.canvas, metrics, ViewState { zoom, pan })
@@ -78,8 +78,8 @@ fn mao_high_zoom_crops_masks_with_stable_pixels_after_panning() -> anyhow::Resul
                     read_rgba8(&submitted.image)
                         .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))
                 };
-                let first = capture(&mut renderer, CanvasPoint::default())?;
-                assert_eq!(first, capture(&mut renderer, CanvasPoint::default())?);
+                let first = capture(&mut renderer, ViewportPoint::default())?;
+                assert_eq!(first, capture(&mut renderer, ViewportPoint::default())?);
                 assert_eq!(
                     renderer.last_frame_stats().masks,
                     0,
@@ -90,7 +90,7 @@ fn mao_high_zoom_crops_masks_with_stable_pixels_after_panning() -> anyhow::Resul
                 for anchor in &anchors {
                     let pixels = capture(
                         &mut renderer,
-                        CanvasPoint {
+                        ViewportPoint {
                             x: (frame.canvas.width / 2. - anchor.x) * zoom / metrics.scale_factor,
                             y: (frame.canvas.height / 2. - anchor.y) * zoom / metrics.scale_factor,
                         },
@@ -100,7 +100,7 @@ fn mao_high_zoom_crops_masks_with_stable_pixels_after_panning() -> anyhow::Resul
                 }
                 assert_eq!(
                     first,
-                    capture(&mut renderer, CanvasPoint::default())?,
+                    capture(&mut renderer, ViewportPoint::default())?,
                     "Returning from a pan must restore identical pixels"
                 );
                 if covered > 0 {

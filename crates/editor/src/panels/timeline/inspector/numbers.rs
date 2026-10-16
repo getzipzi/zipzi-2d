@@ -282,6 +282,7 @@ impl Timeline {
             self.finish_number(cx);
         }
         if self.number_edit.is_none() {
+            self.activity.set(self.activity.get() + 1);
             let Some(command) = self.template(&field, cx) else {
                 return;
             };
@@ -293,7 +294,7 @@ impl Timeline {
                 .update(cx, |owner, _| {
                     let token = owner
                         .editor
-                        .begin_timeline_edit(target.document, "Edit motion value");
+                        .begin_timeline_edit_for(target.binding, "Edit motion value");
                     token
                 })
                 .ok()
@@ -347,9 +348,12 @@ impl Timeline {
             .as_ref()
             .is_some_and(|edit| &edit.field == field)
         {
-            self.number_edit = None;
+            let edit = self.number_edit.take().unwrap();
+            let document = self.context.as_ref().map(|target| target.document);
             let _ = self.owner.update(cx, |owner, cx| {
-                owner.editor.cancel_timeline_edit();
+                if let Some(document) = document {
+                    owner.editor.cancel_timeline_edit_for(document, edit.token);
+                }
                 owner.redraw(cx);
             });
         }

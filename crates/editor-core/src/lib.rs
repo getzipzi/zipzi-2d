@@ -9,6 +9,8 @@ pub use timeline::*;
 mod document;
 pub use animation::*;
 mod editing_context;
+mod inspection;
+pub use inspection::*;
 mod editor;
 mod objects;
 mod scene;
@@ -36,8 +38,8 @@ pub use tree::{TreeNode, TreeNodeKind};
 
 use session::DocumentSession;
 pub use workspace::{
-    DocumentId, DocumentSummary, EditingLifecycle, Editor, LoadCompletion, LoadTask, OperationId,
-    SaveCompletion, SaveTask,
+    DocumentId, DocumentSummary, EditingContextToken, EditingLifecycle, Editor, LoadCompletion,
+    LoadTask, OperationId, SaveCompletion, SaveTask,
 };
 
 mod panels;
