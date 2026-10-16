@@ -260,7 +260,6 @@ impl Editor {
             self.restore_active_workspace();
             self.refresh_viewport_bindings();
             self.invalidate_animation();
-            self.displayed_request = None;
         }
         Ok(true)
     }

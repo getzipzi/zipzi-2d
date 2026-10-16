@@ -800,22 +800,16 @@ impl TabGroupRenderer for EditorTabGroupSkin {
 }
 
 fn panel_label(name: &str) -> SharedString {
-    PanelKind::from_name(name)
-        .and_then(|kind| kind.spec().command)
-        .map(|command| SharedString::from(t!(command.spec().label).into_owned()))
-        .unwrap_or_else(|| {
-            if name == "Canvas" {
-                t!("dock.canvas").into_owned().into()
-            } else {
-                name.to_owned().into()
-            }
-        })
+    PanelKind::from_name(name).map_or_else(
+        || name.to_owned().into(),
+        |kind| t!(kind.label()).into_owned().into(),
+    )
 }
 
 pub(super) fn panel_icon(name: &str) -> IconName {
     use PanelKind::*;
     match PanelKind::from_name(name) {
-        Some(Canvas) => IconName::Image,
+        Some(ModelingViewport | AnimationViewport) => IconName::Image,
         Some(MeshTree) => IconName::Layers,
         Some(Deformers) => IconName::Network,
         Some(DrawOrder) => IconName::ListOrdered,

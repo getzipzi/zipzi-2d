@@ -56,6 +56,15 @@ impl ToolbarRegistry {
         registry
     }
 
+    pub(crate) fn navigation() -> Self {
+        Self {
+            items: vec![ToolbarItemConfig {
+                id: "tool_hand",
+                icon: IconName::Hand,
+                command: CommandId::HandTool,
+            }],
+        }
+    }
     pub(crate) fn register(&mut self, item: ToolbarItemConfig) -> Result<(), &'static str> {
         if self
             .items
@@ -73,7 +82,7 @@ impl ToolbarRegistry {
 #[derive(gpui_kit::IntoElement)]
 pub(super) struct CanvasToolbar {
     pub owner: Entity<EditorView>,
-    pub canvas: Entity<super::CanvasView>,
+    pub canvas: Entity<super::ViewportSurface>,
     pub modal: bool,
     pub items: Vec<ToolbarItemConfig>,
 }
@@ -112,15 +121,6 @@ impl RenderOnce for CanvasToolbar {
                 Axis::Vertical,
                 items
                     .iter()
-                    .filter(|item| {
-                        item.command == CommandId::HandTool
-                            || canvas
-                                .read(cx)
-                                .binding(&view.editor)
-                                .is_some_and(|binding| {
-                                    binding.kind == editor_core::ViewportKind::Modeling
-                                })
-                    })
                     .map(|item| {
                         let command = item.command;
                         let invocation = canvas.read(cx).command(
@@ -172,7 +172,7 @@ impl RenderOnce for CanvasToolbar {
                                 window.focus(&focus, cx);
                                 owner.update(cx, |view, _| {
                                     if let Some(dock) = &mut view.dock {
-                                        dock.activate_canvas(id);
+                                        dock.activate_viewport(id);
                                     }
                                 });
                                 owner.update(cx, |view, cx| {

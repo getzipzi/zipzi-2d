@@ -366,7 +366,7 @@ pub(crate) fn dock_screenshots(directory: &std::path::Path) -> anyhow::Result<()
                 Some(px(100.)),
             )
             .child(
-                DockLayout::tabs().panel_view(panel_handle(dock.active_canvas().clone()), cx),
+                DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
                 None,
             );
         area.update(cx, |area, cx| area.set_center(layout, window, cx));
@@ -383,7 +383,7 @@ pub(crate) fn dock_screenshots(directory: &std::path::Path) -> anyhow::Result<()
         let dock = harness.view.read(cx).dock.as_ref().unwrap();
         let area = dock.area.clone();
         let layout = DockLayout::tabs()
-            .panel_view(panel_handle(dock.active_canvas().clone()), cx)
+            .panel_view(dock.viewport_panel(), cx)
             .panel_view(panel_handle(dock.mesh_tree.clone()), cx);
         area.update(cx, |area, cx| area.set_center(layout, window, cx));
     })?;

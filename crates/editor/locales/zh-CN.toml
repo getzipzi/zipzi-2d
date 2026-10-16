@@ -192,6 +192,8 @@ import_complete = "导入完成"
 import_warnings_title = "导入完成，但有警告"
 import_warning_count = "导入完成 · %{count} 条警告"
 [dock]
+modeling_viewport = "建模视图"
+animation_viewport = "动画视图"
 zoom_controls = "画布缩放"
 panel_tools = "面板工具"
 canvas = "画布"

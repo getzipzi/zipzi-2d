@@ -44,6 +44,7 @@ struct Registration {
     binding: Option<ViewportBinding>,
     enabled: bool,
     metrics: crate::CanvasMetrics,
+    presentation: crate::ViewportPresentation,
 }
 #[derive(Default)]
 pub(crate) struct ViewportRegistry {
@@ -52,14 +53,14 @@ pub(crate) struct ViewportRegistry {
     generation: u64,
 }
 impl ViewportRegistry {
-    fn refresh(&mut self, document: Option<DocumentId>, workspace: WorkspaceKind) {
+    fn refresh(&mut self, document: Option<DocumentId>) {
         for (&viewport, entry) in &mut self.registrations {
-            let document =
-                document.filter(|_| entry.enabled && entry.kind == ViewportKind::from(workspace));
+            let document = document.filter(|_| entry.enabled);
             if entry.binding.map(|binding| binding.document) == document {
                 continue;
             }
             self.generation += 1;
+            entry.presentation.invalidate();
             entry.binding = document.map(|document| ViewportBinding {
                 viewport,
                 kind: entry.kind,
@@ -95,6 +96,7 @@ impl Editor {
                     binding: None,
                     enabled: true,
                     metrics: Default::default(),
+                    presentation: Default::default(),
                 },
             );
         }
@@ -113,9 +115,6 @@ impl Editor {
             self.set_viewport_visible(viewport, true);
             if let Some(previous) = previous {
                 self.set_viewport_visible(previous, false);
-            }
-            if kind == ViewportKind::from(self.workspace()) {
-                self.invalidate_primary_presentation();
             }
         }
         self.refresh_viewport_bindings();
@@ -147,12 +146,18 @@ impl Editor {
             self.cancel_viewport_interaction(token);
         }
         self.invalidate_viewport_state(viewport);
-        if self.primary_viewport_id() == Some(viewport) {
+        let editing = self
+            .active_session()
+            .is_some_and(|session| session.modeling.tools.interaction_viewport() == Some(viewport));
+        if editing {
             self.cancel_gesture();
-            self.invalidate_preview();
+        }
+        if let Some(presentation) = self.viewport_presentation_mut(viewport) {
+            presentation.requested_modeling = None;
+            presentation.requested_animation = None;
         }
     }
-    pub(crate) fn registered_viewports(&self) -> Vec<ViewportId> {
+    pub fn viewport_ids(&self) -> Vec<ViewportId> {
         self.viewports.registrations.keys().copied().collect()
     }
     pub fn unregister_viewport(&mut self, viewport: ViewportId) {
@@ -162,12 +167,15 @@ impl Editor {
         {
             self.cancel_viewport_interaction(token);
         }
+        if self
+            .active_session()
+            .is_some_and(|session| session.modeling.tools.interaction_viewport() == Some(viewport))
+        {
+            self.cancel_gesture();
+        }
         if let Some(entry) = self.viewports.registrations.remove(&viewport) {
             if self.viewports.primary.get(&entry.kind) == Some(&viewport) {
                 self.viewports.primary.remove(&entry.kind);
-                if entry.kind == ViewportKind::from(self.workspace()) {
-                    self.invalidate_primary_presentation();
-                }
             }
         }
     }
@@ -180,10 +188,42 @@ impl Editor {
                 self.cancel_viewport_interaction(token);
             }
         }
+        if !visible
+            && self.active_session().is_some_and(|session| {
+                session.modeling.tools.interaction_viewport() == Some(viewport)
+            })
+        {
+            self.cancel_gesture();
+        }
         if let Some(entry) = self.viewports.registrations.get_mut(&viewport) {
             entry.enabled = visible;
         }
         self.refresh_viewport_bindings();
+    }
+    pub(crate) fn viewport_presentation(
+        &self,
+        viewport: ViewportId,
+    ) -> Option<&crate::ViewportPresentation> {
+        self.viewports
+            .registrations
+            .get(&viewport)
+            .map(|entry| &entry.presentation)
+    }
+    pub(crate) fn viewport_presentation_mut(
+        &mut self,
+        viewport: ViewportId,
+    ) -> Option<&mut crate::ViewportPresentation> {
+        self.viewports
+            .registrations
+            .get_mut(&viewport)
+            .map(|entry| &mut entry.presentation)
+    }
+    pub fn visible_viewport_bindings(&self) -> Vec<ViewportBinding> {
+        self.viewports
+            .registrations
+            .values()
+            .filter_map(|entry| entry.binding)
+            .collect()
     }
     pub fn viewport_binding(&self, viewport: ViewportId) -> Option<ViewportBinding> {
         self.viewports.registrations.get(&viewport)?.binding
@@ -205,6 +245,7 @@ impl Editor {
     pub(crate) fn invalidate_viewport_bindings(&mut self) {
         for entry in self.viewports.registrations.values_mut() {
             entry.binding = None;
+            entry.presentation.invalidate();
         }
         self.refresh_viewport_bindings();
     }
@@ -215,7 +256,7 @@ impl Editor {
         let document = self
             .active_id()
             .filter(|_| !self.is_busy() && !self.exiting());
-        self.viewports.refresh(document, self.workspace());
+        self.viewports.refresh(document);
         if self
             .viewport_interaction
             .is_some_and(|token| !self.viewport_binding_valid(token.binding))
@@ -236,12 +277,16 @@ impl Editor {
         ensure!(
             kind == ViewportInteractionKind::Navigation
                 || (binding.kind == ViewportKind::Modeling
-                    && self.editing_context() == Some(crate::EditingContext::Modeling)
-                    && self.primary_viewport_id() == Some(binding.viewport)),
-            "Modeling interaction requires the primary Modeling presentation"
+                    && self.editing_context() == Some(crate::EditingContext::Modeling)),
+            "Modeling interaction requires a Modeling editing context"
         );
         if let Some(previous) = self.viewport_interaction {
             self.cancel_viewport_interaction(previous);
+        }
+        // Direct domain input also records a viewport owner in ToolController.
+        // It must obey the same single-writer transition as token-based UI input.
+        if self.gesture_active() {
+            self.cancel_gesture();
         }
         self.next_viewport_interaction += 1;
         let token = ViewportInteractionToken {
@@ -299,10 +344,6 @@ impl Editor {
                 && self.editing_context() == Some(crate::EditingContext::Modeling),
             "Viewport does not support Modeling input"
         );
-        ensure!(
-            self.primary_viewport_id() == Some(binding.viewport),
-            "Modeling presentation is only available for the primary viewport"
-        );
-        self.canvas_input(input)
+        self.modeling_input(binding, input)
     }
 }

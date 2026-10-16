@@ -36,8 +36,6 @@ impl AnimationEvaluator {
                 let mut frame = frame.clone();
                 frame.identity.request = request.identity.request;
                 frame.identity.acceptance_floor = request.identity.acceptance_floor;
-                frame.identity.viewport_revision = request.identity.viewport_revision;
-                frame.identity.canvas_metrics = request.identity.canvas_metrics;
                 return Ok(frame);
             }
         }

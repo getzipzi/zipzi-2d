@@ -138,7 +138,7 @@ fn timeline_channel_scrubs_reuse_overview_and_do_not_notify_the_editor_owner(
 fn canvas_frame_notifications_do_not_redraw_unchanged_header(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let canvas = harness.view.read_with(cx, |view, _| {
-        view.dock.as_ref().unwrap().active_canvas().clone()
+        view.dock.as_ref().unwrap().active_viewport().clone()
     });
     for _ in 0..3 {
         canvas.update(cx, |_, cx| cx.notify());

@@ -31,9 +31,10 @@ impl EditorView {
         }
     }
     pub(super) fn refresh_document(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.focused_viewport = None;
         self.sync_workspace_layout(window, cx);
         if let Some(dock) = &self.dock {
-            for canvas in dock.canvas_views() {
+            for canvas in dock.viewport_surfaces() {
                 let token = canvas.update(cx, |canvas, _| canvas.cancel_pointer());
                 if let Some(token) = token {
                     self.editor.cancel_viewport_interaction(token);
@@ -42,20 +43,29 @@ impl EditorView {
         }
         self.animation_anchor = None;
         let active = self.editor.active_id();
-        self.animation_frame = self
-            .animation_frame
-            .take()
-            .filter(|f| Some(f.state.identity.document) == active);
+        self.animation_content = None;
         self.mesh_thumbnails
             .update(cx, |cache, cx| cache.sync_document(active, window, cx));
-        // A repeated tab click or save completion may reuse the same scene.
-        // Keep that document's last image while its replacement is pending.
-        self.frame = self
-            .frame
-            .take()
-            .filter(|frame| Some(frame.canvas.version.document) == active)
-            .or_else(|| active.and_then(|id| self.frozen_frames.get(&id).cloned()));
-        self.render_error = None;
+        self.viewport_frames.retain(|_, state| {
+            state
+                .modeling
+                .as_ref()
+                .is_some_and(|frame| Some(frame.canvas.version.binding.document) == active)
+                || state
+                    .animation
+                    .as_ref()
+                    .is_some_and(|frame| Some(frame.state.identity.document) == active)
+        });
+        if let Some(frozen) = active.and_then(|id| self.frozen_frames.get(&id)) {
+            for (&id, state) in frozen {
+                self.viewport_frames
+                    .entry(id)
+                    .or_insert_with(|| state.clone());
+            }
+        }
+        for state in self.viewport_frames.values_mut() {
+            state.error = None;
+        }
         self.redraw(cx);
     }
     pub(super) fn save(&mut self, save_as: bool, window: &mut Window, cx: &mut Context<Self>) {
@@ -144,9 +154,7 @@ impl EditorView {
             }
         };
         if self.editor.active_id() == Some(id) {
-            if let Some(frame) = &self.frame {
-                self.frozen_frames.insert(id, frame.clone());
-            }
+            self.frozen_frames.insert(id, self.viewport_frames.clone());
         }
         cx.notify();
         cx.spawn_in(window, async move |this, cx| {

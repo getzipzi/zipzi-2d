@@ -11,6 +11,7 @@ mod dock_and_layout;
 mod mesh_generation_scene;
 mod modeling_scene;
 mod timeline_scene;
+mod viewports_scene;
 
 pub(super) fn run() -> anyhow::Result<()> {
     anyhow::ensure!(
@@ -49,6 +50,11 @@ pub(super) fn run() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    viewports_scene::viewport_screenshots(&directory)?;
+    if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("viewports") {
+        println!("Dual viewport Metal screenshots passed.");
+        return Ok(());
+    }
     modeling_scene::empty_titlebar_screenshots(&directory)?;
     animation_scene::animation_scrubbing_presents_frames_before_release()?;
     let mut harness = Harness::new()?;

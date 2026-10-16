@@ -14,7 +14,7 @@ impl EditorView {
         // Let the existing input blur rules finish before changing context.
         window.focus(&self.focus, cx);
         if let Some(dock) = &self.dock {
-            for canvas in dock.canvas_views() {
+            for canvas in dock.viewport_surfaces() {
                 let token = canvas.update(cx, |canvas, _| canvas.cancel_pointer());
                 if let Some(token) = token {
                     self.editor.cancel_viewport_interaction(token);
@@ -43,11 +43,10 @@ impl EditorView {
         {
             return;
         }
-        self.frame = None;
-        self.animation_frame = None;
+        self.focused_viewport = None;
+        self.reset_viewport_images();
         self.animation_anchor = None;
         self.frozen_frames.clear();
-        self.render_error = None;
         if let Some(dock) = &mut self.dock {
             if let Err(error) = dock.switch(workspace, window, cx) {
                 self.edit_error = Some(error.to_string());

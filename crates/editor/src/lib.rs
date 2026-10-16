@@ -6,7 +6,6 @@ pub mod acceptance;
 mod actions;
 mod animation;
 mod benchmark;
-mod canvas;
 mod canvas_overlay;
 mod commands;
 mod dev_session;
@@ -20,6 +19,7 @@ mod menus;
 mod mesh_edges;
 mod mesh_thumbnails;
 mod panels;
+mod presentation;
 mod preview;
 mod project;
 mod settings;
@@ -28,7 +28,9 @@ mod settings;
 pub(crate) mod test_fixture;
 mod theme;
 mod ui;
+mod viewports;
 mod worker;
+mod worker_queue;
 mod workspace;
 
 use editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
@@ -38,22 +40,27 @@ use rust_i18n::t;
 struct EditorView {
     focus: FocusHandle,
     modal: bool,
-    frozen_frames: std::collections::HashMap<editor_core::DocumentId, preview::Presented>,
+    focused_viewport: Option<editor_core::ViewportId>,
+    frozen_frames: std::collections::HashMap<
+        editor_core::DocumentId,
+        std::collections::HashMap<editor_core::ViewportId, presentation::ViewportFrames>,
+    >,
     editor: Editor,
     viewport_slots: [editor_core::ViewportId; 2],
+    #[cfg(any(test, feature = "test-support"))]
+    viewport_scene: Option<viewports::ViewportScene>,
     mesh_thumbnails: Entity<mesh_thumbnails::MeshThumbnails>,
     dock: Option<docking::DockWorkspace>,
     ui_subscriptions: Vec<Subscription>,
-    frame: Option<preview::Presented>,
-    animation_frame: Option<animation::Presented>,
+    viewport_frames:
+        std::collections::HashMap<editor_core::ViewportId, presentation::ViewportFrames>,
+    animation_content: Option<editor_core::AnimationEvaluated>,
     animation_worker: Option<animation::AnimationWorker>,
     _animation_results: Option<Task<()>>,
     animation_anchor: Option<(std::time::Instant, f32)>,
     animation_clock_running: bool,
-    render_stats: (u64, u64, u64),
     menu_state: menus::MenuState,
     edit_error: Option<String>,
-    render_error: Option<String>,
     message: String,
     requests: Option<preview::RequestSender>,
     gpu_device: Option<metal::Device>,
@@ -72,22 +79,23 @@ impl EditorView {
         let mut editor = Self {
             focus,
             modal: false,
+            focused_viewport: None,
             frozen_frames: Default::default(),
             editor,
             viewport_slots: std::array::from_fn(|_| editor_core::ViewportId::new()),
+            #[cfg(any(test, feature = "test-support"))]
+            viewport_scene: None,
             mesh_thumbnails: mesh_thumbnails::MeshThumbnails::new(cx),
             dock: None,
             ui_subscriptions: Vec::new(),
-            frame: None,
-            animation_frame: None,
+            viewport_frames: Default::default(),
+            animation_content: None,
             animation_worker: None,
             _animation_results: None,
             animation_anchor: None,
             animation_clock_running: false,
-            render_stats: (0, 0, 0),
             menu_state: menus::MenuState::default(),
             edit_error: None,
-            render_error: None,
             message: if cx.global::<settings::Settings>().notices.is_empty() {
                 t!("editor.welcome").into_owned()
             } else {
@@ -108,6 +116,38 @@ impl EditorView {
                 })
                 .unwrap_or(true)
         });
+        editor.ui_subscriptions.push(cx.observe_window_visibility(
+            window,
+            |this, _, window, cx| {
+                if !window.is_visible() {
+                    if let Some(document) = this.editor.active_id() {
+                        let _ = this.editor.end_editing(
+                            document,
+                            editor_core::EditingLifecycle::WindowDeactivated,
+                        );
+                    }
+                    for viewport in this.viewport_slots {
+                        this.editor
+                            .set_viewport_metrics(viewport, Default::default());
+                    }
+                }
+                this.sync_viewport_visibility(window, cx);
+                this.redraw(cx);
+            },
+        ));
+        editor
+            .ui_subscriptions
+            .push(cx.observe_window_activation(window, |this, window, cx| {
+                if !window.is_window_active() {
+                    if let Some(document) = this.editor.active_id() {
+                        let _ = this.editor.end_editing(
+                            document,
+                            editor_core::EditingLifecycle::WindowDeactivated,
+                        );
+                    }
+                    this.redraw(cx);
+                }
+            }));
         editor.sync_viewports();
         editor.init_dock(window, cx);
         if let Some(session) = &mut editor.dev_session {
@@ -138,143 +178,42 @@ impl EditorView {
         }
     }
 
-    fn connect_preview(&mut self, window: &Window, cx: &mut Context<Self>) {
-        self._frames = None;
-        self.requests = None;
-        self.frame = None;
-        self.animation_frame = None;
-        self.editor.invalidate_animation();
-        self.frozen_frames.clear();
-        self.editor.invalidate_preview();
-        let (requests, frames, device) = match preview::start(window) {
-            Ok(connection) => connection,
-            Err(error) => {
-                self.render_error = Some(error.to_string());
-                return;
-            }
-        };
-        if self.animation_worker.is_none() {
-            self.init_animation(cx);
-        }
-        self.gpu_device = device;
-        self.render_error = None;
-        self._frames = Some(cx.spawn(async move |this, cx| {
-            while let Ok(frame) = frames.recv().await {
-                if this
-                    .update(cx, |this, cx| {
-                        frame_trace::emit(frame.trace_id, "ui_received", &[]);
-                        if let Some(state) = frame.animation {
-                            let mut pose_changed = true;
-                            match frame.image {
-                                Ok(image) => {
-                                    if !this
-                                        .editor
-                                        .present_animation(state.identity, state.snapshot.clone())
-                                    {
-                                        frame_trace::emit(
-                                            frame.trace_id,
-                                            "rejected",
-                                            &[
-                                                (
-                                                    "viewport_matches",
-                                                    (this.editor.animation_viewport_revision()
-                                                        == Some(state.identity.viewport_revision))
-                                                        as u64,
-                                                ),
-                                                (
-                                                    "recipe_matches",
-                                                    this.editor.accepts_animation(state.identity)
-                                                        as u64,
-                                                ),
-                                                (
-                                                    "candidate_matches",
-                                                    this.editor.animation().is_some_and(|a| {
-                                                        a.candidate == state.identity.candidate
-                                                    })
-                                                        as u64,
-                                                ),
-                                            ],
-                                        );
-                                        return;
-                                    }
-                                    frame_trace::emit(frame.trace_id, "accepted", &[]);
-                                    this.render_stats = frame.stats;
-                                    pose_changed =
-                                        this.animation_frame.as_ref().is_none_or(|frame| {
-                                            !std::sync::Arc::ptr_eq(
-                                                &frame.state.snapshot,
-                                                &state.snapshot,
-                                            )
-                                        });
-                                    this.animation_frame =
-                                        Some(animation::Presented { image, state });
-                                }
-                                Err(error) => this.editor.fail_animation(
-                                    state.identity,
-                                    editor_core::AnimationFailure::Other(error),
-                                ),
-                            }
-                            this.sync_animation_clock(cx);
-                            if pose_changed {
-                                this.notify_animation(cx);
-                            } else {
-                                // Panning/zooming a completed pose only changes its image.
-                                this.notify_canvas(cx);
-                            }
-                            return;
-                        }
-                        match frame.image {
-                            Ok(image) => {
-                                let Some(canvas) = frame.canvas else {
-                                    return;
-                                };
-                                if !this.editor.present_frame(canvas.clone()) {
-                                    frame_trace::emit(frame.trace_id, "rejected", &[]);
-                                    return;
-                                }
-                                frame_trace::emit(frame.trace_id, "accepted", &[]);
-                                this.render_stats = frame.stats;
-                                this.frame = Some(preview::Presented { image, canvas });
-                                if this.render_error.take().is_some() {
-                                    cx.notify();
-                                }
-                            }
-                            Err(error) => {
-                                if frame.revision != 0
-                                    && !this.editor.accepts_preview(frame.revision)
-                                {
-                                    return;
-                                }
-                                this.render_error = Some(error);
-                                cx.notify();
-                            }
-                        }
-                        this.notify_canvas(cx);
-                    })
-                    .is_err()
-                {
-                    break;
+    fn sync_viewport_visibility(&mut self, window: &Window, cx: &App) -> bool {
+        let visible = self
+            .dock
+            .as_ref()
+            .map(|dock| dock.visible_viewports(cx))
+            .unwrap_or_default();
+        #[cfg(any(test, feature = "test-support"))]
+        let visible = self.viewport_scene.as_ref().map_or(visible, |scene| {
+            scene.instances.iter().map(|(id, _)| *id).collect()
+        });
+        let editing = self.editor.gesture_active();
+        let mut changed = false;
+        for viewport in self.editor.viewport_ids() {
+            let displayed = window.is_visible() && visible.contains(&viewport);
+            let before = self.editor.viewport_binding(viewport);
+            self.editor.set_viewport_visible(viewport, displayed);
+            changed |= before != self.editor.viewport_binding(viewport);
+            if !displayed {
+                self.viewport_frames.remove(&viewport);
+                if let Some(requests) = &self.requests {
+                    requests.cancel(viewport);
                 }
             }
-        }));
-        self.requests = Some(requests);
-        self.redraw(cx);
-    }
-
-    fn sync_viewport_visibility(&mut self, window: &Window, cx: &App) -> bool {
-        let visible = window.is_visible()
-            && self
-                .dock
-                .as_ref()
-                .is_none_or(|dock| dock.viewport_displayed(cx));
-        let editing = self.editor.gesture_active();
-        for viewport in self.viewport_slots {
-            self.editor.set_viewport_visible(viewport, visible);
         }
-        editing && !self.editor.gesture_active()
+        changed || (editing && !self.editor.gesture_active())
     }
 
     fn sync_viewports(&mut self) {
+        #[cfg(any(test, feature = "test-support"))]
+        if let Some(scene) = &self.viewport_scene {
+            for &(id, kind) in &scene.instances {
+                self.editor
+                    .register_viewport(id, kind)
+                    .expect("fixed viewport kind");
+            }
+        }
         for (kind, viewport) in [
             editor_core::ViewportKind::Modeling,
             editor_core::ViewportKind::Animation,
@@ -323,8 +262,14 @@ impl EditorView {
     }
     fn notify_canvas(&self, cx: &mut Context<Self>) {
         if let Some(dock) = &self.dock {
-            for canvas in dock.canvas_views() {
+            for canvas in dock.viewport_surfaces() {
                 App::notify(cx, canvas.entity_id());
+            }
+        }
+        #[cfg(any(test, feature = "test-support"))]
+        if let Some(scene) = &self.viewport_scene {
+            for surface in &scene.surfaces {
+                App::notify(cx, surface.entity_id());
             }
         }
     }
@@ -341,76 +286,6 @@ impl EditorView {
 
     fn request_preview(&mut self) {
         self.request_preview_for_input(frame_trace::current_input());
-    }
-
-    fn request_preview_for_input(&mut self, input: u64) {
-        if self.editor.workspace() == editor_core::WorkspaceKind::Animation {
-            if self.editor.is_busy()
-                || !self.editor.canvas_metrics().visible()
-                || self.editor.active_id().is_none()
-            {
-                if let Some(worker) = &mut self.animation_worker {
-                    worker.suspend();
-                }
-            } else if let Some(request) = self.editor.animation_request() {
-                if let Some(worker) = &mut self.animation_worker {
-                    worker.send(request);
-                }
-            }
-            return;
-        }
-        if let Some(worker) = &mut self.animation_worker {
-            worker.suspend();
-        }
-        if self.editor.is_busy() {
-            return;
-        }
-        let trace_id = frame_trace::next_id();
-        frame_trace::emit(trace_id, "scene_begin", &[("input", input)]);
-        let preview = self.editor.preview_if_needed();
-        frame_trace::emit(trace_id, "scene_end", &[]);
-        match preview {
-            Ok(Some(preview)) => {
-                let Some(canvas) = preview.canvas else {
-                    return;
-                };
-                let Some((width, height)) = canvas.transform.metrics.physical_size() else {
-                    return;
-                };
-                frame_trace::emit(
-                    trace_id,
-                    "request",
-                    &[
-                        ("revision", preview.revision),
-                        ("width", width as u64),
-                        ("height", height as u64),
-                    ],
-                );
-                let request = preview::Request {
-                    trace_id,
-                    revision: preview.revision,
-                    transform: canvas.transform,
-                    canvas: Some(canvas),
-                    animation: None,
-                    scene: preview.scene,
-                    target: editor_render::MetalTargetConfig {
-                        width,
-                        height,
-                        format: metal::MTLPixelFormat::RGBA8Unorm,
-                    },
-                };
-                if self
-                    .requests
-                    .as_ref()
-                    .is_none_or(|requests| requests.send(request).is_err())
-                {
-                    frame_trace::emit(trace_id, "send_error", &[]);
-                    self.render_error = Some(t!("editor.preview_stopped").into_owned());
-                }
-            }
-            Ok(None) => {}
-            Err(error) => self.render_error = Some(error.to_string()),
-        }
     }
 }
 

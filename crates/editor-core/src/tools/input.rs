@@ -28,8 +28,9 @@ impl ToolController {
         match event {
             CanvasInput::Cancel => Ok(self.cancel(document)),
             CanvasInput::Leave => {
-                if self.press.is_none() {
+                if self.press.is_none() && self.hovered_binding == Some(frame.version.binding) {
                     self.hovered = None;
+                    self.hovered_binding = None;
                 }
                 Ok(false)
             }
@@ -50,6 +51,7 @@ impl ToolController {
                     &locks,
                 );
                 self.hovered = hit.clone();
+                self.hovered_binding = Some(frame.version.binding);
                 let component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
                     !locks.is_locked(selected) && ((selected.kind == ObjectKind::Mesh && selected == r)
                     || (selected.kind == ObjectKind::Deformer
@@ -100,6 +102,7 @@ impl ToolController {
                     }
                     self.update(document, point)
                 } else {
+                    self.hovered_binding = Some(frame.version.binding);
                     self.hovered = scene.hit_with_mode(
                         point,
                         t,

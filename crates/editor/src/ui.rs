@@ -17,8 +17,12 @@ impl EditorView {
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_viewports();
+        self.sync_workspace_layout(window, cx);
         if self.sync_viewport_visibility(window, cx) {
             self.redraw(cx);
+        }
+        if let Some(viewport) = self.focused_viewport_id(window, cx) {
+            self.focused_viewport = Some(viewport);
         }
         if let Some(session) = &mut self.dev_session {
             if let Err(error) = session.sync(&self.editor) {
@@ -49,6 +53,34 @@ impl Render for EditorView {
         self.refresh_menus(modal, window, cx);
         let theme = cx.theme();
 
+        let workspace = self.dock.as_ref().map(|dock| {
+            div()
+                .flex_1()
+                .min_h_0()
+                .child(dock.area.clone())
+                .into_any_element()
+        });
+        #[cfg(any(test, feature = "test-support"))]
+        let workspace = if let Some(scene) = &self.viewport_scene {
+            Some(
+                div()
+                    .id("viewport-test-scene")
+                    .flex_1()
+                    .min_h_0()
+                    .flex()
+                    .children(scene.panels.iter().enumerate().map(|(index, panel)| {
+                        div()
+                            .id(("viewport-test-panel", index))
+                            .flex_1()
+                            .min_w_0()
+                            .h_full()
+                            .child(panel.clone())
+                    }))
+                    .into_any_element(),
+            )
+        } else {
+            workspace
+        };
         self.action_handlers(modal, cx)
             .size_full()
             .flex()
@@ -60,11 +92,7 @@ impl Render for EditorView {
                 this.filter_repeat(event, window, cx)
             }))
             .child(workspace::render_title_bar(self, modal, window, cx))
-            .children(
-                self.dock
-                    .as_ref()
-                    .map(|dock| div().flex_1().min_h_0().child(dock.area.clone())),
-            )
+            .children(workspace)
             .child(self.status_bar.clone())
             .into_any_element()
     }

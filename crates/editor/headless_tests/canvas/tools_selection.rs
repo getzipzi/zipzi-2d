@@ -11,7 +11,11 @@ fn hover_without_a_presented_frame_keeps_document_observers_idle(cx: &mut TestAp
     use std::{cell::Cell, rc::Rc};
 
     let harness = setup(cx);
-    assert!(harness.view.read_with(cx, |view, _| view.frame.is_none()));
+    assert!(
+        harness
+            .view
+            .read_with(cx, |view, _| view.modeling_frame().is_none())
+    );
     let notifications = Rc::new(Cell::new(0));
     let observed = notifications.clone();
     let _observe =
@@ -70,7 +74,10 @@ fn losing_the_presented_frame_rolls_back_a_live_edit_and_notifies_observers(
             view.editor.document().unwrap().selected_vertex_positions(),
             original
         );
-        view.frame = None;
+        view.viewport_frames
+            .entry(view.viewport_slots[0])
+            .or_default()
+            .modeling = None;
         original
     });
     let notifications = Rc::new(Cell::new(0));
@@ -105,7 +112,7 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
                     .find(|l| l.name == "Second")
                     .unwrap()
                     .id,
-                view.frame
+                view.modeling_frame()
                     .as_ref()
                     .unwrap()
                     .canvas
@@ -212,7 +219,7 @@ fn overlap_menu_selects_a_candidate_and_keeps_history(cx: &mut TestAppContext) {
                 view.dock
                     .as_ref()
                     .unwrap()
-                    .active_canvas()
+                    .active_viewport()
                     .read(cx)
                     .focus
                     .is_focused(window)
@@ -296,7 +303,7 @@ fn helper_menu_toggles_preserve_selection_history_and_canvas_focus(cx: &mut Test
                     view.dock
                         .as_ref()
                         .unwrap()
-                        .active_canvas()
+                        .active_viewport()
                         .read(cx)
                         .focus
                         .is_focused(window)
@@ -590,7 +597,12 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
     present_canvas(&harness, cx);
     cx.update_window(harness.window, |_, window, cx| {
         let original = harness.view.read_with(cx, |view, _| {
-            view.frame.as_ref().unwrap().canvas.geometry.controls[0]
+            view.modeling_frame()
+                .as_ref()
+                .unwrap()
+                .canvas
+                .geometry
+                .controls[0]
                 .points
                 .clone()
         });
@@ -601,7 +613,13 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
             assert_eq!(
-                view.frame.as_ref().unwrap().canvas.geometry.controls[0].points,
+                view.modeling_frame()
+                    .as_ref()
+                    .unwrap()
+                    .canvas
+                    .geometry
+                    .controls[0]
+                    .points,
                 original
             );
         });
@@ -634,6 +652,13 @@ fn a_cancelled_capture_does_not_swallow_the_next_pointer_down(cx: &mut TestAppCo
         };
         window.dispatch_event(press.clone().to_platform_input(), cx);
         assert!(harness.view.read(cx).editor.gesture_active());
+        let canvas = harness
+            .view
+            .read(cx)
+            .modeling_frame()
+            .unwrap()
+            .image
+            .clone();
         harness.view.update(cx, |view, _| {
             let document = view.editor.active_id().unwrap();
             view.editor
@@ -641,6 +666,17 @@ fn a_cancelled_capture_does_not_swallow_the_next_pointer_down(cx: &mut TestAppCo
                 .unwrap();
         });
         assert!(!harness.view.read(cx).editor.gesture_active());
+        harness.view.update(cx, |view, _| {
+            let frame = view.editor.preview().unwrap().canvas.unwrap();
+            assert!(view.editor.present_frame(frame.clone()));
+            view.viewport_frames
+                .entry(frame.version.binding.viewport)
+                .or_default()
+                .modeling = Some(crate::preview::Presented {
+                image: canvas,
+                canvas: frame.clone(),
+            });
+        });
         window.dispatch_event(press.to_platform_input(), cx);
         assert!(harness.view.read(cx).editor.gesture_active());
         window.dispatch_event(

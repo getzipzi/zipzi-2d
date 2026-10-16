@@ -23,7 +23,7 @@ impl Drag {
 
 pub(super) fn frame_ready(view: &EditorView) -> bool {
     let (Some(shown), Some(evaluated), Some(document)) = (
-        &view.frame,
+        view.modeling_frame(),
         view.editor.evaluated_frame(),
         view.editor.document(),
     ) else {
@@ -46,8 +46,7 @@ pub(super) fn prepare(
 ) -> anyhow::Result<Drag> {
     let config = CONFIG.get().unwrap();
     let frame = view
-        .frame
-        .as_ref()
+        .modeling_frame()
         .context("no displayed canvas")?
         .canvas
         .clone();
@@ -59,7 +58,7 @@ pub(super) fn prepare(
         .dock
         .as_ref()
         .unwrap()
-        .active_canvas()
+        .active_viewport()
         .read(cx)
         .benchmark_bounds()
         .context("canvas has no bounds")?;

@@ -201,14 +201,13 @@ fn resizing_another_instance_cannot_cancel_the_primary_modeling_candidate() -> a
     editor.set_viewport_metrics(second, metrics(300., 400., 1.));
     assert!(editor.gesture_active());
     assert!(editor.viewport_interaction_valid(token));
-    assert!(
-        editor
-            .begin_viewport_interaction(
-                editor.viewport_binding(second).unwrap(),
-                ViewportInteractionKind::Modeling
-            )
-            .is_err()
-    );
+    assert!(!editor.canvas_input_for(
+        editor.viewport_binding(second).unwrap(),
+        CanvasInput::Move {
+            point,
+            left_down: false
+        }
+    )?);
     assert!(editor.viewport_interaction_valid(token));
     editor.set_viewport_metrics(first.viewport, metrics(600., 400., 1.));
     assert!(!editor.gesture_active());

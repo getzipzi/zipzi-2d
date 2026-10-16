@@ -55,7 +55,10 @@ pub(super) fn present_canvas(harness: &super::super::Harness, cx: &mut TestAppCo
             descriptor.set_pixel_format(metal::MTLPixelFormat::RGBA8Unorm);
             let image = device.new_texture(&descriptor);
             assert!(view.editor.present_frame(frame.clone()));
-            view.frame = Some(crate::preview::Presented {
+            view.viewport_frames
+                .entry(view.viewport_slots[0])
+                .or_default()
+                .modeling = Some(crate::preview::Presented {
                 image,
                 canvas: frame,
             });

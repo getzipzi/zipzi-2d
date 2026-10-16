@@ -77,7 +77,7 @@ impl CanvasOverlay {
     }
 }
 
-impl CanvasView {
+impl ViewportSurface {
     pub(super) fn overlay_element(
         &self,
         overlay: editor_core::OverlaySnapshot,
@@ -110,7 +110,7 @@ impl CanvasView {
                         if owner.editor.viewport_metrics(binding.viewport) != Some(metrics) {
                             let editing = owner.editor.gesture_active();
                             owner.editor.set_viewport_metrics(binding.viewport, metrics);
-                            if editing {
+                            if editing && !owner.editor.gesture_active() {
                                 // Resizing cancels an authoring gesture; its
                                 // rollback must also reach document panels.
                                 owner.redraw(cx);

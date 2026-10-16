@@ -33,6 +33,8 @@ mod psd_import;
 mod sorting;
 #[path = "cases/timeline/mod.rs"]
 mod timeline;
+#[path = "cases/viewport_rendering.rs"]
+mod viewport_rendering;
 #[path = "cases/viewport_states.rs"]
 mod viewport_states;
 #[path = "cases/viewport_targets.rs"]

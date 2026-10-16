@@ -6,12 +6,12 @@ use std::collections::HashMap;
 use std::{rc::Rc, sync::Arc};
 
 pub(super) mod add_panel;
-mod canvases;
 pub(crate) mod header;
 mod layout;
 mod persistence;
 mod registry;
 mod skin;
+mod viewports;
 mod workspace;
 pub use layout::{LayoutConfig, validate_layout};
 use layout::{layout_file, layout_version, timeline_height};
@@ -28,7 +28,7 @@ const REGIONS: [DockPlacement; 4] = [
 
 pub struct DockWorkspace {
     pub area: Entity<DockArea>,
-    canvases: canvases::CanvasPanels,
+    viewports: viewports::ViewportPanels,
     pub timeline: Entity<crate::panels::timeline::Timeline>,
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,
@@ -53,28 +53,41 @@ pub struct DockWorkspace {
 }
 
 impl DockWorkspace {
-    pub fn active_canvas(&self) -> &Entity<crate::canvas::CanvasView> {
-        self.canvases.active()
+    pub fn active_viewport(&self) -> &Entity<crate::viewports::ViewportSurface> {
+        &self.viewports.active(self.workspace).surface
     }
 
-    pub(super) fn activate_canvas(&mut self, id: EntityId) {
-        self.canvases.activate(id);
+    pub(super) fn activate_viewport(&mut self, id: EntityId) {
+        self.viewports.activate(id);
     }
 
-    pub(super) fn canvas_views(&self) -> impl Iterator<Item = &Entity<crate::canvas::CanvasView>> {
-        self.canvases.iter()
+    pub(super) fn viewport_surfaces(
+        &self,
+    ) -> impl Iterator<Item = &Entity<crate::viewports::ViewportSurface>> {
+        self.viewports.iter().map(|entry| &entry.surface)
     }
 
     pub(super) fn canvas_node(&self, cx: &App) -> Option<NodeId> {
-        let id = PanelId::from(self.active_canvas().entity_id());
+        let id = self.viewport_panel_id();
         let area = self.area.read(cx);
         REGIONS
             .into_iter()
             .find_map(|placement| area.layout(placement)?.find_panel_node(id))
     }
 
-    pub(super) fn viewport_displayed(&self, cx: &App) -> bool {
-        self.displayed(PanelKind::Canvas, cx)
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) fn viewport_panel(&self) -> Arc<dyn BasePanelView> {
+        self.viewports.active(self.workspace).panel.clone()
+    }
+    pub(crate) fn viewport_panel_id(&self) -> PanelId {
+        self.viewports.panel_id(self.workspace)
+    }
+    pub(crate) fn visible_viewports(&self, cx: &App) -> Vec<editor_core::ViewportId> {
+        self.viewports
+            .iter()
+            .filter(|entry| self.panel_displayed(entry.panel.panel_id(cx), cx))
+            .map(|entry| entry.id)
+            .collect()
     }
 
     pub fn contains(&self, kind: PanelKind, cx: &App) -> bool {
@@ -85,8 +98,11 @@ impl DockWorkspace {
     }
 
     fn displayed(&self, kind: PanelKind, cx: &App) -> bool {
-        let area = self.area.read(cx);
         let id = self.panels[&kind].panel_id(cx);
+        self.panel_displayed(id, cx)
+    }
+    fn panel_displayed(&self, id: PanelId, cx: &App) -> bool {
+        let area = self.area.read(cx);
         let Some(region) = panel_region(area, id) else {
             return false;
         };
@@ -103,7 +119,7 @@ impl DockWorkspace {
     }
 
     pub fn toggle(&self, kind: PanelKind, window: &mut Window, cx: &mut App) {
-        if !kind.spec().available(self.workspace) || kind == PanelKind::Canvas {
+        if !kind.spec().available(self.workspace) || kind.is_viewport() {
             return;
         }
         let panel = self.panels[&kind].clone();
@@ -185,7 +201,7 @@ impl DockWorkspace {
                 };
             }
         }
-        let canvas = PanelId::from(self.active_canvas().entity_id());
+        let canvas = self.viewport_panel_id();
         let node = REGIONS
             .into_iter()
             .find_map(|region| area.layout(region)?.find_panel_node(canvas))
@@ -209,7 +225,7 @@ impl DockWorkspace {
         window: &mut Window,
         cx: &mut App,
     ) {
-        if kind == PanelKind::Canvas || !kind.spec().available(self.workspace) {
+        if kind.is_viewport() || !kind.spec().available(self.workspace) {
             return;
         }
         let panel = self.panels[&kind].clone();
@@ -306,27 +322,28 @@ mod tests {
     use gpui_kit::component::dock::{DockAreaState, PanelInfo, PanelState};
 
     #[test]
-    fn animation_dock_layout_requires_the_timeline_panel_layout_version() {
+    fn workspace_layouts_require_their_concrete_viewport_and_version() {
         let mut state = DockAreaState {
-            version: Some(3),
-            center: PanelState::new("Canvas"),
+            version: Some(5),
+            center: PanelState::new("ModelingViewport"),
             ..Default::default()
         };
         assert!(validate_layout(&state, WorkspaceKind::Modeling).is_ok());
         assert!(validate_layout(&state, WorkspaceKind::Animation).is_err());
-        state.version = Some(4);
+        state.version = Some(6);
+        state.center = PanelState::new("AnimationViewport");
         // A deliberately closed Timeline is still a valid new Animation layout.
         assert!(validate_layout(&state, WorkspaceKind::Animation).is_ok());
         assert!(validate_layout(&state, WorkspaceKind::Modeling).is_err());
     }
     fn layout() -> DockAreaState {
         DockAreaState {
-            version: Some(3),
+            version: Some(5),
             center: PanelState {
                 panel_name: "StackPanel".into(),
                 children: vec![
                     PanelState::new("MeshTree"),
-                    PanelState::new("Canvas"),
+                    PanelState::new("ModelingViewport"),
                     PanelState::new("Properties"),
                 ],
                 info: PanelInfo::stack(vec![], gpui_kit::Axis::Horizontal),
@@ -385,7 +402,10 @@ mod tests {
         invalid.center.children.push(PanelState::new("unknown"));
         assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());
         invalid = default.clone();
-        invalid.center.children.push(PanelState::new("Canvas"));
+        invalid
+            .center
+            .children
+            .push(PanelState::new("ModelingViewport"));
         assert!(validate_layout(&invalid, WorkspaceKind::Modeling).is_err());
         std::fs::write(dir.path().join("layout-modeling.json"), "{")?;
         assert!(store.read::<LayoutConfig>("layout-modeling.json").is_err());
@@ -426,8 +446,8 @@ mod tests {
         latest.center.children.remove(0);
         writer.save(WorkspaceKind::Modeling, latest.clone())?;
         let animation = DockAreaState {
-            version: Some(3),
-            center: PanelState::new("Canvas"),
+            version: Some(5),
+            center: PanelState::new("ModelingViewport"),
             ..Default::default()
         };
         writer.save(WorkspaceKind::Animation, animation.clone())?;

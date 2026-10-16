@@ -2,7 +2,7 @@
 use super::*;
 use gpui_kit::component::menu::PopupMenu;
 
-impl CanvasView {
+impl ViewportSurface {
     pub(super) fn object_menu(
         menu_owner: &WeakEntity<EditorView>,
         menu_canvas: &WeakEntity<Self>,
@@ -23,14 +23,17 @@ impl CanvasView {
         let state = owner.read(cx);
         if state.modal
             || state.editor.is_busy()
-            || state.editor.workspace() != WorkspaceKind::Modeling
+            || state.editor.editing_context() != Some(editor_core::EditingContext::Modeling)
         {
             return menu;
         }
         let point = canvas.read(cx).local(window.mouse_position());
-        let candidates = state
-            .editor
-            .pick_candidates(point, state.frame.as_ref().map(|f| f.canvas.version));
+        let candidates = state.editor.pick_candidates(
+            point,
+            state
+                .modeling_frame_for(canvas.read(cx).viewport)
+                .map(|f| f.canvas.version),
+        );
         let Some(binding) = canvas.read(cx).binding(&state.editor) else {
             return menu;
         };
@@ -48,7 +51,8 @@ impl CanvasView {
                     };
                     owner.update(cx, |owner, cx| {
                         if !owner.editor.viewport_binding_valid(binding)
-                            || owner.editor.workspace() != WorkspaceKind::Modeling
+                            || owner.editor.editing_context()
+                                != Some(editor_core::EditingContext::Modeling)
                             || owner.modal
                             || owner.editor.is_busy()
                         {

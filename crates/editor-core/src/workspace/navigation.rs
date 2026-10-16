@@ -114,15 +114,14 @@ impl Editor {
     pub(crate) fn invalidate_primary_presentation(&mut self) {
         self.cancel_gesture();
         self.invalidate_preview();
-        self.presentation_floor = self.revision + 1;
-        if let Some(session) = self.active_session_mut() {
-            session.displayed = None;
-        }
         self.invalidate_animation();
     }
     pub fn invalidate_preview(&mut self) {
-        self.requested_scene = None;
-        self.displayed_request = None;
+        for viewport in self.viewport_ids() {
+            if let Some(state) = self.viewport_presentation_mut(viewport) {
+                state.invalidate();
+            }
+        }
     }
     pub fn set_canvas_metrics(&mut self, metrics: crate::CanvasMetrics) {
         if let Some(viewport) = self.primary_viewport_id() {

@@ -148,11 +148,7 @@ fn ui_scale_changes_controls_rows_and_chrome_together(cx: &mut TestAppContext) {
                     <= gpui_kit::px(0.5),
                 "tree header right inset differs from top inset: {search:?} in {header:?}"
             );
-            let canvas_node = tree
-                .find_panel_node(gpui_kit::component::dock::PanelId::from(
-                    dock.active_canvas().entity_id(),
-                ))
-                .unwrap();
+            let canvas_node = tree.find_panel_node(dock.viewport_panel_id()).unwrap();
             let canvas_header = window
                 .find(format!("dock-header-{}", canvas_node.as_u64()))
                 .bounds();

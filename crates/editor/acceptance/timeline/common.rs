@@ -24,11 +24,13 @@ pub(crate) fn current(h: &Harness) -> bool {
     h.view.read_with(&h.cx, |view, _| {
         let a = view.editor.animation().unwrap();
         assert!(a.error.is_none(), "{:?}", a.error);
-        assert!(view.render_error.is_none(), "{:?}", view.render_error);
-        view.animation_frame.as_ref().is_some_and(|frame| {
+        assert!(view.render_error().is_none(), "{:?}", view.render_error());
+        view.animation_frame().is_some_and(|frame| {
             let id = frame.state.identity;
-            view.editor.can_display_animation_image(id)
-                && view.editor.animation_viewport_revision() == Some(id.viewport_revision)
+            view.editor
+                .can_display_animation_viewport(frame.state.viewport)
+                && view.editor.animation_viewport_revision()
+                    == Some(frame.state.viewport.viewport_revision)
                 && id.time == a.time
                 && id.candidate == a.candidate
                 && id.model_generation == a.model_generation

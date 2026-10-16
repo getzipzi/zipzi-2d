@@ -185,6 +185,7 @@ impl Drop for AnimationWorker {
 #[derive(Clone)]
 pub struct Presentation {
     pub identity: AnimationIdentity,
+    pub viewport: editor_core::AnimationViewportIdentity,
     pub snapshot: Arc<kasane_sdk::MotionSnapshot>,
     pub transform: editor_core::ViewportTransform,
 }
@@ -196,11 +197,10 @@ pub struct Presented {
 
 impl EditorView {
     pub(crate) fn displayed_animation(&self) -> Option<&kasane_sdk::MotionSnapshot> {
-        self.animation_frame
-            .as_ref()
+        self.animation_frame()
             .filter(|frame| {
                 self.editor
-                    .can_display_animation_image(frame.state.identity)
+                    .can_display_animation_viewport(frame.state.viewport)
             })
             .map(|frame| frame.state.snapshot.as_ref())
             .or_else(|| self.editor.animation().and_then(|a| a.presented.as_deref()))
@@ -217,7 +217,10 @@ impl EditorView {
                             return;
                         }
                         match frame.result {
-                            Ok(evaluated) => this.render_animation(evaluated, frame.trace_id),
+                            Ok(evaluated) => {
+                                this.animation_content = Some(evaluated.clone());
+                                this.render_animation(evaluated, frame.trace_id);
+                            }
                             Err(error) => {
                                 this.editor.fail_animation(
                                     frame.identity,
@@ -235,48 +238,43 @@ impl EditorView {
             }
         }));
     }
-    fn render_animation(&mut self, evaluated: AnimationEvaluated, trace_id: u64) {
-        let Some(transform) = editor_core::ViewportTransform::new(
-            evaluated.scene.viewport_frame.canvas,
-            self.editor.canvas_metrics(),
-            self.editor.view(),
-        ) else {
-            return;
-        };
-        let Some((width, height)) = transform.metrics.physical_size() else {
-            return;
-        };
-        let mut identity = evaluated.identity;
-        identity.viewport_revision = self
+    pub(crate) fn render_animation(&mut self, evaluated: AnimationEvaluated, trace_id: u64) {
+        for binding in self
             .editor
-            .animation_viewport_revision()
-            .unwrap_or(identity.viewport_revision);
-        identity.canvas_metrics = transform.metrics;
-        let state = Presentation {
-            identity,
-            snapshot: evaluated.snapshot,
-            transform,
-        };
-        let request = preview::Request {
-            trace_id,
-            revision: identity.request,
-            canvas: None,
-            animation: Some(state),
-            transform,
-            scene: evaluated.scene,
-            target: editor_render::MetalTargetConfig {
-                width,
-                height,
-                format: metal::MTLPixelFormat::RGBA8Unorm,
-            },
-        };
-        if self
-            .requests
-            .as_ref()
-            .is_some_and(|requests| requests.send(request).is_err())
+            .visible_viewport_bindings()
+            .into_iter()
+            .filter(|binding| binding.kind == editor_core::ViewportKind::Animation)
         {
-            self.editor
-                .fail_animation(identity, editor_core::AnimationFailure::RendererStopped);
+            let Some((viewport, transform)) = self.editor.animation_viewport_request(
+                binding,
+                evaluated.identity,
+                evaluated.scene.viewport_frame.canvas,
+            ) else {
+                continue;
+            };
+            let Some((width, height)) = transform.metrics.physical_size() else {
+                continue;
+            };
+            let state = Presentation {
+                identity: evaluated.identity,
+                viewport,
+                snapshot: evaluated.snapshot.clone(),
+                transform,
+            };
+            self.send_viewport_request(preview::Request {
+                binding,
+                trace_id,
+                revision: viewport.request,
+                canvas: None,
+                animation: Some(state),
+                transform,
+                scene: evaluated.scene.clone(),
+                target: editor_render::MetalTargetConfig {
+                    width,
+                    height,
+                    format: metal::MTLPixelFormat::RGBA8Unorm,
+                },
+            });
         }
     }
     pub(super) fn sync_animation_clock(&mut self, cx: &mut Context<Self>) {

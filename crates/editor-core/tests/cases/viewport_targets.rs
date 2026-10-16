@@ -19,7 +19,7 @@ fn commands_require_registered_targets_and_fixed_viewport_capabilities() -> anyh
             .register_primary_viewport(modeling, ViewportKind::Animation)
             .is_err()
     );
-    assert!(editor.viewport_binding(animation).is_none());
+    assert!(editor.viewport_binding(animation).is_some());
     editor.dispatch(editor.command_for_viewport(
         CommandId::GlueTool,
         binding,

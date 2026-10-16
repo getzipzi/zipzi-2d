@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// A document's work mode. Panel layouts are shared by mode within the window.
+/// Layout selection. Editing contexts and viewport identities are separate state.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkspaceKind {

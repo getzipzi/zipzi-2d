@@ -193,6 +193,8 @@ import_complete = "Import complete"
 import_warnings_title = "Import completed with warnings"
 import_warning_count = "Import complete · %{count} warning(s)"
 [dock]
+modeling_viewport = "Modeling View"
+animation_viewport = "Animation View"
 zoom_controls = "Canvas Zoom"
 panel_tools = "Panel Tools"
 canvas = "Canvas"

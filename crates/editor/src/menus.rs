@@ -106,11 +106,18 @@ impl EditorView {
             deformer_visibility: self.editor.deformer_visibility(),
             commands: COMMANDS
                 .iter()
-                .map(|s| self.editor.command_state(self.editor.command(s.id)))
+                .map(|s| {
+                    self.editor.command_state(
+                        self.viewport_command(s.id, editor_core::CommandSource::NativeMenu),
+                    )
+                })
                 .collect(),
             targets: COMMANDS
                 .iter()
-                .map(|spec| self.editor.command(spec.id).target)
+                .map(|spec| {
+                    self.viewport_command(spec.id, editor_core::CommandSource::NativeMenu)
+                        .target
+                })
                 .collect(),
             text,
             modal,
@@ -141,10 +148,7 @@ impl EditorView {
                 .items(items)
         };
         let item = |id: CommandId| {
-            let command = self
-                .editor
-                .command(id)
-                .with_source(editor_core::CommandSource::NativeMenu);
+            let command = self.viewport_command(id, editor_core::CommandSource::NativeMenu);
             let state = self.editor.command_state(command);
             MenuItem::action(
                 t!(id.spec().label).into_owned(),

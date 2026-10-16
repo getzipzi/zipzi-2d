@@ -69,12 +69,17 @@ impl ToolController {
         let scene = &frame.geometry;
         let t = frame.transform;
         let selection = &document.context().selections;
+        let hovered_target = self
+            .hovered
+            .clone()
+            .filter(|_| self.hovered_binding == Some(frame.version.binding));
         let mut out = OverlaySnapshot::default();
         out.active_handle = self
             .press
             .as_ref()
+            .filter(|press| press.version.binding == frame.version.binding)
             .and_then(|p| p.target.as_ref())
-            .or(self.hovered.as_ref())
+            .or(hovered_target.as_ref())
             .and_then(|hit| match hit {
                 HitTarget::DeformerHandle(_, handle) => Some(*handle),
                 HitTarget::RotationHandle(_) => Some(crate::DeformerHandle::Rotate),
@@ -107,7 +112,7 @@ impl ToolController {
                             id: *id,
                             position: t.to_canvas(*p),
                             selected: self.components.contains(&c),
-                            hovered: self.hovered == Some(HitTarget::Component(c)),
+                            hovered: hovered_target == Some(HitTarget::Component(c)),
                             kind: OverlayVertexKind::Mesh,
                         });
                     }
@@ -161,8 +166,7 @@ impl ToolController {
                 }
                 continue;
             }
-            let hovered = self
-                .hovered
+            let hovered = hovered_target
                 .as_ref()
                 .is_some_and(|h| h.object() == &control.object);
             if control.kind == ControlKind::Glue {
@@ -223,7 +227,7 @@ impl ToolController {
                         id,
                         position: t.to_canvas(*p),
                         selected: self.components.contains(&c),
-                        hovered: self.hovered == Some(HitTarget::Component(c)),
+                        hovered: hovered_target == Some(HitTarget::Component(c)),
                         kind: OverlayVertexKind::Warp,
                     });
                 }
@@ -237,7 +241,7 @@ impl ToolController {
                         position: t.to_canvas(*b),
                         round: true,
                         selected: self.components.contains(&c),
-                        hovered: self.hovered == Some(HitTarget::Component(c)),
+                        hovered: hovered_target == Some(HitTarget::Component(c)),
                     });
                 }
                 if self.deformer_grid {
@@ -279,9 +283,9 @@ impl ToolController {
                                                 control.object.clone(),
                                             ))
                                     })),
-                            hovered: self.hovered == Some(HitTarget::Component(c))
+                            hovered: hovered_target == Some(HitTarget::Component(c))
                                 || (i == 1
-                                    && self.hovered
+                                    && hovered_target
                                         == Some(HitTarget::RotationHandle(control.object.clone()))),
                         });
                     }
@@ -320,7 +324,7 @@ impl ToolController {
                                                 kind,
                                             ))
                                     }),
-                                    hovered: self.hovered
+                                    hovered: hovered_target
                                         == Some(HitTarget::DeformerHandle(
                                             control.object.clone(),
                                             kind,
@@ -330,7 +334,7 @@ impl ToolController {
                 }
             }
         }
-        if let Some(hit) = &self.hovered {
+        if let Some(hit) = &hovered_target {
             if let Some(mesh) = scene
                 .mesh(&hit.object().id)
                 .filter(|_| hit.object().kind == ObjectKind::Mesh)
@@ -342,7 +346,11 @@ impl ToolController {
                 );
             }
         }
-        if let Some(p) = &self.press {
+        if let Some(p) = self
+            .press
+            .as_ref()
+            .filter(|press| press.version.binding == frame.version.binding)
+        {
             if p.dragged && (p.target.is_none() || matches!(p.target, Some(HitTarget::Object(_)))) {
                 out.marquee = Some((p.point, p.current));
             }

@@ -12,7 +12,7 @@ fn scope(scope: CommandScope) -> &'static str {
     match scope {
         CommandScope::Window => "KasaneEditor && !KasaneModal",
         CommandScope::Document => "KasaneEditor && !Input && !KasaneModal",
-        CommandScope::Viewport => "KasaneCanvas && !Input && !KasaneModal",
+        CommandScope::Viewport => "KasaneViewport && !Input && !KasaneModal",
         CommandScope::Timeline => "KasaneTimeline && !Input && !KasaneModal",
         CommandScope::Property => "(KasaneEditor > Input) && !KasaneModal",
     }
@@ -115,10 +115,7 @@ impl EditorView {
             return;
         }
         let text = self.has_focused_input(window, cx);
-        let canvas = self
-            .dock
-            .as_ref()
-            .is_some_and(|d| d.active_canvas().focus_handle(cx).is_focused(window));
+        let canvas = self.focused_viewport_id(window, cx).is_some();
         let timeline = self
             .dock
             .as_ref()
@@ -203,14 +200,14 @@ mod tests {
         assert_eq!(find("cmd-z", "KasaneEditor > Input"), 0);
         assert_eq!(find("space", "KasaneEditor > Input"), 0);
         assert_eq!(find("space", "KasaneEditor"), 1);
-        assert_eq!(find("space", "KasaneEditor > KasaneCanvas"), 1);
+        assert_eq!(find("space", "KasaneEditor > KasaneViewport"), 1);
         assert_eq!(find("space", "KasaneEditor KasaneModal"), 0);
-        assert_eq!(find("v", "KasaneEditor > KasaneCanvas"), 1);
+        assert_eq!(find("v", "KasaneEditor > KasaneViewport"), 1);
         assert_eq!(find("cmd-c", "KasaneEditor > KasaneTimeline"), 1);
-        assert_eq!(find("cmd-c", "KasaneEditor > KasaneCanvas"), 0);
+        assert_eq!(find("cmd-c", "KasaneEditor > KasaneViewport"), 0);
         assert_eq!(find("cmd-c", "KasaneEditor > KasaneTimeline > Input"), 0);
         assert_eq!(find("left", "KasaneEditor > KasaneTimeline"), 1);
-        assert_eq!(find("left", "KasaneEditor > KasaneCanvas"), 0);
+        assert_eq!(find("left", "KasaneEditor > KasaneViewport"), 0);
         assert_eq!(find("left", "KasaneEditor KasaneModal > KasaneTimeline"), 0);
         assert_eq!(find("cmd-s", "KasaneEditor KasaneModal"), 0);
         assert_eq!(find("escape", "KasaneEditor > Input"), 1);
@@ -230,8 +227,8 @@ mod tests {
                 .is_some_and(|a| a.id == CommandId::CommitProperty)
         );
         assert_eq!(find("enter", "KasaneEditor KasaneModal > Input"), 1);
-        assert_eq!(find("v", "KasaneEditor > KasaneCanvas > Input"), 0);
-        assert_eq!(find("escape", "KasaneEditor > KasaneCanvas"), 1);
+        assert_eq!(find("v", "KasaneEditor > KasaneViewport > Input"), 0);
+        assert_eq!(find("escape", "KasaneEditor > KasaneViewport"), 1);
         assert_eq!(
             keymap
                 .bindings_for_action(&RunCommand::new(CommandId::Open))

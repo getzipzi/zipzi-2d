@@ -408,19 +408,24 @@ impl Editor {
     }
     pub fn animation_request(&mut self) -> Option<AnimationRequest> {
         let document = self.active_id()?;
-        if self.workspace() != WorkspaceKind::Animation
-            || self.ensure_animation_target(document).is_err()
-            || !self.canvas_metrics().visible()
-        {
+        if self.is_busy() || self.exiting() {
             return None;
         }
+        let binding = self
+            .visible_viewport_bindings()
+            .into_iter()
+            .find(|binding| {
+                binding.kind == crate::ViewportKind::Animation
+                    && self
+                        .viewport_metrics(binding.viewport)
+                        .is_some_and(|metrics| metrics.visible())
+            })?;
         let workspace_revision = self.workspace_revision();
-        let metrics = self.canvas_metrics();
-        let viewport_id = self.primary_viewport_id()?;
+        let metrics = self.viewport_metrics(binding.viewport)?;
+        let viewport_id = binding.viewport;
         let session = self.active_session_mut()?;
         session.fit_default_view(viewport_id, metrics);
         session.reconcile_animation();
-        let viewport = session.view_state(viewport_id).revision;
         let source = if let Some(source) = &session.animation.playback.source {
             source.clone()
         } else {
@@ -430,9 +435,7 @@ impl Editor {
         };
         let animation = &mut session.animation.playback;
         if animation.frames.latest().is_some_and(|previous| {
-            previous.viewport_revision == viewport
-                && previous.time == animation.time
-                && previous.candidate == animation.candidate
+            previous.time == animation.time && previous.candidate == animation.candidate
         }) {
             return None;
         }
@@ -446,8 +449,6 @@ impl Editor {
             preview_generation: animation.preview_generation,
             request: sequence,
             acceptance_floor: animation.frames.acceptance_floor(),
-            viewport_revision: viewport,
-            canvas_metrics: metrics,
             time: animation.time,
             preview_mode: animation.preview_mode,
             candidate: animation.candidate,

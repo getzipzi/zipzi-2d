@@ -29,10 +29,7 @@ impl Render for StatusBar {
 
 fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
     let theme = cx.theme();
-    let error = view
-        .edit_error
-        .clone()
-        .or_else(|| view.render_error.clone());
+    let error = view.edit_error.clone().or_else(|| view.render_error());
     let message = error.clone().unwrap_or_else(|| view.message.clone());
     let is_error = error.is_some();
     let selected_layer = view.editor.selected_layer();

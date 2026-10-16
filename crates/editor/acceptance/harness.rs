@@ -98,9 +98,9 @@ impl Harness {
                 window.render_frame(cx);
                 self.view.read_with(cx, |view, cx| {
                     anyhow::ensure!(
-                        view.render_error.is_none(),
+                        view.render_error().is_none(),
                         "Preview failed: {:?}",
-                        view.render_error
+                        view.render_error()
                     );
                     anyhow::ensure!(
                         view.edit_error.is_none(),
@@ -110,9 +110,18 @@ impl Harness {
                     let current = if view.editor.active_id().is_none() {
                         true
                     } else if view.editor.workspace() == editor_core::WorkspaceKind::Animation {
-                        view.animation_frame.as_ref().is_some_and(|frame| {
+                        view.animation_frame().is_some_and(|frame| {
                             view.editor
-                                .can_display_animation_image(frame.state.identity)
+                                .can_display_animation_viewport(frame.state.viewport)
+                                && view
+                                    .editor
+                                    .viewport_state(
+                                        frame.state.viewport.binding.document,
+                                        frame.state.viewport.binding.viewport,
+                                    )
+                                    .is_some_and(|state| {
+                                        state.revision == frame.state.viewport.viewport_revision
+                                    })
                                 && view.editor.animation().is_some_and(|a| {
                                     a.time == frame.state.snapshot.time
                                         && a.candidate == frame.state.identity.candidate
@@ -127,7 +136,7 @@ impl Harness {
                                 })
                         })
                     } else {
-                        view.frame.as_ref().is_some_and(|frame| {
+                        view.modeling_frame().is_some_and(|frame| {
                             view.editor.accepts_preview(frame.canvas.version.request)
                         })
                     };
@@ -155,9 +164,9 @@ impl Harness {
                         a.presented.as_ref().map(|s| s.time),
                         a.error.clone()
                     )),
-                    view.animation_frame.as_ref().map(|f| (
+                    view.animation_frame().map(|f| (
                         f.state.snapshot.time,
-                        view.editor.can_display_animation_image(f.state.identity)
+                        view.editor.can_display_animation_viewport(f.state.viewport)
                     ))
                 ))
             );

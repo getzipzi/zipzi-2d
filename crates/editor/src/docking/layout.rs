@@ -16,9 +16,9 @@ pub(super) fn layout_file(workspace: WorkspaceKind) -> &'static str {
 
 pub(super) fn layout_version(workspace: WorkspaceKind) -> usize {
     match workspace {
-        WorkspaceKind::Modeling => 3,
+        WorkspaceKind::Modeling => 5,
         // Timeline is now part of the dock layout rather than window chrome.
-        WorkspaceKind::Animation => 4,
+        WorkspaceKind::Animation => 6,
     }
 }
 
@@ -184,7 +184,7 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
                     "Panel is unavailable in this workspace"
                 );
                 ensure!(seen.insert(node.panel_name.clone()), "Duplicate panel");
-                Ok(usize::from(node.panel_name == "Canvas"))
+                Ok(usize::from(kind == PanelKind::primary_viewport(workspace)))
             }
             PanelInfo::Tabs { active_index } => {
                 ensure!(
@@ -242,8 +242,8 @@ pub fn validate_layout(state: &DockAreaState, workspace: WorkspaceKind) -> anyho
         );
         canvases += walk(dock.panel(), &mut seen, 0, workspace)?;
     }
-    // The canvas is a normal dock panel. Instance count remains one until the
-    // render scheduler and document view states support independent viewports.
-    ensure!(canvases == 1, "Exactly one canvas is required");
+    // Product workspaces declare one required viewport kind. Simultaneous
+    // instances are exercised by the test scene without expanding product layouts.
+    ensure!(canvases == 1, "Exactly one primary viewport is required");
     Ok(())
 }

@@ -18,8 +18,6 @@ pub struct DocumentSession {
     geometry: Option<Arc<CanvasScene>>,
     previous_geometry: Option<Arc<CanvasScene>>,
     appearance_geometry: Option<Arc<CanvasScene>>,
-    // The existing primary Modeling presentation bridge, until surface queues split.
-    pub displayed: Option<CanvasFrame>,
     pub evaluations: u64,
 }
 impl DocumentSession {
@@ -37,7 +35,6 @@ impl DocumentSession {
             geometry: None,
             previous_geometry: None,
             appearance_geometry: None,
-            displayed: None,
             evaluations: 0,
         }
     }
@@ -351,19 +348,25 @@ impl DocumentSession {
             self.geometry.as_ref().unwrap().clone(),
         ))
     }
-    pub fn overlay(&self) -> OverlaySnapshot {
-        let Some(frame) = &self.displayed else {
-            return OverlaySnapshot::default();
-        };
+    pub fn overlay(&self, frame: &CanvasFrame) -> OverlaySnapshot {
         self.modeling.tools.overlay(&self.document, frame)
     }
-    pub fn input(&mut self, viewport: ViewportId, event: crate::CanvasInput) -> Result<bool> {
+    pub fn input(
+        &mut self,
+        viewport: ViewportId,
+        event: crate::CanvasInput,
+        frame: Option<CanvasFrame>,
+    ) -> Result<bool> {
         if matches!(event, crate::CanvasInput::Cancel) {
             let was = self.modeling.tools.dragging();
             self.cancel_gesture();
             return Ok(was);
         }
-        let Some(frame) = self.displayed.clone() else {
+        let Some(frame) = frame else {
+            ensure!(
+                !matches!(event, crate::CanvasInput::Down { .. }),
+                "Wait for the current model frame"
+            );
             return Ok(false);
         };
         if matches!(event, crate::CanvasInput::Down { .. }) {

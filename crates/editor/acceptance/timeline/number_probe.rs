@@ -342,7 +342,7 @@ pub(super) fn run(h: &mut Harness, samples: usize) -> anyhow::Result<Value> {
         loop {
             pump(h)?;
             let ready = h.view.read_with(&h.cx, |v, _| {
-                v.frame
+                v.modeling_frame()
                     .as_ref()
                     .is_some_and(|frame| v.editor.accepts_preview(frame.canvas.version.request))
             });

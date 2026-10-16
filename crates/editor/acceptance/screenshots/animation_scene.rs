@@ -55,7 +55,7 @@ pub(crate) fn animation_replacement_keeps_canvas(harness: &mut Harness) -> anyho
             "Animation change {change} cleared the canvas while waiting for a replacement"
         );
         let previous = harness.view.read_with(&harness.cx, |view, _| {
-            let frame = view.animation_frame.as_ref().unwrap();
+            let frame = view.animation_frame().unwrap();
             assert!(std::ptr::eq(
                 view.displayed_animation().unwrap(),
                 frame.state.snapshot.as_ref()
@@ -71,7 +71,7 @@ pub(crate) fn animation_replacement_keeps_canvas(harness: &mut Harness) -> anyho
         before = harness.capture()?;
         harness.view.read_with(&harness.cx, |view, _| {
             assert!(
-                view.animation_frame
+                view.animation_frame()
                     .as_ref()
                     .unwrap()
                     .state

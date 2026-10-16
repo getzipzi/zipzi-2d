@@ -5,6 +5,27 @@ use editor_core::{Command, CommandEffect, CommandId};
 use gpui_kit::component::WindowExt;
 
 impl EditorView {
+    pub(crate) fn viewport_command(
+        &self,
+        id: CommandId,
+        source: editor_core::CommandSource,
+    ) -> Command {
+        if id.spec().scope == editor_core::CommandScope::Viewport {
+            if let Some(viewport) = self.focused_viewport {
+                return self
+                    .editor
+                    .viewport_binding(viewport)
+                    .map(|binding| self.editor.command_for_viewport(id, binding, source))
+                    .unwrap_or(editor_core::Command {
+                        id,
+                        source,
+                        target: editor_core::CommandTarget::Unavailable,
+                    });
+            }
+        }
+        self.editor.command(id).with_source(source)
+    }
+
     pub(super) fn run_command(
         &mut self,
         id: CommandId,
@@ -12,7 +33,7 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         self.sync_viewports();
-        let command = self.editor.command(id);
+        let command = self.viewport_command(id, editor_core::CommandSource::Direct);
         self.run_invocation(command, window, cx);
     }
 
@@ -26,13 +47,10 @@ impl EditorView {
         if self.modal || window.has_active_dialog(cx) {
             return;
         }
-        if matches!(command.target, editor_core::CommandTarget::Viewport(_))
-            && self
-                .dock
-                .as_ref()
-                .is_none_or(|dock| !dock.viewport_displayed(cx))
-        {
-            return;
+        if let editor_core::CommandTarget::Viewport(binding) = command.target {
+            if !self.viewport_displayed(binding.viewport, window, cx) {
+                return;
+            }
         }
         if !self.editor.command_available(command) {
             return;
@@ -62,15 +80,14 @@ impl EditorView {
                         | CommandId::HandTool
                         | CommandId::CancelGesture
                 ) {
-                    if let Some(dock) = &self.dock {
-                        self.editor.cancel_gesture();
-                        let token = dock
-                            .active_canvas()
-                            .update(cx, |canvas, _| canvas.cancel_pointer());
-                        if let Some(token) = token {
-                            self.editor.cancel_viewport_interaction(token);
+                    if let editor_core::CommandTarget::Viewport(binding) = command.target {
+                        if let Some(surface) = self.viewport_surface(binding.viewport, cx) {
+                            let token = surface.update(cx, |surface, _| surface.cancel_pointer());
+                            if let Some(token) = token {
+                                self.editor.cancel_viewport_interaction(token);
+                            }
+                            window.focus(&surface.read(cx).focus_handle(cx), cx);
                         }
-                        window.focus(&dock.active_canvas().read(cx).focus_handle(cx), cx);
                     }
                 }
                 if self.editor.active_id() != previous {

@@ -319,7 +319,7 @@ fn default_layout_has_independent_document_panels(cx: &mut TestAppContext) {
     harness.view.read_with(cx, |view, cx| {
         let dock = view.dock.as_ref().unwrap();
         let layout = dock.area.read(cx).dump(cx);
-        assert_eq!(layout.version, Some(3));
+        assert_eq!(layout.version, Some(5));
         let columns = &layout.center.children;
         assert_eq!(columns.len(), 3);
         assert_eq!(
@@ -331,7 +331,7 @@ fn default_layout_has_independent_document_panels(cx: &mut TestAppContext) {
             ["MeshTree", "DrawOrder"]
         );
         assert_eq!(columns[0].children[1].children[0].panel_name, "Deformers");
-        assert_eq!(columns[1].children[0].panel_name, "Canvas");
+        assert_eq!(columns[1].children[0].panel_name, "ModelingViewport");
         assert_eq!(
             columns[2].children[0]
                 .children

@@ -19,7 +19,7 @@ type ZoomAction = Rc<dyn Fn(CommandId, &mut Window, &mut App)>;
 
 pub(super) fn state(
     owner: &EditorView,
-    canvas: &super::CanvasView,
+    canvas: &super::ViewportSurface,
     modal: bool,
 ) -> (i32, [bool; 3]) {
     (
@@ -123,7 +123,7 @@ impl RenderOnce for ZoomControl {
 #[derive(gpui_kit::IntoElement)]
 pub(super) struct CanvasZoomBar {
     pub owner: Entity<EditorView>,
-    pub canvas: Entity<super::CanvasView>,
+    pub canvas: Entity<super::ViewportSurface>,
     pub modal: bool,
 }
 
@@ -157,7 +157,7 @@ impl RenderOnce for CanvasZoomBar {
             window.focus(&focus, cx);
             owner.update(cx, |owner, cx| {
                 if let Some(dock) = &mut owner.dock {
-                    dock.activate_canvas(canvas.entity_id());
+                    dock.activate_viewport(canvas.entity_id());
                 }
                 owner.run_invocation(invocation, window, cx);
             });

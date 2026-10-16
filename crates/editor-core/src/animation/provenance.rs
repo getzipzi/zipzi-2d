@@ -47,8 +47,6 @@ pub struct AnimationIdentity {
     pub preview_generation: u64,
     pub request: u64,
     pub acceptance_floor: u64,
-    pub viewport_revision: u64,
-    pub canvas_metrics: crate::CanvasMetrics,
     pub time: f32,
     pub preview_mode: AnimationPreviewMode,
     pub candidate: Option<TimelineCandidateIdentity>,
@@ -70,8 +68,6 @@ impl AnimationRequest {
         AnimationIdentity {
             request: other.identity.request,
             acceptance_floor: other.identity.acceptance_floor,
-            viewport_revision: other.identity.viewport_revision,
-            canvas_metrics: other.identity.canvas_metrics,
             ..self.identity
         } == other.identity
             && Arc::ptr_eq(&self.source, &other.source)
@@ -81,7 +77,7 @@ impl AnimationRequest {
 }
 
 impl AnimationSession {
-    pub(super) fn accepts(&self, id: AnimationIdentity) -> bool {
+    pub(super) fn accepts_content(&self, id: AnimationIdentity) -> bool {
         id.model_generation == self.model_generation
             && (id.candidate == self.candidate
                 || id
@@ -92,6 +88,14 @@ impl AnimationSession {
                     }))
             && id.preview_mode == self.preview_mode
             && id.preview_generation == self.preview_generation
+            && id.request >= self.frames.floor
+            && self
+                .frames
+                .latest()
+                .is_some_and(|latest| id.request <= latest.request)
+    }
+    pub(super) fn accepts(&self, id: AnimationIdentity) -> bool {
+        self.accepts_content(id)
             && self.frames.accepts(id.request)
             && ((self.preview_mode == AnimationPreviewMode::Editing && self.preview_loop)
                 || self.scrubbing
@@ -118,9 +122,7 @@ impl Editor {
             })
     }
     pub fn accepts_animation(&self, identity: AnimationIdentity) -> bool {
-        self.workspace() == identity.workspace
-            && self.workspace() == WorkspaceKind::Animation
-            && self.editing_context() == Some(crate::EditingContext::Animation)
+        identity.workspace == WorkspaceKind::Animation
             && self.workspace_revision() == identity.workspace_revision
             && self.active_id() == Some(identity.document)
             && !self.is_busy()
@@ -137,16 +139,14 @@ impl Editor {
         if !self.accepts_animation(identity) {
             return false;
         }
-        // Navigation may advance while a frame is in flight. Its texture still
-        // represents a valid intermediate view; request order prevents rollback.
-        // A resized surface, however, must never adopt the old-sized texture.
-        if self
-            .animation_viewport_revision()
-            .is_none_or(|current| identity.viewport_revision > current)
-            || identity.canvas_metrics != self.canvas_metrics()
-        {
-            return false;
-        }
+        self.adopt_animation_content(identity, snapshot);
+        true
+    }
+    fn adopt_animation_content(
+        &mut self,
+        identity: AnimationIdentity,
+        snapshot: Arc<MotionSnapshot>,
+    ) {
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.frames.shown = identity.request;
         if animation.preview_mode == AnimationPreviewMode::Result {
@@ -174,7 +174,6 @@ impl Editor {
                 .map_or(snapshot.time, |position| position.local_time);
         }
         animation.presented = Some(snapshot);
-        true
     }
     pub fn fail_animation(&mut self, identity: AnimationIdentity, error: AnimationFailure) {
         // Intermediate successful frames are useful, but an obsolete candidate's
@@ -188,5 +187,121 @@ impl Editor {
             animation.playing = false;
             animation.error = Some(error);
         }
+    }
+}
+
+impl Editor {
+    /// Content may have been presented by another viewport already. Its recipe
+    /// and candidate epoch still have to be valid for a new projection.
+    pub fn animation_content_valid(&self, identity: AnimationIdentity) -> bool {
+        identity.workspace == WorkspaceKind::Animation
+            && self.active_id() == Some(identity.document)
+            && self.workspace_revision() == identity.workspace_revision
+            && !self.is_busy()
+            && !self.exiting()
+            && self
+                .animation()
+                .is_some_and(|animation| animation.accepts_content(identity))
+    }
+    pub fn animation_viewport_request(
+        &mut self,
+        binding: crate::ViewportBinding,
+        content: AnimationIdentity,
+        canvas: kasane_core::Canvas,
+    ) -> Option<(crate::AnimationViewportIdentity, crate::ViewportTransform)> {
+        if !self.viewport_binding_valid(binding)
+            || binding.kind != crate::ViewportKind::Animation
+            || binding.document != content.document
+            || !self.animation_content_valid(content)
+        {
+            return None;
+        }
+        let metrics = self.viewport_metrics(binding.viewport)?;
+        let session = self.active_session_mut()?;
+        session.fit_default_view(binding.viewport, metrics);
+        let state = session.view_state(binding.viewport);
+        let transform = crate::ViewportTransform::new(canvas, metrics, state.view)?;
+        let presentation = self.viewport_presentation_mut(binding.viewport)?;
+        if presentation.requested_animation == Some((content, state.revision)) {
+            return None;
+        }
+        presentation.requested_animation = Some((content, state.revision));
+        let identity = crate::AnimationViewportIdentity {
+            binding,
+            content,
+            viewport_revision: state.revision,
+            metrics,
+            request: presentation.next(),
+        };
+        Some((identity, transform))
+    }
+    pub fn present_animation_viewport(
+        &mut self,
+        identity: crate::AnimationViewportIdentity,
+        snapshot: Arc<MotionSnapshot>,
+    ) -> bool {
+        let binding = identity.binding;
+        if !self.viewport_binding_valid(binding)
+            || binding.kind != crate::ViewportKind::Animation
+            || binding.document != identity.content.document
+            || !self.animation_content_valid(identity.content)
+            || self.viewport_metrics(binding.viewport) != Some(identity.metrics)
+            || self
+                .viewport_state(binding.document, binding.viewport)
+                .is_none_or(|state| identity.viewport_revision > state.revision)
+        {
+            return false;
+        }
+        let presentation = self.viewport_presentation(binding.viewport).unwrap();
+        if identity.request < presentation.floor
+            || identity.request > presentation.sequence
+            || presentation.animation.is_some_and(|shown| {
+                shown.request >= identity.request
+                    || shown.content.request > identity.content.request
+            })
+        {
+            return false;
+        }
+        self.viewport_presentation_mut(binding.viewport)
+            .unwrap()
+            .animation = Some(identity);
+        // Inspectors follow the newest presented content, while each viewport
+        // can continue consuming its own intermediate frame without starvation.
+        if self
+            .animation()
+            .is_some_and(|animation| identity.content.request > animation.frames.shown)
+        {
+            self.adopt_animation_content(identity.content, snapshot);
+        }
+        true
+    }
+    pub fn can_display_animation_viewport(
+        &self,
+        identity: crate::AnimationViewportIdentity,
+    ) -> bool {
+        self.viewport_binding_valid(identity.binding)
+            && self
+                .viewport_presentation(identity.binding.viewport)
+                .is_some_and(|state| state.animation == Some(identity))
+            && self.animation().is_some_and(|animation| {
+                animation.model_generation == identity.content.model_generation
+            })
+    }
+    pub fn accepts_animation_viewport_error(
+        &self,
+        identity: crate::AnimationViewportIdentity,
+    ) -> bool {
+        self.viewport_binding_valid(identity.binding)
+            && self.animation_content_valid(identity.content)
+            && self
+                .animation()
+                .is_some_and(|animation| animation.candidate == identity.content.candidate)
+            && self
+                .viewport_presentation(identity.binding.viewport)
+                .is_some_and(|state| {
+                    state.sequence == identity.request
+                        && state.requested_animation
+                            == Some((identity.content, identity.viewport_revision))
+                })
     }
 }

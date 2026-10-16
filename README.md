@@ -72,6 +72,8 @@ cargo test --locked -p kasane-editor --lib headless_tests
 # Focused work-count regressions for canvas redraws and property-list virtualization:
 cargo test --locked -p kasane-editor --lib headless_tests::ui_performance
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
+# Two simultaneous Modeling/Animation viewports, independent pixels and render scheduling:
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=viewports cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Focused Timeline views and candidate/cancel pixel verification:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Title bar project switching and empty states:

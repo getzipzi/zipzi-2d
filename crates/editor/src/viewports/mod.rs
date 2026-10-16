@@ -1,34 +1,108 @@
-//! Measured canvas, pointer ownership and overlay painting. Tool semantics live in core.
+//! Concrete viewport panels sharing measured surfaces and navigation.
+macro_rules! viewport_panel {
+    ($name:ident, $label:literal) => {
+        impl EventEmitter<gpui_kit::component::dock::PanelEvent> for $name {}
+        impl Focusable for $name {
+            fn focus_handle(&self, cx: &App) -> FocusHandle {
+                self.surface.read(cx).focus.clone()
+            }
+        }
+        impl gpui_kit::component::dock::BasePanel for $name {
+            fn panel_name(&self) -> &'static str {
+                stringify!($name)
+            }
+            fn closable(&self, _: &App) -> bool {
+                false
+            }
+        }
+        impl gpui_kit::component::dock::Panel for $name {
+            fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                t!($label)
+            }
+            fn inner_padding(&self, _: &App) -> bool {
+                false
+            }
+        }
+        impl Render for $name {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                div().size_full().child(self.surface.clone())
+            }
+        }
+        impl $name {
+            pub(crate) fn header_state(
+                panel: &Entity<Self>,
+                window: &mut Window,
+                cx: &mut App,
+            ) -> Option<(i32, [bool; 3])> {
+                ViewportSurface::header_state(&panel.read(cx).surface.clone(), window, cx)
+            }
+        }
+        impl crate::docking::header::PanelHeader for $name {
+            fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+                let surface = self.surface.read(cx);
+                let Some(owner) = surface.owner.upgrade() else {
+                    return div().into_any_element();
+                };
+                let modal = owner.read(cx).modal || window.has_active_dialog(cx);
+                zoom_bar::CanvasZoomBar {
+                    owner,
+                    canvas: self.surface.clone(),
+                    modal,
+                }
+                .into_any_element()
+            }
+            fn header_min_width(&self) -> Pixels {
+                px(126.)
+            }
+        }
+    };
+}
+
 mod context_menu;
 mod deformer_bar;
 mod input;
 mod painting;
 use painting::CanvasOverlay;
+mod animation;
+#[cfg(any(test, feature = "test-support"))]
+mod test_scene;
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) use test_scene::ViewportScene;
+mod modeling;
 mod navigation;
 pub(crate) mod toolbar;
-mod zoom_bar;
+pub(crate) mod zoom_bar;
+pub use animation::AnimationViewport;
+pub use modeling::ModelingViewport;
 
 use super::*;
-use editor_core::{
-    CanvasInput, CanvasMetrics, CanvasPoint, CommandId, EditorCommand, ToolId, WorkspaceKind,
-};
+use editor_core::{CanvasInput, CanvasMetrics, CanvasPoint, CommandId, EditorCommand, ToolId};
 use gpui_kit::component::{
     ActiveTheme, WindowExt,
-    dock::{BasePanel, Panel, PanelEvent},
     menu::{ContextMenuExt, PopupMenuItem},
 };
 
-pub struct CanvasView {
+pub struct ViewportSurface {
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
-    viewport_slots: [editor_core::ViewportId; 2],
+    pub(crate) viewport: editor_core::ViewportId,
+    pub(crate) kind: editor_core::ViewportKind,
+    content: fn(&EditorView, editor_core::ViewportId) -> SurfaceContent,
+    on_input: fn(&mut Self, CanvasInput, &mut Window, &mut Context<Self>),
+    object_menu: Option<
+        fn(
+            &WeakEntity<EditorView>,
+            &WeakEntity<Self>,
+            gpui_kit::component::menu::PopupMenu,
+            &mut Window,
+            &mut Context<gpui_kit::component::menu::PopupMenu>,
+        ) -> gpui_kit::component::menu::PopupMenu,
+    >,
     pub(crate) toolbar: toolbar::ToolbarRegistry,
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
-    pan: Option<PanGesture>,
+    navigation: navigation::ViewportNavigation,
     interaction: Option<editor_core::ViewportInteractionToken>,
-    wheel_zoom: Option<navigation::WheelZoom>,
-    zoom_frame_pending: bool,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -39,10 +113,14 @@ struct PanGesture {
     token: editor_core::ViewportInteractionToken,
 }
 
-impl CanvasView {
-    pub fn new(
+impl ViewportSurface {
+    fn new(
         owner: WeakEntity<EditorView>,
-        viewport_slots: [editor_core::ViewportId; 2],
+        viewport: editor_core::ViewportId,
+        kind: editor_core::ViewportKind,
+        content: fn(&EditorView, editor_core::ViewportId) -> SurfaceContent,
+        on_input: fn(&mut Self, CanvasInput, &mut Window, &mut Context<Self>),
+        toolbar: toolbar::ToolbarRegistry,
         window: &mut Window,
         cx: &mut App,
     ) -> Entity<Self> {
@@ -57,6 +135,7 @@ impl CanvasView {
                                 || !state.editor.gesture_active()
                         })
                         || this
+                            .navigation
                             .pan
                             .is_some_and(|pan| !state.editor.viewport_interaction_valid(pan.token))
                     {
@@ -67,11 +146,12 @@ impl CanvasView {
                         }
                     }
                     if this
+                        .navigation
                         .wheel_zoom
                         .as_ref()
                         .is_some_and(|zoom| !zoom.valid(owner.read(cx), this.bounds))
                     {
-                        this.wheel_zoom = None;
+                        this.navigation.wheel_zoom = None;
                     }
                     cx.notify();
                 }),
@@ -79,72 +159,37 @@ impl CanvasView {
                     let id = cx.entity_id();
                     let owner = this.owner.clone();
                     _ = owner.update(cx, |owner, _| {
+                        owner.focused_viewport = Some(this.viewport);
                         if let Some(dock) = &mut owner.dock {
-                            dock.activate_canvas(id);
+                            dock.activate_viewport(id);
                         }
                     });
                 }),
                 cx.on_focus_out(&focus, window, |this, _, _, cx| {
                     this.cancel(cx);
                 }),
-                cx.observe_window_visibility(window, |this, _, window, cx| {
-                    if !window.is_visible() {
-                        this.cancel(cx);
-                        let _ = this.owner.update(cx, |owner, cx| {
-                            if let Some(document) = owner.editor.active_id() {
-                                let _ = owner.editor.end_editing(
-                                    document,
-                                    editor_core::EditingLifecycle::WindowDeactivated,
-                                );
-                            }
-                            for viewport in owner.viewport_slots {
-                                owner.editor.set_viewport_visible(viewport, false);
-                            }
-                            owner.editor.set_canvas_metrics(CanvasMetrics::default());
-                            owner.redraw(cx);
-                            cx.notify();
-                        });
-                    } else {
-                        let _ = this.owner.update(cx, |owner, _| {
-                            for viewport in owner.viewport_slots {
-                                owner.editor.set_viewport_visible(viewport, true);
-                            }
-                        });
-                        cx.notify();
-                    }
-                }),
-                cx.observe_window_activation(window, |this, window, cx| {
-                    if !window.is_window_active() {
-                        this.cancel(cx);
-                        let _ = this.owner.update(cx, |owner, cx| {
-                            if let Some(document) = owner.editor.active_id() {
-                                let _ = owner.editor.end_editing(
-                                    document,
-                                    editor_core::EditingLifecycle::WindowDeactivated,
-                                );
-                            }
-                            owner.redraw(cx);
-                        });
-                    }
-                }),
             ];
             Self {
                 owner,
-                viewport_slots,
+                viewport,
+                kind,
+                content,
+                on_input,
+                object_menu: None,
                 focus,
-                toolbar: toolbar::ToolbarRegistry::with_defaults(),
+                toolbar,
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
-                pan: None,
+                navigation: Default::default(),
                 interaction: None,
-                wheel_zoom: None,
-                zoom_frame_pending: false,
                 _subscriptions: subscriptions,
             }
         })
     }
     pub(crate) fn binding(&self, editor: &Editor) -> Option<editor_core::ViewportBinding> {
-        editor.viewport_binding(self.viewport_slots[editor.workspace().index()])
+        editor
+            .viewport_binding(self.viewport)
+            .filter(|binding| binding.kind == self.kind)
     }
     pub(crate) fn command(
         &self,
@@ -167,115 +212,53 @@ impl CanvasView {
     pub(crate) fn benchmark_bounds(&self) -> Option<Bounds<Pixels>> {
         self.benchmark_center().map(|_| self.bounds)
     }
-    pub fn active_tool(&self, cx: &App) -> ToolId {
+    pub fn hand_tool(&self, cx: &App) -> bool {
         self.owner
             .upgrade()
-            .map_or(ToolId::Select, |owner| owner.read(cx).editor.active_tool())
-    }
-    pub fn hand_tool(&self, cx: &App) -> bool {
-        self.owner.upgrade().is_some_and(|owner| {
-            self.binding(&owner.read(cx).editor)
-                .is_some_and(|binding| binding.kind == editor_core::ViewportKind::Animation)
-        }) || self.active_tool(cx) == ToolId::Hand
+            .is_some_and(|owner| (self.content)(owner.read(cx), self.viewport).hand_tool)
     }
     pub fn cancel_pointer(&mut self) -> Option<editor_core::ViewportInteractionToken> {
         let token = self
             .interaction
             .take()
-            .or_else(|| self.pan.map(|pan| pan.token));
-        self.wheel_zoom = None;
-        self.pan = None;
+            .or_else(|| self.navigation.pan.map(|pan| pan.token));
+        self.navigation.wheel_zoom = None;
+        self.navigation.pan = None;
         token
     }
 }
-impl EventEmitter<PanelEvent> for CanvasView {}
-impl Focusable for CanvasView {
+impl Focusable for ViewportSurface {
     fn focus_handle(&self, _: &App) -> FocusHandle {
         self.focus.clone()
     }
 }
-impl BasePanel for CanvasView {
-    fn panel_name(&self) -> &'static str {
-        "Canvas"
-    }
-    fn closable(&self, _: &App) -> bool {
-        false
-    }
-}
-impl Panel for CanvasView {
-    fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        t!("dock.canvas")
-    }
-    fn inner_padding(&self, _: &App) -> bool {
-        false
-    }
-}
-impl Render for CanvasView {
+impl Render for ViewportSurface {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
-        let modeling = state.editor.workspace() == WorkspaceKind::Modeling;
-        let frame = modeling.then(|| state.frame.clone()).flatten();
-        let image = if modeling {
-            frame
-                .as_ref()
-                .map(|f| (f.image.clone(), f.canvas.transform.metrics))
-        } else {
-            state
-                .animation_frame
-                .as_ref()
-                .filter(|f| state.editor.can_display_animation_image(f.state.identity))
-                .map(|f| (f.image.clone(), f.state.transform.metrics))
-        };
-        let mut overlay = state
-            .editor
-            .overlay_for_frame(frame.as_ref().map(|f| f.canvas.version));
+        let SurfaceContent {
+            image,
+            mut overlay,
+            error,
+            hand_tool,
+            controls,
+            cursor,
+            interaction_label,
+            target_label,
+            vertex_notice,
+        } = (self.content)(state, self.viewport);
         if benchmark::hide_mesh_edges() {
             overlay.lines.clear();
         }
-        let vertex_notice = overlay.unavailable.clone();
-        let active_handle = overlay.active_handle;
-        let interaction_label = overlay.interaction_label.clone().or_else(|| {
-            active_handle.map(|handle| {
-                use editor_core::DeformerHandle as H;
-                t!(match handle {
-                    H::Move => "editor.deformer_move_hint",
-                    H::Rotate => "editor.deformer_rotate_hint",
-                    H::Scale(_) | H::RotationScale => "editor.deformer_scale_hint",
-                })
-                .into_owned()
-            })
-        });
-        let target_label = overlay.target_label.as_ref().map(|label| {
-            if label == "Base shape" {
-                t!("editor.edit_base").into_owned()
-            } else if let Some(keys) = label.strip_prefix("Keyform · ") {
-                format!("{} · {}", t!("editor.edit_keyform"), keys)
-            } else {
-                label.clone()
-            }
-        });
-        let hand_tool = !modeling || state.editor.active_tool() == ToolId::Hand;
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
         if modal {
             self.cancel_pointer();
         }
-        let error = state.render_error.clone().or_else(|| {
-            (!modeling)
-                .then(|| {
-                    state.editor.animation().and_then(|a| {
-                        a.error
-                            .as_ref()
-                            .map(crate::panels::animation_feedback::failure_text)
-                    })
-                })
-                .flatten()
-        });
-        let capture = self.pan.is_some() || state.editor.gesture_active();
+        let capture = self.navigation.pan.is_some() || self.interaction.is_some();
         let palette = crate::canvas_overlay::Palette::new(cx.theme().is_dark());
         let muted = cx.theme().muted_foreground;
         let foreground = cx.theme().foreground;
@@ -285,17 +268,7 @@ impl Render for CanvasView {
         let body = div()
             .id("canvas-body")
             .test_support()
-            .when(!modal && !hand_tool && active_handle.is_some(), |e| {
-                use editor_core::DeformerHandle as H;
-                let cursor = match active_handle.unwrap() {
-                    H::Move => CursorStyle::OpenHand,
-                    H::Rotate => CursorStyle::Crosshair,
-                    H::Scale(1 | 5) => CursorStyle::ResizeUpDown,
-                    H::Scale(3 | 7) => CursorStyle::ResizeLeftRight,
-                    H::Scale(0 | 4) => CursorStyle::ResizeUpLeftDownRight,
-                    H::Scale(_) => CursorStyle::ResizeUpRightDownLeft,
-                    H::RotationScale => CursorStyle::Crosshair,
-                };
+            .when_some(cursor.filter(|_| !modal && !hand_tool), |e, cursor| {
                 e.cursor(cursor)
             })
             .relative()
@@ -304,8 +277,10 @@ impl Render for CanvasView {
             .w_full()
             .overflow_hidden()
             .bg(cx.theme().muted)
-            .when(!modal && self.pan.is_some(), |e| e.cursor_grabbing())
-            .when(!modal && self.pan.is_none() && hand_tool, |e| {
+            .when(!modal && self.navigation.pan.is_some(), |e| {
+                e.cursor_grabbing()
+            })
+            .when(!modal && self.navigation.pan.is_none() && hand_tool, |e| {
                 e.cursor_grab()
             })
             .map(|element| self.bind_input(element, capture, cx))
@@ -341,9 +316,7 @@ impl Render for CanvasView {
                 modal,
                 items: self.toolbar.items(),
             })
-            .when(modeling, |e| {
-                e.child(deformer_bar::render_deformer_bar(self, modal, cx))
-            })
+            .children(controls.map(|render| render(self, modal, cx)))
             .children(interaction_label.map(|label| {
                 div()
                     .absolute()
@@ -385,8 +358,15 @@ impl Render for CanvasView {
                     .text_color(muted)
                     .child(label)
             }))
-            .context_menu(move |menu, window, cx| {
-                Self::object_menu(&menu_owner, &menu_canvas, menu, window, cx)
+            .map(|e| {
+                if let Some(handler) = self.object_menu {
+                    e.context_menu(move |menu, window, cx| {
+                        handler(&menu_owner, &menu_canvas, menu, window, cx)
+                    })
+                    .into_any_element()
+                } else {
+                    e.into_any_element()
+                }
             });
         div()
             .size_full()
@@ -394,16 +374,16 @@ impl Render for CanvasView {
             .flex_col()
             .track_focus(&self.focus)
             .key_context(if modal {
-                "KasaneCanvas KasaneModal"
+                "KasaneViewport KasaneModal"
             } else {
-                "KasaneCanvas"
+                "KasaneViewport"
             })
             .child(body)
             .into_any_element()
     }
 }
 
-impl CanvasView {
+impl ViewportSurface {
     pub(crate) fn header_state(
         panel: &Entity<Self>,
         window: &mut Window,
@@ -417,21 +397,14 @@ impl CanvasView {
     }
 }
 
-impl crate::docking::header::PanelHeader for CanvasView {
-    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        let Some(owner) = self.owner.upgrade() else {
-            return div().into_any_element();
-        };
-        let modal = owner.read(cx).modal || window.has_active_dialog(cx);
-        zoom_bar::CanvasZoomBar {
-            owner,
-            canvas: cx.entity(),
-            modal,
-        }
-        .into_any_element()
-    }
-
-    fn header_min_width(&self) -> Pixels {
-        px(126.)
-    }
+pub(super) struct SurfaceContent {
+    image: Option<(preview::Image, CanvasMetrics)>,
+    overlay: editor_core::OverlaySnapshot,
+    error: Option<String>,
+    hand_tool: bool,
+    controls: Option<fn(&ViewportSurface, bool, &mut Context<ViewportSurface>) -> AnyElement>,
+    cursor: Option<CursorStyle>,
+    interaction_label: Option<String>,
+    target_label: Option<String>,
+    vertex_notice: Option<String>,
 }

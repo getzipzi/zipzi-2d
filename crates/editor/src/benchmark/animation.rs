@@ -131,7 +131,7 @@ async fn run_drag(
             let origin = number
                 .as_ref()
                 .map(|(origin, _)| *origin)
-                .or_else(|| dock.active_canvas().read(cx).benchmark_center())
+                .or_else(|| dock.active_viewport().read(cx).benchmark_center())
                 .context("drag control has no visible bounds")?;
             Ok((
                 origin,

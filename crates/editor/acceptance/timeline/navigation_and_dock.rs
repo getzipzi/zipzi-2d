@@ -213,7 +213,7 @@ pub(crate) fn canvas_dock_resize(
             } else {
                 let deadline = Instant::now() + Duration::from_secs(10);
                 while !h.view.read_with(&h.cx, |v, _| {
-                    v.frame
+                    v.modeling_frame()
                         .as_ref()
                         .is_some_and(|f| v.editor.accepts_preview(f.canvas.version.request))
                 }) {

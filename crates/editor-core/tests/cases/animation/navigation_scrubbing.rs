@@ -11,22 +11,32 @@ fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes(
     for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
         editor.set_animation_preview_mode(document, mode)?;
         editor.seek_timeline(document, 0.4)?;
-        let mut pending = evaluate(&mut editor, &mut evaluator)?;
-        let first = pending.clone();
+        let content = evaluate(&mut editor, &mut evaluator)?;
+        let binding = editor.primary_viewport_binding().unwrap();
+        let canvas = content.scene.viewport_frame.canvas;
+        let (mut pending, _) = editor
+            .animation_viewport_request(binding, content.identity, canvas)
+            .unwrap();
+        let first = pending;
         for step in 0..24 {
             if step % 2 == 0 {
                 editor.pan_by(CanvasPoint { x: 4., y: -2. });
             } else {
                 editor.set_zoom_at(editor.view().zoom * 1.01, None);
             }
-            let newer = evaluate(&mut editor, &mut evaluator)?;
-            assert!(newer.identity.viewport_revision > pending.identity.viewport_revision);
-            assert!(editor.present_animation(pending.identity, pending.snapshot.clone()));
-            assert!(std::sync::Arc::ptr_eq(&first.snapshot, &pending.snapshot));
+            assert!(
+                editor.animation_request().is_none(),
+                "navigation must reuse content"
+            );
+            let (newer, _) = editor
+                .animation_viewport_request(binding, content.identity, canvas)
+                .unwrap();
+            assert!(newer.viewport_revision > pending.viewport_revision);
+            assert!(editor.present_animation_viewport(pending, content.snapshot.clone()));
             pending = newer;
         }
-        assert!(editor.present_animation(pending.identity, pending.snapshot.clone()));
-        assert!(!editor.present_animation(first.identity, first.snapshot));
+        assert!(editor.present_animation_viewport(pending, content.snapshot.clone()));
+        assert!(!editor.present_animation_viewport(first, content.snapshot.clone()));
         for metrics in [
             CanvasMetrics {
                 width: 720.,
@@ -40,19 +50,21 @@ fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes(
             },
         ] {
             editor.pan_by(CanvasPoint { x: 1., y: 0. });
-            let old_size = evaluate(&mut editor, &mut evaluator)?;
+            let (old_size, _) = editor
+                .animation_viewport_request(binding, content.identity, canvas)
+                .unwrap();
             editor.set_canvas_metrics(metrics);
-            // The CPU pose remains usable, but a GPU frame for the old
-            // dimensions or scale must not be adopted by the resized canvas.
-            assert!(editor.accepts_animation(old_size.identity));
-            assert!(!editor.present_animation(old_size.identity, old_size.snapshot));
-            let resized = evaluate(&mut editor, &mut evaluator)?;
-            assert_eq!(resized.identity.canvas_metrics, metrics);
-            assert!(std::sync::Arc::ptr_eq(&pending.snapshot, &resized.snapshot));
-            let mut future = resized.identity;
+            assert!(editor.animation_content_valid(content.identity));
+            assert!(!editor.present_animation_viewport(old_size, content.snapshot.clone()));
+            assert!(editor.animation_request().is_none());
+            let (resized, _) = editor
+                .animation_viewport_request(binding, content.identity, canvas)
+                .unwrap();
+            assert_eq!(resized.metrics, metrics);
+            let mut future = resized;
             future.viewport_revision += 1;
-            assert!(!editor.present_animation(future, resized.snapshot.clone()));
-            assert!(editor.present_animation(resized.identity, resized.snapshot));
+            assert!(!editor.present_animation_viewport(future, content.snapshot.clone()));
+            assert!(editor.present_animation_viewport(resized, content.snapshot.clone()));
         }
     }
     Ok(())
@@ -70,7 +82,12 @@ fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation(
         editor.set_animation_preview_mode(document, mode)?;
         editor.seek_timeline(document, 0.35)?;
         let original = evaluate(&mut editor, &mut evaluator)?;
-        assert!(editor.present_animation(original.identity, original.snapshot.clone()));
+        let binding = editor.primary_viewport_binding().unwrap();
+        let canvas = original.scene.viewport_frame.canvas;
+        let (first, _) = editor
+            .animation_viewport_request(binding, original.identity, canvas)
+            .unwrap();
+        assert!(editor.present_animation_viewport(first, original.snapshot.clone()));
         for step in 0..16 {
             match step % 3 {
                 0 => editor.pan_by(CanvasPoint { x: 3., y: -2. }),
@@ -81,23 +98,13 @@ fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation(
                     scale_factor: 1.,
                 }),
             }
-            let request = editor.animation_request().unwrap();
-            let frame = evaluator.evaluate(&request, |done, total| {
-                assert_eq!((done, total), (0, 0));
-                true
-            })?;
-            assert!(Arc::ptr_eq(&original.snapshot, &frame.snapshot));
-            assert!(Arc::ptr_eq(
-                &original.scene.viewport_frame,
-                &frame.scene.viewport_frame
-            ));
-            assert_eq!(frame.identity.request, request.identity.request);
-            assert_eq!(
-                frame.identity.viewport_revision,
-                request.identity.viewport_revision
-            );
-            assert!(!editor.present_animation(original.identity, original.snapshot.clone()));
-            assert!(editor.present_animation(frame.identity, frame.snapshot));
+            assert!(editor.animation_request().is_none());
+            let (projection, _) = editor
+                .animation_viewport_request(binding, original.identity, canvas)
+                .unwrap();
+            assert_eq!(projection.content, original.identity);
+            assert!(!editor.present_animation_viewport(first, original.snapshot.clone()));
+            assert!(editor.present_animation_viewport(projection, original.snapshot.clone()));
         }
         editor.invalidate_animation();
         let request = editor.animation_request().unwrap();
@@ -109,7 +116,6 @@ fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation(
             request.identity.acceptance_floor
         );
         assert!(editor.present_animation(frame.identity, frame.snapshot));
-
         editor.seek_timeline(document, 0.4)?;
         let later = evaluate(&mut editor, &mut evaluator)?;
         assert!(!Arc::ptr_eq(&original.snapshot, &later.snapshot));
@@ -235,14 +241,17 @@ fn continuous_frames_do_not_starve_and_barriers_reject_late_frames() -> anyhow::
     );
     editor.rewind_animation()?;
     let zero = evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
-    assert!(editor.present_animation(zero.identity, zero.snapshot));
+    assert!(editor.present_animation(zero.identity, zero.snapshot.clone()));
     let request = editor.animation_request();
     assert!(request.is_none());
     editor.pan_by(CanvasPoint { x: 5., y: 2. });
-    let old_view = editor.animation_request().unwrap();
-    let result = evaluator.evaluate(&old_view, |_, _| true)?;
+    assert!(editor.animation_request().is_none());
+    let binding = editor.primary_viewport_binding().unwrap();
+    let (old_view, _) = editor
+        .animation_viewport_request(binding, zero.identity, zero.scene.viewport_frame.canvas)
+        .unwrap();
     editor.pan_by(CanvasPoint { x: 1., y: 0. });
-    assert!(editor.present_animation(result.identity, result.snapshot.clone()));
-    assert!(!editor.present_animation(result.identity, result.snapshot));
+    assert!(editor.present_animation_viewport(old_view, zero.snapshot.clone()));
+    assert!(!editor.present_animation_viewport(old_view, zero.snapshot));
     Ok(())
 }

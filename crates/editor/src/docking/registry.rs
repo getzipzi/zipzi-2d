@@ -17,7 +17,10 @@ impl DockWorkspace {
         window: &mut Window,
         cx: &mut App,
     ) -> Self {
-        let canvas = crate::canvas::CanvasView::new(owner.clone(), viewport_slots, window, cx);
+        let modeling =
+            crate::viewports::ModelingViewport::new(owner.clone(), viewport_slots[0], window, cx);
+        let animation =
+            crate::viewports::AnimationViewport::new(owner.clone(), viewport_slots[1], window, cx);
         let timeline = crate::panels::timeline::Timeline::new(owner.clone(), window, cx);
         let properties = crate::panels::PropertiesPanel::new(owner.clone(), window, cx);
         let mesh_tree =
@@ -46,7 +49,11 @@ impl DockWorkspace {
             .map(|(kind, panel)| (*kind, panel_handle(panel.clone())))
             .collect();
         for (kind, handle) in [
-            (PanelKind::Canvas, panel_handle(canvas.clone())),
+            (PanelKind::ModelingViewport, panel_handle(modeling.clone())),
+            (
+                PanelKind::AnimationViewport,
+                panel_handle(animation.clone()),
+            ),
             (PanelKind::AnimationTimeline, panel_handle(timeline.clone())),
             (
                 PanelKind::AnimationMotions,
@@ -82,10 +89,17 @@ impl DockWorkspace {
         let mut headers = header::PanelHeaders::new();
         header::register_with_state(
             &mut headers,
-            &canvas,
+            &modeling,
             window,
             cx,
-            crate::canvas::CanvasView::header_state,
+            crate::viewports::ModelingViewport::header_state,
+        );
+        header::register_with_state(
+            &mut headers,
+            &animation,
+            window,
+            cx,
+            crate::viewports::AnimationViewport::header_state,
         );
         header::register(&mut headers, &mesh_tree, cx);
         header::register(&mut headers, &deformer_tree, cx);
@@ -141,7 +155,7 @@ impl DockWorkspace {
 
         let mut result = Self {
             area,
-            canvases: canvases::CanvasPanels::new(canvas),
+            viewports: viewports::ViewportPanels::new(modeling, animation, cx),
             timeline,
             animation_motions,
             animation_expressions,

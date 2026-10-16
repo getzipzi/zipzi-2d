@@ -1,13 +1,13 @@
-use crate::{canvas::CanvasView, t, ui::compact};
-use editor_core::{EditorCommand, ObjectKind};
+use crate::{t, ui::compact, viewports::ViewportSurface};
+use editor_core::{CommandId, CommandSource, EditorCommand, ObjectKind};
 use gpui_kit::assets::IconName;
-use gpui_kit::component::{Disableable, button::Button};
+use gpui_kit::component::{Disableable, WindowExt, button::Button};
 use gpui_kit::{prelude::*, *};
 
 pub fn render_deformer_bar(
-    canvas: &CanvasView,
+    canvas: &ViewportSurface,
     modal: bool,
-    cx: &mut Context<CanvasView>,
+    cx: &mut Context<ViewportSurface>,
 ) -> AnyElement {
     let Some(owner) = canvas.owner.upgrade() else {
         return div().into_any_element();
@@ -21,11 +21,19 @@ pub fn render_deformer_bar(
     }) {
         return div().into_any_element();
     }
+    let Some(binding) = canvas.binding(&state.editor) else {
+        return div().into_any_element();
+    };
+    let ancestors = state.editor.command_for_viewport(
+        CommandId::ToggleAncestorDeformers,
+        binding,
+        CommandSource::Toolbar,
+    );
     let visibility = state.editor.deformer_visibility();
     let grid = state.editor.deformer_grid();
     let fine = state.editor.warp_fine();
     let has_warp = state.editor.document().is_some_and(|d| {
-        state.frame.as_ref().is_some_and(|f| {
+        state.modeling_frame_for(canvas.viewport).is_some_and(|f| {
             f.canvas.geometry.controls.iter().any(|c| {
                 c.kind == editor_core::ControlKind::Warp
                     && d.context().selections.contains(&c.object)
@@ -38,15 +46,9 @@ pub fn render_deformer_bar(
             .accessibility_label(t!("editor.show_ancestor_deformers").into_owned())
             .tooltip(t!("editor.show_ancestor_deformers"))
             .disabled(modal)
-            .on_click(cx.listener(|this, _, window, cx| {
+            .on_click(cx.listener(move |this, _, window, cx| {
                 if let Some(owner) = this.owner.upgrade() {
-                    owner.update(cx, |owner, cx| {
-                        owner.run_command(
-                            editor_core::CommandId::ToggleAncestorDeformers,
-                            window,
-                            cx,
-                        )
-                    });
+                    owner.update(cx, |owner, cx| owner.run_invocation(ancestors, window, cx));
                 }
             })),
     ];
@@ -61,9 +63,15 @@ pub fn render_deformer_bar(
                 .accessibility_label(t!("editor.warp_mode_hint").into_owned())
                 .tooltip(t!("editor.warp_mode_hint"))
                 .disabled(modal)
-                .on_click(cx.listener(|this, _, _, cx| {
+                .on_click(cx.listener(move |this, _, window, cx| {
+                    if window.has_active_dialog(cx) {
+                        return;
+                    }
                     if let Some(owner) = this.owner.upgrade() {
                         owner.update(cx, |owner, cx| {
+                            if owner.modal || !owner.editor.viewport_binding_valid(binding) {
+                                return;
+                            }
                             let result = owner.editor.execute(EditorCommand::ToggleWarpFine);
                             owner.complete_edit(result, cx);
                         });
@@ -77,9 +85,15 @@ pub fn render_deformer_bar(
             .accessibility_label(t!("editor.deformer_grid").into_owned())
             .tooltip(t!("editor.deformer_grid"))
             .disabled(modal)
-            .on_click(cx.listener(|this, _, _, cx| {
+            .on_click(cx.listener(move |this, _, window, cx| {
+                if window.has_active_dialog(cx) {
+                    return;
+                }
                 if let Some(owner) = this.owner.upgrade() {
                     owner.update(cx, |owner, cx| {
+                        if owner.modal || !owner.editor.viewport_binding_valid(binding) {
+                            return;
+                        }
                         let result = owner.editor.execute(EditorCommand::ToggleDeformerGrid);
                         owner.complete_edit(result, cx);
                     });

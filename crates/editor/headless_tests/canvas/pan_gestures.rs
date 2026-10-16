@@ -1,5 +1,5 @@
 use super::super::setup;
-use crate::canvas::toolbar::ToolbarItemConfig;
+use crate::viewports::toolbar::ToolbarItemConfig;
 use gpui_kit::assets::IconName;
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{
@@ -17,7 +17,7 @@ fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext)
                 view.dock
                     .as_ref()
                     .unwrap()
-                    .active_canvas()
+                    .active_viewport()
                     .read(cx)
                     .hand_tool(cx)
             );
@@ -39,7 +39,7 @@ fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext)
                     .dock
                     .as_ref()
                     .unwrap()
-                    .active_canvas()
+                    .active_viewport()
                     .read(cx)
                     .hand_tool(cx)
             );
@@ -60,7 +60,7 @@ fn space_never_enters_temporary_hand_and_repeats_are_suppressed(cx: &mut TestApp
             view.dock
                 .as_ref()
                 .unwrap()
-                .active_canvas()
+                .active_viewport()
                 .read(cx)
                 .focus
                 .clone()
@@ -179,7 +179,7 @@ fn space_in_parameter_input_keeps_input_focus(cx: &mut TestAppContext) {
                     .dock
                     .as_ref()
                     .unwrap()
-                    .active_canvas()
+                    .active_viewport()
                     .read(cx)
                     .hand_tool(cx)
             );
@@ -218,7 +218,7 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
             view.dock
                 .as_ref()
                 .unwrap()
-                .active_canvas()
+                .active_viewport()
                 .update(cx, |canvas, cx| {
                     assert!(canvas.toolbar.register(item).is_ok());
                     assert!(canvas.toolbar.register(item).is_err());
@@ -652,7 +652,10 @@ fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {
                         .unwrap();
                     submitted.command.wait_until_completed();
                     assert!(view.editor.present_frame(canvas.clone()));
-                    view.frame = Some(crate::preview::Presented {
+                    view.viewport_frames
+                        .entry(view.viewport_slots[0])
+                        .or_default()
+                        .modeling = Some(crate::preview::Presented {
                         image: submitted.image,
                         canvas,
                     });

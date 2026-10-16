@@ -79,10 +79,11 @@ impl EditorView {
             .track_focus(&self.focus)
             .when(!modal, |e| {
                 e.on_action(cx.listener(|this, action: &RunCommand, window, cx| {
+                    if let Some(viewport) = this.focused_viewport_id(window, cx) {
+                        this.focused_viewport = Some(viewport);
+                    }
                     let command = action.invocation.unwrap_or_else(|| {
-                        this.editor
-                            .command(action.id)
-                            .with_source(editor_core::CommandSource::Shortcut)
+                        this.viewport_command(action.id, editor_core::CommandSource::Shortcut)
                     });
                     this.run_invocation(command, window, cx)
                 }))

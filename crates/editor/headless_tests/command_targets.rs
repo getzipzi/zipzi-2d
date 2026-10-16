@@ -105,7 +105,7 @@ fn switching_dock_tabs_unbinds_hidden_viewports_and_rejects_old_menus(cx: &mut T
         let dock = view.dock.as_ref().unwrap();
         (
             dock.area.clone(),
-            dock.active_canvas().clone(),
+            dock.viewport_panel(),
             dock.properties.clone(),
         )
     });
@@ -114,7 +114,7 @@ fn switching_dock_tabs_unbinds_hidden_viewports_and_rejects_old_menus(cx: &mut T
             area.remove_panel(properties.clone(), window, cx)
         });
         let layout = DockLayout::tabs()
-            .panel_view(panel_handle(canvas.clone()), cx)
+            .panel_view(canvas.clone(), cx)
             .panel_view(panel_handle(properties.clone()), cx);
         area.update(cx, |area, cx| {
             area.set_center(layout, window, cx);
@@ -132,7 +132,7 @@ fn switching_dock_tabs_unbinds_hidden_viewports_and_rejects_old_menus(cx: &mut T
         .read_with(cx, |view, _| view.editor.view().zoom);
     cx.update_window(harness.window, |_, window, cx| {
         area.update(cx, |area, cx| {
-            area.select_panel(PanelId::from(canvas.entity_id()), window, cx)
+            area.select_panel(canvas.panel_id(cx), window, cx)
         });
         window.render_frame(cx);
         window.dispatch_action(Box::new(RunCommand::targeted(saved)), cx);
@@ -148,49 +148,148 @@ fn switching_dock_tabs_unbinds_hidden_viewports_and_rejects_old_menus(cx: &mut T
 #[gpui_kit::test]
 fn targeted_navigation_actions_update_only_their_instance(cx: &mut TestAppContext) {
     let harness = setup(cx);
-    let (command, primary, second, document) = cx
-        .update_window(harness.window, |_, _, cx| {
-            harness.view.update(cx, |view, _| {
-                let primary = view.editor.primary_viewport_binding().unwrap();
-                let second = editor_core::ViewportId::new();
-                view.editor
-                    .register_viewport(second, editor_core::ViewportKind::Modeling)
-                    .unwrap();
-                let binding = view.editor.viewport_binding(second).unwrap();
-                let command = view.editor.command_for_viewport(
-                    CommandId::ZoomIn,
-                    binding,
-                    CommandSource::Toolbar,
-                );
-                (
-                    command,
-                    view.editor
-                        .viewport_state(primary.document, primary.viewport)
-                        .unwrap(),
-                    second,
-                    primary.document,
-                )
-            })
+    let ids = cx
+        .update_window(harness.window, |_, window, cx| {
+            let ids = harness.view.update(cx, |view, cx| {
+                view.install_viewport_scene(&[editor_core::ViewportKind::Modeling; 2], window, cx)
+            });
+            window.render_frame(cx);
+            ids
         })
         .unwrap();
+    let (command, before, document) = harness.view.read_with(cx, |view, _| {
+        let document = view.editor.active_id().unwrap();
+        let command = view.editor.command_for_viewport(
+            CommandId::ZoomIn,
+            view.editor.viewport_binding(ids[1]).unwrap(),
+            CommandSource::Toolbar,
+        );
+        (
+            command,
+            view.editor.viewport_state(document, ids[0]).unwrap(),
+            document,
+        )
+    });
+    let second = harness.view.read_with(cx, |view, _| {
+        view.editor
+            .viewport_state(document, ids[1])
+            .unwrap()
+            .view
+            .zoom
+    });
     cx.update_window(harness.window, |_, window, cx| {
-        window.dispatch_action(Box::new(RunCommand::targeted(command)), cx);
+        window.dispatch_action(Box::new(RunCommand::targeted(command)), cx)
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        let current = view.editor.primary_viewport_binding().unwrap();
-        assert_eq!(
-            view.editor.viewport_state(document, current.viewport),
-            Some(primary)
-        );
+        assert_eq!(view.editor.viewport_state(document, ids[0]), Some(before));
         assert_eq!(
             view.editor
-                .viewport_state(document, second)
+                .viewport_state(document, ids[1])
                 .unwrap()
                 .view
                 .zoom,
-            1.25
+            second + 0.25
         );
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+}
+
+#[gpui_kit::test]
+fn viewport_render_failures_stay_with_their_owner_and_stale_errors_are_ignored(
+    cx: &mut TestAppContext,
+) {
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            let ids =
+                view.install_viewport_scene(&[editor_core::ViewportKind::Modeling; 2], window, cx);
+            for state in view.viewport_frames.values_mut() {
+                state.error = None;
+            }
+            let binding = view.editor.viewport_binding(ids[0]).unwrap();
+            let old = view.editor.preview_for(binding).unwrap();
+            let error = |revision, text: &str| crate::preview::Frame {
+                binding: Some(binding),
+                trace_id: 0,
+                revision,
+                canvas: None,
+                animation: None,
+                stats: (0, 0, 0),
+                image: Err(text.to_owned()),
+            };
+            view.receive_viewport_frame(error(old.revision, "first viewport failed"), cx);
+            assert_eq!(
+                view.viewport_error(ids[0]).map(String::as_str),
+                Some("first viewport failed")
+            );
+            assert!(view.viewport_error(ids[1]).is_none());
+            view.editor
+                .pan_viewport(binding, editor_core::CanvasPoint { x: 3., y: 0. })
+                .unwrap();
+            let newer = view.editor.preview_for(binding).unwrap();
+            view.receive_viewport_frame(error(old.revision, "stale error"), cx);
+            assert_eq!(
+                view.viewport_error(ids[0]).map(String::as_str),
+                Some("first viewport failed")
+            );
+            view.receive_viewport_frame(error(newer.revision, "new error"), cx);
+            assert_eq!(
+                view.viewport_error(ids[0]).map(String::as_str),
+                Some("new error")
+            );
+            assert!(view.viewport_error(ids[1]).is_none());
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn local_shortcuts_follow_the_focused_instance_in_a_dual_viewport_scene(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let ids = cx
+        .update_window(harness.window, |_, window, cx| {
+            let ids = harness.view.update(cx, |view, cx| {
+                view.install_viewport_scene(&[editor_core::ViewportKind::Modeling; 2], window, cx)
+            });
+            window.render_frame(cx);
+            ids
+        })
+        .unwrap();
+    let before = harness.view.read_with(cx, |view, _| {
+        ids.iter()
+            .map(|&id| {
+                view.editor
+                    .viewport_state(view.editor.active_id().unwrap(), id)
+                    .unwrap()
+                    .view
+            })
+            .collect::<Vec<_>>()
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        let surface = harness.view.read(cx).viewport_surface(ids[1], cx).unwrap();
+        window.focus(&surface.read(cx).focus.clone(), cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        assert_eq!(harness.view.read(cx).focused_viewport, Some(ids[1]));
+        window.dispatch_action(Box::new(RunCommand::new(CommandId::ZoomIn)), cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let document = view.editor.active_id().unwrap();
+        assert_eq!(
+            view.editor.viewport_state(document, ids[0]).unwrap().view,
+            before[0]
+        );
+        assert_eq!(
+            view.editor
+                .viewport_state(document, ids[1])
+                .unwrap()
+                .view
+                .zoom,
+            before[1].zoom + 0.25
+        );
     });
 }

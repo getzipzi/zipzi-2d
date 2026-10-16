@@ -1,12 +1,12 @@
 //! Pointer ownership, tool dispatch and canvas input bindings.
 use super::*;
 
-impl CanvasView {
+impl ViewportSurface {
     pub(super) fn cancel(&mut self, cx: &mut Context<Self>) {
         let token = self
             .interaction
             .take()
-            .or_else(|| self.pan.map(|pan| pan.token));
+            .or_else(|| self.navigation.pan.map(|pan| pan.token));
         self.cancel_pointer();
         let _ = self.owner.update(cx, |owner, cx| {
             if token.is_some_and(|token| owner.editor.cancel_viewport_interaction(token)) {
@@ -26,102 +26,7 @@ impl CanvasView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if matches!(input, CanvasInput::Down { .. }) {
-            self.wheel_zoom = None;
-        }
-        if window.has_active_dialog(cx) {
-            self.cancel(cx);
-            return;
-        }
-        let owner = self.owner.clone();
-        let _ = owner.update(cx, |owner, cx| {
-            if owner.modal || owner.editor.is_busy() {
-                return;
-            }
-            if self
-                .interaction
-                .is_some_and(|token| !owner.editor.viewport_interaction_valid(token))
-            {
-                self.cancel_pointer();
-                if !matches!(input, CanvasInput::Down { .. }) {
-                    return;
-                }
-            }
-            let Some(binding) = self
-                .binding(&owner.editor)
-                .filter(|binding| binding.kind == editor_core::ViewportKind::Modeling)
-            else {
-                return;
-            };
-            if matches!(input, CanvasInput::Up { .. }) && self.interaction.is_none() {
-                return;
-            }
-            if !owner
-                .editor
-                .has_presented_frame(owner.frame.as_ref().map(|f| f.canvas.version))
-            {
-                // A revisited tab can retain geometry before its image arrives.
-                // Never hit-test controls that the user cannot yet see.
-                let editing = owner.editor.gesture_active();
-                owner.editor.cancel_gesture();
-                if editing {
-                    owner.redraw(cx);
-                } else {
-                    // Layout can deliver hover/leave callbacks before the first
-                    // image arrives. There is no document edit to reconcile.
-                    owner.redraw_canvas(cx);
-                }
-                return;
-            }
-            let moving = matches!(input, CanvasInput::Move { .. } | CanvasInput::Leave);
-            if matches!(input, CanvasInput::Down { .. }) {
-                match owner.editor.begin_viewport_interaction(
-                    binding,
-                    editor_core::ViewportInteractionKind::Modeling,
-                ) {
-                    Ok(token) => self.interaction = Some(token),
-                    Err(_) => return,
-                }
-            }
-            let result = if let Some(token) = self.interaction {
-                owner.editor.canvas_interaction_input(token, input)
-            } else {
-                owner.editor.canvas_input_for(binding, input)
-            };
-            if matches!(input, CanvasInput::Up { .. }) || result.is_err() {
-                if let Some(token) = self.interaction.take() {
-                    if result.is_err() {
-                        owner.editor.cancel_viewport_interaction(token);
-                    } else {
-                        owner.editor.finish_viewport_interaction(token);
-                    }
-                }
-            }
-            match result {
-                Ok(changed) => {
-                    if matches!(input, CanvasInput::Down { .. }) {
-                        owner.edit_error = None;
-                    }
-                    if changed {
-                        if moving {
-                            owner.redraw_canvas(cx);
-                        } else {
-                            owner.redraw(cx);
-                        }
-                    } else {
-                        if moving {
-                            owner.notify_canvas(cx);
-                        } else {
-                            cx.notify();
-                        }
-                    }
-                }
-                Err(e) => {
-                    owner.edit_error = Some(e.to_string());
-                    owner.redraw(cx);
-                }
-            }
-        });
+        (self.on_input)(self, input, window, cx);
     }
     pub(super) fn moved(
         &mut self,
@@ -140,13 +45,13 @@ impl CanvasView {
             position,
             button,
             token,
-        }) = self.pan
+        }) = self.navigation.pan
         {
             if self.owner.upgrade().is_none_or(|o| {
                 let editor = &o.read(cx).editor;
                 !editor.viewport_interaction_valid(token)
             }) {
-                self.pan = None;
+                self.navigation.pan = None;
                 cx.notify();
                 return;
             }
@@ -154,7 +59,7 @@ impl CanvasView {
                 let _ = self.owner.update(cx, |owner, _| {
                     owner.editor.finish_viewport_interaction(token)
                 });
-                self.pan = None;
+                self.navigation.pan = None;
                 cx.notify();
                 return;
             }
@@ -165,7 +70,7 @@ impl CanvasView {
             if delta.x == 0. && delta.y == 0. {
                 return;
             }
-            self.pan = Some(PanGesture {
+            self.navigation.pan = Some(PanGesture {
                 position: event.position,
                 button,
                 token,
@@ -193,14 +98,18 @@ impl CanvasView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.pan.is_some_and(|pan| pan.button == event.button) {
-            if let Some(pan) = self.pan.take() {
+        if self
+            .navigation
+            .pan
+            .is_some_and(|pan| pan.button == event.button)
+        {
+            if let Some(pan) = self.navigation.pan.take() {
                 let _ = self.owner.update(cx, |owner, _| {
                     owner.editor.finish_viewport_interaction(pan.token)
                 });
             }
             cx.notify();
-        } else if self.pan.is_none() && event.button == MouseButton::Left {
+        } else if self.navigation.pan.is_none() && event.button == MouseButton::Left {
             self.input(
                 CanvasInput::Up {
                     point: self.local(event.position),
@@ -243,7 +152,7 @@ impl CanvasView {
                 })
                 .ok()
                 .flatten();
-            self.pan = token.map(|token| PanGesture {
+            self.navigation.pan = token.map(|token| PanGesture {
                 position: event.position,
                 button: event.button,
                 token,
@@ -288,7 +197,7 @@ impl CanvasView {
                 this.pinch(event, window, cx);
             }))
             .on_hover(cx.listener(|this, hovered: &bool, window, cx| {
-                if !hovered && this.pan.is_none() {
+                if !hovered && this.navigation.pan.is_none() {
                     this.input(CanvasInput::Leave, window, cx);
                 }
             }))

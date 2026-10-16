@@ -104,7 +104,7 @@ fn single_panel_has_a_padded_draggable_tab_and_context_actions_without_a_selecto
                 Some(px(240.)),
             )
             .child(
-                DockLayout::tabs().panel_view(panel_handle(dock.active_canvas().clone()), cx),
+                DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
                 None,
             );
         area.update(cx, |area, cx| area.set_center(layout, window, cx));
@@ -150,7 +150,7 @@ fn selector_keeps_every_grouped_panel_reachable_without_a_tab_strip(cx: &mut Tes
                 layout = layout.panel_view(panel_handle(dock.document_panels[&kind].clone()), cx);
             }
             let layout = DockLayout::h_split().child(layout, Some(px(240.))).child(
-                DockLayout::tabs().panel_view(panel_handle(dock.active_canvas().clone()), cx),
+                DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
                 None,
             );
             dock.area
@@ -255,7 +255,7 @@ fn canvas_drags_from_header_background_and_keeps_zoom_controls(cx: &mut TestAppC
         let dock = view.dock.as_ref().unwrap();
         (
             dock.area.clone(),
-            PanelId::from(dock.active_canvas().entity_id()),
+            dock.viewport_panel_id(),
             PanelId::from(dock.mesh_tree.entity_id()),
         )
     });
@@ -472,7 +472,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     !dock.contains(PanelKind::AnimationParameters, cx),
                     "a stale menu target must not fall back elsewhere"
                 );
-                let canvas = PanelId::from(dock.active_canvas().entity_id());
+                let canvas = dock.viewport_panel_id();
                 let node = dock
                     .area
                     .read(cx)
@@ -576,13 +576,13 @@ fn workspace_restoration_keeps_each_windows_own_panel_instances(cx: &mut TestApp
         let dock = harness.view.read(cx).dock.as_ref().unwrap();
         let foreign = other.read(cx).dock.as_ref().unwrap();
         for (own, foreign) in [
+            (dock.viewport_panel_id(), foreign.viewport_panel_id()),
             (
-                dock.active_canvas().entity_id(),
-                foreign.active_canvas().entity_id(),
+                PanelId::from(dock.mesh_tree.entity_id()),
+                PanelId::from(foreign.mesh_tree.entity_id()),
             ),
-            (dock.mesh_tree.entity_id(), foreign.mesh_tree.entity_id()),
         ] {
-            assert!(dock.area.read(cx).panel(PanelId::from(own)).is_some());
+            assert!(dock.area.read(cx).panel(own).is_some());
             assert!(dock.area.read(cx).panel(PanelId::from(foreign)).is_none());
         }
     })
@@ -671,15 +671,10 @@ fn workspace_menu_recovers_a_layout_without_any_panels(cx: &mut TestAppContext) 
                 });
             });
             window.render_frame(cx);
-            assert!(
-                !harness
-                    .view
-                    .read(cx)
-                    .dock
-                    .as_ref()
-                    .unwrap()
-                    .contains(PanelKind::Canvas, cx)
-            );
+            assert!(!harness.view.read(cx).dock.as_ref().unwrap().contains(
+                PanelKind::primary_viewport(harness.view.read(cx).editor.workspace()),
+                cx
+            ));
             window.click("workspace-layout-menu", cx);
             window.render_frame(cx);
             // Recovery remains reachable beside the appearance settings.
@@ -689,7 +684,10 @@ fn workspace_menu_recovers_a_layout_without_any_panels(cx: &mut TestAppContext) 
         cx.update_window(harness.window, |_, window, cx| {
             window.render_frame(cx);
             let dock = harness.view.read(cx).dock.as_ref().unwrap();
-            assert!(dock.contains(PanelKind::Canvas, cx));
+            assert!(dock.contains(
+                PanelKind::primary_viewport(harness.view.read(cx).editor.workspace()),
+                cx
+            ));
             assert!(dock.contains(
                 if workspace == CommandId::AnimationWorkspace {
                     PanelKind::AnimationProperties
@@ -761,7 +759,7 @@ fn narrow_panel_keeps_selector_and_tools_accessible(cx: &mut TestAppContext) {
                     Some(px(100.)),
                 )
                 .child(
-                    DockLayout::tabs().panel_view(panel_handle(dock.active_canvas().clone()), cx),
+                    DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
                     None,
                 );
             area.update(cx, |area, cx| area.set_center(layout, window, cx));
@@ -801,7 +799,7 @@ fn canvas_uses_the_same_selector_and_can_share_and_restore_a_panel_group(cx: &mu
         let dock = view.dock.as_ref().unwrap();
         (
             dock.area.clone(),
-            PanelId::from(dock.active_canvas().entity_id()),
+            dock.viewport_panel_id(),
             PanelId::from(dock.mesh_tree.entity_id()),
         )
     });
@@ -851,16 +849,13 @@ fn canvas_uses_the_same_selector_and_can_share_and_restore_a_panel_group(cx: &mu
         assert!(window.find("canvas-toolbar").visible());
         assert!(harness.view.read(cx).edit_error.is_none());
         assert_eq!(
-            PanelId::from(
-                harness
-                    .view
-                    .read(cx)
-                    .dock
-                    .as_ref()
-                    .unwrap()
-                    .active_canvas()
-                    .entity_id()
-            ),
+            harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .viewport_panel_id(),
             canvas
         );
     })
@@ -882,7 +877,7 @@ fn canvas_in_a_side_dock_remains_a_valid_target_for_new_panels(cx: &mut TestAppC
                 );
                 area.set_dock(
                     DockPlacement::Right,
-                    DockLayout::tabs().panel_view(panel_handle(dock.active_canvas().clone()), cx),
+                    DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
                     window,
                     cx,
                 );
@@ -891,11 +886,7 @@ fn canvas_in_a_side_dock_remains_a_valid_target_for_new_panels(cx: &mut TestAppC
             dock.show(PanelKind::Keyforms, None, window, cx);
             let area = dock.area.read(cx);
             let right = area.layout(DockPlacement::Right).unwrap();
-            assert!(
-                right
-                    .find_panel_node(PanelId::from(dock.active_canvas().entity_id()))
-                    .is_some()
-            );
+            assert!(right.find_panel_node(dock.viewport_panel_id()).is_some());
             let keyforms = PanelId::from(dock.document_panels[&PanelKind::Keyforms].entity_id());
             assert!(right.find_panel_node(keyforms).is_some());
             crate::docking::validate_layout(&area.dump(cx), WorkspaceKind::Modeling).unwrap();

@@ -310,7 +310,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
             let ready_deadline = Instant::now() + Duration::from_secs(30);
             loop {
                 executor.timer(Duration::from_millis(25)).await;
-                if view.update_in(cx, |v, _, _| v.frame.is_some())? {
+                if view.update_in(cx, |v, _, _| v.modeling_frame().is_some())? {
                     break;
                 }
                 ensure!(
@@ -337,7 +337,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         view.dock
                             .as_ref()
                             .unwrap()
-                            .active_canvas()
+                            .active_viewport()
                             .read(cx)
                             .benchmark_center()
                             .map(|center| (center, window.is_visible()))

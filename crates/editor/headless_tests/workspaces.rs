@@ -88,12 +88,14 @@ fn timeline_dock_size_and_hidden_state_restore_in_new_windows(cx: &mut TestAppCo
 }
 
 #[gpui_kit::test]
-fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppContext) {
+fn switching_uses_distinct_viewport_types_and_keeps_document_and_modeling_tool(
+    cx: &mut TestAppContext,
+) {
     let harness = setup(cx);
     let (document, canvas) = harness.view.read_with(cx, |view, _| {
         (
             view.editor.active_id(),
-            view.dock.as_ref().unwrap().active_canvas().entity_id(),
+            view.dock.as_ref().unwrap().active_viewport().entity_id(),
         )
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -138,11 +140,11 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
             assert_eq!(view.editor.workspace(), WorkspaceKind::Animation);
             assert_eq!(view.editor.active_id(), document);
             assert_eq!(view.editor.document_count(), 1);
-            assert_eq!(
-                view.dock.as_ref().unwrap().active_canvas().entity_id(),
+            assert_ne!(
+                view.dock.as_ref().unwrap().active_viewport().entity_id(),
                 canvas
             );
-            assert!(view.frame.is_none());
+            assert!(view.modeling_frame().is_none());
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         });
         window.click("animation-play-pause", cx);
@@ -156,7 +158,7 @@ fn switching_keeps_document_canvas_identity_and_modeling_tool(cx: &mut TestAppCo
             assert_eq!(view.editor.active_id(), document);
             assert_eq!(view.editor.active_tool(), ToolId::Glue);
             assert_eq!(
-                view.dock.as_ref().unwrap().active_canvas().entity_id(),
+                view.dock.as_ref().unwrap().active_viewport().entity_id(),
                 canvas
             );
             assert!(!view.editor.document().unwrap().modified());

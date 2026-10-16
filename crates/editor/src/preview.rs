@@ -1,5 +1,6 @@
 //! Immutable Metal frames produced on GPUI's device and command queue.
-use editor_core::SceneSnapshot;
+use crate::worker_queue::{Coalesced, MailboxReceiver, mailbox};
+use editor_core::{SceneSnapshot, ViewportBinding, ViewportId};
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
 use gpui_kit::{IntoElement, Styled, Window, frame_trace};
 use metal::MTLPixelFormat;
@@ -13,6 +14,7 @@ pub struct Presented {
 }
 
 pub struct Request {
+    pub binding: ViewportBinding,
     pub trace_id: u64,
     pub revision: u64,
     pub canvas: Option<editor_core::CanvasFrame>,
@@ -23,6 +25,7 @@ pub struct Request {
 }
 
 pub struct Frame {
+    pub binding: Option<ViewportBinding>,
     pub trace_id: u64,
     pub revision: u64,
     pub canvas: Option<editor_core::CanvasFrame>,
@@ -32,19 +35,26 @@ pub struct Frame {
 }
 type Connection = (
     RequestSender,
-    async_channel::Receiver<Frame>,
+    MailboxReceiver<Option<ViewportId>, Frame>,
     Option<metal::Device>,
 );
 
 #[derive(Default)]
 struct Inbox {
-    latest: Option<Request>,
+    pending: Coalesced<ViewportId, Request>,
     closed: bool,
 }
 pub struct RequestSender {
     shared: Arc<(Mutex<Inbox>, Condvar)>,
 }
 impl RequestSender {
+    pub fn cancel(&self, viewport: ViewportId) {
+        if let Ok(mut inbox) = self.shared.0.lock() {
+            if let Some(old) = inbox.pending.remove(viewport) {
+                frame_trace::emit(old.trace_id, "cancelled", &[]);
+            }
+        }
+    }
     pub fn send(&self, request: Request) -> Result<(), ()> {
         let (lock, ready) = &*self.shared;
         let mut inbox = lock.lock().map_err(|_| ())?;
@@ -52,7 +62,7 @@ impl RequestSender {
             return Err(());
         }
         let trace_id = request.trace_id;
-        if let Some(old) = inbox.latest.replace(request) {
+        if let Some(old) = inbox.pending.insert(request.binding.viewport, request) {
             frame_trace::emit(old.trace_id, "coalesced", &[]);
         }
         frame_trace::emit(trace_id, "enqueued", &[]);
@@ -65,7 +75,7 @@ impl Drop for RequestSender {
         let (lock, ready) = &*self.shared;
         if let Ok(mut inbox) = lock.lock() {
             inbox.closed = true;
-            if let Some(old) = inbox.latest.take() {
+            while let Some(old) = inbox.pending.pop() {
                 frame_trace::emit(old.trace_id, "cancelled", &[]);
             }
             ready.notify_one();
@@ -82,7 +92,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
     let requests = RequestSender {
         shared: shared.clone(),
     };
-    let (frames, receiver) = async_channel::bounded(1);
+    let (frames, receiver) = mailbox();
     let initial_target = MetalTargetConfig {
         width: 1,
         height: 1,
@@ -95,14 +105,18 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
         let mut renderer = match renderer {
             Ok(renderer) => renderer,
             Err(error) => {
-                let _ = frames.send_blocking(Frame {
-                    trace_id: 0,
-                    revision: 0,
-                    canvas: None,
-                    animation: None,
-                    stats: (0, 0, 0),
-                    image: Err(error.to_string()),
-                });
+                let _ = frames.send(
+                    None,
+                    Frame {
+                        binding: None,
+                        trace_id: 0,
+                        revision: 0,
+                        canvas: None,
+                        animation: None,
+                        stats: (0, 0, 0),
+                        image: Err(error.to_string()),
+                    },
+                );
                 return;
             }
         };
@@ -110,13 +124,13 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
             let request = {
                 let (lock, ready) = &*shared;
                 let mut inbox = lock.lock().unwrap();
-                while inbox.latest.is_none() && !inbox.closed {
+                while inbox.pending.is_empty() && !inbox.closed {
                     inbox = ready.wait(inbox).unwrap();
                 }
                 if inbox.closed {
                     break;
                 }
-                let request = inbox.latest.take().unwrap();
+                let request = inbox.pending.pop().unwrap();
                 frame_trace::emit(request.trace_id, "dequeued", &[]);
                 request
             };
@@ -164,21 +178,25 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 }
             };
             if frames
-                .send_blocking(Frame {
-                    trace_id,
-                    revision: request.revision,
-                    canvas: request.canvas,
-                    animation: request.animation,
-                    stats: renderer.stats(),
-                    image,
-                })
+                .send(
+                    Some(request.binding.viewport),
+                    Frame {
+                        binding: Some(request.binding),
+                        trace_id,
+                        revision: request.revision,
+                        canvas: request.canvas,
+                        animation: request.animation,
+                        stats: renderer.stats(),
+                        image,
+                    },
+                )
                 .is_err()
             {
                 break;
             }
             frame_trace::emit(trace_id, "delivery_sent", &[]);
             // One producer command in flight. Requests arriving while the GPU
-            // works collapse into Inbox::latest; discarded images no longer
+            // works coalesce independently by viewport; discarded images no longer
             // leave an unbounded queue of obsolete GPU work ahead of the UI.
             // Publish before waiting: GPUI can sample on this same queue.
             if let Some(command) = completion {

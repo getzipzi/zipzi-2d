@@ -1,8 +1,11 @@
 use kasane_core::Canvas;
 mod identity;
+mod presentation;
 mod state;
 pub(crate) use identity::ViewportRegistry;
 pub use identity::*;
+pub use presentation::AnimationViewportIdentity;
+pub(crate) use presentation::ViewportPresentation;
 pub use state::ViewportState;
 
 /// Window coordinates enter only at the UI boundary; core accepts canvas-local logical pixels.

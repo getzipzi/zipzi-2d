@@ -61,15 +61,26 @@ fn viewport_pose_cache_tracks_candidate_revisions_cancel_commit_and_undo() -> an
         let candidate = evaluate(&mut e, &mut evaluator)?;
         assert_eq!(candidate.snapshot.parameters[&id(2)], value);
         assert!(!Arc::ptr_eq(&original.snapshot, &candidate.snapshot));
+        let binding = e.primary_viewport_binding().unwrap();
+        let (before_pan, _) = e
+            .animation_viewport_request(
+                binding,
+                candidate.identity,
+                candidate.scene.viewport_frame.canvas,
+            )
+            .unwrap();
         e.pan_by(CanvasPoint { x: 2., y: 3. });
-        let panned = evaluate(&mut e, &mut evaluator)?;
-        assert!(Arc::ptr_eq(&candidate.snapshot, &panned.snapshot));
-        assert!(Arc::ptr_eq(
-            &candidate.scene.viewport_frame,
-            &panned.scene.viewport_frame
-        ));
-        assert!(e.present_animation(candidate.identity, candidate.snapshot));
-        assert!(e.present_animation(panned.identity, panned.snapshot));
+        assert!(e.animation_request().is_none());
+        let (panned, _) = e
+            .animation_viewport_request(
+                binding,
+                candidate.identity,
+                candidate.scene.viewport_frame.canvas,
+            )
+            .unwrap();
+        assert_eq!(panned.content, before_pan.content);
+        assert!(e.present_animation_viewport(before_pan, candidate.snapshot.clone()));
+        assert!(e.present_animation_viewport(panned, candidate.snapshot));
     }
     e.cancel_timeline_edit();
     let cancelled = evaluate(&mut e, &mut evaluator)?;
@@ -491,5 +502,63 @@ fn acknowledging_a_new_key_reveal_keeps_the_live_candidate_and_snapshot() -> any
     assert!(Arc::ptr_eq(&rows, &e.timeline_visible_rows().unwrap()));
     e.finish_timeline_edit(d, token)?;
     assert_eq!(e.document().unwrap().history_lengths(), (1, 0));
+    Ok(())
+}
+
+#[test]
+fn a_slower_animation_viewport_accepts_candidate_frames_after_its_peer_has_advanced()
+-> anyhow::Result<()> {
+    let (mut editor, _assets) = fixture(false, false)?;
+    let document = editor.active_id().unwrap();
+    let fast = editor.primary_viewport_binding().unwrap();
+    let second = ViewportId::new();
+    editor.register_viewport(second, ViewportKind::Animation)?;
+    editor.set_viewport_metrics(
+        second,
+        CanvasMetrics {
+            width: 300.,
+            height: 240.,
+            scale_factor: 1.,
+        },
+    );
+    let slow = editor.viewport_binding(second).unwrap();
+    editor.seek_timeline(document, 0.6)?;
+    editor.begin_timeline_edit(document, "Value")?;
+    let mut evaluator = AnimationEvaluator::default();
+    let mut frames = Vec::new();
+    for value in [0.4, 0.6, 0.8] {
+        editor.update_timeline_edit(
+            document,
+            editor.timeline_edit().unwrap().identity,
+            write(2, None, value),
+        )?;
+        let content = evaluate(&mut editor, &mut evaluator)?;
+        let canvas = content.scene.viewport_frame.canvas;
+        let (a, _) = editor
+            .animation_viewport_request(fast, content.identity, canvas)
+            .unwrap();
+        let (b, _) = editor
+            .animation_viewport_request(slow, content.identity, canvas)
+            .unwrap();
+        frames.push((a, b, content.snapshot));
+    }
+    assert!(editor.present_animation_viewport(frames[2].0, frames[2].2.clone()));
+    assert!(editor.present_animation_viewport(frames[0].1, frames[0].2.clone()));
+    assert!(editor.present_animation_viewport(frames[1].1, frames[1].2.clone()));
+    assert_eq!(
+        editor
+            .animation()
+            .unwrap()
+            .presented
+            .as_ref()
+            .unwrap()
+            .parameters[&id(2)],
+        0.8
+    );
+    editor.set_viewport_visible(fast.viewport, false);
+    assert!(editor.present_animation_viewport(frames[2].1, frames[2].2.clone()));
+    editor.cancel_timeline_edit();
+    assert!(!editor.present_animation_viewport(frames[2].1, frames[2].2.clone()));
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }

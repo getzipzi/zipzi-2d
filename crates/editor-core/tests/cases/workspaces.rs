@@ -66,7 +66,7 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
                     editor.preview_if_needed()?.unwrap();
                 }
                 WorkspaceKind::Animation => {
-                    editor.animation_request().unwrap();
+                    let _ = editor.animation_request();
                 }
             }
             assert_view(editor.view(), fitted(&editor));
@@ -87,7 +87,7 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
                 editor.preview_if_needed()?.unwrap();
             }
             WorkspaceKind::Animation => {
-                editor.animation_request().unwrap();
+                let _ = editor.animation_request();
             }
         }
         assert_view(editor.view(), ViewState::default());

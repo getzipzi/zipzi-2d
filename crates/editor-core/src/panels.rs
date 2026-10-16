@@ -33,7 +33,8 @@ macro_rules! panels {
 use CommandId as C;
 use WorkspaceKind::{Animation, Modeling};
 panels! {
-    (Canvas, None, None, Center, 0, true),
+    (ModelingViewport, None, Some(Modeling), Center, 0, true),
+    (AnimationViewport, None, Some(Animation), Center, 0, true),
     (MeshTree, Some(C::MeshTree), Some(Modeling), Left, 0, true),
     (DrawOrder, Some(C::DrawOrder), Some(Modeling), Left, 0, true),
     (Deformers, Some(C::Deformers), Some(Modeling), Left, 1, true),
@@ -63,6 +64,16 @@ impl PanelSpec {
     }
 }
 impl PanelKind {
+    pub fn primary_viewport(workspace: WorkspaceKind) -> Self {
+        match workspace {
+            WorkspaceKind::Modeling => Self::ModelingViewport,
+            WorkspaceKind::Animation => Self::AnimationViewport,
+        }
+    }
+    pub fn is_viewport(self) -> bool {
+        matches!(self, Self::ModelingViewport | Self::AnimationViewport)
+    }
+
     pub const DOCUMENT_PANELS: [Self; 10] = [
         Self::DrawOrder,
         Self::Relations,
@@ -81,9 +92,14 @@ impl PanelKind {
     }
 
     pub fn label(self) -> &'static str {
-        self.spec()
-            .command
-            .map_or("dock.canvas", |command| command.spec().label)
+        self.spec().command.map_or(
+            match self {
+                Self::ModelingViewport => "dock.modeling_viewport",
+                Self::AnimationViewport => "dock.animation_viewport",
+                _ => "dock.canvas",
+            },
+            |command| command.spec().label,
+        )
     }
 
     pub fn spec(self) -> &'static PanelSpec {

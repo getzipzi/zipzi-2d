@@ -78,7 +78,7 @@ pub(crate) fn modeling_and_parameters_screenshots(
     let marker = harness.view.read_with(&mut harness.cx, |view, _| {
         let position = view.editor.overlay().vertices[0].position;
         let scale = view
-            .frame
+            .modeling_frame()
             .as_ref()
             .unwrap()
             .canvas
@@ -166,8 +166,7 @@ pub(crate) fn modeling_and_parameters_screenshots(
                 area.set_center(
                     DockLayout::h_split()
                         .child(
-                            DockLayout::tabs()
-                                .panel_view(panel_handle(dock.active_canvas().clone()), cx),
+                            DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
                             None,
                         )
                         .child(
