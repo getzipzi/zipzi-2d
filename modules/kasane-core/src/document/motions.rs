@@ -165,7 +165,7 @@ impl MotionClip {
 
 impl Document {
     pub fn motion_groups(&self) -> &[MotionGroup] {
-        &self.motion_groups
+        &self.content.motion_groups
     }
 
     pub fn set_motion_groups(&mut self, groups: Vec<MotionGroup>) -> EditResult {
@@ -182,10 +182,10 @@ impl Document {
         if !status.is_ok() {
             return self.failed(status);
         }
-        if self.motion_groups == groups {
+        if self.content.motion_groups == groups {
             return self.failed(Status::ok());
         }
-        self.motion_groups = groups;
+        self.content.motion_groups = groups;
         self.changed(ChangeKind::Metadata, Vec::new(), Vec::new())
     }
 
@@ -198,7 +198,7 @@ impl Document {
                 return Status::error("INVALID_MOTION_GROUP", format!("groups[{index}]"));
             }
             for (entry_index, entry) in group.entries.iter().enumerate() {
-                if !self.motions.contains_key(&entry.clip_id) {
+                if !self.content.motions.contains_key(&entry.clip_id) {
                     return Status::error(
                         "MISSING_MOTION",
                         format!("groups[{index}].entries[{entry_index}]"),
@@ -229,11 +229,11 @@ impl Document {
         Status::ok()
     }
     pub fn motion_order(&self) -> &[String] {
-        &self.motion_order
+        &self.content.motion_order
     }
 
     pub fn get_motion(&self, id: &str) -> Option<&MotionClip> {
-        self.motions.get(id).map(std::sync::Arc::as_ref)
+        self.content.motions.get(id).map(std::sync::Arc::as_ref)
     }
 
     pub fn create_motion(&mut self, clip: MotionClip) -> EditResult {
@@ -254,8 +254,10 @@ impl Document {
             return self.failed(status);
         }
         let id = clip.id.clone();
-        self.motions.insert(id.clone(), std::sync::Arc::new(clip));
-        self.motion_order.push(id.clone());
+        self.content
+            .motions
+            .insert(id.clone(), std::sync::Arc::new(clip));
+        self.content.motion_order.push(id.clone());
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
@@ -266,7 +268,7 @@ impl Document {
                 "Commit or cancel first",
             ));
         }
-        if !self.motions.contains_key(&clip.id) {
+        if !self.content.motions.contains_key(&clip.id) {
             return self.failed(Status::error("MISSING_MOTION", &clip.id));
         }
         let status = self.validate_motion(&clip);
@@ -277,7 +279,9 @@ impl Document {
         if self.get_motion(&id) == Some(&clip) {
             return self.failed(Status::ok());
         }
-        self.motions.insert(id.clone(), std::sync::Arc::new(clip));
+        self.content
+            .motions
+            .insert(id.clone(), std::sync::Arc::new(clip));
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
@@ -287,7 +291,12 @@ impl Document {
             return Status::error("INVALID_MOTION_ID", &clip.id);
         }
         let mut nested_elsewhere = HashSet::new();
-        for other in self.motions.values().filter(|other| other.id != clip.id) {
+        for other in self
+            .content
+            .motions
+            .values()
+            .filter(|other| other.id != clip.id)
+        {
             for track in &other.tracks {
                 nested_elsewhere.insert(track.id.as_str());
                 nested_elsewhere.extend(track.keys().map(|key| key.id.as_str()));
@@ -301,6 +310,7 @@ impl Document {
             return Status::error("INVALID_MOTION_NAME", &clip.id);
         }
         if self
+            .content
             .motions
             .values()
             .any(|other| other.id != clip.id && other.name == clip.name)
@@ -461,8 +471,8 @@ impl Document {
 
     pub(super) fn validate_motions(&self) -> Vec<StructureIssue> {
         let mut issues = Vec::new();
-        for id in &self.motion_order {
-            if let Some(clip) = self.motions.get(id) {
+        for id in &self.content.motion_order {
+            if let Some(clip) = self.content.motions.get(id) {
                 let status = self.validate_motion(clip);
                 if !status.is_ok() {
                     issues.push(StructureIssue {
@@ -472,10 +482,10 @@ impl Document {
                 }
             }
         }
-        let status = self.validate_motion_groups(&self.motion_groups);
+        let status = self.validate_motion_groups(&self.content.motion_groups);
         if !status.is_ok() {
             issues.push(StructureIssue {
-                object_id: self.id.clone(),
+                object_id: self.content.id.clone(),
                 status,
             });
         }

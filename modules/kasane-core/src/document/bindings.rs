@@ -8,18 +8,18 @@ use std::collections::HashSet;
 
 impl Document {
     pub fn binding_order(&self) -> &[String] {
-        &self.binding_order
+        &self.content.binding_order
     }
 
     pub fn get_binding(&self, id: &str) -> Option<&MeshBinding> {
-        self.bindings.get(id)
+        self.content.bindings.get(id)
     }
 
     pub fn binding_for_mesh(&self, mesh_id: &str) -> Option<&MeshBinding> {
         self.lookup()
             .mesh_bindings
             .get(mesh_id)
-            .and_then(|id| self.bindings.get(id))
+            .and_then(|id| self.content.bindings.get(id))
     }
 
     pub(super) fn canonicalize_binding(&self, b: &mut MeshBinding) -> Status {
@@ -166,8 +166,8 @@ impl Document {
         }
         let id = b.id.clone();
         let mesh = b.mesh_id.clone();
-        self.bindings.insert(id.clone(), b);
-        self.binding_order.push(id.clone());
+        self.content.bindings.insert(id.clone(), b);
+        self.content.binding_order.push(id.clone());
         self.changed(ChangeKind::Structure, vec![mesh], vec![id])
     }
 
@@ -178,7 +178,7 @@ impl Document {
                 "Commit or cancel first",
             ));
         }
-        let previous_mesh = match self.bindings.get(&b.id) {
+        let previous_mesh = match self.content.bindings.get(&b.id) {
             Some(old) => old.mesh_id.clone(),
             None => return self.failed(Status::error("MISSING_BINDING", &b.id)),
         };
@@ -192,7 +192,7 @@ impl Document {
         if previous_mesh != mesh {
             affected.push(previous_mesh.clone());
         }
-        self.bindings.insert(id.clone(), b);
+        self.content.bindings.insert(id.clone(), b);
         self.changed(
             ChangeKind::Structure,
             affected,
@@ -225,7 +225,7 @@ impl Document {
             return self.failed(s);
         }
         let mesh = b.mesh_id.clone();
-        self.bindings.insert(id.to_string(), b);
+        self.content.bindings.insert(id.to_string(), b);
         self.changed(
             if changes_order {
                 ChangeKind::Structure
@@ -238,18 +238,18 @@ impl Document {
     }
 
     pub fn scene_binding_order(&self) -> &[String] {
-        &self.scene_binding_order
+        &self.content.scene_binding_order
     }
 
     pub fn get_scene_binding(&self, id: &str) -> Option<&SceneBinding> {
-        self.scene_bindings.get(id)
+        self.content.scene_bindings.get(id)
     }
 
     pub fn binding_for_scene(&self, target_id: &str) -> Option<&SceneBinding> {
         self.lookup()
             .scene_bindings
             .get(target_id)
-            .and_then(|id| self.scene_bindings.get(id))
+            .and_then(|id| self.content.scene_bindings.get(id))
     }
 
     pub(super) fn canonicalize_scene_binding(&self, b: &mut SceneBinding) -> Status {
@@ -412,9 +412,9 @@ impl Document {
         }
         let id = b.id.clone();
         let target = b.target_id().to_owned();
-        self.scene_bindings.insert(id.clone(), b);
-        self.scene_binding_order.push(id.clone());
-        let meshes = self.mesh_order.clone();
+        self.content.scene_bindings.insert(id.clone(), b);
+        self.content.scene_binding_order.push(id.clone());
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id, target])
     }
 
@@ -422,7 +422,7 @@ impl Document {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &b.id));
         }
-        let previous = match self.scene_bindings.get(&b.id) {
+        let previous = match self.content.scene_bindings.get(&b.id) {
             Some(old) => old.target_id().to_owned(),
             None => return self.failed(Status::error("MISSING_BINDING", &b.id)),
         };
@@ -432,8 +432,8 @@ impl Document {
         }
         let id = b.id.clone();
         let target = b.target_id().to_owned();
-        self.scene_bindings.insert(id.clone(), b);
-        let meshes = self.mesh_order.clone();
+        self.content.scene_bindings.insert(id.clone(), b);
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id, target, previous])
     }
 
@@ -470,6 +470,7 @@ impl Document {
         ];
         let mut candidate = self.clone();
         candidate
+            .content
             .offscreens
             .insert(offscreen.id.clone(), offscreen.clone());
         let edit = candidate.replace_scene_binding(binding);
@@ -480,9 +481,13 @@ impl Document {
         if !edit.status.is_ok() {
             return self.failed(edit.status);
         }
-        self.scene_bindings = candidate.scene_bindings;
-        self.offscreens = candidate.offscreens;
-        self.changed(ChangeKind::Structure, self.mesh_order.clone(), objects)
+        self.content.scene_bindings = candidate.content.scene_bindings;
+        self.content.offscreens = candidate.content.offscreens;
+        self.changed(
+            ChangeKind::Structure,
+            self.content.mesh_order.clone(),
+            objects,
+        )
     }
 
     pub fn set_scene_keyform(&mut self, id: &str, f: SceneKeyform) -> EditResult {
@@ -509,7 +514,11 @@ impl Document {
             ChangeKind::Positions
         };
         let target = b.target_id().to_owned();
-        self.scene_bindings.insert(id.to_owned(), b);
-        self.changed(kind, self.mesh_order.clone(), vec![id.to_owned(), target])
+        self.content.scene_bindings.insert(id.to_owned(), b);
+        self.changed(
+            kind,
+            self.content.mesh_order.clone(),
+            vec![id.to_owned(), target],
+        )
     }
 }

@@ -3,19 +3,22 @@ use crate::types::{ChangeKind, EditResult, Offscreen, Status};
 
 impl Document {
     pub fn offscreen_order(&self) -> &[String] {
-        &self.offscreen_order
+        &self.content.offscreen_order
     }
 
     pub fn offscreen_count(&self) -> usize {
-        self.offscreens.len()
+        self.content.offscreens.len()
     }
 
     pub fn get_offscreen(&self, id: &str) -> Option<&Offscreen> {
-        self.offscreens.get(id)
+        self.content.offscreens.get(id)
     }
 
     pub fn offscreen_for_part(&self, part_id: &str) -> Option<&Offscreen> {
-        self.offscreens.values().find(|os| os.part_id == part_id)
+        self.content
+            .offscreens
+            .values()
+            .find(|os| os.part_id == part_id)
     }
 
     pub fn is_part_ancestor(&self, ancestor_id: &str, part_id: &str) -> bool {
@@ -53,13 +56,13 @@ impl Document {
         if !valid_uuid(&os.id) {
             return Status::error("INVALID_ID", format!("{}: invalid UUID", os.id));
         }
-        if os.part_id.is_empty() || !self.parts.contains_key(&os.part_id) {
+        if os.part_id.is_empty() || !self.content.parts.contains_key(&os.part_id) {
             return Status::error(
                 "MISSING_PART",
                 format!("{}: owner part {} not found", os.id, os.part_id),
             );
         }
-        for (other_id, other) in &self.offscreens {
+        for (other_id, other) in &self.content.offscreens {
             if other_id != &os.id && other.part_id == os.part_id {
                 return Status::error(
                     "DUPLICATE_OWNER",
@@ -71,7 +74,7 @@ impl Document {
             }
         }
         for mask_id in &os.masks {
-            if !self.meshes.contains_key(mask_id) {
+            if !self.content.meshes.contains_key(mask_id) {
                 return Status::error(
                     "MISSING_MESH",
                     format!("{}: mask mesh {} not found", os.id, mask_id),
@@ -140,7 +143,7 @@ impl Document {
         if self.contains_id(&offscreen.id) {
             return self.failed(Status::error("DUPLICATE_ID", &offscreen.id));
         }
-        for (other_id, other) in &self.offscreens {
+        for (other_id, other) in &self.content.offscreens {
             if other.runtime_id == offscreen.runtime_id {
                 return self.failed(Status::error(
                     "DUPLICATE_RUNTIME_ID",
@@ -154,8 +157,8 @@ impl Document {
         }
         let id = offscreen.id.clone();
         let part_id = offscreen.part_id.clone();
-        self.offscreens.insert(id.clone(), offscreen);
-        self.offscreen_order.push(id.clone());
+        self.content.offscreens.insert(id.clone(), offscreen);
+        self.content.offscreen_order.push(id.clone());
         self.changed(ChangeKind::Structure, Vec::new(), vec![id, part_id])
     }
 
@@ -163,10 +166,10 @@ impl Document {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &offscreen.id));
         }
-        if !self.offscreens.contains_key(&offscreen.id) {
+        if !self.content.offscreens.contains_key(&offscreen.id) {
             return self.failed(Status::error("MISSING_OBJECT", &offscreen.id));
         }
-        for (other_id, other) in &self.offscreens {
+        for (other_id, other) in &self.content.offscreens {
             if other_id != &offscreen.id && other.runtime_id == offscreen.runtime_id {
                 return self.failed(Status::error(
                     "DUPLICATE_RUNTIME_ID",
@@ -180,7 +183,7 @@ impl Document {
         }
         let id = offscreen.id.clone();
         let part_id = offscreen.part_id.clone();
-        self.offscreens.insert(id.clone(), offscreen);
+        self.content.offscreens.insert(id.clone(), offscreen);
         self.changed(ChangeKind::Structure, Vec::new(), vec![id, part_id])
     }
 }

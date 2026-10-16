@@ -8,18 +8,18 @@ use std::collections::{HashMap, HashSet};
 
 impl Document {
     pub fn mesh_order(&self) -> &[String] {
-        &self.mesh_order
+        &self.content.mesh_order
     }
 
     pub fn get_mesh(&self, id: &str) -> Option<&Mesh> {
-        self.meshes.get(id)
+        self.content.meshes.get(id)
     }
 
     pub(super) fn validate_mesh_properties(&self, m: &Mesh) -> Status {
-        if !m.part_id.is_empty() && !self.parts.contains_key(&m.part_id) {
+        if !m.part_id.is_empty() && !self.content.parts.contains_key(&m.part_id) {
             return Status::error("MISSING_PART", format!("{}.part_id", m.id));
         }
-        if !m.deformer_id.is_empty() && !self.transforms.contains_key(&m.deformer_id) {
+        if !m.deformer_id.is_empty() && !self.content.transforms.contains_key(&m.deformer_id) {
             return Status::error("MISSING_TRANSFORM", format!("{}.deformer_id", m.id));
         }
         let s = validate_appearance(&m.appearance, &m.id);
@@ -37,7 +37,7 @@ impl Document {
             if !seen.insert(mask.clone()) {
                 return Status::error("INVALID_MASK", format!("{}.masks", m.id));
             }
-            if !self.meshes.contains_key(mask) {
+            if !self.content.meshes.contains_key(mask) {
                 return Status::error("MISSING_MESH", format!("{}.masks: {}", m.id, mask));
             }
         }
@@ -68,7 +68,7 @@ impl Document {
         if self.contains_id(&mesh.id) {
             return self.failed(Status::error("DUPLICATE_ID", "Object ID already exists."));
         }
-        if !self.assets.contains_key(&mesh.texture_asset_id) {
+        if !self.content.assets.contains_key(&mesh.texture_asset_id) {
             return self.failed(Status::error(
                 "MISSING_ASSET",
                 "Texture asset does not exist.",
@@ -123,15 +123,15 @@ impl Document {
         let key = mesh.id.clone();
         self.mesh_runtime_ids
             .insert(mesh.runtime_id.clone(), key.clone());
-        self.meshes.insert(key.clone(), mesh);
+        self.content.meshes.insert(key.clone(), mesh);
         self.vertex_slots.insert(key.clone(), slots);
-        self.mesh_order.push(key.clone());
-        if let Some(groups) = &mut self.draw_order_groups {
+        self.content.mesh_order.push(key.clone());
+        if let Some(groups) = &mut self.content.draw_order_groups {
             // New meshes join their Part's drawing group, or the nearest
             // grouped ancestor. A flat imported drawing remains flat.
-            let mut owner = self.meshes[&key].part_id.clone();
+            let mut owner = self.content.meshes[&key].part_id.clone();
             while !groups.iter().any(|g| g.owner == owner) {
-                owner = self.parts[&owner].parent_id.clone();
+                owner = self.content.parts[&owner].parent_id.clone();
             }
             groups
                 .iter_mut()
@@ -166,7 +166,7 @@ impl Document {
             ));
         }
         if previous.vertex_ids != mesh.vertex_ids {
-            for b in self.blend_bindings.values() {
+            for b in self.content.blend_bindings.values() {
                 if b.target_id == mesh.id && b.target_kind == BlendShapeTargetKind::Mesh {
                     return self.failed(Status::error(
                         "KEYFORMS_REQUIRED",
@@ -175,7 +175,7 @@ impl Document {
                 }
             }
             let new_vids: HashSet<u32> = mesh.vertex_ids.iter().copied().collect();
-            for g in self.glues.values() {
+            for g in self.content.glues.values() {
                 if g.mesh_a_id == mesh.id {
                     for pair in &g.pairs {
                         if !new_vids.contains(&pair.vertex_a) {
@@ -204,7 +204,7 @@ impl Document {
                 }
             }
         }
-        if !self.assets.contains_key(&mesh.texture_asset_id) {
+        if !self.content.assets.contains_key(&mesh.texture_asset_id) {
             return self.failed(Status::error(
                 "MISSING_ASSET",
                 "Texture asset does not exist.",
@@ -262,7 +262,7 @@ impl Document {
             self.mesh_runtime_ids
                 .insert(mesh.runtime_id.clone(), key.clone());
         }
-        self.meshes.insert(key.clone(), mesh);
+        self.content.meshes.insert(key.clone(), mesh);
         self.vertex_slots.insert(key.clone(), slots);
         self.changed(ChangeKind::Structure, vec![key], Vec::new())
     }
@@ -299,10 +299,10 @@ impl Document {
         if !rebound.status.is_ok() {
             return self.failed(rebound.status);
         }
-        self.meshes = candidate.meshes;
+        self.content.meshes = candidate.content.meshes;
         self.mesh_runtime_ids = candidate.mesh_runtime_ids;
         self.vertex_slots = candidate.vertex_slots;
-        self.bindings = candidate.bindings;
+        self.content.bindings = candidate.content.bindings;
         self.changed(
             ChangeKind::Structure,
             vec![mesh_id.clone()],
@@ -345,6 +345,7 @@ impl Document {
             ));
         }
         let expected_blends: HashSet<_> = self
+            .content
             .blend_bindings
             .values()
             .filter(|b| b.target_id == mesh.id)
@@ -372,18 +373,19 @@ impl Document {
         let ordinary_id = binding.as_ref().map(|b| b.id.clone());
         let mut candidate = self.clone();
         if let Some(b) = &binding {
-            candidate.bindings.remove(&b.id);
+            candidate.content.bindings.remove(&b.id);
         }
         for id in &expected_blends {
-            candidate.blend_bindings.remove(id);
+            candidate.content.blend_bindings.remove(id);
         }
         for id in &expected_glues {
-            candidate.glues.remove(id);
+            candidate.content.glues.remove(id);
         }
         // Remove only temporary map entries; order arrays are restored on commit.
         candidate
+            .content
             .binding_order
-            .retain(|id| candidate.bindings.contains_key(id));
+            .retain(|id| candidate.content.bindings.contains_key(id));
         candidate.lookup.take();
         let result = candidate.replace_mesh(mesh);
         if !result.status.is_ok() {
@@ -394,14 +396,14 @@ impl Document {
             if !status.is_ok() {
                 return self.failed(status);
             }
-            candidate.bindings.insert(b.id.clone(), b);
+            candidate.content.bindings.insert(b.id.clone(), b);
         }
         for b in blend_bindings {
             let status = candidate.validate_blend_binding(&b);
             if !status.is_ok() {
                 return self.failed(status);
             }
-            candidate.blend_bindings.insert(b.id.clone(), b);
+            candidate.content.blend_bindings.insert(b.id.clone(), b);
             candidate.lookup.take();
         }
         for g in glues {
@@ -411,22 +413,23 @@ impl Document {
             }
             // Reuse replacement validation, including runtime-ID uniqueness.
             candidate
+                .content
                 .glues
-                .insert(g.id.clone(), self.glues[&g.id].clone());
+                .insert(g.id.clone(), self.content.glues[&g.id].clone());
             let result = candidate.replace_glue(g);
             if !result.status.is_ok() {
                 return self.failed(result.status);
             }
         }
-        self.meshes = candidate.meshes;
+        self.content.meshes = candidate.content.meshes;
         self.mesh_runtime_ids = candidate.mesh_runtime_ids;
         self.vertex_slots = candidate.vertex_slots;
-        self.bindings = candidate.bindings;
-        self.blend_bindings = candidate.blend_bindings;
-        self.glues = candidate.glues;
+        self.content.bindings = candidate.content.bindings;
+        self.content.blend_bindings = candidate.content.blend_bindings;
+        self.content.glues = candidate.content.glues;
         self.changed(
             ChangeKind::Structure,
-            self.mesh_order.clone(),
+            self.content.mesh_order.clone(),
             result
                 .changes
                 .mesh_ids
@@ -481,7 +484,7 @@ impl Document {
                 "Opacity must be between 0 and 1",
             ));
         }
-        let Some(mesh) = self.meshes.get_mut(id) else {
+        let Some(mesh) = self.content.meshes.get_mut(id) else {
             return self.failed(Status::error("MISSING_MESH", id));
         };
         if mesh.appearance.opacity == opacity {
@@ -498,7 +501,7 @@ impl Document {
                 "Commit or cancel the active transaction first.",
             ));
         }
-        let mesh = match self.meshes.get_mut(id) {
+        let mesh = match self.content.meshes.get_mut(id) {
             Some(m) => m,
             None => return self.failed(Status::error("MISSING_MESH", "Mesh does not exist.")),
         };

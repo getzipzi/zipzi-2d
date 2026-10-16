@@ -63,11 +63,11 @@ impl ExpressionAsset {
 
 impl Document {
     pub fn expression_order(&self) -> &[String] {
-        &self.expression_order
+        &self.content.expression_order
     }
 
     pub fn get_expression(&self, id: &str) -> Option<&ExpressionAsset> {
-        self.expressions.get(id)
+        self.content.expressions.get(id)
     }
 
     pub fn create_expression(&mut self, expression: ExpressionAsset) -> EditResult {
@@ -88,8 +88,8 @@ impl Document {
             return self.failed(status);
         }
         let id = expression.id.clone();
-        self.expressions.insert(id.clone(), expression);
-        self.expression_order.push(id.clone());
+        self.content.expressions.insert(id.clone(), expression);
+        self.content.expression_order.push(id.clone());
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
@@ -100,7 +100,7 @@ impl Document {
                 "Commit or cancel first",
             ));
         }
-        if !self.expressions.contains_key(&expression.id) {
+        if !self.content.expressions.contains_key(&expression.id) {
             return self.failed(Status::error("MISSING_EXPRESSION", &expression.id));
         }
         let status = self.validate_expression(&expression);
@@ -108,10 +108,10 @@ impl Document {
             return self.failed(status);
         }
         let id = expression.id.clone();
-        if self.expressions.get(&id) == Some(&expression) {
+        if self.content.expressions.get(&id) == Some(&expression) {
             return self.failed(Status::ok());
         }
-        self.expressions.insert(id.clone(), expression);
+        self.content.expressions.insert(id.clone(), expression);
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
@@ -123,6 +123,7 @@ impl Document {
             return Status::error("INVALID_EXPRESSION_NAME", &expression.id);
         }
         if self
+            .content
             .expressions
             .values()
             .any(|other| other.id != expression.id && other.name == expression.name)
@@ -180,8 +181,8 @@ impl Document {
     pub(super) fn validate_expressions(&self) -> Vec<StructureIssue> {
         let mut issues = Vec::new();
         let mut names = HashSet::new();
-        for id in &self.expression_order {
-            if let Some(expression) = self.expressions.get(id) {
+        for id in &self.content.expression_order {
+            if let Some(expression) = self.content.expressions.get(id) {
                 let status = self.validate_expression(expression);
                 if !status.is_ok() {
                     issues.push(StructureIssue {

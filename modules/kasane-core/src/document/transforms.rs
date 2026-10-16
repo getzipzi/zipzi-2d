@@ -5,11 +5,11 @@ use std::collections::{HashMap, HashSet};
 
 impl Document {
     pub fn transform_order(&self) -> &[String] {
-        &self.transform_order
+        &self.content.transform_order
     }
 
     pub fn get_transform(&self, id: &str) -> Option<&Transform> {
-        self.transforms.get(id)
+        self.content.transforms.get(id)
     }
 
     pub(super) fn validate_transform(&self, t: &Transform) -> Status {
@@ -25,12 +25,12 @@ impl Document {
         {
             return Status::error("INVALID_ID", &t.id);
         }
-        for (id, other) in &self.transforms {
+        for (id, other) in &self.content.transforms {
             if id != &t.id && other.runtime_id == t.runtime_id {
                 return Status::error("DUPLICATE_RUNTIME_ID", &t.id);
             }
         }
-        if !t.part_id.is_none() && !self.parts.contains_key(t.part()) {
+        if !t.part_id.is_none() && !self.content.parts.contains_key(t.part()) {
             return Status::error("MISSING_PART", format!("{}.part_id", t.id));
         }
         let mut seen = HashSet::new();
@@ -97,9 +97,9 @@ impl Document {
             return self.failed(s);
         }
         let id = t.id.clone();
-        self.transforms.insert(id.clone(), t);
-        self.transform_order.push(id.clone());
-        let meshes = self.mesh_order.clone();
+        self.content.transforms.insert(id.clone(), t);
+        self.content.transform_order.push(id.clone());
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id])
     }
 
@@ -107,7 +107,7 @@ impl Document {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &t.id));
         }
-        let Some(old) = self.transforms.get(&t.id) else {
+        let Some(old) = self.content.transforms.get(&t.id) else {
             return self.failed(Status::error("MISSING_TRANSFORM", &t.id));
         };
         if (self.binding_for_scene(&t.id).is_some()
@@ -130,8 +130,8 @@ impl Document {
             ChangeKind::Structure
         };
         let id = t.id.clone();
-        self.transforms.insert(id.clone(), t);
-        let meshes = self.mesh_order.clone();
+        self.content.transforms.insert(id.clone(), t);
+        let meshes = self.content.mesh_order.clone();
         self.changed(kind, meshes, vec![id])
     }
 
@@ -154,8 +154,8 @@ impl Document {
             }
         }
 
-        for id in &self.transform_order {
-            visit(id, &self.transforms, &mut seen, &mut result);
+        for id in &self.content.transform_order {
+            visit(id, &self.content.transforms, &mut seen, &mut result);
         }
         result
     }
@@ -199,12 +199,12 @@ impl Document {
             ChangeKind::Structure
         };
         let id = t.id.clone();
-        self.transforms.insert(id.clone(), t);
+        self.content.transforms.insert(id.clone(), t);
         let mut objects = vec![id.clone()];
         if let Some(mut b) = binding {
             let status = self.canonicalize_scene_binding(&mut b);
             if !status.is_ok() {
-                self.transforms.insert(id.clone(), old);
+                self.content.transforms.insert(id.clone(), old);
                 return self.failed(status);
             }
             let previous = self.get_scene_binding(&b.id).unwrap();
@@ -218,9 +218,9 @@ impl Document {
                 kind = ChangeKind::Structure;
             }
             objects.push(b.id.clone());
-            self.scene_bindings.insert(b.id.clone(), b);
+            self.content.scene_bindings.insert(b.id.clone(), b);
         }
-        self.changed(kind, self.mesh_order.clone(), objects)
+        self.changed(kind, self.content.mesh_order.clone(), objects)
     }
 }
 

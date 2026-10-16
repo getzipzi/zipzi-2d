@@ -12,13 +12,13 @@ use crate::types::{
     RotationKeyform, SceneBinding, SceneTrack, Transform, TransformData, Vec2, WarpKeyform,
 };
 
+use super::super::DocumentContent;
 use super::super::PackageAttachment;
 use super::super::PhysicsAsset;
 use super::super::{
     CdiCombinedSet, CdiNamespaceIds, CdiParameterEntry, CdiParameterGroup, CdiParameterRef,
     CdiPartEntry, DisplayInfo,
 };
-use super::super::{ContentRef, DocumentContent};
 use super::super::{ExpressionAsset, ExpressionEntry, ExpressionTarget};
 use super::super::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
 use super::super::{
@@ -538,7 +538,7 @@ impl ExtraBytes for Offscreen {
     }
 }
 
-pub(super) fn estimated_content_bytes(content: ContentRef<'_>) -> usize {
+pub(super) fn estimated_content_bytes(content: &DocumentContent) -> usize {
     size_of::<DocumentContent>()
         + content.id.extra_bytes()
         + content.assets.extra_bytes()

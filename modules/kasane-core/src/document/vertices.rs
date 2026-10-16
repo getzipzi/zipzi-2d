@@ -43,7 +43,7 @@ impl Document {
         let mut changed_mesh_set = HashSet::new();
 
         for update in updates {
-            let mesh = match self.meshes.get(&update.mesh_id) {
+            let mesh = match self.content.meshes.get(&update.mesh_id) {
                 Some(m) => m,
                 None => return self.failed(Status::error("MISSING_MESH", "Mesh does not exist.")),
             };
@@ -108,7 +108,7 @@ impl Document {
 
         let mut history = crate::history::EditDelta::default();
         for delta in deltas {
-            let mesh = self.meshes.get_mut(&delta.mesh_id).unwrap();
+            let mesh = self.content.meshes.get_mut(&delta.mesh_id).unwrap();
             for (slot, after) in delta.slots.into_iter().zip(delta.after) {
                 history.vertex(
                     &delta.mesh_id,

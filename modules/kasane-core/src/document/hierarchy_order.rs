@@ -24,7 +24,7 @@ impl HierarchyOrder {
 impl Document {
     /// Palette ordering has no effect on relationships or evaluated draw order.
     pub fn hierarchy_order(&self) -> &HierarchyOrder {
-        &self.hierarchy_order
+        &self.content.hierarchy_order
     }
 
     /// Validate and replace both display orders as one metadata edit.
@@ -41,11 +41,15 @@ impl Document {
         if let Some(issue) = self.hierarchy_order_issues(&order).into_iter().next() {
             return self.failed(issue.status);
         }
-        if self.hierarchy_order == order {
+        if self.content.hierarchy_order == order {
             return self.failed(Status::ok());
         }
-        self.hierarchy_order = order;
-        self.changed(ChangeKind::Metadata, Vec::new(), vec![self.id.clone()])
+        self.content.hierarchy_order = order;
+        self.changed(
+            ChangeKind::Metadata,
+            Vec::new(),
+            vec![self.content.id.clone()],
+        )
     }
 
     pub(super) fn hierarchy_order_issues(&self, order: &HierarchyOrder) -> Vec<StructureIssue> {
@@ -53,10 +57,11 @@ impl Document {
         for (ids, organization) in [(&order.organization, true), (&order.deformation, false)] {
             let mut seen = HashSet::new();
             for id in ids {
-                let valid = self.meshes.contains_key(id)
-                    || self.transforms.contains_key(id)
+                let valid = self.content.meshes.contains_key(id)
+                    || self.content.transforms.contains_key(id)
                     || (organization
-                        && (self.parts.contains_key(id) || self.offscreens.contains_key(id)));
+                        && (self.content.parts.contains_key(id)
+                            || self.content.offscreens.contains_key(id)));
                 if !valid || !seen.insert(id) {
                     issues.push(StructureIssue {
                         object_id: id.clone(),

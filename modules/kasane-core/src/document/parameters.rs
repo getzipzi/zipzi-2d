@@ -3,11 +3,11 @@ use crate::types::{ChangeKind, EditResult, Parameter, Status};
 
 impl Document {
     pub fn parameter_order(&self) -> &[String] {
-        &self.parameter_order
+        &self.content.parameter_order
     }
 
     pub fn get_parameter(&self, id: &str) -> Option<&Parameter> {
-        self.parameters.get(id)
+        self.content.parameters.get(id)
     }
 
     pub(super) fn validate_parameter(&self, p: &Parameter) -> Status {
@@ -20,7 +20,7 @@ impl Document {
         if p.runtime_id.is_empty() {
             return Status::error("INVALID_ID", format!("{}.runtime_id is empty", p.id));
         }
-        for (id, other) in &self.parameters {
+        for (id, other) in &self.content.parameters {
             if id != &p.id && other.runtime_id == p.runtime_id {
                 return Status::error(
                     "DUPLICATE_RUNTIME_ID",
@@ -28,7 +28,7 @@ impl Document {
                 );
             }
         }
-        if self.display_info.parameters.as_ref().is_some_and(|entries| entries.iter().any(|entry| {
+        if self.content.display_info.parameters.as_ref().is_some_and(|entries| entries.iter().any(|entry| {
             matches!(entry, CdiParameterEntry::Unresolved { runtime_id, .. } if runtime_id == &p.runtime_id)
         })) {
             return Status::error("DUPLICATE_RUNTIME_ID", format!("{}.runtime_id collides with unresolved CDI parameter", p.id));
@@ -79,12 +79,12 @@ impl Document {
             return self.failed(s);
         }
         let id = p.id.clone();
-        self.parameters.insert(id.clone(), p);
-        self.parameter_order.push(id.clone());
+        self.content.parameters.insert(id.clone(), p);
+        self.content.parameter_order.push(id.clone());
         // An edited generated CDI table is explicit. Keep newly authored
         // parameters visible there; imported tables retain their file scope.
-        if self.display_info.origin == DisplayInfoOrigin::Generated {
-            if let Some(entries) = &mut self.display_info.parameters {
+        if self.content.display_info.origin == DisplayInfoOrigin::Generated {
+            if let Some(entries) = &mut self.content.display_info.parameters {
                 entries.push(CdiParameterEntry::Resolved {
                     parameter_id: id.clone(),
                     group_id: None,
@@ -102,7 +102,7 @@ impl Document {
                 "Commit or cancel first",
             ));
         }
-        if !self.parameters.contains_key(&p.id) {
+        if !self.content.parameters.contains_key(&p.id) {
             return self.failed(Status::error("MISSING_PARAMETER", &p.id));
         }
         let s = self.validate_parameter(&p);
@@ -111,9 +111,9 @@ impl Document {
         }
         // Validate dependent keyforms against the proposed range before committing.
         let mut candidate = self.clone();
-        candidate.parameters.insert(p.id.clone(), p.clone());
+        candidate.content.parameters.insert(p.id.clone(), p.clone());
         let mut meshes = Vec::new();
-        for binding in self.bindings.values() {
+        for binding in self.content.bindings.values() {
             if binding.axes.iter().any(|axis| axis.parameter_id == p.id) {
                 let status = candidate.canonicalize_binding(&mut binding.clone());
                 if !status.is_ok() {
@@ -122,16 +122,16 @@ impl Document {
                 meshes.push(binding.mesh_id.clone());
             }
         }
-        for binding in self.scene_bindings.values() {
+        for binding in self.content.scene_bindings.values() {
             if binding.axes.iter().any(|axis| axis.parameter_id == p.id) {
                 let status = candidate.canonicalize_scene_binding(&mut binding.clone());
                 if !status.is_ok() {
                     return self.failed(status);
                 }
-                meshes = self.mesh_order.clone();
+                meshes = self.content.mesh_order.clone();
             }
         }
-        for glue in self.glues.values() {
+        for glue in self.content.glues.values() {
             if glue
                 .binding
                 .as_ref()
@@ -141,10 +141,11 @@ impl Document {
                 if !status.is_ok() {
                     return self.failed(status);
                 }
-                meshes = self.mesh_order.clone();
+                meshes = self.content.mesh_order.clone();
             }
         }
         for table in self
+            .content
             .blend_key_tables
             .values()
             .filter(|t| t.parameter_id == p.id)
@@ -153,9 +154,10 @@ impl Document {
             if !status.is_ok() {
                 return self.failed(status);
             }
-            meshes = self.mesh_order.clone();
+            meshes = self.content.mesh_order.clone();
         }
         for constraint in self
+            .content
             .blend_constraints
             .values()
             .filter(|c| c.parameter_id == p.id)
@@ -164,12 +166,12 @@ impl Document {
             if !status.is_ok() {
                 return self.failed(status);
             }
-            meshes = self.mesh_order.clone();
+            meshes = self.content.mesh_order.clone();
         }
         meshes.sort();
         meshes.dedup();
         let id = p.id.clone();
-        self.parameters.insert(id.clone(), p);
+        self.content.parameters.insert(id.clone(), p);
         self.changed(ChangeKind::Structure, meshes, vec![id])
     }
 }

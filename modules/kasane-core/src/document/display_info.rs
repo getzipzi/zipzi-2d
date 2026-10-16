@@ -163,7 +163,7 @@ impl DisplayInfo {
 
 impl Document {
     pub fn display_info(&self) -> &DisplayInfo {
-        &self.display_info
+        &self.content.display_info
     }
 
     pub fn replace_display_info(&mut self, display_info: DisplayInfo) -> EditResult {
@@ -176,15 +176,19 @@ impl Document {
         if !self.initialized() {
             return self.failed(Status::error("NOT_INITIALIZED", "Initialize first"));
         }
-        if self.display_info == display_info {
+        if self.content.display_info == display_info {
             return self.failed(Status::ok());
         }
-        let previous = std::mem::replace(&mut self.display_info, display_info);
+        let previous = std::mem::replace(&mut self.content.display_info, display_info);
         if let Some(issue) = self.validate_structure().into_iter().next() {
-            self.display_info = previous;
+            self.content.display_info = previous;
             return self.failed(issue.status);
         }
-        self.changed(ChangeKind::Metadata, Vec::new(), vec![self.id.clone()])
+        self.changed(
+            ChangeKind::Metadata,
+            Vec::new(),
+            vec![self.content.id.clone()],
+        )
     }
 
     pub fn set_parameter_display_name(&mut self, id: &str, name: String) -> EditResult {
@@ -200,7 +204,7 @@ impl Document {
                 format!("$.Parameters[{id}].Name: embedded NUL"),
             ));
         }
-        let Some(parameter) = self.parameters.get_mut(id) else {
+        let Some(parameter) = self.content.parameters.get_mut(id) else {
             return self.failed(Status::error("MISSING_PARAMETER", id));
         };
         if parameter.name == name {
@@ -223,7 +227,7 @@ impl Document {
                 format!("$.Parts[{id}].Name: embedded NUL"),
             ));
         }
-        let Some(part) = self.parts.get_mut(id) else {
+        let Some(part) = self.content.parts.get_mut(id) else {
             return self.failed(Status::error("MISSING_PART", id));
         };
         if part.name == name {
@@ -234,7 +238,7 @@ impl Document {
     }
 
     pub(super) fn validate_display_info(&self) -> Vec<StructureIssue> {
-        let info = &self.display_info;
+        let info = &self.content.display_info;
         let mut issues = Vec::new();
         let mut group_ids = std::collections::HashSet::new();
         let mut group_runtime_ids = std::collections::HashSet::new();

@@ -16,27 +16,27 @@ impl Document {
     pub fn validate_structure(&self) -> Vec<StructureIssue> {
         let mut issues = Vec::new();
         let mut initialized = Document::new();
-        let status = initialized.initialize(self.id.clone(), self.canvas);
+        let status = initialized.initialize(self.content.id.clone(), self.content.canvas);
         if !status.is_ok() {
             issues.push(StructureIssue {
-                object_id: self.id.clone(),
+                object_id: self.content.id.clone(),
                 status,
             });
         }
 
         let mut all_ids = HashSet::new();
-        all_ids.insert(self.id.clone());
+        all_ids.insert(self.content.id.clone());
         macro_rules! check_collection {
             ($map:ident, $order:ident) => {{
                 let mut ordered = HashSet::new();
-                for id in &self.$order {
+                for id in &self.content.$order {
                     if !ordered.insert(id.clone()) {
                         issues.push(StructureIssue {
                             object_id: id.clone(),
                             status: Status::error("DUPLICATE_ORDER_ID", "Repeated object in order"),
                         });
                     }
-                    if !self.$map.contains_key(id) {
+                    if !self.content.$map.contains_key(id) {
                         issues.push(StructureIssue {
                             object_id: id.clone(),
                             status: Status::error(
@@ -46,7 +46,7 @@ impl Document {
                         });
                     }
                 }
-                for (id, object) in &self.$map {
+                for (id, object) in &self.content.$map {
                     if !ordered.contains(id) {
                         issues.push(StructureIssue {
                             object_id: id.clone(),
@@ -82,7 +82,7 @@ impl Document {
         check_collection!(offscreens, offscreen_order);
         check_collection!(expressions, expression_order);
         check_collection!(motions, motion_order);
-        if let Some(pose) = &self.pose {
+        if let Some(pose) = &self.content.pose {
             if !all_ids.insert(pose.id.clone()) {
                 issues.push(StructureIssue {
                     object_id: pose.id.clone(),
@@ -90,7 +90,7 @@ impl Document {
                 });
             }
         }
-        if let Some(physics) = &self.physics {
+        if let Some(physics) = &self.content.physics {
             if !all_ids.insert(physics.id.clone()) {
                 issues.push(StructureIssue {
                     object_id: physics.id.clone(),
@@ -98,7 +98,7 @@ impl Document {
                 });
             }
         }
-        for motion in self.motions.values() {
+        for motion in self.content.motions.values() {
             for id in motion
                 .tracks
                 .iter()
@@ -117,6 +117,7 @@ impl Document {
             }
         }
         for id in self
+            .content
             .display_info
             .parameter_groups
             .as_ref()
@@ -124,7 +125,8 @@ impl Document {
             .flatten()
             .map(|group| &group.id)
             .chain(
-                self.display_info
+                self.content
+                    .display_info
                     .combined_parameters
                     .as_ref()
                     .into_iter()
@@ -140,8 +142,8 @@ impl Document {
             }
         }
         issues.extend(self.validate_display_info());
-        issues.extend(self.hierarchy_order_issues(&self.hierarchy_order));
-        issues.extend(self.editor_state_issues(&self.editor_state));
+        issues.extend(self.hierarchy_order_issues(&self.content.hierarchy_order));
+        issues.extend(self.editor_state_issues(&self.content.editor_state));
         issues.extend(self.validate_expressions());
         issues.extend(self.validate_model3());
         issues.extend(self.validate_motions());
@@ -156,41 +158,42 @@ impl Document {
                 });
             }
         };
-        for (id, asset) in &self.assets {
+        for (id, asset) in &self.content.assets {
             if asset.width == 0 || asset.height == 0 || asset.source.is_empty() {
                 add_issue(id, Status::error("INVALID_ASSET", id));
             }
         }
-        for (id, part) in &self.parts {
+        for (id, part) in &self.content.parts {
             add_issue(id, self.validate_part(part));
         }
-        for (id, transform) in &self.transforms {
+        for (id, transform) in &self.content.transforms {
             add_issue(id, self.validate_transform(transform));
         }
-        for (id, mesh) in &self.meshes {
+        for (id, mesh) in &self.content.meshes {
             let status = self.validate_mesh_snapshot(mesh);
             add_issue(id, status);
         }
-        for (id, parameter) in &self.parameters {
+        for (id, parameter) in &self.content.parameters {
             add_issue(id, self.validate_parameter(parameter));
         }
-        for (id, binding) in &self.bindings {
+        for (id, binding) in &self.content.bindings {
             add_issue(id, self.canonicalize_binding(&mut binding.clone()));
         }
-        for (id, binding) in &self.scene_bindings {
+        for (id, binding) in &self.content.scene_bindings {
             add_issue(id, self.canonicalize_scene_binding(&mut binding.clone()));
         }
-        for (id, table) in &self.blend_key_tables {
+        for (id, table) in &self.content.blend_key_tables {
             add_issue(id, self.validate_blend_key_table(table));
         }
-        for (id, constraint) in &self.blend_constraints {
+        for (id, constraint) in &self.content.blend_constraints {
             add_issue(id, self.validate_blend_constraint(constraint));
         }
-        for (id, binding) in &self.blend_bindings {
+        for (id, binding) in &self.content.blend_bindings {
             add_issue(id, self.validate_blend_binding(binding));
         }
-        for (id, glue) in &self.glues {
+        for (id, glue) in &self.content.glues {
             let duplicate = self
+                .content
                 .glues
                 .iter()
                 .any(|(other_id, other)| other_id != id && other.runtime_id == glue.runtime_id);
@@ -203,8 +206,8 @@ impl Document {
                 },
             );
         }
-        for (id, offscreen) in &self.offscreens {
-            let duplicate = self.offscreens.iter().any(|(other_id, other)| {
+        for (id, offscreen) in &self.content.offscreens {
+            let duplicate = self.content.offscreens.iter().any(|(other_id, other)| {
                 other_id != id && other.runtime_id == offscreen.runtime_id
             });
             add_issue(
@@ -219,10 +222,10 @@ impl Document {
                 },
             );
         }
-        if let Some(groups) = &self.draw_order_groups {
+        if let Some(groups) = &self.content.draw_order_groups {
             if let Err(status) = validate_groups(self, groups) {
                 issues.push(StructureIssue {
-                    object_id: self.id.clone(),
+                    object_id: self.content.id.clone(),
                     status,
                 });
             }
@@ -238,7 +241,7 @@ impl Document {
     }
 
     fn validate_mesh_snapshot(&self, mesh: &Mesh) -> Status {
-        if !self.assets.contains_key(&mesh.texture_asset_id) {
+        if !self.content.assets.contains_key(&mesh.texture_asset_id) {
             return Status::error("MISSING_ASSET", "Texture asset does not exist.");
         }
         let status = self.validate_mesh_properties(mesh);
@@ -308,8 +311,8 @@ mod tests {
         let mut restored = source.clone();
         assert!(restored.validate_structure().is_empty());
 
-        source.parts.get_mut(PART).unwrap().parent_id = PART.into();
-        source.part_order.push(PART.into());
+        source.content.parts.get_mut(PART).unwrap().parent_id = PART.into();
+        source.content.part_order.push(PART.into());
         let mut checkpoint = source.checkpoint();
         restored.exchange_checkpoint(&mut checkpoint).unwrap();
         let revision = restored.revision();

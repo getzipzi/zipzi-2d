@@ -6,11 +6,11 @@ use crate::types::{
 
 impl Document {
     pub fn blend_key_table_order(&self) -> &[String] {
-        &self.blend_key_table_order
+        &self.content.blend_key_table_order
     }
 
     pub fn get_blend_key_table(&self, id: &str) -> Option<&BlendShapeKeyTable> {
-        self.blend_key_tables.get(id)
+        self.content.blend_key_tables.get(id)
     }
 
     pub(super) fn validate_blend_key_table(&self, table: &BlendShapeKeyTable) -> Status {
@@ -61,9 +61,9 @@ impl Document {
         }
         let id = table.id.clone();
         let param_id = table.parameter_id.clone();
-        self.blend_key_tables.insert(id.clone(), table);
-        self.blend_key_table_order.push(id.clone());
-        let meshes = self.mesh_order.clone();
+        self.content.blend_key_tables.insert(id.clone(), table);
+        self.content.blend_key_table_order.push(id.clone());
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id, param_id])
     }
 
@@ -71,14 +71,14 @@ impl Document {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &table.id));
         }
-        if !self.blend_key_tables.contains_key(&table.id) {
+        if !self.content.blend_key_tables.contains_key(&table.id) {
             return self.failed(Status::error("MISSING_KEY_TABLE", &table.id));
         }
         let s = self.validate_blend_key_table(&table);
         if !s.is_ok() {
             return self.failed(s);
         }
-        for b in self.blend_bindings.values() {
+        for b in self.content.blend_bindings.values() {
             if b.key_table_id == table.id && b.keyforms.len() != table.keys.len() {
                 return self.failed(Status::error(
                     "KEYFORMS_REQUIRED",
@@ -91,17 +91,17 @@ impl Document {
         }
         let id = table.id.clone();
         let param_id = table.parameter_id.clone();
-        self.blend_key_tables.insert(id.clone(), table);
-        let meshes = self.mesh_order.clone();
+        self.content.blend_key_tables.insert(id.clone(), table);
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id, param_id])
     }
 
     pub fn blend_constraint_order(&self) -> &[String] {
-        &self.blend_constraint_order
+        &self.content.blend_constraint_order
     }
 
     pub fn get_blend_constraint(&self, id: &str) -> Option<&BlendShapeConstraint> {
-        self.blend_constraints.get(id)
+        self.content.blend_constraints.get(id)
     }
 
     pub(super) fn validate_blend_constraint(&self, constraint: &BlendShapeConstraint) -> Status {
@@ -157,9 +157,11 @@ impl Document {
         }
         let id = constraint.id.clone();
         let param_id = constraint.parameter_id.clone();
-        self.blend_constraints.insert(id.clone(), constraint);
-        self.blend_constraint_order.push(id.clone());
-        let meshes = self.mesh_order.clone();
+        self.content
+            .blend_constraints
+            .insert(id.clone(), constraint);
+        self.content.blend_constraint_order.push(id.clone());
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id, param_id])
     }
 
@@ -167,7 +169,7 @@ impl Document {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &constraint.id));
         }
-        if !self.blend_constraints.contains_key(&constraint.id) {
+        if !self.content.blend_constraints.contains_key(&constraint.id) {
             return self.failed(Status::error("MISSING_CONSTRAINT", &constraint.id));
         }
         let s = self.validate_blend_constraint(&constraint);
@@ -176,17 +178,19 @@ impl Document {
         }
         let id = constraint.id.clone();
         let param_id = constraint.parameter_id.clone();
-        self.blend_constraints.insert(id.clone(), constraint);
-        let meshes = self.mesh_order.clone();
+        self.content
+            .blend_constraints
+            .insert(id.clone(), constraint);
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id, param_id])
     }
 
     pub fn blend_binding_order(&self) -> &[String] {
-        &self.blend_binding_order
+        &self.content.blend_binding_order
     }
 
     pub fn get_blend_binding(&self, id: &str) -> Option<&BlendShapeBinding> {
-        self.blend_bindings.get(id)
+        self.content.blend_bindings.get(id)
     }
 
     pub fn blend_bindings_for_target(&self, target_id: &str) -> Vec<&BlendShapeBinding> {
@@ -195,7 +199,7 @@ impl Document {
             .get(target_id)
             .into_iter()
             .flatten()
-            .map(|id| &self.blend_bindings[id])
+            .map(|id| &self.content.blend_bindings[id])
             .collect()
     }
 
@@ -208,7 +212,7 @@ impl Document {
             None => return Status::error("MISSING_KEY_TABLE", &b.key_table_id),
         };
         for c_id in &b.constraint_ids {
-            if !self.blend_constraints.contains_key(c_id) {
+            if !self.content.blend_constraints.contains_key(c_id) {
                 return Status::error("MISSING_CONSTRAINT", c_id);
             }
         }
@@ -375,7 +379,7 @@ impl Document {
                 }
             }
             (BlendShapeTargetKind::Part, DeltaKeyforms::Part(forms)) => {
-                if !self.parts.contains_key(&b.target_id) {
+                if !self.content.parts.contains_key(&b.target_id) {
                     return Status::error(
                         "MISSING_OBJECT",
                         format!("{}: expected Part", b.target_id),
@@ -389,7 +393,7 @@ impl Document {
                 }
             }
             (BlendShapeTargetKind::Glue, DeltaKeyforms::Glue(forms)) => {
-                if !self.glues.contains_key(&b.target_id) {
+                if !self.content.glues.contains_key(&b.target_id) {
                     return Status::error(
                         "MISSING_OBJECT",
                         format!("{}: expected Glue", b.target_id),
@@ -402,7 +406,7 @@ impl Document {
                 }
             }
             (BlendShapeTargetKind::Offscreen, DeltaKeyforms::Offscreen(forms)) => {
-                if !self.offscreens.contains_key(&b.target_id) {
+                if !self.content.offscreens.contains_key(&b.target_id) {
                     return Status::error(
                         "MISSING_OBJECT",
                         format!("{}: expected Offscreen", b.target_id),
@@ -455,9 +459,9 @@ impl Document {
         let id = b.id.clone();
         let target = b.target_id.clone();
         let key_table = b.key_table_id.clone();
-        self.blend_bindings.insert(id.clone(), b);
-        self.blend_binding_order.push(id.clone());
-        let meshes = self.mesh_order.clone();
+        self.content.blend_bindings.insert(id.clone(), b);
+        self.content.blend_binding_order.push(id.clone());
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id, target, key_table])
     }
 
@@ -465,7 +469,7 @@ impl Document {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &b.id));
         }
-        if !self.blend_bindings.contains_key(&b.id) {
+        if !self.content.blend_bindings.contains_key(&b.id) {
             return self.failed(Status::error("MISSING_BINDING", &b.id));
         }
         let s = self.validate_blend_binding(&b);
@@ -475,8 +479,8 @@ impl Document {
         let id = b.id.clone();
         let target = b.target_id.clone();
         let key_table = b.key_table_id.clone();
-        self.blend_bindings.insert(id.clone(), b);
-        let meshes = self.mesh_order.clone();
+        self.content.blend_bindings.insert(id.clone(), b);
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id, target, key_table])
     }
 }

@@ -1,4 +1,4 @@
-use super::{ContentRef, Document, DocumentContent};
+use super::{Document, DocumentContent};
 use crate::types::{ChangeKind, ImageAsset, Status};
 use std::collections::HashMap;
 
@@ -13,7 +13,7 @@ impl DocumentCheckpoint {
     /// Estimated heap and inline bytes owned by persistent content. This is a
     /// capacity-aware budget estimate, not a process RSS measurement.
     pub fn estimated_bytes(&self) -> usize {
-        size::estimated_content_bytes(self.0.content_ref())
+        size::estimated_content_bytes(&self.0)
     }
 
     /// Read-only resource descriptions for SDK history relocation.
@@ -47,10 +47,10 @@ impl DocumentCheckpoint {
 
 impl Document {
     pub fn estimated_content_bytes(&self) -> usize {
-        size::estimated_content_bytes(self.content_ref())
+        size::estimated_content_bytes(&self.content)
     }
     pub fn checkpoint(&self) -> DocumentCheckpoint {
-        DocumentCheckpoint(self.content())
+        DocumentCheckpoint(self.content.clone())
     }
 
     /// Build an isolated edit candidate. Its saved baseline and evaluation caches
@@ -75,7 +75,7 @@ impl Document {
         if self.transaction_active || candidate.transaction_active || candidate.batch_build_active {
             return Err(Status::error("EDIT_ACTIVE", "Finish the active edit first"));
         }
-        if self.id != candidate.id {
+        if self.content.id != candidate.content.id {
             return Err(Status::error(
                 "DIFFERENT_DOCUMENT",
                 "Candidate document ID differs",
@@ -87,7 +87,7 @@ impl Document {
         // Preserve geometry caches only when all persistent changes are known
         // display metadata; identity and runtime inputs must still invalidate.
         let metadata_only = if !identity_changed && declared_kind == ChangeKind::Metadata {
-            self.same_content_except_visual_metadata(candidate.content_ref())
+            self.same_content_except_visual_metadata(&candidate.content)
         } else {
             false
         };
@@ -99,8 +99,8 @@ impl Document {
         Ok(true)
     }
 
-    fn same_content_except_visual_metadata(&self, content: ContentRef<'_>) -> bool {
-        let original = self.content_ref();
+    fn same_content_except_visual_metadata(&self, content: &DocumentContent) -> bool {
+        let original = &self.content;
         // Compare borrowed data directly: metadata commits must not clone mesh
         // geometry merely to decide whether the prepared frame remains valid.
         original.id == content.id
@@ -193,13 +193,13 @@ impl Document {
         if self.transaction_active || self.batch_build_active {
             return Err(Status::error("EDIT_ACTIVE", "Finish the active edit first"));
         }
-        if self.id != checkpoint.0.id {
+        if self.content.id != checkpoint.0.id {
             return Err(Status::error(
                 "DIFFERENT_DOCUMENT",
                 "Checkpoint document ID differs",
             ));
         }
-        let metadata_only = self.same_content_except_visual_metadata(checkpoint.0.content_ref());
+        let metadata_only = self.same_content_except_visual_metadata(&checkpoint.0);
         self.swap_checkpoint(checkpoint, !metadata_only);
         self.advance_checkpoint_revision(!metadata_only);
         Ok(())
@@ -208,58 +208,15 @@ impl Document {
     /// Swap all persistent content while retaining the saved baseline.
     fn swap_checkpoint(&mut self, checkpoint: &mut DocumentCheckpoint, invalidate: bool) {
         self.modified_cache.take();
-        let content = &mut checkpoint.0;
-        macro_rules! swap_field {
-            ($field:ident) => {
-                std::mem::swap(&mut self.$field, &mut content.$field)
-            };
-        }
-        swap_field!(id);
-        swap_field!(canvas);
-        swap_field!(assets);
-        swap_field!(asset_order);
-        swap_field!(parts);
-        swap_field!(part_order);
-        swap_field!(transforms);
-        swap_field!(transform_order);
-        swap_field!(meshes);
-        swap_field!(mesh_order);
+        std::mem::swap(&mut self.content, &mut checkpoint.0);
         self.mesh_runtime_ids = self
+            .content
             .meshes
             .iter()
             .map(|(id, mesh)| (mesh.runtime_id.clone(), id.clone()))
             .collect();
-        swap_field!(parameters);
-        swap_field!(parameter_order);
-        swap_field!(bindings);
-        swap_field!(binding_order);
-        swap_field!(scene_bindings);
-        swap_field!(scene_binding_order);
-        swap_field!(draw_order_groups);
-        swap_field!(blend_key_tables);
-        swap_field!(blend_key_table_order);
-        swap_field!(blend_constraints);
-        swap_field!(blend_constraint_order);
-        swap_field!(blend_bindings);
-        swap_field!(blend_binding_order);
-        swap_field!(glues);
-        swap_field!(glue_order);
-        swap_field!(offscreens);
-        swap_field!(offscreen_order);
-        swap_field!(display_info);
-        swap_field!(hierarchy_order);
-        swap_field!(editor_state);
-        swap_field!(expressions);
-        swap_field!(expression_order);
-        swap_field!(motions);
-        swap_field!(motion_order);
-        swap_field!(motion_groups);
-        swap_field!(pose);
-        swap_field!(physics);
-        swap_field!(missing_attachments);
-        swap_field!(model3_settings);
-        swap_field!(package_attachments);
         self.vertex_slots = self
+            .content
             .meshes
             .iter()
             .map(|(id, mesh)| {

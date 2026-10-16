@@ -4,17 +4,18 @@ use std::collections::HashSet;
 
 impl Document {
     pub fn glue_order(&self) -> &[String] {
-        &self.glue_order
+        &self.content.glue_order
     }
 
     pub fn get_glue(&self, id: &str) -> Option<&Glue> {
-        self.glues.get(id)
+        self.content.glues.get(id)
     }
 
     pub fn glues_for_mesh(&self, mesh_id: &str) -> Vec<&Glue> {
-        self.glue_order
+        self.content
+            .glue_order
             .iter()
-            .filter_map(|id| self.glues.get(id))
+            .filter_map(|id| self.content.glues.get(id))
             .filter(|g| g.mesh_a_id == mesh_id || g.mesh_b_id == mesh_id)
             .collect()
     }
@@ -26,10 +27,10 @@ impl Document {
         if glue.mesh_a_id.is_empty() || glue.mesh_b_id.is_empty() {
             return Status::error("INVALID_GLUE", "Mesh IDs cannot be empty");
         }
-        if !self.meshes.contains_key(&glue.mesh_a_id) {
+        if !self.content.meshes.contains_key(&glue.mesh_a_id) {
             return Status::error("MISSING_MESH", &glue.mesh_a_id);
         }
-        if !self.meshes.contains_key(&glue.mesh_b_id) {
+        if !self.content.meshes.contains_key(&glue.mesh_b_id) {
             return Status::error("MISSING_MESH", &glue.mesh_b_id);
         }
         let slots_a = &self.vertex_slots[&glue.mesh_a_id];
@@ -111,7 +112,7 @@ impl Document {
         if self.contains_id(&glue.id) {
             return self.failed(Status::error("DUPLICATE_ID", &glue.id));
         }
-        for (other_id, other) in &self.glues {
+        for (other_id, other) in &self.content.glues {
             if other.runtime_id == glue.runtime_id {
                 return self.failed(Status::error(
                     "DUPLICATE_RUNTIME_ID",
@@ -126,8 +127,8 @@ impl Document {
         let id = glue.id.clone();
         let mesh_a = glue.mesh_a_id.clone();
         let mesh_b = glue.mesh_b_id.clone();
-        self.glues.insert(id.clone(), glue);
-        self.glue_order.push(id.clone());
+        self.content.glues.insert(id.clone(), glue);
+        self.content.glue_order.push(id.clone());
         let mut affected = vec![mesh_a.clone()];
         if mesh_a != mesh_b {
             affected.push(mesh_b.clone());
@@ -139,11 +140,11 @@ impl Document {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &glue.id));
         }
-        let prev = match self.glues.get(&glue.id) {
+        let prev = match self.content.glues.get(&glue.id) {
             Some(g) => (g.mesh_a_id.clone(), g.mesh_b_id.clone()),
             None => return self.failed(Status::error("MISSING_GLUE", &glue.id)),
         };
-        for (other_id, other) in &self.glues {
+        for (other_id, other) in &self.content.glues {
             if other_id != &glue.id && other.runtime_id == glue.runtime_id {
                 return self.failed(Status::error(
                     "DUPLICATE_RUNTIME_ID",
@@ -158,7 +159,7 @@ impl Document {
         let id = glue.id.clone();
         let mesh_a = glue.mesh_a_id.clone();
         let mesh_b = glue.mesh_b_id.clone();
-        self.glues.insert(id.clone(), glue);
+        self.content.glues.insert(id.clone(), glue);
         let mut affected = vec![mesh_a.clone(), mesh_b.clone(), prev.0, prev.1];
         affected.sort();
         affected.dedup();

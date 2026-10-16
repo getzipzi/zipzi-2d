@@ -1,4 +1,5 @@
 //! Binary variants of the independently generated v50 fixture.
+#[allow(dead_code)]
 pub fn set_i32(bytes: &mut [u8], section: usize, index: usize, value: i32) {
     let offset = u32::from_le_bytes(
         bytes[64 + section * 4..68 + section * 4]
@@ -8,6 +9,7 @@ pub fn set_i32(bytes: &mut [u8], section: usize, index: usize, value: i32) {
     bytes[offset + index * 4..offset + index * 4 + 4].copy_from_slice(&value.to_le_bytes());
 }
 
+#[allow(dead_code)]
 pub fn variant(source: &[u8], name: &str) -> Vec<u8> {
     let mut bytes = source.to_vec();
     let offsets = kasane_moc3::inspect_moc3(source).unwrap().section_offsets;

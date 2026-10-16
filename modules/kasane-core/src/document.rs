@@ -64,8 +64,8 @@ impl<T> EmptyOr for Vec<T> {
 
 #[derive(Debug, Clone, Default)]
 pub struct Document {
-    id: String,
-    canvas: Canvas,
+    content: DocumentContent,
+
     revision: u64,
     evaluation_revision: u64,
     batch_build_active: bool,
@@ -73,57 +73,8 @@ pub struct Document {
     staged_edits: Vec<DocumentEdit>,
     receipt: crate::history::Receipt,
 
-    assets: HashMap<String, ImageAsset>,
-    asset_order: Vec<String>,
-
-    parts: HashMap<String, Part>,
-    part_order: Vec<String>,
-
-    transforms: HashMap<String, Transform>,
-    transform_order: Vec<String>,
-
-    meshes: HashMap<String, Mesh>,
     mesh_runtime_ids: HashMap<String, String>,
     vertex_slots: HashMap<String, HashMap<VertexId, usize>>,
-    mesh_order: Vec<String>,
-
-    parameters: HashMap<String, Parameter>,
-    parameter_order: Vec<String>,
-
-    bindings: HashMap<String, MeshBinding>,
-    binding_order: Vec<String>,
-
-    scene_bindings: HashMap<String, SceneBinding>,
-    scene_binding_order: Vec<String>,
-    draw_order_groups: Option<Vec<DrawOrderGroup>>,
-
-    blend_key_tables: HashMap<String, BlendShapeKeyTable>,
-    blend_key_table_order: Vec<String>,
-
-    blend_constraints: HashMap<String, BlendShapeConstraint>,
-    blend_constraint_order: Vec<String>,
-
-    blend_bindings: HashMap<String, BlendShapeBinding>,
-    blend_binding_order: Vec<String>,
-
-    glues: HashMap<String, Glue>,
-    glue_order: Vec<String>,
-
-    offscreens: HashMap<String, Offscreen>,
-    offscreen_order: Vec<String>,
-    display_info: DisplayInfo,
-    hierarchy_order: HierarchyOrder,
-    editor_state: EditorState,
-    expressions: HashMap<String, ExpressionAsset>,
-    expression_order: Vec<String>,
-    motions: HashMap<String, std::sync::Arc<MotionClip>>,
-    motion_order: Vec<String>,
-    motion_groups: Vec<MotionGroup>,
-    pose: Option<PoseAsset>,
-    physics: Option<PhysicsAsset>,
-    missing_attachments: Vec<String>,
-    model3_settings: Model3Settings,
-    package_attachments: Vec<PackageAttachment>,
 
     saved_content: Option<Arc<DocumentContent>>,
     // Valid until persistent content or its saved baseline changes. OnceLock
@@ -140,6 +91,8 @@ pub(super) struct DocumentLookup {
     pub(super) blend_bindings: HashMap<String, Vec<String>>,
 }
 
+/// The single owning representation of persistent state, shared by live
+/// documents, saved baselines, and checkpoints. Runtime indexes stay on Document.
 #[derive(Debug, Clone, Default, PartialEq)]
 struct DocumentContent {
     id: String,
@@ -184,97 +137,6 @@ struct DocumentContent {
     package_attachments: Vec<PackageAttachment>,
 }
 
-#[derive(PartialEq)]
-struct ContentRef<'a> {
-    id: &'a String,
-    canvas: &'a Canvas,
-    assets: &'a HashMap<String, ImageAsset>,
-    asset_order: &'a Vec<String>,
-    parts: &'a HashMap<String, Part>,
-    part_order: &'a Vec<String>,
-    transforms: &'a HashMap<String, Transform>,
-    transform_order: &'a Vec<String>,
-    meshes: &'a HashMap<String, Mesh>,
-    mesh_order: &'a Vec<String>,
-    parameters: &'a HashMap<String, Parameter>,
-    parameter_order: &'a Vec<String>,
-    bindings: &'a HashMap<String, MeshBinding>,
-    binding_order: &'a Vec<String>,
-    scene_bindings: &'a HashMap<String, SceneBinding>,
-    scene_binding_order: &'a Vec<String>,
-    draw_order_groups: &'a Option<Vec<DrawOrderGroup>>,
-    blend_key_tables: &'a HashMap<String, BlendShapeKeyTable>,
-    blend_key_table_order: &'a Vec<String>,
-    blend_constraints: &'a HashMap<String, BlendShapeConstraint>,
-    blend_constraint_order: &'a Vec<String>,
-    blend_bindings: &'a HashMap<String, BlendShapeBinding>,
-    blend_binding_order: &'a Vec<String>,
-    glues: &'a HashMap<String, Glue>,
-    glue_order: &'a Vec<String>,
-    offscreens: &'a HashMap<String, Offscreen>,
-    offscreen_order: &'a Vec<String>,
-    display_info: &'a DisplayInfo,
-    hierarchy_order: &'a HierarchyOrder,
-    editor_state: &'a EditorState,
-    expressions: &'a HashMap<String, ExpressionAsset>,
-    expression_order: &'a Vec<String>,
-    motions: &'a HashMap<String, std::sync::Arc<MotionClip>>,
-    motion_order: &'a Vec<String>,
-    motion_groups: &'a Vec<MotionGroup>,
-    pose: &'a Option<PoseAsset>,
-    physics: &'a Option<PhysicsAsset>,
-    missing_attachments: &'a Vec<String>,
-    model3_settings: &'a Model3Settings,
-    package_attachments: &'a Vec<PackageAttachment>,
-}
-
-impl DocumentContent {
-    fn content_ref(&self) -> ContentRef<'_> {
-        ContentRef {
-            id: &self.id,
-            canvas: &self.canvas,
-            assets: &self.assets,
-            asset_order: &self.asset_order,
-            parts: &self.parts,
-            part_order: &self.part_order,
-            transforms: &self.transforms,
-            transform_order: &self.transform_order,
-            meshes: &self.meshes,
-            mesh_order: &self.mesh_order,
-            parameters: &self.parameters,
-            parameter_order: &self.parameter_order,
-            bindings: &self.bindings,
-            binding_order: &self.binding_order,
-            scene_bindings: &self.scene_bindings,
-            scene_binding_order: &self.scene_binding_order,
-            draw_order_groups: &self.draw_order_groups,
-            blend_key_tables: &self.blend_key_tables,
-            blend_key_table_order: &self.blend_key_table_order,
-            blend_constraints: &self.blend_constraints,
-            blend_constraint_order: &self.blend_constraint_order,
-            blend_bindings: &self.blend_bindings,
-            blend_binding_order: &self.blend_binding_order,
-            glues: &self.glues,
-            glue_order: &self.glue_order,
-            offscreens: &self.offscreens,
-            offscreen_order: &self.offscreen_order,
-            display_info: &self.display_info,
-            hierarchy_order: &self.hierarchy_order,
-            editor_state: &self.editor_state,
-            expressions: &self.expressions,
-            expression_order: &self.expression_order,
-            motions: &self.motions,
-            motion_order: &self.motion_order,
-            motion_groups: &self.motion_groups,
-            pose: &self.pose,
-            physics: &self.physics,
-            missing_attachments: &self.missing_attachments,
-            model3_settings: &self.model3_settings,
-            package_attachments: &self.package_attachments,
-        }
-    }
-}
-
 impl Document {
     pub const SCHEMA_VERSION: u32 = 3;
 
@@ -307,26 +169,26 @@ impl Document {
                 "Canvas dimensions must be finite and positive.",
             );
         }
-        self.id = id_str;
-        self.canvas = canvas;
+        self.content.id = id_str;
+        self.content.canvas = canvas;
         self.modified_cache.take();
         Status::ok()
     }
 
     pub fn initialized(&self) -> bool {
-        !self.id.is_empty()
+        !self.content.id.is_empty()
     }
 
     pub fn id(&self) -> &str {
-        &self.id
+        &self.content.id
     }
 
     pub fn canvas(&self) -> Canvas {
-        self.canvas
+        self.content.canvas
     }
 
     pub fn missing_attachments(&self) -> &[String] {
-        &self.missing_attachments
+        &self.content.missing_attachments
     }
 
     /// Record unresolved model3 files in persistent project state. An editor
@@ -346,10 +208,10 @@ impl Document {
                 "Attachment path is empty",
             ));
         }
-        if self.missing_attachments == paths {
+        if self.content.missing_attachments == paths {
             return self.failed(Status::ok());
         }
-        self.missing_attachments = paths;
+        self.content.missing_attachments = paths;
         self.changed(ChangeKind::Metadata, Vec::new(), Vec::new())
     }
 
@@ -360,96 +222,6 @@ impl Document {
 
     pub fn revision(&self) -> u64 {
         self.revision
-    }
-
-    fn content_ref(&self) -> ContentRef<'_> {
-        ContentRef {
-            id: &self.id,
-            canvas: &self.canvas,
-            assets: &self.assets,
-            asset_order: &self.asset_order,
-            parts: &self.parts,
-            part_order: &self.part_order,
-            transforms: &self.transforms,
-            transform_order: &self.transform_order,
-            meshes: &self.meshes,
-            mesh_order: &self.mesh_order,
-            parameters: &self.parameters,
-            parameter_order: &self.parameter_order,
-            bindings: &self.bindings,
-            binding_order: &self.binding_order,
-            scene_bindings: &self.scene_bindings,
-            scene_binding_order: &self.scene_binding_order,
-            draw_order_groups: &self.draw_order_groups,
-            blend_key_tables: &self.blend_key_tables,
-            blend_key_table_order: &self.blend_key_table_order,
-            blend_constraints: &self.blend_constraints,
-            blend_constraint_order: &self.blend_constraint_order,
-            blend_bindings: &self.blend_bindings,
-            blend_binding_order: &self.blend_binding_order,
-            glues: &self.glues,
-            glue_order: &self.glue_order,
-            offscreens: &self.offscreens,
-            offscreen_order: &self.offscreen_order,
-            display_info: &self.display_info,
-            hierarchy_order: &self.hierarchy_order,
-            editor_state: &self.editor_state,
-            expressions: &self.expressions,
-            expression_order: &self.expression_order,
-            motions: &self.motions,
-            motion_order: &self.motion_order,
-            motion_groups: &self.motion_groups,
-            pose: &self.pose,
-            physics: &self.physics,
-            missing_attachments: &self.missing_attachments,
-            model3_settings: &self.model3_settings,
-            package_attachments: &self.package_attachments,
-        }
-    }
-
-    fn content(&self) -> DocumentContent {
-        DocumentContent {
-            id: self.id.clone(),
-            canvas: self.canvas,
-            assets: self.assets.clone(),
-            asset_order: self.asset_order.clone(),
-            parts: self.parts.clone(),
-            part_order: self.part_order.clone(),
-            transforms: self.transforms.clone(),
-            transform_order: self.transform_order.clone(),
-            meshes: self.meshes.clone(),
-            mesh_order: self.mesh_order.clone(),
-            parameters: self.parameters.clone(),
-            parameter_order: self.parameter_order.clone(),
-            bindings: self.bindings.clone(),
-            binding_order: self.binding_order.clone(),
-            scene_bindings: self.scene_bindings.clone(),
-            scene_binding_order: self.scene_binding_order.clone(),
-            draw_order_groups: self.draw_order_groups.clone(),
-            blend_key_tables: self.blend_key_tables.clone(),
-            blend_key_table_order: self.blend_key_table_order.clone(),
-            blend_constraints: self.blend_constraints.clone(),
-            blend_constraint_order: self.blend_constraint_order.clone(),
-            blend_bindings: self.blend_bindings.clone(),
-            blend_binding_order: self.blend_binding_order.clone(),
-            glues: self.glues.clone(),
-            glue_order: self.glue_order.clone(),
-            offscreens: self.offscreens.clone(),
-            offscreen_order: self.offscreen_order.clone(),
-            display_info: self.display_info.clone(),
-            hierarchy_order: self.hierarchy_order.clone(),
-            editor_state: self.editor_state.clone(),
-            expressions: self.expressions.clone(),
-            expression_order: self.expression_order.clone(),
-            motions: self.motions.clone(),
-            motion_order: self.motion_order.clone(),
-            motion_groups: self.motion_groups.clone(),
-            pose: self.pose.clone(),
-            physics: self.physics.clone(),
-            missing_attachments: self.missing_attachments.clone(),
-            model3_settings: self.model3_settings.clone(),
-            package_attachments: self.package_attachments.clone(),
-        }
     }
 
     pub fn take_edit_delta(&mut self) -> Option<crate::history::EditDelta> {
@@ -479,7 +251,7 @@ impl Document {
         // Validate every target before the first swap; failure cannot partially replay an action.
         for (key, value) in &delta.values {
             let valid = match (key, value) {
-                (Field::MeshName(id), Value::Name(_)) => self.meshes.contains_key(id),
+                (Field::MeshName(id), Value::Name(_)) => self.content.meshes.contains_key(id),
                 (Field::Vertex(id, vertex), Value::Position(_)) => self
                     .vertex_slots
                     .get(id)
@@ -502,13 +274,13 @@ impl Document {
         for (key, value) in &mut delta.values {
             match (key, value) {
                 (Field::MeshName(id), Value::Name(name)) => {
-                    std::mem::swap(&mut self.meshes.get_mut(id).unwrap().name, name);
+                    std::mem::swap(&mut self.content.meshes.get_mut(id).unwrap().name, name);
                     meshes.push(id.clone());
                 }
                 (Field::Vertex(id, vertex), Value::Position(position)) => {
                     let slot = self.vertex_slots[id][vertex];
                     std::mem::swap(
-                        &mut self.meshes.get_mut(id).unwrap().base_positions[slot],
+                        &mut self.content.meshes.get_mut(id).unwrap().base_positions[slot],
                         position,
                     );
                     positions = true;
@@ -531,20 +303,20 @@ impl Document {
     }
 
     pub fn same_content(&self, other: &Document) -> bool {
-        self.content_ref() == other.content_ref()
+        self.content == other.content
     }
 
     pub fn modified(&self) -> bool {
         *self
             .modified_cache
             .get_or_init(|| match &self.saved_content {
-                Some(saved) => self.content_ref() != saved.content_ref(),
+                Some(saved) => &self.content != saved.as_ref(),
                 None => self.initialized(),
             })
     }
 
     pub fn mark_saved(&mut self) {
-        self.saved_content = Some(Arc::new(self.content()));
+        self.saved_content = Some(Arc::new(self.content.clone()));
         self.modified_cache = OnceLock::from(false);
     }
 
@@ -607,33 +379,36 @@ impl Document {
     }
 
     pub fn contains_id(&self, id: &str) -> bool {
-        self.id == id
-            || self.assets.contains_key(id)
-            || self.parts.contains_key(id)
-            || self.transforms.contains_key(id)
-            || self.meshes.contains_key(id)
-            || self.parameters.contains_key(id)
-            || self.bindings.contains_key(id)
-            || self.scene_bindings.contains_key(id)
-            || self.blend_key_tables.contains_key(id)
-            || self.blend_constraints.contains_key(id)
-            || self.blend_bindings.contains_key(id)
-            || self.glues.contains_key(id)
-            || self.offscreens.contains_key(id)
+        self.content.id == id
+            || self.content.assets.contains_key(id)
+            || self.content.parts.contains_key(id)
+            || self.content.transforms.contains_key(id)
+            || self.content.meshes.contains_key(id)
+            || self.content.parameters.contains_key(id)
+            || self.content.bindings.contains_key(id)
+            || self.content.scene_bindings.contains_key(id)
+            || self.content.blend_key_tables.contains_key(id)
+            || self.content.blend_constraints.contains_key(id)
+            || self.content.blend_bindings.contains_key(id)
+            || self.content.glues.contains_key(id)
+            || self.content.offscreens.contains_key(id)
             || self
+                .content
                 .display_info
                 .parameter_groups
                 .as_ref()
                 .is_some_and(|groups| groups.iter().any(|group| group.id == id))
             || self
+                .content
                 .display_info
                 .combined_parameters
                 .as_ref()
                 .is_some_and(|sets| sets.iter().any(|set| set.id == id))
-            || self.expressions.contains_key(id)
-            || self.motions.contains_key(id)
-            || self.pose.as_ref().is_some_and(|pose| pose.id == id)
+            || self.content.expressions.contains_key(id)
+            || self.content.motions.contains_key(id)
+            || self.content.pose.as_ref().is_some_and(|pose| pose.id == id)
             || self
+                .content
                 .physics
                 .as_ref()
                 .is_some_and(|physics| physics.id == id)
@@ -715,18 +490,19 @@ impl Document {
     pub(super) fn lookup(&self) -> &DocumentLookup {
         self.lookup.get_or_init(|| {
             let mut lookup = DocumentLookup::default();
-            for id in &self.binding_order {
+            for id in &self.content.binding_order {
                 lookup
                     .mesh_bindings
-                    .insert(self.bindings[id].mesh_id.clone(), id.clone());
+                    .insert(self.content.bindings[id].mesh_id.clone(), id.clone());
             }
-            for id in &self.scene_binding_order {
-                lookup
-                    .scene_bindings
-                    .insert(self.scene_bindings[id].target_id().to_owned(), id.clone());
+            for id in &self.content.scene_binding_order {
+                lookup.scene_bindings.insert(
+                    self.content.scene_bindings[id].target_id().to_owned(),
+                    id.clone(),
+                );
             }
-            for id in &self.blend_binding_order {
-                if let Some(binding) = self.blend_bindings.get(id) {
+            for id in &self.content.blend_binding_order {
+                if let Some(binding) = self.content.blend_bindings.get(id) {
                     lookup
                         .blend_bindings
                         .entry(binding.target_id.clone())

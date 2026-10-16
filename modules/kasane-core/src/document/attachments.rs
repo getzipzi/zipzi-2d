@@ -28,7 +28,7 @@ pub fn valid_attachment_path(path: &str) -> bool {
 
 impl Document {
     pub fn package_attachments(&self) -> &[PackageAttachment] {
-        &self.package_attachments
+        &self.content.package_attachments
     }
 
     pub fn set_package_attachments(&mut self, attachments: Vec<PackageAttachment>) -> EditResult {
@@ -50,10 +50,10 @@ impl Document {
                 return self.failed(Status::error("ATTACHMENT_TOO_LARGE", &attachment.path));
             }
         }
-        if self.package_attachments == attachments {
+        if self.content.package_attachments == attachments {
             return self.failed(Status::ok());
         }
-        self.package_attachments = attachments;
+        self.content.package_attachments = attachments;
         self.changed(ChangeKind::Metadata, Vec::new(), Vec::new())
     }
 }

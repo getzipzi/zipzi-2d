@@ -4,23 +4,23 @@ use std::collections::{HashMap, HashSet};
 
 impl Document {
     pub fn part_order(&self) -> &[String] {
-        &self.part_order
+        &self.content.part_order
     }
 
     pub fn get_part(&self, id: &str) -> Option<&Part> {
-        self.parts.get(id)
+        self.content.parts.get(id)
     }
 
     pub(super) fn validate_part(&self, p: &Part) -> Status {
         if !valid_uuid(&p.id) || p.runtime_id.is_empty() {
             return Status::error("INVALID_ID", &p.id);
         }
-        for (id, other) in &self.parts {
+        for (id, other) in &self.content.parts {
             if id != &p.id && other.runtime_id == p.runtime_id {
                 return Status::error("DUPLICATE_RUNTIME_ID", &p.id);
             }
         }
-        if self.display_info.parts.as_ref().is_some_and(|entries| entries.iter().any(|entry| {
+        if self.content.display_info.parts.as_ref().is_some_and(|entries| entries.iter().any(|entry| {
             matches!(entry, CdiPartEntry::Unresolved { runtime_id, .. } if runtime_id == &p.runtime_id)
         })) {
             return Status::error("DUPLICATE_RUNTIME_ID", format!("{}.runtime_id collides with unresolved CDI part", p.id));
@@ -58,9 +58,9 @@ impl Document {
             return self.failed(s);
         }
         let id = p.id.clone();
-        self.parts.insert(id.clone(), p);
-        self.part_order.push(id.clone());
-        let meshes = self.mesh_order.clone();
+        self.content.parts.insert(id.clone(), p);
+        self.content.part_order.push(id.clone());
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id])
     }
 
@@ -68,7 +68,7 @@ impl Document {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &p.id));
         }
-        if !self.parts.contains_key(&p.id) {
+        if !self.content.parts.contains_key(&p.id) {
             return self.failed(Status::error("MISSING_PART", &p.id));
         }
         let s = self.validate_part(&p);
@@ -76,8 +76,8 @@ impl Document {
             return self.failed(s);
         }
         let id = p.id.clone();
-        self.parts.insert(id.clone(), p);
-        let meshes = self.mesh_order.clone();
+        self.content.parts.insert(id.clone(), p);
+        let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id])
     }
 
@@ -100,8 +100,8 @@ impl Document {
             }
         }
 
-        for id in &self.part_order {
-            visit(id, &self.parts, &mut seen, &mut result);
+        for id in &self.content.part_order {
+            visit(id, &self.content.parts, &mut seen, &mut result);
         }
         result
     }

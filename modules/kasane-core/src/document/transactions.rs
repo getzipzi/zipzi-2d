@@ -53,7 +53,7 @@ impl Document {
         for edit in staged {
             match edit {
                 DocumentEdit::VertexPositions(update) => {
-                    let Some(mesh) = self.meshes.get(&update.mesh_id) else {
+                    let Some(mesh) = self.content.meshes.get(&update.mesh_id) else {
                         return self.failed(Status::error("MISSING_MESH", "Mesh does not exist."));
                     };
                     if update.vertex_ids.len() != update.positions.len() {
@@ -90,7 +90,7 @@ impl Document {
                     }
                 }
                 DocumentEdit::MeshName { mesh_id, name } => {
-                    let Some(mesh) = self.meshes.get(&mesh_id) else {
+                    let Some(mesh) = self.content.meshes.get(&mesh_id) else {
                         return self.failed(Status::error("MISSING_MESH", "Mesh does not exist."));
                     };
                     if !seen_names.insert(mesh_id.clone()) {
@@ -112,7 +112,7 @@ impl Document {
         let mut object_ids = Vec::new();
 
         for write in positions {
-            let mesh = self.meshes.get_mut(&write.mesh_id).unwrap();
+            let mesh = self.content.meshes.get_mut(&write.mesh_id).unwrap();
             delta.vertex(
                 &write.mesh_id,
                 mesh.vertex_ids[write.slot],
@@ -125,7 +125,7 @@ impl Document {
         }
         let saw_positions = !changed_meshes.is_empty();
         for (mesh_id, name) in names {
-            let mesh = self.meshes.get_mut(&mesh_id).unwrap();
+            let mesh = self.content.meshes.get_mut(&mesh_id).unwrap();
             let before = std::mem::replace(&mut mesh.name, name);
             delta.merge(crate::history::EditDelta::name(&mesh_id, before));
             if changed_mesh_set.insert(mesh_id.clone()) {

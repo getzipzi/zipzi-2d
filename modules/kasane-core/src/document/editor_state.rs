@@ -38,7 +38,7 @@ impl EditorState {
 }
 impl Document {
     pub fn editor_state(&self) -> &EditorState {
-        &self.editor_state
+        &self.content.editor_state
     }
 
     pub fn replace_editor_state(&mut self, mut state: EditorState) -> EditResult {
@@ -57,10 +57,11 @@ impl Document {
         state
             .objects
             .retain(|_, flags| flags.hidden_in_editor || flags.locked);
-        if self.editor_state == state {
+        if self.content.editor_state == state {
             return self.failed(Status::ok());
         }
         let mut changed: Vec<_> = self
+            .content
             .editor_state
             .objects
             .keys()
@@ -69,7 +70,7 @@ impl Document {
             .collect();
         changed.sort();
         changed.dedup();
-        self.editor_state = state;
+        self.content.editor_state = state;
         self.changed(ChangeKind::Metadata, Vec::new(), changed)
     }
 
@@ -78,11 +79,11 @@ impl Document {
             .objects
             .keys()
             .filter_map(|id| {
-                let valid = self.meshes.contains_key(id)
-                    || self.transforms.contains_key(id)
-                    || self.parts.contains_key(id)
-                    || self.offscreens.contains_key(id)
-                    || self.glues.contains_key(id);
+                let valid = self.content.meshes.contains_key(id)
+                    || self.content.transforms.contains_key(id)
+                    || self.content.parts.contains_key(id)
+                    || self.content.offscreens.contains_key(id)
+                    || self.content.glues.contains_key(id);
                 (!valid).then(|| StructureIssue {
                     object_id: id.clone(),
                     status: Status::error(

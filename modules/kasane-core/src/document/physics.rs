@@ -41,7 +41,7 @@ impl PhysicsAsset {
 
 impl Document {
     pub fn physics(&self) -> Option<&PhysicsAsset> {
-        self.physics.as_ref()
+        self.content.physics.as_ref()
     }
 
     pub fn set_physics(&mut self, asset: PhysicsAsset) -> EditResult {
@@ -54,7 +54,12 @@ impl Document {
         if !self.initialized() {
             return self.failed(Status::error("NOT_INITIALIZED", "Initialize first"));
         }
-        if self.physics.as_ref().is_none_or(|old| old.id != asset.id) && self.contains_id(&asset.id)
+        if self
+            .content
+            .physics
+            .as_ref()
+            .is_none_or(|old| old.id != asset.id)
+            && self.contains_id(&asset.id)
         {
             return self.failed(Status::error("DUPLICATE_ID", &asset.id));
         }
@@ -62,11 +67,11 @@ impl Document {
         if !status.is_ok() {
             return self.failed(status);
         }
-        if self.physics.as_ref() == Some(&asset) {
+        if self.content.physics.as_ref() == Some(&asset) {
             return self.failed(Status::ok());
         }
         let id = asset.id.clone();
-        self.physics = Some(asset);
+        self.content.physics = Some(asset);
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
@@ -90,7 +95,8 @@ impl Document {
     }
 
     pub(super) fn validate_physics_asset(&self) -> Vec<StructureIssue> {
-        self.physics
+        self.content
+            .physics
             .as_ref()
             .and_then(|asset| {
                 let status = self.validate_physics(asset);

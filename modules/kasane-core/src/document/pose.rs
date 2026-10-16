@@ -48,7 +48,7 @@ impl PoseAsset {
 
 impl Document {
     pub fn pose(&self) -> Option<&PoseAsset> {
-        self.pose.as_ref()
+        self.content.pose.as_ref()
     }
 
     pub fn set_pose(&mut self, pose: PoseAsset) -> EditResult {
@@ -61,18 +61,24 @@ impl Document {
         if !self.initialized() {
             return self.failed(Status::error("NOT_INITIALIZED", "Initialize first"));
         }
-        if self.pose.as_ref().is_none_or(|old| old.id != pose.id) && self.contains_id(&pose.id) {
+        if self
+            .content
+            .pose
+            .as_ref()
+            .is_none_or(|old| old.id != pose.id)
+            && self.contains_id(&pose.id)
+        {
             return self.failed(Status::error("DUPLICATE_ID", &pose.id));
         }
         let status = self.validate_pose(&pose);
         if !status.is_ok() {
             return self.failed(status);
         }
-        if self.pose.as_ref() == Some(&pose) {
+        if self.content.pose.as_ref() == Some(&pose) {
             return self.failed(Status::ok());
         }
         let id = pose.id.clone();
-        self.pose = Some(pose);
+        self.content.pose = Some(pose);
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
@@ -137,7 +143,8 @@ impl Document {
     }
 
     pub(super) fn validate_pose_asset(&self) -> Vec<StructureIssue> {
-        self.pose
+        self.content
+            .pose
             .as_ref()
             .and_then(|pose| {
                 let status = self.validate_pose(pose);

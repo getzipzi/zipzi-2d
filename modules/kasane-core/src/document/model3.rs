@@ -75,7 +75,7 @@ impl Model3Settings {
 }
 impl Document {
     pub fn model3_settings(&self) -> &Model3Settings {
-        &self.model3_settings
+        &self.content.model3_settings
     }
 
     pub fn set_model3_settings(&mut self, settings: Model3Settings) -> EditResult {
@@ -92,10 +92,10 @@ impl Document {
         if !status.is_ok() {
             return self.failed(status);
         }
-        if self.model3_settings == settings {
+        if self.content.model3_settings == settings {
             return self.failed(Status::ok());
         }
-        self.model3_settings = settings;
+        self.content.model3_settings = settings;
         self.changed(ChangeKind::Metadata, Vec::new(), Vec::new())
     }
 
@@ -153,12 +153,12 @@ impl Document {
         Status::ok()
     }
     pub(super) fn validate_model3(&self) -> Vec<StructureIssue> {
-        let status = self.validate_model3_settings(&self.model3_settings);
+        let status = self.validate_model3_settings(&self.content.model3_settings);
         if status.is_ok() {
             Vec::new()
         } else {
             vec![StructureIssue {
-                object_id: self.id.clone(),
+                object_id: self.content.id.clone(),
                 status,
             }]
         }
