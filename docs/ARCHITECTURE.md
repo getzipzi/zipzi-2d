@@ -30,3 +30,16 @@ Python wheel (kasane.Session) → kasane-sdk → kasane-core / kasane-project / 
 正式验收使用仓库外安装的 Python wheel、Rust 契约与 GPU 测试、官方/Purism Core 数值探针，以及仓库内固定的外部 GPU 参考图。参考图的输入哈希和来源记录在 `tests/fixtures/render_reference/`；[验证命令](VALIDATION.md)会检查输入与参考图身份。
 
 Godot 编辑器、Viewer、demo 与 GDExtension 已从代码库移除。旧实现方案和里程碑记录见 [archive](archive/)。
+
+## CMO3 / CAN3 导出与转换边界
+
+`kasane-cmo3` 负责 `Document + AssetResolver → Cmo3Artifact`，独立处理 CAFF、
+Cubism XML 对象图和模型语义映射，不依赖 project、编辑器、JVM 或官方 SDK。
+`kasane-project` 负责已保存工程和内存会话的资源校验，以及暂存/原子发布；
+`kasane-sdk` 暴露会话编码入口。诊断与文件字节一起返回，默认拒绝已知有损转换。
+`encode_can3` 把 motion clips 写为可编辑动画场景，并按相对文件名链接 CMO3；
+`encode_cubism` 成对返回模型、动画和合并诊断，在任何资源读取前完成有损预检。
+整数帧/毫秒量化、冲突、未支持的动画目标都会显式报告。项目层提供成对目录发布，
+暂存完整文件后提交，提交失败恢复旧目录；拒绝覆盖含非导出文件的目录。
+未来 CLI 以 `Document` 和资源接口组合 Kasane/MOC3/PSD 导入与 CMO3/CAN3 导出，
+格式能力与限制见 [crate 文档](../modules/kasane-cmo3/README.md)。

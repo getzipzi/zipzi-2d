@@ -26,7 +26,9 @@ pub use kasane_animation::{
     MotionPlaybackPosition,
 };
 pub use kasane_project::{
-    FileSystem, ImportReport, NativeFileSystem, ProjectResult, PsdImportReport, ResourceDiagnostic,
+    Can3Artifact, Can3Options, Cmo3Artifact, Cmo3Diagnostic, Cmo3Error, Cmo3Options, Cmo3Report,
+    CubismArtifact, CubismOptions, FileSystem, ImportReport, LossPolicy, NativeFileSystem,
+    ProjectResult, PsdImportReport, ResourceDiagnostic,
 };
 pub use session::{AuthoringSession, AuthoringSnapshot};
 pub use spatial::{

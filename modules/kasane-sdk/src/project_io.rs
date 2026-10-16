@@ -9,6 +9,31 @@ use kasane_core::{Canvas, Document};
 use kasane_project::{ProjectResult, ResourceDiagnostic};
 
 impl AuthoringSession {
+    /// Capture an editable Cubism project, including unsaved PNG resources.
+    /// Structured codec errors retain loss reports for command-line/UI callers.
+    pub fn encode_cmo3(
+        &self,
+        options: &kasane_project::Cmo3Options,
+    ) -> Result<kasane_project::Cmo3Artifact, kasane_project::Cmo3Error> {
+        self.project.encode_cmo3(options)
+    }
+
+    /// Capture linked editable model and animation files, including unsaved artwork.
+    pub fn encode_cubism(
+        &self,
+        options: &kasane_project::CubismOptions,
+    ) -> Result<kasane_project::CubismArtifact, kasane_project::Cmo3Error> {
+        self.project.encode_cubism(options)
+    }
+
+    /// Capture animation only; the caller supplies the sibling model filename.
+    pub fn encode_can3(
+        &self,
+        options: &kasane_project::Can3Options,
+    ) -> Result<kasane_project::Can3Artifact, kasane_project::Cmo3Error> {
+        self.project.encode_can3(options)
+    }
+
     /// Atomically replace the in-memory document. A failed request leaves the
     /// current document, history, preview and handles intact.
     pub fn new_project(

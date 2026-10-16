@@ -4,7 +4,7 @@
 
 | 模型 | 模型源位置 | 使用处 |
 | --- | --- | --- |
-| Nijiiro Mao (`mao_pro`) | `models/local/mao/runtime/mao_pro.model3.json` | `benchmarks/cubism-matrix` 的六种对照运行，以及可选的 MOC3 导入、导出测试与示例。 |
+| Nijiiro Mao (`mao_pro`) | `models/local/mao/runtime/mao_pro.model3.json` | `benchmarks/cubism-matrix` 的六种对照运行，以及可选的 MOC3 导入、导出测试与示例，CMO3/CAN3 导出集成测试 `mao_cubism`。 |
 | Hiyori | `third_party/CubismSdkForNative-5-r.5/Samples/Resources/Hiyori/` | 可选 MOC3 导入测试。 |
 | Rice、Mark | 同一 SDK 的 `Samples/Resources/Rice/`、`Samples/Resources/Mark/` | 可选旧版本 MOC3 导入测试。 |
 | Ren | 同一 SDK 的 `Samples/Resources/Ren/` | 可选 MOC3 导入与导出测试。 |

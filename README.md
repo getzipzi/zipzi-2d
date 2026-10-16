@@ -4,6 +4,9 @@ Kasane 2D provides a Rust authoring SDK, Python bindings, and a WGPU renderer
 for editable 2D models. The Python workflow creates or imports a project with
 `kasane.Session`, edits and exports it, and can render frames with
 `kasane.Observer` when the optional GPU feature is built.
+Editable Cubism `.cmo3` models and linked `.can3` animations can be exported with the native
+[`kasane-cmo3` crate](modules/kasane-cmo3/README.md), project adapters, or
+`kasane_sdk::AuthoringSession::{encode_cmo3, encode_can3, encode_cubism}`.
 Layered 8-bit RGB PSD artwork can be imported into a new project with
 `Session.import_psd(source, destination)`.
 

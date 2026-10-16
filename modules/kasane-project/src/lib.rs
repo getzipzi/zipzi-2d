@@ -1,5 +1,7 @@
 pub mod cdi;
+pub mod cmo3;
 pub mod codec;
+pub mod cubism;
 pub mod expression;
 pub mod filesystem;
 pub mod model3;
@@ -11,14 +13,20 @@ pub mod resources;
 pub mod store;
 
 pub use cdi::{export_cdi3, import_cdi3, CdiImport, CdiProjectDiagnostic, CdiProjectError};
+pub use cmo3::{encode_document_cmo3, encode_project_cmo3, publish_cmo3};
 pub use codec::{decode_project, encode_project};
 #[cfg(feature = "binary-prototype")]
 pub use codec::{decode_project_cbor, encode_project_cbor};
+pub use cubism::{encode_document_cubism, encode_project_cubism, publish_can3, publish_cubism};
 pub use expression::{
     export_expression3, import_expression3, ExpressionDiagnostic, ExpressionImport,
     ExpressionProjectError,
 };
 pub use filesystem::{FileSystem, NativeFileSystem, Publication};
+pub use kasane_cmo3::{
+    Can3Artifact, Can3Options, Cmo3Artifact, Cmo3Diagnostic, Cmo3Error, Cmo3Options, Cmo3Report,
+    CubismArtifact, CubismOptions, DiagnosticSeverity as Cmo3DiagnosticSeverity, LossPolicy,
+};
 pub use kasane_moc3::ImportReport;
 pub use kasane_psd::ImportReport as PsdImportReport;
 pub use motion::{

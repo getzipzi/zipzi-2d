@@ -1,0 +1,18 @@
+[package]
+name = "kasane-cmo3"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Native Cubism editable project export for Kasane documents"
+
+[dependencies]
+kasane-core = { path = "../kasane-core" }
+thiserror.workspace = true
+serde.workspace = true
+png.workspace = true
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+roxmltree = "0.20"
