@@ -10,9 +10,9 @@ use crate::{
     window_border,
 };
 use gpui::{
-    App, AppContext, Context, DefiniteLength, ElementId, Entity, FocusHandle, InteractiveElement,
-    IntoElement, ParentElement as _, Render, RenderOnce, Styled, WeakFocusHandle, Window, div,
-    prelude::FluentBuilder as _,
+    App, AppContext, Context, DefiniteLength, ElementId, Entity, FocusHandle, GlobalElementId,
+    InteractiveElement, IntoElement, ParentElement as _, Render, RenderOnce, Styled,
+    WeakFocusHandle, Window, div, prelude::FluentBuilder as _,
 };
 use gpui_base::{TextSelection, TextSelectionScopeId};
 use std::{any::TypeId, rc::Rc};
@@ -28,6 +28,7 @@ pub(crate) struct WindowState {
     pub(super) focused_input: Option<AnyInputState>,
     pub notification: Entity<NotificationList>,
     pub(crate) tooltip_overlay: Entity<gpui_base::TooltipOverlay>,
+    tooltip_trigger: Option<GlobalElementId>,
     pub(crate) native_menu_overlay: Entity<FallbackMenuOverlay>,
     touch_selection_overlay: Entity<WindowTouchSelectionOverlay>,
     sheet_size: Option<DefiniteLength>,
@@ -78,6 +79,7 @@ impl WindowState {
             notification: cx.new(|cx| NotificationList::new(window, cx)),
             tooltip_overlay: cx
                 .new(|_| gpui_base::TooltipOverlay::new().render_with(render_tooltip)),
+            tooltip_trigger: None,
             native_menu_overlay: cx.new(|_| FallbackMenuOverlay::new()),
             touch_selection_overlay: cx.new(|cx| WindowTouchSelectionOverlay::new(window, cx)),
             sheet_size: None,
@@ -423,6 +425,26 @@ impl WindowState {
     ) -> Option<Entity<gpui_base::TooltipOverlay>> {
         let root = Self::entity(window, cx)?;
         Some(root.read(cx).tooltip_overlay.clone())
+    }
+
+    /// Ignore a previous trigger's leave event after another trigger has taken over.
+    pub(crate) fn tooltip_overlay_for_trigger(
+        window: &Window,
+        cx: &mut App,
+        trigger: &GlobalElementId,
+        hovered: bool,
+    ) -> Option<Entity<gpui_base::TooltipOverlay>> {
+        let root = Self::entity(window, cx)?;
+        root.update(cx, |root, _| {
+            if hovered {
+                root.tooltip_trigger = Some(trigger.clone());
+            } else if root.tooltip_trigger.as_ref() == Some(trigger) {
+                root.tooltip_trigger = None;
+            } else {
+                return None;
+            }
+            Some(root.tooltip_overlay.clone())
+        })
     }
 
     /// Get the fallback native-menu overlay entity for this window.

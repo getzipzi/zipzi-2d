@@ -38,6 +38,9 @@ Context and dropdown menus share Kit's Small density, including submenus and
 multiline project entries. Menus and Selects use 12px text. Selects use XSmall
 dropdown styling with 22px triggers; compact menu rows are 20px. Both follow
 the editor's UI scale.
+Tooltips use 11px text with compact padding and follow the same UI scale.
+Animation defaults to Full Effect with editing-preview Loop enabled. Full Effect
+continues to follow each Motion's Loop setting; preview modes are selected in Timeline.
 
 ## Test
 

@@ -9,8 +9,8 @@ impl Timeline {
         let animation = view.editor.animation();
         let document = view.editor.active_id();
         let playing = animation.is_some_and(|a| a.playing);
-        let mode = animation.map_or(AnimationPreviewMode::Editing, |a| a.preview_mode);
-        let looping = animation.is_some_and(|a| a.preview_loop);
+        let mode = animation.map_or(AnimationPreviewMode::default(), |a| a.preview_mode);
+        let looping = animation.is_none_or(|a| a.preview_loop);
         let resource = view.editor.document().and_then(|document| {
             document
                 .animation_catalog()

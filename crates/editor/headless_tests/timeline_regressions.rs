@@ -607,7 +607,7 @@ fn shared_header_retains_timeline_keyboard_context(cx: &mut TestAppContext) {
         for _ in 0..64 {
             window.focus_next(cx);
             window.render_frame(cx);
-            if window.find("animation-preview-loop").focused() == Some(true) {
+            if window.find("animation-preview-mode").focused() == Some(true) {
                 found = true;
                 break;
             }

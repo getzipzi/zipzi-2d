@@ -174,6 +174,8 @@ pub(super) fn fixture(
         scale_factor: 1.,
     });
     let document = editor.active_id().unwrap();
+    // Timeline authoring checks inspect raw clip values rather than Full Effect.
+    editor.set_animation_preview_mode(document, AnimationPreviewMode::Editing)?;
     editor.select_motion(
         document,
         MotionSelection {

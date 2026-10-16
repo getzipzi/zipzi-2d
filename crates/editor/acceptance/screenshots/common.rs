@@ -23,7 +23,6 @@ pub(crate) fn click_expression(
     index: usize,
     cx: &mut gpui_kit::App,
 ) {
-    window.click("animation-expression-preview-result", cx);
     window.render_frame(cx);
     let bounds = window.find(("animation-expression", index)).bounds();
     let viewport = window.find("animation-expression-list").bounds();

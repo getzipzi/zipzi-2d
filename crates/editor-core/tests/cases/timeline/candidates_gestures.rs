@@ -189,6 +189,7 @@ fn commit_undo_and_modes_reject_old_cpu_and_gpu_candidates() -> anyhow::Result<(
 fn editing_loop_is_session_only_and_natural_end_can_restart_looping_assets() -> anyhow::Result<()> {
     let (mut e, _temp) = fixture(false, false)?;
     let d = e.active_id().unwrap();
+    e.set_animation_preview_loop(d, false)?;
     e.toggle_animation()?;
     e.advance_animation_clock(2.);
     assert!(!e.animation().unwrap().playing);

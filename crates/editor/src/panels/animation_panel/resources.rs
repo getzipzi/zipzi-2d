@@ -80,12 +80,6 @@ impl AnimationPanel {
         let Some(id) = state.editor.active_id() else {
             return Empty.into_any_element();
         };
-        let preview_mode = state
-            .editor
-            .animation()
-            .map_or(editor_core::AnimationPreviewMode::Editing, |a| {
-                a.preview_mode
-            });
         let disabled = state.modal || state.editor.is_busy() || dialog;
         let motion_panel = matches!(self.kind, PanelKind::AnimationMotions);
         let prefix = if motion_panel {
@@ -121,31 +115,6 @@ impl AnimationPanel {
                     })
             });
         } else {
-            let owner = self.owner.clone();
-            toolbar = toolbar.action(move |_| {
-                Button::new("animation-expression-preview-result")
-                    .icon(IconName::Eye)
-                    .ghost()
-                    .accessibility_label(t!("timeline.result_effect").into_owned())
-                    .tooltip(t!("timeline.expression_hint"))
-                    .disabled(disabled || preview_mode == editor_core::AnimationPreviewMode::Result)
-                    .on_click(move |_, window, cx| {
-                        if window.has_active_dialog(cx) {
-                            return;
-                        }
-                        let _ = owner.update(cx, |owner, cx| {
-                            if owner.modal || owner.editor.active_id() != Some(id) {
-                                return;
-                            }
-                            let result = owner.editor.set_animation_preview_mode(
-                                id,
-                                editor_core::AnimationPreviewMode::Result,
-                            );
-                            owner.animation_anchor = None;
-                            owner.complete_edit(result, cx);
-                        });
-                    })
-            });
             let owner = self.owner.clone();
             let unavailable = disabled
                 || !state

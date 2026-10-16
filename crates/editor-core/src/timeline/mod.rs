@@ -104,8 +104,8 @@ pub enum TimelineFilter {
 }
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum AnimationPreviewMode {
-    #[default]
     Editing,
+    #[default]
     Result,
 }
 

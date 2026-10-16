@@ -21,7 +21,21 @@ fn preview_modes_and_preview_loop_are_session_controls(cx: &mut TestAppContext) 
                 .animation()
                 .unwrap()
                 .preview_mode,
-            editor_core::AnimationPreviewMode::Editing
+            editor_core::AnimationPreviewMode::Result
+        );
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .animation()
+                .unwrap()
+                .preview_loop
+        );
+        assert!(
+            window
+                .try_find("animation-expression-preview-result")
+                .is_none()
         );
         window.click("animation-preview-mode", cx);
         window.render_frame(cx);
@@ -52,7 +66,7 @@ fn preview_modes_and_preview_loop_are_session_controls(cx: &mut TestAppContext) 
         window.click("animation-preview-loop", cx);
         window.render_frame(cx);
         let view = harness.view.read(cx);
-        assert!(view.editor.animation().unwrap().preview_loop);
+        assert!(!view.editor.animation().unwrap().preview_loop);
         assert!(!view.editor.document().unwrap().modified());
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
     })
@@ -744,7 +758,6 @@ pub(super) fn click_expression(
     index: usize,
     cx: &mut gpui_kit::App,
 ) {
-    window.click("animation-expression-preview-result", cx);
     window.render_frame(cx);
     let row = window.find(("animation-expression", index)).bounds();
     let viewport = window.find("animation-expression-list").bounds();

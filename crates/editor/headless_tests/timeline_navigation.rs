@@ -14,6 +14,8 @@ fn animation(cx: &mut TestAppContext) -> Harness {
     cx.update_window(harness.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
+        window.click("animation-preview-mode", cx);
+        window.click("animation-edit-preview", cx);
         window.click(("animation-motion", 0usize), cx);
         window.render_frame(cx);
     })
@@ -552,7 +554,8 @@ fn search_clear_restores_channels_and_expression_selection_keeps_preview_mode(
                 .expression
                 .is_some()
         );
-        window.click("animation-expression-preview-result", cx);
+        window.click("animation-preview-mode", cx);
+        window.click("animation-result-preview", cx);
         assert_eq!(
             harness
                 .view

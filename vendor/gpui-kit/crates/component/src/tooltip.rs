@@ -1,14 +1,19 @@
 use crate::root::WindowState;
-use std::{cell::Cell, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+    time::Duration,
+};
 
 use gpui::{
-    Action, AnyElement, AnyView, App, AppContext, Bounds, Context, ElementId, IntoElement,
-    MouseButton, ParentElement, Pixels, Render, SharedString, StatefulInteractiveElement,
-    StyleRefinement, Styled, Window, div, prelude::FluentBuilder, px,
+    Action, AnyElement, AnyView, App, AppContext, Bounds, Context, ElementId, GlobalElementId,
+    InteractiveElement, IntoElement, MouseButton, ParentElement, Pixels, Render, SharedString,
+    StatefulInteractiveElement, StyleRefinement, Styled, Window, div, prelude::FluentBuilder, px,
+    rems,
 };
 pub use gpui_base::TooltipDefaults;
 use gpui_base::{
-    Tooltip as BaseTooltip, TooltipOverlay as BaseTooltipOverlay,
+    TestSupportExt as _, Tooltip as BaseTooltip, TooltipOverlay as BaseTooltipOverlay,
     TooltipRequest as BaseTooltipRequest, TooltipTransition as BaseTooltipTransition,
 };
 
@@ -106,7 +111,7 @@ impl Render for Tooltip {
             }
         };
 
-        div().child(
+        div().id("tooltip").test_support().child(
             // Wrap in a child, to ensure the left margin is applied to the tooltip
             BaseTooltip::new("tooltip-popup")
                 .h_flex()
@@ -120,10 +125,12 @@ impl Render for Tooltip {
                 .shadow_md()
                 .rounded(cx.theme().radius)
                 .justify_between()
-                .py_0p5()
-                .px_2()
-                .text_sm()
-                .gap_3()
+                // Compact editor density, proportional to the window's UI scale.
+                .py(rems(1. / 16.))
+                .px(rems(6. / 16.))
+                .text_size(rems(11. / 16.))
+                .line_height(rems(14. / 16.))
+                .gap(rems(6. / 16.))
                 .refine_style(&self.style)
                 .map(|this| {
                     this.child(div().map(|this| match self.content {
@@ -134,7 +141,6 @@ impl Render for Tooltip {
                 .when_some(key_binding, |this, kbd| {
                     this.child(
                         div()
-                            .text_xs()
                             .flex_shrink_0()
                             .text_color(cx.theme().muted_foreground)
                             .child(kbd.appearance(false)),
@@ -255,16 +261,28 @@ pub(crate) trait ManagedTooltipExt:
     ) -> Self {
         let build_tooltip = Rc::new(build_tooltip);
         let trigger_bounds_cell: Rc<Cell<Bounds<Pixels>>> = Rc::new(Cell::new(Bounds::default()));
+        let trigger_id_cell: Rc<RefCell<Option<GlobalElementId>>> = Rc::new(RefCell::new(None));
         let bounds_writer = trigger_bounds_cell.clone();
+        let id_writer = trigger_id_cell.clone();
 
-        self.on_prepaint(move |bounds, _, _| {
+        self.on_prepaint(move |bounds, window, _| {
             bounds_writer.set(bounds);
+            // Resolve the scoped identity each frame, so ownership survives rerenders.
+            window.with_global_id("managed-tooltip".into(), |id, _| {
+                *id_writer.borrow_mut() = Some(id.clone());
+            });
         })
         .on_hover({
             let trigger_bounds_cell = trigger_bounds_cell.clone();
             let build_tooltip = build_tooltip.clone();
             move |hovered, window, cx| {
-                if let Some(overlay) = WindowState::tooltip_overlay(window, cx) {
+                let trigger_id = trigger_id_cell.borrow();
+                let Some(trigger_id) = trigger_id.as_ref() else {
+                    return;
+                };
+                if let Some(overlay) =
+                    WindowState::tooltip_overlay_for_trigger(window, cx, trigger_id, *hovered)
+                {
                     if *hovered {
                         let bounds = trigger_bounds_cell.get();
                         overlay.update(cx, |o: &mut BaseTooltipOverlay, cx| {

@@ -13,7 +13,7 @@ impl Timeline {
             .read(cx)
             .editor
             .animation()
-            .map_or(AnimationPreviewMode::Editing, |a| a.preview_mode);
+            .map_or(AnimationPreviewMode::default(), |a| a.preview_mode);
         let looping = owner
             .read(cx)
             .editor

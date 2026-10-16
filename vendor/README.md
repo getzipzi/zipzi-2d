@@ -4,13 +4,13 @@
 
 保留 crates.io 发布的 `gpui-fast`、`gpui-fast-macos`、`gpui-fast-apple` **0.1.7**，作为 GPUI Kit 0.7.3 的 `gpui-fast` 后端。根目录 `Cargo.toml` 的 `[patch.crates-io]` 选择这些本地包。Kit 固定在官方 commit，另通过 Git source 的 `[patch]` 覆盖下述 `gpui-component` 包。
 
-## Kit compact 菜单
+## Kit compact 菜单与 Tooltip
 
 `vendor/gpui-kit/crates/component` 来自 Kit commit `507e82b8115ac73af92b7d3856501f9d7b73b2c9`，保留完整包、上游清单和 Apache-2.0 许可。精简的 `vendor/gpui-kit/Cargo.toml` 提供原清单继承的依赖与 lint；同仓库的 base、assets、macros 仍指向相同 Git commit，未整体 vendor Kit。额外保留 README 和上游测试通过相对路径引用的五份文件，它们不作为其他本地包编译。
 
 工作区清单相对上述固定 commit 的完整差异见 [kit-workspace.patch](kit-workspace.patch)，涵盖成员裁剪、依赖继承与同版本 Git 引用。该补丁以原始 Kit 根目录 `Cargo.toml` 为基线，目标路径为 `vendor/gpui-kit/Cargo.toml`。
 
-唯一修改的 Kit 源码是 `menu/popup_menu.rs`，完整差异见 [compact-menu.patch](compact-menu.patch)：
+Kit 的菜单修改位于 `menu/popup_menu.rs`，完整差异见 [compact-menu.patch](compact-menu.patch)：
 
 - 实现 `Sizable`，公开已有 Small 密度。
 - Small 普通行保留 20px 基准，改为随 window rem 缩放；其余尺寸保持上游行为。
@@ -19,14 +19,20 @@
 
 菜单水平 padding 继续使用 8px，圆角使用原 Small 的半径减半规则；自定义内容保留最小行高，项目标题与路径不会被固定为单行高度。编辑器通过 `ui::compact::menu` 和 `ui::compact::select` 统一入口；Select 使用原生 XSmall，将触发框、选项与搜索框字体一并缩小为 12px，触发框高度仍为 22px。XSmall 的选项垂直 padding 沿用 Kit 的 4px。字体跟随现有 UI scale。未重写交互逻辑或修改兄弟工作目录。
 
+Tooltip 的修改位于 `tooltip.rs` 与 `root.rs`，完整差异见 [compact-tooltip.patch](compact-tooltip.patch)：文字与快捷键统一为 11px，行高 14px，水平/垂直 padding 为 6px/1px，文字与快捷键间距为 6px。尺寸均使用 rem 跟随 UI scale；共享浮层与 GPUI 原生 tooltip 两条路径复用此内容组件。共享浮层按窗口记录当前触发元素的完整 GPUI 身份；旧按钮的离开事件不会关闭新按钮的提示或取消其显示计时。身份在 prepaint 阶段取得并跨重绘匹配，避免依赖 hover 回调顺序。
+
+Tooltip 回归见 [tooltips.rs](../crates/editor/headless_tests/tooltips.rs)，覆盖双向反复切换、首次显示前切换、停留超过隐藏宽限期、离开后的正常隐藏、点击关闭与取消待显示提示。外层 tooltip 通过 Kit 的标准 `test_support()` 接口供测试观察，正式构建中该观察接口为空操作。
+
 回归见 [compact_popups.rs](../crates/editor/headless_tests/compact_popups.rs)，覆盖明暗主题、三档 UI 缩放、两种子菜单构造方式、多行内容，以及真实编辑器对话框中的普通/可搜索 Select。右键菜单动作继续由现有 Dock、Canvas 和参数管理测试覆盖。真实 Metal 截图使用 `KASANE_SCREENSHOT_SCENE=compact-popups`。
 
-更新 Kit 时，将该包、README、五份测试引用文件及根工作区清单替换为新固定 commit 的对应内容，再适配并应用 `kit-workspace.patch` 和 `compact-menu.patch`。更新精简工作区中的 Git revisions，重新核对补丁是否仍需要，以新基线重新生成两份补丁，并更新根目录依赖和 lockfile。
+更新 Kit 时，将该包、README、五份测试引用文件及根工作区清单替换为新固定 commit 的对应内容，再适配并应用 `kit-workspace.patch`、`compact-menu.patch` 和 `compact-tooltip.patch`。更新精简工作区中的 Git revisions，重新核对补丁是否仍需要，以新基线重新生成三份补丁，并更新根目录依赖和 lockfile。
 
 ```sh
 git apply --reverse --check vendor/kit-workspace.patch
 git apply --reverse --check vendor/compact-menu.patch
+git apply --reverse --check vendor/compact-tooltip.patch
 cargo test --locked -p kasane-editor --lib headless_tests::compact_popups
+cargo test --locked -p kasane-editor --lib headless_tests::tooltips
 ```
 
 原生 Metal 集成涉及 **11 个文件（10 个源码文件 + 1 个依赖清单），新增 495 行、删除 13 行**，差异见 [native-metal.patch](native-metal.patch)。此外，Fast 缓存边界修复涉及 `fast/retained.rs` 和 `fast/splice.rs` 两个文件，独立保存为 [cache-boundary.patch](cache-boundary.patch)；虚拟列表高度估计修复涉及 `elements/list.rs`，保存为 [list-height-estimates.patch](list-height-estimates.patch)。合计修改/新增 14 个文件，其余保持发布版本原样。
@@ -82,9 +88,10 @@ git apply --reverse --check vendor/cache-boundary.patch
 git apply --reverse --check vendor/list-height-estimates.patch
 git apply --reverse --check vendor/kit-workspace.patch
 git apply --reverse --check vendor/compact-menu.patch
+git apply --reverse --check vendor/compact-tooltip.patch
 ```
 
-反向检查不能单独证明没有遗漏改动。核对补丁覆盖完整性时，应在临时目录准备上述原始发布包和 Kit 保留文件，按相同 `vendor/` 路径布局应用全部五份补丁，再逐文件比对重建结果与当前依赖包目录；文件集合及内容均应一致。
+反向检查不能单独证明没有遗漏改动。核对补丁覆盖完整性时，应在临时目录准备上述原始发布包和 Kit 保留文件，按相同 `vendor/` 路径布局应用全部六份补丁，再逐文件比对重建结果与当前依赖包目录；文件集合及内容均应一致。
 
 补丁使用仓库根目录相对路径，可应用到按相同目录布局放置的原始 0.1.7 发布包。更新 GPUI 时，应以新发布包为基线重新核对上述三份补丁涉及的 14 个文件，检查上游是否已修复缓存边界及列表高度估计，重新生成仍需要的补丁并更新统计，运行合成测试、完整 UI 截图测试和两个应用构建。原生 Metal 集成细节见 [native-metal.md](../docs/archive/native-metal.md)。
 
