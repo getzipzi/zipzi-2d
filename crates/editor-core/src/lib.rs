@@ -34,8 +34,8 @@ pub use tree::{TreeNode, TreeNodeKind};
 
 use session::DocumentSession;
 pub use workspace::{
-    DocumentId, DocumentSummary, Editor, LoadCompletion, LoadTask, OperationId, SaveCompletion,
-    SaveTask,
+    DocumentId, DocumentSummary, EditingLifecycle, Editor, LoadCompletion, LoadTask, OperationId,
+    SaveCompletion, SaveTask,
 };
 
 mod panels;

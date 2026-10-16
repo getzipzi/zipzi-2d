@@ -60,6 +60,7 @@ fn zoom_stays_within_four_to_thirty_two_hundred_percent() -> anyhow::Result<()> 
 
     editor.zoom_by(-100.0);
     assert_eq!(editor.view().zoom, 0.04);
+    support::attach_viewports(&mut editor);
     assert!(!editor.command_available(editor.command(CommandId::ZoomOut)));
     assert!(editor.command_available(editor.command(CommandId::ZoomIn)));
 

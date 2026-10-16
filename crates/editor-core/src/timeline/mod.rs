@@ -226,14 +226,19 @@ pub(crate) struct TimelineSession {
     pub edit: Option<TimelineEdit>,
     pub clipboard: Option<clipboard::TimelineClipboard>,
     pub next_edit: u64,
+    pub binding_generation: u64,
 }
 impl TimelineSession {
     pub fn reconcile(&mut self, document: &crate::Document, active: Option<&str>) {
         self.clips
             .retain(|id, _| document.motion_definition(id).is_some());
-        self.active = active
+        let active = active
             .filter(|id| document.motion_definition(id).is_some())
             .map(str::to_owned);
+        if self.active != active {
+            self.binding_generation += 1;
+        }
+        self.active = active;
         let Some(id) = &self.active else {
             return;
         };

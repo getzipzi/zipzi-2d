@@ -17,14 +17,20 @@ const ZOOM_ACTIONS: [(&str, CommandId, IconName); 3] = [
 
 type ZoomAction = Rc<dyn Fn(CommandId, &mut Window, &mut App)>;
 
-pub(super) fn state(owner: &EditorView, modal: bool) -> (i32, [bool; 3]) {
+pub(super) fn state(
+    owner: &EditorView,
+    canvas: &super::CanvasView,
+    modal: bool,
+) -> (i32, [bool; 3]) {
     (
         (owner.editor.view().zoom * 100.0).round() as i32,
         ZOOM_ACTIONS.map(|(_, command, _)| {
             !modal
-                && owner
-                    .editor
-                    .command_available(owner.editor.command(command))
+                && owner.editor.command_available(canvas.command(
+                    &owner.editor,
+                    command,
+                    editor_core::CommandSource::Toolbar,
+                ))
         }),
     )
 }
@@ -118,19 +124,27 @@ pub(super) struct CanvasZoomBar {
 impl RenderOnce for CanvasZoomBar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let state = self.owner.read(cx);
-        let (percentage, enabled) = self::state(state, self.modal);
+        let (percentage, enabled) = self::state(state, self.canvas.read(cx), self.modal);
+        let commands = ZOOM_ACTIONS.map(|(_, id, _)| {
+            self.canvas
+                .read(cx)
+                .command(&state.editor, id, editor_core::CommandSource::Toolbar)
+        });
         let owner = self.owner;
         let canvas = self.canvas;
         let on_action: ZoomAction = Rc::new(move |command, window, cx| {
             if window.has_active_dialog(cx) {
                 return;
             }
+            let Some(invocation) = commands
+                .iter()
+                .find(|invocation| invocation.id == command)
+                .copied()
+            else {
+                return;
+            };
             let state = owner.read(cx);
-            if state.modal
-                || !state
-                    .editor
-                    .command_available(state.editor.command(command))
-            {
+            if state.modal || !state.editor.command_available(invocation) {
                 return;
             }
             let focus = canvas.read(cx).focus.clone();
@@ -139,7 +153,7 @@ impl RenderOnce for CanvasZoomBar {
                 if let Some(dock) = &mut owner.dock {
                     dock.activate_canvas(canvas.entity_id());
                 }
-                owner.run_command(command, window, cx);
+                owner.run_invocation(invocation, window, cx);
             });
         });
         div()

@@ -40,6 +40,7 @@ struct EditorView {
     modal: bool,
     frozen_frames: std::collections::HashMap<editor_core::DocumentId, preview::Presented>,
     editor: Editor,
+    viewport_slots: [editor_core::ViewportId; 2],
     mesh_thumbnails: Entity<mesh_thumbnails::MeshThumbnails>,
     dock: Option<docking::DockWorkspace>,
     ui_subscriptions: Vec<Subscription>,
@@ -73,6 +74,7 @@ impl EditorView {
             modal: false,
             frozen_frames: Default::default(),
             editor,
+            viewport_slots: std::array::from_fn(|_| editor_core::ViewportId::new()),
             mesh_thumbnails: mesh_thumbnails::MeshThumbnails::new(cx),
             dock: None,
             ui_subscriptions: Vec::new(),
@@ -106,6 +108,7 @@ impl EditorView {
                 })
                 .unwrap_or(true)
         });
+        editor.sync_viewports();
         editor.init_dock(window, cx);
         if let Some(session) = &mut editor.dev_session {
             if let Err(error) = session.restore(&mut editor.editor) {
@@ -258,7 +261,35 @@ impl EditorView {
         self.redraw(cx);
     }
 
+    fn sync_viewport_visibility(&mut self, window: &Window, cx: &App) -> bool {
+        let visible = window.is_visible()
+            && self
+                .dock
+                .as_ref()
+                .is_none_or(|dock| dock.viewport_displayed(cx));
+        let editing = self.editor.gesture_active();
+        for viewport in self.viewport_slots {
+            self.editor.set_viewport_visible(viewport, visible);
+        }
+        editing && !self.editor.gesture_active()
+    }
+
+    fn sync_viewports(&mut self) {
+        for (kind, viewport) in [
+            editor_core::ViewportKind::Modeling,
+            editor_core::ViewportKind::Animation,
+        ]
+        .into_iter()
+        .zip(self.viewport_slots)
+        {
+            self.editor
+                .register_primary_viewport(viewport, kind)
+                .expect("fixed viewport kind");
+        }
+    }
+
     fn redraw(&mut self, cx: &mut Context<Self>) {
+        self.sync_viewports();
         self.request_preview();
         self.sync_animation_clock(cx);
         cx.notify();

@@ -3,10 +3,15 @@ use super::*;
 
 impl CanvasView {
     pub(super) fn cancel(&mut self, cx: &mut Context<Self>) {
+        let token = self
+            .interaction
+            .take()
+            .or_else(|| self.pan.map(|pan| pan.token));
         self.cancel_pointer();
         let _ = self.owner.update(cx, |owner, cx| {
-            owner.editor.cancel_gesture();
-            owner.redraw(cx);
+            if token.is_some_and(|token| owner.editor.cancel_viewport_interaction(token)) {
+                owner.redraw(cx);
+            }
         });
     }
     pub(super) fn local(&self, p: Point<Pixels>) -> CanvasPoint {
@@ -28,8 +33,27 @@ impl CanvasView {
             self.cancel(cx);
             return;
         }
-        let _ = self.owner.update(cx, |owner, cx| {
+        let owner = self.owner.clone();
+        let _ = owner.update(cx, |owner, cx| {
             if owner.modal || owner.editor.is_busy() {
+                return;
+            }
+            if self
+                .interaction
+                .is_some_and(|token| !owner.editor.viewport_interaction_valid(token))
+            {
+                self.cancel_pointer();
+                if !matches!(input, CanvasInput::Down { .. }) {
+                    return;
+                }
+            }
+            let Some(binding) = self
+                .binding(&owner.editor)
+                .filter(|binding| binding.kind == editor_core::ViewportKind::Modeling)
+            else {
+                return;
+            };
+            if matches!(input, CanvasInput::Up { .. }) && self.interaction.is_none() {
                 return;
             }
             if !owner
@@ -50,7 +74,30 @@ impl CanvasView {
                 return;
             }
             let moving = matches!(input, CanvasInput::Move { .. } | CanvasInput::Leave);
-            match owner.editor.canvas_input(input) {
+            if matches!(input, CanvasInput::Down { .. }) {
+                match owner.editor.begin_viewport_interaction(
+                    binding,
+                    editor_core::ViewportInteractionKind::Modeling,
+                ) {
+                    Ok(token) => self.interaction = Some(token),
+                    Err(_) => return,
+                }
+            }
+            let result = if let Some(token) = self.interaction {
+                owner.editor.canvas_interaction_input(token, input)
+            } else {
+                owner.editor.canvas_input_for(binding, input)
+            };
+            if matches!(input, CanvasInput::Up { .. }) || result.is_err() {
+                if let Some(token) = self.interaction.take() {
+                    if result.is_err() {
+                        owner.editor.cancel_viewport_interaction(token);
+                    } else {
+                        owner.editor.finish_viewport_interaction(token);
+                    }
+                }
+            }
+            match result {
                 Ok(changed) => {
                     if matches!(input, CanvasInput::Down { .. }) {
                         owner.edit_error = None;
@@ -92,19 +139,21 @@ impl CanvasView {
         if let Some(PanGesture {
             position,
             button,
-            document,
-            workspace_revision,
+            token,
         }) = self.pan
         {
             if self.owner.upgrade().is_none_or(|o| {
                 let editor = &o.read(cx).editor;
-                editor.active_id() != document || editor.workspace_revision() != workspace_revision
+                !editor.viewport_interaction_valid(token)
             }) {
                 self.pan = None;
                 cx.notify();
                 return;
             }
             if event.pressed_button != Some(button) {
+                let _ = self.owner.update(cx, |owner, _| {
+                    owner.editor.finish_viewport_interaction(token)
+                });
                 self.pan = None;
                 cx.notify();
                 return;
@@ -119,8 +168,7 @@ impl CanvasView {
             self.pan = Some(PanGesture {
                 position: event.position,
                 button,
-                document,
-                workspace_revision,
+                token,
             });
             let _ = self.owner.update(cx, |owner, cx| {
                 if !owner.modal {
@@ -146,7 +194,11 @@ impl CanvasView {
         cx: &mut Context<Self>,
     ) {
         if self.pan.is_some_and(|pan| pan.button == event.button) {
-            self.pan = None;
+            if let Some(pan) = self.pan.take() {
+                let _ = self.owner.update(cx, |owner, _| {
+                    owner.editor.finish_viewport_interaction(pan.token)
+                });
+            }
             cx.notify();
         } else if self.pan.is_none() && event.button == MouseButton::Left {
             self.input(
@@ -177,16 +229,24 @@ impl CanvasView {
         window.focus(&self.focus, cx);
         if event.button == MouseButton::Middle || self.hand_tool(cx) {
             self.cancel(cx);
-            let owner = self.owner.upgrade();
-            self.pan = Some(PanGesture {
+            let token = self
+                .owner
+                .update(cx, |owner, _| {
+                    let binding = self.binding(&owner.editor)?;
+                    owner
+                        .editor
+                        .begin_viewport_interaction(
+                            binding,
+                            editor_core::ViewportInteractionKind::Navigation,
+                        )
+                        .ok()
+                })
+                .ok()
+                .flatten();
+            self.pan = token.map(|token| PanGesture {
                 position: event.position,
                 button: event.button,
-                document: owner
-                    .as_ref()
-                    .and_then(|owner| owner.read(cx).editor.active_id()),
-                workspace_revision: owner
-                    .as_ref()
-                    .map_or(0, |owner| owner.read(cx).editor.workspace_revision()),
+                token,
             });
             cx.notify();
         } else {

@@ -35,6 +35,7 @@ impl Editor {
         } else {
             local
         };
+        session.timeline.binding_generation += 1;
         animation.preview_mode = mode;
         animation.head_located = true;
         animation.time = time;

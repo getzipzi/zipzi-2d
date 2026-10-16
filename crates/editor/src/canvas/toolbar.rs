@@ -118,7 +118,12 @@ impl RenderOnce for CanvasToolbar {
                     })
                     .map(|item| {
                         let command = item.command;
-                        let state = view.editor.command_state(view.editor.command(command));
+                        let invocation = canvas.read(cx).command(
+                            &view.editor,
+                            command,
+                            editor_core::CommandSource::Toolbar,
+                        );
+                        let state = view.editor.command_state(invocation);
                         let selected = state.checked;
                         let enabled = !modal && state.enabled;
                         let border = if selected {
@@ -165,7 +170,9 @@ impl RenderOnce for CanvasToolbar {
                                         dock.activate_canvas(id);
                                     }
                                 });
-                                owner.update(cx, |view, cx| view.run_command(command, window, cx));
+                                owner.update(cx, |view, cx| {
+                                    view.run_invocation(invocation, window, cx)
+                                });
                             })
                     })
                     .collect::<Vec<_>>(),

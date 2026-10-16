@@ -12,8 +12,10 @@ use std::{
 use uuid::Uuid;
 mod entry;
 mod io;
+mod lifecycle;
 use entry::{DeferredClose, Entry};
 pub use io::{LoadCompletion, LoadTask, SaveCompletion, SaveTask};
+pub use lifecycle::EditingLifecycle;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DocumentId(Uuid);
@@ -45,7 +47,11 @@ impl DocumentSummary {
 }
 pub struct Editor {
     workspace: WorkspaceKind,
+    pub(crate) viewports: crate::ViewportRegistry,
+    pub(crate) viewport_interaction: Option<crate::ViewportInteractionToken>,
+    pub(crate) next_viewport_interaction: u64,
     workspace_revision: u64,
+    pub(crate) context_generation: u64,
     documents: Vec<Entry>,
     active: Option<DocumentId>,
     loads: HashMap<OperationId, (DocumentId, Option<PathBuf>)>,
@@ -72,7 +78,11 @@ impl Editor {
     pub fn empty() -> Self {
         Self {
             workspace: WorkspaceKind::default(),
+            viewports: Default::default(),
+            viewport_interaction: None,
+            next_viewport_interaction: 0,
             workspace_revision: 0,
+            context_generation: 0,
             documents: Vec::new(),
             active: None,
             loads: HashMap::new(),
@@ -86,9 +96,8 @@ impl Editor {
     }
     pub fn new_document(&mut self) -> Result<DocumentId> {
         ensure!(!self.exiting, "Workspace is closing");
-        if self.active.is_some() && !self.is_busy() {
-            self.cancel_timeline_edit();
-            self.execute(EditorCommand::FinishEdit)?;
+        if let Some(id) = self.active.filter(|_| !self.is_busy()) {
+            self.end_editing(id, EditingLifecycle::ContextChange)?;
         }
         Ok(self.insert(Document::new_blank()?))
     }
@@ -105,7 +114,9 @@ impl Editor {
         let mut session = DocumentSession::from_document(document);
         session.set_workspace(self.workspace);
         self.documents.push(Entry::new(id, self.workspace, session));
+        self.context_generation += 1;
         self.active = Some(id);
+        self.refresh_viewport_bindings();
         self.displayed_request = None;
         self.requested_scene = None;
         id
@@ -138,9 +149,8 @@ impl Editor {
             return Ok(());
         }
         ensure!(!self.exiting(), "Workspace is closing");
-        if self.active.is_some() && !self.is_busy() {
-            self.cancel_timeline_edit();
-            self.execute(EditorCommand::FinishEdit)?;
+        if let Some(id) = self.active.filter(|_| !self.is_busy()) {
+            self.end_editing(id, EditingLifecycle::ContextChange)?;
         }
         if let Some(id) = self.active {
             let entry = self.entry_mut(id)?;
@@ -157,7 +167,9 @@ impl Editor {
             return;
         }
         self.workspace = workspace;
+        self.context_generation += 1;
         self.workspace_revision += 1;
+        self.refresh_viewport_bindings();
         self.invalidate_preview();
         self.presentation_floor = self.revision + 1;
     }
@@ -285,15 +297,13 @@ impl Editor {
         if self.active == Some(id) {
             return Ok(());
         }
-        self.cancel_timeline_edit();
-        self.pause_animation();
         if let Some(previous) = self.active {
-            if self.entry(previous)?.session().is_some() {
-                self.execute_for(previous, EditorCommand::FinishEdit)?;
-            }
+            self.end_editing(previous, EditingLifecycle::ContextChange)?;
         }
+        self.context_generation += 1;
         self.active = Some(id);
         self.restore_active_workspace();
+        self.refresh_viewport_bindings();
         self.displayed_request = None;
         self.requested_scene = None;
         // The UI releases the inactive document's GPU image. Reissue a paused
@@ -352,16 +362,18 @@ impl Editor {
         }
     }
     pub fn prepare_close(&mut self, id: DocumentId) -> Result<CloseDisposition> {
-        if let Some(s) = self.entry_mut(id)?.session_mut() {
-            s.cancel_timeline_edit();
-            s.animation.pause();
-            s.execute(EditorCommand::FinishEdit)?;
-        }
+        self.end_editing(id, EditingLifecycle::Close)?;
         self.close_disposition(id)
     }
     pub fn set_canvas_metrics(&mut self, metrics: crate::CanvasMetrics) {
         if self.metrics == metrics {
             return;
+        }
+        if let Some(token) = self
+            .viewport_interaction
+            .filter(|token| token.kind == crate::ViewportInteractionKind::Modeling)
+        {
+            self.cancel_viewport_interaction(token);
         }
         self.metrics = metrics;
         for entry in &mut self.documents {
@@ -450,6 +462,12 @@ impl Editor {
             .input(input, metrics)
     }
     pub fn cancel_gesture(&mut self) {
+        if self
+            .viewport_interaction
+            .is_some_and(|token| token.kind == crate::ViewportInteractionKind::Modeling)
+        {
+            self.viewport_interaction = None;
+        }
         if let Some(id) = self.active {
             if let Ok(e) = self.entry_mut(id) {
                 if let Some(s) = e.session_mut() {

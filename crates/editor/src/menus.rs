@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct MenuState {
     pub commands: Vec<editor_core::CommandState>,
+    pub targets: Vec<editor_core::CommandTarget>,
     pub text: bool,
     pub modal: bool,
     pub recent_files: Vec<PathBuf>,
@@ -107,6 +108,10 @@ impl EditorView {
                 .iter()
                 .map(|s| self.editor.command_state(self.editor.command(s.id)))
                 .collect(),
+            targets: COMMANDS
+                .iter()
+                .map(|spec| self.editor.command(spec.id).target)
+                .collect(),
             text,
             modal,
             recent_files: settings.recent_files.paths.clone(),
@@ -136,10 +141,17 @@ impl EditorView {
                 .items(items)
         };
         let item = |id: CommandId| {
-            let state = self.editor.command_state(self.editor.command(id));
-            MenuItem::action(t!(id.spec().label).into_owned(), RunCommand { id })
-                .disabled(modal || !state.enabled)
-                .checked(state.checked)
+            let command = self
+                .editor
+                .command(id)
+                .with_source(editor_core::CommandSource::NativeMenu);
+            let state = self.editor.command_state(command);
+            MenuItem::action(
+                t!(id.spec().label).into_owned(),
+                RunCommand::targeted(command),
+            )
+            .disabled(modal || !state.enabled)
+            .checked(state.checked)
         };
         let edit = if text {
             vec![

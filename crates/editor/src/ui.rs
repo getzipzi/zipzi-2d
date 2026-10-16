@@ -16,6 +16,10 @@ impl EditorView {
 
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.sync_viewports();
+        if self.sync_viewport_visibility(window, cx) {
+            self.redraw(cx);
+        }
         if let Some(session) = &mut self.dev_session {
             if let Err(error) = session.sync(&self.editor) {
                 self.edit_error = Some(error.to_string());
@@ -25,17 +29,21 @@ impl Render for EditorView {
             self.connect_preview(window, cx);
         }
         let modal = self.modal || window.has_active_dialog(cx);
-        if modal && self.editor.animation().is_some_and(|a| a.playing) {
-            self.editor.pause_animation();
-            self.redraw(cx);
-        }
-        if modal && self.editor.timeline_edit().is_some() {
-            self.editor.cancel_timeline_edit();
-            self.redraw(cx);
-        }
-        if modal && self.editor.gesture_active() {
-            self.editor.cancel_gesture();
-            self.redraw(cx);
+        if modal
+            && (self.editor.animation().is_some_and(|a| a.playing)
+                || self.editor.timeline_edit().is_some()
+                || self.editor.gesture_active()
+                || self.editor.viewport_interaction_active())
+        {
+            if let Some(document) = self.editor.active_id() {
+                if let Err(error) = self
+                    .editor
+                    .end_editing(document, editor_core::EditingLifecycle::BlockingUi)
+                {
+                    self.edit_error = Some(error.to_string());
+                }
+                self.redraw(cx);
+            }
         }
         self.schedule_animation_frame(window, cx);
         self.refresh_menus(modal, window, cx);

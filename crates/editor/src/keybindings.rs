@@ -25,9 +25,7 @@ fn install(cx: &mut App) {
         .map(|binding| {
             KeyBinding::load(
                 &binding.key,
-                Box::new(RunCommand {
-                    id: binding.command,
-                }),
+                Box::new(RunCommand::new(binding.command)),
                 Some(
                     KeyBindingContextPredicate::parse(scope(binding.command.spec().scope))
                         .unwrap()
@@ -170,7 +168,7 @@ mod tests {
             .map(|b| {
                 KeyBinding::new(
                     &b.key,
-                    RunCommand { id: b.command },
+                    RunCommand::new(b.command),
                     Some(scope(b.command.spec().scope)),
                 )
             })
@@ -236,20 +234,23 @@ mod tests {
         assert_eq!(find("escape", "KasaneEditor > KasaneCanvas"), 1);
         assert_eq!(
             keymap
-                .bindings_for_action(&RunCommand {
-                    id: CommandId::Open
-                })
+                .bindings_for_action(&RunCommand::new(CommandId::Open))
                 .count(),
             1
         );
         assert_eq!(
             keymap
-                .bindings_for_action(&RunCommand {
-                    id: CommandId::Save
-                })
+                .bindings_for_action(&RunCommand::new(CommandId::Save))
                 .count(),
             1
         );
+        let editor = editor_core::Editor::new()?;
+        let saved_menu_action = RunCommand::targeted(
+            editor
+                .command(CommandId::Save)
+                .with_source(editor_core::CommandSource::NativeMenu),
+        );
+        assert_eq!(keymap.bindings_for_action(&saved_menu_action).count(), 1);
         Ok(())
     }
 }

@@ -9,6 +9,7 @@ fn assert_view(actual: ViewState, expected: ViewState) {
 #[test]
 fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
+    support::attach_viewports(&mut editor);
     let first = editor.active_id().unwrap();
     let second = editor.new_document()?;
     editor.set_workspace(WorkspaceKind::Animation)?;
@@ -37,6 +38,7 @@ fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow:
 #[test]
 fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
+    support::attach_viewports(&mut editor);
     let first = editor.active_id().unwrap();
     // An unmeasured canvas must not consume the default Fit behavior.
     assert!(editor.preview()?.canvas.is_none());
@@ -116,6 +118,7 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
 #[test]
 fn fit_view_uses_canvas_and_display_scale_without_changing_other_views() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
+    support::attach_viewports(&mut editor);
     assert!(!editor.command_available(editor.command(CommandId::FitView)));
     let first = editor.active_id().unwrap();
     editor.pan_by(CanvasPoint { x: 30., y: 40. });
@@ -155,6 +158,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
 -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document_with_binding(true)?;
     let mut editor = Editor::from_document(document);
+    support::attach_viewports(&mut editor);
     let first = editor.active_id().unwrap();
     let parameter = editor.document().unwrap().parameters()[0].id.clone();
     editor.execute(EditorCommand::SetPreviewParameter {
@@ -248,6 +252,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
 fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document()?;
     let mut editor = Editor::from_document(document);
+    support::attach_viewports(&mut editor);
     editor.set_canvas_metrics(CanvasMetrics {
         width: 512.,
         height: 512.,
@@ -297,6 +302,7 @@ fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> any
 fn switching_commits_properties_and_shared_undo_remains_available() -> anyhow::Result<()> {
     let (document, _assets) = support::sample_document()?;
     let mut editor = Editor::from_document(document);
+    support::attach_viewports(&mut editor);
     let original = editor.document().unwrap().selected_layer().unwrap().name;
     editor.execute(EditorCommand::PreviewName("Changed".into()))?;
     editor.set_workspace(WorkspaceKind::Animation)?;
@@ -321,6 +327,7 @@ fn save_completion_keeps_both_views_and_uses_the_current_workspace() -> anyhow::
     let (document, _assets) = support::sample_document()?;
     let output = tempfile::tempdir()?;
     let mut editor = Editor::from_document(document);
+    support::attach_viewports(&mut editor);
     editor.zoom_by(1.);
     let modeling = editor.view();
     editor.set_workspace(WorkspaceKind::Animation)?;
@@ -345,6 +352,7 @@ fn save_completion_keeps_both_views_and_uses_the_current_workspace() -> anyhow::
 #[test]
 fn play_pause_has_one_non_repeating_space_binding_in_both_modes() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
+    support::attach_viewports(&mut editor);
     let play = CommandId::PlayPause.spec();
     assert_eq!(play.keys, &["space"]);
     assert_eq!(play.scope, CommandScope::Document);

@@ -21,10 +21,12 @@ use gpui_kit::component::{
 pub struct CanvasView {
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
+    viewport_slots: [editor_core::ViewportId; 2],
     pub(crate) toolbar: toolbar::ToolbarRegistry,
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     pan: Option<PanGesture>,
+    interaction: Option<editor_core::ViewportInteractionToken>,
     wheel_zoom: Option<navigation::WheelZoom>,
     zoom_frame_pending: bool,
     _subscriptions: Vec<Subscription>,
@@ -34,24 +36,35 @@ pub struct CanvasView {
 struct PanGesture {
     position: Point<Pixels>,
     button: MouseButton,
-    document: Option<editor_core::DocumentId>,
-    workspace_revision: u64,
+    token: editor_core::ViewportInteractionToken,
 }
 
 impl CanvasView {
-    pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
+    pub fn new(
+        owner: WeakEntity<EditorView>,
+        viewport_slots: [editor_core::ViewportId; 2],
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
             let focus = cx.focus_handle();
             let subscriptions = vec![
                 cx.observe(&owner.upgrade().unwrap(), |this, owner, cx| {
                     let state = owner.read(cx);
                     if state.modal
-                        || this.pan.is_some_and(|pan| {
-                            pan.document != state.editor.active_id()
-                                || pan.workspace_revision != state.editor.workspace_revision()
+                        || this.interaction.is_some_and(|token| {
+                            !state.editor.viewport_interaction_valid(token)
+                                || !state.editor.gesture_active()
                         })
+                        || this
+                            .pan
+                            .is_some_and(|pan| !state.editor.viewport_interaction_valid(pan.token))
                     {
-                        this.cancel_pointer();
+                        if let Some(token) = this.cancel_pointer() {
+                            owner.update(cx, |owner, _| {
+                                owner.editor.finish_viewport_interaction(token);
+                            });
+                        }
                     }
                     if this
                         .wheel_zoom
@@ -78,12 +91,25 @@ impl CanvasView {
                     if !window.is_visible() {
                         this.cancel(cx);
                         let _ = this.owner.update(cx, |owner, cx| {
-                            owner.editor.pause_animation();
+                            if let Some(document) = owner.editor.active_id() {
+                                let _ = owner.editor.end_editing(
+                                    document,
+                                    editor_core::EditingLifecycle::WindowDeactivated,
+                                );
+                            }
+                            for viewport in owner.viewport_slots {
+                                owner.editor.set_viewport_visible(viewport, false);
+                            }
                             owner.editor.set_canvas_metrics(CanvasMetrics::default());
                             owner.redraw(cx);
                             cx.notify();
                         });
                     } else {
+                        let _ = this.owner.update(cx, |owner, _| {
+                            for viewport in owner.viewport_slots {
+                                owner.editor.set_viewport_visible(viewport, true);
+                            }
+                        });
                         cx.notify();
                     }
                 }),
@@ -91,7 +117,12 @@ impl CanvasView {
                     if !window.is_window_active() {
                         this.cancel(cx);
                         let _ = this.owner.update(cx, |owner, cx| {
-                            owner.editor.pause_animation();
+                            if let Some(document) = owner.editor.active_id() {
+                                let _ = owner.editor.end_editing(
+                                    document,
+                                    editor_core::EditingLifecycle::WindowDeactivated,
+                                );
+                            }
                             owner.redraw(cx);
                         });
                     }
@@ -99,16 +130,35 @@ impl CanvasView {
             ];
             Self {
                 owner,
+                viewport_slots,
                 focus,
                 toolbar: toolbar::ToolbarRegistry::with_defaults(),
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 pan: None,
+                interaction: None,
                 wheel_zoom: None,
                 zoom_frame_pending: false,
                 _subscriptions: subscriptions,
             }
         })
+    }
+    pub(crate) fn binding(&self, editor: &Editor) -> Option<editor_core::ViewportBinding> {
+        editor.viewport_binding(self.viewport_slots[editor.workspace().index()])
+    }
+    pub(crate) fn command(
+        &self,
+        editor: &Editor,
+        id: CommandId,
+        source: editor_core::CommandSource,
+    ) -> editor_core::Command {
+        self.binding(editor)
+            .map(|binding| editor.command_for_viewport(id, binding, source))
+            .unwrap_or(editor_core::Command {
+                id,
+                target: editor_core::CommandTarget::Unavailable,
+                source,
+            })
     }
     pub(crate) fn benchmark_center(&self) -> Option<Point<Pixels>> {
         (self.bounds.size.width > px(0.) && self.bounds.size.height > px(0.))
@@ -125,9 +175,14 @@ impl CanvasView {
     pub fn hand_tool(&self, cx: &App) -> bool {
         self.active_tool(cx) == ToolId::Hand
     }
-    pub fn cancel_pointer(&mut self) {
+    pub fn cancel_pointer(&mut self) -> Option<editor_core::ViewportInteractionToken> {
+        let token = self
+            .interaction
+            .take()
+            .or_else(|| self.pan.map(|pan| pan.token));
         self.wheel_zoom = None;
         self.pan = None;
+        token
     }
 }
 impl EventEmitter<PanelEvent> for CanvasView {}
@@ -354,7 +409,7 @@ impl CanvasView {
         let dialog = window.has_active_dialog(cx);
         panel.read(cx).owner.upgrade().map(|owner| {
             let owner = owner.read(cx);
-            zoom_bar::state(owner, owner.modal || dialog)
+            zoom_bar::state(owner, panel.read(cx), owner.modal || dialog)
         })
     }
 }

@@ -15,7 +15,10 @@ impl EditorView {
         window.focus(&self.focus, cx);
         if let Some(dock) = &self.dock {
             for canvas in dock.canvas_views() {
-                canvas.update(cx, |canvas, _| canvas.cancel_pointer());
+                let token = canvas.update(cx, |canvas, _| canvas.cancel_pointer());
+                if let Some(token) = token {
+                    self.editor.cancel_viewport_interaction(token);
+                }
             }
             for panel in dock.document_panels.values() {
                 panel.update(cx, |panel, _| panel.cancel_drag());
@@ -71,6 +74,7 @@ impl EditorView {
         let mut dock = DockWorkspace::new(
             self.editor.workspace(),
             cx.weak_entity(),
+            self.viewport_slots,
             self.mesh_thumbnails.clone(),
             window,
             cx,
@@ -100,6 +104,9 @@ impl EditorView {
             |this, area, event, window, cx| {
                 if !matches!(event, DockEvent::LayoutChanged) {
                     return;
+                }
+                if this.sync_viewport_visibility(window, cx) {
+                    this.redraw(cx);
                 }
                 let has_empty_dock = [
                     DockPlacement::Left,

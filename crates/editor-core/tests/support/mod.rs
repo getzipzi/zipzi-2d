@@ -15,9 +15,25 @@ pub fn object(kind: ObjectKind, n: u128) -> ObjectRef {
 
 #[allow(dead_code)]
 pub fn present_canvas(editor: &mut Editor) -> anyhow::Result<CanvasFrame> {
+    attach_viewports(editor);
     let frame = editor.preview()?.canvas.unwrap();
     assert!(editor.present_frame(frame.clone()));
     Ok(frame)
+}
+
+#[allow(dead_code)]
+pub fn attach_viewports(editor: &mut Editor) {
+    if editor.primary_viewport_binding().is_some() {
+        return;
+    }
+    for kind in [
+        editor_core::ViewportKind::Modeling,
+        editor_core::ViewportKind::Animation,
+    ] {
+        editor
+            .register_primary_viewport(editor_core::ViewportId::new(), kind)
+            .unwrap();
+    }
 }
 
 pub fn sample_document() -> anyhow::Result<(Document, TempDir)> {

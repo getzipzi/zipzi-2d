@@ -1,6 +1,6 @@
 # Viewport 与编辑器基础设施重构方案
 
-日期：2026-10-16。状态：实施中（前置阶段：命令基础）。
+日期：2026-10-16。状态：实施中（前置阶段：显式目标与生命周期边界）。
 
 当前已落地：
 
@@ -9,10 +9,16 @@
 - Timeline 删除、复制、粘贴、逐帧／关键帧导航和首尾跳转纳入统一命令目录、用户覆盖、冲突检查、帮助和重复按键过滤，领域候选操作继续留在 Timeline。
 - host 选择可传入的 `KeyboardPolicy`，在 GPUI mapper 前展开 `secondary`；覆盖顺序、平台保留键、文本保护与 Windows 附加 Ctrl+Y 均通过纯逻辑测试。用户配置保留语义键位与可选 `platform`。
 - core 测试覆盖三种平台策略及 Timeline 用户命令的历史、播放、只读和文档检查；headless 测试覆盖真实重绑定、旧键移除、文本输入优先与长按写入过滤。
+- UI 分别注册 Modeling / Animation 的不透明 `ViewportId` 和固定 `ViewportKind`；core 保存绑定代数，在文档、workspace、可见性、保存和销毁／重建边界拒绝旧目标。当前仍通过两个 primary 槽位桥接现有单一 `CanvasView`，没有宣称多实例呈现已可用。
+- `CommandTarget` 区分窗口、文档、viewport 和 Timeline 上下文，`CommandSource` 记录调用来源。建模工具栏和建模上下文菜单保存所属实例目标；原生菜单保存调用快照，菜单缓存同时比较目标，GPUI action 保留与快捷键一致的命令等价关系。
+- 建模指针和平移使用包含绑定身份的交互 token；滚轮动画校验绑定代数；旧取消和释放不能终止新 token，取消后首个新按下事件仍正常处理；docking 标签、遮挡与窗口可见性同步到绑定生命周期。尺寸重测只取消建模捕获，持续平移保持可用。Timeline 候选取消统一通过 DocumentId 与候选 edit ID 核验，导航捕获不取消 Timeline 写入候选。
+- `EditingLifecycle` 提供上下文切换、阻塞 UI、窗口失焦、保存和关闭准备的共同策略入口。保存继续提交 Timeline 候选、取消建模手势；后台保存完成不使另一文档的上下文失效。
 
-本批验证：`cargo test --locked -p editor-core`（255 passed，1 ignored）、`cargo test --locked -p kasane-editor --lib`（238 passed，1 ignored）和格式检查通过。`./scripts/test.sh` 的 Python、core、headless、截图与前置 Metal 检查通过，但本地 Mao 模型的 `timeline_acceptance` 在 Natural 手势阶段报告 `native dense drag did not change presented pixels`；修改前的 HEAD `0f56a72` 在相同依赖和模型上独立复现同一失败，完整测试尚未全绿。
+第一批验证：`cargo test --locked -p editor-core`（255 passed，1 ignored）、`cargo test --locked -p kasane-editor --lib`（238 passed，1 ignored）和格式检查通过。`./scripts/test.sh` 的 Python、core、headless、截图与前置 Metal 检查通过，但本地 Mao 模型的 `timeline_acceptance` 在 Natural 手势阶段报告 `native dense drag did not change presented pixels`；修改前的 HEAD `0f56a72` 在相同依赖和模型上独立复现同一失败，完整测试尚未全绿。
 
-前置阶段尚待完成：显式 panel / viewport 命令目标与调用来源、`ViewportId` 和绑定代数、编辑上下文与操作 token、共同生命周期入口。其后的 viewport 拆分、按实例存储、悬停路由、多实例渲染和保存冻结仍按下文顺序实施。当前局部快捷键仍使用 GPUI 焦点上下文；平台策略测试不代表 Windows / Linux 宿主及原生键盘验收已完成。
+第二批验证：core 264 passed（1 ignored），headless UI 与命令／菜单测试 242 passed（1 ignored）；Timeline overview、curves、候选与取消恢复的原生 Metal 截图通过。完整脚本再次通过 Python、core、headless、三份本地模型 Animation 验收、默认截图和前置 Metal 检查，最终仍停在上述已确认的 Timeline 像素断言失败。
+
+前置阶段尚待完成：编辑上下文与布局分离、Timeline panel 实例身份、窗口级捕获与参数对话框生命周期的进一步收敛。其后的 viewport 拆分、按实例存储、悬停路由、多实例渲染和保存冻结仍按下文顺序实施。当前局部快捷键仍使用 GPUI 焦点上下文；视图与冻结状态仍是固定 workspace 数组，渲染仍是单视图队列；平台策略测试不代表 Windows / Linux 宿主及原生键盘验收已完成。
 
 将当前随 workspace 改变行为的 `CanvasView` 拆成独立 viewport panel，由 workspace 组合面板。各 viewport 明确拥有自己的内容来源、工具和输入行为，共享绘制与导航基础组件。同时重构 Command、快捷键、编辑会话与生命周期，为后续扩展提供明确边界。
 

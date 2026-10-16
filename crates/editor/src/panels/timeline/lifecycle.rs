@@ -167,6 +167,12 @@ impl Timeline {
     }
 
     pub(super) fn cancel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let token = self
+            .gesture
+            .as_ref()
+            .and_then(input::Gesture::token)
+            .or_else(|| self.number_edit.as_ref().map(|edit| edit.token));
+        let document = self.context.as_ref().map(|target| target.document);
         cx.stop_active_drag(window);
         self.gesture = None;
         self.edge_scroll = None;
@@ -175,7 +181,9 @@ impl Timeline {
         self.error = None;
 
         let _ = self.owner.update(cx, |owner, cx| {
-            owner.editor.cancel_timeline_edit();
+            if let (Some(document), Some(token)) = (document, token) {
+                owner.editor.cancel_timeline_edit_for(document, token);
+            }
             owner.redraw(cx);
         });
         cx.notify();
@@ -220,13 +228,8 @@ impl Timeline {
                 if owner.editor.active_id() != document {
                     return;
                 }
-                if token.is_some_and(|token| {
-                    owner
-                        .editor
-                        .timeline_edit()
-                        .is_some_and(|edit| edit.identity.edit == token.edit)
-                }) {
-                    owner.editor.cancel_timeline_edit();
+                if let (Some(document), Some(token)) = (document, token) {
+                    owner.editor.cancel_timeline_edit_for(document, token);
                 }
                 if seeking {
                     owner.editor.pause_animation();

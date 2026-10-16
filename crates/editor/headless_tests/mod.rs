@@ -3,6 +3,7 @@
 mod animation;
 mod animation_panels;
 mod canvas;
+mod command_targets;
 mod compact_popups;
 mod compact_ui;
 mod docking_tabs;

@@ -160,7 +160,7 @@ impl ParametersPanel {
         if state.modal || !state.editor.command_available(command) {
             return None;
         }
-        let document = command.document?;
+        let document = command.document()?;
         self.finish_slider_drag(cx);
         let ok = owner.update(cx, |state, cx| {
             let result = state

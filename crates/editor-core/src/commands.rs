@@ -396,14 +396,54 @@ impl CommandId {
         COMMANDS.iter().find(|s| s.id == self).unwrap()
     }
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum CommandSource {
+    #[default]
+    Direct,
+    Shortcut,
+    Toolbar,
+    ContextMenu,
+    NativeMenu,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TimelineCommandTarget {
+    pub document: DocumentId,
+    pub context_generation: u64,
+    pub timeline_generation: u64,
+    pub model_generation: u64,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CommandTarget {
+    Unavailable,
+    Window,
+    Document(DocumentId),
+    Viewport(crate::ViewportBinding),
+    Timeline(TimelineCommandTarget),
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Command {
     pub id: CommandId,
-    pub document: Option<DocumentId>,
+    pub target: CommandTarget,
+    pub source: CommandSource,
+}
+impl Command {
+    pub fn document(self) -> Option<DocumentId> {
+        match self.target {
+            CommandTarget::Document(document) => Some(document),
+            CommandTarget::Viewport(binding) => Some(binding.document),
+            CommandTarget::Timeline(target) => Some(target.document),
+            _ => None,
+        }
+    }
+    pub fn with_source(mut self, source: CommandSource) -> Self {
+        self.source = source;
+        self
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CommandDisabledReason {
     InvalidDocument,
+    InvalidTarget,
     Closing,
     Busy,
     UnavailableInContext,
@@ -423,9 +463,82 @@ pub enum CommandEffect {
 }
 impl Editor {
     pub fn command(&self, id: CommandId) -> Command {
+        let target = match id.spec().scope {
+            CommandScope::Window
+                if !matches!(id, CommandId::Save | CommandId::SaveAs | CommandId::Close) =>
+            {
+                CommandTarget::Window
+            }
+            CommandScope::Window | CommandScope::Document | CommandScope::Property => self
+                .active_id()
+                .map(CommandTarget::Document)
+                .unwrap_or(CommandTarget::Unavailable),
+            CommandScope::Viewport => self
+                .primary_viewport_binding()
+                .map(CommandTarget::Viewport)
+                .unwrap_or(CommandTarget::Unavailable),
+            CommandScope::Timeline => self
+                .timeline_command_target()
+                .map(CommandTarget::Timeline)
+                .unwrap_or(CommandTarget::Unavailable),
+        };
         Command {
             id,
-            document: self.active_id(),
+            target,
+            source: CommandSource::Direct,
+        }
+    }
+    pub fn command_for_viewport(
+        &self,
+        id: CommandId,
+        binding: crate::ViewportBinding,
+        source: CommandSource,
+    ) -> Command {
+        Command {
+            id,
+            target: CommandTarget::Viewport(binding),
+            source,
+        }
+    }
+    pub fn timeline_command_target(&self) -> Option<TimelineCommandTarget> {
+        let session = self.active_session()?;
+        (self.workspace() == crate::WorkspaceKind::Animation
+            && session.timeline.current().is_some())
+        .then(|| TimelineCommandTarget {
+            document: self.active_id().unwrap(),
+            context_generation: self.context_generation,
+            timeline_generation: session.timeline.binding_generation,
+            model_generation: session.document().model_generation(),
+        })
+    }
+    pub fn timeline_command_target_valid(&self, target: TimelineCommandTarget) -> bool {
+        self.timeline_command_target() == Some(target) && !self.is_busy() && !self.exiting()
+    }
+    fn command_target_valid(&self, command: Command) -> bool {
+        match (command.id.spec().scope, command.target) {
+            (CommandScope::Viewport, CommandTarget::Viewport(binding)) => {
+                self.viewport_binding_valid(binding)
+            }
+            (CommandScope::Timeline, CommandTarget::Timeline(target)) => {
+                self.timeline_command_target_valid(target)
+            }
+            (CommandScope::Viewport | CommandScope::Timeline, _) => false,
+            (_, CommandTarget::Window) => {
+                command.id.spec().scope == CommandScope::Window
+                    && !matches!(
+                        command.id,
+                        CommandId::Save | CommandId::SaveAs | CommandId::Close
+                    )
+            }
+            (scope, CommandTarget::Document(document)) => {
+                self.active_id() == Some(document)
+                    && (matches!(scope, CommandScope::Document | CommandScope::Property)
+                        || matches!(
+                            command.id,
+                            CommandId::Save | CommandId::SaveAs | CommandId::Close
+                        ))
+            }
+            _ => false,
         }
     }
     /// Shared UI state. Dispatch always queries it again before executing.
@@ -445,13 +558,15 @@ impl Editor {
         let disabled_reason = if self.command_enabled(command) {
             None
         } else if command.id.spec().scope != CommandScope::Window
-            && (command.document.is_none() || command.document != self.active_id())
+            && (command.document().is_none() || command.document() != self.active_id())
         {
             Some(CommandDisabledReason::InvalidDocument)
         } else if self.exiting() {
             Some(CommandDisabledReason::Closing)
         } else if self.is_busy() {
             Some(CommandDisabledReason::Busy)
+        } else if !self.command_target_valid(command) {
+            Some(CommandDisabledReason::InvalidTarget)
         } else {
             Some(CommandDisabledReason::UnavailableInContext)
         };
@@ -466,6 +581,9 @@ impl Editor {
     }
     fn command_enabled(&self, command: Command) -> bool {
         use CommandId::*;
+        if !self.command_target_valid(command) {
+            return false;
+        }
         if crate::PANELS
             .iter()
             .any(|spec| spec.command == Some(command.id))
@@ -473,8 +591,18 @@ impl Editor {
             return !self.exiting()
                 && crate::PanelKind::for_command(command.id, self.workspace()).is_some();
         }
-        let target = command.document.is_some() && command.document == self.active_id();
-        let modeling = self.workspace() == crate::WorkspaceKind::Modeling;
+        let target = command.document().is_some() && self.command_target_valid(command);
+        if matches!(
+            command.id.spec().scope,
+            CommandScope::Viewport | CommandScope::Timeline
+        ) && !target
+        {
+            return false;
+        }
+        let modeling = match command.target {
+            CommandTarget::Viewport(binding) => binding.kind == crate::ViewportKind::Modeling,
+            _ => self.workspace() == crate::WorkspaceKind::Modeling,
+        };
         if command.id.spec().scope == CommandScope::Timeline {
             return target && self.timeline_command_enabled(command.id);
         }
@@ -572,7 +700,7 @@ impl Editor {
         use CommandId::*;
         match command.id {
             id if id.spec().scope == CommandScope::Timeline => {
-                self.dispatch_timeline_command(command.document.unwrap(), id)?;
+                self.dispatch_timeline_command(command.document().unwrap(), id)?;
             }
             PlayPause => self.toggle_animation()?,
             RewindAnimation => self.rewind_animation()?,
@@ -584,13 +712,13 @@ impl Editor {
             Previous | Next => {
                 self.activate(self.adjacent(command.id == Next).unwrap())?;
             }
-            Undo => self.execute_for(command.document.unwrap(), EditorCommand::Undo)?,
-            Redo => self.execute_for(command.document.unwrap(), EditorCommand::Redo)?,
+            Undo => self.execute_for(command.document().unwrap(), EditorCommand::Undo)?,
+            Redo => self.execute_for(command.document().unwrap(), EditorCommand::Redo)?,
             CommitProperty => {
-                self.execute_for(command.document.unwrap(), EditorCommand::FinishEdit)?
+                self.execute_for(command.document().unwrap(), EditorCommand::FinishEdit)?
             }
             CancelProperty => {
-                self.execute_for(command.document.unwrap(), EditorCommand::CancelEdit)?
+                self.execute_for(command.document().unwrap(), EditorCommand::CancelEdit)?
             }
             ZoomIn => self.zoom_by(0.25),
             ZoomOut => self.zoom_by(-0.25),
@@ -602,13 +730,13 @@ impl Editor {
                     GlueTool => crate::ToolId::Glue,
                     _ => crate::ToolId::Hand,
                 };
-                self.execute_for(command.document.unwrap(), EditorCommand::SetTool(tool))?;
+                self.execute_for(command.document().unwrap(), EditorCommand::SetTool(tool))?;
             }
             ToggleDeformers => {
-                self.execute_for(command.document.unwrap(), EditorCommand::ToggleDeformers)?
+                self.execute_for(command.document().unwrap(), EditorCommand::ToggleDeformers)?
             }
             ToggleAncestorDeformers => self.execute_for(
-                command.document.unwrap(),
+                command.document().unwrap(),
                 EditorCommand::ToggleAncestorDeformers,
             )?,
             CancelGesture => self.cancel_gesture(),

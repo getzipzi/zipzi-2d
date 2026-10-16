@@ -31,8 +31,9 @@ impl CanvasView {
         let candidates = state
             .editor
             .pick_candidates(point, state.frame.as_ref().map(|f| f.canvas.version));
-        let document = state.editor.active_id();
-        let workspace_revision = state.editor.workspace_revision();
+        let Some(binding) = canvas.read(cx).binding(&state.editor) else {
+            return menu;
+        };
         let visibility = state.editor.deformer_visibility();
         if candidates.is_empty() {
             menu = menu.item(PopupMenuItem::new(t!("editor.no_canvas_objects")).disabled(true));
@@ -46,8 +47,7 @@ impl CanvasView {
                         return;
                     };
                     owner.update(cx, |owner, cx| {
-                        if owner.editor.workspace_revision() != workspace_revision
-                            || owner.editor.active_id() != document
+                        if !owner.editor.viewport_binding_valid(binding)
                             || owner.editor.workspace() != WorkspaceKind::Modeling
                             || owner.modal
                             || owner.editor.is_busy()
@@ -75,6 +75,11 @@ impl CanvasView {
             (CommandId::ToggleAncestorDeformers, visibility.ancestors),
             (CommandId::ToggleDeformers, visibility.all),
         ] {
+            let invocation = state.editor.command_for_viewport(
+                command,
+                binding,
+                editor_core::CommandSource::ContextMenu,
+            );
             let owner = owner.downgrade();
             let canvas = canvas.downgrade();
             menu = menu.item(
@@ -83,11 +88,7 @@ impl CanvasView {
                     .on_click(move |_, window, cx| {
                         if let Some(owner) = owner.upgrade() {
                             owner.update(cx, |owner, cx| {
-                                if owner.editor.active_id() == document
-                                    && owner.editor.workspace_revision() == workspace_revision
-                                {
-                                    owner.run_command(command, window, cx);
-                                }
+                                owner.run_invocation(invocation, window, cx);
                             });
                         }
                         if let Some(canvas) = canvas.upgrade() {

@@ -628,7 +628,7 @@ impl Timeline {
     }
     pub(super) fn user_command(
         &mut self,
-        command: editor_core::CommandId,
+        id: editor_core::CommandId,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -636,10 +636,30 @@ impl Timeline {
             return;
         }
         self.finish_number(cx);
+        let command = self.owner.upgrade().map(|owner| {
+            owner
+                .read(cx)
+                .editor
+                .command(id)
+                .with_source(editor_core::CommandSource::Toolbar)
+        });
+        if let Some(command) = command {
+            self.user_invocation(command, window, cx);
+        }
+    }
+    pub(super) fn user_invocation(
+        &mut self,
+        command: editor_core::Command,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.allowed(window, cx) || window.has_focused_input(cx) {
+            return;
+        }
         let _ = self
             .owner
-            .update(cx, |owner, cx| owner.run_command(command, window, cx));
-        // A matched but disabled local command is consumed by its originating panel.
+            .update(cx, |owner, cx| owner.run_invocation(command, window, cx));
+        // A matched but disabled local command stays consumed by this panel.
         cx.stop_propagation();
     }
 }

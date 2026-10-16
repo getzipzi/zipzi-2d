@@ -617,3 +617,53 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn a_cancelled_capture_does_not_swallow_the_next_pointer_down(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let start = harness.view.read(cx).editor.overlay().vertices[1].position;
+        let position = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
+        let press = gpui_kit::MouseDownEvent {
+            button: gpui_kit::MouseButton::Left,
+            position,
+            modifiers: Default::default(),
+            click_count: 1,
+            first_mouse: false,
+        };
+        window.dispatch_event(press.clone().to_platform_input(), cx);
+        assert!(harness.view.read(cx).editor.gesture_active());
+        harness.view.update(cx, |view, _| {
+            let document = view.editor.active_id().unwrap();
+            view.editor
+                .end_editing(document, editor_core::EditingLifecycle::BlockingUi)
+                .unwrap();
+        });
+        assert!(!harness.view.read(cx).editor.gesture_active());
+        window.dispatch_event(press.to_platform_input(), cx);
+        assert!(harness.view.read(cx).editor.gesture_active());
+        window.dispatch_event(
+            gpui_kit::MouseUpEvent {
+                button: gpui_kit::MouseButton::Left,
+                position,
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(!harness.view.read(cx).editor.gesture_active());
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (0, 0)
+        );
+    })
+    .unwrap();
+}

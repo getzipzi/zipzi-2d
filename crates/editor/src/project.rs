@@ -34,7 +34,10 @@ impl EditorView {
         self.sync_workspace_layout(window, cx);
         if let Some(dock) = &self.dock {
             for canvas in dock.canvas_views() {
-                canvas.update(cx, |canvas, _| canvas.cancel_pointer());
+                let token = canvas.update(cx, |canvas, _| canvas.cancel_pointer());
+                if let Some(token) = token {
+                    self.editor.cancel_viewport_interaction(token);
+                }
             }
         }
         self.animation_anchor = None;

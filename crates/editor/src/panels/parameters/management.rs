@@ -55,7 +55,7 @@ impl EditorView {
             window.defer(cx, move |window, cx| {
                 if owner
                     .upgrade()
-                    .is_some_and(|owner| owner.read(cx).editor.active_id() == command.document)
+                    .is_some_and(|owner| owner.read(cx).editor.active_id() == command.document())
                 {
                     panel.update(cx, |panel, cx| panel.open_management(action, window, cx));
                 }

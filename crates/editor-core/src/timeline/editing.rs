@@ -506,6 +506,22 @@ impl Editor {
     pub fn timeline_edit(&self) -> Option<&TimelineEdit> {
         self.active_session()?.timeline.edit.as_ref()
     }
+    /// Delayed panel callbacks may only cancel the candidate they started.
+    pub fn cancel_timeline_edit_for(
+        &mut self,
+        document: DocumentId,
+        token: TimelineCandidateIdentity,
+    ) -> bool {
+        if self.active_id() != Some(document)
+            || !self
+                .timeline_edit()
+                .is_some_and(|edit| edit.identity.edit == token.edit)
+        {
+            return false;
+        }
+        self.cancel_timeline_edit();
+        true
+    }
     pub fn cancel_timeline_edit(&mut self) {
         if let Some(session) = self.active_session_mut() {
             session.cancel_timeline_edit();

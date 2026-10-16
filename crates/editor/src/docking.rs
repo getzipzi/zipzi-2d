@@ -73,6 +73,10 @@ impl DockWorkspace {
             .find_map(|placement| area.layout(placement)?.find_panel_node(id))
     }
 
+    pub(super) fn viewport_displayed(&self, cx: &App) -> bool {
+        self.displayed(PanelKind::Canvas, cx)
+    }
+
     pub fn contains(&self, kind: PanelKind, cx: &App) -> bool {
         self.area
             .read(cx)

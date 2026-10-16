@@ -87,9 +87,8 @@ impl Editor {
                 "Project is already loading"
             );
         }
-        if self.active.is_some() && !self.is_busy() {
-            self.cancel_timeline_edit();
-            self.execute(EditorCommand::FinishEdit)?;
+        if let Some(id) = self.active.filter(|_| !self.is_busy()) {
+            self.end_editing(id, EditingLifecycle::ContextChange)?;
         }
         let id = DocumentId(Uuid::new_v4());
         let operation = OperationId(Uuid::new_v4());
@@ -116,9 +115,8 @@ impl Editor {
             }
         }
         // A user may have edited the old tab while loading.
-        if self.active.is_some() && !self.is_busy() {
-            self.cancel_timeline_edit();
-            self.execute(EditorCommand::FinishEdit)?;
+        if let Some(id) = self.active.filter(|_| !self.is_busy()) {
+            self.end_editing(id, EditingLifecycle::ContextChange)?;
         }
         self.insert_with_id(completion.id, document);
         Ok(notices)
@@ -161,10 +159,7 @@ impl Editor {
         close_after: bool,
     ) -> Result<SaveTask> {
         let identity = self.ensure_available_path(Some(id), path)?;
-        if let Some(session) = self.entry_mut(id)?.session_mut() {
-            session.animation.pause();
-        }
-        self.execute_for(id, EditorCommand::FinishEdit)?;
+        self.end_editing(id, EditingLifecycle::Save)?;
         let operation = OperationId(Uuid::new_v4());
         let close_reason = if self.exiting {
             DeferredClose::Exit
@@ -173,6 +168,10 @@ impl Editor {
         };
         let entry = self.entry_mut(id)?;
         let session = entry.begin_save(operation, identity, close_after.then_some(close_reason))?;
+        if self.active == Some(id) {
+            self.context_generation += 1;
+        }
+        self.refresh_viewport_bindings();
         Ok(SaveTask {
             id,
             operation,
@@ -198,6 +197,10 @@ impl Editor {
         session.viewport_revision += 1;
         session.set_workspace(entry.workspace);
         let close = entry.restore_session(session);
+        if self.active == Some(completion.id) {
+            self.context_generation += 1;
+        }
+        self.refresh_viewport_bindings();
         match result {
             Ok(receipt) => {
                 if close.is_some() {
@@ -248,11 +251,13 @@ impl Editor {
         let index = self.documents.iter().position(|e| e.id == id).unwrap();
         self.documents.remove(index);
         if self.active == Some(id) {
+            self.context_generation += 1;
             self.active = self
                 .documents
                 .get(index.min(self.documents.len().saturating_sub(1)))
                 .map(|e| e.id);
             self.restore_active_workspace();
+            self.refresh_viewport_bindings();
             self.invalidate_animation();
             self.displayed_request = None;
         }
@@ -260,7 +265,11 @@ impl Editor {
     }
     pub fn request_exit(&mut self) -> Result<()> {
         ensure!(self.loads.is_empty(), "Wait for project loading to finish");
+        if let Some(document) = self.active {
+            self.end_editing(document, EditingLifecycle::Close)?;
+        }
         self.exiting = true;
+        self.refresh_viewport_bindings();
         for entry in &mut self.documents {
             if let Some(session) = entry.session_mut() {
                 session.animation.pause();
@@ -270,6 +279,7 @@ impl Editor {
     }
     pub fn cancel_exit(&mut self) {
         self.exiting = false;
+        self.refresh_viewport_bindings();
         for entry in &mut self.documents {
             if let Some(saving) = entry.saving_mut() {
                 if saving.close_after_save == Some(DeferredClose::Exit) {

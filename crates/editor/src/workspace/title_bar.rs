@@ -253,7 +253,7 @@ fn render_project_select(
                         div().id(id).test_support().child(label.clone())
                     })
                     .icon(icon)
-                    .action(Box::new(crate::actions::RunCommand { id: command }))
+                    .action(Box::new(crate::actions::RunCommand::new(command)))
                     .disabled(!enabled),
                 );
             }
@@ -266,9 +266,7 @@ fn render_project_select(
                             .child(t!("editor.close_project"))
                     })
                     .icon(IconName::Close)
-                    .action(Box::new(crate::actions::RunCommand {
-                        id: CommandId::Close,
-                    }))
+                    .action(Box::new(crate::actions::RunCommand::new(CommandId::Close)))
                     .disabled(!can_close),
                 );
             }

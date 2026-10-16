@@ -5,10 +5,33 @@ use gpui_kit::component::{ActiveTheme, ThemeMode, WindowExt, input};
 use serde::Deserialize;
 use std::path::PathBuf;
 
-#[derive(Action, Clone, PartialEq, Deserialize)]
+#[derive(Action, Clone, Deserialize)]
 #[action(namespace=kasane_editor,no_json)]
 pub struct RunCommand {
     pub id: CommandId,
+    #[serde(skip)]
+    pub invocation: Option<editor_core::Command>,
+}
+impl RunCommand {
+    pub fn new(id: CommandId) -> Self {
+        Self {
+            id,
+            invocation: None,
+        }
+    }
+    pub fn targeted(command: editor_core::Command) -> Self {
+        Self {
+            id: command.id,
+            invocation: Some(command),
+        }
+    }
+}
+// A saved invocation and its keymap entry are the same user command. Keeping
+// equality independent of target also preserves native menu accelerators.
+impl PartialEq for RunCommand {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 #[derive(Action, Clone, PartialEq, Deserialize)]
@@ -56,7 +79,12 @@ impl EditorView {
             .track_focus(&self.focus)
             .when(!modal, |e| {
                 e.on_action(cx.listener(|this, action: &RunCommand, window, cx| {
-                    this.run_command(action.id, window, cx)
+                    let command = action.invocation.unwrap_or_else(|| {
+                        this.editor
+                            .command(action.id)
+                            .with_source(editor_core::CommandSource::Shortcut)
+                    });
+                    this.run_invocation(command, window, cx)
                 }))
                 .on_action(cx.listener(|this, action: &OpenRecent, window, cx| {
                     this.open_recent(&action.path, window, cx)

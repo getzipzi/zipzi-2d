@@ -1,7 +1,7 @@
 //! Dispatch shared editor commands and coordinate their UI effects.
 use super::*;
 use crate::project::ImportKind;
-use editor_core::{CommandEffect, CommandId};
+use editor_core::{Command, CommandEffect, CommandId};
 use gpui_kit::component::WindowExt;
 
 impl EditorView {
@@ -11,10 +11,29 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.sync_viewports();
+        let command = self.editor.command(id);
+        self.run_invocation(command, window, cx);
+    }
+
+    pub(super) fn run_invocation(
+        &mut self,
+        command: Command,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let id = command.id;
         if self.modal || window.has_active_dialog(cx) {
             return;
         }
-        let command = self.editor.command(id);
+        if matches!(command.target, editor_core::CommandTarget::Viewport(_))
+            && self
+                .dock
+                .as_ref()
+                .is_none_or(|dock| !dock.viewport_displayed(cx))
+        {
+            return;
+        }
         if !self.editor.command_available(command) {
             return;
         }
@@ -45,8 +64,12 @@ impl EditorView {
                 ) {
                     if let Some(dock) = &self.dock {
                         self.editor.cancel_gesture();
-                        dock.active_canvas()
+                        let token = dock
+                            .active_canvas()
                             .update(cx, |canvas, _| canvas.cancel_pointer());
+                        if let Some(token) = token {
+                            self.editor.cancel_viewport_interaction(token);
+                        }
                         window.focus(&dock.active_canvas().read(cx).focus_handle(cx), cx);
                     }
                 }
@@ -77,8 +100,9 @@ impl EditorView {
                     } else {
                         let owner = cx.weak_entity();
                         window.defer(cx, move |window, cx| {
+                            if owner.upgrade().is_none_or(|owner| !owner.read(cx).editor.command_available(command)) { return; }
                             if let Err(error) = crate::ui::mesh_generation::MeshGenerationForm::open(
-                                owner.clone(), command.document.unwrap(), window, cx,
+                                owner.clone(), command.document().unwrap(), window, cx,
                             ) {
                                 if let Some(owner) = owner.upgrade() {
                                     owner.update(cx, |owner, cx| {

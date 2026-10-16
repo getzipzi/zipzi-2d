@@ -12,11 +12,12 @@ impl DockWorkspace {
     pub fn new(
         workspace: WorkspaceKind,
         owner: WeakEntity<EditorView>,
+        viewport_slots: [editor_core::ViewportId; 2],
         thumbnails: Entity<crate::mesh_thumbnails::MeshThumbnails>,
         window: &mut Window,
         cx: &mut App,
     ) -> Self {
-        let canvas = crate::canvas::CanvasView::new(owner.clone(), window, cx);
+        let canvas = crate::canvas::CanvasView::new(owner.clone(), viewport_slots, window, cx);
         let timeline = crate::panels::timeline::Timeline::new(owner.clone(), window, cx);
         let properties = crate::panels::PropertiesPanel::new(owner.clone(), window, cx);
         let mesh_tree =

@@ -1,6 +1,6 @@
 //! Input-device-specific navigation. Only discrete wheel input needs interpolation.
 use super::*;
-use editor_core::{DocumentId, MAX_ZOOM, MIN_ZOOM, ViewState};
+use editor_core::{MAX_ZOOM, MIN_ZOOM, ViewState, ViewportBinding};
 use std::time::{Duration, Instant};
 
 const WHEEL_ZOOM_DURATION: Duration = Duration::from_millis(80);
@@ -18,8 +18,7 @@ fn scroll_zoom(zoom: f32, lines: f32) -> f32 {
 }
 
 pub(super) struct WheelZoom {
-    document: DocumentId,
-    workspace_revision: u64,
+    binding: ViewportBinding,
     bounds: Bounds<Pixels>,
     metrics: CanvasMetrics,
     expected: ViewState,
@@ -36,8 +35,7 @@ impl WheelZoom {
         !owner.modal
             && !owner.editor.is_busy()
             && !owner.editor.gesture_active()
-            && owner.editor.active_id() == Some(self.document)
-            && owner.editor.workspace_revision() == self.workspace_revision
+            && owner.editor.viewport_binding_valid(self.binding)
             && owner.editor.canvas_metrics() == self.metrics
             && bounds == self.bounds
             && owner.editor.view().zoom == self.expected.zoom
@@ -88,8 +86,13 @@ impl CanvasView {
         let anchor = self.local(event.position);
         let now = cx.background_executor().now();
         let animate = !precise && !cx.reduce_motion();
-        let _ = self.owner.update(cx, |owner, cx| {
-            if owner.modal || owner.editor.is_busy() || owner.editor.gesture_active() {
+        let owner = self.owner.clone();
+        let _ = owner.update(cx, |owner, cx| {
+            if owner.modal
+                || owner.editor.is_busy()
+                || owner.editor.gesture_active()
+                || self.binding(&owner.editor).is_none()
+            {
                 self.wheel_zoom = None;
                 return;
             }
@@ -101,7 +104,7 @@ impl CanvasView {
             if pan {
                 owner.editor.pan_by(delta);
             } else if animate {
-                let Some(document) = owner.editor.active_id() else {
+                let Some(binding) = self.binding(&owner.editor) else {
                     return;
                 };
                 let base = self
@@ -114,8 +117,7 @@ impl CanvasView {
                 let target = scroll_zoom(base, delta.y / 16.);
                 // Reversal discards unfinished movement in the previous direction.
                 self.wheel_zoom = (target != before.zoom).then_some(WheelZoom {
-                    document,
-                    workspace_revision: owner.editor.workspace_revision(),
+                    binding,
                     bounds: self.bounds,
                     metrics: owner.editor.canvas_metrics(),
                     expected: before,
@@ -161,7 +163,8 @@ impl CanvasView {
             return;
         }
         let now = cx.background_executor().now();
-        let _ = self.owner.update(cx, |owner, cx| {
+        let owner = self.owner.clone();
+        let _ = owner.update(cx, |owner, cx| {
             if !zoom.valid(owner, self.bounds) {
                 return;
             }
@@ -201,8 +204,13 @@ impl CanvasView {
             return;
         }
         let anchor = self.local(event.position);
-        let _ = self.owner.update(cx, |owner, cx| {
-            if owner.modal || owner.editor.is_busy() || owner.editor.gesture_active() {
+        let owner = self.owner.clone();
+        let _ = owner.update(cx, |owner, cx| {
+            if owner.modal
+                || owner.editor.is_busy()
+                || owner.editor.gesture_active()
+                || self.binding(&owner.editor).is_none()
+            {
                 return;
             }
             let before = owner.editor.view();

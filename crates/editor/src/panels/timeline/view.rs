@@ -41,6 +41,16 @@ impl Timeline {
                         cx.propagate();
                         return;
                     }
+                    if let Some(command) = action.invocation {
+                        if this
+                            .owner
+                            .upgrade()
+                            .is_none_or(|owner| !owner.read(cx).editor.command_available(command))
+                        {
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
                     match action.id {
                         editor_core::CommandId::CancelProperty
                             if this.number_edit.is_some() || this.gesture.is_some() =>
@@ -74,7 +84,18 @@ impl Timeline {
             .on_action(
                 cx.listener(|this, action: &crate::actions::RunCommand, window, cx| {
                     if action.id.spec().scope == editor_core::CommandScope::Timeline {
-                        this.user_command(action.id, window, cx);
+                        let command = action.invocation.or_else(|| {
+                            this.owner.upgrade().map(|owner| {
+                                owner
+                                    .read(cx)
+                                    .editor
+                                    .command(action.id)
+                                    .with_source(editor_core::CommandSource::Shortcut)
+                            })
+                        });
+                        if let Some(command) = command {
+                            this.user_invocation(command, window, cx);
+                        }
                     } else {
                         cx.propagate();
                     }

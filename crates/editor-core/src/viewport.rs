@@ -1,4 +1,7 @@
 use kasane_core::Canvas;
+mod identity;
+pub(crate) use identity::ViewportRegistry;
+pub use identity::*;
 
 /// Window coordinates enter only at the UI boundary; core accepts canvas-local logical pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
