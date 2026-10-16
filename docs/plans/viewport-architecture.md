@@ -150,7 +150,7 @@ Generate Mesh 是一次命令，不是持续活动工具。Hand 可以表现为�
 
 Dock 重排、遮挡、标签切换和 popup 打开时重新计算可见命中区域，不能只依赖鼠标移动回调，否则旧悬停目标可能继续生效。布局校验与命令执行也要拒绝隐藏或已解绑的实例。
 
-保留 Space 表示播放／暂停、中键平移以及显式 Hand 的现有约定。播放命令作用于 Animation 上下文，在支持播放的 workspace 中沿用现有可用范围；本次不把 Space 改成临时抓手。`Cmd+Z` 在输入框编辑时走控件历史，在普通编辑区域走文档历史；已有候选时先按候选取消契约处理。
+保留 Space 表示播放／暂停、中键平移以及显式 Hand 的现有约定。播放命令作用于 Animation 上下文，在支持播放的 workspace 中沿用现有可用范围；本次不把 Space 改成临时抓手。撤销键在 macOS 为 `Cmd+Z`，在 Windows / Linux 为 `Ctrl+Z`；输入框编辑时走控件历史，在普通编辑区域走文档历史；已有候选时先按候选取消契约处理。
 
 Blender 的事件系统提供悬停区域、上层 handler 和模态操作上下文的参考，具体实现见 [wm_event_system.cc](https://github.com/blender/blender/blob/main/source/blender/windowmanager/intern/wm_event_system.cc) 与 [Context 文档](https://developer.blender.org/docs/features/core/context/)。以上规则是本项目的输入契约，尤其对窗口外、docking 标题和文本焦点给出了明确行为。
 
@@ -198,6 +198,35 @@ DocumentId + ViewportId + binding_generation
 
 按键匹配、长按过滤和执行使用同一次上下文解析结果。互斥编辑区域可复用按键，重叠绑定按明确优先级诊断；匹配到局部但不可用的编辑命令不得悄悄改投另一视图。区分未匹配、已消费但不可用和执行失败，防止 Delete 等按键落到意外对象上。
 
+### 跨平台快捷键策略
+
+快捷键架构覆盖 macOS、Windows 和 Linux 的平台差异，当前应用运行与原生验收仍以 macOS 为基线。渲染后端和窗口宿主的其他平台移植属于独立工作，不能用键位映射通过测试代表整个应用已经跨平台可用。
+
+当前 [默认命令键位](../../crates/editor-core/src/commands.rs) 和 Timeline 多处直接使用 `cmd-*`；[配置校验](../../crates/editor-core/src/settings.rs) 的系统保留键与文本保护规则也主要面向 macOS。已有 `PlatformKeyboardMapper` 处理键盘映射，GPUI 的 [Keystroke](../../vendor/gpui-fast/src/platform/keystroke.rs) 支持 `secondary`：macOS 映射为 Command，其他平台映射为 Control。`cmd` 本身表示平台键，与 `super`、`win` 共享解析语义，不会自动变成 Control。
+
+将命令语义、平台默认绑定和用户覆盖分开。通用应用快捷键使用 `secondary`，真实 Control、Alt、Shift 以及平台专用动作保留明确含义。
+
+| 命令或行为 | 方案默认规则 |
+| --- | --- |
+| 新建、打开、保存、关闭文档 | 使用 `secondary-n/o/s/w` |
+| 撤销、复制、粘贴、剪切、全选 | 使用 `secondary-z/c/v/x/a`，按控件和编辑上下文路由 |
+| 重做 | 通用绑定 `secondary-shift-z`；Windows 可额外提供 `ctrl-y`，按最终上下文检查冲突 |
+| 文档切换 | 保留明确的 `ctrl-tab` 与 `ctrl-shift-tab`，不机械替换真实 Control |
+| 工具字母键、Escape、Space | 保留命令含义和上下文限制，由平台键盘映射处理实际输入 |
+| Hide、Hide Others、macOS 最小化绑定 | 只在支持的平台注册，不参与其他平台的默认绑定与保留键集合 |
+
+选择追加、修饰键拖动等鼠标交互也要检查同样的平台语义。应用级 Command / Control 行为使用 `Modifiers::secondary()` 或统一平台策略；不能直接将 `modifiers.platform` 当成跨平台的 Control。领域确实要求真实 Control 的操作保持显式。
+
+绑定构建顺序为：通用默认值、平台默认差异、用户通用覆盖、用户当前平台覆盖，最后展开修饰键并按当前键盘布局规范化。用户配置保存语义键位与平台条件，规范化后的运行时字符串不反向覆盖配置。空绑定列表表示明确解绑。冲突检查基于最终有效键位与上下文，能识别 macOS 下 `secondary-s` 与 `cmd-s`、Windows / Linux 下 `secondary-s` 与 `ctrl-s` 的等价关系。
+
+将系统动作保留键和控件文本键保护规则移入平台策略，由 host 提供给校验器；core 不硬编码一份 macOS 字符串黑名单。操作系统或桌面环境可能截获部分组合，诊断只覆盖已知规则，不承诺应用可以覆盖所有系统快捷键。
+
+菜单、工具提示、快捷键帮助和命令搜索从同一有效绑定生成平台显示，macOS 使用对应修饰键符号，Windows / Linux 使用对应键名。符号键、非美式布局和布局切换继续经过平台 mapper，避免手动比较展示字符串。重构保持现有键位等价规则，不额外引入物理扫描码绑定模式。
+
+文本输入、IME 组合输入、dead key 和 AltGr 字符输入保留控件处理优先级，不能把字符生成误判为 viewport 命令。按键重复和按下释放配对沿用同一平台事件与命令解析结果。
+
+将平台策略设计为可传入的纯数据，分别测试 macOS、Windows、Linux 默认映射、覆盖优先级、等价冲突和平台专用动作过滤。GPUI 的 `secondary` 解析包含编译目标条件，仅替换 DummyKeyboardMapper 无法模拟另一操作系统；跨平台纯逻辑测试在调用 GPUI 前展开策略。原生键盘布局、系统菜单、输入法与 AltGr 行为在目标平台实际可运行后分别验收。
+
 ### 操作归属与写入事务
 
 定义最小的操作协调边界：谁持有指针捕获，谁持有文档写入候选，允许哪些结束方式。导航捕获与文档编辑候选分开记录，某个视图的导航操作不自动拥有或取消另一个编辑上下文的写入。
@@ -238,7 +267,7 @@ Panel 注册统一声明名称、可用 workspace、默认位置、是否必需�
 
 ### 前置阶段 命令与会话边界
 
-确定命令目标、ViewportId、编辑上下文与操作 token 的边界，将 Timeline 用户命令纳入统一目录。先让现有单视图调用经过显式目标和共同生命周期入口，再分离实例状态。明确菜单调用上下文，补齐命令状态和冲突诊断。
+确定命令目标、ViewportId、编辑上下文与操作 token 的边界，将 Timeline 用户命令纳入统一目录。先让现有单视图调用经过显式目标和共同生命周期入口，再分离实例状态。明确菜单调用上下文，补齐命令状态、平台键位策略和冲突诊断。
 
 冻结状态和保存恢复、对象选择及检视来源在此阶段确定接口；具体多实例存储和 UI 替换与后续阶段一起完成。
 
@@ -267,6 +296,8 @@ Panel 注册统一声明名称、可用 workspace、默认位置、是否必需�
 | 现有功能 | Modeling 的选择、Glue、变形器和顶点手势，以及 Animation 的播放、Timeline 编辑保持可用 |
 | 工具边界 | Animation 无法通过按钮、快捷键或直接命令入口执行建模写入 |
 | 命令一致性 | Timeline 命令可重绑定并参与冲突诊断；按钮、菜单和快捷键查询相同状态；菜单目标不因移入菜单栏而丢失 |
+| 平台键位 | 分别验证 macOS、Windows、Linux 策略的修饰键映射、用户覆盖、等价冲突和系统动作过滤；原生验收状态与纯逻辑测试分开记录 |
+| 键盘输入 | macOS 原生验证菜单显示、布局切换、符号键和 IME；Windows / Linux 可运行后补充原生验证与 AltGr 测试，不以模拟策略测试替代 |
 | 实例隔离 | 测试专用的两个 viewport 同时可见，各自平移、缩放、Fit、尺寸变化互不影响 |
 | 事件路由 | 鼠标在 viewport、对象列表和 Timeline 间移动后，无需点击即可切换普通局部命令上下文；离开所有内容区域不使用旧目标 |
 | 控件焦点 | 文本输入、数值输入、菜单和输入法不被悬停 viewport 抢占；一个按键至多执行一次业务命令 |
