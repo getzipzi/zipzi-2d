@@ -73,6 +73,7 @@ public final class ReadCmo3 {
         double maximum = 0;
         String worst = "";
         int vertices = 0;
+        int orderedPoses = 0;
         for (Object raw : cases) {
             java.util.Map<?,?> row = (java.util.Map<?,?>)raw;
             java.util.Map<?,?> parameters = (java.util.Map<?,?>)row.get("parameters");
@@ -84,6 +85,22 @@ public final class ReadCmo3 {
                 instance.getParameterSet().setValue(id, ((Number)entry.getValue()).floatValue());
             }
             model.updateModelInstances();
+            if (row.containsKey("render_order")) {
+                java.util.List<com.live2d.cubism.doc.model.drawable.artMesh.CArtMesh> meshes =
+                    new java.util.ArrayList<>(instance.getAllArtMeshes());
+                meshes.sort(java.util.Comparator.comparingInt(mesh -> mesh.getRelativeDrawOrder()));
+                java.util.List<String> actualOrder = new java.util.ArrayList<>();
+                for (com.live2d.cubism.doc.model.drawable.artMesh.CArtMesh mesh : meshes) actualOrder.add(mesh.getId().toString());
+                java.util.List<?> expectedOrder = (java.util.List<?>)row.get("render_order");
+                if (!actualOrder.equals(expectedOrder)) {
+                    int first = 0;
+                    while (first < Math.min(actualOrder.size(), expectedOrder.size()) && actualOrder.get(first).equals(expectedOrder.get(first))) first++;
+                    throw new AssertionError("Draw order differs at rank " + first + " parameters " + parameters
+                        + ": expected " + (first < expectedOrder.size() ? expectedOrder.get(first) : "<end>")
+                        + ", actual " + (first < actualOrder.size() ? actualOrder.get(first) : "<end>"));
+                }
+                orderedPoses++;
+            }
             if (positions.size() != instance.getAllArtMeshes().size()) throw new AssertionError("Mesh count differs from reference");
             for (com.live2d.cubism.doc.model.drawable.artMesh.CArtMesh mesh : instance.getAllArtMeshes()) {
                 String id = mesh.getId().toString();
@@ -102,6 +119,7 @@ public final class ReadCmo3 {
             }
         }
         System.out.println("Geometry: " + cases.size() + " poses, " + vertices + " vertices, max error " + maximum + " px");
+        if (orderedPoses > 0) System.out.println("Draw order: " + orderedPoses + " poses match Kasane back-to-front");
         if (maximum > tolerance) throw new AssertionError("Geometry error exceeds " + tolerance + " px: " + worst);
     }
     private static void checkAnimation(com.live2d.cubism.doc.animation.CAnimation animation, File file) throws Exception {

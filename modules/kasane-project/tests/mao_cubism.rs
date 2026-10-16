@@ -116,7 +116,10 @@ fn local_mao_exports_linked_editable_cubism_projects() {
                 )
             })
             .collect();
-        geometry.push(serde_json::json!({"parameters":parameters,"positions":positions}));
+        let mut drawables: Vec<_> = frame.drawables.iter().collect();
+        drawables.sort_by_key(|mesh| mesh.render_order);
+        let render_order: Vec<_> = drawables.iter().map(|mesh| &mesh.runtime_id).collect();
+        geometry.push(serde_json::json!({"parameters":parameters,"positions":positions,"render_order":render_order}));
     }
     fs::write(
         output.join("expected-geometry.json"),

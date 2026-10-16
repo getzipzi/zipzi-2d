@@ -13,7 +13,7 @@ def main():
     parser.add_argument("--editor", type=Path, default=os.environ.get("KASANE_CUBISM_EDITOR"),
                         help="Cubism installation directory containing res/ (or KASANE_CUBISM_EDITOR)")
     parser.add_argument("--expected-geometry", type=Path,
-                        help="Compare a single CMO3 against captured Kasane poses (canvas pixel coordinates)")
+                        help="Compare a single CMO3 against captured Kasane poses (canvas pixels and optional render_order)")
     parser.add_argument("--geometry-tolerance-px", type=float, default=0.05)
     args = parser.parse_args()
     if not math.isfinite(args.geometry_tolerance_px) or args.geometry_tolerance_px <= 0:
@@ -47,7 +47,7 @@ def main():
             raise SystemExit(result.returncode or 1)
         print(model)
         print("\n".join(line for line in result.stdout.splitlines()
-                        if line.startswith(("Cubism read:", "Objects:", "Geometry:"))))
+                        if line.startswith(("Cubism read:", "Objects:", "Geometry:", "Draw order:"))))
 
 
 if __name__ == "__main__":

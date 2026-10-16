@@ -411,6 +411,136 @@ fn write_probe_artifact(name: &str, artifact: &Cmo3Artifact) {
 }
 
 #[test]
+fn parts_panel_reverses_nested_render_ties_without_reversing_draw_order_values() {
+    use kasane_core::draw_order::DrawOrderGroup;
+    let (mut d, png) = fixture();
+    let mut parameter = d.get_parameter(PARAM).unwrap().clone();
+    parameter.repeat = false;
+    assert!(d.replace_parameter(parameter).status.is_ok());
+    let group = "00000000-0000-4000-8000-000000000030";
+    let folder = "00000000-0000-4000-8000-000000000031";
+    let other = "00000000-0000-4000-8000-000000000032";
+    let outer = "00000000-0000-4000-8000-000000000033";
+    let floor = "00000000-0000-4000-8000-000000000034";
+    for (id, parent) in [(group, ""), (folder, group)] {
+        assert!(d
+            .create_part(Part {
+                id: id.into(),
+                runtime_id: id.into(),
+                parent_id: parent.into(),
+                draw_order: 5.,
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+    }
+    let mut mesh = d.get_mesh(MESH).unwrap().clone();
+    mesh.part_id = folder.into();
+    mesh.draw_order = Some(5.);
+    assert!(d.replace_mesh(mesh.clone()).status.is_ok());
+    for (id, part, order) in [(other, folder, 5.), (outer, group, 20.), (floor, "", 5.)] {
+        mesh.id = id.into();
+        mesh.runtime_id = id.into();
+        mesh.part_id = part.into();
+        mesh.draw_order = Some(order);
+        assert!(d.create_mesh(mesh.clone()).status.is_ok());
+    }
+    let mut binding = d.binding_for_mesh(MESH).unwrap().clone();
+    for (form, order) in binding.keyforms.iter_mut().zip([0., 5., 10.]) {
+        form.draw_order = Some(order);
+    }
+    assert!(d.replace_binding(binding).status.is_ok());
+    assert!(d
+        .replace_draw_order_groups(vec![
+            DrawOrderGroup {
+                owner: "".into(),
+                items: vec![floor.into(), group.into()],
+                min_order: 0,
+                max_order: 1000
+            },
+            DrawOrderGroup {
+                owner: group.into(),
+                items: vec![MESH.into(), other.into(), outer.into()],
+                min_order: 0,
+                max_order: 1000
+            },
+        ])
+        .status
+        .is_ok());
+    let artifact = encode(&d, &png, 1);
+    write_probe_artifact("nested-draw-order", &artifact);
+    let entries = archive(&artifact.bytes);
+    let text = std::str::from_utf8(&entries.last().unwrap().3).unwrap();
+    let xml = roxmltree::Document::parse(text).unwrap();
+    for (id, expected) in [
+        ("__RootPart__", vec![group, floor]),
+        (group, vec![outer, folder]),
+        (folder, vec![other, MESH]),
+    ] {
+        let part = xml
+            .descendants()
+            .find(|n| {
+                n.tag_name().name() == "CPartSource"
+                    && n.has_attribute("xs.id")
+                    && field(*n, "id").attribute("idstr") == Some(id)
+            })
+            .unwrap();
+        let actual: Vec<_> = field(part, "_childGuids")
+            .children()
+            .filter_map(|n| n.attribute("uuid"))
+            .collect();
+        assert_eq!(actual, expected);
+    }
+    let orders: Vec<_> = xml
+        .descendants()
+        .filter(|n| n.tag_name().name() == "CArtMeshForm" && n.has_attribute("xs.id"))
+        .map(|n| field(n, "super"))
+        .map(|n| field(n, "drawOrder").text().unwrap())
+        .collect();
+    assert_eq!(&orders[..3], &["0", "5", "10"]);
+
+    // The optional native probe also checks animated numeric order against the
+    // tree tie order, including a non-group folder inside a drawing group.
+    let mut cases = Vec::new();
+    for value in [-1., 0., 1.] {
+        let mut frame = kasane_core::DrawableFrame::default();
+        let pose = std::collections::HashMap::from([(PARAM.into(), value)]);
+        assert!(
+            kasane_core::evaluation::evaluate_frame_including_hidden(&d, &pose, &mut frame).is_ok()
+        );
+        let canvas = d.canvas();
+        let positions: std::collections::BTreeMap<_, Vec<_>> = frame
+            .drawables
+            .iter()
+            .map(|mesh| {
+                (
+                    mesh.runtime_id.clone(),
+                    mesh.positions
+                        .iter()
+                        .map(|p| {
+                            [
+                                p.x * canvas.pixels_per_unit + canvas.origin.x,
+                                canvas.origin.y - p.y * canvas.pixels_per_unit,
+                            ]
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
+        frame.drawables.sort_by_key(|mesh| mesh.render_order);
+        let render_order: Vec<_> = frame
+            .drawables
+            .iter()
+            .map(|mesh| &mesh.runtime_id)
+            .collect();
+        cases.push(serde_json::json!({"parameters":{"ParamX":value},"positions":positions,"render_order":render_order}));
+    }
+    let target = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/cmo3-acceptance/nested-draw-order.json");
+    std::fs::write(target, serde_json::to_vec(&cases).unwrap()).unwrap();
+}
+
+#[test]
 fn canvas_reversal_matches_runtime_geometry_texture_uvs_and_triangle_orientation() {
     let (mut doc, png) = fixture();
     let mut canvas = doc.canvas();

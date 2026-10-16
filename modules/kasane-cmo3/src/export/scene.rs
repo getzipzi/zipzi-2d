@@ -93,6 +93,10 @@ impl Exporter<'_> {
                 .unwrap()
                 .items;
             let mut children = ordered_drawing_children(self.doc, part, items);
+            // Cubism's parts panel is front-to-back; Kasane group items break
+            // equal draw-order ties back-to-front. Reverse at every tree level,
+            // including ordinary parts flattened into an ancestor's group.
+            children.reverse();
             children.extend(
                 self.doc
                     .transform_order()

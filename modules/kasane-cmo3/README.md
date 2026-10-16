@@ -212,7 +212,7 @@ uv run --locked python tools/check_cmo3.py \
   --editor '/Applications/Live2D Cubism 5.4 alpha' \
   target/mao-cubism-integration/editable/mao.cmo3 \
   target/mao-cubism-integration/editable/mao.can3
-# Compare Cubism's evaluated geometry against Kasane's captured reference poses:
+# Compare Cubism's evaluated geometry and draw order against Kasane's poses:
 uv run --locked python tools/check_cmo3.py \
   --editor '/Applications/Live2D Cubism 5.4 alpha' \
   --expected-geometry target/mao-cubism-integration/expected-geometry.json \
@@ -226,6 +226,8 @@ from the saved Kasane project. It writes the linked files, full loss report and
 `summary.json` under `target/mao-cubism-integration/`; third-party assets are
 never checked in. Reference poses include parameter extrema and representative
 mesh/warp/rotation morph drivers. The optional geometry probe compares every
-vertex in canvas pixels with a default tolerance of 0.05 px. This catches canvas
-Y-reversal errors that a successful archive/XML read alone cannot detect. If the
+vertex in canvas pixels with a default tolerance of 0.05 px, and compares the
+complete back-to-front mesh sequence at every pose. This catches canvas
+Y-reversal and parts-panel tie-order errors that a successful archive/XML read
+alone cannot detect. If the
 local sample is absent the optional Rust test skips.

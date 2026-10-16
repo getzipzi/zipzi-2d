@@ -16,3 +16,4 @@ zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 roxmltree = "0.20"
+serde_json.workspace = true

@@ -748,6 +748,7 @@ dependencies = [
  "png",
  "roxmltree",
  "serde",
+ "serde_json",
  "thiserror",
  "zip",
 ]
