@@ -16,6 +16,10 @@ Run the editor:
 cargo run --locked -p kasane-editor
 ```
 
+Document Undo/Redo uses `kasane-sdk::AuthoringSession` checkpoint history.
+Gestures preview isolated candidates and commit one history step. Selection,
+tools, and viewport state stay in the editor; text inputs use GPUI Kit history.
+
 Watch source changes and rebuild automatically:
 
 ```sh
