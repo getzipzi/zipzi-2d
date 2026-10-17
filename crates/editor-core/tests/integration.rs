@@ -27,6 +27,8 @@ mod panels;
 mod parameter_creation;
 #[path = "cases/parameter_management.rs"]
 mod parameter_management;
+#[path = "cases/properties.rs"]
+mod properties;
 #[path = "cases/psd_import.rs"]
 mod psd_import;
 #[path = "cases/sorting.rs"]

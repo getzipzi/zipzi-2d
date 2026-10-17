@@ -87,11 +87,33 @@ enum Gesture {
     Rename,
     Opacity,
     Controls,
+    Properties(u64),
+}
+
+enum PendingOriginal {
+    Controls(crate::control_edit::EditOriginal),
+    Properties(crate::ObjectRef, crate::PropertyValues),
+}
+impl PendingOriginal {
+    fn id(&self) -> &str {
+        match self {
+            Self::Controls(original) => original.id(),
+            Self::Properties(object, _) => &object.id,
+        }
+    }
+    fn unchanged(&self, model: &kasane_core::Document) -> bool {
+        match self {
+            Self::Controls(original) => original.unchanged(model),
+            Self::Properties(object, values) => {
+                crate::property::values_from(model, object).is_ok_and(|current| current == *values)
+            }
+        }
+    }
 }
 
 struct PendingEdit {
     kind: Gesture,
-    original: crate::control_edit::EditOriginal,
+    original: PendingOriginal,
     edit: EditSession<'static>,
     preview: PreviewState,
     changed: OnceLock<bool>,
@@ -112,12 +134,14 @@ pub struct Document {
     pub(crate) animation_catalog: std::sync::Mutex<Option<(u64, Arc<crate::AnimationCatalog>)>>,
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
     pending: Option<PendingEdit>,
+    next_property_edit: u64,
     textures: textures::DocumentTextures,
     pristine_blank: bool,
 }
 
 mod edits;
 mod projection;
+mod properties;
 mod textures;
 
 impl Document {
@@ -139,6 +163,9 @@ impl Document {
     pub(crate) fn animation_source(&self) -> crate::AnimationSource {
         crate::AnimationSource {
             snapshot: Arc::new(self.session.read_snapshot()),
+            properties: self
+                .property_edit_serial()
+                .map(|_| Arc::new(self.model().fork_candidate())),
             textures: self.textures.snapshot(),
             candidate: None,
             materialized: Default::default(),
@@ -226,6 +253,7 @@ impl Document {
             canvas_topology: std::sync::Mutex::new(None),
             selected,
             pending: None,
+            next_property_edit: 0,
             textures,
             pristine_blank: false,
         })
@@ -243,7 +271,7 @@ impl Document {
     }
 
     pub fn canvas(&self) -> Canvas {
-        self.session.canvas()
+        self.model().canvas().clone()
     }
 
     pub fn path(&self) -> Option<&Path> {
@@ -350,95 +378,14 @@ impl Document {
         self.selected.as_deref().and_then(|id| self.layer(id))
     }
 
-    /// Shared scalar inspector edits remain SDK transactions and history entries.
-    pub fn set_object_property(
-        &mut self,
-        object: &crate::ObjectRef,
-        field: &str,
-        value: serde_json::Value,
-    ) -> Result<()> {
-        use crate::ObjectKind as K;
-        self.ensure_editable(std::slice::from_ref(object))?;
-        ensure!(
-            crate::editable_property(object.kind, field),
-            "This property is read only"
-        );
-        self.finish_edit()?;
-        if object.kind == K::Parameter {
-            let mut draft = self.parameter_draft(&object.id)?;
-            let mut fields = serde_json::to_value(self.model().get_parameter(&object.id).unwrap())?;
-            fields[field] = value;
-            let p: kasane_core::Parameter = serde_json::from_value(fields)?;
-            draft.name = p.name;
-            draft.runtime_id = p.runtime_id;
-            draft.minimum = p.minimum;
-            draft.maximum = p.maximum;
-            draft.default_value = p.default_value;
-            draft.decimal_places = p.decimal_places;
-            draft.kind = p.kind;
-            draft.repeat = p.repeat;
-            return self.update_parameter(&object.id, draft, self.parameter_model_revision());
-        }
-        let model = self.model();
-        macro_rules! update {
-            ($get:ident, $ty:ty, $replace:ident) => {{
-                let old = model
-                    .$get(&object.id)
-                    .ok_or_else(|| anyhow!("Object no longer exists"))?;
-                let mut properties = serde_json::to_value(old)?;
-                properties[field] = value;
-                let next: $ty = serde_json::from_value(properties)?;
-                self.session
-                    .edit("Edit object property", None, |edit| edit.$replace(next))?
-                    .1
-                    .changed
-            }};
-        }
-        let changed = match object.kind {
-            K::Mesh => update!(get_mesh, kasane_core::Mesh, replace_mesh),
-            K::Part => update!(get_part, kasane_core::Part, replace_part),
-            K::Deformer => update!(get_transform, kasane_core::Transform, replace_transform),
-            K::Parameter => update!(get_parameter, kasane_core::Parameter, replace_parameter),
-            K::Glue => update!(get_glue, kasane_core::Glue, replace_glue),
-            K::Offscreen => update!(get_offscreen, kasane_core::Offscreen, replace_offscreen),
-            K::Texture => update!(get_asset, kasane_core::ImageAsset, replace_asset),
-            K::Expression => update!(
-                get_expression,
-                kasane_core::document::ExpressionAsset,
-                replace_expression
-            ),
-            K::Motion => update!(
-                get_motion,
-                kasane_core::document::MotionClip,
-                replace_motion
-            ),
-            K::Document => {
-                let mut fields = serde_json::to_value(model.canvas())?;
-                fields[field
-                    .strip_prefix("canvas.")
-                    .ok_or_else(|| anyhow!("Invalid canvas property"))?] = value;
-                let canvas = serde_json::from_value(fields)?;
-                self.session
-                    .edit("Edit canvas property", None, |edit| {
-                        edit.replace_canvas(canvas)
-                    })?
-                    .1
-                    .changed
-            }
-            _ => return Err(anyhow!("This property is read only")),
-        };
-        self.session.drain_events();
-        if changed {
-            self.pristine_blank = false;
-            self.invalidate_projection(true);
-        }
-        let index = self.object_index();
-        self.context.reconcile(&index);
-        Ok(())
-    }
     pub fn context(&self) -> &crate::PanelContext {
         &self.context
     }
+    /// Changes when inspector-visible object data changes, including candidates.
+    pub fn properties_revision(&self) -> u64 {
+        self.projection_revision
+    }
+
     pub fn object_index(&self) -> Arc<crate::ObjectIndex> {
         let model = self.model();
         let mut cache = self.object_index.lock().unwrap();

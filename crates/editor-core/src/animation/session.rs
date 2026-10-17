@@ -11,6 +11,7 @@ impl AnimationSession {
     }
     pub(crate) fn new(document: &Document) -> Self {
         Self {
+            inspected: None,
             motion: None,
             expression: None,
             expressions: Vec::new(),
@@ -32,6 +33,11 @@ impl AnimationSession {
             scrubbing: false,
         }
     }
+    pub(crate) fn property_preview_changed(&mut self) {
+        self.source = None;
+        self.rebuild();
+    }
+
     pub(crate) fn pause(&mut self) {
         self.playing = false;
         // An explicit pause needs a fresh request even at an unchanged time.
@@ -98,6 +104,13 @@ impl AnimationSession {
             return;
         }
         self.model_generation = generation;
+        if self
+            .inspected
+            .as_ref()
+            .is_some_and(|object| document.object_index().get(object).is_none())
+        {
+            self.inspected = None;
+        }
         self.source = None;
         self.rebuild();
         if self.motion.is_none() && self.expression.is_none() && self.expressions.is_empty() {

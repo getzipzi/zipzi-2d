@@ -197,19 +197,33 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
         .save_project(&assets.path().join("dense.kasane"), None)
         .unwrap();
     let document = editor_core::Document::open(&saved.manifest).unwrap();
-    let mut fields = crate::panels::document_panel::property_rows(
+    let fields = crate::panels::document_panel::property_rows(
         &document.object_index().objects[0].properties,
     );
-    fields.sort_by_key(|(field, _)| (field != "name", field.clone()));
     assert!(fields.len() > 500);
+    let first_detail: SharedString = format!(
+        "object-property-{}",
+        fields
+            .iter()
+            .find(|(field, _)| !field.starts_with("canvas."))
+            .unwrap()
+            .0
+    )
+    .into();
     let last: SharedString = format!("object-property-{}", fields.last().unwrap().0).into();
     let harness = setup_with_document(cx, document, assets);
     let properties = harness
         .view
         .read_with(cx, |view, _| view.dock.as_ref().unwrap().properties.clone());
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("property-group-$details", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
     for width in [280., 180., 340.] {
         cx.update_window(harness.window, |_, window, cx| {
             let builds = properties.read(cx).row_builds();
+            let cache = properties.read(cx).properties_cache_stats();
             let area = harness.view.read(cx).dock.as_ref().unwrap().area.clone();
             area.update(cx, |area, cx| {
                 area.set_dock_size(DockPlacement::Right, px(width), window, cx)
@@ -218,6 +232,11 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
             // Count construction across every intermediate draw, not just the
             // elements left in the final frame. Allow overscan and remeasurement.
             let built = properties.read(cx).row_builds() - builds;
+            assert_eq!(
+                properties.read(cx).properties_cache_stats(),
+                cache,
+                "resize must reuse property data"
+            );
             assert!(
                 built > 0 && built < 120,
                 "resize built {built} rows at width {width}"
@@ -251,12 +270,14 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
                 cx,
             );
             window.render_frame(cx);
-            window.click("property-group-canvas", cx);
-            window.render_frame(cx);
-            assert!(window.try_find("object-property-canvas.width").is_none());
-            window.click("property-group-canvas", cx);
+            assert!(window.try_find("object-property-canvas.width").is_some());
+            window.click("property-group-$details", cx);
             window.render_frame(cx);
             assert!(window.try_find("object-property-canvas.width").is_some());
+            assert!(window.try_find(first_detail.clone()).is_none());
+            window.click("property-group-$details", cx);
+            window.render_frame(cx);
+            assert!(window.try_find(first_detail.clone()).is_some());
         })
         .unwrap();
     }

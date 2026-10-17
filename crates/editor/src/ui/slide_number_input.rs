@@ -47,6 +47,13 @@ impl SlideNumberOptions {
 /// Values are controlled by the caller, including restoration on Escape.
 pub(crate) struct SlideNumberChange(pub f64);
 
+/// Explicit ownership boundaries for callers that preview document candidates.
+pub(crate) enum SlideNumberGesture {
+    Begin,
+    End,
+    Cancel,
+}
+
 struct Drag {
     origin: Point<Pixels>,
     last_x: Pixels,
@@ -73,6 +80,7 @@ pub(crate) struct SlideNumberInput {
 }
 
 impl EventEmitter<SlideNumberChange> for SlideNumberInput {}
+impl EventEmitter<SlideNumberGesture> for SlideNumberInput {}
 
 impl SlideNumberInput {
     pub fn new(
@@ -86,6 +94,7 @@ impl SlideNumberInput {
             _observe: cx.observe(&input, |_, _, cx| cx.notify()),
             _activation: cx.observe_window_activation(window, |this: &mut Self, window, cx| {
                 if !window.is_window_active() && this.drag.take().is_some() {
+                    cx.emit(SlideNumberGesture::Cancel);
                     cx.notify();
                 }
             }),
@@ -130,10 +139,21 @@ impl SlideNumberInput {
                 || (self.is_sliding()
                     && (self.sliding_value_format)(self.options.value)
                         != (self.sliding_value_format)(options.value));
+            if let Some(drag) = &mut self.drag {
+                if drag.sliding
+                    && (self.sliding_value_format)(self.options.value)
+                        != (self.sliding_value_format)(options.value)
+                {
+                    drag.value = options.value;
+                    drag.anchor = options.value;
+                }
+            }
             self.options = options;
             self.label = label;
             if options.disabled {
-                self.drag = None;
+                if self.drag.take().is_some() {
+                    cx.emit(SlideNumberGesture::Cancel);
+                }
             }
             if repaint {
                 cx.notify();
@@ -196,6 +216,7 @@ impl SlideNumberInput {
         };
         if self.options.disabled || event.pressed_button != Some(MouseButton::Left) {
             self.drag = None;
+            cx.emit(SlideNumberGesture::Cancel);
             cx.notify();
             return false;
         }
@@ -239,6 +260,9 @@ impl SlideNumberInput {
             || (changed
                 && (self.sliding_value_format)(self.options.value)
                     != (self.sliding_value_format)(value));
+        if started {
+            cx.emit(SlideNumberGesture::Begin);
+        }
         if changed {
             self.options.value = value;
             cx.emit(SlideNumberChange(value));
@@ -259,6 +283,9 @@ impl SlideNumberInput {
                 input.select_all(window, cx);
             });
         }
+        if drag.sliding {
+            cx.emit(SlideNumberGesture::End);
+        }
         cx.notify();
         true
     }
@@ -269,6 +296,7 @@ impl SlideNumberInput {
                 self.options.value = drag.original;
                 cx.emit(SlideNumberChange(drag.original));
             }
+            cx.emit(SlideNumberGesture::Cancel);
             cx.notify();
         }
     }

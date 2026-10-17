@@ -1,11 +1,8 @@
-//! Resource rows are immutable between authoring/selection changes. Only visible
-//! rows become elements; narrowing the dock must not lay out every motion track.
+//! Read-only resource diagnostics, folded into the common inspector's Details.
 use super::*;
-use editor_core::{AnimationCatalog, AnimationSession, Document, DocumentId, MotionSelection};
-use gpui_kit::component::scroll::ScrollableElement;
+use editor_core::{AnimationCatalog, AnimationSession, Document, MotionSelection};
 use kasane_core::document::{ExpressionBlend, ExpressionTarget, MotionTrackTarget, PosePartRef};
-use std::{collections::HashMap, sync::Arc};
-
+use std::collections::HashMap;
 #[derive(PartialEq, Eq)]
 struct Key {
     document: DocumentId,
@@ -15,7 +12,8 @@ struct Key {
     locale: String,
 }
 
-enum Row {
+#[derive(Clone, PartialEq, Eq)]
+pub(super) enum Row {
     Hint(SharedString),
     Heading(SharedString),
     Text {
@@ -30,6 +28,16 @@ enum Row {
     },
 }
 impl Row {
+    #[allow(dead_code)]
+    #[cfg(any(test, feature = "test-support"))]
+    pub(super) fn id(&self) -> Option<ElementId> {
+        match self {
+            Self::Text { id, .. } => id.clone(),
+            Self::Value { id, .. } => Some(id.clone()),
+            _ => None,
+        }
+    }
+
     fn property(
         id: impl Into<ElementId>,
         label: impl Into<SharedString>,
@@ -60,13 +68,16 @@ impl Row {
             value: value.into(),
         }
     }
-    fn render(&self, cx: &App) -> AnyElement {
-        let element = match self {
+    pub(super) fn render(&self, cx: &App) -> AnyElement {
+        match self {
             Self::Hint(value) => div()
                 .text_color(cx.theme().muted_foreground)
                 .child(value.clone())
                 .into_any_element(),
-            Self::Heading(value) => inspectors::heading(value.clone(), cx).into_any_element(),
+            Self::Heading(value) => {
+                crate::panels::animation_panel::inspectors::heading(value.clone(), cx)
+                    .into_any_element()
+            }
             Self::Text { id, value } => {
                 let element = div().child(value.clone());
                 if let Some(id) = id {
@@ -81,107 +92,53 @@ impl Row {
                 value,
                 stacked,
             } => if *stacked {
-                inspectors::field(id.clone(), label.clone(), value.clone(), cx)
+                crate::panels::animation_panel::inspectors::field(
+                    id.clone(),
+                    label.clone(),
+                    value.clone(),
+                    cx,
+                )
             } else {
-                inspectors::property(id.clone(), label.clone(), value.clone(), cx)
+                crate::panels::animation_panel::inspectors::property(
+                    id.clone(),
+                    label.clone(),
+                    value.clone(),
+                    cx,
+                )
             }
             .into_any_element(),
-        };
-        div()
-            .w_full()
-            .px_3()
-            .pb_1()
-            .child(element)
-            .into_any_element()
-    }
-}
-
-pub(super) struct Properties {
-    key: Option<Key>,
-    rows: Arc<[Row]>,
-    scroll: ListState,
-    #[cfg(any(test, feature = "test-support"))]
-    builds: u64,
-}
-impl Default for Properties {
-    fn default() -> Self {
-        Self {
-            key: None,
-            rows: Arc::from([]),
-            scroll: ListState::new(0, ListAlignment::Top, px(16.)),
-            #[cfg(any(test, feature = "test-support"))]
-            builds: 0,
         }
     }
 }
 
-impl AnimationPanel {
-    pub(super) fn render_properties(&mut self, cx: &mut Context<Self>) -> AnyElement {
-        let content = div()
-            .id("AnimationProperties")
-            .test_support()
-            .key_context("KasaneDocument")
-            .track_focus(&self.focus)
-            .size_full()
-            .relative()
-            .overflow_hidden()
-            .min_h_0()
-            .min_w_0()
-            .text_xs();
-        let Some(owner) = self.owner.upgrade() else {
-            return content.into_any_element();
-        };
-        let state = owner.read(cx);
-        let (Some(document), Some(id), Some(animation)) = (
-            state.editor.document(),
-            state.editor.active_id(),
-            state.editor.animation(),
-        ) else {
-            self.properties.key = None;
-            self.properties.rows = Arc::from([]);
-            self.properties.scroll.reset(0);
-            return content
-                .child(div().p_3().child(t!("editor.welcome")))
-                .into_any_element();
-        };
+#[derive(Default)]
+pub(super) struct Details {
+    key: Option<Key>,
+    rows: Arc<[Row]>,
+    pub(super) builds: u64,
+}
+impl Details {
+    pub(super) fn rows(
+        &mut self,
+        document: &Document,
+        id: DocumentId,
+        animation: &AnimationSession,
+    ) -> Arc<[Row]> {
         let key = Key {
             document: id,
-            generation: document.model_generation(),
+            generation: document.properties_revision(),
             motion: animation.motion.clone(),
             expression: animation.expression.clone(),
             locale: rust_i18n::locale().to_string(),
         };
-        if self.properties.key.as_ref() != Some(&key) {
-            self.properties.rows = rows(document, animation, &document.animation_catalog()).into();
-            self.properties
-                .scroll
-                .reset_with_uniform_height(self.properties.rows.len(), px(36.));
-            self.properties.key = Some(key);
-            #[cfg(any(test, feature = "test-support"))]
-            {
-                self.properties.builds += 1;
-            }
+        if self.key.as_ref() != Some(&key) {
+            self.rows = rows(document, animation, &document.animation_catalog()).into();
+            self.key = Some(key);
+            self.builds += 1;
         }
-        let rows = self.properties.rows.clone();
-        content
-            .child(
-                list(self.properties.scroll.clone(), move |index, _, cx| {
-                    rows[index].render(cx)
-                })
-                .size_full()
-                .py_3(),
-            )
-            .vertical_scrollbar(&self.properties.scroll)
-            .into_any_element()
-    }
-
-    #[cfg(any(test, feature = "test-support"))]
-    #[allow(dead_code)]
-    pub(crate) fn properties_cache_stats(&self) -> (u64, usize) {
-        (self.properties.builds, self.properties.rows.len())
+        self.rows.clone()
     }
 }
-
 fn rows(document: &Document, animation: &AnimationSession, catalog: &AnimationCatalog) -> Vec<Row> {
     let mut rows = vec![
         Row::Hint(t!("workspace.properties_hint").into()),
@@ -282,7 +239,7 @@ fn rows(document: &Document, animation: &AnimationSession, catalog: &AnimationCa
         ));
         rows.push(Row::Text {
             id: Some("animation-property-expression-summary".into()),
-            value: super::expression_info(resource).into(),
+            value: crate::panels::animation_panel::expression_info(resource).into(),
         });
         if let Some(expression) = document.expression_definition(&resource.id) {
             for (index, entry) in expression.entries.iter().enumerate() {
@@ -315,13 +272,15 @@ fn rows(document: &Document, animation: &AnimationSession, catalog: &AnimationCa
         for (index, track) in clip.tracks.iter().enumerate() {
             let target = match &track.target {
                 MotionTrackTarget::Parameter { parameter_id } => parameter_name(parameter_id),
-                MotionTrackTarget::PartOpacity { part_id } => inspectors::part_name(
-                    document,
-                    &PosePartRef::Resolved {
-                        part_id: part_id.clone(),
-                    },
-                )
-                .into(),
+                MotionTrackTarget::PartOpacity { part_id } => {
+                    crate::panels::animation_panel::inspectors::part_name(
+                        document,
+                        &PosePartRef::Resolved {
+                            part_id: part_id.clone(),
+                        },
+                    )
+                    .into()
+                }
                 MotionTrackTarget::Model { runtime_id } => {
                     t!("workspace.model_channel", target = runtime_id).into()
                 }

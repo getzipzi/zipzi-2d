@@ -49,6 +49,7 @@ struct EditorView {
         std::collections::HashMap<editor_core::ViewportId, presentation::ViewportFrames>,
     >,
     editor: Editor,
+    property_forms: ui::property_form::PropertyForms,
     viewport_slots: [editor_core::ViewportId; 2],
     #[cfg(any(test, feature = "test-support"))]
     viewport_scene: Option<viewports::ViewportScene>,
@@ -65,6 +66,7 @@ struct EditorView {
     menu_state: menus::MenuState,
     edit_error: Option<String>,
     message: String,
+    status_message_task: Option<Task<()>>,
     requests: Option<preview::RequestSender>,
     gpu_device: Option<metal::Device>,
     _frames: Option<Task<()>>,
@@ -72,6 +74,9 @@ struct EditorView {
     dev_session: Option<dev_session::DevSession>,
 }
 impl EditorView {
+    pub(crate) const STATUS_MESSAGE_TIMEOUT: std::time::Duration =
+        std::time::Duration::from_secs(4);
+
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let mut editor = Editor::empty();
         editor
@@ -86,6 +91,7 @@ impl EditorView {
             focused_viewport: None,
             frozen_frames: Default::default(),
             editor,
+            property_forms: Default::default(),
             viewport_slots: std::array::from_fn(|_| editor_core::ViewportId::new()),
             #[cfg(any(test, feature = "test-support"))]
             viewport_scene: None,
@@ -105,6 +111,7 @@ impl EditorView {
             } else {
                 cx.global::<settings::Settings>().notices.join("; ")
             },
+            status_message_task: None,
             requests: None,
             gpu_device: None,
             _frames: None,
@@ -128,18 +135,74 @@ impl EditorView {
                 editor.edit_error = Some(error.to_string());
             }
         }
+        editor.schedule_status_clear(cx);
         editor.connect_preview(window, cx);
         benchmark::start(&mut editor, window, cx);
         editor
     }
 
+    pub(crate) fn set_edit_error(&mut self, error: impl Into<String>, cx: &mut Context<Self>) {
+        self.edit_error = Some(error.into());
+        self.schedule_status_clear(cx);
+        App::notify(cx, self.status_bar.entity_id());
+        cx.notify();
+    }
+
+    pub(crate) fn clear_edit_error(&mut self, cx: &mut Context<Self>) {
+        if self.edit_error.take().is_some() {
+            if self.message.is_empty() {
+                self.status_message_task = None;
+            }
+            App::notify(cx, self.status_bar.entity_id());
+            cx.notify();
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn set_status_message(
+        &mut self,
+        message: impl Into<String>,
+        cx: &mut Context<Self>,
+    ) {
+        self.edit_error = None;
+        self.message = message.into();
+        self.schedule_status_clear(cx);
+        App::notify(cx, self.status_bar.entity_id());
+        cx.notify();
+    }
+
+    fn schedule_status_clear(&mut self, cx: &mut Context<Self>) {
+        if self.edit_error.is_none() && self.message.is_empty() {
+            self.status_message_task = None;
+            return;
+        }
+        self.status_message_task = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(Self::STATUS_MESSAGE_TIMEOUT)
+                .await;
+            _ = this.update(cx, |this, cx| {
+                this.edit_error = None;
+                this.message.clear();
+                this.status_message_task = None;
+                App::notify(cx, this.status_bar.entity_id());
+                cx.notify();
+            });
+        }));
+    }
+
     fn complete_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
-        self.edit_error = result.err().map(|error| error.to_string());
+        match result {
+            Ok(()) => self.clear_edit_error(cx),
+            Err(error) => self.set_edit_error(error.to_string(), cx),
+        }
         self.redraw(cx);
     }
 
     fn complete_preview_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
-        self.edit_error = result.err().map(|error| error.to_string());
+        match result {
+            Ok(()) => self.clear_edit_error(cx),
+            Err(error) => self.set_edit_error(error.to_string(), cx),
+        }
         self.redraw_canvas(cx);
         if let Some(dock) = &self.dock {
             for kind in [

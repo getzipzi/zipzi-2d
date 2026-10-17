@@ -1,0 +1,244 @@
+//! A single end-of-edit policy for every configured field. Draft text exists
+//! only during editing; rejected submissions restore committed values.
+use editor_core::{
+    DocumentId, EditingContext, Editor, ObjectKind, ObjectRef, PropertyGroup, PropertyId,
+    PropertyPatch, PropertySpec, PropertyValue, PropertyValues, property_specs,
+};
+use std::collections::{BTreeMap, HashMap};
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct PropertyTarget {
+    pub document: DocumentId,
+    pub context: EditingContext,
+    pub object: ObjectRef,
+}
+
+mod definition;
+pub(crate) use definition::{FieldEditor, FieldSpec, FormDefinition, definition};
+
+#[derive(Clone, Debug)]
+pub(crate) struct FieldDraft {
+    pub revision: u64,
+    pub baseline: PropertyValue,
+    pub raw: String,
+    pub parsed: Result<PropertyValue, String>,
+    pub touched: bool,
+    pub conflict: bool,
+}
+impl FieldDraft {
+    fn new(value: PropertyValue) -> Self {
+        Self {
+            revision: 0,
+            raw: value.text(),
+            parsed: Ok(value.clone()),
+            baseline: value,
+            touched: false,
+            conflict: false,
+        }
+    }
+    pub fn dirty(&self) -> bool {
+        self.conflict
+            || self
+                .parsed
+                .as_ref()
+                .ok()
+                .is_none_or(|value| *value != self.baseline)
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub(crate) struct PropertyForm {
+    pub fields: BTreeMap<PropertyId, FieldDraft>,
+    current: PropertyValues,
+}
+impl PropertyForm {
+    pub fn sync(&mut self, kind: ObjectKind, values: PropertyValues) {
+        for spec in property_specs(kind) {
+            let Some(value) = values.get(&spec.id) else {
+                continue;
+            };
+            let field = self
+                .fields
+                .entry(spec.id)
+                .or_insert_with(|| FieldDraft::new(value.clone()));
+            if field.touched {
+                field.conflict = field.baseline != *value;
+            } else if field.baseline != *value {
+                let revision = field.revision + 1;
+                *field = FieldDraft::new(value.clone());
+                field.revision = revision;
+            }
+        }
+        self.current = values;
+    }
+    pub fn edit(&mut self, spec: &PropertySpec, raw: String) {
+        if let Some(field) = self.fields.get_mut(&spec.id) {
+            field.parsed = spec.parse(&raw).map_err(|error| error.to_string());
+            field.raw = raw;
+            field.touched = true;
+        }
+    }
+    pub fn set_value(&mut self, spec: &PropertySpec, value: PropertyValue) {
+        if let Some(field) = self.fields.get_mut(&spec.id) {
+            field.raw = value.text();
+            field.parsed = spec
+                .validate(&value)
+                .map(|_| value)
+                .map_err(|error| error.to_string());
+            field.touched = true;
+        }
+    }
+    pub fn field_active(&self, id: PropertyId, live_raw: &str) -> bool {
+        self.fields
+            .get(&id)
+            .is_some_and(|field| field.touched || field.dirty() || field.raw != live_raw)
+    }
+    #[cfg(test)]
+    pub fn dirty(&self) -> bool {
+        self.fields.values().any(FieldDraft::dirty)
+    }
+
+    /// Dependencies come from the object, never from another field's draft.
+    pub fn patch(&self, kind: ObjectKind, id: PropertyId) -> anyhow::Result<PropertyPatch> {
+        let spec = property_specs(kind)
+            .iter()
+            .find(|s| s.id == id)
+            .ok_or_else(|| anyhow::anyhow!("This property is read only"))?;
+        let field = &self.fields[&id];
+        anyhow::ensure!(
+            !field.conflict,
+            "The value changed outside this form. Restored the current value."
+        );
+        let value = field
+            .parsed
+            .as_ref()
+            .map_err(|error| anyhow::anyhow!("{error}"))?;
+        let expected: PropertyValues = property_specs(kind)
+            .iter()
+            .filter(|s| s.group == spec.group)
+            .filter_map(|s| self.current.get(&s.id).map(|v| (s.id, v.clone())))
+            .collect();
+        let changes = if *value == field.baseline {
+            PropertyValues::new()
+        } else {
+            [(id, value.clone())].into()
+        };
+        if spec.group == PropertyGroup::ParameterRange {
+            let number = |key| {
+                if key == id {
+                    value.number()
+                } else {
+                    self.current.get(&key).and_then(PropertyValue::number)
+                }
+                .unwrap()
+            };
+            let (min, max, default) = (
+                number(PropertyId::Minimum),
+                number(PropertyId::Maximum),
+                number(PropertyId::DefaultValue),
+            );
+            anyhow::ensure!(
+                min < max,
+                "Minimum ({min}) must be less than maximum ({max})"
+            );
+            anyhow::ensure!(
+                (min..=max).contains(&default),
+                "Default ({default}) must be within [{min}, {max}]"
+            );
+        }
+        Ok(PropertyPatch { expected, changes })
+    }
+    pub fn reload_field(&mut self, id: PropertyId) {
+        if let Some(value) = self.current.get(&id) {
+            let revision = self.fields.get(&id).map_or(0, |field| field.revision + 1);
+            let mut field = FieldDraft::new(value.clone());
+            field.revision = revision;
+            self.fields.insert(id, field);
+        }
+    }
+    pub fn numeric_visible(&self, id: PropertyId) -> bool {
+        !matches!(
+            self.fields[&id].parsed,
+            Ok(PropertyValue::OptionalFloat(None))
+        )
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct PropertyForms {
+    pub entries: HashMap<PropertyTarget, PropertyForm>,
+}
+impl PropertyForms {
+    pub fn sync(&mut self, target: &PropertyTarget, values: PropertyValues) -> &PropertyForm {
+        let form = self.entries.entry(target.clone()).or_default();
+        form.sync(target.object.kind, values);
+        form
+    }
+    pub fn commit(
+        &mut self,
+        editor: &mut Editor,
+        target: &PropertyTarget,
+        id: PropertyId,
+    ) -> anyhow::Result<()> {
+        let form = self
+            .entries
+            .get_mut(target)
+            .ok_or_else(|| anyhow::anyhow!("Form ended"))?;
+        let result = (|| {
+            anyhow::ensure!(
+                editor.active_id() == Some(target.document)
+                    && editor.editing_context() == Some(target.context),
+                "Editing context changed"
+            );
+            let current = editor.document().unwrap().property_values(&target.object)?;
+            form.sync(target.object.kind, current);
+            let patch = form.patch(target.object.kind, id)?;
+            if !patch.changes.is_empty() {
+                let context = editor
+                    .editing_context_token()
+                    .ok_or_else(|| anyhow::anyhow!("Editing context changed"))?;
+                editor.commit_properties(context, target.object.clone(), patch)?;
+            }
+            Ok(())
+        })();
+        if let Some(values) = editor
+            .document()
+            .filter(|_| editor.active_id() == Some(target.document))
+            .and_then(|doc| doc.property_values(&target.object).ok())
+        {
+            form.sync(target.object.kind, values);
+        }
+        form.reload_field(id);
+        result
+    }
+    #[cfg(test)]
+    pub fn dirty_document(&self, document: DocumentId) -> bool {
+        self.entries
+            .iter()
+            .any(|(target, form)| target.document == document && form.dirty())
+    }
+    /// Save ends input through the same validation/reversion policy as blur.
+    pub fn prepare_save(&mut self, editor: &mut Editor, document: DocumentId) -> Option<String> {
+        let fields: Vec<_> = self
+            .entries
+            .iter()
+            .filter(|(target, _)| target.document == document)
+            .flat_map(|(target, form)| {
+                form.fields
+                    .iter()
+                    .filter(|(_, field)| field.touched)
+                    .map(move |(&id, _)| (target.clone(), id))
+            })
+            .collect();
+        let mut last_error = None;
+        for (target, id) in fields {
+            if let Err(error) = self.commit(editor, &target, id) {
+                last_error = Some(error.to_string());
+            }
+        }
+        last_error
+    }
+}
+
+#[cfg(test)]
+mod tests;

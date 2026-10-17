@@ -51,6 +51,14 @@ impl AnimationPanel {
                     .animation()
                     .is_some_and(|animation| animation.motion.as_ref() == Some(selection))
             {
+                let _ = owner.editor.inspect_animation_resource(
+                    document,
+                    editor_core::ObjectRef::new(
+                        editor_core::ObjectKind::Motion,
+                        &selection.clip_id,
+                    ),
+                );
+                cx.notify();
                 return;
             }
             let result = match choice {

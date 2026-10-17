@@ -1,7 +1,6 @@
 //! Playback projections. These controls never edit the authoring document.
-mod inspectors;
+pub(crate) mod inspectors;
 mod parameters;
-mod properties;
 mod resources;
 use crate::{EditorView, t};
 use gpui_kit::component::{
@@ -21,14 +20,12 @@ pub struct AnimationPanel {
     _observe: Subscription,
     resources: resources::ResourceList,
     parameters: parameters::PreviewParameters,
-    properties: properties::Properties,
 }
 impl AnimationPanel {
     pub fn new(owner: WeakEntity<EditorView>, kind: PanelKind, cx: &mut App) -> Entity<Self> {
         cx.new(|cx| Self {
             resources: resources::ResourceList::default(),
             parameters: parameters::PreviewParameters::default(),
-            properties: properties::Properties::default(),
             _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
             owner,
             kind,
@@ -139,9 +136,6 @@ impl Render for AnimationPanel {
         if matches!(self.kind, PanelKind::AnimationParameters) {
             return self.render_parameters(cx);
         }
-        if matches!(self.kind, PanelKind::AnimationProperties) {
-            return self.render_properties(cx);
-        }
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
@@ -165,7 +159,6 @@ impl Render for AnimationPanel {
             .text_xs();
         match self.kind {
             PanelKind::AnimationExpressions | PanelKind::AnimationMotions => unreachable!(),
-            PanelKind::AnimationProperties => unreachable!(),
             PanelKind::AnimationPhysics => {
                 content = inspectors::physics(content.gap_1(), document, snapshot, cx);
             }
@@ -320,7 +313,7 @@ fn motion_info(resource: &editor_core::MotionResource) -> Vec<String> {
         .into_owned(),
     ]
 }
-fn expression_info(resource: &editor_core::ExpressionResource) -> String {
+pub(crate) fn expression_info(resource: &editor_core::ExpressionResource) -> String {
     let blends = resource
         .blends
         .iter()

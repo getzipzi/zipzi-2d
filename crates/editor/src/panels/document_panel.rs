@@ -749,10 +749,79 @@ impl Render for DocumentPanel {
 
 /// Readable scalar/nested configuration rows for the shared property inspector.
 pub fn property_rows(value: &serde_json::Value) -> Vec<(String, String)> {
+    fn scalar_text(value: &serde_json::Value) -> Option<String> {
+        match value {
+            serde_json::Value::String(text) => Some(text.clone()),
+            serde_json::Value::Number(num) => Some(num.to_string()),
+            serde_json::Value::Bool(flag) => Some(flag.to_string()),
+            _ => None,
+        }
+    }
+
+    fn compact_object_summary(value: &serde_json::Value) -> Option<String> {
+        let serde_json::Value::Object(fields) = value else {
+            return None;
+        };
+        let has_identity = fields.keys().any(|key| {
+            matches!(
+                key.as_str(),
+                "id" | "name" | "runtime_id" | "parameter_id" | "clip_id"
+            )
+        });
+        if has_identity {
+            return None;
+        }
+        let mut parts = Vec::new();
+        let mut entries: Vec<_> = fields.iter().collect();
+        entries.sort_by_key(|(name, _)| *name);
+        for (name, field) in entries {
+            match field {
+                serde_json::Value::Null => continue,
+                serde_json::Value::Object(nested) if nested.is_empty() => continue,
+                serde_json::Value::Object(nested)
+                    if nested.len() <= 2 && nested.values().all(|v| scalar_text(v).is_some()) =>
+                {
+                    let mut coords: Vec<_> = nested.iter().collect();
+                    coords.sort_by_key(|(k, _)| *k);
+                    let tuple = coords
+                        .into_iter()
+                        .filter_map(|(_, v)| scalar_text(v))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    parts.push(format!("{name}: ({tuple})"));
+                }
+                _ => {
+                    let text = scalar_text(field)?;
+                    parts.push(format!("{name}: {text}"));
+                }
+            }
+        }
+        (!parts.is_empty() && parts.len() <= 5).then(|| parts.join(", "))
+    }
+
     fn walk(value: &serde_json::Value, path: String, rows: &mut Vec<(String, String)>) {
         match value {
+            serde_json::Value::Null => {}
             serde_json::Value::Object(fields) => {
-                for (name, value) in fields {
+                if fields.is_empty() {
+                    return;
+                }
+                // Unwrap single-variant Rust enum wrappers (e.g. `{"Resolved": {...}}`).
+                if fields.len() == 1 {
+                    let (variant, inner) = fields.iter().next().unwrap();
+                    if variant
+                        .chars()
+                        .next()
+                        .is_some_and(|ch| ch.is_ascii_uppercase())
+                        && inner.is_object()
+                    {
+                        walk(inner, path, rows);
+                        return;
+                    }
+                }
+                let mut entries: Vec<_> = fields.iter().collect();
+                entries.sort_by_key(|(name, _)| (name.as_str() != "name", name.as_str()));
+                for (name, value) in entries {
                     walk(
                         value,
                         if path.is_empty() {
@@ -767,9 +836,19 @@ pub fn property_rows(value: &serde_json::Value) -> Vec<(String, String)> {
             serde_json::Value::Array(items) => {
                 if items.is_empty() {
                     rows.push((path, "[]".into()));
+                } else if items.iter().all(|item| scalar_text(item).is_some()) {
+                    rows.push((
+                        path,
+                        serde_json::to_string(items).unwrap_or_else(|_| "[]".into()),
+                    ));
                 } else {
                     for (i, item) in items.iter().enumerate() {
-                        walk(item, format!("{path}[{i}]"), rows);
+                        let item_path = format!("{path}[{i}]");
+                        if let Some(summary) = compact_object_summary(item) {
+                            rows.push((item_path, summary));
+                        } else {
+                            walk(item, item_path, rows);
+                        }
                     }
                 }
             }

@@ -1,0 +1,810 @@
+use super::*;
+use crate::ui::{
+    property_form::{self, FieldEditor, PropertyForm, PropertyTarget},
+    slide_number_input::{
+        SlideNumberChange, SlideNumberGesture, SlideNumberInput, SlideNumberOptions,
+    },
+};
+use editor_core::{PropertyId, PropertyValue};
+use gpui_kit::component::{
+    checkbox::Checkbox,
+    input::{Input, InputEvent, InputState},
+};
+
+pub(super) struct FieldControl {
+    pub input: Entity<InputState>,
+    displayed: String,
+    settled: u64,
+    number: Option<Entity<SlideNumberInput>>,
+    _events: Vec<Subscription>,
+}
+
+pub(super) fn target(editor: &editor_core::Editor) -> Option<PropertyTarget> {
+    let inspection = editor.active_inspection()?;
+    let object = inspection.object().or_else(|| {
+        if inspection.context != editor_core::EditingContext::Modeling {
+            return None;
+        }
+        editor
+            .document()?
+            .object_index()
+            .objects
+            .first()
+            .map(|info| info.reference.clone())
+    })?;
+    Some(PropertyTarget {
+        document: inspection.document,
+        context: inspection.context,
+        object,
+    })
+}
+
+impl PropertiesPanel {
+    pub(super) fn sync_form(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        let next = target(&owner.read(cx).editor);
+        let context = owner.read(cx).editor.editing_context_token();
+        if self.target != next || self.context != context {
+            if self.preview.is_none() {
+                if let Some(previous) = self.target.clone() {
+                    let inputs: Vec<_> = self
+                        .controls
+                        .iter()
+                        .map(|(&id, control)| {
+                            (
+                                id,
+                                control.input.read(cx).value().to_string(),
+                                control.settled,
+                                self.composing(id, window, cx),
+                            )
+                        })
+                        .collect();
+                    owner.update(cx, |state, cx| {
+                        if let Some(form) = state.property_forms.entries.get_mut(&previous) {
+                            for (id, raw, settled, composing) in inputs {
+                                if composing {
+                                    form.reload_field(id);
+                                } else if form.fields[&id].revision == settled
+                                    && form.fields[&id].raw != raw
+                                {
+                                    let spec = editor_core::property_specs(previous.object.kind)
+                                        .iter()
+                                        .find(|s| s.id == id)
+                                        .unwrap();
+                                    form.edit(spec, raw);
+                                }
+                            }
+                        }
+                        let pending: Vec<_> = state
+                            .property_forms
+                            .entries
+                            .get(&previous)
+                            .map(|form| {
+                                form.fields
+                                    .iter()
+                                    .filter(|(_, f)| f.touched)
+                                    .map(|(&id, _)| id)
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        let changed = !pending.is_empty();
+                        for id in pending {
+                            if let Err(error) = state
+                                .property_forms
+                                .commit(&mut state.editor, &previous, id)
+                            {
+                                state.set_edit_error(error.to_string(), cx);
+                            }
+                        }
+                        if changed {
+                            state.redraw(cx);
+                        }
+                    });
+                }
+            }
+            self.cancel_preview(cx);
+            self.controls.clear();
+            self.epoch += 1;
+            self.definition = next.as_ref().map_or_else(Default::default, |target| {
+                property_form::definition(target.object.kind)
+            });
+            self.target = next;
+            self.context = context;
+            self.snapshot = None;
+        }
+        if self
+            .preview
+            .as_ref()
+            .is_some_and(|(_, token)| !owner.read(cx).editor.property_edit_owned(token))
+        {
+            self.cancel_preview(cx);
+        }
+        let Some(target) = &self.target else {
+            self.form = PropertyForm::default();
+            return;
+        };
+        let state = owner.read(cx);
+        self.disabled = state.modal
+            || state.editor.is_busy()
+            || state.editor.exiting()
+            || (target.context == editor_core::EditingContext::Animation
+                && !matches!(
+                    target.object.kind,
+                    editor_core::ObjectKind::Motion | editor_core::ObjectKind::Expression
+                ))
+            || state.editor.document().is_none_or(|doc| {
+                doc.ensure_editable(std::slice::from_ref(&target.object))
+                    .is_err()
+            });
+        let snapshot = state
+            .editor
+            .document()
+            .map(|doc| (target.clone(), doc.model_generation()));
+        if snapshot == self.snapshot {
+            self.form = state
+                .property_forms
+                .entries
+                .get(target)
+                .cloned()
+                .unwrap_or_default();
+            return;
+        }
+        let values = state
+            .editor
+            .document()
+            .and_then(|doc| doc.property_values(&target.object).ok());
+        if let Some(values) = values {
+            self.form = owner.update(cx, |state, _| {
+                state.property_forms.sync(target, values).clone()
+            });
+            self.snapshot = snapshot;
+        } else {
+            self.form = PropertyForm::default();
+        }
+    }
+
+    fn allowed(&self, epoch: u64, window: &mut Window, cx: &mut App) -> bool {
+        self.visible
+            && !self.disabled
+            && self.epoch == epoch
+            && !window.has_active_dialog(cx)
+            && self.owner.upgrade().is_some_and(|owner| {
+                let state = owner.read(cx);
+                !state.modal
+                    && !state.editor.is_busy()
+                    && !state.editor.exiting()
+                    && state.editor.editing_context_token() == self.context
+                    && target(&state.editor) == self.target
+                    && self.target.as_ref().is_some_and(|target| {
+                        state.editor.document().is_some_and(|doc| {
+                            doc.ensure_editable(std::slice::from_ref(&target.object))
+                                .is_ok()
+                        })
+                    })
+            })
+    }
+
+    fn field_spec(&self, id: PropertyId) -> property_form::FieldSpec {
+        self.definition.field(id).unwrap()
+    }
+
+    fn edit_text(&mut self, id: PropertyId, raw: String, cx: &mut Context<Self>) {
+        let Some(target) = self.target.clone() else {
+            return;
+        };
+        let spec = self.field_spec(id).binding;
+        if let Some(owner) = self.owner.upgrade() {
+            owner.update(cx, |state, cx| {
+                if let Some(form) = state.property_forms.entries.get_mut(&target) {
+                    form.edit(&spec, raw);
+                }
+                cx.notify();
+            });
+        }
+        cx.notify();
+    }
+
+    fn commit_field(&mut self, id: PropertyId, cx: &mut Context<Self>) {
+        let Some(target) = self.target.clone() else {
+            return;
+        };
+        if let Some(owner) = self.owner.upgrade() {
+            owner.update(cx, |state, cx| {
+                match state.property_forms.commit(&mut state.editor, &target, id) {
+                    Ok(()) => {
+                        state.clear_edit_error(cx);
+                        state.redraw(cx);
+                    }
+                    Err(error) => {
+                        state.set_edit_error(error.to_string(), cx);
+                    }
+                }
+            });
+        }
+        cx.notify();
+    }
+
+    fn set_value(&mut self, id: PropertyId, value: PropertyValue, cx: &mut Context<Self>) {
+        let Some(target) = self.target.clone() else {
+            return;
+        };
+        let spec = self.field_spec(id);
+        if let Some(owner) = self.owner.upgrade() {
+            owner.update(cx, |state, cx| {
+                if let Some(form) = state.property_forms.entries.get_mut(&target) {
+                    form.set_value(&spec.binding, value);
+                }
+                cx.notify();
+            });
+        }
+        self.commit_field(id, cx);
+        cx.notify();
+    }
+
+    pub(super) fn reload_field(&mut self, id: PropertyId, cx: &mut Context<Self>) {
+        self.cancel_preview(cx);
+        let Some(target) = self.target.clone() else {
+            return;
+        };
+        if let Some(owner) = self.owner.upgrade() {
+            owner.update(cx, |state, cx| {
+                if let (Some(values), Some(form)) = (
+                    state
+                        .editor
+                        .document()
+                        .and_then(|doc| doc.property_values(&target.object).ok()),
+                    state.property_forms.entries.get_mut(&target),
+                ) {
+                    form.sync(target.object.kind, values);
+                    form.reload_field(id);
+                }
+                state.clear_edit_error(cx);
+                cx.notify();
+            });
+        }
+        cx.notify();
+    }
+
+    fn begin_preview(&mut self, id: PropertyId, cx: &mut Context<Self>) {
+        self.cancel_preview(cx);
+        let Some(target) = self.target.clone() else {
+            return;
+        };
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        let result = owner.update(cx, |state, _| {
+            let form = state
+                .property_forms
+                .entries
+                .get(&target)
+                .ok_or_else(|| anyhow::anyhow!("Form ended"))?;
+            let mut patch = form.patch(target.object.kind, id)?;
+            patch.changes.insert(id, form.fields[&id].baseline.clone());
+            let context = state
+                .editor
+                .editing_context_token()
+                .ok_or_else(|| anyhow::anyhow!("Editing context changed"))?;
+            state
+                .editor
+                .begin_property_edit(context, target.object.clone(), &patch)
+        });
+        match result {
+            Ok(token) => self.preview = Some((id, token)),
+            Err(error) => owner.update(cx, |state, cx| {
+                if let Some(form) = state.property_forms.entries.get_mut(&target) {
+                    form.reload_field(id);
+                }
+                state.set_edit_error(error.to_string(), cx);
+            }),
+        }
+    }
+
+    fn update_preview(&mut self, id: PropertyId, value: f64, cx: &mut Context<Self>) {
+        let Some((field, token)) = self.preview.clone() else {
+            return;
+        };
+        if field != id {
+            return;
+        }
+        let Some(target) = self.target.clone() else {
+            return;
+        };
+        let spec = self.field_spec(id).binding;
+        if let Some(owner) = self.owner.upgrade() {
+            owner.update(cx, |state, cx| {
+                let Some(form) = state.property_forms.entries.get_mut(&target) else {
+                    return;
+                };
+                let previous = form.fields[&id].clone();
+                let raw = if spec.value_type == editor_core::PropertyType::Integer {
+                    (value as i64).to_string()
+                } else {
+                    (value as f32).to_string()
+                };
+                form.edit(&spec, raw);
+                let result = form
+                    .patch(target.object.kind, id)
+                    .and_then(|patch| state.editor.update_property_edit(&token, &patch));
+                if let Err(error) = &result {
+                    // Keep the candidate and its text at the last valid preview.
+                    form.fields.insert(id, previous);
+                    state.set_edit_error(error.to_string(), cx);
+                }
+                state.redraw(cx);
+            });
+        }
+        cx.notify();
+    }
+
+    fn finish_preview(&mut self, cx: &mut Context<Self>) {
+        let Some((id, token)) = self.preview.take() else {
+            return;
+        };
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        let Some(target) = self.target.clone() else {
+            return;
+        };
+        owner.update(cx, |state, cx| {
+            let result = state.editor.finish_property_edit(&token);
+            if let (Some(values), Some(form)) = (
+                state
+                    .editor
+                    .document()
+                    .and_then(|doc| doc.property_values(&target.object).ok()),
+                state.property_forms.entries.get_mut(&target),
+            ) {
+                form.sync(target.object.kind, values);
+                form.reload_field(id);
+            }
+            if let Err(error) = result {
+                state.set_edit_error(error.to_string(), cx);
+            }
+            state.redraw(cx);
+        });
+        cx.notify();
+    }
+
+    pub(super) fn cancel_preview(&mut self, cx: &mut Context<Self>) {
+        let Some((id, token)) = self.preview.take() else {
+            return;
+        };
+        if let Some(control) = self.controls.get(&id).and_then(|c| c.number.clone()) {
+            control.update(cx, |number, cx| number.reset_drag(cx));
+        }
+        if let Some(owner) = self.owner.upgrade() {
+            owner.update(cx, |state, cx| {
+                state.editor.cancel_property_edit(&token);
+                if let Some(target) = &self.target {
+                    if let Some(form) = state.property_forms.entries.get_mut(target) {
+                        form.reload_field(id);
+                    }
+                }
+                state.redraw(cx);
+            });
+        }
+    }
+
+    pub(crate) fn take_preview(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) -> Option<(PropertyTarget, PropertyId, editor_core::PropertyEditToken)> {
+        let (id, token) = self.preview.take()?;
+        if let Some(number) = self.controls.get(&id).and_then(|c| c.number.clone()) {
+            number.update(cx, |number, cx| number.reset_drag(cx));
+        }
+        self.target.clone().map(|target| (target, id, token))
+    }
+
+    pub(crate) fn is_visible(&self) -> bool {
+        self.visible
+    }
+
+    /// Return domain cleanup to the parent; never update EditorView while the
+    /// parent's render holds its entity borrow.
+    pub(crate) fn set_visible(
+        &mut self,
+        visible: bool,
+        cx: &mut Context<Self>,
+    ) -> Option<(PropertyTarget, PropertyId, editor_core::PropertyEditToken)> {
+        if self.visible == visible {
+            return None;
+        }
+        self.visible = visible;
+        if visible {
+            return None;
+        }
+        let preview = self.preview.take();
+        if let Some((id, _)) = &preview {
+            if let Some(number) = self.controls.get(id).and_then(|c| c.number.clone()) {
+                number.update(cx, |number, cx| number.reset_drag(cx));
+            }
+        }
+        self.controls.clear();
+        self.epoch += 1;
+        self.snapshot = None;
+        preview.and_then(|(id, token)| self.target.clone().map(|target| (target, id, token)))
+    }
+
+    fn ensure_control(&mut self, id: PropertyId, window: &mut Window, cx: &mut Context<Self>) {
+        if self.controls.contains_key(&id) {
+            return;
+        }
+        let spec = self.field_spec(id);
+        let epoch = self.epoch;
+        let input = cx
+            .new(|cx| InputState::new(window, cx).default_value(self.form.fields[&id].raw.clone()));
+        let text = cx.subscribe_in(
+            &input,
+            window,
+            move |this, source, event: &InputEvent, window, cx| {
+                if !this.allowed(epoch, window, cx)
+                    || this
+                        .controls
+                        .get(&id)
+                        .is_none_or(|control| &control.input != source)
+                {
+                    return;
+                }
+                match event {
+                    InputEvent::Change if source.read(cx).focus_handle(cx).is_focused(window) => {
+                        let raw = source.read(cx).value().to_string();
+                        let matches_draft = this.owner.upgrade().is_some_and(|owner| {
+                            owner
+                                .read(cx)
+                                .property_forms
+                                .entries
+                                .get(this.target.as_ref().unwrap())
+                                .is_some_and(|form| form.fields[&id].raw == raw)
+                        });
+                        if !matches_draft {
+                            this.edit_text(id, raw, cx);
+                        }
+                    }
+                    InputEvent::PressEnter { .. } | InputEvent::Blur => {
+                        if !this.composing(id, window, cx) {
+                            let raw = source.read(cx).value().to_string();
+                            if this.form.fields[&id].touched || this.form.fields[&id].raw != raw {
+                                this.edit_text(id, raw, cx);
+                                this.commit_field(id, cx);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            },
+        );
+        let mut events = vec![text];
+        let number = spec.binding.preview.then(|| {
+            let number = cx.new(|cx| {
+                let control = SlideNumberInput::new(
+                    input.clone(),
+                    t!(spec.label).into_owned(),
+                    self.number_options(id),
+                    window,
+                    cx,
+                );
+                if spec.binding.value_type == editor_core::PropertyType::Integer {
+                    control.truncate_to_integer()
+                } else {
+                    control
+                }
+            });
+            events.push(cx.subscribe_in(
+                &number,
+                window,
+                move |this, source, event: &SlideNumberGesture, window, cx| {
+                    if this.epoch != epoch
+                        || this.controls.get(&id).and_then(|c| c.number.as_ref()) != Some(source)
+                    {
+                        return;
+                    }
+                    if !this.allowed(epoch, window, cx) {
+                        this.cancel_preview(cx);
+                        return;
+                    }
+                    match event {
+                        SlideNumberGesture::Begin => this.begin_preview(id, cx),
+                        SlideNumberGesture::End => this.finish_preview(cx),
+                        SlideNumberGesture::Cancel => this.cancel_preview(cx),
+                    }
+                },
+            ));
+            events.push(cx.subscribe_in(
+                &number,
+                window,
+                move |this, _, event: &SlideNumberChange, window, cx| {
+                    if this.allowed(epoch, window, cx) {
+                        this.update_preview(id, event.0, cx);
+                    }
+                },
+            ));
+            number
+        });
+        self.controls.insert(
+            id,
+            FieldControl {
+                input,
+                displayed: self.form.fields[&id].raw.clone(),
+                settled: self.form.fields[&id].revision,
+                number,
+                _events: events,
+            },
+        );
+    }
+
+    fn number_options(&self, id: PropertyId) -> SlideNumberOptions {
+        let spec = self.field_spec(id).binding;
+        let mut min = spec.min;
+        let mut max = spec.max;
+        if let Some(target) = &self.target {
+            if target.object.kind == editor_core::ObjectKind::Parameter {
+                let value = |key| {
+                    self.form
+                        .fields
+                        .get(&key)
+                        .and_then(|f| f.baseline.number())
+                        .unwrap_or(0.) as f32
+                };
+                match id {
+                    PropertyId::Minimum => {
+                        max = f64::from(
+                            value(PropertyId::DefaultValue)
+                                .min(value(PropertyId::Maximum).next_down()),
+                        )
+                    }
+                    PropertyId::Maximum => {
+                        min = f64::from(
+                            value(PropertyId::DefaultValue)
+                                .max(value(PropertyId::Minimum).next_up()),
+                        )
+                    }
+                    PropertyId::DefaultValue => {
+                        min = f64::from(value(PropertyId::Minimum));
+                        max = f64::from(value(PropertyId::Maximum));
+                    }
+                    _ => {}
+                }
+            }
+        }
+        SlideNumberOptions {
+            value: self.form.fields[&id]
+                .parsed
+                .as_ref()
+                .ok()
+                .and_then(PropertyValue::number)
+                .unwrap_or(0.),
+            min,
+            max,
+            step: spec.step,
+            drag_distance: None,
+            disabled: self.disabled,
+        }
+    }
+
+    pub(super) fn render_field(
+        &mut self,
+        id: PropertyId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let Some(field) = self.form.fields.get(&id).cloned() else {
+            return div().into_any_element();
+        };
+        let spec = self.field_spec(id);
+        let epoch = self.epoch;
+        let disabled = self.disabled || window.has_active_dialog(cx);
+        let body = if spec.editor == FieldEditor::Toggle {
+            let checked = matches!(field.parsed, Ok(PropertyValue::Bool(true)));
+            Checkbox::new(SharedString::from(format!("property-toggle-{}", id.path())))
+                .checked(checked)
+                .disabled(disabled)
+                .on_click(cx.listener(move |this, checked, window, cx| {
+                    if this.allowed(epoch, window, cx) {
+                        this.set_value(id, PropertyValue::Bool(*checked), cx);
+                    }
+                }))
+                .into_any_element()
+        } else {
+            self.ensure_control(id, window, cx);
+            let options = self.number_options(id);
+            let control = self.controls.get_mut(&id).unwrap();
+            let input = control.input.clone();
+            if control.displayed != field.raw || control.settled != field.revision {
+                control.settled = field.revision;
+                control.displayed = field.raw.clone();
+                if input.read(cx).value().as_ref() != field.raw {
+                    input.update(cx, |input, cx| {
+                        input.set_value(field.raw.clone(), window, cx)
+                    });
+                }
+            }
+            let number = control.number.clone();
+            let mut body = div()
+                .flex()
+                .items_center()
+                .w_full()
+                .min_w_0()
+                .gap(compact::rem(compact::GAP));
+            if spec.editor == FieldEditor::OptionalNumber {
+                let custom = self.form.numeric_visible(id);
+                body = body.child(
+                    Checkbox::new(SharedString::from(format!("property-custom-{}", id.path())))
+                        .label(t!("properties.custom").into_owned())
+                        .checked(custom)
+                        .disabled(disabled)
+                        .on_click(cx.listener(move |this, custom: &bool, window, cx| {
+                            if this.allowed(epoch, window, cx) {
+                                this.set_value(
+                                    id,
+                                    PropertyValue::OptionalFloat(custom.then_some(0.)),
+                                    cx,
+                                );
+                            }
+                        })),
+                );
+            }
+            if self.form.numeric_visible(id) {
+                let numeric = spec.editor != FieldEditor::Text;
+                let editor = if let Some(number) = &number {
+                    number.update(cx, |number, cx| {
+                        number.configure(t!(spec.label).into_owned(), options, cx)
+                    });
+                    number.clone().into_any_element()
+                } else {
+                    compact::input(Input::new(&input))
+                        .map(|input| Styled::h(input, compact::rem(compact::NUMBER_CONTROL)))
+                        .line_height(compact::rem(14.))
+                        .disabled(disabled)
+                        .aria_label(t!(spec.label))
+                        .when(numeric, |input| {
+                            input
+                                .text_align(TextAlign::Right)
+                                .font_family(".AppleSystemUIFontMonospaced")
+                        })
+                        .into_any_element()
+                };
+                body = body.child(
+                    div()
+                        .id(SharedString::from(format!("property-input-{}", id.path())))
+                        .test_support()
+                        .flex_1()
+                        .min_w_0()
+                        .w_full()
+                        .child(editor),
+                );
+            }
+            body.into_any_element()
+        };
+        let label = t!(spec.label).into_owned();
+        compact::property_row(label, body, cx)
+            .id(SharedString::from(format!("object-property-{}", id.path())))
+            .test_support()
+            .into_any_element()
+    }
+
+    pub(super) fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        if !self.allowed(self.epoch, window, cx) {
+            return false;
+        }
+        if self.preview.is_some() {
+            self.cancel_preview(cx);
+            return true;
+        }
+        let Some((&id, _)) = self
+            .controls
+            .iter()
+            .find(|(_, control)| control.input.read(cx).focus_handle(cx).is_focused(window))
+        else {
+            return false;
+        };
+        if self.composing(id, window, cx) {
+            return false;
+        }
+        self.reload_field(id, cx);
+        window.focus(&self.focus, cx);
+        true
+    }
+
+    pub(crate) fn active_property_edit(
+        &self,
+        forms: &property_form::PropertyForms,
+        window: &Window,
+        cx: &App,
+    ) -> bool {
+        if !self.visible || self.disabled {
+            return false;
+        }
+        if self.preview.is_some() {
+            return true;
+        }
+        let Some(target) = &self.target else {
+            return false;
+        };
+        let Some((&id, control)) = self
+            .controls
+            .iter()
+            .find(|(_, control)| control.input.read(cx).focus_handle(cx).is_focused(window))
+        else {
+            return false;
+        };
+        let live_raw = control.input.read(cx).value();
+        forms
+            .entries
+            .get(target)
+            .is_some_and(|form| form.field_active(id, live_raw.as_ref()))
+    }
+
+    fn composing(&self, id: PropertyId, window: &mut Window, cx: &mut App) -> bool {
+        use gpui_kit::EntityInputHandler;
+        self.controls[&id].input.update(cx, |input, cx| {
+            input.marked_text_range(window, cx).is_some()
+        })
+    }
+
+    pub(crate) fn composing_input(&self, window: &mut Window, cx: &mut App) -> bool {
+        self.controls
+            .iter()
+            .find(|(_, control)| control.input.read(cx).focus_handle(cx).is_focused(window))
+            .map(|(&id, _)| id)
+            .is_some_and(|id| self.composing(id, window, cx))
+    }
+
+    pub(crate) fn focused_input_snapshot(
+        &self,
+        window: &Window,
+        cx: &App,
+    ) -> Option<(PropertyTarget, PropertyId, String)> {
+        if !self.visible {
+            return None;
+        }
+        let (&id, control) = self
+            .controls
+            .iter()
+            .find(|(_, control)| control.input.read(cx).focus_handle(cx).is_focused(window))?;
+        Some((
+            self.target.clone()?,
+            id,
+            control.input.read(cx).value().to_string(),
+        ))
+    }
+
+    pub(super) fn property_action(
+        &mut self,
+        action: editor_core::CommandId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        use editor_core::CommandId::{CancelProperty, CommitProperty};
+        if !matches!(action, CommitProperty | CancelProperty)
+            || !self.allowed(self.epoch, window, cx)
+        {
+            return false;
+        }
+        if action == CancelProperty {
+            return self.escape(window, cx);
+        }
+        if self.preview.is_some() {
+            self.finish_preview(cx);
+            return true;
+        }
+        let Some((&id, _)) = self
+            .controls
+            .iter()
+            .find(|(_, control)| control.input.read(cx).focus_handle(cx).is_focused(window))
+        else {
+            return false;
+        };
+        if self.composing(id, window, cx) {
+            return true;
+        }
+        let raw = self.controls[&id].input.read(cx).value().to_string();
+        self.edit_text(id, raw, cx);
+        self.commit_field(id, cx);
+        true
+    }
+}

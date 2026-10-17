@@ -85,7 +85,7 @@ impl DocumentSession {
     pub fn active_tool(&self) -> crate::ToolId {
         self.modeling.tools.active
     }
-    fn invalidate_scene(&mut self) {
+    pub(crate) fn invalidate_scene(&mut self) {
         self.scene_revision += 1;
         self.cache = None;
         self.previous_geometry = self
@@ -101,6 +101,35 @@ impl DocumentSession {
         }
     }
     pub fn execute(&mut self, command: EditorCommand) -> Result<()> {
+        // Reject invalid property writes before releasing any current owner.
+        // The document revalidates immediately before publication as well.
+        match &command {
+            EditorCommand::SetObjectProperties { object, patch } => {
+                self.document.validate_object_properties(object, patch)?;
+            }
+            EditorCommand::SetObjectProperty {
+                object,
+                field,
+                value,
+            } => {
+                let patch = self.document.object_property_patch(object, field, value)?;
+                self.document.validate_object_properties(object, &patch)?;
+            }
+            _ => {}
+        }
+        if self.document.property_edit_serial().is_some()
+            && !matches!(
+                &command,
+                EditorCommand::FinishEdit | EditorCommand::CancelEdit
+            )
+        {
+            self.document.cancel_edit();
+            self.animation.playback.property_preview_changed();
+            self.invalidate_scene();
+            if matches!(&command, EditorCommand::Undo | EditorCommand::Redo) {
+                return Ok(());
+            }
+        }
         if self.animation.timeline.edit.is_some() {
             match command {
                 EditorCommand::Undo | EditorCommand::Redo | EditorCommand::CancelEdit => {
@@ -123,6 +152,7 @@ impl DocumentSession {
             None
         };
         let had_pending = self.document.has_pending_edit();
+        let had_property = self.document.property_edit_serial().is_some();
         let evaluation_before = self.document.evaluation_revision();
         let history_state = matches!(&command, EditorCommand::Undo | EditorCommand::Redo)
             .then(|| self.document.model().editor_state().clone());
@@ -272,6 +302,9 @@ impl DocumentSession {
                 field,
                 value,
             } => self.document.set_object_property(&object, &field, value),
+            EditorCommand::SetObjectProperties { object, patch } => {
+                self.document.set_object_properties(&object, &patch)
+            }
             EditorCommand::Select(id) => self.document.select(&id),
             EditorCommand::SelectObject(r) => self.document.select_object(r),
             EditorCommand::FocusParameter(id) => self.document.focus_parameter(&id),
@@ -296,6 +329,9 @@ impl DocumentSession {
             EditorCommand::FinishEdit => self.document.finish_edit(),
             EditorCommand::CancelEdit => {
                 self.document.cancel_edit();
+                if had_property {
+                    self.animation.playback.property_preview_changed();
+                }
                 Ok(())
             }
             EditorCommand::Undo => self.document.undo(),

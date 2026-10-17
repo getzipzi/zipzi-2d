@@ -760,6 +760,7 @@ impl Editor {
         if candidate != edit.candidate {
             let source = Arc::new(AnimationSource {
                 snapshot: edit.source.snapshot.clone(),
+                properties: None,
                 textures: edit.source.textures.clone(),
                 candidate: Some(Arc::new(candidate.clone())),
                 materialized: Default::default(),

@@ -1,6 +1,6 @@
 use super::super::harness::{Harness, update};
-use super::common::{clip, drain, elapsed, pointer, pump, select, stats};
-use anyhow::ensure;
+use super::common::{drain, elapsed, pointer, pump, select, stats};
+use anyhow::{Context as _, ensure};
 use editor_core::{AnimationPreviewMode, PanelKind, TimelineDisplayMode, WorkspaceKind};
 use gpui_kit::{
     InputEvent as _, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
@@ -155,7 +155,7 @@ pub(crate) fn canvas_dock_resize(
             if workspace == WorkspaceKind::Animation {
                 v.dock.as_ref().unwrap().show(
                     if properties {
-                        PanelKind::AnimationProperties
+                        PanelKind::Properties
                     } else {
                         PanelKind::AnimationInfo
                     },
@@ -176,6 +176,26 @@ pub(crate) fn canvas_dock_resize(
             h.capture()?;
         }
         pump(h)?;
+        if properties {
+            h.cx.update_window(h.window, |_, w, cx| {
+                for _ in 0..3 {
+                    w.scroll(
+                        "object-properties",
+                        ScrollDelta::Pixels(point(px(0.), px(-100_000.))),
+                        cx,
+                    );
+                    w.render_frame(cx);
+                }
+                w.click("property-group-$details", cx);
+                w.render_frame(cx);
+                w.scroll(
+                    "object-properties",
+                    ScrollDelta::Pixels(point(px(0.), px(100_000.))),
+                    cx,
+                );
+            })?;
+            pump(h)?;
+        }
         let (origin, width) = h.cx.update_window(h.window, |_, w, _| {
             let b = w.find("canvas-body").bounds();
             (point(b.right(), b.top() + px(60.)), b.size.width)
@@ -190,9 +210,7 @@ pub(crate) fn canvas_dock_resize(
             let dock = v.dock.as_ref().unwrap();
             (
                 dock.timeline.read(cx).renders(),
-                dock.animation_inspectors[&PanelKind::AnimationProperties]
-                    .read(cx)
-                    .properties_cache_stats(),
+                dock.properties.read(cx).properties_cache_stats(),
             )
         });
         let mut dispatch = Vec::new();
@@ -231,9 +249,7 @@ pub(crate) fn canvas_dock_resize(
             let dock = v.dock.as_ref().unwrap();
             (
                 dock.timeline.read(cx).renders(),
-                dock.animation_inspectors[&PanelKind::AnimationProperties]
-                    .read(cx)
-                    .properties_cache_stats(),
+                dock.properties.read(cx).properties_cache_stats(),
             )
         });
         if properties {
@@ -262,14 +278,14 @@ pub(crate) fn canvas_dock_resize(
         if properties {
             h.capture()?
                 .save(output.join("dock-properties-resized.png"))?;
-            let clip = clip(h);
-            let last: gpui_kit::ElementId = if clip.events.is_empty() {
-                ("animation-property-track", clip.tracks.len() - 1).into()
-            } else {
-                ("animation-property-event", clip.events.len() - 1).into()
-            };
+            let last = h
+                .view
+                .read_with(&h.cx, |v, cx| {
+                    v.dock.as_ref().unwrap().properties.read(cx).last_row_id()
+                })
+                .context("Properties has no last row")?;
             let last_visible = |window: &Window| {
-                let bounds = window.find("AnimationProperties").bounds();
+                let bounds = window.find("object-properties").bounds();
                 window.try_find(last.clone()).is_some_and(|row| {
                     row.bounds().top() >= bounds.top() && row.bounds().bottom() <= bounds.bottom()
                 })
@@ -285,7 +301,7 @@ pub(crate) fn canvas_dock_resize(
                 h.cx.update_window(h.window, |_, w, cx| {
                     w.dispatch_event(
                         ScrollWheelEvent {
-                            position: w.find("AnimationProperties").bounds().center(),
+                            position: w.find("object-properties").bounds().center(),
                             delta: ScrollDelta::Pixels(point(px(0.), px(-100_000.))),
                             ..Default::default()
                         }

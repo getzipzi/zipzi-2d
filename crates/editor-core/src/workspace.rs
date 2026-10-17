@@ -282,7 +282,9 @@ impl Editor {
                         | EditorCommand::Redo
                         | EditorCommand::FinishEdit
                         | EditorCommand::CancelEdit
-                ),
+                )
+                || matches!(&command, EditorCommand::SetObjectProperties { object, .. }
+                    if matches!(object.kind, crate::ObjectKind::Motion | crate::ObjectKind::Expression)),
             "Modeling commands are unavailable in Animation"
         );
         if matches!(
@@ -297,6 +299,7 @@ impl Editor {
                 | EditorCommand::UpdateParameterGroup { .. }
                 | EditorCommand::DeleteParameterGroup { .. }
                 | EditorCommand::SetObjectsLocked { .. }
+                | EditorCommand::SetObjectProperties { .. }
                 | EditorCommand::SelectCanvasObjects(_)
                 | EditorCommand::ReorderTree { .. }
                 | EditorCommand::MoveOrganization { .. }

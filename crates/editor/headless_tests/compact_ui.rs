@@ -187,8 +187,8 @@ fn ui_scale_changes_controls_rows_and_chrome_together(cx: &mut TestAppContext) {
             assert!(area.contains(&canvas.origin));
             assert!(canvas.right() <= area.right());
             assert!(canvas.bottom() <= area.bottom());
-            // Theme changes retain the selected object and read-only properties.
-            assert!(window.try_find("object-property-input").is_none());
+            // Theme changes retain the selected object and its form.
+            assert!(window.try_find("property-input-name").is_some());
         })
         .unwrap();
     }
@@ -196,15 +196,68 @@ fn ui_scale_changes_controls_rows_and_chrome_together(cx: &mut TestAppContext) {
 
 #[gpui_kit::test]
 fn property_groups_collapse_without_editing_the_document(cx: &mut TestAppContext) {
-    let harness = setup(cx);
+    let rows = crate::panels::document_panel::property_rows(&serde_json::json!({
+        "masks": [],
+        "axes": [
+            {"parameter_id": "ParamAngleX", "keys": [-30.0, 0.0, 30.0]}
+        ],
+        "pairs": [
+            {"vertex_a": 0, "vertex_b": 1, "weight": 0.5}
+        ],
+        "items": (0..12).map(|i| serde_json::json!({"id": format!("id_{i}"), "name": format!("Item {i}")})).collect::<Vec<_>>(),
+    }));
+    assert!(rows.contains(&("masks".into(), "[]".into())));
+    assert!(rows.contains(&("axes[0].keys".into(), "[-30.0,0.0,30.0]".into())));
+    assert!(rows.contains(&(
+        "pairs[0]".into(),
+        "vertex_a: 0, vertex_b: 1, weight: 0.5".into()
+    )));
+    let pos_2 = rows.iter().position(|(k, _)| k == "items[2].name").unwrap();
+    let pos_10 = rows
+        .iter()
+        .position(|(k, _)| k == "items[10].name")
+        .unwrap();
+    assert!(
+        pos_2 < pos_10,
+        "natural index order must keep [2] before [10]"
+    );
+
+    let (document, assets) =
+        super::document_fixture::sample_document_with_parameter_groups().unwrap();
+    let harness = super::setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
-        assert!(window.find("object-property-name").visible());
-        window.click("property-group-", cx);
+        window.click("inspect-document", cx);
         window.render_frame(cx);
-        assert!(window.try_find("object-property-name").is_none());
-        window.click("property-group-", cx);
+        let panel = harness
+            .view
+            .read(cx)
+            .dock
+            .as_ref()
+            .unwrap()
+            .properties
+            .clone();
+        let collapsed_rows = panel.read(cx).properties_cache_stats().1;
+        window.click("property-group-$details", cx);
         window.render_frame(cx);
-        assert!(window.find("object-property-name").visible());
+        let (builds, expanded_rows) = panel.read(cx).properties_cache_stats();
+        assert!(expanded_rows > collapsed_rows);
+        assert!(
+            window
+                .try_find("property-array-display_info.parameter_groups")
+                .is_some()
+        );
+        window.click("property-array-display_info.parameter_groups", cx);
+        window.render_frame(cx);
+        let (builds_after_array_fold, array_collapsed_rows) =
+            panel.read(cx).properties_cache_stats();
+        assert_eq!(builds_after_array_fold, builds);
+        assert!(array_collapsed_rows < expanded_rows);
+        window.click("property-array-display_info.parameter_groups", cx);
+        window.render_frame(cx);
+        assert_eq!(panel.read(cx).properties_cache_stats().1, expanded_rows);
+        window.click("property-group-$details", cx);
+        window.render_frame(cx);
+        assert_eq!(panel.read(cx).properties_cache_stats().1, collapsed_rows);
         let doc = harness.view.read(cx).editor.document().unwrap();
         assert_eq!(doc.history_lengths(), (0, 0));
         assert!(!doc.modified());

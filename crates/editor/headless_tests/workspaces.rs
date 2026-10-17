@@ -127,13 +127,10 @@ fn switching_uses_distinct_viewport_types_and_keeps_document_and_modeling_tool(
         assert!(motions.right() <= canvas_bounds.left());
         assert!(info.left() >= canvas_bounds.right());
         harness.view.read_with(cx, |view, cx| {
-            use editor_core::PanelKind;
             let dock = view.dock.as_ref().unwrap();
             let tree = dock.area.read(cx).layout(DockPlacement::Center).unwrap();
             let info = tree.find_panel_node(PanelId::from(dock.animation_info.entity_id()));
-            let properties = tree.find_panel_node(PanelId::from(
-                dock.animation_inspectors[&PanelKind::AnimationProperties].entity_id(),
-            ));
+            let properties = tree.find_panel_node(PanelId::from(dock.properties.entity_id()));
             assert_eq!(info, properties, "Info and Properties share tabs");
         });
         harness.view.read_with(cx, |view, _| {

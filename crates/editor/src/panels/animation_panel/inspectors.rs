@@ -5,7 +5,7 @@ use editor_core::{Document, ObjectKind, ObjectRef};
 use kasane_core::document::PosePartRef;
 use kasane_sdk::MotionSnapshot;
 
-pub(super) fn heading(title: impl Into<SharedString>, cx: &App) -> Div {
+pub(crate) fn heading(title: impl Into<SharedString>, cx: &App) -> Div {
     div()
         .mt_2()
         .pb_1()
@@ -15,7 +15,7 @@ pub(super) fn heading(title: impl Into<SharedString>, cx: &App) -> Div {
         .child(title.into())
 }
 
-pub(super) fn field(
+pub(crate) fn field(
     id: impl Into<ElementId>,
     label: impl Into<SharedString>,
     value: impl Into<SharedString>,
@@ -41,7 +41,7 @@ pub(super) fn field(
         )
 }
 
-pub(super) fn property(
+pub(crate) fn property(
     id: impl Into<ElementId>,
     label: impl Into<SharedString>,
     value: impl Into<SharedString>,
@@ -83,7 +83,7 @@ fn parameter_name(document: &Document, id: &str) -> String {
         )
 }
 
-pub(super) fn part_name(document: &Document, part: &PosePartRef) -> String {
+pub(crate) fn part_name(document: &Document, part: &PosePartRef) -> String {
     match part {
         PosePartRef::Resolved { part_id } => document
             .object_index()
@@ -117,7 +117,7 @@ fn frame_status(mut content: Stateful<Div>, snapshot: Option<&MotionSnapshot>) -
     })
 }
 
-pub(super) fn physics(
+pub(crate) fn physics(
     mut content: Stateful<Div>,
     document: &Document,
     snapshot: Option<&MotionSnapshot>,
@@ -238,7 +238,7 @@ pub(super) fn physics(
     content
 }
 
-pub(super) fn pose(
+pub(crate) fn pose(
     mut content: Stateful<Div>,
     document: &Document,
     snapshot: Option<&MotionSnapshot>,

@@ -21,14 +21,14 @@ impl Document {
         sorting::ordered_parameter_ids(self.model())
             .iter()
             .filter_map(|id| {
-                let parameter = self.session.parameter(id)?;
+                let parameter = self.model().get_parameter(id)?;
                 Some(ParameterValue {
                     id: id.clone(),
                     group_id: groups.get(id.as_str()).cloned().flatten(),
                     name: if parameter.name.is_empty() {
-                        parameter.runtime_id
+                        parameter.runtime_id.clone()
                     } else {
-                        parameter.name
+                        parameter.name.clone()
                     },
                     minimum: parameter.minimum,
                     maximum: parameter.maximum,
@@ -38,7 +38,8 @@ impl Document {
                         .preview_values()
                         .get(id)
                         .copied()
-                        .unwrap_or(parameter.default_value),
+                        .unwrap_or(parameter.default_value)
+                        .clamp(parameter.minimum, parameter.maximum),
                     decimal_places: parameter.decimal_places.clamp(0, 9) as usize,
                 })
             })

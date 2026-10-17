@@ -48,7 +48,7 @@ fn reveal_property(
         }
         window.dispatch_event(
             ScrollWheelEvent {
-                position: window.find("AnimationProperties").bounds().center(),
+                position: window.find("object-properties").bounds().center(),
                 delta: ScrollDelta::Pixels(point(px(0.), px(-32.))),
                 ..Default::default()
             }
@@ -277,20 +277,23 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
     cx.update_window(harness.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         harness.view.update(cx, |view, cx| {
-            view.dock.as_ref().unwrap().show(
-                editor_core::PanelKind::AnimationProperties,
-                None,
-                window,
-                cx,
-            );
+            view.dock
+                .as_ref()
+                .unwrap()
+                .show(editor_core::PanelKind::Properties, None, window, cx);
         });
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
         window.render_frame(cx);
+        reveal_property(window, "property-group-$details", cx);
+        window.click("property-group-$details", cx);
+        window.render_frame(cx);
+        reveal_property(window, "animation-property-motion", cx);
         assert_eq!(
             window.find("animation-property-motion").label(),
             Some("Once")
         );
+        reveal_property(window, "animation-property-registration", cx);
         assert_eq!(
             window.find("animation-property-registration").label(),
             Some("Idle [1]")
@@ -302,6 +305,7 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
         );
         window.click(("animation-motion", 1usize), cx);
         window.render_frame(cx);
+        reveal_property(window, "animation-property-registration", cx);
         assert_eq!(
             window.find("animation-property-registration").label(),
             Some("Idle [2]")
@@ -313,11 +317,12 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
         );
         super::animation::click_expression(window, 0, cx);
         window.render_frame(cx);
-        reveal_property(window, ("animation-property-expression-entry", 0usize), cx);
+        reveal_property(window, "animation-property-expression", cx);
         assert_eq!(
             window.find("animation-property-expression").label(),
             Some("Add")
         );
+        reveal_property(window, ("animation-property-expression-entry", 0usize), cx);
         assert_eq!(
             window
                 .find(("animation-property-expression-entry", 0usize))
@@ -372,12 +377,10 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
     cx.update_window(harness.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         harness.view.update(cx, |view, cx| {
-            view.dock.as_ref().unwrap().show(
-                editor_core::PanelKind::AnimationProperties,
-                None,
-                window,
-                cx,
-            );
+            view.dock
+                .as_ref()
+                .unwrap()
+                .show(editor_core::PanelKind::Properties, None, window, cx);
         });
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
@@ -453,7 +456,16 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
         window.render_frame(cx);
         assert!(window.try_find("animation-physics-empty").is_some());
         assert!(window.try_find("animation-physics-input-0-0").is_none());
-        assert!(window.try_find("animation-property-no-motion").is_some());
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .active_inspection()
+                .unwrap()
+                .object()
+                .is_none()
+        );
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
@@ -465,8 +477,25 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
         assert!(window.try_find("animation-physics-empty").is_none());
         assert!(window.try_find("animation-physics-input-0-0").is_some());
         assert_eq!(
-            window.find("animation-property-motion").label(),
-            Some("Once")
+            harness
+                .view
+                .read(cx)
+                .editor
+                .animation()
+                .unwrap()
+                .motion
+                .as_ref()
+                .unwrap()
+                .clip_id,
+            harness
+                .view
+                .read(cx)
+                .editor
+                .active_inspection()
+                .unwrap()
+                .object()
+                .unwrap()
+                .id
         );
     })
     .unwrap();
@@ -485,13 +514,13 @@ fn inspector_commands_restore_separate_workspace_layouts(cx: &mut TestAppContext
             view.run_command(CommandId::Pose, window, cx);
             let dock = view.dock.as_ref().unwrap();
             for kind in [
-                PanelKind::AnimationProperties,
+                PanelKind::Properties,
                 PanelKind::AnimationPhysics,
                 PanelKind::AnimationPose,
             ] {
                 assert!(dock.contains(kind, cx));
             }
-            for kind in [PanelKind::Properties, PanelKind::Physics, PanelKind::Pose] {
+            for kind in [PanelKind::Physics, PanelKind::Pose] {
                 assert!(!dock.contains(kind, cx));
             }
             view.run_command(CommandId::Properties, window, cx);
@@ -500,7 +529,7 @@ fn inspector_commands_restore_separate_workspace_layouts(cx: &mut TestAppContext
                     .dock
                     .as_ref()
                     .unwrap()
-                    .contains(PanelKind::AnimationProperties, cx)
+                    .contains(PanelKind::Properties, cx)
             );
         });
         window.render_frame(cx);
@@ -517,10 +546,10 @@ fn inspector_commands_restore_separate_workspace_layouts(cx: &mut TestAppContext
             let dock = view.dock.as_ref().unwrap();
             assert!(dock.contains(PanelKind::AnimationPhysics, cx));
             assert!(dock.contains(PanelKind::AnimationPose, cx));
-            assert!(!dock.contains(PanelKind::AnimationProperties, cx));
+            assert!(!dock.contains(PanelKind::Properties, cx));
             view.run_command(CommandId::ResetLayout, window, cx);
             let dock = view.dock.as_ref().unwrap();
-            assert!(dock.contains(PanelKind::AnimationProperties, cx));
+            assert!(dock.contains(PanelKind::Properties, cx));
             assert!(dock.contains(PanelKind::AnimationInfo, cx));
             assert!(!dock.contains(PanelKind::AnimationPhysics, cx));
             assert!(!dock.contains(PanelKind::AnimationPose, cx));

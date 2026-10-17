@@ -39,9 +39,14 @@ impl DockWorkspace {
         };
         let column = |region, cx: &App| {
             let mut groups = std::collections::BTreeMap::<usize, DockLayout>::new();
-            for spec in PANELS.iter().filter(|spec| {
-                spec.available(self.workspace) && spec.default_visible && spec.region == region
-            }) {
+            let mut specs: Vec<_> = PANELS
+                .iter()
+                .filter(|spec| {
+                    spec.available(self.workspace) && spec.default_visible && spec.region == region
+                })
+                .collect();
+            specs.sort_by_key(|spec| (spec.group, animation && spec.kind == PanelKind::Properties));
+            for spec in specs {
                 let group = groups
                     .remove(&spec.group)
                     .unwrap_or_else(DockLayout::tabs)

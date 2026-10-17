@@ -16,41 +16,12 @@ Run the editor:
 cargo run --locked -p kasane-editor
 ```
 
-Document Undo/Redo uses `kasane-sdk::AuthoringSession` checkpoint history.
-Gestures preview isolated candidates and commit one history step. Selection,
-tools, and viewport state stay in the editor; text inputs use GPUI Kit history.
-
-Editor and Timeline shortcuts share `keybindings.json` and the shortcut help.
-Local shortcuts follow the visible content under the pointer without moving
-keyboard focus. Text controls, menus, and captured gestures retain input priority;
-dock headers and window chrome do not reuse a previous viewport target.
-Use `secondary` for Command on macOS or Control on Windows/Linux. Each override
-may specify `platform` (`macos`, `windows`, or `linux`); platform overrides replace
-common overrides, and an empty `keys` array unbinds a command. Timeline and viewport
-bindings may reuse keys in their separate contexts. Invalid settings fall back to
-the last valid configuration.
-
 Watch source changes and rebuild automatically:
 
 ```sh
 brew install watchexec
 ./scripts/dev.sh
 ```
-
-The title bar combines a project dropdown (including New/Open and Close), a centered
-workspace switcher, and a workspace menu (the top-right ellipsis) with UI scale.
-The project dropdown remains available when no project is open.
-Right-click a panel header (including its tab and unused space) for panel actions
-or to add panels. Drag the tab or header background to move a panel. Groups with
-multiple tabs offer a selection-only dropdown. Canvas tools live in the canvas overlay;
-zoom controls are aligned to the right of its panel header.
-Context and dropdown menus share Kit's Small density, including submenus and
-multiline project entries. Menus and Selects use 12px text. Selects use XSmall
-dropdown styling with 22px triggers; compact menu rows are 20px. Both follow
-the editor's UI scale.
-Tooltips use 11px text with compact padding and follow the same UI scale.
-Animation defaults to Full Effect with editing-preview Loop enabled. Full Effect
-continues to follow each Motion's Loop setting; preview modes are selected in Timeline.
 
 ## Test
 
@@ -85,6 +56,8 @@ env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=titlebar cargo test --lock
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Compact menus, submenus and plain/searchable Selects at every UI scale:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact-popups cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
+# Part identity and Parameter validation in English and Chinese:
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=properties cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Imported motion edge cases, editing and canvas navigation acceptance (local Mao asset):
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --features test-support --test timeline_acceptance
 # Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:

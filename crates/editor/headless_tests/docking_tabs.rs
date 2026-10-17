@@ -690,7 +690,7 @@ fn workspace_menu_recovers_a_layout_without_any_panels(cx: &mut TestAppContext) 
             ));
             assert!(dock.contains(
                 if workspace == CommandId::AnimationWorkspace {
-                    PanelKind::AnimationProperties
+                    PanelKind::Properties
                 } else {
                     PanelKind::Properties
                 },

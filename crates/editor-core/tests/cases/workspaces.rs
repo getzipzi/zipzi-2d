@@ -191,7 +191,7 @@ fn workspaces_preserve_modeling_pose_selection_tools_history_and_separate_views(
     assert!(!editor.command_available(editor.command(CommandId::SelectTool)));
     assert!(!editor.command_available(editor.command(CommandId::Parameters)));
     for (command, kind) in [
-        (CommandId::Properties, PanelKind::AnimationProperties),
+        (CommandId::Properties, PanelKind::Properties),
         (CommandId::Physics, PanelKind::AnimationPhysics),
         (CommandId::Pose, PanelKind::AnimationPose),
         (CommandId::AnimationTimeline, PanelKind::AnimationTimeline),

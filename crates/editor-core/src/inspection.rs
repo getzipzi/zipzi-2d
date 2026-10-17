@@ -13,6 +13,7 @@ pub enum InspectionSource {
         primary: Option<ObjectRef>,
     },
     Animation {
+        object: Option<ObjectRef>,
         motion: Option<String>,
         expression: Option<String>,
         channels: Vec<TimelineRowId>,
@@ -31,15 +32,20 @@ impl Inspection {
         match &self.source {
             InspectionSource::Modeling { object, .. } => object.clone(),
             InspectionSource::Animation {
-                motion, expression, ..
-            } => motion
-                .as_ref()
-                .map(|id| ObjectRef::new(ObjectKind::Motion, id))
-                .or_else(|| {
-                    expression
-                        .as_ref()
-                        .map(|id| ObjectRef::new(ObjectKind::Expression, id))
-                }),
+                object,
+                motion,
+                expression,
+                ..
+            } => object.clone().or_else(|| {
+                motion
+                    .as_ref()
+                    .map(|id| ObjectRef::new(ObjectKind::Motion, id))
+                    .or_else(|| {
+                        expression
+                            .as_ref()
+                            .map(|id| ObjectRef::new(ObjectKind::Expression, id))
+                    })
+            }),
         }
     }
 }
@@ -56,6 +62,7 @@ impl Editor {
                 let animation = self.animation()?;
                 let timeline = self.timeline_view();
                 InspectionSource::Animation {
+                    object: animation.inspected.clone(),
                     motion: animation
                         .motion
                         .as_ref()
@@ -76,6 +83,29 @@ impl Editor {
             token,
             source,
         })
+    }
+    pub fn inspect_animation_resource(
+        &mut self,
+        document: DocumentId,
+        object: ObjectRef,
+    ) -> anyhow::Result<()> {
+        self.ensure_animation_target(document)?;
+        anyhow::ensure!(
+            matches!(object.kind, ObjectKind::Motion | ObjectKind::Expression)
+                && self
+                    .document()
+                    .unwrap()
+                    .object_index()
+                    .get(&object)
+                    .is_some(),
+            "Resource no longer exists"
+        );
+        self.active_session_mut()
+            .unwrap()
+            .animation
+            .playback
+            .inspected = Some(object);
+        Ok(())
     }
     pub fn active_inspection(&self) -> Option<Inspection> {
         self.inspection(self.editing_context()?)

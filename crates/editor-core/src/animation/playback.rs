@@ -113,6 +113,10 @@ impl Editor {
                 .any(|r| r.selection == selection),
             "Motion registration no longer exists"
         );
+        session.animation.playback.inspected = Some(crate::ObjectRef::new(
+            crate::ObjectKind::Motion,
+            &selection.clip_id,
+        ));
         session.animation.playback.motion = Some(selection);
         session.animation.playback.time = 0.;
         session.animation.playback.new_run();
@@ -135,6 +139,10 @@ impl Editor {
             resource.unresolved_targets.join(", ")
         );
         let animation = &mut session.animation.playback;
+        animation.inspected = Some(crate::ObjectRef::new(
+            crate::ObjectKind::Expression,
+            &expression_id,
+        ));
         if animation.expression.as_ref() == Some(&expression_id)
             && animation
                 .expressions
@@ -178,6 +186,10 @@ impl Editor {
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
         let playing = animation.playing;
         animation.expression = None;
+        animation.inspected = animation
+            .motion
+            .as_ref()
+            .map(|motion| crate::ObjectRef::new(crate::ObjectKind::Motion, &motion.clip_id));
         animation.expressions.clear();
         animation.rebuild();
         animation.playing = playing;
@@ -192,6 +204,7 @@ impl Editor {
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.motion = None;
         animation.expression = None;
+        animation.inspected = None;
         animation.expressions.clear();
         animation.time = 0.;
         animation.new_run();

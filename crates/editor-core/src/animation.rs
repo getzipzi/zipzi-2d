@@ -24,10 +24,27 @@ pub struct AnimationSource {
     pub textures: Arc<[SceneTexture]>,
     /// Validated motion overlay; the base document remains unchanged.
     pub candidate: Option<Arc<kasane_sdk::MotionClipCandidate>>,
+    /// Detached inspector candidate; remains isolated from authoring history.
+    pub properties: Option<Arc<kasane_core::Document>>,
     pub(crate) materialized: OnceLock<Arc<AuthoringSnapshot>>,
 }
 
 impl AnimationSource {
+    pub fn document(&self) -> &kasane_core::Document {
+        self.properties
+            .as_deref()
+            .unwrap_or_else(|| self.snapshot.document())
+    }
+
+    pub(super) fn same_document(&self, other: &Self) -> bool {
+        self.snapshot.version() == other.snapshot.version()
+            && match (&self.properties, &other.properties) {
+                (None, None) => true,
+                (Some(a), Some(b)) => Arc::ptr_eq(a, b),
+                _ => false,
+            }
+    }
+
     /// Result playback needs a document containing the candidate. Raw editing
     /// samples its curve overlay directly and shares the immutable model.
     pub fn materialized_snapshot(&self) -> Result<Arc<AuthoringSnapshot>> {
@@ -44,6 +61,7 @@ impl AnimationSource {
 }
 
 pub struct AnimationSession {
+    pub(crate) inspected: Option<crate::ObjectRef>,
     pub motion: Option<MotionSelection>,
     pub expression: Option<String>,
     pub expressions: Vec<ExpressionTrigger>,

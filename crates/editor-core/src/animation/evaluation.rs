@@ -15,6 +15,7 @@ pub struct AnimationEvaluator {
     preview: Option<MotionPreview>,
     identity: Option<AnimationIdentity>,
     motion: Option<MotionSelection>,
+    source: Option<Arc<AnimationSource>>,
     editing: Option<kasane_sdk::MotionEditingPreview>,
     completed: Option<(AnimationRequest, AnimationEvaluated)>,
 }
@@ -55,9 +56,13 @@ impl AnimationEvaluator {
                 previous.document != id.document
                     || previous.model_generation != id.model_generation
                     || previous.preview_mode != id.preview_mode
+                    || !self
+                        .source
+                        .as_ref()
+                        .is_some_and(|source| source.same_document(&request.source))
             }) {
                 self.editing = Some(kasane_sdk::MotionEditingPreview::new(
-                    request.source.snapshot.document(),
+                    request.source.document(),
                 ));
             }
             let mut progress = progress;
@@ -75,13 +80,7 @@ impl AnimationEvaluator {
                         .as_ref()
                         .filter(|candidate| candidate.clip().id == motion.clip_id)
                         .map(|candidate| candidate.clip())
-                        .or_else(|| {
-                            request
-                                .source
-                                .snapshot
-                                .document()
-                                .get_motion(&motion.clip_id)
-                        })
+                        .or_else(|| request.source.document().get_motion(&motion.clip_id))
                         .ok_or_else(|| anyhow::anyhow!("Missing motion {}", motion.clip_id))
                 })
                 .transpose()?;
@@ -92,6 +91,7 @@ impl AnimationEvaluator {
             }
             let snapshot = Arc::new(preview.snapshot().clone());
             self.identity = Some(id);
+            self.source = Some(request.source.clone());
             self.preview = None;
             return Ok(AnimationEvaluated {
                 identity: id,
@@ -110,6 +110,10 @@ impl AnimationEvaluator {
                 && self.motion == request.motion
                 && previous.candidate == id.candidate
                 && previous.preview_mode == id.preview_mode
+                && self
+                    .source
+                    .as_ref()
+                    .is_some_and(|source| source.same_document(&request.source))
         });
         let expressions = || {
             request.expressions.iter().map(|trigger| {
@@ -122,7 +126,12 @@ impl AnimationEvaluator {
         };
         if !reusable {
             let snapshot = request.source.materialized_snapshot()?;
-            let mut preview = MotionPreview::new(snapshot.document());
+            let document = request
+                .source
+                .properties
+                .as_deref()
+                .unwrap_or_else(|| snapshot.document());
+            let mut preview = MotionPreview::new(document);
             let version = request.source.snapshot.version();
             preview.bind_session_identity(version.session_id, version.generation);
             if let Some(motion) = &request.motion {
@@ -157,6 +166,7 @@ impl AnimationEvaluator {
                 .replace_expression_schedule_with_transitions(expressions())?;
         }
         self.identity = Some(id);
+        self.source = Some(request.source.clone());
         let preview = self.preview.as_mut().unwrap();
         preview.advance_to_with_progress(id.time, progress)?;
         let snapshot = Arc::new(preview.snapshot().clone());

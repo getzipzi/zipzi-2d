@@ -20,6 +20,7 @@ impl Editor {
     /// an uncommitted candidate. Local UI may outlive these domain operations.
     pub fn editing_active(&self) -> bool {
         self.viewport_interaction_active()
+            || self.document().is_some_and(|doc| doc.has_pending_edit())
             || self.gesture_active()
             || self.timeline_edit().is_some()
             || self
@@ -52,6 +53,12 @@ impl Editor {
         let session = self.entry_mut(document)?.session_mut();
         if let Some(session) = session {
             session.animation.playback.pause();
+            if reason != EditingLifecycle::Save && session.document.property_edit_serial().is_some()
+            {
+                session.document.cancel_edit();
+                session.animation.playback.property_preview_changed();
+                session.invalidate_scene();
+            }
             match reason {
                 EditingLifecycle::BlockingUi | EditingLifecycle::WindowDeactivated => {
                     session.cancel_gesture();

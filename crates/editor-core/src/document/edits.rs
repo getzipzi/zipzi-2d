@@ -21,10 +21,11 @@ impl Document {
             Gesture::Rename => "Rename layer",
             Gesture::Opacity => "Change opacity",
             Gesture::Controls => "Edit canvas controls",
+            Gesture::Properties(_) => unreachable!(),
         };
         self.pending = Some(PendingEdit {
             kind,
-            original: crate::control_edit::EditOriginal::Mesh(original),
+            original: PendingOriginal::Controls(crate::control_edit::EditOriginal::Mesh(original)),
             edit: self.session.begin_owned_edit(label, None)?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -42,9 +43,9 @@ impl Document {
         self.finish_edit()?;
         self.pending = Some(PendingEdit {
             kind: Gesture::Controls,
-            original: crate::control_edit::EditOriginal::Batch(
+            original: PendingOriginal::Controls(crate::control_edit::EditOriginal::Batch(
                 targets.iter().map(|t| t.original.clone()).collect(),
-            ),
+            )),
             edit: self
                 .session
                 .begin_owned_edit("Edit canvas controls", None)?,
@@ -154,9 +155,16 @@ impl Document {
     pub fn finish_edit(&mut self) -> Result<()> {
         let changed = self.pending_changed();
         if let Some(pending) = self.pending.take() {
-            self.invalidate_projection(pending.kind == Gesture::Rename || pending.topology_changed);
+            self.invalidate_projection(
+                matches!(pending.kind, Gesture::Rename | Gesture::Properties(_))
+                    || pending.topology_changed,
+            );
             if changed {
+                let parameter = matches!(&pending.original, PendingOriginal::Properties(object, _) if object.kind == crate::ObjectKind::Parameter);
                 pending.edit.commit_to(&mut self.session)?;
+                if parameter {
+                    self.reconcile_parameter_preview()?;
+                }
                 self.session.drain_events();
                 self.pristine_blank = false;
             }
@@ -166,7 +174,10 @@ impl Document {
 
     pub fn cancel_edit(&mut self) {
         if let Some(pending) = self.pending.take() {
-            self.invalidate_projection(pending.kind == Gesture::Rename || pending.topology_changed);
+            self.invalidate_projection(
+                matches!(pending.kind, Gesture::Rename | Gesture::Properties(_))
+                    || pending.topology_changed,
+            );
         }
     }
 

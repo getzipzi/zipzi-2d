@@ -77,6 +77,70 @@ impl EditorView {
             self.save_document(id, save_as, false, window, cx);
         }
     }
+    fn prepare_property_inputs(
+        &mut self,
+        id: DocumentId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if self.editor.active_id() == Some(id)
+            && self.dock.as_ref().is_some_and(|dock| {
+                dock.properties
+                    .update(cx, |panel, cx| panel.composing_input(window, cx))
+            })
+        {
+            self.edit_error = Some(t!("properties.finish_composition").into_owned());
+            self.editor.cancel_exit();
+            cx.notify();
+            return false;
+        }
+        if let Some((target, field, raw)) = self
+            .dock
+            .as_ref()
+            .and_then(|dock| dock.properties.read(cx).focused_input_snapshot(window, cx))
+        {
+            if target.document == id && self.editor.editing_context() == Some(target.context) {
+                if let Some(form) = self.property_forms.entries.get_mut(&target) {
+                    let spec = editor_core::property_specs(target.object.kind)
+                        .iter()
+                        .find(|spec| spec.id == field)
+                        .unwrap();
+                    if form
+                        .fields
+                        .get(&field)
+                        .is_some_and(|value| value.raw != raw)
+                    {
+                        form.edit(spec, raw);
+                    }
+                }
+            }
+        }
+        if let Some((target, field, token)) = self
+            .dock
+            .as_ref()
+            .filter(|_| self.editor.active_id() == Some(id))
+            .and_then(|dock| {
+                dock.properties
+                    .update(cx, |panel, cx| panel.take_preview(cx))
+            })
+        {
+            let _ = self.editor.finish_property_edit(&token);
+            if let Some(form) = self.property_forms.entries.get_mut(&target) {
+                if let Some(values) = self
+                    .editor
+                    .document()
+                    .and_then(|doc| doc.property_values(&target.object).ok())
+                {
+                    form.sync(target.object.kind, values);
+                    form.reload_field(field);
+                }
+            }
+        }
+        self.property_forms.prepare_save(&mut self.editor, id);
+        cx.notify();
+        true
+    }
+
     fn save_document(
         &mut self,
         id: DocumentId,
@@ -85,6 +149,9 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !self.prepare_property_inputs(id, window, cx) {
+            return;
+        }
         let Some(summary) = self.editor.documents().into_iter().find(|d| d.id == id) else {
             return;
         };
@@ -396,6 +463,11 @@ impl EditorView {
         if self.modal {
             return;
         }
+        if let Some(id) = self.editor.active_id() {
+            if !self.prepare_property_inputs(id, window, cx) {
+                return;
+            }
+        }
         match self.editor.request_exit() {
             Ok(()) => self.continue_exit(window, cx),
             Err(error) => {
@@ -420,7 +492,11 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        match self.editor.prepare_close(id) {
+        if !self.prepare_property_inputs(id, window, cx) {
+            return;
+        }
+        let disposition = self.editor.prepare_close(id);
+        match disposition {
             Ok(CloseDisposition::Busy) => {
                 let _ = self.editor.close_document(id, false);
             }
@@ -462,6 +538,9 @@ impl EditorView {
                         this.modal = false;
                         match choice {
                             Some(1) => {
+                                this.property_forms
+                                    .entries
+                                    .retain(|target, _| target.document != id);
                                 let was_active = this.editor.active_id() == Some(id);
                                 if let Err(error) = this.editor.close_document(id, true) {
                                     this.edit_error = Some(error.to_string());

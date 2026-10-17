@@ -1,7 +1,7 @@
 //! Authoring contexts are document state; workspace layouts only choose which to activate.
 use crate::{AnimationSession, ToolController, WorkspaceKind};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum EditingContext {
     Modeling,
     Animation,

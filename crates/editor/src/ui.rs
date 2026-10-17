@@ -3,6 +3,7 @@ pub(crate) mod form_dialog;
 pub(crate) mod mesh_generation;
 pub(crate) mod mesh_generation_preview;
 mod mesh_preview;
+pub(crate) mod property_form;
 pub(crate) mod slide_number_input;
 
 use super::*;
@@ -17,7 +18,56 @@ impl EditorView {
 impl Render for EditorView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_viewports();
+        let open: std::collections::HashSet<_> = self
+            .editor
+            .documents()
+            .into_iter()
+            .map(|doc| doc.id)
+            .collect();
+        self.property_forms
+            .entries
+            .retain(|target, _| open.contains(&target.document));
         self.sync_workspace_layout(window, cx);
+        if let Some(dock) = &self.dock {
+            let visible =
+                window.is_visible() && dock.displayed(editor_core::PanelKind::Properties, cx);
+            let pending = if !visible && dock.properties.read(cx).is_visible() {
+                let composing = dock
+                    .properties
+                    .update(cx, |panel, cx| panel.composing_input(window, cx));
+                dock.properties
+                    .read(cx)
+                    .focused_input_snapshot(window, cx)
+                    .map(|snapshot| (snapshot, composing))
+            } else {
+                None
+            };
+            let cleanup = dock
+                .properties
+                .update(cx, |panel, cx| panel.set_visible(visible, cx));
+            if let Some((target, id, token)) = cleanup {
+                self.editor.cancel_property_edit(&token);
+                if let Some(form) = self.property_forms.entries.get_mut(&target) {
+                    form.reload_field(id);
+                }
+            } else if let Some(((target, id, raw), composing)) = pending {
+                if let Some(form) = self.property_forms.entries.get_mut(&target) {
+                    if composing {
+                        form.reload_field(id);
+                    } else if let Some(spec) = editor_core::property_specs(target.object.kind)
+                        .iter()
+                        .find(|s| s.id == id)
+                    {
+                        if form.fields[&id].raw != raw {
+                            form.edit(spec, raw);
+                        }
+                    }
+                }
+                if !composing {
+                    let _ = self.property_forms.commit(&mut self.editor, &target, id);
+                }
+            }
+        }
         self.sync_timeline_visibility(window, cx);
         if self.sync_viewport_visibility(window, cx) {
             self.redraw(cx);

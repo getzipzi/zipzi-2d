@@ -55,6 +55,7 @@ fn render_status_bar(view: &EditorView, cx: &App) -> impl IntoElement {
             div()
                 .id("app-status-message")
                 .test_support()
+                .h(compact::rem(STATUS_LINE_HEIGHT))
                 .flex()
                 .flex_1()
                 .min_w_0()

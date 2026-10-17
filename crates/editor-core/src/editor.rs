@@ -77,6 +77,10 @@ pub enum EditorCommand {
         field: String,
         value: serde_json::Value,
     },
+    SetObjectProperties {
+        object: crate::ObjectRef,
+        patch: crate::PropertyPatch,
+    },
     Select(String),
     SelectObject(crate::ObjectRef),
     FocusParameter(String),

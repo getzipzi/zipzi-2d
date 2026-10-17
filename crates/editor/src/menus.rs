@@ -100,6 +100,20 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         let text = self.has_focused_input(window, cx);
+        let property_form_edit = self.dock.as_ref().is_some_and(|dock| {
+            dock.properties
+                .read(cx)
+                .active_property_edit(&self.property_forms, window, cx)
+        });
+        let property_state = |id, mut state: editor_core::CommandState| {
+            if property_form_edit
+                && matches!(id, CommandId::CommitProperty | CommandId::CancelProperty)
+            {
+                state.enabled = true;
+                state.disabled_reason = None;
+            }
+            state
+        };
         let settings = cx.global::<settings::Settings>();
         let state = MenuState {
             workspace: self.editor.workspace(),
@@ -107,8 +121,11 @@ impl EditorView {
             commands: COMMANDS
                 .iter()
                 .map(|s| {
-                    self.editor.command_state(
-                        self.viewport_command(s.id, editor_core::CommandSource::NativeMenu),
+                    property_state(
+                        s.id,
+                        self.editor.command_state(
+                            self.viewport_command(s.id, editor_core::CommandSource::NativeMenu),
+                        ),
                     )
                 })
                 .collect(),
@@ -149,7 +166,7 @@ impl EditorView {
         };
         let item = |id: CommandId| {
             let command = self.viewport_command(id, editor_core::CommandSource::NativeMenu);
-            let state = self.editor.command_state(command);
+            let state = property_state(id, self.editor.command_state(command));
             MenuItem::action(
                 t!(id.spec().label).into_owned(),
                 RunCommand::targeted(command),

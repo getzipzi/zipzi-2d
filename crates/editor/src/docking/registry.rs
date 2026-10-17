@@ -36,14 +36,11 @@ impl DockWorkspace {
         let animation_parameters =
             AnimationPanel::new(owner.clone(), PanelKind::AnimationParameters, cx);
 
-        let animation_inspectors: HashMap<_, _> = [
-            PanelKind::AnimationProperties,
-            PanelKind::AnimationPhysics,
-            PanelKind::AnimationPose,
-        ]
-        .into_iter()
-        .map(|kind| (kind, AnimationPanel::new(owner.clone(), kind, cx)))
-        .collect();
+        let animation_inspectors: HashMap<_, _> =
+            [PanelKind::AnimationPhysics, PanelKind::AnimationPose]
+                .into_iter()
+                .map(|kind| (kind, AnimationPanel::new(owner.clone(), kind, cx)))
+                .collect();
         let mut panels: PanelViews = animation_inspectors
             .iter()
             .map(|(kind, panel)| (*kind, panel_handle(panel.clone())))

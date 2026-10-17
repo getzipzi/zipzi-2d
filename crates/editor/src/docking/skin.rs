@@ -820,7 +820,7 @@ pub(super) fn panel_icon(name: &str) -> IconName {
         Some(MeshTree) => IconName::Layers,
         Some(Deformers) => IconName::Network,
         Some(DrawOrder) => IconName::ListOrdered,
-        Some(Properties | AnimationProperties) => IconName::Settings,
+        Some(Properties) => IconName::Settings,
         Some(Relations) => IconName::GitBranch,
         Some(Parameters | AnimationParameters) => IconName::SlidersHorizontal,
         Some(Keyforms) => IconName::Grid2x2,
