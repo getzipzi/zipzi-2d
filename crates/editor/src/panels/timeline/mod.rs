@@ -38,7 +38,6 @@ const COMPACT_LEFT: f32 = 160.;
 pub struct Timeline {
     pub(crate) id: editor_core::TimelineId,
     pub(crate) input_region: crate::input_routing::InputRegion,
-    activity: Rc<Cell<u64>>,
     ui_scale: f32,
     #[cfg(any(test, feature = "test-support"))]
     renders: u64,
@@ -74,26 +73,6 @@ pub struct Timeline {
 }
 
 impl Timeline {
-    pub(crate) fn capturing(&self, editor: &editor_core::Editor) -> bool {
-        let Some(binding) = self.context.as_ref().map(|target| target.binding) else {
-            return false;
-        };
-        if !editor.timeline_binding_valid(binding) {
-            return false;
-        }
-        self.gesture.as_ref().is_some_and(|gesture| {
-            if matches!(gesture, input::Gesture::Seek) {
-                editor.timeline_scrub_owned(binding)
-            } else {
-                gesture
-                    .token()
-                    .is_none_or(|token| editor.timeline_edit_owned(binding, token))
-            }
-        }) || self
-            .number_edit
-            .as_ref()
-            .is_some_and(|edit| editor.timeline_edit_owned(binding, edit.token))
-    }
     fn row_height(&self) -> f32 {
         ROW * self.ui_scale
     }
@@ -118,10 +97,38 @@ impl Timeline {
             let scene = Rc::new(std::cell::RefCell::new(drawing::SceneCache::default()));
             let search =
                 cx.new(|cx| InputState::new(window, cx).placeholder(t!("timeline.search")));
+            let focus = cx.focus_handle();
+            let timeline = cx.weak_entity();
+            let input_region = crate::input_routing::InputRegion::new(focus.clone()).with_capture(
+                move |editor, cx| {
+                    let entity = timeline.upgrade()?;
+                    let operation = entity.read(cx).operation()?;
+                    let timeline = timeline.clone();
+                    Some(crate::input_routing::CapturedInput::new(
+                        crate::input_routing::LocalTarget::Timeline(operation.binding()),
+                        operation.valid(editor),
+                        crate::input_routing::CaptureCancelKey::Escape,
+                        move |window, cx| {
+                            timeline
+                                .update(cx, |timeline, cx| {
+                                    if timeline.operation() != Some(operation) {
+                                        return None;
+                                    }
+                                    let cancellation = timeline.cancel_local(window, cx);
+                                    Some(Box::new(move |owner: &mut EditorView| {
+                                        cancellation.apply(owner)
+                                    })
+                                        as crate::input_routing::CoreCleanup)
+                                })
+                                .ok()
+                                .flatten()
+                        },
+                    ))
+                },
+            );
             Self {
                 id: editor_core::TimelineId::new(),
-                input_region: Default::default(),
-                activity: Default::default(),
+                input_region,
                 #[cfg(any(test, feature = "test-support"))]
                 renders: 0,
                 ui_scale: compact::scale(cx),
@@ -145,7 +152,7 @@ impl Timeline {
                     },
                 ),
                 owner,
-                focus: cx.focus_handle(),
+                focus,
                 search,
                 search_placeholder: t!("timeline.search").into_owned(),
                 context: None,

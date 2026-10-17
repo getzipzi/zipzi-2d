@@ -16,6 +16,17 @@ pub struct EditingContextToken {
     generation: u64,
 }
 impl Editor {
+    /// Whether ending editing would stop live playback, a pointer operation or
+    /// an uncommitted candidate. Local UI may outlive these domain operations.
+    pub fn editing_active(&self) -> bool {
+        self.viewport_interaction_active()
+            || self.gesture_active()
+            || self.timeline_edit().is_some()
+            || self
+                .animation()
+                .is_some_and(|animation| animation.playing || animation.is_scrubbing())
+    }
+
     pub(crate) fn advance_editing_context(&mut self) {
         self.context_generation += 1;
         self.editing_epoch += 1;
@@ -34,7 +45,7 @@ impl Editor {
     pub fn end_editing(&mut self, document: DocumentId, reason: EditingLifecycle) -> Result<()> {
         if self
             .timeline_scrub_owner
-            .is_some_and(|binding| binding.document == document)
+            .is_some_and(|token| token.binding.document == document)
         {
             self.timeline_scrub_owner = None;
         }

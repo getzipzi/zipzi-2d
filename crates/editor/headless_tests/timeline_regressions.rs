@@ -38,10 +38,24 @@ fn escape_ends_playhead_scrubbing(cx: &mut TestAppContext) {
             .editor
             .timeline_binding(timeline.read(cx).id)
             .unwrap();
-        assert!(harness.view.read(cx).editor.timeline_scrub_owned(binding));
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .active_timeline_scrub(binding)
+                .is_some()
+        );
         window.press("escape", cx);
         assert!(!timeline.read(cx).pointer_active());
-        assert!(!harness.view.read(cx).editor.timeline_scrub_owned(binding));
+        assert!(
+            !harness
+                .view
+                .read(cx)
+                .editor
+                .active_timeline_scrub(binding)
+                .is_some()
+        );
     })
     .unwrap();
 }
@@ -64,7 +78,7 @@ fn deferred_scrub_deactivation_is_idempotent_and_preserves_new_playback(cx: &mut
                     .clone();
                 harness.view.update(cx, |view, cx| {
                     let binding = view.editor.timeline_binding(timeline.read(cx).id).unwrap();
-                    assert!(view.editor.timeline_scrub_owned(binding));
+                    assert!(view.editor.active_timeline_scrub(binding).is_some());
                     timeline.update(cx, |timeline, cx| timeline.deactivate(window, cx));
                     timeline.update(cx, |timeline, cx| timeline.deactivate(window, cx));
                     if restart {
@@ -76,7 +90,7 @@ fn deferred_scrub_deactivation_is_idempotent_and_preserves_new_playback(cx: &mut
             .unwrap();
         cx.run_until_parked();
         harness.view.read_with(cx, |view, _| {
-            assert!(!view.editor.timeline_scrub_owned(binding));
+            assert!(!view.editor.active_timeline_scrub(binding).is_some());
             assert_eq!(view.editor.animation().unwrap().playing, restart);
         });
     }
@@ -690,6 +704,85 @@ fn shared_header_preserves_control_focus_without_an_implicit_timeline_target(
         let after = harness.view.read(cx).editor.animation().unwrap().edit_time;
         assert_eq!(after, before);
         assert_eq!(window.find("animation-preview-mode").focused(), Some(true));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn deferred_deactivation_preserves_a_new_scrub_in_the_same_panel(cx: &mut TestAppContext) {
+    let harness = animation(cx);
+    let replacement = cx
+        .update_window(harness.window, |_, window, cx| {
+            let position = window.find("timeline-ruler").bounds().center();
+            press(window, position, cx);
+            let timeline = harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .timeline
+                .clone();
+            harness.view.update(cx, |view, cx| {
+                let binding = view.editor.timeline_binding(timeline.read(cx).id).unwrap();
+                timeline.update(cx, |timeline, cx| timeline.deactivate(window, cx));
+                let token = view.editor.begin_timeline_scrub(binding, 0.5).unwrap();
+                (token, view.editor.animation().unwrap().time)
+            })
+        })
+        .unwrap();
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        assert!(view.editor.timeline_scrub_valid(replacement.0));
+        assert_eq!(view.editor.animation().unwrap().time, replacement.1);
+    });
+}
+
+#[gpui_kit::test]
+fn blocking_ui_releases_stale_capture_without_invalidating_its_dialog_context(
+    cx: &mut TestAppContext,
+) {
+    let harness = animation(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let position = window.find("timeline-ruler").bounds().center();
+        press(window, position, cx);
+        let timeline = harness
+            .view
+            .read(cx)
+            .dock
+            .as_ref()
+            .unwrap()
+            .timeline
+            .clone();
+        harness.view.update(cx, |view, cx| {
+            let document = view.editor.active_id().unwrap();
+            view.editor
+                .end_editing(document, editor_core::EditingLifecycle::BlockingUi)
+                .unwrap();
+            let dialog = view.editor.editing_context_token().unwrap();
+            assert!(timeline.read(cx).pointer_active());
+            assert!(!view.suspend_input(editor_core::EditingLifecycle::BlockingUi, window, cx));
+            assert!(!timeline.read(cx).pointer_active());
+            assert!(view.editor.editing_context_token_valid(dialog));
+            assert!(!view.suspend_input(editor_core::EditingLifecycle::BlockingUi, window, cx));
+            assert!(view.editor.editing_context_token_valid(dialog));
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn blocking_ui_ends_domain_scrub_without_a_local_pointer_owner(cx: &mut TestAppContext) {
+    let harness = animation(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            let panel = view.dock.as_ref().unwrap().timeline.read(cx).id;
+            let binding = view.editor.timeline_binding(panel).unwrap();
+            let scrub = view.editor.begin_timeline_scrub(binding, 0.5).unwrap();
+            assert!(view.suspend_input(editor_core::EditingLifecycle::BlockingUi, window, cx));
+            assert!(!view.editor.timeline_scrub_valid(scrub));
+            assert!(!view.editor.editing_active());
+        });
     })
     .unwrap();
 }

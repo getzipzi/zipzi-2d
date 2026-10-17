@@ -22,10 +22,18 @@ pub struct TimelineBinding {
     pub document: DocumentId,
     pub generation: u64,
 }
+/// One playhead drag, including its owning panel binding. A new drag in the
+/// same panel receives a new serial, so deferred cleanup cannot end it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TimelineScrubToken {
+    pub binding: TimelineBinding,
+    serial: u64,
+}
 #[derive(Default)]
 pub(crate) struct TimelinePanels {
     entries: HashMap<TimelineId, (bool, Option<TimelineBinding>)>,
     generation: u64,
+    next_scrub: u64,
 }
 impl Editor {
     pub fn set_timeline_visible(&mut self, panel: TimelineId, visible: bool) {
@@ -45,7 +53,10 @@ impl Editor {
             generation: self.timeline_panels.generation,
         });
         if let Some(binding) = previous {
-            if self.timeline_scrub_owner == Some(binding) {
+            if self
+                .timeline_scrub_owner
+                .is_some_and(|token| token.binding == binding)
+            {
                 if self.active_id() == Some(binding.document) {
                     self.pause_animation();
                 }
@@ -122,36 +133,56 @@ impl Editor {
                 .timeline_edit()
                 .is_some_and(|edit| edit.owner == Some(binding) && edit.identity.edit == token.edit)
     }
-    pub fn scrub_timeline_for(&mut self, binding: TimelineBinding, time: f32) -> Result<()> {
+    pub fn begin_timeline_scrub(
+        &mut self,
+        binding: TimelineBinding,
+        time: f32,
+    ) -> Result<TimelineScrubToken> {
         ensure!(
             self.timeline_binding_valid(binding),
             "Timeline panel binding changed"
         );
+        self.ensure_animation_target(binding.document)?;
+        ensure!(time.is_finite() && time >= 0., "Invalid animation time");
+        // Every new drag has its own acceptance epoch, even in the same panel.
+        self.pause_animation();
         self.scrub_timeline(binding.document, time)?;
-        self.timeline_scrub_owner = Some(binding);
-        Ok(())
+        self.timeline_panels.next_scrub += 1;
+        let token = TimelineScrubToken {
+            binding,
+            serial: self.timeline_panels.next_scrub,
+        };
+        self.timeline_scrub_owner = Some(token);
+        Ok(token)
     }
-    pub fn timeline_scrub_owned(&self, binding: TimelineBinding) -> bool {
-        self.timeline_binding_valid(binding)
-            && self.timeline_scrub_owner == Some(binding)
+    pub fn active_timeline_scrub(&self, binding: TimelineBinding) -> Option<TimelineScrubToken> {
+        self.timeline_scrub_owner
+            .filter(|token| token.binding == binding && self.timeline_scrub_valid(*token))
+    }
+    pub fn timeline_scrub_valid(&self, token: TimelineScrubToken) -> bool {
+        self.timeline_binding_valid(token.binding)
+            && self.timeline_scrub_owner == Some(token)
             && self
                 .animation()
                 .is_some_and(|animation| animation.is_scrubbing())
     }
-    /// End only this panel's current scrub. A deferred cleanup must not pause
-    /// playback or a scrub subsequently started by another panel.
-    pub fn cancel_timeline_scrub_for(&mut self, binding: TimelineBinding) -> bool {
-        if !self.timeline_scrub_owned(binding) {
+    pub fn update_timeline_scrub(&mut self, token: TimelineScrubToken, time: f32) -> Result<()> {
+        ensure!(self.timeline_scrub_valid(token), "Timeline scrub ended");
+        ensure!(time.is_finite() && time >= 0., "Invalid animation time");
+        self.scrub_timeline(token.binding.document, time)?;
+        self.timeline_scrub_owner = Some(token);
+        Ok(())
+    }
+    pub fn finish_timeline_scrub(&mut self, token: TimelineScrubToken, time: f32) -> Result<()> {
+        ensure!(self.timeline_scrub_valid(token), "Timeline scrub ended");
+        ensure!(time.is_finite() && time >= 0., "Invalid animation time");
+        self.seek_timeline(token.binding.document, time)
+    }
+    pub fn cancel_timeline_scrub(&mut self, token: TimelineScrubToken) -> bool {
+        if !self.timeline_scrub_valid(token) {
             return false;
         }
         self.pause_animation();
         true
-    }
-    pub fn seek_timeline_for(&mut self, binding: TimelineBinding, time: f32) -> Result<()> {
-        ensure!(
-            self.timeline_binding_valid(binding),
-            "Timeline panel binding changed"
-        );
-        self.seek_timeline(binding.document, time)
     }
 }

@@ -11,14 +11,73 @@ use std::{
     rc::Rc,
 };
 
-#[derive(Clone, Default)]
-pub(crate) struct InputRegion(Rc<RefCell<Option<Hitbox>>>);
+/// Pointer editing can reserve Escape; viewport tools use the configured command.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CaptureCancelKey {
+    Escape,
+    CommandBinding,
+}
+
+type CaptureResolver = dyn Fn(&Editor, &App) -> Option<CapturedInput>;
+type CancelCapture = dyn FnOnce(&mut Window, &mut App) -> Option<CoreCleanup>;
+pub(crate) type CoreCleanup = Box<dyn FnOnce(&mut EditorView)>;
+
+/// A snapshot, never another stored owner. Local cleanup compares the snapshot
+/// with the owner's current operation before returning domain cleanup to the root.
+pub(crate) struct CapturedInput {
+    pub target: LocalTarget,
+    valid: bool,
+    cancel_key: CaptureCancelKey,
+    cancel: Box<CancelCapture>,
+}
+impl CapturedInput {
+    pub fn new(
+        target: LocalTarget,
+        valid: bool,
+        cancel_key: CaptureCancelKey,
+        cancel: impl FnOnce(&mut Window, &mut App) -> Option<CoreCleanup> + 'static,
+    ) -> Self {
+        Self {
+            target,
+            valid,
+            cancel_key,
+            cancel: Box::new(cancel),
+        }
+    }
+    fn cancel(self, owner: &mut EditorView, window: &mut Window, cx: &mut App) {
+        if let Some(cleanup) = (self.cancel)(window, cx) {
+            cleanup(owner);
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct InputRegion {
+    hitbox: Rc<RefCell<Option<Hitbox>>>,
+    focus: FocusHandle,
+    capture: Option<Rc<CaptureResolver>>,
+}
 impl InputRegion {
+    pub fn new(focus: FocusHandle) -> Self {
+        Self {
+            focus,
+            hitbox: Default::default(),
+            capture: None,
+        }
+    }
+    pub fn with_capture(
+        mut self,
+        capture: impl Fn(&Editor, &App) -> Option<CapturedInput> + 'static,
+    ) -> Self {
+        self.capture = Some(Rc::new(capture));
+        self
+    }
     pub fn marker(&self) -> impl IntoElement {
         let region = self.clone();
         canvas(
             move |bounds, window, _| {
-                *region.0.borrow_mut() = Some(window.insert_hitbox(bounds, HitboxBehavior::Normal));
+                *region.hitbox.borrow_mut() =
+                    Some(window.insert_hitbox(bounds, HitboxBehavior::Normal));
             },
             |_, _, _, _| (),
         )
@@ -27,11 +86,28 @@ impl InputRegion {
         .size_full()
     }
     pub(crate) fn hovered(&self, window: &Window) -> bool {
-        self.0
+        self.hitbox
             .borrow()
             .as_ref()
             .is_some_and(|hitbox| hitbox.is_hovered_at(window.mouse_position(), window))
     }
+    fn owns_keyboard(&self, window: &Window) -> bool {
+        self.focus.is_focused(window)
+    }
+    fn captured(&self, editor: &Editor, cx: &App) -> Option<CapturedInput> {
+        self.capture
+            .as_ref()
+            .and_then(|capture| capture(editor, cx))
+    }
+}
+
+/// Unknown focus belongs to a control, including future controls. Only declared
+/// editor surfaces opt in to ordinary hovered commands. Text keeps global keys.
+#[derive(Clone, Copy)]
+enum KeyboardOwner {
+    Editor,
+    Text,
+    Control,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum LocalTarget {
@@ -58,47 +134,101 @@ impl EditorView {
         }
         self.dock.as_ref()
     }
-    pub(crate) fn hovered_target(&self, window: &Window, cx: &App) -> Option<LocalTarget> {
-        if !self.input_router.inside.get() || !window.is_visible() {
-            return None;
-        }
+    fn input_regions(&self, window: &Window, cx: &App) -> Vec<(LocalTarget, InputRegion)> {
+        let mut regions = Vec::new();
         for id in self.editor.viewport_ids() {
             if !self.viewport_displayed(id, window, cx) {
                 continue;
             }
-            let Some(surface) = self.viewport_surface(id, cx) else {
-                continue;
-            };
-            let surface = surface.read(cx);
-            if surface.input_region.hovered(window) {
-                return surface.binding(&self.editor).map(LocalTarget::Viewport);
+            if let Some(surface) = self.viewport_surface(id, cx) {
+                let surface = surface.read(cx);
+                if let Some(binding) = surface.binding(&self.editor) {
+                    regions.push((LocalTarget::Viewport(binding), surface.input_region.clone()));
+                }
             }
         }
-        let dock = self.input_dock()?;
-        if dock.displayed(editor_core::PanelKind::AnimationTimeline, cx)
-            && dock.timeline.read(cx).input_region.hovered(window)
-        {
-            self.editor
-                .timeline_binding(dock.timeline.read(cx).id)
-                .map(LocalTarget::Timeline)
-        } else {
-            dock.input_regions
-                .iter()
-                .find(|(kind, region)| dock.displayed(**kind, cx) && region.hovered(window))
-                .map(|(&kind, _)| LocalTarget::Panel(kind))
+        if let Some(dock) = self.input_dock() {
+            for (&kind, region) in &dock.input_regions {
+                if dock.displayed(kind, cx) {
+                    regions.push((LocalTarget::Panel(kind), region.clone()));
+                }
+            }
+            if dock.displayed(editor_core::PanelKind::AnimationTimeline, cx) {
+                let timeline = dock.timeline.read(cx);
+                if let Some(binding) = self.editor.timeline_binding(timeline.id) {
+                    regions.push((
+                        LocalTarget::Timeline(binding),
+                        timeline.input_region.clone(),
+                    ));
+                }
+            }
+        }
+        regions
+    }
+    #[cfg(test)]
+    pub(crate) fn hovered_target(&self, window: &Window, cx: &App) -> Option<LocalTarget> {
+        self.hovered_in(&self.input_regions(window, cx), window)
+    }
+    fn hovered_in(
+        &self,
+        regions: &[(LocalTarget, InputRegion)],
+        window: &Window,
+    ) -> Option<LocalTarget> {
+        if !self.input_router.inside.get() || !window.is_visible() {
+            return None;
+        }
+        regions
+            .iter()
+            .find(|(_, region)| region.hovered(window))
+            .map(|(target, _)| *target)
+    }
+    pub(crate) fn cancel_input_captures(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // Include hidden instances during lifecycle cleanup; their core bindings
+        // may already be invalid, but their local pointer state still needs release.
+        let mut regions: Vec<_> = self
+            .editor
+            .viewport_ids()
+            .into_iter()
+            .filter_map(|id| self.viewport_surface(id, cx))
+            .map(|surface| surface.read(cx).input_region.clone())
+            .collect();
+        if let Some(dock) = &self.dock {
+            regions.push(dock.timeline.read(cx).input_region.clone());
+        }
+        let captures: Vec<_> = regions
+            .iter()
+            .filter_map(|region| region.captured(&self.editor, cx))
+            .collect();
+        for capture in captures {
+            capture.cancel(self, window, cx);
         }
     }
-    fn captured_target(&self, cx: &App) -> Option<LocalTarget> {
-        if let Some(binding) = self.editor.viewport_interaction_binding() {
-            return Some(LocalTarget::Viewport(binding));
+    fn keyboard_owner(
+        &self,
+        regions: &[(LocalTarget, InputRegion)],
+        window: &mut Window,
+        cx: &mut App,
+    ) -> KeyboardOwner {
+        if self.modal
+            || window.has_active_dialog(cx)
+            || window.has_active_sheet(cx)
+            || cx.has_active_drag()
+        {
+            return KeyboardOwner::Control;
         }
-        let dock = self.dock.as_ref()?;
-        let timeline = dock.timeline.read(cx);
-        timeline
-            .capturing(&self.editor)
-            .then(|| self.editor.timeline_binding(timeline.id))
-            .flatten()
-            .map(LocalTarget::Timeline)
+        if self.has_focused_input(window, cx) {
+            return KeyboardOwner::Text;
+        }
+        if window.focused(cx).is_none()
+            || self.focus.is_focused(window)
+            || regions
+                .iter()
+                .any(|(_, region)| region.owns_keyboard(window))
+        {
+            KeyboardOwner::Editor
+        } else {
+            KeyboardOwner::Control
+        }
     }
     fn command_at(&self, id: CommandId, target: Option<LocalTarget>) -> Command {
         match (id.spec().scope, target) {
@@ -123,42 +253,32 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.modal || window.has_active_dialog(cx) {
-            return;
-        }
         if event.prefer_character_input {
             return;
         }
-        let contexts = window.context_stack();
-        if contexts.iter().any(|c| {
-            c.contains("PopupMenu")
-                || c.contains("Popover")
-                || c.contains("AppMenuBar")
-                || c.contains("Select")
-                || c.contains("SearchPanel")
-        }) {
+        let regions = self.input_regions(window, cx);
+        let keyboard = self.keyboard_owner(&regions, window, cx);
+        if matches!(keyboard, KeyboardOwner::Control) {
             return;
         }
-        // Kit drags (sliders, sorting, docking) and focused number scrubs own
-        // their cancellation/navigation keys even after the pointer leaves them.
-        if cx.has_active_drag() || contexts.iter().any(|c| c.contains("KasaneControlCapture")) {
-            return;
-        }
-        let text =
-            self.has_focused_input(window, cx) || contexts.iter().any(|c| c.contains("Input"));
-        let capture = self.captured_target(cx);
-        // Timeline's local edit cancellation is also used by its focused controls.
-        // Viewport cancellation goes through the configured command binding below.
-        if event.keystroke.key == "escape" && matches!(capture, Some(LocalTarget::Timeline(_))) {
-            let timeline = self.dock.as_ref().unwrap().timeline.clone();
-            let cancellation =
-                timeline.update(cx, |timeline, cx| timeline.cancel_local(window, cx));
-            cancellation.apply(self);
+        let text = matches!(keyboard, KeyboardOwner::Text);
+        let capture = regions
+            .iter()
+            .filter_map(|(_, region)| region.captured(&self.editor, cx))
+            .find(|capture| capture.valid);
+        if event.keystroke.key == "escape"
+            && capture
+                .as_ref()
+                .is_some_and(|capture| capture.cancel_key == CaptureCancelKey::Escape)
+        {
+            capture.unwrap().cancel(self, window, cx);
             self.redraw(cx);
             cx.stop_propagation();
             return;
         }
-        let target = capture.or_else(|| self.hovered_target(window, cx));
+        let target = capture
+            .map(|capture| capture.target)
+            .or_else(|| self.hovered_in(&regions, window));
         let resolved = cx
             .global::<settings::Settings>()
             .bindings
@@ -197,34 +317,7 @@ impl EditorView {
         let inside = self.input_router.inside.clone();
         let menu_target = self.input_router.menu_target.clone();
         let owner = cx.weak_entity();
-        let mut regions = Vec::new();
-        for id in self.editor.viewport_ids() {
-            if let Some(binding) = self.editor.viewport_binding(id) {
-                if !self.viewport_displayed(id, window, cx) {
-                    continue;
-                }
-                if let Some(surface) = self.viewport_surface(id, cx) {
-                    regions.push((
-                        LocalTarget::Viewport(binding),
-                        surface.read(cx).input_region.clone(),
-                    ));
-                }
-            }
-        }
-        if let Some(dock) = self.input_dock() {
-            for (&kind, region) in &dock.input_regions {
-                if dock.displayed(kind, cx) {
-                    regions.push((LocalTarget::Panel(kind), region.clone()));
-                }
-            }
-            let timeline = dock.timeline.read(cx);
-            if let Some(binding) = self.editor.timeline_binding(timeline.id) {
-                regions.push((
-                    LocalTarget::Timeline(binding),
-                    timeline.input_region.clone(),
-                ));
-            }
-        }
+        let regions = self.input_regions(window, cx);
         canvas(
             |_, _, _| (),
             move |_, _, window, _| {

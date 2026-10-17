@@ -13,13 +13,8 @@ impl EditorView {
         }
         // Let the existing input blur rules finish before changing context.
         window.focus(&self.focus, cx);
+        self.cancel_input_captures(window, cx);
         if let Some(dock) = &self.dock {
-            for canvas in dock.viewport_surfaces() {
-                let token = canvas.update(cx, |canvas, _| canvas.cancel_pointer());
-                if let Some(token) = token {
-                    self.editor.cancel_viewport_interaction(token);
-                }
-            }
             for panel in dock.document_panels.values() {
                 panel.update(cx, |panel, _| panel.cancel_drag());
             }
@@ -133,10 +128,6 @@ impl EditorView {
                 let Some(dock) = &mut this.dock else {
                     return;
                 };
-                if !dock.displayed(PanelKind::AnimationTimeline, cx) {
-                    dock.timeline
-                        .update(cx, |timeline, cx| timeline.deactivate(window, cx));
-                }
                 for panel in dock.document_panels.values() {
                     panel.update(cx, |panel, _| panel.cancel_drag());
                 }

@@ -14,7 +14,6 @@ impl Timeline {
             return;
         }
         self.finish_number(cx);
-        self.activity.set(self.activity.get() + 1);
         self.edge_scroll = None;
         window.focus(&self.focus, cx);
         self.gesture = Some(Gesture::Pan {
@@ -171,7 +170,7 @@ impl Timeline {
                 }
             }
         }
-        let dy = if matches!(self.gesture, Some(Gesture::Seek | Gesture::Event { .. })) {
+        let dy = if matches!(self.gesture, Some(Gesture::Seek(_) | Gesture::Event { .. })) {
             0.
         } else {
             velocity(point.y, bounds.size.height.as_f32())

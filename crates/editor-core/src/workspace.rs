@@ -51,7 +51,7 @@ pub struct Editor {
     workspace: WorkspaceKind,
     pub(crate) viewports: crate::ViewportRegistry,
     pub(crate) timeline_panels: crate::TimelinePanels,
-    pub(crate) timeline_scrub_owner: Option<crate::TimelineBinding>,
+    pub(crate) timeline_scrub_owner: Option<crate::TimelineScrubToken>,
     pub(crate) viewport_interaction: Option<crate::ViewportInteractionToken>,
     pub(crate) next_viewport_interaction: u64,
     workspace_revision: u64,

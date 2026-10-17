@@ -2883,6 +2883,26 @@ impl App {
         self.active_drag.is_some()
     }
 
+    /// Snapshot the current drag without keeping its view or payload alive.
+    pub fn active_drag_token(&self) -> Option<ActiveDragToken> {
+        self.active_drag
+            .as_ref()
+            .map(|drag| ActiveDragToken(Rc::downgrade(&drag.identity)))
+    }
+
+    /// Stop only the drag represented by this token. Delayed owner cleanup must
+    /// not release a different drag that has since started, even in another window.
+    pub fn stop_drag(&mut self, token: &ActiveDragToken, window: &mut Window) -> bool {
+        if !self
+            .active_drag
+            .as_ref()
+            .is_some_and(|drag| std::rc::Weak::ptr_eq(&token.0, &Rc::downgrade(&drag.identity)))
+        {
+            return false;
+        }
+        self.stop_active_drag(window)
+    }
+
     /// Gets the cursor style of the currently active drag operation.
     pub fn active_drag_cursor_style(&self) -> Option<CursorStyle> {
         self.active_drag.as_ref().and_then(|drag| drag.cursor_style)
@@ -3411,9 +3431,14 @@ impl<G: Global> DerefMut for GlobalLease<G> {
     }
 }
 
+/// Identity of a toolkit drag, suitable for owner-scoped delayed cancellation.
+#[derive(Clone)]
+pub struct ActiveDragToken(std::rc::Weak<()>);
+
 /// Contains state associated with an active drag operation, started by dragging an element
 /// within the window or by dragging into the app from the underlying platform.
 pub struct AnyDrag {
+    pub(crate) identity: Rc<()>,
     /// The view used to render this drag
     pub view: AnyView,
 

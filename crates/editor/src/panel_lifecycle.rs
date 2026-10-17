@@ -2,17 +2,38 @@
 use crate::*;
 
 impl EditorView {
+    pub(super) fn suspend_input(
+        &mut self,
+        reason: editor_core::EditingLifecycle,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        // A dialog may already have ended editing before capturing its context
+        // token. Releasing leftover UI must not invalidate that new token.
+        let end =
+            reason != editor_core::EditingLifecycle::BlockingUi || self.editor.editing_active();
+        if reason == editor_core::EditingLifecycle::WindowDeactivated {
+            self.input_router.deactivate();
+        }
+        self.cancel_input_captures(window, cx);
+        if end {
+            if let Some(document) = self.editor.active_id() {
+                if let Err(error) = self.editor.end_editing(document, reason) {
+                    self.edit_error = Some(error.to_string());
+                }
+            }
+        }
+        end
+    }
     pub(super) fn connect_panel_lifecycle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.ui_subscriptions
             .push(cx.observe_window_visibility(window, |this, _, window, cx| {
                 if !window.is_visible() {
-                    this.input_router.deactivate();
-                    if let Some(document) = this.editor.active_id() {
-                        let _ = this.editor.end_editing(
-                            document,
-                            editor_core::EditingLifecycle::WindowDeactivated,
-                        );
-                    }
+                    this.suspend_input(
+                        editor_core::EditingLifecycle::WindowDeactivated,
+                        window,
+                        cx,
+                    );
                     for viewport in this.editor.viewport_ids() {
                         this.editor
                             .set_viewport_metrics(viewport, Default::default());
@@ -24,13 +45,11 @@ impl EditorView {
         self.ui_subscriptions
             .push(cx.observe_window_activation(window, |this, window, cx| {
                 if !window.is_window_active() {
-                    this.input_router.deactivate();
-                    if let Some(document) = this.editor.active_id() {
-                        let _ = this.editor.end_editing(
-                            document,
-                            editor_core::EditingLifecycle::WindowDeactivated,
-                        );
-                    }
+                    this.suspend_input(
+                        editor_core::EditingLifecycle::WindowDeactivated,
+                        window,
+                        cx,
+                    );
                     this.redraw(cx);
                 }
             }));

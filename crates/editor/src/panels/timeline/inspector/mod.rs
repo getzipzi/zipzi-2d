@@ -79,6 +79,7 @@ pub(super) struct NumberEdit {
     pub(super) field: Field,
     command: TimelineCommand,
     pub sliding: bool,
+    pub drag: Option<gpui_kit::ActiveDragToken>,
 }
 pub(super) struct ChannelSlider {
     field: Field,

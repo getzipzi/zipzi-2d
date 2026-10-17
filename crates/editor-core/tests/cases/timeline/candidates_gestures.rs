@@ -12,21 +12,21 @@ fn scrub_cancellation_checks_owner_and_invalidates_in_flight_samples() -> anyhow
     editor.set_timeline_visible(second, true);
     let a = editor.timeline_binding(first).unwrap();
     let b = editor.timeline_binding(second).unwrap();
-    editor.scrub_timeline_for(a, 0.3)?;
-    editor.scrub_timeline_for(b, 0.5)?;
+    let scrub_a = editor.begin_timeline_scrub(a, 0.3)?;
+    let scrub_b = editor.begin_timeline_scrub(b, 0.5)?;
     let in_flight = editor.animation_request().unwrap().identity;
-    assert!(!editor.cancel_timeline_scrub_for(a));
-    assert!(editor.timeline_scrub_owned(b));
+    assert!(!editor.cancel_timeline_scrub(scrub_a));
+    assert!(editor.timeline_scrub_valid(scrub_b));
     assert!(editor.animation_request().is_none());
-    assert!(editor.cancel_timeline_scrub_for(b));
+    assert!(editor.cancel_timeline_scrub(scrub_b));
     let final_sample = editor.animation_request().unwrap().identity;
     assert_eq!(final_sample.time, in_flight.time);
     assert!(final_sample.acceptance_floor > in_flight.request);
-    assert!(!editor.timeline_scrub_owned(b));
-    assert!(!editor.cancel_timeline_scrub_for(b));
-    editor.scrub_timeline_for(a, 0.4)?;
+    assert!(!editor.timeline_scrub_valid(scrub_b));
+    assert!(!editor.cancel_timeline_scrub(scrub_b));
+    let scrub_a = editor.begin_timeline_scrub(a, 0.4)?;
     editor.toggle_animation()?;
-    assert!(!editor.cancel_timeline_scrub_for(a));
+    assert!(!editor.cancel_timeline_scrub(scrub_a));
     assert!(editor.animation().unwrap().playing);
     Ok(())
 }
@@ -53,7 +53,7 @@ fn panel_bindings_isolate_candidate_and_scrub_lifecycles() -> anyhow::Result<()>
     editor.set_timeline_visible(second, false);
     assert!(editor.timeline_edit().is_none());
     let a = editor.timeline_binding(first).unwrap();
-    editor.scrub_timeline_for(a, 0.3)?;
+    editor.begin_timeline_scrub(a, 0.3)?;
     assert!(editor.animation_request().is_some());
     editor.set_timeline_visible(second, true);
     editor.set_timeline_visible(second, false);
@@ -65,9 +65,9 @@ fn panel_bindings_isolate_candidate_and_scrub_lifecycles() -> anyhow::Result<()>
     editor.unregister_timeline(first);
     editor.set_timeline_visible(first, true);
     assert_ne!(editor.timeline_binding(first), Some(fresh));
-    assert!(editor.scrub_timeline_for(fresh, 0.5).is_err());
+    assert!(editor.begin_timeline_scrub(fresh, 0.5).is_err());
     let fresh = editor.timeline_binding(first).unwrap();
-    editor.scrub_timeline_for(fresh, 0.5)?;
+    editor.begin_timeline_scrub(fresh, 0.5)?;
     editor.toggle_animation()?;
     editor.set_timeline_visible(first, false);
     assert!(
@@ -724,5 +724,34 @@ fn a_slower_animation_viewport_accepts_candidate_frames_after_its_peer_has_advan
     editor.cancel_timeline_edit();
     assert!(!editor.present_animation_viewport(frames[2].1, frames[2].2.clone()));
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn newer_scrub_in_the_same_panel_rejects_old_updates_finish_and_cancellation() -> anyhow::Result<()>
+{
+    let (mut editor, _assets) = fixture(false, false)?;
+    let panel = TimelineId::new();
+    editor.set_timeline_visible(panel, true);
+    let binding = editor.timeline_binding(panel).unwrap();
+    let old = editor.begin_timeline_scrub(binding, 0.3)?;
+    let old_sample = editor.animation_request().unwrap().identity;
+    let current = editor.begin_timeline_scrub(binding, 0.5)?;
+    let sample = editor.animation_request().unwrap().identity;
+    assert_ne!(current, old);
+    assert!(sample.acceptance_floor > old_sample.request);
+    assert!(editor.update_timeline_scrub(old, 0.8).is_err());
+    assert!(editor.finish_timeline_scrub(old, 0.8).is_err());
+    assert!(!editor.cancel_timeline_scrub(old));
+    assert_eq!(editor.active_timeline_scrub(binding), Some(current));
+    assert_eq!(editor.animation().unwrap().time, 0.5);
+    assert!(editor.begin_timeline_scrub(binding, f32::NAN).is_err());
+    assert!(editor.update_timeline_scrub(current, f32::NAN).is_err());
+    assert!(editor.finish_timeline_scrub(current, f32::NAN).is_err());
+    assert_eq!(editor.active_timeline_scrub(binding), Some(current));
+    editor.update_timeline_scrub(current, 0.7)?;
+    editor.finish_timeline_scrub(current, 0.7)?;
+    assert!(editor.active_timeline_scrub(binding).is_none());
+    assert_eq!(editor.animation().unwrap().time, 0.7);
     Ok(())
 }

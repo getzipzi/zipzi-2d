@@ -301,9 +301,6 @@ impl Render for SlideNumberInput {
             .w_full()
             .h(compact::rem(compact::NUMBER_CONTROL))
             .track_focus(&self.focus)
-            .when(self.drag.is_some(), |element| {
-                element.key_context("KasaneControlCapture")
-            })
             .capture_any_mouse_down(cx.listener(Self::begin))
             .on_action(
                 cx.listener(|this, _: &gpui_kit::component::dialog::Cancel, _, cx| {

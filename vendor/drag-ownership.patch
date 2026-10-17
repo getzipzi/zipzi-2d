@@ -1,0 +1,70 @@
+diff --git a/vendor/gpui-fast/src/app.rs b/vendor/gpui-fast/src/app.rs
+index 4836552..ce580bd 100644
+--- a/vendor/gpui-fast/src/app.rs
++++ b/vendor/gpui-fast/src/app.rs
+@@ -2883,6 +2883,26 @@ impl App {
+         self.active_drag.is_some()
+     }
+ 
++    /// Snapshot the current drag without keeping its view or payload alive.
++    pub fn active_drag_token(&self) -> Option<ActiveDragToken> {
++        self.active_drag
++            .as_ref()
++            .map(|drag| ActiveDragToken(Rc::downgrade(&drag.identity)))
++    }
++
++    /// Stop only the drag represented by this token. Delayed owner cleanup must
++    /// not release a different drag that has since started, even in another window.
++    pub fn stop_drag(&mut self, token: &ActiveDragToken, window: &mut Window) -> bool {
++        if !self
++            .active_drag
++            .as_ref()
++            .is_some_and(|drag| std::rc::Weak::ptr_eq(&token.0, &Rc::downgrade(&drag.identity)))
++        {
++            return false;
++        }
++        self.stop_active_drag(window)
++    }
++
+     /// Gets the cursor style of the currently active drag operation.
+     pub fn active_drag_cursor_style(&self) -> Option<CursorStyle> {
+         self.active_drag.as_ref().and_then(|drag| drag.cursor_style)
+@@ -3411,9 +3431,14 @@ impl<G: Global> DerefMut for GlobalLease<G> {
+     }
+ }
+ 
++/// Identity of a toolkit drag, suitable for owner-scoped delayed cancellation.
++#[derive(Clone)]
++pub struct ActiveDragToken(std::rc::Weak<()>);
++
+ /// Contains state associated with an active drag operation, started by dragging an element
+ /// within the window or by dragging into the app from the underlying platform.
+ pub struct AnyDrag {
++    pub(crate) identity: Rc<()>,
+     /// The view used to render this drag
+     pub view: AnyView,
+ 
+diff --git a/vendor/gpui-fast/src/elements/div.rs b/vendor/gpui-fast/src/elements/div.rs
+index c132bf7..4d6c7a6 100644
+--- a/vendor/gpui-fast/src/elements/div.rs
++++ b/vendor/gpui-fast/src/elements/div.rs
+@@ -3039,6 +3039,7 @@ impl Interactivity {
+                                         as ExternalDragPayloadSource
+                                 });
+                             cx.active_drag = Some(AnyDrag {
++                                identity: Rc::new(()),
+                                 view: drag,
+                                 value: listener.value,
+                                 cursor_offset,
+diff --git a/vendor/gpui-fast/src/window.rs b/vendor/gpui-fast/src/window.rs
+index dbfbc69..f7f3025 100644
+--- a/vendor/gpui-fast/src/window.rs
++++ b/vendor/gpui-fast/src/window.rs
+@@ -5746,6 +5746,7 @@ impl Window {
+                     let source_window = self.handle.window_id();
+                     if !cx.restore_platform_drag(source_window) && cx.active_drag.is_none() {
+                         cx.active_drag = Some(AnyDrag {
++                            identity: Rc::new(()),
+                             value: Arc::new(paths.clone()),
+                             view: cx.new(|_| paths).into(),
+                             cursor_offset: position,

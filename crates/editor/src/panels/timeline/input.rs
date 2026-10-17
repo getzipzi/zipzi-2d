@@ -7,7 +7,7 @@ pub(super) enum Gesture {
         last: Point<f32>,
         button: MouseButton,
     },
-    Seek,
+    Seek(editor_core::TimelineScrubToken),
     Marquee {
         origin: Point<f32>,
         current: Point<f32>,
@@ -72,51 +72,54 @@ impl Timeline {
             return;
         }
         self.finish_number(cx);
-        self.activity.set(self.activity.get() + 1);
-        window.focus(&self.focus, cx);
-        self.gesture = Some(Gesture::Seek);
-        self.seek_at(event.position, true, cx);
-        cx.stop_propagation();
-    }
-    fn seek_at(&mut self, position: Point<Pixels>, scrub: bool, cx: &mut Context<Self>) {
         let Some(target) = self.target(cx) else {
             return;
         };
+        let Some(time) = self.seek_time(event.position, cx) else {
+            return;
+        };
+        let token = self
+            .owner
+            .update(cx, |owner, cx| {
+                let result = owner.editor.begin_timeline_scrub(target.binding, time);
+                let token = result.as_ref().ok().copied();
+                owner.animation_anchor = None;
+                owner.complete_edit(result.map(|_| ()), cx);
+                token
+            })
+            .ok()
+            .flatten();
+        if let Some(token) = token {
+            window.focus(&self.focus, cx);
+            self.gesture = Some(Gesture::Seek(token));
+            cx.notify();
+        }
+        cx.stop_propagation();
+    }
+    fn seek_time(&self, position: Point<Pixels>, cx: &App) -> Option<f32> {
+        let target = self.target(cx)?;
+        let owner = self.owner.upgrade()?;
+        let editor = &owner.read(cx).editor;
+        let state = editor.timeline_view()?;
+        let projection = editor.timeline_projection()?;
+        let max = if target.mode == AnimationPreviewMode::Result {
+            editor
+                .animation()
+                .and_then(|a| a.result_playback_position())
+                .map_or(projection.display_end, |p| {
+                    f64::from(p.period).max(projection.display_end)
+                })
+        } else {
+            projection.display_end
+        };
         let bounds = self.ruler.get();
-        let _ = self.owner.update(cx, |owner, cx| {
-            let Some(state) = owner.editor.timeline_view() else {
-                return;
-            };
-            let Some(projection) = owner.editor.timeline_projection() else {
-                return;
-            };
-            let max = if target.mode == AnimationPreviewMode::Result {
-                owner
-                    .editor
-                    .animation()
-                    .and_then(|a| a.result_playback_position())
-                    .map_or(projection.display_end, |p| {
-                        f64::from(p.period).max(projection.display_end)
-                    })
-            } else {
-                projection.display_end
-            };
-            let time = x_time(
-                (position.x - bounds.left()).as_f32(),
-                state.time_range,
-                bounds.size.width.as_f32(),
-            )
-            .clamp(0., max);
-            let result = timeline_time(time, projection.fps, state.snap).and_then(|time| {
-                if scrub {
-                    owner.editor.scrub_timeline_for(target.binding, time)
-                } else {
-                    owner.editor.seek_timeline_for(target.binding, time)
-                }
-            });
-            owner.animation_anchor = None;
-            owner.complete_edit(result, cx);
-        });
+        let time = x_time(
+            (position.x - bounds.left()).as_f32(),
+            state.time_range,
+            bounds.size.width.as_f32(),
+        )
+        .clamp(0., max);
+        timeline_time(time, projection.fps, state.snap).ok()
     }
     fn begin(&mut self, cx: &mut Context<Self>) -> Option<TimelineCandidateIdentity> {
         let target = self.target(cx)?;
@@ -181,7 +184,6 @@ impl Timeline {
             return;
         }
         self.finish_number(cx);
-        self.activity.set(self.activity.get() + 1);
         window.focus(&self.focus, cx);
         let local = self.local(event.position);
         let hit = self
@@ -416,8 +418,14 @@ impl Timeline {
         };
         let command = match self.gesture.as_mut().unwrap() {
             Gesture::Pan { .. } => unreachable!(),
-            Gesture::Seek => {
-                self.seek_at(event.position, true, cx);
+            Gesture::Seek(token) => {
+                let token = *token;
+                if let Some(time) = self.seek_time(event.position, cx) {
+                    let _ = self.owner.update(cx, |owner, cx| {
+                        let result = owner.editor.update_timeline_scrub(token, time);
+                        owner.complete_edit(result, cx);
+                    });
+                }
                 return;
             }
             Gesture::Marquee {
@@ -534,8 +542,13 @@ impl Timeline {
             return;
         }
         if let Some(gesture) = self.gesture.take() {
-            if matches!(gesture, Gesture::Seek) {
-                self.seek_at(window.mouse_position(), false, cx);
+            if let Gesture::Seek(token) = gesture {
+                if let Some(time) = self.seek_time(window.mouse_position(), cx) {
+                    let _ = self.owner.update(cx, |owner, cx| {
+                        let result = owner.editor.finish_timeline_scrub(token, time);
+                        owner.complete_edit(result, cx);
+                    });
+                }
             }
             if let Some(token) = gesture.token() {
                 self.finish_token(token, cx);

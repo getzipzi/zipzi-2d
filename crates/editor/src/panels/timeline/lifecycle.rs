@@ -4,65 +4,47 @@
 //! owner is released. Keep those notification and cancellation boundaries distinct.
 use super::*;
 
-#[derive(Default)]
-struct DragOwner(Option<(AnyWindowHandle, editor_core::TimelineBinding, u64)>);
-impl Global for DragOwner {}
-
-pub(crate) struct InteractionCancellation {
-    binding: Option<editor_core::TimelineBinding>,
-    token: Option<TimelineCandidateIdentity>,
-    seeking: bool,
+/// The domain operation behind local pointer/number state. This is the common
+/// source for capture validity, reconciliation and delayed cancellation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum TimelineOperation {
+    Navigation(editor_core::TimelineBinding),
+    Scrub(editor_core::TimelineScrubToken),
+    Edit(editor_core::TimelineBinding, TimelineCandidateIdentity),
 }
-impl InteractionCancellation {
-    pub(crate) fn apply(self, owner: &mut EditorView) {
-        let Some(binding) = self.binding else {
-            return;
-        };
-        if let Some(token) = self.token {
-            if owner.editor.timeline_edit_owned(binding, token) {
+impl TimelineOperation {
+    pub(super) fn binding(self) -> editor_core::TimelineBinding {
+        match self {
+            Self::Navigation(binding) | Self::Edit(binding, _) => binding,
+            Self::Scrub(token) => token.binding,
+        }
+    }
+    pub(super) fn valid(self, editor: &editor_core::Editor) -> bool {
+        match self {
+            Self::Navigation(binding) => editor.timeline_binding_valid(binding),
+            Self::Scrub(token) => editor.timeline_scrub_valid(token),
+            Self::Edit(binding, token) => editor.timeline_edit_owned(binding, token),
+        }
+    }
+    fn cancel(self, owner: &mut EditorView) {
+        match self {
+            Self::Edit(binding, token) if owner.editor.timeline_edit_owned(binding, token) => {
                 owner
                     .editor
                     .cancel_timeline_edit_for(binding.document, token);
             }
-        }
-        if self.seeking && owner.editor.cancel_timeline_scrub_for(binding) {
-            owner.animation_anchor = None;
+            Self::Scrub(token) if owner.editor.cancel_timeline_scrub(token) => {
+                owner.animation_anchor = None;
+            }
+            _ => {}
         }
     }
 }
-
-impl Timeline {
-    pub(super) fn claim_number_drag(
-        &self,
-        token: TimelineCandidateIdentity,
-        window: &Window,
-        cx: &mut App,
-    ) {
-        if let Some(target) = &self.context {
-            cx.set_global(DragOwner(Some((
-                window.window_handle(),
-                target.binding,
-                token.edit,
-            ))));
-        }
-    }
-    fn release_number_drag(
-        &self,
-        token: TimelineCandidateIdentity,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
-        let owner = self
-            .context
-            .as_ref()
-            .map(|target| (window.window_handle(), target.binding, token.edit));
-        if owner.is_some()
-            && cx
-                .try_global::<DragOwner>()
-                .is_some_and(|drag| drag.0 == owner)
-        {
-            cx.set_global(DragOwner::default());
-            cx.stop_active_drag(window);
+pub(crate) struct InteractionCancellation(Option<TimelineOperation>);
+impl InteractionCancellation {
+    pub(crate) fn apply(self, owner: &mut EditorView) {
+        if let Some(operation) = self.0 {
+            operation.cancel(owner);
         }
     }
 }
@@ -138,14 +120,7 @@ impl Timeline {
     fn reconcile_target(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let target = self.target(cx);
         if target != self.context {
-            if let Some(edit) = self.number_edit.take() {
-                self.release_number_drag(edit.token, window, cx);
-                if let Some(control) = self.fields.get(&edit.field) {
-                    control
-                        .number
-                        .update(cx, |number, cx| number.reset_drag(cx));
-                }
-            }
+            self.cancel_local(window, cx);
             // A commit changes the model revision, but surviving field entities
             // must retain focus (including a field just focused by a blur).
             // The full target comparison above still invalidates scene geometry.
@@ -160,9 +135,6 @@ impl Timeline {
                         && old.clip == new.clip
                         && old.mode == new.mode
                 });
-            self.gesture = None;
-            self.edge_scroll = None;
-            self.number_edit = None;
             if same_clip {
                 let projection = self
                     .owner
@@ -192,38 +164,35 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let active = self.owner.upgrade().and_then(|owner| {
-            owner
-                .read(cx)
-                .editor
-                .timeline_edit()
-                .map(|edit| edit.identity.edit)
+        let valid = self.operation().is_none_or(|operation| {
+            self.owner
+                .upgrade()
+                .is_some_and(|owner| operation.valid(&owner.read(cx).editor))
         });
-        if self
-            .number_edit
-            .as_ref()
-            .is_some_and(|edit| active != Some(edit.token.edit))
-        {
-            let edit = self.number_edit.take().unwrap();
-            window.focus(&self.focus, cx);
-            self.release_number_drag(edit.token, window, cx);
-            self.reset_number_drags(cx);
+        if !valid {
+            let editing_number = self.number_edit.is_some();
+            self.cancel_local(window, cx);
+            if editing_number {
+                window.focus(&self.focus, cx);
+            }
         }
-        if self
+    }
+    pub(super) fn operation(&self) -> Option<TimelineOperation> {
+        let binding = self.context.as_ref()?.binding;
+        if let Some(input::Gesture::Seek(token)) = self.gesture.as_ref() {
+            return Some(TimelineOperation::Scrub(*token));
+        }
+        if let Some(token) = self
             .gesture
             .as_ref()
             .and_then(input::Gesture::token)
-            .is_some_and(|token| active != Some(token.edit))
-            || (matches!(self.gesture, Some(input::Gesture::Seek))
-                && !self.owner.upgrade().is_some_and(|owner| {
-                    self.context.as_ref().is_some_and(|target| {
-                        owner.read(cx).editor.timeline_scrub_owned(target.binding)
-                    })
-                }))
+            .or_else(|| self.number_edit.as_ref().map(|edit| edit.token))
         {
-            self.gesture = None;
-            self.edge_scroll = None;
+            return Some(TimelineOperation::Edit(binding, token));
         }
+        self.gesture
+            .as_ref()
+            .map(|_| TimelineOperation::Navigation(binding))
     }
 
     fn sync_search(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -248,25 +217,19 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> InteractionCancellation {
-        // Only starting a new interaction supersedes deferred cleanup. Repeated
-        // deactivation must still deliver the first operation's cancellation.
-        let token = self
-            .gesture
-            .as_ref()
-            .and_then(input::Gesture::token)
-            .or_else(|| self.number_edit.as_ref().map(|edit| edit.token));
-        let cancellation = InteractionCancellation {
-            binding: self.context.as_ref().map(|target| target.binding),
-            token,
-            seeking: matches!(self.gesture, Some(input::Gesture::Seek)),
-        };
-        if let Some(token) = token {
-            self.release_number_drag(token, window, cx);
+        let cancellation = InteractionCancellation(self.operation());
+        if let Some(edit) = self.number_edit.take() {
+            if let Some(drag) = edit.drag {
+                cx.stop_drag(&drag, window);
+            }
+            if let Some(control) = self.fields.get(&edit.field) {
+                control
+                    .number
+                    .update(cx, |number, cx| number.reset_drag(cx));
+            }
         }
         self.gesture = None;
         self.edge_scroll = None;
-        self.number_edit = None;
-        self.reset_number_drags(cx);
         self.error = None;
         cx.notify();
         cancellation
@@ -281,32 +244,19 @@ impl Timeline {
         cx.notify();
     }
 
-    fn reset_number_drags(&self, cx: &mut Context<Self>) {
-        let numbers: Vec<_> = self
-            .fields
-            .values()
-            .map(|field| field.number.clone())
-            .collect();
-        for number in numbers {
-            number.update(cx, |number, cx| number.reset_drag(cx));
-        }
-    }
-
     pub(crate) fn deactivate(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let cancellation = self.cancel_local(window, cx);
-        if cancellation.token.is_none() && !cancellation.seeking {
+        if !matches!(
+            cancellation.0,
+            Some(TimelineOperation::Scrub(_) | TimelineOperation::Edit(..))
+        ) {
             return;
         }
         let owner = self.owner.clone();
-        let activity = self.activity.clone();
-        let generation = activity.get();
         // Dock callbacks may run inside an EditorView update. Resolve the owner
         // after it is released, and never cancel a newer gesture or another tab.
         cx.defer(move |cx| {
             let _ = owner.update(cx, |owner, cx| {
-                if activity.get() != generation {
-                    return;
-                }
                 cancellation.apply(owner);
                 owner.redraw(cx);
             });

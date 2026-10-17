@@ -4,6 +4,12 @@
 
 保留 crates.io 发布的 `gpui-fast`、`gpui-fast-macos`、`gpui-fast-apple` **0.1.7**，作为 GPUI Kit 0.7.3 的 `gpui-fast` 后端。根目录 `Cargo.toml` 的 `[patch.crates-io]` 选择这些本地包。Kit 固定在官方 commit，另通过 Git source 的 `[patch]` 覆盖下述 `gpui-component` 包。
 
+## 拖动身份与定向取消
+
+[drag-ownership.patch](drag-ownership.patch) 为 `gpui-fast` 增加 `ActiveDragToken`、`App::active_drag_token` 和 `App::stop_drag`。身份在内部拖动或平台文件拖入创建时生成，跨平台交接保留；弱引用快照不延长拖动资源寿命。取消验证同一次拖动，过期 token 不会停止后来开始的操作。原有无条件 `stop_active_drag` 保留。
+
+Timeline 数值滑块直接持有此 token，替代编辑器全局 DragOwner。回归见 [input_routing.rs](../crates/editor/headless_tests/input_routing.rs) 的真实 GPUI 拖动替换与重复取消测试。`AnyDrag` 新增 crate 内部身份字段；直接构造该结构体的外部使用方需要适配。升级 GPUI 时在已有本地补丁之后重新核对并应用本补丁。
+
 ## Kit compact 菜单与 Tooltip
 
 `vendor/gpui-kit/crates/component` 来自 Kit commit `507e82b8115ac73af92b7d3856501f9d7b73b2c9`，保留完整包、上游清单和 Apache-2.0 许可。精简的 `vendor/gpui-kit/Cargo.toml` 提供原清单继承的依赖与 lint；同仓库的 base、assets、macros 仍指向相同 Git commit，未整体 vendor Kit。额外保留 README 和上游测试通过相对路径引用的五份文件，它们不作为其他本地包编译。
@@ -83,6 +89,7 @@ core 定义绘制与平台接口，macOS 负责窗口到 renderer 的转发，Ap
 ```sh
 ./scripts/test.sh
 # 检查全部补丁能否从当前文件反向应用，不修改文件：
+git apply --reverse --check vendor/drag-ownership.patch
 git apply --reverse --check vendor/native-metal.patch
 git apply --reverse --check vendor/cache-boundary.patch
 git apply --reverse --check vendor/list-height-estimates.patch

@@ -282,7 +282,6 @@ impl Timeline {
             self.finish_number(cx);
         }
         if self.number_edit.is_none() {
-            self.activity.set(self.activity.get() + 1);
             let Some(command) = self.template(&field, cx) else {
                 return;
             };
@@ -305,6 +304,7 @@ impl Timeline {
                 field: field.clone(),
                 command,
                 sliding,
+                drag: None,
             });
         }
         let edit = self.number_edit.as_mut().unwrap();

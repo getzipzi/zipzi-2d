@@ -118,7 +118,12 @@ impl DockWorkspace {
             .keys()
             .copied()
             .filter(|kind| !kind.is_viewport() && *kind != PanelKind::AnimationTimeline)
-            .map(|kind| (kind, Default::default()))
+            .map(|kind| {
+                (
+                    kind,
+                    crate::input_routing::InputRegion::new(panels[&kind].focus_handle(cx)),
+                )
+            })
             .collect();
         let regions = input_regions
             .iter()

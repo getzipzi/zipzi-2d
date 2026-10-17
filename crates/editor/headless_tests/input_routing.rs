@@ -369,3 +369,108 @@ fn destroying_a_timeline_unregisters_its_binding(cx: &mut TestAppContext) {
         assert!(view.editor.timeline_binding(id).is_none())
     });
 }
+
+#[gpui_kit::test]
+fn undeclared_focus_keeps_keys_without_a_named_control_context(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        let control = cx.focus_handle();
+        window.focus(&control, cx);
+        window.hover("canvas-body", cx);
+        let before = h.view.read(cx).editor.view();
+        window.press("cmd-=", cx);
+        assert_eq!(h.view.read(cx).editor.view(), before);
+        let focus = h.view.read(cx).focus.clone();
+        window.focus(&focus, cx);
+        window.press("cmd-=", cx);
+        assert_eq!(h.view.read(cx).editor.view().zoom, before.zoom + 0.25);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn popover_in_another_window_does_not_capture_this_windows_keyboard(cx: &mut TestAppContext) {
+    let first = setup(cx);
+    let second = setup(cx);
+    cx.update_window(first.window, |_, window, cx| {
+        window.click("mesh-tree-filter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(second.window, |_, window, cx| {
+        let focus = second.view.read(cx).focus.clone();
+        window.focus(&focus, cx);
+        window.hover("canvas-body", cx);
+        let before = second.view.read(cx).editor.view().zoom;
+        window.press("cmd-=", cx);
+        assert_eq!(second.view.read(cx).editor.view().zoom, before + 0.25);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn toolkit_drag_cancellation_only_releases_the_captured_operation(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::*;
+    struct DragPreview;
+    impl Render for DragPreview {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            Empty
+        }
+    }
+    struct DragProbe;
+    impl Render for DragProbe {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div().size_full().child(
+                div()
+                    .id("drag-source")
+                    .test_support()
+                    .size(px(100.))
+                    .on_drag((), |_, _, _, cx| cx.new(|_| DragPreview)),
+            )
+        }
+    }
+    let window = cx.add_window(|_, _| DragProbe);
+    cx.update_window(*window, |_, window, cx| {
+        window.render_frame(cx);
+        let position = window.find("drag-source").bounds().center();
+        press(window, position, cx);
+        slide(window, position + point(px(20.), px(0.)), false, cx);
+        let old = cx.active_drag_token().expect("first drag");
+        release(window, position, cx);
+        window.render_frame(cx);
+        press(window, position, cx);
+        slide(window, position + point(px(20.), px(0.)), false, cx);
+        let current = cx.active_drag_token().expect("replacement drag");
+        assert!(!cx.stop_drag(&old, window));
+        assert!(cx.has_active_drag());
+        assert!(cx.stop_drag(&current, window));
+        assert!(!cx.has_active_drag());
+        assert!(!cx.stop_drag(&current, window));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn closing_blocking_ui_keeps_the_current_pointer_location(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.hover("canvas-body", cx);
+        let before = h.view.read(cx).editor.view().zoom;
+        h.view.update(cx, |view, cx| {
+            view.modal = true;
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        window.press("cmd-=", cx);
+        assert_eq!(h.view.read(cx).editor.view().zoom, before);
+        h.view.update(cx, |view, cx| {
+            view.modal = false;
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        window.press("cmd-=", cx);
+        assert_eq!(h.view.read(cx).editor.view().zoom, before + 0.25);
+    })
+    .unwrap();
+}

@@ -3,11 +3,7 @@ use super::*;
 
 impl ViewportSurface {
     pub(super) fn cancel(&mut self, cx: &mut Context<Self>) {
-        let token = self
-            .interaction
-            .take()
-            .or_else(|| self.navigation.pan.map(|pan| pan.token));
-        self.cancel_pointer();
+        let token = self.cancel_pointer();
         let _ = self.owner.update(cx, |owner, cx| {
             if token.is_some_and(|token| owner.editor.cancel_viewport_interaction(token)) {
                 owner.redraw(cx);

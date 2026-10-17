@@ -3039,6 +3039,7 @@ impl Interactivity {
                                         as ExternalDragPayloadSource
                                 });
                             cx.active_drag = Some(AnyDrag {
+                                identity: Rc::new(()),
                                 view: drag,
                                 value: listener.value,
                                 cursor_offset,

@@ -170,8 +170,37 @@ impl ViewportSurface {
                     this.cancel(cx);
                 }),
             ];
+            let surface = cx.weak_entity();
+            let input_region = crate::input_routing::InputRegion::new(focus.clone()).with_capture(
+                move |editor, cx| {
+                    let entity = surface.upgrade()?;
+                    let token = entity.read(cx).pointer_token()?;
+                    let surface = surface.clone();
+                    Some(crate::input_routing::CapturedInput::new(
+                        crate::input_routing::LocalTarget::Viewport(token.binding),
+                        editor.viewport_interaction_valid(token),
+                        crate::input_routing::CaptureCancelKey::CommandBinding,
+                        move |_, cx| {
+                            surface
+                                .update(cx, |surface, cx| {
+                                    if surface.pointer_token() != Some(token) {
+                                        return None;
+                                    }
+                                    surface.cancel_pointer();
+                                    cx.notify();
+                                    Some(Box::new(move |owner: &mut EditorView| {
+                                        owner.editor.cancel_viewport_interaction(token);
+                                    })
+                                        as crate::input_routing::CoreCleanup)
+                                })
+                                .ok()
+                                .flatten()
+                        },
+                    ))
+                },
+            );
             Self {
-                input_region: Default::default(),
+                input_region,
                 owner,
                 viewport,
                 kind,
@@ -219,11 +248,13 @@ impl ViewportSurface {
             .upgrade()
             .is_some_and(|owner| (self.content)(owner.read(cx), self.viewport).hand_tool)
     }
+    fn pointer_token(&self) -> Option<editor_core::ViewportInteractionToken> {
+        self.interaction
+            .or_else(|| self.navigation.pan.map(|pan| pan.token))
+    }
     pub fn cancel_pointer(&mut self) -> Option<editor_core::ViewportInteractionToken> {
-        let token = self
-            .interaction
-            .take()
-            .or_else(|| self.navigation.pan.map(|pan| pan.token));
+        let token = self.pointer_token();
+        self.interaction = None;
         self.navigation.wheel_zoom = None;
         self.navigation.pan = None;
         token

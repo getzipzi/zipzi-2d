@@ -34,21 +34,8 @@ impl Render for EditorView {
             self.connect_preview(window, cx);
         }
         let modal = self.modal || window.has_active_dialog(cx);
-        if modal
-            && (self.editor.animation().is_some_and(|a| a.playing)
-                || self.editor.timeline_edit().is_some()
-                || self.editor.gesture_active()
-                || self.editor.viewport_interaction_active())
-        {
-            if let Some(document) = self.editor.active_id() {
-                if let Err(error) = self
-                    .editor
-                    .end_editing(document, editor_core::EditingLifecycle::BlockingUi)
-                {
-                    self.edit_error = Some(error.to_string());
-                }
-                self.redraw(cx);
-            }
+        if modal && self.suspend_input(editor_core::EditingLifecycle::BlockingUi, window, cx) {
+            self.redraw(cx);
         }
         self.schedule_animation_frame(window, cx);
         self.refresh_menus(modal, window, cx);
