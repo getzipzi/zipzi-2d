@@ -703,3 +703,123 @@ fn a_cancelled_capture_does_not_swallow_the_next_pointer_down(cx: &mut TestAppCo
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn escape_under_canvas_select_clears_all_selection(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseUpEvent};
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, _| window.activate_window())
+        .unwrap();
+    cx.run_until_parked();
+    present_canvas(&harness, cx);
+
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("tool_select", cx);
+        assert_eq!(
+            harness.view.read(cx).editor.active_tool(),
+            editor_core::ToolId::Select
+        );
+
+        let start = harness
+            .view
+            .read_with(cx, |view, _| view.editor.overlay().vertices[1].position);
+        let from = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+
+        harness.view.read_with(cx, |view, _| {
+            assert!(!view.editor.document().unwrap().context().selections.is_empty());
+            assert!(!view.editor.document().unwrap().selected_vertex_positions().is_empty());
+        });
+
+        window.press("escape", cx);
+        window.render_frame(cx);
+
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.document().unwrap().context().selections.is_empty());
+            assert!(view.editor.document().unwrap().selected_vertex_positions().is_empty());
+            assert!(view.editor.overlay().vertices.is_empty());
+        });
+
+        // Re-select by clicking the vertex again.
+        window.click("tool_select", cx);
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+
+        harness.view.read_with(cx, |view, _| {
+            assert!(!view.editor.document().unwrap().context().selections.is_empty());
+        });
+
+        // Switch to Hand tool: pressing escape does NOT clear selection.
+        window.press("h", cx);
+        assert_eq!(
+            harness.view.read(cx).editor.active_tool(),
+            editor_core::ToolId::Hand
+        );
+        window.press("escape", cx);
+        window.render_frame(cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(!view.editor.document().unwrap().context().selections.is_empty());
+        });
+
+        // Switch back to Select tool.
+        window.press("v", cx);
+        assert_eq!(
+            harness.view.read(cx).editor.active_tool(),
+            editor_core::ToolId::Select
+        );
+
+        // Shortcut cmd-d triggers Deselect and clears selection.
+        window.press("cmd-d", cx);
+        window.render_frame(cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.document().unwrap().context().selections.is_empty());
+            assert!(view.editor.document().unwrap().selected_vertex_positions().is_empty());
+            assert!(view.editor.overlay().vertices.is_empty());
+        });
+    })
+    .unwrap();
+}
+

@@ -67,6 +67,8 @@ pub enum CommandId {
     Undo,
     #[serde(rename = "edit.redo")]
     Redo,
+    #[serde(rename = "edit.deselect")]
+    Deselect,
     #[serde(rename = "parameter.create")]
     CreateParameter,
     #[serde(rename = "parameter.edit")]
@@ -288,6 +290,13 @@ specs![
     (Next, "menu.next_document", Window, false, ["ctrl-tab"]),
     (Undo, "menu.undo", Document, false, ["secondary-z"]),
     (Redo, "menu.redo", Document, false, ["secondary-shift-z"]),
+    (
+        Deselect,
+        "menu.deselect",
+        Document,
+        false,
+        ["secondary-d"]
+    ),
     (CreateParameter, "parameter.new", Document, false, []),
     (EditParameter, "parameter.edit", Document, false, []),
     (DeleteParameter, "parameter.delete", Document, false, []),
@@ -716,6 +725,15 @@ impl Editor {
             }
             Undo => target && self.can_undo(),
             Redo => target && self.can_redo(),
+            Deselect => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.gesture_active()
+                    && self
+                        .document()
+                        .is_some_and(|d| !d.context().selections.is_empty())
+            }
             CommitProperty | CancelProperty => {
                 target
                     && !self.is_busy()
@@ -758,6 +776,12 @@ impl Editor {
             }
             Undo => self.execute_for(command.document().unwrap(), EditorCommand::Undo)?,
             Redo => self.execute_for(command.document().unwrap(), EditorCommand::Redo)?,
+            Deselect => {
+                self.execute_for(
+                    command.document().unwrap(),
+                    EditorCommand::SelectObjects(Vec::new()),
+                )?;
+            }
             CommitProperty => {
                 self.execute_for(command.document().unwrap(), EditorCommand::FinishEdit)?
             }

@@ -231,6 +231,7 @@ impl EditorView {
                 MenuItem::os_action(t!("menu.copy"), input::Copy, OsAction::Copy),
                 MenuItem::os_action(t!("menu.paste"), input::Paste, OsAction::Paste),
                 MenuItem::os_action(t!("menu.select_all"), input::SelectAll, OsAction::SelectAll),
+                item(CommandId::Deselect),
                 item(CommandId::CommitProperty),
                 item(CommandId::CancelProperty),
             ])),

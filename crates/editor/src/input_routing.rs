@@ -2,8 +2,8 @@
 //! frame, including clipping and occlusion; hover never changes keyboard focus.
 use crate::*;
 use editor_core::{
-    Command, CommandId, CommandScope, CommandSource, CommandTarget, TimelineBinding,
-    ViewportBinding,
+    Command, CommandId, CommandScope, CommandSource, CommandTarget, TimelineBinding, ToolId,
+    ViewportBinding, ViewportKind,
 };
 use gpui_kit::component::WindowExt;
 use std::{
@@ -255,6 +255,11 @@ impl EditorView {
                 source: CommandSource::Shortcut,
                 target: CommandTarget::Unavailable,
             },
+            (CommandScope::Document, Some(LocalTarget::Viewport(binding))) => Command {
+                id,
+                source: CommandSource::Shortcut,
+                target: CommandTarget::Document(binding.document),
+            },
             _ => self.editor.command(id).with_source(CommandSource::Shortcut),
         }
     }
@@ -290,34 +295,53 @@ impl EditorView {
         }
         let target = capture
             .map(|capture| capture.target)
-            .or_else(|| self.hovered_in(&regions, window));
-        let resolved = cx
-            .global::<settings::Settings>()
-            .bindings
-            .iter()
-            .find(|binding| {
-                let scope = binding.command.spec().scope;
-                let applicable = match scope {
-                    CommandScope::Window => true,
-                    CommandScope::Document => !text,
-                    CommandScope::Viewport => {
-                        !text && matches!(target, Some(LocalTarget::Viewport(_)))
-                    }
-                    CommandScope::Timeline => {
-                        !text && matches!(target, Some(LocalTarget::Timeline(_)))
-                    }
-                    CommandScope::Property => false, // GPUI controls own semantic Enter/Escape.
-                };
-                applicable
-                    && event
-                        .keystroke
-                        .should_match(&KeybindingKeystroke::new_with_mapper(
-                            Keystroke::parse(&binding.key).expect("validated binding"),
-                            false,
-                            cx.keyboard_mapper().as_ref(),
-                        ))
-            })
-            .map(|binding| self.command_at(binding.command, target));
+            .or_else(|| self.hovered_in(&regions, window))
+            .or_else(|| {
+                regions
+                    .iter()
+                    .find(|(_, region)| region.owns_keyboard(window))
+                    .map(|(target, _)| *target)
+            });
+        let resolved = if event.keystroke.key == "escape"
+            && !event.keystroke.modifiers.modified()
+            && !text
+            && matches!(
+                target,
+                Some(LocalTarget::Viewport(binding))
+                    if binding.kind == ViewportKind::Modeling
+                        && self.editor.active_tool() == ToolId::Select
+                        && !self.editor.gesture_active_for(binding)
+                        && self.editor.viewport_interaction_binding() != Some(binding)
+            ) {
+            Some(self.command_at(CommandId::Deselect, target))
+        } else {
+            cx.global::<settings::Settings>()
+                .bindings
+                .iter()
+                .find(|binding| {
+                    let scope = binding.command.spec().scope;
+                    let applicable = match scope {
+                        CommandScope::Window => true,
+                        CommandScope::Document => !text,
+                        CommandScope::Viewport => {
+                            !text && matches!(target, Some(LocalTarget::Viewport(_)))
+                        }
+                        CommandScope::Timeline => {
+                            !text && matches!(target, Some(LocalTarget::Timeline(_)))
+                        }
+                        CommandScope::Property => false, // GPUI controls own semantic Enter/Escape.
+                    };
+                    applicable
+                        && event
+                            .keystroke
+                            .should_match(&KeybindingKeystroke::new_with_mapper(
+                                Keystroke::parse(&binding.key).expect("validated binding"),
+                                false,
+                                cx.keyboard_mapper().as_ref(),
+                            ))
+                })
+                .map(|binding| self.command_at(binding.command, target))
+        };
         if let Some(command) = resolved {
             cx.stop_propagation(); // Disabled local commands still consume their key.
             if !event.is_held || command.id.spec().repeat {

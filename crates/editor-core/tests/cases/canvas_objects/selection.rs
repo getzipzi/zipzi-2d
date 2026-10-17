@@ -433,3 +433,70 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
     Ok(())
 }
+
+#[test]
+fn deselect_command_clears_all_selection_and_cancel_gesture_preserves_selection() -> anyhow::Result<()> {
+    let (mut editor, _) = setup()?;
+    assert_eq!(editor.active_tool(), ToolId::Select);
+
+    // Initial state has selection from setup.
+    assert!(!editor.document().unwrap().context().selections.is_empty());
+
+    // CancelGesture when idle does NOT clear selection.
+    editor.dispatch(editor.command(CommandId::CancelGesture))?;
+    assert!(!editor.document().unwrap().context().selections.is_empty());
+
+    // Deselect command clears all selections and vertex overlays.
+    assert!(editor.command_available(editor.command(CommandId::Deselect)));
+    editor.dispatch(editor.command(CommandId::Deselect))?;
+    assert!(editor.document().unwrap().context().selections.is_empty());
+    assert!(editor.document().unwrap().context().selection.is_none());
+    assert!(editor.overlay().vertices.is_empty());
+    assert!(!editor.command_available(editor.command(CommandId::Deselect)));
+
+    // Selecting an object again and vertices.
+    let top = editor
+        .layers()
+        .into_iter()
+        .find(|l| l.name == "Second")
+        .unwrap()
+        .id;
+    editor.execute(EditorCommand::SelectObject(ObjectRef::new(
+        ObjectKind::Mesh,
+        top.clone(),
+    )))?;
+    assert!(!editor.document().unwrap().context().selections.is_empty());
+
+    let vertex_pos = editor.overlay().vertices[0].position;
+    click(&mut editor, vertex_pos, false)?;
+    assert!(!editor.document().unwrap().selected_vertex_positions().is_empty());
+
+    // Start an in-flight vertex drag gesture.
+    editor.canvas_input(CanvasInput::Down {
+        point: vertex_pos,
+        shift: false,
+    })?;
+    editor.canvas_input(CanvasInput::Move {
+        point: ViewportPoint {
+            x: vertex_pos.x + 20.,
+            y: vertex_pos.y + 20.,
+        },
+        left_down: true,
+    })?;
+    assert!(editor.gesture_active());
+
+    // CancelGesture cancels the in-flight drag gesture but preserves selection.
+    editor.dispatch(editor.command(CommandId::CancelGesture))?;
+    assert!(!editor.gesture_active());
+    assert!(!editor.document().unwrap().context().selections.is_empty());
+    assert!(!editor.document().unwrap().selected_vertex_positions().is_empty());
+
+    // Deselect then clears both object selection and vertex selection.
+    editor.dispatch(editor.command(CommandId::Deselect))?;
+    assert!(editor.document().unwrap().context().selections.is_empty());
+    assert!(editor.document().unwrap().selected_vertex_positions().is_empty());
+    assert!(editor.overlay().vertices.is_empty());
+
+    Ok(())
+}
+
