@@ -29,7 +29,6 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
                 view.refresh_document(window, cx);
             });
             window.render_frame(cx);
-            window.click("inspect-document", cx);
         })?;
         save(
             &harness.capture()?,

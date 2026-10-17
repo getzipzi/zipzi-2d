@@ -223,8 +223,6 @@ fn property_groups_collapse_without_editing_the_document(cx: &mut TestAppContext
         super::document_fixture::sample_document_with_parameter_groups().unwrap();
     let harness = super::setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("inspect-document", cx);
-        window.render_frame(cx);
         let panel = harness
             .view
             .read(cx)

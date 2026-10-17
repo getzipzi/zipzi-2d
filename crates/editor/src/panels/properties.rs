@@ -4,7 +4,7 @@ mod details;
 use crate::ui::property_form::{self, PropertyForm, PropertyTarget};
 use crate::{EditorView, t, ui::compact};
 use controls::FieldControl;
-use editor_core::{DocumentId, EditorCommand, ObjectRef, PropertyId};
+use editor_core::{DocumentId, ObjectRef, PropertyId};
 use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
@@ -185,8 +185,6 @@ impl PropertiesPanel {
                 t!(&key).into_owned()
             }
         };
-        let document = target.document;
-        let doc_ref = index.objects[0].reference.clone();
         let locked = doc
             .ensure_editable(std::slice::from_ref(inspected))
             .is_err();
@@ -255,38 +253,6 @@ impl PropertiesPanel {
                         }),
                 )
             })
-            .child(
-                compact::header_button(Button::new("inspect-document"))
-                    .ghost()
-                    .icon(gpui_kit::assets::IconName::File)
-                    .accessibility_label(t!("editor.document_properties").into_owned())
-                    .tooltip(t!("editor.document_properties"))
-                    .disabled(
-                        state.modal
-                            || state.editor.is_busy()
-                            || target.context != editor_core::EditingContext::Modeling,
-                    )
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        if window.has_active_dialog(cx) {
-                            return;
-                        }
-                        if let Some(owner) = this.owner.upgrade() {
-                            owner.update(cx, |state, cx| {
-                                if state.modal
-                                    || state.editor.is_busy()
-                                    || state.editor.active_id() != Some(document)
-                                {
-                                    return;
-                                }
-                                let result = state.editor.execute_for(
-                                    document,
-                                    EditorCommand::Navigate(doc_ref.clone()),
-                                );
-                                state.complete_edit(result, cx);
-                            });
-                        }
-                    })),
-            )
             .into_any_element()
     }
 

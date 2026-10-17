@@ -159,7 +159,6 @@ indirect_influences = "间接影响"
 direct_bindings = "直接目标"
 used_by = "使用者"
 draw_order_direction = "前景 ↑ · 背景 ↓ · 当前求值与合成顺序"
-document_properties = "文档属性"
 
 unused_object = "未使用"
 

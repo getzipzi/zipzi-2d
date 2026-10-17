@@ -160,7 +160,6 @@ indirect_influences = "Indirect influences"
 direct_bindings = "Direct targets"
 used_by = "Used by"
 draw_order_direction = "Foreground ↑ · Background ↓ · Evaluated composition order"
-document_properties = "Document properties"
 
 unused_object = "Unused"
 

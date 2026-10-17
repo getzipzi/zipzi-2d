@@ -37,22 +37,16 @@ fn mesh_name_and_runtime_id_edit_without_changing_object_identity(cx: &mut TestA
         );
         assert_eq!(window.find("property-title-type").label(), Some("ArtMesh"));
         assert!(window.try_find("object-property-id").is_none());
-        assert!(window.try_find("property-revert-all").is_none());
-        window.click("inspect-document", cx);
+        harness.view.update(cx, |view, cx| {
+            view.run_command(editor_core::CommandId::Deselect, window, cx);
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("property-title-name").label(), Some("Document"));
+        assert_eq!(window.find("property-title-type").label(), Some("Document"));
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(
-            view.editor
-                .document()
-                .unwrap()
-                .context()
-                .inspected
-                .as_ref()
-                .unwrap()
-                .kind,
-            editor_core::ObjectKind::Document
-        );
+        assert_eq!(view.editor.document().unwrap().context().inspected, None);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
     });
 }
