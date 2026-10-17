@@ -7,7 +7,7 @@ use super::*;
 /// The domain operation behind local pointer/number state. This is the common
 /// source for capture validity, reconciliation and delayed cancellation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum TimelineOperation {
+pub(crate) enum TimelineOperation {
     Navigation(editor_core::TimelineBinding),
     Scrub(editor_core::TimelineScrubToken),
     Edit(editor_core::TimelineBinding, TimelineCandidateIdentity),
@@ -19,7 +19,7 @@ impl TimelineOperation {
             Self::Scrub(token) => token.binding,
         }
     }
-    pub(super) fn valid(self, editor: &editor_core::Editor) -> bool {
+    pub(crate) fn valid(self, editor: &editor_core::Editor) -> bool {
         match self {
             Self::Navigation(binding) => editor.timeline_binding_valid(binding),
             Self::Scrub(token) => editor.timeline_scrub_valid(token),
@@ -231,6 +231,7 @@ impl Timeline {
         self.gesture = None;
         self.edge_scroll = None;
         self.error = None;
+        self.sync_capture_hint();
         cx.notify();
         cancellation
     }

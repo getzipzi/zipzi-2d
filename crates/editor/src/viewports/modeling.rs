@@ -144,6 +144,7 @@ impl ViewportSurface {
                     .take()
                     .is_some_and(|token| owner.editor.cancel_viewport_interaction(token))
                     || owner.editor.cancel_gesture_for(binding);
+                self.sync_capture_hint();
                 if editing {
                     owner.redraw(cx);
                 } else {
@@ -159,7 +160,10 @@ impl ViewportSurface {
                     binding,
                     editor_core::ViewportInteractionKind::Modeling,
                 ) {
-                    Ok(token) => self.interaction = Some(token),
+                    Ok(token) => {
+                        self.interaction = Some(token);
+                        self.sync_capture_hint();
+                    }
                     Err(_) => return,
                 }
             }
@@ -176,11 +180,12 @@ impl ViewportSurface {
                         owner.editor.finish_viewport_interaction(token);
                     }
                 }
+                self.sync_capture_hint();
             }
             match result {
                 Ok(changed) => {
                     if matches!(input, CanvasInput::Down { .. }) {
-                        owner.edit_error = None;
+                        owner.clear_edit_error(cx);
                     }
                     if changed {
                         if moving {
@@ -188,16 +193,15 @@ impl ViewportSurface {
                         } else {
                             owner.redraw(cx);
                         }
+                    } else if moving {
+                        owner.notify_canvas(cx);
                     } else {
-                        if moving {
-                            owner.notify_canvas(cx);
-                        } else {
-                            cx.notify();
-                        }
+                        crate::workspace::status_bar::StatusBar::sync(&owner.status_bar, owner, cx);
+                        cx.notify();
                     }
                 }
                 Err(e) => {
-                    owner.edit_error = Some(e.to_string());
+                    owner.set_edit_error(e.to_string(), cx);
                     owner.redraw(cx);
                 }
             }

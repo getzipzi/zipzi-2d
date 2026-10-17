@@ -20,8 +20,7 @@ impl EditorView {
             }
         }
         if let Err(error) = self.editor.set_workspace(workspace) {
-            self.edit_error = Some(error.to_string());
-            cx.notify();
+            self.set_edit_error(error.to_string(), cx);
             return;
         }
         self.sync_workspace_layout(window, cx);
@@ -43,17 +42,23 @@ impl EditorView {
         self.reset_viewport_images();
         self.animation_anchor = None;
         self.frozen_frames.clear();
+        let mut switch_error = None;
         if let Some(dock) = &mut self.dock {
             if let Err(error) = dock.switch(workspace, window, cx) {
-                self.edit_error = Some(error.to_string());
+                switch_error = Some(error.to_string());
             }
         }
+        if let Some(error) = switch_error {
+            self.set_edit_error(error, cx);
+        }
         self.save_layout_after_frame(window, cx);
-        if let Err(error) = cx
+        let save_workspace_error = cx
             .global_mut::<settings::Settings>()
             .set_workspace(workspace)
-        {
-            self.edit_error = Some(error.to_string());
+            .err()
+            .map(|e| e.to_string());
+        if let Some(error) = save_workspace_error {
+            self.set_edit_error(error, cx);
         }
     }
 
@@ -79,8 +84,7 @@ impl EditorView {
             while let Ok(error) = errors.recv().await {
                 if this
                     .update(cx, |this, cx| {
-                        this.edit_error = Some(error);
-                        cx.notify();
+                        this.set_edit_error(error, cx);
                     })
                     .is_err()
                 {
@@ -144,10 +148,16 @@ impl EditorView {
                     return;
                 }
                 dock.last_valid = state.clone();
-                if let Err(error) = dock.writer.save(dock.workspace, state) {
-                    this.edit_error = Some(error.to_string());
+                let save_error = dock
+                    .writer
+                    .save(dock.workspace, state)
+                    .err()
+                    .map(|e| e.to_string());
+                if let Some(error) = save_error {
+                    this.set_edit_error(error, cx);
+                } else {
+                    cx.notify();
                 }
-                cx.notify();
             },
         ));
         dock.pending_layout_measurement = true;
@@ -176,9 +186,13 @@ impl EditorView {
                 }
                 dock.last_valid = state.clone();
                 dock.pending_layout_measurement = false;
-                if let Err(error) = dock.writer.save(dock.workspace, state) {
-                    view.edit_error = Some(error.to_string());
-                    cx.notify();
+                let save_error = dock
+                    .writer
+                    .save(dock.workspace, state)
+                    .err()
+                    .map(|e| e.to_string());
+                if let Some(error) = save_error {
+                    view.set_edit_error(error, cx);
                 }
             });
         });

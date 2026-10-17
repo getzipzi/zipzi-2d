@@ -144,7 +144,7 @@ impl EditorView {
     pub(crate) fn set_edit_error(&mut self, error: impl Into<String>, cx: &mut Context<Self>) {
         self.edit_error = Some(error.into());
         self.schedule_status_clear(cx);
-        App::notify(cx, self.status_bar.entity_id());
+        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
         cx.notify();
     }
 
@@ -153,12 +153,11 @@ impl EditorView {
             if self.message.is_empty() {
                 self.status_message_task = None;
             }
-            App::notify(cx, self.status_bar.entity_id());
+            workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
             cx.notify();
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn set_status_message(
         &mut self,
         message: impl Into<String>,
@@ -167,7 +166,7 @@ impl EditorView {
         self.edit_error = None;
         self.message = message.into();
         self.schedule_status_clear(cx);
-        App::notify(cx, self.status_bar.entity_id());
+        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
         cx.notify();
     }
 
@@ -184,7 +183,7 @@ impl EditorView {
                 this.edit_error = None;
                 this.message.clear();
                 this.status_message_task = None;
-                App::notify(cx, this.status_bar.entity_id());
+                workspace::status_bar::StatusBar::sync(&this.status_bar, this, cx);
                 cx.notify();
             });
         }));
@@ -218,6 +217,7 @@ impl EditorView {
         self.sync_viewports();
         self.request_preview();
         self.sync_animation_clock(cx);
+        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
         cx.notify();
     }
 
@@ -268,7 +268,7 @@ impl EditorView {
     fn redraw_canvas_for_input(&mut self, cx: &mut Context<Self>, input: u64) {
         self.request_preview_for_input(input);
         self.notify_canvas(cx);
-        App::notify(cx, self.status_bar.entity_id());
+        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
     }
 
     fn request_preview(&mut self) {

@@ -25,8 +25,7 @@ impl EditorView {
         match self.editor.activate(id) {
             Ok(()) => self.refresh_document(window, cx),
             Err(error) => {
-                self.edit_error = Some(error.to_string());
-                cx.notify();
+                self.set_edit_error(error.to_string(), cx);
             }
         }
     }
@@ -89,9 +88,8 @@ impl EditorView {
                     .update(cx, |panel, cx| panel.composing_input(window, cx))
             })
         {
-            self.edit_error = Some(t!("properties.finish_composition").into_owned());
+            self.set_edit_error(t!("properties.finish_composition").into_owned(), cx);
             self.editor.cancel_exit();
-            cx.notify();
             return false;
         }
         if let Some((target, field, raw)) = self
@@ -162,9 +160,8 @@ impl EditorView {
             }
         }
         if let Err(error) = self.editor.execute_for(id, EditorCommand::FinishEdit) {
-            self.edit_error = Some(error.to_string());
+            self.set_edit_error(error.to_string(), cx);
             self.editor.cancel_exit();
-            cx.notify();
             return;
         }
         window.focus(&self.focus, cx);
@@ -195,9 +192,10 @@ impl EditorView {
                     other => {
                         this.editor.cancel_exit();
                         if !matches!(other, Ok(Ok(None))) {
-                            this.edit_error = Some(format!("{other:?}"));
+                            this.set_edit_error(format!("{other:?}"), cx);
+                        } else {
+                            cx.notify();
                         }
-                        cx.notify();
                     }
                 }
             });
@@ -216,8 +214,7 @@ impl EditorView {
             Ok(task) => task,
             Err(error) => {
                 self.editor.cancel_exit();
-                self.edit_error = Some(error.to_string());
-                cx.notify();
+                self.set_edit_error(error.to_string(), cx);
                 return;
             }
         };
@@ -235,21 +232,21 @@ impl EditorView {
                 let active_before = this.editor.active_id();
                 match this.editor.finish_save(&mut completion) {
                     Ok(receipt) => {
-                        this.edit_error = None;
                         let mut notices = receipt.warnings;
                         notices.extend(receipt.history_warnings);
                         if !receipt.durable {
                             notices.push(t!("project.durability_warning").into_owned());
                         }
-                        this.message = if notices.is_empty() {
+                        let msg = if notices.is_empty() {
                             t!("project.saved", path = receipt.manifest.display()).into_owned()
                         } else {
                             t!("project.saved_with_warnings", warnings = notices.join("; "))
                                 .into_owned()
                         };
+                        this.set_status_message(msg, cx);
                         this.record_recent_file(path.clone(), cx);
                     }
-                    Err(error) => this.edit_error = Some(error.to_string()),
+                    Err(error) => this.set_edit_error(error.to_string(), cx),
                 }
                 // A background save must not blur or rewrite another document's input.
                 if active_before == Some(id) || active_before != this.editor.active_id() {
@@ -274,49 +271,56 @@ impl EditorView {
         window.focus(&self.focus, cx);
         if self.editor.active_id().is_some() && !self.editor.is_busy() {
             if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
-                self.edit_error = Some(error.to_string());
-                cx.notify();
+                self.set_edit_error(error.to_string(), cx);
                 return;
             }
         }
         if !path.exists() {
             let error = t!("project.file_not_found", path = path.display()).into_owned();
             self.remove_recent_file(path, cx);
-            self.edit_error = Some(error);
-            cx.notify();
+            self.set_edit_error(error, cx);
             return;
         }
         self.execute_load(LoadRequest::Open(path.to_path_buf()), None, window, cx);
     }
     pub(super) fn record_recent_file(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         let mut settings = cx.global::<settings::Settings>().clone();
-        if let Err(e) = settings.push_recent_file(path) {
-            self.edit_error = Some(e.to_string());
-        }
+        let error = settings.push_recent_file(path).err().map(|e| e.to_string());
         cx.set_global(settings);
         self.menu_state = Default::default();
-        cx.notify();
+        if let Some(e) = error {
+            self.set_edit_error(e, cx);
+        } else {
+            cx.notify();
+        }
     }
     pub(super) fn clear_recent(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.modal || window.has_active_dialog(cx) {
             return;
         }
         let mut settings = cx.global::<settings::Settings>().clone();
-        if let Err(e) = settings.clear_recent_files() {
-            self.edit_error = Some(e.to_string());
-        }
+        let error = settings.clear_recent_files().err().map(|e| e.to_string());
         cx.set_global(settings);
         self.menu_state = Default::default();
-        cx.notify();
+        if let Some(e) = error {
+            self.set_edit_error(e, cx);
+        } else {
+            cx.notify();
+        }
     }
     pub(super) fn remove_recent_file(&mut self, path: &Path, cx: &mut Context<Self>) {
         let mut settings = cx.global::<settings::Settings>().clone();
-        if let Err(e) = settings.remove_recent_file(path) {
-            self.edit_error = Some(e.to_string());
-        }
+        let error = settings
+            .remove_recent_file(path)
+            .err()
+            .map(|e| e.to_string());
         cx.set_global(settings);
         self.menu_state = Default::default();
-        cx.notify();
+        if let Some(e) = error {
+            self.set_edit_error(e, cx);
+        } else {
+            cx.notify();
+        }
     }
     fn pick_load(&mut self, kind: Option<ImportKind>, window: &mut Window, cx: &mut Context<Self>) {
         if self.modal || self.editor.exiting() {
@@ -325,8 +329,7 @@ impl EditorView {
         window.focus(&self.focus, cx);
         if self.editor.active_id().is_some() && !self.editor.is_busy() {
             if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
-                self.edit_error = Some(error.to_string());
-                cx.notify();
+                self.set_edit_error(error.to_string(), cx);
                 return;
             }
         }
@@ -352,9 +355,10 @@ impl EditorView {
                     let _ = this.update(cx, |this, cx| {
                         this.modal = false;
                         if !matches!(other, Ok(Ok(None))) {
-                            this.edit_error = Some(format!("{other:?}"));
+                            this.set_edit_error(format!("{other:?}"), cx);
+                        } else {
+                            cx.notify();
                         }
-                        cx.notify();
                     });
                     None
                 }
@@ -405,8 +409,7 @@ impl EditorView {
                 task
             }
             Err(error) => {
-                self.edit_error = Some(error.to_string());
-                cx.notify();
+                self.set_edit_error(error.to_string(), cx);
                 return;
             }
         };
@@ -420,8 +423,7 @@ impl EditorView {
                     Ok(warnings) => {
                         // Commit/blur the previous property input before displaying the new tab.
                         window.focus(&this.focus, cx);
-                        this.edit_error = None;
-                        this.message = if kind.is_none() {
+                        let msg = if kind.is_none() {
                             t!("project.opened").into_owned()
                         } else if warnings.is_empty() {
                             t!("project.import_complete").into_owned()
@@ -434,6 +436,7 @@ impl EditorView {
                             });
                             t!("project.import_warning_count", count = warnings.len()).into_owned()
                         };
+                        this.set_status_message(msg, cx);
                         if let Some(path) = this
                             .editor
                             .document()
@@ -444,7 +447,7 @@ impl EditorView {
                         }
                         this.refresh_document(window, cx);
                     }
-                    Err(error) => this.edit_error = Some(error.to_string()),
+                    Err(error) => this.set_edit_error(error.to_string(), cx),
                 }
                 cx.notify();
             });
@@ -471,8 +474,7 @@ impl EditorView {
         match self.editor.request_exit() {
             Ok(()) => self.continue_exit(window, cx),
             Err(error) => {
-                self.edit_error = Some(error.to_string());
-                cx.notify();
+                self.set_edit_error(error.to_string(), cx);
             }
         }
     }
@@ -543,7 +545,7 @@ impl EditorView {
                                     .retain(|target, _| target.document != id);
                                 let was_active = this.editor.active_id() == Some(id);
                                 if let Err(error) = this.editor.close_document(id, true) {
-                                    this.edit_error = Some(error.to_string());
+                                    this.set_edit_error(error.to_string(), cx);
                                     this.editor.cancel_exit();
                                 }
                                 if was_active {
@@ -560,9 +562,8 @@ impl EditorView {
                 .detach();
             }
             Err(error) => {
-                self.edit_error = Some(error.to_string());
+                self.set_edit_error(error.to_string(), cx);
                 self.editor.cancel_exit();
-                cx.notify();
             }
         }
     }

@@ -306,6 +306,7 @@ impl Timeline {
                 sliding,
                 drag: None,
             });
+            self.sync_status_bar(cx);
         }
         let edit = self.number_edit.as_mut().unwrap();
         edit.sliding |= sliding;
@@ -349,6 +350,7 @@ impl Timeline {
             .is_some_and(|edit| &edit.field == field)
         {
             let edit = self.number_edit.take().unwrap();
+            self.sync_capture_hint();
             let document = self.context.as_ref().map(|target| target.document);
             let _ = self.owner.update(cx, |owner, cx| {
                 if let Some(document) = document {
@@ -376,6 +378,7 @@ impl Timeline {
     }
     pub(in crate::panels::timeline) fn finish_number(&mut self, cx: &mut Context<Self>) {
         if let Some(edit) = self.number_edit.take() {
+            self.sync_capture_hint();
             self.finish_token(edit.token, cx);
         }
     }

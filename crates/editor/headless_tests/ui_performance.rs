@@ -51,6 +51,7 @@ fn timeline_channel_scrubs_reuse_overview_and_do_not_notify_the_editor_owner(
     let observed = notifications.clone();
     let _observe =
         cx.update(|cx| cx.observe(&harness.view, move |_, _| observed.set(observed.get() + 1)));
+    let status_bar = harness.view.read_with(cx, |view, _| view.status_bar.clone());
     let before = timeline.read_with(cx, |timeline, _| {
         (
             timeline.renders(),
@@ -58,6 +59,7 @@ fn timeline_channel_scrubs_reuse_overview_and_do_not_notify_the_editor_owner(
             timeline.scene_paints(),
         )
     });
+    let status_renders_before = status_bar.read_with(cx, |bar, _| bar.renders());
     for sample in 1..=12 {
         cx.update_window(harness.window, |_, window, cx| {
             slide(
@@ -78,10 +80,16 @@ fn timeline_channel_scrubs_reuse_overview_and_do_not_notify_the_editor_owner(
             timeline.scene_paints(),
         )
     });
+    let status_renders_after = status_bar.read_with(cx, |bar, _| bar.renders());
     assert_eq!(
         notifications.get(),
         0,
         "candidate updates notified unrelated editor views"
+    );
+    assert!(
+        status_renders_after - status_renders_before <= 1,
+        "StatusBar rendered {} times during 12 scrub samples",
+        status_renders_after - status_renders_before
     );
     assert!(
         after.0 - before.0 <= 13,

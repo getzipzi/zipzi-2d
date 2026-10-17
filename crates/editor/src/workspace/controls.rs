@@ -52,8 +52,7 @@ pub(super) fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl 
                                             );
                                         if let Err(error) = result {
                                             _ = owner.update(cx, |owner, cx| {
-                                                owner.edit_error = Some(error.to_string());
-                                                cx.notify();
+                                                owner.set_edit_error(error.to_string(), cx);
                                             });
                                             return;
                                         }

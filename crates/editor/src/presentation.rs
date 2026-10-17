@@ -163,6 +163,7 @@ impl EditorView {
                         .or_default()
                         .error = Some(error.clone());
                 }
+                workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
                 self.notify_canvas(cx);
             }
             return;
@@ -192,6 +193,7 @@ impl EditorView {
                     previous.error = None;
                     frame_trace::emit(frame.trace_id, "accepted", &[]);
                     self.sync_animation_clock(cx);
+                    workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
                     if changed {
                         self.notify_animation(cx);
                     } else {
@@ -204,6 +206,7 @@ impl EditorView {
                             .entry(binding.viewport)
                             .or_default()
                             .error = Some(error);
+                        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
                         self.notify_viewport(binding.viewport, cx);
                     }
                 }
@@ -241,6 +244,7 @@ impl EditorView {
                     .error = Some(error);
             }
         }
+        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
         self.notify_viewport(binding.viewport, cx);
     }
     pub(crate) fn notify_viewport(&self, viewport: ViewportId, cx: &mut Context<Self>) {

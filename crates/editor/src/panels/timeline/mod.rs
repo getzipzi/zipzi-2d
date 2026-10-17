@@ -5,6 +5,7 @@ mod input;
 mod inspector;
 mod lifecycle;
 use lifecycle::Target;
+pub(crate) use lifecycle::TimelineOperation;
 mod navigation;
 mod transport;
 mod view;
@@ -38,6 +39,10 @@ const COMPACT_LEFT: f32 = 160.;
 pub struct Timeline {
     pub(crate) id: editor_core::TimelineId,
     pub(crate) input_region: crate::input_routing::InputRegion,
+    timeline_capture: std::cell::OnceCell<
+        Rc<Cell<Option<(TimelineOperation, crate::workspace::status_bar::TimelineCaptureKind)>>>,
+    >,
+    timeline_pan_tool: std::cell::OnceCell<Rc<Cell<bool>>>,
     ui_scale: f32,
     #[cfg(any(test, feature = "test-support"))]
     renders: u64,
@@ -73,6 +78,55 @@ pub struct Timeline {
 }
 
 impl Timeline {
+    fn current_capture(
+        &self,
+    ) -> Option<(TimelineOperation, crate::workspace::status_bar::TimelineCaptureKind)> {
+        use crate::workspace::status_bar::TimelineCaptureKind;
+        self.operation().and_then(|op| {
+            if let Some(gesture) = &self.gesture {
+                let kind = match gesture {
+                    input::Gesture::Pan { .. } => TimelineCaptureKind::Pan,
+                    input::Gesture::Seek(_) => TimelineCaptureKind::Seek,
+                    input::Gesture::Marquee { .. } => TimelineCaptureKind::Marquee,
+                    input::Gesture::Keys { .. } => TimelineCaptureKind::Keys,
+                    input::Gesture::Handle { .. } => TimelineCaptureKind::Handle,
+                    input::Gesture::Event { .. } => TimelineCaptureKind::Event,
+                };
+                return Some((op, kind));
+            }
+            if self.number_edit.is_some() {
+                return Some((op, TimelineCaptureKind::Number));
+            }
+            None
+        })
+    }
+
+    pub(super) fn sync_capture_hint(&self) {
+        if let Some(cell) = self.timeline_capture.get() {
+            cell.set(self.current_capture());
+        }
+        if let Some(cell) = self.timeline_pan_tool.get() {
+            cell.set(self.pan_tool);
+        }
+    }
+
+    pub(super) fn sync_status_bar(&self, cx: &mut App) {
+        if let Some(owner) = self.owner.upgrade() {
+            {
+                let router = &owner.read(cx).input_router;
+                let capture = self
+                    .timeline_capture
+                    .get_or_init(|| router.timeline_capture.clone());
+                capture.set(self.current_capture());
+                let pan_tool = self
+                    .timeline_pan_tool
+                    .get_or_init(|| router.timeline_pan_tool.clone());
+                pan_tool.set(self.pan_tool);
+            }
+            crate::workspace::status_bar::StatusBar::sync_owner(&owner, cx);
+        }
+    }
+
     fn row_height(&self) -> f32 {
         ROW * self.ui_scale
     }
@@ -83,7 +137,14 @@ impl Timeline {
 
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
+            let upgraded = owner.upgrade().unwrap();
             cx.on_release(|this: &mut Self, cx| {
+                if let Some(cell) = this.timeline_capture.get() {
+                    cell.set(None);
+                }
+                if let Some(cell) = this.timeline_pan_tool.get() {
+                    cell.set(false);
+                }
                 let panel = this.id;
                 let owner = this.owner.clone();
                 cx.defer(move |cx| {
@@ -129,6 +190,8 @@ impl Timeline {
             Self {
                 id: editor_core::TimelineId::new(),
                 input_region,
+                timeline_capture: std::cell::OnceCell::new(),
+                timeline_pan_tool: std::cell::OnceCell::new(),
                 #[cfg(any(test, feature = "test-support"))]
                 renders: 0,
                 ui_scale: compact::scale(cx),
@@ -144,7 +207,7 @@ impl Timeline {
                     },
                 ),
                 _observe: cx.observe_in(
-                    &owner.upgrade().unwrap(),
+                    &upgraded,
                     window,
                     |this, _, window, cx| {
                         this.sync(window, cx);

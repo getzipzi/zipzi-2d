@@ -109,11 +109,11 @@ impl EditorView {
                             }
                             window.set_window_title(&t!("app.title"));
                             this.menu_state = menus::MenuState::default();
+                            workspace::status_bar::StatusBar::sync(&this.status_bar, this, cx);
                             cx.refresh_windows();
                         }
                         Err(error) => {
-                            this.edit_error = Some(error.to_string());
-                            cx.notify();
+                            this.set_edit_error(error.to_string(), cx);
                         }
                     }
                 }))

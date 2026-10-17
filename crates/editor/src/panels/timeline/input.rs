@@ -92,6 +92,7 @@ impl Timeline {
         if let Some(token) = token {
             window.focus(&self.focus, cx);
             self.gesture = Some(Gesture::Seek(token));
+            self.sync_status_bar(cx);
             cx.notify();
         }
         cx.stop_propagation();
@@ -357,6 +358,7 @@ impl Timeline {
             }
         }
         self.pointer = event.position;
+        self.sync_status_bar(cx);
         cx.notify();
         cx.stop_propagation();
     }
@@ -553,6 +555,7 @@ impl Timeline {
             if let Some(token) = gesture.token() {
                 self.finish_token(token, cx);
             }
+            self.sync_status_bar(cx);
             cx.notify();
         }
         if self.number_edit.as_ref().is_some_and(|edit| edit.sliding) {

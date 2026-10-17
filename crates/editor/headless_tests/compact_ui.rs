@@ -158,13 +158,10 @@ fn ui_scale_changes_controls_rows_and_chrome_together(cx: &mut TestAppContext) {
                     <= gpui_kit::px(0.5),
                 "canvas header right inset differs from top inset: {zoom:?} in {canvas_header:?}"
             );
-            for id in ["app-status-message"] {
-                let left = window.find(id).bounds().left();
-                assert!(
-                    (left - selector.left()).abs() <= gpui_kit::px(0.5),
-                    "{id} content inset differs from panel header"
-                );
-            }
+            assert!(window.try_find("app-status-hints").is_none());
+            let status_bar = window.find("app-status-bar").bounds();
+            let message_bounds = window.find("app-status-message").bounds();
+            assert!((message_bounds.center().x - status_bar.center().x).abs() <= gpui_kit::px(0.5));
             let canvas = window.find("canvas-body").bounds();
             // Only the panel frame supplies spacing below the title bar.
             let expected_gap = crate::ui::compact::scaled(crate::ui::compact::PANEL_GAP, cx);

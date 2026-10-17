@@ -20,6 +20,7 @@ impl Timeline {
             last: self.local(event.position),
             button: event.button,
         });
+        self.sync_status_bar(cx);
         cx.stop_propagation();
         cx.notify();
     }

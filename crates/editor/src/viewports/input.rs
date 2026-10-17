@@ -48,6 +48,7 @@ impl ViewportSurface {
                 !editor.viewport_interaction_valid(token)
             }) {
                 self.navigation.pan = None;
+                self.sync_status_bar(cx);
                 cx.notify();
                 return;
             }
@@ -56,6 +57,7 @@ impl ViewportSurface {
                     owner.editor.finish_viewport_interaction(token)
                 });
                 self.navigation.pan = None;
+                self.sync_status_bar(cx);
                 cx.notify();
                 return;
             }
@@ -104,6 +106,7 @@ impl ViewportSurface {
                     owner.editor.finish_viewport_interaction(pan.token)
                 });
             }
+            self.sync_status_bar(cx);
             cx.notify();
         } else if self.navigation.pan.is_none() && event.button == MouseButton::Left {
             self.input(
@@ -153,6 +156,7 @@ impl ViewportSurface {
                 button: event.button,
                 token,
             });
+            self.sync_status_bar(cx);
             cx.notify();
         } else {
             self.input(

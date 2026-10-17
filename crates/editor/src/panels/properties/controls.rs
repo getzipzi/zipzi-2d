@@ -601,6 +601,7 @@ impl PropertiesPanel {
         let body = if spec.editor == FieldEditor::Toggle {
             let checked = matches!(field.parsed, Ok(PropertyValue::Bool(true)));
             Checkbox::new(SharedString::from(format!("property-toggle-{}", id.path())))
+                .xsmall()
                 .checked(checked)
                 .disabled(disabled)
                 .on_click(cx.listener(move |this, checked, window, cx| {
@@ -635,6 +636,7 @@ impl PropertiesPanel {
                 body = body.child(
                     Checkbox::new(SharedString::from(format!("property-custom-{}", id.path())))
                         .label(t!("properties.custom").into_owned())
+                        .xsmall()
                         .checked(custom)
                         .disabled(disabled)
                         .on_click(cx.listener(move |this, custom: &bool, window, cx| {

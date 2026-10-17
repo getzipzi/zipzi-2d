@@ -150,7 +150,7 @@ impl EditorView {
                 CommandId::Quit => self.close(window, cx),
                 CommandId::GenerateMesh => {
                     if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
-                        self.edit_error = Some(error.to_string());
+                        self.set_edit_error(error.to_string(), cx);
                     } else {
                         let owner = cx.weak_entity();
                         window.defer(cx, move |window, cx| {
@@ -160,14 +160,13 @@ impl EditorView {
                             ) {
                                 if let Some(owner) = owner.upgrade() {
                                     owner.update(cx, |owner, cx| {
-                                        owner.edit_error = Some(error.to_string());
-                                        cx.notify();
+                                        owner.set_edit_error(error.to_string(), cx);
                                     });
                                 }
                             }
                         });
+                        cx.notify();
                     }
-                    cx.notify();
                 }
                 CommandId::CreateParameter
                 | CommandId::EditParameter
@@ -190,17 +189,19 @@ impl EditorView {
                 CommandId::ResetLayout => self.reset_layout(window, cx),
                 CommandId::ResetShortcuts => {
                     match keybindings::reset(cx) {
-                        Ok(()) => self.menu_state = Default::default(),
-                        Err(e) => self.edit_error = Some(e.to_string()),
+                        Ok(()) => {
+                            self.menu_state = Default::default();
+                            workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
+                            cx.notify();
+                        }
+                        Err(e) => self.set_edit_error(e.to_string(), cx),
                     }
-                    cx.notify();
                 }
                 CommandId::ShowShortcuts => keybindings::show(window, cx),
                 _ => {}
             },
             Err(e) => {
-                self.edit_error = Some(e.to_string());
-                cx.notify();
+                self.set_edit_error(e.to_string(), cx);
             }
         }
     }

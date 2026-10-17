@@ -344,6 +344,7 @@ impl Timeline {
             "timeline-pan" => {
                 self.cancel(window, cx);
                 self.pan_tool = !self.pan_tool;
+                self.sync_status_bar(cx);
             }
             "timeline-snap" => self.change_view(|view| view.snap = !view.snap, cx),
             "timeline-fit" => self.fit(cx),

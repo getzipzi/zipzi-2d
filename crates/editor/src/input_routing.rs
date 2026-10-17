@@ -119,11 +119,23 @@ pub(crate) enum LocalTarget {
 pub(crate) struct InputRouter {
     inside: Rc<Cell<bool>>,
     pub menu_target: Rc<Cell<Option<LocalTarget>>>,
+    pub viewport_capture: Rc<Cell<Option<(editor_core::ViewportInteractionToken, bool)>>>,
+    pub timeline_capture: Rc<
+        Cell<
+            Option<(
+                crate::panels::timeline::TimelineOperation,
+                crate::workspace::status_bar::TimelineCaptureKind,
+            )>,
+        >,
+    >,
+    pub timeline_pan_tool: Rc<Cell<bool>>,
 }
 impl InputRouter {
     pub fn deactivate(&self) {
         self.inside.set(false);
         self.menu_target.set(None);
+        self.viewport_capture.set(None);
+        self.timeline_capture.set(None);
     }
 }
 impl EditorView {
@@ -325,7 +337,7 @@ impl EditorView {
                 let regions = regions.clone();
                 let menu_target = menu_target.clone();
                 let owner = owner.clone();
-                let update_pointer = Rc::new(move |window: &mut Window, cx: &mut App| {
+                let update_menu_target = Rc::new(move |window: &mut Window, cx: &mut App| {
                     entered.set(true);
                     if let Some((target, _)) =
                         regions.iter().find(|(_, region)| region.hovered(window))
@@ -341,7 +353,7 @@ impl EditorView {
                         }
                     }
                 });
-                let moving = update_pointer.clone();
+                let moving = update_menu_target.clone();
                 window.on_mouse_event(move |_: &MouseMoveEvent, phase, window, cx| {
                     if phase == DispatchPhase::Capture {
                         moving(window, cx);
@@ -349,7 +361,7 @@ impl EditorView {
                 });
                 window.on_mouse_event(move |_: &MouseDownEvent, phase, window, cx| {
                     if phase == DispatchPhase::Capture {
-                        update_pointer(window, cx);
+                        update_menu_target(window, cx);
                     }
                 });
                 let exited = inside.clone();

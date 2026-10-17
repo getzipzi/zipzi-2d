@@ -84,6 +84,9 @@ use gpui_kit::component::{
 
 pub struct ViewportSurface {
     pub(crate) input_region: crate::input_routing::InputRegion,
+    viewport_capture: std::cell::OnceCell<
+        std::rc::Rc<std::cell::Cell<Option<(editor_core::ViewportInteractionToken, bool)>>>,
+    >,
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
     pub(crate) viewport: editor_core::ViewportId,
@@ -126,9 +129,10 @@ impl ViewportSurface {
         cx: &mut App,
     ) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
+            let upgraded = owner.upgrade().unwrap();
             let focus = cx.focus_handle();
             let subscriptions = vec![
-                cx.observe(&owner.upgrade().unwrap(), |this, owner, cx| {
+                cx.observe(&upgraded, |this, owner, cx| {
                     let state = owner.read(cx);
                     if state.modal
                         || this.interaction.is_some_and(|token| {
@@ -201,6 +205,7 @@ impl ViewportSurface {
             );
             Self {
                 input_region,
+                viewport_capture: std::cell::OnceCell::new(),
                 owner,
                 viewport,
                 kind,
@@ -248,6 +253,27 @@ impl ViewportSurface {
             .upgrade()
             .is_some_and(|owner| (self.content)(owner.read(cx), self.viewport).hand_tool)
     }
+    fn current_capture(&self) -> Option<(editor_core::ViewportInteractionToken, bool)> {
+        if let Some(pan) = self.navigation.pan {
+            Some((pan.token, true))
+        } else {
+            self.interaction.map(|token| (token, false))
+        }
+    }
+    pub(super) fn sync_capture_hint(&self) {
+        if let Some(cell) = self.viewport_capture.get() {
+            cell.set(self.current_capture());
+        }
+    }
+    pub(super) fn sync_status_bar(&self, cx: &mut App) {
+        if let Some(owner) = self.owner.upgrade() {
+            let cell = self
+                .viewport_capture
+                .get_or_init(|| owner.read(cx).input_router.viewport_capture.clone());
+            cell.set(self.current_capture());
+            crate::workspace::status_bar::StatusBar::sync_owner(&owner, cx);
+        }
+    }
     fn pointer_token(&self) -> Option<editor_core::ViewportInteractionToken> {
         self.interaction
             .or_else(|| self.navigation.pan.map(|pan| pan.token))
@@ -257,6 +283,7 @@ impl ViewportSurface {
         self.interaction = None;
         self.navigation.wheel_zoom = None;
         self.navigation.pan = None;
+        self.sync_capture_hint();
         token
     }
 }

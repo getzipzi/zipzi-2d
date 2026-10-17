@@ -474,3 +474,135 @@ fn closing_blocking_ui_keeps_the_current_pointer_location(cx: &mut TestAppContex
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut TestAppContext) {
+    use crate::workspace::status_bar::{HintContext, TimelineCaptureKind};
+    use editor_core::ToolId;
+    use gpui_kit::{MouseButton, MouseDownEvent, component::kbd::Kbd};
+
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let h = setup_with_document(cx, document, assets);
+
+    cx.update_window(h.window, |_, window, cx| {
+        let status_bar = h.view.read(cx).status_bar.clone();
+
+        // 1. Quiet by default in Select tool, even when hovering across panels and viewport.
+        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+        assert!(status_bar.read(cx).hints().is_empty());
+        window.hover("canvas-body", cx);
+        window.render_frame(cx);
+        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+        assert!(status_bar.read(cx).hints().is_empty());
+
+        // 2. Non-default Modeling tools (Glue / Hand) display concise tool hints.
+        window.click("tool_glue", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            status_bar.read(cx).hint_context(),
+            Some(HintContext::ModelingTool(ToolId::Glue))
+        );
+        assert_eq!(status_bar.read(cx).hints().len(), 2);
+
+        // 3. Active viewport capture overrides tool hints and reflects custom keybindings.
+        for binding in &mut cx.global_mut::<crate::settings::Settings>().bindings {
+            if binding.command == CommandId::CancelGesture {
+                binding.key = "alt-x".into();
+            }
+        }
+        window.dispatch_event(
+            MouseDownEvent {
+                position: window.find("canvas-body").bounds().center(),
+                button: MouseButton::Middle,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        assert_eq!(
+            status_bar.read(cx).hint_context(),
+            Some(HintContext::ViewportCapture { panning: true })
+        );
+        let expected_cancel_key = Kbd::format(&Keystroke::parse("alt-x").unwrap());
+        assert!(
+            status_bar
+                .read(cx)
+                .hints()
+                .iter()
+                .any(|(key, _)| key == &expected_cancel_key),
+            "expected custom CancelGesture key {expected_cancel_key} in {:?}",
+            status_bar.read(cx).hints()
+        );
+
+        window.press("alt-x", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            status_bar.read(cx).hint_context(),
+            Some(HintContext::ModelingTool(ToolId::Glue))
+        );
+
+        // 4. Animation workspace stays quiet until Timeline pan mode or an active capture starts.
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        window.render_frame(cx);
+        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+        assert!(status_bar.read(cx).hints().is_empty());
+
+        window.click("timeline-pan", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            status_bar.read(cx).hint_context(),
+            Some(HintContext::TimelinePanTool)
+        );
+        window.click("timeline-pan", cx);
+        window.render_frame(cx);
+        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+
+        let ruler_center = window.find("timeline-ruler").bounds().center();
+        window.dispatch_event(
+            MouseDownEvent {
+                position: ruler_center,
+                button: MouseButton::Left,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        assert_eq!(
+            status_bar.read(cx).hint_context(),
+            Some(HintContext::TimelineCapture(TimelineCaptureKind::Seek))
+        );
+
+        window.press("escape", cx);
+        window.render_frame(cx);
+        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+
+        // 5. Status messages and edit errors route through StatusBar with semantic error flag.
+        h.view.update(cx, |view, cx| {
+            view.set_status_message("Saved snapshot", cx);
+        });
+        assert_eq!(
+            status_bar.read(cx).displayed_message(),
+            Some(("Saved snapshot", false))
+        );
+        h.view.update(cx, |view, cx| {
+            view.set_edit_error("Invalid operation", cx);
+        });
+        assert_eq!(
+            status_bar.read(cx).displayed_message(),
+            Some(("Invalid operation", true))
+        );
+        h.view.update(cx, |view, cx| {
+            view.clear_edit_error(cx);
+        });
+        assert_eq!(
+            status_bar.read(cx).displayed_message(),
+            Some(("Saved snapshot", false))
+        );
+    })
+    .unwrap();
+}
+
