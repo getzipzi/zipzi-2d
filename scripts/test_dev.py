@@ -12,17 +12,11 @@ SCRIPT = Path(__file__).with_name("dev.sh")
 
 
 class DevLifecycle(unittest.TestCase):
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="kasane-dev-test-")
-        self.root = Path(self.temp.name) / "editor"
-        (self.root / "scripts").mkdir(parents=True)
-        (self.root.parent / "kasane-2d/modules").mkdir(parents=True)
-        shutil.copy(SCRIPT, self.root / "scripts/dev.sh")
-        (self.root / "LICENSE").write_text("Dev lifecycle fixture license\n")
-        (self.root / "target/debug").mkdir(parents=True)
-        # Copying an Apple platform-signed /bin/sleep is killed by macOS code
-        # signing. Build a tiny, owned stand-in with normal process semantics.
-        subprocess.run(["cc", "-x", "c", "-", "-o", str(self.root / "target/debug/kasane-editor")],
+    @classmethod
+    def setUpClass(cls):
+        cls._shared_temp = tempfile.TemporaryDirectory(prefix="kasane-dev-stub-")
+        cls._stub_binary = Path(cls._shared_temp.name) / "kasane-editor"
+        subprocess.run(["cc", "-x", "c", "-", "-o", str(cls._stub_binary)],
                        input='''#include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -39,6 +33,20 @@ int main(void) {
     for (;;) pause();
 }''',
                        text=True, capture_output=True, check=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._shared_temp.cleanup()
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="kasane-dev-test-")
+        self.root = Path(self.temp.name) / "editor"
+        (self.root / "scripts").mkdir(parents=True)
+        (self.root.parent / "kasane-2d/modules").mkdir(parents=True)
+        shutil.copy(SCRIPT, self.root / "scripts/dev.sh")
+        (self.root / "LICENSE").write_text("Dev lifecycle fixture license\n")
+        (self.root / "target/debug").mkdir(parents=True)
+        shutil.copy(self._stub_binary, self.root / "target/debug/kasane-editor")
         self.bin = self.root / "tools"
         self.bin.mkdir()
         self.tool("cargo", """
@@ -71,7 +79,13 @@ while True:
         subprocess.run(['sh','scripts/dev.sh','editor','reload'],check=False)
     time.sleep(0.05)
 """)
-        self.env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}"}
+        self.env = {
+            **os.environ,
+            "PATH": f"{self.bin}:{os.environ['PATH']}",
+            "KASANE_DEV_ATTEMPTS": "50",
+            "KASANE_DEV_SLEEP_INTERVAL": "0.04",
+            "KASANE_DEV_WATCH_INTERVAL": "0.05",
+        }
         self.pid_file = self.root / "target/dev-kasane-editor.pid"
         self.children = []
 
@@ -160,7 +174,7 @@ while True:
     def test_watcher_survives_restart_gap_but_stops_when_app_is_closed(self):
         self.run_reload()
         first=int(self.pid_file.read_text())
-        watcher=self.start('watch',READY_DELAY='1.2')
+        watcher=self.start('watch',READY_DELAY='0.8')
         self.wait_for(lambda:(self.root/'target/dev-kasane-editor.watch.lock/owner').exists())
         (self.root/'trigger-reload').touch()
         self.wait_for(lambda:int(self.pid_file.read_text()) != first)
@@ -199,7 +213,7 @@ while True:
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
 
     def test_late_pid_after_timeout_is_recovered_on_next_reload(self):
-        code,output=self.run_reload(expected=None, READY_DELAY='6.5')
+        code,output=self.run_reload(expected=None, READY_DELAY='2.5')
         self.assertNotEqual(code,0,output)
         pid=int((self.root/'test-pids').read_text())
         pending=Path((self.root/'launches').read_text().strip())
@@ -214,7 +228,7 @@ while True:
         self.assertTrue(self.alive(int(self.pid_file.read_text())))
 
     def test_interrupted_launch_keeps_pid_record_for_recovery(self):
-        reload=self.start(READY_DELAY='1.2')
+        reload=self.start(READY_DELAY='0.8')
         self.wait_for(lambda:(self.root/'test-pids').exists())
         pid=int((self.root/'test-pids').read_text())
         pending=Path((self.root/'launches').read_text().strip())

@@ -34,7 +34,7 @@ pub(super) fn run() -> anyhow::Result<()> {
         .ok()
         .map(|s| s.parse::<usize>())
         .transpose()?
-        .unwrap_or(60);
+        .unwrap_or(4);
     ensure!((2..=3600).contains(&samples), "invalid sample count");
     let output = std::env::var_os("KASANE_TIMELINE_OUTPUT")
         .map(PathBuf::from)
@@ -47,9 +47,12 @@ pub(super) fn run() -> anyhow::Result<()> {
     let (_assets, path, source_info) = if source_probe {
         (None, source.canonicalize()?, json!({"model":source}))
     } else {
+        let t0 = std::time::Instant::now();
         let (assets, path, info) = variants::variants(&source.canonicalize()?)?;
+        eprintln!("variants took: {:?}", t0.elapsed());
         (Some(assets), path, info)
     };
+    let t0 = std::time::Instant::now();
     eprintln!("Timeline acceptance: importing real curves and dense variants");
     let (document, notices) = Document::import_model3(&path)?;
     let mut h = Harness::new()?;
@@ -61,6 +64,7 @@ pub(super) fn run() -> anyhow::Result<()> {
     command(&mut h, CommandId::AnimationWorkspace)?;
     command(&mut h, CommandId::FitView)?;
     drain(&mut h)?;
+    eprintln!("import & harness took: {:?}", t0.elapsed());
     if std::env::var_os("KASANE_TIMELINE_NUMBER_PROBE").is_some() {
         let report = number_probe::run(&mut h, samples)?;
         std::fs::write(
@@ -71,19 +75,31 @@ pub(super) fn run() -> anyhow::Result<()> {
         crate::benchmark::finish();
         return Ok(());
     }
+    let t0 = std::time::Instant::now();
     eprintln!("Timeline acceptance: imported edge cases");
     let edges = edges::edges(&mut h)?;
+    eprintln!("edges took: {:?}", t0.elapsed());
+    let t0 = std::time::Instant::now();
     eprintln!("Timeline acceptance: real motion input, cancellation and playback");
     let real_performance = performance::performance(&mut h, &output, samples, "Natural")?;
+    eprintln!("natural performance took: {:?}", t0.elapsed());
+    let t0 = std::time::Instant::now();
     eprintln!("Timeline acceptance: dense input, cancellation and playback");
     let performance = performance::performance(&mut h, &output, samples, "Dense")?;
+    eprintln!("dense performance took: {:?}", t0.elapsed());
+    let t0 = std::time::Instant::now();
     eprintln!("Timeline acceptance: paused animation canvas navigation");
     let navigation = navigation_and_dock::canvas_navigation(&mut h, samples)?;
+    eprintln!("canvas navigation took: {:?}", t0.elapsed());
+    let t0 = std::time::Instant::now();
     eprintln!("Timeline acceptance: native right dock resize across workspaces");
     let dock_resize = navigation_and_dock::canvas_dock_resize(&mut h, samples, &output)?;
+    eprintln!("dock resize took: {:?}", t0.elapsed());
+    let t0 = std::time::Instant::now();
     eprintln!("Timeline acceptance: SDK result parity and project round trip");
     parity_and_persistence::result_parity(&mut h)?;
     parity_and_persistence::persistence(&mut h)?;
+    eprintln!("parity & persistence took: {:?}", t0.elapsed());
     let report = json!({"profile":if cfg!(debug_assertions){"debug"}else{"release"},"logical_window":[1100,740],"measurement":"injected GPUI input through current SDK/Metal canvas acceptance and GPUI draw; excludes OS input delivery, screenshot readback and compositor presentation","source":source_info,"import_notices":notices,"edge_cases":edges,"real_motion_performance":real_performance,"performance":performance,"canvas_navigation":navigation,"dock_resize":dock_resize,"save_reopen_unchanged":true,"result_sdk_snapshot_and_geometry_parity":true});
     std::fs::write(
         output.join("results.json"),

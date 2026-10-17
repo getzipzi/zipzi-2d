@@ -605,4 +605,3 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
     })
     .unwrap();
 }
-

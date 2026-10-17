@@ -96,6 +96,7 @@ impl StatusBar {
     }
 
     #[cfg(any(test, feature = "test-support"))]
+    #[allow(dead_code)]
     pub(crate) fn renders(&self) -> u64 {
         self.renders
     }

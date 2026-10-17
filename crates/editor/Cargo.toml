@@ -62,3 +62,8 @@ name = "timeline_acceptance"
 path = "tests/timeline_acceptance.rs"
 harness = false
 required-features = ["test-support"]
+
+[[test]]
+name = "native_render"
+path = "tests/native_render.rs"
+required-features = ["test-support"]

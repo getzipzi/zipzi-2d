@@ -749,16 +749,44 @@ fn escape_under_canvas_select_clears_all_selection(cx: &mut TestAppContext) {
         window.render_frame(cx);
 
         harness.view.read_with(cx, |view, _| {
-            assert!(!view.editor.document().unwrap().context().selections.is_empty());
-            assert!(!view.editor.document().unwrap().selected_vertex_positions().is_empty());
+            assert!(
+                !view
+                    .editor
+                    .document()
+                    .unwrap()
+                    .context()
+                    .selections
+                    .is_empty()
+            );
+            assert!(
+                !view
+                    .editor
+                    .document()
+                    .unwrap()
+                    .selected_vertex_positions()
+                    .is_empty()
+            );
         });
 
         window.press("escape", cx);
         window.render_frame(cx);
 
         harness.view.read_with(cx, |view, _| {
-            assert!(view.editor.document().unwrap().context().selections.is_empty());
-            assert!(view.editor.document().unwrap().selected_vertex_positions().is_empty());
+            assert!(
+                view.editor
+                    .document()
+                    .unwrap()
+                    .context()
+                    .selections
+                    .is_empty()
+            );
+            assert!(
+                view.editor
+                    .document()
+                    .unwrap()
+                    .selected_vertex_positions()
+                    .is_empty()
+            );
             assert!(view.editor.overlay().vertices.is_empty());
         });
 
@@ -789,7 +817,15 @@ fn escape_under_canvas_select_clears_all_selection(cx: &mut TestAppContext) {
         window.render_frame(cx);
 
         harness.view.read_with(cx, |view, _| {
-            assert!(!view.editor.document().unwrap().context().selections.is_empty());
+            assert!(
+                !view
+                    .editor
+                    .document()
+                    .unwrap()
+                    .context()
+                    .selections
+                    .is_empty()
+            );
         });
 
         // Switch to Hand tool: pressing escape does NOT clear selection.
@@ -801,7 +837,15 @@ fn escape_under_canvas_select_clears_all_selection(cx: &mut TestAppContext) {
         window.press("escape", cx);
         window.render_frame(cx);
         harness.view.read_with(cx, |view, _| {
-            assert!(!view.editor.document().unwrap().context().selections.is_empty());
+            assert!(
+                !view
+                    .editor
+                    .document()
+                    .unwrap()
+                    .context()
+                    .selections
+                    .is_empty()
+            );
         });
 
         // Switch back to Select tool.
@@ -815,11 +859,23 @@ fn escape_under_canvas_select_clears_all_selection(cx: &mut TestAppContext) {
         window.press("cmd-d", cx);
         window.render_frame(cx);
         harness.view.read_with(cx, |view, _| {
-            assert!(view.editor.document().unwrap().context().selections.is_empty());
-            assert!(view.editor.document().unwrap().selected_vertex_positions().is_empty());
+            assert!(
+                view.editor
+                    .document()
+                    .unwrap()
+                    .context()
+                    .selections
+                    .is_empty()
+            );
+            assert!(
+                view.editor
+                    .document()
+                    .unwrap()
+                    .selected_vertex_positions()
+                    .is_empty()
+            );
             assert!(view.editor.overlay().vertices.is_empty());
         });
     })
     .unwrap();
 }
-

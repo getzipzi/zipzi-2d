@@ -31,6 +31,9 @@ watch_lock="$PWD/target/dev-$package.watch.lock"
 reload_lock="$PWD/target/dev-$package.reload.lock"
 owned_lock=
 launch_pid_file=
+dev_attempts="${KASANE_DEV_ATTEMPTS:-50}"
+dev_interval="${KASANE_DEV_SLEEP_INTERVAL:-0.1}"
+dev_watch_interval="${KASANE_DEV_WATCH_INTERVAL:-0.5}"
 
 # mkdir is atomic on macOS too. Never steal a lock: concurrent recovery can
 # otherwise remove a new owner's lock. A crash leaves an explicit stale-lock error.
@@ -126,7 +129,7 @@ case "${2:-watch}" in
       if [ -n "$watched_pid" ] && ! is_dev_process "$watched_pid"; then
         # The reload owns the intentional gap between stopping and launching.
         if [ -f "$reload_lock/restarting" ] && lock_live "$reload_lock"; then
-          sleep 0.5
+          sleep "$dev_watch_interval"
           continue
         fi
         if [ -s "$pid_file" ]; then
@@ -146,7 +149,7 @@ case "${2:-watch}" in
           exit $?
           ;;
       esac
-      sleep 0.5
+      sleep "$dev_watch_interval"
     done
     ;;
   reload)
@@ -208,8 +211,8 @@ case "${2:-watch}" in
     if [ -n "$old_pid" ]; then
       if is_dev_process "$old_pid"; then kill -TERM "$old_pid" 2>/dev/null || :; fi
       attempts=0
-      while is_dev_process "$old_pid" && [ "$attempts" -lt 50 ]; do
-        sleep 0.1
+      while is_dev_process "$old_pid" && [ "$attempts" -lt "$dev_attempts" ]; do
+        sleep "$dev_interval"
         attempts=$((attempts + 1))
       done
       if is_dev_process "$old_pid"; then
@@ -258,14 +261,14 @@ PLIST
 
     attempts=0
     new_pid=
-    while [ "$attempts" -lt 50 ]; do
+    while [ "$attempts" -lt "$dev_attempts" ]; do
       if [ -s "$launch_pid_file" ]; then
         new_pid=$(cat "$launch_pid_file")
         if is_dev_process "$new_pid"; then
           break
         fi
       fi
-      sleep 0.1
+      sleep "$dev_interval"
       attempts=$((attempts + 1))
     done
     if ! is_dev_process "$new_pid"; then

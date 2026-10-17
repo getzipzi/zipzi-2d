@@ -8,7 +8,7 @@ use gpui_kit::{
     point, size,
 };
 use metal::MTLPixelFormat;
-#[path = "../../editor-core/tests/support/mod.rs"]
+#[path = "../../../editor-core/tests/support/mod.rs"]
 mod support;
 
 fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {

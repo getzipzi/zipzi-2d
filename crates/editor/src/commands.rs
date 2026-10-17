@@ -187,16 +187,14 @@ impl EditorView {
                     cx.notify();
                 }
                 CommandId::ResetLayout => self.reset_layout(window, cx),
-                CommandId::ResetShortcuts => {
-                    match keybindings::reset(cx) {
-                        Ok(()) => {
-                            self.menu_state = Default::default();
-                            workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
-                            cx.notify();
-                        }
-                        Err(e) => self.set_edit_error(e.to_string(), cx),
+                CommandId::ResetShortcuts => match keybindings::reset(cx) {
+                    Ok(()) => {
+                        self.menu_state = Default::default();
+                        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
+                        cx.notify();
                     }
-                }
+                    Err(e) => self.set_edit_error(e.to_string(), cx),
+                },
                 CommandId::ShowShortcuts => keybindings::show(window, cx),
                 _ => {}
             },

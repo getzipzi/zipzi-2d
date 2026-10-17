@@ -30,11 +30,49 @@ tempfile = "3"
 uuid = { version = "1", features = ["v4"] }
 
 [profile.dev]
-debug = 0
+debug = "line-tables-only"
 incremental = true
 
-[profile.dev.package.gpui-fast]
-opt-level = 2
+[profile.dev.package."*"]
+opt-level = 3
+
+# Keep sibling project kasane-2d packages unoptimized for fast edit-compile cycles
+[profile.dev.package.kasane-core]
+opt-level = 0
+
+[profile.dev.package.kasane-sdk]
+opt-level = 0
+
+[profile.dev.package.kasane-sdk-observe]
+opt-level = 0
+
+[profile.dev.package.kasane-project]
+opt-level = 0
+
+[profile.dev.package.kasane-render]
+opt-level = 0
+
+[profile.dev.package.kasane-render-metal]
+opt-level = 0
+
+[profile.dev.package.kasane-render-wgpu]
+opt-level = 0
+
+[profile.dev.package.kasane-animation]
+opt-level = 0
+
+[profile.dev.package.kasane-live2d]
+opt-level = 0
+
+[profile.dev.package.kasane-moc3]
+opt-level = 0
+
+[profile.dev.package.kasane-cmo3]
+opt-level = 0
+
+
+[profile.dev.package.kasane-psd]
+opt-level = 0
 
 [patch.crates-io]
 gpui-fast = { path = "vendor/gpui-fast" }

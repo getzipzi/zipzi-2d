@@ -7,8 +7,7 @@ use gpui_kit::{
     size,
 };
 
-#[path = "../src/mesh_edges.rs"]
-mod mesh_edges;
+use crate::mesh_edges;
 
 fn p(x: f32, y: f32) -> ViewportPoint {
     ViewportPoint { x, y }

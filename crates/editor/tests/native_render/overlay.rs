@@ -1,5 +1,6 @@
 //! Production overlay regression tests; no window or benchmark sampling.
 #![cfg(target_os = "macos")]
+use crate::mesh_edges;
 use editor_core::{OverlaySnapshot, OverlayVertex, ViewportPoint};
 use editor_render::{MetalOverlayRenderer, OverlayStyle, OverlayViewport};
 use gpui_apple::metal_renderer::MetalRenderer;
@@ -7,8 +8,6 @@ use gpui_kit::{
     Bounds, ContentMask, DevicePixels, PaintSurface, Pixels, Quad, Scene, SurfaceSource, point, px,
     rgba, size,
 };
-#[path = "../src/mesh_edges.rs"]
-mod mesh_edges;
 
 fn pt(x: f32, y: f32) -> ViewportPoint {
     ViewportPoint { x, y }
@@ -261,7 +260,7 @@ fn overlay_matches_paths_markers_and_retains_old_frames() -> anyhow::Result<()> 
     })
 }
 
-#[path = "../src/canvas_overlay.rs"]
+#[path = "../../src/canvas_overlay.rs"]
 mod canvas_overlay;
 
 struct ScenePainter {

@@ -927,4 +927,3 @@ fn form_error_routes_to_status_bar_and_clears_after_timeout(cx: &mut TestAppCont
         assert!(view.edit_error.is_none());
     });
 }
-

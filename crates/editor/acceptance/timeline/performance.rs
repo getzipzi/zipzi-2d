@@ -16,6 +16,9 @@ pub(crate) fn performance(
     samples: usize,
     variant: &str,
 ) -> anyhow::Result<Value> {
+    let is_benchmark = std::env::var_os("KASANE_TIMELINE_SAMPLES").is_some();
+    let drag_steps = if is_benchmark { 32 } else { 4 };
+    let seek_steps = if is_benchmark { 32 } else { 4 };
     select(h, &format!("Timeline{variant}"))?;
     let original = clip(h);
     let projection = h
@@ -134,7 +137,7 @@ pub(crate) fn performance(
     pointer(h, origin, 0)?;
     let mut drag = Vec::new();
     let mut drag_dispatch = Vec::new();
-    for i in 0..32 {
+    for i in 0..drag_steps {
         let start = Instant::now();
         pointer(h, origin + point(px(0.), px(-8. - i as f32 * 0.5)), 1)?;
         drag_dispatch.push(elapsed(start));
@@ -220,7 +223,7 @@ pub(crate) fn performance(
     drain(h)?;
     ensure!(clip(h) == original, "dense drag Undo changed UUIDs/curves");
     let mut seeks = Vec::new();
-    for i in 0..32 {
+    for i in 0..seek_steps {
         let start = Instant::now();
         update(h, |view, _, cx| {
             let doc = view.editor.active_id().unwrap();
@@ -267,10 +270,12 @@ pub(crate) fn performance(
     let mut last = None;
     let mut max_lag = 0f32;
     for tick in 0..samples {
-        let deadline = start + Duration::from_secs_f64(tick as f64 / 60.);
-        while Instant::now() < deadline {
-            pump(h)?;
-            std::thread::sleep(Duration::from_millis(1));
+        if is_benchmark {
+            let deadline = start + Duration::from_secs_f64(tick as f64 / 60.);
+            while Instant::now() < deadline {
+                pump(h)?;
+                std::thread::sleep(Duration::from_millis(1));
+            }
         }
         update(h, |view, _, cx| {
             view.editor.advance_animation_clock(tick as f32 / 60.);

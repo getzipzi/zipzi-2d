@@ -290,13 +290,7 @@ specs![
     (Next, "menu.next_document", Window, false, ["ctrl-tab"]),
     (Undo, "menu.undo", Document, false, ["secondary-z"]),
     (Redo, "menu.redo", Document, false, ["secondary-shift-z"]),
-    (
-        Deselect,
-        "menu.deselect",
-        Document,
-        false,
-        ["secondary-d"]
-    ),
+    (Deselect, "menu.deselect", Document, false, ["secondary-d"]),
     (CreateParameter, "parameter.new", Document, false, []),
     (EditParameter, "parameter.edit", Document, false, []),
     (DeleteParameter, "parameter.delete", Document, false, []),

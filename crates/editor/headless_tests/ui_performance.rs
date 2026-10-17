@@ -51,7 +51,9 @@ fn timeline_channel_scrubs_reuse_overview_and_do_not_notify_the_editor_owner(
     let observed = notifications.clone();
     let _observe =
         cx.update(|cx| cx.observe(&harness.view, move |_, _| observed.set(observed.get() + 1)));
-    let status_bar = harness.view.read_with(cx, |view, _| view.status_bar.clone());
+    let status_bar = harness
+        .view
+        .read_with(cx, |view, _| view.status_bar.clone());
     let before = timeline.read_with(cx, |timeline, _| {
         (
             timeline.renders(),

@@ -91,9 +91,10 @@ impl PropertiesPanel {
                             .unwrap_or_default();
                         let changed = !pending.is_empty();
                         for id in pending {
-                            if let Err(error) = state
-                                .property_forms
-                                .commit(&mut state.editor, &previous, id)
+                            if let Err(error) =
+                                state
+                                    .property_forms
+                                    .commit(&mut state.editor, &previous, id)
                             {
                                 state.set_edit_error(error.to_string(), cx);
                             }

@@ -1,20 +1,29 @@
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{point, px};
 use image::RgbaImage;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static FIRST_SAVED: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn save(
     image: &RgbaImage,
     directory: &std::path::Path,
     name: &str,
 ) -> anyhow::Result<()> {
-    let path = directory.join(name);
-    image.save_with_format(&path, image::ImageFormat::Png)?;
-    // Verify the actual exported artifact, not just the in-memory buffer.
-    anyhow::ensure!(
-        image::open(&path)?.into_rgba8() == *image,
-        "PNG round trip changed pixels"
-    );
-    println!("Screenshot: {}", path.display());
+    let should_save = std::env::var_os("KASANE_SCREENSHOT_DIR").is_some()
+        || std::env::var_os("KASANE_SCREENSHOT_SAVE").is_some()
+        || !FIRST_SAVED.swap(true, Ordering::Relaxed);
+
+    if should_save {
+        let path = directory.join(name);
+        image.save_with_format(&path, image::ImageFormat::Png)?;
+        // Verify the actual exported artifact round-trips without loss.
+        anyhow::ensure!(
+            image::open(&path)?.into_rgba8() == *image,
+            "PNG round trip changed pixels"
+        );
+        println!("Screenshot: {}", path.display());
+    }
     Ok(())
 }
 

@@ -40,7 +40,14 @@ pub struct Timeline {
     pub(crate) id: editor_core::TimelineId,
     pub(crate) input_region: crate::input_routing::InputRegion,
     timeline_capture: std::cell::OnceCell<
-        Rc<Cell<Option<(TimelineOperation, crate::workspace::status_bar::TimelineCaptureKind)>>>,
+        Rc<
+            Cell<
+                Option<(
+                    TimelineOperation,
+                    crate::workspace::status_bar::TimelineCaptureKind,
+                )>,
+            >,
+        >,
     >,
     timeline_pan_tool: std::cell::OnceCell<Rc<Cell<bool>>>,
     ui_scale: f32,
@@ -80,7 +87,10 @@ pub struct Timeline {
 impl Timeline {
     fn current_capture(
         &self,
-    ) -> Option<(TimelineOperation, crate::workspace::status_bar::TimelineCaptureKind)> {
+    ) -> Option<(
+        TimelineOperation,
+        crate::workspace::status_bar::TimelineCaptureKind,
+    )> {
         use crate::workspace::status_bar::TimelineCaptureKind;
         self.operation().and_then(|op| {
             if let Some(gesture) = &self.gesture {
@@ -206,14 +216,10 @@ impl Timeline {
                         }
                     },
                 ),
-                _observe: cx.observe_in(
-                    &upgraded,
-                    window,
-                    |this, _, window, cx| {
-                        this.sync(window, cx);
-                        cx.notify();
-                    },
-                ),
+                _observe: cx.observe_in(&upgraded, window, |this, _, window, cx| {
+                    this.sync(window, cx);
+                    cx.notify();
+                }),
                 owner,
                 focus,
                 search,
