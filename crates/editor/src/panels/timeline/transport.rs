@@ -245,43 +245,23 @@ impl Timeline {
             transport,
         );
         let tools = self.tools(window, cx);
-        div()
-            .id("timeline-toolbar")
-            .test_support()
-            .h(compact::rem(compact::HEADER_CONTROL))
-            .w_full()
+        let left = div()
+            .flex_1()
             .min_w_0()
-            .flex_shrink_0()
             .flex()
             .items_center()
             .gap(compact::rem(6.))
-            .px_0()
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .child(transport)
-                    .children(preview),
-            )
-            .child(
-                div()
-                    .h(px(18.))
-                    .border_l_1()
-                    .border_color(cx.theme().border),
-            )
             .child(
                 div()
                     .id("timeline-motion-name")
                     .test_support()
-                    .flex_1()
                     .min_w_0()
                     .overflow_hidden()
                     .text_ellipsis()
                     .when(!self.header_compact, |label| label.child(name)),
             )
-            .when_some(self.error.clone(), |toolbar, error| {
-                toolbar.child(
+            .when_some(self.error.clone(), |left, error| {
+                left.child(
                     div()
                         .id("timeline-error")
                         .test_support()
@@ -294,6 +274,19 @@ impl Timeline {
                         .child(Icon::new(IconName::TriangleAlert).xsmall()),
                 )
             })
+            .children(preview);
+        let center = div()
+            .flex_shrink_0()
+            .flex()
+            .items_center()
+            .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+            .child(transport);
+        let right = div()
+            .flex_1()
+            .flex()
+            .items_center()
+            .justify_end()
+            .gap(compact::rem(6.))
             .child(
                 div()
                     .id("timeline-time")
@@ -311,7 +304,21 @@ impl Timeline {
                         time_label
                     }),
             )
-            .child(tools)
+            .child(tools);
+        div()
+            .id("timeline-toolbar")
+            .test_support()
+            .h(compact::rem(compact::HEADER_CONTROL))
+            .w_full()
+            .min_w_0()
+            .flex_shrink_0()
+            .flex()
+            .items_center()
+            .gap(compact::rem(6.))
+            .px_0()
+            .child(left)
+            .child(center)
+            .child(right)
             .into_any_element()
     }
 }
