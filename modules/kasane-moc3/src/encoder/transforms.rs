@@ -130,6 +130,7 @@ impl<'a> Moc3EncoderContext<'a> {
                         t.parent(),
                         f.rotation.origin,
                     )?;
+                    let origin = super::helpers::format_units(self.doc, t.parent(), origin)?;
                     self.l.scalar("rotation_key_src.origin_x", origin.x)?;
                     self.l.scalar("rotation_key_src.origin_y", origin.y)?;
                     self.l.scalar("rotation_key_src.angle", f.rotation.angle)?;

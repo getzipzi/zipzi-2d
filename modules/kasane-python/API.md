@@ -9,11 +9,13 @@ For installation and runnable recipes, start with the [SDK README](README.md).
 ## Conventions
 
 - `Point` is a `tuple[float, float]`, such as `(40, 60)`. It is a type alias,
-  not a constructor. Canvas and editable mesh positions use source pixel
+  not a constructor. Editable mesh positions use unbounded source pixel
   coordinates. Evaluated drawable positions use runtime coordinates: for a
-  root mesh, `((x - origin_x) / pixels_per_unit,
-  (origin_y - y) / pixels_per_unit)`. `CanvasSnapshot.source_to_runtime()`
-  and `runtime_to_source()` perform these conversions for root drawables.
+  root mesh with `y_axis_down=True`, `(x - origin_x, origin_y - y)`. `ModelSpaceSnapshot.source_to_runtime()`
+  and `runtime_to_source()` perform these conversions for evaluated world points.
+  Model units equal source pixels in magnitude. Rotation-local coordinates use
+  these units; warp-local coordinates remain normalized parameters. Cubism PPU
+  lives only in optional `source_canvas` metadata and is applied at import/export.
 - Object IDs and document IDs are canonical lowercase UUID strings; generate
   them with `str(uuid.uuid4())`. IDs identify objects across reads and edits.
   Display names are not IDs and may be duplicated.
@@ -35,8 +37,8 @@ For installation and runnable recipes, start with the [SDK README](README.md).
 
 | API | Purpose |
 | --- | --- |
-| `Session(document_id, width, height, origin, pixels_per_unit)` | Create an empty authoring session. `origin` is a `Point`. |
-| `Session.with_history_limits(document_id, width, height, origin, pixels_per_unit, max_steps, max_bytes)` | Create a session with explicit undo capacity. |
+| `Session(document_id, width=None, height=None, origin=(0, 0))` | Create an unbounded authoring session. Both dimensions must be supplied together to retain optional source framing. |
+| `Session.with_history_limits(document_id, width, height, origin, max_steps, max_bytes)` | Create a session with explicit undo capacity. |
 | `open_project(absolute_path)` | Open a saved project and return a `Session`. This is a package function, not a `Session` method. |
 | `capabilities()` | Return booleans including `gpu_observation`, `gpu_texture_mipmaps`, `purism_core_validation`, and `official_core_validation`. |
 | `Session.save(absolute_path, expected_version=None, *, on_exists="error")` | Save to a project directory or `.kasane.json` manifest path; return `SaveResult`. `on_exists="new"` chooses a numbered sibling if another project occupies the destination. |
@@ -47,18 +49,23 @@ For installation and runnable recipes, start with the [SDK README](README.md).
 | `ImportResult` | `version`, `moc_version`, `diagnostics: list[ResourceIssue]`, `warnings`. Imported content has no saved `project_path` until saved. |
 | `PsdImportResult` | `version`, `manifest`, `width`, `height`, `raster_layers`, `groups`, `durable`, `warnings`. The new project is already saved. |
 | `Session.export_package(absolute_path, expected_version=None)` | Publish a standalone MOC3/model3/texture directory with its supported animation, CDI, Sound, and UserData assets; return `ExportResult(published, durable, warnings)`. |
-| `Session.new_project(document_id, width, height, origin, pixels_per_unit, expected_version=None)` | Replace the current in-memory project and return its new `Version`. |
+| `Session.new_project(document_id, width=None, height=None, origin=(0, 0), expected_version=None)` | Replace the current in-memory project and return its new `Version`. |
 | `Session.remesh_rectangle_grid(mesh_id, columns, rows, expected_version=None)` | Atomically subdivide a PSD/create_rectangle quad and migrate its ordinary mesh keyforms, mesh BlendShape deltas, and glue references. Bound meshes require equal columns and rows. |
 
 `save()` never silently replaces an unrelated project. `on_exists="new"` does
 not override a `PROJECT_CONFLICT` on a session's own saved project. Check
 `durable` and `warnings` even when a save or export returns successfully.
 
+Models have no fixed rectangle. Imported source framing is retained as metadata.
+Cubism exporters derive a finite rectangle from tight default-pose geometry,
+including hidden meshes, without reflecting it about the origin. Saved projects use format 12; previous canvas-based
+project shapes require reimporting the source model.
+
 ## Reading a session
 
 | API | Returns / behavior |
 | --- | --- |
-| Properties: `version`, `document_id`, `canvas`, `uv_v_origin`, `draw_order_groups`, `evaluation_revision`, `modified`, `project_path` | Current values; `project_path` is `Path | None`. `canvas.origin` returns the original `(x, y)` pair. `uv_v_origin` is `"top"` or `"bottom"` for mesh UVs relative to PNG rows. `draw_order_groups` is `None` when no explicit groups exist. |
+| Properties: `version`, `document_id`, `model_space`, `source_canvas`, `uv_v_origin`, `draw_order_groups`, `evaluation_revision`, `modified`, `project_path` | Current values; `project_path` is `Path | None`. `model_space` is a `ModelSpaceSnapshot(origin_x, origin_y, y_axis_down)`. `source_canvas` is optional `CanvasSnapshot` format metadata, including its original flag. `uv_v_origin` is `"top"` or `"bottom"` for mesh UVs relative to PNG rows. `draw_order_groups` is `None` when no explicit groups exist. |
 | `asset_ids()`, `mesh_ids()`, `parameter_ids()`, `binding_ids()` | IDs of PNG assets, meshes, parameters, and mesh bindings. |
 | `part_ids()`, `transform_ids()`, `scene_binding_ids()`, `offscreen_ids()`, `glue_ids()` | IDs of scene and composition objects. |
 | `blend_key_table_ids()`, `blend_constraint_ids()`, `blend_binding_ids()` | IDs of BlendShape objects. |
@@ -83,7 +90,7 @@ use public runtime IDs or names to find objects after a fresh import.
 
 `GeometrySnapshot` includes `vertex_ids`, `positions`, `uvs`, `triangles`,
 `space`, `parent_id`, and `version`. Triangles refer to vertex IDs. Root mesh
-positions are in canvas pixels; positions under a deformer are local to their
+positions are in unbounded source pixels; positions under a deformer are local to their
 parent. `mesh_record()` is for full replacement and topology work;
 `mesh_properties()` is for drawing-only changes.
 
@@ -155,7 +162,9 @@ import/export, undo/redo, project reset, and nested edits are rejected with
 | `create_blend_key_table(BlendKeyTableSpec)`, `replace_blend_key_table(BlendKeyTableSnapshot)` | Manage BlendShape keys. |
 | `create_blend_constraint(BlendConstraintSpec)`, `replace_blend_constraint(BlendConstraintSnapshot)` | Manage BlendShape weights. |
 | `create_blend_binding(BlendBindingSpec)`, `replace_blend_binding(BlendBindingSnapshot)` | Bind BlendShape deltas to a target. |
-| `replace_canvas(width, height, origin, pixels_per_unit)`, `replace_draw_order_groups(groups)` | Change document-wide settings. |
+| `replace_model_space(origin, *, y_axis_down=True)` | Reinterpret authored coordinates with a new origin/orientation. Does not compensate geometry or alter source metadata. |
+| `replace_source_canvas(canvas: CanvasSnapshot \| None)` | Set/remove optional source-format framing metadata without invalidating evaluated geometry. |
+| `replace_draw_order_groups(groups)` | Replace document-wide draw ordering. |
 | `erase_object(object_id)` | Delete an unreferenced object; referenced objects raise `OBJECT_REFERENCED` with `referrers`. |
 | `set_parameter_display_name(id, name)`, `set_part_display_name(id, name)` | Edit CDI names while retaining runtime IDs. |
 | `create_parameter_group(id, runtime_id, name, parent_id=None)`, `replace_parameter_group(...)`, `set_parameter_group(parameter_id, group_id)` | Edit CDI hierarchy and membership. Group `id` is a project UUID. |
@@ -444,7 +453,7 @@ are typed in [`python/kasane/__init__.py`](python/kasane/__init__.py).
 | API | Result |
 | --- | --- |
 | `evaluate(values)` | `Evaluation(parameters, drawables)`: sampled parameters and drawable runtime positions. It does not change preview values. |
-| `evaluate_snapshot(values)` | `EvaluationSnapshot` with version, source revision, canvas, full drawable render attributes, offscreens, and render plan. |
+| `evaluate_snapshot(values)` | `EvaluationSnapshot` with version, source revision, model_space, full drawable render attributes, offscreens, and render plan. |
 | `preview_values`, `preview_revision`, `preview_evaluation_count` | Read-only properties of the cached preview state. |
 | `set_preview_values(values)`, `set_preview_parameter(name_or_id, value)`, `reset_preview_values()` | Update preview input; return whether it changed. |
 | `preview_frame()`, `preview_snapshot()` | Evaluate the current preview input as a short or full snapshot. |
@@ -462,7 +471,7 @@ short `evaluate()` when only runtime positions are needed.
 
 | API | Result |
 | --- | --- |
-| `observer.observe(session, values=None)` | `ObservedFrame` with `rgba`, `png`, size, version, input hash, sampled parameters, canvas/view, drawable bounds, texture revisions, and adapter information. |
+| `observer.observe(session, values=None)` | Fits current visible geometry independently of source framing; returns `ObservedFrame` with `rgba`, `png`, size, version, input hash, sampled parameters, model_space/view, drawable bounds, texture revisions, and adapter information. |
 | `frame.save_png(absolute_path)` | Write the PNG bytes to disk. |
 | `observer.set_fit_long_side(value)` | Change the view's fitted long side. |
 | `observer.observe_run(session, samples, output, crop_targets=(), crop_mode="each")` | Render samples into a unique child of absolute `output`; crop each mesh or Part target from the full frame, or use `crop_mode="union"` for one combined crop. Return `ObservationRun`. |
@@ -470,7 +479,7 @@ short `evaluate()` when only runtime positions are needed.
 | `observer.capture_scenes(session, samples)` | Freeze 1–64 parameter samples against one detached document snapshot; resolve names there and decode the union of textures once. All returned scenes share a capture ID. |
 | `observer.capture_animation_scene(session, preview, apply_model_opacity=False)` | Freeze the preview's actual evaluated animation frame and current snapshot without advancing it; reject a stale preview. |
 | `observer.render_scene(scene, *, roi, resolution, padding_canvas=0)` | Rerender the frozen scene at a source-canvas ROI. Return `RenderedSceneView` with an `ObservedFrame`, requested/padded/visible ROI, and `render_digest`. |
-| `scene.bounds(targets, include_hidden=True)` | Return evaluated source-canvas geometry bounds and resolved mesh IDs for one or more `ObjectRef("mesh"/"part", id)` values. Includes hidden geometry by default; an existing target without geometry returns `status="empty"` and `empty_reason`. |
+| `scene.bounds(targets, include_hidden=True)` | Return evaluated source-pixel `canvas_bounds`, Y-up model-unit `model_bounds`, and resolved mesh IDs for one or more `ObjectRef("mesh"/"part", id)` values. Includes hidden geometry by default; an existing target without geometry returns `status="empty"` and `empty_reason`. |
 | `observer.focus(scene, targets, *, resolution=(1024, 1024), padding_canvas=12, include_hidden=True)` | Derive an ROI from the selected objects and rerender the complete scene. Returns `FocusedSceneView(view, bounds)`. |
 | `observer.focus_scenes(scenes, targets, *, ..., follow=False)` | Focus several captured scenes using a shared union ROI by default. `follow=True` computes an ROI per scene. |
 | `scene.hit_test(view, point, *, include_hidden=True, details=False, max_candidates=256)` | Find every mesh whose evaluated triangle contains an image point. Returns mesh-grouped geometry candidates, total count and truncation status. `details=True` includes triangle indices, barycentric weights and UV. The view must belong to the scene. |
@@ -518,8 +527,9 @@ interpolation weights. `CapturedScene.metadata.snapshot_clone_ns` records the
 cost of copying the authoring document for the read-only capture.
 
 For object-guided observation, use a frozen scene and refer to objects by kind
-and ID. Part targets include descendant Parts. Bounds are in source-canvas
-pixels, including outside the canvas; image points belong to a particular view.
+and ID. Part targets include descendant Parts. `canvas_bounds` uses unbounded source pixels; `model_bounds` uses Y-up model units.
+Both are geometric bounds of evaluated vertices, independent of source/export
+rectangles, padding, texture alpha and masks. Image points belong to a particular view.
 Candidates are sorted by descending evaluated draw order with stable ties;
 this is not a visibility ranking across offscreen composition groups. Invalid
 points are rejected before coordinate conversion. Repeated object targets are
@@ -570,8 +580,7 @@ GPU failures use `ObservationFailure.code` and, when applicable, `asset_id`.
 `ObservedFrame` exposes `width`, `height`, `rgba`, and `png`; it has no `size`
 field. Observer image pixels, evaluated runtime coordinates, and editable
 source or parent-local mesh coordinates are different spaces. For root meshes,
-convert runtime to source pixels with the canvas origin and
-`pixels_per_unit`; for meshes under a transform, inspect `geometry.space` and
+convert runtime to source pixels with the model-space origin and Y reflection; for meshes under a transform, inspect `geometry.space` and
 `geometry.parent_id` before changing keyforms.
 
 ## Errors and command-line runner
@@ -591,3 +600,6 @@ Groups/HitAreas to stable UUIDs using their saved namespace. Older readers must
 reject v6. Python callers that passed capitalized wire-style Groups/HitAreas to
 `set_model3_settings()` must use the typed records shown above; model3 package
 import/export still uses the standard Live2D wire format.
+
+Saved observation scene bundles use schema 3, and run reports use schema 2.
+Earlier canvas-based scene bundles must be captured again.

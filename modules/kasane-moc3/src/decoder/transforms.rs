@@ -1,4 +1,4 @@
-use kasane_core::types::{RotationPose, SceneBinding, Status, Transform, Vec2};
+use kasane_core::types::{RotationPose, SceneBinding, Status, Transform};
 use kasane_core::{
     RotationKeyform, RotationTransform, SceneTrack, TransformData, WarpKeyform, WarpTransform,
 };
@@ -14,8 +14,6 @@ impl<'a> Moc3DecoderContext<'a> {
     pub(super) fn decode_transforms(&mut self) -> Result<DecodedTransforms, Status> {
         let counts = &self.inspection.counts;
         let offsets = &self.inspection.section_offsets;
-        let ppu = self.inspection.canvas.pixels_per_unit;
-        let canvas_origin = self.doc.canvas().origin;
 
         let mut deformer_parents = Vec::with_capacity(counts.deformers as usize);
         for d in 0..counts.deformers as usize {
@@ -73,7 +71,6 @@ impl<'a> Moc3DecoderContext<'a> {
                     String::new()
                 };
 
-            let is_root = parent_id.is_empty();
             let axes = self.get_binding_axes(b_idx)?;
             let is_bound = !axes.is_empty();
             let total_combos = if is_bound {
@@ -137,14 +134,7 @@ impl<'a> Moc3DecoderContext<'a> {
                             offsets[section::KEY_POS_SRC_XY] as usize
                                 + (pos_off + p_idx * 2 + 1) * 4,
                         )?;
-                        if is_root {
-                            points.push(Vec2::new(
-                                rx * ppu + canvas_origin.x,
-                                canvas_origin.y - ry * ppu,
-                            ));
-                        } else {
-                            points.push(Vec2::new(rx, ry));
-                        }
+                        points.push(self.import_point(&parent_id, rx, ry));
                     }
 
                     let mut appearance =
@@ -276,14 +266,7 @@ impl<'a> Moc3DecoderContext<'a> {
                         false
                     };
 
-                    let origin = if is_root {
-                        kasane_core::types::PreciseVec2::new(
-                            ox as f64 * ppu as f64 + canvas_origin.x as f64,
-                            canvas_origin.y as f64 - oy as f64 * ppu as f64,
-                        )
-                    } else {
-                        kasane_core::types::PreciseVec2::new(ox as f64, oy as f64)
-                    };
+                    let origin = self.import_origin(&parent_id, f64::from(ox), f64::from(oy));
 
                     let mut appearance =
                         self.get_colors(section::ROTATION_SRC_KEY_COLOR_OFF, local_idx, k)?;

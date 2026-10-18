@@ -96,7 +96,10 @@ fn convert(imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error> {
                 .join("; ")
         )));
     }
-    let canvas = imported.document.canvas();
+    let canvas = imported
+        .document
+        .source_canvas()
+        .expect("MOC3 import retains its canvas");
     if !canvas.width.is_finite() || !canvas.height.is_finite() {
         return Err(Error::InvalidInput("invalid canvas size".into()));
     }

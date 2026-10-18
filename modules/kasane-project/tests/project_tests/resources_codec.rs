@@ -152,7 +152,7 @@ fn test_project_encode_decode_roundtrip() {
     assert_eq!(encoded.bytes().filter(|&byte| byte == b'\n').count(), 1);
     let root: serde_json::Value = serde_json::from_str(&encoded).unwrap();
     assert_eq!(root["format"], "kasane-directory-project");
-    assert_eq!(root["format_version"], 11);
+    assert_eq!(root["format_version"], 13);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
     assert!(before.same_content(&decoded));
@@ -304,9 +304,7 @@ fn test_reject_duplicate_keys_and_malformed() {
       "format_version": 99,
       "document": {
         "id": "00000001-1111-4111-8111-111111111111",
-        "canvas": [640.0, 480.0],
-        "canvas_origin": [0.0, 0.0],
-        "pixels_per_unit": 100.0,
+        "model_space": {"origin": {"x": 0.0, "y": 0.0}, "y_axis_down": true},
         "assets": [],
         "meshes": [],
         "parts": [],
@@ -325,9 +323,7 @@ fn test_reject_duplicate_keys_and_malformed() {
       "format_version": 1,
       "document": {
         "id": "00000001-1111-4111-8111-111111111111",
-        "canvas": [640.0, 480.0],
-        "canvas_origin": [0.0, 0.0],
-        "pixels_per_unit": 100.0,
+        "model_space": {"origin": {"x": 0.0, "y": 0.0}, "y_axis_down": true},
         "assets": [{
           "id": "00000002-1111-4111-8111-111111111111",
           "name": "escape",

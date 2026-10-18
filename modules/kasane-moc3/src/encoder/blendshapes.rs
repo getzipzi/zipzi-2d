@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use kasane_core::types::{BlendShapeBinding, BlendShapeTargetKind, DeltaKeyforms, Status, Vec2};
+use kasane_core::types::{BlendShapeBinding, BlendShapeTargetKind, DeltaKeyforms, Status};
 
 use crate::layout::{checked, Layout};
 
@@ -315,16 +315,11 @@ impl<'a> Moc3EncoderContext<'a> {
                                 .scalar("rotation_key_src.opacity", f.opacity.unwrap_or(0.0))?;
                             self.l
                                 .scalar("rotation_key_src.angle", f.angle.unwrap_or(0.0))?;
-                            let origin = if let Some(o) = f.origin {
-                                if rot.parent_id.is_none() {
-                                    let ppu = self.doc.canvas().pixels_per_unit;
-                                    Vec2::new(o.x / ppu, -o.y / ppu)
-                                } else {
-                                    o
-                                }
-                            } else {
-                                Vec2::default()
-                            };
+                            let origin = super::helpers::format_delta(
+                                self.doc,
+                                rot.parent(),
+                                f.origin.unwrap_or_default(),
+                            )?;
                             self.l.scalar("rotation_key_src.origin_x", origin.x)?;
                             self.l.scalar("rotation_key_src.origin_y", origin.y)?;
                             self.l

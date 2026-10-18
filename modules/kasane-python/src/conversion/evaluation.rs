@@ -5,11 +5,9 @@ pub(crate) fn full_frame_tuple(frame: &DrawableFrame, version: Version) -> FullE
         version_tuple(version),
         frame.source_revision,
         (
-            frame.canvas.width,
-            frame.canvas.height,
-            frame.canvas.origin.x,
-            frame.canvas.origin.y,
-            frame.canvas.pixels_per_unit,
+            frame.model_space.origin.x,
+            frame.model_space.origin.y,
+            frame.model_space.y_axis_down,
         ),
         frame
             .parameters

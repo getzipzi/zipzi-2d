@@ -33,3 +33,31 @@ fn unsaved_psd_draft_exports_without_publishing_or_editing_the_session() {
     assert_eq!(after.project_path(), before.project_path());
     assert!(after.document().same_content(before.document()));
 }
+
+#[test]
+fn boundless_draft_exports_all_editable_cubism_formats_without_mutation() {
+    let session = AuthoringSession::new(
+        "00000000-0000-4000-8000-000000003002",
+        kasane_core::ModelSpace::default(),
+    )
+    .unwrap();
+    let before = session.read_snapshot();
+    let modified = session.modified();
+    let model = session.encode_cmo3(&Cmo3Options::default()).unwrap();
+    let animation = session
+        .encode_can3(&Can3Options {
+            animation_name: Cmo3Options::default().model_name,
+            ..Default::default()
+        })
+        .unwrap();
+    let pair = session.encode_cubism(&CubismOptions::default()).unwrap();
+    assert!(!pair.report.has_loss());
+    assert_eq!(pair.cmo3.bytes, model.bytes);
+    assert_eq!(pair.can3.bytes, animation.bytes);
+    assert_eq!(session.version(), before.version());
+    assert_eq!(session.modified(), modified);
+    assert!(session
+        .read_snapshot()
+        .document()
+        .same_content(before.document()));
+}

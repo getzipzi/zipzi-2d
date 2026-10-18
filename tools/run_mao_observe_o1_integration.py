@@ -40,13 +40,13 @@ def main() -> None:
     run = OUTPUT / f"run-{uuid4().hex[:12]}"
     run.mkdir()
 
-    session = kasane.Session(str(uuid4()), 64, 64, (32, 32), 1)
+    session = kasane.Session(str(uuid4()), 64, 64, (32, 32))
     imported = session.import_model3(SOURCE)
     if imported.warnings or session.diagnose_resources():
         raise AssertionError("Mao import reported warnings or missing resources")
     if len(session.mesh_ids()) != 260:
         raise AssertionError("Mao drawable count changed")
-    canvas = session.canvas
+    canvas = session.source_canvas
     full_roi = (0.0, 0.0, canvas.width, canvas.height)
     request = kasane.RawInspectionRequest(HEAD_ROI, HEAD_RESOLUTION)
 

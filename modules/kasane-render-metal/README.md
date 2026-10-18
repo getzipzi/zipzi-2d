@@ -25,13 +25,21 @@ targets, texture repeat and mipmapped sampling, resize, and Replace/Composite
 presentation. Consecutive draws to a target share a render pass; destination
 snapshots end the pass before the blit. Replace renders directly into the host
 output; Composite preserves the host background with an intermediate texture.
-Offscreen children are rendered and composited in draw order. Their color
-textures and destination snapshots reuse storage within each command buffer,
-ending the previous render pass before a texture is written again. The 512 MiB
-attachment budget covers nesting depth, snapshot scratch space, presentation
-storage and masks. Sibling count and repeated destination reads do not multiply
-the color storage. Pools are local to a command so submitted frames remain
-independent.
+Offscreen children are rendered and composited in draw order. Each group's
+visible geometry bounds are transformed to screen space, intersected with the
+viewport, and rounded outward to whole pixels. Nested groups may have different
+crop origins and extents; their completed images are translated on the same
+screen pixel grid. Mask lookup stays in model space, and destination snapshots
+retain the current parent target's extent and draw order. Hidden raw mask
+sources keep their own bounds without expanding a group's color surface.
+
+Color textures and destination snapshots reuse exact-size storage within each
+command buffer, ending the previous render pass before a texture is written
+again. A dry run follows the same allocation/release order before encoding;
+when many different crop sizes would allocate more storage than a common
+scene-wide extent, the common extent is used instead. The 512 MiB attachment
+budget covers the resulting allocations, snapshots, presentation storage and
+masks. Pools are local to a command so submitted frames remain independent.
 
 Mesh buffers are immutable and retained across view changes. Model submissions
 replace only buffers whose geometry changed, so earlier submitted frames keep
@@ -84,3 +92,17 @@ without `observe` do not include a GPU renderer.
 cargo test -p kasane-render-metal --test metal_smoke --locked
 cargo test -p kasane-sdk-observe --locked
 ```
+
+For the group-crop A/B benchmark and pixel comparison, run:
+
+```sh
+uv run --locked python tools/benchmark_offscreens.py --rounds 3
+```
+
+This alternates the default crop policy with the `benchmark-global-surfaces`
+feature, which forces the previous common-surface strategy while retaining the
+same traversal and preflight. Keep that feature disabled in application builds.
+Each run warms 20 frames and measures 90 frames at 2048×2048. Reports include
+completed-command GPU timestamps, CPU encoding time, attachment bytes, and raw
+RGBA captures; comparisons fail above a one-byte channel difference. See
+[the measured results](../../docs/OFFSCREEN-PERFORMANCE.md).

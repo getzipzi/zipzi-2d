@@ -28,12 +28,7 @@ pub fn rasterize(
     let points: Vec<(f32, f32)> = d
         .positions
         .iter()
-        .map(|p| {
-            (
-                p.x * canvas.pixels_per_unit + canvas.origin.x,
-                canvas.origin.y - p.y * canvas.pixels_per_unit,
-            )
-        })
+        .map(|p| (p.x + canvas.origin.x, canvas.origin.y - p.y))
         .collect();
     let (mut min_x, mut min_y, mut max_x, mut max_y) = (
         f32::INFINITY,

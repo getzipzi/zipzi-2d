@@ -188,10 +188,18 @@ fn animated_glue_roundtrips_and_matches_core() {
                 .zip(&expected.positions)
                 .zip(&roundtrip.positions)
             {
-                near(a.x, e.x, imported.canvas().pixels_per_unit);
-                near(a.y, e.y, imported.canvas().pixels_per_unit);
-                near(r.x, e.x, imported.canvas().pixels_per_unit);
-                near(r.y, e.y, imported.canvas().pixels_per_unit);
+                near(
+                    a.x / imported.source_canvas().unwrap().pixels_per_unit,
+                    e.x,
+                    imported.source_canvas().unwrap().pixels_per_unit,
+                );
+                near(
+                    a.y / imported.source_canvas().unwrap().pixels_per_unit,
+                    e.y,
+                    imported.source_canvas().unwrap().pixels_per_unit,
+                );
+                near(r.x, e.x, imported.source_canvas().unwrap().pixels_per_unit);
+                near(r.y, e.y, imported.source_canvas().unwrap().pixels_per_unit);
             }
         }
     }
@@ -241,8 +249,16 @@ fn animated_glue_roundtrips_and_matches_core() {
         for actual in frame.drawables {
             let expected = runtime.get_drawable(&actual.runtime_id).unwrap();
             for (a, e) in actual.positions.iter().zip(&expected.positions) {
-                near(a.x, e.x, multi.canvas().pixels_per_unit);
-                near(a.y, e.y, multi.canvas().pixels_per_unit);
+                near(
+                    a.x / multi.source_canvas().unwrap().pixels_per_unit,
+                    e.x,
+                    multi.source_canvas().unwrap().pixels_per_unit,
+                );
+                near(
+                    a.y / multi.source_canvas().unwrap().pixels_per_unit,
+                    e.y,
+                    multi.source_canvas().unwrap().pixels_per_unit,
+                );
             }
         }
     }

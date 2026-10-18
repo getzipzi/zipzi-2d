@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let output_view = output.create_view(&wgpu::TextureViewDescriptor::default());
     let frame = DrawableFrame {
-        canvas: Canvas::new(SIDE as f32, SIDE as f32, Vec2::new(0.0, 0.0), 1.0),
+        model_space: (Canvas::new(SIDE as f32, SIDE as f32, Vec2::new(0.0, 0.0), 1.0)).into(),
         drawables: vec![Drawable {
             id: "triangle".into(),
             texture_asset_id: "solid".into(),

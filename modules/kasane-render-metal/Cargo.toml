@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+# A/B control for pixel validation and GPU measurements; keep disabled in hosts.
+benchmark-global-surfaces = []
+
 [dependencies]
 bytemuck = { workspace = true }
 kasane-core = { path = "../kasane-core" }

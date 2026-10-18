@@ -176,7 +176,7 @@ pub(crate) fn inspect_with_animation(
             );
         }
     }
-    let canvas = doc.canvas();
+    let canvas = crate::canvas::for_document(doc)?;
     if canvas.width.fract() != 0.0
         || canvas.height.fract() != 0.0
         || canvas.origin.x.fract() != 0.0
@@ -280,7 +280,6 @@ pub(crate) fn inspect_with_animation(
             }
         }
     }
-    let canvas = doc.canvas();
     if [
         canvas.width,
         canvas.height,

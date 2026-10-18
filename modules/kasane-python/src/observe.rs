@@ -40,7 +40,7 @@ type NativeFrameTuple = (
         String,
         u64,
         Vec<(String, f32, f32, bool)>,
-        (f32, f32, f32, f32, f32),
+        (f32, f32, bool),
         f32,
         (f32, f32),
         Vec<(String, bool, Option<(u32, u32, u32, u32)>)>,
@@ -72,7 +72,7 @@ fn frame_tuple(py: Python<'_>, frame: ObservedFrame) -> PyResult<NativeFrameTupl
             frame.document_id,
             frame.source_revision,
             frame.parameters,
-            frame.canvas,
+            frame.model_space,
             frame.view_scale,
             frame.view_offset,
             frame

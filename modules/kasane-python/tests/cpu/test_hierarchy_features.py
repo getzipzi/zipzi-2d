@@ -17,8 +17,8 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
     def test_queries_geometry_history_and_events(self):
         model = session()
         self.assertEqual(model.document_id, DOCUMENT)
-        self.assertEqual(model.canvas.width, 100)
-        self.assertEqual(model.canvas.origin_x, 50)
+        self.assertEqual(model.source_canvas.width, 100)
+        self.assertEqual(model.model_space.origin_x, 50)
         with model.edit("create") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
@@ -64,12 +64,12 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         before = model.version
         stale = (before[0], before[1], before[2] + 1)
         with self.assertRaises(kasane.SdkFailure) as failure:
-            model.new_project(DOCUMENT, 200, 200, (100, 100), 20, stale)
+            model.new_project(DOCUMENT, 200, 200, (100, 100), stale)
         self.assertEqual(failure.exception.code, "STALE_VERSION")
         self.assertEqual(model.version, before)
-        after = model.new_project(DOCUMENT, 200, 200, (100, 100), 20, before)
+        after = model.new_project(DOCUMENT, 200, 200, (100, 100), before)
         self.assertEqual(after[1], before[1] + 1)
-        self.assertEqual(model.canvas.width, 200)
+        self.assertEqual(model.source_canvas.width, 200)
         self.assertEqual(model.asset_ids(), [])
         self.assertEqual(model.mesh_ids(), [])
         self.assertEqual(model.history_lengths(), (0, 0))
@@ -82,14 +82,15 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
             edit.create_parameter(PARAMETER, "old", 0, 1, 0)
         before = model.version
         with model.edit("replace") as edit:
-            edit.replace_canvas(200, 100, (100, 50), 20)
+            edit.replace_model_space((100, 50))
+            edit.replace_source_canvas(kasane.CanvasSnapshot(200, 100, 100, 50, 20, 0))
             edit.replace_parameter(PARAMETER, "new", -1, 1, 0.5)
         self.assertEqual(model.version[2], before[2] + 1)
-        self.assertEqual(model.canvas.width, 200)
+        self.assertEqual(model.source_canvas.width, 200)
         self.assertEqual(model.parameter(PARAMETER).name, "new")
         self.assertEqual(model.parameter(PARAMETER).minimum, -1)
         model.undo()
-        self.assertEqual(model.canvas.width, 100)
+        self.assertEqual(model.source_canvas.width, 100)
         self.assertEqual(model.parameter(PARAMETER).name, "old")
         model.redo()
         with model.edit("erase") as edit:
@@ -143,7 +144,7 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         self.assertEqual(stale.exception.code, "STALE_HANDLE")
 
     def test_draw_order_groups_and_history_limits(self):
-        model = kasane.Session.with_history_limits(DOCUMENT, 100, 100, (50, 50), 10, 1, 10**7)
+        model = kasane.Session.with_history_limits(DOCUMENT, 100, 100, (50, 50), 1, 10**7)
         self.assertEqual(model.history_state().max_steps, 1)
         self.assertIsNone(model.draw_order_groups)
         with model.edit("create") as edit:

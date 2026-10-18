@@ -1,9 +1,9 @@
 use kasane_core::types::{
     Appearance, BindingAxis, BlendMode, BlendShapeBinding, BlendShapeConstraint,
-    BlendShapeKeyTable, Canvas, DeltaGlueKeyform, DeltaKeyforms, DeltaMeshKeyform,
-    DeltaOffscreenKeyform, DeltaPartKeyform, DeltaRotationKeyform, DeltaWarpKeyform, Glue,
-    GlueVertexPair, Mesh, MeshBinding, MeshKeyform, Offscreen, OffscreenKeyform, RotationPose,
-    SceneBinding, Status, Transform, TransformKind, Vec2,
+    BlendShapeKeyTable, DeltaGlueKeyform, DeltaKeyforms, DeltaMeshKeyform, DeltaOffscreenKeyform,
+    DeltaPartKeyform, DeltaRotationKeyform, DeltaWarpKeyform, Glue, GlueVertexPair, Mesh,
+    MeshBinding, MeshKeyform, Offscreen, OffscreenKeyform, RotationPose, SceneBinding, Status,
+    Transform, TransformKind, Vec2,
 };
 use kasane_core::Document;
 use kasane_core::{PartKeyform, RotationKeyform, SceneTrack, WarpKeyform};
@@ -141,7 +141,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
     }
 
-    if !(1..=11).contains(&root.format_version) {
+    if !(1..=13).contains(&root.format_version) {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             format!(
@@ -255,14 +255,13 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
     if !s.is_ok() {
         return Err(s);
     }
-    let canvas = Canvas::with_flag(
-        doc.canvas[0],
-        doc.canvas[1],
-        Vec2::new(doc.canvas_origin[0], doc.canvas_origin[1]),
-        doc.pixels_per_unit,
-        doc.canvas_flag,
+    let s = candidate.initialize(
+        doc.id,
+        kasane_core::ModelSetup {
+            space: doc.model_space,
+            source_canvas: doc.source_canvas,
+        },
     );
-    let s = candidate.initialize(doc.id, canvas);
     if !s.is_ok() {
         return Err(s);
     }

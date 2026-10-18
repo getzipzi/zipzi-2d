@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::document::Document;
 use crate::geometry::{to_runtime_positions, validate_positions};
-use crate::types::{BlendMode, Canvas, Status, Vec2};
+use crate::types::{BlendMode, ModelSpace, Status, Vec2};
 
 pub type PreviewValues = HashMap<String, f32>;
 
@@ -93,13 +93,36 @@ pub struct OffscreenFrame {
 pub struct DrawableFrame {
     /// Revision used to evaluate this immutable snapshot; later name edits may reuse it.
     pub source_revision: u64,
-    pub canvas: Canvas,
+    pub model_space: ModelSpace,
     pub parameters: Vec<EvaluatedParameter>,
     pub drawables: Vec<Drawable>,
     pub offscreens: Vec<OffscreenFrame>,
     pub render_plan: Vec<RenderCommand>,
     /// Editor controls evaluated in the same pose as the drawables.
     pub deformers: Vec<EvaluatedDeformer>,
+}
+
+impl DrawableFrame {
+    /// Tight AABB of evaluated vertices in Y-up model units, without export padding.
+    /// This is geometry, not an alpha/mask silhouette or a collision shape.
+    /// To include invisible geometry, obtain the frame using
+    /// `evaluate_frame_including_hidden` before passing `include_hidden = true`.
+    pub fn model_bounds(&self, include_hidden: bool) -> Option<[f64; 4]> {
+        let mut bounds = None::<[f64; 4]>;
+        for d in &self.drawables {
+            if !include_hidden && !(d.enabled && d.visible && d.opacity > 0.) {
+                continue;
+            }
+            for p in &d.positions {
+                let (x, y) = (f64::from(p.x), f64::from(p.y));
+                bounds = Some(match bounds {
+                    Some([x0, y0, x1, y1]) => [x0.min(x), y0.min(y), x1.max(x), y1.max(y)],
+                    None => [x, y, x, y],
+                });
+            }
+        }
+        bounds
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -118,7 +141,7 @@ pub fn to_parent_positions(
     positions: &[Vec2],
 ) -> Result<Vec<Vec2>, Status> {
     if parent.is_empty() {
-        to_runtime_positions(doc.canvas(), positions)
+        to_runtime_positions(doc.model_space(), positions)
     } else {
         if doc.get_transform(parent).is_none() {
             return Err(Status::error("MISSING_TRANSFORM", parent));
@@ -136,11 +159,11 @@ pub fn to_parent_origin(
     parent: &str,
     origin: crate::types::PreciseVec2,
 ) -> Result<Vec2, Status> {
-    let canvas = doc.canvas();
+    let canvas = doc.model_space();
     let p = if parent.is_empty() {
         Vec2::new(
-            ((origin.x - canvas.origin.x as f64) / canvas.pixels_per_unit as f64) as f32,
-            ((canvas.origin.y as f64 - origin.y) / canvas.pixels_per_unit as f64) as f32,
+            (origin.x - canvas.origin.x as f64) as f32,
+            (canvas.origin.y as f64 - origin.y) as f32,
         )
     } else {
         Vec2::new(origin.x as f32, origin.y as f32)

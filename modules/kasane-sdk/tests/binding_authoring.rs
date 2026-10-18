@@ -99,15 +99,15 @@ fn complete_binding_interpolates_and_undoes_with_parameter() {
     assert_eq!(sdk.parameter_ids(), &[PARAMETER_ID]);
     assert_eq!(sdk.binding_ids(), &[BINDING_ID]);
     assert_eq!(sdk.binding_for_mesh(MESH_ID).unwrap().id, BINDING_ID);
-    assert_eq!(sample(&sdk, 0.0), (0.0, -1.0, false));
-    assert_eq!(sample(&sdk, 0.5), (0.5, -0.5, false));
+    assert_eq!(sample(&sdk, 0.0), (0.0, -10.0, false));
+    assert_eq!(sample(&sdk, 0.5), (0.5, -5.0, false));
     assert_eq!(sample(&sdk, 1.0), (1.0, 0.0, false));
     assert_eq!(sample(&sdk, 2.0), (1.0, 0.0, true));
     sdk.undo().unwrap();
     assert!(sdk.parameter_ids().is_empty());
     assert!(sdk.binding_ids().is_empty());
     sdk.redo().unwrap();
-    assert_eq!(sample(&sdk, 0.5), (0.5, -0.5, false));
+    assert_eq!(sample(&sdk, 0.5), (0.5, -5.0, false));
 }
 
 #[test]
@@ -154,14 +154,14 @@ fn keyform_replacement_and_repeat_mapping_use_core_rules() {
         edit.create_binding(b)
     })
     .unwrap();
-    assert_eq!(sample(&sdk, 1.25), (0.25, -0.75, false));
+    assert_eq!(sample(&sdk, 1.25), (0.25, -7.5, false));
     let mut form = sdk.binding(BINDING_ID).unwrap().keyforms[1].clone();
     form.positions.iter_mut().for_each(|p| p.x += 10.0);
     sdk.edit("change form", None, |edit| {
         edit.set_mesh_keyform(BINDING_ID, form)
     })
     .unwrap();
-    assert_eq!(sample(&sdk, 1.25), (0.25, -0.5, false));
+    assert_eq!(sample(&sdk, 1.25), (0.25, -5.0, false));
     let mut binding = sdk.binding(BINDING_ID).unwrap();
     binding.keyforms[1]
         .positions
@@ -169,5 +169,5 @@ fn keyform_replacement_and_repeat_mapping_use_core_rules() {
         .for_each(|p| p.x += 10.0);
     sdk.edit("replace table", None, |edit| edit.replace_binding(binding))
         .unwrap();
-    assert_eq!(sample(&sdk, 1.25), (0.25, -0.25, false));
+    assert_eq!(sample(&sdk, 1.25), (0.25, -2.5, false));
 }

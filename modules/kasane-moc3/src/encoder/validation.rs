@@ -63,16 +63,6 @@ pub(super) fn validate_preflight(
         ));
     }
 
-    if !(doc.canvas().height - doc.canvas().origin.y).is_finite() {
-        return Err(Status::error(
-            "NON_FINITE",
-            format!(
-                "{}.canvas.origin: runtime origin overflows float32",
-                doc.id()
-            ),
-        ));
-    }
-
     for d in drawables {
         if !is_representable(&d.runtime_id) {
             return Err(Status::error(

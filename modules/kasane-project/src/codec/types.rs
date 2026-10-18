@@ -382,18 +382,12 @@ fn is_enabled(value: &bool) -> bool {
     *value
 }
 
-fn default_canvas_flag() -> u8 {
-    1
-}
-
 #[derive(Serialize, Deserialize)]
 pub(super) struct DocumentWire {
     pub(super) id: String,
-    pub(super) canvas: [f32; 2],
-    pub(super) canvas_origin: [f32; 2],
-    pub(super) pixels_per_unit: f32,
-    #[serde(default = "default_canvas_flag")]
-    pub(super) canvas_flag: u8,
+    pub(super) model_space: kasane_core::ModelSpace,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) source_canvas: Option<kasane_core::Canvas>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) draw_order_groups: Option<Vec<DrawOrderGroup>>,
     pub(super) assets: Vec<ImageAsset>,

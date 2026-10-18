@@ -77,7 +77,7 @@ texture = Path(argv[1]).resolve(strict=True)
 output = Path(argv[2]).resolve()
 document_id, asset_id, mesh_id = (str(uuid4()) for _ in range(3))
 
-session = kasane.Session(document_id, 100, 100, (50, 50), 10)
+session = kasane.Session(document_id, origin=(50, 50))
 with session.edit("create face") as edit:
     edit.add_png_asset(asset_id, "face texture", texture)
     edit.create_rectangle(mesh_id, "face", asset_id, (40, 40), (60, 60))
@@ -95,6 +95,11 @@ Run `uv run --locked python first_project.py /absolute/texture.png /absolute/out
 `Session.save()` does not overwrite an unrelated project. For a new numbered
 destination when one exists, pass `on_exists="new"` and use the returned
 `SaveResult.manifest`.
+
+Models use an unbounded coordinate space. `session.model_space` describes the
+origin, unit scale and orientation. `session.source_canvas` is optional import
+metadata; it does not constrain geometry or viewport fitting. Default sessions
+have origin `(0, 0)` and one source pixel per model unit.
 
 ## Parameterized mesh
 
@@ -165,7 +170,7 @@ Expression parameter values and evaluated geometry without editing the project.
 Create another preview after changing model content.
 
 ```python
-session = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
 result = session.import_model3(Path("/absolute/model.model3.json"))
 print(result.moc_version, result.diagnostics, result.warnings)
 

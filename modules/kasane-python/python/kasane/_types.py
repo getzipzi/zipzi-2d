@@ -128,7 +128,7 @@ class ObservedFrame(NamedTuple):
     document_id: str
     source_revision: int
     parameters: list[ParameterSample]
-    canvas: CanvasSnapshot
+    model_space: ModelSpaceSnapshot
     view_scale: float
     view_offset: Point
     drawable_bounds: list[DrawableBounds]
@@ -176,35 +176,48 @@ class AssetSnapshot(NamedTuple):
 
 
 class CanvasSnapshot(NamedTuple):
-    """Canvas pixel size, origin, and pixels-per-runtime-unit scale."""
+    """Optional source-format rectangle; independent of current model coordinates."""
 
     width: float
     height: float
     origin_x: float
     origin_y: float
     pixels_per_unit: float
+    flag: int = 1
 
     @property
     def origin(self) -> Point:
-        """Canvas origin as the same ``(x, y)`` pair accepted by Session."""
+        return (self.origin_x, self.origin_y)
+
+
+class ModelSpaceSnapshot(NamedTuple):
+    """Unbounded model coordinates and source orientation, in pixel-sized units."""
+
+    origin_x: float
+    origin_y: float
+    y_axis_down: bool
+
+    @property
+    def origin(self) -> Point:
+        """Authored origin as the same ``(x, y)`` pair accepted by Session."""
         return (self.origin_x, self.origin_y)
 
     def runtime_to_source(self, point: Point) -> Point:
-        """Convert an evaluated drawable's world runtime point to canvas pixels.
+        """Convert an evaluated drawable's world runtime point to source pixels.
 
         This also works when the drawable has a deformer parent. Do not pass
         parent-local ``geometry.positions`` directly.
         """
-        return (self.origin_x + point[0] * self.pixels_per_unit,
-                self.origin_y - point[1] * self.pixels_per_unit)
+        return (self.origin_x + point[0],
+                self.origin_y + (-1 if self.y_axis_down else 1) * point[1])
 
     def source_to_runtime(self, point: Point) -> Point:
-        """Convert a canvas pixel point to world runtime coordinates.
+        """Convert a source pixel point to world runtime coordinates.
 
         The result is not a parent-local mesh geometry position.
         """
-        return ((point[0] - self.origin_x) / self.pixels_per_unit,
-                (self.origin_y - point[1]) / self.pixels_per_unit)
+        return ((point[0] - self.origin_x),
+                (-1 if self.y_axis_down else 1) * (point[1] - self.origin_y))
 
 
 class DrawOrderGroup(NamedTuple):
@@ -670,7 +683,7 @@ class EvaluationSnapshot(NamedTuple):
 
     version: Version
     source_revision: int
-    canvas: CanvasSnapshot
+    model_space: ModelSpaceSnapshot
     parameters: list[ParameterSample]
     drawables: list[DrawableSnapshot]
     offscreens: list[EvaluatedOffscreenSnapshot]

@@ -46,8 +46,8 @@ pub use validation::*;
 use crate::draw_order::DrawOrderGroup;
 use crate::types::{
     BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas, ChangeKind, ChangeSet,
-    DocumentEdit, EditResult, Glue, ImageAsset, Mesh, MeshBinding, Offscreen, Parameter, Part,
-    SceneBinding, Status, Transform, VertexId,
+    DocumentEdit, EditResult, Glue, ImageAsset, Mesh, MeshBinding, ModelSetup, ModelSpace,
+    Offscreen, Parameter, Part, SceneBinding, Status, Transform, VertexId,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
@@ -95,7 +95,8 @@ pub(super) struct DocumentLookup {
 #[derive(Debug, Clone, Default, PartialEq)]
 struct DocumentContent {
     id: String,
-    canvas: Canvas,
+    model_space: ModelSpace,
+    source_canvas: Option<Canvas>,
     assets: HashMap<String, ImageAsset>,
     asset_order: Vec<String>,
     parts: HashMap<String, Part>,
@@ -137,13 +138,13 @@ struct DocumentContent {
 }
 
 impl Document {
-    pub const SCHEMA_VERSION: u32 = 3;
+    pub const SCHEMA_VERSION: u32 = 5;
 
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn initialize(&mut self, id: impl Into<String>, canvas: Canvas) -> Status {
+    pub fn initialize(&mut self, id: impl Into<String>, setup: impl Into<ModelSetup>) -> Status {
         if self.initialized() {
             return Status::error(
                 "ALREADY_INITIALIZED",
@@ -154,22 +155,16 @@ impl Document {
         if !valid_uuid(&id_str) {
             return Status::error("INVALID_ID", "Use a nonzero canonical lowercase UUID.");
         }
-        if !canvas.width.is_finite()
-            || !canvas.height.is_finite()
-            || canvas.width <= 0.0
-            || canvas.height <= 0.0
-            || !canvas.origin.x.is_finite()
-            || !canvas.origin.y.is_finite()
-            || !canvas.pixels_per_unit.is_finite()
-            || canvas.pixels_per_unit <= 0.0
-        {
+        let setup = setup.into();
+        if !setup.is_valid() {
             return Status::error(
-                "INVALID_CANVAS",
-                "Canvas dimensions must be finite and positive.",
+                "INVALID_MODEL_SPACE",
+                "Model coordinates must be finite with positive scale; a source canvas must have positive finite dimensions.",
             );
         }
         self.content.id = id_str;
-        self.content.canvas = canvas;
+        self.content.model_space = setup.space;
+        self.content.source_canvas = setup.source_canvas;
         self.modified_cache.take();
         Status::ok()
     }
@@ -182,8 +177,19 @@ impl Document {
         &self.content.id
     }
 
-    pub fn canvas(&self) -> Canvas {
-        self.content.canvas
+    pub fn model_space(&self) -> ModelSpace {
+        self.content.model_space
+    }
+
+    pub fn source_canvas(&self) -> Option<Canvas> {
+        self.content.source_canvas
+    }
+
+    pub fn model_setup(&self) -> ModelSetup {
+        ModelSetup {
+            space: self.model_space(),
+            source_canvas: self.source_canvas(),
+        }
     }
 
     pub fn missing_attachments(&self) -> &[String] {

@@ -88,7 +88,7 @@ fn local_mao_exports_linked_editable_cubism_projects() {
         )
         .is_ok());
         assert_eq!(frame.drawables.len(), 260);
-        let canvas = document.canvas();
+        let canvas = document.source_canvas().unwrap();
         let positions: BTreeMap<_, Vec<[f32; 2]>> = frame
             .drawables
             .iter()
@@ -97,12 +97,7 @@ fn local_mao_exports_linked_editable_cubism_projects() {
                     mesh.runtime_id.clone(),
                     mesh.positions
                         .iter()
-                        .map(|point| {
-                            [
-                                point.x * canvas.pixels_per_unit + canvas.origin.x,
-                                canvas.origin.y - point.y * canvas.pixels_per_unit,
-                            ]
-                        })
+                        .map(|point| [point.x + canvas.origin.x, canvas.origin.y - point.y])
                         .collect(),
                 )
             })

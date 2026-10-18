@@ -291,7 +291,7 @@ fn write_case(out_dir: &Path, name: &str, bytes: &[u8], doc: &Document) {
     .unwrap();
     fs::write(
         case_dir.join("ppu.txt"),
-        doc.canvas().pixels_per_unit.to_string(),
+        doc.source_canvas().unwrap().pixels_per_unit.to_string(),
     )
     .unwrap();
     let parameters: Vec<_> = doc
@@ -300,7 +300,7 @@ fn write_case(out_dir: &Path, name: &str, bytes: &[u8], doc: &Document) {
         .map(|id| doc.get_parameter(id).unwrap())
         .collect();
     fs::write(case_dir.join("metadata.json"), serde_json::to_vec_pretty(&serde_json::json!({
-        "canvas": doc.canvas(), "parameters": parameters,
+        "canvas": doc.source_canvas().unwrap(), "parameters": parameters,
         "textures": doc.asset_order().iter().map(|id| doc.get_asset(id).unwrap()).collect::<Vec<_>>()
     })).unwrap()).unwrap();
     println!("{name}: {} samples", samples.len());

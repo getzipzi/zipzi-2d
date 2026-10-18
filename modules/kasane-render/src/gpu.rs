@@ -29,8 +29,8 @@ pub fn append_vertices_for(drawable: &Drawable, frame: &DrawableFrame, out: &mut
             .zip(drawable.uvs.iter())
             .map(|(position, uv)| {
                 let pixel = Vec2::new(
-                    position.x * frame.canvas.pixels_per_unit + frame.canvas.origin.x,
-                    frame.canvas.origin.y - position.y * frame.canvas.pixels_per_unit,
+                    position.x + frame.model_space.origin.x,
+                    frame.model_space.origin.y - position.y,
                 );
                 Vertex {
                     position: [pixel.x, pixel.y],
@@ -151,8 +151,8 @@ pub fn mask_layout(
             .ok_or_else(|| Status::error("INVALID_MASK", source_id))?;
         for position in &drawable.positions {
             let point = Vec2::new(
-                position.x * frame.canvas.pixels_per_unit + frame.canvas.origin.x,
-                frame.canvas.origin.y - position.y * frame.canvas.pixels_per_unit,
+                position.x + frame.model_space.origin.x,
+                frame.model_space.origin.y - position.y,
             );
             bounds = Some(bounds.map_or((point, point), |(min, max)| {
                 (

@@ -142,7 +142,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let mut frame = DrawableFrame {
-        canvas: Canvas::new(WIDTH as f32, HEIGHT as f32, Vec2::default(), 1.0),
+        model_space: (Canvas::new(WIDTH as f32, HEIGHT as f32, Vec2::default(), 1.0)).into(),
         ..Default::default()
     };
     for color in 0..18_u32 {

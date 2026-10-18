@@ -349,7 +349,7 @@ fn mixed_gesture_commits_one_checkpoint_and_tracks_saved_baselines() {
     }
     // Canvas and opacity used to be barriers in the field-based history.
     let canvas = Canvas::new(200., 150., Vec2::new(50., 50.), 10.);
-    gesture.replace_canvas(canvas).unwrap();
+    gesture.replace_model_setup(canvas).unwrap();
     gesture.set_mesh_opacity(MESH, 0.4).unwrap();
     assert!(sdk.document().same_content(&original));
     assert_eq!(sdk.version(), before);
@@ -368,7 +368,7 @@ fn mixed_gesture_commits_one_checkpoint_and_tracks_saved_baselines() {
         Vec2::new(99., 1.)
     );
     assert_eq!(sdk.mesh(MESH).unwrap().appearance.opacity, 0.4);
-    assert_eq!(sdk.canvas(), canvas);
+    assert_eq!(sdk.source_canvas().unwrap(), canvas);
 
     sdk.undo().unwrap();
     assert_eq!(sdk.mesh(MESH).unwrap(), original_mesh);
@@ -449,9 +449,12 @@ fn publication_failure_preserves_checkpoint_history_and_saved_baseline() {
     saved.save_project(&path, None).unwrap();
     let original = saved.mesh(MESH).unwrap();
     let manifest = fs::read(saved.project_path().unwrap()).unwrap();
-    let mut sdk =
-        AuthoringSession::with_filesystem(DOCUMENT, saved.canvas(), Arc::new(FailPsdPublish))
-            .unwrap();
+    let mut sdk = AuthoringSession::with_filesystem(
+        DOCUMENT,
+        saved.source_canvas().unwrap(),
+        Arc::new(FailPsdPublish),
+    )
+    .unwrap();
     sdk.open_project(&path, None).unwrap();
     sdk.edit("unsaved", None, |edit| {
         edit.rename_mesh(MESH, "unsaved")?;

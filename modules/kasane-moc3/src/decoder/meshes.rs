@@ -12,8 +12,6 @@ impl<'a> Moc3DecoderContext<'a> {
         let counts = &self.inspection.counts;
         let offsets = &self.inspection.section_offsets;
         let ver = self.inspection.version_number;
-        let ppu = self.inspection.canvas.pixels_per_unit;
-        let canvas_origin = self.doc.canvas().origin;
 
         let mut mesh_bindings = Vec::new();
         let mut mesh_masks = Vec::new();
@@ -86,8 +84,6 @@ impl<'a> Moc3DecoderContext<'a> {
             } else {
                 String::new()
             };
-
-            let is_root = deformer_id.is_empty();
 
             let slot = if tex_no >= 0 { tex_no as usize } else { 0 };
             let texture_asset_id = if let Some(t) = self.texture_by_slot.get(&slot) {
@@ -252,14 +248,7 @@ impl<'a> Moc3DecoderContext<'a> {
                         self.bytes,
                         offsets[section::KEY_POS_SRC_XY] as usize + (pos_off + v * 2 + 1) * 4,
                     )?;
-                    if is_root {
-                        positions.push(Vec2::new(
-                            rx * ppu + canvas_origin.x,
-                            canvas_origin.y - ry * ppu,
-                        ));
-                    } else {
-                        positions.push(Vec2::new(rx, ry));
-                    }
+                    positions.push(self.import_point(&deformer_id, rx, ry));
                 }
 
                 let mut appearance = self.get_colors(section::ART_MESH_SRC_KEY_COLOR_OFF, m, k)?;

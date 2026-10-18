@@ -31,7 +31,7 @@ PARAMETER = "00000000-0000-4000-8000-000000000010"
 
 class GpuWheelTests(unittest.TestCase):
     def test_batch_resolves_names_from_one_snapshot_and_rejects_ambiguity(self):
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("duplicate names") as edit:
             edit.create_parameter(PARAMETER, "Same", -1, 1, 0)
             edit.create_parameter(PART, "Same", -1, 1, 0)
@@ -48,7 +48,7 @@ class GpuWheelTests(unittest.TestCase):
             kasane.RawInspectionRequest((0, 0, 100, 100), (4096, 4096))
 
     def test_raw_packet_profiles_reopen_with_explicit_capabilities(self):
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("packet fixture") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
@@ -123,7 +123,7 @@ print('PACKET_REOPEN_OK')
             self.assertTrue(extended.capabilities["rerender_scene"])
 
     def test_animation_capture_preserves_pose_part_opacity(self):
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("two pose parts") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_part(PART, "first")
@@ -152,7 +152,7 @@ print('PACKET_REOPEN_OK')
             self.assertEqual(preview.snapshot().part_opacities[PART_B], 0)
 
     def test_frozen_scene_roi_reopens_without_live_session(self):
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("base") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
@@ -245,7 +245,7 @@ print('REOPEN_OK')
                + chunk(b"IHDR", struct.pack(">IIBBBBB", width, 1, 8, 6, 0, 0, 0))
                + chunk(b"IDAT", zlib.compress(b"\x00" + b"\xff\x00\x00\xff" * width))
                + chunk(b"IEND", b""))
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("base") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
@@ -265,7 +265,7 @@ print('REOPEN_OK')
                 self.assertEqual(observer.observe(model).width, 64)
 
     def test_crop_keeps_mask_and_offscreen_composition(self):
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("layered scene") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_part(PART, "group")
@@ -303,7 +303,7 @@ print('REOPEN_OK')
 
     def test_observer_reuses_device_and_tracks_content(self):
         self.assertTrue(kasane.capabilities()["gpu_observation"])
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("base") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
@@ -326,7 +326,9 @@ print('REOPEN_OK')
                     (50, 40), (70, 40), (70, 60), (50, 60),
                 ])
             second = observer.observe(model)
-            self.assertNotEqual(first.rgba, second.rgba)
+            # Automatic fitting follows the translated content.
+            self.assertEqual(first.rgba, second.rgba)
+            self.assertNotEqual(first.view_offset, second.view_offset)
             self.assertNotEqual(first.input_sha256, second.input_sha256)
             self.assertEqual(second.texture_revisions[0].revision, first_revision)
             with TemporaryDirectory() as directory:
@@ -406,7 +408,7 @@ print('REOPEN_OK')
     def test_rectangle_grid_remesh_keeps_bound_appearance(self):
         parameter_id = "00000000-0000-4000-8000-000000000020"
         binding_id = "00000000-0000-4000-8000-000000000021"
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("bound rectangle") as edit:
             edit.add_png_asset(ASSET, "asymmetric", TEXTURE)
             edit.create_rectangle(MESH, "face", ASSET, (20, 20), (80, 80))
@@ -416,9 +418,15 @@ print('REOPEN_OK')
                 kasane.MeshKeyform([1], [(20, 20), (76, 18), (67, 82), (21, 77)]),
             ])
         with kasane.Observer(256, 256, 256) as observer:
-            before = [observer.observe(model, {"Turn": value}).rgba for value in (0, 0.5, 1)]
+            def render(value):
+                scene = observer.capture_scene(model, {"Turn": value})
+                return observer.render_scene(
+                    scene, roi=(0, 0, 100, 100), resolution=(256, 256),
+                ).frame.rgba
+
+            before = [render(value) for value in (0, 0.5, 1)]
             model.remesh_rectangle_grid(MESH, 8, 8)
-            after = [observer.observe(model, {"Turn": value}).rgba for value in (0, 0.5, 1)]
+            after = [render(value) for value in (0, 0.5, 1)]
         for original, remeshed in zip(before, after):
             pixel_deltas = [
                 max(abs(a - b) for a, b in zip(original[i:i + 4], remeshed[i:i + 4]))
@@ -431,7 +439,7 @@ print('REOPEN_OK')
 
 class SpatialObservationTests(unittest.TestCase):
     def test_nested_part_focus_hit_test_and_analysis_reopen(self):
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("spatial fixture") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_part(PART, "head")
@@ -507,7 +515,7 @@ class SpatialObservationTests(unittest.TestCase):
                 self.assertEqual(len(repeated.crops), 1)
 
     def test_focus_scenes_fixed_union_and_hidden_geometry(self):
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         with model.edit("initial") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_rectangle(MESH, "target", ASSET, (10, 30), (30, 50))

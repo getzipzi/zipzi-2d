@@ -21,6 +21,44 @@ fn field<'a, 'input>(node: roxmltree::Node<'a, 'input>, name: &str) -> roxmltree
         .unwrap()
 }
 
+fn exported_origin(xml: &roxmltree::Document<'_>) -> Vec2 {
+    let info = xml
+        .descendants()
+        .find(|n| n.tag_name().name() == "CModelInfo")
+        .unwrap();
+    let origin = field(info, "originInPixels");
+    Vec2::new(
+        field(origin, "x").text().unwrap().parse().unwrap(),
+        field(origin, "y").text().unwrap().parse().unwrap(),
+    )
+}
+
+fn assert_translated_positions(
+    xml: &roxmltree::Document<'_>,
+    node: roxmltree::Node<'_, '_>,
+    expected: &[f32],
+) {
+    let origin = exported_origin(xml);
+    let actual: Vec<f32> = node
+        .text()
+        .unwrap()
+        .split_whitespace()
+        .map(|v| v.parse().unwrap())
+        .collect();
+    assert_eq!(actual.len(), expected.len());
+    for (i, (&actual, &source)) in actual.iter().zip(expected).enumerate() {
+        let offset = if i % 2 == 0 {
+            origin.x - 20.
+        } else {
+            origin.y - 30.
+        };
+        assert!(
+            (actual - source - offset).abs() < 0.0001,
+            "{actual} vs {source} + {offset}"
+        );
+    }
+}
+
 #[test]
 fn self_contained_graph_and_signed_xor_keys() {
     let (d, png) = fixture();
@@ -83,9 +121,10 @@ fn self_contained_graph_and_signed_xor_keys() {
             .filter(|n| n.tag_name().name() == "CArtMeshForm" && n.has_attribute("xs.id"))
             .collect();
         assert_eq!(forms.len(), 3);
-        assert_eq!(
-            field(forms[0], "positions").text(),
-            Some("4 12 100 12 4 60")
+        assert_translated_positions(
+            &xml,
+            field(forms[0], "positions"),
+            &[4., 12., 100., 12., 4., 60.],
         );
         assert_eq!(
             xml.descendants()
@@ -236,7 +275,11 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
                 && field(field(field(*n, "super"), "super"), "guid").attribute("uuid") == Some(uuid)
         })
         .unwrap();
-    assert_eq!(field(form, "positions").text(), Some("10 15 106 15 10 63"));
+    assert_translated_positions(
+        &xml,
+        field(form, "positions"),
+        &[10., 15., 106., 15., 10., 63.],
+    );
     assert_eq!(field(field(form, "super"), "opacity").text(), Some("0.75"));
     assert_eq!(field(field(form, "super"), "drawOrder").text(), Some("10"));
     assert_eq!(
@@ -247,9 +290,9 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
     );
     assert!(text.contains("<?version KeyFormMorphTarget:2?>"));
 
-    let mut canvas = d.canvas();
+    let mut canvas = d.source_canvas().unwrap();
     canvas.flag = 0;
-    assert!(d.replace_canvas(canvas).status.is_ok());
+    assert!(d.replace_model_setup(canvas).status.is_ok());
     let reversed = encode(&d, &png, 1);
     write_probe_artifact("reversed-morph", &reversed);
     let entries = archive(&reversed.bytes);
@@ -268,7 +311,11 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
                 && field(field(field(*n, "super"), "super"), "guid").attribute("uuid") == Some(uuid)
         })
         .unwrap();
-    assert_eq!(field(form, "positions").text(), Some("10 45 106 45 10 -3"));
+    assert_translated_positions(
+        &xml,
+        field(form, "positions"),
+        &[10., 45., 106., 45., 10., -3.],
+    );
 }
 
 #[test]
@@ -366,10 +413,11 @@ fn offscreen_material_and_keyed_glue_remain_editable() {
                 && field(field(*n, "super"), "id").attribute("idstr") == Some("ArtMesh")
         })
         .unwrap();
-    assert_eq!(
-        field(mesh_source, "positions").text(),
-        Some("8 12 104 12 8 60"),
-        "Editable source geometry must not have Glue applied twice"
+    // Editable source geometry must not have Glue applied twice.
+    assert_translated_positions(
+        &xml,
+        field(mesh_source, "positions"),
+        &[8., 12., 104., 12., 8., 60.],
     );
     let glue = xml
         .descendants()
@@ -508,7 +556,10 @@ fn parts_panel_reverses_nested_render_ties_without_reversing_draw_order_values()
         assert!(
             kasane_core::evaluation::evaluate_frame_including_hidden(&d, &pose, &mut frame).is_ok()
         );
-        let canvas = d.canvas();
+        let canvas = Canvas {
+            origin: exported_origin(&xml),
+            ..d.source_canvas().unwrap()
+        };
         let positions: std::collections::BTreeMap<_, Vec<_>> = frame
             .drawables
             .iter()
@@ -517,12 +568,7 @@ fn parts_panel_reverses_nested_render_ties_without_reversing_draw_order_values()
                     mesh.runtime_id.clone(),
                     mesh.positions
                         .iter()
-                        .map(|p| {
-                            [
-                                p.x * canvas.pixels_per_unit + canvas.origin.x,
-                                canvas.origin.y - p.y * canvas.pixels_per_unit,
-                            ]
-                        })
+                        .map(|p| [p.x + canvas.origin.x, canvas.origin.y - p.y])
                         .collect(),
                 )
             })
@@ -543,9 +589,9 @@ fn parts_panel_reverses_nested_render_ties_without_reversing_draw_order_values()
 #[test]
 fn canvas_reversal_matches_runtime_geometry_texture_uvs_and_triangle_orientation() {
     let (mut doc, png) = fixture();
-    let mut canvas = doc.canvas();
+    let mut canvas = doc.source_canvas().unwrap();
     canvas.flag = 0;
-    assert!(doc.replace_canvas(canvas).status.is_ok());
+    assert!(doc.replace_model_setup(canvas).status.is_ok());
     let before = doc.clone();
     let artifact = encode(&doc, &png, 1);
     let entries = archive(&artifact.bytes);
@@ -558,16 +604,15 @@ fn canvas_reversal_matches_runtime_geometry_texture_uvs_and_triangle_orientation
     assert_eq!(field(mesh, "indices").text(), Some("0 2 1"));
     let mut frame = kasane_core::DrawableFrame::default();
     assert!(kasane_core::evaluation::evaluate_frame(&doc, &Default::default(), &mut frame).is_ok());
+    let canvas = Canvas {
+        origin: exported_origin(&xml),
+        ..canvas
+    };
     let drawable = &frame.drawables[0];
     let expected: Vec<_> = drawable
         .positions
         .iter()
-        .flat_map(|p| {
-            [
-                p.x * canvas.pixels_per_unit + canvas.origin.x,
-                canvas.origin.y - p.y * canvas.pixels_per_unit,
-            ]
-        })
+        .flat_map(|p| [p.x + canvas.origin.x, canvas.origin.y - p.y])
         .collect();
     let actual: Vec<f32> = field(mesh, "positions")
         .text()

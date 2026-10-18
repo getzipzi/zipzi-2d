@@ -6,7 +6,7 @@ use super::pipeline::{sampler, Pipelines};
 use super::{MetalContext, MetalTargetConfig, MetalTextureCatalog};
 use kasane_core::{evaluation::DrawableFrame, Status, Vec2};
 use kasane_render::gpu::{append_vertices_for, quad_indices, quad_vertices, Vertex};
-use kasane_render::{surface_layout, Affine2, ScenePlan, ViewportConfig};
+use kasane_render::{surface_layout_bounds, Affine2, ScenePlan, ViewportConfig};
 use metal::{CommandQueue, Device, SamplerState, Texture};
 use std::{collections::HashMap, sync::Arc};
 
@@ -114,7 +114,7 @@ impl MetalRenderer {
         let canvas_changed = self
             .frame
             .as_ref()
-            .is_none_or(|previous| previous.canvas != frame.canvas);
+            .is_none_or(|previous| previous.model_space != frame.model_space);
         for (i, drawable) in frame.drawables.iter().enumerate() {
             let prior = self
                 .frame
@@ -220,8 +220,8 @@ impl MetalRenderer {
                 "Mask scale must be positive and finite.",
             ));
         }
-        let (size, _) = surface_layout(
-            Vec2::new(self.scene.canvas().width, self.scene.canvas().height),
+        let (size, _) = surface_layout_bounds(
+            self.scene.effective_bounds(),
             viewport.transform,
             viewport.target_extent,
         )?;

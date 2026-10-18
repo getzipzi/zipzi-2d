@@ -104,7 +104,7 @@ def main() -> None:
         ARCHIVE.unlink()
 
     session = kasane.Session("00000000-0000-4000-8000-000000000001",
-                             64, 64, (32, 32), 1)
+                             64, 64, (32, 32))
     imported = session.import_model3(SOURCE)
     check(not session.validate_structure(), "imported document has structure issues")
     check(not session.diagnose_resources(), "imported document has resource issues")
@@ -249,7 +249,7 @@ def main() -> None:
         check(len(physics["frames"]) == 120,
               "Framework Physics sequence was incomplete")
         detached_session = kasane.Session(
-            "00000000-0000-4000-8000-000000000002", 64, 64, (32, 32), 1
+            "00000000-0000-4000-8000-000000000002", 64, 64, (32, 32)
         )
         detached_session.import_model3(detached_model3)
         check(len(detached_session.motion_ids()) == 7

@@ -74,23 +74,39 @@ impl NativeEdit {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn replace_canvas(
+    fn replace_model_space(
         &mut self,
         py: Python<'_>,
-        width: f32,
-        height: f32,
         origin_x: f32,
         origin_y: f32,
-        pixels_per_unit: f32,
+        y_axis_down: bool,
     ) -> PyResult<()> {
-        self.ensure_open(py, "replace_canvas")?;
+        self.ensure_open(py, "replace_model_space")?;
         self.commands
-            .push(Command::ReplaceCanvas(Canvas::new(
-                width,
-                height,
-                Vec2::new(origin_x, origin_y),
-                pixels_per_unit,
+            .push(Command::ReplaceModelSpace(ModelSpace {
+                origin: Vec2::new(origin_x, origin_y),
+                y_axis_down,
+            }))
+            .map_err(|error| sdk_failure(py, error))?;
+        Ok(())
+    }
+
+    #[pyo3(signature = (canvas))]
+    fn replace_source_canvas(
+        &mut self,
+        py: Python<'_>,
+        canvas: Option<(f32, f32, f32, f32, f32, u8)>,
+    ) -> PyResult<()> {
+        self.ensure_open(py, "replace_source_canvas")?;
+        self.commands
+            .push(Command::ReplaceSourceCanvas(canvas.map(
+                |(width, height, x, y, pixels_per_unit, flag)| Canvas {
+                    width,
+                    height,
+                    origin: Vec2::new(x, y),
+                    pixels_per_unit,
+                    flag,
+                },
             )))
             .map_err(|error| sdk_failure(py, error))?;
         Ok(())

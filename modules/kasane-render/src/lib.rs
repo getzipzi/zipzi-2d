@@ -16,8 +16,8 @@ use kasane_core::types::Vec2;
 
 pub use plan::{build_plan, prepare_frame};
 pub use scene::{
-    surface_layout, Bounds2, MaskId, MaskPlan, MeshId, MeshPlan, ScenePlan, TargetId, TargetItem,
-    TargetPlan,
+    surface_layout, surface_layout_bounds, Bounds2, MaskId, MaskPlan, MeshId, MeshPlan, ScenePlan,
+    TargetId, TargetItem, TargetPlan,
 };
 pub use validation::validate_frame;
 

@@ -177,6 +177,7 @@ struct TextureSet {
 
 struct Exporter<'a> {
     doc: &'a Document,
+    canvas: Canvas,
     graph: Graph,
     sources: HashMap<String, N>,
     images: Vec<(String, Vec<u8>)>,
@@ -225,7 +226,7 @@ impl<'a> Exporter<'a> {
     /// coordinates have no equivalent flag, so bake its global reflection into
     /// root coordinates and the orientation of every rotation deformer.
     fn canvas_reversed(&self) -> bool {
-        self.doc.canvas().flag & 1 == 0
+        !self.doc.model_space().y_axis_down
     }
     fn rotation_sign(&self) -> f32 {
         if self.canvas_reversed() {
@@ -235,21 +236,38 @@ impl<'a> Exporter<'a> {
         }
     }
     fn source_positions(&self, parent: &str, values: &[Vec2]) -> N {
-        if parent.is_empty() && self.canvas_reversed() {
-            let origin_y = self.doc.canvas().origin.y;
+        if parent.is_empty() {
             points(
                 &values
                     .iter()
-                    .map(|p| Vec2::new(p.x, 2. * origin_y - p.y))
+                    .map(|p| {
+                        Vec2::new(
+                            self.source_origin_x(parent, f64::from(p.x)) as f32,
+                            self.source_origin_y(parent, f64::from(p.y)) as f32,
+                        )
+                    })
                     .collect::<Vec<_>>(),
             )
         } else {
             points(values)
         }
     }
+    fn source_origin_x(&self, parent: &str, value: f64) -> f64 {
+        if parent.is_empty() {
+            value + f64::from(self.canvas.origin.x) - f64::from(self.doc.model_space().origin.x)
+        } else {
+            value
+        }
+    }
     fn source_origin_y(&self, parent: &str, value: f64) -> f64 {
-        if parent.is_empty() && self.canvas_reversed() {
-            2. * f64::from(self.doc.canvas().origin.y) - value
+        if parent.is_empty() {
+            let old_origin = f64::from(self.doc.model_space().origin.y);
+            let value = if self.canvas_reversed() {
+                2. * old_origin - value
+            } else {
+                value
+            };
+            value + f64::from(self.canvas.origin.y) - old_origin
         } else {
             value
         }
@@ -386,7 +404,7 @@ impl<'a> Exporter<'a> {
         let meshes = self.meshes(&textures.bindings);
         let glues = self.glues();
         let (parameters, groups, root_group) = self.parameters();
-        let canvas = self.doc.canvas();
+        let canvas = self.canvas;
         let physics = self.physics();
         let root = N::new("CModelSource")
             .attr("isDefaultKeyformLocked", false)
@@ -592,7 +610,7 @@ pub(crate) fn encode_with_animation(
     if !status.is_ok() {
         return Err(Cmo3Error::InvalidDocument(status.message));
     }
-    let canvas = doc.canvas();
+    let canvas = crate::canvas::for_document(doc)?;
     let rest = frame
         .drawables
         .into_iter()
@@ -601,18 +619,14 @@ pub(crate) fn encode_with_animation(
                 d.id,
                 d.positions
                     .into_iter()
-                    .map(|p| {
-                        Vec2::new(
-                            p.x * canvas.pixels_per_unit + canvas.origin.x,
-                            canvas.origin.y - p.y * canvas.pixels_per_unit,
-                        )
-                    })
+                    .map(|p| Vec2::new(p.x + canvas.origin.x, canvas.origin.y - p.y))
                     .collect(),
             )
         })
         .collect();
     let mut exporter = Exporter {
         doc,
+        canvas,
         graph: Graph::default(),
         sources: HashMap::new(),
         images: Vec::new(),

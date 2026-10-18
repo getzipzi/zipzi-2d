@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use kasane_core::types::{
     BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, BlendShapeTargetKind,
     DeltaGlueKeyform, DeltaKeyforms, DeltaMeshKeyform, DeltaOffscreenKeyform, DeltaPartKeyform,
-    DeltaRotationKeyform, DeltaWarpKeyform, Status, Vec2,
+    DeltaRotationKeyform, DeltaWarpKeyform, Status,
 };
 
 use crate::schema::section;
@@ -144,7 +144,6 @@ impl<'a> Moc3DecoderContext<'a> {
         let counts = &self.inspection.counts;
         let offsets = &self.inspection.section_offsets;
         let ver = self.inspection.version_number;
-        let ppu = self.inspection.canvas.pixels_per_unit;
 
         if counts.blend_bindings == 0 {
             return Ok(());
@@ -383,7 +382,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     let pt_count = ((warp.warp().unwrap().rows + 1)
                         * (warp.warp().unwrap().columns + 1))
                         as usize;
-                    let is_root = warp.parent_id.is_none();
+                    let parent = warp.parent();
                     let mut forms = Vec::with_capacity(key_bs_len);
                     for k in 0..key_bs_len {
                         let ki = key_bs_off + k;
@@ -406,11 +405,7 @@ impl<'a> Moc3DecoderContext<'a> {
                                 offsets[section::KEY_POS_SRC_XY] as usize
                                     + (pos_off + p * 2 + 1) * 4,
                             )?;
-                            if is_root {
-                                points.push(Vec2::new(rx * ppu, -ry * ppu));
-                            } else {
-                                points.push(Vec2::new(rx, ry));
-                            }
+                            points.push(self.import_delta(parent, rx, ry));
                         }
                         let (mul, scr) = self.get_bs_colors(
                             section::WARP_KEY_SRC_KEY_MUL_COLOR_OFF,
@@ -428,7 +423,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 }
                 BlendShapeTargetKind::Rotation => {
                     let rot = self.doc.get_transform(&target_id).unwrap();
-                    let is_root = rot.parent_id.is_none();
+                    let parent = rot.parent();
                     let mut forms = Vec::with_capacity(key_bs_len);
                     for k in 0..key_bs_len {
                         let ki = key_bs_off + k;
@@ -452,11 +447,7 @@ impl<'a> Moc3DecoderContext<'a> {
                             self.bytes,
                             offsets[section::ROTATION_KEY_SRC_SCALE] as usize + ki * 4,
                         )?;
-                        let origin = if is_root {
-                            Vec2::new(ox * ppu, -oy * ppu)
-                        } else {
-                            Vec2::new(ox, oy)
-                        };
+                        let origin = self.import_delta(parent, ox, oy);
                         let (mul, scr) = self.get_bs_colors(
                             section::ROTATION_KEY_SRC_KEY_MUL_COLOR_OFF,
                             section::ROTATION_KEY_SRC_KEY_SCR_COLOR_OFF,
@@ -476,7 +467,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 BlendShapeTargetKind::Mesh => {
                     let mesh = self.doc.get_mesh(&target_id).unwrap();
                     let vc = mesh.vertex_ids.len();
-                    let is_root = mesh.deformer_id.is_empty();
+                    let parent = mesh.deformer_id.as_str();
                     let mut forms = Vec::with_capacity(key_bs_len);
                     for k in 0..key_bs_len {
                         let ki = key_bs_off + k;
@@ -503,11 +494,7 @@ impl<'a> Moc3DecoderContext<'a> {
                                 offsets[section::KEY_POS_SRC_XY] as usize
                                     + (pos_off + v * 2 + 1) * 4,
                             )?;
-                            if is_root {
-                                positions.push(Vec2::new(rx * ppu, -ry * ppu));
-                            } else {
-                                positions.push(Vec2::new(rx, ry));
-                            }
+                            positions.push(self.import_delta(parent, rx, ry));
                         }
                         let (mul, scr) = self.get_bs_colors(
                             section::ART_MESH_KEY_SRC_KEY_MUL_COLOR_OFF,

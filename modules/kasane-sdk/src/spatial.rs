@@ -40,6 +40,9 @@ pub struct ObjectBounds {
     pub mesh_ids: Vec<String>,
     /// `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.
     pub canvas_bounds: Option<[f64; 4]>,
+    /// Evaluated Y-up model units, independent of source canvas or export padding.
+    /// Geometric bounds only: textures, masks and occlusion are not applied.
+    pub model_bounds: Option<[f64; 4]>,
     /// Why `canvas_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or
     /// `no_evaluated_positions`.
     pub empty_reason: Option<&'static str>,
@@ -153,10 +156,10 @@ fn draws(drawable: &kasane_core::Drawable) -> bool {
 }
 
 fn canvas_point(point: Vec2, frame: &DrawableFrame) -> [f64; 2] {
-    let canvas = frame.canvas;
+    let canvas = frame.model_space;
     [
-        f64::from(point.x) * f64::from(canvas.pixels_per_unit) + f64::from(canvas.origin.x),
-        f64::from(canvas.origin.y) - f64::from(point.y) * f64::from(canvas.pixels_per_unit),
+        f64::from(point.x) + f64::from(canvas.origin.x),
+        f64::from(canvas.origin.y) - f64::from(point.y),
     ]
 }
 
@@ -175,6 +178,7 @@ pub fn object_bounds(
     let mesh_ids = resolve_mesh_ids(meshes, parts, targets)?;
     let selected: HashSet<_> = mesh_ids.iter().map(String::as_str).collect();
     let mut bounds = None::<[f64; 4]>;
+    let mut model_bounds = None::<[f64; 4]>;
     let mut filtered = false;
     for drawable in &frame.drawables {
         if !selected.contains(drawable.id.as_str()) {
@@ -182,6 +186,11 @@ pub fn object_bounds(
         }
         if include_hidden || draws(drawable) {
             for position in &drawable.positions {
+                let (mx, my) = (f64::from(position.x), f64::from(position.y));
+                model_bounds = Some(match model_bounds {
+                    Some([x0, y0, x1, y1]) => [x0.min(mx), y0.min(my), x1.max(mx), y1.max(my)],
+                    None => [mx, my, mx, my],
+                });
                 let [x, y] = canvas_point(*position, frame);
                 bounds = Some(match bounds {
                     Some([x0, y0, x1, y1]) => [x0.min(x), y0.min(y), x1.max(x), y1.max(y)],
@@ -204,6 +213,7 @@ pub fn object_bounds(
     Ok(ObjectBounds {
         mesh_ids,
         canvas_bounds: bounds,
+        model_bounds,
         empty_reason,
     })
 }
@@ -405,7 +415,7 @@ mod tests {
             ..Drawable::default()
         };
         let mut frame = DrawableFrame {
-            canvas: Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 1.0),
+            model_space: (Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 1.0)).into(),
             drawables: vec![drawable],
             ..DrawableFrame::default()
         };
@@ -414,6 +424,7 @@ mod tests {
             object_bounds(&frame, std::slice::from_ref(&mesh), &parts, &selected, true).unwrap();
         assert_eq!(bounds.mesh_ids, ["eye"]);
         assert_eq!(bounds.canvas_bounds, Some([40.0, 40.0, 60.0, 60.0]));
+        assert_eq!(bounds.model_bounds, Some([-10.0, -10.0, 10.0, 10.0]));
         let hits = hit_test_geometry(
             &frame,
             std::slice::from_ref(&mesh),

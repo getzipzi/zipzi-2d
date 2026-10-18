@@ -434,7 +434,7 @@ class CpuMeshGeometryTests(unittest.TestCase):
             model.save(destination)
             reopened = kasane.open_project(destination)
             self.assertEqual(reopened.binding(BINDING).keyforms[1].draw_order, 7)
-            self.assertEqual(reopened.evaluate({PARAMETER: 0.5}).drawables[0].positions[0], (-0.5, 1))
+            self.assertEqual(reopened.evaluate({PARAMETER: 0.5}).drawables[0].positions[0], (-5, 10))
 
     def test_mesh_properties_update_preserves_geometry(self):
         model = session()
@@ -479,7 +479,7 @@ class CpuMeshGeometryTests(unittest.TestCase):
             script = root / "script.py"
             script.write_text(
                 "import kasane\n"
-                f"session = kasane.Session('{DOCUMENT}', 100, 100, (50, 50), 10)\n"
+                f"session = kasane.Session('{DOCUMENT}', 100, 100, (50, 50))\n"
                 "with session.edit('asset') as edit:\n"
                 f"    edit.add_png_asset('{ASSET}', 'texture', {str(TEXTURE)!r})\n"
                 "raise ValueError('script failed')\n",

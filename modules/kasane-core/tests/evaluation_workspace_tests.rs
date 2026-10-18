@@ -118,16 +118,20 @@ fn workspace_reuses_geometry_and_preserves_output_on_late_failure() {
     );
     println!("100 meshes: reused={reused}, one_shot={one_shot} allocations");
 
-    let valid_canvas = doc.canvas();
-    let mut overflow_canvas = valid_canvas;
-    overflow_canvas.pixels_per_unit = f32::MIN_POSITIVE;
-    assert!(doc.replace_canvas(overflow_canvas).status.is_ok());
+    let valid = doc.clone();
+    let mut overflow = doc.get_mesh(&id(3)).unwrap().clone();
+    overflow.base_positions[0].x = f32::MAX;
+    assert!(doc.replace_mesh(overflow).status.is_ok());
+    assert!(doc
+        .replace_model_space(ModelSpace::new(Vec2::new(-f32::MAX, 0.)))
+        .status
+        .is_ok());
     assert_eq!(
         evaluator.evaluate(&doc, &preview, &mut output).code,
         "NON_FINITE"
     );
     assert_eq!(output, fresh);
-    assert!(doc.replace_canvas(valid_canvas).status.is_ok());
+    doc.restore_from(&valid);
     assert!(evaluator.evaluate(&doc, &preview, &mut output).is_ok());
     assert!(evaluate_frame(&doc, &preview, &mut fresh).is_ok());
     assert_eq!(output, fresh);
@@ -544,7 +548,7 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
     assert!(doc.replace_blend_constraint(constraint).status.is_ok());
     assert!(evaluator.evaluate(&doc, &samples[3], &mut frame).is_ok());
     assert!(
-        (frame.drawables[0].positions[0].x - initial.drawables[0].positions[0].x - 0.5).abs()
+        (frame.drawables[0].positions[0].x - initial.drawables[0].positions[0].x - 50.).abs()
             < 1e-6
     );
     assert_eq!(frame.drawables[0].positions, frame.drawables[1].positions);

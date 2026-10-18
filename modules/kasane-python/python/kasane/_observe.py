@@ -42,7 +42,7 @@ except ImportError:
     ObservationFailure = _UnavailableObservationFailure
 
 from ._types import (
-    CanvasSnapshot,
+    ModelSpaceSnapshot,
     DrawableBounds,
     ObservationRun,
     ObservedFrame,
@@ -292,7 +292,7 @@ class Observer:
         with Path(_native_module.__file__).open("rb") as native_binary:
             binary_sha256 = hashlib.file_digest(native_binary, "sha256").hexdigest()
         report = {
-            "schema_version": 1,
+            "schema_version": 2,
             "sdk_version": package_version("kasane"),
             "sdk_binary_sha256": binary_sha256,
             "platform": platform.platform(),
@@ -351,7 +351,7 @@ class Observer:
                     "source_revision": frame.source_revision,
                     "evaluation_revision": frame.evaluation_revision,
                     "document_id": frame.document_id,
-                    "canvas": frame.canvas._asdict(),
+                    "model_space": frame.model_space._asdict(),
                     "view": {"scale": frame.view_scale, "offset": frame.view_offset,
                              "width": frame.width, "height": frame.height},
                     "adapter": {"name": frame.adapter_name, "backend": frame.adapter_backend},
@@ -400,7 +400,7 @@ def _frame_from_native(raw: _native_module.NativeFrameTuple) -> ObservedFrame:
     version, input_sha256, evaluation_revision, document_id, source_revision, parameters, canvas, scale, offset, bounds = metadata
     return ObservedFrame(
         version, input_sha256, evaluation_revision, document_id, source_revision,
-        [ParameterSample(*item) for item in parameters], CanvasSnapshot(*canvas),
+        [ParameterSample(*item) for item in parameters], ModelSpaceSnapshot(*canvas),
         scale, offset, [DrawableBounds(*item) for item in bounds],
         width, height, rgba, png,
         [TextureRevision(*item) for item in textures], adapter_name, backend,

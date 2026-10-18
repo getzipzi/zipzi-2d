@@ -25,7 +25,7 @@ fn mesh(id: &str) -> Drawable {
 }
 fn frame() -> DrawableFrame {
     DrawableFrame {
-        canvas: Canvas::new(64., 64., Vec2::new(32., 32.), 10.),
+        model_space: (Canvas::new(64., 64., Vec2::new(32., 32.), 10.)).into(),
         drawables: vec![
             mesh("root-before"),
             mesh("source"),
@@ -88,8 +88,8 @@ fn targets_preserve_order_and_mask_inputs_do_not_depend_on_their_color_target() 
     assert_eq!(scene.masks()[0].sources, vec![MeshId(1)]);
     assert!(scene.meshes()[2].reads_destination);
     assert!(scene.targets()[1].active);
-    assert_eq!(scene.masks()[0].bounds.position, Vec2::new(32., 22.));
-    assert_eq!(scene.masks()[0].bounds.size, Vec2::new(10., 10.));
+    assert_eq!(scene.masks()[0].bounds.position, Vec2::new(32., 31.));
+    assert_eq!(scene.masks()[0].bounds.size, Vec2::new(1., 1.));
 }
 
 #[test]
@@ -123,7 +123,7 @@ fn frame_updates_change_dynamic_order_bounds_and_activity_without_retaining_fram
     assert_eq!(scene.meshes()[0].id.as_ptr(), name_storage);
     assert_eq!(scene.targets()[0].items.as_ptr(), item_storage);
     assert_eq!(scene.targets()[0].items[0], TargetItem::Draw(MeshId(3)));
-    assert_eq!(scene.masks()[0].bounds.size.x, 20.);
+    assert_eq!(scene.masks()[0].bounds.size.x, 2.);
     assert_eq!(scene.active_target_count(), 0);
 }
 
@@ -168,4 +168,38 @@ fn flat_fallback_preserves_ties_and_empty_model_is_valid() {
     scene.update(&frame, &textures()).unwrap();
     assert!(scene.targets()[0].items.is_empty());
     assert!(scene.masks().is_empty());
+}
+
+#[test]
+fn group_bounds_follow_nesting_order_and_exclude_hidden_mask_sources() {
+    let mut f = frame();
+    f.drawables[1].visible = false;
+    for p in &mut f.drawables[1].positions {
+        p.x += 1000.;
+    }
+    f.offscreens[0].parent_offscreen_id = Some("outer".into());
+    f.offscreens.push(OffscreenFrame {
+        id: "outer".into(),
+        enabled: true,
+        opacity: 1.,
+        ..Default::default()
+    });
+    f.render_plan.insert(
+        1,
+        kasane_core::evaluation::RenderCommand::BeginOffscreen {
+            offscreen_id: "outer".into(),
+        },
+    );
+    f.render_plan.insert(
+        6,
+        kasane_core::evaluation::RenderCommand::EndOffscreen {
+            offscreen_id: "outer".into(),
+        },
+    );
+    let mut scene = ScenePlan::default();
+    scene.update(&f, &textures()).unwrap();
+    assert_eq!(scene.targets()[1].bounds.position, Vec2::new(32., 31.));
+    assert_eq!(scene.targets()[1].bounds.size, Vec2::new(1., 1.));
+    assert_eq!(scene.targets()[2].bounds, scene.targets()[1].bounds);
+    assert_eq!(scene.masks()[0].bounds.position, Vec2::new(1032., 31.));
 }

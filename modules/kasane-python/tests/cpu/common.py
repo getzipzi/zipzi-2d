@@ -52,4 +52,4 @@ EXTERNAL = TESTS_DIR.parents[2] / "tests/fixtures/external_v50"
 
 
 def session():
-    return kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+    return kasane.Session(DOCUMENT, 100, 100, (50, 50))

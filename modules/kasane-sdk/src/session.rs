@@ -119,13 +119,16 @@ impl AuthoringSession {
         }
     }
     /// The caller supplies a canonical, nonzero, lowercase document UUID.
-    pub fn new(document_id: &str, canvas: Canvas) -> Result<Self, SdkError> {
+    pub fn new(
+        document_id: &str,
+        canvas: impl Into<kasane_core::ModelSetup>,
+    ) -> Result<Self, SdkError> {
         Self::with_history_limits(document_id, canvas, HistoryLimits::default())
     }
 
     pub fn with_history_limits(
         document_id: &str,
-        canvas: Canvas,
+        canvas: impl Into<kasane_core::ModelSetup>,
         history_limits: HistoryLimits,
     ) -> Result<Self, SdkError> {
         Self::with_options(
@@ -139,7 +142,7 @@ impl AuthoringSession {
     /// Use a custom publication backend, primarily for deterministic IO tests.
     pub fn with_filesystem(
         document_id: &str,
-        canvas: Canvas,
+        canvas: impl Into<kasane_core::ModelSetup>,
         filesystem: Arc<dyn FileSystem>,
     ) -> Result<Self, SdkError> {
         Self::with_options(document_id, canvas, HistoryLimits::default(), filesystem)
@@ -147,7 +150,7 @@ impl AuthoringSession {
 
     fn with_options(
         document_id: &str,
-        canvas: Canvas,
+        canvas: impl Into<kasane_core::ModelSetup>,
         history_limits: HistoryLimits,
         filesystem: Arc<dyn FileSystem>,
     ) -> Result<Self, SdkError> {
@@ -184,8 +187,14 @@ impl AuthoringSession {
     pub fn evaluation_revision(&self) -> u64 {
         self.project.document().evaluation_revision()
     }
-    pub fn canvas(&self) -> Canvas {
-        self.project.document().canvas()
+    pub fn model_space(&self) -> kasane_core::ModelSpace {
+        self.project.document().model_space()
+    }
+    pub fn source_canvas(&self) -> Option<Canvas> {
+        self.project.document().source_canvas()
+    }
+    pub fn model_setup(&self) -> kasane_core::ModelSetup {
+        self.project.document().model_setup()
     }
     pub fn draw_order_groups(&self) -> Option<Vec<DrawOrderGroup>> {
         self.project

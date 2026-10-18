@@ -1,9 +1,27 @@
 use super::*;
 use crate::draw_order::{validate_groups, DrawOrderGroup};
-use crate::types::{Canvas, ChangeKind, EditResult, Status};
+use crate::types::{Canvas, ChangeKind, EditResult, ModelSetup, ModelSpace, Status};
 
 impl Document {
-    pub fn replace_canvas(&mut self, canvas: Canvas) -> EditResult {
+    /// Reinterpret source coordinates in a new model space. This does not move
+    /// authored points to compensate for the change; callers must use an explicit
+    /// coordinate conversion operation when preserving evaluated positions.
+    pub fn replace_model_space(&mut self, space: ModelSpace) -> EditResult {
+        self.replace_model_setup(ModelSetup {
+            space,
+            source_canvas: self.source_canvas(),
+        })
+    }
+
+    /// Source framing is metadata and never affects geometry or viewport fitting.
+    pub fn replace_source_canvas(&mut self, source_canvas: Option<Canvas>) -> EditResult {
+        self.replace_model_setup(ModelSetup {
+            space: self.model_space(),
+            source_canvas,
+        })
+    }
+
+    pub fn replace_model_setup(&mut self, setup: impl Into<ModelSetup>) -> EditResult {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &self.content.id));
         }
@@ -11,14 +29,27 @@ impl Document {
             return self.failed(Status::error("NOT_INITIALIZED", &self.content.id));
         }
         let mut candidate = Document::new();
-        let s = candidate.initialize(self.content.id.clone(), canvas);
+        let setup = setup.into();
+        let s = candidate.initialize(self.content.id.clone(), setup);
         if !s.is_ok() {
             return self.failed(s);
         }
-        self.content.canvas = canvas;
-        let meshes = self.content.mesh_order.clone();
+        if self.model_setup() == setup {
+            return self.failed(Status::ok());
+        }
+        let geometry_changed = self.content.model_space != setup.space;
+        self.content.model_space = setup.space;
+        self.content.source_canvas = setup.source_canvas;
         let doc_id = self.content.id.clone();
-        self.changed(ChangeKind::Structure, meshes, vec![doc_id])
+        if geometry_changed {
+            self.changed(
+                ChangeKind::Structure,
+                self.content.mesh_order.clone(),
+                vec![doc_id],
+            )
+        } else {
+            self.changed(ChangeKind::Metadata, Vec::new(), vec![doc_id])
+        }
     }
 
     pub fn draw_order_groups(&self) -> Option<&[DrawOrderGroup]> {

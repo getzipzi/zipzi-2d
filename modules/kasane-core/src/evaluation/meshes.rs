@@ -98,9 +98,8 @@ pub(super) fn evaluate(
                                 let f = &forms[kf_idx];
                                 for (p, dp) in d.positions.iter_mut().zip(&f.positions) {
                                     if mesh.deformer_id.is_empty() {
-                                        let ppu = doc.canvas().pixels_per_unit;
-                                        p.x += (dp.x / ppu) * eff_w;
-                                        p.y += (-dp.y / ppu) * eff_w;
+                                        p.x += dp.x * eff_w;
+                                        p.y += (-dp.y) * eff_w;
                                     } else {
                                         p.x += dp.x * eff_w;
                                         p.y += dp.y * eff_w;

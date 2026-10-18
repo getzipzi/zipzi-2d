@@ -10,6 +10,7 @@ use crate::{
 };
 use kasane_core::{
     document::{MotionClip, MotionSegment, MotionTrack, MotionTrackTarget},
+    types::Canvas,
     Document,
 };
 use std::collections::{BTreeMap, BTreeSet};
@@ -90,7 +91,7 @@ pub(crate) fn validate_name(name: &str) -> Result<(), Cmo3Error> {
 
 /// Inspect animation losses without resources, archive creation or input mutation.
 pub fn inspect_can3(doc: &Document) -> Result<Cmo3Report, Cmo3Error> {
-    prepare(doc).map(|(_, report)| report)
+    prepare(doc).map(|(_, _, report)| report)
 }
 /// Inspect the paired export; motions are carried by CAN3 rather than lost in CMO3.
 pub fn inspect_cubism(doc: &Document) -> Result<Cmo3Report, Cmo3Error> {
@@ -106,9 +107,9 @@ pub fn encode_can3(doc: &Document, options: &Can3Options) -> Result<Can3Artifact
             "CAN3 model_file_name must end with .cmo3".into(),
         ));
     }
-    let (scenes, report) = prepare(doc)?;
+    let (scenes, canvas, report) = prepare(doc)?;
     reject(&report, options.loss_policy)?;
-    let xml = Animation::new(doc, options).build(&scenes)?;
+    let xml = Animation::new(doc, canvas, options).build(&scenes)?;
     Ok(Can3Artifact {
         bytes: crate::caff::encode(Vec::new(), &xml, options.obfuscation_key)?,
         report,
@@ -269,7 +270,7 @@ fn keys(track: &MotionTrack, fps: f32, report: &mut Cmo3Report) -> Result<Vec<Ke
     }
     Ok(result)
 }
-fn prepare(doc: &Document) -> Result<(Vec<Scene>, Cmo3Report), Cmo3Error> {
+fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error> {
     if let Some(issue) = doc.validate_structure().first() {
         return Err(Cmo3Error::InvalidDocument(format!(
             "{}: {}",
@@ -277,7 +278,7 @@ fn prepare(doc: &Document) -> Result<(Vec<Scene>, Cmo3Report), Cmo3Error> {
         )));
     }
     let mut report = Cmo3Report::default();
-    let canvas = doc.canvas();
+    let canvas = crate::canvas::for_document(doc)?;
     if [canvas.width, canvas.height]
         .iter()
         .any(|&v| f64::from(v).round() > f64::from(i32::MAX))
@@ -393,7 +394,7 @@ fn prepare(doc: &Document) -> Result<(Vec<Scene>, Cmo3Report), Cmo3Error> {
             events: BTreeMap::new(),
         });
     }
-    Ok((scenes, report))
+    Ok((scenes, canvas, report))
 }
 fn s(value: impl ToString) -> N {
     N::scalar("s", value)
@@ -434,6 +435,7 @@ fn rect(width: f32, height: f32) -> N {
 
 struct Animation<'a> {
     doc: &'a Document,
+    canvas: Canvas,
     options: &'a Can3Options,
     graph: Graph,
     root: N,
@@ -444,7 +446,7 @@ struct Animation<'a> {
     serial: u64,
 }
 impl<'a> Animation<'a> {
-    fn new(doc: &'a Document, options: &'a Can3Options) -> Self {
+    fn new(doc: &'a Document, canvas: Canvas, options: &'a Can3Options) -> Self {
         let mut graph = Graph::default();
         let root = graph.reserve("CAnimation");
         let resources = graph.reserve("CResourceManager");
@@ -461,6 +463,7 @@ impl<'a> Animation<'a> {
         let resource_data = graph.reserve("CResourceData");
         Self {
             doc,
+            canvas,
             options,
             graph,
             root,

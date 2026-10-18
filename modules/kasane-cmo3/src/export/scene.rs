@@ -183,19 +183,6 @@ impl Exporter<'_> {
         }
         sources
     }
-    // The first rotation in an ancestor chain converts model units to pixels.
-    // Descendant rotations inherit that factor, including through warp parents.
-    pub(super) fn rotation_scale(&self, id: &str) -> f32 {
-        let mut parent = self.doc.get_transform(id).unwrap().parent();
-        while !parent.is_empty() {
-            let t = self.doc.get_transform(parent).unwrap();
-            if t.rotation().is_some() {
-                return 1.;
-            }
-            parent = t.parent();
-        }
-        self.doc.canvas().pixels_per_unit
-    }
     pub(super) fn transforms(&mut self) -> Vec<N> {
         let mut sources = Vec::new();
         for id in self.doc.transform_order() {
@@ -234,10 +221,10 @@ impl Exporter<'_> {
                     // that reflection. Parented direction probes also change sign.
                     let r = sample.rotation;
                     N::new("CRotationDeformerForm")
-                        .attr("originX", r.origin.x)
+                        .attr("originX", self.source_origin_x(t.parent(), r.origin.x))
                         .attr("originY", self.source_origin_y(t.parent(), r.origin.y))
                         .attr("angle", self.rotation_sign() * r.angle)
-                        .attr("scale", r.scale * self.rotation_scale(id))
+                        .attr("scale", r.scale)
                         .attr("isReflectX", r.reflect_x)
                         .attr("isReflectY", r.reflect_y ^ !self.canvas_reversed())
                         .field("super", base)

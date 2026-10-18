@@ -62,7 +62,7 @@ fn batch_samples_one_document_snapshot_and_reuses_capture_identity() {
     assert_ne!(inputs[0].version(), session.version());
     assert_eq!(
         inputs[0].frame().drawables[0].positions[0],
-        Vec2::new(-1.0, 1.0)
+        Vec2::new(-10.0, 10.0)
     );
     assert_eq!(inputs[1].frame().parameters[0].value, 0.5);
     let scenes = ResolvedObservation::capture_many(inputs).unwrap();
@@ -108,7 +108,7 @@ fn captures_unpublished_project_and_keeps_old_frame_after_edit() {
     let input = ObservationInput::capture(&session, &PreviewValues::new()).unwrap();
     assert_eq!(
         input.frame().drawables[0].positions[0],
-        Vec2::new(-1.0, 1.0)
+        Vec2::new(-10.0, 10.0)
     );
     assert_eq!(input.assets().len(), 1);
     let textures = input.resolve_textures().unwrap();
@@ -122,11 +122,11 @@ fn captures_unpublished_project_and_keeps_old_frame_after_edit() {
     assert_ne!(input.version(), session.version());
     assert_eq!(
         input.frame().drawables[0].positions[0],
-        Vec2::new(-1.0, 1.0)
+        Vec2::new(-10.0, 10.0)
     );
     assert_eq!(
         session.evaluate(&PreviewValues::new()).unwrap().drawables[0].positions[0],
-        Vec2::new(0.0, 1.0)
+        Vec2::new(0.0, 10.0)
     );
 }
 
@@ -284,7 +284,10 @@ fn renders_unsaved_session_and_reuses_gpu_across_changes() {
         .unwrap();
     let moved = ObservationInput::capture(&session, &PreviewValues::new()).unwrap();
     let second = observer.observe(&moved).unwrap();
-    assert_ne!(first.rgba, second.rgba);
+    // Automatic fitting follows content; translation changes the view, not its pixels.
+    assert_eq!(first.rgba, second.rgba);
+    assert_ne!(first.view_offset, second.view_offset);
+    assert_ne!(first.input_sha256, second.input_sha256);
     assert_eq!(
         second.texture_revisions[0].revision,
         initial_texture_revision
@@ -425,13 +428,16 @@ fn resolved_capture_rerenders_roi_after_source_disappears_and_restores_legacy_vi
     previous.as_object_mut().unwrap().remove("capture_id");
     previous.as_object_mut().unwrap().remove("scene_digest");
     std::fs::write(&manifest_path, serde_json::to_vec(&previous).unwrap()).unwrap();
-    let reopened_v1 = ResolvedObservation::open_scene(&scene_directory).unwrap();
-    assert_eq!(reopened_v1.scene_digest(), captured.scene_digest());
-    assert_ne!(reopened_v1.capture_id(), captured.capture_id());
+    assert_eq!(
+        ResolvedObservation::open_scene(&scene_directory)
+            .unwrap_err()
+            .code,
+        "UNSUPPORTED_BUNDLE_VERSION"
+    );
     std::fs::write(&manifest_path, &manifest).unwrap();
     std::fs::write(
         &manifest_path,
-        manifest.replace("\"schema_version\": 2", "\"schema_version\": 99"),
+        manifest.replace("\"schema_version\": 4", "\"schema_version\": 99"),
     )
     .unwrap();
     assert_eq!(

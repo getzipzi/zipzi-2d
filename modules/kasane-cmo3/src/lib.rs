@@ -4,6 +4,7 @@
 //! can use `Document` as its conversion hub and supply assets from any importer.
 mod caff;
 mod can3;
+mod canvas;
 pub use can3::{
     encode_can3, encode_cubism, inspect_can3, inspect_cubism, Can3Artifact, Can3Options,
     CubismArtifact, CubismOptions,

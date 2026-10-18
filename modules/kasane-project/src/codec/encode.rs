@@ -19,7 +19,6 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
         ));
     }
 
-    let c = document.canvas();
     let mut meshes_wire = Vec::with_capacity(document.mesh_order().len());
     for id in document.mesh_order() {
         let m = document.get_mesh(id).unwrap();
@@ -297,13 +296,11 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
 
     let project = ProjectWire {
         format: "kasane-directory-project".to_string(),
-        format_version: 11,
+        format_version: 13,
         document: DocumentWire {
             id: document.id().to_string(),
-            canvas: [c.width, c.height],
-            canvas_origin: [c.origin.x, c.origin.y],
-            pixels_per_unit: c.pixels_per_unit,
-            canvas_flag: c.flag,
+            model_space: document.model_space(),
+            source_canvas: document.source_canvas(),
             draw_order_groups: document.draw_order_groups().map(|g| g.to_vec()),
             assets: assets_wire,
             meshes: meshes_wire,

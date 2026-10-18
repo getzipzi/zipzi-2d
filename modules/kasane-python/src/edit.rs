@@ -8,8 +8,8 @@ use crate::conversion::*;
 use crate::error::{edit_failure, poisoned, sdk_failure};
 use kasane_core::{
     draw_order::DrawOrderGroup, BindingAxis, BlendShapeConstraint, BlendShapeKeyTable, Canvas,
-    MeshBinding, MeshKeyform, Parameter, ParameterKind, Part, RotationTransform, SceneBinding,
-    SceneKeyform, Transform, TransformData, Vec2, WarpTransform,
+    MeshBinding, MeshKeyform, ModelSpace, Parameter, ParameterKind, Part, RotationTransform,
+    SceneBinding, SceneKeyform, Transform, TransformData, Vec2, WarpTransform,
 };
 use kasane_sdk::{
     prepare_png_asset, prepare_png_asset_from_base, prepare_relocated_asset, rectangle_mesh,
@@ -31,7 +31,8 @@ enum Command {
     ReplaceMeshBinding(MeshBinding),
     SetMeshKeyform(String, MeshKeyform),
     UpdateMeshProperties(String, MeshProperties),
-    ReplaceCanvas(Canvas),
+    ReplaceModelSpace(ModelSpace),
+    ReplaceSourceCanvas(Option<Canvas>),
     EraseObject(String),
     ReplaceParameter(Parameter, Option<ParameterKind>),
     SetOrganizationParent(String, String),

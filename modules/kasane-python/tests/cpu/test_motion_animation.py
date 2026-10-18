@@ -15,7 +15,7 @@ from .common import *
 
 class CpuMotionAnimationTests(unittest.TestCase):
     def test_motion_operation_identity_is_read_only_and_tracks_success(self):
-        model = kasane.Session(DOCUMENT, 100, 100, (50, 50), 10)
+        model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         preview = model.motion_preview()
         preview_id = preview.operation["preview_id"]
         self.assertEqual(preview.operation["sequence"], 0)

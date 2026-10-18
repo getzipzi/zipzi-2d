@@ -42,7 +42,7 @@ def plain(value):
 
 
 def state(session, parameter=None, values=(0, 0.5, 1)):
-    result = {"document_id": session.document_id, "canvas": plain(session.canvas),
+    result = {"document_id": session.document_id, "canvas": plain(session.source_canvas),
               "draw_order_groups": plain(session.draw_order_groups)}
     for group, reader in GROUPS.items():
         result[group] = {}
@@ -82,7 +82,7 @@ def close(left, right):
 
 
 def make_project(texture, task):
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
     asset, parameter = str(uuid4()), str(uuid4())
     with session.edit("fixture") as edit:
         edit.add_png_asset(asset, "texture", texture)
@@ -114,8 +114,8 @@ def repair(session):
 
 def creation_checks(session, task, texture_hash):
     checks = {}
-    checks["canvas"] = close(plain(session.canvas), dict(
-        width=100.0, height=100.0, origin_x=50.0, origin_y=50.0, pixels_per_unit=10.0))
+    checks["canvas"] = close(plain(session.source_canvas), dict(
+        width=100.0, height=100.0, origin_x=50.0, origin_y=50.0, pixels_per_unit=1.0, flag=1))
     checks["object_counts"] = all(len(getattr(session, group + "_ids")()) == (
         1 if group in ("asset", "mesh") or (task == "parameter" and group in ("parameter", "binding"))
         else 0) for group in GROUPS)
@@ -165,7 +165,7 @@ def creation_checks(session, task, texture_hash):
                 drawables = session.evaluate({p.id: value}).drawables
                 checks[f"sample_{value}"] = len(drawables) == 1 and close(
                     sorted(plain(drawables[0].positions)),
-                    sorted([[(x - 50) / 10 + value, (50 - y) / 10] for x, y in corners]))
+                    sorted([[x - 50 + 10 * value, 50 - y] for x, y in corners]))
     return checks
 
 
@@ -194,7 +194,7 @@ def advanced_fixture(task, packet):
     source = packet / "input"
     texture = packet / "input/texture.png"
     shutil.copy2(Path(__file__).parent / "texture.png", texture)
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
     a, p = str(uuid4()), str(uuid4())
     assets = [a]
     if task == "resource-recovery":
@@ -224,7 +224,7 @@ def advanced_fixture(task, packet):
             shutil.move(str(child), source / child.name)
         exported.rmdir()
         texture.unlink()
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
         imported.import_model3(source / "model.model3.json")
         target = next(m for m in imported.mesh_ids() if imported.mesh(m).positions[0][0] > 35)
         parameter = imported.parameter_ids()[0]
@@ -288,7 +288,7 @@ def advanced_checks(task, manifest, package, oracle):
         checks["internal_assets"] = all(not Path(moved.asset(a).source).is_absolute()
                                         and ".." not in Path(moved.asset(a).source).parts
                                         for a in moved.asset_ids())
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
         imported.import_model3(receiver / "package/model.model3.json")
         checks["moved_package"] = not imported.diagnose_resources() and not imported.validate_structure()
         checks["package_semantics"] = close(semantic(imported, parameter), oracle["semantic"])
@@ -312,12 +312,12 @@ def semantic(session, parameter):
         values[str(v)] = {session.mesh_record(d.id).runtime_id: plain(d.positions) for d in sample.drawables}
     params = sorted([p.minimum, p.maximum, p.default_value, p.repeat, p.kind]
                     for p in (session.parameter(pid) for pid in session.parameter_ids()))
-    return {"canvas": plain(session.canvas), "meshes": meshes, "parameters": params, "values": values}
+    return {"canvas": plain(session.source_canvas), "meshes": meshes, "parameters": params, "values": values}
 
 
 def advanced_solution(task, packet, oracle, variant="positive"):
     if task == "delivery-transfer":
-        session = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+        session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
         session.import_model3(packet / "input/model.model3.json")
         target = next(m for m in session.mesh_ids() if session.mesh_record(m).runtime_id == oracle["request"]["mesh_runtime_id"])
         if variant == "wrong_target":
@@ -397,7 +397,7 @@ def visual_fixture(packet, parented=False):
     colors = [(240, 70, 70, 255), (60, 200, 90, 255), (70, 100, 240, 255)]
     for index, color in enumerate(colors):
         png(texture_dir / f"{index}.png", 8, 8, color)
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
     parameter = str(uuid4())
     positions = [((12, 20), (30, 38)), ((42, 20), (60, 38)), ((70, 55), (88, 73))]
     meshes = []
@@ -554,7 +554,7 @@ def compose_fixture(packet):
     colors = [(230, 80, 110, 255), (240, 200, 40, 255), (80, 190, 240, 255)]
     names = ["mouth", "left-mark", "right-mark"]
     boxes = [((40, 50), (60, 60)), ((20, 35), (28, 43)), ((72, 35), (80, 43))]
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
     with session.edit("expression base") as edit:
         for index, (name, (minimum, maximum)) in enumerate(zip(names, boxes)):
             texture = textures / f"{index}.png"
@@ -715,7 +715,7 @@ SHIROUSAGI_VARIANTS = {
 
 def shirousagi_model():
     source = Path(__file__).parent / "shirousagi/Shirousagi.model3.json"
-    session = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+    session = kasane.Session(str(uuid4()), 100, 100, (50, 50))
     imported = session.import_model3(source)
     if imported.warnings or imported.diagnostics or session.validate_structure() or session.diagnose_resources():
         raise RuntimeError(f"Shirousagi source failed preflight: {imported}")
@@ -771,7 +771,7 @@ def shirousagi_fixture(packet, oracle_path, variant_name):
     shutil.copy2(source / "Shirousagi.psd", input_dir / "Shirousagi.psd")
     original = shirousagi_model()
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
-        art = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+        art = kasane.Session(str(uuid4()), 100, 100, (50, 50))
         imported = art.import_psd(input_dir / "Shirousagi.psd", Path(folder) / "psd-project")
         model_names = {original.mesh(mid).name for mid in original.mesh_ids()}
         art_names = {art.mesh(mid).name for mid in art.mesh_ids()}
@@ -851,7 +851,7 @@ def shirousagi_checks(manifest, package, oracle):
         moved = kasane.open_project(receiver / "project" / manifest.name)
         checks["moved_project_resources"] = not moved.diagnose_resources()
         checks.update(shirousagi_render_checks(moved, oracle, "moved_project"))
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
         result = imported.import_model3(receiver / "package/model.model3.json")
         checks["moved_package_resources"] = not result.diagnostics and not imported.diagnose_resources()
         checks["moved_package_structure"] = not imported.validate_structure()
@@ -980,7 +980,7 @@ def blink_fixture(packet, oracle_path):
     source = Path(__file__).parent / "shirousagi"
     input_dir = packet / "input"
     shutil.copy2(source / "Shirousagi.psd", input_dir / "Shirousagi.psd")
-    art = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+    art = kasane.Session(str(uuid4()), 100, 100, (50, 50))
     imported = art.import_psd(input_dir / "Shirousagi.psd", input_dir / "project")
     model = shirousagi_model()
     names = {art.mesh(mid).name for mid in art.mesh_ids()}
@@ -1100,7 +1100,7 @@ def blink_checks(manifest, package, oracle):
         checks.update({f"moved_{key}": value
                        for key, value in blink_structure_checks(moved, oracle).items()})
         checks.update(blink_render_checks(moved, oracle, "moved_project"))
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
         result = imported.import_model3(receiver / "package/model.model3.json")
         checks["package_import"] = not result.warnings and not result.diagnostics
         checks["package_structure"] = not imported.validate_structure()
@@ -1243,7 +1243,7 @@ def art_revision_fixture(packet, oracle_path, variant_name):
     if len(original.mesh_ids()) != 24 or len(original.parameter_ids()) != 34:
         raise RuntimeError("Shirousagi delivered model changed")
     with tempfile.TemporaryDirectory(dir=oracle_path.parent) as folder:
-        art = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+        art = kasane.Session(str(uuid4()), 100, 100, (50, 50))
         imported = art.import_psd(input_dir / "Shirousagi.psd", Path(folder) / "psd-project")
         if imported.warnings or imported.raster_layers != 24:
             raise RuntimeError("Shirousagi PSD no longer has 24 layers")
@@ -1351,7 +1351,7 @@ def art_revision_checks(manifest, package, oracle):
             art_state_without_target_hash(oracle["expected"], oracle))
         checks.update(art_texture_checks(moved, receiver / "project", oracle, "moved_project"))
         checks.update(art_render_checks(moved, oracle, "moved_project"))
-        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50), 10)
+        imported = kasane.Session(str(uuid4()), 100, 100, (50, 50))
         result = imported.import_model3(receiver / "package/model.model3.json")
         checks["package_import"] = not result.warnings and not result.diagnostics
         checks["package_structure"] = not imported.validate_structure()

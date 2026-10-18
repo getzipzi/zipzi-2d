@@ -150,7 +150,27 @@ impl<'a> Moc3EncoderContext<'a> {
     }
 
     pub(super) fn encode_canvas(&mut self) -> Result<(), Status> {
-        let c = self.doc.canvas();
+        // Normal evaluation uses placeholders for invisible meshes. Include
+        // their actual geometry in bounds, since they can become visible later.
+        let mut frame = kasane_core::DrawableFrame::default();
+
+        let status = kasane_core::evaluation::evaluate_frame_including_hidden(
+            self.doc,
+            &Default::default(),
+            &mut frame,
+        );
+        if !status.is_ok() {
+            return Err(status);
+        }
+
+        let c = kasane_core::geometry::finite_export_canvas(
+            self.doc.model_space(),
+            self.doc.source_canvas(),
+            frame
+                .drawables
+                .iter()
+                .flat_map(|d| d.positions.iter().copied()),
+        )?;
         let canvas = self.l.section(section::CANVAS_INFO)?;
         canvas.extend_from_slice(&c.pixels_per_unit.to_le_bytes());
         canvas.extend_from_slice(&c.origin.x.to_le_bytes());

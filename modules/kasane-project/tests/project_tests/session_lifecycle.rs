@@ -244,7 +244,7 @@ fn save_as_refuses_existing_project_and_preserves_session() {
     let mut other = DocumentSession::new();
     assert!(other
         .document_mut()
-        .initialize(id(999), original.document().canvas())
+        .initialize(id(999), original.document().source_canvas().unwrap())
         .is_ok());
     let result = other.save(manifest);
     assert_eq!(result.status.code, "DESTINATION_EXISTS");
@@ -533,7 +533,7 @@ fn imported_canvas_and_drawing_groups_survive_save_reopen() {
     let mut session = DocumentSession::new();
     let (result, _) = session.import_bare_moc3(&path, &HashMap::from([(0, texture.clone())]));
     assert!(result.status.is_ok());
-    assert_eq!(session.document().canvas().flag, 0);
+    assert_eq!(session.document().source_canvas().unwrap().flag, 0);
     assert_eq!(session.document().draw_order_groups().unwrap().len(), 1);
     assert!(!session.document().part_order().is_empty());
     let mut before = DrawableFrame::default();
@@ -549,7 +549,7 @@ fn imported_canvas_and_drawing_groups_survive_save_reopen() {
         reopened.document().draw_order_groups(),
         session.document().draw_order_groups()
     );
-    assert_eq!(reopened.document().canvas().flag, 0);
+    assert_eq!(reopened.document().source_canvas().unwrap().flag, 0);
     assert!(!reopened.document().modified());
     let mut after = DrawableFrame::default();
     assert!(evaluate_frame(reopened.document(), &HashMap::new(), &mut after).is_ok());

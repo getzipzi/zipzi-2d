@@ -104,7 +104,7 @@ impl Document {
         // Compare borrowed data directly: metadata commits must not clone mesh
         // geometry merely to decide whether the prepared frame remains valid.
         original.id == content.id
-            && original.canvas == content.canvas
+            && original.model_space == content.model_space
             && original.assets == content.assets
             && original.asset_order == content.asset_order
             && original.part_order == content.part_order

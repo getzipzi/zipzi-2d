@@ -33,6 +33,7 @@ class ObjectBounds:
     targets: tuple[ObjectRef, ...]
     mesh_ids: tuple[str, ...]
     canvas_bounds: tuple[float, float, float, float] | None
+    model_bounds: tuple[float, float, float, float] | None
     status: Literal["ok", "empty"]
     empty_reason: Literal["no_descendant_mesh", "no_evaluated_positions", "filtered_out"] | None
 
@@ -118,6 +119,7 @@ def object_bounds(
     return ObjectBounds(
         capture_id, scene_digest, requested, tuple(raw["mesh_ids"]),
         tuple(bounds) if bounds is not None else None,
+        tuple(raw["model_bounds"]) if raw["model_bounds"] is not None else None,
         "ok" if bounds is not None else "empty", raw["empty_reason"],
     )
 

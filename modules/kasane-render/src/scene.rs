@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use kasane_core::evaluation::{DrawableFrame, RenderCommand};
-use kasane_core::types::{Canvas, Status, Vec2};
+use kasane_core::types::{Status, Vec2};
 
 use crate::{Affine2, Size2, TextureCatalog};
 
@@ -43,7 +43,16 @@ pub struct TargetPlan {
     pub mask: Option<MaskId>,
     pub reads_destination: bool,
     pub items: Vec<TargetItem>,
+    /// Visible, nonempty color draws and active children in render-plane pixels.
+    /// Raw mask inputs retain separate bounds, including hidden source meshes.
+    pub bounds: Bounds2,
     mask_sources: Vec<String>,
+}
+
+impl TargetPlan {
+    pub fn effective_bounds(&self) -> Bounds2 {
+        self.bounds
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -60,6 +69,9 @@ pub struct Bounds2 {
     pub size: Vec2,
 }
 impl Bounds2 {
+    pub fn new(position: Vec2, size: Vec2) -> Self {
+        Self { position, size }
+    }
     pub fn from_point(point: Vec2) -> Self {
         Self {
             position: point,
@@ -80,11 +92,23 @@ impl Bounds2 {
             ),
         }
     }
+    pub fn union(self, other: Self) -> Self {
+        if self.is_empty() {
+            other
+        } else if other.is_empty() {
+            self
+        } else {
+            self.include(other.position).include(other.end())
+        }
+    }
     pub fn grow(self, amount: f32) -> Self {
         Self {
             position: Vec2::new(self.position.x - amount, self.position.y - amount),
             size: Vec2::new(self.size.x + 2.0 * amount, self.size.y + 2.0 * amount),
         }
+    }
+    pub fn is_empty(&self) -> bool {
+        self.size.x <= 0.0 || self.size.y <= 0.0
     }
 }
 
@@ -95,7 +119,7 @@ impl Bounds2 {
 #[derive(Clone, Debug, Default)]
 pub struct ScenePlan {
     validator: crate::validation::FrameValidator,
-    canvas: Canvas,
+    model_space: kasane_core::ModelSpace,
     meshes: Vec<MeshPlan>,
     targets: Vec<TargetPlan>,
     masks: Vec<MaskPlan>,
@@ -104,6 +128,7 @@ pub struct ScenePlan {
     stack: Vec<TargetId>,
     ordered: Vec<usize>,
     bounds: Vec<Option<Bounds2>>,
+    content_bounds: Bounds2,
 }
 
 impl ScenePlan {
@@ -116,8 +141,14 @@ impl ScenePlan {
     pub fn masks(&self) -> &[MaskPlan] {
         &self.masks
     }
-    pub fn canvas(&self) -> Canvas {
-        self.canvas
+    pub fn model_space(&self) -> kasane_core::ModelSpace {
+        self.model_space
+    }
+    pub fn content_bounds(&self) -> Bounds2 {
+        self.content_bounds
+    }
+    pub fn effective_bounds(&self) -> Bounds2 {
+        self.content_bounds
     }
     pub fn mesh_id(&self, id: &str) -> Option<MeshId> {
         self.mesh_ids.get(id).copied()
@@ -166,7 +197,7 @@ impl ScenePlan {
         if !same_structure {
             self.rebuild_structure(frame);
         }
-        self.canvas = frame.canvas;
+        self.model_space = frame.model_space;
         for target in &mut self.targets {
             target.items.clear();
             target.active = false;
@@ -225,32 +256,77 @@ impl ScenePlan {
             }
         }
         self.bounds.clear();
-        self.bounds.resize(frame.drawables.len(), None);
-        // One geometry traversal per required source, even when several masks
-        // reference it. These are raw inputs irrespective of color visibility.
+        self.bounds.reserve(frame.drawables.len());
+        let mut scene_bounds: Option<Bounds2> = None;
+        for d in &frame.drawables {
+            if d.positions.is_empty() {
+                self.bounds.push(None);
+                continue;
+            }
+            let mut b: Option<Bounds2> = None;
+            for p in &d.positions {
+                let point = Vec2::new(
+                    p.x + frame.model_space.origin.x,
+                    frame.model_space.origin.y - p.y,
+                );
+                b = Some(b.map_or(Bounds2::from_point(point), |b| b.include(point)));
+            }
+            if let Some(bounds) = b {
+                scene_bounds = Some(scene_bounds.map_or(bounds, |sb| sb.union(bounds)));
+                self.bounds.push(Some(bounds));
+            } else {
+                self.bounds.push(None);
+            }
+        }
+        self.content_bounds = scene_bounds.unwrap_or_default();
         for mask in &mut self.masks {
             let mut union: Option<Bounds2> = None;
             for id in &mask.sources {
-                let bounds = *self.bounds[id.0].get_or_insert_with(|| {
-                    let mut bounds: Option<Bounds2> = None;
-                    for p in &frame.drawables[id.0].positions {
-                        let point = Vec2::new(
-                            p.x * frame.canvas.pixels_per_unit + frame.canvas.origin.x,
-                            frame.canvas.origin.y - p.y * frame.canvas.pixels_per_unit,
-                        );
-                        bounds =
-                            Some(bounds.map_or(Bounds2::from_point(point), |b| b.include(point)));
-                    }
-                    bounds.unwrap_or_default()
-                });
-                // Empty geometry contributes no points (including no origin).
-                if !frame.drawables[id.0].positions.is_empty() {
-                    union = Some(
-                        union.map_or(bounds, |b| b.include(bounds.position).include(bounds.end())),
-                    );
+                if let Some(Some(bounds)) = self.bounds.get(id.0) {
+                    union = Some(union.map_or(*bounds, |b| b.union(*bounds)));
                 }
             }
             mask.bounds = union.unwrap_or_default();
+        }
+        for target in &mut self.targets {
+            target.bounds = Bounds2::default();
+        }
+        // Offscreen storage order is independent of nesting. Visit the render
+        // tree in postorder so every child's bounds exist before its parent.
+        let mut steps = vec![(TargetId::MAIN, false)];
+        while let Some((id, visited)) = steps.pop() {
+            if !visited {
+                steps.push((id, true));
+                for item in &self.targets[id.0].items {
+                    if let TargetItem::Composite(child) = item {
+                        if self.targets[child.0].active {
+                            steps.push((*child, false));
+                        }
+                    }
+                }
+                continue;
+            }
+            let mut target_union: Option<Bounds2> = None;
+            for item in &self.targets[id.0].items {
+                let bounds = match item {
+                    TargetItem::Draw(mesh_id) => {
+                        let d = &frame.drawables[mesh_id.0];
+                        if d.visible && d.opacity > 0.0 && !d.indices.is_empty() {
+                            self.bounds[mesh_id.0]
+                        } else {
+                            None
+                        }
+                    }
+                    TargetItem::Composite(child_id) => {
+                        let child = &self.targets[child_id.0];
+                        (child.active && !child.bounds.is_empty()).then_some(child.bounds)
+                    }
+                };
+                if let Some(b) = bounds {
+                    target_union = Some(target_union.map_or(b, |u| u.union(b)));
+                }
+            }
+            self.targets[id.0].bounds = target_union.unwrap_or_default();
         }
         Ok(())
     }
@@ -301,6 +377,7 @@ impl ScenePlan {
             mask: None,
             reads_destination: false,
             items: Vec::new(),
+            bounds: Bounds2::default(),
             mask_sources: Vec::new(),
         });
         for (i, group) in frame.offscreens.iter().enumerate() {
@@ -312,16 +389,17 @@ impl ScenePlan {
                 mask: intern(&group.masks),
                 reads_destination: false,
                 items: Vec::new(),
+                bounds: Bounds2::default(),
                 mask_sources: group.masks.clone(),
             });
         }
     }
 }
 
-/// Geometry-only screen crop. Resource limits and attachment formats belong to
-/// backend lowering, not to this coordinate calculation.
-pub fn surface_layout(
-    canvas: Vec2,
+/// Screen-clamped crop for arbitrary bounds. Resource limits and attachment
+/// formats belong to backend lowering, not to this coordinate calculation.
+pub fn surface_layout_bounds(
+    bounds: Bounds2,
     transform: Affine2,
     target: Vec2,
 ) -> Result<(Size2, Affine2), Status> {
@@ -337,19 +415,33 @@ pub fn surface_layout(
             "Target extent must be positive and finite.",
         ));
     }
-    let mut bounds = Bounds2::from_point(transform.transform_point(Vec2::default()));
-    for point in [Vec2::new(canvas.x, 0.0), Vec2::new(0.0, canvas.y), canvas] {
-        let point = transform.transform_point(point);
+    let p0 = transform.transform_point(bounds.position);
+    let p1 = transform.transform_point(Vec2::new(
+        bounds.position.x + bounds.size.x,
+        bounds.position.y,
+    ));
+    let p2 = transform.transform_point(Vec2::new(
+        bounds.position.x,
+        bounds.position.y + bounds.size.y,
+    ));
+    let p3 = transform.transform_point(bounds.end());
+    for point in [p0, p1, p2, p3] {
         if !point.x.is_finite() || !point.y.is_finite() {
             return Err(Status::error(
                 "INVALID_TRANSFORM",
-                "Transformed canvas overflowed.",
+                "Transformed bounds overflowed.",
             ));
         }
-        bounds = bounds.include(point);
     }
-    let min = Vec2::new(bounds.position.x.max(0.0), bounds.position.y.max(0.0));
-    let max = Vec2::new(bounds.end().x.min(target.x), bounds.end().y.min(target.y));
+    let screen_bounds = Bounds2::from_point(p0).include(p1).include(p2).include(p3);
+    let min = Vec2::new(
+        screen_bounds.position.x.max(0.0),
+        screen_bounds.position.y.max(0.0),
+    );
+    let max = Vec2::new(
+        screen_bounds.end().x.min(target.x),
+        screen_bounds.end().y.min(target.y),
+    );
     let (origin, end) = if max.x <= min.x || max.y <= min.y {
         (Vec2::default(), Vec2::default())
     } else {
@@ -368,4 +460,148 @@ pub fn surface_layout(
         },
         root,
     ))
+}
+
+/// Geometry-only screen crop. Resource limits and attachment formats belong to
+/// backend lowering, not to this coordinate calculation.
+pub fn surface_layout(
+    canvas: Vec2,
+    transform: Affine2,
+    target: Vec2,
+) -> Result<(Size2, Affine2), Status> {
+    surface_layout_bounds(
+        Bounds2 {
+            position: Vec2::default(),
+            size: canvas,
+        },
+        transform,
+        target,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::TextureInfo;
+    use kasane_core::evaluation::{Drawable, OffscreenFrame, RenderCommand};
+
+    #[test]
+    fn bounds_union_and_empty() {
+        let empty = Bounds2::default();
+        assert!(empty.is_empty());
+        let b1 = Bounds2::new(Vec2::new(10.0, 20.0), Vec2::new(30.0, 40.0));
+        assert!(!b1.is_empty());
+        assert_eq!(empty.union(b1), b1);
+        assert_eq!(b1.union(empty), b1);
+        let b2 = Bounds2::new(Vec2::new(5.0, 15.0), Vec2::new(10.0, 10.0));
+        let union = b1.union(b2);
+        assert_eq!(union.position, Vec2::new(5.0, 15.0));
+        assert_eq!(union.end(), Vec2::new(40.0, 60.0));
+    }
+
+    #[test]
+    fn surface_layout_bounds_matches_surface_layout_for_canvas() {
+        let canvas = Vec2::new(1920.0, 1080.0);
+        let transform = Affine2 {
+            a: Vec2::new(1.5, 0.0),
+            b: Vec2::new(0.0, 1.5),
+            origin: Vec2::new(50.0, 75.0),
+        };
+        let target = Vec2::new(1024.0, 768.0);
+        let res1 = surface_layout(canvas, transform, target).unwrap();
+        let res2 = surface_layout_bounds(Bounds2::new(Vec2::default(), canvas), transform, target)
+            .unwrap();
+        assert_eq!(res1, res2);
+    }
+
+    #[test]
+    fn surface_layout_bounds_crops_arbitrary_position_and_offsets_transform() {
+        let bounds = Bounds2::new(Vec2::new(100.0, 200.0), Vec2::new(300.0, 400.0));
+        let transform = Affine2 {
+            a: Vec2::new(2.0, 0.0),
+            b: Vec2::new(0.0, 2.0),
+            origin: Vec2::new(0.0, 0.0),
+        };
+        let target = Vec2::new(1000.0, 1000.0);
+        let (size, root) = surface_layout_bounds(bounds, transform, target).unwrap();
+        // bounds on screen: [200, 400] to [800, 1200], clamped to target: [200, 400] to [800, 1000]
+        assert_eq!(
+            size,
+            Size2 {
+                width: 600,
+                height: 600
+            }
+        );
+        assert_eq!(root.origin, Vec2::new(-200.0, -400.0));
+    }
+
+    #[test]
+    fn scene_plan_computes_content_bounds_and_target_bounds() {
+        let frame = DrawableFrame {
+            model_space: kasane_core::ModelSpace::new(Vec2::new(100.0, 100.0)),
+            drawables: vec![
+                Drawable {
+                    id: "d1".to_owned(),
+                    texture_asset_id: "tex".to_owned(),
+                    positions: vec![
+                        Vec2::new(0.0, 0.0),
+                        Vec2::new(5.0, 0.0),
+                        Vec2::new(5.0, -5.0),
+                    ],
+                    uvs: std::sync::Arc::from([Vec2::default(), Vec2::default(), Vec2::default()]),
+                    indices: std::sync::Arc::from([0, 1, 2]),
+                    ..Default::default()
+                },
+                Drawable {
+                    id: "d2".to_owned(),
+                    texture_asset_id: "tex".to_owned(),
+                    positions: vec![
+                        Vec2::new(-2.0, 3.0),
+                        Vec2::new(1.0, 1.0),
+                        Vec2::new(0.0, 0.0),
+                    ],
+                    uvs: std::sync::Arc::from([Vec2::default(), Vec2::default(), Vec2::default()]),
+                    indices: std::sync::Arc::from([0, 1, 2]),
+                    ..Default::default()
+                },
+            ],
+            offscreens: vec![OffscreenFrame {
+                id: "grp".to_owned(),
+                enabled: true,
+                opacity: 1.0,
+                ..Default::default()
+            }],
+            render_plan: vec![
+                RenderCommand::BeginOffscreen {
+                    offscreen_id: "grp".to_owned(),
+                },
+                RenderCommand::DrawMesh {
+                    mesh_id: "d1".to_owned(),
+                },
+                RenderCommand::EndOffscreen {
+                    offscreen_id: "grp".to_owned(),
+                },
+                RenderCommand::DrawMesh {
+                    mesh_id: "d2".to_owned(),
+                },
+            ],
+            ..Default::default()
+        };
+        let textures = std::collections::HashMap::from([(
+            "tex".to_owned(),
+            TextureInfo {
+                width: 16,
+                height: 16,
+            },
+        )]);
+        let mut scene = ScenePlan::default();
+        scene.update(&frame, &textures).unwrap();
+
+        // Model units equal pixels: origin translation and Y reflection only.
+        assert_eq!(scene.targets()[1].bounds.position, Vec2::new(100., 100.));
+        assert_eq!(scene.targets()[1].bounds.size, Vec2::new(5., 5.));
+        assert_eq!(scene.content_bounds().position, Vec2::new(98., 97.));
+        assert_eq!(scene.content_bounds().size, Vec2::new(7., 8.));
+        assert_eq!(scene.effective_bounds(), scene.content_bounds());
+    }
 }

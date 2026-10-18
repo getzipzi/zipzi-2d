@@ -23,22 +23,22 @@ fn test_import_m1_roundtrip() {
     let import_res = import_from_bare_moc3(&encoded.bytes, &tex_map).expect("Import failed");
     let doc_imported = &import_res.document;
 
-    // Verify canvas
-    assert_eq!(doc_imported.canvas().width, doc_orig.canvas().width);
-    assert_eq!(doc_imported.canvas().height, doc_orig.canvas().height);
-    near(
-        doc_imported.canvas().origin.x,
-        doc_orig.canvas().origin.x,
-        100.0,
-    );
-    near(
-        doc_imported.canvas().origin.y,
-        doc_orig.canvas().origin.y,
-        100.0,
-    );
+    // Import initializes model origin/units from the exported finite rectangle.
+    let inspection = inspect_moc3(&encoded.bytes).unwrap();
+    let canvas = doc_imported.source_canvas().unwrap();
+    assert_eq!(canvas.width, inspection.canvas.width);
+    assert_eq!(canvas.height, inspection.canvas.height);
     assert_eq!(
-        doc_imported.canvas().pixels_per_unit,
-        doc_orig.canvas().pixels_per_unit
+        canvas.origin,
+        Vec2::new(
+            inspection.canvas.origin_x,
+            canvas.height - inspection.canvas.origin_y
+        )
+    );
+    assert_eq!(doc_imported.model_space(), canvas.model_space());
+    assert_eq!(
+        canvas.pixels_per_unit,
+        doc_orig.source_canvas().unwrap().pixels_per_unit
     );
 
     // Verify parameters count and values
@@ -402,7 +402,11 @@ fn test_import_mao_full() {
                 .iter()
                 .zip(&purism_drawable.positions)
             {
-                let err = ((p_doc.x - p_purism.x).powi(2) + (p_doc.y - p_purism.y).powi(2)).sqrt();
+                let err = ((p_doc.x / doc.source_canvas().unwrap().pixels_per_unit - p_purism.x)
+                    .powi(2)
+                    + (p_doc.y / doc.source_canvas().unwrap().pixels_per_unit - p_purism.y)
+                        .powi(2))
+                .sqrt();
                 if err > mesh_err {
                     mesh_err = err;
                 }
@@ -421,11 +425,12 @@ fn test_import_mao_full() {
     let mut mismatch_count = 0;
     for d in &frame.drawables {
         let p = runtime.get_drawable(&d.runtime_id).unwrap();
-        let is_ok = d
-            .positions
-            .iter()
-            .zip(&p.positions)
-            .all(|(a, b)| ((a.x - b.x).powi(2) + (a.y - b.y).powi(2)).sqrt() <= 0.05);
+        let is_ok = d.positions.iter().zip(&p.positions).all(|(a, b)| {
+            ((a.x / doc.source_canvas().unwrap().pixels_per_unit - b.x).powi(2)
+                + (a.y / doc.source_canvas().unwrap().pixels_per_unit - b.y).powi(2))
+            .sqrt()
+                <= 0.05
+        });
         if !is_ok {
             mismatch_count += 1;
         }
@@ -625,8 +630,12 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
         if let Some(core_d) = runtime.get_drawable(&d.runtime_id) {
             assert_eq!(d.positions.len(), core_d.positions.len());
             for p in 0..d.positions.len() {
-                let dx = (d.positions[p].x - core_d.positions[p].x).abs();
-                let dy = (d.positions[p].y - core_d.positions[p].y).abs();
+                let dx = (d.positions[p].x / doc.source_canvas().unwrap().pixels_per_unit
+                    - core_d.positions[p].x)
+                    .abs();
+                let dy = (d.positions[p].y / doc.source_canvas().unwrap().pixels_per_unit
+                    - core_d.positions[p].y)
+                    .abs();
                 max_pos_error = max_pos_error.max(dx).max(dy);
             }
         }
@@ -703,8 +712,12 @@ fn test_import_rice_and_mark_v3() {
             if let Some(core_d) = runtime.get_drawable(&d.runtime_id) {
                 assert_eq!(d.positions.len(), core_d.positions.len());
                 for p in 0..d.positions.len() {
-                    let dx = (d.positions[p].x - core_d.positions[p].x).abs();
-                    let dy = (d.positions[p].y - core_d.positions[p].y).abs();
+                    let dx = (d.positions[p].x / doc.source_canvas().unwrap().pixels_per_unit
+                        - core_d.positions[p].x)
+                        .abs();
+                    let dy = (d.positions[p].y / doc.source_canvas().unwrap().pixels_per_unit
+                        - core_d.positions[p].y)
+                        .abs();
                     max_pos_error = max_pos_error.max(dx).max(dy);
                 }
             }

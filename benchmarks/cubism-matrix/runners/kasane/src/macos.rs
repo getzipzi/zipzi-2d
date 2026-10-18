@@ -78,11 +78,17 @@ fn assemble(frames: Vec<DrawableFrame>, workload: &Workload) -> DrawableFrame {
     let cell_width = width / workload.layout.columns as f32;
     let cell_height = height / workload.layout.rows as f32;
     let mut scene = DrawableFrame {
-        canvas: Canvas::new(width, height, Vec2::new(0.0, 0.0), 1.0),
+        model_space: kasane_core::ModelSpace::default(),
         ..Default::default()
     };
     for (instance, mut frame) in frames.into_iter().enumerate() {
-        let canvas = frame.canvas;
+        let [x0, y0, x1, y1] = frame.model_bounds(false).unwrap_or([0., 0., 1., 1.]);
+        let canvas = Canvas::new(
+            ((x1 - x0) as f32).max(1.),
+            ((y1 - y0) as f32).max(1.),
+            Vec2::new(-x0 as f32, y1 as f32),
+            1.,
+        );
         let scale = (cell_width * workload.layout.cell_fill / canvas.width)
             .min(cell_height * workload.layout.cell_fill / canvas.height);
         let left = (instance % workload.layout.columns) as f32 * cell_width
@@ -98,8 +104,8 @@ fn assemble(frames: Vec<DrawableFrame>, workload: &Workload) -> DrawableFrame {
                 .map(|id| prefixed(instance, id))
                 .collect();
             for position in &mut drawable.positions {
-                let x = (position.x * canvas.pixels_per_unit + canvas.origin.x) * scale + left;
-                let y = (canvas.origin.y - position.y * canvas.pixels_per_unit) * scale + top;
+                let x = (position.x + canvas.origin.x) * scale + left;
+                let y = (canvas.origin.y - position.y) * scale + top;
                 *position = Vec2::new(x, -y);
             }
         }

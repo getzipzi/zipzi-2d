@@ -1,8 +1,8 @@
 //! Compatibility lowering for consumers of the original pass-stream API.
 //! Logical interpretation is shared with ScenePlan.
 use crate::{
-    surface_layout, Affine2, DrawItem, MaskKey, PreparedFrame, RenderPass, ScenePlan, Size2,
-    TargetId, TargetItem, TextureCatalog, ViewportConfig, OFFSCREEN_BUDGET_BYTES,
+    surface_layout_bounds, Affine2, Bounds2, DrawItem, MaskKey, PreparedFrame, RenderPass,
+    ScenePlan, Size2, TargetId, TargetItem, TextureCatalog, ViewportConfig, OFFSCREEN_BUDGET_BYTES,
 };
 use kasane_core::evaluation::DrawableFrame;
 use kasane_core::types::{Status, Vec2};
@@ -31,8 +31,8 @@ pub fn prepare_frame<'a, T: TextureCatalog>(
         .filter(|(_, target)| target.active)
         .map(|(i, _)| frame.offscreens[i - 1].id.as_str())
         .collect();
-    let (surface_size, surface_transform) = offscreen_layout(
-        Vec2::new(frame.canvas.width, frame.canvas.height),
+    let (surface_size, surface_transform) = offscreen_layout_bounds(
+        scene.effective_bounds(),
         viewport.transform,
         viewport.target_extent,
         active_offscreens.len(),
@@ -170,8 +170,8 @@ pub fn prepare_frame<'a, T: TextureCatalog>(
     })
 }
 
-fn offscreen_layout(
-    canvas: Vec2,
+fn offscreen_layout_bounds(
+    bounds: Bounds2,
     transform: Affine2,
     target: Vec2,
     count: usize,
@@ -185,7 +185,7 @@ fn offscreen_layout(
             Affine2::IDENTITY,
         ));
     }
-    let (size, root) = surface_layout(canvas, transform, target)?;
+    let (size, root) = surface_layout_bounds(bounds, transform, target)?;
     if size.width > 4096 || size.height > 4096 {
         return Err(Status::error(
             "OFFSCREEN_BUDGET_EXCEEDED",
@@ -200,6 +200,24 @@ fn offscreen_layout(
         ));
     }
     Ok((size, root))
+}
+
+#[cfg(test)]
+fn offscreen_layout(
+    canvas: Vec2,
+    transform: Affine2,
+    target: Vec2,
+    count: usize,
+) -> Result<(Size2, Affine2), Status> {
+    offscreen_layout_bounds(
+        Bounds2 {
+            position: Vec2::default(),
+            size: canvas,
+        },
+        transform,
+        target,
+        count,
+    )
 }
 
 #[cfg(test)]
@@ -287,7 +305,13 @@ mod tests {
         inner_drawable.masks.push("root-mesh".to_owned());
         inner_drawable.raw_blend_mode = Some(0);
         let frame = DrawableFrame {
-            canvas: kasane_core::types::Canvas::new(640.0, 480.0, Vec2::new(320.0, 240.0), 100.0),
+            model_space: (kasane_core::types::Canvas::new(
+                640.0,
+                480.0,
+                Vec2::new(320.0, 240.0),
+                100.0,
+            ))
+            .into(),
             drawables: vec![
                 test_drawable("root-mesh", "texture", 0),
                 test_drawable("outer-mesh", "texture", 1),
@@ -406,7 +430,13 @@ mod tests {
     #[test]
     fn prepares_flat_frames_without_a_core_render_plan_in_render_order() {
         let frame = DrawableFrame {
-            canvas: kasane_core::types::Canvas::new(640.0, 480.0, Vec2::new(320.0, 240.0), 100.0),
+            model_space: (kasane_core::types::Canvas::new(
+                640.0,
+                480.0,
+                Vec2::new(320.0, 240.0),
+                100.0,
+            ))
+            .into(),
             drawables: vec![
                 test_drawable("late", "texture", 20),
                 test_drawable("early", "texture", 10),

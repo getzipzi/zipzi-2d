@@ -256,7 +256,7 @@ fn test_blendshape_evaluation() {
     assert_eq!(mesh_a.draw_order, 0);
 
     // Case 2: PARAM_BS = 1.0, constraint param_bs2 = 0.0 (weight 1.0) -> full delta (5, 10)
-    // Note: doc.canvas().flag & 1 == 0 inverts Y for final output
+    // Note: doc.source_canvas().unwrap().flag & 1 == 0 inverts Y for final output
     preview.insert(PARAM_BS.to_string(), 1.0);
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let mesh_a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();

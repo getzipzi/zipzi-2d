@@ -92,7 +92,7 @@ impl PreparedEvaluation {
                 .map(|uv| {
                     Vec2::new(
                         uv.x,
-                        if doc.canvas().flag & 1 == 0 {
+                        if !doc.model_space().y_axis_down {
                             uv.y
                         } else {
                             1.0 - uv.y
@@ -104,7 +104,7 @@ impl PreparedEvaluation {
             doc.render_indices_into(id, &mut indices)?;
             for tri in indices.as_chunks_mut::<3>().0 {
                 tri.swap(1, 2);
-                if doc.canvas().flag & 1 == 0 {
+                if !doc.model_space().y_axis_down {
                     tri.swap(0, 2);
                 }
             }

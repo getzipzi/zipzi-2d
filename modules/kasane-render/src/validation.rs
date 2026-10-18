@@ -63,19 +63,11 @@ fn validate_frame_with(
     frame: &DrawableFrame,
     mut geometry: impl FnMut(usize, &Drawable) -> Status,
 ) -> Status {
-    let canvas = frame.canvas;
-    if !canvas.width.is_finite()
-        || !canvas.height.is_finite()
-        || !canvas.origin.x.is_finite()
-        || !canvas.origin.y.is_finite()
-        || !canvas.pixels_per_unit.is_finite()
-        || canvas.width <= 0.0
-        || canvas.height <= 0.0
-        || canvas.pixels_per_unit <= 0.0
-    {
+    let canvas = frame.model_space;
+    if !canvas.is_valid() {
         return Status::error(
-            "INVALID_CANVAS",
-            "Canvas dimensions and scale must be positive and finite.",
+            "INVALID_MODEL_SPACE",
+            "Model origin must be finite and unit scale positive and finite.",
         );
     }
     let mut ids = HashSet::new();
@@ -94,8 +86,7 @@ fn validate_frame_with(
                 .chain(&drawable.screen_color)
                 .any(|v| !v.is_finite())
             || drawable.positions.iter().any(|p| {
-                !(p.x * canvas.pixels_per_unit + canvas.origin.x).is_finite()
-                    || !(canvas.origin.y - p.y * canvas.pixels_per_unit).is_finite()
+                !(p.x + canvas.origin.x).is_finite() || !(canvas.origin.y - p.y).is_finite()
             })
         {
             return Status::error(
@@ -224,7 +215,7 @@ mod tests {
 
     fn frame() -> DrawableFrame {
         DrawableFrame {
-            canvas: Canvas::new(640.0, 480.0, Vec2::new(320.0, 240.0), 100.0),
+            model_space: (Canvas::new(640.0, 480.0, Vec2::new(320.0, 240.0), 100.0)).into(),
             drawables: vec![Drawable {
                 id: "mesh".into(),
                 positions: vec![
@@ -252,14 +243,16 @@ mod tests {
         value.drawables[0].positions[0].x = f32::NAN;
         assert_eq!(validator.validate(&value).code, "NON_FINITE");
         value.drawables[0].positions[0].x = f32::MAX;
+        value.model_space.origin.x = f32::MAX;
         assert_eq!(validator.validate(&value).code, "NON_FINITE");
         value.drawables[0].positions[0].x = 0.0;
+        value.model_space.origin.x = 0.;
         value.drawables[0].positions.pop();
         assert_eq!(validator.validate(&value).code, "INVALID_LENGTH");
         value.drawables[0].positions.push(Vec2::new(0.0, 1.0));
         assert!(validator.validate(&value).is_ok());
-        value.canvas.pixels_per_unit = 0.0;
-        assert_eq!(validator.validate(&value).code, "INVALID_CANVAS");
+        value.model_space.origin.y = f32::NAN;
+        assert_eq!(validator.validate(&value).code, "INVALID_MODEL_SPACE");
     }
 
     #[test]
@@ -291,10 +284,22 @@ mod tests {
     }
 
     #[test]
+    fn boundless_frames_keep_coordinate_and_scale_validation() {
+        let mut value = frame();
+        assert!(validate_frame(&value).is_ok());
+        assert!(validate_frame(&value).is_ok());
+        value.model_space.origin.x = f32::NAN;
+        assert_eq!(validate_frame(&value).code, "INVALID_MODEL_SPACE");
+        value.model_space.origin.x = 0.0;
+        value.model_space.origin.y = f32::NAN;
+        assert_eq!(validate_frame(&value).code, "INVALID_MODEL_SPACE");
+    }
+
+    #[test]
     fn rejects_invalid_canvas_and_appearance() {
         let mut value = frame();
-        value.canvas.width = 0.0;
-        assert_eq!(validate_frame(&value).code, "INVALID_CANVAS");
+        value.model_space.origin.y = f32::NAN;
+        assert_eq!(validate_frame(&value).code, "INVALID_MODEL_SPACE");
         let mut value = frame();
         value.drawables[0].opacity = f32::NAN;
         assert_eq!(validate_frame(&value).code, "NON_FINITE");
@@ -333,7 +338,7 @@ mod tests {
         value.drawables[0].positions[0].x = f32::INFINITY;
         assert_eq!(validate_frame(&value).code, "NON_FINITE");
         let mut value = frame();
-        value.canvas.pixels_per_unit = f32::MAX;
+        value.model_space.origin.x = f32::MAX;
         value.drawables[0].positions[1].x = f32::MAX;
         assert_eq!(validate_frame(&value).code, "NON_FINITE");
     }

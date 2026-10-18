@@ -60,7 +60,7 @@ fn test_import_external_v33_3d8e869a() {
     let mut doc_frame = DrawableFrame::default();
     evaluate_frame(doc, &HashMap::new(), &mut doc_frame);
 
-    let ppu = doc.canvas().pixels_per_unit;
+    let ppu = doc.source_canvas().unwrap().pixels_per_unit;
 
     // 4. Re-export imported Document to v50 MOC3 and verify in PurismCore
     let re_export = encode_moc3(doc).expect("Re-export of v33 model to v50 failed");

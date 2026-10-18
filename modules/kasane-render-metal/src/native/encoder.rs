@@ -3,13 +3,14 @@ use super::context::create_texture;
 use super::geometry::MeshBuffers;
 use super::mask::{fit_mask_budget, CachedMask, MaskAttachment, MaskCacheKey, MaskViewport};
 use super::pipeline::Uniform;
+use super::surface::SurfaceLayout;
 use super::{MetalOutputMode, MetalRenderStats, MetalRenderer, MetalTextureCatalog};
 use kasane_core::{
     evaluation::{DrawableFrame, OffscreenFrame},
     BlendMode, Status, Vec2,
 };
 use kasane_render::gpu::{compose_affine, inverse_affine};
-use kasane_render::{surface_layout, Affine2, TargetId, TargetItem, ViewportConfig};
+use kasane_render::{Affine2, TargetId, TargetItem, ViewportConfig};
 use metal::{
     CommandBufferRef, MTLClearColor, MTLIndexType, MTLLoadAction, MTLOrigin, MTLPrimitiveType,
     MTLSize, MTLStoreAction, MTLTextureUsage, RenderPassDescriptor, RenderPipelineState, Texture,
@@ -82,17 +83,11 @@ impl MetalRenderer {
                 "Output texture belongs to another Metal device.",
             ));
         }
-        let (size, surface_transform) = surface_layout(
-            Vec2::new(self.scene.canvas().width, self.scene.canvas().height),
-            viewport.transform,
-            viewport.target_extent,
-        )?;
-        let surface_size = (size.width as u32, size.height as u32);
+        let color_layout = self.color_layout(viewport, output_mode)?;
         let (viewport, mask_view, attachment_bytes) =
             fit_mask_budget(viewport, |view, mask_view| {
-                self.validate_attachment_budget(frame, view, surface_size, output_mode, mask_view)
+                self.validate_attachment_budget(frame, view, color_layout.bytes, mask_view)
             })?;
-        let surface_to_model = inverse_affine(surface_transform)?;
         // Replace can render directly to the host texture. Composite requires
         // an intermediate image to preserve the host's existing background.
         let main_color = if output_mode == MetalOutputMode::Replace {
@@ -117,9 +112,7 @@ impl MetalRenderer {
             mask_view,
             textures,
             command,
-            surface_size,
-            surface_transform,
-            surface_to_model,
+            layouts: color_layout.surfaces,
             surfaces: HashMap::new(),
             color_pool: Vec::new(),
             attachment_bytes,
@@ -182,6 +175,7 @@ impl MetalRenderer {
         let mask_cache = std::mem::take(&mut state.mask_cache);
         let atlas_pages = std::mem::take(&mut state.atlas_pages);
         let stats = state.stats;
+        debug_assert_eq!(stats.color_attachment_bytes, color_layout.bytes);
         drop(state);
         self.mask_cache = mask_cache;
         self.mask_atlas_pages = atlas_pages;
@@ -213,9 +207,7 @@ pub(super) struct FrameEncoder<'a, 'tex> {
     pub(super) mask_view: MaskViewport,
     pub(super) textures: &'a MetalTextureCatalog<'tex>,
     pub(super) command: &'a CommandBufferRef,
-    pub(super) surface_size: (u32, u32),
-    pub(super) surface_transform: Affine2,
-    pub(super) surface_to_model: Affine2,
+    pub(super) layouts: Vec<SurfaceLayout>,
     pub(super) surfaces: HashMap<TargetId, Texture>,
     // Local to this command: submitted frames never share writable attachments.
     pub(super) color_pool: Vec<Texture>,
@@ -240,16 +232,12 @@ impl FrameEncoder<'_, '_> {
         let target_texture = if id == TargetId::MAIN {
             main.to_owned()
         } else {
-            let texture = self.acquire_color(self.surface_size);
+            let texture = self.acquire_color(self.layouts[id.0].size);
             self.surfaces.insert(id, texture.clone());
             self.stats.active_surfaces += 1;
             texture
         };
-        let size = if id == TargetId::MAIN {
-            (self.renderer.target.width, self.renderer.target.height)
-        } else {
-            self.surface_size
-        };
+        let size = self.layouts[id.0].size;
         let mut clear = true;
         for item in items {
             if let TargetItem::Composite(child) = item {
@@ -258,18 +246,7 @@ impl FrameEncoder<'_, '_> {
                     self.encode_target(child, main)?;
                 }
             }
-            let destination_read = match item {
-                TargetItem::Draw(mesh) => {
-                    self.renderer.scene.meshes()[mesh.0].reads_destination
-                        && self.frame.drawables[mesh.0].visible
-                        && self.frame.drawables[mesh.0].opacity > 0.0
-                        && !self.frame.drawables[mesh.0].indices.is_empty()
-                }
-                TargetItem::Composite(child) => {
-                    self.renderer.scene.targets()[child.0].reads_destination
-                        && self.renderer.scene.targets()[child.0].active
-                }
-            };
+            let destination_read = self.renderer.item_reads_destination(item);
             let snapshot = if destination_read {
                 if clear {
                     self.clear(&target_texture);
@@ -341,7 +318,7 @@ impl FrameEncoder<'_, '_> {
         uniform.view(if target_id == TargetId::MAIN {
             self.viewport.transform
         } else {
-            self.surface_transform
+            self.layouts[target_id.0].transform
         });
         let mask = self.masks.get(&drawable.id).cloned();
         if let Some(mask) = &mask {
@@ -402,18 +379,27 @@ impl FrameEncoder<'_, '_> {
             offscreen.screen_color,
             offscreen.opacity,
         );
+        let layout = self.layouts[child.0];
         let source_scale = Affine2 {
-            a: Vec2::new(self.surface_size.0 as f32, 0.0),
-            b: Vec2::new(0.0, self.surface_size.1 as f32),
+            a: Vec2::new(layout.size.0 as f32, 0.0),
+            b: Vec2::new(0.0, layout.size.1 as f32),
             origin: Vec2::default(),
         };
-        let composite_transform = if parent == TargetId::MAIN {
-            compose_affine(self.viewport.transform, self.surface_to_model)
-        } else {
-            Affine2::IDENTITY
+        // Crops share the viewport's pixel grid. Composite with an integer
+        // translation, including between differently cropped nested targets.
+        let parent_origin = self.layouts[parent.0].screen_origin;
+        let composite_transform = Affine2 {
+            origin: Vec2::new(
+                layout.screen_origin.x - parent_origin.x,
+                layout.screen_origin.y - parent_origin.y,
+            ),
+            ..source_scale
         };
-        uniform.view(compose_affine(composite_transform, source_scale));
-        uniform.mask_view(compose_affine(self.surface_to_model, source_scale));
+        uniform.view(composite_transform);
+        uniform.mask_view(compose_affine(
+            inverse_affine(layout.transform)?,
+            source_scale,
+        ));
         let mask = self.masks.get(&offscreen.id).cloned();
         if let Some(mask) = &mask {
             uniform.mask(mask, offscreen.flags & 8 != 0);

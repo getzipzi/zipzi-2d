@@ -39,6 +39,10 @@ fn shared_layered_fixture_is_generated_and_imported_here() {
     assert_eq!(fixture.as_slice(), psd(vec![layer]));
     let bundle = import_psd(fixture).unwrap();
     assert_eq!((bundle.report.width, bundle.report.height), (8, 8));
+    assert_eq!(
+        bundle.document.model_space().origin,
+        kasane_core::Vec2::new(4., 4.)
+    );
     assert_eq!(bundle.report.raster_layers, 1);
     assert_eq!(bundle.document.mesh_order().len(), 1);
 }

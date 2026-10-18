@@ -356,7 +356,11 @@ fn main() {
         .unwrap();
         fs::write(
             case_dir.join("ppu.txt"),
-            detached_doc.canvas().pixels_per_unit.to_string(),
+            detached_doc
+                .source_canvas()
+                .unwrap()
+                .pixels_per_unit
+                .to_string(),
         )
         .unwrap();
 
@@ -369,7 +373,7 @@ fn main() {
         fs::write(
             case_dir.join("metadata.json"),
             serde_json::to_vec_pretty(&serde_json::json!({
-                "canvas": detached_doc.canvas(),
+                "canvas": detached_doc.source_canvas().unwrap(),
                 "parameters": parameters,
                 "meshes_count": detached_doc.mesh_order().len(),
                 "parts_count": detached_doc.part_order().len(),

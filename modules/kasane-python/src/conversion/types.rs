@@ -62,7 +62,7 @@ pub(crate) type FullOffscreenTuple = (
 pub(crate) type FullEvaluationTuple = (
     VersionTuple,
     u64,
-    (f32, f32, f32, f32, f32),
+    (f32, f32, bool),
     Vec<(String, f32, f32, bool)>,
     Vec<FullDrawableTuple>,
     Vec<FullOffscreenTuple>,

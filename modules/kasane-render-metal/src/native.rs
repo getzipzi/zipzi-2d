@@ -5,6 +5,7 @@ mod geometry;
 mod mask;
 mod pipeline;
 mod renderer;
+mod surface;
 mod textures;
 
 use metal::MTLPixelFormat;

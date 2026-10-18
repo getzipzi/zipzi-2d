@@ -119,7 +119,7 @@ impl Exporter<'_> {
                             add_attr(&mut form, "angle", self.rotation_sign() * angle);
                         }
                         if let Some(scale) = delta.scale {
-                            add_attr(&mut form, "scale", scale * self.rotation_scale(target));
+                            add_attr(&mut form, "scale", scale);
                         }
                         add_appearance(&mut form, delta.opacity, delta.multiply, delta.screen);
                     }

@@ -19,25 +19,30 @@ fn session() -> AuthoringSession {
 #[test]
 fn owned_workspace_isolated_until_publication_and_checks_source_version() {
     let mut sdk = session();
-    let original = sdk.canvas();
+    let original = sdk.source_canvas().unwrap();
     let mut workspace = sdk.begin_owned_edit("resize", None).unwrap();
     let resized = Canvas::new(120.0, 100.0, Vec2::new(50.0, 50.0), 10.0);
-    workspace.replace_canvas(resized).unwrap();
-    assert_eq!(workspace.candidate_document().canvas(), resized);
-    assert_eq!(sdk.canvas(), original);
+    workspace.replace_model_setup(resized).unwrap();
+    assert_eq!(
+        workspace.candidate_document().source_canvas().unwrap(),
+        resized
+    );
+    assert_eq!(sdk.source_canvas().unwrap(), original);
     workspace.commit_to(&mut sdk).unwrap();
-    assert_eq!(sdk.canvas(), resized);
+    assert_eq!(sdk.source_canvas().unwrap(), resized);
     assert_eq!(sdk.history_lengths(), (1, 0));
 
     let mut stale = sdk.begin_owned_edit("stale", None).unwrap();
-    stale.replace_canvas(original).unwrap();
-    sdk.edit("another resize", None, |edit| edit.replace_canvas(original))
-        .unwrap();
+    stale.replace_model_setup(original).unwrap();
+    sdk.edit("another resize", None, |edit| {
+        edit.replace_model_setup(original)
+    })
+    .unwrap();
     assert_eq!(
         stale.commit_to(&mut sdk).unwrap_err().code.as_ref(),
         "STALE_VERSION"
     );
-    assert_eq!(sdk.canvas(), original);
+    assert_eq!(sdk.source_canvas().unwrap(), original);
 }
 
 #[test]
@@ -148,8 +153,8 @@ fn creates_png_rectangle_evaluates_and_undoes_all_content() {
     assert_eq!(source.vertex_ids, vec![0, 1, 2, 3]);
     let frame = sdk.evaluate(&PreviewValues::new()).unwrap();
     assert_eq!(frame.drawables.len(), 1);
-    assert_eq!(frame.drawables[0].positions[0], Vec2::new(-1.0, 1.0));
-    assert_eq!(frame.drawables[0].positions[2], Vec2::new(1.0, -1.0));
+    assert_eq!(frame.drawables[0].positions[0], Vec2::new(-10.0, 10.0));
+    assert_eq!(frame.drawables[0].positions[2], Vec2::new(10.0, -10.0));
 
     let geometry = sdk.mesh(MESH_ID).unwrap();
     let moved: Vec<_> = geometry
@@ -163,7 +168,7 @@ fn creates_png_rectangle_evaluates_and_undoes_all_content() {
     .unwrap();
     assert_eq!(
         sdk.evaluate(&PreviewValues::new()).unwrap().drawables[0].positions[0],
-        Vec2::new(0.0, 1.0)
+        Vec2::new(0.0, 10.0)
     );
     assert_eq!(sdk.history_lengths(), (2, 0));
     sdk.undo().unwrap();

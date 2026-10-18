@@ -1,6 +1,6 @@
 //! ScenePlan-driven wgpu renderer.
 use super::*;
-use kasane_render::{surface_layout, ScenePlan, TargetItem};
+use kasane_render::{surface_layout_bounds, ScenePlan, TargetItem};
 use std::sync::Arc;
 
 /// Owns all resources for one device and one output size/format.
@@ -53,7 +53,7 @@ impl RenderSnapshot {
             .collect();
         Self {
             frame: DrawableFrame {
-                canvas: frame.canvas,
+                model_space: frame.model_space,
                 drawables,
                 offscreens,
                 ..Default::default()
@@ -747,8 +747,8 @@ fn lower_scene<'a>(
             "Viewport extent must match the output target.",
         ));
     }
-    let (surface_size, surface_transform) = surface_layout(
-        Vec2::new(scene.canvas().width, scene.canvas().height),
+    let (surface_size, surface_transform) = surface_layout_bounds(
+        scene.effective_bounds(),
         viewport.transform,
         viewport.target_extent,
     )?;

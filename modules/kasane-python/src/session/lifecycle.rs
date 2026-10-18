@@ -1,23 +1,40 @@
 use super::*;
 
+fn model_setup(
+    width: Option<f32>,
+    height: Option<f32>,
+    origin_x: f32,
+    origin_y: f32,
+) -> PyResult<kasane_core::ModelSetup> {
+    let space = kasane_core::ModelSpace::new(Vec2::new(origin_x, origin_y));
+    let source_canvas = match (width, height) {
+        (None, None) => None,
+        (Some(w), Some(h)) => Some(Canvas::new(w, h, space.origin, 1.)),
+        _ => {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "Supply both source canvas dimensions or neither",
+            ))
+        }
+    };
+    Ok(kasane_core::ModelSetup {
+        space,
+        source_canvas,
+    })
+}
+
 #[pymethods]
 impl NativeSession {
     #[new]
+    #[pyo3(signature = (document_id, width, height, origin_x, origin_y))]
     fn new(
         py: Python<'_>,
         document_id: &str,
-        width: f32,
-        height: f32,
+        width: Option<f32>,
+        height: Option<f32>,
         origin_x: f32,
         origin_y: f32,
-        pixels_per_unit: f32,
     ) -> PyResult<Self> {
-        let canvas = Canvas::new(
-            width,
-            height,
-            Vec2::new(origin_x, origin_y),
-            pixels_per_unit,
-        );
+        let canvas = model_setup(width, height, origin_x, origin_y)?;
         let session =
             AuthoringSession::new(document_id, canvas).map_err(|error| sdk_failure(py, error))?;
         Ok(Self {
@@ -28,23 +45,18 @@ impl NativeSession {
 
     #[staticmethod]
     #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (document_id, width, height, origin_x, origin_y, max_steps, max_bytes))]
     fn with_history_limits(
         py: Python<'_>,
         document_id: &str,
-        width: f32,
-        height: f32,
+        width: Option<f32>,
+        height: Option<f32>,
         origin_x: f32,
         origin_y: f32,
-        pixels_per_unit: f32,
         max_steps: usize,
         max_bytes: usize,
     ) -> PyResult<Self> {
-        let canvas = Canvas::new(
-            width,
-            height,
-            Vec2::new(origin_x, origin_y),
-            pixels_per_unit,
-        );
+        let canvas = model_setup(width, height, origin_x, origin_y)?;
         let session = AuthoringSession::with_history_limits(
             document_id,
             canvas,
@@ -65,7 +77,7 @@ impl NativeSession {
         let result = py.detach(|| {
             let mut session = AuthoringSession::new(
                 "00000000-0000-4000-8000-000000000001",
-                Canvas::new(1.0, 1.0, Vec2::new(0.0, 0.0), 1.0),
+                kasane_core::ModelSpace::default(),
             )?;
             session.open_project(Path::new(&path), None)?;
             Ok::<_, SdkError>(session)
@@ -83,27 +95,21 @@ impl NativeSession {
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[pyo3(signature = (document_id, width, height, origin_x, origin_y, pixels_per_unit, expected_version=None))]
+    #[pyo3(signature = (document_id, width, height, origin_x, origin_y, expected_version=None))]
     fn new_project(
         &self,
         py: Python<'_>,
         document_id: String,
-        width: f32,
-        height: f32,
+        width: Option<f32>,
+        height: Option<f32>,
         origin_x: f32,
         origin_y: f32,
-        pixels_per_unit: f32,
         expected_version: Option<VersionTuple>,
     ) -> PyResult<VersionTuple> {
         self.ensure_idle(py, "new_project")?;
         let active = self.active_edit.clone();
         let session = self.inner.clone();
-        let canvas = Canvas::new(
-            width,
-            height,
-            Vec2::new(origin_x, origin_y),
-            pixels_per_unit,
-        );
+        let canvas = model_setup(width, height, origin_x, origin_y)?;
         let result = py.detach(move || {
             let mut session = session.lock().map_err(|_| ())?;
             if active.load(Ordering::Acquire) {
@@ -131,20 +137,37 @@ impl NativeSession {
             .to_owned())
     }
 
-    fn canvas(&self) -> PyResult<(f32, f32, f32, f32, f32)> {
-        let canvas = self.inner.lock().map_err(|_| poisoned())?.canvas();
-        Ok((
-            canvas.width,
-            canvas.height,
-            canvas.origin.x,
-            canvas.origin.y,
-            canvas.pixels_per_unit,
-        ))
+    fn model_space(&self) -> PyResult<(f32, f32, bool)> {
+        let space = self.inner.lock().map_err(|_| poisoned())?.model_space();
+        Ok((space.origin.x, space.origin.y, space.y_axis_down))
+    }
+
+    fn source_canvas(&self) -> PyResult<Option<(f32, f32, f32, f32, f32, u8)>> {
+        Ok(self
+            .inner
+            .lock()
+            .map_err(|_| poisoned())?
+            .source_canvas()
+            .map(|c| {
+                (
+                    c.width,
+                    c.height,
+                    c.origin.x,
+                    c.origin.y,
+                    c.pixels_per_unit,
+                    c.flag,
+                )
+            }))
     }
 
     fn uv_v_origin(&self) -> PyResult<&'static str> {
-        let flag = self.inner.lock().map_err(|_| poisoned())?.canvas().flag;
-        Ok(if flag & 1 == 0 { "bottom" } else { "top" })
+        let down = self
+            .inner
+            .lock()
+            .map_err(|_| poisoned())?
+            .model_space()
+            .y_axis_down;
+        Ok(if !down { "bottom" } else { "top" })
     }
 
     fn draw_order_groups(&self) -> PyResult<Option<Vec<DrawOrderTuple>>> {

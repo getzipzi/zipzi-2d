@@ -78,11 +78,26 @@ impl EditSession<'_> {
         self.aborted = true;
         error
     }
-    pub fn replace_canvas(&mut self, canvas: Canvas) -> Result<(), SdkError> {
-        self.ensure_active("replace_canvas")?;
+    pub fn replace_model_space(&mut self, space: kasane_core::ModelSpace) -> Result<(), SdkError> {
+        self.ensure_active("replace_model_space")?;
         let id = self.document().id().to_owned();
-        let result = self.document().replace_canvas(canvas);
-        self.record(result, "replace_canvas", &id)
+        let result = self.document().replace_model_space(space);
+        self.record(result, "replace_model_space", &id)
+    }
+    pub fn replace_source_canvas(&mut self, source_canvas: Option<Canvas>) -> Result<(), SdkError> {
+        self.ensure_active("replace_source_canvas")?;
+        let id = self.document().id().to_owned();
+        let result = self.document().replace_source_canvas(source_canvas);
+        self.record(result, "replace_source_canvas", &id)
+    }
+    pub fn replace_model_setup(
+        &mut self,
+        canvas: impl Into<kasane_core::ModelSetup>,
+    ) -> Result<(), SdkError> {
+        self.ensure_active("replace_model_setup")?;
+        let id = self.document().id().to_owned();
+        let result = self.document().replace_model_setup(canvas);
+        self.record(result, "replace_model_setup", &id)
     }
     pub fn replace_editor_state(
         &mut self,

@@ -16,7 +16,7 @@ impl Document {
     pub fn validate_structure(&self) -> Vec<StructureIssue> {
         let mut issues = Vec::new();
         let mut initialized = Document::new();
-        let status = initialized.initialize(self.content.id.clone(), self.content.canvas);
+        let status = initialized.initialize(self.content.id.clone(), self.model_setup());
         if !status.is_ok() {
             issues.push(StructureIssue {
                 object_id: self.content.id.clone(),

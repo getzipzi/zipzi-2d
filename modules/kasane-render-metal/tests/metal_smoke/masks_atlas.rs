@@ -32,7 +32,7 @@ fn cropped_masks_follow_zoom_pan_and_resize_including_empty_inverted_masks() {
         (1, false, true),
     ] {
         let mut frame = DrawableFrame {
-            canvas: Canvas::new(4096., 4096., Vec2::default(), 1.),
+            model_space: (Canvas::new(4096., 4096., Vec2::default(), 1.)).into(),
             ..Default::default()
         };
         for i in 0..count {
@@ -180,7 +180,7 @@ fn cropped_mask_sampling_stays_stable_across_integer_pixel_pans() {
     let mut consumer = quad("mesh", "solid");
     consumer.masks = vec![source.id.clone()];
     let frame = DrawableFrame {
-        canvas: Canvas::new(64., 64., Vec2::default(), 1.),
+        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: vec![source, consumer],
         ..Default::default()
     };
@@ -253,7 +253,7 @@ fn visible_masks_lower_resolution_when_shared_budget_is_exhausted() {
         },
     )]));
     let mut frame = DrawableFrame {
-        canvas: Canvas::new(8000., 8000., Vec2::default(), 1.),
+        model_space: (Canvas::new(8000., 8000., Vec2::default(), 1.)).into(),
         ..Default::default()
     };
     for i in 0..8 {
@@ -311,7 +311,7 @@ fn raw_mask_and_inverted_mask_use_source_alpha() {
     let mut target = quad("target", "red");
     target.masks = vec!["source".into()];
     let mut frame = DrawableFrame {
-        canvas: Canvas::new(64.0, 64.0, Vec2::default(), 1.0),
+        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, target],
         ..Default::default()
     };
@@ -330,7 +330,7 @@ fn duplicate_mask_sources_do_not_accumulate_alpha() {
     let mut target = quad("target", "red");
     target.masks = vec!["source".into()];
     let mut frame = DrawableFrame {
-        canvas: Canvas::new(64.0, 64.0, Vec2::default(), 1.0),
+        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, target],
         ..Default::default()
     };
@@ -342,7 +342,7 @@ fn duplicate_mask_sources_do_not_accumulate_alpha() {
 #[test]
 fn mask_atlas_matches_individual_masks_without_neighbor_bleed() {
     let mut frame = DrawableFrame {
-        canvas: Canvas::new(64., 64., Vec2::default(), 1.),
+        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         ..Default::default()
     };
     for i in 0..40 {
@@ -371,7 +371,7 @@ fn mask_atlas_matches_individual_masks_without_neighbor_bleed() {
     let mut expected = vec![0u8; atlas.len()];
     for chunk in frame.drawables.chunks(40) {
         let (pixels, stats) = fixture(&DrawableFrame {
-            canvas: frame.canvas,
+            model_space: (frame.model_space).into(),
             drawables: chunk.to_vec(),
             ..Default::default()
         });
@@ -405,7 +405,7 @@ fn rejected_encoding_preserves_mask_cache_and_pending_upload_stats() {
         };
         let mut renderer = MetalRenderer::new(&context, target).unwrap();
         let mut frame = DrawableFrame {
-            canvas: Canvas::new(64., 64., Vec2::default(), 1.),
+            model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
             ..Default::default()
         };
         for i in 0..count {
@@ -489,7 +489,7 @@ fn atlas_cache_edits_and_transition_preserve_submitted_frames() {
     };
     let mut renderer = MetalRenderer::new(&context, target).unwrap();
     let mut frame = DrawableFrame {
-        canvas: Canvas::new(64., 64., Vec2::default(), 1.),
+        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         ..Default::default()
     };
     for i in 0..40 {

@@ -25,6 +25,7 @@ from ._types import (
     BlendRotationDelta,
     BlendWarpDelta,
     CanvasSnapshot,
+    ModelSpaceSnapshot,
     DrawOrderGroup,
     DrawableSample,
     EditEvent,
@@ -75,20 +76,19 @@ class Session:
 
     Mutations are made through ``edit``; reads return detached snapshots.
     ``document_id`` is a canonical UUID string, ``origin`` is a pixel ``(x, y)``
-    tuple, and ``pixels_per_unit`` converts source pixels to runtime units.
+    tuple. Model units have the same magnitude as source pixels.
     """
 
     def __init__(
         self,
         document_id: str,
-        width: float,
-        height: float,
-        origin: Point,
-        pixels_per_unit: float,
+        width: float | None = None,
+        height: float | None = None,
+        origin: Point = (0.0, 0.0),
     ) -> None:
-        """Create an empty document with a UUID and canvas in source pixels."""
+        """Create an unbounded model. Optional dimensions retain source framing metadata."""
         self._native = NativeSession(
-            document_id, width, height, origin[0], origin[1], pixels_per_unit
+            document_id, width, height, origin[0], origin[1]
         )
         _sessions.add(self)
 
@@ -103,10 +103,9 @@ class Session:
     def with_history_limits(
         cls,
         document_id: str,
-        width: float,
-        height: float,
+        width: float | None,
+        height: float | None,
         origin: Point,
-        pixels_per_unit: float,
         max_steps: int,
         max_bytes: int,
     ) -> Session:
@@ -117,7 +116,6 @@ class Session:
             height,
             origin[0],
             origin[1],
-            pixels_per_unit,
             max_steps,
             max_bytes,
         )
@@ -217,10 +215,9 @@ class Session:
     def new_project(
         self,
         document_id: str,
-        width: float,
-        height: float,
-        origin: Point,
-        pixels_per_unit: float,
+        width: float | None = None,
+        height: float | None = None,
+        origin: Point = (0.0, 0.0),
         expected_version: Version | None = None,
     ) -> Version:
         """Replace this session with an empty project and return its new version."""
@@ -230,7 +227,6 @@ class Session:
             height,
             origin[0],
             origin[1],
-            pixels_per_unit,
             expected_version,
         )
 
@@ -677,9 +673,15 @@ class Session:
         return self._native.document_id()
 
     @property
-    def canvas(self) -> CanvasSnapshot:
-        """Return a copy of the current canvas settings."""
-        return CanvasSnapshot(*self._native.canvas())
+    def model_space(self) -> ModelSpaceSnapshot:
+        """Stable model coordinates, independent of imported/exported rectangles."""
+        return ModelSpaceSnapshot(*self._native.model_space())
+
+    @property
+    def source_canvas(self) -> CanvasSnapshot | None:
+        """Optional source format framing; never the geometry bounding box."""
+        value = self._native.source_canvas()
+        return CanvasSnapshot(*value) if value is not None else None
 
     @property
     def uv_v_origin(self) -> str:

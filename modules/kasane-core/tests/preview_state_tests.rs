@@ -133,9 +133,13 @@ fn late_geometry_failure_preserves_request_and_published_snapshot() {
     state.replace(&doc, 1, [(id(2), 0.5)].into()).unwrap();
     let frame = state.frame(&doc, 1).unwrap();
     let revision = state.revision();
-    let mut canvas = doc.canvas();
-    canvas.pixels_per_unit = f32::MIN_POSITIVE;
-    assert!(doc.replace_canvas(canvas).status.is_ok());
+    let mut mesh = doc.get_mesh(&id(4)).unwrap().clone();
+    mesh.base_positions[0].x = f32::MAX;
+    assert!(doc.replace_mesh(mesh).status.is_ok());
+    assert!(doc
+        .replace_model_space(ModelSpace::new(Vec2::new(-f32::MAX, 0.)))
+        .status
+        .is_ok());
     assert_eq!(
         state
             .replace(&doc, 1, [(id(2), 0.75)].into())

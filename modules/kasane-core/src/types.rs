@@ -40,11 +40,76 @@ impl Vec2 {
 
 pub type VertexId = u32;
 
+/// Stable authoring coordinates. There is no document rectangle: source points
+/// can extend in every direction from the origin. Evaluation produces Y-up model
+/// units equal in magnitude to source pixels. `y_axis_down` describes the
+/// imported source orientation; format PPU is kept only in source metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ModelSpace {
+    pub origin: Vec2,
+    pub y_axis_down: bool,
+}
+impl Default for ModelSpace {
+    fn default() -> Self {
+        Self {
+            origin: Vec2::default(),
+            y_axis_down: true,
+        }
+    }
+}
+impl ModelSpace {
+    pub const fn new(origin: Vec2) -> Self {
+        Self {
+            origin,
+            y_axis_down: true,
+        }
+    }
+    pub fn is_valid(self) -> bool {
+        self.origin.x.is_finite() && self.origin.y.is_finite()
+    }
+}
+
+/// Initialization data for a new model or a format import. The optional source
+/// canvas is provenance/export framing, never a bound on the model or viewport.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+pub struct ModelSetup {
+    pub space: ModelSpace,
+    pub source_canvas: Option<Canvas>,
+}
+impl From<ModelSpace> for ModelSetup {
+    fn from(space: ModelSpace) -> Self {
+        Self {
+            space,
+            source_canvas: None,
+        }
+    }
+}
+impl From<Canvas> for ModelSpace {
+    fn from(canvas: Canvas) -> Self {
+        canvas.model_space()
+    }
+}
+impl From<Canvas> for ModelSetup {
+    fn from(canvas: Canvas) -> Self {
+        Self {
+            space: canvas.model_space(),
+            source_canvas: Some(canvas),
+        }
+    }
+}
+impl ModelSetup {
+    pub fn is_valid(self) -> bool {
+        self.space.is_valid() && self.source_canvas.is_none_or(Canvas::is_valid)
+    }
+}
+
 fn default_canvas_flag() -> u8 {
     1
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+/// A finite rectangle carried by an import/export format, not the model space.
 pub struct Canvas {
     pub width: f32,
     pub height: f32,
@@ -57,8 +122,8 @@ pub struct Canvas {
 impl Default for Canvas {
     fn default() -> Self {
         Self {
-            width: 0.0,
-            height: 0.0,
+            width: 1.0,
+            height: 1.0,
             origin: Vec2::default(),
             pixels_per_unit: 1.0,
             flag: 1,
@@ -67,6 +132,24 @@ impl Default for Canvas {
 }
 
 impl Canvas {
+    pub fn model_space(self) -> ModelSpace {
+        ModelSpace {
+            origin: self.origin,
+            y_axis_down: self.flag & 1 != 0,
+        }
+    }
+
+    pub fn is_valid(self) -> bool {
+        self.width.is_finite()
+            && self.height.is_finite()
+            && self.width > 0.0
+            && self.height > 0.0
+            && self.origin.x.is_finite()
+            && self.origin.y.is_finite()
+            && self.pixels_per_unit.is_finite()
+            && self.pixels_per_unit > 0.0
+    }
+
     pub fn new(width: f32, height: f32, origin: Vec2, pixels_per_unit: f32) -> Self {
         Self {
             width,

@@ -33,7 +33,7 @@ fn renders_pixels_through_native_metal() {
     };
     let output = context.output_texture(target).unwrap();
     let frame = DrawableFrame {
-        canvas: Canvas::new(SIDE as f32, SIDE as f32, Vec2::new(0.0, 0.0), 1.0),
+        model_space: (Canvas::new(SIDE as f32, SIDE as f32, Vec2::new(0.0, 0.0), 1.0)).into(),
         drawables: vec![Drawable {
             id: "triangle".into(),
             texture_asset_id: "solid".into(),
@@ -113,7 +113,7 @@ fn filtered_transparent_texels_do_not_tint_normal_or_clipped_edges() {
             }
             draws.push(edge);
             let frame = DrawableFrame {
-                canvas: Canvas::new(64., 64., Vec2::new(0., 0.), 1.),
+                model_space: (Canvas::new(64., 64., Vec2::new(0., 0.), 1.)).into(),
                 drawables: draws,
                 ..Default::default()
             };
@@ -164,7 +164,7 @@ fn packed_mesh_buffers_preserve_vertex_and_index_offsets() {
         position.x = 32. + position.x * 0.5;
     }
     let (pixels, stats) = fixture(&DrawableFrame {
-        canvas: Canvas::new(64., 64., Vec2::default(), 1.),
+        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: vec![left, right],
         ..Default::default()
     });
@@ -182,7 +182,7 @@ fn empty_mesh_does_not_allocate_a_destination_snapshot() {
     empty.indices = Arc::from([]);
     empty.raw_blend_mode = Some(1);
     let frame = DrawableFrame {
-        canvas: Canvas::new(64.0, 64.0, Vec2::default(), 1.0),
+        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![empty],
         ..Default::default()
     };
@@ -222,7 +222,7 @@ fn rejects_array_textures_before_encoding_or_readback() {
     )]));
     let mut renderer = MetalRenderer::new(&context, target).unwrap();
     let mut frame = DrawableFrame {
-        canvas: Canvas::new(64.0, 64.0, Vec2::default(), 1.0),
+        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         ..Default::default()
     };
     let viewport = ViewportConfig {
@@ -284,7 +284,7 @@ fn texture_rows_follow_the_shared_uv_orientation() {
     };
     let output = context.output_texture(target).unwrap();
     let frame = DrawableFrame {
-        canvas: Canvas::new(64.0, 64.0, Vec2::default(), 1.0),
+        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("mesh", "image")],
         ..Default::default()
     };

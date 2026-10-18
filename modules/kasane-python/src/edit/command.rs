@@ -35,7 +35,8 @@ pub(super) fn apply_command(
         Command::ReplaceMeshBinding(binding) => edit.replace_binding(binding)?,
         Command::SetMeshKeyform(id, form) => edit.set_mesh_keyform(&id, form)?,
         Command::UpdateMeshProperties(id, props) => edit.update_mesh_properties(&id, props)?,
-        Command::ReplaceCanvas(canvas) => edit.replace_canvas(canvas)?,
+        Command::ReplaceModelSpace(space) => edit.replace_model_space(space)?,
+        Command::ReplaceSourceCanvas(canvas) => edit.replace_source_canvas(canvas)?,
         Command::EraseObject(id) => edit.erase_object(&id)?,
         Command::ReplaceParameter(mut parameter, kind) => {
             if let Some(previous) = edit.candidate_document().get_parameter(&parameter.id) {

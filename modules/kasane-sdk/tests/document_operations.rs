@@ -36,9 +36,31 @@ fn session() -> AuthoringSession {
 }
 
 #[test]
+fn boundless_canvas_supports_history_and_rejects_invalid_coordinates() {
+    let mut sdk = AuthoringSession::new(&id(1), kasane_core::ModelSpace::default()).unwrap();
+    assert!(sdk.source_canvas().is_none());
+    // Source origin and units can change without introducing a document rectangle.
+    let partial = kasane_core::ModelSpace::new(Vec2::new(17.0, -30.0));
+    sdk.edit("extent", None, |edit| edit.replace_model_setup(partial))
+        .unwrap();
+    assert_eq!(sdk.preview_frame().unwrap().model_space, partial);
+    sdk.undo().unwrap();
+    assert_eq!(sdk.model_space(), kasane_core::ModelSpace::default());
+    sdk.redo().unwrap();
+    for invalid in [
+        Canvas::new(-1.0, 0.0, Vec2::default(), 1.0),
+        Canvas::new(0.0, f32::INFINITY, Vec2::default(), 1.0),
+        Canvas::new(0.0, 0.0, Vec2::new(f32::NAN, 0.0), 1.0),
+        Canvas::new(0.0, 0.0, Vec2::default(), 0.0),
+    ] {
+        assert!(AuthoringSession::new(&id(3), invalid).is_err());
+    }
+}
+
+#[test]
 fn canvas_and_draw_order_publish_together_and_reject_invalid_groups() {
     let mut sdk = session();
-    let mut canvas = sdk.canvas();
+    let mut canvas = sdk.source_canvas().unwrap();
     canvas.pixels_per_unit = 20.0;
     let groups = vec![DrawOrderGroup {
         owner: String::new(),
@@ -48,17 +70,17 @@ fn canvas_and_draw_order_publish_together_and_reject_invalid_groups() {
     }];
     let before = sdk.version();
     sdk.edit("drawing", Some(before), |edit| {
-        edit.replace_canvas(canvas)?;
+        edit.replace_model_setup(canvas)?;
         edit.replace_draw_order_groups(groups.clone())
     })
     .unwrap();
     assert_eq!(sdk.version().revision, before.revision + 1);
     assert!(sdk.validate_structure().is_empty());
-    assert_eq!(sdk.canvas().pixels_per_unit, 20.0);
+    assert_eq!(sdk.source_canvas().unwrap().pixels_per_unit, 20.0);
     assert_eq!(sdk.draw_order_groups(), Some(groups));
     assert_eq!(
         sdk.evaluate(&Default::default()).unwrap().drawables[0].positions[0].x,
-        -0.5
+        -10.
     );
 
     let version = sdk.version();
@@ -78,7 +100,7 @@ fn canvas_and_draw_order_publish_together_and_reject_invalid_groups() {
     assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
     assert_eq!(sdk.version(), version);
     sdk.undo().unwrap();
-    assert_eq!(sdk.canvas().pixels_per_unit, 10.0);
+    assert_eq!(sdk.source_canvas().unwrap().pixels_per_unit, 10.0);
     assert!(sdk.draw_order_groups().is_none());
 }
 
@@ -213,19 +235,19 @@ fn new_project_failure_preserves_session_and_success_changes_generation() {
     let old = sdk.handle(ObjectKind::Mesh, &id(3)).unwrap();
     let frame = sdk.preview_frame().unwrap();
     let current = sdk.version();
-    let mut invalid_canvas = sdk.canvas();
+    let mut invalid_canvas = sdk.source_canvas().unwrap();
     invalid_canvas.pixels_per_unit = 0.0;
     assert_eq!(
         sdk.new_project(&id(1), invalid_canvas, Some(current))
             .unwrap_err()
             .code
             .as_ref(),
-        "INVALID_CANVAS"
+        "INVALID_MODEL_SPACE"
     );
     let mut stale = current;
     stale.revision += 1;
     assert_eq!(
-        sdk.new_project(&id(1), sdk.canvas(), Some(stale))
+        sdk.new_project(&id(1), sdk.source_canvas().unwrap(), Some(stale))
             .unwrap_err()
             .code
             .as_ref(),
@@ -237,7 +259,7 @@ fn new_project_failure_preserves_session_and_success_changes_generation() {
     assert_eq!(sdk.history_lengths(), (1, 0));
 
     let next = sdk
-        .new_project(&id(1), sdk.canvas(), Some(current))
+        .new_project(&id(1), sdk.source_canvas().unwrap(), Some(current))
         .unwrap();
     assert_eq!(next.session_id, current.session_id);
     assert_eq!(next.generation, current.generation + 1);
@@ -250,4 +272,76 @@ fn new_project_failure_preserves_session_and_success_changes_generation() {
         sdk.resolve_handle(&old).unwrap_err().code.as_ref(),
         "STALE_HANDLE"
     );
+}
+
+#[test]
+fn source_framing_is_metadata_and_never_changes_model_bounds_or_evaluation() {
+    let mut sdk = session();
+    let before = sdk.preview_frame().unwrap().clone();
+    let revision = sdk.evaluation_revision();
+    let space = sdk.model_space();
+    assert_eq!(before.model_bounds(false), Some([-10., -10., 10., 10.]));
+    sdk.edit("Source framing", None, |edit| {
+        edit.replace_source_canvas(Some(Canvas::new(
+            4000.,
+            3000.,
+            Vec2::new(-800., 700.),
+            123.,
+        )))
+    })
+    .unwrap();
+    assert_eq!(sdk.model_space(), space);
+    assert_eq!(sdk.evaluation_revision(), revision);
+    assert!(Arc::ptr_eq(&sdk.preview_frame().unwrap(), &before));
+    let source = sdk.source_canvas().unwrap();
+    sdk.edit("Cubism units metadata", None, |edit| {
+        edit.replace_source_canvas(Some(Canvas {
+            pixels_per_unit: 20.,
+            ..source
+        }))
+    })
+    .unwrap();
+    assert_eq!(sdk.evaluation_revision(), revision);
+    assert!(Arc::ptr_eq(&sdk.preview_frame().unwrap(), &before));
+    assert_eq!(
+        sdk.preview_frame().unwrap().model_bounds(false),
+        before.model_bounds(false)
+    );
+    sdk.undo().unwrap();
+    assert_eq!(sdk.source_canvas(), Some(source));
+    assert_eq!(sdk.evaluation_revision(), revision);
+    sdk.edit("Remove source reference", None, |edit| {
+        edit.replace_source_canvas(None)
+    })
+    .unwrap();
+    assert!(sdk.source_canvas().is_none());
+    assert_eq!(
+        sdk.preview_frame().unwrap().model_bounds(false),
+        before.model_bounds(false)
+    );
+    sdk.undo().unwrap();
+    assert_eq!(sdk.source_canvas(), Some(source));
+}
+
+#[test]
+fn model_space_and_source_reference_are_separate_project_fields() {
+    let mut sdk =
+        AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
+    sdk.edit("Origin", None, |edit| {
+        edit.replace_model_space(kasane_core::ModelSpace::new(Vec2::new(-30., 17.)))
+    })
+    .unwrap();
+    let before = sdk.read_snapshot();
+    let json = kasane_project::encode_project(before.document()).unwrap();
+    let wire: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(wire["format_version"], 13);
+    assert!(wire["document"].get("canvas").is_none());
+    assert_eq!(wire["document"]["model_space"]["origin"]["x"], -30.);
+    assert!(wire["document"]["model_space"]
+        .get("pixels_per_unit")
+        .is_none());
+    assert_eq!(wire["document"]["source_canvas"]["pixels_per_unit"], 10.);
+    assert_eq!(wire["document"]["source_canvas"]["origin"]["x"], 50.);
+    let reopened = kasane_project::decode_project(&json).unwrap();
+    assert!(reopened.same_content(before.document()));
 }

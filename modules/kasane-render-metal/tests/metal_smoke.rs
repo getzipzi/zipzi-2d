@@ -1,5 +1,7 @@
 #![cfg(target_os = "macos")]
 
+#[path = "metal_smoke/cropped_offscreens.rs"]
+mod cropped_offscreens;
 #[path = "metal_smoke/helpers.rs"]
 mod helpers;
 #[path = "metal_smoke/masks_atlas.rs"]

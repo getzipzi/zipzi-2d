@@ -91,7 +91,7 @@ fn make_workload(
     Workload {
         name,
         frame: DrawableFrame {
-            canvas: Canvas::new(3840.0, 2160.0, Vec2::new(1920.0, 1080.0), 100.0),
+            model_space: (Canvas::new(3840.0, 2160.0, Vec2::new(1920.0, 1080.0), 100.0)).into(),
             drawables,
             offscreens,
             render_plan,

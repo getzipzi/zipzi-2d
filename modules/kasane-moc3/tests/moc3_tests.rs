@@ -202,15 +202,27 @@ fn verify_with_purism(doc: &Document, artifact: &Moc3Artifact, preview: &Preview
         let mut ppu: f32 = 0.0;
         csmReadCanvasInfo(model, &mut canvas_size, &mut canvas_origin, &mut ppu);
 
-        near(canvas_size.x, doc.canvas().width, 1.0);
-        near(canvas_size.y, doc.canvas().height, 1.0);
-        near(canvas_origin.x, doc.canvas().origin.x, 1.0);
-        near(
-            canvas_origin.y,
-            doc.canvas().height - doc.canvas().origin.y,
-            1.0,
-        );
-        near(ppu, doc.canvas().pixels_per_unit, 1.0);
+        let mut default_frame = DrawableFrame::default();
+        assert!(kasane_core::evaluation::evaluate_frame_including_hidden(
+            doc,
+            &Default::default(),
+            &mut default_frame
+        )
+        .is_ok());
+        let canvas = kasane_core::geometry::finite_export_canvas(
+            doc.model_space(),
+            doc.source_canvas(),
+            default_frame
+                .drawables
+                .iter()
+                .flat_map(|d| d.positions.iter().copied()),
+        )
+        .unwrap();
+        near(canvas_size.x, canvas.width, 1.0);
+        near(canvas_size.y, canvas.height, 1.0);
+        near(canvas_origin.x, canvas.origin.x, 1.0);
+        near(canvas_origin.y, canvas.height - canvas.origin.y, 1.0);
+        near(ppu, canvas.pixels_per_unit, 1.0);
 
         let draw_ids = csmGetDrawableIds(model);
         let draw_tex = csmGetDrawableTextureIndices(model);
@@ -292,8 +304,8 @@ fn verify_with_purism(doc: &Document, artifact: &Moc3Artifact, preview: &Preview
                 let p = *pos_slice.add(j);
                 let uv = *uv_slice.add(j);
                 if d.visible {
-                    near(p.x, d.positions[j].x, ppu);
-                    near(p.y, d.positions[j].y, ppu);
+                    near(p.x, d.positions[j].x / ppu, ppu);
+                    near(p.y, d.positions[j].y / ppu, ppu);
                 }
                 near(uv.x, d.uvs[j].x, 1.0);
                 near(uv.y, d.uvs[j].y, 1.0);
@@ -729,4 +741,55 @@ fn test_error_handling_and_validations() {
     assert!(doc.replace_mesh(bad_mesh).status.is_ok());
     let err = encode_moc3(&doc).unwrap_err();
     assert_eq!(err.code, "UNREPRESENTABLE_ID");
+}
+
+#[test]
+fn boundless_canvas_preserves_runtime_geometry_and_includes_hidden_bounds() {
+    for flag in [0, 1] {
+        for origin in [
+            Vec2::new(130.25, -77.5),
+            Vec2::default(),
+            Vec2::new(-100., 200.),
+        ] {
+            let mut doc = fixture();
+            let mut canvas = kasane_core::ModelSpace::new(origin);
+            canvas.y_axis_down = flag != 0;
+            assert!(doc.replace_model_setup(canvas).status.is_ok());
+            let before = doc.clone();
+            let artifact = encode_moc3(&doc).unwrap();
+            verify_with_purism(&doc, &artifact, &Default::default());
+            assert!(doc.same_content(&before));
+            assert_eq!(doc.revision(), before.revision());
+            let mut hidden = doc.get_mesh(&id(4)).unwrap().clone();
+            hidden.id = id(90);
+            hidden.runtime_id = "Hidden".into();
+            hidden.enabled = false;
+            hidden.base_positions = hidden
+                .base_positions
+                .iter()
+                .map(|p| Vec2::new(p.x + 4000., p.y + 2000.))
+                .collect();
+            assert!(doc.create_mesh(hidden).status.is_ok());
+            let artifact = encode_moc3(&doc).unwrap();
+            let info = kasane_moc3::inspect_moc3(&artifact.bytes).unwrap().canvas;
+            assert!(info.width > 4800. && info.height > 2400.);
+        }
+    }
+}
+
+#[test]
+fn source_ppu_only_changes_export_units_and_rejects_export_overflow() {
+    let mut doc = fixture();
+    let mut before = DrawableFrame::default();
+    assert!(evaluate_frame(&doc, &Default::default(), &mut before).is_ok());
+    let evaluation_revision = doc.evaluation_revision();
+    let mut canvas = doc.source_canvas().unwrap();
+    canvas.pixels_per_unit = f32::MIN_POSITIVE;
+    assert!(doc.replace_source_canvas(Some(canvas)).status.is_ok());
+    assert_eq!(doc.evaluation_revision(), evaluation_revision);
+    let mut after = DrawableFrame::default();
+    assert!(evaluate_frame(&doc, &Default::default(), &mut after).is_ok());
+    assert_eq!(before.drawables, after.drawables);
+    assert_eq!(before.deformers, after.deformers);
+    assert_eq!(encode_moc3(&doc).unwrap_err().code, "NON_FINITE");
 }

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::assets::{relocate_history_assets, validate_asset_root};
 use crate::session::AuthoringSession;
 use crate::types::{ImportReceipt, PsdImportReceipt, SaveReceipt, SdkError, Version};
-use kasane_core::{Canvas, Document};
+use kasane_core::Document;
 use kasane_project::{ProjectResult, ResourceDiagnostic};
 
 impl AuthoringSession {
@@ -39,7 +39,7 @@ impl AuthoringSession {
     pub fn new_project(
         &mut self,
         document_id: &str,
-        canvas: Canvas,
+        canvas: impl Into<kasane_core::ModelSetup>,
         expected: Option<Version>,
     ) -> Result<Version, SdkError> {
         let current = self.version();

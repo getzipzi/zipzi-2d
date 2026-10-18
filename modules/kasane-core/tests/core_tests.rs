@@ -115,7 +115,7 @@ fn test_core_lifecycle_and_topology() {
         )
         .is_ok());
     assert!(!doc
-        .initialize(DOC, Canvas::new(0.0, 100.0, Vec2::default(), 1.0))
+        .initialize(DOC, Canvas::new(-1.0, 100.0, Vec2::default(), 1.0))
         .is_ok());
     assert!(doc
         .initialize(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 1.0))

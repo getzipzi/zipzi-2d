@@ -216,9 +216,8 @@ pub(super) fn evaluate(
                                     let f = &forms[kf_idx];
                                     for (p, dp) in state.points.iter_mut().zip(&f.points) {
                                         if t.parent_id.is_none() {
-                                            let ppu = doc.canvas().pixels_per_unit;
-                                            p.x += (dp.x / ppu) * eff_w;
-                                            p.y += (-dp.y / ppu) * eff_w;
+                                            p.x += dp.x * eff_w;
+                                            p.y += (-dp.y) * eff_w;
                                         } else {
                                             p.x += dp.x * eff_w;
                                             p.y += dp.y * eff_w;
@@ -260,11 +259,8 @@ pub(super) fn evaluate(
                                     let f = &forms[kf_idx];
                                     if let Some(d_orig) = f.origin {
                                         if t.parent_id.is_none() {
-                                            let ppu = doc.canvas().pixels_per_unit;
-                                            transform_state.pose.origin.x +=
-                                                (d_orig.x / ppu) * eff_w;
-                                            transform_state.pose.origin.y +=
-                                                (-d_orig.y / ppu) * eff_w;
+                                            transform_state.pose.origin.x += d_orig.x * eff_w;
+                                            transform_state.pose.origin.y += (-d_orig.y) * eff_w;
                                         } else {
                                             transform_state.pose.origin.x += d_orig.x * eff_w;
                                             transform_state.pose.origin.y += d_orig.y * eff_w;
@@ -332,11 +328,36 @@ pub(super) fn evaluate(
                 } else {
                     let mut origin =
                         PsmVec2::new(transform_state.pose.origin.x, transform_state.pose.origin.y);
-                    let adj = rotation_parent_angle(
-                        parent.source.kind == TransformKind::Rotation,
-                        |pt| parent.point(pt),
-                        &mut origin,
-                    );
+                    let adj = if parent.source.kind == TransformKind::Rotation {
+                        // A rotation is affine: derive its direction without its
+                        // translation. Subtracting nearby large world points
+                        // loses precision, especially after importing small scales.
+                        let mut zero = PsmVec2::default();
+                        let adj = rotation_parent_angle(
+                            true,
+                            |point| {
+                                let input = [point.x, point.y];
+                                let mut output = [0.; 2];
+                                rotation_points(
+                                    parent.source.base_angle,
+                                    parent.pose.angle,
+                                    parent.pose.scale,
+                                    PsmVec2::default(),
+                                    parent.pose.reflect_x,
+                                    parent.pose.reflect_y,
+                                    &input,
+                                    &mut output,
+                                    1,
+                                );
+                                PsmVec2::new(output[0], output[1])
+                            },
+                            &mut zero,
+                        );
+                        origin = parent.point(origin);
+                        adj
+                    } else {
+                        rotation_parent_angle(false, |point| parent.point(point), &mut origin)
+                    };
                     transform_state.pose.angle += adj;
                     transform_state.pose.origin = Vec2::new(origin.x, origin.y);
                     transform_state.pose.scale *= parent.inherited_scale;

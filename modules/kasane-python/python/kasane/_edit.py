@@ -6,6 +6,7 @@ import json
 from typing import Mapping, Sequence
 from ._types import (
     Axis,
+    CanvasSnapshot,
     BlendBindingSnapshot,
     BlendBindingSpec,
     BlendConstraintSnapshot,
@@ -357,15 +358,17 @@ class Edit:
         """Change an asset path only if the new PNG matches its dimensions and hash."""
         self._call(lambda: self._native.relocate_png_asset(asset_id, str(absolute_path)))
 
-    def replace_canvas(
-        self, width: float, height: float, origin: Point, pixels_per_unit: float
+    def replace_model_space(
+        self, origin: Point, *, y_axis_down: bool = True
     ) -> None:
-        """Replace the canvas size, pixel origin, and pixels-per-unit scale."""
-        self._call(
-            lambda: self._native.replace_canvas(
-                width, height, origin[0], origin[1], pixels_per_unit
-            )
-        )
+        """Reinterpret authored coordinates using this origin, unit scale and orientation."""
+        self._call(lambda: self._native.replace_model_space(
+            origin[0], origin[1], y_axis_down
+        ))
+
+    def replace_source_canvas(self, canvas: CanvasSnapshot | None) -> None:
+        """Replace optional source framing metadata without changing model geometry."""
+        self._call(lambda: self._native.replace_source_canvas(canvas))
 
     def replace_draw_order_groups(self, groups: Sequence[DrawOrderGroup]) -> None:
         """Replace all explicit draw-order groups in this document."""

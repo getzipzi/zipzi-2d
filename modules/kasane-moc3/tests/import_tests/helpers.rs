@@ -369,8 +369,16 @@ pub(crate) fn assert_runtime_matches(doc: &Document, bytes: &[u8], samples: &[Ve
                 }
                 assert_eq!(d.positions.len(), actual.positions.len());
                 for (a, b) in d.positions.iter().zip(&actual.positions) {
-                    near(a.x, b.x, doc.canvas().pixels_per_unit);
-                    near(a.y, b.y, doc.canvas().pixels_per_unit);
+                    near(
+                        a.x / doc.source_canvas().unwrap().pixels_per_unit,
+                        b.x,
+                        doc.source_canvas().unwrap().pixels_per_unit,
+                    );
+                    near(
+                        a.y / doc.source_canvas().unwrap().pixels_per_unit,
+                        b.y,
+                        doc.source_canvas().unwrap().pixels_per_unit,
+                    );
                 }
                 near(d.opacity, actual.opacity, 1.0);
                 assert_eq!(d.draw_order, actual.draw_order);

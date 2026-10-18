@@ -155,7 +155,7 @@ impl ResolvedObservation {
     fn scene_bundle(&self) -> SceneBundle {
         let input = &self.input;
         SceneBundle {
-            schema_version: 2,
+            schema_version: 4,
             kind: "kasane-observe-scene".into(),
             capture_id: self.capture_id.clone(),
             scene_digest: self.scene_digest.clone(),
@@ -265,7 +265,7 @@ impl ResolvedObservation {
         }
         let bundle: SceneBundle = serde_json::from_slice(&content)
             .map_err(|e| failure("BUNDLE_FORMAT", e.to_string()))?;
-        if !matches!(bundle.schema_version, 1 | 2) || bundle.kind != "kasane-observe-scene" {
+        if bundle.schema_version != 4 || bundle.kind != "kasane-observe-scene" {
             return Err(failure(
                 "UNSUPPORTED_BUNDLE_VERSION",
                 "Unknown scene bundle version",
@@ -361,13 +361,9 @@ impl ResolvedObservation {
             ));
         }
         let declared_digest = bundle.scene_digest.clone();
-        let capture_id = if bundle.schema_version == 1 {
-            uuid::Uuid::new_v4().to_string()
-        } else {
-            uuid::Uuid::parse_str(&bundle.capture_id)
-                .map_err(|_| failure("BUNDLE_FORMAT", "Invalid capture ID"))?;
-            bundle.capture_id.clone()
-        };
+        uuid::Uuid::parse_str(&bundle.capture_id)
+            .map_err(|_| failure("BUNDLE_FORMAT", "Invalid capture ID"))?;
+        let capture_id = bundle.capture_id.clone();
         let mut capture = Self {
             input: ObservationInput {
                 version: Version {
@@ -390,7 +386,7 @@ impl ResolvedObservation {
             scene_digest: String::new(),
         };
         capture.scene_digest = capture.compute_scene_digest()?;
-        if bundle.schema_version == 2 && capture.scene_digest != declared_digest {
+        if capture.scene_digest != declared_digest {
             return Err(failure(
                 "BUNDLE_HASH_MISMATCH",
                 "Saved scene does not match its digest",
@@ -406,7 +402,7 @@ mod tests {
 
     fn empty_bundle() -> SceneBundle {
         SceneBundle {
-            schema_version: 2,
+            schema_version: 4,
             kind: "kasane-observe-scene".into(),
             capture_id: String::new(),
             scene_digest: String::new(),

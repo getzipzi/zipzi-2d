@@ -316,7 +316,7 @@ where
     }
     out.clear();
     out.resize(size, Vec2::default());
-    let canvas = doc.canvas();
+    let canvas = doc.model_space();
     for (&index, &weight) in s.indices.iter().zip(&s.weights) {
         let raw = get(index);
         if raw.len() != size {
@@ -329,19 +329,18 @@ where
         if parent.is_empty() {
             let ox = canvas.origin.x as f64;
             let oy = canvas.origin.y as f64;
-            let ppu = canvas.pixels_per_unit as f64;
             if weight != 0.0 {
                 for (target, p) in out.iter_mut().zip(raw) {
-                    let x = ((p.x as f64 - ox) / ppu) as f32;
-                    let y = ((oy - p.y as f64) / ppu) as f32;
+                    let x = (p.x as f64 - ox) as f32;
+                    let y = (oy - p.y as f64) as f32;
                     finite &= x.is_finite() & y.is_finite();
                     target.x += x * weight;
                     target.y += y * weight;
                 }
             } else {
                 for p in raw {
-                    let x = ((p.x as f64 - ox) / ppu) as f32;
-                    let y = ((oy - p.y as f64) / ppu) as f32;
+                    let x = (p.x as f64 - ox) as f32;
+                    let y = (oy - p.y as f64) as f32;
                     finite &= x.is_finite() & y.is_finite();
                 }
             }
@@ -395,7 +394,7 @@ mod selection_tests {
         }
         out.clear();
         out.resize(size, Vec2::default());
-        let canvas = doc.canvas();
+        let canvas = doc.model_space();
         for (&index, &weight) in s.indices.iter().zip(&s.weights) {
             let raw = get(index);
             if raw.len() != size {
@@ -404,10 +403,8 @@ mod selection_tests {
             for (target, p) in out.iter_mut().zip(raw) {
                 let q = if parent.is_empty() {
                     Vec2::new(
-                        ((p.x as f64 - canvas.origin.x as f64) / canvas.pixels_per_unit as f64)
-                            as f32,
-                        ((canvas.origin.y as f64 - p.y as f64) / canvas.pixels_per_unit as f64)
-                            as f32,
+                        (p.x as f64 - canvas.origin.x as f64) as f32,
+                        (canvas.origin.y as f64 - p.y as f64) as f32,
                     )
                 } else {
                     *p

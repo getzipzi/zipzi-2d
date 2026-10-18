@@ -7,6 +7,8 @@ const PART: &str = "live2DPartsOpacity_";
 const UNBOUNDED: (f64, f64) = (-f64::MAX, f64::MAX);
 impl Animation<'_> {
     pub(super) fn scene(&mut self, scene: &Scene) -> (N, N) {
+        let width = self.canvas.width.max(1.).round();
+        let height = self.canvas.height.max(1.).round();
         let source = self.graph.reserve("CSceneSource");
         let guid = self.graph.add(
             N::new("CSceneGuid")
@@ -52,11 +54,8 @@ impl Animation<'_> {
             N::new("CMvTrack_Group_Source")
                 .field("super", root_base)
                 .field("_childTrackGuids", list([model_guid.clone()]))
-                .field("bounds", rect(640., 480.)),
+                .field("bounds", rect(width, height)),
         );
-        let canvas = self.doc.canvas();
-        let width = canvas.width.max(1.).round();
-        let height = canvas.height.max(1.).round();
         let movie = N::new("CMvMovieInfo")
             .attr("durationLock", false)
             .field("width", i(width as i32))

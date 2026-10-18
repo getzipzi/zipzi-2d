@@ -2,10 +2,10 @@
 use super::context::create_texture;
 use super::encoder::FrameEncoder;
 use super::pipeline::Uniform;
-use super::{MetalOutputMode, MetalRenderer};
+use super::MetalRenderer;
 use kasane_core::{evaluation::DrawableFrame, Status, Vec2};
 use kasane_render::gpu::{inverse_affine, mask_layout_from_bounds, MaskLayout};
-use kasane_render::{Affine2, Bounds2, MaskId, TargetId, TargetItem, ViewportConfig};
+use kasane_render::{Affine2, Bounds2, MaskId, ViewportConfig};
 use metal::{MTLPixelFormat, Texture, TextureRef};
 
 impl MetalRenderer {
@@ -23,60 +23,13 @@ impl MetalRenderer {
         &self,
         frame: &DrawableFrame,
         viewport: ViewportConfig,
-        surface_size: (u32, u32),
-        output_mode: MetalOutputMode,
+        color_bytes: u64,
         mask_view: MaskViewport,
     ) -> Result<u64, Status> {
         let bytes = |size: (u32, u32)| u64::from(size.0) * u64::from(size.1) * 4;
-        // Children are rendered and consumed in target order. Color storage is
-        // bounded by nesting depth; destination reads share one scratch texture
-        // per extent after the preceding render pass has ended.
-        let mut depth = 0;
-        let mut stack = vec![(TargetId::MAIN, 0)];
-        while let Some((id, level)) = stack.pop() {
-            depth = depth.max(level);
-            for item in &self.scene.targets()[id.0].items {
-                if let TargetItem::Composite(child) = item {
-                    if self.scene.targets()[child.0].active {
-                        stack.push((*child, level + 1));
-                    }
-                }
-            }
-        }
-        let mut main_snapshot = false;
-        let mut surface_snapshot = false;
-        for (index, target) in self.scene.targets().iter().enumerate() {
-            if !target.active {
-                continue;
-            }
-            for item in &target.items {
-                let reads = match item {
-                    TargetItem::Draw(id) => {
-                        let drawable = &frame.drawables[id.0];
-                        drawable.raw_blend_mode.is_some()
-                            && drawable.visible
-                            && drawable.opacity > 0.0
-                            && !drawable.indices.is_empty()
-                    }
-                    TargetItem::Composite(id) => {
-                        self.scene.targets()[id.0].reads_destination
-                            && self.scene.targets()[id.0].active
-                    }
-                };
-                if reads {
-                    if index == 0 {
-                        main_snapshot = true;
-                    } else {
-                        surface_snapshot = true;
-                    }
-                }
-            }
-        }
-        let main_count =
-            1 + u64::from(main_snapshot) + u64::from(output_mode == MetalOutputMode::Composite);
-        let surface_count = depth + u64::from(surface_snapshot);
-        let mut total = main_count * bytes((self.target.width, self.target.height));
-        total = total.saturating_add(surface_count.saturating_mul(bytes(surface_size)));
+        // The color dry run follows the same acquire/release order and exact
+        // extent matching as FrameEncoder, including mixed-size pool storage.
+        let mut total = color_bytes.saturating_add(bytes((self.target.width, self.target.height)));
         let mut masks = std::collections::HashSet::new();
         let mut count_mask = |sources: &[String], mask: MaskId, scale: f64| -> Result<(), Status> {
             let layout = self.mask_layout(mask, scale, mask_view)?;

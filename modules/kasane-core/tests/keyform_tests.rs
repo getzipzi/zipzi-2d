@@ -93,7 +93,7 @@ fn test_keyform_data_editing_and_evaluation() {
     let mut preview = HashMap::new();
     preview.insert(id(4), 0.5f32);
     assert!(evaluate_frame(&d, &preview, &mut frame).is_ok());
-    assert!((frame.drawables[0].positions[0].x + 0.3).abs() < 1e-6);
+    assert!((frame.drawables[0].positions[0].x + 30.).abs() < 1e-6);
     assert_eq!(d.revision(), rev);
     assert!(!d.modified());
 
@@ -141,7 +141,7 @@ fn test_keyform_data_editing_and_evaluation() {
 
     assert!(d.erase_object(&id(5)).status.is_ok());
     assert!(evaluate_frame(&d, &HashMap::new(), &mut frame).is_ok());
-    assert!((frame.drawables[0].positions[0].x - 9.49).abs() < 1e-5);
+    assert!((frame.drawables[0].positions[0].x - 949.).abs() < 1e-5);
 
     assert!(d.erase_object(&id(4)).status.is_ok());
     assert!(d.erase_object(&id(3)).status.is_ok());

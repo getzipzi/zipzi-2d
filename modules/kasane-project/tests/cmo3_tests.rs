@@ -40,7 +40,7 @@ fn imported_models_and_saved_projects_share_the_codec() {
         for pose in poses {
             let mut frame = kasane_core::DrawableFrame::default();
             assert!(kasane_core::evaluation::evaluate_frame(doc, &pose, &mut frame).is_ok());
-            let canvas = doc.canvas();
+            let canvas = doc.source_canvas().unwrap();
             let params: std::collections::BTreeMap<_, _> = pose
                 .iter()
                 .map(|(id, value)| (doc.get_parameter(id).unwrap().runtime_id.clone(), *value))
@@ -54,12 +54,7 @@ fn imported_models_and_saved_projects_share_the_codec() {
                         d.runtime_id.clone(),
                         d.positions
                             .iter()
-                            .map(|p| {
-                                [
-                                    p.x * canvas.pixels_per_unit + canvas.origin.x,
-                                    canvas.origin.y - p.y * canvas.pixels_per_unit,
-                                ]
-                            })
+                            .map(|p| [p.x + canvas.origin.x, canvas.origin.y - p.y])
                             .collect(),
                     )
                 })
