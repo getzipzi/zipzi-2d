@@ -53,7 +53,6 @@ impl RenderSnapshot {
             .collect();
         Self {
             frame: DrawableFrame {
-                model_space: frame.model_space,
                 drawables,
                 offscreens,
                 ..Default::default()

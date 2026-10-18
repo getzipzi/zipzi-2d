@@ -455,7 +455,7 @@ impl<'a> Moc3DecoderContext<'a> {
                         )?;
                         forms.push(DeltaRotationKeyform {
                             origin: Some(origin),
-                            angle: Some(ang),
+                            angle: Some(self.import_angle(ang)),
                             scale: Some(sc),
                             opacity: Some(op),
                             multiply: mul,

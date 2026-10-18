@@ -45,8 +45,7 @@ fn frame(doc: &Document, value: f32) -> DrawableFrame {
 }
 fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
     let (mut doc, png) = fixture();
-    let mut c = ModelSpace::new(Vec2::new(130.25, -77.5));
-    c.y_axis_down = flag != 0;
+    let c = Canvas::with_flag(100., 100., Vec2::new(130.25, -77.5), 100., flag);
     assert!(doc.replace_model_setup(c).status.is_ok());
     let mut parameter = doc.get_parameter(PARAM).unwrap().clone();
     parameter.repeat = false;
@@ -227,14 +226,9 @@ fn boundless_pair_preserves_root_and_nested_geometry_for_both_canvas_directions(
 
             // Changing only imported framing must not move any exported forms.
             let mut finite = doc.clone();
-            let space = doc.model_space();
-            let old = Canvas::with_flag(
-                1024.,
-                1024.,
-                space.origin,
-                c.pixels_per_unit,
-                u8::from(space.y_axis_down),
-            );
+            let _space = doc.export_settings();
+            let old =
+                Canvas::with_flag(1024., 1024., Vec2::new(130.25, -77.5), c.pixels_per_unit, 1);
             // Fractional authored origins are valid; generated export origins are integral.
             assert!(finite.replace_model_setup(old).status.is_ok());
             let fixed = encode_cmo3(
@@ -318,7 +312,9 @@ fn boundless_pair_preserves_root_and_nested_geometry_for_both_canvas_directions(
 fn empty_model_spaces_and_invisible_meshes_get_finite_export_bounds() {
     for origin in [Vec2::default(), Vec2::new(17., -23.)] {
         let mut empty = Document::new();
-        assert!(empty.initialize(DOC, ModelSpace::new(origin)).is_ok());
+        assert!(empty
+            .initialize(DOC, Canvas::new(100., 100., origin, 1.))
+            .is_ok());
         let pair = encode_cubism(
             &empty,
             &|_: &ImageAsset| panic!("empty document read an asset"),
@@ -358,9 +354,9 @@ fn empty_model_spaces_and_invisible_meshes_get_finite_export_bounds() {
 #[test]
 fn overflowing_canvas_is_rejected_before_reading_assets() {
     let (mut doc, _) = fixture_with_hierarchy(0, 1);
-    let mut c = doc.model_space();
-    c.origin.x = 1e15;
-    assert!(doc.replace_model_setup(c).status.is_ok());
+    let mut c = doc.export_settings();
+    c.bounds = Some([-f32::MAX, 0., f32::MAX, 100.]);
+    assert!(doc.replace_export_settings(c).status.is_ok());
     assert!(inspect_cubism(&doc).is_err());
     assert!(encode_cubism(
         &doc,

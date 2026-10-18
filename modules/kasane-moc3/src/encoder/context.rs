@@ -164,8 +164,7 @@ impl<'a> Moc3EncoderContext<'a> {
         }
 
         let c = kasane_core::geometry::finite_export_canvas(
-            self.doc.model_space(),
-            self.doc.source_canvas(),
+            self.doc.export_settings(),
             frame
                 .drawables
                 .iter()

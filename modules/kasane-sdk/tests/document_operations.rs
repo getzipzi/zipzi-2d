@@ -37,15 +37,24 @@ fn session() -> AuthoringSession {
 
 #[test]
 fn boundless_canvas_supports_history_and_rejects_invalid_coordinates() {
-    let mut sdk = AuthoringSession::new(&id(1), kasane_core::ModelSpace::default()).unwrap();
+    let mut sdk = AuthoringSession::new(&id(1), kasane_core::ModelSetup::default()).unwrap();
     assert!(sdk.source_canvas().is_none());
-    // Source origin and units can change without introducing a document rectangle.
-    let partial = kasane_core::ModelSpace::new(Vec2::new(17.0, -30.0));
-    sdk.edit("extent", None, |edit| edit.replace_model_setup(partial))
-        .unwrap();
-    assert_eq!(sdk.preview_frame().unwrap().model_space, partial);
+    let partial = kasane_core::ExportSettings {
+        pixels_per_unit: 17.,
+        ..Default::default()
+    };
+    let revision = sdk.evaluation_revision();
+    sdk.edit("output units", None, |edit| {
+        edit.replace_export_settings(partial)
+    })
+    .unwrap();
+    assert_eq!(sdk.export_settings(), partial);
+    assert_eq!(sdk.evaluation_revision(), revision);
     sdk.undo().unwrap();
-    assert_eq!(sdk.model_space(), kasane_core::ModelSpace::default());
+    assert_eq!(
+        sdk.export_settings(),
+        kasane_core::ExportSettings::default()
+    );
     sdk.redo().unwrap();
     for invalid in [
         Canvas::new(-1.0, 0.0, Vec2::default(), 1.0),
@@ -80,7 +89,7 @@ fn canvas_and_draw_order_publish_together_and_reject_invalid_groups() {
     assert_eq!(sdk.draw_order_groups(), Some(groups));
     assert_eq!(
         sdk.evaluate(&Default::default()).unwrap().drawables[0].positions[0].x,
-        -10.
+        40.
     );
 
     let version = sdk.version();
@@ -200,7 +209,7 @@ fn geometry_warnings_are_separate_from_structural_validity() {
     let warnings = sdk
         .diagnose_geometry(GeometryChecks {
             min_triangle_area: 201.0,
-            canvas_bounds: Some(GeometryBounds {
+            model_bounds: Some(GeometryBounds {
                 min: Vec2::new(0.0, 0.0),
                 max: Vec2::new(50.0, 50.0),
             }),
@@ -215,11 +224,11 @@ fn geometry_warnings_are_separate_from_structural_validity() {
     );
     assert!(warnings
         .iter()
-        .any(|issue| issue.kind == GeometryDiagnosticKind::OutsideCanvasBounds));
+        .any(|issue| issue.kind == GeometryDiagnosticKind::OutsideModelBounds));
     assert_eq!(
         sdk.diagnose_geometry(GeometryChecks {
             min_triangle_area: -1.0,
-            canvas_bounds: None,
+            model_bounds: None,
         })
         .unwrap_err()
         .code
@@ -242,7 +251,7 @@ fn new_project_failure_preserves_session_and_success_changes_generation() {
             .unwrap_err()
             .code
             .as_ref(),
-        "INVALID_MODEL_SPACE"
+        "INVALID_MODEL_SETUP"
     );
     let mut stale = current;
     stale.revision += 1;
@@ -279,8 +288,8 @@ fn source_framing_is_metadata_and_never_changes_model_bounds_or_evaluation() {
     let mut sdk = session();
     let before = sdk.preview_frame().unwrap().clone();
     let revision = sdk.evaluation_revision();
-    let space = sdk.model_space();
-    assert_eq!(before.model_bounds(false), Some([-10., -10., 10., 10.]));
+    let space = sdk.export_settings();
+    assert_eq!(before.model_bounds(false), Some([40., 40., 60., 60.]));
     sdk.edit("Source framing", None, |edit| {
         edit.replace_source_canvas(Some(Canvas::new(
             4000.,
@@ -290,7 +299,7 @@ fn source_framing_is_metadata_and_never_changes_model_bounds_or_evaluation() {
         )))
     })
     .unwrap();
-    assert_eq!(sdk.model_space(), space);
+    assert_eq!(sdk.export_settings(), space);
     assert_eq!(sdk.evaluation_revision(), revision);
     assert!(Arc::ptr_eq(&sdk.preview_frame().unwrap(), &before));
     let source = sdk.source_canvas().unwrap();
@@ -327,19 +336,20 @@ fn source_framing_is_metadata_and_never_changes_model_bounds_or_evaluation() {
 fn model_space_and_source_reference_are_separate_project_fields() {
     let mut sdk =
         AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
-    sdk.edit("Origin", None, |edit| {
-        edit.replace_model_space(kasane_core::ModelSpace::new(Vec2::new(-30., 17.)))
+    sdk.edit("Export", None, |edit| {
+        edit.replace_export_settings(kasane_core::ExportSettings {
+            pixels_per_unit: 20.,
+            ..Default::default()
+        })
     })
     .unwrap();
     let before = sdk.read_snapshot();
     let json = kasane_project::encode_project(before.document()).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&json).unwrap();
-    assert_eq!(wire["format_version"], 13);
+    assert_eq!(wire["format_version"], 14);
     assert!(wire["document"].get("canvas").is_none());
-    assert_eq!(wire["document"]["model_space"]["origin"]["x"], -30.);
-    assert!(wire["document"]["model_space"]
-        .get("pixels_per_unit")
-        .is_none());
+    assert!(wire["document"].get("model_space").is_none());
+    assert_eq!(wire["document"]["export_settings"]["pixels_per_unit"], 20.);
     assert_eq!(wire["document"]["source_canvas"]["pixels_per_unit"], 10.);
     assert_eq!(wire["document"]["source_canvas"]["origin"]["x"], 50.);
     let reopened = kasane_project::decode_project(&json).unwrap();

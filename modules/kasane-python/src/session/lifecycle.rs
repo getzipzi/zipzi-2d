@@ -6,10 +6,10 @@ fn model_setup(
     origin_x: f32,
     origin_y: f32,
 ) -> PyResult<kasane_core::ModelSetup> {
-    let space = kasane_core::ModelSpace::new(Vec2::new(origin_x, origin_y));
+    let origin = Vec2::new(origin_x, origin_y);
     let source_canvas = match (width, height) {
         (None, None) => None,
-        (Some(w), Some(h)) => Some(Canvas::new(w, h, space.origin, 1.)),
+        (Some(w), Some(h)) => Some(Canvas::new(w, h, origin, 1.)),
         _ => {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "Supply both source canvas dimensions or neither",
@@ -17,8 +17,8 @@ fn model_setup(
         }
     };
     Ok(kasane_core::ModelSetup {
-        space,
         source_canvas,
+        ..Default::default()
     })
 }
 
@@ -77,7 +77,7 @@ impl NativeSession {
         let result = py.detach(|| {
             let mut session = AuthoringSession::new(
                 "00000000-0000-4000-8000-000000000001",
-                kasane_core::ModelSpace::default(),
+                kasane_core::ModelSetup::default(),
             )?;
             session.open_project(Path::new(&path), None)?;
             Ok::<_, SdkError>(session)
@@ -137,12 +137,18 @@ impl NativeSession {
             .to_owned())
     }
 
-    fn model_space(&self) -> PyResult<(f32, f32, bool)> {
-        let space = self.inner.lock().map_err(|_| poisoned())?.model_space();
-        Ok((space.origin.x, space.origin.y, space.y_axis_down))
+    fn export_settings(&self) -> PyResult<ExportSettingsTuple> {
+        let s = self.inner.lock().map_err(|_| poisoned())?.export_settings();
+        Ok((
+            s.pixels_per_unit,
+            s.bounds,
+            s.padding_fraction,
+            s.padding_pixels,
+            s.minimum_extent,
+        ))
     }
 
-    fn source_canvas(&self) -> PyResult<Option<(f32, f32, f32, f32, f32, u8)>> {
+    fn source_canvas(&self) -> PyResult<Option<CanvasTuple>> {
         Ok(self
             .inner
             .lock()
@@ -161,13 +167,7 @@ impl NativeSession {
     }
 
     fn uv_v_origin(&self) -> PyResult<&'static str> {
-        let down = self
-            .inner
-            .lock()
-            .map_err(|_| poisoned())?
-            .model_space()
-            .y_axis_down;
-        Ok(if !down { "bottom" } else { "top" })
+        Ok("bottom")
     }
 
     fn draw_order_groups(&self) -> PyResult<Option<Vec<DrawOrderTuple>>> {

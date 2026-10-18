@@ -11,12 +11,10 @@ pub mod types;
 
 pub use document::Document;
 pub use evaluation::{
-    evaluate_frame, to_parent_positions, Drawable, DrawableFrame, EvaluatedParameter,
-    FrameEvaluator, PreviewValues,
+    evaluate_frame, parent_positions, Drawable, DrawableFrame, EvaluatedParameter, FrameEvaluator,
+    PreviewValues,
 };
-pub use geometry::{
-    is_renderable_mesh, to_runtime_positions, validate_positions, validate_render_mesh,
-};
+pub use geometry::{is_renderable_mesh, validate_positions, validate_render_mesh};
 pub use types::*;
 
 pub mod warp_bezier;

@@ -35,7 +35,10 @@ fn test_import_m1_roundtrip() {
             canvas.height - inspection.canvas.origin_y
         )
     );
-    assert_eq!(doc_imported.model_space(), canvas.model_space());
+    assert_eq!(
+        doc_imported.export_settings().pixels_per_unit,
+        canvas.pixels_per_unit
+    );
     assert_eq!(
         canvas.pixels_per_unit,
         doc_orig.source_canvas().unwrap().pixels_per_unit
@@ -825,4 +828,112 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
         .unwrap();
     assert!(re_mesh.triangles.is_empty());
     assert_eq!(re_mesh.vertex_ids.len(), 3);
+}
+
+#[test]
+fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
+    use kasane_core::{
+        Canvas, Document, ImageAsset, PreciseVec2, RotationPose, RotationTransform, Transform,
+        TransformData, WarpTransform,
+    };
+    for root_warp in [false, true] {
+        let mut doc = Document::new();
+        assert!(doc
+            .initialize(
+                id(800),
+                Canvas::new(800., 600., Vec2::new(211., -77.), 37.5)
+            )
+            .is_ok());
+        assert!(doc
+            .add_asset(ImageAsset {
+                id: id(801),
+                name: "texture".into(),
+                source: "textures/0.png".into(),
+                sha256: "0".repeat(64),
+                width: 8,
+                height: 8,
+            })
+            .status
+            .is_ok());
+        let mut parent = String::new();
+        for depth in 0..4 {
+            let transform_id = id(810 + depth);
+            let warp = (depth % 2 == 0) == root_warp;
+            let data = if warp {
+                TransformData::Warp(WarpTransform {
+                    rows: 1,
+                    columns: 1,
+                    quad: true,
+                    bezier: None,
+                    points: vec![
+                        Vec2::new(-30., -20.),
+                        Vec2::new(80., -10.),
+                        Vec2::new(-15., 90.),
+                        Vec2::new(100., 110.),
+                    ],
+                })
+            } else {
+                let in_warp = doc
+                    .get_transform(&parent)
+                    .is_some_and(|t| t.warp().is_some());
+                TransformData::Rotation(RotationTransform {
+                    base_angle: 17.,
+                    pose: RotationPose {
+                        origin: if in_warp {
+                            PreciseVec2::new(0.4, 0.55)
+                        } else {
+                            PreciseVec2::new(11., 23.)
+                        },
+                        angle: -29.,
+                        scale: 0.8,
+                        reflect_x: depth == 0,
+                        ..Default::default()
+                    },
+                })
+            };
+            assert!(doc
+                .create_transform(Transform {
+                    id: transform_id.clone(),
+                    runtime_id: format!("Transform{depth}"),
+                    parent_id: kasane_core::TransformId::optional(parent),
+                    data,
+                    ..Default::default()
+                })
+                .status
+                .is_ok());
+            let positions = if warp {
+                vec![
+                    Vec2::new(0.2, 0.3),
+                    Vec2::new(0.7, 0.3),
+                    Vec2::new(0.2, 0.8),
+                ]
+            } else {
+                vec![Vec2::new(-4., -3.), Vec2::new(8., -3.), Vec2::new(-4., 9.)]
+            };
+            assert!(doc
+                .create_mesh(Mesh {
+                    id: id(820 + depth),
+                    runtime_id: format!("Mesh{depth}"),
+                    texture_asset_id: id(801),
+                    deformer_id: transform_id.clone(),
+                    vertex_ids: vec![1, 2, 3],
+                    base_positions: positions,
+                    uvs: vec![
+                        Vec2::new(0.1, 0.2),
+                        Vec2::new(0.9, 0.2),
+                        Vec2::new(0.1, 0.8)
+                    ],
+                    triangles: vec![[1, 2, 3]],
+                    ..Default::default()
+                })
+                .status
+                .is_ok());
+            parent = transform_id;
+        }
+        let bytes = encode_moc3(&doc).unwrap().bytes;
+        for bytes in [bytes.clone(), import_cases::variant(&bytes, "canvas_y")] {
+            let imported = import_from_bare_moc3(&bytes, &HashMap::new()).unwrap();
+            assert_runtime_matches(&imported.document, &bytes, &[vec![]]);
+        }
+    }
 }

@@ -78,7 +78,6 @@ fn assemble(frames: Vec<DrawableFrame>, workload: &Workload) -> DrawableFrame {
     let cell_width = width / workload.layout.columns as f32;
     let cell_height = height / workload.layout.rows as f32;
     let mut scene = DrawableFrame {
-        model_space: kasane_core::ModelSpace::default(),
         ..Default::default()
     };
     for (instance, mut frame) in frames.into_iter().enumerate() {

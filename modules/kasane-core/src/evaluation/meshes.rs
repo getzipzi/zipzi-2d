@@ -97,13 +97,8 @@ pub(super) fn evaluate(
                             if kf_idx < forms.len() {
                                 let f = &forms[kf_idx];
                                 for (p, dp) in d.positions.iter_mut().zip(&f.positions) {
-                                    if mesh.deformer_id.is_empty() {
-                                        p.x += dp.x * eff_w;
-                                        p.y += (-dp.y) * eff_w;
-                                    } else {
-                                        p.x += dp.x * eff_w;
-                                        p.y += dp.y * eff_w;
-                                    }
+                                    p.x += dp.x * eff_w;
+                                    p.y += dp.y * eff_w;
                                 }
                                 if let Some(d_do) = f.draw_order {
                                     order += d_do * eff_w;

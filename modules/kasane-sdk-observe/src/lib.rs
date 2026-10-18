@@ -22,7 +22,7 @@ mod bundle;
 mod gpu;
 mod view;
 pub use gpu::{DrawableBounds, ObservedFrame, Observer, ObserverConfig, TextureRevision};
-pub use view::{CanvasRoi, RenderRequest, ViewMapping};
+pub use view::{ModelRoi, RenderRequest, ViewMapping};
 
 #[derive(Clone, Debug)]
 pub struct ObservationInput {

@@ -1,4 +1,4 @@
-use crate::types::{Canvas, ModelSpace, Status, Vec2};
+use crate::types::{Canvas, Status, Vec2};
 
 pub fn validate_positions(positions: &[Vec2]) -> Status {
     for p in positions {
@@ -62,65 +62,60 @@ pub fn is_renderable_mesh(positions: &[Vec2], indices: &[u32]) -> bool {
     !indices.is_empty() && positions.len() >= 3 && indices.len().is_multiple_of(3)
 }
 
-pub fn to_runtime_positions(canvas: ModelSpace, positions: &[Vec2]) -> Result<Vec<Vec2>, Status> {
-    let mut result = Vec::with_capacity(positions.len());
-    let ox = canvas.origin.x as f64;
-    let oy = canvas.origin.y as f64;
-    for p in positions {
-        let qx = (p.x as f64 - ox) as f32;
-        let qy = (oy - p.y as f64) as f32;
-        if !qx.is_finite() || !qy.is_finite() {
-            return Err(Status::error(
-                "NON_FINITE",
-                "Position conversion overflows float32",
-            ));
-        }
-        result.push(Vec2::new(qx, qy));
-    }
-    Ok(result)
-}
-
-/// Derive a tight export rectangle from evaluated default-pose geometry.
-/// Source dimensions never constrain it; format PPU and opaque flags are retained.
-/// Bounds include hidden geometry, 10% or 50px padding per edge, and a minimum
-/// 256px extent. Exporters translate root coordinates and apply format PPU at the file boundary.
+/// A finite format rectangle derived from model-space geometry and output policy.
+/// Source dimensions and orientation never participate in this calculation.
 pub fn finite_export_canvas(
-    space: ModelSpace,
-    source_canvas: Option<Canvas>,
+    settings: crate::ExportSettings,
     positions: impl IntoIterator<Item = Vec2>,
 ) -> Result<Canvas, Status> {
-    if !space.is_valid() || source_canvas.is_some_and(|c| !c.is_valid()) {
+    if !settings.is_valid() {
         return Err(Status::error(
-            "INVALID_MODEL_SPACE",
-            "Invalid export coordinates",
+            "INVALID_EXPORT_SETTINGS",
+            "Invalid export policy",
         ));
     }
-    let mut canvas = Canvas::with_flag(
-        1.,
-        1.,
-        space.origin,
-        source_canvas.map_or(1., |canvas| canvas.pixels_per_unit),
-        (source_canvas.map_or(0, |c| c.flag) & !1) | u8::from(space.y_axis_down),
-    );
-    let mut bounds = None::<(f64, f64, f64, f64)>;
+    let mut bounds = None::<[f64; 4]>;
     for p in positions {
         if !p.x.is_finite() || !p.y.is_finite() {
             return Err(Status::error("NON_FINITE", "Non-finite export geometry"));
         }
         let (x, y) = (f64::from(p.x), f64::from(p.y));
         bounds = Some(match bounds {
-            Some((xmin, xmax, ymin, ymax)) => (xmin.min(x), xmax.max(x), ymin.min(y), ymax.max(y)),
-            None => (x, x, y, y),
+            Some([l, b, r, t]) => [l.min(x), b.min(y), r.max(x), t.max(y)],
+            None => [x, y, x, y],
         });
     }
-    let (xmin, xmax, ymin, ymax) = bounds.unwrap_or((0., 0., 0., 0.));
-    let width = xmax - xmin;
-    let height = ymax - ymin;
-    let padx = (width * 0.1).max(50.);
-    let pady = (height * 0.1).max(50.);
-    canvas.width = (width + 2. * padx).ceil().max(256.) as f32;
-    canvas.height = (height + 2. * pady).ceil().max(256.) as f32;
-    canvas.origin = Vec2::new((-xmin + padx).round() as f32, (ymax + pady).round() as f32);
+    let [mut l, mut b, mut r, mut t] =
+        settings
+            .bounds
+            .map(|v| v.map(f64::from))
+            .unwrap_or_else(|| {
+                let [l, b, r, t] = bounds.unwrap_or([0.; 4]);
+                let px = (f64::from(((r - l) as f32 * settings.padding_fraction).ceil()))
+                    .max(f64::from(settings.padding_pixels));
+                let py = (f64::from(((t - b) as f32 * settings.padding_fraction).ceil()))
+                    .max(f64::from(settings.padding_pixels));
+                let w = (r - l + 2. * px)
+                    .max(f64::from(settings.minimum_extent))
+                    .max(1.);
+                let h = (t - b + 2. * py)
+                    .max(f64::from(settings.minimum_extent))
+                    .max(1.);
+                let (cx, cy) = ((l + r) * 0.5, (b + t) * 0.5);
+                [cx - w * 0.5, cy - h * 0.5, cx + w * 0.5, cy + h * 0.5]
+            });
+    // Snap outwards so rounding never clips content or requested padding.
+    l = l.floor();
+    b = b.floor();
+    r = r.ceil();
+    t = t.ceil();
+    let canvas = Canvas::with_flag(
+        (r - l) as f32,
+        (t - b) as f32,
+        Vec2::new(-l as f32, t as f32),
+        settings.pixels_per_unit,
+        1,
+    );
     if !canvas.is_valid() || !(canvas.height - canvas.origin.y).is_finite() {
         return Err(Status::error(
             "NON_FINITE",
@@ -131,72 +126,72 @@ pub fn finite_export_canvas(
 }
 
 #[cfg(test)]
-mod export_canvas_tests {
+mod export_tests {
     use super::*;
-
+    use crate::ExportSettings;
     #[test]
-    fn export_uses_tight_geometry_and_ignores_source_rectangle() {
-        let fixed = Canvas::new(300., 200., Vec2::new(17., 29.), 2.5);
-        let input = ModelSpace::new(Vec2::new(17., 29.));
-        let result = finite_export_canvas(
-            input,
-            Some(fixed),
-            [Vec2::new(-100., -40.), Vec2::new(100., 40.)],
+    fn auto_bounds_are_tight_padded_and_independent_of_ppu() {
+        let points = [Vec2::new(-100., 0.), Vec2::new(100., 600.)];
+        let a = finite_export_canvas(ExportSettings::default(), points).unwrap();
+        let b = finite_export_canvas(
+            ExportSettings {
+                pixels_per_unit: 100.,
+                ..Default::default()
+            },
+            points,
         )
         .unwrap();
-        assert_eq!(result.width, 300.);
-        assert_eq!(result.height, 256.);
-        assert_eq!(result.origin, Vec2::new(150., 90.));
-        assert_eq!(result.pixels_per_unit, 2.5);
-        assert_eq!(result.flag, u8::from(input.y_axis_down));
-        assert_eq!(
-            finite_export_canvas(
-                input,
-                Some(fixed),
-                [Vec2::new(-100., -40.), Vec2::new(100., 40.)]
-            )
-            .unwrap(),
-            result
-        );
-        // One-sided geometry stays tight; it does not include a mirrored empty region.
-        let offset = finite_export_canvas(
-            input,
-            Some(fixed),
-            [Vec2::new(20., -160.), Vec2::new(40., -120.)],
-        )
-        .unwrap();
-        assert_eq!((offset.width, offset.height), (256., 256.));
-        assert_eq!(offset.origin, Vec2::new(30., -70.));
+        assert_eq!((a.width, a.height, a.origin), (b.width, b.height, b.origin));
+        assert_eq!((a.width, a.height), (300., 720.));
+        assert_eq!(a.origin, Vec2::new(150., 660.));
     }
-
+    #[test]
+    fn specified_bounds_keep_a_stable_frame_without_padding() {
+        let s = ExportSettings {
+            bounds: Some([-100., 0., 100., 600.]),
+            ..Default::default()
+        };
+        let a = finite_export_canvas(s, [Vec2::new(2000., 3000.)]).unwrap();
+        assert_eq!(
+            (a.width, a.height, a.origin),
+            (200., 600., Vec2::new(100., 600.))
+        );
+    }
+    #[test]
+    fn empty_and_invalid_export_geometry() {
+        assert_eq!(
+            finite_export_canvas(ExportSettings::default(), [])
+                .unwrap()
+                .width,
+            256.
+        );
+        assert!(
+            finite_export_canvas(ExportSettings::default(), [Vec2::new(f32::NAN, 0.)]).is_err()
+        );
+        assert!(finite_export_canvas(
+            ExportSettings::default(),
+            [Vec2::new(-f32::MAX, 0.), Vec2::new(f32::MAX, 0.)]
+        )
+        .is_err());
+        assert!(finite_export_canvas(
+            ExportSettings {
+                pixels_per_unit: 0.,
+                ..Default::default()
+            },
+            []
+        )
+        .is_err());
+    }
     #[test]
     fn model_bounds_remain_tight_and_respect_visibility() {
         let mut frame = crate::DrawableFrame::default();
         frame.drawables.push(crate::Drawable {
-            positions: vec![Vec2::new(10., -40.), Vec2::new(30., -20.)],
+            positions: vec![Vec2::new(-4., 2.), Vec2::new(8., 9.)],
             ..Default::default()
         });
-        assert_eq!(frame.model_bounds(false), Some([10., -40., 30., -20.]));
+        assert_eq!(frame.model_bounds(false), Some([-4., 2., 8., 9.]));
         frame.drawables[0].visible = false;
         assert_eq!(frame.model_bounds(false), None);
-        assert_eq!(frame.model_bounds(true), Some([10., -40., 30., -20.]));
-        assert_eq!(crate::DrawableFrame::default().model_bounds(true), None);
-    }
-
-    #[test]
-    fn empty_and_non_finite_export_geometry() {
-        let empty = finite_export_canvas(ModelSpace::default(), None, []).unwrap();
-        assert_eq!((empty.width, empty.height), (256., 256.));
-        assert_eq!(empty.origin, Vec2::new(50., 50.));
-        assert!(
-            finite_export_canvas(ModelSpace::default(), None, [Vec2::new(f32::NAN, 0.)]).is_err()
-        );
-        let huge = ModelSpace::new(Vec2::default());
-        assert!(finite_export_canvas(
-            huge,
-            None,
-            [Vec2::new(-f32::MAX, 0.), Vec2::new(f32::MAX, 0.)]
-        )
-        .is_err());
+        assert_eq!(frame.model_bounds(true), Some([-4., 2., 8., 9.]));
     }
 }

@@ -222,18 +222,8 @@ impl<'a> Exporter<'a> {
             guid("CPartGuid", id)
         }
     }
-    /// Kasane applies the MOC canvas flag after deformation. Cubism source
-    /// coordinates have no equivalent flag, so bake its global reflection into
-    /// root coordinates and the orientation of every rotation deformer.
-    fn canvas_reversed(&self) -> bool {
-        !self.doc.model_space().y_axis_down
-    }
     fn rotation_sign(&self) -> f32 {
-        if self.canvas_reversed() {
-            1.
-        } else {
-            -1.
-        }
+        -1.
     }
     fn source_positions(&self, parent: &str, values: &[Vec2]) -> N {
         if parent.is_empty() {
@@ -254,26 +244,20 @@ impl<'a> Exporter<'a> {
     }
     fn source_origin_x(&self, parent: &str, value: f64) -> f64 {
         if parent.is_empty() {
-            value + f64::from(self.canvas.origin.x) - f64::from(self.doc.model_space().origin.x)
+            value + f64::from(self.canvas.origin.x)
         } else {
             value
         }
     }
     fn source_origin_y(&self, parent: &str, value: f64) -> f64 {
         if parent.is_empty() {
-            let old_origin = f64::from(self.doc.model_space().origin.y);
-            let value = if self.canvas_reversed() {
-                2. * old_origin - value
-            } else {
-                value
-            };
-            value + f64::from(self.canvas.origin.y) - old_origin
+            f64::from(self.canvas.origin.y) - value
         } else {
             value
         }
     }
     fn source_delta(&self, parent: &str, value: Vec2) -> Vec2 {
-        if parent.is_empty() && self.canvas_reversed() {
+        if parent.is_empty() {
             Vec2::new(value.x, -value.y)
         } else {
             value

@@ -207,7 +207,7 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
 
     let encoded = encode_project(&doc).expect("encode_project failed");
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 13);
+    assert_eq!(wire["format_version"], 14);
     for field in [
         "blend_key_tables",
         "blend_constraints",
@@ -227,52 +227,14 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
 
 #[test]
 fn test_project_v1_v2_v3_v4_migration_to_current_format() {
-    let sha1 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    let sha2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
-    let doc = fixture_doc(sha1, sha2);
-
-    for old_ver in [1, 2, 3, 4] {
-        let mut wire: serde_json::Value =
-            serde_json::from_str(&encode_project(&doc).unwrap()).unwrap();
-        wire["format_version"] = old_ver.into();
-        wire["document"]
-            .as_object_mut()
-            .unwrap()
-            .remove("display_info");
-        wire["document"]
-            .as_object_mut()
-            .unwrap()
-            .remove("animation_assets");
-        if old_ver == 1 {
-            // v1 had no blend or glue fields
-            let fields = wire["document"].as_object_mut().unwrap();
-            for field in [
-                "blend_key_tables",
-                "blend_constraints",
-                "blend_bindings",
-                "glues",
-            ] {
-                fields.remove(field);
-            }
-        }
-        let encoded = serde_json::to_string(&wire).unwrap();
-
-        let decoded = decode_project(&encoded)
-            .unwrap_or_else(|e| panic!("Failed to decode v{} project: {:?}", old_ver, e));
-        // Verify default value populated for repeat
-        for p_id in decoded.parameter_order() {
-            let p = decoded.get_parameter(p_id).unwrap();
-            assert!(
-                !p.repeat,
-                "Migrated v{} parameter must have repeat: false by default",
-                old_ver
-            );
-        }
-
-        // Saving emits the current format.
-        let re_encoded = encode_project(&decoded).expect("Failed to re-encode project");
-        let re_wire: serde_json::Value = serde_json::from_str(&re_encoded).unwrap();
-        assert_eq!(re_wire["format_version"], 13);
+    let doc = fixture_doc(&"0".repeat(64), &"1".repeat(64));
+    let mut wire: serde_json::Value = serde_json::from_str(&encode_project(&doc).unwrap()).unwrap();
+    for old in 1..14 {
+        wire["format_version"] = old.into();
+        assert_eq!(
+            decode_project(&wire.to_string()).unwrap_err().code,
+            "UNSUPPORTED_VERSION"
+        );
     }
 }
 
@@ -379,7 +341,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     assert!(doc.create_offscreen(offscreen.clone()).status.is_ok());
     let encoded = encode_project(&doc).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 13);
+    assert_eq!(wire["format_version"], 14);
     assert!(wire["document"]["offscreens"][0].get("enabled").is_none());
     assert!(
         decode_project(&encoded)
@@ -393,7 +355,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     assert!(doc.replace_offscreen(offscreen.clone()).status.is_ok());
     let encoded = encode_project(&doc).unwrap();
     let mut wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 13);
+    assert_eq!(wire["format_version"], 14);
     assert_eq!(wire["document"]["offscreens"][0]["enabled"], false);
     assert_eq!(
         decode_project(&encoded).unwrap().get_offscreen(&id(10)),
@@ -419,7 +381,7 @@ fn test_project_v4_preserves_repeat_parameter() {
 
     let encoded = encode_project(&doc).expect("encode_project failed");
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 13);
+    assert_eq!(wire["format_version"], 14);
     assert_eq!(wire["document"]["parameters"][0]["repeat"], true);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
@@ -566,51 +528,11 @@ fn test_project_v4_blendshape_glue_roundtrip() {
 
 #[test]
 fn v5_model3_migrates_to_uuid_references_and_survives_runtime_renames() {
-    let tmp = TestDirectory::new();
-    let session = tmp.saved_session();
-    let parameter = session.document().get_parameter(&id(6)).unwrap();
-    let mesh = session.document().get_mesh(&id(4)).unwrap();
-    let mut wire: serde_json::Value =
-        serde_json::from_str(&encode_project(session.document()).unwrap()).unwrap();
+    let doc = fixture_doc(&"0".repeat(64), &"1".repeat(64));
+    let mut wire: serde_json::Value = serde_json::from_str(&encode_project(&doc).unwrap()).unwrap();
     wire["format_version"] = 5.into();
-    wire["document"]["animation_assets"]["model3_settings"] = serde_json::json!({
-        "groups": [{"Target":"Parameter", "Name":"EyeBlink", "Ids":[parameter.runtime_id]}],
-        "layout": {"Width": 2},
-        "hit_areas": [{"Name":"Head", "Id":mesh.runtime_id}],
-        "extensions": {},
-        "source_runtime_ids": kasane_project::model3::runtime_namespace(session.document())
-    });
-    let mut migrated = decode_project(&wire.to_string()).unwrap();
     assert_eq!(
-        migrated.model3_settings().groups.as_ref().unwrap()[0].parameters[0].object_id(),
-        Some(id(6).as_str())
+        decode_project(&wire.to_string()).unwrap_err().code,
+        "UNSUPPORTED_VERSION"
     );
-    assert!(migrated
-        .references_to(&id(4))
-        .contains(&"model3 settings".to_string()));
-    assert!(!migrated.erase_object(&id(4)).status.is_ok());
-    let mut renamed = migrated.get_parameter(&id(6)).unwrap().clone();
-    renamed.runtime_id = "RenamedParameter".into();
-    assert!(migrated.replace_parameter(renamed).status.is_ok());
-    let mut renamed = migrated.get_mesh(&id(4)).unwrap().clone();
-    renamed.runtime_id = "RenamedMesh".into();
-    assert!(migrated.replace_mesh(renamed).status.is_ok());
-    let encoded = encode_project(&migrated).unwrap();
-    let new_wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(new_wire["format_version"], 13);
-    let reopened = decode_project(&encoded).unwrap();
-    let model = kasane_project::model3::export_settings(&reopened).unwrap();
-    assert_eq!(model["Groups"][0]["Ids"][0], "RenamedParameter");
-    assert_eq!(model["HitAreas"][0]["Id"], "RenamedMesh");
-    let before = migrated.clone();
-    let mut invalid = migrated.model3_settings().clone();
-    invalid.groups.as_mut().unwrap()[0].parameters[0] =
-        kasane_core::document::ModelTargetRef::Resolved {
-            object_id: id(99999),
-        };
-    assert_eq!(
-        migrated.set_model3_settings(invalid).status.code,
-        "INVALID_MODEL3_GROUPS"
-    );
-    assert!(migrated.same_content(&before));
 }

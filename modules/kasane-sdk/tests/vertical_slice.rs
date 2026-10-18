@@ -1,5 +1,5 @@
 use kasane_core::{Canvas, PreviewValues, Vec2};
-use kasane_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, SourceSpace};
+use kasane_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, GeometrySpace};
 
 const DOCUMENT_ID: &str = "00000000-0000-4000-8000-000000000001";
 const ASSET_ID: &str = "00000000-0000-4000-8000-000000000002";
@@ -149,12 +149,12 @@ fn creates_png_rectangle_evaluates_and_undoes_all_content() {
         vec![[0, 1, 2], [0, 2, 3]]
     );
     let source = sdk.geometry(MESH_ID).unwrap();
-    assert_eq!(source.space, SourceSpace::CanvasPixels);
+    assert_eq!(source.space, GeometrySpace::Model);
     assert_eq!(source.vertex_ids, vec![0, 1, 2, 3]);
     let frame = sdk.evaluate(&PreviewValues::new()).unwrap();
     assert_eq!(frame.drawables.len(), 1);
-    assert_eq!(frame.drawables[0].positions[0], Vec2::new(-10.0, 10.0));
-    assert_eq!(frame.drawables[0].positions[2], Vec2::new(10.0, -10.0));
+    assert_eq!(frame.drawables[0].positions[0], Vec2::new(40.0, 40.0));
+    assert_eq!(frame.drawables[0].positions[2], Vec2::new(60.0, 60.0));
 
     let geometry = sdk.mesh(MESH_ID).unwrap();
     let moved: Vec<_> = geometry
@@ -168,7 +168,7 @@ fn creates_png_rectangle_evaluates_and_undoes_all_content() {
     .unwrap();
     assert_eq!(
         sdk.evaluate(&PreviewValues::new()).unwrap().drawables[0].positions[0],
-        Vec2::new(0.0, 10.0)
+        Vec2::new(50.0, 40.0)
     );
     assert_eq!(sdk.history_lengths(), (2, 0));
     sdk.undo().unwrap();

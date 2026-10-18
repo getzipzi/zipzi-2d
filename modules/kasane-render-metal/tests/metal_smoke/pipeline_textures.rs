@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use super::helpers::*;
 use kasane_core::{
     evaluation::{Drawable, DrawableFrame},
-    types::{Canvas, Vec2},
+    types::Vec2,
 };
 use kasane_render::{Affine2, ViewportConfig};
 use kasane_render_metal::{
@@ -33,7 +33,6 @@ fn renders_pixels_through_native_metal() {
     };
     let output = context.output_texture(target).unwrap();
     let frame = DrawableFrame {
-        model_space: (Canvas::new(SIDE as f32, SIDE as f32, Vec2::new(0.0, 0.0), 1.0)).into(),
         drawables: vec![Drawable {
             id: "triangle".into(),
             texture_asset_id: "solid".into(),
@@ -56,7 +55,10 @@ fn renders_pixels_through_native_metal() {
     renderer.sync_model(&frame, &textures).unwrap();
     renderer
         .update_view(ViewportConfig {
-            transform: Affine2::IDENTITY,
+            transform: Affine2 {
+                b: Vec2::new(0., -1.),
+                ..Affine2::IDENTITY
+            },
             target_extent: Vec2::new(SIDE as f32, SIDE as f32),
             mask_scale: 1.0,
         })
@@ -113,7 +115,6 @@ fn filtered_transparent_texels_do_not_tint_normal_or_clipped_edges() {
             }
             draws.push(edge);
             let frame = DrawableFrame {
-                model_space: (Canvas::new(64., 64., Vec2::new(0., 0.), 1.)).into(),
                 drawables: draws,
                 ..Default::default()
             };
@@ -122,7 +123,10 @@ fn filtered_transparent_texels_do_not_tint_normal_or_clipped_edges() {
             renderer.sync_model(&frame, &catalog).unwrap();
             renderer
                 .update_view(ViewportConfig {
-                    transform: Affine2::IDENTITY,
+                    transform: Affine2 {
+                        b: Vec2::new(0., -1.),
+                        ..Affine2::IDENTITY
+                    },
                     target_extent: Vec2::new(64., 64.),
                     mask_scale: 1.,
                 })
@@ -164,7 +168,6 @@ fn packed_mesh_buffers_preserve_vertex_and_index_offsets() {
         position.x = 32. + position.x * 0.5;
     }
     let (pixels, stats) = fixture(&DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: vec![left, right],
         ..Default::default()
     });
@@ -182,7 +185,6 @@ fn empty_mesh_does_not_allocate_a_destination_snapshot() {
     empty.indices = Arc::from([]);
     empty.raw_blend_mode = Some(1);
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![empty],
         ..Default::default()
     };
@@ -222,11 +224,13 @@ fn rejects_array_textures_before_encoding_or_readback() {
     )]));
     let mut renderer = MetalRenderer::new(&context, target).unwrap();
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         ..Default::default()
     };
     let viewport = ViewportConfig {
-        transform: Affine2::IDENTITY,
+        transform: Affine2 {
+            b: Vec2::new(0., -1.),
+            ..Affine2::IDENTITY
+        },
         target_extent: Vec2::new(64.0, 64.0),
         mask_scale: 1.0,
     };
@@ -284,7 +288,6 @@ fn texture_rows_follow_the_shared_uv_orientation() {
     };
     let output = context.output_texture(target).unwrap();
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("mesh", "image")],
         ..Default::default()
     };
@@ -292,7 +295,10 @@ fn texture_rows_follow_the_shared_uv_orientation() {
     renderer.sync_model(&frame, &catalog).unwrap();
     renderer
         .update_view(ViewportConfig {
-            transform: Affine2::IDENTITY,
+            transform: Affine2 {
+                b: Vec2::new(0., -1.),
+                ..Affine2::IDENTITY
+            },
             target_extent: Vec2::new(64.0, 64.0),
             mask_scale: 1.0,
         })

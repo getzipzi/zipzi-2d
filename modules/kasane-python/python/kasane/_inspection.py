@@ -84,18 +84,18 @@ def _read_member(directory: Path, relative: str, declared_hash: str, budget: int
 
 @dataclass(frozen=True)
 class RawInspectionRequest:
-    """One explicit source-canvas ROI and raw RGBA output size."""
+    """One explicit model-space ROI and raw RGBA output size."""
 
     roi: tuple[float, float, float, float]
     resolution: tuple[int, int] = (1024, 1024)
-    padding_canvas: float = 0.0
+    padding_model: float = 0.0
 
     def __post_init__(self) -> None:
         if len(self.roi) != 4 or len(self.resolution) != 2:
             raise ValueError("ROI needs four values and resolution needs two")
-        if (not all(math.isfinite(value) for value in (*self.roi, self.padding_canvas))
+        if (not all(math.isfinite(value) for value in (*self.roi, self.padding_model))
                 or self.roi[2] <= self.roi[0] or self.roi[3] <= self.roi[1]
-                or self.padding_canvas < 0):
+                or self.padding_model < 0):
             raise ValueError("ROI and padding must be finite with positive extent")
         if (any(type(side) is not int or side <= 0 or side > 4096
                 for side in self.resolution)):
@@ -106,7 +106,7 @@ class RawInspectionRequest:
 
 @dataclass(frozen=True)
 class InspectionView:
-    """A saved or captured ROI view with pixel-to-canvas mapping."""
+    """A saved or captured ROI view with image-to-model mapping."""
 
     view_id: str
     sample_index: int
@@ -125,15 +125,15 @@ class InspectionView:
     adapter_backend: str
     frame: ObservedFrame | None = None
 
-    def canvas_to_image(self, point: tuple[float, float]) -> tuple[float, float]:
-        """Map a source-canvas pixel coordinate into this view's image pixels."""
+    def model_to_image(self, point: tuple[float, float]) -> tuple[float, float]:
+        """Map a model coordinate into this view's image pixels."""
         return (point[0] * self.view_scale + self.view_offset[0],
-                point[1] * self.view_scale + self.view_offset[1])
+                -point[1] * self.view_scale + self.view_offset[1])
 
-    def image_to_canvas(self, point: tuple[float, float]) -> tuple[float, float]:
-        """Map an image pixel coordinate back into source-canvas pixels."""
+    def image_to_model(self, point: tuple[float, float]) -> tuple[float, float]:
+        """Map an image pixel coordinate back into model units."""
         return ((point[0] - self.view_offset[0]) / self.view_scale,
-                (point[1] - self.view_offset[1]) / self.view_scale)
+                (self.view_offset[1] - point[1]) / self.view_scale)
 
 
 @dataclass(frozen=True)
@@ -222,7 +222,7 @@ class InspectionPacket:
         self, targets: ObjectRef | Sequence[ObjectRef], *,
         include_hidden: bool = True,
     ) -> ObjectBounds:
-        """Query source-canvas target bounds from retained packet geometry.
+        """Query model-space target bounds from retained packet geometry.
 
         Reopened ``analysis`` and ``scene`` profiles support this query;
         ``report`` profiles and closed packets do not.
@@ -245,7 +245,7 @@ class InspectionPacket:
         if view is None:
             raise KeyError(f"View not found: {view_id}")
         return hit_test(source, self.capture_id, self.scene_digest,
-                        point, view.image_to_canvas,
+                        point, view.image_to_model,
                         (view.width, view.height), include_hidden=include_hidden,
                         details=details, max_candidates=max_candidates)
 
@@ -314,7 +314,7 @@ class InspectionPacket:
             assert self._scene is not None
             self._scene.save_scene(absolute_directory / "scene")
         manifest = {
-            "schema_version": 2, "kind": "kasane-inspection-packet",
+            "schema_version": 3, "kind": "kasane-inspection-packet",
             "status": "complete", "profile": profile,
             "capture": self.metadata, "source": self.source,
             "objects": self.objects, "views": view_entries,
@@ -400,7 +400,7 @@ def open_inspection_packet(absolute_directory: Path) -> InspectionPacket:
     if manifest_path.stat().st_size > MAX_MANIFEST_BYTES:
         raise ValueError("Packet manifest exceeds 64 MiB")
     manifest = _parse_json(manifest_path.read_bytes())
-    if (not isinstance(manifest, dict) or manifest.get("schema_version") != 2 or
+    if (not isinstance(manifest, dict) or manifest.get("schema_version") != 3 or
             manifest.get("kind") != "kasane-inspection-packet"):
         raise ValueError("Unsupported packet schema")
     profile = manifest.get("profile")

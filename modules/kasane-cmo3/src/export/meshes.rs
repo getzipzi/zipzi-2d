@@ -7,20 +7,7 @@ impl Exporter<'_> {
         for id in self.doc.mesh_order() {
             let m = self.doc.get_mesh(id).unwrap();
             let owner = self.source(id);
-            let uvs: Vec<_> = m
-                .uvs
-                .iter()
-                .map(|uv| {
-                    Vec2::new(
-                        uv.x,
-                        if self.canvas_reversed() {
-                            1. - uv.y
-                        } else {
-                            uv.y
-                        },
-                    )
-                })
-                .collect();
+            let uvs: Vec<_> = m.uvs.iter().map(|uv| Vec2::new(uv.x, 1. - uv.y)).collect();
             let binding = self.doc.binding_for_mesh(id);
             let rest = self.rest[id].clone();
             let mut guids = Vec::new();
@@ -78,7 +65,7 @@ impl Exporter<'_> {
                 .iter()
                 .flat_map(|t| t.iter().map(|v| vertices[v]))
                 .collect();
-            if self.canvas_reversed() {
+            {
                 for triangle in indices.as_chunks_mut::<3>().0 {
                     triangle.swap(1, 2);
                 }

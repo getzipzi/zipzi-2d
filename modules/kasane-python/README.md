@@ -96,10 +96,11 @@ Run `uv run --locked python first_project.py /absolute/texture.png /absolute/out
 destination when one exists, pass `on_exists="new"` and use the returned
 `SaveResult.manifest`.
 
-Models use an unbounded coordinate space. `session.model_space` describes the
-origin, unit scale and orientation. `session.source_canvas` is optional import
-metadata; it does not constrain geometry or viewport fitting. Default sessions
-have origin `(0, 0)` and one source pixel per model unit.
+Models use origin-relative coordinates, X right and Y up. Root geometry and
+CPU evaluation use the same model units. `session.source_canvas` retains optional
+import provenance; `session.export_settings` independently controls output PPU,
+framing and padding. Neither affects geometry or viewport fitting. See the
+[coordinate contract](../../docs/coordinates.md).
 
 ## Parameterized mesh
 

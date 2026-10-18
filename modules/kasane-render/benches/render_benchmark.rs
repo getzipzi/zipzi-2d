@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use kasane_core::evaluation::{Drawable, DrawableFrame, OffscreenFrame, RenderCommand};
-use kasane_core::types::{Canvas, Vec2};
+use kasane_core::types::Vec2;
 use kasane_render::{build_plan, Affine2, TextureInfo, ViewportConfig};
 
 const WARMUP_ITERATIONS: usize = 100;
@@ -91,7 +91,6 @@ fn make_workload(
     Workload {
         name,
         frame: DrawableFrame {
-            model_space: (Canvas::new(3840.0, 2160.0, Vec2::new(1920.0, 1080.0), 100.0)).into(),
             drawables,
             offscreens,
             render_plan,

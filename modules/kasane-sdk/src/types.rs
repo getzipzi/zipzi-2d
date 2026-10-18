@@ -101,9 +101,10 @@ pub struct PsdImportReceipt {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SourceSpace {
-    CanvasPixels,
-    ParentLocal(String),
+pub enum GeometrySpace {
+    Model,
+    RotationLocal(String),
+    WarpParameter(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -114,7 +115,7 @@ pub struct GeometrySnapshot {
     pub positions: Vec<Vec2>,
     pub uvs: Vec<Vec2>,
     pub triangles: Vec<[VertexId; 3]>,
-    pub space: SourceSpace,
+    pub space: GeometrySpace,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

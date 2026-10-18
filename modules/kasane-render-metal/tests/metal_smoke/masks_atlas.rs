@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use super::helpers::*;
 use kasane_core::{
     evaluation::{DrawableFrame, OffscreenFrame, RenderCommand},
-    types::{Canvas, Vec2},
+    types::Vec2,
 };
 use kasane_render::{Affine2, ViewportConfig};
 use kasane_render_metal::{
@@ -32,7 +32,6 @@ fn cropped_masks_follow_zoom_pan_and_resize_including_empty_inverted_masks() {
         (1, false, true),
     ] {
         let mut frame = DrawableFrame {
-            model_space: (Canvas::new(4096., 4096., Vec2::default(), 1.)).into(),
             ..Default::default()
         };
         for i in 0..count {
@@ -114,7 +113,7 @@ fn cropped_masks_follow_zoom_pan_and_resize_including_empty_inverted_masks() {
                 .update_view(ViewportConfig {
                     transform: Affine2 {
                         a: Vec2::new(32., 0.),
-                        b: Vec2::new(0., 32.),
+                        b: Vec2::new(0., -32.),
                         origin: Vec2::new(
                             side as f32 / 2. - center_x * 32.,
                             side as f32 / 2. - 2048. * 32.,
@@ -180,7 +179,6 @@ fn cropped_mask_sampling_stays_stable_across_integer_pixel_pans() {
     let mut consumer = quad("mesh", "solid");
     consumer.masks = vec![source.id.clone()];
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: vec![source, consumer],
         ..Default::default()
     };
@@ -196,7 +194,7 @@ fn cropped_mask_sampling_stays_stable_across_integer_pixel_pans() {
             .update_view(ViewportConfig {
                 transform: Affine2 {
                     a: Vec2::new(zoom, 0.),
-                    b: Vec2::new(0., zoom),
+                    b: Vec2::new(0., -zoom),
                     origin: Vec2::new(128. - 32. * zoom + pan, 128. - 32. * zoom),
                 },
                 target_extent: Vec2::new(256., 256.),
@@ -253,7 +251,6 @@ fn visible_masks_lower_resolution_when_shared_budget_is_exhausted() {
         },
     )]));
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(8000., 8000., Vec2::default(), 1.)).into(),
         ..Default::default()
     };
     for i in 0..8 {
@@ -278,7 +275,10 @@ fn visible_masks_lower_resolution_when_shared_budget_is_exhausted() {
     renderer.sync_model(&frame, &catalog).unwrap();
     renderer
         .update_view(ViewportConfig {
-            transform: Affine2::IDENTITY,
+            transform: Affine2 {
+                b: Vec2::new(0., -1.),
+                ..Affine2::IDENTITY
+            },
             target_extent: Vec2::new(4096., 4096.),
             mask_scale: 1.,
         })
@@ -311,7 +311,6 @@ fn raw_mask_and_inverted_mask_use_source_alpha() {
     let mut target = quad("target", "red");
     target.masks = vec!["source".into()];
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, target],
         ..Default::default()
     };
@@ -330,7 +329,6 @@ fn duplicate_mask_sources_do_not_accumulate_alpha() {
     let mut target = quad("target", "red");
     target.masks = vec!["source".into()];
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, target],
         ..Default::default()
     };
@@ -342,7 +340,6 @@ fn duplicate_mask_sources_do_not_accumulate_alpha() {
 #[test]
 fn mask_atlas_matches_individual_masks_without_neighbor_bleed() {
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         ..Default::default()
     };
     for i in 0..40 {
@@ -371,7 +368,6 @@ fn mask_atlas_matches_individual_masks_without_neighbor_bleed() {
     let mut expected = vec![0u8; atlas.len()];
     for chunk in frame.drawables.chunks(40) {
         let (pixels, stats) = fixture(&DrawableFrame {
-            model_space: (frame.model_space).into(),
             drawables: chunk.to_vec(),
             ..Default::default()
         });
@@ -405,7 +401,6 @@ fn rejected_encoding_preserves_mask_cache_and_pending_upload_stats() {
         };
         let mut renderer = MetalRenderer::new(&context, target).unwrap();
         let mut frame = DrawableFrame {
-            model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
             ..Default::default()
         };
         for i in 0..count {
@@ -418,7 +413,10 @@ fn rejected_encoding_preserves_mask_cache_and_pending_upload_stats() {
         renderer.sync_model(&frame, &catalog).unwrap();
         renderer
             .update_view(ViewportConfig {
-                transform: Affine2::IDENTITY,
+                transform: Affine2 {
+                    b: Vec2::new(0., -1.),
+                    ..Affine2::IDENTITY
+                },
                 target_extent: Vec2::new(64., 64.),
                 mask_scale: 1.,
             })
@@ -489,7 +487,6 @@ fn atlas_cache_edits_and_transition_preserve_submitted_frames() {
     };
     let mut renderer = MetalRenderer::new(&context, target).unwrap();
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         ..Default::default()
     };
     for i in 0..40 {
@@ -529,7 +526,10 @@ fn atlas_cache_edits_and_transition_preserve_submitted_frames() {
         renderer.sync_model(&frame, &catalog).unwrap();
         renderer
             .update_view(ViewportConfig {
-                transform: Affine2::IDENTITY,
+                transform: Affine2 {
+                    b: Vec2::new(0., -1.),
+                    ..Affine2::IDENTITY
+                },
                 target_extent: Vec2::new(64., 64.),
                 mask_scale: 1.,
             })

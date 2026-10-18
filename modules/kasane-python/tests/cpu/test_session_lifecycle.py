@@ -35,7 +35,8 @@ class CpuSessionLifecycleTests(unittest.TestCase):
     def test_unbounded_model_space_and_source_metadata_are_independent(self):
         model = kasane.Session(DOCUMENT)
         self.assertIsNone(model.source_canvas)
-        self.assertEqual(model.model_space, kasane.ModelSpaceSnapshot(0, 0, True))
+        self.assertEqual(model.export_settings.pixels_per_unit,1)
+        self.assertAlmostEqual(model.export_settings.padding_fraction,0.1)
         revision = model.evaluation_revision
         reference = kasane.CanvasSnapshot(1000, 800, 500, 400, 100, 1)
         with model.edit("source reference") as edit:
@@ -43,10 +44,10 @@ class CpuSessionLifecycleTests(unittest.TestCase):
         self.assertEqual(model.source_canvas, reference)
         self.assertEqual(model.evaluation_revision, revision)
         with model.edit("model units") as edit:
-            edit.replace_model_space((-20, 30), y_axis_down=False)
+            edit.replace_export_settings(kasane.ExportSettings(pixels_per_unit=100))
         self.assertEqual(model.source_canvas, reference)
-        self.assertEqual(model.model_space.runtime_to_source((1, 2)), (-19, 32))
-        self.assertEqual(model.model_space.source_to_runtime((-19, 32)), (1, 2))
+        self.assertEqual(model.export_settings.pixels_per_unit, 100)
+        self.assertEqual(model.evaluation_revision, revision)
         with model.edit("remove source") as edit:
             edit.replace_source_canvas(None)
         self.assertIsNone(model.source_canvas)
@@ -55,17 +56,20 @@ class CpuSessionLifecycleTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             saved = model.save(Path(directory).resolve() / "project")
             reopened = kasane.open_project(saved.manifest)
-            self.assertEqual(reopened.model_space, model.model_space)
+            self.assertEqual(reopened.export_settings, model.export_settings)
             self.assertEqual(reopened.source_canvas, reference)
         model.new_project(DOCUMENT)
         self.assertIsNone(model.source_canvas)
         with self.assertRaises(ValueError):
             kasane.Session(DOCUMENT, width=100)
 
-    def test_canvas_conversion(self):
-        canvas = session().model_space
-        self.assertEqual(canvas.runtime_to_source((1, -2)), (51, 52))
-        self.assertEqual(canvas.source_to_runtime((51, 52)), (1, -2))
+    def test_model_coordinates_need_no_source_conversion(self):
+        model=session()
+        with model.edit("rectangle") as edit:
+            edit.add_png_asset(ASSET,"texture",TEXTURE)
+            edit.create_rectangle(MESH,"mesh",ASSET,(-10,-20),(30,40))
+        self.assertEqual(model.geometry(MESH).space,"model")
+        self.assertEqual(model.evaluate({}).drawables[0].positions,model.mesh(MESH).positions)
 
     def test_shared_authoring_contract_matches_expected_results(self):
         spec = json.loads((TEXTURE.parent / "authoring-contract.json").read_text())
@@ -103,8 +107,8 @@ class CpuSessionLifecycleTests(unittest.TestCase):
 
     def test_create_save_reopen_and_snapshot_copy(self):
         model = session()
-        self.assertEqual(model.model_space.origin, (50, 50))
-        self.assertEqual(model.uv_v_origin, "top")
+        self.assertEqual(model.source_canvas.origin, (50, 50))
+        self.assertEqual(model.uv_v_origin, "bottom")
         with model.edit("create") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
@@ -113,7 +117,7 @@ class CpuSessionLifecycleTests(unittest.TestCase):
         self.assertEqual(snapshot.name, "face")
         snapshot.positions[0] = (999, 999)
         self.assertEqual(model.mesh(MESH).positions[0], (40, 40))
-        self.assertEqual(model.evaluate({}).drawables[0].positions[0], (-10, 10))
+        self.assertEqual(model.evaluate({}).drawables[0].positions[0], (40, 40))
         with TemporaryDirectory() as directory:
             destination = Path(directory).resolve() / "project"
             result = model.save(destination)
@@ -121,7 +125,7 @@ class CpuSessionLifecycleTests(unittest.TestCase):
             self.assertEqual(model.project_path, result.manifest)
             self.assertFalse(model.modified)
             reopened = kasane.open_project(destination)
-            self.assertEqual(reopened.model_space.origin, (50, 50))
+            self.assertEqual(reopened.source_canvas.origin, (50, 50))
             self.assertEqual(reopened.mesh_ids(), [MESH])
             self.assertEqual(reopened.mesh(MESH).positions, model.mesh(MESH).positions)
             self.assertEqual(reopened.mesh(MESH).vertex_ids, model.mesh(MESH).vertex_ids)
@@ -240,7 +244,7 @@ class CpuSessionLifecycleTests(unittest.TestCase):
         with model.edit("move", expected_version=before) as edit:
             edit.update_positions(MESH, mesh.vertex_ids, shifted)
         self.assertEqual(model.version[2], before[2] + 1)
-        self.assertEqual(model.evaluate({}).drawables[0].positions[0], (0, 10))
+        self.assertEqual(model.evaluate({}).drawables[0].positions[0], (50, 40))
 
     def test_import_edit_save_and_export(self):
         model = session()
@@ -249,7 +253,7 @@ class CpuSessionLifecycleTests(unittest.TestCase):
         self.assertEqual([item.code for item in imported.diagnostics],
                          ["MISSING_PHYSICS_ATTACHMENT", "MISSING_MOTION_ATTACHMENT"])
         self.assertTrue(model.missing_attachments())
-        self.assertEqual(model.uv_v_origin, "top")
+        self.assertEqual(model.uv_v_origin, "bottom")
         mesh_id = model.mesh_ids()[0]
         with model.edit("rename") as edit:
             edit.rename_mesh(mesh_id, "changed")
@@ -296,7 +300,7 @@ class CpuSessionLifecycleTests(unittest.TestCase):
             self.assertTrue(result.durable)
             self.assertEqual(model.project_path, result.manifest)
             self.assertEqual(model.mesh(model.mesh_ids()[0]).name, "face")
-            self.assertEqual(model.uv_v_origin, "top")
+            self.assertEqual(model.uv_v_origin, "bottom")
             self.assertEqual(model.mesh_record(model.mesh_ids()[0]).runtime_id, "face")
             self.assertEqual(model.diagnose_resources(), [])
             reopened = kasane.open_project(result.manifest)
@@ -347,23 +351,23 @@ class CpuSessionLifecycleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "supplied twice"):
             model.evaluate({PARAMETER: 0.5, "open": 0.5})
         self.assertEqual(middle.parameters[0].value, 0.5)
-        self.assertEqual(middle.drawables[0].positions[0], (-5, 10))
+        self.assertEqual(middle.drawables[0].positions[0], (45, 40))
         self.assertEqual(model.evaluate({PARAMETER: 2}).parameters[0].value, 1)
         preview_before = model.preview_revision
         self.assertTrue(model.set_preview_values({PARAMETER: 0.5}))
         self.assertFalse(model.set_preview_values({"open": 0.5}))
         self.assertEqual(model.preview_values, {PARAMETER: 0.5})
         self.assertGreater(model.preview_revision, preview_before)
-        self.assertEqual(model.preview_frame().drawables[0].positions[0], (-5, 10))
+        self.assertEqual(model.preview_frame().drawables[0].positions[0], (45, 40))
         self.assertGreaterEqual(model.preview_evaluation_count, 1)
-        self.assertEqual(model.evaluate({PARAMETER: 0}).drawables[0].positions[0], (-10, 10))
+        self.assertEqual(model.evaluate({PARAMETER: 0}).drawables[0].positions[0], (40, 40))
         revision = model.preview_revision
         with self.assertRaises(kasane.SdkFailure):
             model.set_preview_parameter("00000000-0000-4000-8000-000000000099", 1)
         self.assertEqual(model.preview_revision, revision)
         self.assertTrue(model.set_preview_parameter(PARAMETER, 1))
         self.assertFalse(model.set_preview_parameter("open", 1))
-        self.assertEqual(model.preview_frame().drawables[0].positions[0], (0, 10))
+        self.assertEqual(model.preview_frame().drawables[0].positions[0], (50, 40))
         self.assertTrue(model.reset_preview_values())
         self.assertEqual(model.preview_values, {})
         with TemporaryDirectory() as directory:

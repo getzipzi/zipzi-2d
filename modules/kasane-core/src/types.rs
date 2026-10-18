@@ -40,68 +40,79 @@ impl Vec2 {
 
 pub type VertexId = u32;
 
-/// Stable authoring coordinates. There is no document rectangle: source points
-/// can extend in every direction from the origin. Evaluation produces Y-up model
-/// units equal in magnitude to source pixels. `y_axis_down` describes the
-/// imported source orientation; format PPU is kept only in source metadata.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ModelSpace {
-    pub origin: Vec2,
-    pub y_axis_down: bool,
-}
-impl Default for ModelSpace {
-    fn default() -> Self {
-        Self {
-            origin: Vec2::default(),
-            y_axis_down: true,
-        }
-    }
-}
-impl ModelSpace {
-    pub const fn new(origin: Vec2) -> Self {
-        Self {
-            origin,
-            y_axis_down: true,
-        }
-    }
-    pub fn is_valid(self) -> bool {
-        self.origin.x.is_finite() && self.origin.y.is_finite()
-    }
-}
-
-/// Initialization data for a new model or a format import. The optional source
-/// canvas is provenance/export framing, never a bound on the model or viewport.
+/// Source-format provenance and independent output settings. Neither affects evaluation.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ModelSetup {
-    pub space: ModelSpace,
     pub source_canvas: Option<Canvas>,
-}
-impl From<ModelSpace> for ModelSetup {
-    fn from(space: ModelSpace) -> Self {
-        Self {
-            space,
-            source_canvas: None,
-        }
-    }
-}
-impl From<Canvas> for ModelSpace {
-    fn from(canvas: Canvas) -> Self {
-        canvas.model_space()
-    }
+    pub export: ExportSettings,
 }
 impl From<Canvas> for ModelSetup {
     fn from(canvas: Canvas) -> Self {
         Self {
-            space: canvas.model_space(),
             source_canvas: Some(canvas),
+            export: ExportSettings {
+                pixels_per_unit: canvas.pixels_per_unit,
+                ..Default::default()
+            },
         }
     }
 }
 impl ModelSetup {
     pub fn is_valid(self) -> bool {
-        self.space.is_valid() && self.source_canvas.is_none_or(Canvas::is_valid)
+        self.source_canvas.is_none_or(Canvas::is_valid) && self.export.is_valid()
     }
+}
+
+/// Cubism output policy. A model unit corresponds to one canvas pixel; PPU
+/// converts those lengths into Cubism runtime units only at the file boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExportSettings {
+    pub pixels_per_unit: f32,
+    /// Optional stable rectangle [left, bottom, right, top] in model units.
+    /// Specified bounds bypass automatic padding; pixel edges round outwards.
+    pub bounds: Option<[f32; 4]>,
+    pub padding_fraction: f32,
+    pub padding_pixels: f32,
+    pub minimum_extent: f32,
+}
+impl Default for ExportSettings {
+    fn default() -> Self {
+        Self {
+            pixels_per_unit: 1.,
+            bounds: None,
+            padding_fraction: 0.1,
+            padding_pixels: 50.,
+            minimum_extent: 256.,
+        }
+    }
+}
+impl ExportSettings {
+    pub fn is_valid(self) -> bool {
+        self.pixels_per_unit.is_finite()
+            && self.pixels_per_unit > 0.
+            && [
+                self.padding_fraction,
+                self.padding_pixels,
+                self.minimum_extent,
+            ]
+            .into_iter()
+            .all(|v| v.is_finite() && v >= 0.)
+            && self.bounds.is_none_or(|[l, b, r, t]| {
+                [l, b, r, t].into_iter().all(f32::is_finite) && r > l && t > b
+            })
+    }
+}
+
+/// Model and rotation-local lengths are X-right/Y-up. Warp parameters
+/// have different dimensions, even though both are represented by Vec2.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CoordinateSpace {
+    Model,
+    RotationLocal,
+    WarpParameter,
 }
 
 fn default_canvas_flag() -> u8 {
@@ -132,13 +143,6 @@ impl Default for Canvas {
 }
 
 impl Canvas {
-    pub fn model_space(self) -> ModelSpace {
-        ModelSpace {
-            origin: self.origin,
-            y_axis_down: self.flag & 1 != 0,
-        }
-    }
-
     pub fn is_valid(self) -> bool {
         self.width.is_finite()
             && self.height.is_finite()

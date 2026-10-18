@@ -296,10 +296,10 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
 
     let project = ProjectWire {
         format: "kasane-directory-project".to_string(),
-        format_version: 13,
+        format_version: 14,
         document: DocumentWire {
             id: document.id().to_string(),
-            model_space: document.model_space(),
+            export_settings: document.export_settings(),
             source_canvas: document.source_canvas(),
             draw_order_groups: document.draw_order_groups().map(|g| g.to_vec()),
             assets: assets_wire,

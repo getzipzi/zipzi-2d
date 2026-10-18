@@ -313,7 +313,7 @@ class CpuMeshGeometryTests(unittest.TestCase):
             sum(issue.kind == "small_triangle" for issue in issues), 2
         )
         self.assertTrue(
-            any(issue.kind == "outside_canvas_bounds" for issue in issues)
+            any(issue.kind == "outside_model_bounds" for issue in issues)
         )
         self.assertEqual({issue.mesh_id for issue in issues}, {MESH})
         self.assertEqual(model.version, version)
@@ -434,7 +434,7 @@ class CpuMeshGeometryTests(unittest.TestCase):
             model.save(destination)
             reopened = kasane.open_project(destination)
             self.assertEqual(reopened.binding(BINDING).keyforms[1].draw_order, 7)
-            self.assertEqual(reopened.evaluate({PARAMETER: 0.5}).drawables[0].positions[0], (-5, 10))
+            self.assertEqual(reopened.evaluate({PARAMETER: 0.5}).drawables[0].positions[0], (45, 40))
 
     def test_mesh_properties_update_preserves_geometry(self):
         model = session()

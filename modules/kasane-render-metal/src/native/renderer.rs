@@ -111,20 +111,15 @@ impl MetalRenderer {
         let mut meshes = Vec::with_capacity(frame.drawables.len());
         let mut vertex_updates = Vec::new();
         let mut index_updates = Vec::new();
-        let canvas_changed = self
-            .frame
-            .as_ref()
-            .is_none_or(|previous| previous.model_space != frame.model_space);
         for (i, drawable) in frame.drawables.iter().enumerate() {
             let prior = self
                 .frame
                 .as_ref()
                 .and_then(|previous| previous.drawables.get(i));
             if let Some(old) = self.meshes.get(i) {
-                let vertex_changed = canvas_changed
-                    || prior.is_none_or(|prior| {
-                        prior.positions != drawable.positions || prior.uvs != drawable.uvs
-                    });
+                let vertex_changed = prior.is_none_or(|prior| {
+                    prior.positions != drawable.positions || prior.uvs != drawable.uvs
+                });
                 let index_changed = prior.is_none_or(|prior| prior.indices != drawable.indices);
                 if !vertex_changed && !index_changed {
                     meshes.push(old.clone());
@@ -170,7 +165,7 @@ impl MetalRenderer {
             &self.device,
             &vertex_updates,
             |i| frame.drawables[i].positions.len(),
-            |i, data| append_vertices_for(&frame.drawables[i], &frame, data),
+            |i, data| append_vertices_for(&frame.drawables[i], data),
         );
         self.pending_uploads += uploads;
         for (i, buffer, offset) in buffers {

@@ -31,7 +31,7 @@ pub enum SpatialError {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
-/// Bounds of evaluated target vertices in source-canvas pixel coordinates.
+/// Bounds of evaluated target vertices in model coordinates.
 ///
 /// These geometric bounds can extend outside the canvas and do not account for
 /// textures, masks, or occlusion.
@@ -39,11 +39,10 @@ pub struct ObjectBounds {
     /// Resolved mesh IDs in authoring order, including meshes filtered from the bounds.
     pub mesh_ids: Vec<String>,
     /// `[min_x, min_y, max_x, max_y]`, or `None` when no vertices contribute.
-    pub canvas_bounds: Option<[f64; 4]>,
     /// Evaluated Y-up model units, independent of source canvas or export padding.
     /// Geometric bounds only: textures, masks and occlusion are not applied.
     pub model_bounds: Option<[f64; 4]>,
-    /// Why `canvas_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or
+    /// Why `model_bounds` is absent: `no_descendant_mesh`, `filtered_out`, or
     /// `no_evaluated_positions`.
     pub empty_reason: Option<&'static str>,
 }
@@ -91,7 +90,7 @@ pub struct GeometryHit {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
-/// Mesh candidates for a source-canvas point, ordered by descending draw order.
+/// Mesh candidates for a model-space point, ordered by descending draw order.
 pub struct GeometryQuery {
     /// Candidates retained after applying `max_candidates`.
     pub hits: Vec<GeometryHit>,
@@ -155,15 +154,7 @@ fn draws(drawable: &kasane_core::Drawable) -> bool {
     drawable.enabled && drawable.visible && drawable.opacity > 0.0
 }
 
-fn canvas_point(point: Vec2, frame: &DrawableFrame) -> [f64; 2] {
-    let canvas = frame.model_space;
-    [
-        f64::from(point.x) + f64::from(canvas.origin.x),
-        f64::from(canvas.origin.y) - f64::from(point.y),
-    ]
-}
-
-/// Union the evaluated positions of the selected meshes in source-canvas pixels.
+/// Union the evaluated positions of the selected meshes in model units.
 ///
 /// With `include_hidden = false`, drawables that are disabled, invisible, or
 /// fully transparent do not contribute. An empty result reports its reason in
@@ -178,7 +169,6 @@ pub fn object_bounds(
     let mesh_ids = resolve_mesh_ids(meshes, parts, targets)?;
     let selected: HashSet<_> = mesh_ids.iter().map(String::as_str).collect();
     let mut bounds = None::<[f64; 4]>;
-    let mut model_bounds = None::<[f64; 4]>;
     let mut filtered = false;
     for drawable in &frame.drawables {
         if !selected.contains(drawable.id.as_str()) {
@@ -186,12 +176,7 @@ pub fn object_bounds(
         }
         if include_hidden || draws(drawable) {
             for position in &drawable.positions {
-                let (mx, my) = (f64::from(position.x), f64::from(position.y));
-                model_bounds = Some(match model_bounds {
-                    Some([x0, y0, x1, y1]) => [x0.min(mx), y0.min(my), x1.max(mx), y1.max(my)],
-                    None => [mx, my, mx, my],
-                });
-                let [x, y] = canvas_point(*position, frame);
+                let (x, y) = (f64::from(position.x), f64::from(position.y));
                 bounds = Some(match bounds {
                     Some([x0, y0, x1, y1]) => [x0.min(x), y0.min(y), x1.max(x), y1.max(y)],
                     None => [x, y, x, y],
@@ -212,14 +197,12 @@ pub fn object_bounds(
     };
     Ok(ObjectBounds {
         mesh_ids,
-        canvas_bounds: bounds,
-        model_bounds,
+        model_bounds: bounds,
         empty_reason,
     })
 }
 
 fn triangle_hit(
-    frame: &DrawableFrame,
     positions: &[Vec2],
     uvs: &[Vec2],
     vertex_ids: &[u32],
@@ -232,7 +215,7 @@ fn triangle_hit(
     else {
         return None;
     };
-    let [pa, pb, pc] = [pa, pb, pc].map(|p| canvas_point(p, frame));
+    let [pa, pb, pc] = [pa, pb, pc].map(|p| [f64::from(p.x), f64::from(p.y)]);
     let [x, y] = point;
     if x < pa[0].min(pb[0]).min(pc[0])
         || x > pa[0].max(pb[0]).max(pc[0])
@@ -272,7 +255,7 @@ fn triangle_hit(
     })
 }
 
-/// Find meshes with evaluated triangles containing a source-canvas point.
+/// Find meshes with evaluated triangles containing a model-space point.
 ///
 /// Degenerate triangles are skipped. With `include_hidden = false`, disabled,
 /// invisible, and fully transparent drawables are skipped. `details` includes
@@ -306,7 +289,6 @@ pub fn hit_test_geometry(
         for (index, triple) in drawable.indices.as_chunks::<3>().0.iter().enumerate() {
             let indices = [triple[0], triple[1], triple[2]];
             if let Some(hit) = triangle_hit(
-                frame,
                 &drawable.positions,
                 &drawable.uvs,
                 mesh.map_or(&[], |mesh| mesh.vertex_ids.as_slice()),
@@ -370,7 +352,7 @@ pub fn hit_test_geometry(
 mod tests {
     use std::sync::Arc;
 
-    use kasane_core::{Canvas, Drawable, DrawableFrame, Mesh, Part, Vec2};
+    use kasane_core::{Drawable, DrawableFrame, Mesh, Part, Vec2};
 
     use super::*;
 
@@ -415,7 +397,6 @@ mod tests {
             ..Drawable::default()
         };
         let mut frame = DrawableFrame {
-            model_space: (Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 1.0)).into(),
             drawables: vec![drawable],
             ..DrawableFrame::default()
         };
@@ -423,13 +404,12 @@ mod tests {
         let bounds =
             object_bounds(&frame, std::slice::from_ref(&mesh), &parts, &selected, true).unwrap();
         assert_eq!(bounds.mesh_ids, ["eye"]);
-        assert_eq!(bounds.canvas_bounds, Some([40.0, 40.0, 60.0, 60.0]));
         assert_eq!(bounds.model_bounds, Some([-10.0, -10.0, 10.0, 10.0]));
         let hits = hit_test_geometry(
             &frame,
             std::slice::from_ref(&mesh),
             &parts,
-            [50.0, 50.0],
+            [0.0, 0.0],
             true,
             true,
             8,
@@ -455,14 +435,14 @@ mod tests {
             Some("filtered_out")
         );
         assert_eq!(
-            hit_test_geometry(&frame, &[], &parts, [50.0, 50.0], false, false, 8)
+            hit_test_geometry(&frame, &[], &parts, [0.0, 0.0], false, false, 8)
                 .unwrap()
                 .total,
             0
         );
         frame.drawables[0].positions.fill(Vec2::new(0.0, 0.0));
         assert_eq!(
-            hit_test_geometry(&frame, &[], &parts, [50.0, 50.0], true, true, 8)
+            hit_test_geometry(&frame, &[], &parts, [0.0, 0.0], true, true, 8)
                 .unwrap()
                 .total,
             0

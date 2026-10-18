@@ -4,7 +4,6 @@ use kasane_core::{types::Canvas, Document, DrawableFrame};
 /// Use the same evaluated default-pose bounds as MOC3, including hidden meshes
 /// and the full deformer hierarchy. This never mutates the authored canvas.
 pub(crate) fn for_document(doc: &Document) -> Result<Canvas, Cmo3Error> {
-    let space = doc.model_space();
     let mut frame = DrawableFrame::default();
 
     let status = kasane_core::evaluation::evaluate_frame_including_hidden(
@@ -17,8 +16,7 @@ pub(crate) fn for_document(doc: &Document) -> Result<Canvas, Cmo3Error> {
     }
 
     kasane_core::geometry::finite_export_canvas(
-        space,
-        doc.source_canvas(),
+        doc.export_settings(),
         frame
             .drawables
             .iter()

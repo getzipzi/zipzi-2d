@@ -12,18 +12,18 @@ pub struct GeometryBounds {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GeometryChecks {
-    /// Area in source coordinates: canvas pixels for root meshes, parent-local
-    /// units for meshes with a deform parent.
+    /// Area in authored coordinates: model units squared at the root, or
+    /// the appropriate rotation-local / Warp-parameter units under a parent.
     pub min_triangle_area: f64,
-    /// Optional expected source bounds for root meshes only.
-    pub canvas_bounds: Option<GeometryBounds>,
+    /// Optional expected model bounds for root meshes only.
+    pub model_bounds: Option<GeometryBounds>,
 }
 
 impl Default for GeometryChecks {
     fn default() -> Self {
         Self {
             min_triangle_area: 0.0,
-            canvas_bounds: None,
+            model_bounds: None,
         }
     }
 }
@@ -32,7 +32,7 @@ impl Default for GeometryChecks {
 pub enum GeometryDiagnosticKind {
     SmallTriangle,
     InconsistentWinding,
-    OutsideCanvasBounds,
+    OutsideModelBounds,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,7 +55,7 @@ impl AuthoringSession {
                 "diagnose_geometry",
             ));
         }
-        if let Some(bounds) = checks.canvas_bounds {
+        if let Some(bounds) = checks.model_bounds {
             let finite = [bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y]
                 .into_iter()
                 .all(f32::is_finite);
@@ -119,7 +119,7 @@ impl AuthoringSession {
                 }
             }
             if mesh.deformer_id.is_empty()
-                && checks.canvas_bounds.is_some_and(|bounds| {
+                && checks.model_bounds.is_some_and(|bounds| {
                     mesh.base_positions.iter().any(|p| {
                         p.x < bounds.min.x
                             || p.x > bounds.max.x
@@ -129,7 +129,7 @@ impl AuthoringSession {
                 })
             {
                 diagnostics.push(GeometryDiagnostic {
-                    kind: GeometryDiagnosticKind::OutsideCanvasBounds,
+                    kind: GeometryDiagnosticKind::OutsideModelBounds,
                     mesh_id: mesh_id.clone(),
                     triangle_index: None,
                 });

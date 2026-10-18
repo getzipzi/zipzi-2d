@@ -217,8 +217,8 @@ impl Exporter<'_> {
                         self.source_positions(t.parent(), sample.positions),
                     )
                 } else {
-                    // Canvas flag 1 maps world +Y into canvas -Y; flag 0 cancels
-                    // that reflection. Parented direction probes also change sign.
+                    // Cubism canvas roots are Y-down. Convert rotation orientation
+                    // at serialization, including the parent direction probes.
                     let r = sample.rotation;
                     N::new("CRotationDeformerForm")
                         .attr("originX", self.source_origin_x(t.parent(), r.origin.x))
@@ -226,7 +226,7 @@ impl Exporter<'_> {
                         .attr("angle", self.rotation_sign() * r.angle)
                         .attr("scale", r.scale)
                         .attr("isReflectX", r.reflect_x)
-                        .attr("isReflectY", r.reflect_y ^ !self.canvas_reversed())
+                        .attr("isReflectY", !r.reflect_y)
                         .field("super", base)
                 };
                 forms.push(self.graph.add(form));
@@ -260,11 +260,7 @@ impl Exporter<'_> {
                     .field(
                         "baseAngle",
                         f(self.rotation_sign() * r.base_angle
-                            - if !self.canvas_reversed() && !t.parent().is_empty() {
-                                180.
-                            } else {
-                                0.
-                            }),
+                            - if !t.parent().is_empty() { 180. } else { 0. }),
                     ),
             };
             self.graph.set(&owner, source);

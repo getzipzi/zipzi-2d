@@ -2,6 +2,8 @@ use super::*;
 
 pub(crate) type VersionTuple = (u64, u64, u64);
 pub(crate) type PointTuple = (f32, f32);
+pub(crate) type CanvasTuple = (f32, f32, f32, f32, f32, u8);
+pub(crate) type ExportSettingsTuple = (f32, Option<[f32; 4]>, f32, f32, f32);
 pub(crate) type ParameterTuple = (
     String,
     String,
@@ -62,7 +64,6 @@ pub(crate) type FullOffscreenTuple = (
 pub(crate) type FullEvaluationTuple = (
     VersionTuple,
     u64,
-    (f32, f32, bool),
     Vec<(String, f32, f32, bool)>,
     Vec<FullDrawableTuple>,
     Vec<FullOffscreenTuple>,
@@ -118,9 +119,10 @@ pub(crate) fn mesh_binding_from_tuple(data: MeshBindingDataTuple) -> MeshBinding
 pub(crate) fn geometry_from_tuple(value: GeometryTuple) -> PyResult<GeometrySnapshot> {
     let (version, mesh_id, vertex_ids, positions, uvs, triangles, space, parent) = value;
     let space = match (space.as_str(), parent) {
-        ("canvas_pixels", None) => SourceSpace::CanvasPixels,
-        ("parent_local", Some(parent)) => SourceSpace::ParentLocal(parent),
-        _ => return Err(PyValueError::new_err("Invalid geometry source space")),
+        ("model", None) => GeometrySpace::Model,
+        ("rotation_local", Some(parent)) => GeometrySpace::RotationLocal(parent),
+        ("warp_parameter", Some(parent)) => GeometrySpace::WarpParameter(parent),
+        _ => return Err(PyValueError::new_err("Invalid geometry space")),
     };
     Ok(GeometrySnapshot {
         version: tuple_version(version),

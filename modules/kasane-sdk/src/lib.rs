@@ -36,8 +36,8 @@ pub use spatial::{
     ObjectTarget, SpatialError, TriangleHit,
 };
 pub use types::{
-    EditReceipt, GeometrySnapshot, HistoryLimits, HistoryState, ImportReceipt, MeshProperties,
-    ObjectHandle, ObjectKind, PsdImportReceipt, SaveReceipt, SdkError, SourceSpace,
+    EditReceipt, GeometrySnapshot, GeometrySpace, HistoryLimits, HistoryState, ImportReceipt,
+    MeshProperties, ObjectHandle, ObjectKind, PsdImportReceipt, SaveReceipt, SdkError,
     TopologyReplacement, Version,
 };
 

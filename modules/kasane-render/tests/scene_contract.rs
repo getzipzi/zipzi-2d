@@ -1,5 +1,5 @@
 use kasane_core::evaluation::{Drawable, DrawableFrame, OffscreenFrame, RenderCommand};
-use kasane_core::types::{Canvas, Vec2};
+use kasane_core::types::Vec2;
 use kasane_render::{MaskId, MeshId, ScenePlan, TargetId, TargetItem, TextureInfo};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -25,7 +25,6 @@ fn mesh(id: &str) -> Drawable {
 }
 fn frame() -> DrawableFrame {
     DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::new(32., 32.), 10.)).into(),
         drawables: vec![
             mesh("root-before"),
             mesh("source"),
@@ -88,7 +87,7 @@ fn targets_preserve_order_and_mask_inputs_do_not_depend_on_their_color_target() 
     assert_eq!(scene.masks()[0].sources, vec![MeshId(1)]);
     assert!(scene.meshes()[2].reads_destination);
     assert!(scene.targets()[1].active);
-    assert_eq!(scene.masks()[0].bounds.position, Vec2::new(32., 31.));
+    assert_eq!(scene.masks()[0].bounds.position, Vec2::new(0., 0.));
     assert_eq!(scene.masks()[0].bounds.size, Vec2::new(1., 1.));
 }
 
@@ -198,8 +197,8 @@ fn group_bounds_follow_nesting_order_and_exclude_hidden_mask_sources() {
     );
     let mut scene = ScenePlan::default();
     scene.update(&f, &textures()).unwrap();
-    assert_eq!(scene.targets()[1].bounds.position, Vec2::new(32., 31.));
+    assert_eq!(scene.targets()[1].bounds.position, Vec2::new(0., 0.));
     assert_eq!(scene.targets()[1].bounds.size, Vec2::new(1., 1.));
     assert_eq!(scene.targets()[2].bounds, scene.targets()[1].bounds);
-    assert_eq!(scene.masks()[0].bounds.position, Vec2::new(1032., 31.));
+    assert_eq!(scene.masks()[0].bounds.position, Vec2::new(1000., 0.));
 }

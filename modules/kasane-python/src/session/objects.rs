@@ -222,8 +222,9 @@ impl NativeSession {
             .geometry(id)
             .map(|geometry| {
                 let (space, parent) = match geometry.space {
-                    SourceSpace::CanvasPixels => ("canvas_pixels".into(), None),
-                    SourceSpace::ParentLocal(parent) => ("parent_local".into(), Some(parent)),
+                    GeometrySpace::Model => ("model".into(), None),
+                    GeometrySpace::WarpParameter(parent) => ("warp_parameter".into(), Some(parent)),
+                    GeometrySpace::RotationLocal(parent) => ("rotation_local".into(), Some(parent)),
                 };
                 (
                     version_tuple(geometry.version),

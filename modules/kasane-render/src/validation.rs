@@ -63,13 +63,6 @@ fn validate_frame_with(
     frame: &DrawableFrame,
     mut geometry: impl FnMut(usize, &Drawable) -> Status,
 ) -> Status {
-    let canvas = frame.model_space;
-    if !canvas.is_valid() {
-        return Status::error(
-            "INVALID_MODEL_SPACE",
-            "Model origin must be finite and unit scale positive and finite.",
-        );
-    }
     let mut ids = HashSet::new();
     for (slot, drawable) in frame.drawables.iter().enumerate() {
         if drawable.id.is_empty() || !ids.insert(drawable.id.as_str()) {
@@ -85,9 +78,10 @@ fn validate_frame_with(
                 .iter()
                 .chain(&drawable.screen_color)
                 .any(|v| !v.is_finite())
-            || drawable.positions.iter().any(|p| {
-                !(p.x + canvas.origin.x).is_finite() || !(canvas.origin.y - p.y).is_finite()
-            })
+            || drawable
+                .positions
+                .iter()
+                .any(|p| !p.x.is_finite() || !p.y.is_finite())
         {
             return Status::error(
                 "NON_FINITE",
@@ -211,11 +205,10 @@ fn valid_blend_mode(mode: u32) -> bool {
 mod tests {
     use super::*;
     use kasane_core::evaluation::Drawable;
-    use kasane_core::types::{Canvas, Vec2};
+    use kasane_core::types::Vec2;
 
     fn frame() -> DrawableFrame {
         DrawableFrame {
-            model_space: (Canvas::new(640.0, 480.0, Vec2::new(320.0, 240.0), 100.0)).into(),
             drawables: vec![Drawable {
                 id: "mesh".into(),
                 positions: vec![
@@ -243,16 +236,15 @@ mod tests {
         value.drawables[0].positions[0].x = f32::NAN;
         assert_eq!(validator.validate(&value).code, "NON_FINITE");
         value.drawables[0].positions[0].x = f32::MAX;
-        value.model_space.origin.x = f32::MAX;
+        value.drawables[0].positions[0].x = f32::INFINITY;
         assert_eq!(validator.validate(&value).code, "NON_FINITE");
         value.drawables[0].positions[0].x = 0.0;
-        value.model_space.origin.x = 0.;
         value.drawables[0].positions.pop();
         assert_eq!(validator.validate(&value).code, "INVALID_LENGTH");
         value.drawables[0].positions.push(Vec2::new(0.0, 1.0));
         assert!(validator.validate(&value).is_ok());
-        value.model_space.origin.y = f32::NAN;
-        assert_eq!(validator.validate(&value).code, "INVALID_MODEL_SPACE");
+        value.drawables[0].positions[0].y = f32::NAN;
+        assert_eq!(validator.validate(&value).code, "NON_FINITE");
     }
 
     #[test]
@@ -288,18 +280,18 @@ mod tests {
         let mut value = frame();
         assert!(validate_frame(&value).is_ok());
         assert!(validate_frame(&value).is_ok());
-        value.model_space.origin.x = f32::NAN;
-        assert_eq!(validate_frame(&value).code, "INVALID_MODEL_SPACE");
-        value.model_space.origin.x = 0.0;
-        value.model_space.origin.y = f32::NAN;
-        assert_eq!(validate_frame(&value).code, "INVALID_MODEL_SPACE");
+        value.drawables[0].positions[0].x = f32::NAN;
+        assert_eq!(validate_frame(&value).code, "NON_FINITE");
+        value.drawables[0].positions[0].x = 0.0;
+        value.drawables[0].positions[0].y = f32::NAN;
+        assert_eq!(validate_frame(&value).code, "NON_FINITE");
     }
 
     #[test]
     fn rejects_invalid_canvas_and_appearance() {
         let mut value = frame();
-        value.model_space.origin.y = f32::NAN;
-        assert_eq!(validate_frame(&value).code, "INVALID_MODEL_SPACE");
+        value.drawables[0].positions[0].y = f32::NAN;
+        assert_eq!(validate_frame(&value).code, "NON_FINITE");
         let mut value = frame();
         value.drawables[0].opacity = f32::NAN;
         assert_eq!(validate_frame(&value).code, "NON_FINITE");
@@ -338,7 +330,7 @@ mod tests {
         value.drawables[0].positions[0].x = f32::INFINITY;
         assert_eq!(validate_frame(&value).code, "NON_FINITE");
         let mut value = frame();
-        value.model_space.origin.x = f32::MAX;
+        value.drawables[0].positions[0].x = f32::INFINITY;
         value.drawables[0].positions[1].x = f32::MAX;
         assert_eq!(validate_frame(&value).code, "NON_FINITE");
     }

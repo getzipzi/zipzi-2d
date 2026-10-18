@@ -119,7 +119,6 @@ impl Bounds2 {
 #[derive(Clone, Debug, Default)]
 pub struct ScenePlan {
     validator: crate::validation::FrameValidator,
-    model_space: kasane_core::ModelSpace,
     meshes: Vec<MeshPlan>,
     targets: Vec<TargetPlan>,
     masks: Vec<MaskPlan>,
@@ -140,9 +139,6 @@ impl ScenePlan {
     }
     pub fn masks(&self) -> &[MaskPlan] {
         &self.masks
-    }
-    pub fn model_space(&self) -> kasane_core::ModelSpace {
-        self.model_space
     }
     pub fn content_bounds(&self) -> Bounds2 {
         self.content_bounds
@@ -197,7 +193,6 @@ impl ScenePlan {
         if !same_structure {
             self.rebuild_structure(frame);
         }
-        self.model_space = frame.model_space;
         for target in &mut self.targets {
             target.items.clear();
             target.active = false;
@@ -265,10 +260,7 @@ impl ScenePlan {
             }
             let mut b: Option<Bounds2> = None;
             for p in &d.positions {
-                let point = Vec2::new(
-                    p.x + frame.model_space.origin.x,
-                    frame.model_space.origin.y - p.y,
-                );
+                let point = *p;
                 b = Some(b.map_or(Bounds2::from_point(point), |b| b.include(point)));
             }
             if let Some(bounds) = b {
@@ -538,7 +530,6 @@ mod tests {
     #[test]
     fn scene_plan_computes_content_bounds_and_target_bounds() {
         let frame = DrawableFrame {
-            model_space: kasane_core::ModelSpace::new(Vec2::new(100.0, 100.0)),
             drawables: vec![
                 Drawable {
                     id: "d1".to_owned(),
@@ -597,10 +588,10 @@ mod tests {
         let mut scene = ScenePlan::default();
         scene.update(&frame, &textures).unwrap();
 
-        // Model units equal pixels: origin translation and Y reflection only.
-        assert_eq!(scene.targets()[1].bounds.position, Vec2::new(100., 100.));
+        // Planning bounds are unprojected model-space geometry.
+        assert_eq!(scene.targets()[1].bounds.position, Vec2::new(0., -5.));
         assert_eq!(scene.targets()[1].bounds.size, Vec2::new(5., 5.));
-        assert_eq!(scene.content_bounds().position, Vec2::new(98., 97.));
+        assert_eq!(scene.content_bounds().position, Vec2::new(-2., -5.));
         assert_eq!(scene.content_bounds().size, Vec2::new(7., 8.));
         assert_eq!(scene.effective_bounds(), scene.content_bounds());
     }

@@ -385,7 +385,7 @@ fn is_enabled(value: &bool) -> bool {
 #[derive(Serialize, Deserialize)]
 pub(super) struct DocumentWire {
     pub(super) id: String,
-    pub(super) model_space: kasane_core::ModelSpace,
+    pub(super) export_settings: kasane_core::ExportSettings,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) source_canvas: Option<kasane_core::Canvas>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

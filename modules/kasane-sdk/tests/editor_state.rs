@@ -46,7 +46,7 @@ fn unified_flags_are_atomic_sparse_metadata_with_history_and_cleanup() {
     assert!(Arc::ptr_eq(&frame, &s.preview_frame().unwrap()));
     let bytes = encode_project(s.document()).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&bytes).unwrap();
-    assert_eq!(wire["format_version"], 13);
+    assert_eq!(wire["format_version"], 14);
     assert!(wire["document"].get("object_locks").is_none());
     assert!(wire["document"].get("deformer_display").is_none());
     let loaded = decode_project(&bytes).unwrap();

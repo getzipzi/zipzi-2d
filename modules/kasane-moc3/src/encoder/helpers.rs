@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use kasane_core::evaluation::to_parent_positions;
+use kasane_core::evaluation::parent_positions;
 use kasane_core::types::{Appearance, Status, Vec2, VertexId};
 use kasane_core::Document;
 
@@ -110,7 +110,7 @@ pub(super) fn format_units(doc: &Document, parent: &str, point: Vec2) -> Result<
             .get_transform(parent)
             .is_some_and(|t| t.rotation().is_some())
     {
-        let ppu = doc.source_canvas().map_or(1., |c| c.pixels_per_unit);
+        let ppu = doc.export_settings().pixels_per_unit;
         Vec2::new(point.x / ppu, point.y / ppu)
     } else {
         point
@@ -125,11 +125,6 @@ pub(super) fn format_units(doc: &Document, parent: &str, point: Vec2) -> Result<
 }
 
 pub(super) fn format_delta(doc: &Document, parent: &str, point: Vec2) -> Result<Vec2, Status> {
-    let point = if parent.is_empty() {
-        Vec2::new(point.x, -point.y)
-    } else {
-        point
-    };
     format_units(doc, parent, point)
 }
 
@@ -140,10 +135,10 @@ pub(super) fn write_positions(
     parent: &str,
     positions: &[Vec2],
 ) -> Result<(), Status> {
-    let converted = to_parent_positions(doc, parent, positions)?;
+    let converted = parent_positions(doc, parent, positions)?;
     let offset = checked(l.field("key_pos_src.xy")?.len() / 4, "positions")?;
     l.integer(&format!("{prefix}.key_pos_off"), offset)?;
-    for p in converted {
+    for &p in converted {
         let p = format_units(doc, parent, p)?;
         l.scalar("key_pos_src.xy", p.x)?;
         l.scalar("key_pos_src.xy", p.y)?;

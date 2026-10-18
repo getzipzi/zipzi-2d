@@ -8,7 +8,7 @@ use kasane_core::{
     RotationKeyform, RotationPose, RotationTransform, SceneBinding, SceneKeyform, SceneTrack,
     Transform, TransformData, Vec2, WarpKeyform,
 };
-use kasane_sdk::{GeometrySnapshot, ObjectKind, SourceSpace, Version};
+use kasane_sdk::{GeometrySnapshot, GeometrySpace, ObjectKind, Version};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 

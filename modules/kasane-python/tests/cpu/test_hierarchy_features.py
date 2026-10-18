@@ -18,7 +18,7 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         model = session()
         self.assertEqual(model.document_id, DOCUMENT)
         self.assertEqual(model.source_canvas.width, 100)
-        self.assertEqual(model.model_space.origin_x, 50)
+        self.assertEqual(model.source_canvas.origin_x, 50)
         with model.edit("create") as edit:
             edit.add_png_asset(ASSET, "texture", TEXTURE)
             edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
@@ -41,7 +41,7 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
             model.require_unique_mesh("missing")
         self.assertEqual(failure.exception.code, "NOT_FOUND")
         geometry = model.geometry(MESH)
-        self.assertEqual(geometry.space, "canvas_pixels")
+        self.assertEqual(geometry.space, "model")
         self.assertEqual(geometry.parent_id, None)
         self.assertEqual(geometry.version, model.version)
         self.assertEqual(len(geometry.uvs), 4)
@@ -82,7 +82,7 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
             edit.create_parameter(PARAMETER, "old", 0, 1, 0)
         before = model.version
         with model.edit("replace") as edit:
-            edit.replace_model_space((100, 50))
+            edit.replace_export_settings(kasane.ExportSettings(pixels_per_unit=20))
             edit.replace_source_canvas(kasane.CanvasSnapshot(200, 100, 100, 50, 20, 0))
             edit.replace_parameter(PARAMETER, "new", -1, 1, 0.5)
         self.assertEqual(model.version[2], before[2] + 1)
@@ -210,7 +210,7 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         self.assertEqual(model.transform(WARP).parent_id, ROTATION)
         self.assertEqual(model.transform(WARP).part_id, CHILD_PART)
         self.assertEqual(model.transform(WARP).warp.points, points)
-        self.assertEqual(model.geometry(MESH).space, "parent_local")
+        self.assertEqual(model.geometry(MESH).space, "warp_parameter")
         self.assertEqual(model.geometry(MESH).parent_id, WARP)
         self.assertEqual(model.validate_structure(), [])
         with model.edit("update") as edit:

@@ -21,10 +21,10 @@ class ObjectRef:
 
 @dataclass(frozen=True)
 class ObjectBounds:
-    """Evaluated geometry bounds in source-canvas pixels for one capture.
+    """Evaluated geometry bounds in model units for one capture.
 
     ``mesh_ids`` lists resolved descendants even when a drawing filter removes
-    them from the bounds. An empty result has ``canvas_bounds=None`` and an
+    them from the bounds. An empty result has ``model_bounds=None`` and an
     ``empty_reason``. Bounds do not measure painted or unoccluded pixels.
     """
 
@@ -32,7 +32,6 @@ class ObjectBounds:
     scene_digest: str
     targets: tuple[ObjectRef, ...]
     mesh_ids: tuple[str, ...]
-    canvas_bounds: tuple[float, float, float, float] | None
     model_bounds: tuple[float, float, float, float] | None
     status: Literal["ok", "empty"]
     empty_reason: Literal["no_descendant_mesh", "no_evaluated_positions", "filtered_out"] | None
@@ -78,13 +77,13 @@ class HitTestResult:
     """All geometry candidates at an image point, subject to the result limit.
 
     ``total`` counts mesh candidates before truncation. For an out-of-image
-    point, ``status='outside_image'`` and ``canvas_point`` is absent.
+    point, ``status='outside_image'`` and ``model_point`` is absent.
     """
 
     capture_id: str
     scene_digest: str
     image_point: tuple[float, float]
-    canvas_point: tuple[float, float] | None
+    model_point: tuple[float, float] | None
     hits: tuple[GeometryHit, ...]
     total: int
     truncated: bool
@@ -95,7 +94,7 @@ class SpatialSource(Protocol):
     """Internal bridge shared by live captures and reopened analysis data."""
 
     def bounds_json(self, targets: list[tuple[str, str]], include_hidden: bool) -> str: ...
-    def hit_test_json(self, canvas_point: tuple[float, float], include_hidden: bool,
+    def hit_test_json(self, model_point: tuple[float, float], include_hidden: bool,
                       details: bool, max_candidates: int) -> str: ...
 
 
@@ -115,11 +114,10 @@ def object_bounds(
     raw = json.loads(source.bounds_json(
         [(target.kind, target.id) for target in requested], include_hidden,
     ))
-    bounds = raw["canvas_bounds"]
+    bounds = raw["model_bounds"]
     return ObjectBounds(
         capture_id, scene_digest, requested, tuple(raw["mesh_ids"]),
         tuple(bounds) if bounds is not None else None,
-        tuple(raw["model_bounds"]) if raw["model_bounds"] is not None else None,
         "ok" if bounds is not None else "empty", raw["empty_reason"],
     )
 
@@ -127,7 +125,7 @@ def object_bounds(
 def hit_test(
     source: SpatialSource, capture_id: str, scene_digest: str,
     image_point: tuple[float, float],
-    image_to_canvas: Callable[[tuple[float, float]], tuple[float, float]],
+    image_to_model: Callable[[tuple[float, float]], tuple[float, float]],
     image_size: tuple[int, int], *, include_hidden: bool = True,
     details: bool = False, max_candidates: int = 256,
 ) -> HitTestResult:
@@ -139,9 +137,9 @@ def hit_test(
             and 0 <= image_point[1] < image_size[1]):
         return HitTestResult(capture_id, scene_digest, image_point, None,
                              (), 0, False, "outside_image")
-    canvas_point = image_to_canvas(image_point)
+    model_point = image_to_model(image_point)
     raw = json.loads(source.hit_test_json(
-        canvas_point, include_hidden, details, max_candidates,
+        model_point, include_hidden, details, max_candidates,
     ))
     hits = tuple(GeometryHit(
         item["mesh_id"], item["name"], tuple(item["part_path"]),
@@ -153,6 +151,6 @@ def hit_test(
             tuple(tri["barycentric"]), tuple(tri["uv"]) if tri["uv"] is not None else None,
         ) for tri in item["triangles"]),
     ) for item in raw["hits"])
-    return HitTestResult(capture_id, scene_digest, image_point, canvas_point,
+    return HitTestResult(capture_id, scene_digest, image_point, model_point,
                          hits, raw["total"], raw["truncated"],
                          "hit" if raw["total"] else "no_hit")

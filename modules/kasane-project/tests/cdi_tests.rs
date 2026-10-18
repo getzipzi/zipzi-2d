@@ -190,7 +190,7 @@ fn nonempty_cdi_survives_store_save_and_session_open() {
     assert!(result.status.is_ok(), "{result:?}");
     let manifest = snapshot.unwrap().manifest;
     let saved: Value = serde_json::from_slice(&std::fs::read(&manifest).unwrap()).unwrap();
-    assert_eq!(saved["format_version"], 13);
+    assert_eq!(saved["format_version"], 14);
     assert!(saved["document"]["display_info"]["extensions"]["Future"].is_object());
     let mut session = DocumentSession::new();
     let opened = session.open(&manifest);
@@ -385,12 +385,12 @@ fn invalid_or_unpersistable_cdi_fails_without_changing_source() {
 fn current_format_is_strict_and_legacy_versions_cannot_smuggle_display_info() {
     let source = document();
     let mut wire: Value = serde_json::from_str(&encode_project(&source).unwrap()).unwrap();
-    assert_eq!(wire["format_version"], 13);
+    assert_eq!(wire["format_version"], 14);
     assert!(wire["document"]["display_info"].is_object());
     for (value, expected_code) in [
         (Value::Null, "UNSUPPORTED_VERSION"),
-        (json!({}), "INVALID_PROJECT"),
-        (json!({"origin":"generated"}), "INVALID_PROJECT"),
+        (json!({}), "UNSUPPORTED_VERSION"),
+        (json!({"origin":"generated"}), "UNSUPPORTED_VERSION"),
     ] {
         let mut old = wire.clone();
         old["format_version"] = json!(4);
@@ -425,14 +425,15 @@ fn current_format_is_strict_and_legacy_versions_cannot_smuggle_display_info() {
         .as_object_mut()
         .unwrap()
         .remove("animation_assets");
-    let legacy = decode_project(&old.to_string()).unwrap();
-    assert_eq!(legacy.display_info(), &DisplayInfo::default());
     assert_eq!(
-        serde_json::from_str::<Value>(&encode_project(&legacy).unwrap()).unwrap()["format_version"],
-        13
+        decode_project(&old.to_string()).unwrap_err().code,
+        "UNSUPPORTED_VERSION"
     );
-    old["document"]["legacy_extra"] = json!({"still_accepted":true});
-    assert!(decode_project(&old.to_string()).is_ok());
+    old["document"]["legacy_extra"] = json!({"still_accepted":false});
+    assert_eq!(
+        decode_project(&old.to_string()).unwrap_err().code,
+        "UNSUPPORTED_VERSION"
+    );
 
     let mut future_root = wire.clone();
     future_root["future_root"] = json!(true);

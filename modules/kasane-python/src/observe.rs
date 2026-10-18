@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use kasane_sdk_observe::{
-    CanvasRoi, ObservationError, ObservationInput, ObservedFrame, Observer, ObserverConfig,
+    ModelRoi, ObservationError, ObservationInput, ObservedFrame, Observer, ObserverConfig,
     RenderRequest, ResolvedObservation,
 };
 use pyo3::create_exception;
@@ -40,7 +40,6 @@ type NativeFrameTuple = (
         String,
         u64,
         Vec<(String, f32, f32, bool)>,
-        (f32, f32, bool),
         f32,
         (f32, f32),
         Vec<(String, bool, Option<(u32, u32, u32, u32)>)>,
@@ -72,7 +71,6 @@ fn frame_tuple(py: Python<'_>, frame: ObservedFrame) -> PyResult<NativeFrameTupl
             frame.document_id,
             frame.source_revision,
             frame.parameters,
-            frame.model_space,
             frame.view_scale,
             frame.view_offset,
             frame
@@ -161,7 +159,7 @@ impl NativeCapturedScene {
 
     fn hit_test_json(
         &self,
-        canvas_point: (f64, f64),
+        model_point: (f64, f64),
         include_hidden: bool,
         details: bool,
         max_candidates: usize,
@@ -171,7 +169,7 @@ impl NativeCapturedScene {
             &input.authoring().meshes,
             &input.authoring().parts,
             input.frame(),
-            canvas_point,
+            model_point,
             include_hidden,
             details,
             max_candidates,
@@ -201,18 +199,18 @@ impl NativeCapturedScene {
         width: u32,
         height: u32,
         roi: (f32, f32, f32, f32),
-        padding_canvas: f32,
+        padding_model: f32,
     ) -> PyResult<(NativeFrameTuple, RenderMappingTuple, String)> {
         let request = RenderRequest {
             width,
             height,
-            roi: CanvasRoi {
+            roi: ModelRoi {
                 x0: roi.0,
                 y0: roi.1,
                 x1: roi.2,
                 y1: roi.3,
             },
-            padding_canvas,
+            padding_model,
         };
         let render_digest = self
             .inner
@@ -234,7 +232,7 @@ impl NativeCapturedScene {
         let mapping = frame
             .explicit_view
             .expect("explicit render has an ROI mapping");
-        let roi_tuple = |roi: CanvasRoi| (roi.x0, roi.y0, roi.x1, roi.y1);
+        let roi_tuple = |roi: ModelRoi| (roi.x0, roi.y0, roi.x1, roi.y1);
         Ok((
             frame_tuple(py, frame)?,
             (

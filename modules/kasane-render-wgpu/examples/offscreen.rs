@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use kasane_core::evaluation::{Drawable, DrawableFrame};
-use kasane_core::types::{Canvas, Status, Vec2};
+use kasane_core::types::{Status, Vec2};
 use kasane_render::{Affine2, ViewportConfig};
 use kasane_render_wgpu::{
     WgpuEncodeTarget, WgpuOutputMode, WgpuRenderer, WgpuTargetConfig, WgpuTexture,
@@ -94,7 +94,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let output_view = output.create_view(&wgpu::TextureViewDescriptor::default());
     let frame = DrawableFrame {
-        model_space: (Canvas::new(SIDE as f32, SIDE as f32, Vec2::new(0.0, 0.0), 1.0)).into(),
         drawables: vec![Drawable {
             id: "triangle".into(),
             texture_asset_id: "solid".into(),

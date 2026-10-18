@@ -125,7 +125,7 @@ impl<'a> Moc3EncoderContext<'a> {
                         f.positions,
                     )?;
                 } else {
-                    let origin = kasane_core::evaluation::to_parent_origin(
+                    let origin = kasane_core::evaluation::parent_origin(
                         self.doc,
                         t.parent(),
                         f.rotation.origin,

@@ -7,6 +7,6 @@
   "updated_name": "face-updated",
   "minimum": [40.0, 40.0],
   "maximum": [60.0, 60.0],
-  "evaluated_first_position": [-10.0, 10.0],
+  "evaluated_first_position": [40.0, 40.0],
   "invalid_create_code": "MISSING_ASSET"
 }

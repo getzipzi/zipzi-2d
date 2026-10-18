@@ -11,7 +11,7 @@ use super::prepared::PreparedEvaluation;
 use super::selection::{
     blend_appearance, blend_positions, default_selection, inherit_appearance, RuntimeRotationPose,
 };
-use super::types::to_parent_origin;
+use super::types::parent_origin;
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct TransformSource {
@@ -159,7 +159,7 @@ pub(super) fn evaluate(
                     transform_state.pose.reflect_y = first.reflect_y;
                     for k in 0..sel.indices.len() {
                         let p = b_ref.track.sample(sel.indices[k]).rotation;
-                        let origin = match to_parent_origin(doc, t.parent(), p.origin) {
+                        let origin = match parent_origin(doc, t.parent(), p.origin) {
                             Ok(orig) => orig,
                             Err(s) => return s,
                         };
@@ -191,11 +191,11 @@ pub(super) fn evaluate(
                     Err(s) => return s,
                 }
             } else if b.is_none() {
-                let origin =
-                    match to_parent_origin(doc, t.parent(), t.rotation().unwrap().pose.origin) {
-                        Ok(orig) => orig,
-                        Err(s) => return s,
-                    };
+                let origin = match parent_origin(doc, t.parent(), t.rotation().unwrap().pose.origin)
+                {
+                    Ok(orig) => orig,
+                    Err(s) => return s,
+                };
                 transform_state.pose.origin = origin;
             }
 
@@ -215,13 +215,8 @@ pub(super) fn evaluate(
                                 if kf_idx < forms.len() {
                                     let f = &forms[kf_idx];
                                     for (p, dp) in state.points.iter_mut().zip(&f.points) {
-                                        if t.parent_id.is_none() {
-                                            p.x += dp.x * eff_w;
-                                            p.y += (-dp.y) * eff_w;
-                                        } else {
-                                            p.x += dp.x * eff_w;
-                                            p.y += dp.y * eff_w;
-                                        }
+                                        p.x += dp.x * eff_w;
+                                        p.y += dp.y * eff_w;
                                     }
                                     if let Some(d_op) = f.opacity {
                                         transform_state.appearance.opacity += d_op * eff_w;
@@ -258,13 +253,8 @@ pub(super) fn evaluate(
                                 if kf_idx < forms.len() {
                                     let f = &forms[kf_idx];
                                     if let Some(d_orig) = f.origin {
-                                        if t.parent_id.is_none() {
-                                            transform_state.pose.origin.x += d_orig.x * eff_w;
-                                            transform_state.pose.origin.y += (-d_orig.y) * eff_w;
-                                        } else {
-                                            transform_state.pose.origin.x += d_orig.x * eff_w;
-                                            transform_state.pose.origin.y += d_orig.y * eff_w;
-                                        }
+                                        transform_state.pose.origin.x += d_orig.x * eff_w;
+                                        transform_state.pose.origin.y += d_orig.y * eff_w;
                                     }
                                     if let Some(d_ang) = f.angle {
                                         transform_state.pose.angle += d_ang * eff_w;

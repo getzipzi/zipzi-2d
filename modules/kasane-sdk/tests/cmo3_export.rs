@@ -38,7 +38,7 @@ fn unsaved_psd_draft_exports_without_publishing_or_editing_the_session() {
 fn boundless_draft_exports_all_editable_cubism_formats_without_mutation() {
     let session = AuthoringSession::new(
         "00000000-0000-4000-8000-000000003002",
-        kasane_core::ModelSpace::default(),
+        kasane_core::ModelSetup::default(),
     )
     .unwrap();
     let before = session.read_snapshot();

@@ -305,13 +305,6 @@ mod tests {
         inner_drawable.masks.push("root-mesh".to_owned());
         inner_drawable.raw_blend_mode = Some(0);
         let frame = DrawableFrame {
-            model_space: (kasane_core::types::Canvas::new(
-                640.0,
-                480.0,
-                Vec2::new(320.0, 240.0),
-                100.0,
-            ))
-            .into(),
             drawables: vec![
                 test_drawable("root-mesh", "texture", 0),
                 test_drawable("outer-mesh", "texture", 1),
@@ -430,13 +423,6 @@ mod tests {
     #[test]
     fn prepares_flat_frames_without_a_core_render_plan_in_render_order() {
         let frame = DrawableFrame {
-            model_space: (kasane_core::types::Canvas::new(
-                640.0,
-                480.0,
-                Vec2::new(320.0, 240.0),
-                100.0,
-            ))
-            .into(),
             drawables: vec![
                 test_drawable("late", "texture", 20),
                 test_drawable("early", "texture", 10),

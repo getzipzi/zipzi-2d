@@ -98,27 +98,11 @@ pub(super) fn evaluate(
         }
     }
 
-    // Apply canvas Y reversal and validate positions
-    for d in &mut state.frame.drawables {
+    for d in &state.frame.drawables {
         if d.enabled || state.include_hidden_geometry {
-            if !doc.model_space().y_axis_down {
-                for p in &mut d.positions {
-                    p.y = -p.y;
-                }
-            }
             let s = validate_positions(&d.positions);
             if !s.is_ok() {
                 return Status::error(s.code, format!("{}.evaluated_positions", d.id));
-            }
-        }
-    }
-    // Published editor controls share the drawables' final coordinate space.
-    // Keep TransformState itself unchanged: deformation was evaluated before
-    // the canvas reversal and uses that space for parent composition.
-    if !doc.model_space().y_axis_down {
-        for deformer in &mut state.frame.deformers {
-            for point in &mut deformer.points {
-                point.y = -point.y;
             }
         }
     }

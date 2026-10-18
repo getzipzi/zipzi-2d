@@ -260,16 +260,16 @@ fn test_blendshape_evaluation() {
     preview.insert(PARAM_BS.to_string(), 1.0);
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let mesh_a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
-    assert_eq!(mesh_a.positions[0], Vec2::new(5.0, -10.0));
-    assert_eq!(mesh_a.positions[1], Vec2::new(15.0, -10.0));
+    assert_eq!(mesh_a.positions[0], Vec2::new(5.0, 10.0));
+    assert_eq!(mesh_a.positions[1], Vec2::new(15.0, 10.0));
     assert_eq!(mesh_a.draw_order, 50);
 
     // Case 3: PARAM_BS = 0.5, constraint = 0.0 (weight 1.0) -> half delta (2.5, 5.0)
     preview.insert(PARAM_BS.to_string(), 0.5);
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let mesh_a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
-    assert_eq!(mesh_a.positions[0], Vec2::new(2.5, -5.0));
-    assert_eq!(mesh_a.positions[1], Vec2::new(12.5, -5.0));
+    assert_eq!(mesh_a.positions[0], Vec2::new(2.5, 5.0));
+    assert_eq!(mesh_a.positions[1], Vec2::new(12.5, 5.0));
     assert_eq!(mesh_a.draw_order, 25);
 
     // Case 4: PARAM_BS = 1.0, constraint param_bs2 = 0.5 (halfway between 0 and 1 -> weight 0.5)
@@ -278,8 +278,8 @@ fn test_blendshape_evaluation() {
     preview.insert(param_bs2.to_string(), 0.5);
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let mesh_a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
-    assert_eq!(mesh_a.positions[0], Vec2::new(2.5, -5.0));
-    assert_eq!(mesh_a.positions[1], Vec2::new(12.5, -5.0));
+    assert_eq!(mesh_a.positions[0], Vec2::new(2.5, 5.0));
+    assert_eq!(mesh_a.positions[1], Vec2::new(12.5, 5.0));
     assert_eq!(mesh_a.draw_order, 25);
 
     // Case 5: PARAM_BS = 1.0, constraint param_bs2 = 1.0 (weight 0.0) -> 0 delta
@@ -329,8 +329,8 @@ fn test_glue_evaluation() {
     // d = (10 - 0, 20 - 0) = (10, 20)
     // p_a = (0, 0) + (10, 20) * 0.5 = (5, 10) -> canvas y inverted: (5, -10)
     // p_b = (10, 20) - (10, 20) * 0.5 = (5, 10) -> canvas y inverted: (5, -10)
-    assert_eq!(mesh_a.positions[0], Vec2::new(5.0, -10.0));
-    assert_eq!(mesh_b.positions[0], Vec2::new(5.0, -10.0));
+    assert_eq!(mesh_a.positions[0], Vec2::new(5.0, 10.0));
+    assert_eq!(mesh_b.positions[0], Vec2::new(5.0, 10.0));
 
     // Test with intensity 0.5
     let mut glue_half = doc.get_glue(GLUE_ID).unwrap().clone();
@@ -343,6 +343,6 @@ fn test_glue_evaluation() {
 
     // p_a = (0, 0) + (10, 20) * (0.5 * 0.5) = (2.5, 5.0) -> canvas y inverted: (2.5, -5.0)
     // p_b = (10, 20) - (10, 20) * (0.5 * 0.5) = (7.5, 15.0) -> canvas y inverted: (7.5, -15.0)
-    assert_eq!(mesh_a.positions[0], Vec2::new(2.5, -5.0));
-    assert_eq!(mesh_b.positions[0], Vec2::new(7.5, -15.0));
+    assert_eq!(mesh_a.positions[0], Vec2::new(2.5, 5.0));
+    assert_eq!(mesh_b.positions[0], Vec2::new(7.5, 15.0));
 }

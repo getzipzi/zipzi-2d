@@ -24,45 +24,53 @@ pub(super) struct Moc3DecoderContext<'a> {
 }
 
 impl<'a> Moc3DecoderContext<'a> {
-    /// Cubism world/rotation coordinates are normalized by PPU; warp-local
-    /// coordinates are dimensionless and must retain their original values.
+    fn reflected(&self) -> bool {
+        self.inspection.canvas.flag & 1 == 0
+    }
+    pub(super) fn import_angle(&self, angle: f32) -> f32 {
+        if self.reflected() {
+            -angle
+        } else {
+            angle
+        }
+    }
+    pub(super) fn import_base_angle(&self, parent: &str, angle: f32) -> f32 {
+        self.import_angle(angle)
+            + if self.reflected()
+                && self
+                    .doc
+                    .get_transform(parent)
+                    .is_some_and(|t| t.warp().is_some())
+            {
+                180.
+            } else {
+                0.
+            }
+    }
+    /// Only model and rotation-local coordinates carry lengths. Warp-local
+    /// parameters stay dimensionless and retain their grid orientation.
     pub(super) fn import_origin(&self, parent: &str, x: f64, y: f64) -> kasane_core::PreciseVec2 {
-        let ppu = f64::from(self.inspection.canvas.pixels_per_unit);
-        if parent.is_empty() {
-            let origin = self.doc.model_space().origin;
-            kasane_core::PreciseVec2::new(
-                x * ppu + f64::from(origin.x),
-                f64::from(origin.y) - y * ppu,
-            )
-        } else if self
-            .doc
-            .get_transform(parent)
-            .is_some_and(|t| t.rotation().is_some())
+        if parent.is_empty()
+            || self
+                .doc
+                .get_transform(parent)
+                .is_some_and(|t| t.rotation().is_some())
         {
-            kasane_core::PreciseVec2::new(x * ppu, y * ppu)
+            let ppu = f64::from(self.inspection.canvas.pixels_per_unit);
+            kasane_core::PreciseVec2::new(
+                x * ppu,
+                y * ppu * if self.reflected() { -1. } else { 1. },
+            )
         } else {
             kasane_core::PreciseVec2::new(x, y)
         }
     }
-
     pub(super) fn import_point(&self, parent: &str, x: f32, y: f32) -> Vec2 {
         let p = self.import_origin(parent, f64::from(x), f64::from(y));
         Vec2::new(p.x as f32, p.y as f32)
     }
-
     pub(super) fn import_delta(&self, parent: &str, x: f32, y: f32) -> Vec2 {
-        let ppu = self.inspection.canvas.pixels_per_unit;
-        if parent.is_empty() {
-            Vec2::new(x * ppu, -y * ppu)
-        } else if self
-            .doc
-            .get_transform(parent)
-            .is_some_and(|t| t.rotation().is_some())
-        {
-            Vec2::new(x * ppu, y * ppu)
-        } else {
-            Vec2::new(x, y)
-        }
+        self.import_point(parent, x, y)
     }
 
     pub(super) fn new(bytes: &'a [u8], textures: &'a [TextureSlotInfo]) -> Result<Self, Status> {

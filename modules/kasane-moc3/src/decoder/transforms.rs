@@ -280,7 +280,7 @@ impl<'a> Moc3DecoderContext<'a> {
                         },
                         rotation: RotationPose {
                             origin,
-                            angle,
+                            angle: self.import_angle(angle),
                             scale,
                             reflect_x: ref_x,
                             reflect_y: ref_y,
@@ -289,6 +289,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     });
                 }
 
+                let base_angle = self.import_base_angle(&parent_id, base_angle);
                 let base = &keyforms[0];
                 check_status!(
                     self.doc

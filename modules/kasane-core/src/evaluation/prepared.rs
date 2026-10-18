@@ -86,28 +86,9 @@ impl PreparedEvaluation {
         let mut geometry = Vec::new();
         for id in doc.mesh_order() {
             let mesh = doc.get_mesh(id).unwrap();
-            let uvs = mesh
-                .uvs
-                .iter()
-                .map(|uv| {
-                    Vec2::new(
-                        uv.x,
-                        if !doc.model_space().y_axis_down {
-                            uv.y
-                        } else {
-                            1.0 - uv.y
-                        },
-                    )
-                })
-                .collect::<Vec<_>>();
+            let uvs = mesh.uvs.clone();
             let mut indices = Vec::new();
             doc.render_indices_into(id, &mut indices)?;
-            for tri in indices.as_chunks_mut::<3>().0 {
-                tri.swap(1, 2);
-                if !doc.model_space().y_axis_down {
-                    tri.swap(0, 2);
-                }
-            }
             geometry.push(StaticGeometry {
                 uvs: uvs.into(),
                 indices: indices.into(),

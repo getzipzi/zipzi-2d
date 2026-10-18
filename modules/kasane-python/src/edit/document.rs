@@ -74,20 +74,22 @@ impl NativeEdit {
         Ok(())
     }
 
-    fn replace_model_space(
+    fn replace_export_settings(
         &mut self,
         py: Python<'_>,
-        origin_x: f32,
-        origin_y: f32,
-        y_axis_down: bool,
+        settings: ExportSettingsTuple,
     ) -> PyResult<()> {
-        self.ensure_open(py, "replace_model_space")?;
+        self.ensure_open(py, "replace_export_settings")?;
+        let (pixels_per_unit, bounds, padding_fraction, padding_pixels, minimum_extent) = settings;
         self.commands
-            .push(Command::ReplaceModelSpace(ModelSpace {
-                origin: Vec2::new(origin_x, origin_y),
-                y_axis_down,
+            .push(Command::ReplaceExportSettings(ExportSettings {
+                pixels_per_unit,
+                bounds,
+                padding_fraction,
+                padding_pixels,
+                minimum_extent,
             }))
-            .map_err(|error| sdk_failure(py, error))?;
+            .map_err(|e| sdk_failure(py, e))?;
         Ok(())
     }
 
@@ -95,7 +97,7 @@ impl NativeEdit {
     fn replace_source_canvas(
         &mut self,
         py: Python<'_>,
-        canvas: Option<(f32, f32, f32, f32, f32, u8)>,
+        canvas: Option<CanvasTuple>,
     ) -> PyResult<()> {
         self.ensure_open(py, "replace_source_canvas")?;
         self.commands

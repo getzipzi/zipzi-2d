@@ -6,10 +6,10 @@ pub(super) use kasane_render::gpu::{
 
 pub(super) fn vertices_for(
     drawable: &Drawable,
-    frame: &DrawableFrame,
+    _frame: &DrawableFrame,
     viewport: ViewportConfig,
 ) -> Vec<Vertex> {
-    kasane_render::gpu::transformed_vertices_for(drawable, frame, viewport)
+    kasane_render::gpu::transformed_vertices_for(drawable, viewport)
 }
 
 pub(super) fn draw_uniform(

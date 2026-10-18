@@ -40,7 +40,7 @@ fn shared_layered_fixture_is_generated_and_imported_here() {
     let bundle = import_psd(fixture).unwrap();
     assert_eq!((bundle.report.width, bundle.report.height), (8, 8));
     assert_eq!(
-        bundle.document.model_space().origin,
+        bundle.document.source_canvas().unwrap().origin,
         kasane_core::Vec2::new(4., 4.)
     );
     assert_eq!(bundle.report.raster_layers, 1);
@@ -71,8 +71,8 @@ fn imports_cropped_layers_as_a_valid_document_and_pngs() {
         .document
         .get_mesh(&bundle.document.mesh_order()[1])
         .unwrap();
-    assert_eq!(front.base_positions[0].x, 3.0);
-    assert_eq!(front.base_positions[0].y, 4.0);
+    assert_eq!(front.base_positions[0].x, -1.0);
+    assert_eq!(front.base_positions[0].y, -2.0);
     assert_eq!(front.draw_order, Some(1.0));
     let decoded = decode_png(&bundle.assets[0].bytes).unwrap();
     assert_eq!((decoded.width, decoded.height), (2, 2));

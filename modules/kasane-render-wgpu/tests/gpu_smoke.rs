@@ -2,7 +2,7 @@ use std::{collections::HashMap, future::Future, sync::Arc, time::Duration};
 
 use kasane_core::{
     evaluation::{Drawable, DrawableFrame, OffscreenFrame, RenderCommand},
-    types::{BlendMode, Canvas, Vec2},
+    types::{BlendMode, Vec2},
 };
 use kasane_render::{Affine2, ViewportConfig};
 use kasane_render_wgpu::{
@@ -81,7 +81,6 @@ fn flat_scene_renders_real_pixels() {
     });
     let output_view = output.create_view(&wgpu::TextureViewDescriptor::default());
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::new(0.0, 0.0), 1.0)).into(),
         drawables: vec![Drawable {
             id: "red-triangle".into(),
             texture_asset_id: "red".into(),
@@ -114,7 +113,10 @@ fn flat_scene_renders_real_pixels() {
             &frame,
             &textures,
             ViewportConfig {
-                transform: Affine2::IDENTITY,
+                transform: Affine2 {
+                    b: Vec2::new(0., -1.),
+                    ..Affine2::IDENTITY
+                },
                 target_extent: Vec2::new(64.0, 64.0),
                 mask_scale: 1.0,
             },
@@ -298,6 +300,7 @@ fn render_fixture_with_texture_change(
             ViewportConfig {
                 transform: Affine2 {
                     origin: Vec2::new(1.0, 0.0),
+                    b: Vec2::new(0., -1.),
                     ..Affine2::IDENTITY
                 },
                 target_extent: Vec2::new(64.0, 64.0),
@@ -327,7 +330,10 @@ fn render_fixture_with_texture_change(
         .update_view(
             &device,
             ViewportConfig {
-                transform: Affine2::IDENTITY,
+                transform: Affine2 {
+                    b: Vec2::new(0., -1.),
+                    ..Affine2::IDENTITY
+                },
                 target_extent: Vec2::new(64.0, 64.0),
                 mask_scale: 1.0,
             },
@@ -375,19 +381,22 @@ fn render_fixture_with_texture_change(
         queue.submit([encoder.finish()]);
     }
     let mut rejected = frame.clone();
-    rejected.model_space.origin.x = f32::NAN;
+    rejected.drawables[0].positions[0].x = f32::NAN;
     assert_eq!(
         renderer
             .sync_model(&device, &rejected, &textures)
             .unwrap_err()
             .code,
-        "INVALID_MODEL_SPACE"
+        "NON_FINITE"
     );
     assert!(renderer
         .update_view(
             &device,
             ViewportConfig {
-                transform: Affine2::IDENTITY,
+                transform: Affine2 {
+                    b: Vec2::new(0., -1.),
+                    ..Affine2::IDENTITY
+                },
                 target_extent: Vec2::new(0.0, 64.0),
                 mask_scale: 1.0,
             }
@@ -509,7 +518,6 @@ fn invisible_raw_mask_source_affects_visible_mesh() {
     let mut target = quad("target", "red");
     target.masks = vec!["source".into()];
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, target],
         ..Default::default()
     };
@@ -529,7 +537,6 @@ fn texture_revision_repaints_mask_after_in_place_upload() {
     let mut target = quad("target", "red");
     target.masks = vec!["source".into()];
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, target],
         ..Default::default()
     };
@@ -542,7 +549,6 @@ fn texture_revision_repaints_mask_after_in_place_upload() {
 #[test]
 fn offscreen_composites_child_into_parent() {
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("child", "red")],
         offscreens: vec![OffscreenFrame {
             id: "group".into(),
@@ -574,7 +580,6 @@ fn destination_read_works_without_host_copy_source() {
     let mut green = quad("green", "green");
     green.raw_blend_mode = Some(0);
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("red", "red"), green],
         ..Default::default()
     };
@@ -590,7 +595,6 @@ fn consecutive_destination_reads_observe_the_latest_target() {
     let mut blue = quad("blue", "blue");
     blue.raw_blend_mode = Some(1);
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("red", "red"), green, blue],
         ..Default::default()
     };
@@ -602,7 +606,6 @@ fn consecutive_destination_reads_observe_the_latest_target() {
 #[test]
 fn nested_offscreens_render_before_parent_composite() {
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("inner-mesh", "red")],
         offscreens: vec![
             OffscreenFrame {
@@ -651,7 +654,6 @@ fn offscreen_mask_uses_raw_source_alpha() {
     source.visible = false;
     source.opacity = 0.0;
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, quad("child", "red")],
         offscreens: vec![OffscreenFrame {
             id: "group".into(),
@@ -695,7 +697,6 @@ fn fixed_additive_and_multiplicative_draws_match_expected_pixels() {
         let mut green = quad("green", "green");
         green.blend_mode = mode;
         let frame = DrawableFrame {
-            model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
             drawables: vec![quad("red", "red"), green],
             ..Default::default()
         };
@@ -712,7 +713,6 @@ fn inverted_opaque_mask_removes_the_draw() {
     target.masks = vec!["source".into()];
     target.inverted_mask = true;
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, target],
         ..Default::default()
     };
@@ -723,7 +723,6 @@ fn inverted_opaque_mask_removes_the_draw() {
 #[test]
 fn destination_read_on_offscreen_composite_sees_prior_parent_draw() {
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("background", "red"), quad("child", "green")],
         offscreens: vec![OffscreenFrame {
             id: "group".into(),

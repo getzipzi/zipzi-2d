@@ -152,7 +152,7 @@ fn test_project_encode_decode_roundtrip() {
     assert_eq!(encoded.bytes().filter(|&byte| byte == b'\n').count(), 1);
     let root: serde_json::Value = serde_json::from_str(&encoded).unwrap();
     assert_eq!(root["format"], "kasane-directory-project");
-    assert_eq!(root["format_version"], 13);
+    assert_eq!(root["format_version"], 14);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
     assert!(before.same_content(&decoded));
@@ -318,29 +318,11 @@ fn test_reject_duplicate_keys_and_malformed() {
     assert_eq!(err.code, "UNSUPPORTED_VERSION");
 
     // Invalid asset path (directory traversal)
-    let traversal = r#"{
-      "format": "kasane-directory-project",
-      "format_version": 1,
-      "document": {
-        "id": "00000001-1111-4111-8111-111111111111",
-        "model_space": {"origin": {"x": 0.0, "y": 0.0}, "y_axis_down": true},
-        "assets": [{
-          "id": "00000002-1111-4111-8111-111111111111",
-          "name": "escape",
-          "source": "../escape.png",
-          "width": 8,
-          "height": 8,
-          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-        }],
-        "meshes": [],
-        "parts": [],
-        "transforms": [],
-        "parameters": [],
-        "bindings": [],
-        "scene_bindings": []
-      }
-    }"#;
-    let err = decode_project(traversal).unwrap_err();
+    let doc = fixture_doc(&"0".repeat(64), &"1".repeat(64));
+    let mut traversal: serde_json::Value =
+        serde_json::from_str(&encode_project(&doc).unwrap()).unwrap();
+    traversal["document"]["assets"][0]["source"] = "../escape.png".into();
+    let err = decode_project(&traversal.to_string()).unwrap_err();
     assert_eq!(err.code, "INVALID_PROJECT");
 }
 

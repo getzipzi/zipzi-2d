@@ -47,15 +47,12 @@ fn assert_translated_positions(
         .collect();
     assert_eq!(actual.len(), expected.len());
     for (i, (&actual, &source)) in actual.iter().zip(expected).enumerate() {
-        let offset = if i % 2 == 0 {
-            origin.x - 20.
+        let expected = if i % 2 == 0 {
+            origin.x + source
         } else {
-            origin.y - 30.
+            origin.y - source
         };
-        assert!(
-            (actual - source - offset).abs() < 0.0001,
-            "{actual} vs {source} + {offset}"
-        );
+        assert!((actual - expected).abs() < 0.0001, "{actual} vs {expected}");
     }
 }
 
@@ -109,8 +106,8 @@ fn self_contained_graph_and_signed_xor_keys() {
             .descendants()
             .find(|n| n.tag_name().name() == "CArtMeshSource" && n.has_attribute("xs.id"))
             .unwrap();
-        assert_eq!(field(mesh, "indices").text(), Some("0 1 2"));
-        assert_eq!(field(mesh, "uvs").text(), Some("0 0 1 0 0 1"));
+        assert_eq!(field(mesh, "indices").text(), Some("0 2 1"));
+        assert_eq!(field(mesh, "uvs").text(), Some("0 1 1 1 0 0"));
         let name = xml.descendants().find(|n| {
             n.attribute("xs.n") == Some("localName")
                 && n.text() == Some(d.get_mesh(MESH).unwrap().name.as_str())
@@ -314,7 +311,7 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
     assert_translated_positions(
         &xml,
         field(form, "positions"),
-        &[10., 45., 106., 45., 10., -3.],
+        &[10., 15., 106., 15., 10., 63.],
     );
 }
 

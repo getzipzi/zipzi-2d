@@ -1,7 +1,7 @@
 use kasane_core::{Canvas, Parameter, PreviewValues, Vec2};
 use kasane_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession};
 use kasane_sdk_observe::{
-    CanvasRoi, HistoryStatus, ObservationInput, ObservationSource, Observer, ObserverConfig,
+    HistoryStatus, ModelRoi, ObservationInput, ObservationSource, Observer, ObserverConfig,
     RenderRequest, ResolvedObservation,
 };
 
@@ -62,7 +62,7 @@ fn batch_samples_one_document_snapshot_and_reuses_capture_identity() {
     assert_ne!(inputs[0].version(), session.version());
     assert_eq!(
         inputs[0].frame().drawables[0].positions[0],
-        Vec2::new(-10.0, 10.0)
+        Vec2::new(40.0, 40.0)
     );
     assert_eq!(inputs[1].frame().parameters[0].value, 0.5);
     let scenes = ResolvedObservation::capture_many(inputs).unwrap();
@@ -108,7 +108,7 @@ fn captures_unpublished_project_and_keeps_old_frame_after_edit() {
     let input = ObservationInput::capture(&session, &PreviewValues::new()).unwrap();
     assert_eq!(
         input.frame().drawables[0].positions[0],
-        Vec2::new(-10.0, 10.0)
+        Vec2::new(40.0, 40.0)
     );
     assert_eq!(input.assets().len(), 1);
     let textures = input.resolve_textures().unwrap();
@@ -122,11 +122,11 @@ fn captures_unpublished_project_and_keeps_old_frame_after_edit() {
     assert_ne!(input.version(), session.version());
     assert_eq!(
         input.frame().drawables[0].positions[0],
-        Vec2::new(-10.0, 10.0)
+        Vec2::new(40.0, 40.0)
     );
     assert_eq!(
         session.evaluate(&PreviewValues::new()).unwrap().drawables[0].positions[0],
-        Vec2::new(0.0, 10.0)
+        Vec2::new(50.0, 40.0)
     );
 }
 
@@ -364,13 +364,13 @@ fn resolved_capture_rerenders_roi_after_source_disappears_and_restores_legacy_vi
     let request = RenderRequest {
         width: 128,
         height: 96,
-        roi: CanvasRoi {
+        roi: ModelRoi {
             x0: 38.0,
             y0: 38.0,
             x1: 62.0,
             y1: 62.0,
         },
-        padding_canvas: 2.0,
+        padding_model: 2.0,
     };
     let enlarged = observer.render(&captured, request).unwrap();
     assert_eq!((enlarged.width, enlarged.height), (128, 96));
@@ -437,7 +437,7 @@ fn resolved_capture_rerenders_roi_after_source_disappears_and_restores_legacy_vi
     std::fs::write(&manifest_path, &manifest).unwrap();
     std::fs::write(
         &manifest_path,
-        manifest.replace("\"schema_version\": 4", "\"schema_version\": 99"),
+        manifest.replace("\"schema_version\": 5", "\"schema_version\": 99"),
     )
     .unwrap();
     assert_eq!(
@@ -507,13 +507,13 @@ fn bundle_child_process() {
             RenderRequest {
                 width: 128,
                 height: 96,
-                roi: CanvasRoi {
+                roi: ModelRoi {
                     x0: 38.0,
                     y0: 38.0,
                     x1: 62.0,
                     y1: 62.0,
                 },
-                padding_canvas: 2.0,
+                padding_model: 2.0,
             },
         )
         .unwrap();

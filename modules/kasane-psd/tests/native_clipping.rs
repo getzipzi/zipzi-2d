@@ -82,7 +82,11 @@ fn render(bundle: &ImportBundle) -> Vec<u8> {
     renderer.sync_model(&frame, &catalog).unwrap();
     renderer
         .update_view(ViewportConfig {
-            transform: Affine2::IDENTITY,
+            transform: Affine2 {
+                b: Vec2::new(0., -1.),
+                origin: Vec2::new(4., 4.),
+                ..Affine2::IDENTITY
+            },
             target_extent: Vec2::new(8.0, 8.0),
             mask_scale: 1.0,
         })

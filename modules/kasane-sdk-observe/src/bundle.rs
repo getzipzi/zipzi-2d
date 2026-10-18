@@ -155,7 +155,7 @@ impl ResolvedObservation {
     fn scene_bundle(&self) -> SceneBundle {
         let input = &self.input;
         SceneBundle {
-            schema_version: 4,
+            schema_version: 5,
             kind: "kasane-observe-scene".into(),
             capture_id: self.capture_id.clone(),
             scene_digest: self.scene_digest.clone(),
@@ -203,7 +203,7 @@ impl ResolvedObservation {
             "width": request.width,
             "height": request.height,
             "roi": [request.roi.x0, request.roi.y0, request.roi.x1, request.roi.y1],
-            "padding_canvas": request.padding_canvas,
+            "padding_model": request.padding_model,
             "mode": "context",
             "output": "raw_rgba8_renderer_default",
             "sample_policy": "single_evaluated_frame",
@@ -265,7 +265,7 @@ impl ResolvedObservation {
         }
         let bundle: SceneBundle = serde_json::from_slice(&content)
             .map_err(|e| failure("BUNDLE_FORMAT", e.to_string()))?;
-        if bundle.schema_version != 4 || bundle.kind != "kasane-observe-scene" {
+        if bundle.schema_version != 5 || bundle.kind != "kasane-observe-scene" {
             return Err(failure(
                 "UNSUPPORTED_BUNDLE_VERSION",
                 "Unknown scene bundle version",
@@ -402,7 +402,7 @@ mod tests {
 
     fn empty_bundle() -> SceneBundle {
         SceneBundle {
-            schema_version: 4,
+            schema_version: 5,
             kind: "kasane-observe-scene".into(),
             capture_id: String::new(),
             scene_digest: String::new(),

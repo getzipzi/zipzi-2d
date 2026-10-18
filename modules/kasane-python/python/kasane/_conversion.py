@@ -13,7 +13,6 @@ from ._types import (
     BlendPartDelta,
     BlendRotationDelta,
     BlendWarpDelta,
-    ModelSpaceSnapshot,
     DrawableSnapshot,
     EvaluatedOffscreenSnapshot,
     EvaluationSnapshot,
@@ -37,9 +36,9 @@ from ._types import (
 
 
 def _evaluation_snapshot(data) -> EvaluationSnapshot:
-    version, revision, canvas, parameters, drawables, offscreens, plan = data
+    version, revision, parameters, drawables, offscreens, plan = data
     return EvaluationSnapshot(
-        version, revision, ModelSpaceSnapshot(*canvas),
+        version, revision,
         [ParameterSample(*item) for item in parameters],
         [DrawableSnapshot(*item[0], *item[1]) for item in drawables],
         [EvaluatedOffscreenSnapshot(*item) for item in offscreens], plan,

@@ -141,13 +141,20 @@ impl<'a> Moc3DecoderContext<'a> {
                     self.bytes,
                     offsets[section::UV_SRC_XY] as usize + (uv_off + v * 2 + 1) * 4,
                 )?;
-                uvs.push(Vec2::new(u, 1.0 - v_val));
+                uvs.push(Vec2::new(
+                    u,
+                    if self.inspection.canvas.flag & 1 == 0 {
+                        1. - v_val
+                    } else {
+                        v_val
+                    },
+                ));
             }
 
             // Generate 1-indexed dense vertex IDs
             let vertex_ids: Vec<VertexId> = (1..=vc as u32).collect();
 
-            // Read triangles (inverting winding by swapping 1 and 2)
+            // Normalize file winding together with the imported axis reflection.
             if !idx_len.is_multiple_of(3) {
                 return Err(Status::error(
                     "INVALID_LENGTH",
@@ -184,8 +191,12 @@ impl<'a> Moc3DecoderContext<'a> {
                         ),
                     ));
                 }
-                // Invert winding swap (render swapped 1 and 2, so swapping 1 and 2 restores source)
-                triangles.push([vertex_ids[i0], vertex_ids[i2], vertex_ids[i1]]);
+                // Evaluation preserves canonical document winding unchanged.
+                triangles.push(if self.inspection.canvas.flag & 1 == 0 {
+                    [vertex_ids[i2], vertex_ids[i1], vertex_ids[i0]]
+                } else {
+                    [vertex_ids[i0], vertex_ids[i1], vertex_ids[i2]]
+                });
             }
 
             // Masks

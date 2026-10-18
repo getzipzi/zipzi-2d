@@ -187,8 +187,8 @@ impl AuthoringSession {
     pub fn evaluation_revision(&self) -> u64 {
         self.project.document().evaluation_revision()
     }
-    pub fn model_space(&self) -> kasane_core::ModelSpace {
-        self.project.document().model_space()
+    pub fn export_settings(&self) -> kasane_core::ExportSettings {
+        self.project.document().export_settings()
     }
     pub fn source_canvas(&self) -> Option<Canvas> {
         self.project.document().source_canvas()
@@ -470,9 +470,17 @@ impl AuthoringSession {
     pub fn geometry(&self, id: &str) -> Option<GeometrySnapshot> {
         let mesh = self.project.document().get_mesh(id)?;
         let space = if mesh.deformer_id.is_empty() {
-            SourceSpace::CanvasPixels
+            GeometrySpace::Model
+        } else if self
+            .project
+            .document()
+            .get_transform(&mesh.deformer_id)?
+            .warp()
+            .is_some()
+        {
+            GeometrySpace::WarpParameter(mesh.deformer_id.clone())
         } else {
-            SourceSpace::ParentLocal(mesh.deformer_id.clone())
+            GeometrySpace::RotationLocal(mesh.deformer_id.clone())
         };
         Some(GeometrySnapshot {
             version: self.version(),

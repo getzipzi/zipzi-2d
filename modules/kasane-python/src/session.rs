@@ -10,8 +10,8 @@ use crate::error::{edit_failure, poisoned, sdk_failure};
 use crate::handle::NativeHandle;
 use kasane_core::{Canvas, Vec2};
 use kasane_sdk::{
-    AuthoringSession, GeometryBounds, GeometryChecks, GeometryDiagnosticKind, HistoryLimits,
-    MeshProperties, SdkError, SourceSpace,
+    AuthoringSession, GeometryBounds, GeometryChecks, GeometryDiagnosticKind, GeometrySpace,
+    HistoryLimits, MeshProperties, SdkError,
 };
 use pyo3::prelude::*;
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 from typing import Mapping, Sequence
 from ._types import (
+    ExportSettings,
     Axis,
     CanvasSnapshot,
     BlendBindingSnapshot,
@@ -358,13 +359,9 @@ class Edit:
         """Change an asset path only if the new PNG matches its dimensions and hash."""
         self._call(lambda: self._native.relocate_png_asset(asset_id, str(absolute_path)))
 
-    def replace_model_space(
-        self, origin: Point, *, y_axis_down: bool = True
-    ) -> None:
-        """Reinterpret authored coordinates using this origin, unit scale and orientation."""
-        self._call(lambda: self._native.replace_model_space(
-            origin[0], origin[1], y_axis_down
-        ))
+    def replace_export_settings(self, settings: ExportSettings) -> None:
+        """Replace output policy without changing geometry or evaluation."""
+        self._call(lambda: self._native.replace_export_settings(tuple(settings)))
 
     def replace_source_canvas(self, canvas: CanvasSnapshot | None) -> None:
         """Replace optional source framing metadata without changing model geometry."""

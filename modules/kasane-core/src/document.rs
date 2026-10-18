@@ -46,7 +46,7 @@ pub use validation::*;
 use crate::draw_order::DrawOrderGroup;
 use crate::types::{
     BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas, ChangeKind, ChangeSet,
-    DocumentEdit, EditResult, Glue, ImageAsset, Mesh, MeshBinding, ModelSetup, ModelSpace,
+    DocumentEdit, EditResult, ExportSettings, Glue, ImageAsset, Mesh, MeshBinding, ModelSetup,
     Offscreen, Parameter, Part, SceneBinding, Status, Transform, VertexId,
 };
 use std::collections::HashMap;
@@ -95,7 +95,7 @@ pub(super) struct DocumentLookup {
 #[derive(Debug, Clone, Default, PartialEq)]
 struct DocumentContent {
     id: String,
-    model_space: ModelSpace,
+    export_settings: ExportSettings,
     source_canvas: Option<Canvas>,
     assets: HashMap<String, ImageAsset>,
     asset_order: Vec<String>,
@@ -138,7 +138,7 @@ struct DocumentContent {
 }
 
 impl Document {
-    pub const SCHEMA_VERSION: u32 = 5;
+    pub const SCHEMA_VERSION: u32 = 6;
 
     pub fn new() -> Self {
         Self::default()
@@ -158,12 +158,12 @@ impl Document {
         let setup = setup.into();
         if !setup.is_valid() {
             return Status::error(
-                "INVALID_MODEL_SPACE",
-                "Model coordinates must be finite with positive scale; a source canvas must have positive finite dimensions.",
+                "INVALID_MODEL_SETUP",
+                "Source metadata and export settings must have finite valid dimensions and scale.",
             );
         }
         self.content.id = id_str;
-        self.content.model_space = setup.space;
+        self.content.export_settings = setup.export;
         self.content.source_canvas = setup.source_canvas;
         self.modified_cache.take();
         Status::ok()
@@ -177,8 +177,22 @@ impl Document {
         &self.content.id
     }
 
-    pub fn model_space(&self) -> ModelSpace {
-        self.content.model_space
+    pub fn export_settings(&self) -> ExportSettings {
+        self.content.export_settings
+    }
+
+    pub fn coordinate_space(&self, parent: &str) -> Result<crate::CoordinateSpace, Status> {
+        if parent.is_empty() {
+            return Ok(crate::CoordinateSpace::Model);
+        }
+        let t = self
+            .get_transform(parent)
+            .ok_or_else(|| Status::error("MISSING_TRANSFORM", parent))?;
+        Ok(if t.warp().is_some() {
+            crate::CoordinateSpace::WarpParameter
+        } else {
+            crate::CoordinateSpace::RotationLocal
+        })
     }
 
     pub fn source_canvas(&self) -> Option<Canvas> {
@@ -187,7 +201,7 @@ impl Document {
 
     pub fn model_setup(&self) -> ModelSetup {
         ModelSetup {
-            space: self.model_space(),
+            export: self.export_settings(),
             source_canvas: self.source_canvas(),
         }
     }

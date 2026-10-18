@@ -78,11 +78,14 @@ impl EditSession<'_> {
         self.aborted = true;
         error
     }
-    pub fn replace_model_space(&mut self, space: kasane_core::ModelSpace) -> Result<(), SdkError> {
-        self.ensure_active("replace_model_space")?;
+    pub fn replace_export_settings(
+        &mut self,
+        settings: kasane_core::ExportSettings,
+    ) -> Result<(), SdkError> {
+        self.ensure_active("replace_export_settings")?;
         let id = self.document().id().to_owned();
-        let result = self.document().replace_model_space(space);
-        self.record(result, "replace_model_space", &id)
+        let result = self.document().replace_export_settings(settings);
+        self.record(result, "replace_export_settings", &id)
     }
     pub fn replace_source_canvas(&mut self, source_canvas: Option<Canvas>) -> Result<(), SdkError> {
         self.ensure_active("replace_source_canvas")?;

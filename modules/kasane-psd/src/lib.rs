@@ -566,6 +566,8 @@ impl Builder {
 
         let mesh_id = self.id("mesh");
         let runtime_id = self.mesh_runtime_id(name, &mesh_id);
+        let origin = self.document.source_canvas().unwrap().origin;
+        let point = |x, y| Vec2::new(x - origin.x, origin.y - y);
         let mesh = Mesh {
             id: mesh_id.clone(),
             runtime_id,
@@ -574,10 +576,10 @@ impl Builder {
             part_id: parent_id.into(),
             vertex_ids: vec![1, 2, 3, 4],
             base_positions: vec![
-                Vec2::new(left, top),
-                Vec2::new(right, top),
-                Vec2::new(right, bottom),
-                Vec2::new(left, bottom),
+                point(left, bottom),
+                point(right, bottom),
+                point(right, top),
+                point(left, top),
             ],
             uvs: vec![
                 Vec2::new(0.0, 0.0),

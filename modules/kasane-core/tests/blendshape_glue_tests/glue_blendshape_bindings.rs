@@ -122,8 +122,8 @@ fn test_glue_blendshape_and_ordinary_coexistence() {
     // d = (10, 20)
     // disp_a = (10, 20) * 0.5 * 0.3 = (1.5, 3.0) -> canvas y inverted: (1.5, -3.0)
     // disp_b = -(10, 20) * 0.5 * 0.3 = (-1.5, -3.0) -> pos: (8.5, 17.0) -> canvas: (8.5, -17.0)
-    assert_eq!(a.positions[0], Vec2::new(1.5, -3.0));
-    assert_eq!(b.positions[0], Vec2::new(8.5, -17.0));
+    assert_eq!(a.positions[0], Vec2::new(1.5, 3.0));
+    assert_eq!(b.positions[0], Vec2::new(8.5, 17.0));
 
     // Case 2: PARAM_BS = 1.0 -> intensity = 0.3 + 0.4 = 0.7
     preview.insert(PARAM_BS.to_string(), 1.0);
@@ -132,8 +132,8 @@ fn test_glue_blendshape_and_ordinary_coexistence() {
     let b = frame.drawables.iter().find(|d| d.id == MESH_B).unwrap();
     // disp_a = (10, 20) * 0.5 * 0.7 = (3.5, 7.0) -> canvas: (3.5, -7.0)
     // disp_b = pos (10 - 3.5, 20 - 7.0) = (6.5, 13.0) -> canvas: (6.5, -13.0)
-    assert_vec2_near(a.positions[0], Vec2::new(3.5, -7.0), 1e-5);
-    assert_vec2_near(b.positions[0], Vec2::new(6.5, -13.0), 1e-5);
+    assert_vec2_near(a.positions[0], Vec2::new(3.5, 7.0), 1e-5);
+    assert_vec2_near(b.positions[0], Vec2::new(6.5, 13.0), 1e-5);
 }
 
 #[test]
@@ -246,7 +246,7 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
     // (10, 20) * 0.5 * 0.6 = (3.0, 6.0) -> canvas: (3.0, -6.0)
-    assert_vec2_near(a.positions[0], Vec2::new(3.0, -6.0), 1e-5);
+    assert_vec2_near(a.positions[0], Vec2::new(3.0, 6.0), 1e-5);
 
     // PARAM_NORM = 1.0 -> constraint weight = 0.5
     // intensity = 0.0 + 0.2*0.5 + 0.4*0.5 = 0.3
@@ -254,7 +254,7 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
     // (10, 20) * 0.5 * 0.3 = (1.5, 3.0) -> canvas: (1.5, -3.0)
-    assert_vec2_near(a.positions[0], Vec2::new(1.5, -3.0), 1e-5);
+    assert_vec2_near(a.positions[0], Vec2::new(1.5, 3.0), 1e-5);
 }
 
 #[test]
@@ -318,7 +318,7 @@ fn test_glue_blendshape_negative_and_excess_delta_clamping() {
     let a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
     let b = frame.drawables.iter().find(|d| d.id == MESH_B).unwrap();
     assert_eq!(a.positions[0], Vec2::new(0.0, 0.0));
-    assert_eq!(b.positions[0], Vec2::new(10.0, -20.0));
+    assert_eq!(b.positions[0], Vec2::new(10.0, 20.0));
 
     // At 1.0: intensity clamped to 1.0 -> full displacement!
     preview.insert(PARAM_BS.to_string(), 1.0);
@@ -326,6 +326,6 @@ fn test_glue_blendshape_negative_and_excess_delta_clamping() {
     let a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
     let b = frame.drawables.iter().find(|d| d.id == MESH_B).unwrap();
     // full 1.0 displacement: (10, 20) * 0.5 = (5.0, 10.0) -> canvas: (5.0, -10.0)
-    assert_eq!(a.positions[0], Vec2::new(5.0, -10.0));
-    assert_eq!(b.positions[0], Vec2::new(5.0, -10.0));
+    assert_eq!(a.positions[0], Vec2::new(5.0, 10.0));
+    assert_eq!(b.positions[0], Vec2::new(5.0, 10.0));
 }

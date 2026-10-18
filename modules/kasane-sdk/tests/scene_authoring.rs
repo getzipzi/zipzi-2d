@@ -5,7 +5,7 @@ use kasane_core::{
     RotationPose, RotationTransform, SceneBinding, SceneKeyform, SceneTrack, Transform,
     TransformData, TransformId, Vec2, WarpKeyform, WarpTransform,
 };
-use kasane_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, ObjectKind, SourceSpace};
+use kasane_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, GeometrySpace, ObjectKind};
 
 fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
@@ -107,7 +107,7 @@ fn parts_transforms_and_distinct_parent_relations_publish_atomically() {
     assert_eq!(sdk.transform_ids(), &[id(5), id(6)]);
     assert_eq!(
         sdk.geometry(&id(3)).unwrap().space,
-        SourceSpace::ParentLocal(id(6))
+        GeometrySpace::WarpParameter(id(6))
     );
     assert_eq!(sdk.transform(&id(6)).unwrap().parent(), id(5));
     assert_eq!(sdk.transform(&id(6)).unwrap().part(), id(11));
@@ -162,10 +162,7 @@ fn parts_transforms_and_distinct_parent_relations_publish_atomically() {
     sdk.undo().unwrap();
     assert!(sdk.part_ids().is_empty());
     assert!(sdk.transform_ids().is_empty());
-    assert_eq!(
-        sdk.geometry(&id(3)).unwrap().space,
-        SourceSpace::CanvasPixels
-    );
+    assert_eq!(sdk.geometry(&id(3)).unwrap().space, GeometrySpace::Model);
     sdk.redo().unwrap();
     assert_eq!(
         sdk.resolve_handle(&handle).unwrap_err().code.as_ref(),

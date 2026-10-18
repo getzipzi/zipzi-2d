@@ -63,8 +63,8 @@ fn test_glue_blendshape_asymmetric_weights() {
     // d = (10, 20)
     // a += d * (1.0 * 0.7) = (7.0, 14.0) -> canvas: (7.0, -14.0)
     // b -= d * (1.0 * 0.3) = (10 - 3.0, 20 - 6.0) = (7.0, 14.0) -> canvas: (7.0, -14.0)
-    assert_eq!(a.positions[0], Vec2::new(7.0, -14.0));
-    assert_eq!(b.positions[0], Vec2::new(7.0, -14.0));
+    assert_eq!(a.positions[0], Vec2::new(7.0, 14.0));
+    assert_eq!(b.positions[0], Vec2::new(7.0, 14.0));
 }
 
 #[test]
@@ -181,8 +181,8 @@ fn test_glue_blendshape_ordered_multiple_glues() {
     // Sequential evaluation:
     let b = frame.drawables.iter().find(|d| d.id == MESH_B).unwrap();
     let c = frame.drawables.iter().find(|d| d.id == mesh_c_id).unwrap();
-    assert_eq!(b.positions[0], Vec2::new(10.0, -0.0));
-    assert_eq!(c.positions[0], Vec2::new(10.0, -0.0));
+    assert_eq!(b.positions[0], Vec2::new(10.0, 0.0));
+    assert_eq!(c.positions[0], Vec2::new(10.0, 0.0));
 }
 
 #[test]
@@ -265,8 +265,8 @@ fn test_glue_blendshape_faceless_endpoints() {
     // d = (10, 10)
     // faceless += (5, 5) -> canvas (5, -5)
     // b -= (5, 5) -> canvas (5, -5)
-    assert_eq!(faceless.positions[0], Vec2::new(5.0, -5.0));
-    assert_eq!(b.positions[0], Vec2::new(5.0, -5.0));
+    assert_eq!(faceless.positions[0], Vec2::new(5.0, 5.0));
+    assert_eq!(b.positions[0], Vec2::new(5.0, 5.0));
 }
 
 #[test]

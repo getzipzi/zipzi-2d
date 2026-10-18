@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use super::helpers::*;
 use kasane_core::{
     evaluation::{DrawableFrame, OffscreenFrame, RenderCommand},
-    types::{BlendMode, Canvas, Vec2},
+    types::{BlendMode, Vec2},
 };
 use kasane_render::{Affine2, ViewportConfig};
 use kasane_render_metal::{
@@ -14,7 +14,6 @@ use kasane_render_metal::{
 #[test]
 fn nested_offscreens_composite_into_main() {
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("inner-mesh", "red")],
         offscreens: vec![
             OffscreenFrame {
@@ -60,7 +59,6 @@ fn nested_offscreens_composite_into_main() {
 #[test]
 fn zoomed_sibling_offscreens_reuse_attachments_and_preserve_draw_order() {
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: vec![quad("background", "red")],
         offscreens: vec![OffscreenFrame {
             id: "outer".into(),
@@ -146,7 +144,7 @@ fn zoomed_sibling_offscreens_reuse_attachments_and_preserve_draw_order() {
         .update_view(ViewportConfig {
             transform: Affine2 {
                 a: Vec2::new(32., 0.),
-                b: Vec2::new(0., 32.),
+                b: Vec2::new(0., -32.),
                 origin: Vec2::default(),
             },
             target_extent: Vec2::new(2048., 2048.),
@@ -205,7 +203,6 @@ fn pooled_colors_preserve_parent_order_and_submitted_frames() {
     draws[2].opacity = 0.5;
     draws[4].opacity = 0.5;
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: draws,
         offscreens: [
             ("outer", None, 0.5),
@@ -267,6 +264,7 @@ fn pooled_colors_preserve_parent_order_and_submitted_frames() {
     let view = ViewportConfig {
         transform: Affine2 {
             origin: Vec2::new(16.25, 8.75),
+            b: Vec2::new(0., -1.),
             ..Affine2::IDENTITY
         },
         target_extent: Vec2::new(128., 96.),
@@ -352,7 +350,6 @@ fn deeply_nested_offscreens_still_enforce_the_peak_attachment_budget() {
         },
     )]));
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: vec![quad("mesh", "red")],
         ..Default::default()
     };
@@ -389,7 +386,7 @@ fn deeply_nested_offscreens_still_enforce_the_peak_attachment_budget() {
         .update_view(ViewportConfig {
             transform: Affine2 {
                 a: Vec2::new(64., 0.),
-                b: Vec2::new(0., 64.),
+                b: Vec2::new(0., -64.),
                 origin: Vec2::default(),
             },
             target_extent: Vec2::new(4096., 4096.),
@@ -415,7 +412,10 @@ fn deeply_nested_offscreens_still_enforce_the_peak_attachment_budget() {
     renderer.resize(target).unwrap();
     renderer
         .update_view(ViewportConfig {
-            transform: Affine2::IDENTITY,
+            transform: Affine2 {
+                b: Vec2::new(0., -1.),
+                ..Affine2::IDENTITY
+            },
             target_extent: Vec2::new(64., 64.),
             mask_scale: 1.,
         })
@@ -443,7 +443,6 @@ fn fixed_and_destination_blends_see_prior_draws() {
         let mut green = quad("green", "green");
         green.blend_mode = mode;
         let frame = DrawableFrame {
-            model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
             drawables: vec![quad("red", "red"), green],
             ..Default::default()
         };
@@ -452,7 +451,6 @@ fn fixed_and_destination_blends_see_prior_draws() {
     let mut green = quad("green", "green");
     green.raw_blend_mode = Some(1);
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![quad("red", "red"), green],
         ..Default::default()
     };
@@ -467,7 +465,6 @@ fn offscreen_mask_and_destination_blend_use_parent_pixels() {
     source.visible = false;
     source.opacity = 0.0;
     let frame = DrawableFrame {
-        model_space: (Canvas::new(64.0, 64.0, Vec2::default(), 1.0)).into(),
         drawables: vec![source, quad("background", "red"), quad("child", "green")],
         offscreens: vec![OffscreenFrame {
             id: "group".into(),
@@ -542,7 +539,6 @@ fn view_changes_reuse_buffers_and_masks_but_source_changes_invalidate_them() {
     let mut b = a.clone();
     b.id = "b".into();
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: vec![mask, a, b],
         ..Default::default()
     };
@@ -558,6 +554,7 @@ fn view_changes_reuse_buffers_and_masks_but_source_changes_invalidate_them() {
                 .update_view(ViewportConfig {
                     transform: Affine2 {
                         origin: Vec2::new(pan, 0.),
+                        b: Vec2::new(0., -1.),
                         ..Affine2::IDENTITY
                     },
                     target_extent: Vec2::new(64., 64.),
@@ -689,7 +686,6 @@ fn edits_do_not_overwrite_buffers_referenced_by_submitted_frames() {
     };
     let mut renderer = MetalRenderer::new(&context, target).unwrap();
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
         drawables: vec![quad("mesh", "red")],
         ..Default::default()
     };
@@ -698,7 +694,10 @@ fn edits_do_not_overwrite_buffers_referenced_by_submitted_frames() {
         renderer.sync_model(&frame, &catalog).unwrap();
         renderer
             .update_view(ViewportConfig {
-                transform: Affine2::IDENTITY,
+                transform: Affine2 {
+                    b: Vec2::new(0., -1.),
+                    ..Affine2::IDENTITY
+                },
                 target_extent: Vec2::new(64., 64.),
                 mask_scale: 1.,
             })

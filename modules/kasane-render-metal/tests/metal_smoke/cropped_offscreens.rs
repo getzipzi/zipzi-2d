@@ -75,20 +75,23 @@ fn cropped_nested_groups_match_full_surfaces_for_every_blend_and_mask() {
         for alpha in 0..5 {
             for color in 0..18 {
                 for (case, transform) in [
-                    Affine2::IDENTITY,
+                    Affine2 {
+                        b: Vec2::new(0., -1.),
+                        ..Affine2::IDENTITY
+                    },
                     Affine2 {
                         a: Vec2::new(1.7, 0.),
-                        b: Vec2::new(0., 1.7),
+                        b: Vec2::new(0., -1.7),
                         origin: Vec2::new(-37.25, -21.75),
                     },
                     Affine2 {
                         a: Vec2::new(0.83, 0.27),
-                        b: Vec2::new(-0.19, 1.13),
+                        b: Vec2::new(0.19, -1.13),
                         origin: Vec2::new(23.375, -11.125),
                     },
                     Affine2 {
                         a: Vec2::new(-1.1, 0.),
-                        b: Vec2::new(0., 0.9),
+                        b: Vec2::new(0., -0.9),
                         origin: Vec2::new(139.25, 13.5),
                     },
                 ]
@@ -303,7 +306,10 @@ fn color_storage_shrinks_for_small_groups_and_falls_back_for_fragmented_sizes() 
             renderer.sync_model(&frame, &catalog).unwrap();
             renderer
                 .update_view(ViewportConfig {
-                    transform: Affine2::IDENTITY,
+                    transform: Affine2 {
+                        b: Vec2::new(0., -1.),
+                        ..Affine2::IDENTITY
+                    },
                     target_extent: Vec2::new(64., 64.),
                     mask_scale: 1.,
                 })

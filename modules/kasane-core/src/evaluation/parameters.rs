@@ -10,7 +10,6 @@ pub(super) fn evaluate(
     state: &mut EvalContext<'_>,
 ) -> Status {
     state.frame.source_revision = doc.revision();
-    state.frame.model_space = doc.model_space();
     state
         .frame
         .parameters

@@ -131,28 +131,11 @@ impl<'a> Moc3EncoderContext<'a> {
 
             for p in d.uvs.iter() {
                 self.l.scalar("uv_src.xy", p.x)?;
-                self.l.scalar(
-                    "uv_src.xy",
-                    if !self.doc.model_space().y_axis_down {
-                        1.0 - p.y
-                    } else {
-                        p.y
-                    },
-                )?;
+                self.l.scalar("uv_src.xy", p.y)?;
             }
-
             let idx_field = self.l.field("idx_src.idx")?;
-            // evaluate_frame exposes revived runtime winding. Undo the canvas
-            // reversal here because Core applies it while reviving the file.
-            for triangle in d.indices.as_chunks::<3>().0 {
-                let stored = if !self.doc.model_space().y_axis_down {
-                    [triangle[2], triangle[1], triangle[0]]
-                } else {
-                    [triangle[0], triangle[1], triangle[2]]
-                };
-                for v in stored {
-                    idx_field.extend_from_slice(&(v as u16).to_le_bytes());
-                }
+            for &v in d.indices.iter() {
+                idx_field.extend_from_slice(&(v as u16).to_le_bytes());
             }
         }
 

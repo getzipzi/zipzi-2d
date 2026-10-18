@@ -11,6 +11,7 @@ from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
 from ._types import (
+    ExportSettings,
     Appearance,
     AssetSnapshot,
     Axis,
@@ -25,7 +26,6 @@ from ._types import (
     BlendRotationDelta,
     BlendWarpDelta,
     CanvasSnapshot,
-    ModelSpaceSnapshot,
     DrawOrderGroup,
     DrawableSample,
     EditEvent,
@@ -615,12 +615,12 @@ class Session:
     def diagnose_geometry(
         self,
         min_triangle_area: float = 0,
-        canvas_bounds: tuple[Point, Point] | None = None,
+        model_bounds: tuple[Point, Point] | None = None,
     ) -> list[GeometryIssue]:
         """Return non-blocking triangle and canvas-boundary authoring hints."""
         return [
             GeometryIssue(*item)
-            for item in self._native.diagnose_geometry(min_triangle_area, canvas_bounds)
+            for item in self._native.diagnose_geometry(min_triangle_area, model_bounds)
         ]
 
     @property
@@ -673,9 +673,9 @@ class Session:
         return self._native.document_id()
 
     @property
-    def model_space(self) -> ModelSpaceSnapshot:
-        """Stable model coordinates, independent of imported/exported rectangles."""
-        return ModelSpaceSnapshot(*self._native.model_space())
+    def export_settings(self) -> ExportSettings:
+        """Output units and framing, independent of model geometry."""
+        return ExportSettings(*self._native.export_settings())
 
     @property
     def source_canvas(self) -> CanvasSnapshot | None:

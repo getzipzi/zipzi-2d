@@ -59,7 +59,7 @@ class GpuWheelTests(unittest.TestCase):
             self.assertTrue(packet.capabilities["rerender_scene"])
             self.assertEqual(packet.objects[0]["name"], "face")
             extended = observer.render(packet, request=kasane.RawInspectionRequest(
-                (38, 38, 62, 62), (128, 96), padding_canvas=1,
+                (38, 38, 62, 62), (128, 96), padding_model=1,
             ))
             self.assertEqual(extended.capture_id, packet.capture_id)
             self.assertEqual(extended.scene_digest, packet.scene_digest)
@@ -178,11 +178,11 @@ print('PACKET_REOPEN_OK')
             self.assertEqual(animated.source["snapshot"]["time"], before_preview.time)
             view = observer.render_scene(
                 scene, roi=(38.25, 39.5, 61.75, 60.5),
-                resolution=(128, 96), padding_canvas=2,
+                resolution=(128, 96), padding_model=2,
             )
             self.assertEqual((view.frame.width, view.frame.height), (128, 96))
             point = (51.125, 52.25)
-            restored = view.image_to_canvas(view.canvas_to_image(point))
+            restored = view.image_to_model(view.model_to_image(point))
             self.assertAlmostEqual(restored[0], point[0], places=5)
             self.assertAlmostEqual(restored[1], point[1], places=5)
             with model.edit("move later") as edit:
@@ -212,7 +212,7 @@ print('PACKET_REOPEN_OK')
                 self.assertEqual(reopened.authoring, scene.authoring)
                 again = observer.render_scene(
                     reopened, roi=(38.25, 39.5, 61.75, 60.5),
-                    resolution=(128, 96), padding_canvas=2,
+                    resolution=(128, 96), padding_model=2,
                 )
                 self.assertEqual(again.frame.rgba, view.frame.rgba)
                 self.assertEqual(again.render_digest, view.render_digest)
@@ -227,7 +227,7 @@ import kasane
 with kasane.Observer(64, 64, 64) as observer:
     scene = observer.open_scene(Path(sys.argv[1]))
     frame = observer.render_scene(scene, roi=(38.25, 39.5, 61.75, 60.5),
-                                  resolution=(128, 96), padding_canvas=2).frame
+                                  resolution=(128, 96), padding_model=2).frame
     assert any(frame.rgba[3::4])
 print('REOPEN_OK')
 """, str(bundle)],
@@ -458,13 +458,13 @@ class SpatialObservationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 observer.focus(scene, kasane.ObjectRef("part", OFFSCREEN))
             self.assertEqual(bounds.mesh_ids, (MESH,))
-            for actual, expected in zip(bounds.canvas_bounds, (40, 40, 60, 60)):
+            for actual, expected in zip(bounds.model_bounds, (40, 40, 60, 60)):
                 self.assertAlmostEqual(actual, expected)
             focused = observer.focus(scene, target, resolution=(128, 128),
-                                     padding_canvas=4)
+                                     padding_model=4)
             self.assertEqual(focused.bounds, bounds)
             self.assertEqual(focused.view.requested_roi, (40, 40, 60, 60))
-            point = focused.view.canvas_to_image((50, 50))
+            point = focused.view.model_to_image((50, 50))
             result = scene.hit_test(focused.view, point, details=True)
             self.assertEqual(result.status, "hit")
             self.assertEqual({hit.mesh_id for hit in result.hits}, {MESH, BACKGROUND})
@@ -495,7 +495,7 @@ class SpatialObservationTests(unittest.TestCase):
                 packet.save(directory, profile="analysis")
                 reopened = observer.open(directory)
                 self.assertTrue(reopened.capabilities["geometry_query"])
-                image_point = reopened.views[0].canvas_to_image((50, 50))
+                image_point = reopened.views[0].model_to_image((50, 50))
                 self.assertEqual(reopened.hit_test(reopened.views[0].view_id,
                                                    image_point).total, 2)
             self.assertEqual(reopened.bounds(target).mesh_ids, (MESH,))
@@ -528,7 +528,7 @@ class SpatialObservationTests(unittest.TestCase):
             second = observer.capture_scene(model)
             target = kasane.ObjectRef("mesh", MESH)
             views = observer.focus_scenes((first, second), target,
-                                          padding_canvas=0, resolution=(96, 96))
+                                          padding_model=0, resolution=(96, 96))
             self.assertEqual(views[0].view.requested_roi,
                              views[1].view.requested_roi)
             self.assertAlmostEqual(views[0].view.requested_roi[0], 10)
@@ -545,23 +545,23 @@ class SpatialObservationTests(unittest.TestCase):
                     props.inverted_mask, props.masks,
                 ))
             hidden = observer.capture_scene(model)
-            self.assertIsNotNone(hidden.bounds(target).canvas_bounds)
+            self.assertIsNotNone(hidden.bounds(target).model_bounds)
             self.assertEqual(hidden.bounds(target, include_hidden=False).status,
                              "empty")
             self.assertEqual(hidden.bounds(target, include_hidden=False).empty_reason,
                              "filtered_out")
             visible_only = observer.focus_scenes(
                 (first, hidden), target, include_hidden=False,
-                padding_canvas=0, resolution=(96, 96),
+                padding_model=0, resolution=(96, 96),
             )
             self.assertEqual(visible_only[1].bounds.status, "empty")
             self.assertEqual(visible_only[0].view.requested_roi,
                              visible_only[1].view.requested_roi)
             animated = observer.capture_animation_scene(model, model.motion_preview())
-            self.assertEqual(animated.bounds(target).canvas_bounds,
-                             hidden.bounds(target).canvas_bounds)
+            self.assertEqual(animated.bounds(target).model_bounds,
+                             hidden.bounds(target).model_bounds)
             hidden_view = observer.focus(hidden, target, resolution=(96, 96))
-            query_point = hidden_view.view.canvas_to_image((60, 40))
+            query_point = hidden_view.view.model_to_image((60, 40))
             self.assertEqual(hidden.hit_test(hidden_view.view, query_point).total, 1)
             self.assertEqual(hidden.hit_test(hidden_view.view, query_point,
                                              include_hidden=False).total, 0)

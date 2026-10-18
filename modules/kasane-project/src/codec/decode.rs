@@ -104,6 +104,16 @@ fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh, Status> {
 pub fn decode_project(text: &str) -> Result<Document, Status> {
     validate_json_syntax(text)?;
 
+    let header: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
+    if header.get("format").and_then(|v| v.as_str()) == Some("kasane-directory-project")
+        && header.get("format_version").and_then(|v| v.as_u64()) != Some(14)
+    {
+        return Err(Status::error(
+            "UNSUPPORTED_VERSION",
+            "Only directory-project version 14 is supported; reimport the source asset",
+        ));
+    }
     let root: ProjectWire = match serde_json::from_str(text) {
         Ok(r) => r,
         Err(e) => {
@@ -141,7 +151,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
     }
 
-    if !(1..=13).contains(&root.format_version) {
+    if root.format_version != 14 {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             format!(
@@ -151,77 +161,29 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         ));
     }
 
-    if root.format_version < 11
-        && matches!(&root.document.animation_assets, Present::Present(Some(assets)) if !assets.motions.is_empty())
-    {
+    if !root.extra.is_empty() || !root.document.extra.is_empty() {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
-            "Persistent motion key IDs require project version 11; no automatic migration",
+            "Unrecognized project fields",
         ));
     }
-    if root.format_version < 10 && !root.document.editor_state.is_absent() {
-        return Err(Status::error(
-            "UNSUPPORTED_VERSION",
-            "Editor state requires project version 10",
-        ));
-    }
-    if root.format_version < 8 && root.document.offscreens.iter().any(|o| !o.enabled) {
-        return Err(Status::error(
-            "UNSUPPORTED_VERSION",
-            "Hidden offscreens require project version 8",
-        ));
-    }
-    if root.format_version < 6 && !root.document.hierarchy_order.is_empty() {
-        return Err(Status::error(
-            "UNSUPPORTED_VERSION",
-            "Hierarchy order requires project version 6",
-        ));
-    }
-    let display_info = if root.format_version >= 5 {
-        if !root.extra.is_empty() || !root.document.extra.is_empty() {
+    let display_info = match &root.document.display_info {
+        Present::Present(Some(info)) => Some(info.clone()),
+        _ => {
             return Err(Status::error(
-                "UNSUPPORTED_VERSION",
-                "v5+ root/document contains unrecognized fields",
-            ));
+                "INVALID_PROJECT",
+                "Project requires non-null display_info",
+            ))
         }
-        match &root.document.display_info {
-            Present::Present(Some(info)) => Some(info.clone()),
-            Present::Present(None) | Present::Absent => {
-                return Err(Status::error(
-                    "INVALID_PROJECT",
-                    "v5+ requires non-null display_info",
-                ))
-            }
-        }
-    } else {
-        if !root.document.display_info.is_absent()
-            || root.document.extra.contains_key("animation_assets")
-        {
-            return Err(Status::error(
-                "UNSUPPORTED_VERSION",
-                "v5 display_info/animation_assets cannot appear in v1-v4",
-            ));
-        }
-        None
     };
-    let animation_assets = if root.format_version >= 5 {
-        match &root.document.animation_assets {
-            Present::Present(Some(assets)) => assets.clone(),
-            Present::Present(None) | Present::Absent => {
-                return Err(Status::error(
-                    "INVALID_PROJECT",
-                    "v5+ requires non-null animation_assets",
-                ));
-            }
-        }
-    } else {
-        if !root.document.animation_assets.is_absent() {
+    let animation_assets = match &root.document.animation_assets {
+        Present::Present(Some(assets)) => assets.clone(),
+        _ => {
             return Err(Status::error(
-                "UNSUPPORTED_VERSION",
-                "v5 animation_assets cannot appear in v1-v4",
-            ));
+                "INVALID_PROJECT",
+                "Project requires non-null animation_assets",
+            ))
         }
-        AnimationAssetsWire::default()
     };
 
     let doc = root.document;
@@ -258,7 +220,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
     let s = candidate.initialize(
         doc.id,
         kasane_core::ModelSetup {
-            space: doc.model_space,
+            export: doc.export_settings,
             source_canvas: doc.source_canvas,
         },
     );
@@ -634,14 +596,8 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
     if !result.status.is_ok() {
         return Err(result.status);
     }
-    let settings = if root.format_version == 5 {
-        crate::model3::migrate_v5_settings(&candidate, animation_assets.model3_settings)?
-    } else if root.format_version >= 6 {
-        serde_json::from_value(animation_assets.model3_settings)
-            .map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?
-    } else {
-        kasane_core::document::Model3Settings::default()
-    };
+    let settings = serde_json::from_value(animation_assets.model3_settings)
+        .map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
     let result = candidate.set_model3_settings(settings);
     if !result.status.is_ok() {
         return Err(result.status);

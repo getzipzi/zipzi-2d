@@ -42,7 +42,6 @@ except ImportError:
     ObservationFailure = _UnavailableObservationFailure
 
 from ._types import (
-    ModelSpaceSnapshot,
     DrawableBounds,
     ObservationRun,
     ObservedFrame,
@@ -127,11 +126,11 @@ class Observer:
 
     def render_scene(
         self, scene: CapturedScene, *, roi: tuple[float, float, float, float],
-        resolution: tuple[int, int], padding_canvas: float = 0,
+        resolution: tuple[int, int], padding_model: float = 0,
     ) -> RenderedSceneView:
-        """Rerender a frozen scene at an explicit source-canvas ROI."""
+        """Rerender a frozen scene at an explicit model-space ROI."""
         raw, (requested, padded, visible), render_digest = scene._native.render(
-            self._native, resolution[0], resolution[1], roi, padding_canvas
+            self._native, resolution[0], resolution[1], roi, padding_model
         )
         return RenderedSceneView(
             _frame_from_native(raw), requested, padded, visible, render_digest,
@@ -140,29 +139,29 @@ class Observer:
 
     def focus(
         self, scene: CapturedScene, targets: ObjectRef | Sequence[ObjectRef], *,
-        resolution: tuple[int, int] = (1024, 1024), padding_canvas: float = 12,
+        resolution: tuple[int, int] = (1024, 1024), padding_model: float = 12,
         include_hidden: bool = True,
     ) -> FocusedSceneView:
         """Rerender the complete scene around evaluated mesh or Part geometry.
 
         ``include_hidden`` controls which geometry sets the ROI; it does not
-        make hidden objects visible. ``padding_canvas`` is measured in source
+        make hidden objects visible. ``padding_model`` is measured in source
         pixels. Raises ``ValueError`` when no selected geometry contributes to
         the ROI.
         """
         bounds = scene.bounds(targets, include_hidden=include_hidden)
-        if bounds.canvas_bounds is None:
+        if bounds.model_bounds is None:
             raise ValueError(f"Selected objects have no evaluated geometry: {bounds.empty_reason}")
-        roi = _nonempty_roi(bounds.canvas_bounds)
+        roi = _nonempty_roi(bounds.model_bounds)
         return FocusedSceneView(
             self.render_scene(scene, roi=roi, resolution=resolution,
-                              padding_canvas=padding_canvas), bounds,
+                              padding_model=padding_model), bounds,
         )
 
     def focus_scenes(
         self, scenes: Sequence[CapturedScene],
         targets: ObjectRef | Sequence[ObjectRef], *,
-        resolution: tuple[int, int] = (1024, 1024), padding_canvas: float = 12,
+        resolution: tuple[int, int] = (1024, 1024), padding_model: float = 12,
         include_hidden: bool = True, follow: bool = False,
     ) -> tuple[FocusedSceneView, ...]:
         """Focus same-document captures with one shared ROI by default.
@@ -177,22 +176,22 @@ class Observer:
             raise ValueError("Focused scenes must come from one document")
         bounds = tuple(scene.bounds(targets, include_hidden=include_hidden)
                        for scene in scenes)
-        available = tuple(item.canvas_bounds for item in bounds
-                          if item.canvas_bounds is not None)
+        available = tuple(item.model_bounds for item in bounds
+                          if item.model_bounds is not None)
         if not available:
             raise ValueError(f"Selected objects have no evaluated geometry: "
                              f"{bounds[0].empty_reason}")
         xs0, ys0, xs1, ys1 = zip(*available)
         union = _nonempty_roi((min(xs0), min(ys0), max(xs1), max(ys1)))
         if follow:
-            rois = tuple(_nonempty_roi(item.canvas_bounds)
-                         if item.canvas_bounds is not None else union
+            rois = tuple(_nonempty_roi(item.model_bounds)
+                         if item.model_bounds is not None else union
                          for item in bounds)
         else:
             rois = (union,) * len(scenes)
         return tuple(FocusedSceneView(
             self.render_scene(scene, roi=roi, resolution=resolution,
-                              padding_canvas=padding_canvas), item,
+                              padding_model=padding_model), item,
         ) for scene, roi, item in zip(scenes, rois, bounds))
 
     def inspect_scene(
@@ -201,7 +200,7 @@ class Observer:
         """Create a raw O1 packet from a frozen scene without live session reads."""
         rendered = self.render_scene(
             scene, roi=request.roi, resolution=request.resolution,
-            padding_canvas=request.padding_canvas,
+            padding_model=request.padding_model,
         )
         return packet_from_scene(scene, rendered)
 
@@ -232,7 +231,7 @@ class Observer:
         check_next_view(packet, request)
         rendered = self.render_scene(
             packet._scene, roi=request.roi, resolution=request.resolution,
-            padding_canvas=request.padding_canvas,
+            padding_model=request.padding_model,
         )
         return append_view(packet, rendered)
 
@@ -351,7 +350,6 @@ class Observer:
                     "source_revision": frame.source_revision,
                     "evaluation_revision": frame.evaluation_revision,
                     "document_id": frame.document_id,
-                    "model_space": frame.model_space._asdict(),
                     "view": {"scale": frame.view_scale, "offset": frame.view_offset,
                              "width": frame.width, "height": frame.height},
                     "adapter": {"name": frame.adapter_name, "backend": frame.adapter_backend},
@@ -397,10 +395,10 @@ class Observer:
 def _frame_from_native(raw: _native_module.NativeFrameTuple) -> ObservedFrame:
     """Decode the legacy native tuple; the new view reuses its pixel record."""
     metadata, width, height, rgba, png, textures, adapter_name, backend = raw
-    version, input_sha256, evaluation_revision, document_id, source_revision, parameters, canvas, scale, offset, bounds = metadata
+    version, input_sha256, evaluation_revision, document_id, source_revision, parameters, scale, offset, bounds = metadata
     return ObservedFrame(
         version, input_sha256, evaluation_revision, document_id, source_revision,
-        [ParameterSample(*item) for item in parameters], ModelSpaceSnapshot(*canvas),
+        [ParameterSample(*item) for item in parameters],
         scale, offset, [DrawableBounds(*item) for item in bounds],
         width, height, rgba, png,
         [TextureRevision(*item) for item in textures], adapter_name, backend,
@@ -468,7 +466,7 @@ class CapturedScene:
         if view.capture_id != self.capture_id or view.scene_digest != self.scene_digest:
             raise ValueError("View belongs to another captured scene")
         return hit_test(self._native, self.capture_id, self.scene_digest,
-                        point, view.image_to_canvas,
+                        point, view.image_to_model,
                         (view.frame.width, view.frame.height),
                         include_hidden=include_hidden, details=details,
                         max_candidates=max_candidates)
@@ -497,15 +495,15 @@ class RenderedSceneView:
     capture_id: str
     scene_digest: str
 
-    def canvas_to_image(self, point: tuple[float, float]) -> tuple[float, float]:
-        """Map a source-canvas pixel coordinate into this view's image pixels."""
+    def model_to_image(self, point: tuple[float, float]) -> tuple[float, float]:
+        """Map a model coordinate into this view's image pixels."""
         scale, (ox, oy) = self.frame.view_scale, self.frame.view_offset
-        return point[0] * scale + ox, point[1] * scale + oy
+        return point[0] * scale + ox, -point[1] * scale + oy
 
-    def image_to_canvas(self, point: tuple[float, float]) -> tuple[float, float]:
-        """Map an image pixel coordinate back into source-canvas pixels."""
+    def image_to_model(self, point: tuple[float, float]) -> tuple[float, float]:
+        """Map an image pixel coordinate back into model units."""
         scale, (ox, oy) = self.frame.view_scale, self.frame.view_offset
-        return (point[0] - ox) / scale, (point[1] - oy) / scale
+        return (point[0] - ox) / scale, (oy - point[1]) / scale
 
 
 @dataclass(frozen=True)

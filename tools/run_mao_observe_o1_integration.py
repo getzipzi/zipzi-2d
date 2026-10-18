@@ -55,7 +55,7 @@ def main() -> None:
         full = observer.render_scene(scene, roi=full_roi, resolution=FULL_RESOLUTION)
         head = observer.render_scene(scene, roi=HEAD_ROI, resolution=HEAD_RESOLUTION)
         point = (2900.0, 1800.0)
-        restored = head.image_to_canvas(head.canvas_to_image(point))
+        restored = head.image_to_model(head.model_to_image(point))
         if any(abs(a - b) > 0.001 for a, b in zip(point, restored)):
             raise AssertionError("Head ROI image/canvas coordinate mapping changed")
         full.frame.save_png(run / "full.png")

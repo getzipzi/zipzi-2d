@@ -128,7 +128,6 @@ class ObservedFrame(NamedTuple):
     document_id: str
     source_revision: int
     parameters: list[ParameterSample]
-    model_space: ModelSpaceSnapshot
     view_scale: float
     view_offset: Point
     drawable_bounds: list[DrawableBounds]
@@ -190,34 +189,14 @@ class CanvasSnapshot(NamedTuple):
         return (self.origin_x, self.origin_y)
 
 
-class ModelSpaceSnapshot(NamedTuple):
-    """Unbounded model coordinates and source orientation, in pixel-sized units."""
+class ExportSettings(NamedTuple):
+    """Independent output policy; bounds are [left,bottom,right,top] in model units."""
 
-    origin_x: float
-    origin_y: float
-    y_axis_down: bool
-
-    @property
-    def origin(self) -> Point:
-        """Authored origin as the same ``(x, y)`` pair accepted by Session."""
-        return (self.origin_x, self.origin_y)
-
-    def runtime_to_source(self, point: Point) -> Point:
-        """Convert an evaluated drawable's world runtime point to source pixels.
-
-        This also works when the drawable has a deformer parent. Do not pass
-        parent-local ``geometry.positions`` directly.
-        """
-        return (self.origin_x + point[0],
-                self.origin_y + (-1 if self.y_axis_down else 1) * point[1])
-
-    def source_to_runtime(self, point: Point) -> Point:
-        """Convert a source pixel point to world runtime coordinates.
-
-        The result is not a parent-local mesh geometry position.
-        """
-        return ((point[0] - self.origin_x),
-                (-1 if self.y_axis_down else 1) * (point[1] - self.origin_y))
+    pixels_per_unit: float = 1.0
+    bounds: tuple[float, float, float, float] | None = None
+    padding_fraction: float = 0.1
+    padding_pixels: float = 50.0
+    minimum_extent: float = 256.0
 
 
 class DrawOrderGroup(NamedTuple):
@@ -683,7 +662,6 @@ class EvaluationSnapshot(NamedTuple):
 
     version: Version
     source_revision: int
-    model_space: ModelSpaceSnapshot
     parameters: list[ParameterSample]
     drawables: list[DrawableSnapshot]
     offscreens: list[EvaluatedOffscreenSnapshot]

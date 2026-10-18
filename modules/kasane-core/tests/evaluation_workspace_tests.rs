@@ -122,10 +122,24 @@ fn workspace_reuses_geometry_and_preserves_output_on_late_failure() {
     let mut overflow = doc.get_mesh(&id(3)).unwrap().clone();
     overflow.base_positions[0].x = f32::MAX;
     assert!(doc.replace_mesh(overflow).status.is_ok());
+    let rotation_id = id(9999);
     assert!(doc
-        .replace_model_space(ModelSpace::new(Vec2::new(-f32::MAX, 0.)))
+        .create_transform(Transform {
+            id: rotation_id.clone(),
+            data: TransformData::Rotation(RotationTransform {
+                pose: RotationPose {
+                    scale: 2.,
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
         .status
         .is_ok());
+    let mut overflow_mesh = doc.get_mesh(&id(3)).unwrap().clone();
+    overflow_mesh.deformer_id = rotation_id;
+    assert!(doc.replace_mesh(overflow_mesh).status.is_ok());
     assert_eq!(
         evaluator.evaluate(&doc, &preview, &mut output).code,
         "NON_FINITE"
@@ -259,7 +273,7 @@ fn static_geometry_survives_positions_and_names_but_not_topology_changes() {
         .evaluate(&doc, &PreviewValues::new(), &mut frame)
         .is_ok());
     assert!(!Arc::ptr_eq(&uvs, &frame.drawables[0].uvs));
-    assert_eq!(uvs[0], Vec2::new(0., 1.));
+    assert_eq!(uvs[0], Vec2::new(0., 0.));
     // Reusing an evaluator on another document with the same revision is safe.
     let other = document(2);
     assert!(evaluator

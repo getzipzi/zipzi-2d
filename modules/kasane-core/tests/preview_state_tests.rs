@@ -136,10 +136,24 @@ fn late_geometry_failure_preserves_request_and_published_snapshot() {
     let mut mesh = doc.get_mesh(&id(4)).unwrap().clone();
     mesh.base_positions[0].x = f32::MAX;
     assert!(doc.replace_mesh(mesh).status.is_ok());
+    let rotation_id = id(9999);
     assert!(doc
-        .replace_model_space(ModelSpace::new(Vec2::new(-f32::MAX, 0.)))
+        .create_transform(Transform {
+            id: rotation_id.clone(),
+            data: TransformData::Rotation(RotationTransform {
+                pose: RotationPose {
+                    scale: 2.,
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
         .status
         .is_ok());
+    let mut overflow_mesh = doc.get_mesh(&id(4)).unwrap().clone();
+    overflow_mesh.deformer_id = rotation_id;
+    assert!(doc.replace_mesh(overflow_mesh).status.is_ok());
     assert_eq!(
         state
             .replace(&doc, 1, [(id(2), 0.75)].into())

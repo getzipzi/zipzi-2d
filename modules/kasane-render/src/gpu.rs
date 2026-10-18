@@ -14,39 +14,32 @@ pub struct Vertex {
     pub mask_point: [f32; 2],
 }
 
-pub fn vertices_for(drawable: &Drawable, frame: &DrawableFrame) -> Vec<Vertex> {
+pub fn vertices_for(drawable: &Drawable) -> Vec<Vertex> {
     let mut vertices = Vec::with_capacity(drawable.positions.len());
-    append_vertices_for(drawable, frame, &mut vertices);
+    append_vertices_for(drawable, &mut vertices);
     vertices
 }
 
 /// Append converted geometry directly into a packed GPU staging buffer.
-pub fn append_vertices_for(drawable: &Drawable, frame: &DrawableFrame, out: &mut Vec<Vertex>) {
+pub fn append_vertices_for(drawable: &Drawable, out: &mut Vec<Vertex>) {
     out.extend(
         drawable
             .positions
             .iter()
             .zip(drawable.uvs.iter())
             .map(|(position, uv)| {
-                let pixel = Vec2::new(
-                    position.x + frame.model_space.origin.x,
-                    frame.model_space.origin.y - position.y,
-                );
+                let model = *position;
                 Vertex {
-                    position: [pixel.x, pixel.y],
+                    position: [model.x, model.y],
                     uv: [uv.x, 1.0 - uv.y],
-                    mask_point: [pixel.x, pixel.y],
+                    mask_point: [model.x, model.y],
                 }
             }),
     );
 }
 
-pub fn transformed_vertices_for(
-    drawable: &Drawable,
-    frame: &DrawableFrame,
-    viewport: ViewportConfig,
-) -> Vec<Vertex> {
-    let mut vertices = vertices_for(drawable, frame);
+pub fn transformed_vertices_for(drawable: &Drawable, viewport: ViewportConfig) -> Vec<Vertex> {
+    let mut vertices = vertices_for(drawable);
     for vertex in &mut vertices {
         let point = viewport
             .transform
@@ -150,10 +143,7 @@ pub fn mask_layout(
             .find(|drawable| drawable.id == *source_id)
             .ok_or_else(|| Status::error("INVALID_MASK", source_id))?;
         for position in &drawable.positions {
-            let point = Vec2::new(
-                position.x + frame.model_space.origin.x,
-                frame.model_space.origin.y - position.y,
-            );
+            let point = *position;
             bounds = Some(bounds.map_or((point, point), |(min, max)| {
                 (
                     Vec2::new(min.x.min(point.x), min.y.min(point.y)),

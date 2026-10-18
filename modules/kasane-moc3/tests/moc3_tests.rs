@@ -210,8 +210,7 @@ fn verify_with_purism(doc: &Document, artifact: &Moc3Artifact, preview: &Preview
         )
         .is_ok());
         let canvas = kasane_core::geometry::finite_export_canvas(
-            doc.model_space(),
-            doc.source_canvas(),
+            doc.export_settings(),
             default_frame
                 .drawables
                 .iter()
@@ -752,8 +751,7 @@ fn boundless_canvas_preserves_runtime_geometry_and_includes_hidden_bounds() {
             Vec2::new(-100., 200.),
         ] {
             let mut doc = fixture();
-            let mut canvas = kasane_core::ModelSpace::new(origin);
-            canvas.y_axis_down = flag != 0;
+            let canvas = Canvas::with_flag(100., 100., origin, 100., flag);
             assert!(doc.replace_model_setup(canvas).status.is_ok());
             let before = doc.clone();
             let artifact = encode_moc3(&doc).unwrap();
@@ -783,9 +781,9 @@ fn source_ppu_only_changes_export_units_and_rejects_export_overflow() {
     let mut before = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &Default::default(), &mut before).is_ok());
     let evaluation_revision = doc.evaluation_revision();
-    let mut canvas = doc.source_canvas().unwrap();
-    canvas.pixels_per_unit = f32::MIN_POSITIVE;
-    assert!(doc.replace_source_canvas(Some(canvas)).status.is_ok());
+    let mut settings = doc.export_settings();
+    settings.pixels_per_unit = f32::MIN_POSITIVE;
+    assert!(doc.replace_export_settings(settings).status.is_ok());
     assert_eq!(doc.evaluation_revision(), evaluation_revision);
     let mut after = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &Default::default(), &mut after).is_ok());

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::document::Document;
-use crate::geometry::{to_runtime_positions, validate_positions};
-use crate::types::{BlendMode, ModelSpace, Status, Vec2};
+use crate::geometry::validate_positions;
+use crate::types::{BlendMode, Status, Vec2};
 
 pub type PreviewValues = HashMap<String, f32>;
 
@@ -93,7 +93,6 @@ pub struct OffscreenFrame {
 pub struct DrawableFrame {
     /// Revision used to evaluate this immutable snapshot; later name edits may reuse it.
     pub source_revision: u64,
-    pub model_space: ModelSpace,
     pub parameters: Vec<EvaluatedParameter>,
     pub drawables: Vec<Drawable>,
     pub offscreens: Vec<OffscreenFrame>,
@@ -129,45 +128,32 @@ impl DrawableFrame {
 pub struct EvaluatedDeformer {
     pub id: String,
     pub enabled: bool,
-    /// Final runtime coordinates, including the canvas Y reversal, matching
+    /// Final model coordinates (X-right/Y-up), matching
     /// Drawable::positions. Warp points are row-major; rotation points are the
     /// transformed origin and unit X/Y axes.
     pub points: Vec<Vec2>,
 }
 
-pub fn to_parent_positions(
+pub fn parent_positions<'a>(
     doc: &Document,
     parent: &str,
-    positions: &[Vec2],
-) -> Result<Vec<Vec2>, Status> {
-    if parent.is_empty() {
-        to_runtime_positions(doc.model_space(), positions)
-    } else {
-        if doc.get_transform(parent).is_none() {
-            return Err(Status::error("MISSING_TRANSFORM", parent));
-        }
-        let s = validate_positions(positions);
-        if !s.is_ok() {
-            return Err(s);
-        }
-        Ok(positions.to_vec())
+    positions: &'a [Vec2],
+) -> Result<&'a [Vec2], Status> {
+    doc.coordinate_space(parent)?;
+    let s = validate_positions(positions);
+    if !s.is_ok() {
+        return Err(s);
     }
+    Ok(positions)
 }
 
-pub fn to_parent_origin(
+pub fn parent_origin(
     doc: &Document,
     parent: &str,
     origin: crate::types::PreciseVec2,
 ) -> Result<Vec2, Status> {
-    let canvas = doc.model_space();
-    let p = if parent.is_empty() {
-        Vec2::new(
-            (origin.x - canvas.origin.x as f64) as f32,
-            (canvas.origin.y as f64 - origin.y) as f32,
-        )
-    } else {
-        Vec2::new(origin.x as f32, origin.y as f32)
-    };
+    doc.coordinate_space(parent)?;
+    let p = Vec2::new(origin.x as f32, origin.y as f32);
     let status = validate_positions(&[p]);
     if !status.is_ok() {
         return Err(status);

@@ -64,7 +64,6 @@ pub struct ObservedFrame {
     pub document_id: String,
     pub source_revision: u64,
     pub parameters: Vec<(String, f32, f32, bool)>,
-    pub model_space: (f32, f32, bool),
     pub view_scale: f32,
     pub view_offset: (f32, f32),
     /// Present only for an explicit ROI render. The legacy observe path keeps
@@ -429,7 +428,7 @@ impl Observer {
                 request.roi.y0,
                 request.roi.x1,
                 request.roi.y1,
-                request.padding_canvas,
+                request.padding_model,
             ] {
                 digest.update(value.to_bits().to_le_bytes());
             }
@@ -487,7 +486,6 @@ impl Observer {
         self.renderer
             .sync_model(&self.device, &input.frame, &catalog)
             .map_err(status)?;
-        let canvas = input.frame.model_space;
         let (scale, offset_x, offset_y) = if let Some(view) = explicit_view {
             (view.scale, view.offset.0, view.offset.1)
         } else {
@@ -495,8 +493,8 @@ impl Observer {
             let w = (x1 - x0) as f32;
             let h = (y1 - y0) as f32;
             let scale = self.config.fit_long_side / w.max(h).max(1.);
-            let center_x = ((x0 + x1) * 0.5) as f32 + canvas.origin.x;
-            let center_y = canvas.origin.y - ((y0 + y1) * 0.5) as f32;
+            let center_x = ((x0 + x1) * 0.5) as f32;
+            let center_y = -((y0 + y1) * 0.5) as f32;
             (
                 scale,
                 width as f32 * 0.5 - center_x * scale,
@@ -515,8 +513,8 @@ impl Observer {
                     let mut max_x = f32::NEG_INFINITY;
                     let mut max_y = f32::NEG_INFINITY;
                     for position in &drawable.positions {
-                        let x = (position.x + canvas.origin.x) * scale + offset_x;
-                        let y = (canvas.origin.y - position.y) * scale + offset_y;
+                        let x = position.x * scale + offset_x;
+                        let y = -position.y * scale + offset_y;
                         min_x = min_x.min(x);
                         min_y = min_y.min(y);
                         max_x = max_x.max(x);
@@ -584,7 +582,6 @@ impl Observer {
                     )
                 })
                 .collect(),
-            model_space: (canvas.origin.x, canvas.origin.y, canvas.y_axis_down),
             view_scale: scale,
             view_offset: (offset_x, offset_y),
             explicit_view,
@@ -613,7 +610,7 @@ fn render_sample(
         let view = ViewportConfig {
             transform: Affine2 {
                 a: Vec2::new(scale, 0.0),
-                b: Vec2::new(0.0, scale),
+                b: Vec2::new(0.0, -scale),
                 origin: Vec2::new(offset_x, offset_y),
             },
             target_extent: Vec2::new(width as f32, height as f32),
@@ -656,7 +653,7 @@ fn render_sample(
     let view = ViewportConfig {
         transform: Affine2 {
             a: Vec2::new(scale, 0.0),
-            b: Vec2::new(0.0, scale),
+            b: Vec2::new(0.0, -scale),
             origin: Vec2::new(offset_x, offset_y),
         },
         target_extent: Vec2::new(width as f32, height as f32),

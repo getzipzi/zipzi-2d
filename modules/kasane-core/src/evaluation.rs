@@ -15,6 +15,6 @@ pub use evaluator::{
 pub(crate) use prepared::PreparedEvaluation;
 pub use selection::evaluate_blend_binding;
 pub use types::{
-    to_parent_origin, to_parent_positions, Drawable, DrawableFrame, EvaluatedParameter,
-    OffscreenFrame, PreviewValues, RenderCommand,
+    parent_origin, parent_positions, Drawable, DrawableFrame, EvaluatedParameter, OffscreenFrame,
+    PreviewValues, RenderCommand,
 };

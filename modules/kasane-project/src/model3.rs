@@ -181,53 +181,6 @@ fn import_with_namespace(
     Ok(settings)
 }
 
-/// v5 stored raw JSON and source namespace; convert only at the codec boundary.
-pub(crate) fn migrate_v5_settings(
-    document: &Document,
-    value: Value,
-) -> Result<Model3Settings, Status> {
-    #[derive(Deserialize, Default)]
-    #[serde(deny_unknown_fields)]
-    struct Legacy {
-        groups: Option<Value>,
-        layout: Option<Value>,
-        hit_areas: Option<Value>,
-        user_data: Option<String>,
-        #[serde(default)]
-        extensions: BTreeMap<String, Value>,
-        source_runtime_ids: Option<BTreeMap<String, String>>,
-        source_content: Option<String>,
-    }
-    let old: Legacy = serde_json::from_value(value)
-        .map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
-    let mut wire = Map::new();
-    for (key, value) in [
-        ("Groups", old.groups),
-        ("Layout", old.layout),
-        ("HitAreas", old.hit_areas),
-    ] {
-        if let Some(value) = value {
-            wire.insert(key.into(), value);
-        }
-    }
-    if let Some(path) = old.user_data {
-        wire.insert(
-            "FileReferences".into(),
-            serde_json::json!({"UserData": path}),
-        );
-    }
-    let namespace = old
-        .source_runtime_ids
-        .unwrap_or_else(|| runtime_namespace(document));
-    let mut settings = import_with_namespace(document, &Value::Object(wire), &namespace)?;
-    settings.extensions = old.extensions;
-    settings.source_content = old.source_content;
-    if settings.has_extensions() || settings.user_data.is_some() {
-        settings.source_runtime_ids = Some(namespace);
-    }
-    Ok(settings)
-}
-
 pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status> {
     let settings = document.model3_settings();
     // Known fields are remapped by identity. Only opaque payloads need a

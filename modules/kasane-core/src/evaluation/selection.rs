@@ -316,43 +316,17 @@ where
     }
     out.clear();
     out.resize(size, Vec2::default());
-    let canvas = doc.model_space();
     for (&index, &weight) in s.indices.iter().zip(&s.weights) {
         let raw = get(index);
         if raw.len() != size {
             return Err(Status::error("INVALID_LENGTH", "keyform positions"));
         }
-        // Keep validation, but reduce its result without a per-vertex exit.
-        // Separating root conversion and zero weights lets the local-space
-        // accumulation vectorize without changing the order across keyforms.
         let mut finite = true;
-        if parent.is_empty() {
-            let ox = canvas.origin.x as f64;
-            let oy = canvas.origin.y as f64;
-            if weight != 0.0 {
-                for (target, p) in out.iter_mut().zip(raw) {
-                    let x = (p.x as f64 - ox) as f32;
-                    let y = (oy - p.y as f64) as f32;
-                    finite &= x.is_finite() & y.is_finite();
-                    target.x += x * weight;
-                    target.y += y * weight;
-                }
-            } else {
-                for p in raw {
-                    let x = (p.x as f64 - ox) as f32;
-                    let y = (oy - p.y as f64) as f32;
-                    finite &= x.is_finite() & y.is_finite();
-                }
-            }
-        } else if weight != 0.0 {
-            for (target, p) in out.iter_mut().zip(raw) {
-                finite &= p.x.is_finite() & p.y.is_finite();
+        for (target, p) in out.iter_mut().zip(raw) {
+            finite &= p.x.is_finite() & p.y.is_finite();
+            if weight != 0. {
                 target.x += p.x * weight;
                 target.y += p.y * weight;
-            }
-        } else {
-            for p in raw {
-                finite &= p.x.is_finite() & p.y.is_finite();
             }
         }
         if !finite {
@@ -394,21 +368,13 @@ mod selection_tests {
         }
         out.clear();
         out.resize(size, Vec2::default());
-        let canvas = doc.model_space();
         for (&index, &weight) in s.indices.iter().zip(&s.weights) {
             let raw = get(index);
             if raw.len() != size {
                 return Err(Status::error("INVALID_LENGTH", "keyform positions"));
             }
             for (target, p) in out.iter_mut().zip(raw) {
-                let q = if parent.is_empty() {
-                    Vec2::new(
-                        (p.x as f64 - canvas.origin.x as f64) as f32,
-                        (canvas.origin.y as f64 - p.y as f64) as f32,
-                    )
-                } else {
-                    *p
-                };
+                let q = *p;
                 if !q.x.is_finite() || !q.y.is_finite() {
                     return Err(Status::error(
                         "NON_FINITE",

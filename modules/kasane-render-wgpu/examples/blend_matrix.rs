@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use kasane_core::evaluation::{Drawable, DrawableFrame, OffscreenFrame, RenderCommand};
-use kasane_core::types::{Canvas, Status, Vec2};
+use kasane_core::types::{Status, Vec2};
 use kasane_render::{Affine2, ViewportConfig};
 use kasane_render_wgpu::{
     WgpuEncodeTarget, WgpuOutputMode, WgpuRenderer, WgpuTargetConfig, WgpuTexture,
@@ -142,7 +142,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let mut frame = DrawableFrame {
-        model_space: (Canvas::new(WIDTH as f32, HEIGHT as f32, Vec2::default(), 1.0)).into(),
         ..Default::default()
     };
     for color in 0..18_u32 {
