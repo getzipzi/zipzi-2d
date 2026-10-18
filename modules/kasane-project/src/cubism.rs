@@ -64,12 +64,14 @@ fn publish_with_filesystem(
     destination: &Path,
     files: &dyn FileSystem,
 ) -> Result<Publication, Cmo3Error> {
+    // Both sibling names remain managed when the last animation is removed.
+    // Staging below writes only the files present in the new artifact.
     let names = [
         artifact.model_file_name.as_str(),
         artifact.animation_file_name.as_str(),
         "export-report.json",
     ];
-    for name in names {
+    for name in &names {
         if !matches!(
             Path::new(name).components().collect::<Vec<_>>().as_slice(),
             [Component::Normal(_)]
@@ -81,9 +83,10 @@ fn publish_with_filesystem(
             ));
         }
     }
-    if !names[0].ends_with(".cmo3")
-        || !names[1].ends_with(".can3")
-        || names[0].strip_suffix(".cmo3") != names[1].strip_suffix(".can3")
+    if !artifact.model_file_name.ends_with(".cmo3")
+        || !artifact.animation_file_name.ends_with(".can3")
+        || artifact.model_file_name.strip_suffix(".cmo3")
+            != artifact.animation_file_name.strip_suffix(".can3")
     {
         return Err(Cmo3Error::InvalidDocument(
             "Cubism package filenames must have the same basename".into(),
@@ -110,10 +113,15 @@ fn publish_with_filesystem(
     }
     let stage = io::Stage::new(parent).map_err(status)?;
     files.write_new(&stage.0.join(names[0]), &artifact.cmo3.bytes)?;
-    files.write_new(&stage.0.join(names[1]), &artifact.can3.bytes)?;
+    if !artifact.can3.bytes.is_empty() {
+        files.write_new(
+            &stage.0.join(&artifact.animation_file_name),
+            &artifact.can3.bytes,
+        )?;
+    }
     let report = serde_json::to_vec_pretty(&artifact.report)
         .map_err(|e| Cmo3Error::InvalidDocument(e.to_string()))?;
-    files.write_new(&stage.0.join(names[2]), &report)?;
+    files.write_new(&stage.0.join("export-report.json"), &report)?;
     files.sync_directory(&stage.0)?;
     let backup = io::Stage::new(parent).map_err(status)?;
     let previous = backup.0.join("previous");
@@ -254,4 +262,24 @@ mod tests {
         assert!(publish_cubism(&unsafe_artifact, &output).is_err());
         fs::remove_dir_all(temp).unwrap();
     }
+}
+
+/// Publish a complete model-only engineering group, without an empty animation.
+pub fn publish_cubism_model(
+    model: kasane_cmo3::Cmo3Artifact,
+    name: &str,
+    destination: &Path,
+) -> Result<Publication, Cmo3Error> {
+    let report = model.report.clone();
+    let artifact = CubismArtifact {
+        model_file_name: format!("{name}.cmo3"),
+        animation_file_name: format!("{name}.can3"),
+        cmo3: model,
+        can3: Can3Artifact {
+            bytes: Vec::new(),
+            report: Default::default(),
+        },
+        report,
+    };
+    publish_cubism(&artifact, destination)
 }

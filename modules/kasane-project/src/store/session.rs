@@ -86,6 +86,21 @@ impl DocumentSession {
         }
     }
 
+    pub(crate) fn store_cubism_candidate(&mut self, candidate: Self, document: Document) {
+        self.reset_authoring_document(document);
+        *self
+            .store
+            .memory_assets
+            .lock()
+            .unwrap_or_else(|p| p.into_inner()) = candidate
+            .store
+            .memory_assets
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
+        self.store.remember_imported_assets(&self.document);
+    }
+
     pub fn document(&self) -> &Document {
         &self.document
     }

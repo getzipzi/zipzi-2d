@@ -30,6 +30,7 @@ pub(crate) fn class_name(tag: &str) -> Option<&'static str> {
     "CDrawableId" => "com.live2d.cubism.doc.model.id.CDrawableId",
     "CDrawableSourceSet" => "com.live2d.cubism.doc.model.drawable.CDrawableSourceSet",
     "CEditableMeshExtension" => "com.live2d.cubism.doc.model.extension.editableMesh.CEditableMeshExtension",
+    "EffectParameterType" => "com.live2d.cubism.doc.model.EffectParameterType",
     "CEffectParameterGroups" => "com.live2d.cubism.doc.model.CEffectParameterGroups",
     "CExtensionGuid" => "com.live2d.type.CExtensionGuid",
     "CFloatColor" => "com.live2d.type.CFloatColor",

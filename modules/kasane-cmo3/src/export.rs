@@ -377,6 +377,43 @@ impl<'a> Exporter<'a> {
             .field("guid", g)
             .field("_owner", owner.clone())
     }
+    fn effect_parameter_groups(&self) -> N {
+        use kasane_core::document::ModelTargetRef;
+        N::list(
+            "hash_map",
+            self.doc
+                .model3_settings()
+                .groups
+                .iter()
+                .flatten()
+                .map(|group| {
+                    N::new("entry")
+                        .field(
+                            "key",
+                            N::enumeration(
+                                "EffectParameterType",
+                                if group.name == "EyeBlink" {
+                                    "EYE_BLINK"
+                                } else {
+                                    "LIPSYNC"
+                                },
+                            ),
+                        )
+                        .field(
+                            "value",
+                            N::list(
+                                "carray_list",
+                                group.parameters.iter().map(|target| match target {
+                                    ModelTargetRef::Resolved { object_id } => {
+                                        guid("CParameterGuid", object_id)
+                                    }
+                                    _ => unreachable!("inspection rejects unresolved effects"),
+                                }),
+                            ),
+                        )
+                }),
+        )
+    }
     fn model(
         &mut self,
         assets: &dyn AssetResolver,
@@ -440,7 +477,8 @@ impl<'a> Exporter<'a> {
                     )
                     .field(
                         "_effectParameterGroups",
-                        N::new("CEffectParameterGroups").field("_parameterGroups", N::empty_map()),
+                        N::new("CEffectParameterGroups")
+                            .field("_parameterGroups", self.effect_parameter_groups()),
                     ),
             )
             .field("modelOptions", N::empty_map());

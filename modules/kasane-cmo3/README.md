@@ -151,11 +151,34 @@ Inverse-stepped segments retain their authored keys/type, but Animator displays
 the anchor value at the first frame of the segment while Kasane samples its
 endpoint. When those values differ this boundary mismatch is an explicit loss.
 Unresolved targets, aggregate EyeBlink/LipSync or unknown model-effect curves,
-opaque motion extensions, and model3 motion-group registrations/sound references
-are reported as losses. Use explicit parameter curves for editable eye/mouth
-animation. Expressions, pose and other runtime sidecars still require the
+opaque motion extensions, and registration-specific fades/sound references
+are reported as losses. Plain model3 motion groups are encoded as native CAN3
+playlists, preserving names, order, repeated entries and empty groups alongside
+the normal all-scenes playlist. A reserved playlist GUID namespace records
+which playlists are model3 registrations; ordinary native Editor playlists are
+not automatically treated as runtime registrations. Known registered motion
+scenes retain their identity even if they contain only initial values.
+Use explicit parameter curves for editable eye/mouth
+animation. Add expressions become scenes containing absolute parameter initial
+values: the current model default plus the expression offset. Missing expression
+Blend is also Add. Native CAN3 scenes with parameter values only at frame zero and no
+later keys or events import as expressions, regardless of name or duration;
+even an equal-valued second key keeps a scene classified as a motion. Empty
+scenes remain motions. Static part visibility is scene setup, retained with
+duration/FPS and track fades in the expression's `KasaneSourceScene` authoring
+metadata. Parameter entries import as Add offsets (scene initial value minus
+model default), including zero offsets. Runtime exp3 output omits this metadata
+and emits these Add offsets.
+Engineering re-export uses current expression entries while retaining scene
+setup. Multiply/Overwrite expressions have unavailable CAN3 blend semantics and are
+explicit export losses. Pose and other runtime sidecars still require the
 existing runtime package exporter. Paired export carries motion clips in CAN3;
 standalone CMO3 export continues to report their omission.
+
+Native CMO3 imports populate CDI parameter, group and Part display entries.
+Runtime package export can therefore preserve Part names in `cdi3.json` even
+when the imported display metadata is marked as originating from an Editor
+project. Mesh/deformer display labels have no equivalent standard CDI fields.
 
 ## Future CLI boundary
 
@@ -170,10 +193,34 @@ behind a resolver/session:
 | CMO3 | `kasane_cmo3::{inspect_export, encode_cmo3}` plus the project adapters above |
 | CAN3 | `kasane_cmo3::{inspect_can3, encode_can3}`; linked pair via `inspect_cubism` / `encode_cubism` |
 
-A CLI can compose these APIs without depending on editor or Python code. CMO3/CAN3
-**import** and a general bidirectional conversion dispatcher are future work;
-this crate implements the requested Kasane → CMO3/CAN3 direction. No placeholder
-conversion APIs claim unsupported routes.
+A CLI can compose these APIs without depending on editor or Python code.
+
+## Native editable project import
+
+`import_model` reads CAFF resources and the CMO3 XML object graph into a typed
+Kasane document plus in-memory PNGs. `animation_model_paths` reads CAN3 model
+references, and `import_animation` imports its scenes against the model's stable
+parameter and Part identities. No Java or Cubism installation is required by
+these readers. Project/SDK adapters resolve relocated sibling files and retain
+artwork in memory; `AuthoringSession::import_cubism` accepts either entry file.
+
+The local Mao Editor-authored CMO3 5.2 and CAN3 5.4 files are tested, together with
+Kasane's 5.3 output. Coverage includes ordinary grids, meshes, warp/rotation
+hierarchies, morphs and constraints, Glue, parameter folders, effect groups,
+physics, scene curves and fades. Unknown necessary structures, missing model
+associations, multiple-model scenes, model track offsets/repetition, Form
+Animation, ArtPath, Offscreen and non-default morph edit bases are rejected.
+This is not a promise of all-version/all-feature Editor compatibility.
+
+Source keys before zero or past the scene duration remain in native projects;
+complete runtime packages split those curves at the playback boundaries without
+altering the document. Editable exports retain the source keys and duration.
+
+`DocumentSession::transfer_snapshot` captures fixed document/resources for
+runtime or editable grouped publication. Unsaved artwork is held through shared
+immutable pixels and encoded on the export worker, independently of the live
+session. Model-only editable groups omit an empty CAN3. Transfer adapters always
+use strict loss handling.
 
 ## Validation
 

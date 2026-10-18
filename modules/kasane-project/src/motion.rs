@@ -407,11 +407,19 @@ pub fn export_motion3(document: &Document, id: &str) -> Result<String, MotionPro
                     runtime_id.clone(),
                 ),
             };
+            let (initial, segments) = if clip.source_key_range().is_some() {
+                runtime_curve(track, clip.duration, clip.restricted_beziers)
+            } else {
+                (
+                    wire_point(track.initial.point()),
+                    track.segments.iter().map(wire_segment).collect(),
+                )
+            };
             Ok(Motion3Curve {
                 target,
                 id: runtime_id,
-                initial: wire_point(track.initial.point()),
-                segments: track.segments.iter().map(wire_segment).collect(),
+                initial,
+                segments,
                 fade_in: track.fade_in,
                 fade_out: track.fade_out,
                 extensions: track.extensions.clone(),
@@ -441,11 +449,248 @@ pub fn export_motion3(document: &Document, id: &str) -> Result<String, MotionPro
             total_user_data_size: 0,
             fade_in: clip.fade_in,
             fade_out: clip.fade_out,
-            extensions: clip.meta_extensions.clone(),
+            extensions: clip.runtime_meta_extensions(),
         },
         curves,
         user_data: Some(events),
         extensions: clip.extensions.clone(),
     };
     encode_motion3(&wire).map_err(|e| error(e.code, e.path, e.message))
+}
+
+/// Runtime motion files contain the playback interval. Keep source-authoring
+/// pre-roll/tail keys in Document and split their curves exactly at the boundary.
+fn runtime_curve(
+    track: &MotionTrack,
+    duration: f32,
+    restricted: bool,
+) -> (WirePoint, Vec<WireSegment>) {
+    let mut initial = wire_point(track.initial.point());
+    let mut previous = track.initial.point();
+    let mut segments = Vec::new();
+    let lerp = |a: MotionPoint, b: MotionPoint, t: f32| MotionPoint {
+        time: a.time + (b.time - a.time) * t,
+        value: a.value + (b.value - a.value) * t,
+    };
+    let split = |p: [MotionPoint; 4], t: f32| {
+        let a = lerp(p[0], p[1], t);
+        let b = lerp(p[1], p[2], t);
+        let c = lerp(p[2], p[3], t);
+        let d = lerp(a, b, t);
+        let e = lerp(b, c, t);
+        let mid = lerp(d, e, t);
+        ([p[0], a, d, mid], [mid, e, c, p[3]])
+    };
+    let parameter = |p: [MotionPoint; 4], time: f32| {
+        if restricted {
+            return ((time - p[0].time) / (p[3].time - p[0].time)).clamp(0., 1.);
+        }
+        let mut lo = 0.;
+        let mut hi = 1.;
+        for _ in 0..32 {
+            let t = (lo + hi) * 0.5;
+            let value = split(p, t).0[3].time;
+            if value < time {
+                lo = t;
+            } else {
+                hi = t;
+            }
+        }
+        (lo + hi) * 0.5
+    };
+    for segment in track.segments.iter() {
+        let end = segment.end().point();
+        if end.time <= 0. {
+            previous = end;
+            initial = wire_point(end);
+            continue;
+        }
+        if previous.time >= duration {
+            break;
+        }
+        let left = previous.time.max(0.);
+        let right = end.time.min(duration);
+        if right < left {
+            previous = end;
+            continue;
+        }
+        let (start, wire) = match segment {
+            MotionSegment::Bezier {
+                control1, control2, ..
+            } => {
+                let mut p = [previous, *control1, *control2, end];
+                if restricted {
+                    let span = end.time - previous.time;
+                    p[1].time = previous.time + span / 3.;
+                    p[2].time = previous.time + 2. * span / 3.;
+                }
+                if right < end.time {
+                    p = split(p, parameter(p, right)).0;
+                }
+                if left > previous.time {
+                    p = split(p, parameter(p, left)).1;
+                }
+                p[0].time = left;
+                p[3].time = right;
+                (
+                    p[0],
+                    WireSegment::Bezier {
+                        control1: wire_point(p[1]),
+                        control2: wire_point(p[2]),
+                        end: wire_point(p[3]),
+                    },
+                )
+            }
+            MotionSegment::Linear { .. } => {
+                let value = |time: f32| {
+                    lerp(
+                        previous,
+                        end,
+                        ((time - previous.time) / (end.time - previous.time)).clamp(0., 1.),
+                    )
+                    .value
+                };
+                (
+                    MotionPoint {
+                        time: left,
+                        value: value(left),
+                    },
+                    WireSegment::Linear {
+                        end: WirePoint {
+                            time: right,
+                            value: value(right),
+                        },
+                    },
+                )
+            }
+            MotionSegment::Stepped { .. } => (
+                MotionPoint {
+                    time: left,
+                    value: previous.value,
+                },
+                WireSegment::Stepped {
+                    end: WirePoint {
+                        time: right,
+                        value: if right == end.time {
+                            end.value
+                        } else {
+                            previous.value
+                        },
+                    },
+                },
+            ),
+            MotionSegment::InverseStepped { .. } => (
+                MotionPoint {
+                    time: left,
+                    value: if left == previous.time {
+                        previous.value
+                    } else {
+                        end.value
+                    },
+                },
+                WireSegment::InverseStepped {
+                    end: WirePoint {
+                        time: right,
+                        value: end.value,
+                    },
+                },
+            ),
+        };
+        if segments.is_empty() {
+            initial = wire_point(start);
+        }
+        if right > left {
+            segments.push(wire);
+        }
+        previous = end;
+        if end.time >= duration {
+            break;
+        }
+    }
+    if initial.time < 0. || initial.time > duration {
+        initial.time = 0.;
+    }
+    (initial, segments)
+}
+
+#[cfg(test)]
+mod source_range_tests {
+    use super::*;
+    fn track(segment: MotionSegment) -> MotionTrack {
+        MotionTrack {
+            id: "track".into(),
+            target: MotionTrackTarget::Model {
+                runtime_id: "Opacity".into(),
+            },
+            initial: MotionKey {
+                id: "first".into(),
+                time: -1.,
+                value: 0.,
+            },
+            segments: vec![segment].into(),
+            fade_in: None,
+            fade_out: None,
+            extensions: Default::default(),
+        }
+    }
+    #[test]
+    fn source_preroll_and_tail_cubic_are_split_without_changing_playback_values() {
+        // y(u)=u², time(u)=-1+3u. After cropping, y(t)=((t+1)/3)².
+        let source = track(MotionSegment::Bezier {
+            control1: MotionPoint {
+                time: 0.,
+                value: 0.,
+            },
+            control2: MotionPoint {
+                time: 1.,
+                value: 1. / 3.,
+            },
+            end: MotionKey {
+                id: "last".into(),
+                time: 2.,
+                value: 1.,
+            },
+        });
+        for restricted in [true, false] {
+            let (initial, segments) = runtime_curve(&source, 1., restricted);
+            assert_eq!(initial.time, 0.);
+            let WireSegment::Bezier {
+                control1,
+                control2,
+                end,
+            } = &segments[0]
+            else {
+                panic!("cubic expected")
+            };
+            assert_eq!(end.time, 1.);
+            for t in [0f32, 0.25, 0.5, 0.75, 1.] {
+                let actual = (1. - t).powi(3) * initial.value
+                    + 3. * (1. - t).powi(2) * t * control1.value
+                    + 3. * (1. - t) * t * t * control2.value
+                    + t.powi(3) * end.value;
+                assert!((actual - ((t + 1.) / 3.).powi(2)).abs() < 1e-5);
+            }
+        }
+        assert_eq!(source.initial.time, -1.);
+        assert_eq!(source.segments[0].end().time, 2.);
+    }
+    #[test]
+    fn cropped_steps_preserve_the_value_inside_the_playback_interval() {
+        let end = MotionKey {
+            id: "last".into(),
+            time: 2.,
+            value: 9.,
+        };
+        let (initial, segments) = runtime_curve(
+            &track(MotionSegment::Stepped { end: end.clone() }),
+            1.,
+            true,
+        );
+        assert_eq!(initial.value, 0.);
+        assert_eq!(segments[0].end().value, 0.);
+        let (initial, segments) =
+            runtime_curve(&track(MotionSegment::InverseStepped { end }), 1., true);
+        assert_eq!(initial.value, 9.);
+        assert_eq!(segments[0].end().value, 9.);
+    }
 }

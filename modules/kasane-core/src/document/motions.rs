@@ -154,10 +154,53 @@ pub struct MotionGroup {
     pub entries: Vec<MotionRegistration>,
 }
 
+/// Source-authoring key storage can extend outside the scene playback range.
+/// Native projects preserve this recognized provenance; runtime export splits
+/// curves to the playback range and omits the source-only metadata.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MotionSourceRange {
+    pub start: f32,
+    pub end: f32,
+}
+const SOURCE_RANGE: &str = "KasaneSourceKeyRange";
 impl MotionClip {
+    pub fn runtime_meta_extensions(&self) -> BTreeMap<String, Value> {
+        self.meta_extensions
+            .iter()
+            .filter(|(key, _)| key.as_str() != SOURCE_RANGE)
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect()
+    }
+    pub fn source_key_range(&self) -> Option<MotionSourceRange> {
+        self.meta_extensions
+            .get(SOURCE_RANGE)
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+    }
+    pub fn preserve_source_key_range(&mut self) {
+        let start = self
+            .tracks
+            .iter()
+            .flat_map(|t| t.keys())
+            .map(|k| k.time)
+            .fold(0., f32::min);
+        let end = self
+            .tracks
+            .iter()
+            .flat_map(|t| t.keys())
+            .map(|k| k.time)
+            .fold(self.duration, f32::max);
+        if start < 0. || end > self.duration {
+            self.meta_extensions.insert(
+                SOURCE_RANGE.into(),
+                serde_json::to_value(MotionSourceRange { start, end })
+                    .expect("finite validated source keys"),
+            );
+        }
+    }
     pub fn has_extensions(&self) -> bool {
         !self.extensions.is_empty()
-            || !self.meta_extensions.is_empty()
+            || self.meta_extensions.keys().any(|key| key != SOURCE_RANGE)
             || self.tracks.iter().any(|track| !track.extensions.is_empty())
             || self.events.iter().any(|event| !event.extensions.is_empty())
     }
@@ -330,6 +373,22 @@ impl Document {
         {
             return Status::error("INVALID_MOTION_FADE", &clip.id);
         }
+        let source_range = match clip.meta_extensions.get(SOURCE_RANGE) {
+            Some(value) => match serde_json::from_value::<MotionSourceRange>(value.clone()) {
+                Ok(range)
+                    if range.start.is_finite()
+                        && range.end.is_finite()
+                        && range.start <= 0.
+                        && range.end >= 0. =>
+                {
+                    Some(range)
+                }
+                _ => return Status::error("INVALID_MOTION_SOURCE_RANGE", &clip.id),
+            },
+            None => None,
+        };
+        let minimum_time = source_range.map_or(0., |r| r.start);
+        let maximum_time = source_range.map_or(clip.duration, |r| r.end.max(clip.duration));
         let mut ids = HashSet::new();
         for (index, track) in clip.tracks.iter().enumerate() {
             if !super::valid_uuid(&track.id)
@@ -401,16 +460,16 @@ impl Document {
             }
             if !track.initial.time.is_finite()
                 || !track.initial.value.is_finite()
-                || track.initial.time < 0.0
-                || track.initial.time > clip.duration
+                || track.initial.time < minimum_time
+                || track.initial.time > maximum_time
             {
                 return Status::error(
                     "INVALID_MOTION_POINT",
                     format!("{}.tracks[{index}].initial", clip.id),
                 );
             }
-            // Cubism Editor may round the clip duration more coarsely than
-            // its last curve timestamp (for example 9.23 vs 9.233 at 30 FPS).
+            // Ordinary motion3 retains its half-frame rounding tolerance;
+            // editable Cubism sources explicitly preserve their wider key range.
             let end_tolerance = (0.5 / clip.fps).max(0.0001);
             let mut previous = track.initial.time;
             for (segment_index, segment) in track.segments.iter().enumerate() {
@@ -418,7 +477,7 @@ impl Document {
                 if !end.time.is_finite()
                     || !end.value.is_finite()
                     || end.time <= previous
-                    || end.time > clip.duration + end_tolerance
+                    || end.time > maximum_time + end_tolerance
                 {
                     return Status::error(
                         "INVALID_MOTION_POINT",

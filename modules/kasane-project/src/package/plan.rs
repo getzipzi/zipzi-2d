@@ -177,6 +177,16 @@ impl ExportPlan {
 }
 
 pub fn build_export_plan(doc: &Document, asset_root: &Path) -> Result<ExportPlan, Status> {
+    build_export_plan_with(doc, asset_root, &|asset| {
+        read_project_asset(asset_root, asset)
+    })
+}
+
+pub fn build_export_plan_with(
+    doc: &Document,
+    asset_root: &Path,
+    read: &dyn Fn(&kasane_core::ImageAsset) -> Result<crate::AssetData, Status>,
+) -> Result<ExportPlan, Status> {
     if doc.transaction_active() {
         return Err(Status::error(
             "TRANSACTION_ACTIVE",
@@ -361,7 +371,7 @@ pub fn build_export_plan(doc: &Document, asset_root: &Path) -> Result<ExportPlan
     // The bytes checked here are the exact bytes written below; never reopen after validation.
     let mut verified = std::collections::HashMap::new();
     for id in doc.asset_order() {
-        let data = read_project_asset(asset_root, doc.get_asset(id).unwrap())?;
+        let data = read(doc.get_asset(id).unwrap())?;
         verified.insert(id.as_str(), data.bytes);
     }
     let moc_version = artifact.bytes[4];
@@ -467,7 +477,10 @@ pub fn build_export_plan(doc: &Document, asset_root: &Path) -> Result<ExportPlan
         source_paths.push(io::local_path(asset_root)?);
     }
     for id in doc.asset_order() {
-        source_paths.push(asset_path(asset_root, doc.get_asset(id).expect("asset"))?);
+        let asset = doc.get_asset(id).expect("asset");
+        if !asset_root.as_os_str().is_empty() || Path::new(&asset.source).is_absolute() {
+            source_paths.push(asset_path(asset_root, asset)?);
+        }
     }
     Ok(ExportPlan {
         files,

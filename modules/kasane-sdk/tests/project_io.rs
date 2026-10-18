@@ -901,3 +901,34 @@ fn publication_warning_keeps_saved_baseline_and_undo_history() {
     #[cfg(not(unix))]
     assert!(!retried.durable);
 }
+
+#[test]
+fn unsaved_psd_snapshot_exports_both_formats_after_source_session_is_dropped() {
+    let temp = TempDir::new();
+    let source = temp.path("art.psd");
+    fs::write(&source, LAYERED_PSD).unwrap();
+    let mut session = AuthoringSession::new(DOCUMENT, kasane_core::ModelSetup::default()).unwrap();
+    session.import_psd_in_memory(&source, None).unwrap();
+    let original = session.read_texture(&session.asset_ids()[0]).unwrap();
+    let runtime = session.transfer_snapshot().unwrap();
+    let cubism = session.transfer_snapshot().unwrap();
+    drop(session);
+    fs::remove_file(source).unwrap();
+    let output = temp.path("runtime");
+    runtime
+        .publish(kasane_project::TransferFormat::Runtime, &output)
+        .unwrap();
+    cubism
+        .publish(
+            kasane_project::TransferFormat::Cubism,
+            &temp.path("artwork"),
+        )
+        .unwrap();
+    assert!(temp.path("artwork/artwork.cmo3").is_file());
+    assert!(!temp.path("artwork/artwork.can3").exists());
+    let model: serde_json::Value =
+        serde_json::from_slice(&fs::read(output.join("model.model3.json")).unwrap()).unwrap();
+    let texture = model["FileReferences"]["Textures"][0].as_str().unwrap();
+    let decoded = kasane_project::decode_png(&fs::read(output.join(texture)).unwrap()).unwrap();
+    assert_eq!(decoded.rgba, original.rgba.as_ref());
+}

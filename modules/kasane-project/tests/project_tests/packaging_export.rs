@@ -285,3 +285,88 @@ fn export_plan_is_inspectable_and_publication_never_reopens_sources() {
     }
     assert!(!destination.join("old").exists());
 }
+
+#[test]
+fn transfer_replaces_removed_and_renamed_runtime_files_but_keeps_unmanaged_files() {
+    use kasane_core::document::MotionClip;
+    use kasane_project::TransferFormat;
+    let tmp = TestDirectory::new();
+    let mut session = tmp.saved_session();
+    let motion = MotionClip {
+        id: id(800),
+        name: "Original motion".into(),
+        duration: 1.,
+        fps: 30.,
+        looping: false,
+        restricted_beziers: true,
+        fade_in: None,
+        fade_out: None,
+        tracks: vec![],
+        events: vec![],
+        extensions: Default::default(),
+        meta_extensions: Default::default(),
+        opaque_source_ids: None,
+        opaque_source_content_hash: None,
+    };
+    assert!(session
+        .document_mut()
+        .create_motion(motion.clone())
+        .status
+        .is_ok());
+    let output = tmp.0.join("transfer-runtime");
+    let publish = |session: &DocumentSession| {
+        session
+            .transfer_snapshot()
+            .unwrap()
+            .publish(TransferFormat::Runtime, &output)
+    };
+    let motion_path = || {
+        let model: serde_json::Value =
+            serde_json::from_slice(&fs::read(output.join("model.model3.json")).unwrap()).unwrap();
+        output.join(
+            model["FileReferences"]["Motions"]["Default"][0]["File"]
+                .as_str()
+                .unwrap(),
+        )
+    };
+    publish(&session).unwrap();
+    let original = motion_path();
+    let mut renamed = motion;
+    renamed.name = "Renamed motion".into();
+    assert!(session
+        .document_mut()
+        .replace_motion(renamed)
+        .status
+        .is_ok());
+    publish(&session).unwrap();
+    let renamed = motion_path();
+    assert!(renamed.is_file());
+    assert!(!original.exists());
+    assert!(session.document_mut().erase_object(&id(800)).status.is_ok());
+    // A user-created neighbor in the former managed directory must still block replacement.
+    let notes = output.join("motions/notes.txt");
+    fs::write(&notes, b"keep").unwrap();
+    assert_eq!(publish(&session).unwrap_err().code, "UNMANAGED_OUTPUT");
+    assert_eq!(fs::read(&notes).unwrap(), b"keep");
+    assert!(renamed.is_file());
+    fs::remove_file(notes).unwrap();
+    let saved_motion = fs::read(&renamed).unwrap();
+    fs::write(&renamed, b"independently edited motion").unwrap();
+    assert_eq!(publish(&session).unwrap_err().code, "UNMANAGED_OUTPUT");
+    assert_eq!(fs::read(&renamed).unwrap(), b"independently edited motion");
+    fs::write(&renamed, saved_motion).unwrap();
+    #[cfg(unix)]
+    {
+        let outside = tmp.0.join("keep.txt");
+        fs::write(&outside, b"keep outside").unwrap();
+        let alias = output.join("motions/alias");
+        std::os::unix::fs::symlink(&outside, &alias).unwrap();
+        assert_eq!(publish(&session).unwrap_err().code, "UNMANAGED_OUTPUT");
+        assert_eq!(fs::read(&outside).unwrap(), b"keep outside");
+        fs::remove_file(alias).unwrap();
+    }
+    publish(&session).unwrap();
+    assert!(!renamed.exists());
+    assert!(!output.join("motions").exists());
+    publish(&session).unwrap();
+}

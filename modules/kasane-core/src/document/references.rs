@@ -126,6 +126,18 @@ impl Document {
                     refs.push(format!("expression {} entry {index}", expression.id));
                 }
             }
+            if let Some(scene) = expression.source_scene() {
+                for (index, track) in scene.tracks.iter().enumerate() {
+                    if matches!(&track.target, MotionTrackTarget::Parameter { parameter_id } if parameter_id == id)
+                        || matches!(&track.target, MotionTrackTarget::PartOpacity { part_id } if part_id == id)
+                    {
+                        refs.push(format!(
+                            "expression {} source scene track {index}",
+                            expression.id
+                        ));
+                    }
+                }
+            }
         }
         for motion in self.content.motions.values() {
             for (index, track) in motion.tracks.iter().enumerate() {

@@ -461,7 +461,7 @@ fn unsupported_effects_registrations_and_duplicate_tracks_are_explicit() {
                 clip_id: uuid(100),
                 fade_in: None,
                 fade_out: None,
-                sound: None,
+                sound: Some("voice.wav".into()),
                 extensions: Default::default()
             }]
         }])

@@ -52,8 +52,31 @@ pub struct ExpressionAsset {
 }
 
 impl ExpressionAsset {
+    /// CAN3 scene layout and initial non-parameter state are authoring data,
+    /// separate from the expression's runtime parameter overrides.
+    pub fn source_scene(&self) -> Option<super::MotionClip> {
+        self.extensions
+            .get("KasaneSourceScene")
+            .and_then(|value| serde_json::from_value(value.clone()).ok())
+    }
+
+    pub fn preserve_source_scene(&mut self, scene: &super::MotionClip) {
+        self.extensions.insert(
+            "KasaneSourceScene".into(),
+            serde_json::to_value(scene).expect("validated source scene serializes"),
+        );
+    }
+
+    pub fn runtime_extensions(&self) -> BTreeMap<String, Value> {
+        self.extensions
+            .iter()
+            .filter(|(key, _)| key.as_str() != "KasaneSourceScene")
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect()
+    }
+
     pub fn has_extensions(&self) -> bool {
-        !self.extensions.is_empty()
+        self.extensions.keys().any(|key| key != "KasaneSourceScene")
             || self
                 .entries
                 .iter()
@@ -118,6 +141,24 @@ impl Document {
     fn validate_expression(&self, expression: &ExpressionAsset) -> Status {
         if !super::valid_uuid(&expression.id) {
             return Status::error("INVALID_EXPRESSION_ID", &expression.id);
+        }
+        if expression.extensions.contains_key("KasaneSourceScene") {
+            let Some(scene) = expression.source_scene() else {
+                return Status::error("INVALID_EXPRESSION_SOURCE_SCENE", &expression.id);
+            };
+            let status = self.validate_motion(&scene);
+            if !status.is_ok() {
+                return status;
+            }
+            if scene.id != expression.id
+                || !scene.events.is_empty()
+                || scene
+                    .tracks
+                    .iter()
+                    .any(|track| track.initial.time != 0. || !track.segments.is_empty())
+            {
+                return Status::error("INVALID_EXPRESSION_SOURCE_SCENE", &expression.id);
+            }
         }
         if expression.name.is_empty() || expression.name.contains('\0') {
             return Status::error("INVALID_EXPRESSION_NAME", &expression.id);

@@ -162,6 +162,9 @@ impl Animation<'_> {
                     let parameter = self.doc.get_parameter(parameter_id).unwrap();
                     let id = format!("{PARAM}{}", parameter.runtime_id);
                     let mut attr = Attribute::new(&id, &parameter.name);
+                    attr.guid = N::new("CParameterGuid")
+                        .attr("uuid", parameter_id)
+                        .attr("note", &parameter.name);
                     attr.options = fades(track);
                     attr.options.push(
                         s(format!("live2dParam:{}", parameter.runtime_id)).named("KEY_PARAM_ID"),

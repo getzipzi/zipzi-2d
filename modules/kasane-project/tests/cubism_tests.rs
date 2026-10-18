@@ -87,3 +87,57 @@ fn saved_projects_publish_a_consistent_animation_model_pair() {
     assert_eq!(session.document().revision(), revision);
     std::fs::remove_dir_all(temp).unwrap();
 }
+
+#[test]
+fn removing_last_motion_replaces_pair_with_model_only_without_deleting_unmanaged_files() {
+    let temp = std::env::temp_dir().join(format!("kasane-model-only-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir(&temp).unwrap();
+    let mut doc = Document::new();
+    assert!(doc
+        .initialize(
+            &uuid::Uuid::new_v4().to_string(),
+            Canvas::new(100., 100., Vec2::default(), 1.)
+        )
+        .is_ok());
+    let motion = uuid::Uuid::new_v4().to_string();
+    assert!(doc
+        .create_motion(MotionClip {
+            id: motion.clone(),
+            name: "Motion".into(),
+            duration: 1.,
+            fps: 30.,
+            looping: false,
+            restricted_beziers: true,
+            fade_in: None,
+            fade_out: None,
+            tracks: vec![],
+            events: vec![],
+            extensions: Default::default(),
+            meta_extensions: Default::default(),
+            opaque_source_ids: None,
+            opaque_source_content_hash: None,
+        })
+        .status
+        .is_ok());
+    let mut session = DocumentSession::from_authoring_document(doc);
+    let output = temp.join("avatar");
+    let publish = |session: &DocumentSession| {
+        session
+            .transfer_snapshot()
+            .unwrap()
+            .publish(kasane_project::TransferFormat::Cubism, &output)
+    };
+    publish(&session).unwrap();
+    assert!(output.join("avatar.can3").is_file());
+    assert!(session.document_mut().erase_object(&motion).status.is_ok());
+    std::fs::write(output.join("other.can3"), b"keep").unwrap();
+    assert!(publish(&session).is_err());
+    assert_eq!(std::fs::read(output.join("other.can3")).unwrap(), b"keep");
+    assert!(output.join("avatar.can3").is_file());
+    std::fs::remove_file(output.join("other.can3")).unwrap();
+    publish(&session).unwrap();
+    assert!(output.join("avatar.cmo3").is_file());
+    assert!(!output.join("avatar.can3").exists());
+    publish(&session).unwrap();
+    std::fs::remove_dir_all(temp).unwrap();
+}

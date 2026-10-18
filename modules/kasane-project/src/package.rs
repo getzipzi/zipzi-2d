@@ -53,8 +53,12 @@ pub struct PackageOptions {
     pub validate: Option<PackageValidator>,
 }
 
+mod managed;
 mod plan;
-pub use plan::{build_export_plan, ExportFile, ExportFileKind, ExportPlan, PackageReference};
+pub use plan::{
+    build_export_plan, build_export_plan_with, ExportFile, ExportFileKind, ExportPlan,
+    PackageReference,
+};
 
 pub fn publish_package(doc: &Document, options: &PackageOptions) -> Result<Publication, Status> {
     publish_with_filesystem(doc, options, &NativeFileSystem)
@@ -72,7 +76,7 @@ pub(crate) fn publish_with_filesystem(
         )
     })?;
     let plan = build_export_plan(doc, &options.asset_root)?;
-    publish_plan_with_filesystem(&plan, &options.destination, validate.as_ref(), files)
+    publish_plan_with_filesystem(&plan, &options.destination, validate.as_ref(), files, false)
 }
 
 /// Validate and publish the exact captured bytes; source files are never reopened.
@@ -81,7 +85,26 @@ pub fn publish_export_plan(
     destination: &std::path::Path,
     validate: &dyn Fn(&ExportPlan) -> Result<PackageValidation, Status>,
 ) -> Result<Publication, Status> {
-    publish_plan_with_filesystem(plan, destination, validate, &NativeFileSystem)
+    publish_plan_with_filesystem(plan, destination, validate, &NativeFileSystem, false)
+}
+
+/// Editor transfers replace only known output files. Check under the publication
+/// lock so another export cannot change the old manifest between checking and rename.
+pub(crate) fn publish_managed_export_plan(
+    plan: &ExportPlan,
+    destination: &std::path::Path,
+) -> Result<Publication, Status> {
+    publish_plan_with_filesystem(
+        plan,
+        destination,
+        &|_| {
+            Ok(PackageValidation::structural(
+                RuntimeValidation::NotPerformed,
+            ))
+        },
+        &NativeFileSystem,
+        true,
+    )
 }
 
 fn publish_plan_with_filesystem(
@@ -89,6 +112,7 @@ fn publish_plan_with_filesystem(
     destination: &std::path::Path,
     validate: &dyn Fn(&ExportPlan) -> Result<PackageValidation, Status>,
     files: &dyn FileSystem,
+    managed_only: bool,
 ) -> Result<Publication, Status> {
     io::reject_symlink(destination)?;
     let destination = io::local_path(destination)?;
@@ -114,6 +138,11 @@ fn publish_plan_with_filesystem(
         ));
     }
     let mut report = plan.report.clone();
+    report["managed_files"] = serde_json::json!(plan
+        .files
+        .iter()
+        .map(|(path, file)| (path, file.sha256()))
+        .collect::<std::collections::BTreeMap<_, _>>());
     report["runtime_validation"] = validation.runtime.report_value().into();
     report["framework_model3_loader_validation"] = validation.model3_loader.report_value().into();
     report["framework_animation_validation"] = validation.animation.report_value().into();
@@ -132,6 +161,9 @@ fn publish_plan_with_filesystem(
             "INVALID_DESTINATION",
             "Destination is not a directory",
         ));
+    }
+    if managed_only && destination.exists() {
+        managed::check(&destination, &plan.files)?;
     }
     let stage = io::Stage::new(parent)?;
     for directory in &directories {

@@ -11,6 +11,7 @@ pub mod physics;
 pub mod pose;
 pub mod resources;
 pub mod store;
+pub mod transfer;
 
 pub use cdi::{export_cdi3, import_cdi3, CdiImport, CdiProjectDiagnostic, CdiProjectError};
 pub use cmo3::{encode_document_cmo3, encode_project_cmo3, publish_cmo3};
@@ -46,3 +47,4 @@ pub use store::{
     project_manifest, read_project_asset, DocumentSession, DocumentSnapshot, DocumentStore,
     ProjectResult, ResourceDiagnostic,
 };
+pub use transfer::{resolve_model3_entry, TransferFormat, TransferSnapshot};

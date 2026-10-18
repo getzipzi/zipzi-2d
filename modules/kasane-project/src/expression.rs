@@ -231,7 +231,7 @@ pub fn export_expression3(document: &Document, id: &str) -> Result<String, Expre
         fade_in: asset.fade_in,
         fade_out: asset.fade_out,
         parameters: Some(parameters),
-        extensions: asset.extensions.clone(),
+        extensions: asset.runtime_extensions(),
     })
     .map_err(wire_error)
 }

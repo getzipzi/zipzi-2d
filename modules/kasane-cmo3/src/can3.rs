@@ -9,11 +9,19 @@ use crate::{
     *,
 };
 use kasane_core::{
-    document::{MotionClip, MotionSegment, MotionTrack, MotionTrackTarget},
+    document::{
+        ExpressionAsset, ExpressionBlend, ExpressionTarget, MotionClip, MotionKey, MotionSegment,
+        MotionTrack, MotionTrackTarget,
+    },
     types::Canvas,
     Document,
 };
 use std::collections::{BTreeMap, BTreeSet};
+
+// A reserved playlist identity namespace distinguishes model3 registrations
+// from ordinary Editor playback playlists. UUIDs survive Editor save/reopen;
+// the visible playlist name and ordered scene references remain native CAN3.
+pub(crate) const MOTION_GROUP_PLAYLIST_PREFIX: &str = "ca5a4d47-0001-4000-8000-";
 
 #[derive(Debug, Clone)]
 pub struct Can3Options {
@@ -162,7 +170,10 @@ fn loss(report: &mut Cmo3Report, id: &str, code: &str, message: &str) {
 }
 fn frame(time: f32, fps: f32, id: &str, report: &mut Cmo3Report) -> Result<i32, Cmo3Error> {
     let value = f64::from(time) * f64::from(fps);
-    if !value.is_finite() || value < 0. || value.round() > f64::from(i32::MAX) {
+    if !value.is_finite()
+        || value.round() < f64::from(i32::MIN)
+        || value.round() > f64::from(i32::MAX)
+    {
         return Err(Cmo3Error::InvalidDocument(format!(
             "{id}: CAN3 frame exceeds int32 range"
         )));
@@ -270,6 +281,111 @@ fn keys(track: &MotionTrack, fps: f32, report: &mut Cmo3Report) -> Result<Vec<Ke
     }
     Ok(result)
 }
+
+fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Report) -> MotionClip {
+    let mut clip = asset.source_scene().unwrap_or_else(|| MotionClip {
+        id: asset.id.clone(),
+        name: asset.name.clone(),
+        duration: 1. / 30.,
+        fps: 30.,
+        looping: false,
+        restricted_beziers: true,
+        fade_in: asset.fade_in,
+        fade_out: asset.fade_out,
+        tracks: Vec::new(),
+        events: Vec::new(),
+        extensions: Default::default(),
+        meta_extensions: Default::default(),
+        opaque_source_ids: None,
+        opaque_source_content_hash: None,
+    });
+    clip.name = asset.name.clone();
+    clip.fade_in = asset.fade_in;
+    clip.fade_out = asset.fade_out;
+    let source_tracks = std::mem::take(&mut clip.tracks);
+    clip.tracks.extend(
+        source_tracks
+            .iter()
+            .filter(|track| !matches!(track.target, MotionTrackTarget::Parameter { .. }))
+            .cloned(),
+    );
+    if asset.has_extensions() {
+        loss(
+            report,
+            &asset.id,
+            "CAN3_EXPRESSION_EXTENSIONS",
+            "Opaque expression extensions cannot be represented in CAN3",
+        );
+    }
+    let mut targets = BTreeSet::new();
+    for entry in &asset.entries {
+        let ExpressionTarget::Resolved { parameter_id } = &entry.target else {
+            loss(
+                report,
+                &asset.id,
+                "CAN3_EXPRESSION_TARGET",
+                "Unresolved expression parameters cannot be represented in CAN3",
+            );
+            continue;
+        };
+        if entry.blend.unwrap_or(ExpressionBlend::Add) != ExpressionBlend::Add {
+            loss(report, &asset.id, "CAN3_EXPRESSION_BLEND", "CAN3 initial values import as Add expressions; Multiply and Overwrite require unavailable blend metadata");
+            continue;
+        }
+        // CAN3 stores absolute poses; Add expressions store an offset from the
+        // model default. Reconstruct the pose using the current parameter.
+        let value = doc.get_parameter(parameter_id).unwrap().default_value + entry.value;
+        if !value.is_finite() {
+            loss(
+                report,
+                &asset.id,
+                "CAN3_EXPRESSION_VALUE",
+                "Expression offset plus parameter default exceeds the finite CAN3 value range",
+            );
+            continue;
+        }
+        if !targets.insert(parameter_id) {
+            loss(report, &asset.id, "CAN3_EXPRESSION_COLLISION", "Repeated expression parameters cannot be represented by a single CAN3 initial value");
+            continue;
+        }
+        let target = MotionTrackTarget::Parameter {
+            parameter_id: parameter_id.clone(),
+        };
+        let mut track = source_tracks
+            .iter()
+            .find(|track| track.target == target)
+            .cloned()
+            .unwrap_or_else(|| MotionTrack {
+                id: uuid::Uuid::new_v4().to_string(),
+                target,
+                initial: MotionKey {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    time: 0.,
+                    value,
+                },
+                segments: Default::default(),
+                fade_in: None,
+                fade_out: None,
+                extensions: Default::default(),
+            });
+        track.initial.value = value;
+        clip.tracks.push(track);
+    }
+    if clip
+        .tracks
+        .iter()
+        .all(|track| !matches!(track.target, MotionTrackTarget::Parameter { .. }))
+    {
+        loss(
+            report,
+            &asset.id,
+            "CAN3_EMPTY_EXPRESSION",
+            "An expression needs a parameter initial value to retain its classification on import",
+        );
+    }
+    clip
+}
+
 fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error> {
     if let Some(issue) = doc.validate_structure().first() {
         return Err(Cmo3Error::InvalidDocument(format!(
@@ -296,8 +412,18 @@ fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error
         );
     }
     let mut scenes = Vec::new();
-    for id in doc.motion_order() {
-        let clip: &MotionClip = doc.get_motion(id).unwrap();
+    let expressions: Vec<_> = doc
+        .expression_order()
+        .iter()
+        .map(|id| expression_clip(doc, doc.get_expression(id).unwrap(), &mut report))
+        .collect();
+    for clip in doc
+        .motion_order()
+        .iter()
+        .map(|id| doc.get_motion(id).unwrap())
+        .chain(expressions.iter())
+    {
+        let id = &clip.id;
         let frames = frame(clip.duration, clip.fps, id, &mut report)?;
         if frames == 0 {
             loss(
@@ -377,8 +503,15 @@ fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error
         }
         scenes.push(scene);
     }
-    if !doc.motion_groups().is_empty() {
-        loss(&mut report, doc.id(), "CAN3_MOTION_REGISTRATIONS", "model3 motion groups, registration fades and sound references are omitted; source clips remain editable scenes");
+    if doc.motion_groups().iter().any(|group| {
+        group.entries.iter().any(|entry| {
+            entry.fade_in.is_some()
+                || entry.fade_out.is_some()
+                || entry.sound.is_some()
+                || !entry.extensions.is_empty()
+        })
+    }) {
+        loss(&mut report, doc.id(), "CAN3_MOTION_REGISTRATIONS", "Registration-specific fades, sound references and opaque metadata cannot be represented by CAN3 playlists");
     }
     if scenes.is_empty() {
         scenes.push(Scene {
@@ -500,6 +633,39 @@ impl<'a> Animation<'a> {
                         .field("guid", guid.clone())
                 })),
             );
+        let mut playlists = vec![playlist];
+        for group in self.doc.motion_groups() {
+            let uuid = loop {
+                if self.serial >= 1 << 48 {
+                    return Err(Cmo3Error::TooLarge);
+                }
+                let uuid = format!("{MOTION_GROUP_PLAYLIST_PREFIX}{:012x}", self.serial);
+                self.serial += 1;
+                if !self.doc.contains_id(&uuid) {
+                    break uuid;
+                }
+            };
+            let guid = self.graph.add(
+                N::new("CPlaylistGuid")
+                    .attr("uuid", uuid)
+                    .attr("note", "Model3 motion group"),
+            );
+            let entries = group.entries.iter().map(|entry| {
+                let index = scenes
+                    .iter()
+                    .position(|scene| scene.guid == entry.clip_id)
+                    .expect("validated registration scene exists");
+                N::new("PlaylistItemData")
+                    .field("super", N::new("ASceneBlendingData"))
+                    .field("guid", built[index].1.clone())
+            });
+            playlists.push(
+                N::new("PlaylistData")
+                    .field("guid", guid)
+                    .field("name", s(&group.name))
+                    .field("list", list(entries)),
+            );
+        }
         self.graph.set(
             &self.root,
             N::new("CAnimation")
@@ -530,7 +696,7 @@ impl<'a> Animation<'a> {
                     "sceneBlendingSettings",
                     N::new("CSceneBlendingSettingsSource")
                         .field("guid", blend_guid)
-                        .field("playlists", list([playlist]))
+                        .field("playlists", list(playlists))
                         .field("sceneGroups", N::empty_list()),
                 )
                 .field("hideAbsolutePathIfLinkError", b(false))

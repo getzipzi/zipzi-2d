@@ -9,6 +9,45 @@ use kasane_core::Document;
 use kasane_project::{ProjectResult, ResourceDiagnostic};
 
 impl AuthoringSession {
+    pub fn transfer_snapshot(&self) -> Result<kasane_project::TransferSnapshot, SdkError> {
+        self.project
+            .transfer_snapshot()
+            .map_err(|s| SdkError::from_status(s, "transfer_snapshot", Vec::new()))
+    }
+    pub fn import_cubism(
+        &mut self,
+        path: &Path,
+        expected: Option<Version>,
+    ) -> Result<Version, SdkError> {
+        if !path.is_absolute() {
+            return Err(SdkError::new(
+                "INVALID_PATH",
+                "Cubism path must be absolute",
+                "import_cubism",
+            ));
+        }
+        let current = self.version();
+        if let Some(value) = expected.filter(|v| *v != current) {
+            let mut error =
+                SdkError::new("STALE_VERSION", "Document version changed", "import_cubism");
+            error.expected_version = Some(Box::new(value));
+            error.actual_version = Some(Box::new(current));
+            return Err(error);
+        }
+        let generation = self.generation.checked_add(1).ok_or_else(|| {
+            SdkError::new(
+                "GENERATION_EXHAUSTED",
+                "Document generation exhausted",
+                "import_cubism",
+            )
+        })?;
+        self.project.import_cubism_authoring(path).map_err(|s| {
+            SdkError::from_status(s, "import_cubism", vec![path.display().to_string()])
+        })?;
+        self.reset_after_open(generation);
+        Ok(self.version())
+    }
+
     /// Capture an editable Cubism project, including unsaved PNG resources.
     /// Structured codec errors retain loss reports for command-line/UI callers.
     pub fn encode_cmo3(
@@ -276,6 +315,27 @@ impl AuthoringSession {
                 vec![path.display().to_string()],
             ));
         }
+        if let Some(canvas) = self.project.document().source_canvas() {
+            let mut settings = self.project.document().export_settings();
+            settings.pixels_per_unit = canvas.pixels_per_unit;
+            settings.bounds = Some([
+                -canvas.origin.x,
+                canvas.origin.y - canvas.height,
+                canvas.width - canvas.origin.x,
+                canvas.origin.y,
+            ]);
+            let result = self
+                .project
+                .document_mut()
+                .replace_export_settings(settings);
+            if !result.status.is_ok() {
+                return Err(SdkError::from_status(
+                    result.status,
+                    "import_model3",
+                    Vec::new(),
+                ));
+            }
+        }
         self.reset_after_open(generation);
         Ok(ImportReceipt {
             before,
@@ -324,6 +384,27 @@ impl AuthoringSession {
                 "import_bare_moc3",
                 vec![path.display().to_string()],
             ));
+        }
+        if let Some(canvas) = self.project.document().source_canvas() {
+            let mut settings = self.project.document().export_settings();
+            settings.pixels_per_unit = canvas.pixels_per_unit;
+            settings.bounds = Some([
+                -canvas.origin.x,
+                canvas.origin.y - canvas.height,
+                canvas.width - canvas.origin.x,
+                canvas.origin.y,
+            ]);
+            let result = self
+                .project
+                .document_mut()
+                .replace_export_settings(settings);
+            if !result.status.is_ok() {
+                return Err(SdkError::from_status(
+                    result.status,
+                    "import_model3",
+                    Vec::new(),
+                ));
+            }
         }
         self.reset_after_open(generation);
         Ok(ImportReceipt {

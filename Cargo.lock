@@ -744,12 +744,15 @@ dependencies = [
 name = "kasane-cmo3"
 version = "0.1.0"
 dependencies = [
+ "crc32fast",
+ "flate2",
  "kasane-core",
  "png",
  "roxmltree",
  "serde",
  "serde_json",
  "thiserror",
+ "uuid",
  "zip",
 ]
 
