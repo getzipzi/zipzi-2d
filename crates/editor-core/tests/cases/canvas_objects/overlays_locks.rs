@@ -33,7 +33,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
             "tangent drag must keep anchors fixed"
         );
     }
-    assert!(bent[1].y < original[0].y - 1.);
+    assert!(bent[1].y > original[0].y + 1.);
     assert_ne!(
         shown(&mut editor)?.geometry.meshes[0].vertices,
         original_mesh
@@ -463,7 +463,7 @@ fn locked_deformer_has_only_read_only_lines_and_blocks_control_adjustments() -> 
             .execute(EditorCommand::AdjustDeformer {
                 object,
                 adjustment: DeformerAdjustment {
-                    translation: ModelPoint { x: 1., y: 0. },
+                    translation: editor_core::ModelVector { x: 1., y: 0. },
                     angle: 0.,
                     scale: 1.
                 }
@@ -486,7 +486,6 @@ fn locked_mask_still_clips_unlocked_objects_in_canvas_candidates() -> anyhow::Re
     let scene = CanvasScene::new(&doc, source);
     doc.set_objects_locked(&[ObjectRef::new(ObjectKind::Mesh, bottom)], true)?;
     let t = ViewportTransform::new(
-        scene.source.viewport_frame.model_space,
         ViewportMetrics {
             width: 512.,
             height: 512.,

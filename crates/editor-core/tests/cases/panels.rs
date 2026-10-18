@@ -460,8 +460,8 @@ fn repeated_keyform_preview_and_unchanged_scalar_edits_are_noops() -> anyhow::Re
     let object = index.objects[0].reference.clone();
     blank.set_object_property(
         &object,
-        "model_space.origin.x",
-        serde_json::json!(blank.model_space().origin.x),
+        "export_settings.padding_pixels",
+        serde_json::json!(blank.export_settings().padding_pixels),
     )?;
     assert!(!blank.modified());
     assert_eq!(blank.history_lengths(), (0, 0));

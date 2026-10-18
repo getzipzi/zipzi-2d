@@ -140,21 +140,17 @@ impl Editor {
         let presentation = self.viewport_presentation_mut(binding.viewport).unwrap();
         let revision = presentation.next();
         presentation.requested_modeling = Some((scene_revision, view_state.revision));
-        let canvas = crate::ViewportTransform::new(
-            scene.viewport_frame.model_space,
-            metrics,
-            view_state.view,
-        )
-        .map(|transform| CanvasFrame {
-            version: FrameVersion {
-                binding,
-                scene: scene_revision,
-                viewport: view_state.revision,
-                request: revision,
-            },
-            transform,
-            geometry,
-        });
+        let canvas =
+            crate::ViewportTransform::new(metrics, view_state.view).map(|transform| CanvasFrame {
+                version: FrameVersion {
+                    binding,
+                    scene: scene_revision,
+                    viewport: view_state.revision,
+                    request: revision,
+                },
+                transform,
+                geometry,
+            });
         Ok(EditorPreview {
             revision,
             scene,

@@ -74,7 +74,7 @@ fn deformer_lock_only_protects_itself_but_part_locks_still_protect_members() -> 
     assert!(doc.ensure_editable(&[parent.clone()]).is_err());
     doc.ensure_editable(&[child.clone(), mesh.clone()])?;
     let adjustment = DeformerAdjustment {
-        translation: ModelPoint { x: 3., y: 2. },
+        translation: editor_core::ModelVector { x: 3., y: 2. },
         angle: 0.,
         scale: 1.,
     };

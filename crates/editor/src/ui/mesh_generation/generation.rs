@@ -31,7 +31,7 @@ impl Candidate {
                 geometry
                     .positions
                     .iter()
-                    .map(|p| [(p.x - min_x) / width, (p.y - min_y) / height]),
+                    .map(|p| [(p.x - min_x) / width, 1. - (p.y - min_y) / height]),
             )
             .collect();
         let mut seen = HashSet::new();

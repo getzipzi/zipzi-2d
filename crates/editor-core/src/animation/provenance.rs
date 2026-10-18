@@ -207,7 +207,6 @@ impl Editor {
         &mut self,
         binding: crate::ViewportBinding,
         content: AnimationIdentity,
-        canvas: kasane_core::ModelSpace,
     ) -> Option<(crate::AnimationViewportIdentity, crate::ViewportTransform)> {
         if !self.viewport_binding_valid(binding)
             || binding.kind != crate::ViewportKind::Animation
@@ -220,7 +219,7 @@ impl Editor {
         let session = self.active_session_mut()?;
         session.fit_default_view(binding.viewport, metrics).ok()?;
         let state = session.view_state(binding.viewport);
-        let transform = crate::ViewportTransform::new(canvas, metrics, state.view)?;
+        let transform = crate::ViewportTransform::new(metrics, state.view)?;
         let presentation = self.viewport_presentation_mut(binding.viewport)?;
         if presentation.requested_animation == Some((content, state.revision)) {
             return None;

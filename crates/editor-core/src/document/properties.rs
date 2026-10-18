@@ -261,7 +261,9 @@ fn replace(edit: &mut EditSession<'_>, kind: ObjectKind, payload: serde_json::Va
     }
     match kind {
         ObjectKind::Document => {
-            edit.replace_model_space(serde_json::from_value(payload["model_space"].clone())?)?;
+            edit.replace_export_settings(serde_json::from_value(
+                payload["export_settings"].clone(),
+            )?)?;
         }
         ObjectKind::Part => replace!(replace_part),
         ObjectKind::Parameter => replace!(replace_parameter),

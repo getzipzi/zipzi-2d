@@ -55,9 +55,9 @@ fn actual_pixel_size_survives_viewport_resize_and_display_changes(cx: &mut TestA
             cx.simulate_window_resize(window, size(px(width), px(height)));
             cx.update_window(window, |_, window, cx| window.render_frame(cx))
                 .unwrap();
-            let (bounds, content, scale) = painted.borrow().unwrap();
-            assert!((content.size.width.as_f32() * scale - 480.).abs() < 0.001);
-            assert!((content.size.height.as_f32() * scale - 320.).abs() < 0.001);
+            let (bounds, content, _scale) = painted.borrow().unwrap();
+            assert!((content.size.width.as_f32() - 480.).abs() < 0.001);
+            assert!((content.size.height.as_f32() - 320.).abs() < 0.001);
             assert_eq!(content.center(), bounds.center());
         }
     }

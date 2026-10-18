@@ -94,7 +94,7 @@ fn warp_marquee_preserves_object_and_moves_selected_controls_only() -> anyhow::R
     )?;
     let after = control_points(&mut editor, &object)?;
     for i in 0..2 {
-        assert!((after[i].x - before[i].x - 40.).abs() < 0.001);
+        assert!((after[i].x - before[i].x - 20.).abs() < 0.001);
     }
     assert_eq!(&after[2..], &before[2..]);
     editor.execute(EditorCommand::Undo)?;
@@ -138,9 +138,9 @@ fn warp_gizmo_scales_all_points_and_cancels_as_one_edit() -> anyhow::Result<()> 
     );
     drag(&mut editor, start, end, true)?;
     let after = control_points(&mut editor, &object)?;
-    assert_eq!(after[0], before[0]);
-    assert!((after[3].x - before[0].x - 240.).abs() < 0.001);
-    assert!((after[3].y - before[0].y - 240.).abs() < 0.001);
+    assert_eq!(after[2], before[2]);
+    assert!((after[1].x - before[2].x - 240.).abs() < 0.001);
+    assert!((after[1].y - before[2].y + 240.).abs() < 0.001);
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.execute(EditorCommand::Undo)?;
     shown(&mut editor)?;
@@ -186,8 +186,8 @@ fn warp_outer_edge_moves_without_selecting_descendant_mesh() -> anyhow::Result<(
     )?;
     let after = control_points(&mut editor, &object)?;
     for (a, b) in before.iter().zip(&after) {
-        assert!((b.x - a.x - 40.).abs() < 0.001);
-        assert!((b.y - a.y + 32.).abs() < 0.001);
+        assert!((b.x - a.x - 20.).abs() < 0.001);
+        assert!((b.y - a.y - 16.).abs() < 0.001);
     }
     assert_eq!(editor.document().unwrap().context().selections, [object]);
     Ok(())
@@ -222,7 +222,7 @@ fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> 
     editor.execute(EditorCommand::AdjustDeformer {
         object: object.clone(),
         adjustment: DeformerAdjustment {
-            translation: ModelPoint { x: 10., y: 20. },
+            translation: editor_core::ModelVector { x: 10., y: 20. },
             angle: 90.,
             scale: 1.5,
         },
@@ -231,7 +231,7 @@ fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> 
     assert!((after[0].x - before[0].x - 10.).abs() < 0.001);
     assert!((after[0].y - before[0].y - 20.).abs() < 0.001);
     assert!(
-        after[1].y < after[0].y,
+        after[1].y > after[0].y,
         "positive numeric angle turns counterclockwise"
     );
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
@@ -240,7 +240,7 @@ fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> 
     editor.execute(EditorCommand::AdjustDeformer {
         object: object.clone(),
         adjustment: DeformerAdjustment {
-            translation: ModelPoint::default(),
+            translation: editor_core::ModelVector::default(),
             angle: 0.,
             scale: 1.,
         },
@@ -251,7 +251,7 @@ fn rotation_scale_handle_and_numeric_adjustment_preserve_pivot_and_history() -> 
             .execute(EditorCommand::AdjustDeformer {
                 object: object.clone(),
                 adjustment: DeformerAdjustment {
-                    translation: ModelPoint { x: 10., y: 0. },
+                    translation: editor_core::ModelVector { x: 10., y: 0. },
                     angle: 0.,
                     scale: 101.
                 }
@@ -385,7 +385,7 @@ fn unqueried_warp_snapshot_retains_keyform_and_parent_space_after_edits() -> any
             editor.execute(EditorCommand::AdjustDeformer {
                 object: target.clone(),
                 adjustment: DeformerAdjustment {
-                    translation: ModelPoint { x: 12., y: 8. },
+                    translation: editor_core::ModelVector { x: 12., y: 8. },
                     angle: 0.,
                     scale: 1.,
                 },
@@ -438,7 +438,7 @@ fn nested_deformer_adjustments_write_only_the_exact_keyform_in_both_canvas_direc
             editor.execute(EditorCommand::AdjustDeformer {
                 object: object.clone(),
                 adjustment: DeformerAdjustment {
-                    translation: ModelPoint { x: 12., y: 8. },
+                    translation: editor_core::ModelVector { x: 12., y: 8. },
                     angle: 0.,
                     scale: 1.,
                 },
@@ -464,7 +464,7 @@ fn nested_deformer_adjustments_write_only_the_exact_keyform_in_both_canvas_direc
                     .execute(EditorCommand::AdjustDeformer {
                         object: object.clone(),
                         adjustment: DeformerAdjustment {
-                            translation: ModelPoint::default(),
+                            translation: editor_core::ModelVector::default(),
                             angle: 25.,
                             scale: 1.2
                         }
@@ -496,15 +496,15 @@ fn numeric_warp_rotation_and_scale_use_displayed_center_under_parent() -> anyhow
     editor.execute(EditorCommand::AdjustDeformer {
         object: object.clone(),
         adjustment: DeformerAdjustment {
-            translation: ModelPoint::default(),
+            translation: editor_core::ModelVector::default(),
             angle: 90.,
             scale: 0.5,
         },
     })?;
     let after = control_points(&mut editor, &object)?;
     for (a, b) in before.iter().zip(&after) {
-        assert!((b.x - (center.x + (a.y - center.y) * 0.5)).abs() < 0.01);
-        assert!((b.y - (center.y - (a.x - center.x) * 0.5)).abs() < 0.01);
+        assert!((b.x - (center.x - (a.y - center.y) * 0.5)).abs() < 0.01);
+        assert!((b.y - (center.y + (a.x - center.x) * 0.5)).abs() < 0.01);
     }
     Ok(())
 }
@@ -520,7 +520,6 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
         for zoom in [0.5, 1., 2.] {
             for dpi in [1., 2.] {
                 let transform = ViewportTransform::new(
-                    scene.source.viewport_frame.model_space,
                     ViewportMetrics {
                         width,
                         height: width,
@@ -535,9 +534,9 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
                 let points = scene.control_points(control, transform);
                 let gizmo = scene.deformer_gizmo(control, transform).unwrap();
                 let radius = |p: ViewportPoint| (p.x - gizmo.center.x).hypot(p.y - gizmo.center.y);
-                assert!((radius(points[1]) * dpi - 540. * zoom).abs() < 0.001);
-                assert!((radius(gizmo.outline[0].0) * dpi - 280. * zoom).abs() < 0.001);
-                assert!((radius(gizmo.handles[0].1) * dpi - 400. * zoom).abs() < 0.001);
+                assert!((radius(points[1]) - 540. * zoom).abs() < 0.001);
+                assert!((radius(gizmo.outline[0].0) - 280. * zoom).abs() < 0.001);
+                assert!((radius(gizmo.handles[0].1) - 400. * zoom).abs() < 0.001);
                 let selection = std::slice::from_ref(&object);
                 let hit = |p| {
                     scene.hit(

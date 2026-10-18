@@ -13,9 +13,9 @@ fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes(
         editor.seek_timeline(document, 0.4)?;
         let content = evaluate(&mut editor, &mut evaluator)?;
         let binding = editor.primary_viewport_binding().unwrap();
-        let canvas = content.scene.viewport_frame.model_space;
+
         let (mut pending, _) = editor
-            .animation_viewport_request(binding, content.identity, canvas)
+            .animation_viewport_request(binding, content.identity)
             .unwrap();
         let first = pending;
         for step in 0..24 {
@@ -29,7 +29,7 @@ fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes(
                 "navigation must reuse content"
             );
             let (newer, _) = editor
-                .animation_viewport_request(binding, content.identity, canvas)
+                .animation_viewport_request(binding, content.identity)
                 .unwrap();
             assert!(newer.viewport_revision > pending.viewport_revision);
             assert!(editor.present_animation_viewport(pending, content.snapshot.clone()));
@@ -51,14 +51,14 @@ fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes(
         ] {
             editor.pan_by(ViewportPoint { x: 1., y: 0. });
             let (old_size, _) = editor
-                .animation_viewport_request(binding, content.identity, canvas)
+                .animation_viewport_request(binding, content.identity)
                 .unwrap();
             editor.set_canvas_metrics(metrics);
             assert!(editor.animation_content_valid(content.identity));
             assert!(!editor.present_animation_viewport(old_size, content.snapshot.clone()));
             assert!(editor.animation_request().is_none());
             let (resized, _) = editor
-                .animation_viewport_request(binding, content.identity, canvas)
+                .animation_viewport_request(binding, content.identity)
                 .unwrap();
             assert_eq!(resized.metrics, metrics);
             let mut future = resized;
@@ -83,9 +83,9 @@ fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation(
         editor.seek_timeline(document, 0.35)?;
         let original = evaluate(&mut editor, &mut evaluator)?;
         let binding = editor.primary_viewport_binding().unwrap();
-        let canvas = original.scene.viewport_frame.model_space;
+
         let (first, _) = editor
-            .animation_viewport_request(binding, original.identity, canvas)
+            .animation_viewport_request(binding, original.identity)
             .unwrap();
         assert!(editor.present_animation_viewport(first, original.snapshot.clone()));
         for step in 0..16 {
@@ -100,7 +100,7 @@ fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation(
             }
             assert!(editor.animation_request().is_none());
             let (projection, _) = editor
-                .animation_viewport_request(binding, original.identity, canvas)
+                .animation_viewport_request(binding, original.identity)
                 .unwrap();
             assert_eq!(projection.content, original.identity);
             assert!(!editor.present_animation_viewport(first, original.snapshot.clone()));
@@ -248,11 +248,7 @@ fn continuous_frames_do_not_starve_and_barriers_reject_late_frames() -> anyhow::
     assert!(editor.animation_request().is_none());
     let binding = editor.primary_viewport_binding().unwrap();
     let (old_view, _) = editor
-        .animation_viewport_request(
-            binding,
-            zero.identity,
-            zero.scene.viewport_frame.model_space,
-        )
+        .animation_viewport_request(binding, zero.identity)
         .unwrap();
     editor.pan_by(ViewportPoint { x: 1., y: 0. });
     assert!(editor.present_animation_viewport(old_view, zero.snapshot.clone()));

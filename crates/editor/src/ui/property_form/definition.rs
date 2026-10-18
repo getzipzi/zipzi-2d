@@ -55,10 +55,6 @@ pub(crate) fn definition(kind: ObjectKind) -> FormDefinition {
         }
     };
     let fields = match kind {
-        ObjectKind::Document => vec![
-            field(OriginX, "properties.origin_x", Number),
-            field(OriginY, "properties.origin_y", Number),
-        ],
         ObjectKind::Part => vec![
             field(Name, "properties.name", Text),
             field(RuntimeId, "properties.runtime_id", Text),

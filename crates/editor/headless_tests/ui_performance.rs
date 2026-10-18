@@ -207,19 +207,17 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
         .save_project(&assets.path().join("dense.kasane"), None)
         .unwrap();
     let document = editor_core::Document::open(&saved.manifest).unwrap();
-    let fields = crate::panels::document_panel::property_rows(
+    let fields: Vec<_> = crate::panels::document_panel::property_rows(
         &document.object_index().objects[0].properties,
-    );
-    assert!(fields.len() > 500);
-    let first_detail: SharedString = format!(
-        "object-property-{}",
-        fields
-            .iter()
-            .find(|(field, _)| !field.starts_with("canvas."))
-            .unwrap()
-            .0
     )
-    .into();
+    .into_iter()
+    .filter(|(field, _)| {
+        !field.starts_with("export_settings.") && !field.starts_with("source_canvas.")
+    })
+    .collect();
+    assert!(fields.len() > 500);
+    let first_detail: SharedString =
+        format!("object-property-{}", fields.first().unwrap().0).into();
     let last: SharedString = format!("object-property-{}", fields.last().unwrap().0).into();
     let harness = setup_with_document(cx, document, assets);
     let properties = harness
@@ -282,15 +280,15 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
             window.render_frame(cx);
             assert!(
                 window
-                    .try_find("object-property-model_space.origin.x")
-                    .is_some()
+                    .try_find("object-property-export_settings.padding_pixels")
+                    .is_none()
             );
             window.click("property-group-$details", cx);
             window.render_frame(cx);
             assert!(
                 window
-                    .try_find("object-property-model_space.origin.x")
-                    .is_some()
+                    .try_find("object-property-export_settings.padding_pixels")
+                    .is_none()
             );
             assert!(window.try_find(first_detail.clone()).is_none());
             window.click("property-group-$details", cx);

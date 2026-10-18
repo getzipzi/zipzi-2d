@@ -56,15 +56,13 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
             return ViewState::default();
         }
         let metrics = editor.canvas_metrics();
-        let zoom = ((f64::from(metrics.width) / 208.).min(f64::from(metrics.height) / 208.)
-            * f64::from(metrics.scale_factor)
-            * 0.9)
+        let zoom = ((f64::from(metrics.width) / 208.).min(f64::from(metrics.height) / 208.) * 0.9)
             .clamp(0.04, 32.) as f32;
         ViewState {
             zoom,
             pan: ViewportPoint {
-                x: -128. * (zoom / metrics.scale_factor),
-                y: -128. * (zoom / metrics.scale_factor),
+                x: -128. * zoom,
+                y: 128. * zoom,
             },
         }
     };
@@ -147,14 +145,14 @@ fn fit_view_uses_content_and_display_scale_without_changing_other_views() -> any
     });
     editor.pan_by(ViewportPoint { x: 10., y: -40. });
     editor.dispatch(editor.command(CommandId::FitView))?;
-    let zoom = ((420_f64 / 208.).min(280. / 208.) * 2. * 0.9) as f32;
+    let zoom = ((420_f64 / 208.).min(280. / 208.) * 0.9) as f32;
     assert_view(
         editor.view(),
         ViewState {
             zoom,
             pan: ViewportPoint {
-                x: -128. * (zoom / 2.),
-                y: -128. * (zoom / 2.),
+                x: -128. * zoom,
+                y: 128. * zoom,
             },
         },
     );

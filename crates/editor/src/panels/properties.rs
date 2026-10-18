@@ -839,6 +839,16 @@ impl Render for PropertiesPanel {
                     })
                     .into_iter()
                     .filter(|(field, _)| {
+                        // Import provenance and output policy belong to the
+                        // import/export UI, including their read-only fields.
+                        if inspected.kind == editor_core::ObjectKind::Document
+                            && matches!(
+                                field.split('.').next(),
+                                Some("export_settings" | "source_canvas")
+                            )
+                        {
+                            return false;
+                        }
                         !self
                             .definition
                             .fields()

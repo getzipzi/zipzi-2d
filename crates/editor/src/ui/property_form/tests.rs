@@ -22,10 +22,14 @@ fn definitions_cover_domain_fields_once_without_submission_overrides() {
         let fields: std::collections::HashSet<_> =
             definition.fields().map(|s| s.binding.id).collect();
         assert_eq!(fields.len(), definition.fields().count());
-        assert_eq!(
-            fields,
-            property_specs(kind).iter().map(|spec| spec.id).collect()
-        );
+        if kind == Document {
+            assert!(fields.is_empty());
+        } else {
+            assert_eq!(
+                fields,
+                property_specs(kind).iter().map(|spec| spec.id).collect()
+            );
+        }
     }
 }
 fn parameter() -> PropertyForm {
@@ -159,7 +163,7 @@ fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
     );
     let width = property_specs(ObjectKind::Document)
         .iter()
-        .find(|s| s.id == PropertyId::OriginX)
+        .find(|s| s.id == PropertyId::PaddingPixels)
         .unwrap();
     forms
         .entries
@@ -167,7 +171,10 @@ fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
         .unwrap()
         .edit(width, "512".into());
     assert!(forms.prepare_save(&mut editor, target.document).is_none());
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 512.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        512.
+    );
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     forms
         .entries

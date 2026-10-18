@@ -224,7 +224,7 @@ fn texture_alpha_picking_matches_renderer_v_orientation_for_surfaces_and_masks()
             .positions
             .iter()
             .map(|p| {
-                let p = ViewportTransform::evaluated_to_source(frame.model_space, *p);
+                let p = editor_core::ModelPoint { x: p.x, y: p.y };
                 Vec2::new((p.x - 24.) / 208., 1. - (p.y - 24.) / 208.)
             })
             .collect();

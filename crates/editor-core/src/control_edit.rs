@@ -8,19 +8,19 @@ use kasane_core::{Mesh, MeshBinding, SceneBinding, SceneTrack, Transform, Vec2};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum ControlChange {
-    Translate(ModelPoint),
+    Translate(crate::ModelVector),
     Transform {
         pivot: ModelPoint,
         scale: [f32; 2],
         radians: f32,
-        translation: ModelPoint,
+        translation: crate::ModelVector,
     },
     Rotation {
         angle: f32,
         scale: f32,
-        translation: ModelPoint,
+        translation: crate::ModelVector,
     },
-    MoveAll(ModelPoint),
+    MoveAll(crate::ModelVector),
 }
 
 #[derive(Clone)]
@@ -73,7 +73,6 @@ pub(crate) struct ControlSpace {
     pub parent: Option<ControlGeometry>,
     pub parent_shape: Option<(usize, usize, bool)>,
     parent_points: Vec<f32>,
-    canvas: kasane_core::ModelSpace,
 }
 
 impl ControlEdit {
@@ -452,14 +451,7 @@ impl ControlEdit {
         if delta < -180. {
             delta += 360.
         }
-        // The evaluated rotation adds the parent angle; changing its authored
-        // angle changes the displayed angle by the same amount, even under warp.
-        // Its screen-space sign also includes the final canvas Y reversal.
-        Ok(if !self.space.canvas.y_axis_down {
-            delta
-        } else {
-            -delta
-        })
+        Ok(delta)
     }
 }
 
@@ -495,19 +487,11 @@ impl ControlSpace {
             parent,
             parent_shape,
             parent_points,
-            canvas: scene.source.viewport_frame.model_space,
         })
     }
     pub fn to_model(&self, p: Vec2) -> ModelPoint {
         let Some(parent) = &self.parent else {
-            return ModelPoint {
-                x: p.x,
-                y: if !self.canvas.y_axis_down {
-                    2. * self.canvas.origin.y - p.y
-                } else {
-                    p.y
-                },
-            };
+            return ModelPoint { x: p.x, y: p.y };
         };
         if parent.kind == ControlKind::Rotation {
             let [o, x, y, ..] = parent.points.as_slice() else {
@@ -543,9 +527,7 @@ impl ControlSpace {
     }
     pub fn from_model(&self, desired: ModelPoint, initial: Vec2) -> Result<Vec2> {
         if self.parent.is_none() {
-            // Canvas Y reversal is its own inverse for root authored positions.
-            let source = self.to_model(Vec2::new(desired.x, desired.y));
-            return Ok(Vec2::new(source.x, source.y));
+            return Ok(Vec2::new(desired.x, desired.y));
         }
         let mut p = initial;
         for _ in 0..24 {

@@ -148,7 +148,7 @@ mod tests {
     use super::{MeshPreview, MeshPreviewCache};
     use editor_core::{SceneSnapshot, SceneTexture};
     use gpui_apple::metal_renderer::MetalRenderer;
-    use kasane_core::{Canvas, DrawableFrame, Vec2};
+    use kasane_core::DrawableFrame;
     use std::sync::Arc;
 
     #[test]
@@ -158,7 +158,6 @@ mod tests {
             let gpu = gpui.shared_metal_context();
             let cache = MeshPreviewCache::default();
             let frame = Arc::new(DrawableFrame {
-                model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
                 ..Default::default()
             });
             let scene = SceneSnapshot {

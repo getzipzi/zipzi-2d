@@ -80,24 +80,15 @@ fn geometry_reuse_respects_canvas_coordinates_drawable_order_and_topology() -> a
         assert_eq!(reordered.mesh(&mesh.id).unwrap().vertices, mesh.vertices);
         assert_eq!(mesh.vertices, original.meshes[1 - index].vertices);
     }
-    for flag in [0, 1] {
-        let mut changed_canvas = source.clone();
-        let canvas = &mut Arc::make_mut(&mut changed_canvas.viewport_frame).model_space;
-        canvas.origin = Vec2::new(7., 9.);
-        canvas.y_axis_down = flag != 0;
-        let updated = original.with_positions(&document, changed_canvas.clone());
-        let fresh = CanvasScene::new(&document, changed_canvas);
-        for (old, (updated, fresh)) in original
+    // Metadata edits reuse exactly the same model-space mesh geometry.
+    let updated = original.with_positions(&document, source.clone());
+    assert!(
+        original
             .meshes
             .iter()
-            .zip(updated.meshes.iter().zip(fresh.meshes.iter()))
-        {
-            assert!(!Arc::ptr_eq(old, updated));
-            assert_eq!(updated.vertices, fresh.vertices);
-            assert_eq!(updated.bounds, fresh.bounds);
-            assert_eq!(updated.boundary, fresh.boundary);
-        }
-    }
+            .zip(updated.meshes.iter())
+            .all(|(a, b)| Arc::ptr_eq(a, b))
+    );
     document.preview_name("Renamed mesh")?;
     let renamed = document.snapshot()?;
     let renamed = original.with_positions(&document, renamed);

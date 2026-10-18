@@ -1,7 +1,7 @@
 //! Pixel coverage sampling and hit order through masks and offscreen compositing.
 use super::geometry::barycentric;
 use super::{CanvasScene, PICK_ALPHA};
-use crate::{ModelPoint, ViewportTransform};
+use crate::ModelPoint;
 use kasane_core::{Vec2, evaluation::RenderCommand};
 use std::collections::HashMap;
 
@@ -24,7 +24,6 @@ impl CanvasScene {
         else {
             return 0.;
         };
-        let canvas = self.source.viewport_frame.model_space;
         let mut alpha: f32 = 0.;
         for indices in d.indices.chunks_exact(3) {
             let [a, b, c] = [
@@ -43,7 +42,7 @@ impl CanvasScene {
             };
             let Some(w) = barycentric(
                 p,
-                [pa, pb, pc].map(|p| ViewportTransform::evaluated_to_source(canvas, p)),
+                [pa, pb, pc].map(|p| crate::ModelPoint { x: p.x, y: p.y }),
             ) else {
                 continue;
             };

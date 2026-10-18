@@ -14,9 +14,9 @@ pub(super) fn pad_texture(
     let mut bounds = [0.0_f64, 0.0, w, h];
     for uv in &geometry.uvs {
         bounds[0] = bounds[0].min(uv.x as f64 * w);
-        bounds[1] = bounds[1].min(uv.y as f64 * h);
+        bounds[1] = bounds[1].min((1. - uv.y as f64) * h);
         bounds[2] = bounds[2].max(uv.x as f64 * w);
-        bounds[3] = bounds[3].max(uv.y as f64 * h);
+        bounds[3] = bounds[3].max((1. - uv.y as f64) * h);
     }
     let pad = |distance: f64| {
         if distance > 0.0 {
@@ -58,7 +58,7 @@ pub(super) fn pad_texture(
     }
     for uv in &mut geometry.uvs {
         uv.x = ((uv.x as f64 * w + left as f64) / width as f64) as f32;
-        uv.y = ((uv.y as f64 * h + top as f64) / height as f64) as f32;
+        uv.y = ((uv.y as f64 * h + bottom as f64) / height as f64) as f32;
     }
     Ok(Some(crate::SceneTexture {
         asset_id: texture.asset_id.clone(),
@@ -176,8 +176,6 @@ impl TextureTransform {
 
     pub fn map(self, g: &mut MeshGeometry) {
         for (uv, position) in g.uvs.iter_mut().zip(&mut g.positions) {
-            // SDK alpha output is Y-up; authored UVs and positions are Y-down.
-            uv.y = 1. - uv.y;
             *position = self.point(*uv);
         }
         // Alpha output uses sequential vertex IDs. Keep authored winding positive.

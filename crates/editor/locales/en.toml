@@ -500,6 +500,7 @@ custom_fade = "Resource default · Customize"
 custom_fade_hint = "Set a custom fade starting at 0 seconds"
 
 [properties]
+
 runtime_id = "Runtime ID"
 details = "Details"
 rejected_value = "Rejected input: %{value}"

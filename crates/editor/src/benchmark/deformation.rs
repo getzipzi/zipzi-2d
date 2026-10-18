@@ -22,7 +22,7 @@ impl Drag {
 }
 
 pub(super) fn frame_ready(view: &EditorView) -> bool {
-    let (Some(shown), Some(evaluated), Some(document)) = (
+    let (Some(shown), Some(evaluated), Some(_document)) = (
         view.modeling_frame(),
         view.editor.evaluated_frame(),
         view.editor.document(),
@@ -32,11 +32,7 @@ pub(super) fn frame_ready(view: &EditorView) -> bool {
     view.editor.has_presented_frame(Some(shown.canvas.version))
         && std::sync::Arc::ptr_eq(&shown.canvas.geometry.source.viewport_frame, &evaluated)
         && Some(shown.canvas.transform)
-            == editor_core::ViewportTransform::new(
-                document.model_space(),
-                view.editor.canvas_metrics(),
-                view.editor.view(),
-            )
+            == editor_core::ViewportTransform::new(view.editor.canvas_metrics(), view.editor.view())
 }
 
 pub(super) fn prepare(

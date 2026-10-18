@@ -84,14 +84,10 @@ impl DocumentSession {
         if !metrics.visible() || self.modeling.tools.dragging() {
             return Ok(());
         }
-        let canvas = self.document.model_space();
         // Resolve the current scene before fitting, including the first preview
         // and scenes invalidated by an edit. Never fit stale cached geometry.
         let bounds = self.scene()?.1.content_bounds();
-        self.views
-            .entry(viewport)
-            .or_default()
-            .fit(canvas, bounds, metrics);
+        self.views.entry(viewport).or_default().fit(bounds, metrics);
         Ok(())
     }
     pub(crate) fn view_state(&self, viewport: ViewportId) -> ViewportState {

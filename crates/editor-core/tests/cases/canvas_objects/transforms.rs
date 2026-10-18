@@ -53,8 +53,8 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
         .zip(&moved.viewport_frame.drawables)
     {
         for (a, b) in before.positions.iter().zip(&after.positions) {
-            assert!((b.x - a.x - 40.).abs() < 1e-4);
-            assert!((b.y - a.y + 20.).abs() < 1e-4);
+            assert!((b.x - a.x - 20.).abs() < 1e-4);
+            assert!((b.y - a.y + 10.).abs() < 1e-4);
         }
     }
     editor.execute(EditorCommand::Undo)?;
@@ -211,11 +211,7 @@ fn warp_controls_align_with_mesh_after_canvas_y_reversal() -> anyhow::Result<()>
             .find(|c| c.object.id == warp)
             .unwrap();
         assert!((control.points[0].x - 32.).abs() < 1e-3);
-        let expected_y = if flag == 0 {
-            2. * canvas.origin.y - 32.
-        } else {
-            32.
-        };
+        let expected_y = 32.;
         assert!((control.points[0].y - expected_y).abs() < 1e-3);
         // Vertices occupy known local (u,v) positions inside the root warp.
         for ((_, p), (u, v)) in frame.geometry.mesh(&mesh.id).unwrap().vertices.iter().zip([

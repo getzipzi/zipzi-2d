@@ -1,6 +1,6 @@
 //! Immutable scene construction and reuse of position, topology, and appearance data.
 use super::{CanvasScene, ControlGeometry, ControlKind, MeshGeometry, PICK_ALPHA, bounds};
-use crate::{Document, ObjectKind as K, ObjectRef, SceneSnapshot, ViewportTransform};
+use crate::{Document, ModelPoint, ObjectKind as K, ObjectRef, SceneSnapshot};
 use kasane_core::evaluation::RenderCommand;
 use std::{
     collections::{HashMap, HashSet},
@@ -18,13 +18,9 @@ impl CanvasScene {
     fn build(document: &Document, source: SceneSnapshot, previous: Option<&Self>) -> Self {
         let topology = document.canvas_topology();
         let index = topology.index.clone();
-        let canvas = source.viewport_frame.model_space;
-        let previous = previous.filter(|previous| {
-            Arc::ptr_eq(&previous.topology, &topology)
-                && previous.source.viewport_frame.model_space == canvas
-        });
+        let previous = previous.filter(|previous| Arc::ptr_eq(&previous.topology, &topology));
         let visible_meshes = visible_meshes(&source.viewport_frame);
-        let to_model = |p| ViewportTransform::evaluated_to_source(canvas, p);
+        let to_model = |p: kasane_core::Vec2| ModelPoint { x: p.x, y: p.y };
         let meshes: Arc<[Arc<MeshGeometry>]> = source
             .viewport_frame
             .drawables

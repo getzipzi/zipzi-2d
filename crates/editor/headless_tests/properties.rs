@@ -2,6 +2,27 @@ use super::{document_fixture, setup, setup_with_document};
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 
+fn part_properties_document() -> (editor_core::Document, tempfile::TempDir) {
+    let (mut document, assets) = document_fixture::sample_document_with_parts().unwrap();
+    document
+        .navigate(document_fixture::object(editor_core::ObjectKind::Part, 101))
+        .unwrap();
+    (document, assets)
+}
+
+fn part_draw_order(document: &editor_core::Document) -> f32 {
+    document
+        .object_index()
+        .get(&document_fixture::object(
+            editor_core::ObjectKind::Part,
+            101,
+        ))
+        .unwrap()
+        .properties["draw_order"]
+        .as_f64()
+        .unwrap() as f32
+}
+
 #[gpui_kit::test]
 fn mesh_name_and_runtime_id_edit_without_changing_object_identity(cx: &mut TestAppContext) {
     use editor_core::{PropertyId, PropertyValue};
@@ -315,20 +336,19 @@ fn properties_external_conflict_restores_latest_value_without_overwriting_it(
 }
 
 #[gpui_kit::test]
-fn properties_origin_scrub_previews_then_commits_once_and_escape_cancels(cx: &mut TestAppContext) {
+fn properties_draw_order_scrub_previews_then_commits_once_and_escape_cancels(
+    cx: &mut TestAppContext,
+) {
     use super::slide_number_input::{press, release, slide};
     use gpui_kit::{point, px};
-    let harness = setup_with_document(
-        cx,
-        editor_core::Document::new_blank().unwrap(),
-        tempfile::tempdir().unwrap(),
-    );
+    let (document, assets) = part_properties_document();
+    let harness = setup_with_document(cx, document, assets);
     let origin = cx
         .update_window(harness.window, |_, window, cx| {
             window.activate_window();
             window.render_frame(cx);
             let origin = window
-                .within("property-input-model_space.origin.x")
+                .within("property-input-draw_order")
                 .find("slide-number-input")
                 .bounds()
                 .center();
@@ -342,7 +362,7 @@ fn properties_origin_scrub_previews_then_commits_once_and_escape_cancels(cx: &mu
     .unwrap();
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert_eq!(doc.model_space().origin.x, 1.);
+        assert_eq!(part_draw_order(doc), 10.);
         assert_eq!(doc.history_lengths(), (0, 0));
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -350,7 +370,7 @@ fn properties_origin_scrub_previews_then_commits_once_and_escape_cancels(cx: &mu
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 1.);
+        assert_eq!(part_draw_order(view.editor.document().unwrap()), 10.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -365,7 +385,7 @@ fn properties_origin_scrub_previews_then_commits_once_and_escape_cancels(cx: &mu
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 1.);
+        assert_eq!(part_draw_order(view.editor.document().unwrap()), 10.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
     });
 }
@@ -374,16 +394,15 @@ fn properties_origin_scrub_previews_then_commits_once_and_escape_cancels(cx: &mu
 fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
     cx: &mut TestAppContext,
 ) {
-    let assets = tempfile::tempdir().unwrap();
-    let mut document = editor_core::Document::new_blank().unwrap();
+    let (mut document, assets) = part_properties_document();
     document.save(&assets.path().join("saved.kasane")).unwrap();
     let harness = setup_with_document(cx, document, assets);
-    fill(&harness, "property-input-model_space.origin.x", "512", cx);
+    fill(&harness, "property-input-draw_order", "512", cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.press("enter", cx);
     })
     .unwrap();
-    fill(&harness, "property-input-model_space.origin.x", "-", cx);
+    fill(&harness, "property-input-draw_order", "-", cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.save(false, window, cx);
@@ -392,7 +411,7 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
     .unwrap();
     cx.run_until_parked();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 512.);
+        assert_eq!(part_draw_order(view.editor.document().unwrap()), 512.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
         assert!(
             !view
@@ -401,7 +420,7 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
         );
         let saved =
             editor_core::Document::open(view.editor.document().unwrap().path().unwrap()).unwrap();
-        assert_eq!(saved.model_space().origin.x, 512.);
+        assert_eq!(part_draw_order(&saved), 512.);
     });
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
@@ -413,7 +432,7 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
             .unwrap()
             .properties
             .read(cx)
-            .field_input(editor_core::PropertyId::OriginX);
+            .field_input(editor_core::PropertyId::DrawOrder);
         assert_eq!(input.read(cx).value().as_ref(), "512");
     })
     .unwrap();
@@ -472,16 +491,13 @@ fn properties_optional_fade_distinguishes_default_from_explicit_zero(cx: &mut Te
 fn properties_hiding_panel_cancels_drag_and_late_release_cannot_commit(cx: &mut TestAppContext) {
     use super::slide_number_input::{press, release, slide};
     use gpui_kit::{point, px};
-    let harness = setup_with_document(
-        cx,
-        editor_core::Document::new_blank().unwrap(),
-        tempfile::tempdir().unwrap(),
-    );
+    let (document, assets) = part_properties_document();
+    let harness = setup_with_document(cx, document, assets);
     let origin = cx
         .update_window(harness.window, |_, window, cx| {
             window.activate_window();
             let origin = window
-                .within("property-input-model_space.origin.x")
+                .within("property-input-draw_order")
                 .find("slide-number-input")
                 .bounds()
                 .center();
@@ -494,7 +510,7 @@ fn properties_hiding_panel_cancels_drag_and_late_release_cannot_commit(cx: &mut 
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 1.)
+        assert_eq!(part_draw_order(view.editor.document().unwrap()), 10.)
     });
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
@@ -509,7 +525,7 @@ fn properties_hiding_panel_cancels_drag_and_late_release_cannot_commit(cx: &mut 
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 0.);
+        assert_eq!(part_draw_order(view.editor.document().unwrap()), 0.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         assert!(
             !view
@@ -521,12 +537,9 @@ fn properties_hiding_panel_cancels_drag_and_late_release_cannot_commit(cx: &mut 
 
 #[gpui_kit::test]
 fn invalid_input_does_not_create_a_phantom_unsaved_document_on_close(cx: &mut TestAppContext) {
-    let harness = setup_with_document(
-        cx,
-        editor_core::Document::new_blank().unwrap(),
-        tempfile::tempdir().unwrap(),
-    );
-    fill(&harness, "property-input-model_space.origin.x", "-", cx);
+    let (document, assets) = part_properties_document();
+    let harness = setup_with_document(cx, document, assets);
+    fill(&harness, "property-input-draw_order", "-", cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.close_active(window, cx);
@@ -602,7 +615,7 @@ fn compact_properties_align_and_wrap_without_overflow_in_narrow_panels(cx: &mut 
     impl Render for PropertyHarness {
         fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             crate::ui::compact::property_row(
-                "model_space.origin.x",
+                "draw_order",
                 crate::ui::compact::property_value(
                     "a-long-identifier-01234567-89ab-cdef-0123-456789abcdef",
                 ),
@@ -629,7 +642,7 @@ fn compact_properties_align_and_wrap_without_overflow_in_narrow_panels(cx: &mut 
             });
             window.render_frame(cx);
             let row = window.find("property-row").bounds();
-            let label = window.find("property-label-model_space.origin.x").bounds();
+            let label = window.find("property-label-draw_order").bounds();
             let value = window.find("property-value").bounds();
             for bounds in [label, value] {
                 assert!(bounds.left() >= row.left());
@@ -798,11 +811,8 @@ fn switching_objects_during_ime_composition_does_not_publish_partial_text(cx: &m
 fn closing_an_inactive_document_does_not_commit_the_active_property_drag(cx: &mut TestAppContext) {
     use super::slide_number_input::{press, release, slide};
     use gpui_kit::{point, px};
-    let harness = setup_with_document(
-        cx,
-        editor_core::Document::new_blank().unwrap(),
-        tempfile::tempdir().unwrap(),
-    );
+    let (document, assets) = part_properties_document();
+    let harness = setup_with_document(cx, document, assets);
     let inactive = cx
         .update_window(harness.window, |_, _, cx| {
             harness.view.update(cx, |view, cx| {
@@ -819,7 +829,7 @@ fn closing_an_inactive_document_does_not_commit_the_active_property_drag(cx: &mu
             window.activate_window();
             window.render_frame(cx);
             let origin = window
-                .within("property-input-model_space.origin.x")
+                .within("property-input-draw_order")
                 .find("slide-number-input")
                 .bounds()
                 .center();
@@ -835,7 +845,7 @@ fn closing_an_inactive_document_does_not_commit_the_active_property_drag(cx: &mu
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.close_document(inactive, window, cx);
-            assert_eq!(view.editor.document().unwrap().model_space().origin.x, 1.);
+            assert_eq!(part_draw_order(view.editor.document().unwrap()), 10.);
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         });
         release(window, origin + point(px(80.), px(0.)), cx);
@@ -921,42 +931,46 @@ fn form_error_routes_to_status_bar_and_clears_after_timeout(cx: &mut TestAppCont
 }
 
 #[gpui_kit::test]
-fn document_origin_inputs_accept_negative_coordinates_and_undo(cx: &mut TestAppContext) {
-    let harness = setup_with_document(
-        cx,
-        editor_core::Document::new_blank().unwrap(),
-        tempfile::tempdir().unwrap(),
-    );
-    for (field, value) in [
-        ("model_space.origin.x", "-125.5"),
-        ("model_space.origin.y", "80"),
-    ] {
-        fill(&harness, &format!("property-input-{field}"), value, cx);
-        cx.update_window(harness.window, |_, window, cx| {
-            window.press("enter", cx);
-            window.render_frame(cx);
-        })
-        .unwrap();
-    }
-    harness.view.read_with(cx, |view, _| {
-        let doc = view.editor.document().unwrap();
-        assert_eq!(
-            doc.model_space().origin,
-            kasane_core::Vec2::new(-125.5, 80.)
-        );
-        assert_eq!(doc.history_lengths(), (2, 0));
-    });
+fn document_properties_exclude_import_export_settings(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_parts().unwrap();
+    let source_canvas = document.source_canvas();
+    assert!(source_canvas.is_some());
+    let export_settings = document.export_settings();
+    let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.run_command(editor_core::CommandId::Undo, window, cx)
+            view.run_command(editor_core::CommandId::Deselect, window, cx);
         });
         window.render_frame(cx);
+        assert_eq!(window.find("property-title-type").label(), Some("Document"));
+        window.click("property-group-$details", cx);
+        window.render_frame(cx);
+        for field in [
+            "export_settings.pixels_per_unit",
+            "export_settings.padding_fraction",
+            "export_settings.padding_pixels",
+            "export_settings.minimum_extent",
+            "export_settings.bounds",
+            "source_canvas.width",
+            "source_canvas.height",
+            "source_canvas.origin.x",
+            "source_canvas.origin.y",
+            "source_canvas.pixels_per_unit",
+            "source_canvas.flag",
+        ] {
+            assert!(window.try_find(format!("property-input-{field}")).is_none());
+            assert!(
+                window
+                    .try_find(format!("object-property-{field}"))
+                    .is_none()
+            );
+        }
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(
-            view.editor.document().unwrap().model_space().origin,
-            kasane_core::Vec2::new(-125.5, 0.)
-        );
+        let document = view.editor.document().unwrap();
+        assert_eq!(document.source_canvas(), source_canvas);
+        assert_eq!(document.export_settings(), export_settings);
+        assert_eq!(document.history_lengths(), (0, 0));
     });
 }

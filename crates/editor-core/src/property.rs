@@ -11,8 +11,10 @@ pub enum PropertyId {
     RuntimeId,
     Enabled,
     DrawOrder,
-    OriginX,
-    OriginY,
+    PixelsPerUnit,
+    PaddingFraction,
+    PaddingPixels,
+    MinimumExtent,
     Minimum,
     Maximum,
     DefaultValue,
@@ -30,8 +32,10 @@ impl PropertyId {
             Self::RuntimeId => "runtime_id",
             Self::Enabled => "enabled",
             Self::DrawOrder => "draw_order",
-            Self::OriginX => "model_space.origin.x",
-            Self::OriginY => "model_space.origin.y",
+            Self::PixelsPerUnit => "export_settings.pixels_per_unit",
+            Self::PaddingFraction => "export_settings.padding_fraction",
+            Self::PaddingPixels => "export_settings.padding_pixels",
+            Self::MinimumExtent => "export_settings.minimum_extent",
             Self::Minimum => "minimum",
             Self::Maximum => "maximum",
             Self::DefaultValue => "default_value",
@@ -229,9 +233,15 @@ pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
     const FADE_OUT: PropertySpec = S::new(FadeOut, T::OptionalFloat)
         .range(0., f32::MAX as f64, 0.1)
         .preview();
-    const MODEL_SPACE: &[PropertySpec] = &[
-        S::new(OriginX, T::Float).preview(),
-        S::new(OriginY, T::Float).preview(),
+    const EXPORT_SETTINGS: &[PropertySpec] = &[
+        S::new(PixelsPerUnit, T::Float).range(f32::MIN_POSITIVE as f64, f32::MAX as f64, 1.),
+        S::new(PaddingFraction, T::Float).range(0., 10., 0.01),
+        S::new(PaddingPixels, T::Float)
+            .range(0., f32::MAX as f64, 1.)
+            .preview(),
+        S::new(MinimumExtent, T::Float)
+            .range(0., f32::MAX as f64, 1.)
+            .preview(),
     ];
     const PART: &[PropertySpec] = &[
         NAME,
@@ -259,7 +269,7 @@ pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
     ];
     const MOTION: &[PropertySpec] = &[NAME, S::new(Looping, T::Bool), FADE_IN, FADE_OUT];
     match kind {
-        ObjectKind::Document => MODEL_SPACE,
+        ObjectKind::Document => EXPORT_SETTINGS,
         ObjectKind::Part => PART,
         ObjectKind::Deformer | ObjectKind::Offscreen => &[NAME, RUNTIME_ID, ENABLED],
         ObjectKind::Parameter => PARAMETER,
@@ -304,7 +314,7 @@ pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) 
     Ok(match object.kind {
         K::Document => {
             ensure!(model.id() == object.id, "Object no longer exists");
-            serde_json::json!({ "model_space": model.model_space() })
+            serde_json::json!({ "export_settings": model.export_settings() })
         }
         K::Part => get!(get_part),
         K::Mesh => get!(get_mesh),

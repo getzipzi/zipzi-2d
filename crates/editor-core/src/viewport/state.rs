@@ -18,13 +18,8 @@ impl Default for ViewportState {
 }
 impl ViewportState {
     /// Center the visible content and choose a scale that keeps it in view.
-    pub(crate) fn fit(
-        &mut self,
-        canvas: kasane_core::ModelSpace,
-        content_bounds: Option<[f32; 4]>,
-        metrics: ViewportMetrics,
-    ) {
-        if !metrics.visible() || !canvas.is_valid() {
+    pub(crate) fn fit(&mut self, content_bounds: Option<[f32; 4]>, metrics: ViewportMetrics) {
+        if !metrics.visible() {
             return;
         }
         let mut fitted = ViewState::default();
@@ -34,20 +29,14 @@ impl ViewportState {
             }
             let w = (f64::from(x1) - f64::from(x0)).max(1.);
             let h = (f64::from(y1) - f64::from(y0)).max(1.);
-            fitted.zoom = ((f64::from(metrics.width) / w).min(f64::from(metrics.height) / h)
-                * f64::from(metrics.scale_factor)
-                * 0.9)
+            fitted.zoom = ((f64::from(metrics.width) / w).min(f64::from(metrics.height) / h) * 0.9)
                 .clamp(f64::from(MIN_ZOOM), f64::from(MAX_ZOOM)) as f32;
-            // Pan compensates for the transform's origin anchor so Fit centers
-            // the content independently of where the document origin is placed.
-            let scale = f64::from(fitted.zoom / metrics.scale_factor);
+            let scale = f64::from(fitted.zoom);
             fitted.pan = ViewportPoint {
-                x: ((f64::from(canvas.origin.x) - (f64::from(x0) + f64::from(x1)) / 2.) * scale)
-                    as f32,
-                y: ((f64::from(canvas.origin.y) - (f64::from(y0) + f64::from(y1)) / 2.) * scale)
-                    as f32,
+                x: -((f64::from(x0) + f64::from(x1)) * 0.5 * scale) as f32,
+                y: ((f64::from(y0) + f64::from(y1)) * 0.5 * scale) as f32,
             };
-            if crate::ViewportTransform::new(canvas, metrics, fitted).is_none() {
+            if crate::ViewportTransform::new(metrics, fitted).is_none() {
                 return;
             }
         }
@@ -86,7 +75,7 @@ impl ViewportState {
 
 impl ViewState {
     /// Shared navigation math for editor surfaces and dialog previews. Points
-    /// are logical pixels relative to the viewport; zoom is physical pixels.
+    /// are logical pixels relative to the viewport; zoom is logical pixels per model unit.
     pub fn zoom_about(
         &mut self,
         zoom: f32,

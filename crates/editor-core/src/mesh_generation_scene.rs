@@ -1,13 +1,12 @@
 //! Isolated neutral candidate rendering. The live document is never edited.
 use crate::{MeshGenerationPreview, SceneSnapshot, SceneTexture};
 use kasane_core::evaluation::RenderCommand;
-use kasane_core::{Drawable, DrawableFrame, ModelSpace, Vec2};
+use kasane_core::{Drawable, DrawableFrame, Vec2};
 use std::{collections::HashMap, sync::Arc};
 impl MeshGenerationPreview {
     pub fn scene(&self, texture: SceneTexture) -> SceneSnapshot {
         let texture = self.render_texture(texture);
-        let [a, _] = self.source_bounds();
-        let model_space = ModelSpace::default();
+        let [a, c] = self.source_bounds();
         let g = self.geometry();
         let index: HashMap<_, _> = g
             .vertex_ids
@@ -22,25 +21,19 @@ impl MeshGenerationPreview {
             positions: g
                 .positions
                 .iter()
-                .map(|p| Vec2::new(p.x - a.x, -(p.y - a.y)))
+                .map(|p| Vec2::new(p.x - a.x, p.y - c.y))
                 .collect(),
             // DrawableFrame uses runtime UVs (Y up), just like PreparedEvaluation.
-            uvs: g
-                .uvs
-                .iter()
-                .map(|uv| Vec2::new(uv.x, 1. - uv.y))
-                .collect::<Vec<_>>()
-                .into(),
+            uvs: g.uvs.iter().copied().collect::<Vec<_>>().into(),
             indices: g
                 .triangles
                 .iter()
-                .flat_map(|f| [index[&f[0]], index[&f[2]], index[&f[1]]])
+                .flat_map(|f| [index[&f[0]], index[&f[1]], index[&f[2]]])
                 .collect::<Vec<_>>()
                 .into(),
             ..Default::default()
         };
         let frame = Arc::new(DrawableFrame {
-            model_space,
             drawables: vec![drawable],
             render_plan: vec![RenderCommand::DrawMesh { mesh_id: id }],
             ..Default::default()

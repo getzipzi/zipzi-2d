@@ -68,12 +68,11 @@ impl MeshGenerationPreview {
         cx.notify();
     }
 
-    fn fit(&mut self, window: &Window, cx: &mut Context<Self>) {
+    fn fit(&mut self, _window: &Window, cx: &mut Context<Self>) {
         let Some(content) = &self.content else { return };
         let bounds = self.bounds.get();
         self.zoom = (((bounds.size.width.as_f32() - 32.).max(1.) / content.source_size[0])
-            .min((bounds.size.height.as_f32() - 32.).max(1.) / content.source_size[1])
-            * window.scale_factor())
+            .min((bounds.size.height.as_f32() - 32.).max(1.) / content.source_size[1]))
         .clamp(MIN_ZOOM, MAX_ZOOM);
         self.pan = point(px(0.), px(0.));
         self.drag = None;
@@ -203,7 +202,7 @@ impl Render for MeshGenerationPreview {
                     move |bounds, _, _| measured.set(bounds),
                     move |bounds, _, window, cx| {
                         let Some(content) = &content else { return };
-                        let scale = zoom / window.scale_factor();
+                        let scale = zoom;
                         let width = content.source_size[0] * scale;
                         let height = content.source_size[1] * scale;
                         let origin = bounds.center() + pan - point(px(width / 2.), px(height / 2.));

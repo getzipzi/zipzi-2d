@@ -1,7 +1,7 @@
 //! Drag preparation and candidate updates against the captured press frame.
 use super::ToolController;
 use crate::control_edit::{ControlChange, ControlEdit};
-use crate::{Document, HitTarget, ModelPoint, ViewportPoint};
+use crate::{Document, HitTarget, ViewportPoint};
 use anyhow::{Result, ensure};
 
 impl ToolController {
@@ -53,13 +53,13 @@ impl ToolController {
         let edits = press.edit.as_ref().unwrap();
         let start = press.transform.to_model(press.point);
         let end = press.transform.to_model(point);
-        let delta = ModelPoint {
+        let delta = crate::ModelVector {
             x: end.x - start.x,
             y: end.y - start.y,
         };
         let change = match target {
             HitTarget::RotationHandle(_) => ControlChange::Rotation {
-                translation: ModelPoint::default(),
+                translation: crate::ModelVector::default(),
                 angle: edits[0].rotation_delta(start, end)?,
                 scale: 1.,
             },
@@ -78,7 +78,7 @@ impl ToolController {
                 match handle {
                     H::Move => ControlChange::MoveAll(delta),
                     H::Rotate => ControlChange::Rotation {
-                        translation: ModelPoint::default(),
+                        translation: crate::ModelVector::default(),
                         angle: edits[0].rotation_delta(start, end)?,
                         scale: 1.,
                     },
@@ -88,7 +88,7 @@ impl ToolController {
                         let after = (end.x - center.x).hypot(end.y - center.y);
                         ensure!(before > 1e-6, "Rotation scale handle is unavailable");
                         ControlChange::Rotation {
-                            translation: ModelPoint::default(),
+                            translation: crate::ModelVector::default(),
                             angle: 0.,
                             scale: (after / before).max(0.0001),
                         }
@@ -115,7 +115,7 @@ impl ToolController {
                             [sx, sy]
                         };
                         ControlChange::Transform {
-                            translation: ModelPoint::default(),
+                            translation: crate::ModelVector::default(),
                             pivot: press.transform.to_model(anchor),
                             scale,
                             radians: 0.,

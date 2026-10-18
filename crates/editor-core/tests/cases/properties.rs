@@ -143,31 +143,43 @@ fn properties_preview_isolated_cancelable_and_commits_one_history_step() -> anyh
     let initial = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
+        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
     );
     let token = editor.begin_property_edit(context, object.clone(), &initial)?;
     editor.update_property_edit(&token, &initial)?;
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 300.);
     assert_eq!(
-        editor.document().unwrap().property_values(&object)?[&PropertyId::OriginX],
-        PropertyValue::Float(0.)
+        editor.document().unwrap().export_settings().padding_pixels,
+        300.
+    );
+    assert_eq!(
+        editor.document().unwrap().property_values(&object)?[&PropertyId::PaddingPixels],
+        PropertyValue::Float(50.)
     );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     let mut latest = initial.clone();
     latest
         .changes
-        .insert(PropertyId::OriginX, PropertyValue::Float(400.));
+        .insert(PropertyId::PaddingPixels, PropertyValue::Float(400.));
     editor.update_property_edit(&token, &latest)?;
     editor.finish_property_edit(&token)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 400.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        400.
+    );
     editor.execute(EditorCommand::Undo)?;
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        50.
+    );
     let modified = editor.document().unwrap().modified();
     let token = editor.begin_property_edit(context, object.clone(), &initial)?;
     editor.update_property_edit(&token, &initial)?;
     editor.cancel_property_edit(&token);
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        50.
+    );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
     assert_eq!(editor.document().unwrap().modified(), modified);
     Ok(())
@@ -184,7 +196,7 @@ fn properties_preview_old_tokens_and_changed_targets_cannot_mutate_new_edits() -
     let changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
+        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
     );
     let old = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.cancel_property_edit(&old);
@@ -205,7 +217,10 @@ fn properties_preview_old_tokens_and_changed_targets_cannot_mutate_new_edits() -
     editor.update_property_edit(&new, &changes)?;
     editor.end_editing(context.document, EditingLifecycle::WindowDeactivated)?;
     assert!(!editor.property_edit_owned(&new));
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        50.
+    );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
@@ -220,7 +235,7 @@ fn properties_preview_returning_to_baseline_and_navigation_do_not_commit() -> an
     let mut changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
+        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
     );
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
@@ -230,12 +245,15 @@ fn properties_preview_returning_to_baseline_and_navigation_do_not_commit() -> an
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     changes
         .changes
-        .insert(PropertyId::OriginX, PropertyValue::Float(500.));
+        .insert(PropertyId::PaddingPixels, PropertyValue::Float(500.));
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
     editor.execute(EditorCommand::Navigate(object))?;
     assert!(!editor.property_edit_owned(&token));
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        50.
+    );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
@@ -250,7 +268,7 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     let changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
+        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
     );
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
@@ -258,7 +276,7 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     let invalid = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::OriginX, PropertyValue::Float(f32::NAN))],
+        &[(PropertyId::PaddingPixels, PropertyValue::Float(f32::NAN))],
     );
     assert!(
         editor
@@ -272,7 +290,7 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
         editor
             .execute(EditorCommand::SetObjectProperty {
                 object: object.clone(),
-                field: "model_space.origin.x".into(),
+                field: "export_settings.padding_pixels".into(),
                 value: serde_json::Value::Null,
             })
             .is_err()
@@ -295,10 +313,16 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     );
 
     assert!(editor.property_edit_owned(&token));
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 300.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        300.
+    );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     editor.cancel_property_edit(&token);
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        50.
+    );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
@@ -314,24 +338,30 @@ fn properties_new_preview_replaces_previous_candidate_without_publishing_it() ->
     let mut changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
+        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
     );
     let first = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&first, &changes)?;
     changes
         .changes
-        .insert(PropertyId::OriginX, PropertyValue::Float(400.));
+        .insert(PropertyId::PaddingPixels, PropertyValue::Float(400.));
     let second = editor.begin_property_edit(context, object, &changes)?;
     assert!(!editor.property_edit_owned(&first));
     assert!(editor.property_edit_owned(&second));
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     editor.update_property_edit(&second, &changes)?;
     editor.cancel_property_edit(&first);
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 400.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        400.
+    );
     editor.finish_property_edit(&second)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.execute(EditorCommand::Undo)?;
-    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        50.
+    );
     Ok(())
 }
 
@@ -554,8 +584,7 @@ fn parameter_range_preview_clamps_display_value_and_committed_value_on_release()
 }
 
 #[test]
-fn document_origin_properties_preserve_source_coordinates_and_support_history() -> anyhow::Result<()>
-{
+fn document_export_properties_preserve_geometry_and_support_history() -> anyhow::Result<()> {
     let (mut doc, assets) = support::rectangle_document(false)?;
     let object = doc
         .object_index()
@@ -567,54 +596,36 @@ fn document_origin_properties_preserve_source_coordinates_and_support_history() 
         .clone();
     let source = doc.source_canvas();
     let before = doc.snapshot()?;
-    assert!(
-        doc.set_object_property(
-            &object,
-            "model_space.pixels_per_unit",
-            serde_json::json!(100.)
-        )
-        .is_err()
-    );
-    assert_eq!(doc.history_lengths(), (0, 0));
+    let settings = doc.export_settings();
     let changes = patch(
         &doc,
         &object,
         &[
-            (PropertyId::OriginX, PropertyValue::Float(-25.)),
-            (PropertyId::OriginY, PropertyValue::Float(80.)),
+            (PropertyId::PaddingPixels, PropertyValue::Float(25.)),
+            (PropertyId::MinimumExtent, PropertyValue::Float(80.)),
         ],
     );
     doc.set_object_properties(&object, &changes)?;
-    assert_eq!(doc.model_space().origin, kasane_core::Vec2::new(-25., 80.));
     assert_eq!(doc.source_canvas(), source);
-    let after = doc.snapshot()?;
-    for (a, b) in before.runtime_frame.drawables[0]
-        .positions
-        .iter()
-        .zip(&after.runtime_frame.drawables[0].positions)
-    {
-        assert_eq!(b.x, a.x + 25.);
-        assert_eq!(b.y, a.y + 80.);
-    }
-    assert_eq!(doc.history_lengths(), (1, 0));
-    doc.undo()?;
     assert_eq!(
-        doc.model_space().origin,
-        before.runtime_frame.model_space.origin
+        doc.snapshot()?.runtime_frame.drawables,
+        before.runtime_frame.drawables
     );
+    assert_eq!(doc.export_settings().padding_pixels, 25.);
+    doc.undo()?;
+    assert_eq!(doc.export_settings(), settings);
     doc.redo()?;
-    assert_eq!(doc.model_space().origin, kasane_core::Vec2::new(-25., 80.));
+    assert_eq!(doc.export_settings().padding_pixels, 25.);
     let invalid = patch(
         &doc,
         &object,
-        &[(PropertyId::OriginX, PropertyValue::Float(f32::NAN))],
+        &[(PropertyId::PaddingPixels, PropertyValue::Float(f32::NAN))],
     );
     assert!(doc.set_object_properties(&object, &invalid).is_err());
-    assert_eq!(doc.model_space().origin, kasane_core::Vec2::new(-25., 80.));
-    let saved = doc.save(&assets.path().join("origin.kasane"))?;
+    let saved = doc.save(&assets.path().join("settings.kasane"))?;
     assert_eq!(
-        Document::open(&saved.manifest)?.model_space(),
-        doc.model_space()
+        Document::open(&saved.manifest)?.export_settings(),
+        doc.export_settings()
     );
     Ok(())
 }

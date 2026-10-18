@@ -170,23 +170,23 @@ fn animation_instances_reuse_one_content_evaluation_and_accept_independent_inter
     editor.select_motion(a.document, motion)?;
     let mut evaluator = AnimationEvaluator::default();
     let content = evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
-    let canvas = content.scene.viewport_frame.model_space;
+
     let (first, _) = editor
-        .animation_viewport_request(a, content.identity, canvas)
+        .animation_viewport_request(a, content.identity)
         .unwrap();
     let (second, _) = editor
-        .animation_viewport_request(b, content.identity, canvas)
+        .animation_viewport_request(b, content.identity)
         .unwrap();
     assert_eq!(first.content, second.content);
     assert_ne!(first.metrics, second.metrics);
     editor.pan_viewport(a, ViewportPoint { x: 10., y: -5. })?;
     assert!(editor.animation_request().is_none());
     let (newer, _) = editor
-        .animation_viewport_request(a, content.identity, canvas)
+        .animation_viewport_request(a, content.identity)
         .unwrap();
     assert!(
         editor
-            .animation_viewport_request(b, content.identity, canvas)
+            .animation_viewport_request(b, content.identity)
             .is_none()
     );
     assert!(editor.present_animation_viewport(first, content.snapshot.clone()));
@@ -205,7 +205,7 @@ fn animation_instances_reuse_one_content_evaluation_and_accept_independent_inter
     assert!(editor.can_display_animation_viewport(second));
     assert!(editor.animation_request().is_none());
     let (resized, _) = editor
-        .animation_viewport_request(a, content.identity, canvas)
+        .animation_viewport_request(a, content.identity)
         .unwrap();
     editor.set_viewport_visible(a.viewport, false);
     editor.set_viewport_visible(a.viewport, true);
@@ -213,7 +213,7 @@ fn animation_instances_reuse_one_content_evaluation_and_accept_independent_inter
     assert!(editor.can_display_animation_viewport(second));
     let rebound = editor.viewport_binding(a.viewport).unwrap();
     let (replacement, _) = editor
-        .animation_viewport_request(rebound, content.identity, canvas)
+        .animation_viewport_request(rebound, content.identity)
         .unwrap();
     assert!(editor.present_animation_viewport(replacement, content.snapshot));
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));

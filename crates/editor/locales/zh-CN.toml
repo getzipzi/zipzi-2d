@@ -499,6 +499,7 @@ custom_fade = "资源默认 · 自定义"
 custom_fade_hint = "从 0 秒开始设置自定义淡入淡出"
 
 [properties]
+
 runtime_id = "Runtime ID"
 details = "详情"
 rejected_value = "未接受的输入：%{value}"

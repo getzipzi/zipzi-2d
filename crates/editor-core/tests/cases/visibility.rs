@@ -246,7 +246,6 @@ fn hiding_parent_deformer_only_hides_its_controls_and_preserves_deformation() ->
     let scene = CanvasScene::new(&doc, after);
     assert!(doc.layers().iter().all(|mesh| scene.mesh_visible(&mesh.id)));
     let transform = ViewportTransform::new(
-        scene.source.viewport_frame.model_space,
         ViewportMetrics {
             width: 512.,
             height: 512.,
@@ -297,7 +296,7 @@ fn hiding_parent_deformer_only_hides_its_controls_and_preserves_deformation() ->
     doc.adjust_deformer(
         &child,
         DeformerAdjustment {
-            translation: ModelPoint { x: 3., y: 2. },
+            translation: editor_core::ModelVector { x: 3., y: 2. },
             angle: 0.,
             scale: 1.,
         },

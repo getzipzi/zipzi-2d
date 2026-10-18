@@ -78,8 +78,8 @@ impl MetalSceneRenderer {
             height: config.height as f32,
             scale_factor: 1.,
         };
-        let transform = ViewportTransform::new(scene.viewport_frame.model_space, metrics, view)
-            .ok_or_else(|| anyhow!("Invalid viewport"))?;
+        let transform =
+            ViewportTransform::new(metrics, view).ok_or_else(|| anyhow!("Invalid viewport"))?;
         self.draw_transformed(queue, config, scene, transform)
     }
 
@@ -218,7 +218,7 @@ impl MetalSceneRenderer {
             .update_view(ViewportConfig {
                 transform: Affine2 {
                     a: Vec2::new(scale, 0.),
-                    b: Vec2::new(0., scale),
+                    b: Vec2::new(0., -scale),
                     origin: Vec2::new(
                         transform.offset.x * transform.metrics.scale_factor,
                         transform.offset.y * transform.metrics.scale_factor,
@@ -268,7 +268,6 @@ mod tests {
             let mut renderer = MetalSceneRenderer::new(device, config)?;
             let mut scene = Document::new_blank()?.snapshot()?;
             let frame = Arc::make_mut(&mut scene.viewport_frame);
-            assert_eq!(frame.model_space, kasane_core::ModelSpace::default());
             frame.drawables = vec![Drawable {
                 id: "art".into(),
                 texture_asset_id: "red".into(),
@@ -314,7 +313,6 @@ mod tests {
             }]);
             for zoom in [1., 2.] {
                 let transform = ViewportTransform::new(
-                    scene.viewport_frame.model_space,
                     ViewportMetrics {
                         width: 64.,
                         height: 64.,
@@ -374,7 +372,6 @@ mod tests {
                     .collect::<Vec<_>>()
                     .into();
                 let transform = ViewportTransform::new(
-                    scene.viewport_frame.model_space,
                     ViewportMetrics {
                         width: 1.,
                         height: 1.,
@@ -431,10 +428,7 @@ mod tests {
                     let count = drawable.positions.len() as f32;
                     let x = drawable.positions.iter().map(|p| p.x).sum::<f32>() / count;
                     let y = drawable.positions.iter().map(|p| p.y).sum::<f32>() / count;
-                    ViewportPoint {
-                        x: x + frame.model_space.origin.x,
-                        y: frame.model_space.origin.y - y,
-                    }
+                    ViewportPoint { x: x, y: y }
                 })
                 .collect();
             assert_eq!(anchors.len(), 2);
@@ -457,12 +451,8 @@ mod tests {
                     let capture = |renderer: &mut MetalSceneRenderer,
                                    pan: ViewportPoint|
                      -> anyhow::Result<Vec<u8>> {
-                        let transform = ViewportTransform::new(
-                            frame.model_space,
-                            metrics,
-                            ViewState { zoom, pan },
-                        )
-                        .unwrap();
+                        let transform =
+                            ViewportTransform::new(metrics, ViewState { zoom, pan }).unwrap();
                         let submitted =
                             renderer.submit_transformed(&queue, config, &scene, transform)?;
                         submitted.command.wait_until_completed();
@@ -495,10 +485,8 @@ mod tests {
                         let pixels = capture(
                             &mut renderer,
                             ViewportPoint {
-                                x: (frame.model_space.origin.x - anchor.x) * zoom
-                                    / metrics.scale_factor,
-                                y: (frame.model_space.origin.y - anchor.y) * zoom
-                                    / metrics.scale_factor,
+                                x: -anchor.x * zoom,
+                                y: anchor.y * zoom,
                             },
                         )?;
                         covered += pixels.chunks_exact(4).filter(|pixel| pixel[3] != 0).count();

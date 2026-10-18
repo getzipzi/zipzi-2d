@@ -57,8 +57,7 @@ fn main() -> anyhow::Result<()> {
                     y: (sample as f32 * 0.07).cos() * 40.,
                 },
             };
-            let transform =
-                ViewportTransform::new(scene.viewport_frame.model_space, metrics, view).unwrap();
+            let transform = ViewportTransform::new(metrics, view).unwrap();
             let start = Instant::now();
             let (mut edit_ms, mut scene_ms) = (0., 0.);
             if mode == "opacity_edit" {

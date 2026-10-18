@@ -1,6 +1,6 @@
 use crate::{SceneSnapshot, SceneTexture, TreeNode, TreeNodeKind, tree::nest_nodes};
 use anyhow::{Result, anyhow, ensure};
-use kasane_core::{Mesh, ModelSpace, ParameterKind, preview::PreviewState};
+use kasane_core::{Mesh, ModelSetup, ParameterKind, preview::PreviewState};
 use kasane_sdk::{AuthoringSession, EditReceipt, EditSession, SaveReceipt, SdkError};
 use std::collections::HashMap;
 use std::{
@@ -180,7 +180,7 @@ impl Document {
     fn empty_session() -> Result<AuthoringSession> {
         Ok(AuthoringSession::new(
             &Uuid::new_v4().to_string(),
-            ModelSpace::default(),
+            ModelSetup::default(),
         )?)
     }
 
@@ -270,12 +270,15 @@ impl Document {
         Ok(receipt)
     }
 
-    pub fn source_canvas(&self) -> Option<kasane_core::Canvas> {
-        self.model().source_canvas()
+    pub fn export_settings(&self) -> kasane_core::ExportSettings {
+        self.model().export_settings()
+    }
+    pub fn model_setup(&self) -> kasane_core::ModelSetup {
+        self.model().model_setup()
     }
 
-    pub fn model_space(&self) -> ModelSpace {
-        self.model().model_space().clone()
+    pub fn source_canvas(&self) -> Option<kasane_core::Canvas> {
+        self.model().source_canvas()
     }
 
     pub fn path(&self) -> Option<&Path> {

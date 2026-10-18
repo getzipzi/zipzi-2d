@@ -1,6 +1,6 @@
 use super::support;
 use editor_core::*;
-use kasane_core::{ModelSpace, Vec2};
+use kasane_core::{ModelSetup, Vec2};
 use kasane_sdk::{AuthoringSession, prepare_png_asset, rectangle_mesh};
 
 fn fixture() -> anyhow::Result<(Editor, tempfile::TempDir)> {
@@ -15,12 +15,17 @@ fn fixture_with_source(
     std::fs::write(&texture, include_bytes!("../fixtures/accent.png"))?;
     let id = |n| uuid::Uuid::from_u128(n).to_string();
     // Source coordinates must remain independent of the origin and SDK units.
-    let canvas = ModelSpace::new(Vec2::new(73., -42.));
+    let canvas = ModelSetup::from(kasane_core::Canvas::new(
+        100.,
+        100.,
+        Vec2::new(73., -42.),
+        1.,
+    ));
     let mut session = AuthoringSession::new(
         &id(1),
         kasane_core::ModelSetup {
-            space: canvas,
             source_canvas,
+            ..canvas
         },
     )?;
     session.edit("Artwork", None, |edit| {
@@ -35,7 +40,7 @@ fn fixture_with_source(
     })?;
     let saved = session.save_project(&dir.path().join("boundless.kasane"), None)?;
     let document = Document::open(&saved.manifest)?;
-    assert_eq!(document.model_space(), canvas);
+    assert_eq!(document.source_canvas(), source_canvas);
     Ok((support::editor_from_document(document), dir))
 }
 
@@ -78,7 +83,7 @@ fn first_preview_fits_offset_content_and_picking_uses_the_same_transform() -> an
             .model_bounds(false)
             .unwrap();
         assert!(
-            bounds[0] > 0. && bounds[1] > 0.,
+            bounds == [1000., -600., 1200., -500.],
             "model bounds must stay tight: {bounds:?}"
         );
         assert!(editor.present_frame(frame.clone()));
@@ -91,7 +96,7 @@ fn first_preview_fits_offset_content_and_picking_uses_the_same_transform() -> an
         assert!(!hits.is_empty());
         assert!(editor.preview_if_needed()?.is_none());
         let crosshair = editor.overlay().origin_crosshair.unwrap();
-        let origin = frame.transform.to_viewport(ModelPoint { x: 73., y: -42. });
+        let origin = frame.transform.to_viewport(ModelPoint::default());
         assert_eq!(crosshair, origin);
     }
     Ok(())
@@ -184,11 +189,7 @@ fn animation_can_fit_without_a_modeling_preview() -> anyhow::Result<()> {
     let evaluated = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
     let binding = editor.primary_viewport_binding().unwrap();
     let (_, transform) = editor
-        .animation_viewport_request(
-            binding,
-            evaluated.identity,
-            evaluated.scene.viewport_frame.model_space,
-        )
+        .animation_viewport_request(binding, evaluated.identity)
         .unwrap();
     let center = transform.to_viewport(ModelPoint { x: 1100., y: -550. });
     assert!((center.x - 400.).abs() < 0.001 && (center.y - 300.).abs() < 0.001);
@@ -203,8 +204,8 @@ fn animation_can_fit_without_a_modeling_preview() -> anyhow::Result<()> {
 fn new_empty_canvas_round_trips_and_fits_to_actual_pixels() -> anyhow::Result<()> {
     let mut editor = support::new_editor()?;
     assert_eq!(
-        editor.document().unwrap().model_space(),
-        ModelSpace::default()
+        editor.document().unwrap().model_setup(),
+        kasane_core::ModelSetup::default()
     );
     assert!(editor.document().unwrap().source_canvas().is_none());
     editor.set_canvas_metrics(metrics(2.));
@@ -221,7 +222,7 @@ fn new_empty_canvas_round_trips_and_fits_to_actual_pixels() -> anyhow::Result<()
     editor.finish_save(&mut save.run())?;
     assert!(!editor.document().unwrap().modified());
     let reopened = Document::open(editor.document().unwrap().path().unwrap())?;
-    assert_eq!(reopened.model_space(), ModelSpace::default());
+    assert_eq!(reopened.model_setup(), kasane_core::ModelSetup::default());
     Ok(())
 }
 

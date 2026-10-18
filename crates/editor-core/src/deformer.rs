@@ -170,7 +170,7 @@ pub(crate) fn sample_grid(
 /// One atomic relative adjustment, expressed in canvas model coordinates.
 #[derive(Clone, Copy, Debug)]
 pub struct DeformerAdjustment {
-    pub translation: crate::ModelPoint,
+    pub translation: crate::ModelVector,
     /// Positive angles turn counterclockwise on the canvas.
     pub angle: f32,
     pub scale: f32,
@@ -213,11 +213,7 @@ impl crate::Document {
             .ok_or_else(|| anyhow::anyhow!("Deformer has no points"))?;
         let change = if target.rotation {
             ControlChange::Rotation {
-                angle: if snapshot.viewport_frame.model_space.y_axis_down == false {
-                    -adjustment.angle
-                } else {
-                    adjustment.angle
-                },
+                angle: adjustment.angle,
                 scale: adjustment.scale,
                 translation: adjustment.translation,
             }
@@ -228,7 +224,7 @@ impl crate::Document {
                     y: (b[1] + b[3]) / 2.,
                 },
                 scale: [adjustment.scale; 2],
-                radians: -adjustment.angle.to_radians(),
+                radians: adjustment.angle.to_radians(),
                 translation: adjustment.translation,
             }
         };

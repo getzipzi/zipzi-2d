@@ -227,20 +227,12 @@ fn viewport_pose_cache_tracks_candidate_revisions_cancel_commit_and_undo() -> an
         assert!(!Arc::ptr_eq(&original.snapshot, &candidate.snapshot));
         let binding = e.primary_viewport_binding().unwrap();
         let (before_pan, _) = e
-            .animation_viewport_request(
-                binding,
-                candidate.identity,
-                candidate.scene.viewport_frame.model_space,
-            )
+            .animation_viewport_request(binding, candidate.identity)
             .unwrap();
         e.pan_by(ViewportPoint { x: 2., y: 3. });
         assert!(e.animation_request().is_none());
         let (panned, _) = e
-            .animation_viewport_request(
-                binding,
-                candidate.identity,
-                candidate.scene.viewport_frame.model_space,
-            )
+            .animation_viewport_request(binding, candidate.identity)
             .unwrap();
         assert_eq!(panned.content, before_pan.content);
         assert!(e.present_animation_viewport(before_pan, candidate.snapshot.clone()));
@@ -697,12 +689,12 @@ fn a_slower_animation_viewport_accepts_candidate_frames_after_its_peer_has_advan
             write(2, None, value),
         )?;
         let content = evaluate(&mut editor, &mut evaluator)?;
-        let canvas = content.scene.viewport_frame.model_space;
+
         let (a, _) = editor
-            .animation_viewport_request(fast, content.identity, canvas)
+            .animation_viewport_request(fast, content.identity)
             .unwrap();
         let (b, _) = editor
-            .animation_viewport_request(slow, content.identity, canvas)
+            .animation_viewport_request(slow, content.identity)
             .unwrap();
         frames.push((a, b, content.snapshot));
     }

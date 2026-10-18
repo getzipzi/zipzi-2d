@@ -260,7 +260,7 @@ fn alpha_preview_maps_source_pixels_and_survives_regeneration_history_and_save()
         assert!((p.x - (24. + 208. * uv.x)).abs() < 0.001);
         assert!((p.y - (24. + 208. * uv.y)).abs() < 0.001);
         assert!(uv.x >= 8. / 96. - 1e-6 && uv.x <= 66. / 96. + 1e-6);
-        assert!(uv.y >= 6. / 64. - 1e-6 && uv.y <= 42. / 64. + 1e-6);
+        assert!(uv.y >= 1. - 42. / 64. - 1e-6 && uv.y <= 1. - 6. / 64. + 1e-6);
     }
     for face in &geometry.triangles {
         let [a, b, c] = face.map(|i| geometry.positions[i as usize]);
@@ -373,7 +373,7 @@ fn alpha_outside_margin_pads_texture_atomically_and_regenerates_after_save() -> 
             .geometry()
             .positions
             .iter()
-            .any(|p| p.x < 24. && p.y < 24.)
+            .any(|p| p.x < 24. && p.y > 232.)
     );
     assert!(
         preview

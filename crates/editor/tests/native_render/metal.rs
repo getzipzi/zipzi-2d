@@ -17,7 +17,7 @@ fn fixture_view(zoom: f32) -> ViewState {
         zoom,
         pan: ViewportPoint {
             x: -128. * zoom,
-            y: -128. * zoom,
+            y: 128. * zoom,
         },
     }
 }
@@ -91,7 +91,7 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
         for (index, snapshot) in frames.iter().enumerate() {
             let [minimum, maximum] = plan.source_bounds();
             let center = if index == 0 {
-                [(maximum.x - minimum.x) / 2., (maximum.y - minimum.y) / 2.]
+                [(maximum.x - minimum.x) / 2., -(maximum.y - minimum.y) / 2.]
             } else {
                 [32., 32.]
             };
@@ -103,7 +103,7 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
                     zoom: 1.,
                     pan: ViewportPoint {
                         x: -center[0],
-                        y: -center[1],
+                        y: center[1],
                     },
                 },
             )?;
@@ -170,7 +170,6 @@ fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scal
                         format: MTLPixelFormat::RGBA8Unorm,
                     };
                     let transform = ViewportTransform::new(
-                        snapshot.viewport_frame.model_space,
                         ViewportMetrics {
                             width: side as f32 / dpi,
                             height: side as f32 / dpi,
@@ -179,8 +178,8 @@ fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scal
                         ViewState {
                             zoom,
                             pan: ViewportPoint {
-                                x: -128. * zoom / dpi,
-                                y: -128. * zoom / dpi,
+                                x: -128. * zoom,
+                                y: 128. * zoom,
                             },
                         },
                     )
@@ -196,7 +195,7 @@ fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scal
                         .count();
                     assert_eq!(
                         coverage,
-                        (208. * zoom) as usize,
+                        (208. * zoom * dpi).min(side as f32) as usize,
                         "viewport={side}, dpi={dpi}, zoom={zoom}"
                     );
                 }
@@ -641,10 +640,13 @@ fn mesh_candidate_preview_renders_only_its_triangles() -> anyhow::Result<()> {
                 whole, cut,
                 "Missing triangle must remain visible with no wireframe"
             );
-            let (x, y) = (size_px / 4, 3 * size_px / 4);
+            let (x, y) = (size_px / 4, size_px / 4);
             assert_ne!(whole.get_pixel(x, y), cut.get_pixel(x, y));
             assert_eq!(cut.get_pixel(x, y).0, [255; 4]);
-            assert_eq!(whole.get_pixel(y, x), cut.get_pixel(y, x));
+            assert_eq!(
+                whole.get_pixel(size_px - x, size_px - y),
+                cut.get_pixel(size_px - x, size_px - y)
+            );
         }
         Ok(())
     })
@@ -680,7 +682,7 @@ fn check_animation_opacity(
         use editor_core::{AnimationEvaluator, Editor, ViewportMetrics, WorkspaceKind};
         use kasane_core::{Canvas, Vec2};
         use kasane_sdk_observe::{
-            CanvasRoi, ObservationInput, Observer, ObserverConfig, RenderRequest,
+            ModelRoi, ObservationInput, Observer, ObserverConfig, RenderRequest,
         };
         let canvas = document
             .source_canvas()
@@ -765,13 +767,13 @@ fn check_animation_opacity(
                 RenderRequest {
                     width: 256,
                     height: 256,
-                    roi: CanvasRoi {
+                    roi: ModelRoi {
                         x0: 0.,
                         y0: 0.,
                         x1: canvas.width,
                         y1: canvas.height,
                     },
-                    padding_canvas: 0.,
+                    padding_model: 0.,
                 },
             )?;
             let mut editor = Editor::from_document(Document::open(&manifest)?);
@@ -814,7 +816,6 @@ fn check_animation_opacity(
                 config,
                 &scene,
                 editor_core::ViewportTransform::new(
-                    scene.viewport_frame.model_space,
                     ViewportMetrics {
                         width: 256.,
                         height: 256.,
@@ -823,10 +824,8 @@ fn check_animation_opacity(
                     ViewState {
                         zoom: 256. / canvas.width.max(canvas.height),
                         pan: ViewportPoint {
-                            x: (canvas.origin.x - canvas.width / 2.) * 256.
-                                / canvas.width.max(canvas.height),
-                            y: (canvas.origin.y - canvas.height / 2.) * 256.
-                                / canvas.width.max(canvas.height),
+                            x: (-canvas.width / 2.) * 256. / canvas.width.max(canvas.height),
+                            y: (canvas.height / 2.) * 256. / canvas.width.max(canvas.height),
                         },
                     },
                 )

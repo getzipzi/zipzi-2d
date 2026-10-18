@@ -248,11 +248,10 @@ impl EditorView {
             .into_iter()
             .filter(|binding| binding.kind == editor_core::ViewportKind::Animation)
         {
-            let Some((viewport, transform)) = self.editor.animation_viewport_request(
-                binding,
-                evaluated.identity,
-                evaluated.scene.viewport_frame.model_space,
-            ) else {
+            let Some((viewport, transform)) = self
+                .editor
+                .animation_viewport_request(binding, evaluated.identity)
+            else {
                 continue;
             };
             let Some((width, height)) = transform.metrics.physical_size() else {
