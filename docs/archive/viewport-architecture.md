@@ -23,7 +23,7 @@
 - Timeline 使用独立的 `TimelineId`／`TimelineBinding`，命令、候选与 scrub 记录实例身份。隐藏／重建使旧绑定失效，只取消该实例的候选或 scrub；数值拖动的全局 UI 捕获按窗口、binding 和候选 edit ID 登记、释放。延迟停用回调同时核对活动代数和领域 token。
 - [panel 生命周期](../../crates/editor/src/panel_lifecycle.rs) 统一窗口激活、可见性与实例注册协调；关闭、保存、上下文切换及阻塞 UI 仍调用 core 的 `EditingLifecycle`。参数和网格对话框保存 `EditingContextToken`，文档切走再返回不能复活旧提交，领域版本校验继续保留；窗口暂时失焦只释放交互捕获，不使同一上下文中的对话框草稿失效。
 - [Inspection](../../crates/editor-core/src/inspection.rs) 显式区分 Modeling 的对象／主对象和 Animation 的资源／channel／key 来源，携带 DocumentId 与上下文 token；属性面板读取活动编辑上下文，不用显示名称或列表位置引用对象。
-- 导航尺寸和逻辑像素点统一为 `ViewportMetrics`／`ViewportPoint`，源像素仍使用 `ModelPoint`，SDK 归一化点与对象局部点在边界转换。网格对话框图片组件归并为 `MeshGenerationPreview`，与编辑器视图共用 `ViewState::zoom_about` 的锚点缩放数学。
+- 导航尺寸和逻辑像素点统一为 `ViewportMetrics`／`ViewportPoint`，`ModelPoint` 使用原点相对、X 右 Y 上的模型坐标，视口直接消费求值结果；局部空间在对象编辑边界转换，zoom 表示每模型单位的逻辑像素数。网格对话框图片组件归并为 `MeshGenerationPreview`，与编辑器视图共用 `ViewState::zoom_about` 的锚点缩放数学。
 
 
 第一批验证：`cargo test --locked -p editor-core`（255 passed，1 ignored）、`cargo test --locked -p kasane-editor --lib`（238 passed，1 ignored）和格式检查通过。`./scripts/test.sh` 的 Python、core、headless、截图与前置 Metal 检查通过，但本地 Mao 模型的 `timeline_acceptance` 在 Natural 手势阶段报告 `native dense drag did not change presented pixels`；修改前的 HEAD `0f56a72` 在相同依赖和模型上独立复现同一失败，完整测试尚未全绿。
