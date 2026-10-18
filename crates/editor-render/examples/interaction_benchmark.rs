@@ -58,7 +58,7 @@ fn main() -> anyhow::Result<()> {
                 },
             };
             let transform =
-                ViewportTransform::new(scene.viewport_frame.canvas, metrics, view).unwrap();
+                ViewportTransform::new(scene.viewport_frame.model_space, metrics, view).unwrap();
             let start = Instant::now();
             let (mut edit_ms, mut scene_ms) = (0., 0.);
             if mode == "opacity_edit" {

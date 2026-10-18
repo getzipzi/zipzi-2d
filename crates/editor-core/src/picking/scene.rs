@@ -18,10 +18,10 @@ impl CanvasScene {
     fn build(document: &Document, source: SceneSnapshot, previous: Option<&Self>) -> Self {
         let topology = document.canvas_topology();
         let index = topology.index.clone();
-        let canvas = source.viewport_frame.canvas;
+        let canvas = source.viewport_frame.model_space;
         let previous = previous.filter(|previous| {
             Arc::ptr_eq(&previous.topology, &topology)
-                && previous.source.viewport_frame.canvas == canvas
+                && previous.source.viewport_frame.model_space == canvas
         });
         let visible_meshes = visible_meshes(&source.viewport_frame);
         let to_model = |p| ViewportTransform::evaluated_to_source(canvas, p);

@@ -46,7 +46,14 @@ impl Candidate {
         }
         let scene = texture.map(|texture| plan.scene(texture));
         let renderer = scene
-            .map(|scene| crate::ui::mesh_preview::MeshPreview::prepare(scene, gpu, preview_cache))
+            .map(|scene| {
+                crate::ui::mesh_preview::MeshPreview::prepare(
+                    scene,
+                    [width, height],
+                    gpu,
+                    preview_cache,
+                )
+            })
             .transpose()?;
         Ok(Self {
             renderer,

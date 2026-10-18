@@ -24,7 +24,7 @@ impl CanvasScene {
         else {
             return 0.;
         };
-        let canvas = self.source.viewport_frame.canvas;
+        let canvas = self.source.viewport_frame.model_space;
         let mut alpha: f32 = 0.;
         for indices in d.indices.chunks_exact(3) {
             let [a, b, c] = [

@@ -12,7 +12,10 @@ fn heijiao_imports_with_clipping_and_survives_save_reopen() -> anyhow::Result<()
     assert!(document.modified());
     assert_eq!(document.import_name(), Some("2024.6.24"));
     assert_eq!(
-        (document.canvas().width, document.canvas().height),
+        (
+            document.source_canvas().unwrap().width,
+            document.source_canvas().unwrap().height
+        ),
         (4275.0, 8185.0)
     );
     let imported = document.snapshot()?;

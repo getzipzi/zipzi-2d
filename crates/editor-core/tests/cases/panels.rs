@@ -458,7 +458,11 @@ fn repeated_keyform_preview_and_unchanged_scalar_edits_are_noops() -> anyhow::Re
     let mut blank = Document::new_blank()?;
     let index = blank.object_index();
     let object = index.objects[0].reference.clone();
-    blank.set_object_property(&object, "canvas.width", serde_json::json!(256))?;
+    blank.set_object_property(
+        &object,
+        "model_space.origin.x",
+        serde_json::json!(blank.model_space().origin.x),
+    )?;
     assert!(!blank.modified());
     assert_eq!(blank.history_lengths(), (0, 0));
     assert!(Arc::ptr_eq(&index, &blank.object_index()));

@@ -1,6 +1,9 @@
 //! Core behavior suites share one set of SDK fixtures.
 mod support;
 
+#[path = "cases/boundless_canvas.rs"]
+mod boundless_canvas;
+
 #[path = "cases/animation/mod.rs"]
 mod animation;
 #[path = "cases/canvas.rs"]

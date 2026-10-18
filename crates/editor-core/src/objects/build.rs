@@ -109,7 +109,7 @@ impl ObjectIndex {
             ..Default::default()
         };
         let doc = ObjectRef::new(K::Document, m.id());
-        s.add(doc.clone(), "Document", json!({"canvas":m.canvas(),"model_settings":m.model3_settings(),"display_info":m.display_info(),"missing_attachments":m.missing_attachments(),"draw_groups":m.draw_order_groups()}), None);
+        s.add(doc.clone(), "Document", json!({"model_space":m.model_space(),"source_canvas":m.source_canvas(),"model_settings":m.model3_settings(),"display_info":m.display_info(),"missing_attachments":m.missing_attachments(),"draw_groups":m.draw_order_groups()}), None);
         for id in m.part_order() {
             if let Some(x) = m.get_part(id) {
                 let r = ObjectRef::new(K::Part, id);

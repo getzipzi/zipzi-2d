@@ -72,11 +72,13 @@ impl Document {
         }
         let mut payload = crate::property::object_payload(self.session.document(), object)?;
         for (id, value) in &patch.changes {
-            if let Some(field) = id.path().strip_prefix("canvas.") {
-                payload["canvas"][field] = value.json();
-            } else {
-                payload[id.path()] = value.json();
+            let mut field = &mut payload;
+            for key in id.path().split('.') {
+                field = field
+                    .get_mut(key)
+                    .ok_or_else(|| anyhow!("Missing property field"))?;
             }
+            *field = value.json();
         }
         Ok(payload)
     }
@@ -259,7 +261,7 @@ fn replace(edit: &mut EditSession<'_>, kind: ObjectKind, payload: serde_json::Va
     }
     match kind {
         ObjectKind::Document => {
-            edit.replace_canvas(serde_json::from_value(payload["canvas"].clone())?)?;
+            edit.replace_model_space(serde_json::from_value(payload["model_space"].clone())?)?;
         }
         ObjectKind::Part => replace!(replace_part),
         ObjectKind::Parameter => replace!(replace_parameter),

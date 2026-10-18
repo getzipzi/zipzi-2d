@@ -143,31 +143,31 @@ fn properties_preview_isolated_cancelable_and_commits_one_history_step() -> anyh
     let initial = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Width, PropertyValue::Float(300.))],
+        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
     );
     let token = editor.begin_property_edit(context, object.clone(), &initial)?;
     editor.update_property_edit(&token, &initial)?;
-    assert_eq!(editor.document().unwrap().canvas().width, 300.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 300.);
     assert_eq!(
-        editor.document().unwrap().property_values(&object)?[&PropertyId::Width],
-        PropertyValue::Float(256.)
+        editor.document().unwrap().property_values(&object)?[&PropertyId::OriginX],
+        PropertyValue::Float(0.)
     );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     let mut latest = initial.clone();
     latest
         .changes
-        .insert(PropertyId::Width, PropertyValue::Float(400.));
+        .insert(PropertyId::OriginX, PropertyValue::Float(400.));
     editor.update_property_edit(&token, &latest)?;
     editor.finish_property_edit(&token)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
-    assert_eq!(editor.document().unwrap().canvas().width, 400.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 400.);
     editor.execute(EditorCommand::Undo)?;
-    assert_eq!(editor.document().unwrap().canvas().width, 256.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
     let modified = editor.document().unwrap().modified();
     let token = editor.begin_property_edit(context, object.clone(), &initial)?;
     editor.update_property_edit(&token, &initial)?;
     editor.cancel_property_edit(&token);
-    assert_eq!(editor.document().unwrap().canvas().width, 256.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
     assert_eq!(editor.document().unwrap().modified(), modified);
     Ok(())
@@ -184,7 +184,7 @@ fn properties_preview_old_tokens_and_changed_targets_cannot_mutate_new_edits() -
     let changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Width, PropertyValue::Float(300.))],
+        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
     );
     let old = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.cancel_property_edit(&old);
@@ -195,7 +195,7 @@ fn properties_preview_old_tokens_and_changed_targets_cannot_mutate_new_edits() -
     let other_field = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Height, PropertyValue::Float(800.))],
+        &[(PropertyId::Name, PropertyValue::Text("unsupported".into()))],
     );
     assert!(editor.update_property_edit(&new, &other_field).is_err());
     let mut forged = new.clone();
@@ -205,7 +205,7 @@ fn properties_preview_old_tokens_and_changed_targets_cannot_mutate_new_edits() -
     editor.update_property_edit(&new, &changes)?;
     editor.end_editing(context.document, EditingLifecycle::WindowDeactivated)?;
     assert!(!editor.property_edit_owned(&new));
-    assert_eq!(editor.document().unwrap().canvas().width, 256.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
@@ -220,7 +220,7 @@ fn properties_preview_returning_to_baseline_and_navigation_do_not_commit() -> an
     let mut changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Width, PropertyValue::Float(300.))],
+        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
     );
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
@@ -230,12 +230,12 @@ fn properties_preview_returning_to_baseline_and_navigation_do_not_commit() -> an
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     changes
         .changes
-        .insert(PropertyId::Width, PropertyValue::Float(500.));
+        .insert(PropertyId::OriginX, PropertyValue::Float(500.));
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
     editor.execute(EditorCommand::Navigate(object))?;
     assert!(!editor.property_edit_owned(&token));
-    assert_eq!(editor.document().unwrap().canvas().width, 256.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
@@ -250,7 +250,7 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     let changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Width, PropertyValue::Float(300.))],
+        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
     );
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
@@ -258,7 +258,7 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     let invalid = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Height, PropertyValue::Float(-1.))],
+        &[(PropertyId::OriginX, PropertyValue::Float(f32::NAN))],
     );
     assert!(
         editor
@@ -272,8 +272,8 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
         editor
             .execute(EditorCommand::SetObjectProperty {
                 object: object.clone(),
-                field: "canvas.height".into(),
-                value: serde_json::json!(-1.),
+                field: "model_space.origin.x".into(),
+                value: serde_json::Value::Null,
             })
             .is_err()
     );
@@ -295,10 +295,10 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     );
 
     assert!(editor.property_edit_owned(&token));
-    assert_eq!(editor.document().unwrap().canvas().width, 300.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 300.);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     editor.cancel_property_edit(&token);
-    assert_eq!(editor.document().unwrap().canvas().width, 256.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
@@ -314,24 +314,24 @@ fn properties_new_preview_replaces_previous_candidate_without_publishing_it() ->
     let mut changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Width, PropertyValue::Float(300.))],
+        &[(PropertyId::OriginX, PropertyValue::Float(300.))],
     );
     let first = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&first, &changes)?;
     changes
         .changes
-        .insert(PropertyId::Width, PropertyValue::Float(400.));
+        .insert(PropertyId::OriginX, PropertyValue::Float(400.));
     let second = editor.begin_property_edit(context, object, &changes)?;
     assert!(!editor.property_edit_owned(&first));
     assert!(editor.property_edit_owned(&second));
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     editor.update_property_edit(&second, &changes)?;
     editor.cancel_property_edit(&first);
-    assert_eq!(editor.document().unwrap().canvas().width, 400.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 400.);
     editor.finish_property_edit(&second)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.execute(EditorCommand::Undo)?;
-    assert_eq!(editor.document().unwrap().canvas().width, 256.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 0.);
     Ok(())
 }
 
@@ -550,5 +550,71 @@ fn parameter_range_preview_clamps_display_value_and_committed_value_on_release()
     editor.finish_property_edit(&token)?;
     let value = &editor.document().unwrap().parameters()[0];
     assert_eq!((value.minimum, value.value), (10., 10.));
+    Ok(())
+}
+
+#[test]
+fn document_origin_properties_preserve_source_coordinates_and_support_history() -> anyhow::Result<()>
+{
+    let (mut doc, assets) = support::rectangle_document(false)?;
+    let object = doc
+        .object_index()
+        .objects
+        .iter()
+        .find(|o| o.reference.kind == ObjectKind::Document)
+        .unwrap()
+        .reference
+        .clone();
+    let source = doc.source_canvas();
+    let before = doc.snapshot()?;
+    assert!(
+        doc.set_object_property(
+            &object,
+            "model_space.pixels_per_unit",
+            serde_json::json!(100.)
+        )
+        .is_err()
+    );
+    assert_eq!(doc.history_lengths(), (0, 0));
+    let changes = patch(
+        &doc,
+        &object,
+        &[
+            (PropertyId::OriginX, PropertyValue::Float(-25.)),
+            (PropertyId::OriginY, PropertyValue::Float(80.)),
+        ],
+    );
+    doc.set_object_properties(&object, &changes)?;
+    assert_eq!(doc.model_space().origin, kasane_core::Vec2::new(-25., 80.));
+    assert_eq!(doc.source_canvas(), source);
+    let after = doc.snapshot()?;
+    for (a, b) in before.runtime_frame.drawables[0]
+        .positions
+        .iter()
+        .zip(&after.runtime_frame.drawables[0].positions)
+    {
+        assert_eq!(b.x, a.x + 25.);
+        assert_eq!(b.y, a.y + 80.);
+    }
+    assert_eq!(doc.history_lengths(), (1, 0));
+    doc.undo()?;
+    assert_eq!(
+        doc.model_space().origin,
+        before.runtime_frame.model_space.origin
+    );
+    doc.redo()?;
+    assert_eq!(doc.model_space().origin, kasane_core::Vec2::new(-25., 80.));
+    let invalid = patch(
+        &doc,
+        &object,
+        &[(PropertyId::OriginX, PropertyValue::Float(f32::NAN))],
+    );
+    assert!(doc.set_object_properties(&object, &invalid).is_err());
+    assert_eq!(doc.model_space().origin, kasane_core::Vec2::new(-25., 80.));
+    let saved = doc.save(&assets.path().join("origin.kasane"))?;
+    assert_eq!(
+        Document::open(&saved.manifest)?.model_space(),
+        doc.model_space()
+    );
     Ok(())
 }

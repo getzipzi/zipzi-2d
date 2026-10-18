@@ -230,7 +230,7 @@ fn viewport_pose_cache_tracks_candidate_revisions_cancel_commit_and_undo() -> an
             .animation_viewport_request(
                 binding,
                 candidate.identity,
-                candidate.scene.viewport_frame.canvas,
+                candidate.scene.viewport_frame.model_space,
             )
             .unwrap();
         e.pan_by(ViewportPoint { x: 2., y: 3. });
@@ -239,7 +239,7 @@ fn viewport_pose_cache_tracks_candidate_revisions_cancel_commit_and_undo() -> an
             .animation_viewport_request(
                 binding,
                 candidate.identity,
-                candidate.scene.viewport_frame.canvas,
+                candidate.scene.viewport_frame.model_space,
             )
             .unwrap();
         assert_eq!(panned.content, before_pan.content);
@@ -697,7 +697,7 @@ fn a_slower_animation_viewport_accepts_candidate_frames_after_its_peer_has_advan
             write(2, None, value),
         )?;
         let content = evaluate(&mut editor, &mut evaluator)?;
-        let canvas = content.scene.viewport_frame.canvas;
+        let canvas = content.scene.viewport_frame.model_space;
         let (a, _) = editor
             .animation_viewport_request(fast, content.identity, canvas)
             .unwrap();

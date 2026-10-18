@@ -1,6 +1,6 @@
 //! Real native Metal composition without opening a window or automating UI.
 #![cfg(target_os = "macos")]
-use editor_core::{Document, SceneSnapshot, ViewState};
+use editor_core::{Document, SceneSnapshot, ViewState, ViewportPoint};
 use editor_render::{MetalSceneRenderer, MetalTargetConfig};
 use gpui_apple::metal_renderer::MetalRenderer;
 use gpui_kit::{
@@ -10,6 +10,17 @@ use gpui_kit::{
 use metal::MTLPixelFormat;
 #[path = "../../../editor-core/tests/support/mod.rs"]
 mod support;
+
+// Pixel assertions below use a fixed 256px source region centered at (128, 128).
+fn fixture_view(zoom: f32) -> ViewState {
+    ViewState {
+        zoom,
+        pan: ViewportPoint {
+            x: -128. * zoom,
+            y: -128. * zoom,
+        },
+    }
+}
 
 fn input(opacity: f32, visible: bool) -> anyhow::Result<SceneSnapshot> {
     let (mut document, _source) = support::sample_document()?;
@@ -77,8 +88,25 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
             format: MTLPixelFormat::RGBA8Unorm,
         };
         let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
-        for snapshot in &frames {
-            let texture = renderer.draw(&gpu.queue, config, snapshot, ViewState::default())?;
+        for (index, snapshot) in frames.iter().enumerate() {
+            let [minimum, maximum] = plan.source_bounds();
+            let center = if index == 0 {
+                [(maximum.x - minimum.x) / 2., (maximum.y - minimum.y) / 2.]
+            } else {
+                [32., 32.]
+            };
+            let texture = renderer.draw(
+                &gpu.queue,
+                config,
+                snapshot,
+                ViewState {
+                    zoom: 1.,
+                    pan: ViewportPoint {
+                        x: -center[0],
+                        y: -center[1],
+                    },
+                },
+            )?;
             let pixels = gpui.render_scene_to_image(
                 &scene(texture, 64., false),
                 size(DevicePixels(64), DevicePixels(64)),
@@ -142,7 +170,7 @@ fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scal
                         format: MTLPixelFormat::RGBA8Unorm,
                     };
                     let transform = ViewportTransform::new(
-                        snapshot.viewport_frame.canvas,
+                        snapshot.viewport_frame.model_space,
                         ViewportMetrics {
                             width: side as f32 / dpi,
                             height: side as f32 / dpi,
@@ -150,7 +178,10 @@ fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scal
                         },
                         ViewState {
                             zoom,
-                            ..Default::default()
+                            pan: ViewportPoint {
+                                x: -128. * zoom / dpi,
+                                y: -128. * zoom / dpi,
+                            },
                         },
                     )
                     .unwrap();
@@ -223,7 +254,7 @@ fn editor_hidden_mask_source_still_clips_native_metal_output() -> anyhow::Result
         };
         let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
         let mut capture = |snapshot: &SceneSnapshot| -> anyhow::Result<image::RgbaImage> {
-            let texture = renderer.draw(&gpu.queue, config, snapshot, ViewState::default())?;
+            let texture = renderer.draw(&gpu.queue, config, snapshot, fixture_view(1.))?;
             Ok(gpui.render_scene_to_image(
                 &scene(texture, 256., false),
                 size(DevicePixels(256), DevicePixels(256)),
@@ -356,16 +387,11 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
         };
         let mut kasane = MetalSceneRenderer::new(gpu.device.clone(), config)?;
         let mut blank = Document::new_blank()?;
-        kasane.draw(&gpu.queue, config, &blank.snapshot()?, ViewState::default())?;
+        kasane.draw(&gpu.queue, config, &blank.snapshot()?, fixture_view(1.))?;
         let (mut document, _source) = support::sample_document()?;
         document.preview_opacity(0.5)?;
         document.finish_edit()?;
-        let frame = kasane.draw(
-            &gpu.queue,
-            config,
-            &document.snapshot()?,
-            ViewState::default(),
-        )?;
+        let frame = kasane.draw(&gpu.queue, config, &document.snapshot()?, fixture_view(1.))?;
         assert!(std::ptr::eq(frame.device(), gpu.device.as_ref()));
         // No producer wait: GPUI uses the same queue and samples the published texture.
         let original = scene(frame, 256., true);
@@ -394,12 +420,7 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
             );
         }
         document.set_object_visible(&document.context().selection.clone().unwrap(), false)?;
-        let hidden = kasane.draw(
-            &gpu.queue,
-            config,
-            &document.snapshot()?,
-            ViewState::default(),
-        )?;
+        let hidden = kasane.draw(&gpu.queue, config, &document.snapshot()?, fixture_view(1.))?;
         let image = gpui.render_scene_to_image(
             &scene(hidden, 256., false),
             size(DevicePixels(256), DevicePixels(256)),
@@ -423,12 +444,7 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
         config.height = 128;
         document.undo()?; // Undo visibility, then undo opacity using the same mesh/resource IDs.
         document.undo()?;
-        let resized = kasane.draw(
-            &gpu.queue,
-            config,
-            &document.snapshot()?,
-            ViewState::default(),
-        )?;
+        let resized = kasane.draw(&gpu.queue, config, &document.snapshot()?, fixture_view(1.))?;
         let image = gpui.render_scene_to_image(
             &scene(resized, 128., false),
             size(DevicePixels(128), DevicePixels(128)),
@@ -446,15 +462,7 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
             );
         }
         let full_coverage = image.pixels().filter(|pixel| pixel.0 != [255; 4]).count();
-        let smaller = kasane.draw(
-            &gpu.queue,
-            config,
-            &document.snapshot()?,
-            ViewState {
-                zoom: 0.5,
-                ..Default::default()
-            },
-        )?;
+        let smaller = kasane.draw(&gpu.queue, config, &document.snapshot()?, fixture_view(0.5))?;
         let image = gpui.render_scene_to_image(
             &scene(smaller, 128., false),
             size(DevicePixels(128), DevicePixels(128)),
@@ -465,12 +473,7 @@ fn native_metal_composes_kasane_without_readback_between_renderers() -> anyhow::
             "zoom must reduce rendered area"
         );
         config.width = 192;
-        let wide = kasane.draw(
-            &gpu.queue,
-            config,
-            &document.snapshot()?,
-            ViewState::default(),
-        )?;
+        let wide = kasane.draw(&gpu.queue, config, &document.snapshot()?, fixture_view(1.))?;
         assert_eq!((wide.width(), wide.height()), (192, 128));
         Ok(())
     })
@@ -489,8 +492,7 @@ fn native_metal_preserves_premultiplied_alpha_for_transparent_targets() -> anyho
                 format,
             };
             let mut kasane = MetalSceneRenderer::new(gpu.device.clone(), config)?;
-            let texture =
-                kasane.draw(&gpu.queue, config, &input(0.5, true)?, ViewState::default())?;
+            let texture = kasane.draw(&gpu.queue, config, &input(0.5, true)?, fixture_view(1.))?;
             let mut scene = Scene::default();
             scene.insert_primitive(PaintSurface {
                 order: 0,
@@ -540,7 +542,7 @@ fn content_cache_isolates_same_asset_ids_and_reuses_textures_across_views() -> a
                     gpui: &mut MetalRenderer,
                     frame: &SceneSnapshot|
          -> anyhow::Result<[u8; 4]> {
-            let image = renderer.draw(&gpu.queue, config, frame, ViewState::default())?;
+            let image = renderer.draw(&gpu.queue, config, frame, fixture_view(1.))?;
             Ok(gpui
                 .render_scene_to_image(
                     &scene(image, 256., false),
@@ -556,15 +558,7 @@ fn content_cache_isolates_same_asset_ids_and_reuses_textures_across_views() -> a
         assert_eq!(renderer.stats().1, 2);
         assert_eq!(draw(&mut renderer, &mut gpui, &a)?, original);
         assert_eq!(renderer.stats().1, 2);
-        renderer.draw(
-            &gpu.queue,
-            config,
-            &a,
-            ViewState {
-                zoom: 1.5,
-                ..Default::default()
-            },
-        )?;
+        renderer.draw(&gpu.queue, config, &a, fixture_view(1.5))?;
         assert_eq!(
             renderer.stats().1,
             2,
@@ -619,10 +613,16 @@ fn mesh_candidate_preview_renders_only_its_triangles() -> anyhow::Result<()> {
             };
             let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
             let mut capture = |snapshot: &SceneSnapshot| -> anyhow::Result<image::RgbaImage> {
-                let canvas = snapshot.viewport_frame.canvas;
+                let [minimum, maximum] = plan.source_bounds();
+                let width = maximum.x - minimum.x;
+                let height = maximum.y - minimum.y;
+                let zoom = (size_px as f32 / width).min(size_px as f32 / height);
                 let view = ViewState {
-                    zoom: (size_px as f32 / canvas.width).min(size_px as f32 / canvas.height),
-                    ..Default::default()
+                    zoom,
+                    pan: ViewportPoint {
+                        x: -width * zoom / 2.,
+                        y: -height * zoom / 2.,
+                    },
                 };
                 let texture = renderer.draw(&gpu.queue, config, snapshot, view)?;
                 Ok(gpui.render_scene_to_image(
@@ -682,7 +682,9 @@ fn check_animation_opacity(
         use kasane_sdk_observe::{
             CanvasRoi, ObservationInput, Observer, ObserverConfig, RenderRequest,
         };
-        let canvas = document.canvas();
+        let canvas = document
+            .source_canvas()
+            .expect("fixture has a source rectangle");
         let manifest = document
             .save(&assets.path().join("opacity.kasane"))?
             .manifest;
@@ -812,7 +814,7 @@ fn check_animation_opacity(
                 config,
                 &scene,
                 editor_core::ViewportTransform::new(
-                    scene.viewport_frame.canvas,
+                    scene.viewport_frame.model_space,
                     ViewportMetrics {
                         width: 256.,
                         height: 256.,
@@ -820,7 +822,12 @@ fn check_animation_opacity(
                     },
                     ViewState {
                         zoom: 256. / canvas.width.max(canvas.height),
-                        ..Default::default()
+                        pan: ViewportPoint {
+                            x: (canvas.origin.x - canvas.width / 2.) * 256.
+                                / canvas.width.max(canvas.height),
+                            y: (canvas.origin.y - canvas.height / 2.) * 256.
+                                / canvas.width.max(canvas.height),
+                        },
                     },
                 )
                 .unwrap(),

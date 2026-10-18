@@ -55,6 +55,7 @@ pub struct OverlaySnapshot {
     pub handles: Vec<OverlayHandle>,
     pub interaction_label: Option<String>,
     pub active_handle: Option<crate::DeformerHandle>,
+    pub origin_crosshair: Option<ViewportPoint>,
 }
 #[derive(Clone, Debug)]
 pub struct OverlayHandle {
@@ -74,6 +75,12 @@ impl ToolController {
             .clone()
             .filter(|_| self.hovered_binding == Some(frame.version.binding));
         let mut out = OverlaySnapshot::default();
+        let canvas = frame.geometry.source.viewport_frame.model_space;
+        let origin_pt = ModelPoint {
+            x: canvas.origin.x,
+            y: canvas.origin.y,
+        };
+        out.origin_crosshair = Some(t.to_viewport(origin_pt));
         out.active_handle = self
             .press
             .as_ref()
@@ -365,7 +372,7 @@ impl ToolController {
                     format!("{:.1}°", -radians.to_degrees())
                 }
                 ControlChange::Rotation { angle, scale, .. } => {
-                    let angle = if p.scene.source.viewport_frame.canvas.flag & 1 == 0 {
+                    let angle = if p.scene.source.viewport_frame.model_space.y_axis_down == false {
                         -angle
                     } else {
                         angle

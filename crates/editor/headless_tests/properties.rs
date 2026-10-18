@@ -315,7 +315,7 @@ fn properties_external_conflict_restores_latest_value_without_overwriting_it(
 }
 
 #[gpui_kit::test]
-fn properties_canvas_scrub_previews_then_commits_once_and_escape_cancels(cx: &mut TestAppContext) {
+fn properties_origin_scrub_previews_then_commits_once_and_escape_cancels(cx: &mut TestAppContext) {
     use super::slide_number_input::{press, release, slide};
     use gpui_kit::{point, px};
     let harness = setup_with_document(
@@ -328,7 +328,7 @@ fn properties_canvas_scrub_previews_then_commits_once_and_escape_cancels(cx: &mu
             window.activate_window();
             window.render_frame(cx);
             let origin = window
-                .within("property-input-canvas.width")
+                .within("property-input-model_space.origin.x")
                 .find("slide-number-input")
                 .bounds()
                 .center();
@@ -342,7 +342,7 @@ fn properties_canvas_scrub_previews_then_commits_once_and_escape_cancels(cx: &mu
     .unwrap();
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
-        assert_eq!(doc.canvas().width, 266.);
+        assert_eq!(doc.model_space().origin.x, 1.);
         assert_eq!(doc.history_lengths(), (0, 0));
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -350,7 +350,7 @@ fn properties_canvas_scrub_previews_then_commits_once_and_escape_cancels(cx: &mu
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().canvas().width, 266.);
+        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 1.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -365,7 +365,7 @@ fn properties_canvas_scrub_previews_then_commits_once_and_escape_cancels(cx: &mu
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().canvas().width, 266.);
+        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 1.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
     });
 }
@@ -378,12 +378,12 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
     let mut document = editor_core::Document::new_blank().unwrap();
     document.save(&assets.path().join("saved.kasane")).unwrap();
     let harness = setup_with_document(cx, document, assets);
-    fill(&harness, "property-input-canvas.width", "512", cx);
+    fill(&harness, "property-input-model_space.origin.x", "512", cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.press("enter", cx);
     })
     .unwrap();
-    fill(&harness, "property-input-canvas.width", "-", cx);
+    fill(&harness, "property-input-model_space.origin.x", "-", cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.save(false, window, cx);
@@ -392,7 +392,7 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
     .unwrap();
     cx.run_until_parked();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().canvas().width, 512.);
+        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 512.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
         assert!(
             !view
@@ -401,7 +401,7 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
         );
         let saved =
             editor_core::Document::open(view.editor.document().unwrap().path().unwrap()).unwrap();
-        assert_eq!(saved.canvas().width, 512.);
+        assert_eq!(saved.model_space().origin.x, 512.);
     });
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
@@ -413,7 +413,7 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
             .unwrap()
             .properties
             .read(cx)
-            .field_input(editor_core::PropertyId::Width);
+            .field_input(editor_core::PropertyId::OriginX);
         assert_eq!(input.read(cx).value().as_ref(), "512");
     })
     .unwrap();
@@ -481,7 +481,7 @@ fn properties_hiding_panel_cancels_drag_and_late_release_cannot_commit(cx: &mut 
         .update_window(harness.window, |_, window, cx| {
             window.activate_window();
             let origin = window
-                .within("property-input-canvas.width")
+                .within("property-input-model_space.origin.x")
                 .find("slide-number-input")
                 .bounds()
                 .center();
@@ -494,7 +494,7 @@ fn properties_hiding_panel_cancels_drag_and_late_release_cannot_commit(cx: &mut 
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().canvas().width, 266.)
+        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 1.)
     });
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
@@ -509,7 +509,7 @@ fn properties_hiding_panel_cancels_drag_and_late_release_cannot_commit(cx: &mut 
     })
     .unwrap();
     harness.view.read_with(cx, |view, _| {
-        assert_eq!(view.editor.document().unwrap().canvas().width, 256.);
+        assert_eq!(view.editor.document().unwrap().model_space().origin.x, 0.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         assert!(
             !view
@@ -526,7 +526,7 @@ fn invalid_input_does_not_create_a_phantom_unsaved_document_on_close(cx: &mut Te
         editor_core::Document::new_blank().unwrap(),
         tempfile::tempdir().unwrap(),
     );
-    fill(&harness, "property-input-canvas.width", "-", cx);
+    fill(&harness, "property-input-model_space.origin.x", "-", cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.close_active(window, cx);
@@ -602,7 +602,7 @@ fn compact_properties_align_and_wrap_without_overflow_in_narrow_panels(cx: &mut 
     impl Render for PropertyHarness {
         fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             crate::ui::compact::property_row(
-                "canvas.pixels_per_unit",
+                "model_space.origin.x",
                 crate::ui::compact::property_value(
                     "a-long-identifier-01234567-89ab-cdef-0123-456789abcdef",
                 ),
@@ -629,9 +629,7 @@ fn compact_properties_align_and_wrap_without_overflow_in_narrow_panels(cx: &mut 
             });
             window.render_frame(cx);
             let row = window.find("property-row").bounds();
-            let label = window
-                .find("property-label-canvas.pixels_per_unit")
-                .bounds();
+            let label = window.find("property-label-model_space.origin.x").bounds();
             let value = window.find("property-value").bounds();
             for bounds in [label, value] {
                 assert!(bounds.left() >= row.left());
@@ -821,7 +819,7 @@ fn closing_an_inactive_document_does_not_commit_the_active_property_drag(cx: &mu
             window.activate_window();
             window.render_frame(cx);
             let origin = window
-                .within("property-input-canvas.width")
+                .within("property-input-model_space.origin.x")
                 .find("slide-number-input")
                 .bounds()
                 .center();
@@ -837,7 +835,7 @@ fn closing_an_inactive_document_does_not_commit_the_active_property_drag(cx: &mu
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.close_document(inactive, window, cx);
-            assert_eq!(view.editor.document().unwrap().canvas().width, 266.);
+            assert_eq!(view.editor.document().unwrap().model_space().origin.x, 1.);
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         });
         release(window, origin + point(px(80.), px(0.)), cx);
@@ -919,5 +917,46 @@ fn form_error_routes_to_status_bar_and_clears_after_timeout(cx: &mut TestAppCont
     harness.view.read_with(cx, |view, _| {
         assert!(view.message.is_empty());
         assert!(view.edit_error.is_none());
+    });
+}
+
+#[gpui_kit::test]
+fn document_origin_inputs_accept_negative_coordinates_and_undo(cx: &mut TestAppContext) {
+    let harness = setup_with_document(
+        cx,
+        editor_core::Document::new_blank().unwrap(),
+        tempfile::tempdir().unwrap(),
+    );
+    for (field, value) in [
+        ("model_space.origin.x", "-125.5"),
+        ("model_space.origin.y", "80"),
+    ] {
+        fill(&harness, &format!("property-input-{field}"), value, cx);
+        cx.update_window(harness.window, |_, window, cx| {
+            window.press("enter", cx);
+            window.render_frame(cx);
+        })
+        .unwrap();
+    }
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.model_space().origin,
+            kasane_core::Vec2::new(-125.5, 80.)
+        );
+        assert_eq!(doc.history_lengths(), (2, 0));
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.run_command(editor_core::CommandId::Undo, window, cx)
+        });
+        window.render_frame(cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.editor.document().unwrap().model_space().origin,
+            kasane_core::Vec2::new(-125.5, 0.)
+        );
     });
 }

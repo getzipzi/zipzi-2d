@@ -78,7 +78,7 @@ impl MetalSceneRenderer {
             height: config.height as f32,
             scale_factor: 1.,
         };
-        let transform = ViewportTransform::new(scene.viewport_frame.canvas, metrics, view)
+        let transform = ViewportTransform::new(scene.viewport_frame.model_space, metrics, view)
             .ok_or_else(|| anyhow!("Invalid viewport"))?;
         self.draw_transformed(queue, config, scene, transform)
     }
@@ -251,6 +251,104 @@ mod tests {
     use editor_core::{Document, SceneTexture};
 
     #[test]
+    fn boundless_offscreen_artwork_renders_after_pan_and_zoom() -> Result<()> {
+        objc2::rc::autoreleasepool(|_| {
+            use editor_core::ViewportPoint;
+            use kasane_core::{
+                Drawable,
+                evaluation::{OffscreenFrame, RenderCommand},
+            };
+            let device = metal::Device::system_default().expect("Metal device");
+            let queue = device.new_command_queue();
+            let config = MetalTargetConfig {
+                width: 64,
+                height: 64,
+                format: metal::MTLPixelFormat::RGBA8Unorm,
+            };
+            let mut renderer = MetalSceneRenderer::new(device, config)?;
+            let mut scene = Document::new_blank()?.snapshot()?;
+            let frame = Arc::make_mut(&mut scene.viewport_frame);
+            assert_eq!(frame.model_space, kasane_core::ModelSpace::default());
+            frame.drawables = vec![Drawable {
+                id: "art".into(),
+                texture_asset_id: "red".into(),
+                positions: vec![
+                    Vec2::new(990., -990.),
+                    Vec2::new(1010., -990.),
+                    Vec2::new(1010., -1010.),
+                    Vec2::new(990., -1010.),
+                ],
+                uvs: Arc::from([
+                    Vec2::new(0., 0.),
+                    Vec2::new(1., 0.),
+                    Vec2::new(1., 1.),
+                    Vec2::new(0., 1.),
+                ]),
+                indices: Arc::from([0, 1, 2, 0, 2, 3]),
+                ..Default::default()
+            }];
+            frame.offscreens = vec![OffscreenFrame {
+                id: "group".into(),
+                enabled: true,
+                opacity: 0.5,
+                multiply_color: [1.; 4],
+                ..Default::default()
+            }];
+            frame.render_plan = vec![
+                RenderCommand::BeginOffscreen {
+                    offscreen_id: "group".into(),
+                },
+                RenderCommand::DrawMesh {
+                    mesh_id: "art".into(),
+                },
+                RenderCommand::EndOffscreen {
+                    offscreen_id: "group".into(),
+                },
+            ];
+            scene.textures = Arc::from([SceneTexture {
+                asset_id: "red".into(),
+                cache_key: "red".into(),
+                width: 1,
+                height: 1,
+                rgba: Arc::from([255, 0, 0, 255]),
+            }]);
+            for zoom in [1., 2.] {
+                let transform = ViewportTransform::new(
+                    scene.viewport_frame.model_space,
+                    ViewportMetrics {
+                        width: 64.,
+                        height: 64.,
+                        scale_factor: 1.,
+                    },
+                    ViewState {
+                        zoom,
+                        pan: ViewportPoint {
+                            x: -1000. * zoom,
+                            y: -1000. * zoom,
+                        },
+                    },
+                )
+                .unwrap();
+                let submitted = renderer.submit_transformed(&queue, config, &scene, transform)?;
+                submitted.command.wait_until_completed();
+                assert_eq!(
+                    submitted.command.status(),
+                    metal::MTLCommandBufferStatus::Completed
+                );
+                let pixels = kasane_render_metal::read_rgba8(&submitted.image).map_err(status)?;
+                let center = &pixels[(32 * 64 + 32) * 4..][..4];
+                assert!(
+                    center[0] >= 120 && center[1] == 0 && center[2] == 0,
+                    "{center:?}"
+                );
+                assert!((120..=136).contains(&center[3]), "{center:?}");
+                assert_eq!(&pixels[..4], &[0, 0, 0, 0]);
+            }
+            Ok(())
+        })
+    }
+
+    #[test]
     fn texture_eviction_keeps_recent_and_active_sources_without_reuploads() -> Result<()> {
         objc2::rc::autoreleasepool(|_| {
             let device = metal::Device::system_default().expect("Metal device");
@@ -276,7 +374,7 @@ mod tests {
                     .collect::<Vec<_>>()
                     .into();
                 let transform = ViewportTransform::new(
-                    scene.viewport_frame.canvas,
+                    scene.viewport_frame.model_space,
                     ViewportMetrics {
                         width: 1.,
                         height: 1.,
@@ -334,8 +432,8 @@ mod tests {
                     let x = drawable.positions.iter().map(|p| p.x).sum::<f32>() / count;
                     let y = drawable.positions.iter().map(|p| p.y).sum::<f32>() / count;
                     ViewportPoint {
-                        x: x * frame.canvas.pixels_per_unit + frame.canvas.origin.x,
-                        y: frame.canvas.origin.y - y * frame.canvas.pixels_per_unit,
+                        x: x + frame.model_space.origin.x,
+                        y: frame.model_space.origin.y - y,
                     }
                 })
                 .collect();
@@ -359,9 +457,12 @@ mod tests {
                     let capture = |renderer: &mut MetalSceneRenderer,
                                    pan: ViewportPoint|
                      -> anyhow::Result<Vec<u8>> {
-                        let transform =
-                            ViewportTransform::new(frame.canvas, metrics, ViewState { zoom, pan })
-                                .unwrap();
+                        let transform = ViewportTransform::new(
+                            frame.model_space,
+                            metrics,
+                            ViewState { zoom, pan },
+                        )
+                        .unwrap();
                         let submitted =
                             renderer.submit_transformed(&queue, config, &scene, transform)?;
                         submitted.command.wait_until_completed();
@@ -394,9 +495,9 @@ mod tests {
                         let pixels = capture(
                             &mut renderer,
                             ViewportPoint {
-                                x: (frame.canvas.width / 2. - anchor.x) * zoom
+                                x: (frame.model_space.origin.x - anchor.x) * zoom
                                     / metrics.scale_factor,
-                                y: (frame.canvas.height / 2. - anchor.y) * zoom
+                                y: (frame.model_space.origin.y - anchor.y) * zoom
                                     / metrics.scale_factor,
                             },
                         )?;

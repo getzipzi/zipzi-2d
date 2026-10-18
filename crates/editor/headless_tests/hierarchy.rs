@@ -485,9 +485,11 @@ fn switching_documents_cancels_pending_mesh_thumbnails(cx: &mut TestAppContext) 
 #[gpui_kit::test]
 fn mesh_thumbnails_only_generate_for_virtualized_rows(cx: &mut TestAppContext) {
     let (document, assets) = super::document_fixture::sample_document().unwrap();
-    let mut session =
-        kasane_sdk::AuthoringSession::new(&uuid::Uuid::new_v4().to_string(), document.canvas())
-            .unwrap();
+    let mut session = kasane_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        document.model_space(),
+    )
+    .unwrap();
     session
         .open_project(document.path().unwrap(), None)
         .unwrap();

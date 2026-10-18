@@ -73,7 +73,7 @@ pub(crate) struct ControlSpace {
     pub parent: Option<ControlGeometry>,
     pub parent_shape: Option<(usize, usize, bool)>,
     parent_points: Vec<f32>,
-    canvas: kasane_core::Canvas,
+    canvas: kasane_core::ModelSpace,
 }
 
 impl ControlEdit {
@@ -455,7 +455,7 @@ impl ControlEdit {
         // The evaluated rotation adds the parent angle; changing its authored
         // angle changes the displayed angle by the same amount, even under warp.
         // Its screen-space sign also includes the final canvas Y reversal.
-        Ok(if self.space.canvas.flag & 1 == 0 {
+        Ok(if !self.space.canvas.y_axis_down {
             delta
         } else {
             -delta
@@ -495,14 +495,14 @@ impl ControlSpace {
             parent,
             parent_shape,
             parent_points,
-            canvas: scene.source.viewport_frame.canvas,
+            canvas: scene.source.viewport_frame.model_space,
         })
     }
     pub fn to_model(&self, p: Vec2) -> ModelPoint {
         let Some(parent) = &self.parent else {
             return ModelPoint {
                 x: p.x,
-                y: if self.canvas.flag & 1 == 0 {
+                y: if !self.canvas.y_axis_down {
                     2. * self.canvas.origin.y - p.y
                 } else {
                     p.y

@@ -13,6 +13,8 @@ pub(super) fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
         height: 512.,
         scale_factor: 2.,
     });
+    // Center the fixture's artwork explicitly; reset now centers the model origin.
+    editor.pan_by(ViewportPoint { x: -64., y: -64. });
     shown(&mut editor)?;
     Ok((editor, dir))
 }

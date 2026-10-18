@@ -1,13 +1,13 @@
 //! Isolated neutral candidate rendering. The live document is never edited.
 use crate::{MeshGenerationPreview, SceneSnapshot, SceneTexture};
 use kasane_core::evaluation::RenderCommand;
-use kasane_core::{Canvas, Drawable, DrawableFrame, Vec2};
+use kasane_core::{Drawable, DrawableFrame, ModelSpace, Vec2};
 use std::{collections::HashMap, sync::Arc};
 impl MeshGenerationPreview {
     pub fn scene(&self, texture: SceneTexture) -> SceneSnapshot {
         let texture = self.render_texture(texture);
-        let [a, c] = self.source_bounds();
-        let canvas = Canvas::new(c.x - a.x, c.y - a.y, Vec2::default(), 1.);
+        let [a, _] = self.source_bounds();
+        let model_space = ModelSpace::default();
         let g = self.geometry();
         let index: HashMap<_, _> = g
             .vertex_ids
@@ -40,7 +40,7 @@ impl MeshGenerationPreview {
             ..Default::default()
         };
         let frame = Arc::new(DrawableFrame {
-            canvas,
+            model_space,
             drawables: vec![drawable],
             render_plan: vec![RenderCommand::DrawMesh { mesh_id: id }],
             ..Default::default()

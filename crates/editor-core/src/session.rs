@@ -66,18 +66,33 @@ impl DocumentSession {
             .as_ref()
             .map(|scene| scene.viewport_frame.clone())
     }
-    pub(crate) fn fit_default_view(&mut self, viewport: ViewportId, metrics: ViewportMetrics) {
+    pub(crate) fn fit_default_view(
+        &mut self,
+        viewport: ViewportId,
+        metrics: ViewportMetrics,
+    ) -> Result<()> {
         if self.views.entry(viewport).or_default().default_fit {
-            self.fit_view(viewport, metrics);
+            self.fit_view(viewport, metrics)?;
         }
+        Ok(())
     }
-    pub(crate) fn fit_view(&mut self, viewport: ViewportId, metrics: ViewportMetrics) {
-        if !self.modeling.tools.dragging() {
-            self.views
-                .entry(viewport)
-                .or_default()
-                .fit(self.document.canvas(), metrics);
+    pub(crate) fn fit_view(
+        &mut self,
+        viewport: ViewportId,
+        metrics: ViewportMetrics,
+    ) -> Result<()> {
+        if !metrics.visible() || self.modeling.tools.dragging() {
+            return Ok(());
         }
+        let canvas = self.document.model_space();
+        // Resolve the current scene before fitting, including the first preview
+        // and scenes invalidated by an edit. Never fit stale cached geometry.
+        let bounds = self.scene()?.1.content_bounds();
+        self.views
+            .entry(viewport)
+            .or_default()
+            .fit(canvas, bounds, metrics);
+        Ok(())
     }
     pub(crate) fn view_state(&self, viewport: ViewportId) -> ViewportState {
         self.views[&viewport]
@@ -412,6 +427,9 @@ impl DocumentSession {
                 "Wait for the current model frame"
             );
             self.document.finish_edit()?;
+            // Once a pointer gesture begins, hold its projection steady across
+            // geometry commits. Automatic fitting must not move the model at release.
+            self.views.entry(viewport).or_default().default_fit = false;
         }
         let result = self.modeling.tools.input(&mut self.document, &frame, event);
         if result.as_ref().is_ok_and(|changed| *changed) || result.is_err() {

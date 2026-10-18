@@ -447,7 +447,7 @@ impl Editor {
         let metrics = self.viewport_metrics(binding.viewport)?;
         let viewport_id = binding.viewport;
         let session = self.active_session_mut()?;
-        session.fit_default_view(viewport_id, metrics);
+        session.fit_default_view(viewport_id, metrics).ok()?;
         session.reconcile_animation();
         let source = if let Some(source) = &session.animation.playback.source {
             source.clone()

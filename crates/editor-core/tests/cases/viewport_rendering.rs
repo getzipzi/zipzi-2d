@@ -170,7 +170,7 @@ fn animation_instances_reuse_one_content_evaluation_and_accept_independent_inter
     editor.select_motion(a.document, motion)?;
     let mut evaluator = AnimationEvaluator::default();
     let content = evaluator.evaluate(&editor.animation_request().unwrap(), |_, _| true)?;
-    let canvas = content.scene.viewport_frame.canvas;
+    let canvas = content.scene.viewport_frame.model_space;
     let (first, _) = editor
         .animation_viewport_request(a, content.identity, canvas)
         .unwrap();

@@ -224,7 +224,7 @@ fn texture_alpha_picking_matches_renderer_v_orientation_for_surfaces_and_masks()
             .positions
             .iter()
             .map(|p| {
-                let p = ViewportTransform::evaluated_to_source(frame.canvas, *p);
+                let p = ViewportTransform::evaluated_to_source(frame.model_space, *p);
                 Vec2::new((p.x - 24.) / 208., 1. - (p.y - 24.) / 208.)
             })
             .collect();
@@ -381,8 +381,9 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
         height: 512.,
         scale_factor: 1.,
     });
-    shown(&mut editor)?;
-    click(&mut editor, ViewportPoint { x: 256., y: 256. }, false)?;
+    let frame = shown(&mut editor)?;
+    let center = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
+    click(&mut editor, center, false)?;
     let p = editor.overlay().vertices[0].position;
     editor.canvas_input(CanvasInput::Down {
         point: p,

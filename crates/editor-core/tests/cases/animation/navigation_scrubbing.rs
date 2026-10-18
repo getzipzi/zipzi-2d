@@ -13,7 +13,7 @@ fn navigation_presents_inflight_frames_in_order_but_rejects_wrong_surface_sizes(
         editor.seek_timeline(document, 0.4)?;
         let content = evaluate(&mut editor, &mut evaluator)?;
         let binding = editor.primary_viewport_binding().unwrap();
-        let canvas = content.scene.viewport_frame.canvas;
+        let canvas = content.scene.viewport_frame.model_space;
         let (mut pending, _) = editor
             .animation_viewport_request(binding, content.identity, canvas)
             .unwrap();
@@ -83,7 +83,7 @@ fn navigation_reuses_completed_pose_but_keeps_frame_acceptance_and_cancellation(
         editor.seek_timeline(document, 0.35)?;
         let original = evaluate(&mut editor, &mut evaluator)?;
         let binding = editor.primary_viewport_binding().unwrap();
-        let canvas = original.scene.viewport_frame.canvas;
+        let canvas = original.scene.viewport_frame.model_space;
         let (first, _) = editor
             .animation_viewport_request(binding, original.identity, canvas)
             .unwrap();
@@ -248,7 +248,11 @@ fn continuous_frames_do_not_starve_and_barriers_reject_late_frames() -> anyhow::
     assert!(editor.animation_request().is_none());
     let binding = editor.primary_viewport_binding().unwrap();
     let (old_view, _) = editor
-        .animation_viewport_request(binding, zero.identity, zero.scene.viewport_frame.canvas)
+        .animation_viewport_request(
+            binding,
+            zero.identity,
+            zero.scene.viewport_frame.model_space,
+        )
         .unwrap();
     editor.pan_by(ViewportPoint { x: 1., y: 0. });
     assert!(editor.present_animation_viewport(old_view, zero.snapshot.clone()));

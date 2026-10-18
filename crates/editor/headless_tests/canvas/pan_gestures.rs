@@ -55,6 +55,7 @@ fn space_never_enters_temporary_hand_and_repeats_are_suppressed(cx: &mut TestApp
         MouseUpEvent,
     };
     let harness = setup(cx);
+    let initial_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
     cx.update_window(harness.window, |_, window, cx| {
         let focus = harness.view.read_with(cx, |view, cx| {
             view.dock
@@ -120,10 +121,7 @@ fn space_never_enters_temporary_hand_and_repeats_are_suppressed(cx: &mut TestApp
             cx,
         );
         harness.view.read_with(cx, |view, _| {
-            assert_eq!(
-                view.editor.view().pan,
-                editor_core::ViewportPoint::default()
-            );
+            assert_eq!(view.editor.view().pan, initial_pan);
             assert_eq!(
                 view.editor.workspace(),
                 editor_core::WorkspaceKind::Modeling
@@ -142,6 +140,7 @@ fn space_never_enters_temporary_hand_and_repeats_are_suppressed(cx: &mut TestApp
 #[gpui_kit::test]
 fn space_after_document_switch_does_not_pan(cx: &mut TestAppContext) {
     let harness = setup(cx);
+    let initial_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
     cx.update_window(harness.window, |_, window, cx| {
         let first = harness
             .view
@@ -155,10 +154,7 @@ fn space_after_document_switch_does_not_pan(cx: &mut TestAppContext) {
         let from = window.find("canvas-body").bounds().center();
         window.drag(from, from + point(px(20.), px(0.)), cx);
         harness.view.read_with(cx, |view, _| {
-            assert_eq!(
-                view.editor.view().pan,
-                editor_core::ViewportPoint::default()
-            );
+            assert_eq!(view.editor.view().pan, initial_pan);
             assert_eq!(
                 view.editor.workspace(),
                 editor_core::WorkspaceKind::Modeling
@@ -197,6 +193,7 @@ fn space_in_parameter_input_keeps_input_focus(cx: &mut TestAppContext) {
 #[gpui_kit::test]
 fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut TestAppContext) {
     let harness = setup(cx);
+    let initial_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
     cx.update_window(harness.window, |_, window, cx| {
         let top = window.find("workspace-titlebar").bounds();
         let tools = window.find("canvas-toolbar").bounds();
@@ -300,7 +297,7 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
         window.click("btn_zoom_fit", cx);
         assert_eq!(
             harness.view.read_with(cx, |view, _| view.editor.view().pan),
-            Default::default()
+            initial_pan
         );
         harness.view.update(cx, |view, cx| {
             view.modal = true;
@@ -565,6 +562,7 @@ fn continuous_pan_does_not_notify_document_panels(cx: &mut TestAppContext) {
     use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent};
     use std::{cell::Cell, rc::Rc};
     let harness = setup(cx);
+    let initial_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
     let from = cx
         .update_window(harness.window, |_, window, cx| {
             window.click("tool_hand", cx);
@@ -613,7 +611,7 @@ fn continuous_pan_does_not_notify_document_panels(cx: &mut TestAppContext) {
     );
     assert_eq!(
         harness.view.read_with(cx, |v, _| v.editor.view().pan.x),
-        32.
+        initial_pan.x + 32.
     );
 }
 

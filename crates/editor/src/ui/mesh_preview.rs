@@ -33,6 +33,7 @@ impl MeshPreviewResources {
 
 pub(super) struct MeshPreview {
     scene: SceneSnapshot,
+    source_size: [f32; 2],
     resources: MeshPreviewCache,
     cached: Option<([u32; 6], metal::Texture)>,
 }
@@ -40,11 +41,17 @@ impl MeshPreview {
     /// Upload textures and prepare geometry off the UI thread before publication.
     pub fn prepare(
         scene: SceneSnapshot,
+        source_size: [f32; 2],
         gpu: Option<SharedMetalContext>,
         resources: MeshPreviewCache,
     ) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            source_size.into_iter().all(|v| v.is_finite() && v > 0.),
+            "Invalid preview extent"
+        );
         let preview = Self {
             scene,
+            source_size,
             resources,
             cached: None,
         };
@@ -61,13 +68,7 @@ impl MeshPreview {
                 config,
                 &preview.scene,
                 ViewportTransform {
-                    scale: 1.
-                        / preview
-                            .scene
-                            .viewport_frame
-                            .canvas
-                            .width
-                            .max(preview.scene.viewport_frame.canvas.height),
+                    scale: 1. / source_size[0].max(source_size[1]),
                     offset: ViewportPoint::default(),
                     metrics: ViewportMetrics {
                         width: 1.,
@@ -115,7 +116,7 @@ impl MeshPreview {
         let renderer = resources.renderer(&gpu, config)?;
         let offset = content.origin - bounds.origin;
         let transform = ViewportTransform {
-            scale: content.size.width.as_f32() / self.scene.viewport_frame.canvas.width,
+            scale: content.size.width.as_f32() / self.source_size[0],
             offset: ViewportPoint {
                 x: offset.x.as_f32(),
                 y: offset.y.as_f32(),
@@ -157,7 +158,7 @@ mod tests {
             let gpu = gpui.shared_metal_context();
             let cache = MeshPreviewCache::default();
             let frame = Arc::new(DrawableFrame {
-                canvas: Canvas::new(64., 64., Vec2::default(), 1.),
+                model_space: (Canvas::new(64., 64., Vec2::default(), 1.)).into(),
                 ..Default::default()
             });
             let scene = SceneSnapshot {
@@ -172,10 +173,15 @@ mod tests {
                     rgba: vec![255; 64 * 64 * 4].into(),
                 }]),
             };
-            let first = MeshPreview::prepare(scene.clone(), Some(gpu.clone()), cache.clone())?;
+            let first =
+                MeshPreview::prepare(scene.clone(), [64., 64.], Some(gpu.clone()), cache.clone())?;
             let mut changed = scene;
-            Arc::make_mut(&mut changed.viewport_frame).canvas.width = 128.;
-            let second = MeshPreview::prepare(changed.clone(), Some(gpu.clone()), cache.clone())?;
+            let second = MeshPreview::prepare(
+                changed.clone(),
+                [128., 64.],
+                Some(gpu.clone()),
+                cache.clone(),
+            )?;
             assert!(Arc::ptr_eq(&first.resources, &second.resources));
             let resources = cache.lock().unwrap();
             let renderer = resources.renderer.as_ref().unwrap();
@@ -189,13 +195,13 @@ mod tests {
                 1,
                 "parameter edits must not upload the texture again"
             );
-            assert_eq!(second.scene.viewport_frame.canvas.width, 128.);
+            assert_eq!(second.source_size[0], 128.);
             drop(resources);
             // Immutable content identity, rather than the local asset alias,
             // controls reuse when a different source texture is supplied.
             Arc::make_mut(&mut changed.textures)[0].cache_key = "changed-source".into();
             Arc::make_mut(&mut changed.textures)[0].rgba = vec![128; 64 * 64 * 4].into();
-            let _third = MeshPreview::prepare(changed, Some(gpu), cache.clone())?;
+            let _third = MeshPreview::prepare(changed, [128., 64.], Some(gpu), cache.clone())?;
             assert_eq!(
                 cache.lock().unwrap().renderer.as_ref().unwrap().stats().1,
                 2

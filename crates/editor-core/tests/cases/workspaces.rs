@@ -3,7 +3,8 @@ use editor_core::*;
 
 fn assert_view(actual: ViewState, expected: ViewState) {
     assert_eq!(actual.zoom, expected.zoom);
-    assert_eq!(actual.pan, expected.pan);
+    assert!((actual.pan.x - expected.pan.x).abs() < 0.0001);
+    assert!((actual.pan.y - expected.pan.y).abs() < 0.0001);
 }
 
 #[test]
@@ -37,20 +38,34 @@ fn project_modes_survive_background_save_and_closing_the_active_tab() -> anyhow:
 
 #[test]
 fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Result<()> {
-    let mut editor = crate::support::new_editor()?;
+    let (document, _assets) = support::sample_document()?;
+    let mut editor = support::editor_from_document(document);
     support::attach_viewports(&mut editor);
     let first = editor.active_id().unwrap();
     // An unmeasured canvas must not consume the default Fit behavior.
     assert!(editor.preview()?.canvas.is_none());
     let fitted = |editor: &Editor| {
-        let canvas = editor.document().unwrap().canvas();
+        if !editor
+            .document()
+            .unwrap()
+            .object_index()
+            .objects
+            .iter()
+            .any(|o| o.reference.kind == ObjectKind::Mesh)
+        {
+            return ViewState::default();
+        }
         let metrics = editor.canvas_metrics();
+        let zoom = ((f64::from(metrics.width) / 208.).min(f64::from(metrics.height) / 208.)
+            * f64::from(metrics.scale_factor)
+            * 0.9)
+            .clamp(0.04, 32.) as f32;
         ViewState {
-            zoom: ((metrics.width / canvas.width).min(metrics.height / canvas.height)
-                * metrics.scale_factor
-                * 0.9)
-                .clamp(0.04, 32.),
-            pan: ViewportPoint::default(),
+            zoom,
+            pan: ViewportPoint {
+                x: -128. * (zoom / metrics.scale_factor),
+                y: -128. * (zoom / metrics.scale_factor),
+            },
         }
     };
     for workspace in WorkspaceKind::ALL {
@@ -116,15 +131,15 @@ fn default_views_fit_measured_layouts_until_manual_navigation() -> anyhow::Resul
 }
 
 #[test]
-fn fit_view_uses_canvas_and_display_scale_without_changing_other_views() -> anyhow::Result<()> {
-    let mut editor = crate::support::new_editor()?;
+fn fit_view_uses_content_and_display_scale_without_changing_other_views() -> anyhow::Result<()> {
+    let (document, _assets) = support::sample_document()?;
+    let mut editor = support::editor_from_document(document);
     support::attach_viewports(&mut editor);
     assert!(!editor.command_available(editor.command(CommandId::FitView)));
     let first = editor.active_id().unwrap();
     editor.pan_by(ViewportPoint { x: 30., y: 40. });
     let modeling = editor.view();
     editor.set_workspace(WorkspaceKind::Animation)?;
-    let canvas = editor.document().unwrap().canvas();
     editor.set_canvas_metrics(ViewportMetrics {
         width: 420.,
         height: 280.,
@@ -132,11 +147,15 @@ fn fit_view_uses_canvas_and_display_scale_without_changing_other_views() -> anyh
     });
     editor.pan_by(ViewportPoint { x: 10., y: -40. });
     editor.dispatch(editor.command(CommandId::FitView))?;
+    let zoom = ((420_f64 / 208.).min(280. / 208.) * 2. * 0.9) as f32;
     assert_view(
         editor.view(),
         ViewState {
-            zoom: (420. / canvas.width).min(280. / canvas.height) * 2. * 0.9,
-            pan: ViewportPoint::default(),
+            zoom,
+            pan: ViewportPoint {
+                x: -128. * (zoom / 2.),
+                y: -128. * (zoom / 2.),
+            },
         },
     );
     let fitted = editor.view();

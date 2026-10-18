@@ -129,4 +129,22 @@ impl CanvasScene {
             .map(Arc::as_ref)
             .collect()
     }
+    pub fn content_bounds(&self) -> Option<[f32; 4]> {
+        let mut result: Option<[f32; 4]> = None;
+        for mesh in self
+            .meshes
+            .iter()
+            .filter(|mesh| self.mesh_visible(&mesh.id))
+        {
+            if let Some(b) = mesh.bounds {
+                result = Some(match result {
+                    None => b,
+                    Some([x0, y0, x1, y1]) => {
+                        [x0.min(b[0]), y0.min(b[1]), x1.max(b[2]), y1.max(b[3])]
+                    }
+                });
+            }
+        }
+        result
+    }
 }

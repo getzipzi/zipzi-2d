@@ -280,10 +280,18 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
                 cx,
             );
             window.render_frame(cx);
-            assert!(window.try_find("object-property-canvas.width").is_some());
+            assert!(
+                window
+                    .try_find("object-property-model_space.origin.x")
+                    .is_some()
+            );
             window.click("property-group-$details", cx);
             window.render_frame(cx);
-            assert!(window.try_find("object-property-canvas.width").is_some());
+            assert!(
+                window
+                    .try_find("object-property-model_space.origin.x")
+                    .is_some()
+            );
             assert!(window.try_find(first_detail.clone()).is_none());
             window.click("property-group-$details", cx);
             window.render_frame(cx);

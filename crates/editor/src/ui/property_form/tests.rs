@@ -159,7 +159,7 @@ fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
     );
     let width = property_specs(ObjectKind::Document)
         .iter()
-        .find(|s| s.id == PropertyId::Width)
+        .find(|s| s.id == PropertyId::OriginX)
         .unwrap();
     forms
         .entries
@@ -167,7 +167,7 @@ fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
         .unwrap()
         .edit(width, "512".into());
     assert!(forms.prepare_save(&mut editor, target.document).is_none());
-    assert_eq!(editor.document().unwrap().canvas().width, 512.);
+    assert_eq!(editor.document().unwrap().model_space().origin.x, 512.);
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     forms
         .entries

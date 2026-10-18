@@ -520,7 +520,7 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
         for zoom in [0.5, 1., 2.] {
             for dpi in [1., 2.] {
                 let transform = ViewportTransform::new(
-                    scene.source.viewport_frame.canvas,
+                    scene.source.viewport_frame.model_space,
                     ViewportMetrics {
                         width,
                         height: width,

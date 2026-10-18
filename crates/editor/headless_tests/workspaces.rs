@@ -227,6 +227,7 @@ fn middle_button_trackpad_and_hand_navigation_work_in_both_workspaces(cx: &mut T
                 .view
                 .update(cx, |view, cx| view.switch_workspace(workspace, window, cx));
             window.render_frame(cx);
+            let initial_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
             let from = window.find("canvas-body").bounds().center();
             window.dispatch_event(
                 MouseDownEvent {
@@ -276,7 +277,10 @@ fn middle_button_trackpad_and_hand_navigation_work_in_both_workspaces(cx: &mut T
             harness.view.read_with(cx, |view, _| {
                 assert_eq!(
                     view.editor.view().pan,
-                    editor_core::ViewportPoint { x: 62., y: 23. }
+                    editor_core::ViewportPoint {
+                        x: initial_pan.x + 62.,
+                        y: initial_pan.y + 23.
+                    }
                 );
                 assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
                 assert!(!view.editor.document().unwrap().modified());
@@ -327,6 +331,7 @@ fn old_pan_and_wheel_callbacks_cannot_continue_after_switching(cx: &mut TestAppC
             view.run_command(CommandId::AnimationWorkspace, window, cx)
         });
         window.render_frame(cx);
+        let initial_pan = harness.view.read(cx).editor.view().pan;
         window.dispatch_event(
             MouseMoveEvent {
                 position: from + point(px(100.), px(20.)),
@@ -336,10 +341,7 @@ fn old_pan_and_wheel_callbacks_cannot_continue_after_switching(cx: &mut TestAppC
             .to_platform_input(),
             cx,
         );
-        assert_eq!(
-            harness.view.read(cx).editor.view().pan,
-            editor_core::ViewportPoint::default()
-        );
+        assert_eq!(harness.view.read(cx).editor.view().pan, initial_pan);
     })
     .unwrap();
 }
@@ -602,6 +604,7 @@ fn modal_blocks_space_workspace_switch_and_clears_pan_capture(cx: &mut TestAppCo
         );
         window.close_dialog(cx);
         window.render_frame(cx);
+        let initial_pan = harness.view.read(cx).editor.view().pan;
         window.dispatch_event(
             MouseMoveEvent {
                 position: from + point(px(100.), px(20.)),
@@ -611,10 +614,7 @@ fn modal_blocks_space_workspace_switch_and_clears_pan_capture(cx: &mut TestAppCo
             .to_platform_input(),
             cx,
         );
-        assert_eq!(
-            harness.view.read(cx).editor.view().pan,
-            editor_core::ViewportPoint::default()
-        );
+        assert_eq!(harness.view.read(cx).editor.view().pan, initial_pan);
     })
     .unwrap();
 }

@@ -77,16 +77,22 @@ impl Editor {
         self.navigate_viewport(binding, |state, _| state.reset())
     }
     pub fn fit_viewport(&mut self, binding: crate::ViewportBinding) -> Result<()> {
-        let canvas = self
-            .document()
-            .ok_or_else(|| anyhow!("No active document"))?
-            .canvas();
-        self.navigate_viewport(binding, |state, metrics| {
-            if metrics.visible() {
-                state.default_fit = false;
-                state.fit(canvas, metrics);
-            }
-        })
+        ensure!(
+            self.viewport_binding_valid(binding),
+            "Viewport binding changed"
+        );
+        ensure!(!self.gesture_active(), "A Modeling gesture is active");
+        let metrics = self.viewport_metrics(binding.viewport).unwrap();
+        if metrics.visible() {
+            let session = self.entry_mut(binding.document)?.session_mut().unwrap();
+            session.fit_view(binding.viewport, metrics)?;
+            session
+                .views
+                .entry(binding.viewport)
+                .or_default()
+                .default_fit = false;
+        }
+        Ok(())
     }
     pub fn zoom_at(&mut self, delta: f32, focus: Option<crate::ViewportPoint>) {
         if let Some(binding) = self.primary_viewport_binding() {

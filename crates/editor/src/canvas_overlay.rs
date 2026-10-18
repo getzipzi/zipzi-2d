@@ -68,6 +68,31 @@ pub(crate) fn paint_lines(
         });
     };
     lines(&overlay.reference_lines, 0.75, p.mesh.opacity(0.5));
+    if let Some(origin) = overlay.origin_crosshair {
+        let size = 10.;
+        let x_axis = [(
+            ViewportPoint {
+                x: origin.x - size,
+                y: origin.y,
+            },
+            ViewportPoint {
+                x: origin.x + size,
+                y: origin.y,
+            },
+        )];
+        let y_axis = [(
+            ViewportPoint {
+                x: origin.x,
+                y: origin.y - size,
+            },
+            ViewportPoint {
+                x: origin.x,
+                y: origin.y + size,
+            },
+        )];
+        lines(&x_axis, 1.0, rgb(0xe05555).opacity(0.6).into());
+        lines(&y_axis, 1.0, rgb(0x55b555).opacity(0.6).into());
+    }
     lines(&overlay.guide_lines, 0.75, p.deformer.opacity(0.3));
     // Hover raises contrast rather than widening the outline over the artwork.
     lines(&overlay.accent_lines, 1., p.mesh.opacity(0.8));

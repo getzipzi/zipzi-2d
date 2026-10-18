@@ -56,10 +56,8 @@ pub(crate) fn definition(kind: ObjectKind) -> FormDefinition {
     };
     let fields = match kind {
         ObjectKind::Document => vec![
-            field(Width, "properties.width", Number),
-            field(Height, "properties.height", Number),
-            field(PixelsPerUnit, "properties.pixels_per_unit", Number),
-            field(CanvasFlag, "properties.canvas_flag", Number),
+            field(OriginX, "properties.origin_x", Number),
+            field(OriginY, "properties.origin_y", Number),
         ],
         ObjectKind::Part => vec![
             field(Name, "properties.name", Text),

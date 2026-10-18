@@ -11,10 +11,8 @@ pub enum PropertyId {
     RuntimeId,
     Enabled,
     DrawOrder,
-    Width,
-    Height,
-    PixelsPerUnit,
-    CanvasFlag,
+    OriginX,
+    OriginY,
     Minimum,
     Maximum,
     DefaultValue,
@@ -32,10 +30,8 @@ impl PropertyId {
             Self::RuntimeId => "runtime_id",
             Self::Enabled => "enabled",
             Self::DrawOrder => "draw_order",
-            Self::Width => "canvas.width",
-            Self::Height => "canvas.height",
-            Self::PixelsPerUnit => "canvas.pixels_per_unit",
-            Self::CanvasFlag => "canvas.flag",
+            Self::OriginX => "model_space.origin.x",
+            Self::OriginY => "model_space.origin.y",
             Self::Minimum => "minimum",
             Self::Maximum => "maximum",
             Self::DefaultValue => "default_value",
@@ -233,17 +229,9 @@ pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
     const FADE_OUT: PropertySpec = S::new(FadeOut, T::OptionalFloat)
         .range(0., f32::MAX as f64, 0.1)
         .preview();
-    const CANVAS: &[PropertySpec] = &[
-        S::new(Width, T::Float)
-            .range(f32::MIN_POSITIVE as f64, f32::MAX as f64, 1.)
-            .preview(),
-        S::new(Height, T::Float)
-            .range(f32::MIN_POSITIVE as f64, f32::MAX as f64, 1.)
-            .preview(),
-        S::new(PixelsPerUnit, T::Float)
-            .range(f32::MIN_POSITIVE as f64, f32::MAX as f64, 0.1)
-            .preview(),
-        S::new(CanvasFlag, T::Integer).range(0., 255., 1.).preview(),
+    const MODEL_SPACE: &[PropertySpec] = &[
+        S::new(OriginX, T::Float).preview(),
+        S::new(OriginY, T::Float).preview(),
     ];
     const PART: &[PropertySpec] = &[
         NAME,
@@ -271,7 +259,7 @@ pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
     ];
     const MOTION: &[PropertySpec] = &[NAME, S::new(Looping, T::Bool), FADE_IN, FADE_OUT];
     match kind {
-        ObjectKind::Document => CANVAS,
+        ObjectKind::Document => MODEL_SPACE,
         ObjectKind::Part => PART,
         ObjectKind::Deformer | ObjectKind::Offscreen => &[NAME, RUNTIME_ID, ENABLED],
         ObjectKind::Parameter => PARAMETER,
@@ -316,7 +304,7 @@ pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) 
     Ok(match object.kind {
         K::Document => {
             ensure!(model.id() == object.id, "Object no longer exists");
-            serde_json::json!({ "canvas": model.canvas() })
+            serde_json::json!({ "model_space": model.model_space() })
         }
         K::Part => get!(get_part),
         K::Mesh => get!(get_mesh),

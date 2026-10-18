@@ -190,7 +190,20 @@ fn overlap_menu_selects_a_candidate_and_keeps_history(cx: &mut TestAppContext) {
             .id
     });
     cx.update_window(harness.window, |_, window, cx| {
-        window.right_click("canvas-body", cx);
+        let center = harness.view.read_with(cx, |view, _| {
+            view.modeling_frame()
+                .unwrap()
+                .canvas
+                .transform
+                .to_viewport(editor_core::ModelPoint { x: 128., y: 128. })
+        });
+        window.click_with_options(
+            "canvas-body",
+            gpui_kit::test::ClickOptions::new()
+                .with_offset(point(px(center.x), px(center.y)))
+                .with_button(gpui_kit::MouseButton::Right),
+            cx,
+        );
     })
     .unwrap();
     cx.run_until_parked();
@@ -267,7 +280,20 @@ fn helper_menu_toggles_preserve_selection_history_and_canvas_focus(cx: &mut Test
         (4usize, DeformerVisibility::default()),
     ] {
         cx.update_window(harness.window, |_, window, cx| {
-            window.right_click("canvas-body", cx);
+            let center = harness.view.read_with(cx, |view, _| {
+                view.modeling_frame()
+                    .unwrap()
+                    .canvas
+                    .transform
+                    .to_viewport(editor_core::ModelPoint { x: 128., y: 128. })
+            });
+            window.click_with_options(
+                "canvas-body",
+                gpui_kit::test::ClickOptions::new()
+                    .with_offset(point(px(center.x), px(center.y)))
+                    .with_button(gpui_kit::MouseButton::Right),
+                cx,
+            );
         })
         .unwrap();
         cx.run_until_parked();

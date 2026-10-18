@@ -251,7 +251,7 @@ impl EditorView {
             let Some((viewport, transform)) = self.editor.animation_viewport_request(
                 binding,
                 evaluated.identity,
-                evaluated.scene.viewport_frame.canvas,
+                evaluated.scene.viewport_frame.model_space,
             ) else {
                 continue;
             };

@@ -486,7 +486,7 @@ fn locked_mask_still_clips_unlocked_objects_in_canvas_candidates() -> anyhow::Re
     let scene = CanvasScene::new(&doc, source);
     doc.set_objects_locked(&[ObjectRef::new(ObjectKind::Mesh, bottom)], true)?;
     let t = ViewportTransform::new(
-        scene.source.viewport_frame.canvas,
+        scene.source.viewport_frame.model_space,
         ViewportMetrics {
             width: 512.,
             height: 512.,

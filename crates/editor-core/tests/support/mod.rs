@@ -458,7 +458,7 @@ pub fn combined_animation_document() -> anyhow::Result<(Document, TempDir)> {
     let path = document
         .save(&assets.path().join("combined.kasane"))?
         .manifest;
-    let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.canvas())?;
+    let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.model_space())?;
     session.open_project(&path, None)?;
     let mut input = session.parameter(&session.parameter_ids()[0]).unwrap();
     input.runtime_id = "ParamX".into();
@@ -519,7 +519,7 @@ pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
     let path = document
         .save(&assets.path().join("diagnostics.kasane"))?
         .manifest;
-    let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.canvas())?;
+    let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.model_space())?;
     session.open_project(&path, None)?;
     let mut clip = session
         .document()

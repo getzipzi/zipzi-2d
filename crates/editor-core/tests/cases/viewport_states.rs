@@ -19,7 +19,8 @@ fn command(editor: &Editor, viewport: ViewportId, id: CommandId) -> Command {
 #[test]
 fn same_kind_instances_keep_navigation_metrics_limits_and_revisions_independent()
 -> anyhow::Result<()> {
-    let mut editor = Editor::new()?;
+    let (document, _assets) = support::sample_document()?;
+    let mut editor = Editor::from_document(document);
     let first = ViewportId::new();
     let second = ViewportId::new();
     editor.register_primary_viewport(first, ViewportKind::Modeling)?;

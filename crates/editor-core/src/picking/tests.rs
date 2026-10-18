@@ -82,10 +82,9 @@ fn geometry_reuse_respects_canvas_coordinates_drawable_order_and_topology() -> a
     }
     for flag in [0, 1] {
         let mut changed_canvas = source.clone();
-        let canvas = &mut Arc::make_mut(&mut changed_canvas.viewport_frame).canvas;
-        canvas.pixels_per_unit = 2.;
+        let canvas = &mut Arc::make_mut(&mut changed_canvas.viewport_frame).model_space;
         canvas.origin = Vec2::new(7., 9.);
-        canvas.flag = flag;
+        canvas.y_axis_down = flag != 0;
         let updated = original.with_positions(&document, changed_canvas.clone());
         let fresh = CanvasScene::new(&document, changed_canvas);
         for (old, (updated, fresh)) in original

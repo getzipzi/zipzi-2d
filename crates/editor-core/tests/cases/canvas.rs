@@ -82,9 +82,11 @@ fn coordinate_spaces_round_trip_at_multiple_display_scales() {
                 },
             )
             .unwrap();
-            let source =
-                ViewportTransform::evaluated_to_source(canvas, kasane_core::Vec2::new(-2., 1.));
-            assert_eq!(source, ModelPoint { x: 120., y: 140. });
+            let source = ViewportTransform::evaluated_to_source(
+                canvas.into(),
+                kasane_core::Vec2::new(-2., 1.),
+            );
+            assert_eq!(source, ModelPoint { x: 318., y: 239. });
             let round = t.to_model(t.to_viewport(source));
             assert!((round.x - source.x).abs() < 0.0001 && (round.y - source.y).abs() < 0.0001);
             assert_eq!(
