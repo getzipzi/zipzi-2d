@@ -30,6 +30,7 @@ static METAL_MESH_OVERLAY: AtomicBool = AtomicBool::new(true);
 static BATCH_MESH_EDGES: AtomicBool = AtomicBool::new(true);
 static HIDE_MESH_EDGES: AtomicBool = AtomicBool::new(false);
 static CONFIG: OnceLock<Config> = OnceLock::new();
+static LAST_PRESENTED: AtomicU64 = AtomicU64::new(0);
 thread_local! { static INJECTING_POINTER: Cell<bool> = const { Cell::new(false) }; }
 struct Config {
     model: PathBuf,
@@ -193,6 +194,9 @@ pub fn init() -> anyhow::Result<()> {
         .ok();
     ensure!(
         frame_trace::install(|event| {
+            if event.stage == "presented" {
+                LAST_PRESENTED.fetch_max(event.at_ns, Ordering::Relaxed);
+            }
             IN_SINK.fetch_add(1, Ordering::SeqCst);
             if !STOPPED.load(Ordering::SeqCst) {
                 if let Some(writer) = WRITER.get() {
@@ -221,9 +225,9 @@ pub fn hide_mesh_edges() -> bool {
 }
 
 // AppKit may deliver an unpressed hover move between synthetic drag samples.
-// Let scripted pointer events own the canvas during an automatic benchmark.
+// Scripted pointer events own the editor during an automatic benchmark.
 // Manual tracing and ordinary editor sessions keep all native mouse behavior.
-pub fn ignore_native_mouse_move() -> bool {
+pub fn ignore_native_pointer_event() -> bool {
     CONFIG.get().is_some() && !INJECTING_POINTER.get()
 }
 
@@ -403,8 +407,52 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         )
                     })?;
                 }
+                if mode == 4 {
+                    ensure!(
+                        view.update_in(cx, |v, _, cx| v
+                            .dock
+                            .as_ref()
+                            .unwrap()
+                            .parameters
+                            .read(cx)
+                            .benchmark_slider_dragging())?,
+                        "parameter benchmark did not start a slider drag"
+                    );
+                }
                 let interval = Duration::from_secs_f64(1. / config.hz as f64);
                 let mut deadline = Instant::now() + interval;
+                if mode == 4 {
+                    if let Ok(phase) = std::env::var("KASANE_BENCH_PHASE_US") {
+                        ensure!(
+                            config.hz == 120,
+                            "phase diagnostic requires a 120 Hz input/display setup"
+                        );
+                        let phase_ns = phase
+                            .parse::<u64>()?
+                            .checked_mul(1000)
+                            .context("input phase overflow")?;
+                        let period = interval.as_nanos() as u64;
+                        ensure!(phase_ns < period, "input phase exceeds one display period");
+                        let reference = LAST_PRESENTED.load(Ordering::Relaxed);
+                        ensure!(reference > 0, "no presentation phase reference");
+                        let now = frame_trace::now_ns();
+                        let elapsed = now
+                            .checked_sub(reference)
+                            .context("presentation reference is ahead of the host clock")?;
+                        let delay = (phase_ns + period - elapsed % period) % period + 2 * period;
+                        deadline = Instant::now() + Duration::from_nanos(delay);
+                        frame_trace::emit(
+                            frame_trace::next_id(),
+                            "benchmark_input_phase",
+                            &[
+                                ("reference_ns", reference),
+                                ("phase_ns", phase_ns),
+                                ("period_ns", period),
+                                ("target_ns", now + delay),
+                            ],
+                        );
+                    }
+                }
                 let mut last_position = center;
                 for sample in 0..config.samples + config.warmup {
                     executor
@@ -513,6 +561,18 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         Ok(())
                     })??;
                     drop(input);
+                    if mode == 4 {
+                        ensure!(
+                            view.update_in(cx, |v, _, cx| v
+                                .dock
+                                .as_ref()
+                                .unwrap()
+                                .parameters
+                                .read(cx)
+                                .benchmark_slider_dragging())?,
+                            "parameter slider drag interrupted at sample {sample}"
+                        );
+                    }
                     if drag.is_some() {
                         view.update_in(cx, |view, _, _| -> anyhow::Result<()> {
                             ensure!(

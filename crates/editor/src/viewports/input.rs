@@ -30,7 +30,7 @@ impl ViewportSurface {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if benchmark::ignore_native_mouse_move() {
+        if benchmark::ignore_native_pointer_event() {
             return;
         }
         if window.has_active_dialog(cx) {

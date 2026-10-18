@@ -43,6 +43,9 @@ impl ParametersPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
+        if crate::benchmark::ignore_native_pointer_event() {
+            return true;
+        }
         let Some(slider) = self.slider_drag.clone() else {
             return false;
         };

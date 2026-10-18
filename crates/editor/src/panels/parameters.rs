@@ -130,6 +130,10 @@ impl ParametersPanel {
         })
     }
 
+    pub(crate) fn benchmark_slider_dragging(&self) -> bool {
+        self.slider_drag.is_some()
+    }
+
     pub(crate) fn benchmark_slider(&self, cx: &App) -> Option<(Bounds<Pixels>, Point<Pixels>)> {
         let viewport = self.scroll.0.borrow().base_handle.bounds();
         self.visible_rows.iter().find_map(|entry| {
@@ -287,6 +291,13 @@ impl Render for ParametersPanel {
                 canvas(|_, _, _| (), {
                     let panel = panel.downgrade();
                     move |_, _, window, _| {
+                        window.on_mouse_event(move |_: &MouseDownEvent, phase, _, cx| {
+                            if phase == DispatchPhase::Capture
+                                && crate::benchmark::ignore_native_pointer_event()
+                            {
+                                cx.stop_propagation();
+                            }
+                        });
                         let moving = panel.clone();
                         window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
                             if phase == DispatchPhase::Capture
@@ -301,6 +312,12 @@ impl Render for ParametersPanel {
                         });
                         let releasing = panel.clone();
                         window.on_mouse_event(move |event: &MouseUpEvent, phase, _, cx| {
+                            if phase == DispatchPhase::Capture
+                                && crate::benchmark::ignore_native_pointer_event()
+                            {
+                                cx.stop_propagation();
+                                return;
+                            }
                             if phase == DispatchPhase::Capture
                                 && event.button == MouseButton::Left
                                 && releasing

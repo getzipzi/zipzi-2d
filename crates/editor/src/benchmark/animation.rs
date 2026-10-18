@@ -148,7 +148,7 @@ async fn run_drag(
     cx.update(|window, cx| {
         if let Some(number) = &number {
             number.update(cx, |number, _| {
-                number.ignore_mouse_moves_when(Some(ignore_native_mouse_move))
+                number.ignore_mouse_moves_when(Some(ignore_native_pointer_event))
             });
         }
         dispatch_pointer(
