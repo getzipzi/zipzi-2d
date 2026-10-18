@@ -51,6 +51,12 @@ pub enum CommandId {
     ImportModel3,
     #[serde(rename = "file.import-psd")]
     ImportPsd,
+    #[serde(rename = "file.import-cubism")]
+    ImportCubism,
+    #[serde(rename = "file.export-runtime")]
+    ExportRuntime,
+    #[serde(rename = "file.export-cubism")]
+    ExportCubism,
     #[serde(rename = "file.save")]
     Save,
     #[serde(rename = "file.save-as")]
@@ -276,6 +282,9 @@ specs![
     (Open, "menu.open", Window, false, ["secondary-o"]),
     (ImportModel3, "menu.import_model3", Window, false, []),
     (ImportPsd, "menu.import_psd", Window, false, []),
+    (ImportCubism, "menu.import_cubism", Window, false, []),
+    (ExportRuntime, "menu.export_runtime", Document, false, []),
+    (ExportCubism, "menu.export_cubism", Document, false, []),
     (Save, "menu.save", Window, false, ["secondary-s"]),
     (SaveAs, "menu.save_as", Window, false, ["secondary-shift-s"]),
     (Close, "menu.close_document", Window, false, ["secondary-w"]),
@@ -680,12 +689,13 @@ impl Editor {
                         .is_some_and(|a| a.expression.is_some() || !a.expressions.is_empty())
             }
 
-            New | Open | ImportModel3 | ImportPsd => !self.exiting(),
+            New | Open | ImportModel3 | ImportPsd | ImportCubism => !self.exiting(),
             Quit => true,
             Previous | Next => self.document_count() > 1,
             ResetLayout | ResetShortcuts | ShowShortcuts => true,
             Close => target,
             Save | SaveAs => target && !self.is_busy(),
+            ExportRuntime | ExportCubism => target && !self.is_busy() && !self.exiting(),
             GenerateMesh => {
                 modeling
                     && target

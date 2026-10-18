@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 pub(super) enum ImportKind {
     Model3,
     Psd,
+    Cubism,
 }
 
 impl EditorView {
@@ -76,7 +77,7 @@ impl EditorView {
             self.save_document(id, save_as, false, window, cx);
         }
     }
-    fn prepare_property_inputs(
+    pub(super) fn prepare_property_inputs(
         &mut self,
         id: DocumentId,
         window: &mut Window,
@@ -372,6 +373,8 @@ impl EditorView {
             };
             let request = if kind == Some(ImportKind::Psd) {
                 LoadRequest::Psd(source)
+            } else if kind == Some(ImportKind::Cubism) {
+                LoadRequest::Cubism(source)
             } else if kind == Some(ImportKind::Model3) {
                 LoadRequest::Model3(source)
             } else {

@@ -1421,6 +1421,7 @@ name = "editor-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "kasane-cmo3",
  "kasane-core",
  "kasane-project",
  "kasane-sdk",
@@ -3859,10 +3860,15 @@ dependencies = [
 name = "kasane-cmo3"
 version = "0.1.0"
 dependencies = [
+ "crc32fast",
+ "flate2",
  "kasane-core",
  "png 0.17.16",
+ "roxmltree 0.20.0",
  "serde",
+ "serde_json",
  "thiserror 2.0.21",
+ "uuid",
  "zip",
 ]
 

@@ -1,4 +1,5 @@
 pub(crate) mod compact;
+pub(crate) mod export;
 pub(crate) mod form_dialog;
 pub(crate) mod mesh_generation;
 pub(crate) mod mesh_generation_preview;

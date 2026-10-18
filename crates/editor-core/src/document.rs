@@ -143,6 +143,7 @@ mod edits;
 mod projection;
 mod properties;
 mod textures;
+mod transfer;
 
 impl Document {
     /// Presentation indexes use the projection revision as their cache key.
@@ -193,6 +194,9 @@ impl Document {
 
     pub fn import_model3(path: &Path) -> Result<(Self, Vec<String>)> {
         let mut session = Self::empty_session()?;
+        let entry = kasane_project::resolve_model3_entry(path)
+            .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
+        let path = entry.as_path();
         let receipt = session.import_model3(path, None)?;
         let mut notices = receipt.project.warnings;
         notices.extend(

@@ -26,6 +26,7 @@ mod timeline_navigation;
 mod timeline_regressions;
 mod titlebar;
 mod tooltips;
+mod transfer;
 mod ui_performance;
 mod workspaces;
 

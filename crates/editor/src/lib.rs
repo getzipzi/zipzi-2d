@@ -29,6 +29,7 @@ mod settings;
 #[path = "../../editor-core/tests/support/mod.rs"]
 pub(crate) mod test_fixture;
 mod theme;
+mod transfer;
 mod ui;
 mod viewports;
 mod worker;

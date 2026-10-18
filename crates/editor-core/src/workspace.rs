@@ -15,6 +15,7 @@ mod io;
 mod lifecycle;
 mod navigation;
 mod presentation;
+mod transfer;
 use entry::{DeferredClose, Entry};
 pub use io::{LoadCompletion, LoadTask, SaveCompletion, SaveTask};
 pub use lifecycle::{EditingContextToken, EditingLifecycle};

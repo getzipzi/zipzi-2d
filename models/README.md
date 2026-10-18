@@ -5,12 +5,17 @@
 
 | 模型 | 导入入口 | 文件数 | 总大小（字节） | 纹理 |
 | --- | --- | ---: | ---: | --- |
-| Nijiiro Mao | `local/mao/runtime/mao_pro.model3.json` | 22 | 9,361,359 | 1 × 4096 × 4096 |
+| Nijiiro Mao | `local/mao/runtime/mao_pro.model3.json` | 24 | 80,242,471 | 1 × 4096 × 4096 |
 | Shirousagi | `local/Shirousagi/Shirousagi.model3.json` | 5 | 5,345,828 | 1 × 2048 × 2048 |
 
 Shirousagi 同时保留 `local/Shirousagi/Shirousagi.psd`，可用于 PSD 导入场景。
 2026-09-28 复制时逐文件核对 SHA-256，并确认两个 model3 的所有文件引用均存在。
 文件数和大小不包含 `.DS_Store`。这些是资源信息，不是运行性能测量结果。
+
+2026-10-18 将 `~/Downloads/mao_en` 的配套 Cubism 工程合并到 `local/mao/`，
+22 个共有文件经 SHA-256 核对一致。新增 `local/mao/mao_pro_t06.cmo3` 和
+`local/mao/mao_pro_t06.can3`，用于 Cubism Editor 工程导入验收；新增副本同样完成
+SHA-256 校验。该素材统一使用 `local/mao/`，不保留单独的 `local/mao_en/`。
 
 ## 基准场景
 

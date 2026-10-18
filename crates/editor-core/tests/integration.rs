@@ -48,3 +48,8 @@ mod viewport_targets;
 mod visibility;
 #[path = "cases/workspaces.rs"]
 mod workspaces;
+
+#[path = "cases/transfer.rs"]
+mod transfer;
+#[path = "cases/transfer_roundtrip/mod.rs"]
+mod transfer_roundtrip;

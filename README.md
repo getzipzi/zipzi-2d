@@ -39,6 +39,13 @@ reports a skip when none are available. Explicit model paths must exist. Set
 `KASANE_ANIMATION_REQUIRE_ASSET=1` or `KASANE_TIMELINE_REQUIRE_ASSET=1` to require
 local assets, including in benchmark runs.
 
+The opt-in [Mao format round-trip audit](docs/plans/mao-transfer-roundtrip-tests.md)
+repeats Kasane, Cubism and runtime transfers and reports document/behavior loss:
+
+```sh
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration transfer_roundtrip::mao_repeated -- --ignored --nocapture
+```
+
 Run UI tests or capture screenshots:
 
 ```sh
@@ -52,6 +59,8 @@ env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=viewports cargo test --loc
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=timeline cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Title bar project switching and empty states:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=titlebar cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
+# Import/export settings in English and Chinese:
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=transfer cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Compact layout, UI scale, and opaque Metal corner pixel checks:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Compact menus, submenus and plain/searchable Selects at every UI scale:

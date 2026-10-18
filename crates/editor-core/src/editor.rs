@@ -115,6 +115,7 @@ pub enum LoadRequest {
     Open(PathBuf),
     Model3(PathBuf),
     Psd(PathBuf),
+    Cubism(PathBuf),
 }
 
 impl LoadRequest {
@@ -123,6 +124,7 @@ impl LoadRequest {
             Self::Open(path) => Ok((Document::open(&path)?, Vec::new())),
             Self::Model3(path) => Document::import_model3(&path),
             Self::Psd(source) => Document::import_psd(&source),
+            Self::Cubism(source) => Document::import_cubism(&source),
         }
     }
 }

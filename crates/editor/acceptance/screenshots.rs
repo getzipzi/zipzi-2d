@@ -12,6 +12,7 @@ mod mesh_generation_scene;
 mod modeling_scene;
 mod properties_scene;
 mod timeline_scene;
+mod transfer_scene;
 mod viewports_scene;
 
 pub(super) fn run() -> anyhow::Result<()> {
@@ -25,6 +26,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("transfer") {
+        transfer_scene::run(&directory)?;
+        println!("Export settings screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("properties") {
         properties_scene::run(&directory)?;
         println!("Properties form screenshots passed.");
