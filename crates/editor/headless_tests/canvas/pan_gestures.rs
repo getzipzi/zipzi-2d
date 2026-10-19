@@ -234,6 +234,10 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
         let status = window.find("app-status-bar").bounds();
         let zoom = window.find("canvas-zoom-toolbar").bounds();
         let controls = window.find("canvas-zoom-controls").bounds();
+        let background = window.find("btn_transparency_grid").bounds();
+        assert_eq!(background.left(), zoom.left());
+        assert!(background.right() < controls.left());
+        assert!((background.center().y - zoom.center().y).abs() <= px(1.));
         assert!(zoom.bottom() <= canvas.top());
         assert!(zoom.top() >= top.bottom());
         assert!(controls.left() >= zoom.left());

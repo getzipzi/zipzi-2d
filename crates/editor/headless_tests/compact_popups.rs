@@ -68,9 +68,8 @@ fn menus_scale_inherit_density_and_keep_multiline_rows(cx: &mut TestAppContext) 
         for scale in UiScale::ALL {
             let expected = px(20. * scale.factor());
             cx.update_window(handle, |_, window, cx| {
-                Theme::change(mode, None, cx);
+                crate::theme::change(mode, cx);
                 Theme::update(cx, |theme| {
-                    compact::apply_theme(theme);
                     theme.font_size = px(16. * scale.factor());
                     theme.radius = px(compact::RADIUS * scale.factor());
                 });

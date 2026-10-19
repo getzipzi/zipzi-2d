@@ -4,7 +4,7 @@ use super::*;
 pub struct AnimationViewport {
     pub(crate) surface: Entity<ViewportSurface>,
     _observe: Subscription,
-    header: Option<(i32, [bool; 3])>,
+    header: Option<zoom_bar::HeaderState>,
 }
 impl AnimationViewport {
     pub fn new(

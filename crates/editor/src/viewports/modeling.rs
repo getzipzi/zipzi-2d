@@ -4,7 +4,7 @@ use super::*;
 pub struct ModelingViewport {
     pub(crate) surface: Entity<ViewportSurface>,
     _observe: Subscription,
-    header: Option<(i32, [bool; 3])>,
+    header: Option<zoom_bar::HeaderState>,
 }
 impl ModelingViewport {
     pub fn new(

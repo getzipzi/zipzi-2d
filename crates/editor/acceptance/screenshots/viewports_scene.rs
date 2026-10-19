@@ -88,6 +88,7 @@ fn changed_region(
 }
 
 pub(super) fn viewport_screenshots(directory: &Path) -> anyhow::Result<()> {
+    transparency_grid_screenshots(directory)?;
     for kind in [ViewportKind::Modeling, ViewportKind::Animation] {
         let mut h = Harness::new()?;
         if kind == ViewportKind::Animation {
@@ -226,6 +227,84 @@ pub(super) fn viewport_screenshots(directory: &Path) -> anyhow::Result<()> {
             h.cx.run_until_parked();
         }
         settled(&mut h, &ids)?;
+    }
+    Ok(())
+}
+
+fn transparency_grid_screenshots(directory: &Path) -> anyhow::Result<()> {
+    use gpui_kit::{component::ThemeMode, point};
+
+    let mut h = Harness::new()?;
+    for (mode, appearance) in [(ThemeMode::Dark, "dark"), (ThemeMode::Light, "light")] {
+        h.cx.update(|cx| crate::theme::change(mode, cx));
+        let before = h.capture()?;
+        let before_canvas = h.canvas_image(&before)?;
+        let request = h.view.read_with(&h.cx, |view, _| {
+            view.modeling_frame().unwrap().canvas.version.request
+        });
+        h.cx.update_window(h.window, |_, window, cx| {
+            let button = window.find("btn_transparency_grid").bounds();
+            let header = window.find("canvas-zoom-toolbar").bounds();
+            let zoom = window.find("canvas-zoom-controls").bounds();
+            assert_eq!(button.left(), header.left());
+            assert!(button.right() < zoom.left());
+            window.click("btn_transparency_grid", cx);
+        })?;
+        let enabled = h.capture()?;
+        let (bounds, scale) = h.cx.update_window(h.window, |_, window, _| {
+            (window.find("canvas-body").bounds(), window.scale_factor())
+        })?;
+        let x = ((bounds.size.width.as_f32() / 12.).floor() - 4.) * 12. + 6.;
+        let pixel = |dx: f32, dy: f32| {
+            let p = bounds.origin + point(px(x + dx), px(66. + dy));
+            *enabled.get_pixel((p.x.as_f32() * scale) as u32, (p.y.as_f32() * scale) as u32)
+        };
+        anyhow::ensure!(pixel(0., 0.) != pixel(12., 0.), "Missing checker squares");
+        anyhow::ensure!(pixel(0., 0.) == pixel(24., 0.), "Wrong horizontal period");
+        anyhow::ensure!(pixel(0., 0.) == pixel(12., 12.), "Wrong checker parity");
+        h.view.read_with(&h.cx, |view, _| {
+            assert_eq!(
+                view.modeling_frame().unwrap().canvas.version.request,
+                request
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+        save(
+            &enabled,
+            directory,
+            &format!("viewport-transparency-{appearance}.png"),
+        )?;
+
+        // The Animation viewport keeps its own default backdrop, and returning
+        // to Modeling preserves this viewport's selected display option.
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.click("workspace-animation", cx);
+        })?;
+        let animation = h.capture()?;
+        let animation_canvas = h.canvas_image(&animation)?;
+        let x = animation_canvas.width() - (54. * scale) as u32;
+        let y = (66. * scale) as u32;
+        anyhow::ensure!(
+            animation_canvas.get_pixel(x, y)
+                == animation_canvas.get_pixel(x + (12. * scale) as u32, y),
+            "Modeling background toggle changed the Animation viewport"
+        );
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.click("workspace-modeling", cx);
+        })?;
+        let restored = h.capture()?;
+        anyhow::ensure!(
+            h.canvas_image(&restored)? == h.canvas_image(&enabled)?,
+            "Workspace switch lost the viewport background"
+        );
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.click("btn_transparency_grid", cx);
+        })?;
+        let disabled = h.capture()?;
+        anyhow::ensure!(
+            h.canvas_image(&disabled)? == before_canvas,
+            "Disabling the transparency grid did not restore the solid backdrop"
+        );
     }
     Ok(())
 }

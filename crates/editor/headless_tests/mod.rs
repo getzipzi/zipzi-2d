@@ -21,6 +21,7 @@ mod properties;
 mod recent_files;
 mod slide_number_input;
 mod sorting;
+mod themes;
 mod timeline;
 mod timeline_navigation;
 mod timeline_regressions;

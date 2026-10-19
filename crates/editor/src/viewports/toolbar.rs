@@ -97,11 +97,11 @@ impl RenderOnce for CanvasToolbar {
         } = self;
         let view = owner.read(cx);
         // Opaque tool surfaces stay distinct from both the canvas and model pixels.
-        let dark = cx.theme().is_dark();
-        let surface: Hsla = rgb(if dark { 0x202020 } else { 0xffffff }).into();
-        let hovered: Hsla = rgb(if dark { 0x292929 } else { 0xf2f2f2 }).into();
-        let pressed: Hsla = rgb(if dark { 0x181818 } else { 0xdedede }).into();
-        let selected_surface: Hsla = rgb(if dark { 0x364964 } else { 0xd6e4f7 }).into();
+        let crate::theme::ToolbarPalette {
+            surface,
+            hovered,
+            pressed,
+        } = crate::theme::toolbar_colors(cx);
         div()
             .id("canvas-toolbar")
             .test_support()
@@ -131,11 +131,6 @@ impl RenderOnce for CanvasToolbar {
                         let state = view.editor.command_state(invocation);
                         let selected = state.checked;
                         let enabled = !modal && state.enabled;
-                        let border = if selected {
-                            cx.theme().primary
-                        } else {
-                            cx.theme().border
-                        };
                         let owner = owner.clone();
                         let canvas = canvas.clone();
                         compact::button(Button::new(item.id))
@@ -146,22 +141,21 @@ impl RenderOnce for CanvasToolbar {
                             .w(compact::rem(TOOL_BUTTON_SIZE))
                             .h(compact::rem(TOOL_BUTTON_SIZE))
                             .min_w(compact::rem(TOOL_BUTTON_SIZE))
-                            .custom(
-                                ButtonCustomVariant::new(cx)
-                                    // Kit derives hover/pressed borders from this color.
-                                    // The opaque idle fill is supplied below separately.
-                                    .color(border)
-                                    .hover(hovered)
-                                    .active(if selected { selected_surface } else { pressed })
-                                    .foreground(if selected {
-                                        cx.theme().primary
-                                    } else {
-                                        cx.theme().foreground
-                                    }),
-                            )
+                            .when(!selected, |button| {
+                                button
+                                    .custom(
+                                        ButtonCustomVariant::new(cx)
+                                            // Kit derives hover/pressed borders from this color.
+                                            // The opaque idle fill is supplied below separately.
+                                            .color(cx.theme().border)
+                                            .hover(hovered)
+                                            .active(pressed)
+                                            .foreground(cx.theme().foreground),
+                                    )
+                                    .border_color(cx.theme().border)
+                                    .bg(surface)
+                            })
                             .border_1()
-                            .border_color(border)
-                            .bg(if selected { selected_surface } else { surface })
                             .icon(item.icon)
                             .accessibility_label(t!(item.command.spec().label).into_owned())
                             .tooltip(t!(item.command.spec().label))

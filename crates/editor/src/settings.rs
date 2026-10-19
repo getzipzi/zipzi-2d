@@ -40,8 +40,10 @@ impl UiScale {
     }
 }
 #[derive(Default, Deserialize, Serialize)]
+#[serde(default)]
 struct AppearancePreference {
     ui_scale: UiScale,
+    color_theme: crate::theme::ColorTheme,
 }
 
 #[derive(Clone)]
@@ -52,6 +54,7 @@ pub struct Settings {
     pub language: Option<String>,
     pub workspace: WorkspaceKind,
     pub ui_scale: UiScale,
+    pub color_theme: crate::theme::ColorTheme,
     pub notices: Vec<String>,
 }
 impl Global for Settings {}
@@ -116,11 +119,11 @@ impl Settings {
                 WorkspaceKind::default()
             }
         };
-        let ui_scale = match store.read::<AppearancePreference>("appearance.json") {
-            Ok(preference) => preference.unwrap_or_default().ui_scale,
+        let appearance = match store.read::<AppearancePreference>("appearance.json") {
+            Ok(preference) => preference.unwrap_or_default(),
             Err(error) => {
                 notices.push(error.to_string());
-                UiScale::default()
+                AppearancePreference::default()
             }
         };
         Self {
@@ -129,15 +132,33 @@ impl Settings {
             recent_files,
             language,
             workspace,
-            ui_scale,
+            ui_scale: appearance.ui_scale,
+            color_theme: appearance.color_theme,
             notices,
         }
     }
 
     pub fn set_ui_scale(&mut self, ui_scale: UiScale) -> anyhow::Result<()> {
-        self.store
-            .write("appearance.json", &AppearancePreference { ui_scale })?;
+        self.store.write(
+            "appearance.json",
+            &AppearancePreference {
+                ui_scale,
+                color_theme: self.color_theme,
+            },
+        )?;
         self.ui_scale = ui_scale;
+        Ok(())
+    }
+
+    pub fn set_color_theme(&mut self, color_theme: crate::theme::ColorTheme) -> anyhow::Result<()> {
+        self.store.write(
+            "appearance.json",
+            &AppearancePreference {
+                ui_scale: self.ui_scale,
+                color_theme,
+            },
+        )?;
+        self.color_theme = color_theme;
         Ok(())
     }
 
@@ -224,6 +245,31 @@ mod tests {
     use super::{Settings, normalize_key};
     use editor_core::{CommandId, ConfigStore, ShortcutOverride, ShortcutOverrides};
     use gpui_kit::DummyKeyboardMapper;
+    #[test]
+    fn appearance_preferences_preserve_each_other_and_default_missing_fields() -> anyhow::Result<()>
+    {
+        use super::UiScale;
+        use crate::theme::ColorTheme;
+        let dir = tempfile::tempdir()?;
+        let store = ConfigStore::new(dir.path());
+        store.write("appearance.json", &serde_json::json!({"ui_scale": "110"}))?;
+        let mut settings = Settings::from_store(store.clone(), &DummyKeyboardMapper);
+        assert_eq!(settings.color_theme, ColorTheme::Dark);
+        assert_eq!(settings.ui_scale, UiScale::Large);
+        for theme in ColorTheme::ALL {
+            settings.set_color_theme(theme)?;
+            settings.set_ui_scale(UiScale::Largest)?;
+            let restored = Settings::from_store(store.clone(), &DummyKeyboardMapper);
+            assert_eq!(restored.color_theme, theme);
+            assert_eq!(restored.ui_scale, UiScale::Largest);
+        }
+        std::fs::write(dir.path().join("appearance.json"), "{")?;
+        let restored = Settings::from_store(store, &DummyKeyboardMapper);
+        assert_eq!(restored.color_theme, ColorTheme::Dark);
+        assert_eq!(restored.ui_scale, UiScale::Standard);
+        assert!(!restored.notices.is_empty());
+        Ok(())
+    }
     #[test]
     fn language_preference_survives_reload() -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;

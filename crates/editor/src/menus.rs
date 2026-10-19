@@ -15,6 +15,7 @@ pub struct MenuState {
     pub language: Option<String>,
     pub deformer_visibility: editor_core::DeformerVisibility,
     pub workspace: editor_core::WorkspaceKind,
+    pub color_theme: theme::ColorTheme,
 }
 
 pub fn path_title(path: &Path) -> String {
@@ -62,7 +63,7 @@ pub fn recent_file_label(path: &Path, all_paths: &[PathBuf]) -> String {
     }
 }
 /// View controls the canvas and presentation; Window owns navigation and layout recovery.
-fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
+fn view_menu(item: impl Fn(CommandId) -> MenuItem, selected_theme: theme::ColorTheme) -> Menu {
     Menu::new(t!("menu.view")).items([
         item(CommandId::ModelingWorkspace),
         item(CommandId::AnimationWorkspace),
@@ -85,6 +86,12 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem) -> Menu {
         item(CommandId::ToggleDeformers),
         item(CommandId::CancelGesture),
         MenuItem::separator(),
+        MenuItem::submenu(
+            Menu::new(t!("editor.color_theme")).items(theme::ColorTheme::ALL.map(|choice| {
+                MenuItem::action(choice.label(), SetColorTheme { theme: choice })
+                    .checked(choice == selected_theme)
+            })),
+        ),
         MenuItem::action(t!("menu.toggle_theme"), ToggleTheme),
         MenuItem::separator(),
         item(CommandId::ShowShortcuts),
@@ -116,6 +123,7 @@ impl EditorView {
         };
         let settings = cx.global::<settings::Settings>();
         let state = MenuState {
+            color_theme: theme::current(cx),
             workspace: self.editor.workspace(),
             deformer_visibility: self.editor.deformer_visibility(),
             commands: COMMANDS
@@ -242,7 +250,7 @@ impl EditorView {
                 item(CommandId::CommitProperty),
                 item(CommandId::CancelProperty),
             ])),
-            view_menu(item),
+            view_menu(item, theme::current(cx)),
             Menu::new(t!("menu.window")).items([
                 item(CommandId::ResetLayout),
                 item(CommandId::AnimationTimeline),

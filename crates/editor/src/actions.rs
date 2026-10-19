@@ -1,7 +1,7 @@
 //! GPUI actions shared by menus, shortcuts, and editor controls.
 use super::*;
 use editor_core::CommandId;
-use gpui_kit::component::{ActiveTheme, ThemeMode, WindowExt, input};
+use gpui_kit::component::{WindowExt, input};
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -44,6 +44,12 @@ pub struct OpenRecent {
 #[action(namespace=kasane_editor,no_json)]
 pub struct SetLanguage {
     pub language: Option<String>,
+}
+
+#[derive(Action, Clone, PartialEq, Deserialize)]
+#[action(namespace=kasane_editor,no_json)]
+pub struct SetColorTheme {
+    pub theme: theme::ColorTheme,
 }
 
 actions!(
@@ -138,14 +144,17 @@ impl EditorView {
                     }
                 }))
             })
-            .on_action(|_: &ToggleTheme, _, cx| {
-                let mode = if cx.theme().is_dark() {
-                    ThemeMode::Light
-                } else {
-                    ThemeMode::Dark
-                };
-                theme::change(mode, cx);
-            })
+            .on_action(cx.listener(|this, action: &SetColorTheme, _, cx| {
+                if let Err(error) = theme::set_preference(action.theme, cx) {
+                    this.set_edit_error(error.to_string(), cx);
+                }
+            }))
+            .on_action(cx.listener(|this, _: &ToggleTheme, _, cx| {
+                let choice = theme::current(cx).toggled();
+                if let Err(error) = theme::set_preference(choice, cx) {
+                    this.set_edit_error(error.to_string(), cx);
+                }
+            }))
             .on_action(|_: &Minimize, window, _| window.minimize_window())
             .on_action(|_: &ZoomWindow, window, _| window.zoom_window())
     }

@@ -33,7 +33,7 @@ macro_rules! viewport_panel {
                 panel: &Entity<Self>,
                 window: &mut Window,
                 cx: &mut App,
-            ) -> Option<(i32, [bool; 3])> {
+            ) -> Option<zoom_bar::HeaderState> {
                 ViewportSurface::header_state(&panel.read(cx).surface.clone(), window, cx)
             }
         }
@@ -52,7 +52,7 @@ macro_rules! viewport_panel {
                 .into_any_element()
             }
             fn header_min_width(&self) -> Pixels {
-                px(126.)
+                px(152.)
             }
         }
     };
@@ -64,6 +64,7 @@ mod input;
 mod painting;
 use painting::CanvasOverlay;
 mod animation;
+mod background;
 #[cfg(any(test, feature = "test-support"))]
 mod test_scene;
 #[cfg(any(test, feature = "test-support"))]
@@ -103,6 +104,7 @@ pub struct ViewportSurface {
         ) -> gpui_kit::component::menu::PopupMenu,
     >,
     pub(crate) toolbar: toolbar::ToolbarRegistry,
+    pub(super) show_transparency_grid: bool,
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     navigation: navigation::ViewportNavigation,
@@ -214,6 +216,7 @@ impl ViewportSurface {
                 object_menu: None,
                 focus,
                 toolbar,
+                show_transparency_grid: false,
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 navigation: Default::default(),
@@ -336,7 +339,7 @@ impl Render for ViewportSurface {
             .min_h_0()
             .w_full()
             .overflow_hidden()
-            .bg(cx.theme().muted)
+            .bg(crate::theme::viewport_background(cx))
             .when(!modal && self.navigation.pan.is_some(), |e| {
                 e.cursor_grabbing()
             })
@@ -344,6 +347,9 @@ impl Render for ViewportSurface {
                 e.cursor_grab()
             })
             .map(|element| self.bind_input(element, capture, cx))
+            .when(self.show_transparency_grid, |body| {
+                body.child(background::transparency_grid(cx))
+            })
             .children(image.map(|(image, metrics)| {
                 div()
                     .absolute()
@@ -451,7 +457,7 @@ impl ViewportSurface {
         panel: &Entity<Self>,
         window: &mut Window,
         cx: &mut App,
-    ) -> Option<(i32, [bool; 3])> {
+    ) -> Option<zoom_bar::HeaderState> {
         let dialog = window.has_active_dialog(cx);
         panel.read(cx).owner.upgrade().map(|owner| {
             let owner = owner.read(cx);

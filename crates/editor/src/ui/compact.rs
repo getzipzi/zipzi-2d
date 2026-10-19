@@ -1,6 +1,6 @@
 //! Editor density in logical pixels. Keep Kit's 16px rem baseline intact.
 use gpui_kit::component::{
-    ActiveTheme, Selectable, Sizable, Theme,
+    ActiveTheme, Selectable, Sizable,
     button::{Button, ButtonVariant, ButtonVariants},
     input::Input,
     menu::PopupMenu,
@@ -63,54 +63,7 @@ pub fn chrome_inset(cx: &App) -> Pixels {
 }
 
 pub fn workspace(cx: &App) -> Hsla {
-    rgb(if cx.theme().is_dark() {
-        0x1f1f1f
-    } else {
-        0xd9d9d9
-    })
-    .into()
-}
-
-pub fn apply_theme(theme: &mut Theme) {
-    let dark = theme.is_dark();
-    let color = |dark_color, light_color| rgb(if dark { dark_color } else { light_color }).into();
-    theme.background = color(0x292929, 0xf3f3f3);
-    theme.foreground = color(0xd8d8d8, 0x292929);
-    theme.muted_foreground = color(0xa6a6a6, 0x666666);
-    theme.border = color(0x484848, 0xb8b8b8);
-    theme.tab_bar = color(0x303030, 0xe6e6e6);
-    theme.tab = theme.tab_bar;
-    theme.tab_active = theme.background;
-    theme.tab_foreground = theme.muted_foreground;
-    theme.tab_active_foreground = theme.foreground;
-    theme.popover = theme.background;
-    theme.popover_foreground = theme.foreground;
-    theme.muted = color(0x353535, 0xe7e7e7);
-    theme.accent = color(0x424242, 0xdcdcdc);
-    theme.accent_foreground = theme.foreground;
-    theme.button = color(0x3a3a3a, 0xe9e9e9);
-    theme.button_hover = color(0x474747, 0xdcdcdc);
-    theme.button_active = color(0x525252, 0xcdcdcd);
-    theme.button_foreground = theme.foreground;
-    theme.input = theme.border;
-    theme.radius = px(RADIUS);
-    theme.shadow = false;
-    let (primary, hover, active, foreground) = if dark {
-        (0x82aaff, 0x96b8ff, 0x7198e6, 0x182334)
-    } else {
-        (0x3568ad, 0x2f5e9e, 0x28518a, 0xffffff)
-    };
-    theme.primary = rgb(primary).into();
-    theme.primary_hover = rgb(hover).into();
-    theme.primary_active = rgb(active).into();
-    theme.primary_foreground = rgb(foreground).into();
-    theme.button_primary = theme.primary;
-    theme.button_primary_hover = theme.primary_hover;
-    theme.button_primary_active = theme.primary_active;
-    theme.button_primary_foreground = theme.primary_foreground;
-    theme.ring = theme.primary;
-    theme.drag_border = theme.primary;
-    theme.selection = theme.primary.opacity(0.25);
+    crate::theme::workspace(cx)
 }
 
 /// Preserve Kit's focus, disabled, pressed and selected behavior.
@@ -122,7 +75,9 @@ pub fn button(button: Button) -> Button {
         .h(rem(CONTROL))
         .min_w(rem(CONTROL))
         .rounded(gpui_kit::component::button::ButtonRounded::Medium)
-        .when(selected, |button| button.primary().outline())
+        .when(selected, |button| {
+            button.primary().border_color(transparent_black())
+        })
 }
 
 /// Kit keeps toggle accessibility and selected styling as separate states.

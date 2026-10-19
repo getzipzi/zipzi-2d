@@ -6,10 +6,16 @@ use gpui_kit::{BorrowAppContext as _, point, px, test::TestWindowExt};
 
 pub(crate) fn compact_popup_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
     use crate::settings::{Settings, UiScale};
-    use gpui_kit::component::ThemeMode;
+    use crate::theme::ColorTheme;
     for (mode, locale, appearance) in [
-        (ThemeMode::Dark, "en", "dark"),
-        (ThemeMode::Light, "zh-CN", "light-zh"),
+        (ColorTheme::Dark, "en", "dark"),
+        (ColorTheme::Light, "zh-CN", "light-zh"),
+        (ColorTheme::VsCodeDarkModern, "en", "vscode-dark-modern"),
+        (
+            ColorTheme::VsCodeLightModern,
+            "zh-CN",
+            "vscode-light-modern",
+        ),
     ] {
         let mut harness = Harness::new()?;
         for scale in UiScale::ALL {
@@ -176,8 +182,8 @@ pub(crate) fn titlebar_screenshots(directory: &std::path::Path) -> anyhow::Resul
 
 pub(crate) fn compact_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
     use crate::settings::{Settings, UiScale};
+    use crate::theme::ColorTheme;
     use gpui_kit::component::dock::{DockPlacement, PaneNode, PaneRef};
-    use gpui_kit::component::{ActiveTheme, ThemeMode};
     fn groups(node: &PaneNode, result: &mut Vec<u64>) {
         match node.kind() {
             PaneRef::Tabs { .. } => result.push(node.id().as_u64()),
@@ -208,8 +214,14 @@ pub(crate) fn compact_screenshots(directory: &std::path::Path) -> anyhow::Result
     let mut metrics = Vec::new();
     for scale in UiScale::ALL {
         for (mode, locale, appearance) in [
-            (ThemeMode::Dark, "en", "dark"),
-            (ThemeMode::Light, "zh-CN", "light-zh"),
+            (ColorTheme::Dark, "en", "dark"),
+            (ColorTheme::Light, "zh-CN", "light-zh"),
+            (ColorTheme::VsCodeDarkModern, "en", "vscode-dark-modern"),
+            (
+                ColorTheme::VsCodeLightModern,
+                "zh-CN",
+                "vscode-light-modern",
+            ),
         ] {
             i18n::activate(Some(locale));
             harness.cx.update(|cx| {
@@ -243,7 +255,7 @@ pub(crate) fn compact_screenshots(directory: &std::path::Path) -> anyhow::Result
                     Some(serde_json::json!({"node": node, "x": bounds.left().as_f32(), "y": bounds.top().as_f32(), "width": bounds.size.width.as_f32(), "height": bounds.size.height.as_f32()}))
                 }).collect();
                 // A local corner mask must cover real Metal content at every scale.
-                let expected = if cx.theme().is_dark() { 31 } else { 217 };
+                let expected = (gpui_kit::Rgba::from(crate::ui::compact::workspace(cx)).r * 255.).round() as u8;
                 for x in [(canvas.left().as_f32() * display_scale).ceil() as u32, (canvas.right().as_f32() * display_scale).floor() as u32 - 1] {
                     let pixel = screenshot.get_pixel(x, (canvas.bottom().as_f32() * display_scale).floor() as u32 - 1);
                     anyhow::ensure!(pixel.0[..3].iter().all(|channel| channel.abs_diff(expected) <= 3), "Metal corner leaked at {}: {:?}, canvas={:?}, x={:?}", scale.label(), pixel.0, canvas, x);
@@ -295,7 +307,8 @@ pub(crate) fn compact_screenshots(directory: &std::path::Path) -> anyhow::Result
             harness.cx.update_window(harness.window, |_, window, cx| {
                 let canvas = window.find("canvas-body").bounds();
                 let display_scale = window.scale_factor();
-                let expected = if cx.theme().is_dark() { 31 } else { 217 };
+                let expected = (gpui_kit::Rgba::from(crate::ui::compact::workspace(cx)).r * 255.)
+                    .round() as u8;
                 for x in [
                     (canvas.left().as_f32() * display_scale).ceil() as u32,
                     (canvas.right().as_f32() * display_scale).floor() as u32 - 1,

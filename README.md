@@ -23,6 +23,10 @@ brew install watchexec
 ./scripts/dev.sh
 ```
 
+Choose **Color Theme** from the top-right More menu or the **View** menu to switch
+between Light, Dark, VS Code Light Modern, and VS Code Dark Modern. The theme and
+UI scale are saved in your appearance preferences.
+
 ## Test
 
 The full suite requires macOS and Metal. The test script checks formatting,

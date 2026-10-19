@@ -36,6 +36,31 @@ pub(super) fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl 
                     )
                     .separator();
                 }
+                let selected_theme = crate::theme::current(cx);
+                let theme_owner = owner.clone();
+                menu = menu.submenu(
+                    t!("editor.color_theme"),
+                    window,
+                    cx,
+                    move |mut menu, _, _| {
+                        for choice in crate::theme::ColorTheme::ALL {
+                            let owner = theme_owner.clone();
+                            menu = menu.item(
+                                gpui_kit::component::menu::PopupMenuItem::new(choice.label())
+                                    .checked(choice == selected_theme)
+                                    .on_click(move |_, _, cx| {
+                                        if let Err(error) = crate::theme::set_preference(choice, cx)
+                                        {
+                                            _ = owner.update(cx, |owner, cx| {
+                                                owner.set_edit_error(error.to_string(), cx);
+                                            });
+                                        }
+                                    }),
+                            );
+                        }
+                        menu
+                    },
+                );
                 let scale = cx.global::<crate::settings::Settings>().ui_scale;
                 let scale_owner = owner.clone();
                 menu = menu
@@ -56,8 +81,7 @@ pub(super) fn render_more_menu(owner: &Entity<EditorView>, modal: bool) -> impl 
                                             });
                                             return;
                                         }
-                                        let mode = cx.theme().mode;
-                                        crate::theme::change(mode, cx);
+                                        crate::theme::change(crate::theme::current(cx), cx);
                                         window.refresh();
                                     }),
                             );

@@ -17,20 +17,28 @@ const ZOOM_ACTIONS: [(&str, CommandId, IconName); 3] = [
 
 type ZoomAction = Rc<dyn Fn(CommandId, &mut Window, &mut App)>;
 
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct HeaderState {
+    percentage: i32,
+    zoom_enabled: [bool; 3],
+    show_transparency_grid: bool,
+    background_enabled: bool,
+}
+
 pub(super) fn state(
     owner: &EditorView,
     canvas: &super::ViewportSurface,
     modal: bool,
-) -> (i32, [bool; 3]) {
-    (
-        (canvas
+) -> HeaderState {
+    HeaderState {
+        percentage: (canvas
             .binding(&owner.editor)
             .and_then(|binding| owner.editor.viewport_view(binding))
             .unwrap_or_default()
             .zoom
             * 100.0)
             .round() as i32,
-        ZOOM_ACTIONS.map(|(_, command, _)| {
+        zoom_enabled: ZOOM_ACTIONS.map(|(_, command, _)| {
             !modal
                 && owner.editor.command_available(canvas.command(
                     &owner.editor,
@@ -38,7 +46,9 @@ pub(super) fn state(
                     editor_core::CommandSource::Toolbar,
                 ))
         }),
-    )
+        show_transparency_grid: canvas.show_transparency_grid,
+        background_enabled: !modal,
+    }
 }
 
 /// One framed control: zoom steps and readout share a surface, fit is its trailing segment.
@@ -119,7 +129,7 @@ impl RenderOnce for ZoomControl {
     }
 }
 
-/// Header controls belong to the same canvas as the overlay tools.
+/// Background and navigation controls belong to this viewport's title bar.
 #[derive(gpui_kit::IntoElement)]
 pub(super) struct CanvasZoomBar {
     pub owner: Entity<EditorView>,
@@ -130,7 +140,8 @@ pub(super) struct CanvasZoomBar {
 impl RenderOnce for CanvasZoomBar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let state = self.owner.read(cx);
-        let (percentage, enabled) = self::state(state, self.canvas.read(cx), self.modal);
+        let header = self::state(state, self.canvas.read(cx), self.modal);
+        let background_canvas = self.canvas.clone();
         let commands = ZOOM_ACTIONS.map(|(_, id, _)| {
             self.canvas
                 .read(cx)
@@ -170,11 +181,41 @@ impl RenderOnce for CanvasZoomBar {
             .min_w_0()
             .flex()
             .items_center()
-            .justify_end()
+            .gap(compact::rem(compact::GAP))
             .text_color(cx.theme().muted_foreground)
+            .child(compact::header_control(
+                compact::header_button(compact::toggle(
+                    Button::new("btn_transparency_grid"),
+                    header.show_transparency_grid,
+                ))
+                .icon(IconName::Grid2x2)
+                .accessibility_label(t!("dock.transparency_grid").into_owned())
+                .tooltip(t!("dock.transparency_grid"))
+                .disabled(!header.background_enabled)
+                .on_click(move |_, window, cx| {
+                    if window.has_active_dialog(cx) {
+                        return;
+                    }
+                    let surface = background_canvas.read(cx);
+                    if surface
+                        .owner
+                        .upgrade()
+                        .is_none_or(|owner| owner.read(cx).modal)
+                    {
+                        return;
+                    }
+                    let focus = surface.focus.clone();
+                    window.focus(&focus, cx);
+                    background_canvas.update(cx, |surface, cx| {
+                        surface.show_transparency_grid = !surface.show_transparency_grid;
+                        cx.notify();
+                    });
+                }),
+            ))
+            .child(div().flex_1().min_w_0())
             .child(ZoomControl {
-                percentage,
-                enabled,
+                percentage: header.percentage,
+                enabled: header.zoom_enabled,
                 on_action,
             })
     }
