@@ -152,10 +152,14 @@ impl DocumentSession {
             }
         }
         self.cancel_gesture();
-        let reusable = if matches!(
-            command,
-            EditorCommand::PreviewOpacity(_) | EditorCommand::PreviewName(_)
-        ) {
+        let presentation_only = match &command {
+            EditorCommand::PreviewOpacity(_) | EditorCommand::PreviewName(_) => true,
+            EditorCommand::SetObjectProperties { object, patch } => {
+                patch.mesh_presentation_only(object.kind)
+            }
+            _ => false,
+        };
+        let reusable = if presentation_only {
             self.geometry
                 .clone()
                 .or_else(|| self.appearance_geometry.clone())

@@ -159,7 +159,7 @@ def analyze(records, budget_ms=1000 / 120):
             row["outcome"] = "submitted_not_presented"
         else:
             compose = None
-            row["outcome"] = next((s for s in ("coalesced", "cancelled", "rejected", "render_error", "send_error") if s in group),
+            row["outcome"] = next((s for s in ("delivery_coalesced", "coalesced", "cancelled", "rejected", "render_error", "send_error") if s in group),
                                   "accepted_not_composed" if "accepted" in group else "incomplete")
         if compose:
             times.update({name: e["at_ns"] for name, e in compose.items()})

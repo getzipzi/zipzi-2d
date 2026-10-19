@@ -178,7 +178,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 }
             };
             if frames
-                .send(
+                .send_with_replaced(
                     Some(request.binding.viewport),
                     Frame {
                         binding: Some(request.binding),
@@ -188,6 +188,13 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                         animation: request.animation,
                         stats: renderer.stats(),
                         image,
+                    },
+                    |old| {
+                        frame_trace::emit(
+                            old.trace_id,
+                            "delivery_coalesced",
+                            &[("replaced_by", trace_id)],
+                        )
                     },
                 )
                 .is_err()

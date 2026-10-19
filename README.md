@@ -77,6 +77,8 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --features te
 ./scripts/timeline-benchmark.sh target/timeline-benchmark-run 600
 # Timeline channel-number scrubbing, CPU/GPU stages and authoring comparison:
 ./scripts/timeline-number-benchmark.sh target/timeline-number-benchmark-run 96
+# Mesh properties and complete RGB/HSV color picker in a native window:
+./scripts/properties-benchmark.sh target/properties-benchmark-run 300 120
 # Continuous Animation workspace drags in a native window (no per-input frame wait):
 KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=canvas ./scripts/window-benchmark.sh MODEL target/animation-canvas-drag 2400 240
 KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-benchmark.sh MODEL target/animation-number-drag 2400 240
@@ -87,6 +89,12 @@ KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-ben
 - [UI performance](docs/references/ui-performance.md): optional guidance on redraws,
   virtualization, rendering costs, and choosing regression checks. Agents and
   contributors can decide whether to consult it based on the task.
+- [Mesh properties benchmark](docs/references/mesh-properties-benchmark.md): native
+  control checklist, CPU/GPU measurements, and result interpretation.
+  [Mao results](docs/benchmarks/2026-10-19-mesh-properties.md) include the measured
+  CPU budget overruns and trace coverage audit.
+  [CPU fixes and small-sample verification](docs/benchmarks/2026-10-19-mesh-properties-cpu-fix.md)
+  record the subsequent tooltip and synchronous commit improvements.
 
 ## Build
 

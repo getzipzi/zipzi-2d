@@ -6,6 +6,7 @@ use gpui_kit::component::{
     ActiveTheme, Disableable,
     button::{Button, ButtonVariants},
     input::Input,
+    tooltip::ManagedTooltipExt,
 };
 
 /// Complete picker content, also usable without a popover. Edits begin a session
@@ -423,13 +424,14 @@ pub(super) fn render(
                             let label = t!(label).into_owned();
                             swatch(color)
                                 .id(SharedString::from(format!("color-picker-swatch-{label}")))
+                                .test_support()
                                 .w(compact::rem(20.))
                                 .h(compact::rem(compact::NUMBER_CONTROL))
                                 .rounded(compact::rem(compact::RADIUS))
                                 .border_1()
                                 .border_color(cx.theme().border)
                                 .aria_label(label.clone())
-                                .tooltip(move |window, cx| {
+                                .managed_tooltip(move |window, cx| {
                                     gpui_kit::component::tooltip::Tooltip::new(label.clone())
                                         .build(window, cx)
                                 })
@@ -548,6 +550,12 @@ pub(super) fn render(
                     window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
                         if phase == DispatchPhase::Capture {
                             let _ = moving.update(cx, |this, cx| {
+                                #[cfg(feature = "test-support")]
+                                if this.benchmark_pointer
+                                    && crate::benchmark::ignore_native_pointer_event()
+                                {
+                                    return;
+                                }
                                 if let Some(kind) = this.drag {
                                     if event.pressed_button == Some(MouseButton::Left) {
                                         this.pick(kind, event.position, window, cx);

@@ -59,10 +59,17 @@ pub(crate) fn mailbox<K: Copy + Eq + Hash, V>() -> (MailboxSender<K, V>, Mailbox
 }
 impl<K: Copy + Eq + Hash, V> MailboxSender<K, V> {
     pub fn send(&self, key: K, value: V) -> Result<(), ()> {
+        self.send_with_replaced(key, value, |_| {})
+    }
+
+    pub fn send_with_replaced(&self, key: K, value: V, replaced: impl FnOnce(V)) -> Result<(), ()> {
         if self.wake.is_closed() {
             return Err(());
         }
-        self.values.lock().map_err(|_| ())?.insert(key, value);
+        let previous = self.values.lock().map_err(|_| ())?.insert(key, value);
+        if let Some(previous) = previous {
+            replaced(previous);
+        }
         // A pending wake already represents every queued owner. Never stall the worker.
         let _ = self.wake.try_send(());
         Ok(())
@@ -108,5 +115,19 @@ mod tests {
         sender.send(2, 2000).unwrap();
         assert_eq!(receiver.values.lock().unwrap().pop(), Some(999));
         assert_eq!(receiver.values.lock().unwrap().pop(), Some(2000));
+    }
+
+    #[test]
+    fn replaced_results_are_reported_without_consuming_other_owners() {
+        let (sender, receiver) = mailbox();
+        sender.send(1, 10).unwrap();
+        sender.send(2, 20).unwrap();
+        let mut replaced = None;
+        sender
+            .send_with_replaced(1, 30, |old| replaced = Some(old))
+            .unwrap();
+        assert_eq!(replaced, Some(10));
+        assert_eq!(receiver.values.lock().unwrap().pop(), Some(30));
+        assert_eq!(receiver.values.lock().unwrap().pop(), Some(20));
     }
 }

@@ -38,6 +38,61 @@ fn fixture() -> anyhow::Result<(Document, tempfile::TempDir)> {
 }
 
 #[test]
+fn mesh_property_commits_reuse_geometry_and_publish_fresh_labels_and_visibility()
+-> anyhow::Result<()> {
+    use crate::{DocumentSession, EditorCommand, ObjectKind, ObjectRef};
+    let (document, _directory) = fixture()?;
+    let object = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::from_u128(2).to_string());
+    let mut session = DocumentSession::from_document(document);
+    let (_, original) = session.scene()?;
+    for (field, value, visible) in [
+        ("name", serde_json::json!("Renamed"), true),
+        ("enabled", serde_json::json!(false), false),
+        ("enabled", serde_json::json!(true), true),
+        ("appearance.opacity", serde_json::json!(0.), false),
+        ("appearance.opacity", serde_json::json!(1.), true),
+    ] {
+        let patch = session
+            .document()
+            .object_property_patch(&object, field, &value)?;
+        session.execute(EditorCommand::SetObjectProperties {
+            object: object.clone(),
+            patch,
+        })?;
+        let (_, scene) = session.scene()?;
+        assert!(Arc::ptr_eq(&original.meshes, &scene.meshes));
+        assert_eq!(scene.index.name(&object), "Renamed");
+        assert_eq!(original.index.name(&object), "Mesh 2");
+        assert_eq!(
+            scene
+                .mesh_hits(ModelPoint { x: 128., y: 128. })
+                .contains(&object.id),
+            visible
+        );
+        assert!(
+            original
+                .mesh_hits(ModelPoint { x: 128., y: 128. })
+                .contains(&object.id)
+        );
+    }
+    session.execute(EditorCommand::Undo)?;
+    let (_, scene) = session.scene()?;
+    assert!(
+        !scene
+            .mesh_hits(ModelPoint { x: 128., y: 128. })
+            .contains(&object.id)
+    );
+    session.execute(EditorCommand::Redo)?;
+    let (_, scene) = session.scene()?;
+    assert!(
+        scene
+            .mesh_hits(ModelPoint { x: 128., y: 128. })
+            .contains(&object.id)
+    );
+    Ok(())
+}
+
+#[test]
 fn updated_positions_reuse_other_meshes_and_refresh_bounds_and_boundaries() -> anyhow::Result<()> {
     let (mut document, _directory) = fixture()?;
     let source = document.snapshot()?;

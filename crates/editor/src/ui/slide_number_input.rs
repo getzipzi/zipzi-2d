@@ -84,6 +84,11 @@ impl EventEmitter<SlideNumberChange> for SlideNumberInput {}
 impl EventEmitter<SlideNumberGesture> for SlideNumberInput {}
 
 impl SlideNumberInput {
+    #[cfg(feature = "test-support")]
+    pub(crate) fn benchmark_value(&self) -> f64 {
+        self.options.value
+    }
+
     pub fn new(
         input: Entity<InputState>,
         label: impl Into<SharedString>,

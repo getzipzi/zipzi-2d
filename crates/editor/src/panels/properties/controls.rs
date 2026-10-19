@@ -48,6 +48,48 @@ pub(super) struct FieldControl {
 }
 
 impl PropertiesPanel {
+    #[cfg(feature = "test-support")]
+    pub(crate) fn benchmark_isolate_pointers(&mut self, cx: &mut Context<Self>) {
+        for control in self.controls.values() {
+            if let Some(number) = &control.number {
+                number.update(cx, |number, _| {
+                    number.ignore_mouse_moves_when(Some(
+                        crate::benchmark::ignore_native_pointer_event,
+                    ))
+                });
+            }
+        }
+        for color in self.colors.values() {
+            color
+                .state
+                .update(cx, |state, cx| state.benchmark_isolate_pointer(cx));
+        }
+    }
+
+    #[cfg(feature = "test-support")]
+    pub(crate) fn benchmark_live_value(&self, id: PropertyKey, cx: &App) -> String {
+        if let Some(color) = self.colors.get(&id) {
+            return format!("{:?}", color.state.read(cx).benchmark_color());
+        }
+        self.controls.get(&id).map_or_else(String::new, |control| {
+            if let Some(number) = &control.number {
+                return number.read(cx).benchmark_value().to_string();
+            }
+            control.input.read(cx).value().to_string()
+        })
+    }
+
+    #[cfg(feature = "test-support")]
+    pub(crate) fn benchmark_choices(&self, id: PropertyKey) -> Vec<(String, String)> {
+        self.selects.get(&id).map_or_else(Vec::new, |control| {
+            control
+                .choices
+                .iter()
+                .map(|choice| (choice.label.to_string(), choice.value.clone()))
+                .collect()
+        })
+    }
+
     #[cfg(test)]
     pub(crate) fn choice_labels(&self, id: PropertyKey) -> Vec<String> {
         self.selects[&id]
@@ -229,10 +271,12 @@ impl PropertiesPanel {
         };
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |state, cx| {
-                match state.property_forms.commit(&mut state.editor, &target, id) {
+                match crate::worker::trace_operation("property_commit", || {
+                    state.property_forms.commit(&mut state.editor, &target, id)
+                }) {
                     Ok(()) => {
                         state.clear_edit_error(cx);
-                        state.redraw(cx);
+                        crate::worker::trace_operation("property_redraw", || state.redraw(cx));
                     }
                     Err(error) => {
                         state.set_edit_error(error.to_string(), cx);

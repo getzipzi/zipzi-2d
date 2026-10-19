@@ -3,6 +3,31 @@ use super::ObjectKind;
 use serde_json::{Value, json};
 
 impl super::ObjectIndex {
+    /// These mesh fields cannot change identities, relation edges or draw groups.
+    pub(crate) fn refresh_mesh_presentation(
+        &mut self,
+        model: &kasane_core::Document,
+        object: &super::ObjectRef,
+    ) -> bool {
+        let Some(mesh) = model.get_mesh(&object.id) else {
+            return false;
+        };
+        let Some(&slot) = self.slots.get(object) else {
+            return false;
+        };
+        let info = &mut self.objects[slot];
+        info.name = if mesh.name.is_empty() {
+            object.id.clone()
+        } else {
+            mesh.name.clone()
+        };
+        info.enabled = Some(mesh.enabled);
+        info.properties["name"] = json!(mesh.name);
+        info.properties["enabled"] = json!(mesh.enabled);
+        info.properties["appearance"] = json!(mesh.appearance);
+        true
+    }
+
     /// Appearance candidates preserve identities and relation edges. Copy their
     /// payloads without rebuilding bindings or influence paths.
     pub(crate) fn refresh_property_preview(

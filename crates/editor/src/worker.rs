@@ -1,6 +1,28 @@
 //! Scheduling and opt-in CPU accounting for the visible preview pipeline.
 use gpui_kit::frame_trace;
 
+/// Optional synchronous stage accounting; clocks are untouched without tracing.
+pub(crate) fn trace_operation<T>(stage: &'static str, operation: impl FnOnce() -> T) -> T {
+    let id = frame_trace::next_id();
+    if id == 0 {
+        return operation();
+    }
+    let input = frame_trace::current_input();
+    let wall = frame_trace::now_ns();
+    let cpu = cpu_time(id);
+    let result = operation();
+    let elapsed = frame_trace::now_ns().saturating_sub(wall);
+    let cpu = cpu
+        .zip(cpu_time(id))
+        .map_or(0, |(a, b)| b.saturating_sub(a));
+    frame_trace::emit(
+        id,
+        stage,
+        &[("input", input), ("wall_ns", elapsed), ("cpu_ns", cpu)],
+    );
+    result
+}
+
 pub(crate) fn configure(worker: u64) {
     // Only the benchmark can opt out, so the same binary supports an A/B run.
     let baseline = frame_trace::enabled()

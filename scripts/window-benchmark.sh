@@ -22,7 +22,11 @@ if ioreg -n Root -d1 | rg '"IOConsoleLocked" = Yes' > /dev/null; then
     echo "Unlock the Mac before running the window benchmark." >&2
     exit 2
 fi
-cargo build --locked --profile "$cargo_profile" -p kasane-editor > "$output/build.log" 2>&1
+if [[ "${KASANE_BENCH_PROPERTIES:-0}" == 1 ]]; then
+    cargo build --locked --profile "$cargo_profile" -p kasane-editor --features test-support > "$output/build.log" 2>&1
+else
+    cargo build --locked --profile "$cargo_profile" -p kasane-editor > "$output/build.log" 2>&1
+fi
 {
     sw_vers
     sysctl hw.model machdep.cpu.brand_string hw.memsize
@@ -39,7 +43,9 @@ export KASANE_FRAME_TRACE="$output/trace.jsonl"
 export KASANE_WINDOW_BENCH=1 KASANE_BENCH_MODEL="$model"
 export KASANE_BENCH_SAMPLES="$samples" KASANE_BENCH_HZ="$hz"
 caffeinate -d -i "./target/$profile/kasane-editor" > "$output/application.log" 2>&1
-if [[ "${KASANE_BENCH_ANIMATION:-0}" == 1 ]]; then
+if [[ "${KASANE_BENCH_PROPERTIES:-0}" == 1 ]]; then
+    python3 scripts/properties-trace-report.py "$output/trace.jsonl" --output "$output"
+elif [[ "${KASANE_BENCH_ANIMATION:-0}" == 1 ]]; then
     python3 scripts/animation-trace-report.py "$output/trace.jsonl" > "$output/summary.json"
     cat "$output/summary.json"
 else

@@ -178,6 +178,30 @@ pub(crate) fn payload(
     Ok(payload)
 }
 
+/// Inspector reads do not need vertex arrays or authored source metadata.
+pub(crate) fn inspector_payload(
+    model: &kasane_core::Document,
+    id: &str,
+    scope: &PropertyScope,
+) -> Result<Value> {
+    let mesh = model
+        .get_mesh(id)
+        .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
+    let mut payload = json!({
+        "name": mesh.name, "runtime_id": mesh.runtime_id,
+        "part_id": mesh.part_id, "deformer_id": mesh.deformer_id,
+        "masks": mesh.masks, "inverted_mask": mesh.inverted_mask,
+        "appearance": mesh.appearance, "draw_order": mesh.draw_order,
+        "enabled": mesh.enabled,
+    });
+    inspector_fields(mesh, &mut payload);
+    if let Some((_, form)) = keyform(model, id, scope)? {
+        payload["appearance"] = json!(form.appearance);
+        payload["draw_order"] = json!(form.draw_order);
+    }
+    Ok(payload)
+}
+
 pub(crate) fn normalize_blend(mesh: &mut Mesh, payload: &Value) -> Result<()> {
     let code = |modes: &[&str], field: &str| -> Result<u32> {
         modes

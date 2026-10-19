@@ -360,6 +360,17 @@ pub struct PropertyPatch {
     pub changes: PropertyValues,
 }
 
+impl PropertyPatch {
+    /// Positions, connectivity and hierarchy are unaffected by these mesh edits.
+    pub(crate) fn mesh_presentation_only(&self, kind: ObjectKind) -> bool {
+        kind == ObjectKind::Mesh
+            && self
+                .changes
+                .keys()
+                .all(|key| [mesh::NAME.key, mesh::ENABLED.key, mesh::OPACITY.key].contains(key))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PropertyEditToken {
     pub document: DocumentId,

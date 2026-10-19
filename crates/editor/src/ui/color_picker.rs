@@ -60,12 +60,29 @@ pub(crate) struct ColorPickerState {
     drag: Option<Surface>,
     bounds: [Bounds<Pixels>; 3],
     wheel_cache: wheel::WheelCache,
+    #[cfg(feature = "test-support")]
+    benchmark_pointer: bool,
     _events: Vec<Subscription>,
 }
 
 impl EventEmitter<ColorPickerEvent> for ColorPickerState {}
 
 impl ColorPickerState {
+    #[cfg(feature = "test-support")]
+    pub(crate) fn benchmark_isolate_pointer(&mut self, cx: &mut Context<Self>) {
+        self.benchmark_pointer = true;
+        for number in &self.numbers {
+            number.update(cx, |number, _| {
+                number.ignore_mouse_moves_when(Some(crate::benchmark::ignore_native_pointer_event))
+            });
+        }
+    }
+
+    #[cfg(feature = "test-support")]
+    pub(crate) fn benchmark_color(&self) -> Rgba {
+        self.color
+    }
+
     /// Enable `alpha` for RGBA controls; RGB controls preserve the supplied alpha.
     pub fn new(color: Rgba, alpha: bool, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let hsv = Hsv::from_rgb(color, Hsv::default());
@@ -90,6 +107,8 @@ impl ColorPickerState {
             drag: None,
             bounds: Default::default(),
             wheel_cache: Default::default(),
+            #[cfg(feature = "test-support")]
+            benchmark_pointer: false,
             _events: vec![],
         };
         cx.on_release(|this, cx| this.wheel_cache.clear(cx))

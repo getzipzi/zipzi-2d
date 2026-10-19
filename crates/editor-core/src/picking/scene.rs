@@ -18,7 +18,7 @@ impl CanvasScene {
     fn build(document: &Document, source: SceneSnapshot, previous: Option<&Self>) -> Self {
         let topology = document.canvas_topology();
         let index = topology.index.clone();
-        let previous = previous.filter(|previous| Arc::ptr_eq(&previous.topology, &topology));
+        let previous = previous.filter(|previous| previous.topology.same_geometry(&topology));
         let visible_meshes = visible_meshes(&source.viewport_frame);
         let to_model = |p: kasane_core::Vec2| ModelPoint { x: p.x, y: p.y };
         let meshes: Arc<[Arc<MeshGeometry>]> = source
@@ -93,7 +93,7 @@ impl CanvasScene {
                         .collect(),
                 )
             });
-        for g in &topology.glues {
+        for g in topology.glues.iter() {
             let (Some(&a), Some(&b)) = (mesh_slots.get(&g.mesh_a), mesh_slots.get(&g.mesh_b))
             else {
                 continue;
@@ -180,7 +180,7 @@ impl CanvasScene {
     /// render plan for picking. Older presented frames retain their own source.
     pub(crate) fn with_appearance(&self, document: &Document, source: SceneSnapshot) -> Self {
         let topology = document.canvas_topology();
-        if !Arc::ptr_eq(&self.topology, &topology) {
+        if !self.topology.same_geometry(&topology) {
             return Self::new(document, source);
         }
         let visible_meshes = visible_meshes(&source.viewport_frame);

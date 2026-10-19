@@ -73,7 +73,7 @@ def report(records):
     cache = 0
     for key, phase in phases.items():
         g = groups[key]
-        outcome = next((s for s in ("accepted", "animation_cancelled", "animation_coalesced", "animation_rejected_cpu", "rejected", "coalesced", "render_error") if s in g), "incomplete")
+        outcome = next((s for s in ("accepted", "delivery_coalesced", "animation_cancelled", "animation_coalesced", "animation_rejected_cpu", "rejected", "coalesced", "render_error") if s in g), "incomplete")
         outcomes[outcome] += 1
         if "animation_cache" in g:
             fields = g["animation_cache"]["fields"]

@@ -3,6 +3,8 @@
 use super::*;
 mod animation;
 mod deformation;
+#[cfg(feature = "test-support")]
+mod properties;
 use anyhow::{Context as _, ensure};
 use std::{
     cell::Cell,
@@ -40,6 +42,7 @@ struct Config {
     parameters_only: bool,
     deformations: bool,
     animation: bool,
+    properties: bool,
     vertices: usize,
     mesh: Option<String>,
     warp: Option<String>,
@@ -99,8 +102,13 @@ pub fn init() -> anyhow::Result<()> {
         let parameters_only = std::env::var("KASANE_BENCH_PARAMETERS").is_ok_and(|s| s == "1");
         let deformations = std::env::var("KASANE_BENCH_DEFORMATIONS").is_ok_and(|s| s == "1");
         let animation = std::env::var("KASANE_BENCH_ANIMATION").is_ok_and(|s| s == "1");
+        let properties = std::env::var("KASANE_BENCH_PROPERTIES").is_ok_and(|s| s == "1");
         ensure!(
-            (parameters_only as u8 + deformations as u8 + animation as u8) <= 1,
+            !properties || cfg!(feature = "test-support"),
+            "properties benchmark requires --features test-support"
+        );
+        ensure!(
+            (parameters_only as u8 + deformations as u8 + animation as u8 + properties as u8) <= 1,
             "choose one benchmark workload"
         );
         let vertices = number("KASANE_BENCH_VERTICES", 8)?;
@@ -117,6 +125,7 @@ pub fn init() -> anyhow::Result<()> {
                 parameters_only,
                 deformations,
                 animation,
+                properties,
                 vertices,
                 mesh: std::env::var("KASANE_BENCH_MESH").ok(),
                 warp: std::env::var("KASANE_BENCH_WARP").ok(),
@@ -143,7 +152,9 @@ pub fn init() -> anyhow::Result<()> {
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
                 "parameters_only": config.map(|c| c.parameters_only),
                 "animation_drag": std::env::var("KASANE_BENCH_ANIMATION_DRAG").ok(),
-                "workloads": config.map(|c| if c.animation { vec![9] } else if c.deformations { vec![5, 6, 7, 8] }
+                "properties": config.map(|c| c.properties),
+                "property_case": std::env::var("KASANE_BENCH_PROPERTY_CASE").ok(),
+                "workloads": config.map(|c| if c.properties { (210..243).collect() } else if c.animation { vec![9] } else if c.deformations { vec![5, 6, 7, 8] }
                     else if c.parameters_only { vec![4] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
@@ -323,6 +334,12 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 );
             }
             executor.timer(Duration::from_millis(500)).await;
+            #[cfg(feature = "test-support")]
+            if config.properties {
+                properties::run(&view, cx, config).await?;
+                frame_trace::emit(frame_trace::next_id(), "benchmark_done", &[]);
+                return Ok(());
+            }
             let modes = if config.animation {
                 animation::run(&view, cx, config).await?;
                 1..=0u64

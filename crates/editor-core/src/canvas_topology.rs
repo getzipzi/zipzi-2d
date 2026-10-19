@@ -84,14 +84,26 @@ pub(crate) struct GlueTopology {
     pub mesh_b: String,
     pub pairs: Vec<(usize, usize)>,
 }
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct CanvasTopology {
     pub index: Arc<CanvasObjectIndex>,
-    pub meshes: HashMap<String, MeshTopology>,
-    pub controls: HashMap<String, ControlTopology>,
-    pub glues: Vec<GlueTopology>,
+    pub meshes: Arc<HashMap<String, MeshTopology>>,
+    pub controls: Arc<HashMap<String, ControlTopology>>,
+    pub glues: Arc<[GlueTopology]>,
 }
 impl CanvasTopology {
+    pub fn same_geometry(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.meshes, &other.meshes)
+            && Arc::ptr_eq(&self.controls, &other.controls)
+            && Arc::ptr_eq(&self.glues, &other.glues)
+    }
+
+    pub fn rename(&mut self, object: &ObjectRef, name: &str) {
+        let index = Arc::make_mut(&mut self.index);
+        if let Some(&slot) = index.slots.get(object) {
+            index.objects[slot].name = if name.is_empty() { &object.id } else { name }.into();
+        }
+    }
     pub fn new(model: &kasane_core::Document) -> Self {
         let mut index = CanvasObjectIndex::default();
         let mut meshes = HashMap::new();
@@ -201,9 +213,9 @@ impl CanvasTopology {
         index.build_ancestors();
         Self {
             index: Arc::new(index),
-            meshes,
-            controls,
-            glues,
+            meshes: Arc::new(meshes),
+            controls: Arc::new(controls),
+            glues: glues.into(),
         }
     }
 }

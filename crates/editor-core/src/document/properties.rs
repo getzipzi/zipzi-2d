@@ -70,7 +70,7 @@ impl Document {
         if object.kind != ObjectKind::Mesh {
             return crate::property::values_from(model, object);
         }
-        let payload = crate::property::mesh::payload(model, &object.id, scope)?;
+        let payload = crate::property::mesh::inspector_payload(model, &object.id, scope)?;
         crate::property_specs(object.kind)
             .iter()
             .map(|spec| Ok((spec.key, spec.read(&payload)?)))
@@ -155,7 +155,15 @@ impl Document {
             );
         }
         let mut payload = if object.kind == ObjectKind::Mesh {
-            crate::property::mesh::payload(self.session.document(), &object.id, &patch.scope)?
+            if patch.mesh_presentation_only(object.kind) {
+                crate::property::mesh::inspector_payload(
+                    self.session.document(),
+                    &object.id,
+                    &patch.scope,
+                )?
+            } else {
+                crate::property::mesh::payload(self.session.document(), &object.id, &patch.scope)?
+            }
         } else {
             crate::property::object_payload(self.session.document(), object)?
         };
@@ -185,7 +193,15 @@ impl Document {
             .document()
             .get_mesh(&object.id)
             .ok_or_else(|| anyhow!("Mesh no longer exists"))?;
-        let mut next: kasane_core::Mesh = serde_json::from_value(payload.clone())?;
+        let mut next: kasane_core::Mesh = if patch.mesh_presentation_only(object.kind) {
+            let mut next = original.clone();
+            next.name = serde_json::from_value(payload["name"].clone())?;
+            next.enabled = serde_json::from_value(payload["enabled"].clone())?;
+            next.appearance = serde_json::from_value(payload["appearance"].clone())?;
+            next
+        } else {
+            serde_json::from_value(payload.clone())?
+        };
         if patch.changes.contains_key(&mesh::COLOR_BLEND.key)
             || patch.changes.contains_key(&mesh::ALPHA_BLEND.key)
         {
@@ -310,11 +326,31 @@ impl Document {
             .session
             .begin_owned_edit("Edit object properties", None)?;
         self.apply_properties(&mut edit, object, patch, payload)?;
+        let previous_revision = self.projection_revision;
         let receipt = edit.commit_to(&mut self.session)?;
         self.session.drain_events();
         if receipt.changed {
             self.pristine_blank = false;
-            self.invalidate_projection(true);
+            let presentation_only = patch.mesh_presentation_only(object.kind);
+            use crate::property::mesh;
+            self.invalidate_projection(!presentation_only);
+            if presentation_only {
+                if patch.changes.contains_key(&mesh::NAME.key) {
+                    if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
+                        let name = &self.session.document().get_mesh(&object.id).unwrap().name;
+                        Arc::make_mut(topology).rename(object, name);
+                    }
+                }
+                let mut cache = self.object_index.lock().unwrap();
+                if let Some((revision, index)) = cache.as_mut() {
+                    if *revision == previous_revision
+                        && Arc::make_mut(index)
+                            .refresh_mesh_presentation(self.session.document(), object)
+                    {
+                        *revision = self.projection_revision;
+                    }
+                }
+            }
             let index = self.object_index();
             self.context.reconcile(&index);
         }
@@ -473,6 +509,75 @@ mod tests {
     use super::*;
     use crate::{NewParameter, PropertyValue};
     use std::sync::atomic::Ordering;
+
+    #[test]
+    fn mesh_presentation_commits_preserve_index_snapshots_and_relations() -> Result<()> {
+        let mut doc = Document::new_blank()?;
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("texture.png");
+        std::fs::write(&path, include_bytes!("../../tests/fixtures/accent.png"))?;
+        let asset = uuid::Uuid::new_v4().to_string();
+        let object = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::new_v4().to_string());
+        doc.session.edit("Mesh fixture", None, |edit| {
+            edit.create_asset(kasane_sdk::prepare_png_asset(&asset, "Texture", &path)?)?;
+            edit.create_mesh(kasane_core::Mesh {
+                id: object.id.clone(),
+                name: "Original".into(),
+                texture_asset_id: asset,
+                vertex_ids: vec![0, 1, 2],
+                base_positions: vec![
+                    kasane_core::Vec2::new(0., 0.),
+                    kasane_core::Vec2::new(1., 0.),
+                    kasane_core::Vec2::new(0., 1.),
+                ],
+                uvs: vec![kasane_core::Vec2::new(0., 0.); 3],
+                triangles: vec![[0, 1, 2]],
+                ..Default::default()
+            })
+        })?;
+        doc.invalidate_projection(true);
+        for (field, value) in [
+            ("name", serde_json::json!("Renamed")),
+            ("enabled", serde_json::json!(false)),
+            ("appearance.opacity", serde_json::json!(0.5)),
+        ] {
+            let old = doc.object_index();
+            let old_payload = old.get(&object).unwrap().properties.clone();
+            let builds = doc.object_index_builds.load(Ordering::Relaxed);
+            let topology = doc.canvas_topology();
+            doc.set_object_property(&object, field, value)?;
+            let index = doc.object_index();
+            assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            assert_eq!(old.get(&object).unwrap().properties, old_payload);
+            let rebuilt = crate::ObjectIndex::build(doc.model());
+            let actual = index.get(&object).unwrap();
+            let expected = rebuilt.get(&object).unwrap();
+            assert_eq!(actual.name, expected.name);
+            assert_eq!(actual.enabled, expected.enabled);
+            assert_eq!(actual.properties, expected.properties);
+            assert_eq!(index.draw_groups, rebuilt.draw_groups);
+            assert_eq!(
+                format!("{:?}", index.relations),
+                format!("{:?}", rebuilt.relations)
+            );
+            assert_eq!(
+                Arc::ptr_eq(&topology, &doc.canvas_topology()),
+                field != "name"
+            );
+            let committed = actual.properties.clone();
+            doc.undo()?;
+            assert_eq!(
+                doc.object_index().get(&object).unwrap().properties,
+                old_payload
+            );
+            doc.redo()?;
+            assert_eq!(
+                doc.object_index().get(&object).unwrap().properties,
+                committed
+            );
+        }
+        Ok(())
+    }
 
     #[test]
     fn numeric_candidates_refresh_payloads_without_rebuilding_indexes() -> Result<()> {

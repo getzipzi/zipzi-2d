@@ -1,14 +1,26 @@
 use super::{ColorField, ColorPickerEvent, ColorPickerState, color};
 use gpui_kit::{
-    AnyWindowHandle, AppContext as _, Context, Entity, IntoElement, ParentElement, Render, Rgba,
-    Styled, Subscription, TestAppContext, Window, WindowOptions, component::button::Button, div,
-    px, test::TestWindowExt,
+    AnyWindowHandle, AppContext as _, Context, Entity, InputEvent, IntoElement, ParentElement,
+    Render, Rgba, Styled, Subscription, TestAppContext, Window, WindowOptions,
+    component::button::Button, div, px, test::TestWindowExt,
 };
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 struct Harness {
     state: Entity<ColorPickerState>,
+    idle: Entity<IdleHost>,
     _event: Subscription,
+}
+
+struct IdleHost(Rc<Cell<usize>>);
+impl Render for IdleHost {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        self.0.set(self.0.get() + 1);
+        div().size(px(10.))
+    }
 }
 
 impl Render for Harness {
@@ -21,6 +33,11 @@ impl Render for Harness {
             .gap(px(16.))
             .child(Button::new("outside").label("Outside"))
             .child(ColorField::new("test-color", &self.state))
+            .child(
+                self.idle
+                    .clone()
+                    .cached(gpui_kit::StyleRefinement::default().size(px(10.))),
+            )
     }
 }
 
@@ -28,10 +45,12 @@ struct TestPicker {
     window: AnyWindowHandle,
     state: Entity<ColorPickerState>,
     events: Rc<RefCell<Vec<ColorPickerEvent>>>,
+    renders: Rc<Cell<usize>>,
 }
 
 fn setup(cx: &mut TestAppContext, color: Rgba, alpha: bool) -> TestPicker {
     let events = Rc::new(RefCell::new(vec![]));
+    let renders = Rc::new(Cell::new(0));
     cx.update(gpui_kit::init);
     crate::i18n::activate(Some("en"));
     let (window, harness) = cx.update(|cx| {
@@ -43,6 +62,7 @@ fn setup(cx: &mut TestAppContext, color: Rgba, alpha: bool) -> TestPicker {
                     cx.subscribe(&state, move |_, _, event, _| log.borrow_mut().push(*event));
                 Harness {
                     state,
+                    idle: cx.new(|_| IdleHost(renders.clone())),
                     _event: event,
                 }
             })
@@ -59,7 +79,75 @@ fn setup(cx: &mut TestAppContext, color: Rgba, alpha: bool) -> TestPicker {
         window,
         state,
         events,
+        renders,
     }
+}
+
+#[gpui_kit::test]
+fn swatch_tooltips_show_and_hide_without_rendering_the_host(cx: &mut TestAppContext) {
+    use std::time::Duration;
+    let p = setup(cx, gpui_kit::rgb(0x804020), false);
+    cx.update(|cx| cx.set_reduce_motion(true));
+    open(&p, cx);
+    cx.run_until_parked();
+    // Settle popover focus before observing tooltip-only work.
+    cx.update_window(p.window, |_, window, cx| window.draw(cx).clear(cx))
+        .unwrap();
+    let before = p.renders.get();
+    let events_before = p.events.borrow().len();
+    for label in ["Original", "Current"] {
+        cx.update_window(p.window, |_, window, cx| {
+            let position = window
+                .find(format!("color-picker-swatch-{label}"))
+                .bounds()
+                .center();
+            window.dispatch_event(
+                gpui_kit::MouseMoveEvent {
+                    position,
+                    pressed_button: None,
+                    modifiers: window.modifiers(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.executor().advance_clock(Duration::from_millis(600));
+        cx.run_until_parked();
+        cx.update_window(p.window, |_, window, cx| {
+            window.draw(cx).clear(cx);
+            assert!(window.try_find("tooltip").is_some());
+        })
+        .unwrap();
+    }
+    cx.update_window(p.window, |_, window, cx| {
+        let position = window.find("color-picker-hex").bounds().center();
+        window.dispatch_event(
+            gpui_kit::MouseMoveEvent {
+                position,
+                pressed_button: None,
+                modifiers: window.modifiers(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.executor().advance_clock(Duration::from_millis(600));
+    cx.run_until_parked();
+    cx.update_window(p.window, |_, window, cx| {
+        window.draw(cx).clear(cx);
+        assert!(window.try_find("tooltip").is_none());
+    })
+    .unwrap();
+    assert_eq!(
+        p.renders.get(),
+        before,
+        "tooltip refreshed its unrelated host"
+    );
+    assert_eq!(p.events.borrow().len(), events_before);
 }
 
 fn open(picker: &TestPicker, cx: &mut TestAppContext) {

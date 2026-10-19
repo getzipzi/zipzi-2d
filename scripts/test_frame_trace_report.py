@@ -39,6 +39,15 @@ def composition(id, start, texture=123, present=None):
 
 
 class TraceReportTest(unittest.TestCase):
+    def test_completed_frame_replaced_before_ui_delivery_has_a_terminal_outcome(self):
+        records = [e for e in request(10, 1, 0) if e.get("stage") not in ("published", "accepted")]
+        rows, summary = report.analyze(capture(*records,
+            event(10, "preview_complete", 4, status=4),
+            event(10, "delivery_coalesced", 5, replaced_by=11)))
+        self.assertFalse(summary["issues"])
+        self.assertEqual(rows[0]["outcome"], "delivery_coalesced")
+        self.assertNotIn("input_to_present_ms", rows[0])
+
     def test_out_of_order_callbacks_and_repeated_composition(self):
         raw = capture(*request(10, 1, 0), *composition(100, 4, present=10),
                       *composition(200, 15, present=20))

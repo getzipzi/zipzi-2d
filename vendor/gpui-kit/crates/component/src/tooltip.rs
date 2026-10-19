@@ -233,9 +233,10 @@ impl ComponentTooltip {
     }
 }
 
-// ── Internal managed tooltip trait ──────────────────────────────────────────
+// ── Managed tooltips for application-owned triggers ─────────────────────────
 
-pub(crate) trait ManagedTooltipExt:
+/// Attach the window's shared tooltip overlay without refreshing unrelated views.
+pub trait ManagedTooltipExt:
     StatefulInteractiveElement + crate::ElementExt + Sized
 {
     fn managed_tooltip(
