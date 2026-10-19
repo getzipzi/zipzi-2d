@@ -1,3 +1,4 @@
+pub(crate) mod about;
 pub(crate) mod compact;
 pub(crate) mod export;
 pub(crate) mod form_dialog;

@@ -2,11 +2,20 @@
 [app]
 title = "Kasane Editor"
 about = "About Kasane Editor"
-description = "A 2D model editor built with the Kasane SDK."
+description = "A native macOS editor for Kasane 2D models."
 hide = "Hide Kasane Editor"
 hide_others = "Hide Others"
 show_all = "Show All"
 quit = "Quit Kasane Editor"
+
+[about]
+version = "Version %{version} · In development"
+report_issue = "Report an issue or request a feature"
+license = "License: %{license}"
+copyright = "© 2026 Pakho Leung and contributors."
+credits = "Built with Kasane SDK, Rust, GPUI Kit, and Metal."
+third_party = "Third-party components retain their respective copyrights and licenses."
+warranty = "Free software: you may redistribute and modify it under the GNU GPL version 3 only. Provided without any warranty."
 
 [menu]
 language = "Language"

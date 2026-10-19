@@ -1,11 +1,20 @@
 [app]
 title = "Kasane 编辑器"
 about = "关于 Kasane 编辑器"
-description = "基于 Kasane SDK 构建的 2D 模型编辑器。"
+description = "用于编辑 Kasane 2D 模型的 macOS 原生应用。"
 hide = "隐藏 Kasane 编辑器"
 hide_others = "隐藏其他应用"
 show_all = "显示全部"
 quit = "退出 Kasane 编辑器"
+
+[about]
+version = "版本 %{version} · 开发中"
+report_issue = "反馈问题或提出功能建议"
+license = "许可证：%{license}"
+copyright = "© 2026 Pakho Leung 及贡献者。"
+credits = "基于 Kasane SDK、Rust、GPUI Kit 和 Metal 构建。"
+third_party = "第三方组件保留各自的版权声明，并遵循各自的许可证。"
+warranty = "本软件是自由软件，可按 GNU GPL 第 3 版（仅限此版本）再分发和修改，不提供任何担保。"
 
 [menu]
 language = "语言"

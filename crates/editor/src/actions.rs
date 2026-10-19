@@ -1,7 +1,7 @@
 //! GPUI actions shared by menus, shortcuts, and editor controls.
 use super::*;
 use editor_core::CommandId;
-use gpui_kit::component::{WindowExt, input};
+use gpui_kit::component::input;
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -123,11 +123,7 @@ impl EditorView {
                         }
                     }
                 }))
-                .on_action(|_: &About, window, cx| {
-                    window.open_dialog(cx, |dialog, _, _| {
-                        dialog.title(t!("app.title")).child(t!("app.description"))
-                    })
-                })
+                .on_action(|_: &About, window, cx| ui::about::show(window, cx))
             })
             // Fallback native text actions only at non-input focus; Kit always owns input history.
             .when(!modal && self.editor.can_undo(), |e| {
