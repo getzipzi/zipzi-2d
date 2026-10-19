@@ -237,7 +237,7 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
         let background = window.find("btn_transparency_grid").bounds();
         let origin = window.find("btn_origin_crosshair").bounds();
         assert_eq!(background.left(), zoom.left());
-        assert_eq!(background.right(), origin.left());
+        assert_eq!(background.right() - px(1.), origin.left());
         assert!(origin.right() < controls.left());
         assert!((origin.center().y - zoom.center().y).abs() <= px(1.));
         assert!((background.center().y - zoom.center().y).abs() <= px(1.));

@@ -125,33 +125,23 @@ pub fn group(
     buttons: Vec<Button>,
 ) -> gpui_kit::component::toolbar::ToolbarGroup {
     let last = buttons.len().saturating_sub(1);
-    let selected: Vec<_> = buttons.iter().map(Button::is_selected).collect();
     let mut group = gpui_kit::component::toolbar::ToolbarGroup::new(id)
         .label(label)
         .gap(px(0.))
         .when(axis == Axis::Vertical, |g| g.flex_col());
     for (index, button) in buttons.into_iter().enumerate() {
-        // A selected button owns both adjoining seams. Otherwise the preceding
-        // button owns the shared edge, keeping a single line with no spacing.
-        let leading = index == 0 || selected[index];
-        let trailing = !selected.get(index + 1).copied().unwrap_or(false);
+        // Keep the content inset identical in every state. Overlap complete
+        // borders to draw one shared seam without moving either button's icon.
         let button = button
-            .when(axis == Axis::Horizontal, |b| {
-                b.border_l(px(if leading { 1. } else { 0. }))
-                    .border_r(px(if trailing { 1. } else { 0. }))
-            })
+            .border_1()
             .when(index > 0 && axis == Axis::Horizontal, |b| {
-                b.rounded_tl(px(0.)).rounded_bl(px(0.))
+                b.ml(-px(1.)).rounded_tl(px(0.)).rounded_bl(px(0.))
             })
             .when(index < last && axis == Axis::Horizontal, |b| {
                 b.rounded_tr(px(0.)).rounded_br(px(0.))
             })
-            .when(axis == Axis::Vertical, |b| {
-                b.border_t(px(if leading { 1. } else { 0. }))
-                    .border_b(px(if trailing { 1. } else { 0. }))
-            })
             .when(index > 0 && axis == Axis::Vertical, |b| {
-                b.rounded_tl(px(0.)).rounded_tr(px(0.))
+                b.mt(-px(1.)).rounded_tl(px(0.)).rounded_tr(px(0.))
             })
             .when(index < last && axis == Axis::Vertical, |b| {
                 b.rounded_bl(px(0.)).rounded_br(px(0.))
