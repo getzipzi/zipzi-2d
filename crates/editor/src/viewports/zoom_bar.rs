@@ -2,7 +2,7 @@ use crate::{EditorView, t, ui::compact};
 use editor_core::CommandId;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, WindowExt,
+    ActiveTheme, Disableable, Icon, WindowExt,
     button::{Button, ButtonVariants},
     toolbar::{Toolbar, ToolbarGroup},
 };
@@ -19,6 +19,7 @@ type ZoomAction = Rc<dyn Fn(CommandId, &mut Window, &mut App)>;
 
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct HeaderState {
+    isolation: Option<super::isolation::IsolationHeaderState>,
     percentage: i32,
     zoom_enabled: [bool; 3],
     show_transparency_grid: bool,
@@ -33,6 +34,7 @@ pub(super) fn state(
     modal: bool,
 ) -> HeaderState {
     HeaderState {
+        isolation: super::isolation::state(owner, canvas, modal),
         percentage: (canvas
             .binding(&owner.editor)
             .and_then(|binding| owner.editor.viewport_view(binding))
@@ -146,6 +148,9 @@ impl RenderOnce for CanvasZoomBar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let state = self.owner.read(cx);
         let header = self::state(state, self.canvas.read(cx), self.modal);
+        let isolation = header.isolation.map(|header| {
+            super::isolation::controls(self.owner.clone(), self.canvas.clone(), header)
+        });
         let background_canvas = self.canvas.clone();
         let origin_canvas = self.canvas.clone();
         let commands = ZOOM_ACTIONS.map(|(_, id, _)| {
@@ -225,7 +230,10 @@ impl RenderOnce for CanvasZoomBar {
                         Button::new("btn_origin_crosshair"),
                         header.show_origin_crosshair,
                     ))
-                    .icon(IconName::Crosshair)
+                    .icon(
+                        Icon::default()
+                            .data(include_bytes!("../../assets/icons/origin-crosshair.svg")),
+                    )
                     .accessibility_label(t!("dock.origin_crosshair").into_owned())
                     .tooltip(t!("dock.origin_crosshair"))
                     .disabled(!header.origin_crosshair_enabled)
@@ -249,6 +257,7 @@ impl RenderOnce for CanvasZoomBar {
                     }),
                 ],
             )))
+            .children(isolation)
             .child(div().flex_1().min_w_0())
             .child(ZoomControl {
                 percentage: header.percentage,

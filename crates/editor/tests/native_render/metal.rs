@@ -897,3 +897,179 @@ fn read_preview(
     );
     bytes
 }
+
+#[test]
+fn modeling_isolation_dims_or_hides_color_without_changing_mask_coverage() -> anyhow::Result<()> {
+    for nested in [false, true] {
+        for overlap_opacity in [1., 0.5] {
+            check_modeling_isolation_composite(nested, overlap_opacity)?;
+        }
+    }
+    Ok(())
+}
+
+fn check_modeling_isolation_composite(nested: bool, overlap_opacity: f32) -> anyhow::Result<()> {
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        use editor_core::{
+            Editor, EditorCommand, IsolationDisplay, ObjectKind, ObjectRef, ViewportId,
+            ViewportKind, ViewportMetrics,
+        };
+        use kasane_core::{Canvas, Vec2};
+        let directory = tempfile::tempdir()?;
+        let mut sdk = kasane_sdk::AuthoringSession::new(
+            &uuid::Uuid::new_v4().to_string(),
+            Canvas::new(64., 64., Vec2::default(), 1.),
+        )?;
+        let id = |n| uuid::Uuid::from_u128(n).to_string();
+        let red = sdk.prepare_rgba_asset(&id(1), "red", 1, 1, vec![255, 0, 0, 255].into())?;
+        let blue = sdk.prepare_rgba_asset(&id(2), "blue", 1, 1, vec![0, 0, 255, 255].into())?;
+        let mut mask = kasane_sdk::rectangle_mesh(
+            &id(3),
+            "mask",
+            &id(2),
+            Vec2::new(8., 8.),
+            Vec2::new(32., 56.),
+        )?;
+        let mut art = kasane_sdk::rectangle_mesh(
+            &id(4),
+            "art",
+            &id(1),
+            Vec2::new(8., 8.),
+            Vec2::new(48., 56.),
+        )?;
+        art.masks = vec![id(3)];
+        art.draw_order = Some(1.);
+        let mut other = kasane_sdk::rectangle_mesh(
+            &id(5),
+            "other",
+            &id(2),
+            Vec2::new(48., 8.),
+            Vec2::new(60., 56.),
+        )?;
+        other.draw_order = Some(2.);
+        let mut overlap = kasane_sdk::rectangle_mesh(
+            &id(6),
+            "overlap",
+            &id(1),
+            Vec2::new(48., 8.),
+            Vec2::new(56., 56.),
+        )?;
+        overlap.draw_order = Some(3.);
+        overlap.appearance.opacity = overlap_opacity;
+        if nested {
+            for mesh in [&mut mask, &mut art, &mut other, &mut overlap] {
+                mesh.part_id = id(8);
+            }
+        }
+        sdk.edit("Fixture", None, |edit| {
+            if nested {
+                edit.create_part(kasane_core::Part {
+                    id: id(7),
+                    ..Default::default()
+                })?;
+                edit.create_part(kasane_core::Part {
+                    id: id(8),
+                    parent_id: id(7),
+                    ..Default::default()
+                })?;
+                for (group, part) in [(9, 7), (10, 8)] {
+                    edit.create_offscreen(kasane_core::Offscreen {
+                        id: id(group),
+                        runtime_id: id(group),
+                        part_id: id(part),
+                        ..Default::default()
+                    })?;
+                }
+            }
+            edit.create_asset(red)?;
+            edit.create_asset(blue)?;
+            edit.create_mesh(mask)?;
+            edit.create_mesh(art)?;
+            edit.create_mesh(other)?;
+            edit.create_mesh(overlap)
+        })?;
+        let saved = sdk.save_project(&directory.path().join("isolation.kasane"), None)?;
+        let mut editor = Editor::from_document(Document::open(&saved.manifest)?);
+        let viewport = ViewportId::new();
+        editor.register_primary_viewport(viewport, ViewportKind::Modeling)?;
+        let binding = editor.viewport_binding(viewport).unwrap();
+        editor.set_viewport_metrics(
+            viewport,
+            ViewportMetrics {
+                width: 64.,
+                height: 64.,
+                scale_factor: 1.,
+            },
+        );
+        editor.reset_viewport(binding)?;
+        editor.pan_viewport(binding, ViewportPoint { x: -32., y: 32. })?;
+        editor.execute(EditorCommand::SelectCanvasObjects(vec![ObjectRef::new(
+            ObjectKind::Mesh,
+            id(4),
+        )]))?;
+        let gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let config = MetalTargetConfig {
+            width: 64,
+            height: 64,
+            format: MTLPixelFormat::RGBA8Unorm,
+        };
+        let mut renderer = MetalSceneRenderer::new(gpu.device.clone(), config)?;
+        for (display, expected_alpha) in [
+            (None, 255u8),
+            (Some(IsolationDisplay::Dim), 38),
+            (Some(IsolationDisplay::Hide), 0),
+        ] {
+            if let Some(display) = display {
+                if !editor.viewport_isolated(binding) {
+                    editor.toggle_viewport_isolation(binding)?;
+                }
+                editor.set_viewport_isolation_display(binding, display)?;
+            }
+            let preview = editor.preview_for(binding)?;
+            assert_eq!(preview.scene.runtime_frame.drawables[0].opacity, 1.);
+            assert!(preview.scene.runtime_frame.drawables[0].visible);
+            let output = renderer.submit_transformed(
+                &gpu.queue,
+                config,
+                &preview.scene,
+                preview.canvas.unwrap().transform,
+            )?;
+            output.command.wait_until_completed();
+            assert_eq!(
+                output.command.status(),
+                metal::MTLCommandBufferStatus::Completed
+            );
+            let pixels = read_preview(&gpu.device, &gpu.queue, &output.image);
+            let pixel = |x: usize| &pixels[(32 * 64 + x) * 4..][..4];
+            assert_eq!(
+                pixel(16),
+                &[255, 0, 0, 255],
+                "mask coverage changed in {display:?}"
+            );
+            assert_eq!(
+                pixel(40),
+                &[0, 0, 0, 0],
+                "clipped area changed in {display:?}"
+            );
+            // Fade the completed red-over-blue context once, retaining its
+            // authored occlusion even when the front mesh is translucent.
+            for channel in 0..4 {
+                let expected = match channel {
+                    0 => (f32::from(expected_alpha) * overlap_opacity).round() as u8,
+                    2 => (f32::from(expected_alpha) * (1. - overlap_opacity)).round() as u8,
+                    3 => expected_alpha,
+                    _ => 0,
+                };
+                assert!(
+                    pixel(52)[channel].abs_diff(expected) <= 1,
+                    "context overlap in {display:?}: {:?}",
+                    pixel(52)
+                );
+            }
+            // A single context mesh and the overlap must have equal coverage.
+            assert!(pixel(58)[3].abs_diff(expected_alpha) <= 1);
+        }
+        Ok(())
+    })
+}

@@ -154,6 +154,7 @@ impl CanvasScene {
             control_slots,
             texture_slots,
             visible_meshes,
+            isolation_scope: None,
             topology,
         };
         let parameters = scene
@@ -213,6 +214,7 @@ impl CanvasScene {
             control_slots: self.control_slots.clone(),
             texture_slots,
             visible_meshes,
+            isolation_scope: None,
             topology,
         }
     }

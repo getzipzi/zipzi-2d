@@ -1,6 +1,6 @@
 //! Concrete viewport panels sharing measured surfaces and navigation.
 macro_rules! viewport_panel {
-    ($name:ident, $label:literal) => {
+    ($name:ident, $label:literal, $header_width:literal) => {
         impl EventEmitter<gpui_kit::component::dock::PanelEvent> for $name {}
         impl Focusable for $name {
             fn focus_handle(&self, cx: &App) -> FocusHandle {
@@ -52,7 +52,7 @@ macro_rules! viewport_panel {
                 .into_any_element()
             }
             fn header_min_width(&self) -> Pixels {
-                px(176.)
+                px($header_width)
             }
         }
     };
@@ -61,6 +61,7 @@ macro_rules! viewport_panel {
 mod context_menu;
 mod deformer_bar;
 mod input;
+mod isolation;
 mod painting;
 use painting::CanvasOverlay;
 mod animation;

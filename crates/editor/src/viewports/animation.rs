@@ -58,4 +58,4 @@ impl AnimationViewport {
         }
     }
 }
-viewport_panel!(AnimationViewport, "dock.animation_viewport");
+viewport_panel!(AnimationViewport, "dock.animation_viewport", 176.);

@@ -61,6 +61,9 @@ impl ViewportRegistry {
             }
             self.generation += 1;
             entry.presentation.invalidate();
+            if let Some(document) = document {
+                entry.presentation.isolation.bind_document(document);
+            }
             entry.binding = document.map(|document| ViewportBinding {
                 viewport,
                 kind: entry.kind,

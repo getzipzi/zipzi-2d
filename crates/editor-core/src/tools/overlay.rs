@@ -69,7 +69,20 @@ impl ToolController {
         let locks = document.object_state_index();
         let scene = &frame.geometry;
         let t = frame.transform;
-        let selection = &document.context().selections;
+        let selection = if scene.isolation_scope.is_some() {
+            std::borrow::Cow::Owned(
+                document
+                    .context()
+                    .selections
+                    .iter()
+                    .filter(|object| scene.in_isolation_scope(object))
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            )
+        } else {
+            std::borrow::Cow::Borrowed(document.context().selections.as_slice())
+        };
+        let selection = selection.as_ref();
         let hovered_target = self
             .hovered
             .clone()

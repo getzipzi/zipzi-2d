@@ -151,6 +151,7 @@ impl CanvasScene {
             .into_iter()
             .rev()
             .map(|(id, _)| id)
+            .filter(|id| self.mesh_visible(id))
             .collect()
     }
 }

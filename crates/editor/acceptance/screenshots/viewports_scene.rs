@@ -88,6 +88,7 @@ fn changed_region(
 }
 
 pub(super) fn viewport_screenshots(directory: &Path) -> anyhow::Result<()> {
+    isolation_screenshots(directory)?;
     origin_crosshair_screenshots(directory)?;
     transparency_grid_screenshots(directory)?;
     for kind in [ViewportKind::Modeling, ViewportKind::Animation] {
@@ -376,5 +377,80 @@ fn transparency_grid_screenshots(directory: &Path) -> anyhow::Result<()> {
             "Disabling the transparency grid did not restore the solid backdrop"
         );
     }
+    Ok(())
+}
+
+fn isolation_screenshots(directory: &Path) -> anyhow::Result<()> {
+    use editor_core::{Editor, EditorCommand, ObjectKind, ObjectRef};
+    use gpui_kit::point;
+    let mut h = Harness::new()?;
+    let (mut document, assets) = crate::test_fixture::sample_document_with_two_layers()?;
+    let saved = document.save(&assets.path().join("isolation.kasane"))?;
+    let mut sdk = kasane_sdk::AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        kasane_core::Canvas::new(256., 256., kasane_core::Vec2::default(), 1.),
+    )?;
+    sdk.open_project(&saved.manifest, None)?;
+    let first = sdk.mesh_ids()[0].clone();
+    let mut other = sdk.mesh(&sdk.mesh_ids()[1]).unwrap();
+    for position in &mut other.base_positions {
+        position.x += 100.;
+    }
+    sdk.edit("Offset second mesh", None, |edit| edit.replace_mesh(other))?;
+    sdk.save_project(&saved.manifest, None)?;
+    let document = editor_core::Document::open(&saved.manifest)?;
+    h._assets = assets;
+    h.cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            view.editor = Editor::from_document(document);
+            view.editor
+                .execute(EditorCommand::SelectCanvasObjects(vec![ObjectRef::new(
+                    ObjectKind::Mesh,
+                    first,
+                )]))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+    })?;
+    let full = h.capture()?;
+    h.cx.update_window(h.window, |_, window, cx| {
+        window.click("btn_isolate_selection", cx);
+        assert_eq!(window.find("btn_isolate_selection").checked(), Some(true));
+    })?;
+    let dim = h.capture()?;
+    h.cx.update_window(h.window, |_, window, cx| {
+        window
+            .within("canvas-isolation-controls")
+            .click("popup", cx);
+        let row = window.within("popup-menu").find(1usize).bounds().center();
+        let origin = window.find("popup-menu").bounds().origin;
+        window.click_at("popup-menu", point(row.x - origin.x, row.y - origin.y), cx);
+    })?;
+    let hidden = h.capture()?;
+    let (bounds, scale) = h.cx.update_window(h.window, |_, window, cx| {
+        let bounds = window.find("canvas-body").bounds();
+        window.click("btn_isolate_selection", cx);
+        (bounds, window.scale_factor())
+    })?;
+    let restored = h.capture()?;
+    anyhow::ensure!(
+        changed_region(&full, &dim, bounds, scale) > 100,
+        "Isolation did not dim context pixels"
+    );
+    anyhow::ensure!(
+        changed_region(&dim, &hidden, bounds, scale) > 100,
+        "Isolation did not hide context pixels"
+    );
+    anyhow::ensure!(
+        h.canvas_image(&full)? == h.canvas_image(&restored)?,
+        "Leaving isolation did not restore the original canvas"
+    );
+    h.view.read_with(&h.cx, |view, _| {
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0))
+    });
+    save(&full, directory, "viewport-isolation-full.png")?;
+    save(&dim, directory, "viewport-isolation-dim.png")?;
+    save(&hidden, directory, "viewport-isolation-hidden.png")?;
     Ok(())
 }

@@ -790,3 +790,101 @@ fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {
         dispatch_samples[49], dispatch_samples[94], dispatch_samples[98]
     );
 }
+
+#[gpui_kit::test]
+fn modeling_isolation_header_toggles_fixed_scope_and_context_display(cx: &mut TestAppContext) {
+    use editor_core::{EditorCommand, IsolationDisplay};
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert_eq!(window.find("btn_isolate_selection").checked(), Some(false));
+        // A fresh binding with identical visible control state must refresh callbacks.
+        harness.view.update(cx, |view, cx| {
+            let viewport = view.editor.primary_viewport_binding().unwrap().viewport;
+            view.editor.set_viewport_visible(viewport, false);
+            view.editor.set_viewport_visible(viewport, true);
+            cx.notify();
+        });
+        window.render_frame(cx);
+        window.click("btn_isolate_selection", cx);
+        assert_eq!(window.find("btn_isolate_selection").checked(), Some(true));
+        let from = window.find("canvas-body").bounds().center();
+        let to = from + point(px(20.), px(10.));
+        let before = harness.view.read(cx).editor.view().pan;
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Middle,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: to,
+                pressed_button: Some(MouseButton::Middle),
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        assert!(harness.view.read(cx).editor.viewport_interaction_active());
+        assert_ne!(harness.view.read(cx).editor.view().pan, before);
+        assert_ne!(window.find("btn_isolate_selection").disabled(), Some(true));
+        assert_ne!(
+            window
+                .within("canvas-isolation-controls")
+                .find("popup")
+                .disabled(),
+            Some(true)
+        );
+        assert_eq!(window.find("btn_isolate_selection").checked(), Some(true));
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Middle,
+                position: to,
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SelectCanvasObjects(Vec::new()))
+                .unwrap();
+            cx.notify();
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("btn_isolate_selection").checked(), Some(true));
+        window
+            .within("canvas-isolation-controls")
+            .click("popup", cx);
+        window.render_frame(cx);
+        let row = window.within("popup-menu").find(1usize).bounds().center();
+        let menu = window.find("popup-menu").bounds();
+        window.click_at("popup-menu", row - menu.origin, cx);
+        harness.view.read_with(cx, |view, _| {
+            let binding = view.editor.primary_viewport_binding().unwrap();
+            assert!(view.editor.viewport_isolated(binding));
+            assert_eq!(
+                view.editor.viewport_isolation_display(binding),
+                IsolationDisplay::Hide
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        });
+        window.click("btn_isolate_selection", cx);
+        assert_eq!(window.find("btn_isolate_selection").checked(), Some(false));
+        // No selection means the inactive tool cannot be activated.
+        window.click("btn_isolate_selection", cx);
+        assert_eq!(window.find("btn_isolate_selection").checked(), Some(false));
+        window.click("workspace-animation", cx);
+        assert!(window.try_find("btn_isolate_selection").is_none());
+    })
+    .unwrap();
+}

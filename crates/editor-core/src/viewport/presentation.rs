@@ -12,6 +12,7 @@ pub struct AnimationViewportIdentity {
 
 #[derive(Default)]
 pub(crate) struct ViewportPresentation {
+    pub isolation: super::isolation::ViewportIsolation,
     pub sequence: u64,
     pub floor: u64,
     pub requested_modeling: Option<(u64, u64)>,

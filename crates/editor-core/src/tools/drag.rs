@@ -30,7 +30,7 @@ impl ToolController {
             let mut targets = vec![target.object().clone()];
             if matches!(target, HitTarget::Component(_)) {
                 for c in &self.components {
-                    if !targets.contains(&c.object) {
+                    if press.scene.in_isolation_scope(&c.object) && !targets.contains(&c.object) {
                         targets.push(c.object.clone());
                     }
                 }

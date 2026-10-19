@@ -134,10 +134,16 @@ impl Editor {
         let metrics = self.viewport_metrics(binding.viewport).unwrap();
         let session = self.active_session_mut().unwrap();
         session.fit_default_view(binding.viewport, metrics)?;
-        let (scene, geometry) = session.scene()?;
+        let (mut scene, mut geometry) = session.scene()?;
         let view_state = session.view_state(binding.viewport);
         let scene_revision = session.scene_revision;
         let presentation = self.viewport_presentation_mut(binding.viewport).unwrap();
+        if let Some((isolated_scene, isolated_geometry)) =
+            presentation.isolation.project(&scene, &geometry)
+        {
+            scene = isolated_scene;
+            geometry = isolated_geometry;
+        }
         let revision = presentation.next();
         presentation.requested_modeling = Some((scene_revision, view_state.revision));
         let canvas =

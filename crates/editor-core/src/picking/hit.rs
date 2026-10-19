@@ -229,7 +229,7 @@ impl CanvasScene {
             .filter(|r| {
                 r.kind != K::Deformer || self.control(&r.id).is_some_and(|c| c.enabled && c.visible)
             })
-            .filter(|r| !locks.is_locked(r) && seen.insert(r.clone()))
+            .filter(|r| self.in_isolation_scope(r) && !locks.is_locked(r) && seen.insert(r.clone()))
             .map(|object| PickCandidate {
                 label: format!("{} · {:?}", self.index.name(&object), object.kind),
                 object,

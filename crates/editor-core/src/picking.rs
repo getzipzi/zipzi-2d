@@ -84,9 +84,26 @@ pub struct CanvasScene {
     control_slots: Arc<HashMap<String, usize>>,
     texture_slots: HashMap<String, usize>,
     visible_meshes: HashSet<String>,
+    pub(crate) isolation_scope: Option<Arc<HashSet<ObjectRef>>>,
     pub(crate) topology: Arc<crate::canvas_topology::CanvasTopology>,
 }
 impl CanvasScene {
+    pub(crate) fn in_isolation_scope(&self, object: &ObjectRef) -> bool {
+        self.isolation_scope
+            .as_ref()
+            .is_none_or(|scope| scope.contains(object))
+    }
+    pub(crate) fn isolate(&self, scope: Arc<HashSet<ObjectRef>>) -> Self {
+        let mut scene = self.clone();
+        scene
+            .visible_meshes
+            .retain(|id| scope.contains(&ObjectRef::new(K::Mesh, id)));
+        for control in &mut scene.controls {
+            control.visible &= scope.contains(&control.object);
+        }
+        scene.isolation_scope = Some(scope);
+        scene
+    }
     pub(crate) fn bezier(&self, id: &str) -> Option<&crate::warp_bezier::BezierGeometry> {
         self.beziers.get(id).and_then(|b| b.get(self))
     }

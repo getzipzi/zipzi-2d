@@ -1,4 +1,6 @@
 mod identity;
+mod isolation;
+pub use isolation::IsolationDisplay;
 mod presentation;
 mod state;
 pub(crate) use identity::ViewportRegistry;

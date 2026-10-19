@@ -40,7 +40,13 @@ impl ToolController {
                     "Invalid pointer position"
                 );
                 self.cancel(document);
-                let selection = document.context().selections.clone();
+                let selection: Vec<_> = document
+                    .context()
+                    .selections
+                    .iter()
+                    .filter(|object| scene.in_isolation_scope(object))
+                    .cloned()
+                    .collect();
                 let hit = scene.hit_with_mode(
                     point,
                     t,
