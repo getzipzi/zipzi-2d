@@ -23,6 +23,8 @@ pub(crate) struct HeaderState {
     zoom_enabled: [bool; 3],
     show_transparency_grid: bool,
     background_enabled: bool,
+    show_origin_crosshair: bool,
+    origin_crosshair_enabled: bool,
 }
 
 pub(super) fn state(
@@ -48,6 +50,9 @@ pub(super) fn state(
         }),
         show_transparency_grid: canvas.show_transparency_grid,
         background_enabled: !modal,
+        show_origin_crosshair: canvas.show_origin_crosshair
+            && canvas.origin_crosshair_available(owner),
+        origin_crosshair_enabled: !modal && canvas.origin_crosshair_available(owner),
     }
 }
 
@@ -142,6 +147,7 @@ impl RenderOnce for CanvasZoomBar {
         let state = self.owner.read(cx);
         let header = self::state(state, self.canvas.read(cx), self.modal);
         let background_canvas = self.canvas.clone();
+        let origin_canvas = self.canvas.clone();
         let commands = ZOOM_ACTIONS.map(|(_, id, _)| {
             self.canvas
                 .read(cx)
@@ -183,35 +189,66 @@ impl RenderOnce for CanvasZoomBar {
             .items_center()
             .gap(compact::rem(compact::GAP))
             .text_color(cx.theme().muted_foreground)
-            .child(compact::header_control(
-                compact::header_button(compact::toggle(
-                    Button::new("btn_transparency_grid"),
-                    header.show_transparency_grid,
-                ))
-                .icon(IconName::Grid2x2)
-                .accessibility_label(t!("dock.transparency_grid").into_owned())
-                .tooltip(t!("dock.transparency_grid"))
-                .disabled(!header.background_enabled)
-                .on_click(move |_, window, cx| {
-                    if window.has_active_dialog(cx) {
-                        return;
-                    }
-                    let surface = background_canvas.read(cx);
-                    if surface
-                        .owner
-                        .upgrade()
-                        .is_none_or(|owner| owner.read(cx).modal)
-                    {
-                        return;
-                    }
-                    let focus = surface.focus.clone();
-                    window.focus(&focus, cx);
-                    background_canvas.update(cx, |surface, cx| {
-                        surface.show_transparency_grid = !surface.show_transparency_grid;
-                        cx.notify();
-                    });
-                }),
-            ))
+            .child(compact::header_control(compact::group(
+                "canvas-display-controls",
+                t!("dock.canvas_display"),
+                Axis::Horizontal,
+                vec![
+                    compact::header_button(compact::toggle(
+                        Button::new("btn_transparency_grid"),
+                        header.show_transparency_grid,
+                    ))
+                    .icon(IconName::Grid2x2)
+                    .accessibility_label(t!("dock.transparency_grid").into_owned())
+                    .tooltip(t!("dock.transparency_grid"))
+                    .disabled(!header.background_enabled)
+                    .on_click(move |_, window, cx| {
+                        if window.has_active_dialog(cx) {
+                            return;
+                        }
+                        let surface = background_canvas.read(cx);
+                        if surface
+                            .owner
+                            .upgrade()
+                            .is_none_or(|owner| owner.read(cx).modal)
+                        {
+                            return;
+                        }
+                        let focus = surface.focus.clone();
+                        window.focus(&focus, cx);
+                        background_canvas.update(cx, |surface, cx| {
+                            surface.show_transparency_grid = !surface.show_transparency_grid;
+                            cx.notify();
+                        });
+                    }),
+                    compact::header_button(compact::toggle(
+                        Button::new("btn_origin_crosshair"),
+                        header.show_origin_crosshair,
+                    ))
+                    .icon(IconName::Crosshair)
+                    .accessibility_label(t!("dock.origin_crosshair").into_owned())
+                    .tooltip(t!("dock.origin_crosshair"))
+                    .disabled(!header.origin_crosshair_enabled)
+                    .on_click(move |_, window, cx| {
+                        if window.has_active_dialog(cx) {
+                            return;
+                        }
+                        let surface = origin_canvas.read(cx);
+                        if surface.owner.upgrade().is_none_or(|owner| {
+                            let owner = owner.read(cx);
+                            owner.modal || !surface.origin_crosshair_available(owner)
+                        }) {
+                            return;
+                        }
+                        let focus = surface.focus.clone();
+                        window.focus(&focus, cx);
+                        origin_canvas.update(cx, |surface, cx| {
+                            surface.show_origin_crosshair = !surface.show_origin_crosshair;
+                            cx.notify();
+                        });
+                    }),
+                ],
+            )))
             .child(div().flex_1().min_w_0())
             .child(ZoomControl {
                 percentage: header.percentage,

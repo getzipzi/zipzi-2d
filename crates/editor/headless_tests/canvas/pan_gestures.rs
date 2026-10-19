@@ -235,8 +235,11 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
         let zoom = window.find("canvas-zoom-toolbar").bounds();
         let controls = window.find("canvas-zoom-controls").bounds();
         let background = window.find("btn_transparency_grid").bounds();
+        let origin = window.find("btn_origin_crosshair").bounds();
         assert_eq!(background.left(), zoom.left());
-        assert!(background.right() < controls.left());
+        assert_eq!(background.right(), origin.left());
+        assert!(origin.right() < controls.left());
+        assert!((origin.center().y - zoom.center().y).abs() <= px(1.));
         assert!((background.center().y - zoom.center().y).abs() <= px(1.));
         assert!(zoom.bottom() <= canvas.top());
         assert!(zoom.top() >= top.bottom());
@@ -322,6 +325,66 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
 
     cx.update_window(harness.window, |_, window, _| {
         assert!(window.try_find("registered-toolbar-item").is_some());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn origin_crosshair_toggle_requires_a_ready_modeling_viewport(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
+        window.click("btn_origin_crosshair", cx);
+    })
+    .unwrap();
+    super::common::present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(true));
+        window.click("btn_origin_crosshair", cx);
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
+
+        harness.view.update(cx, |view, cx| {
+            view.modal = true;
+            cx.notify();
+        });
+        window.render_frame(cx);
+        window.click("btn_origin_crosshair", cx);
+        harness.view.update(cx, |view, cx| {
+            view.modal = false;
+            cx.notify();
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
+
+        window.click("workspace-animation", cx);
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
+        window.click("btn_origin_crosshair", cx);
+        window.click("workspace-modeling", cx);
+    })
+    .unwrap();
+    super::common::present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
+        window.click("btn_origin_crosshair", cx);
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(true));
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (0, 0)
+        );
+
+        harness.view.update(cx, |view, cx| {
+            view.editor = editor_core::Editor::empty();
+            cx.notify();
+        });
+        window.render_frame(cx);
+        window.click("btn_origin_crosshair", cx);
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
     })
     .unwrap();
 }

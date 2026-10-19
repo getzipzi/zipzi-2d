@@ -52,7 +52,7 @@ macro_rules! viewport_panel {
                 .into_any_element()
             }
             fn header_min_width(&self) -> Pixels {
-                px(152.)
+                px(176.)
             }
         }
     };
@@ -105,6 +105,7 @@ pub struct ViewportSurface {
     >,
     pub(crate) toolbar: toolbar::ToolbarRegistry,
     pub(super) show_transparency_grid: bool,
+    pub(super) show_origin_crosshair: bool,
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
     bounds: Bounds<Pixels>,
     navigation: navigation::ViewportNavigation,
@@ -217,6 +218,7 @@ impl ViewportSurface {
                 focus,
                 toolbar,
                 show_transparency_grid: false,
+                show_origin_crosshair: true,
                 overlay_renderer: Default::default(),
                 bounds: Bounds::default(),
                 navigation: Default::default(),
@@ -229,6 +231,14 @@ impl ViewportSurface {
         editor
             .viewport_binding(self.viewport)
             .filter(|binding| binding.kind == self.kind)
+    }
+    pub(super) fn origin_crosshair_available(&self, owner: &EditorView) -> bool {
+        self.kind == editor_core::ViewportKind::Modeling
+            && owner.editor.has_presented_frame(
+                owner
+                    .modeling_frame_for(self.viewport)
+                    .map(|frame| frame.canvas.version),
+            )
     }
     pub(crate) fn command(
         &self,
@@ -313,6 +323,9 @@ impl Render for ViewportSurface {
             target_label,
             vertex_notice,
         } = (self.content)(state, self.viewport);
+        if !self.show_origin_crosshair {
+            overlay.origin_crosshair = None;
+        }
         if benchmark::hide_mesh_edges() {
             overlay.lines.clear();
         }

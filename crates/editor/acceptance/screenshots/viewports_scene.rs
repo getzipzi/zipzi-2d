@@ -88,6 +88,7 @@ fn changed_region(
 }
 
 pub(super) fn viewport_screenshots(directory: &Path) -> anyhow::Result<()> {
+    origin_crosshair_screenshots(directory)?;
     transparency_grid_screenshots(directory)?;
     for kind in [ViewportKind::Modeling, ViewportKind::Animation] {
         let mut h = Harness::new()?;
@@ -228,6 +229,75 @@ pub(super) fn viewport_screenshots(directory: &Path) -> anyhow::Result<()> {
         }
         settled(&mut h, &ids)?;
     }
+    Ok(())
+}
+
+fn origin_crosshair_screenshots(directory: &Path) -> anyhow::Result<()> {
+    let mut h = Harness::new()?;
+    h.capture()?;
+    h.cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            let frame = &view.modeling_frame().unwrap().canvas;
+            let origin = frame
+                .transform
+                .to_viewport(editor_core::ModelPoint::default());
+            view.editor
+                .pan_viewport(
+                    frame.version.binding,
+                    ViewportPoint {
+                        x: frame.transform.metrics.width / 2. - origin.x,
+                        y: frame.transform.metrics.height / 2. - origin.y,
+                    },
+                )
+                .unwrap();
+            view.redraw_canvas(cx);
+        });
+        window.render_frame(cx);
+    })?;
+    let visible = h.capture()?;
+    let (origin, request) = h.view.read_with(&h.cx, |view, _| {
+        let frame = &view.modeling_frame().unwrap().canvas;
+        (
+            frame
+                .transform
+                .to_viewport(editor_core::ModelPoint::default()),
+            frame.version.request,
+        )
+    });
+    let (region, scale) = h.cx.update_window(h.window, |_, window, cx| {
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(true));
+        let canvas = window.find("canvas-body").bounds();
+        let region = Bounds::new(
+            canvas.origin + gpui_kit::point(px(origin.x - 11.), px(origin.y - 11.)),
+            gpui_kit::size(px(22.), px(22.)),
+        );
+        assert!(canvas.contains(&region.origin) && canvas.contains(&region.bottom_right()));
+        window.click("btn_origin_crosshair", cx);
+        (region, window.scale_factor())
+    })?;
+    let hidden = h.capture()?;
+    anyhow::ensure!(
+        changed_region(&visible, &hidden, region, scale) > 10,
+        "Hiding the origin crosshair did not change its pixels"
+    );
+    h.cx.update_window(h.window, |_, window, cx| {
+        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
+        window.click("btn_origin_crosshair", cx);
+    })?;
+    let restored = h.capture()?;
+    anyhow::ensure!(
+        h.canvas_image(&visible)? == h.canvas_image(&restored)?,
+        "Restoring the origin crosshair changed the canvas"
+    );
+    h.view.read_with(&h.cx, |view, _| {
+        assert_eq!(
+            view.modeling_frame().unwrap().canvas.version.request,
+            request
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
+    save(&visible, directory, "viewport-origin-visible.png")?;
+    save(&hidden, directory, "viewport-origin-hidden.png")?;
     Ok(())
 }
 
