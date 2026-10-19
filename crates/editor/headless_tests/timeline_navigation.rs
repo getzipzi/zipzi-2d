@@ -24,6 +24,88 @@ fn animation(cx: &mut TestAppContext) -> Harness {
 }
 
 #[gpui_kit::test]
+fn wheel_zoom_matches_canvas_direction_and_preserves_pointer_time(cx: &mut TestAppContext) {
+    let harness = animation(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            let document = view.editor.active_id().unwrap();
+            view.editor
+                .update_timeline_view(document, |state| state.time_range = (0.5, 1.5))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        let bounds = window.find("timeline-graph").bounds();
+        let fraction = 0.25;
+        let position = point(
+            bounds.left() + bounds.size.width * fraction as f32,
+            bounds.center().y,
+        );
+        let anchor = 0.5 + fraction;
+        for delta in [
+            ScrollDelta::Pixels(point(px(0.), px(24.))),
+            ScrollDelta::Lines(point(0., 1.)),
+        ] {
+            for zoom_in in [true, false] {
+                let before = harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .timeline_view()
+                    .unwrap()
+                    .time_range;
+                let delta = if zoom_in {
+                    delta
+                } else {
+                    match delta {
+                        ScrollDelta::Pixels(p) => ScrollDelta::Pixels(-p),
+                        ScrollDelta::Lines(p) => ScrollDelta::Lines(-p),
+                    }
+                };
+                window.dispatch_event(
+                    ScrollWheelEvent {
+                        position,
+                        delta,
+                        modifiers: Modifiers::secondary_key(),
+                        ..Default::default()
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+                let after = harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .timeline_view()
+                    .unwrap()
+                    .time_range;
+                let before_span = before.1 - before.0;
+                let after_span = after.1 - after.0;
+                if zoom_in {
+                    assert!(after_span < before_span);
+                } else {
+                    assert!(after_span > before_span);
+                    assert!((after.0 - 0.5).abs() < 1e-6);
+                    assert!((after.1 - 1.5).abs() < 1e-6);
+                }
+                assert!((after.0 + fraction * after_span - anchor).abs() < 1e-6);
+            }
+        }
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (0, 0)
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn shift_wheel_and_hand_and_middle_drag_pan_without_asset_edits(cx: &mut TestAppContext) {
     let harness = animation(cx);
     cx.update_window(harness.window, |_, window, cx| {

@@ -608,7 +608,7 @@ impl Timeline {
                 state.time_range,
                 bounds.size.width.as_f32(),
             );
-            let scale = (delta.y as f64 * 0.01).exp().clamp(0.5, 2.);
+            let scale = (-delta.y as f64 * 0.01).exp().clamp(0.5, 2.);
             let span = ((state.time_range.1 - state.time_range.0) * scale).clamp(1e-4, 1e6);
             let fraction =
                 (anchor - state.time_range.0) / (state.time_range.1 - state.time_range.0);
