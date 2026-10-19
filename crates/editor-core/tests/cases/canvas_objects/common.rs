@@ -120,7 +120,9 @@ pub(super) fn rich_document_with_canvas(
         Ok(())
     })?;
     let receipt = s.save_project(&dir.path().join("fixture"), None)?;
-    Ok((Document::open(&receipt.manifest)?, dir, id(4), id(5), id(3)))
+    let mut document = Document::open(&receipt.manifest)?;
+    document.select(&id(6))?;
+    Ok((document, dir, id(4), id(5), id(3)))
 }
 
 pub(super) fn deformer_editor(

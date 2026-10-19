@@ -144,6 +144,7 @@ fn geometry_reuse_respects_canvas_coordinates_drawable_order_and_topology() -> a
             .zip(updated.meshes.iter())
             .all(|(a, b)| Arc::ptr_eq(a, b))
     );
+    document.select(&uuid::Uuid::from_u128(2).to_string())?;
     document.preview_name("Renamed mesh")?;
     let renamed = document.snapshot()?;
     let renamed = original.with_positions(&document, renamed);

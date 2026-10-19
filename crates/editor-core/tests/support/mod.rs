@@ -292,7 +292,9 @@ fn sample_document_with_options(
         Ok(())
     })?;
     let receipt = session.save_project(&directory.path().join("fixture.kasane"), None)?;
-    Ok((Document::open(&receipt.manifest)?, directory))
+    let mut document = Document::open(&receipt.manifest)?;
+    document.select(&mesh.id)?;
+    Ok((document, directory))
 }
 
 #[allow(dead_code)]

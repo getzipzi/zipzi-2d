@@ -238,24 +238,11 @@ impl Document {
 
     fn from_session(session: AuthoringSession) -> Result<Self> {
         let textures = textures::DocumentTextures::new(&session)?;
-        let selected = session.mesh_ids().first().cloned();
         let projection = Arc::new(crate::ObjectIndex::build(session.document()));
         Ok(Self {
             session,
             import_name: None,
-            context: crate::PanelContext {
-                selections: selected
-                    .iter()
-                    .map(|id| crate::ObjectRef::new(crate::ObjectKind::Mesh, id))
-                    .collect(),
-                selection: selected
-                    .as_ref()
-                    .map(|id| crate::ObjectRef::new(crate::ObjectKind::Mesh, id)),
-                inspected: selected
-                    .as_ref()
-                    .map(|id| crate::ObjectRef::new(crate::ObjectKind::Mesh, id)),
-                ..Default::default()
-            },
+            context: crate::PanelContext::default(),
             projection_revision: 1,
             preview_revision: 0,
             object_state_index: std::sync::Mutex::new(None),
@@ -264,7 +251,7 @@ impl Document {
             object_index_builds: std::sync::atomic::AtomicUsize::new(1),
             animation_catalog: std::sync::Mutex::new(None),
             canvas_topology: std::sync::Mutex::new(None),
-            selected,
+            selected: None,
             pending: None,
             next_property_edit: 0,
             textures,

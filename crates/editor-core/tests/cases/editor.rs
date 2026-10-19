@@ -138,8 +138,11 @@ fn same_model_uuid_in_two_files_has_distinct_document_identity() -> anyhow::Resu
     let mut editor = crate::support::empty_editor();
     load(&mut editor, &original)?;
     let first = editor.active_id().unwrap();
+    let mesh = editor.layers()[0].id.clone();
+    editor.execute(EditorCommand::Select(mesh.clone()))?;
     load(&mut editor, &copy)?;
     let second = editor.active_id().unwrap();
+    editor.execute(EditorCommand::Select(mesh))?;
     assert_ne!(first, second);
     editor.execute(EditorCommand::SetObjectVisible {
         object: editor
@@ -295,10 +298,12 @@ fn previews_and_load_completions_never_target_the_tab_active_at_completion() -> 
     loading.new_document()?;
     loading.finish_load(task.run())?;
     assert_eq!(loading.documents().len(), 2);
-    assert_eq!(
-        loading.document().unwrap().selected_layer().unwrap().name,
-        "Diamond"
-    );
+    let document = loading.document().unwrap();
+    assert_eq!(document.layers()[0].name, "Diamond");
+    assert!(document.selected_id().is_none());
+    assert!(document.context().selection.is_none());
+    assert!(document.context().selections.is_empty());
+    assert!(document.context().inspected.is_none());
     Ok(())
 }
 

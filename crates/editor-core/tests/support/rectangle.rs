@@ -132,5 +132,7 @@ fn rectangle_with_texture(
         Ok(())
     })?;
     let saved = session.save_project(&dir.path().join("rectangle.kasane"), None)?;
-    Ok((Document::open(&saved.manifest)?, dir))
+    let mut document = Document::open(&saved.manifest)?;
+    document.select(&mesh.id)?;
+    Ok((document, dir))
 }

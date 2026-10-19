@@ -166,6 +166,7 @@ fn sdk_imports_create_editable_documents_with_textures() -> anyhow::Result<()> {
     let (mut model, notices) = Document::import_model3(&model3)?;
     assert!(!model.layers().is_empty());
     assert!(model.path().is_none());
+    assert_no_selection(&model);
     assert_eq!(model.import_name(), Some("external_v50"));
     assert!(!model.snapshot()?.textures.is_empty());
     assert!(!notices.is_empty()); // Missing optional model3 attachments are reported.
@@ -177,11 +178,14 @@ fn sdk_imports_create_editable_documents_with_textures() -> anyhow::Result<()> {
     let (mut psd_document, notices) = Document::import_psd(&psd)?;
     assert!(!psd_document.layers().is_empty());
     assert!(psd_document.path().is_none());
+    assert_no_selection(&psd_document);
     assert!(psd_document.modified());
     assert_eq!(psd_document.import_name(), Some("layered"));
     assert!(notices.is_empty());
     let imported = psd_document.snapshot()?;
     assert!(!imported.textures.is_empty());
+    let layer = psd_document.layers()[0].id.clone();
+    psd_document.select(&layer)?;
     psd_document.preview_name("Edited PSD layer")?;
     let destination = output.path().join("layers.kasane");
     let receipt = psd_document.save(&destination)?;
@@ -191,6 +195,8 @@ fn sdk_imports_create_editable_documents_with_textures() -> anyhow::Result<()> {
     assert_eq!(psd_document.selected_layer().unwrap().name, "face");
     psd_document.redo()?;
     let mut reopened = Document::open(&receipt.manifest)?;
+    assert_no_selection(&reopened);
+    reopened.select(&layer)?;
     assert_eq!(reopened.selected_layer().unwrap().name, "Edited PSD layer");
     assert_eq!(
         reopened.snapshot()?.textures[0].rgba,
@@ -290,6 +296,8 @@ fn project_round_trip_preserves_edits_and_copies_source_texture() -> anyhow::Res
     drop(document);
     drop(source_fixture); // Reopening must use the copied asset, not the test fixture.
     let mut reopened = Document::open(&receipt.manifest)?;
+    assert_no_selection(&reopened);
+    reopened.select(&id)?;
     assert_eq!(reopened.selected_layer().unwrap().name, "Saved face");
     assert_eq!(reopened.selected_layer().unwrap().opacity, 0.35);
     assert_eq!(reopened.history_lengths(), (0, 0));
@@ -353,6 +361,7 @@ fn opening_multiple_layers_edits_only_the_selected_mesh() -> anyhow::Result<()> 
 
     let mut document = Document::open(&receipt.manifest)?;
     assert_eq!(document.layers().len(), 2);
+    assert_no_selection(&document);
     document.select(&second)?;
     document.preview_name("Edited second")?;
     document.preview_opacity(0.2)?; // Changing gesture commits the rename first.
@@ -377,6 +386,14 @@ fn opening_multiple_layers_edits_only_the_selected_mesh() -> anyhow::Result<()> 
     assert_eq!(reopened.selected_layer().unwrap().name, "Edited second");
     assert_eq!(reopened.selected_layer().unwrap().opacity, 0.2);
     Ok(())
+}
+
+fn assert_no_selection(document: &Document) {
+    assert!(document.selected_id().is_none());
+    assert!(document.selected_layer().is_none());
+    assert!(document.context().selection.is_none());
+    assert!(document.context().selections.is_empty());
+    assert!(document.context().inspected.is_none());
 }
 
 #[test]
