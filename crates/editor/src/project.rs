@@ -102,7 +102,7 @@ impl EditorView {
                 if let Some(form) = self.property_forms.entries.get_mut(&target) {
                     let spec = editor_core::property_specs(target.object.kind)
                         .iter()
-                        .find(|spec| spec.id == field)
+                        .find(|spec| spec.key == field)
                         .unwrap();
                     if form
                         .fields

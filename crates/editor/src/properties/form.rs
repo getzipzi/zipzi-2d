@@ -1,22 +1,14 @@
 //! A single end-of-edit policy for every configured field. Draft text exists
 //! only during editing; rejected submissions restore committed values.
 use editor_core::{
-    DocumentId, EditingContext, Editor, ObjectKind, ObjectRef, PropertyGroup, PropertyId,
-    PropertyPatch, PropertySpec, PropertyValue, PropertyValues, property_specs,
+    DocumentId, Editor, ObjectKind, PropertyKey, PropertyPatch, PropertySpec, PropertyValue,
+    PropertyValues, property_specs,
 };
 use std::collections::{BTreeMap, HashMap};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct PropertyTarget {
-    pub document: DocumentId,
-    pub context: EditingContext,
-    pub object: ObjectRef,
-}
+use super::PropertyTarget;
 
-mod definition;
-pub(crate) use definition::{FieldEditor, FieldSpec, FormDefinition, definition};
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct FieldDraft {
     pub revision: u64,
     pub baseline: PropertyValue,
@@ -46,20 +38,20 @@ impl FieldDraft {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct PropertyForm {
-    pub fields: BTreeMap<PropertyId, FieldDraft>,
+    pub fields: BTreeMap<PropertyKey, FieldDraft>,
     current: PropertyValues,
 }
 impl PropertyForm {
     pub fn sync(&mut self, kind: ObjectKind, values: PropertyValues) {
         for spec in property_specs(kind) {
-            let Some(value) = values.get(&spec.id) else {
+            let Some(value) = values.get(&spec.key) else {
                 continue;
             };
             let field = self
                 .fields
-                .entry(spec.id)
+                .entry(spec.key)
                 .or_insert_with(|| FieldDraft::new(value.clone()));
             if field.touched {
                 field.conflict = field.baseline != *value;
@@ -72,14 +64,14 @@ impl PropertyForm {
         self.current = values;
     }
     pub fn edit(&mut self, spec: &PropertySpec, raw: String) {
-        if let Some(field) = self.fields.get_mut(&spec.id) {
+        if let Some(field) = self.fields.get_mut(&spec.key) {
             field.parsed = spec.parse(&raw).map_err(|error| error.to_string());
             field.raw = raw;
             field.touched = true;
         }
     }
     pub fn set_value(&mut self, spec: &PropertySpec, value: PropertyValue) {
-        if let Some(field) = self.fields.get_mut(&spec.id) {
+        if let Some(field) = self.fields.get_mut(&spec.key) {
             field.raw = value.text();
             field.parsed = spec
                 .validate(&value)
@@ -88,7 +80,7 @@ impl PropertyForm {
             field.touched = true;
         }
     }
-    pub fn field_active(&self, id: PropertyId, live_raw: &str) -> bool {
+    pub fn field_active(&self, id: PropertyKey, live_raw: &str) -> bool {
         self.fields
             .get(&id)
             .is_some_and(|field| field.touched || field.dirty() || field.raw != live_raw)
@@ -99,10 +91,10 @@ impl PropertyForm {
     }
 
     /// Dependencies come from the object, never from another field's draft.
-    pub fn patch(&self, kind: ObjectKind, id: PropertyId) -> anyhow::Result<PropertyPatch> {
+    pub fn patch(&self, kind: ObjectKind, id: PropertyKey) -> anyhow::Result<PropertyPatch> {
         let spec = property_specs(kind)
             .iter()
-            .find(|s| s.id == id)
+            .find(|s| s.key == id)
             .ok_or_else(|| anyhow::anyhow!("This property is read only"))?;
         let field = &self.fields[&id];
         anyhow::ensure!(
@@ -115,40 +107,19 @@ impl PropertyForm {
             .map_err(|error| anyhow::anyhow!("{error}"))?;
         let expected: PropertyValues = property_specs(kind)
             .iter()
-            .filter(|s| s.group == spec.group)
-            .filter_map(|s| self.current.get(&s.id).map(|v| (s.id, v.clone())))
+            .filter(|s| s.same_group(spec))
+            .filter_map(|s| self.current.get(&s.key).map(|v| (s.key, v.clone())))
             .collect();
         let changes = if *value == field.baseline {
             PropertyValues::new()
         } else {
             [(id, value.clone())].into()
         };
-        if spec.group == PropertyGroup::ParameterRange {
-            let number = |key| {
-                if key == id {
-                    value.number()
-                } else {
-                    self.current.get(&key).and_then(PropertyValue::number)
-                }
-                .unwrap()
-            };
-            let (min, max, default) = (
-                number(PropertyId::Minimum),
-                number(PropertyId::Maximum),
-                number(PropertyId::DefaultValue),
-            );
-            anyhow::ensure!(
-                min < max,
-                "Minimum ({min}) must be less than maximum ({max})"
-            );
-            anyhow::ensure!(
-                (min..=max).contains(&default),
-                "Default ({default}) must be within [{min}, {max}]"
-            );
-        }
+        (crate::properties::provider(kind).validate_change)(&self.current, id, value)?;
+
         Ok(PropertyPatch { expected, changes })
     }
-    pub fn reload_field(&mut self, id: PropertyId) {
+    pub fn reload_field(&mut self, id: PropertyKey) {
         if let Some(value) = self.current.get(&id) {
             let revision = self.fields.get(&id).map_or(0, |field| field.revision + 1);
             let mut field = FieldDraft::new(value.clone());
@@ -156,7 +127,11 @@ impl PropertyForm {
             self.fields.insert(id, field);
         }
     }
-    pub fn numeric_visible(&self, id: PropertyId) -> bool {
+    pub fn committed_values(&self) -> &PropertyValues {
+        &self.current
+    }
+
+    pub fn numeric_visible(&self, id: PropertyKey) -> bool {
         !matches!(
             self.fields[&id].parsed,
             Ok(PropertyValue::OptionalFloat(None))
@@ -178,7 +153,7 @@ impl PropertyForms {
         &mut self,
         editor: &mut Editor,
         target: &PropertyTarget,
-        id: PropertyId,
+        id: PropertyKey,
     ) -> anyhow::Result<()> {
         let form = self
             .entries

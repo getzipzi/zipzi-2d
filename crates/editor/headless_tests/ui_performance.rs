@@ -1,6 +1,7 @@
 //! Fast work-count regressions, using synthetic data and no wall-clock budgets.
 //! Keep functional assertions alongside work limits so skipping updates cannot pass.
 use super::{setup, setup_with_document};
+use editor_core::property as schema;
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 
@@ -232,6 +233,7 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
         cx.update_window(harness.window, |_, window, cx| {
             let builds = properties.read(cx).row_builds();
             let cache = properties.read(cx).properties_cache_stats();
+            let projection_builds = properties.read(cx).work_counts().0;
             let area = harness.view.read(cx).dock.as_ref().unwrap().area.clone();
             area.update(cx, |area, cx| {
                 area.set_dock_size(DockPlacement::Right, px(width), window, cx)
@@ -240,6 +242,11 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
             // Count construction across every intermediate draw, not just the
             // elements left in the final frame. Allow overscan and remeasurement.
             let built = properties.read(cx).row_builds() - builds;
+            assert_eq!(
+                properties.read(cx).work_counts().0,
+                projection_builds,
+                "resize must reuse the complete row projection"
+            );
             assert_eq!(
                 properties.read(cx).properties_cache_stats(),
                 cache,
@@ -297,4 +304,157 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
         })
         .unwrap();
     }
+}
+
+#[gpui_kit::test]
+fn property_choices_and_rows_survive_redraws_and_refresh_after_history(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use editor_core::{
+        Document, EditorCommand, NewParameter, ObjectKind, ObjectRef, ParameterGroupDraft,
+    };
+    use gpui_kit::{point, px, size};
+
+    let mut doc = Document::new_blank().unwrap();
+    let group = doc
+        .create_parameter_group(
+            ParameterGroupDraft {
+                name: "Face".into(),
+                runtime_id: "Face".into(),
+                parent_id: None,
+            },
+            doc.parameter_model_revision(),
+        )
+        .unwrap();
+    let parameter = doc.create_parameter(NewParameter::default()).unwrap();
+    let h = setup_with_document(cx, doc, tempfile::tempdir().unwrap());
+    cx.simulate_window_resize(h.window, size(px(1100.), px(1400.)));
+    let panel = h
+        .view
+        .read_with(cx, |view, _| view.dock.as_ref().unwrap().properties.clone());
+    cx.update_window(h.window, |_, window, cx| {
+        window.activate_window();
+        window.render_frame(cx);
+        assert!(window.try_find("property-select-group_id").is_some());
+        assert!(
+            panel
+                .read(cx)
+                .choice_labels(schema::parameter::GROUP_ID.key)
+                .contains(&"Face".into())
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    let before = panel.read_with(cx, |p, _| p.work_counts());
+    let notifications = std::rc::Rc::new(std::cell::Cell::new(0));
+    let observed = notifications.clone();
+    let _observe = cx.update(|cx| cx.observe(&panel, move |_, _| observed.set(observed.get() + 1)));
+    for _ in 0..5 {
+        h.view.update(cx, |_, cx| cx.notify());
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, window, cx| window.render_frame(cx))
+            .unwrap();
+    }
+    assert_eq!(
+        notifications.get(),
+        0,
+        "unrelated owner notifications must not notify the inspector again"
+    );
+    let after = panel.read_with(cx, |p, _| p.work_counts());
+    assert_eq!((after.0, after.1), (before.0, before.1));
+    for _ in 0..5 {
+        panel.update(cx, |_, cx| cx.notify());
+        cx.update_window(h.window, |_, window, cx| window.render_frame(cx))
+            .unwrap();
+    }
+    let after = panel.read_with(cx, |p, _| p.work_counts());
+    assert!(after.2 > before.2);
+    assert_eq!((after.0, after.1), (before.0, before.1));
+
+    let origin = cx
+        .update_window(h.window, |_, window, cx| {
+            let origin = window
+                .within("property-input-default_value")
+                .find("slide-number-input")
+                .bounds()
+                .center();
+            press(window, origin, cx);
+            origin
+        })
+        .unwrap();
+    for sample in 1..=8 {
+        cx.update_window(h.window, |_, window, cx| {
+            slide(
+                window,
+                origin + point(px(sample as f32 * 8.), px(0.)),
+                false,
+                cx,
+            );
+            window.render_frame(cx);
+        })
+        .unwrap();
+    }
+    let after = panel.read_with(cx, |p, _| p.work_counts());
+    assert_eq!(
+        (after.0, after.1),
+        (before.0, before.1),
+        "candidate values must reuse choices and collapsed rows"
+    );
+    h.view.read_with(cx, |view, _| {
+        assert!(
+            view.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&ObjectRef::new(ObjectKind::Parameter, &parameter))
+                .unwrap()
+                .properties["default_value"]
+                .as_f64()
+                .unwrap()
+                > 0.
+        );
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        window.press("escape", cx);
+        release(window, origin, cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    h.view.update(cx, |view, cx| {
+        view.editor
+            .execute(EditorCommand::SetObjectProperty {
+                object: ObjectRef::new(ObjectKind::ParameterGroup, &group),
+                field: "name".into(),
+                value: serde_json::json!("Eyes"),
+            })
+            .unwrap();
+        view.editor
+            .execute(EditorCommand::Navigate(ObjectRef::new(
+                ObjectKind::Parameter,
+                &parameter,
+            )))
+            .unwrap();
+        view.redraw(cx);
+    });
+    cx.update_window(h.window, |_, window, cx| window.render_frame(cx))
+        .unwrap();
+    assert!(
+        panel
+            .read_with(cx, |p, _| p.choice_labels(schema::parameter::GROUP_ID.key))
+            .contains(&"Eyes".into())
+    );
+    h.view.update(cx, |view, cx| {
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        view.editor
+            .execute(EditorCommand::Navigate(ObjectRef::new(
+                ObjectKind::Parameter,
+                &parameter,
+            )))
+            .unwrap();
+        view.redraw(cx);
+    });
+    cx.update_window(h.window, |_, window, cx| window.render_frame(cx))
+        .unwrap();
+    let labels = panel.read_with(cx, |p, _| p.choice_labels(schema::parameter::GROUP_ID.key));
+    assert!(labels.contains(&"Face".into()));
+    assert!(!labels.contains(&"Eyes".into()));
 }

@@ -1,5 +1,6 @@
 //! Playback projections. These controls never edit the authoring document.
 pub(crate) mod inspectors;
+pub(crate) use crate::properties::expression_info;
 mod parameters;
 mod resources;
 use crate::{EditorView, t};
@@ -312,31 +313,4 @@ fn motion_info(resource: &editor_core::MotionResource) -> Vec<String> {
         )
         .into_owned(),
     ]
-}
-pub(crate) fn expression_info(resource: &editor_core::ExpressionResource) -> String {
-    let blends = resource
-        .blends
-        .iter()
-        .map(|blend| {
-            match blend {
-                kasane_core::document::ExpressionBlend::Add => t!("workspace.blend_add"),
-                kasane_core::document::ExpressionBlend::Multiply => t!("workspace.blend_multiply"),
-                kasane_core::document::ExpressionBlend::Overwrite => {
-                    t!("workspace.blend_overwrite")
-                }
-            }
-            .into_owned()
-        })
-        .collect::<Vec<_>>()
-        .join(" / ");
-    format!(
-        "{} · {} · {}",
-        t!("workspace.expression_count", count = resource.parameters),
-        blends,
-        t!(
-            "workspace.fades",
-            fade_in = format!("{:.3}", resource.fade_in),
-            fade_out = format!("{:.3}", resource.fade_out)
-        )
-    )
 }

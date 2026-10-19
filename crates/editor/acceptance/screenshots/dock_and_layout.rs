@@ -78,15 +78,14 @@ pub(crate) fn compact_popup_screenshots(directory: &std::path::Path) -> anyhow::
             })?;
             harness.capture()?;
             for (id, suffix) in [
-                ("new-parameter-kind", "select"),
-                ("new-parameter-group", "search-select"),
+                ("property-select-kind", "select"),
+                ("property-select-group_id", "search-select"),
             ] {
                 harness.cx.update_window(harness.window, |_, window, cx| {
                     let bounds = window.find(id).bounds();
+                    let input_height = window.find("property-input-name").bounds().size.height;
                     anyhow::ensure!(
-                        (bounds.size.height - px(crate::ui::compact::CONTROL * scale.factor()))
-                            .abs()
-                            <= px(0.5),
+                        (bounds.size.height - input_height).abs() <= px(0.5),
                         "Select density at {}: {bounds:?}",
                         scale.label()
                     );
@@ -102,9 +101,9 @@ pub(crate) fn compact_popup_screenshots(directory: &std::path::Path) -> anyhow::
                     .cx
                     .update_window(harness.window, |_, window, cx| window.press("escape", cx))?;
             }
-            harness.cx.update_window(harness.window, |_, window, cx| {
-                window.click("new-parameter-cancel", cx)
-            })?;
+            harness
+                .cx
+                .update_window(harness.window, |_, window, cx| window.press("escape", cx))?;
             harness.capture()?;
         }
     }

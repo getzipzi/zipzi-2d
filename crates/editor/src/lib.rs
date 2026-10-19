@@ -24,6 +24,7 @@ mod panels;
 mod presentation;
 mod preview;
 mod project;
+mod properties;
 mod settings;
 #[cfg(any(test, feature = "test-support"))]
 #[path = "../../editor-core/tests/support/mod.rs"]
@@ -50,7 +51,7 @@ struct EditorView {
         std::collections::HashMap<editor_core::ViewportId, presentation::ViewportFrames>,
     >,
     editor: Editor,
-    property_forms: ui::property_form::PropertyForms,
+    property_forms: properties::form::PropertyForms,
     viewport_slots: [editor_core::ViewportId; 2],
     #[cfg(any(test, feature = "test-support"))]
     viewport_scene: Option<viewports::ViewportScene>,

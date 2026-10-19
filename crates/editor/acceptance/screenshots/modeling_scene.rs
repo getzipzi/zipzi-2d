@@ -2,7 +2,6 @@ use super::super::{fixture, harness::Harness};
 use super::common::save;
 use crate::{i18n, theme};
 use editor_core::Editor;
-use gpui_kit::component::WindowExt;
 use gpui_kit::{point, px, test::TestWindowExt};
 
 pub(crate) fn empty_titlebar_screenshots(directory: &std::path::Path) -> anyhow::Result<()> {
@@ -282,10 +281,10 @@ pub(crate) fn modeling_and_parameters_screenshots(
     harness.cx.update_window(harness.window, |_, window, _| {
         assert!(window.try_find("new-parameter-advanced").is_none());
         for field in [
-            "new-parameter-precision",
-            "new-parameter-kind",
-            "new-parameter-group",
-            "new-parameter-repeat",
+            "property-input-decimal_places",
+            "property-select-kind",
+            "property-select-group_id",
+            "property-toggle-repeat",
         ] {
             assert!(
                 window.find(field).visible(),
@@ -294,24 +293,58 @@ pub(crate) fn modeling_and_parameters_screenshots(
         }
     })?;
     save(
-        &harness.dialog_image(&popup)?,
+        &harness.element_image(&popup, "properties-panel")?,
         directory,
         "new-parameter.png",
     )?;
+    let created_parameter = harness.view.read_with(&harness.cx, |view, _| {
+        view.editor
+            .document()
+            .unwrap()
+            .context()
+            .parameter_focus
+            .as_ref()
+            .unwrap()
+            .id
+            .clone()
+    });
     harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("new-parameter-cancel", cx);
+        window.click("property-select-group_id", cx);
+        window.input("Body", cx);
+    })?;
+    save(&harness.capture()?, directory, "parameter-group-search.png")?;
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
+    })?;
+    harness.capture()?;
+    anyhow::ensure!(
+        harness.view.read_with(&harness.cx, |view, _| {
+            view.editor
+                .document()
+                .unwrap()
+                .parameter_draft(&created_parameter)
+                .unwrap()
+                .group_id
+                .as_deref()
+                == Some(uuid::Uuid::from_u128(103).to_string().as_str())
+        }),
+        "Parameter group search did not commit its selection"
+    );
+
+    harness.cx.update_window(harness.window, |_, window, cx| {
+        window.press("escape", cx);
         i18n::activate(Some("zh-CN"));
         theme::change(gpui_kit::component::ThemeMode::Light, cx);
         window.click("new-parameter", cx);
     })?;
     let popup_zh = harness.capture()?;
     save(
-        &harness.dialog_image(&popup_zh)?,
+        &harness.element_image(&popup_zh, "properties-panel")?,
         directory,
         "new-parameter-zh-light.png",
     )?;
     harness.cx.update_window(harness.window, |_, window, cx| {
-        window.click("new-parameter-cancel", cx);
+        window.press("escape", cx);
     })?;
     for (action, filename) in [
         (
@@ -341,10 +374,14 @@ pub(crate) fn modeling_and_parameters_screenshots(
             panel.update(cx, |panel, cx| panel.open_management(action, window, cx));
         })?;
         let popup = harness.capture()?;
-        save(&harness.dialog_image(&popup)?, directory, filename)?;
+        save(
+            &harness.element_image(&popup, "properties-panel")?,
+            directory,
+            filename,
+        )?;
         harness
             .cx
-            .update_window(harness.window, |_, window, cx| window.close_dialog(cx))?;
+            .update_window(harness.window, |_, window, cx| window.press("escape", cx))?;
     }
     Ok(())
 }

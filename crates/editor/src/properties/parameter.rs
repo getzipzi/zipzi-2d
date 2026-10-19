@@ -1,0 +1,131 @@
+//! Parameter fields, choices, dependent ranges and candidate validation live together.
+use super::*;
+use editor_core::property::{parameter as domain, parameter_group};
+
+pub(super) const PARAMETER: PropertyProvider = PropertyProvider {
+    fields: parameter_fields,
+    validate_change,
+    ..PropertyProvider::DEFAULT
+};
+pub(super) const GROUP: PropertyProvider = PropertyProvider {
+    fields: |_| {
+        FormDefinition::new(&[
+            (parameter_group::NAME, "properties.name", FieldEditor::Text),
+            (
+                parameter_group::RUNTIME_ID,
+                "parameter.group_id",
+                FieldEditor::Text,
+            ),
+        ])
+    },
+    ..PropertyProvider::DEFAULT
+};
+
+fn parameter_fields(_: ObjectKind) -> FormDefinition {
+    use FieldEditor::*;
+    use editor_core::property::parameter::*;
+    let field = |id, label, editor| FieldSpec::new(id, label, editor);
+    FormDefinition {
+        fields: vec![
+            field(NAME, "properties.name", Text),
+            field(RUNTIME_ID, "properties.runtime_id", Text),
+            field(DECIMAL_PLACES, "properties.decimal_places", Number),
+            field(REPEAT, "properties.repeat", Toggle),
+            field(MINIMUM, "properties.minimum", Number).bounds(range),
+            field(MAXIMUM, "properties.maximum", Number).bounds(range),
+            field(DEFAULT_VALUE, "properties.default_value", Number).bounds(range),
+            field(KIND, "parameter.kind", Select).choices(false, kinds),
+            field(GROUP_ID, "parameter.group", Select).choices(true, groups),
+        ],
+    }
+}
+
+fn kinds(_: &Document) -> Vec<Choice> {
+    vec![
+        Choice {
+            label: t!("parameter.normal").into(),
+            value: "normal".into(),
+        },
+        Choice {
+            label: "BlendShape".into(),
+            value: "blend_shape".into(),
+        },
+    ]
+}
+
+fn groups(document: &Document) -> Vec<Choice> {
+    let mut choices = vec![Choice {
+        label: t!("parameter.ungrouped").into(),
+        value: String::new(),
+    }];
+    choices.extend(
+        document
+            .parameter_group_options()
+            .into_iter()
+            .map(|group| Choice {
+                label: group.path.into(),
+                value: group.id,
+            }),
+    );
+    choices
+}
+
+fn range(values: &PropertyValues, id: PropertyKey) -> (f64, f64) {
+    let value = |key| {
+        values
+            .get(&key)
+            .and_then(PropertyValue::number)
+            .unwrap_or(0.) as f32
+    };
+    let (min, max, default) = (
+        value(domain::MINIMUM.key),
+        value(domain::MAXIMUM.key),
+        value(domain::DEFAULT_VALUE.key),
+    );
+    if id == domain::MINIMUM.key {
+        (-(f32::MAX as f64), f64::from(default.min(max.next_down())))
+    } else if id == domain::MAXIMUM.key {
+        (f64::from(default.max(min.next_up())), f32::MAX as f64)
+    } else {
+        assert_eq!(id, domain::DEFAULT_VALUE.key);
+        (f64::from(min), f64::from(max))
+    }
+}
+
+fn validate_change(
+    values: &PropertyValues,
+    id: PropertyKey,
+    candidate: &PropertyValue,
+) -> anyhow::Result<()> {
+    if ![
+        domain::MINIMUM.key,
+        domain::MAXIMUM.key,
+        domain::DEFAULT_VALUE.key,
+    ]
+    .contains(&id)
+    {
+        return Ok(());
+    }
+    let number = |key| {
+        if key == id {
+            candidate.number()
+        } else {
+            values.get(&key).and_then(PropertyValue::number)
+        }
+        .unwrap()
+    };
+    let (min, max, default) = (
+        number(domain::MINIMUM.key),
+        number(domain::MAXIMUM.key),
+        number(domain::DEFAULT_VALUE.key),
+    );
+    anyhow::ensure!(
+        min < max,
+        "Minimum ({min}) must be less than maximum ({max})"
+    );
+    anyhow::ensure!(
+        (min..=max).contains(&default),
+        "Default ({default}) must be within [{min}, {max}]"
+    );
+    Ok(())
+}

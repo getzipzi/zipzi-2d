@@ -122,15 +122,15 @@ fn compact_select_keeps_plain_and_searchable_selection_at_every_scale(cx: &mut T
             cx.run_until_parked();
             cx.update_window(harness.window, |_, window, cx| {
                 window.render_frame(cx);
-                for id in ["new-parameter-kind", "new-parameter-group"] {
+                let input_height = window.find("property-input-name").bounds().size.height;
+                for id in ["property-select-kind", "property-select-group_id"] {
                     let bounds = window.find(id).bounds();
                     assert!(
-                        (bounds.size.height - px(compact::CONTROL * scale.factor())).abs()
-                            <= px(0.5),
+                        (bounds.size.height - input_height).abs() <= px(0.5),
                         "{id} at {scale:?}: {bounds:?}"
                     );
                 }
-                window.click("new-parameter-kind", cx);
+                window.click("property-select-kind", cx);
                 window.press("down", cx);
                 window.press("enter", cx);
             })
@@ -139,13 +139,16 @@ fn compact_select_keeps_plain_and_searchable_selection_at_every_scale(cx: &mut T
             cx.update_window(harness.window, |_, window, cx| {
                 window.render_frame(cx);
                 assert_eq!(
-                    window.find("new-parameter-kind").value(),
+                    window.find("property-select-kind").value(),
                     Some("BlendShape")
                 );
-                window.within("new-parameter-group").click("input", cx);
+                window.within("property-select-group_id").click("input", cx);
                 window.input("Ungrouped", cx);
             })
             .unwrap();
+            cx.run_until_parked();
+            cx.executor()
+                .advance_clock(std::time::Duration::from_millis(150));
             cx.run_until_parked();
             cx.update_window(harness.window, |_, window, cx| window.press("enter", cx))
                 .unwrap();
@@ -153,17 +156,16 @@ fn compact_select_keeps_plain_and_searchable_selection_at_every_scale(cx: &mut T
             cx.update_window(harness.window, |_, window, cx| {
                 window.render_frame(cx);
                 assert_eq!(
-                    window.find("new-parameter-group").value(),
+                    window.find("property-select-group_id").value(),
                     Some("Ungrouped")
                 );
-                window.click("new-parameter-group", cx);
+                window.click("property-select-group_id", cx);
                 window.press("escape", cx);
                 assert_eq!(
-                    window.find("new-parameter-group").value(),
+                    window.find("property-select-group_id").value(),
                     Some("Ungrouped")
                 );
-                assert!(window.try_find("new-parameter-form").is_some());
-                window.click("new-parameter-cancel", cx);
+                assert!(window.try_find("object-property-kind").is_some());
             })
             .unwrap();
             cx.run_until_parked();

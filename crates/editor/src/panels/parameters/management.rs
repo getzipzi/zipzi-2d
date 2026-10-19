@@ -71,59 +71,93 @@ impl ParametersPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        match action {
-            ParameterAction::Create(group) => {
-                return self.open_parameter_dialog(None, group, window, cx);
-            }
-            ParameterAction::Edit(id) => {
-                return self.open_parameter_dialog(Some(id), None, window, cx);
-            }
-            _ => {}
+        if window.has_active_dialog(cx) {
+            return;
         }
-        let Some(document) = self.prepare_parameter_dialog(window, cx) else {
+        let Some(owner) = self.owner.upgrade() else {
             return;
         };
-        let result = match action {
-            ParameterAction::CreateGroup => super::group_form::ParameterGroupForm::open(
-                self.owner.clone(),
-                document,
-                None,
-                window,
-                cx,
-            ),
-            ParameterAction::EditGroup(id) => super::group_form::ParameterGroupForm::open(
-                self.owner.clone(),
-                document,
-                Some(id),
-                window,
-                cx,
-            ),
-            ParameterAction::Delete(id) => super::delete_confirmation::DeleteConfirmation::open(
-                self.owner.clone(),
-                document,
-                super::delete_confirmation::DeleteTarget::Parameter(id),
-                window,
-                cx,
-            ),
-            ParameterAction::DeleteGroup(id) => {
-                super::delete_confirmation::DeleteConfirmation::open(
-                    self.owner.clone(),
-                    document,
-                    super::delete_confirmation::DeleteTarget::Group(id),
-                    window,
-                    cx,
-                )
-            }
-            _ => unreachable!(),
-        };
-        if let Err(error) = result {
-            if let Some(owner) = self.owner.upgrade() {
-                owner.update(cx, |state, cx| {
-                    state.edit_error = Some(management_error(&error));
-                    cx.notify();
-                });
-            }
+        let state = owner.read(cx);
+        if state.modal
+            || !state.editor.command_available(
+                state
+                    .editor
+                    .command(editor_core::CommandId::CreateParameter),
+            )
+        {
+            return;
         }
+        let Some(document) = state.editor.active_id() else {
+            return;
+        };
+        self.finish_slider_drag(cx);
+        let result = owner.update(cx, |state, cx| {
+            state
+                .editor
+                .execute_for(document, EditorCommand::FinishEdit)?;
+            let doc = state.editor.document().unwrap();
+            let expected_version = doc.parameter_model_revision();
+            let command = match action {
+                ParameterAction::Create(group_id) => {
+                    EditorCommand::CreateParameter(editor_core::NewParameter {
+                        name: t!("parameter.default_name").into_owned(),
+                        runtime_id: doc.suggested_parameter_id(),
+                        group_id,
+                        ..Default::default()
+                    })
+                }
+                ParameterAction::CreateGroup => EditorCommand::CreateParameterGroup {
+                    draft: editor_core::ParameterGroupDraft {
+                        name: t!("parameter.default_group_name").into_owned(),
+                        runtime_id: doc.suggested_parameter_group_id(),
+                        parent_id: None,
+                    },
+                    expected_version,
+                },
+                ParameterAction::Edit(id) => EditorCommand::Navigate(editor_core::ObjectRef::new(
+                    editor_core::ObjectKind::Parameter,
+                    id,
+                )),
+                ParameterAction::EditGroup(id) => EditorCommand::Navigate(
+                    editor_core::ObjectRef::new(editor_core::ObjectKind::ParameterGroup, id),
+                ),
+                ParameterAction::Delete(id) => EditorCommand::DeleteParameter {
+                    id,
+                    expected_version,
+                },
+                ParameterAction::DeleteGroup(id) => EditorCommand::DeleteParameterGroup {
+                    id,
+                    expected_version,
+                },
+            };
+            state.editor.execute_for(document, command)?;
+            state.clear_edit_error(cx);
+            state.redraw(cx);
+            Ok::<_, anyhow::Error>(())
+        });
+        if let Err(error) = result {
+            owner.update(cx, |state, cx| {
+                state.set_edit_error(management_error(&error), cx)
+            });
+            return;
+        }
+        let group = owner
+            .read(cx)
+            .editor
+            .document()
+            .and_then(|doc| doc.context().inspected.as_ref())
+            .filter(|object| object.kind == editor_core::ObjectKind::ParameterGroup)
+            .map(|object| object.id.clone());
+        if let Some(id) = group {
+            self.locate_parameter_group(&id, window, cx);
+        } else {
+            self.locate_created_parameter(window, cx);
+        }
+        owner.update(cx, |state, cx| {
+            if let Some(dock) = &state.dock {
+                dock.show(editor_core::PanelKind::Properties, None, window, cx);
+            }
+        });
     }
 
     pub(crate) fn locate_parameter_group(
@@ -203,89 +237,4 @@ pub(super) fn management_error(error: &anyhow::Error) -> String {
             format!("{}: {}", t!("parameter.dependency_conflict"), message)
         }
     }
-}
-
-pub(super) fn export_warning_elements(
-    diagnostics: Vec<editor_core::ParameterExportDiagnostic>,
-    cx: &App,
-) -> Vec<AnyElement> {
-    diagnostics
-        .into_iter()
-        .map(|d| {
-            div()
-                .text_xs()
-                .text_color(cx.theme().muted_foreground)
-                .child(format!(
-                    "{} · {} · {}: {}",
-                    if d.introduced {
-                        t!("parameter.export_new_warning")
-                    } else {
-                        t!("parameter.export_existing_warning")
-                    },
-                    d.resource,
-                    d.code,
-                    d.message
-                ))
-                .into_any_element()
-        })
-        .collect()
-}
-
-pub(super) fn reference_elements<V: crate::ui::form_dialog::FormDialogView>(
-    owner: WeakEntity<EditorView>,
-    document: DocumentId,
-    refs: &[String],
-    cx: &mut Context<V>,
-) -> Vec<AnyElement> {
-    let Some(entity) = owner.upgrade() else {
-        return Vec::new();
-    };
-    let Some(doc) = entity.read(cx).editor.document() else {
-        return Vec::new();
-    };
-    let index = doc.object_index();
-    refs.iter()
-        .enumerate()
-        .map(|(i, id)| {
-            let reference = index
-                .objects
-                .iter()
-                .find(|o| &o.reference.id == id)
-                .map(|o| o.reference.clone());
-            let label = reference
-                .as_ref()
-                .map(|r| format!("{} · {:?}", index.name(r), r.kind))
-                .unwrap_or_else(|| id.clone());
-            let owner = owner.clone();
-            let view = cx.weak_entity();
-            div()
-                .text_xs()
-                .child(label)
-                .when_some(reference, |row, reference| {
-                    row.child(
-                        Button::new(SharedString::from(format!("parameter-conflict-{i}")))
-                            .ghost()
-                            .label(t!("parameter.locate"))
-                            .on_click(move |_, window, cx| {
-                                let Some(owner) = owner.upgrade() else {
-                                    return;
-                                };
-                                if owner.read(cx).editor.active_id() != Some(document) {
-                                    return;
-                                }
-                                let _ = view.update(cx, |view, _| view.dialog_mut().close());
-                                window.close_dialog(cx);
-                                owner.update(cx, |state, cx| {
-                                    let result = state.editor.execute_for(
-                                        document,
-                                        EditorCommand::Navigate(reference.clone()),
-                                    );
-                                    state.complete_edit(result, cx);
-                                });
-                            }),
-                    )
-                })
-                .into_any_element()
-        })
-        .collect()
 }

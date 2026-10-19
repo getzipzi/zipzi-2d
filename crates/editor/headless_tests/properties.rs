@@ -1,4 +1,5 @@
 use super::{document_fixture, setup, setup_with_document};
+use editor_core::property as schema;
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 
@@ -24,8 +25,89 @@ fn part_draw_order(document: &editor_core::Document) -> f32 {
 }
 
 #[gpui_kit::test]
+fn mesh_draw_order_and_opacity_edit_validate_and_restore_automatic_order(cx: &mut TestAppContext) {
+    use editor_core::PropertyValue;
+    let harness = setup(cx);
+    let object = harness.view.read_with(cx, |view, _| {
+        view.editor.active_inspection().unwrap().object().unwrap()
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.try_find("property-input-draw_order").is_none());
+        window.click("property-custom-draw_order", cx);
+        window.render_frame(cx);
+        assert!(window.try_find("property-input-draw_order").is_some());
+    })
+    .unwrap();
+    fill(&harness, "property-input-draw_order", "-12.5", cx);
+    fill(&harness, "property-input-opacity", "0.35", cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        let values = doc.property_values(&object).unwrap();
+        assert_eq!(
+            values[&schema::mesh::DRAW_ORDER.key],
+            PropertyValue::OptionalFloat(Some(-12.5))
+        );
+        assert_eq!(
+            values[&schema::mesh::OPACITY.key],
+            PropertyValue::Float(0.35)
+        );
+        assert_eq!(doc.history_lengths(), (3, 0));
+    });
+    fill(&harness, "property-input-opacity", "1.5", cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::mesh::OPACITY.key],
+            PropertyValue::Float(0.35)
+        );
+        assert_eq!(doc.history_lengths(), (3, 0));
+        assert!(view.edit_error.is_some());
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        let panel = harness
+            .view
+            .read(cx)
+            .dock
+            .as_ref()
+            .unwrap()
+            .properties
+            .read(cx);
+        assert_eq!(
+            panel
+                .field_input(schema::mesh::OPACITY.key)
+                .read(cx)
+                .value()
+                .as_ref(),
+            "0.35"
+        );
+        window.click("property-custom-draw_order", cx);
+        window.render_frame(cx);
+        assert!(window.try_find("property-input-draw_order").is_none());
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::mesh::DRAW_ORDER.key],
+            PropertyValue::OptionalFloat(None)
+        );
+        assert_eq!(doc.history_lengths(), (4, 0));
+    });
+}
+
+#[gpui_kit::test]
 fn mesh_name_and_runtime_id_edit_without_changing_object_identity(cx: &mut TestAppContext) {
-    use editor_core::{PropertyId, PropertyValue};
+    use editor_core::PropertyValue;
     let harness = setup(cx);
     let object = harness.view.read_with(cx, |view, _| {
         view.editor.active_inspection().unwrap().object().unwrap()
@@ -41,11 +123,11 @@ fn mesh_name_and_runtime_id_edit_without_changing_object_identity(cx: &mut TestA
         let doc = view.editor.document().unwrap();
         let values = doc.property_values(&object).unwrap();
         assert_eq!(
-            values[&PropertyId::Name],
+            values[&schema::mesh::NAME.key],
             PropertyValue::Text("Edited ArtMesh".into())
         );
         assert_eq!(
-            values[&PropertyId::RuntimeId],
+            values[&schema::mesh::RUNTIME_ID.key],
             PropertyValue::Text("MeshNew".into())
         );
         assert_eq!(doc.context().inspected.as_ref(), Some(&object));
@@ -88,14 +170,14 @@ fn part_properties_edit_text_and_toggles_with_document_history(cx: &mut TestAppC
             .unwrap()
             .properties
             .clone();
-        let input = panel.read(cx).field_input(editor_core::PropertyId::Name);
+        let input = panel.read(cx).field_input(schema::part::NAME.key);
         assert_eq!(input.read(cx).value().as_ref(), "Edited Part");
         assert!(gpui_kit::Focusable::focus_handle(input.read(cx), cx).is_focused(window));
         let forms = &harness.view.read(cx).property_forms.entries;
         assert!(
             forms.values().any(|form| form
                 .fields
-                .get(&editor_core::PropertyId::Name)
+                .get(&schema::part::NAME.key)
                 .is_some_and(|f| f.raw == "Edited Part")),
             "drafts: {forms:?}"
         );
@@ -109,7 +191,7 @@ fn part_properties_edit_text_and_toggles_with_document_history(cx: &mut TestAppC
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         assert_eq!(
-            doc.property_values(&part).unwrap()[&editor_core::PropertyId::Name],
+            doc.property_values(&part).unwrap()[&schema::part::NAME.key],
             editor_core::PropertyValue::Text("Edited Part".into())
         );
         assert_eq!(doc.history_lengths(), (1, 0));
@@ -121,7 +203,7 @@ fn part_properties_edit_text_and_toggles_with_document_history(cx: &mut TestAppC
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         assert_eq!(
-            doc.property_values(&part).unwrap()[&editor_core::PropertyId::Enabled],
+            doc.property_values(&part).unwrap()[&schema::part::ENABLED.key],
             editor_core::PropertyValue::Bool(false)
         );
         assert_eq!(doc.history_lengths(), (2, 0));
@@ -141,13 +223,13 @@ fn part_properties_edit_text_and_toggles_with_document_history(cx: &mut TestAppC
                 .document()
                 .unwrap()
                 .property_values(&part)
-                .unwrap()[&editor_core::PropertyId::Enabled],
+                .unwrap()[&schema::part::ENABLED.key],
             editor_core::PropertyValue::Bool(true)
         );
     });
 }
 
-fn fill(harness: &super::Harness, field: &str, text: &str, cx: &mut TestAppContext) {
+pub(super) fn fill(harness: &super::Harness, field: &str, text: &str, cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         window.activate_window();
         for _ in 0..60 {
@@ -187,7 +269,7 @@ fn fill(harness: &super::Harness, field: &str, text: &str, cx: &mut TestAppConte
 fn parameter_fields_submit_individually_and_invalid_blur_restores_committed_value(
     cx: &mut TestAppContext,
 ) {
-    use editor_core::{ObjectKind, ObjectRef, PropertyId};
+    use editor_core::{ObjectKind, ObjectRef};
     let (mut document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
     let parameter = ObjectRef::new(ObjectKind::Parameter, &document.parameters()[0].id);
     document.navigate(parameter.clone()).unwrap();
@@ -199,10 +281,10 @@ fn parameter_fields_submit_individually_and_invalid_blur_restores_committed_valu
             .property_forms
             .entries
             .values()
-            .find(|form| form.fields.contains_key(&PropertyId::Minimum))
+            .find(|form| form.fields.contains_key(&schema::parameter::MINIMUM.key))
             .unwrap();
-        assert_eq!(form.fields[&PropertyId::Minimum].raw, "0");
-        assert!(!form.fields[&PropertyId::Minimum].dirty());
+        assert_eq!(form.fields[&schema::parameter::MINIMUM.key].raw, "0");
+        assert!(!form.fields[&schema::parameter::MINIMUM.key].dirty());
         assert!(view.edit_error.is_some());
     });
     fill(&harness, "property-input-default_value", "15", cx);
@@ -229,7 +311,7 @@ fn parameter_fields_submit_individually_and_invalid_blur_restores_committed_valu
 
 #[gpui_kit::test]
 fn input_failure_does_not_resize_header_or_move_the_scroll_anchor(cx: &mut TestAppContext) {
-    use editor_core::{ObjectKind, ObjectRef, PropertyId};
+    use editor_core::{ObjectKind, ObjectRef};
     let (mut document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
     document
         .navigate(ObjectRef::new(
@@ -260,7 +342,7 @@ fn input_failure_does_not_resize_header_or_move_the_scroll_anchor(cx: &mut TestA
         assert_eq!(
             panel
                 .read(cx)
-                .field_input(PropertyId::DefaultValue)
+                .field_input(schema::parameter::DEFAULT_VALUE.key)
                 .read(cx)
                 .value()
                 .as_ref(),
@@ -287,7 +369,7 @@ fn scroll_bottom_in_window(window: &mut gpui_kit::Window, cx: &mut gpui_kit::App
 fn properties_external_conflict_restores_latest_value_without_overwriting_it(
     cx: &mut TestAppContext,
 ) {
-    use editor_core::{EditorCommand, ObjectKind, PropertyId, PropertyValue};
+    use editor_core::{EditorCommand, ObjectKind, PropertyValue};
     let (mut document, assets) = document_fixture::sample_document_with_parts().unwrap();
     let part = document_fixture::object(ObjectKind::Part, 101);
     document.navigate(part.clone()).unwrap();
@@ -311,7 +393,7 @@ fn properties_external_conflict_restores_latest_value_without_overwriting_it(
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         assert_eq!(
-            doc.property_values(&part).unwrap()[&PropertyId::Name],
+            doc.property_values(&part).unwrap()[&schema::part::NAME.key],
             PropertyValue::Text("External name".into())
         );
         assert_eq!(doc.history_lengths(), (1, 0));
@@ -324,13 +406,13 @@ fn properties_external_conflict_restores_latest_value_without_overwriting_it(
     .unwrap();
     harness.view.read_with(cx, |view, _| {
         assert!(view.edit_error.is_some());
-        let target = crate::ui::property_form::PropertyTarget {
+        let target = crate::properties::PropertyTarget {
             document: view.editor.active_id().unwrap(),
             context: editor_core::EditingContext::Modeling,
             object: part,
         };
         let form = &view.property_forms.entries[&target];
-        assert_eq!(form.fields[&PropertyId::Name].raw, "External name");
+        assert_eq!(form.fields[&schema::part::NAME.key].raw, "External name");
         assert!(!form.dirty());
     });
 }
@@ -432,7 +514,7 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
             .unwrap()
             .properties
             .read(cx)
-            .field_input(editor_core::PropertyId::DrawOrder);
+            .field_input(schema::part::DRAW_ORDER.key);
         assert_eq!(input.read(cx).value().as_ref(), "512");
     })
     .unwrap();
@@ -440,7 +522,7 @@ fn properties_save_reverts_invalid_input_and_saves_the_visible_committed_value(
 
 #[gpui_kit::test]
 fn properties_optional_fade_distinguishes_default_from_explicit_zero(cx: &mut TestAppContext) {
-    use editor_core::{ObjectKind, PropertyId, PropertyValue};
+    use editor_core::{ObjectKind, PropertyValue};
     let (mut document, assets) = document_fixture::animation_document().unwrap();
     let motion = document
         .object_index()
@@ -464,7 +546,7 @@ fn properties_optional_fade_distinguishes_default_from_explicit_zero(cx: &mut Te
                 .document()
                 .unwrap()
                 .property_values(&motion)
-                .unwrap()[&PropertyId::FadeIn],
+                .unwrap()[&schema::motion::FADE_IN.key],
             PropertyValue::OptionalFloat(None)
         );
     });
@@ -480,7 +562,7 @@ fn properties_optional_fade_distinguishes_default_from_explicit_zero(cx: &mut Te
                 .document()
                 .unwrap()
                 .property_values(&motion)
-                .unwrap()[&PropertyId::FadeIn],
+                .unwrap()[&schema::motion::FADE_IN.key],
             PropertyValue::OptionalFloat(Some(0.))
         );
         assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
@@ -552,7 +634,7 @@ fn invalid_input_does_not_create_a_phantom_unsaved_document_on_close(cx: &mut Te
 
 #[gpui_kit::test]
 fn properties_ime_composition_does_not_submit_or_save_partial_text(cx: &mut TestAppContext) {
-    use editor_core::{ObjectKind, PropertyId, PropertyValue};
+    use editor_core::{ObjectKind, PropertyValue};
     use gpui_kit::EntityInputHandler;
     let (mut document, assets) = document_fixture::sample_document_with_parts().unwrap();
     let part = document_fixture::object(ObjectKind::Part, 101);
@@ -570,7 +652,7 @@ fn properties_ime_composition_does_not_submit_or_save_partial_text(cx: &mut Test
                 .unwrap()
                 .properties
                 .clone();
-            let input = panel.read(cx).field_input(PropertyId::Name);
+            let input = panel.read(cx).field_input(schema::part::NAME.key);
             input.update(cx, |input, cx| {
                 input.replace_and_mark_text_in_range(Some(0..4), "名称", None, window, cx);
             });
@@ -599,7 +681,7 @@ fn properties_ime_composition_does_not_submit_or_save_partial_text(cx: &mut Test
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         assert_eq!(
-            doc.property_values(&part).unwrap()[&PropertyId::Name],
+            doc.property_values(&part).unwrap()[&schema::part::NAME.key],
             PropertyValue::Text("名称".into())
         );
         assert_eq!(doc.history_lengths(), (1, 0));
@@ -662,7 +744,7 @@ fn compact_properties_align_and_wrap_without_overflow_in_narrow_panels(cx: &mut 
 
 #[gpui_kit::test]
 fn switching_objects_settles_only_the_previous_objects_input(cx: &mut TestAppContext) {
-    use editor_core::{EditorCommand, ObjectKind, PropertyId, PropertyValue};
+    use editor_core::{EditorCommand, ObjectKind, PropertyValue};
     let harness = setup(cx);
     let (first, second) = harness.view.read_with(cx, |view, _| {
         let first = view.editor.active_inspection().unwrap().object().unwrap();
@@ -698,11 +780,11 @@ fn switching_objects_settles_only_the_previous_objects_input(cx: &mut TestAppCon
     harness.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         assert_eq!(
-            doc.property_values(&first).unwrap()[&PropertyId::Name],
+            doc.property_values(&first).unwrap()[&schema::mesh::NAME.key],
             PropertyValue::Text("Changed before switching".into())
         );
         assert_ne!(
-            doc.property_values(&second).unwrap()[&PropertyId::Name],
+            doc.property_values(&second).unwrap()[&schema::mesh::NAME.key],
             PropertyValue::Text("Changed before switching".into())
         );
         assert_eq!(doc.history_lengths(), (1, 0));
@@ -712,7 +794,7 @@ fn switching_objects_settles_only_the_previous_objects_input(cx: &mut TestAppCon
             .document()
             .unwrap()
             .property_values(&second)
-            .unwrap()[&PropertyId::RuntimeId]
+            .unwrap()[&schema::mesh::RUNTIME_ID.key]
             .clone()
     });
     fill(&harness, "property-input-runtime_id", "", cx);
@@ -730,7 +812,7 @@ fn switching_objects_settles_only_the_previous_objects_input(cx: &mut TestAppCon
                 .document()
                 .unwrap()
                 .property_values(&second)
-                .unwrap()[&PropertyId::RuntimeId],
+                .unwrap()[&schema::mesh::RUNTIME_ID.key],
             runtime_id
         );
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
@@ -744,13 +826,13 @@ fn switching_objects_settles_only_the_previous_objects_input(cx: &mut TestAppCon
 
 #[gpui_kit::test]
 fn switching_objects_during_ime_composition_does_not_publish_partial_text(cx: &mut TestAppContext) {
-    use editor_core::{EditorCommand, ObjectKind, PropertyId};
+    use editor_core::{EditorCommand, ObjectKind};
     use gpui_kit::EntityInputHandler;
     let harness = setup(cx);
     let (first, second, name) = harness.view.read_with(cx, |view, _| {
         let first = view.editor.active_inspection().unwrap().object().unwrap();
         let doc = view.editor.document().unwrap();
-        let name = doc.property_values(&first).unwrap()[&PropertyId::Name].clone();
+        let name = doc.property_values(&first).unwrap()[&schema::mesh::NAME.key].clone();
         let second = doc
             .object_index()
             .objects
@@ -772,7 +854,7 @@ fn switching_objects_during_ime_composition_does_not_publish_partial_text(cx: &m
             .unwrap()
             .properties
             .read(cx)
-            .field_input(PropertyId::Name);
+            .field_input(schema::mesh::NAME.key);
         input.update(cx, |input, cx| {
             input.replace_and_mark_text_in_range(Some(0..7), "预编辑", None, window, cx)
         });
@@ -795,7 +877,7 @@ fn switching_objects_during_ime_composition_does_not_publish_partial_text(cx: &m
                 .document()
                 .unwrap()
                 .property_values(&first)
-                .unwrap()[&PropertyId::Name],
+                .unwrap()[&schema::mesh::NAME.key],
             name
         );
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
@@ -859,7 +941,7 @@ fn closing_an_inactive_document_does_not_commit_the_active_property_drag(cx: &mu
 
 #[gpui_kit::test]
 fn form_error_routes_to_status_bar_and_clears_after_timeout(cx: &mut TestAppContext) {
-    use editor_core::{ObjectKind, ObjectRef, PropertyId};
+    use editor_core::{ObjectKind, ObjectRef};
     let (mut document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
     let parameter = ObjectRef::new(ObjectKind::Parameter, &document.parameters()[0].id);
     document.navigate(parameter).unwrap();
@@ -883,10 +965,10 @@ fn form_error_routes_to_status_bar_and_clears_after_timeout(cx: &mut TestAppCont
             .property_forms
             .entries
             .values()
-            .find(|form| form.fields.contains_key(&PropertyId::Minimum))
+            .find(|form| form.fields.contains_key(&schema::parameter::MINIMUM.key))
             .unwrap();
-        assert_eq!(form.fields[&PropertyId::Minimum].raw, "0");
-        assert!(!form.fields[&PropertyId::Minimum].dirty());
+        assert_eq!(form.fields[&schema::parameter::MINIMUM.key].raw, "0");
+        assert!(!form.fields[&schema::parameter::MINIMUM.key].dirty());
         assert!(view.edit_error.is_some());
     });
 

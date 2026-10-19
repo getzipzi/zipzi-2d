@@ -131,6 +131,8 @@ pub struct Document {
     preview_revision: u64,
     object_state_index: std::sync::Mutex<Option<(u64, Arc<ObjectStateIndex>)>>,
     object_index: std::sync::Mutex<Option<(u64, Arc<crate::ObjectIndex>)>>,
+    #[cfg(test)]
+    object_index_builds: std::sync::atomic::AtomicUsize,
     pub(crate) animation_catalog: std::sync::Mutex<Option<(u64, Arc<crate::AnimationCatalog>)>>,
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
     pending: Option<PendingEdit>,
@@ -253,6 +255,8 @@ impl Document {
             preview_revision: 0,
             object_state_index: std::sync::Mutex::new(None),
             object_index: std::sync::Mutex::new(Some((1, projection))),
+            #[cfg(test)]
+            object_index_builds: std::sync::atomic::AtomicUsize::new(1),
             animation_catalog: std::sync::Mutex::new(None),
             canvas_topology: std::sync::Mutex::new(None),
             selected,
@@ -404,6 +408,9 @@ impl Document {
             .as_ref()
             .is_none_or(|(revision, _)| *revision != self.projection_revision)
         {
+            #[cfg(test)]
+            self.object_index_builds
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             *cache = Some((
                 self.projection_revision,
                 Arc::new(crate::ObjectIndex::build(model)),

@@ -10,7 +10,7 @@ struct KitBindings(Vec<KeyBinding>);
 impl Global for KitBindings {}
 fn scope(scope: CommandScope) -> &'static str {
     match scope {
-        CommandScope::Property => "(KasaneEditor > Input) && !KasaneModal",
+        CommandScope::Property => "(KasaneEditor > Input) && !KasaneModal && !(List > Input)",
         _ => "KasaneShortcutDisplay",
     }
 }
@@ -188,6 +188,8 @@ mod tests {
                 .is_some_and(|a| a.id == CommandId::CommitProperty)
         );
         assert_eq!(find("enter", "KasaneEditor KasaneModal > Input"), 1);
+        assert_eq!(find("enter", "KasaneEditor > List > Input"), 1);
+        assert_eq!(find("escape", "KasaneEditor > List > Input"), 0);
         assert_eq!(find("v", "KasaneEditor > KasaneViewport > Input"), 0);
         assert_eq!(find("escape", "KasaneEditor > KasaneViewport"), 0);
         assert_eq!(

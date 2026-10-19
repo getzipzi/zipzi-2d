@@ -1,25 +1,159 @@
 use super::support;
+use editor_core::property as schema;
 use editor_core::*;
 
 fn patch(
     doc: &Document,
     target: &ObjectRef,
-    changes: &[(PropertyId, PropertyValue)],
+    changes: &[(PropertyKey, PropertyValue)],
 ) -> PropertyPatch {
     let current = doc.property_values(target).unwrap();
     let groups: Vec<_> = property_specs(target.kind)
         .iter()
-        .filter(|spec| changes.iter().any(|(id, _)| *id == spec.id))
-        .map(|s| s.group)
+        .filter(|spec| changes.iter().any(|(id, _)| *id == spec.key))
         .collect();
     PropertyPatch {
         expected: property_specs(target.kind)
             .iter()
-            .filter(|s| groups.contains(&s.group))
-            .map(|s| (s.id, current[&s.id].clone()))
+            .filter(|s| groups.iter().any(|group| s.same_group(group)))
+            .map(|s| (s.key, current[&s.key].clone()))
             .collect(),
         changes: changes.iter().cloned().collect(),
     }
+}
+
+#[test]
+fn mesh_properties_validate_preserve_payload_and_roundtrip() -> anyhow::Result<()> {
+    let (mut doc, assets) = support::sample_document()?;
+    let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
+    let original = doc.property_values(&object)?;
+    let mut payload = doc.object_index().get(&object).unwrap().properties.clone();
+    assert_eq!(
+        original[&schema::mesh::DRAW_ORDER.key],
+        PropertyValue::OptionalFloat(None)
+    );
+    assert_eq!(
+        original[&schema::mesh::OPACITY.key],
+        PropertyValue::Float(1.)
+    );
+
+    let changes = patch(
+        &doc,
+        &object,
+        &[
+            (
+                schema::mesh::DRAW_ORDER.key,
+                PropertyValue::OptionalFloat(Some(-12.5)),
+            ),
+            (schema::mesh::OPACITY.key, PropertyValue::Float(0.35)),
+        ],
+    );
+    doc.set_object_properties(&object, &changes)?;
+    payload["draw_order"] = serde_json::json!(-12.5);
+    payload["appearance"]["opacity"] = serde_json::json!(0.35f32);
+    assert_eq!(doc.object_index().get(&object).unwrap().properties, payload);
+    let updated = doc.property_values(&object)?;
+    for invalid in [-0.1, 1.1, f32::INFINITY, f32::NAN] {
+        let rejected = patch(
+            &doc,
+            &object,
+            &[
+                (
+                    schema::mesh::DRAW_ORDER.key,
+                    PropertyValue::OptionalFloat(Some(100.)),
+                ),
+                (schema::mesh::OPACITY.key, PropertyValue::Float(invalid)),
+            ],
+        );
+        assert!(doc.set_object_properties(&object, &rejected).is_err());
+        assert_eq!(doc.property_values(&object)?, updated);
+        assert_eq!(doc.history_lengths(), (1, 0));
+    }
+    doc.undo()?;
+    assert_eq!(doc.property_values(&object)?, original);
+    doc.redo()?;
+    assert_eq!(doc.property_values(&object)?, updated);
+    let saved = doc.save(&assets.path().join("mesh-properties.kasane"))?;
+    assert_eq!(
+        Document::open(&saved.manifest)?.property_values(&object)?,
+        updated
+    );
+
+    doc.set_object_property(&object, "draw_order", serde_json::Value::Null)?;
+    assert_eq!(
+        doc.property_values(&object)?[&schema::mesh::DRAW_ORDER.key],
+        PropertyValue::OptionalFloat(None)
+    );
+    assert_eq!(
+        doc.property_values(&object)?[&schema::mesh::OPACITY.key],
+        PropertyValue::Float(0.35)
+    );
+    Ok(())
+}
+
+#[test]
+fn mesh_properties_preview_updates_evaluation_and_cancels_or_commits_once() -> anyhow::Result<()> {
+    let (doc, _assets) = support::sample_document()?;
+    let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
+    let mut editor = Editor::from_document(doc);
+    support::attach_viewports(&mut editor);
+    for (id, value) in [
+        (schema::mesh::OPACITY.key, PropertyValue::Float(0.4)),
+        (
+            schema::mesh::DRAW_ORDER.key,
+            PropertyValue::OptionalFloat(Some(42.)),
+        ),
+    ] {
+        let before = editor.document().unwrap().property_values(&object)?;
+        let history = editor.document().unwrap().history_lengths();
+        let changes = patch(editor.document().unwrap(), &object, &[(id, value.clone())]);
+        let context = editor.editing_context_token().unwrap();
+        let token = editor.begin_property_edit(context, object.clone(), &changes)?;
+        editor.update_property_edit(&token, &changes)?;
+        let scene = editor.preview()?.scene;
+        let mesh = scene
+            .runtime_frame
+            .drawables
+            .iter()
+            .find(|d| d.id == object.id)
+            .unwrap();
+        match id {
+            key if key == schema::mesh::OPACITY.key => assert_eq!(mesh.opacity, 0.4),
+            key if key == schema::mesh::DRAW_ORDER.key => assert_eq!(mesh.draw_order, 42),
+            _ => unreachable!(),
+        }
+        assert_eq!(editor.document().unwrap().property_values(&object)?, before);
+        assert_eq!(editor.document().unwrap().history_lengths(), history);
+        editor.cancel_property_edit(&token);
+        assert_eq!(editor.document().unwrap().property_values(&object)?, before);
+        let scene = editor.preview()?.scene;
+        let mesh = scene
+            .runtime_frame
+            .drawables
+            .iter()
+            .find(|d| d.id == object.id)
+            .unwrap();
+        match id {
+            key if key == schema::mesh::OPACITY.key => assert_eq!(mesh.opacity, 1.),
+            key if key == schema::mesh::DRAW_ORDER.key => assert_eq!(mesh.draw_order, 0),
+            _ => unreachable!(),
+        }
+        let token = editor.begin_property_edit(context, object.clone(), &changes)?;
+        editor.update_property_edit(&token, &changes)?;
+        editor.update_property_edit(&token, &changes)?;
+        editor.finish_property_edit(&token)?;
+        assert_eq!(
+            editor.document().unwrap().property_values(&object)?[&id],
+            value
+        );
+        assert_eq!(
+            editor.document().unwrap().history_lengths(),
+            (history.0 + 1, 0)
+        );
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(editor.document().unwrap().property_values(&object)?, before);
+    }
+    Ok(())
 }
 
 #[test]
@@ -31,9 +165,12 @@ fn properties_parameter_group_is_atomic_and_uses_domain_dependencies() -> anyhow
         &doc,
         &object,
         &[
-            (PropertyId::Minimum, PropertyValue::Float(10.)),
-            (PropertyId::Maximum, PropertyValue::Float(20.)),
-            (PropertyId::DefaultValue, PropertyValue::Float(15.)),
+            (schema::parameter::MINIMUM.key, PropertyValue::Float(10.)),
+            (schema::parameter::MAXIMUM.key, PropertyValue::Float(20.)),
+            (
+                schema::parameter::DEFAULT_VALUE.key,
+                PropertyValue::Float(15.),
+            ),
         ],
     );
     doc.set_object_properties(&object, &changes)?;
@@ -47,7 +184,10 @@ fn properties_parameter_group_is_atomic_and_uses_domain_dependencies() -> anyhow
     let invalid = patch(
         &doc,
         &object,
-        &[(PropertyId::DefaultValue, PropertyValue::Float(25.))],
+        &[(
+            schema::parameter::DEFAULT_VALUE.key,
+            PropertyValue::Float(25.),
+        )],
     );
     assert!(doc.set_object_properties(&object, &invalid).is_err());
     assert_eq!(doc.history_lengths(), history);
@@ -59,7 +199,7 @@ fn properties_parameter_group_is_atomic_and_uses_domain_dependencies() -> anyhow
     let shrink = patch(
         &bound,
         &parameter,
-        &[(PropertyId::Maximum, PropertyValue::Float(0.5))],
+        &[(schema::parameter::MAXIMUM.key, PropertyValue::Float(0.5))],
     );
     assert!(bound.set_object_properties(&parameter, &shrink).is_err());
     assert_eq!(bound.property_values(&parameter)?, before);
@@ -74,23 +214,32 @@ fn properties_reject_stale_groups_but_merge_unrelated_changes() -> anyhow::Resul
     let rename = patch(
         &doc,
         &object,
-        &[(PropertyId::Name, PropertyValue::Text("Renamed".into()))],
+        &[(
+            schema::part::NAME.key,
+            PropertyValue::Text("Renamed".into()),
+        )],
     );
     doc.set_object_property(&object, "enabled", serde_json::json!(false))?;
     doc.set_object_properties(&object, &rename)?;
     let values = doc.property_values(&object)?;
     assert_eq!(
-        values[&PropertyId::Name],
+        values[&schema::part::NAME.key],
         PropertyValue::Text("Renamed".into())
     );
-    assert_eq!(values[&PropertyId::Enabled], PropertyValue::Bool(false));
+    assert_eq!(
+        values[&schema::part::ENABLED.key],
+        PropertyValue::Bool(false)
+    );
     let history = doc.history_lengths();
     assert!(doc.set_object_properties(&object, &rename).is_err());
     assert_eq!(doc.history_lengths(), history);
     let unchanged = patch(
         &doc,
         &object,
-        &[(PropertyId::Name, values[&PropertyId::Name].clone())],
+        &[(
+            schema::part::NAME.key,
+            values[&schema::part::NAME.key].clone(),
+        )],
     );
     doc.set_object_properties(&object, &unchanged)?;
     assert_eq!(doc.history_lengths(), history);
@@ -104,20 +253,23 @@ fn properties_lock_type_and_dependency_baselines_guard_writes() -> anyhow::Resul
     let mut incomplete = patch(
         &doc,
         &object,
-        &[(PropertyId::Maximum, PropertyValue::Float(2.))],
+        &[(schema::parameter::MAXIMUM.key, PropertyValue::Float(2.))],
     );
-    incomplete.expected.remove(&PropertyId::Minimum);
+    incomplete.expected.remove(&schema::parameter::MINIMUM.key);
     assert!(doc.set_object_properties(&object, &incomplete).is_err());
     let wrong_type = patch(
         &doc,
         &object,
-        &[(PropertyId::Name, PropertyValue::Bool(true))],
+        &[(schema::parameter::NAME.key, PropertyValue::Bool(true))],
     );
     assert!(doc.set_object_properties(&object, &wrong_type).is_err());
     let nonfinite = patch(
         &doc,
         &object,
-        &[(PropertyId::Maximum, PropertyValue::Float(f32::INFINITY))],
+        &[(
+            schema::parameter::MAXIMUM.key,
+            PropertyValue::Float(f32::INFINITY),
+        )],
     );
     assert!(doc.set_object_properties(&object, &nonfinite).is_err());
     let (mut locked, _assets) = support::sample_document_with_parts()?;
@@ -125,7 +277,7 @@ fn properties_lock_type_and_dependency_baselines_guard_writes() -> anyhow::Resul
     let rename = patch(
         &locked,
         &part,
-        &[(PropertyId::Name, PropertyValue::Text("Locked".into()))],
+        &[(schema::part::NAME.key, PropertyValue::Text("Locked".into()))],
     );
     locked.set_objects_locked(std::slice::from_ref(&part), true)?;
     assert!(locked.set_object_properties(&part, &rename).is_err());
@@ -143,7 +295,10 @@ fn properties_preview_isolated_cancelable_and_commits_one_history_step() -> anyh
     let initial = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
+        &[(
+            schema::document::PADDING_PIXELS.key,
+            PropertyValue::Float(300.),
+        )],
     );
     let token = editor.begin_property_edit(context, object.clone(), &initial)?;
     editor.update_property_edit(&token, &initial)?;
@@ -152,14 +307,15 @@ fn properties_preview_isolated_cancelable_and_commits_one_history_step() -> anyh
         300.
     );
     assert_eq!(
-        editor.document().unwrap().property_values(&object)?[&PropertyId::PaddingPixels],
+        editor.document().unwrap().property_values(&object)?[&schema::document::PADDING_PIXELS.key],
         PropertyValue::Float(50.)
     );
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     let mut latest = initial.clone();
-    latest
-        .changes
-        .insert(PropertyId::PaddingPixels, PropertyValue::Float(400.));
+    latest.changes.insert(
+        schema::document::PADDING_PIXELS.key,
+        PropertyValue::Float(400.),
+    );
     editor.update_property_edit(&token, &latest)?;
     editor.finish_property_edit(&token)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
@@ -196,7 +352,10 @@ fn properties_preview_old_tokens_and_changed_targets_cannot_mutate_new_edits() -
     let changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
+        &[(
+            schema::document::PADDING_PIXELS.key,
+            PropertyValue::Float(300.),
+        )],
     );
     let old = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.cancel_property_edit(&old);
@@ -207,7 +366,10 @@ fn properties_preview_old_tokens_and_changed_targets_cannot_mutate_new_edits() -
     let other_field = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Name, PropertyValue::Text("unsupported".into()))],
+        &[(
+            PropertyKey::new(ObjectKind::Document, "name"),
+            PropertyValue::Text("unsupported".into()),
+        )],
     );
     assert!(editor.update_property_edit(&new, &other_field).is_err());
     let mut forged = new.clone();
@@ -235,7 +397,10 @@ fn properties_preview_returning_to_baseline_and_navigation_do_not_commit() -> an
     let mut changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
+        &[(
+            schema::document::PADDING_PIXELS.key,
+            PropertyValue::Float(300.),
+        )],
     );
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
@@ -243,9 +408,10 @@ fn properties_preview_returning_to_baseline_and_navigation_do_not_commit() -> an
     editor.update_property_edit(&token, &changes)?;
     editor.finish_property_edit(&token)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
-    changes
-        .changes
-        .insert(PropertyId::PaddingPixels, PropertyValue::Float(500.));
+    changes.changes.insert(
+        schema::document::PADDING_PIXELS.key,
+        PropertyValue::Float(500.),
+    );
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
     editor.execute(EditorCommand::Navigate(object))?;
@@ -268,7 +434,10 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     let changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
+        &[(
+            schema::document::PADDING_PIXELS.key,
+            PropertyValue::Float(300.),
+        )],
     );
     let token = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&token, &changes)?;
@@ -276,7 +445,10 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     let invalid = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::PaddingPixels, PropertyValue::Float(f32::NAN))],
+        &[(
+            schema::document::PADDING_PIXELS.key,
+            PropertyValue::Float(f32::NAN),
+        )],
     );
     assert!(
         editor
@@ -304,7 +476,10 @@ fn properties_rejected_commands_preserve_the_active_preview() -> anyhow::Result<
     let unsupported = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Name, PropertyValue::Text("unsupported".into()))],
+        &[(
+            PropertyKey::new(ObjectKind::Document, "name"),
+            PropertyValue::Text("unsupported".into()),
+        )],
     );
     assert!(
         editor
@@ -338,13 +513,17 @@ fn properties_new_preview_replaces_previous_candidate_without_publishing_it() ->
     let mut changes = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::PaddingPixels, PropertyValue::Float(300.))],
+        &[(
+            schema::document::PADDING_PIXELS.key,
+            PropertyValue::Float(300.),
+        )],
     );
     let first = editor.begin_property_edit(context, object.clone(), &changes)?;
     editor.update_property_edit(&first, &changes)?;
-    changes
-        .changes
-        .insert(PropertyId::PaddingPixels, PropertyValue::Float(400.));
+    changes.changes.insert(
+        schema::document::PADDING_PIXELS.key,
+        PropertyValue::Float(400.),
+    );
     let second = editor.begin_property_edit(context, object, &changes)?;
     assert!(!editor.property_edit_owned(&first));
     assert!(editor.property_edit_owned(&second));
@@ -390,7 +569,7 @@ fn identity_fields_preserve_scene_objects_references_and_undo() -> anyhow::Resul
             serde_json::json!(format!("Updated{kind:?}")),
         )?;
         assert_eq!(
-            doc.property_values(object)?[&PropertyId::Name],
+            doc.property_values(object)?[&PropertyKey::new(kind, "name")],
             PropertyValue::Text("Renamed object".into())
         );
         assert_eq!(
@@ -402,7 +581,8 @@ fn identity_fields_preserve_scene_objects_references_and_undo() -> anyhow::Resul
         );
         assert_eq!(doc.history_lengths().0, history.0 + 2);
         if let Some(other) = objects.get(1) {
-            let duplicate = doc.property_values(other)?[&PropertyId::RuntimeId].json();
+            let duplicate =
+                doc.property_values(other)?[&PropertyKey::new(kind, "runtime_id")].json();
             assert!(
                 doc.set_object_property(object, "runtime_id", duplicate)
                     .is_err()
@@ -427,7 +607,7 @@ fn parameter_runtime_id_keeps_animation_and_physics_bindings_and_roundtrips() ->
         "{:?}",
         doc.object_index().incoming(&parameter).collect::<Vec<_>>()
     );
-    let original = doc.property_values(&parameter)?[&PropertyId::RuntimeId].clone();
+    let original = doc.property_values(&parameter)?[&schema::parameter::RUNTIME_ID.key].clone();
     doc.set_object_property(&parameter, "runtime_id", serde_json::json!("ParamRenamed"))?;
     assert_eq!(
         doc.parameter_draft(&parameter.id)?.runtime_id,
@@ -448,7 +628,7 @@ fn parameter_runtime_id_keeps_animation_and_physics_bindings_and_roundtrips() ->
     );
     doc.undo()?;
     assert_eq!(
-        doc.property_values(&parameter)?[&PropertyId::RuntimeId],
+        doc.property_values(&parameter)?[&schema::parameter::RUNTIME_ID.key],
         original
     );
     Ok(())
@@ -463,14 +643,14 @@ fn rejected_range_drag_keeps_the_last_valid_candidate_until_release() -> anyhow:
     let valid = patch(
         editor.document().unwrap(),
         &parameter,
-        &[(PropertyId::Maximum, PropertyValue::Float(2.))],
+        &[(schema::parameter::MAXIMUM.key, PropertyValue::Float(2.))],
     );
     let token = editor.begin_property_edit(context, parameter.clone(), &valid)?;
     editor.update_property_edit(&token, &valid)?;
     let invalid = patch(
         editor.document().unwrap(),
         &parameter,
-        &[(PropertyId::Maximum, PropertyValue::Float(-1.))],
+        &[(schema::parameter::MAXIMUM.key, PropertyValue::Float(-1.))],
     );
     assert!(editor.update_property_edit(&token, &invalid).is_err());
     assert_eq!(
@@ -515,7 +695,10 @@ fn animation_property_candidates_are_detached_and_disappear_on_cancel() -> anyho
     let edit = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::FadeIn, PropertyValue::OptionalFloat(Some(3.)))],
+        &[(
+            schema::motion::FADE_IN.key,
+            PropertyValue::OptionalFloat(Some(3.)),
+        )],
     );
     let token = editor.begin_property_edit(
         editor.editing_context_token().unwrap(),
@@ -570,7 +753,7 @@ fn parameter_range_preview_clamps_display_value_and_committed_value_on_release()
     let edit = patch(
         editor.document().unwrap(),
         &object,
-        &[(PropertyId::Minimum, PropertyValue::Float(10.))],
+        &[(schema::parameter::MINIMUM.key, PropertyValue::Float(10.))],
     );
     let token =
         editor.begin_property_edit(editor.editing_context_token().unwrap(), object, &edit)?;
@@ -601,8 +784,14 @@ fn document_export_properties_preserve_geometry_and_support_history() -> anyhow:
         &doc,
         &object,
         &[
-            (PropertyId::PaddingPixels, PropertyValue::Float(25.)),
-            (PropertyId::MinimumExtent, PropertyValue::Float(80.)),
+            (
+                schema::document::PADDING_PIXELS.key,
+                PropertyValue::Float(25.),
+            ),
+            (
+                schema::document::MINIMUM_EXTENT.key,
+                PropertyValue::Float(80.),
+            ),
         ],
     );
     doc.set_object_properties(&object, &changes)?;
@@ -619,7 +808,10 @@ fn document_export_properties_preserve_geometry_and_support_history() -> anyhow:
     let invalid = patch(
         &doc,
         &object,
-        &[(PropertyId::PaddingPixels, PropertyValue::Float(f32::NAN))],
+        &[(
+            schema::document::PADDING_PIXELS.key,
+            PropertyValue::Float(f32::NAN),
+        )],
     );
     assert!(doc.set_object_properties(&object, &invalid).is_err());
     let saved = doc.save(&assets.path().join("settings.kasane"))?;
@@ -627,5 +819,171 @@ fn document_export_properties_preserve_geometry_and_support_history() -> anyhow:
         Document::open(&saved.manifest)?.export_settings(),
         doc.export_settings()
     );
+    Ok(())
+}
+
+#[test]
+fn parameter_group_identity_properties_use_group_validation_and_history() -> anyhow::Result<()> {
+    let mut doc = Document::new_blank()?;
+    let group = doc.create_parameter_group(
+        ParameterGroupDraft {
+            name: "Face".into(),
+            runtime_id: "GroupFace".into(),
+            parent_id: None,
+        },
+        doc.parameter_model_revision(),
+    )?;
+    let other = doc.create_parameter_group(
+        ParameterGroupDraft {
+            name: "Eyes".into(),
+            runtime_id: "GroupEyes".into(),
+            parent_id: Some(group.clone()),
+        },
+        doc.parameter_model_revision(),
+    )?;
+    let target = ObjectRef::new(ObjectKind::ParameterGroup, &other);
+    let original = doc.property_values(&target)?;
+    let rename = patch(
+        &doc,
+        &target,
+        &[(
+            schema::parameter_group::NAME.key,
+            PropertyValue::Text("Lids".into()),
+        )],
+    );
+    doc.set_object_properties(&target, &rename)?;
+    assert_eq!(doc.parameter_group_draft(&other)?.name, "Lids");
+    assert_eq!(
+        doc.parameter_group_draft(&other)?.parent_id.as_deref(),
+        Some(group.as_str())
+    );
+    let history = doc.history_lengths();
+    let duplicate = patch(
+        &doc,
+        &target,
+        &[(
+            schema::parameter_group::RUNTIME_ID.key,
+            PropertyValue::Text("GroupFace".into()),
+        )],
+    );
+    assert!(doc.set_object_properties(&target, &duplicate).is_err());
+    assert_eq!(doc.history_lengths(), history);
+    assert_eq!(doc.parameter_group_draft(&other)?.runtime_id, "GroupEyes");
+    assert!(
+        doc.set_object_properties(&target, &rename).is_err(),
+        "stale baseline must be rejected"
+    );
+    doc.undo()?;
+    assert_eq!(doc.property_values(&target)?, original);
+    doc.redo()?;
+    assert_eq!(doc.parameter_group_draft(&other)?.name, "Lids");
+    Ok(())
+}
+
+#[test]
+fn parameter_choice_properties_validate_and_undo_membership_and_kind() -> anyhow::Result<()> {
+    let mut doc = Document::new_blank()?;
+    let parameter = doc.create_parameter(NewParameter::default())?;
+    let group = doc.create_parameter_group(
+        ParameterGroupDraft {
+            name: "Face".into(),
+            runtime_id: "GroupFace".into(),
+            parent_id: None,
+        },
+        doc.parameter_model_revision(),
+    )?;
+    let target = ObjectRef::new(ObjectKind::Parameter, &parameter);
+    let assignment = patch(
+        &doc,
+        &target,
+        &[(
+            schema::parameter::GROUP_ID.key,
+            PropertyValue::Text(group.clone()),
+        )],
+    );
+    doc.set_object_properties(&target, &assignment)?;
+    assert_eq!(
+        doc.parameter_draft(&parameter)?.group_id.as_deref(),
+        Some(group.as_str())
+    );
+    doc.undo()?;
+    assert!(doc.parameter_draft(&parameter)?.group_id.is_none());
+    doc.redo()?;
+    let invalid = patch(
+        &doc,
+        &target,
+        &[(
+            schema::parameter::GROUP_ID.key,
+            PropertyValue::Text("missing".into()),
+        )],
+    );
+    let history = doc.history_lengths();
+    assert!(doc.set_object_properties(&target, &invalid).is_err());
+    assert_eq!(doc.history_lengths(), history);
+    let kind = patch(
+        &doc,
+        &target,
+        &[(
+            schema::parameter::KIND.key,
+            PropertyValue::Text("blend_shape".into()),
+        )],
+    );
+    doc.set_object_properties(&target, &kind)?;
+    assert_eq!(
+        doc.parameter_draft(&parameter)?.kind,
+        kasane_core::ParameterKind::BlendShape
+    );
+    doc.undo()?;
+    assert_eq!(
+        doc.parameter_draft(&parameter)?.kind,
+        kasane_core::ParameterKind::Normal
+    );
+    let ungroup = patch(
+        &doc,
+        &target,
+        &[(
+            schema::parameter::GROUP_ID.key,
+            PropertyValue::Text(String::new()),
+        )],
+    );
+    doc.set_object_properties(&target, &ungroup)?;
+    assert!(doc.parameter_draft(&parameter)?.group_id.is_none());
+    Ok(())
+}
+
+#[test]
+fn object_scoped_keys_reject_foreign_fields_and_resolve_canonical_paths() -> anyhow::Result<()> {
+    let (mut doc, _assets) = support::sample_document_with_parts()?;
+    let object = support::object(ObjectKind::Part, 101);
+    let baseline = doc.property_values(&object)?;
+    let history = doc.history_lengths();
+    let foreign = PropertyPatch {
+        expected: [(schema::mesh::ENABLED.key, PropertyValue::Bool(true))].into(),
+        changes: [(schema::mesh::ENABLED.key, PropertyValue::Bool(false))].into(),
+    };
+    assert!(doc.set_object_properties(&object, &foreign).is_err());
+    assert_eq!(doc.property_values(&object)?, baseline);
+    assert_eq!(doc.history_lengths(), history);
+
+    // Patches carry identities, not caller-selected storage paths. Even a
+    // descriptor with a different path cannot redirect an authorized write.
+    let alternate = PropertySpec::new(ObjectKind::Part, "enabled", "name", PropertyType::Bool);
+    let edit = patch(
+        &doc,
+        &object,
+        &[(alternate.key, PropertyValue::Bool(false))],
+    );
+    doc.set_object_properties(&object, &edit)?;
+    let values = doc.property_values(&object)?;
+    assert_eq!(
+        values[&schema::part::ENABLED.key],
+        PropertyValue::Bool(false)
+    );
+    assert_eq!(
+        values[&schema::part::NAME.key],
+        baseline[&schema::part::NAME.key]
+    );
+    doc.undo()?;
+    assert_eq!(doc.property_values(&object)?, baseline);
     Ok(())
 }

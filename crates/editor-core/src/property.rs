@@ -1,58 +1,29 @@
 //! Typed inspector bindings. Presentation configuration lives in the editor;
 //! these capabilities also guard every domain write.
+//! Add fields in the corresponding object module and reference those descriptors
+//! from its UI provider. Keys are object-scoped; paths and policies are local.
 use crate::{DocumentId, EditingContextToken, ObjectKind, ObjectRef};
 use anyhow::{Result, bail, ensure};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+/// An object-scoped field identity. Storage paths belong to the descriptor,
+/// never to the key. Keys are cheap to copy into drafts, controls and edit tokens.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum PropertyId {
-    Name,
-    RuntimeId,
-    Enabled,
-    DrawOrder,
-    PixelsPerUnit,
-    PaddingFraction,
-    PaddingPixels,
-    MinimumExtent,
-    Minimum,
-    Maximum,
-    DefaultValue,
-    DecimalPlaces,
-    Repeat,
-    Intensity,
-    Looping,
-    FadeIn,
-    FadeOut,
+pub struct PropertyKey {
+    object: ObjectKind,
+    name: &'static str,
 }
-impl PropertyId {
-    pub fn path(self) -> &'static str {
-        match self {
-            Self::Name => "name",
-            Self::RuntimeId => "runtime_id",
-            Self::Enabled => "enabled",
-            Self::DrawOrder => "draw_order",
-            Self::PixelsPerUnit => "export_settings.pixels_per_unit",
-            Self::PaddingFraction => "export_settings.padding_fraction",
-            Self::PaddingPixels => "export_settings.padding_pixels",
-            Self::MinimumExtent => "export_settings.minimum_extent",
-            Self::Minimum => "minimum",
-            Self::Maximum => "maximum",
-            Self::DefaultValue => "default_value",
-            Self::DecimalPlaces => "decimal_places",
-            Self::Repeat => "repeat",
-            Self::Intensity => "intensity",
-            Self::Looping => "looping",
-            Self::FadeIn => "fade_in",
-            Self::FadeOut => "fade_out",
-        }
+impl PropertyKey {
+    pub const fn new(object: ObjectKind, name: &'static str) -> Self {
+        Self { object, name }
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum PropertyGroup {
-    Field(PropertyId),
-    ParameterRange,
+    pub const fn name(self) -> &'static str {
+        self.name
+    }
+    pub const fn object_kind(self) -> ObjectKind {
+        self.object
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -102,43 +73,97 @@ impl PropertyValue {
 
 #[derive(Clone, Copy, Debug)]
 pub struct PropertySpec {
-    pub id: PropertyId,
+    pub key: PropertyKey,
+    pub path: &'static str,
     pub value_type: PropertyType,
-    pub group: PropertyGroup,
+    group: Option<&'static str>,
+    trim_text: bool,
+    allow_empty: bool,
+    pub(crate) refresh_draw_groups: bool,
     pub min: f64,
     pub max: f64,
     pub step: f64,
     pub preview: bool,
 }
 impl PropertySpec {
-    const fn new(id: PropertyId, value_type: PropertyType) -> Self {
+    pub const fn new(
+        object: ObjectKind,
+        name: &'static str,
+        path: &'static str,
+        value_type: PropertyType,
+    ) -> Self {
         Self {
-            id,
+            key: PropertyKey::new(object, name),
+            path,
             value_type,
-            group: PropertyGroup::Field(id),
+            group: None,
+            trim_text: false,
+            allow_empty: false,
+            refresh_draw_groups: false,
             min: -(f32::MAX as f64),
             max: f32::MAX as f64,
             step: 0.1,
             preview: false,
         }
     }
-    const fn range(mut self, min: f64, max: f64, step: f64) -> Self {
+    pub const fn range(mut self, min: f64, max: f64, step: f64) -> Self {
         self.min = min;
         self.max = max;
         self.step = step;
         self
     }
-    const fn grouped(mut self) -> Self {
-        self.group = PropertyGroup::ParameterRange;
+    pub const fn grouped(mut self, group: &'static str) -> Self {
+        self.group = Some(group);
         self
     }
-    const fn preview(mut self) -> Self {
+    pub const fn preview(mut self) -> Self {
         self.preview = true;
         self
     }
+    pub const fn trimmed(mut self) -> Self {
+        self.trim_text = true;
+        self
+    }
+    pub const fn allow_empty(mut self) -> Self {
+        self.allow_empty = true;
+        self
+    }
+    pub const fn draw_order_preview(mut self) -> Self {
+        self.preview = true;
+        self.refresh_draw_groups = true;
+        self
+    }
+    pub fn same_group(&self, other: &Self) -> bool {
+        self.key == other.key
+            || (self.key.object == other.key.object
+                && self.group.is_some()
+                && self.group == other.group)
+    }
+    /// Read persisted data without imposing editing-only range restrictions.
+    pub fn read(&self, payload: &Value) -> Result<PropertyValue> {
+        let value = self.path.split('.').fold(payload, |value, key| &value[key]);
+        if let (PropertyType::Text, Value::String(text)) = (self.value_type, value) {
+            return Ok(PropertyValue::Text(text.clone()));
+        }
+        let mut reader = *self;
+        reader.min = f64::NEG_INFINITY;
+        reader.max = f64::INFINITY;
+        reader.decode(value)
+    }
+    pub fn write(&self, payload: &mut Value, value: &PropertyValue) -> Result<()> {
+        self.validate(value)?;
+        let mut field = payload;
+        for key in self.path.split('.') {
+            field = field
+                .get_mut(key)
+                .ok_or_else(|| anyhow::anyhow!("Missing property field: {}", self.path))?;
+        }
+        *field = value.json();
+        Ok(())
+    }
     pub fn parse(&self, raw: &str) -> Result<PropertyValue> {
         let value = match self.value_type {
-            PropertyType::Text => PropertyValue::Text(if self.id == PropertyId::RuntimeId {
+            PropertyType::Text => PropertyValue::Text(if self.trim_text {
                 raw.trim().to_owned()
             } else {
                 raw.to_owned()
@@ -177,7 +202,7 @@ impl PropertySpec {
                 }
             }
             (PropertyType::OptionalFloat, Value::Null) => PropertyValue::OptionalFloat(None),
-            _ => bail!("Invalid property type: {}", self.id.path()),
+            _ => bail!("Invalid property type: {}", self.path),
         };
         self.validate(&next)?;
         Ok(next)
@@ -196,9 +221,9 @@ impl PropertySpec {
         );
         if let PropertyValue::Text(value) = value {
             ensure!(
-                !value.trim().is_empty(),
+                self.allow_empty || !value.trim().is_empty(),
                 "{} cannot be empty",
-                self.id.path()
+                self.path
             );
         }
         match value {
@@ -211,7 +236,7 @@ impl PropertySpec {
             ensure!(
                 (self.min..=self.max).contains(&number),
                 "{} must be between {} and {}",
-                self.id.path(),
+                self.path,
                 self.min,
                 self.max
             );
@@ -220,69 +245,37 @@ impl PropertySpec {
     }
 }
 
+pub mod deformer;
+pub mod document;
+pub mod expression;
+pub mod glue;
+pub mod mesh;
+pub mod motion;
+pub mod offscreen;
+pub mod parameter;
+pub mod parameter_group;
+pub mod part;
+pub mod texture;
+
+/// Only object dispatch lives here; each schema owns all of its field definitions.
 pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
-    use PropertyId::*;
-    use PropertySpec as S;
-    use PropertyType as T;
-    const NAME: PropertySpec = S::new(Name, T::Text);
-    const RUNTIME_ID: PropertySpec = S::new(RuntimeId, T::Text);
-    const ENABLED: PropertySpec = S::new(Enabled, T::Bool);
-    const FADE_IN: PropertySpec = S::new(FadeIn, T::OptionalFloat)
-        .range(0., f32::MAX as f64, 0.1)
-        .preview();
-    const FADE_OUT: PropertySpec = S::new(FadeOut, T::OptionalFloat)
-        .range(0., f32::MAX as f64, 0.1)
-        .preview();
-    const EXPORT_SETTINGS: &[PropertySpec] = &[
-        S::new(PixelsPerUnit, T::Float).range(f32::MIN_POSITIVE as f64, f32::MAX as f64, 1.),
-        S::new(PaddingFraction, T::Float).range(0., 10., 0.01),
-        S::new(PaddingPixels, T::Float)
-            .range(0., f32::MAX as f64, 1.)
-            .preview(),
-        S::new(MinimumExtent, T::Float)
-            .range(0., f32::MAX as f64, 1.)
-            .preview(),
-    ];
-    const PART: &[PropertySpec] = &[
-        NAME,
-        RUNTIME_ID,
-        ENABLED,
-        S::new(DrawOrder, T::Float)
-            .range(-(f32::MAX as f64), f32::MAX as f64, 1.)
-            .preview(),
-    ];
-    const PARAMETER: &[PropertySpec] = &[
-        NAME,
-        RUNTIME_ID,
-        S::new(Minimum, T::Float).grouped().preview(),
-        S::new(Maximum, T::Float).grouped().preview(),
-        S::new(DefaultValue, T::Float).grouped().preview(),
-        S::new(DecimalPlaces, T::Integer)
-            .range(0., 9., 1.)
-            .preview(),
-        S::new(Repeat, T::Bool),
-    ];
-    const GLUE: &[PropertySpec] = &[
-        NAME,
-        RUNTIME_ID,
-        S::new(Intensity, T::Float).range(0., 1., 0.01).preview(),
-    ];
-    const MOTION: &[PropertySpec] = &[NAME, S::new(Looping, T::Bool), FADE_IN, FADE_OUT];
     match kind {
-        ObjectKind::Document => EXPORT_SETTINGS,
-        ObjectKind::Part => PART,
-        ObjectKind::Deformer | ObjectKind::Offscreen => &[NAME, RUNTIME_ID, ENABLED],
-        ObjectKind::Parameter => PARAMETER,
-        ObjectKind::Glue => GLUE,
-        ObjectKind::Mesh => &[NAME, RUNTIME_ID, ENABLED],
-        ObjectKind::Texture => &[NAME],
-        ObjectKind::Motion => MOTION,
-        ObjectKind::Expression => &[NAME, FADE_IN, FADE_OUT],
+        ObjectKind::Document => document::FIELDS,
+        ObjectKind::Part => part::FIELDS,
+        ObjectKind::Mesh => mesh::FIELDS,
+        ObjectKind::Parameter => parameter::FIELDS,
+        ObjectKind::ParameterGroup => parameter_group::FIELDS,
+        ObjectKind::Deformer => deformer::FIELDS,
+        ObjectKind::Offscreen => offscreen::FIELDS,
+        ObjectKind::Texture => texture::FIELDS,
+        ObjectKind::Glue => glue::FIELDS,
+        ObjectKind::Motion => motion::FIELDS,
+        ObjectKind::Expression => expression::FIELDS,
         _ => &[],
     }
 }
 
-pub type PropertyValues = BTreeMap<PropertyId, PropertyValue>;
+pub type PropertyValues = BTreeMap<PropertyKey, PropertyValue>;
 
 #[derive(Clone, Debug)]
 pub struct PropertyPatch {
@@ -297,7 +290,7 @@ pub struct PropertyEditToken {
     pub object: ObjectRef,
     pub(crate) context: EditingContextToken,
     pub(crate) serial: u64,
-    property: PropertyId,
+    property: PropertyKey,
 }
 
 pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) -> Result<Value> {
@@ -319,7 +312,33 @@ pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) 
         K::Part => get!(get_part),
         K::Mesh => get!(get_mesh),
         K::Deformer => get!(get_transform),
-        K::Parameter => get!(get_parameter),
+        K::Parameter => {
+            let mut payload = get!(get_parameter);
+            let group = model
+                .display_info()
+                .parameters
+                .iter()
+                .flatten()
+                .find_map(|entry| match entry {
+                    kasane_core::document::CdiParameterEntry::Resolved {
+                        parameter_id,
+                        group_id,
+                        ..
+                    } if parameter_id == &object.id => group_id.clone(),
+                    _ => None,
+                });
+            payload["group_id"] = Value::String(group.unwrap_or_default());
+            payload
+        }
+        K::ParameterGroup => serde_json::to_value(
+            model
+                .display_info()
+                .parameter_groups
+                .iter()
+                .flatten()
+                .find(|group| group.id == object.id)
+                .ok_or_else(|| anyhow::anyhow!("Object no longer exists"))?,
+        )?,
         K::Glue => get!(get_glue),
         K::Offscreen => get!(get_offscreen),
         K::Texture => get!(get_asset),
@@ -336,24 +355,7 @@ pub(crate) fn values_from(
     let payload = object_payload(model, object)?;
     property_specs(object.kind)
         .iter()
-        .map(|spec| {
-            let value = spec
-                .id
-                .path()
-                .split('.')
-                .fold(&payload, |value, key| &value[key]);
-            // Read persisted values without imposing new UI range restrictions.
-            let mut reader = *spec;
-            reader.min = f64::NEG_INFINITY;
-            reader.max = f64::INFINITY;
-            let value =
-                if let (PropertyType::Text, Value::String(text)) = (reader.value_type, value) {
-                    PropertyValue::Text(text.clone())
-                } else {
-                    reader.decode(value)?
-                };
-            Ok((spec.id, value))
-        })
+        .map(|spec| Ok((spec.key, spec.read(&payload)?)))
         .collect()
 }
 
@@ -468,3 +470,6 @@ impl crate::Editor {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

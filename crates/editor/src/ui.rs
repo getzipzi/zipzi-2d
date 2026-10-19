@@ -4,7 +4,7 @@ pub(crate) mod form_dialog;
 pub(crate) mod mesh_generation;
 pub(crate) mod mesh_generation_preview;
 mod mesh_preview;
-pub(crate) mod property_form;
+pub(crate) mod property_details;
 pub(crate) mod slide_number_input;
 
 use super::*;
@@ -57,7 +57,7 @@ impl Render for EditorView {
                         form.reload_field(id);
                     } else if let Some(spec) = editor_core::property_specs(target.object.kind)
                         .iter()
-                        .find(|s| s.id == id)
+                        .find(|s| s.key == id)
                     {
                         if form.fields[&id].raw != raw {
                             form.edit(spec, raw);

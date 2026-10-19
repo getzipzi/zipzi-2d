@@ -248,7 +248,8 @@ fn parameters_toolbar_only_creates_parameters_and_modal_disables_creation(cx: &m
         });
         window.render_frame(cx);
         window.click("new-parameter", cx);
-        assert!(window.has_active_dialog(cx));
+        assert!(!window.has_active_dialog(cx));
+        assert!(window.find("property-input-name").visible());
     })
     .unwrap();
 }

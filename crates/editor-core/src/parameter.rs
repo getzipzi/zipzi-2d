@@ -352,8 +352,8 @@ impl Document {
             }
             Ok(())
         })?;
-        self.parameter_management_changed()?;
-        self.focus_parameter(id)
+        // Property submissions can settle an old input after navigation.
+        self.parameter_management_changed()
     }
 
     /// Display membership is owned by the parameter. All other references block deletion.

@@ -12,9 +12,12 @@ pub use animation::*;
 pub use transfer::*;
 mod editing_context;
 mod inspection;
-mod property;
+pub mod property;
 pub use inspection::*;
-pub use property::*;
+pub use property::{
+    PropertyEditToken, PropertyKey, PropertyPatch, PropertySpec, PropertyType, PropertyValue,
+    PropertyValues, property_specs,
+};
 mod editor;
 mod objects;
 mod scene;

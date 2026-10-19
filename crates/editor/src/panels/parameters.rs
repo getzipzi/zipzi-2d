@@ -1,9 +1,6 @@
-mod delete_confirmation;
-mod dialog_session;
-mod form;
-mod group_form;
 mod headers;
 mod interactions;
+mod locate;
 mod management;
 mod summary;
 mod sync;
@@ -30,7 +27,7 @@ use gpui_kit::component::{
     ActiveTheme, Disableable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
-    input::{Input, InputEvent, InputState},
+    input::{InputEvent, InputState},
     slider::{SliderEvent, SliderState, SliderValue},
     tooltip::Tooltip,
 };
@@ -169,7 +166,9 @@ impl ParametersPanel {
 
     fn toolbar(&self, create_disabled: bool, cx: &mut Context<Self>) -> PanelToolbar {
         let new_label = t!("parameter.new").into_owned();
-        let on_create = cx.listener(|this, _, window, cx| this.open_create_dialog(window, cx));
+        let on_create = cx.listener(|this, _, window, cx| {
+            this.open_management(ParameterAction::Create(None), window, cx)
+        });
         let on_group = cx.listener(|this, _, window, cx| {
             this.open_management(ParameterAction::CreateGroup, window, cx)
         });

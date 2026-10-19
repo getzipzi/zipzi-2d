@@ -1,75 +1,12 @@
 //! Read-only inspectors. Resource definitions come from the document; runtime
 //! values come exclusively from the same presented snapshot as the preview.
 use super::*;
-use editor_core::{Document, ObjectKind, ObjectRef};
+pub(crate) use crate::properties::part_name;
+use editor_core::Document;
 use kasane_core::document::PosePartRef;
 use kasane_sdk::MotionSnapshot;
 
-pub(crate) fn heading(title: impl Into<SharedString>, cx: &App) -> Div {
-    div()
-        .mt_2()
-        .pb_1()
-        .font_weight(FontWeight::SEMIBOLD)
-        .border_b_1()
-        .border_color(cx.theme().border)
-        .child(title.into())
-}
-
-pub(crate) fn field(
-    id: impl Into<ElementId>,
-    label: impl Into<SharedString>,
-    value: impl Into<SharedString>,
-    cx: &App,
-) -> Div {
-    let value = value.into();
-    div()
-        .flex()
-        .flex_col()
-        .gap_1()
-        .flex_shrink_0()
-        .child(
-            div()
-                .text_color(cx.theme().muted_foreground)
-                .child(label.into()),
-        )
-        .child(
-            div()
-                .id(id)
-                .test_support()
-                .aria_label(value.clone())
-                .child(value),
-        )
-}
-
-pub(crate) fn property(
-    id: impl Into<ElementId>,
-    label: impl Into<SharedString>,
-    value: impl Into<SharedString>,
-    cx: &App,
-) -> Div {
-    let value = value.into();
-    div()
-        .flex()
-        .justify_between()
-        .items_start()
-        .gap_2()
-        .flex_shrink_0()
-        .child(
-            div()
-                .text_color(cx.theme().muted_foreground)
-                .child(label.into()),
-        )
-        .child(
-            div()
-                .id(id)
-                .test_support()
-                .aria_label(value.clone())
-                .flex_1()
-                .min_w_0()
-                .text_right()
-                .child(value),
-        )
-}
+pub(crate) use crate::ui::property_details::{field, heading, property};
 
 fn parameter_name(document: &Document, id: &str) -> String {
     document
@@ -81,27 +18,6 @@ fn parameter_name(document: &Document, id: &str) -> String {
             || id.to_string(),
             |p| format!("{} · {}", p.name, p.runtime_id),
         )
-}
-
-pub(crate) fn part_name(document: &Document, part: &PosePartRef) -> String {
-    match part {
-        PosePartRef::Resolved { part_id } => document
-            .object_index()
-            .get(&ObjectRef::new(ObjectKind::Part, part_id))
-            .map_or_else(
-                || part_id.clone(),
-                |p| {
-                    format!(
-                        "{} · {}",
-                        p.name,
-                        p.properties["runtime_id"].as_str().unwrap_or(part_id)
-                    )
-                },
-            ),
-        PosePartRef::Unresolved { runtime_id } => {
-            t!("workspace.unresolved_binding", target = runtime_id).into_owned()
-        }
-    }
 }
 
 fn frame_status(mut content: Stateful<Div>, snapshot: Option<&MotionSnapshot>) -> Stateful<Div> {

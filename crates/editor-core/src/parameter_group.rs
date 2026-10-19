@@ -134,8 +134,9 @@ impl Document {
         self.session.edit("Edit parameter group", None, |edit| {
             edit.replace_display_info(info)
         })?;
-        self.parameter_management_changed()?;
-        self.navigate(ObjectRef::new(ObjectKind::ParameterGroup, id))
+        // Updating properties must preserve navigation: blur may commit this
+        // group after the user has already selected another object.
+        self.parameter_management_changed()
     }
 
     /// Promote an existing group without revalidating unrelated legacy display fields.
