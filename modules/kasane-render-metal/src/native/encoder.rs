@@ -12,9 +12,9 @@ use kasane_core::{
 use kasane_render::gpu::{compose_affine, inverse_affine};
 use kasane_render::{Affine2, TargetId, TargetItem, ViewportConfig};
 use metal::{
-    CommandBufferRef, MTLClearColor, MTLIndexType, MTLLoadAction, MTLOrigin, MTLPrimitiveType,
-    MTLSize, MTLStoreAction, MTLTextureUsage, RenderPassDescriptor, RenderPipelineState, Texture,
-    TextureRef,
+    CommandBufferRef, MTLClearColor, MTLCullMode, MTLIndexType, MTLLoadAction, MTLOrigin,
+    MTLPrimitiveType, MTLSize, MTLStoreAction, MTLTextureUsage, MTLWinding, RenderPassDescriptor,
+    RenderPipelineState, Texture, TextureRef,
 };
 use std::collections::HashMap;
 
@@ -165,6 +165,7 @@ impl MetalRenderer {
                 &self.quad,
                 &uniform,
                 false,
+                true,
                 false,
             );
         }
@@ -349,6 +350,7 @@ impl FrameEncoder<'_, '_> {
             &self.renderer.meshes[index],
             &uniform,
             self.textures.repeats(&drawable.texture_asset_id),
+            drawable.double_sided,
             clear,
         );
         Ok(true)
@@ -419,6 +421,7 @@ impl FrameEncoder<'_, '_> {
             &self.renderer.quad,
             &uniform,
             false,
+            true,
             clear,
         );
         Ok(true)
@@ -501,11 +504,26 @@ impl FrameEncoder<'_, '_> {
         mesh: &MeshBuffers,
         uniform: &Uniform,
         repeat: bool,
+        double_sided: bool,
         clear: bool,
     ) {
         self.begin_pass(target, clear);
         let encoder = &self.pass.as_ref().unwrap().1;
         encoder.set_render_pipeline_state(pipeline);
+        encoder.set_cull_mode(if double_sided {
+            MTLCullMode::None
+        } else {
+            MTLCullMode::Back
+        });
+        // Front faces are counterclockwise in model space. Viewport and mask
+        // targets may reflect Y, so account for their transform independently.
+        let determinant =
+            uniform.view_a[0] * uniform.view_b[1] - uniform.view_a[1] * uniform.view_b[0];
+        encoder.set_front_facing_winding(if determinant < 0. {
+            MTLWinding::Clockwise
+        } else {
+            MTLWinding::CounterClockwise
+        });
         encoder.set_vertex_buffer(0, Some(&mesh.vertex), mesh.vertex_offset);
         encoder.set_vertex_bytes(
             1,

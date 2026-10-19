@@ -252,6 +252,7 @@ impl MaskCacheKey {
 
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct MaskSourceStamp {
+    double_sided: bool,
     pub(super) geometry: u64,
     pub(super) texture: usize,
     pub(super) revision: Option<u64>,
@@ -456,6 +457,7 @@ impl FrameEncoder<'_, '_> {
                     .get(&source.texture_asset_id)
                     .ok_or_else(|| Status::error("MISSING_TEXTURE", &source.texture_asset_id))?;
                 Ok(MaskSourceStamp {
+                    double_sided: source.double_sided,
                     geometry: self.renderer.meshes[index].revision,
                     texture: texture.view as *const TextureRef as usize,
                     revision: self.textures.revision(&source.texture_asset_id),
@@ -547,6 +549,7 @@ impl FrameEncoder<'_, '_> {
                 &self.renderer.meshes[index],
                 &uniform,
                 self.textures.repeats(&source.texture_asset_id),
+                source.double_sided,
                 false,
             );
         }

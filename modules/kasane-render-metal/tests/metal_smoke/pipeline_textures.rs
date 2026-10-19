@@ -316,3 +316,35 @@ fn texture_rows_follow_the_shared_uv_orientation() {
     assert_eq!(pixel(8, 56), &[255, 0, 0, 255]);
     assert_eq!(pixel(56, 56), &[0, 255, 0, 255]);
 }
+
+#[test]
+fn culling_tracks_winding_and_resets_between_draws_and_masks() {
+    // The fixture's quad is clockwise in model space. Reverse it for a front
+    // face, then ensure back faces disappear without leaking state to the next draw.
+    let mut front = quad("front", "red");
+    front.indices = std::sync::Arc::from([0, 2, 1, 0, 3, 2]);
+    front.double_sided = false;
+    let frame = |drawables| DrawableFrame {
+        drawables,
+        ..Default::default()
+    };
+    assert_eq!(
+        center(&fixture(&frame(vec![front.clone()])).0),
+        [255, 0, 0, 255]
+    );
+    let mut back = front.clone();
+    back.id = "back".into();
+    back.indices = std::sync::Arc::from([0, 1, 2, 0, 2, 3]);
+    assert_eq!(center(&fixture(&frame(vec![back.clone()])).0), [0, 0, 0, 0]);
+    let mut both = back.clone();
+    both.id = "both".into();
+    both.double_sided = true;
+    both.texture_asset_id = "green".into();
+    assert_eq!(
+        center(&fixture(&frame(vec![front, back.clone(), both.clone()])).0),
+        [0, 255, 0, 255]
+    );
+    // The same sidedness applies when a culled mesh is a clipping source.
+    both.masks = vec![back.id.clone()];
+    assert_eq!(center(&fixture(&frame(vec![back, both])).0), [0, 0, 0, 0]);
+}
