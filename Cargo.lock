@@ -3862,7 +3862,9 @@ version = "0.1.0"
 dependencies = [
  "crc32fast",
  "flate2",
+ "kasane-animation",
  "kasane-core",
+ "kasane-live2d",
  "png 0.17.16",
  "roxmltree 0.20.0",
  "serde",

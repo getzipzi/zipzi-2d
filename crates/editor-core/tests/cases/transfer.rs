@@ -7,6 +7,345 @@ fn local(name: &str) -> PathBuf {
         .join(name)
 }
 
+#[test]
+fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> anyhow::Result<()> {
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/local/v3a9_315702_nxss.kasane");
+    if !source.is_dir() {
+        eprintln!("SKIP: local v3a9 project unavailable");
+        return Ok(());
+    }
+    let mut editor = Editor::from_document(Document::open(&source)?);
+    let id = editor.active_id().unwrap();
+    let revision = editor.document().unwrap().model_generation();
+    let canvas = editor.export_canvas(id)?;
+    let snapshot = editor.prepare_export(id, revision, canvas)?;
+    let original = snapshot.document().clone();
+    let temp = tempfile::tempdir()?;
+    let parent = std::env::var_os("KASANE_V3A9_EXPORT_OUTPUT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| temp.path().to_path_buf());
+    std::fs::create_dir_all(&parent)?;
+    let parent = std::fs::canonicalize(parent)?;
+    let destination = parent.join("v3a9");
+    let publication = snapshot
+        .publish(TransferFormat::Cubism, &destination)
+        .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
+    assert!(publication.durable());
+    assert!(!publication.notices.is_empty());
+    for extension in ["cmo3", "can3"] {
+        assert!(destination.join(format!("v3a9.{extension}")).is_file());
+    }
+    let report: kasane_cmo3::Cmo3Report =
+        serde_json::from_slice(&std::fs::read(destination.join("export-report.json"))?)?;
+    assert!(!report.has_loss());
+    assert!(!report.diagnostics.iter().any(|d| matches!(
+        d.code.as_str(),
+        "CAN3_BAKED_TRACK" | "CAN3_KEY_COLLISION" | "CAN3_TIME_GRID_UNRESOLVED"
+    )));
+    for code in [
+        "CAN3_TIME_GRID",
+        "CAN3_INVERSE_STEP_REPAIRED",
+        "CAN3_EXPRESSION_SEMANTICS",
+    ] {
+        assert!(
+            report
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == code)
+        );
+    }
+    let model = kasane_cmo3::import_model(&std::fs::read(destination.join("v3a9.cmo3"))?)?;
+    let mut returned = model.document;
+    kasane_cmo3::import_animation(
+        &std::fs::read(destination.join("v3a9.can3"))?,
+        &mut returned,
+    )?;
+    assert_eq!(returned.mesh_order().len(), original.mesh_order().len());
+    assert_eq!(returned.motion_order().len(), 27);
+    assert_eq!(returned.expression_order().len(), 8);
+    assert_eq!(returned.motion_groups(), original.motion_groups());
+    let mut animation_reference = Vec::new();
+    for id in original.expression_order() {
+        let before = original.get_expression(id).unwrap();
+        let after = returned.get_expression(id).unwrap();
+        assert_eq!(after.name, before.name);
+        assert_eq!(after.entries.len(), before.entries.len());
+        let mut reference_tracks = Vec::new();
+        for entry in &before.entries {
+            use kasane_core::document::{ExpressionBlend, ExpressionTarget};
+            let ExpressionTarget::Resolved { parameter_id } = &entry.target else {
+                panic!("unresolved fixture expression")
+            };
+            let default = original.get_parameter(parameter_id).unwrap().default_value;
+            let expected = match entry.blend.unwrap_or(ExpressionBlend::Add) {
+                ExpressionBlend::Add => default + entry.value,
+                ExpressionBlend::Multiply => default * entry.value,
+                ExpressionBlend::Overwrite => entry.value,
+            };
+            let parameter = original.get_parameter(parameter_id).unwrap();
+            let expected = expected.clamp(parameter.minimum, parameter.maximum);
+            let actual = after
+                .entries
+                .iter()
+                .find(|candidate| candidate.target == entry.target)
+                .unwrap();
+            assert_eq!(actual, entry);
+            let companion: serde_json::Value = serde_json::from_slice(&std::fs::read(
+                destination.join(format!("expression-{id}.exp3.json")),
+            )?)?;
+            let runtime_id = &parameter.runtime_id;
+            let exported = companion["Parameters"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|candidate| candidate["Id"] == *runtime_id)
+                .unwrap();
+            assert_eq!(exported["Blend"], "Multiply");
+            assert!((exported["Value"].as_f64().unwrap() as f32 - entry.value).abs() < 0.000001);
+            reference_tracks.push(serde_json::json!({
+                "attribute": format!("live2dParam_{}", original.get_parameter(parameter_id).unwrap().runtime_id),
+                "values": [expected],
+            }));
+        }
+        animation_reference
+            .push(serde_json::json!({"name":before.name, "tracks":reference_tracks}));
+        for baseline in ["min", "default", "max"] {
+            let mut expected = kasane_sdk::ExpressionPreview::new(&original);
+            let mut actual = kasane_sdk::ExpressionPreview::new(&returned);
+            for preview in [&mut expected, &mut actual] {
+                if baseline != "default" {
+                    for parameter_id in original.parameter_order() {
+                        let parameter = original.get_parameter(parameter_id).unwrap();
+                        preview.set_base_parameter(
+                            parameter_id,
+                            if baseline == "min" {
+                                parameter.minimum
+                            } else {
+                                parameter.maximum
+                            },
+                        )?;
+                    }
+                }
+                preview.schedule_expression(id, 0.)?;
+                let next = original
+                    .expression_order()
+                    .iter()
+                    .find(|candidate| *candidate != id)
+                    .unwrap();
+                preview.schedule_expression(next, 0.5)?;
+            }
+            for _ in 0..60 {
+                assert_eq!(
+                    expected.advance(1. / 60.)?.parameters,
+                    actual.advance(1. / 60.)?.parameters,
+                    "{}: {baseline} baseline and cross-fade",
+                    before.name
+                );
+            }
+        }
+    }
+    let mut samples = 0;
+    let mut original_anchors = 0;
+    let mut exported_anchors = 0;
+    let mut original_beziers = 0;
+    let mut exported_beziers = 0;
+    let mut dense_checks = 0;
+    let mut maximum_error = 0f32;
+    for id in original.motion_order() {
+        let before = original.get_motion(id).unwrap();
+        let after = returned.get_motion(id).unwrap();
+        assert_eq!(after.fps, 60.);
+        assert!((after.duration - before.duration).abs() <= 0.000501);
+        assert_eq!(after.tracks.len(), before.tracks.len());
+        let mut reference_tracks = Vec::new();
+        for track in &before.tracks {
+            let actual = after
+                .tracks
+                .iter()
+                .find(|candidate| candidate.target == track.target)
+                .unwrap();
+            let mut normalized = track.clone();
+            normalized.initial.time = (f64::from(track.initial.time) * 60.).round() as f32 / 60.;
+            let mut start = track.initial.time;
+            let mut normalized_start = normalized.initial.time;
+            let segments = std::sync::Arc::make_mut(&mut normalized.segments);
+            for segment in segments {
+                let old_end = segment.end().time;
+                let new_end = (f64::from(old_end) * 60.).round() as f32 / 60.;
+                if let kasane_core::document::MotionSegment::Bezier {
+                    control1, control2, ..
+                } = segment
+                {
+                    if before.restricted_beziers {
+                        control1.time = normalized_start + (new_end - normalized_start) / 3.;
+                        control2.time = normalized_start + (new_end - normalized_start) * 2. / 3.;
+                    } else {
+                        control1.time = normalized_start
+                            + (new_end - normalized_start) * (control1.time - start)
+                                / (old_end - start);
+                        control2.time = normalized_start
+                            + (new_end - normalized_start) * (control2.time - start)
+                                / (old_end - start);
+                    }
+                }
+                segment.end_mut().time = new_end;
+                start = old_end;
+                normalized_start = new_end;
+            }
+            let source_curve = kasane_sdk::CompiledCurve::from(&normalized);
+            let result_curve = kasane_sdk::CompiledCurve::from(actual);
+            let mut reference_values = Vec::new();
+            let mut extra_checks = Vec::new();
+            for frame in 0..=(before.duration * 60.).round() as usize {
+                let time = frame as f32 / 60.;
+                let expected =
+                    kasane_sdk::sample_motion_curve(&source_curve, time, before.restricted_beziers);
+                let actual =
+                    kasane_sdk::sample_motion_curve(&result_curve, time, after.restricted_beziers);
+                assert!(
+                    (actual - expected).abs() < 0.0001,
+                    "{} {} frame {frame}: {actual} != {expected}",
+                    before.name,
+                    track.id
+                );
+                samples += 1;
+                maximum_error = maximum_error.max((actual - expected).abs());
+                reference_values.push(expected);
+            }
+            original_anchors += track.keys().count();
+            exported_anchors += actual.keys().count();
+            for key in normalized.keys() {
+                assert!(
+                    actual
+                        .keys()
+                        .any(|candidate| (candidate.time - key.time).abs() < 0.000001),
+                    "Original anchor missing: {} {}",
+                    before.name,
+                    key.time
+                );
+            }
+            original_beziers += track
+                .segments
+                .iter()
+                .filter(|s| matches!(s, kasane_core::document::MotionSegment::Bezier { .. }))
+                .count();
+            exported_beziers += actual
+                .segments
+                .iter()
+                .filter(|s| matches!(s, kasane_core::document::MotionSegment::Bezier { .. }))
+                .count();
+            let mut start = normalized.initial.time;
+            for (index, segment) in normalized.segments.iter().enumerate() {
+                if matches!(segment, kasane_core::document::MotionSegment::Bezier { .. }) {
+                    let mut end = segment.end().time;
+                    if normalized.segments.get(index + 1).is_some_and(|s| {
+                        matches!(
+                            s,
+                            kasane_core::document::MotionSegment::InverseStepped { .. }
+                        )
+                    }) {
+                        end -= 1. / 60.;
+                    }
+                    for fraction in [0.125, 0.25, 0.5, 0.75, 0.875] {
+                        let time = start + (end - start) * fraction;
+                        let expected = kasane_sdk::sample_motion_curve(
+                            &source_curve,
+                            time,
+                            before.restricted_beziers,
+                        );
+                        let value = kasane_sdk::sample_motion_curve(
+                            &result_curve,
+                            time,
+                            after.restricted_beziers,
+                        );
+                        assert!(
+                            (value - expected).abs() < 0.0001,
+                            "Bezier changed: {} {} at {time}: {value} != {expected}",
+                            before.name,
+                            track.id
+                        );
+                        maximum_error = maximum_error.max((value - expected).abs());
+                        extra_checks.push(
+                            serde_json::json!({"frame":f64::from(time)*60.,"value":expected}),
+                        );
+                        dense_checks += 1;
+                    }
+                }
+                start = segment.end().time;
+            }
+            use kasane_core::document::MotionTrackTarget;
+            let attribute = match &track.target {
+                MotionTrackTarget::Parameter { parameter_id } => format!(
+                    "live2dParam_{}",
+                    original.get_parameter(parameter_id).unwrap().runtime_id
+                ),
+                MotionTrackTarget::PartOpacity { part_id } => format!(
+                    "live2DPartsOpacity_{}",
+                    original.get_part(part_id).unwrap().runtime_id
+                ),
+                MotionTrackTarget::Model { runtime_id } if runtime_id == "Opacity" => {
+                    "opacity".into()
+                }
+                _ => panic!("unsupported fixture channel"),
+            };
+            reference_tracks
+                .push(serde_json::json!({"attribute":attribute,"values":reference_values,"checks":extra_checks}));
+        }
+        animation_reference
+            .push(serde_json::json!({"name":before.name,"fps":60,"tracks":reference_tracks}));
+    }
+    assert_eq!(original_anchors, 17597);
+    assert_eq!(original_beziers, 1868);
+    assert_eq!(exported_beziers, original_beziers);
+    if std::env::var_os("KASANE_V3A9_EXPORT_OUTPUT").is_some() {
+        std::fs::write(
+            parent.join("animation-reference.json"),
+            serde_json::to_vec(&animation_reference)?,
+        )?;
+        std::fs::write(
+            parent.join("curve-verification.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "fps":60,"original_anchors":original_anchors,"exported_anchors":exported_anchors,
+                "original_beziers":original_beziers,"exported_beziers":exported_beziers,
+                "frame_samples":samples,"bezier_subframe_samples":dense_checks,"maximum_error":maximum_error,
+                "comparison":"Source timestamps restored from millisecond rounding onto the inferred 60 FPS grid; inverse-step final-frame boundary adaptations are reported separately"
+            }))?,
+        )?;
+    }
+    eprintln!(
+        "v3a9: 60 FPS, {original_anchors} original anchors retained ({exported_anchors} exported), {exported_beziers} Beziers, {samples} frame samples, {dense_checks} subframe checks, maximum error {maximum_error}; {}",
+        destination.display()
+    );
+    Ok(())
+}
+
+#[test]
+fn local_v3a9_native_saved_can3_retains_original_expression_operations() -> anyhow::Result<()> {
+    let Some(saved) = std::env::var_os("KASANE_V3A9_NATIVE_SAVED_CAN3") else {
+        eprintln!("SKIP: set KASANE_V3A9_NATIVE_SAVED_CAN3 after the native Cubism save probe");
+        return Ok(());
+    };
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/local/v3a9_315702_nxss.kasane");
+    let original = Document::open(&source)?;
+    let (returned, _) = Document::import_cubism(&PathBuf::from(saved))?;
+    let expressions = original.expression_resources();
+    assert_eq!(expressions.len(), 8);
+    assert_eq!(returned.expression_resources().len(), expressions.len());
+    let mut entries = 0;
+    for expression in expressions {
+        let before = original.expression_definition(&expression.id).unwrap();
+        let after = returned.expression_definition(&expression.id).unwrap();
+        assert_eq!(before.entries, after.entries);
+        assert_eq!(before.fade_in, after.fade_in);
+        assert_eq!(before.fade_out, after.fade_out);
+        entries += before.entries.len();
+    }
+    eprintln!("Native Cubism save/reimport: restored {entries} original expression operations");
+    Ok(())
+}
+
 /// Native archives retain their author's absolute links. Relocate only a temporary
 /// copy so acceptance never depends on or reads the Downloads original.
 pub(super) fn portable_mao_fixture() -> anyhow::Result<tempfile::TempDir> {

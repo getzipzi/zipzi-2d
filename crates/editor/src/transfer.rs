@@ -101,10 +101,18 @@ impl EditorView {
                 .await;
             let _ = this.update(cx, |view, cx| match result {
                 Ok(publication) => {
-                    if publication.warnings.is_empty() {
+                    if publication.warnings.is_empty() && publication.notices.is_empty() {
                         view.set_status_message(t!("transfer.complete").into_owned(), cx);
                     } else {
-                        view.set_status_message(publication.warnings.join("\n"), cx);
+                        view.set_status_message(
+                            publication
+                                .notices
+                                .into_iter()
+                                .chain(publication.warnings)
+                                .collect::<Vec<_>>()
+                                .join("\n"),
+                            cx,
+                        );
                     }
                 }
                 Err(error) => view.set_edit_error(error.to_string(), cx),
