@@ -331,6 +331,74 @@ fn continuous_candidate_updates_present_inflight_frames_without_rewinding_or_cro
 }
 
 #[test]
+fn ending_value_edits_retains_the_displayed_viewport_until_replacement() -> anyhow::Result<()> {
+    for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
+        for commit in [false, true] {
+            let (mut editor, _assets) = fixture(false, false)?;
+            let document = editor.active_id().unwrap();
+            editor.set_animation_preview_mode(document, mode)?;
+            editor.seek_timeline(document, 0.6)?;
+            let binding = editor.primary_viewport_binding().unwrap();
+            let mut evaluator = AnimationEvaluator::default();
+            let token = editor.begin_timeline_edit(document, "Value scrub")?;
+            editor.update_timeline_edit(document, token, write(2, None, 0.8))?;
+            let candidate = evaluate(&mut editor, &mut evaluator)?;
+            let (shown, _) = editor
+                .animation_viewport_request(binding, candidate.identity)
+                .unwrap();
+            assert!(editor.present_animation_viewport(shown, candidate.snapshot));
+            assert!(editor.can_display_animation_viewport(shown));
+
+            // Release can arrive while a newer drag sample is still in flight.
+            editor.update_timeline_edit(document, token, write(2, None, 0.9))?;
+            let pending = evaluate(&mut editor, &mut evaluator)?;
+            let (pending_viewport, _) = editor
+                .animation_viewport_request(binding, pending.identity)
+                .unwrap();
+            if commit {
+                editor.finish_timeline_edit(document, token)?;
+                assert_ne!(
+                    editor.animation().unwrap().model_generation,
+                    shown.content.model_generation
+                );
+            } else {
+                editor.cancel_timeline_edit();
+            }
+            assert!(editor.can_display_animation_viewport(shown));
+            assert!(!editor.can_display_animation_viewport(pending_viewport));
+            assert!(!editor.present_animation(pending.identity, pending.snapshot.clone()));
+            assert!(!editor.present_animation_viewport(pending_viewport, pending.snapshot));
+            assert!(editor.can_display_animation_viewport(shown));
+
+            // CPU evaluation and GPU submission must both leave the old image visible.
+            let replacement = evaluate(&mut editor, &mut evaluator)?;
+            let (replacement_viewport, _) = editor
+                .animation_viewport_request(binding, replacement.identity)
+                .unwrap();
+            assert!(editor.can_display_animation_viewport(shown));
+            assert!(!editor.can_display_animation_viewport(replacement_viewport));
+            assert!(editor.present_animation_viewport(replacement_viewport, replacement.snapshot));
+            assert!(editor.can_display_animation_viewport(replacement_viewport));
+            assert!(!editor.can_display_animation_viewport(shown));
+            assert_eq!(
+                editor.document().unwrap().history_lengths(),
+                (usize::from(commit), 0)
+            );
+
+            if commit {
+                editor.execute(EditorCommand::Undo)?;
+                assert!(editor.can_display_animation_viewport(replacement_viewport));
+            }
+            // Retained images still belong to their original viewport binding.
+            editor.set_viewport_visible(binding.viewport, false);
+            editor.set_viewport_visible(binding.viewport, true);
+            assert!(!editor.can_display_animation_viewport(replacement_viewport));
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn commit_undo_and_modes_reject_old_cpu_and_gpu_candidates() -> anyhow::Result<()> {
     let (mut e, _temp) = fixture(false, false)?;
     let d = e.active_id().unwrap();

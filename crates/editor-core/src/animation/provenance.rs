@@ -274,6 +274,9 @@ impl Editor {
         }
         true
     }
+    /// Retain this viewport's last presented image across recipe and document
+    /// edits until its replacement is ready. Incoming frames still require
+    /// current content provenance in `present_animation_viewport`.
     pub fn can_display_animation_viewport(
         &self,
         identity: crate::AnimationViewportIdentity,
@@ -282,9 +285,6 @@ impl Editor {
             && self
                 .viewport_presentation(identity.binding.viewport)
                 .is_some_and(|state| state.animation == Some(identity))
-            && self.animation().is_some_and(|animation| {
-                animation.model_generation == identity.content.model_generation
-            })
     }
     pub fn accepts_animation_viewport_error(
         &self,
