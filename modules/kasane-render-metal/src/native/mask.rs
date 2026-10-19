@@ -312,16 +312,14 @@ impl FrameEncoder<'_, '_> {
         }
         let all_valid = jobs.iter().all(|(key, _)| {
             self.mask_cache.get(key).is_some_and(|cached| {
-                key.sources.iter().zip(&cached.sources).all(|(id, stamp)| {
-                    let index = self.renderer.scene.mesh_id(id).unwrap().0;
-                    let source = &self.frame.drawables[index];
-                    let texture = self.textures.get(&source.texture_asset_id).unwrap();
-                    stamp.geometry == self.renderer.meshes[index].revision
-                        && stamp.texture == texture.view as *const TextureRef as usize
-                        && stamp.revision.is_some()
-                        && stamp.revision == self.textures.revision(&source.texture_asset_id)
-                        && stamp.repeat == self.textures.repeats(&source.texture_asset_id)
-                })
+                key.sources.len() == cached.sources.len()
+                    && key.sources.iter().zip(&cached.sources).all(|(id, stamp)| {
+                        let index = self.renderer.scene.mesh_id(id).unwrap().0;
+                        stamp.revision.is_some()
+                            && self
+                                .mask_source_stamp(index)
+                                .is_ok_and(|current| *stamp == current)
+                    })
             })
         });
         let logical_bytes = self.attachment_bytes;
@@ -426,6 +424,22 @@ impl FrameEncoder<'_, '_> {
         Ok(())
     }
 
+    /// Atlas validation and individual masks must compare the same source state.
+    fn mask_source_stamp(&self, index: usize) -> Result<MaskSourceStamp, Status> {
+        let source = &self.frame.drawables[index];
+        let texture = self
+            .textures
+            .get(&source.texture_asset_id)
+            .ok_or_else(|| Status::error("MISSING_TEXTURE", &source.texture_asset_id))?;
+        Ok(MaskSourceStamp {
+            double_sided: source.double_sided,
+            geometry: self.renderer.meshes[index].revision,
+            texture: texture.view as *const TextureRef as usize,
+            revision: self.textures.revision(&source.texture_asset_id),
+            repeat: self.textures.repeats(&source.texture_asset_id),
+        })
+    }
+
     fn encode_mask(
         &mut self,
         id: &str,
@@ -450,20 +464,7 @@ impl FrameEncoder<'_, '_> {
             .collect::<Result<_, _>>()?;
         let stamps: Vec<_> = source_indices
             .iter()
-            .map(|&index| {
-                let source = &self.frame.drawables[index];
-                let texture = self
-                    .textures
-                    .get(&source.texture_asset_id)
-                    .ok_or_else(|| Status::error("MISSING_TEXTURE", &source.texture_asset_id))?;
-                Ok(MaskSourceStamp {
-                    double_sided: source.double_sided,
-                    geometry: self.renderer.meshes[index].revision,
-                    texture: texture.view as *const TextureRef as usize,
-                    revision: self.textures.revision(&source.texture_asset_id),
-                    repeat: self.textures.repeats(&source.texture_asset_id),
-                })
-            })
+            .map(|&index| self.mask_source_stamp(index))
             .collect::<Result<_, Status>>()?;
         // Unversioned textures may be changed in-place by the host. They can
         // share a mask within this encoding, but never reuse an earlier frame.

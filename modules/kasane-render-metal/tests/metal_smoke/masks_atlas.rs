@@ -564,3 +564,81 @@ fn atlas_cache_edits_and_transition_preserve_submitted_frames() {
     assert_eq!(pixels[2], pixels[3]);
     assert_eq!(pixel(4, 4), [64, 0, 0, 64]);
 }
+
+#[test]
+fn culling_changes_rebuild_the_atlas_and_preserve_warm_cache_hits() {
+    let context = MetalContext::new().unwrap();
+    let texture = context.upload_rgba8(1, 1, &[255; 4], &[]).unwrap();
+    let mut catalog = MetalTextureCatalog::new(HashMap::from([(
+        "solid".into(),
+        MetalTexture {
+            view: &texture,
+            width: 1,
+            height: 1,
+        },
+    )]));
+    catalog.set_revision("solid", 1);
+    let target = MetalTargetConfig {
+        width: 64,
+        height: 64,
+        format: MTLPixelFormat::RGBA8Unorm,
+    };
+    let output = context.output_texture(target).unwrap();
+    let mut renderer = MetalRenderer::new(&context, target).unwrap();
+    let mut frame = DrawableFrame::default();
+    for i in 0..40 {
+        let mut source = quad(&format!("mask-{i}"), "solid");
+        source.visible = false;
+        let mut consumer = quad(&format!("consumer-{i}"), "solid");
+        consumer.masks = vec![source.id.clone()];
+        frame.drawables.extend([source, consumer]);
+    }
+    renderer.sync_model(&frame, &catalog).unwrap();
+    renderer
+        .update_view(ViewportConfig {
+            transform: Affine2 {
+                b: Vec2::new(0., -1.),
+                ..Affine2::IDENTITY
+            },
+            target_extent: Vec2::new(64., 64.),
+            mask_scale: 1.,
+        })
+        .unwrap();
+    for (step, double_sided) in [true, true, false, false, true, true]
+        .into_iter()
+        .enumerate()
+    {
+        for source in frame.drawables.iter_mut().step_by(2) {
+            source.double_sided = double_sided;
+        }
+        renderer.sync_model(&frame, &catalog).unwrap();
+        let command = context.queue().new_command_buffer();
+        let stats = renderer
+            .encode(command, &output, MetalOutputMode::Replace, &catalog)
+            .unwrap();
+        command.commit();
+        command.wait_until_completed();
+        assert_eq!(
+            command.status(),
+            kasane_render_metal::metal::MTLCommandBufferStatus::Completed
+        );
+        assert_eq!(
+            center(&read_rgba8(&output).unwrap()),
+            if double_sided { [255; 4] } else { [0; 4] }
+        );
+        if step % 2 == 0 {
+            assert_eq!(stats.masks, 40);
+            assert_eq!(
+                stats.render_passes, 2,
+                "step {step}: changed masks must remain in one atlas pass"
+            );
+        } else {
+            assert_eq!(stats.masks, 0);
+            assert_eq!(stats.mask_cache_hits, 40);
+            assert_eq!(stats.render_passes, 1);
+        }
+        if step != 0 {
+            assert_eq!(stats.buffer_uploads, 0);
+        }
+    }
+}
