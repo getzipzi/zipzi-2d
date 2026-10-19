@@ -69,6 +69,7 @@ struct Drag {
 pub(crate) struct SlideNumberInput {
     input: Entity<InputState>,
     label: SharedString,
+    suffix: Option<SharedString>,
     options: SlideNumberOptions,
     focus: FocusHandle,
     drag: Option<Drag>,
@@ -100,12 +101,25 @@ impl SlideNumberInput {
             }),
             input,
             label: label.into(),
+            suffix: None,
             options,
             focus: cx.focus_handle().tab_stop(false),
             drag: None,
             truncate_to_integer: false,
             sliding_value_format: |value| (value as f32).to_string(),
             ignore_mouse_move: None,
+        }
+    }
+
+    pub fn suffix(mut self, suffix: impl Into<SharedString>) -> Self {
+        self.suffix = Some(suffix.into());
+        self
+    }
+
+    pub fn set_suffix(&mut self, suffix: Option<SharedString>, cx: &mut Context<Self>) {
+        if self.suffix != suffix {
+            self.suffix = suffix;
+            cx.notify();
         }
     }
 
@@ -364,6 +378,9 @@ impl Render for SlideNumberInput {
                                 .line_height(compact::rem(14.))
                                 .text_align(TextAlign::Right)
                                 .font_family(".AppleSystemUIFontMonospaced")
+                                .when_some(self.suffix.clone(), |input, suffix| {
+                                    input.suffix(suffix)
+                                })
                                 .disabled(disabled)
                                 .aria_label(self.label.clone()),
                         ),
@@ -391,6 +408,9 @@ impl Render for SlideNumberInput {
                                 .text_color(theme.foreground)
                                 .overflow_hidden()
                                 .child((self.sliding_value_format)(self.options.value))
+                                .when_some(self.suffix.clone(), |surface, suffix| {
+                                    surface.gap(px(4.)).pr(px(8.)).child(suffix)
+                                })
                         })
                         .cursor(if disabled {
                             CursorStyle::Arrow

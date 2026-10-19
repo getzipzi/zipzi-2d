@@ -1,5 +1,6 @@
 mod controls;
 mod observe;
+mod rich_controls;
 mod rows;
 use crate::properties;
 use crate::ui::property_details as details;
@@ -28,6 +29,7 @@ pub struct PropertiesPanel {
     readonly_builds: u64,
     controls: std::collections::HashMap<PropertyKey, FieldControl>,
     selects: std::collections::HashMap<PropertyKey, controls::SelectControl>,
+    colors: std::collections::HashMap<PropertyKey, rich_controls::ColorControl>,
     preview: Option<(PropertyKey, editor_core::PropertyEditToken)>,
     epoch: u64,
     context: Option<editor_core::EditingContextToken>,
@@ -86,6 +88,7 @@ impl PropertiesPanel {
                 readonly_builds: 0,
                 controls: Default::default(),
                 selects: Default::default(),
+                colors: Default::default(),
                 preview: None,
                 epoch: 0,
                 context: None,

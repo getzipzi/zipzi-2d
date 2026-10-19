@@ -92,20 +92,25 @@ enum Gesture {
 
 enum PendingOriginal {
     Controls(crate::control_edit::EditOriginal),
-    Properties(crate::ObjectRef, crate::PropertyValues),
+    Properties(
+        crate::ObjectRef,
+        crate::PropertyValues,
+        crate::PropertyScope,
+    ),
 }
 impl PendingOriginal {
     fn id(&self) -> &str {
         match self {
             Self::Controls(original) => original.id(),
-            Self::Properties(object, _) => &object.id,
+            Self::Properties(object, _, _) => &object.id,
         }
     }
     fn unchanged(&self, model: &kasane_core::Document) -> bool {
         match self {
             Self::Controls(original) => original.unchanged(model),
-            Self::Properties(object, values) => {
-                crate::property::values_from(model, object).is_ok_and(|current| current == *values)
+            Self::Properties(object, values, scope) => {
+                Document::property_values_in(model, object, scope)
+                    .is_ok_and(|current| current == *values)
             }
         }
     }

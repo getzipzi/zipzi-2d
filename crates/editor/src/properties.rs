@@ -4,6 +4,7 @@ mod animation;
 mod details;
 mod document;
 pub(crate) mod form;
+mod mesh;
 mod parameter;
 mod scene;
 
@@ -23,6 +24,7 @@ pub(crate) struct PropertyTarget {
     pub document: DocumentId,
     pub context: EditingContext,
     pub object: ObjectRef,
+    pub scope: editor_core::PropertyScope,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -38,6 +40,8 @@ pub(crate) enum FieldEditor {
     Toggle,
     Number,
     OptionalNumber,
+    Color,
+    References,
 }
 
 #[derive(Clone, Copy)]
@@ -47,6 +51,7 @@ pub(crate) struct FieldSpec {
     pub editor: FieldEditor,
     pub searchable: bool,
     pub choices: Option<fn(&Document) -> Vec<Choice>>,
+    pub scale: f64,
     bounds: Option<fn(&PropertyValues, PropertyKey) -> (f64, f64)>,
 }
 impl FieldSpec {
@@ -60,6 +65,8 @@ impl FieldSpec {
                     PropertyType::Integer | PropertyType::Float
                 )
                 | (FieldEditor::OptionalNumber, PropertyType::OptionalFloat)
+                | (FieldEditor::Color, PropertyType::Color)
+                | (FieldEditor::References, PropertyType::References)
         ));
         Self {
             binding,
@@ -68,13 +75,22 @@ impl FieldSpec {
             searchable: false,
             choices: None,
             bounds: None,
+            scale: 1.,
         }
     }
 
     fn choices(mut self, searchable: bool, choices: fn(&Document) -> Vec<Choice>) -> Self {
-        assert_eq!(self.editor, FieldEditor::Select);
+        assert!(matches!(
+            self.editor,
+            FieldEditor::Select | FieldEditor::References
+        ));
         self.searchable = searchable;
         self.choices = Some(choices);
+        self
+    }
+
+    fn percent(mut self) -> Self {
+        self.scale = 100.;
         self
     }
 
@@ -164,6 +180,7 @@ pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
     Some(PropertyTarget {
         document: inspection.document,
         context: inspection.context,
+        scope: editor.document()?.property_scope(&object),
         object,
     })
 }

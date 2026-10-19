@@ -31,6 +31,7 @@ fn mesh_draw_order_and_opacity_edit_validate_and_restore_automatic_order(cx: &mu
     let object = harness.view.read_with(cx, |view, _| {
         view.editor.active_inspection().unwrap().object().unwrap()
     });
+    show(&harness, "property-custom-draw_order", cx);
     cx.update_window(harness.window, |_, window, cx| {
         assert!(window.try_find("property-input-draw_order").is_none());
         window.click("property-custom-draw_order", cx);
@@ -39,7 +40,7 @@ fn mesh_draw_order_and_opacity_edit_validate_and_restore_automatic_order(cx: &mu
     })
     .unwrap();
     fill(&harness, "property-input-draw_order", "-12.5", cx);
-    fill(&harness, "property-input-opacity", "0.35", cx);
+    fill(&harness, "property-input-opacity", "35", cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.press("enter", cx);
         window.render_frame(cx);
@@ -58,7 +59,7 @@ fn mesh_draw_order_and_opacity_edit_validate_and_restore_automatic_order(cx: &mu
         );
         assert_eq!(doc.history_lengths(), (3, 0));
     });
-    fill(&harness, "property-input-opacity", "1.5", cx);
+    fill(&harness, "property-input-opacity", "150", cx);
     cx.update_window(harness.window, |_, window, cx| {
         window.press("enter", cx);
         window.render_frame(cx);
@@ -88,7 +89,7 @@ fn mesh_draw_order_and_opacity_edit_validate_and_restore_automatic_order(cx: &mu
                 .read(cx)
                 .value()
                 .as_ref(),
-            "0.35"
+            "35"
         );
         window.click("property-custom-draw_order", cx);
         window.render_frame(cx);
@@ -229,9 +230,10 @@ fn part_properties_edit_text_and_toggles_with_document_history(cx: &mut TestAppC
     });
 }
 
-pub(super) fn fill(harness: &super::Harness, field: &str, text: &str, cx: &mut TestAppContext) {
+pub(super) fn show(harness: &super::Harness, field: &str, cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         window.activate_window();
+        let mut searched_from_top = false;
         for _ in 0..60 {
             let viewport = window.find("object-properties").bounds();
             let bounds = window
@@ -241,6 +243,19 @@ pub(super) fn fill(harness: &super::Harness, field: &str, text: &str, cx: &mut T
                 bounds.top() >= viewport.top() && bounds.bottom() <= viewport.bottom()
             }) {
                 break;
+            }
+            if bounds.is_none() && !searched_from_top {
+                searched_from_top = true;
+                window.scroll(
+                    "object-properties",
+                    gpui_kit::ScrollDelta::Pixels(gpui_kit::point(
+                        gpui_kit::px(0.),
+                        gpui_kit::px(100_000.),
+                    )),
+                    cx,
+                );
+                window.render_frame(cx);
+                continue;
             }
             let delta = if bounds.is_some_and(|bounds| bounds.top() < viewport.top()) {
                 32.
@@ -257,6 +272,13 @@ pub(super) fn fill(harness: &super::Harness, field: &str, text: &str, cx: &mut T
             );
             window.render_frame(cx);
         }
+    })
+    .unwrap();
+}
+
+pub(super) fn fill(harness: &super::Harness, field: &str, text: &str, cx: &mut TestAppContext) {
+    show(harness, field, cx);
+    cx.update_window(harness.window, |_, window, cx| {
         window.click(field.to_owned(), cx);
         window.press("cmd-a", cx);
         window.input(text, cx);
@@ -407,6 +429,7 @@ fn properties_external_conflict_restores_latest_value_without_overwriting_it(
     harness.view.read_with(cx, |view, _| {
         assert!(view.edit_error.is_some());
         let target = crate::properties::PropertyTarget {
+            scope: Default::default(),
             document: view.editor.active_id().unwrap(),
             context: editor_core::EditingContext::Modeling,
             object: part,

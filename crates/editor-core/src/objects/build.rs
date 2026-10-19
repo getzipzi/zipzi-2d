@@ -129,6 +129,8 @@ impl ObjectIndex {
             if let Some(x) = m.get_mesh(id) {
                 let r = ObjectRef::new(K::Mesh, id);
                 s.add(r.clone(),&x.name,json!({"id":x.id,"name":x.name,"runtime_id":x.runtime_id,"part_id":x.part_id,"deformer_id":x.deformer_id,"texture_asset_id":x.texture_asset_id,"appearance":x.appearance,"draw_order":x.draw_order,"blend_mode":x.blend_mode,"enabled":x.enabled,"double_sided":x.double_sided,"inverted_mask":x.inverted_mask,"masks":x.masks,"vertices":x.vertex_ids.len(),"triangles":x.triangles.len()}),Some(x.enabled));
+                let slot = *s.slots.get(&r).unwrap();
+                crate::property::mesh::inspector_fields(x, &mut s.objects[slot].properties);
                 s.ref_edge(&r, R::PartOwner, K::Part, &x.part_id);
                 s.ref_edge(&r, R::DeformParent, K::Deformer, &x.deformer_id);
                 s.ref_edge(&r, R::Resource, K::Texture, &x.texture_asset_id);

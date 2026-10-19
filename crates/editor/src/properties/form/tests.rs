@@ -138,6 +138,7 @@ fn optional_numbers_preserve_resource_default_and_explicit_zero() {
 fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
     let mut editor = Editor::new().unwrap();
     let target = PropertyTarget {
+        scope: Default::default(),
         document: editor.active_id().unwrap(),
         context: EditingContext::Modeling,
         object: editor.document().unwrap().object_index().objects[0]
@@ -200,4 +201,39 @@ fn formatting_is_not_history_and_invalid_numbers_never_become_zero() {
                 .is_err()
         );
     }
+}
+
+#[test]
+fn mesh_hex_and_percent_display_preserve_precision_and_validate_input() {
+    let mut form = PropertyForm::default();
+    let color = PropertyValue::Color([0.1234567, 0.5678912, 0.9876543]);
+    form.sync(
+        ObjectKind::Mesh,
+        [
+            (schema::mesh::MULTIPLY.key, color.clone()),
+            (schema::mesh::OPACITY.key, PropertyValue::Float(0.6)),
+        ]
+        .into(),
+    );
+    assert_eq!(form.fields[&schema::mesh::OPACITY.key].raw, "60");
+    let displayed = form.fields[&schema::mesh::MULTIPLY.key].raw.clone();
+    form.edit(&schema::mesh::MULTIPLY, displayed.to_lowercase());
+    assert_eq!(form.fields[&schema::mesh::MULTIPLY.key].parsed, Ok(color));
+    assert!(
+        form.patch(ObjectKind::Mesh, schema::mesh::MULTIPLY.key)
+            .unwrap()
+            .changes
+            .is_empty()
+    );
+    form.edit(&schema::mesh::OPACITY, "35.5".into());
+    assert_eq!(
+        form.fields[&schema::mesh::OPACITY.key].parsed,
+        Ok(PropertyValue::Float(0.355))
+    );
+    for raw in ["#abc", "#12345678", "#GG0000", "#😀12", ""] {
+        form.edit(&schema::mesh::MULTIPLY, raw.into());
+        assert!(form.fields[&schema::mesh::MULTIPLY.key].parsed.is_err());
+    }
+    form.edit(&schema::mesh::OPACITY, "101".into());
+    assert!(form.fields[&schema::mesh::OPACITY.key].parsed.is_err());
 }

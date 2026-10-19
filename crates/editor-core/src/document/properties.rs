@@ -1,12 +1,80 @@
-//! Atomic scalar edits and owned inspector candidates.
+//! Atomic property edits and owned inspector candidates.
 use super::*;
-use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyValues};
+use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValues};
 use anyhow::bail;
 
 impl Document {
     /// Committed values remain stable while an inspector candidate is displayed.
     pub fn property_values(&self, object: &ObjectRef) -> Result<PropertyValues> {
-        crate::property::values_from(self.session.document(), object)
+        Self::property_values_in(
+            self.session.document(),
+            object,
+            &self.property_scope(object),
+        )
+    }
+
+    pub fn property_scope(&self, object: &ObjectRef) -> PropertyScope {
+        if object.kind != ObjectKind::Mesh {
+            return PropertyScope::Object;
+        }
+        let model = self.session.document();
+        let Some(binding) = model.binding_for_mesh(&object.id) else {
+            return PropertyScope::Object;
+        };
+        let form = binding.keyforms.iter().find(|form| {
+            binding.axes.len() == form.keys.len()
+                && binding.axes.iter().zip(&form.keys).all(|(axis, key)| {
+                    model
+                        .get_parameter(&axis.parameter_id)
+                        .is_some_and(|parameter| {
+                            let value = self
+                                .session
+                                .preview_values()
+                                .get(&axis.parameter_id)
+                                .copied()
+                                .unwrap_or(parameter.default_value)
+                                .clamp(parameter.minimum, parameter.maximum);
+                            // Modeling preview inputs are constrained to the parameter
+                            // range, but repeating parameters still wrap its upper end.
+                            // Match runtime evaluation when choosing the authoring target.
+                            let value = if parameter.repeat {
+                                let range = parameter.maximum - parameter.minimum;
+                                let normalized = (value - parameter.minimum) / range;
+                                let wrapped =
+                                    (normalized - normalized.floor()) * range + parameter.minimum;
+                                if wrapped < parameter.minimum || wrapped >= parameter.maximum {
+                                    parameter.minimum
+                                } else {
+                                    wrapped
+                                }
+                            } else {
+                                value
+                            };
+                            (value - key).abs() < 1e-6
+                        })
+                })
+        });
+        form.map_or(PropertyScope::InterpolatedMesh, |f| {
+            PropertyScope::MeshKeyform {
+                binding: binding.id.clone(),
+                keys: f.keys.iter().map(|v| v.to_bits()).collect(),
+            }
+        })
+    }
+
+    pub(crate) fn property_values_in(
+        model: &kasane_core::Document,
+        object: &ObjectRef,
+        scope: &PropertyScope,
+    ) -> Result<PropertyValues> {
+        if object.kind != ObjectKind::Mesh {
+            return crate::property::values_from(model, object);
+        }
+        let payload = crate::property::mesh::payload(model, &object.id, scope)?;
+        crate::property_specs(object.kind)
+            .iter()
+            .map(|spec| Ok((spec.key, spec.read(&payload)?)))
+            .collect()
     }
 
     pub fn set_object_property(
@@ -36,6 +104,11 @@ impl Document {
             .map(|s| (s.key, current[&s.key].clone()))
             .collect();
         Ok(PropertyPatch {
+            scope: if spec.keyframed {
+                self.property_scope(object)
+            } else {
+                PropertyScope::Object
+            },
             expected,
             changes: [(spec.key, spec.decode(value)?)].into(),
         })
@@ -62,6 +135,17 @@ impl Document {
                 .find(|s| s.key == *id)
                 .ok_or_else(|| anyhow!("This property is read only"))?;
             spec.validate(value)?;
+            ensure!(!spec.readonly, "This property is read only");
+            if spec.keyframed {
+                ensure!(
+                    patch.scope != PropertyScope::InterpolatedMesh,
+                    "Select a stored keyform before editing this property"
+                );
+                ensure!(
+                    patch.scope == self.property_scope(object),
+                    "Keyform target changed"
+                );
+            }
             ensure!(
                 specs
                     .iter()
@@ -70,7 +154,11 @@ impl Document {
                 "Missing property baseline"
             );
         }
-        let mut payload = crate::property::object_payload(self.session.document(), object)?;
+        let mut payload = if object.kind == ObjectKind::Mesh {
+            crate::property::mesh::payload(self.session.document(), &object.id, &patch.scope)?
+        } else {
+            crate::property::object_payload(self.session.document(), object)?
+        };
         for (id, value) in &patch.changes {
             let spec = specs
                 .iter()
@@ -79,6 +167,67 @@ impl Document {
             spec.write(&mut payload, value)?;
         }
         Ok(payload)
+    }
+
+    fn apply_properties(
+        &self,
+        edit: &mut EditSession<'_>,
+        object: &ObjectRef,
+        patch: &PropertyPatch,
+        payload: serde_json::Value,
+    ) -> Result<()> {
+        if object.kind != ObjectKind::Mesh {
+            return replace(edit, object.kind, payload);
+        }
+        use crate::property::mesh;
+        let original = self
+            .session
+            .document()
+            .get_mesh(&object.id)
+            .ok_or_else(|| anyhow!("Mesh no longer exists"))?;
+        let mut next: kasane_core::Mesh = serde_json::from_value(payload.clone())?;
+        if patch.changes.contains_key(&mesh::COLOR_BLEND.key)
+            || patch.changes.contains_key(&mesh::ALPHA_BLEND.key)
+        {
+            mesh::normalize_blend(&mut next, &payload)?;
+        }
+        next.double_sided = !payload["culling"].as_bool().unwrap();
+        let pose_changed = patch.changes.keys().any(|key| {
+            crate::property_specs(ObjectKind::Mesh)
+                .iter()
+                .any(|spec| spec.key == *key && spec.keyframed)
+        });
+        if let Some((binding, form)) =
+            mesh::keyform(self.session.document(), &object.id, &patch.scope)?
+        {
+            if pose_changed {
+                let mut form = form.clone();
+                form.appearance = next.appearance;
+                form.draw_order = next.draw_order;
+                edit.set_mesh_keyform(binding, form)?;
+            }
+            next.appearance = original.appearance;
+            next.draw_order = original.draw_order;
+        }
+        // Prepare against the same policy as tree moves, and include ordering
+        // and legacy drawing-group protection in this single history step.
+        let plan = if next.part_id != original.part_id {
+            self.prepare_organization_move(
+                object,
+                crate::OrganizationDestination::Part(
+                    (!next.part_id.is_empty()).then(|| next.part_id.clone()),
+                ),
+            )?
+        } else {
+            None
+        };
+        if let Some(plan) = plan {
+            plan.apply(edit, object)?;
+        }
+        if &next != original {
+            edit.replace_mesh(next)?;
+        }
+        Ok(())
     }
 
     fn parameter_from_payload(
@@ -128,7 +277,7 @@ impl Document {
             )?;
         } else {
             let mut edit = self.session.begin_owned_edit("Validate properties", None)?;
-            replace(&mut edit, object.kind, payload)?;
+            self.apply_properties(&mut edit, object, patch, payload)?;
         }
         Ok(())
     }
@@ -160,7 +309,7 @@ impl Document {
         let mut edit = self
             .session
             .begin_owned_edit("Edit object properties", None)?;
-        replace(&mut edit, object.kind, payload)?;
+        self.apply_properties(&mut edit, object, patch, payload)?;
         let receipt = edit.commit_to(&mut self.session)?;
         self.session.drain_events();
         if receipt.changed {
@@ -183,7 +332,7 @@ impl Document {
         self.property_edit_serial() == Some(serial)
             && self.pending.as_ref().is_some_and(|pending| {
                 matches!(&pending.original,
-                PendingOriginal::Properties(target, _) if target == object)
+                PendingOriginal::Properties(target, _, scope) if target == object && (*scope == PropertyScope::Object || *scope == self.property_scope(object)))
             })
     }
 
@@ -215,12 +364,12 @@ impl Document {
     ) -> Result<u64> {
         self.validate_property_preview(object, patch)?;
         self.finish_edit()?;
-        let original = self.property_values(object)?;
+        let original = Self::property_values_in(self.session.document(), object, &patch.scope)?;
         self.next_property_edit += 1;
         let serial = self.next_property_edit;
         self.pending = Some(PendingEdit {
             kind: Gesture::Properties(serial),
-            original: PendingOriginal::Properties(object.clone(), original),
+            original: PendingOriginal::Properties(object.clone(), original, patch.scope.clone()),
             edit: self
                 .session
                 .begin_owned_edit("Edit object property", None)?,
@@ -256,7 +405,13 @@ impl Document {
         let mut edit = self
             .session
             .begin_owned_edit("Edit object property", None)?;
-        replace(&mut edit, object.kind, payload)?;
+        self.apply_properties(&mut edit, object, patch, payload)?;
+        let keyform_order = |model: &kasane_core::Document| {
+            crate::property::mesh::keyform(model, &object.id, &patch.scope)
+                .map(|form| form.map(|(_, form)| form.draw_order))
+        };
+        let keyform_order_changed = keyform_order(edit.candidate_document())?
+            != keyform_order(self.pending.as_ref().unwrap().edit.candidate_document())?;
         let mut preview = PreviewState::default();
         preview
             .replace(
@@ -274,8 +429,11 @@ impl Document {
         self.projection_revision += 1;
         if let Some((revision, index)) = self.object_index.get_mut().unwrap() {
             if *revision == previous_revision
-                && Arc::make_mut(index)
-                    .refresh_property_preview(pending.edit.candidate_document(), object)
+                && Arc::make_mut(index).refresh_property_preview(
+                    pending.edit.candidate_document(),
+                    object,
+                    keyform_order_changed,
+                )
             {
                 *revision = self.projection_revision;
             }

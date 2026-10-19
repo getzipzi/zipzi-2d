@@ -68,6 +68,28 @@ impl Document {
         source: &ObjectRef,
         destination: OrganizationDestination,
     ) -> Result<()> {
+        let Some(plan) = self.prepare_organization_move(source, destination)? else {
+            return Ok(());
+        };
+        self.finish_edit()?;
+        self.session.edit(
+            if plan.parent_changed {
+                "Move Part assignment"
+            } else {
+                "Reorder hierarchy"
+            },
+            None,
+            |edit| plan.apply(edit, source),
+        )?;
+        self.sorted();
+        Ok(())
+    }
+
+    pub(crate) fn prepare_organization_move(
+        &self,
+        source: &ObjectRef,
+        destination: OrganizationDestination,
+    ) -> Result<Option<OrganizationMove>> {
         fn index(
             nodes: &[TreeNode],
             parent: &str,
@@ -163,50 +185,19 @@ impl Document {
                 .filter(|id| is_sibling(id))
                 .eq(ids.iter().filter(|id| is_sibling(id)))
         {
-            return Ok(());
+            return Ok(None);
         }
         let mut order = self.model().hierarchy_order().clone();
         order.organization = ids;
-        let offscreen = self.model().get_offscreen(&source.id).cloned();
         let parent_changed = old_parent != &parent;
-        self.finish_edit()?;
-        // Legacy projects derive drawing groups from Part ownership. Preserve that
-        // drawing hierarchy before changing organization, including its tie order
-        // and animated draw-order ranges, rather than freezing one evaluated pose.
         let drawing_groups = (parent_changed && self.model().draw_order_groups().is_none())
             .then(|| kasane_core::draw_order::resolved_groups(self.model()));
-        self.session.edit(
-            if parent_changed {
-                "Move Part assignment"
-            } else {
-                "Reorder hierarchy"
-            },
-            None,
-            |edit| {
-                if let Some(groups) = drawing_groups {
-                    edit.replace_draw_order_groups(groups)?;
-                }
-                if parent_changed {
-                    match source.kind {
-                        ObjectKind::Part => edit.set_organization_parent(&source.id, &parent)?,
-                        ObjectKind::Mesh => edit.set_mesh_part(&source.id, &parent)?,
-                        ObjectKind::Deformer => edit.set_transform_part(
-                            &source.id,
-                            (!parent.is_empty()).then(|| parent.clone().into()),
-                        )?,
-                        ObjectKind::Offscreen => {
-                            let mut offscreen = offscreen.unwrap();
-                            offscreen.part_id = parent;
-                            edit.replace_offscreen(offscreen)?;
-                        }
-                        _ => unreachable!("Only organization tree objects enter the index"),
-                    }
-                }
-                edit.replace_hierarchy_order(order)
-            },
-        )?;
-        self.sorted();
-        Ok(())
+        Ok(Some(OrganizationMove {
+            parent,
+            parent_changed,
+            order,
+            drawing_groups,
+        }))
     }
 
     pub fn reorder_tree(
@@ -484,4 +475,45 @@ pub(crate) fn ordered_parameter_ids(model: &kasane_core::Document) -> Vec<String
         .filter(|id| model.get_parameter(id).is_some() && seen.insert((*id).clone()))
         .cloned()
         .collect()
+}
+
+/// Prepared once against the editor's lock and hierarchy rules, then applied
+/// inside either a tree move or an inspector's atomic property transaction.
+pub(crate) struct OrganizationMove {
+    parent: String,
+    parent_changed: bool,
+    order: kasane_core::document::HierarchyOrder,
+    drawing_groups: Option<Vec<kasane_core::draw_order::DrawOrderGroup>>,
+}
+impl OrganizationMove {
+    pub(crate) fn apply(
+        self,
+        edit: &mut kasane_sdk::EditSession<'_>,
+        source: &ObjectRef,
+    ) -> std::result::Result<(), kasane_sdk::SdkError> {
+        if let Some(groups) = self.drawing_groups {
+            edit.replace_draw_order_groups(groups)?;
+        }
+        if self.parent_changed {
+            match source.kind {
+                ObjectKind::Part => edit.set_organization_parent(&source.id, &self.parent)?,
+                ObjectKind::Mesh => edit.set_mesh_part(&source.id, &self.parent)?,
+                ObjectKind::Deformer => edit.set_transform_part(
+                    &source.id,
+                    (!self.parent.is_empty()).then(|| self.parent.clone().into()),
+                )?,
+                ObjectKind::Offscreen => {
+                    let mut offscreen = edit
+                        .candidate_document()
+                        .get_offscreen(&source.id)
+                        .unwrap()
+                        .clone();
+                    offscreen.part_id = self.parent;
+                    edit.replace_offscreen(offscreen)?;
+                }
+                _ => unreachable!("Only organization objects enter the tree"),
+            }
+        }
+        edit.replace_hierarchy_order(self.order)
+    }
 }

@@ -11,6 +11,7 @@ mod hierarchy;
 mod input_routing;
 mod mesh_generation;
 mod mesh_generation_preview;
+mod mesh_properties;
 mod panel_toolbar;
 mod parameter_creation;
 mod parameter_groups;

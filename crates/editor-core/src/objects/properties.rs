@@ -3,12 +3,13 @@ use super::ObjectKind;
 use serde_json::{Value, json};
 
 impl super::ObjectIndex {
-    /// Inspector numeric candidates preserve identities and relation edges. Copy
-    /// their scalar payloads without rebuilding bindings or influence paths.
+    /// Appearance candidates preserve identities and relation edges. Copy their
+    /// payloads without rebuilding bindings or influence paths.
     pub(crate) fn refresh_property_preview(
         &mut self,
         model: &kasane_core::Document,
         object: &super::ObjectRef,
+        keyform_order_changed: bool,
     ) -> bool {
         let Ok(values) = crate::property::values_from(model, object) else {
             return false;
@@ -16,7 +17,7 @@ impl super::ObjectIndex {
         let Some(&slot) = self.slots.get(object) else {
             return false;
         };
-        let mut draw_order_changed = false;
+        let mut draw_order_changed = keyform_order_changed;
         for spec in crate::property_specs(object.kind)
             .iter()
             .filter(|s| s.preview)
@@ -43,11 +44,11 @@ impl super::ObjectIndex {
     }
 }
 
-/// Only scalar authoring fields with existing SDK validation get inspector controls.
+/// Writable authoring fields are guarded by the same descriptor policy as the inspector.
 pub fn editable_property(kind: ObjectKind, field: &str) -> bool {
     crate::property_specs(kind)
         .iter()
-        .any(|spec| spec.path == field)
+        .any(|spec| spec.path == field && !spec.readonly)
 }
 
 pub(super) fn deformer_properties(x: &kasane_core::Transform) -> Value {

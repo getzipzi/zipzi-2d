@@ -13,6 +13,7 @@ fn patch(
         .filter(|spec| changes.iter().any(|(id, _)| *id == spec.key))
         .collect();
     PropertyPatch {
+        scope: doc.property_scope(target),
         expected: property_specs(target.kind)
             .iter()
             .filter(|s| groups.iter().any(|group| s.same_group(group)))
@@ -958,6 +959,7 @@ fn object_scoped_keys_reject_foreign_fields_and_resolve_canonical_paths() -> any
     let baseline = doc.property_values(&object)?;
     let history = doc.history_lengths();
     let foreign = PropertyPatch {
+        scope: PropertyScope::Object,
         expected: [(schema::mesh::ENABLED.key, PropertyValue::Bool(true))].into(),
         changes: [(schema::mesh::ENABLED.key, PropertyValue::Bool(false))].into(),
     };

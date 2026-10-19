@@ -33,6 +33,8 @@ pub enum PropertyType {
     Integer,
     Float,
     OptionalFloat,
+    Color,
+    References,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -42,6 +44,8 @@ pub enum PropertyValue {
     Integer(i64),
     Float(f32),
     OptionalFloat(Option<f32>),
+    Color([f32; 3]),
+    References(Vec<String>),
 }
 impl PropertyValue {
     pub fn json(&self) -> Value {
@@ -51,6 +55,8 @@ impl PropertyValue {
             Self::Integer(v) => Value::from(*v),
             Self::Float(v) => serde_json::json!(v),
             Self::OptionalFloat(v) => serde_json::json!(v),
+            Self::Color(v) => serde_json::json!(v),
+            Self::References(v) => serde_json::json!(v),
         }
     }
     pub fn text(&self) -> String {
@@ -60,6 +66,13 @@ impl PropertyValue {
             Self::Integer(v) => v.to_string(),
             Self::Float(v) => v.to_string(),
             Self::OptionalFloat(v) => v.map_or_else(String::new, |v| v.to_string()),
+            Self::Color(v) => format!(
+                "#{:02X}{:02X}{:02X}",
+                (v[0] * 255.).round() as u8,
+                (v[1] * 255.).round() as u8,
+                (v[2] * 255.).round() as u8
+            ),
+            Self::References(v) => serde_json::to_string(v).unwrap(),
         }
     }
     pub fn number(&self) -> Option<f64> {
@@ -84,6 +97,8 @@ pub struct PropertySpec {
     pub max: f64,
     pub step: f64,
     pub preview: bool,
+    pub readonly: bool,
+    pub keyframed: bool,
 }
 impl PropertySpec {
     pub const fn new(
@@ -104,6 +119,8 @@ impl PropertySpec {
             max: f32::MAX as f64,
             step: 0.1,
             preview: false,
+            readonly: false,
+            keyframed: false,
         }
     }
     pub const fn range(mut self, min: f64, max: f64, step: f64) -> Self {
@@ -118,6 +135,14 @@ impl PropertySpec {
     }
     pub const fn preview(mut self) -> Self {
         self.preview = true;
+        self
+    }
+    pub const fn readonly(mut self) -> Self {
+        self.readonly = true;
+        self
+    }
+    pub const fn keyframed(mut self) -> Self {
+        self.keyframed = true;
         self
     }
     pub const fn trimmed(mut self) -> Self {
@@ -169,6 +194,20 @@ impl PropertySpec {
                 raw.to_owned()
             }),
             PropertyType::Bool => PropertyValue::Bool(raw.parse()?),
+            PropertyType::Color => {
+                let hex = raw.trim().strip_prefix('#').unwrap_or(raw.trim());
+                ensure!(
+                    hex.len() == 6 && hex.bytes().all(|b| b.is_ascii_hexdigit()),
+                    "Enter a color as #RRGGBB"
+                );
+                let color = u32::from_str_radix(hex, 16)?;
+                PropertyValue::Color([
+                    ((color >> 16) & 255) as f32 / 255.,
+                    ((color >> 8) & 255) as f32 / 255.,
+                    (color & 255) as f32 / 255.,
+                ])
+            }
+            PropertyType::References => PropertyValue::References(serde_json::from_str(raw)?),
             PropertyType::Integer => PropertyValue::Integer(raw.trim().parse()?),
             PropertyType::Float | PropertyType::OptionalFloat => {
                 let number: f32 = raw.trim().parse()?;
@@ -202,6 +241,12 @@ impl PropertySpec {
                 }
             }
             (PropertyType::OptionalFloat, Value::Null) => PropertyValue::OptionalFloat(None),
+            (PropertyType::Color, Value::Array(_)) => {
+                PropertyValue::Color(serde_json::from_value(value.clone())?)
+            }
+            (PropertyType::References, Value::Array(_)) => {
+                PropertyValue::References(serde_json::from_value(value.clone())?)
+            }
             _ => bail!("Invalid property type: {}", self.path),
         };
         self.validate(&next)?;
@@ -216,6 +261,8 @@ impl PropertySpec {
                     | (PropertyType::Integer, PropertyValue::Integer(_))
                     | (PropertyType::Float, PropertyValue::Float(_))
                     | (PropertyType::OptionalFloat, PropertyValue::OptionalFloat(_))
+                    | (PropertyType::Color, PropertyValue::Color(_))
+                    | (PropertyType::References, PropertyValue::References(_))
             ),
             "Invalid property type"
         );
@@ -224,6 +271,21 @@ impl PropertySpec {
                 self.allow_empty || !value.trim().is_empty(),
                 "{} cannot be empty",
                 self.path
+            );
+        }
+        if let PropertyValue::Color(color) = value {
+            ensure!(
+                color
+                    .iter()
+                    .all(|v| v.is_finite() && (0. ..=1.).contains(v)),
+                "Color channels must be between 0 and 1"
+            );
+        }
+        if let PropertyValue::References(ids) = value {
+            let unique: std::collections::HashSet<_> = ids.iter().collect();
+            ensure!(
+                unique.len() == ids.len() && ids.iter().all(|id| !id.is_empty()),
+                "References must be nonempty and unique"
             );
         }
         match value {
@@ -277,8 +339,22 @@ pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
 
 pub type PropertyValues = BTreeMap<PropertyKey, PropertyValue>;
 
+/// The pose destination captured when the inspector starts editing. Float keys
+/// use their exact bits so navigation cannot redirect a draft to another form.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub enum PropertyScope {
+    #[default]
+    Object,
+    MeshKeyform {
+        binding: String,
+        keys: Vec<u32>,
+    },
+    InterpolatedMesh,
+}
+
 #[derive(Clone, Debug)]
 pub struct PropertyPatch {
+    pub scope: PropertyScope,
     /// Includes the edited group's dependencies, not unrelated object fields.
     pub expected: PropertyValues,
     pub changes: PropertyValues,
@@ -310,7 +386,7 @@ pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) 
             serde_json::json!({ "export_settings": model.export_settings() })
         }
         K::Part => get!(get_part),
-        K::Mesh => get!(get_mesh),
+        K::Mesh => mesh::payload(model, &object.id, &PropertyScope::Object)?,
         K::Deformer => get!(get_transform),
         K::Parameter => {
             let mut payload = get!(get_parameter);

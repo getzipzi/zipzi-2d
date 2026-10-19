@@ -670,6 +670,7 @@ fn model_enabled_property_is_read_only_and_independent_of_the_editor_eye(cx: &mu
         }
         let history = doc.history_lengths();
         let harness = super::setup_with_document(cx, doc, assets);
+        super::properties::show(&harness, "object-property-enabled", cx);
         cx.update_window(harness.window, |_, window, cx| {
             assert!(window.try_find("object-model-enabled").is_none());
             assert_eq!(window.find("object-property-enabled").checked(), None);

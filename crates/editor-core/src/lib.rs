@@ -15,8 +15,8 @@ mod inspection;
 pub mod property;
 pub use inspection::*;
 pub use property::{
-    PropertyEditToken, PropertyKey, PropertyPatch, PropertySpec, PropertyType, PropertyValue,
-    PropertyValues, property_specs,
+    PropertyEditToken, PropertyKey, PropertyPatch, PropertyScope, PropertySpec, PropertyType,
+    PropertyValue, PropertyValues, property_specs,
 };
 mod editor;
 mod objects;

@@ -160,7 +160,7 @@ impl Document {
                     || pending.topology_changed,
             );
             if changed {
-                let parameter = matches!(&pending.original, PendingOriginal::Properties(object, _) if object.kind == crate::ObjectKind::Parameter);
+                let parameter = matches!(&pending.original, PendingOriginal::Properties(object, _, _) if object.kind == crate::ObjectKind::Parameter);
                 pending.edit.commit_to(&mut self.session)?;
                 if parameter {
                     self.reconcile_parameter_preview()?;

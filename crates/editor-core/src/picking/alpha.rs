@@ -40,6 +40,13 @@ impl CanvasScene {
             else {
                 continue;
             };
+            if !d.double_sided
+                && (pb.x - pa.x) as f64 * (pc.y - pa.y) as f64
+                    - (pb.y - pa.y) as f64 * (pc.x - pa.x) as f64
+                    <= 0.
+            {
+                continue;
+            }
             let Some(w) = barycentric(
                 p,
                 [pa, pb, pc].map(|p| crate::ModelPoint { x: p.x, y: p.y }),

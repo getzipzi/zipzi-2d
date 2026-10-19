@@ -1,6 +1,9 @@
 //! Mesh authoring properties. Identity, storage and editing policy live together.
-use super::{PropertySpec, PropertyType};
+use super::{PropertyScope, PropertySpec, PropertyType};
 use crate::ObjectKind;
+use anyhow::{Result, ensure};
+use kasane_core::{BlendMode, Mesh};
+use serde_json::{Value, json};
 
 pub const NAME: PropertySpec =
     PropertySpec::new(ObjectKind::Mesh, "name", "name", PropertyType::Text);
@@ -19,7 +22,8 @@ pub const DRAW_ORDER: PropertySpec = PropertySpec::new(
     "draw_order",
     PropertyType::OptionalFloat,
 )
-.range(-(f32::MAX as f64), f32::MAX as f64, 1.)
+.range(-32768., 32767., 1.)
+.keyframed()
 .draw_order_preview();
 pub const OPACITY: PropertySpec = PropertySpec::new(
     ObjectKind::Mesh,
@@ -28,6 +32,173 @@ pub const OPACITY: PropertySpec = PropertySpec::new(
     PropertyType::Float,
 )
 .range(0., 1., 0.01)
+.keyframed()
 .preview();
 
-pub const FIELDS: &[PropertySpec] = &[NAME, RUNTIME_ID, ENABLED, DRAW_ORDER, OPACITY];
+pub const PART: PropertySpec =
+    PropertySpec::new(ObjectKind::Mesh, "part_id", "part_id", PropertyType::Text).allow_empty();
+pub const DEFORMER: PropertySpec = PropertySpec::new(
+    ObjectKind::Mesh,
+    "deformer_id",
+    "deformer_id",
+    PropertyType::Text,
+)
+.allow_empty()
+.readonly();
+pub const MASKS: PropertySpec =
+    PropertySpec::new(ObjectKind::Mesh, "masks", "masks", PropertyType::References);
+pub const INVERTED_MASK: PropertySpec = PropertySpec::new(
+    ObjectKind::Mesh,
+    "inverted_mask",
+    "inverted_mask",
+    PropertyType::Bool,
+);
+pub const MULTIPLY: PropertySpec = PropertySpec::new(
+    ObjectKind::Mesh,
+    "multiply",
+    "appearance.multiply",
+    PropertyType::Color,
+)
+.keyframed()
+.preview();
+pub const SCREEN: PropertySpec = PropertySpec::new(
+    ObjectKind::Mesh,
+    "screen",
+    "appearance.screen",
+    PropertyType::Color,
+)
+.keyframed()
+.preview();
+pub const COLOR_BLEND: PropertySpec = PropertySpec::new(
+    ObjectKind::Mesh,
+    "color_blend",
+    "color_blend",
+    PropertyType::Text,
+)
+.grouped("blend");
+pub const ALPHA_BLEND: PropertySpec = PropertySpec::new(
+    ObjectKind::Mesh,
+    "alpha_blend",
+    "alpha_blend",
+    PropertyType::Text,
+)
+.grouped("blend");
+pub const CULLING: PropertySpec =
+    PropertySpec::new(ObjectKind::Mesh, "culling", "culling", PropertyType::Bool);
+
+pub const FIELDS: &[PropertySpec] = &[
+    NAME,
+    RUNTIME_ID,
+    PART,
+    DEFORMER,
+    MASKS,
+    INVERTED_MASK,
+    DRAW_ORDER,
+    OPACITY,
+    MULTIPLY,
+    SCREEN,
+    COLOR_BLEND,
+    ALPHA_BLEND,
+    CULLING,
+    ENABLED,
+];
+
+pub const COLOR_MODES: &[&str] = &[
+    "normal",
+    "add_compatible",
+    "multiply_compatible",
+    "add",
+    "add_glow",
+    "darken",
+    "multiply",
+    "color_burn",
+    "linear_burn",
+    "lighten",
+    "screen",
+    "color_dodge",
+    "overlay",
+    "soft_light",
+    "hard_light",
+    "linear_light",
+    "hue",
+    "color",
+];
+pub const ALPHA_MODES: &[&str] = &["over", "atop", "out", "conjoint_over", "disjoint_over"];
+
+pub(crate) fn inspector_fields(mesh: &Mesh, payload: &mut Value) {
+    let packed = mesh.raw_blend_mode.unwrap_or(match mesh.blend_mode {
+        BlendMode::Normal => 0,
+        BlendMode::Additive => 1,
+        BlendMode::Multiplicative => 2,
+    });
+    let name = |modes: &[&str], code: u32| {
+        modes
+            .get(code as usize)
+            .map_or_else(|| format!("unknown_{code}"), |s| s.to_string())
+    };
+    payload["color_blend"] = json!(name(COLOR_MODES, packed & 255));
+    payload["alpha_blend"] = json!(name(ALPHA_MODES, (packed >> 8) & 255));
+    payload["culling"] = json!(!mesh.double_sided);
+}
+
+pub(crate) fn keyform<'a>(
+    model: &'a kasane_core::Document,
+    id: &str,
+    scope: &PropertyScope,
+) -> Result<Option<(&'a str, &'a kasane_core::MeshKeyform)>> {
+    let PropertyScope::MeshKeyform { binding, keys } = scope else {
+        return Ok(None);
+    };
+    let b = model
+        .binding_for_mesh(id)
+        .filter(|b| b.id == *binding)
+        .ok_or_else(|| anyhow::anyhow!("Mesh binding changed"))?;
+    let form = b
+        .keyforms
+        .iter()
+        .find(|f| f.keys.iter().map(|v| v.to_bits()).eq(keys.iter().copied()))
+        .ok_or_else(|| anyhow::anyhow!("Keyform no longer exists"))?;
+    Ok(Some((&b.id, form)))
+}
+
+pub(crate) fn payload(
+    model: &kasane_core::Document,
+    id: &str,
+    scope: &PropertyScope,
+) -> Result<Value> {
+    let mesh = model
+        .get_mesh(id)
+        .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
+    let mut payload = serde_json::to_value(mesh)?;
+    inspector_fields(mesh, &mut payload);
+    if let Some((_, form)) = keyform(model, id, scope)? {
+        payload["appearance"] = json!(form.appearance);
+        payload["draw_order"] = json!(form.draw_order);
+    }
+    Ok(payload)
+}
+
+pub(crate) fn normalize_blend(mesh: &mut Mesh, payload: &Value) -> Result<()> {
+    let code = |modes: &[&str], field: &str| -> Result<u32> {
+        modes
+            .iter()
+            .position(|m| Some(*m) == payload[field].as_str())
+            .map(|i| i as u32)
+            .ok_or_else(|| anyhow::anyhow!("Unsupported {field}"))
+    };
+    let color = code(COLOR_MODES, "color_blend")?;
+    let alpha = code(ALPHA_MODES, "alpha_blend")?;
+    // Compatible additive/multiply have fixed alpha equations. Do not present
+    // another alpha mode as if the renderer could honor it.
+    ensure!(
+        alpha == 0 || !matches!(color, 1 | 2),
+        "Compatible blend modes require Over alpha blending"
+    );
+    mesh.blend_mode = match color {
+        1 => BlendMode::Additive,
+        2 => BlendMode::Multiplicative,
+        _ => BlendMode::Normal,
+    };
+    mesh.raw_blend_mode = (color >= 3 || alpha != 0).then_some(color | (alpha << 8));
+    Ok(())
+}

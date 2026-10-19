@@ -10,6 +10,7 @@ use super::PropertyTarget;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct FieldDraft {
+    scale: f64,
     pub revision: u64,
     pub baseline: PropertyValue,
     pub raw: String,
@@ -18,10 +19,11 @@ pub(crate) struct FieldDraft {
     pub conflict: bool,
 }
 impl FieldDraft {
-    fn new(value: PropertyValue) -> Self {
+    fn new(value: PropertyValue, scale: f64) -> Self {
         Self {
+            scale,
             revision: 0,
-            raw: value.text(),
+            raw: display_value(&value, scale),
             parsed: Ok(value.clone()),
             baseline: value,
             touched: false,
@@ -38,6 +40,17 @@ impl FieldDraft {
     }
 }
 
+fn display_value(value: &PropertyValue, scale: f64) -> String {
+    if scale != 1. {
+        value.number().map_or_else(
+            || value.text(),
+            |n| ((value.text().parse::<f64>().unwrap_or(n) * scale) as f32).to_string(),
+        )
+    } else {
+        value.text()
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct PropertyForm {
     pub fields: BTreeMap<PropertyKey, FieldDraft>,
@@ -45,19 +58,21 @@ pub(crate) struct PropertyForm {
 }
 impl PropertyForm {
     pub fn sync(&mut self, kind: ObjectKind, values: PropertyValues) {
+        let definition = crate::properties::definition(kind);
         for spec in property_specs(kind) {
             let Some(value) = values.get(&spec.key) else {
                 continue;
             };
+            let scale = definition.field(spec.key).map_or(1., |field| field.scale);
             let field = self
                 .fields
                 .entry(spec.key)
-                .or_insert_with(|| FieldDraft::new(value.clone()));
+                .or_insert_with(|| FieldDraft::new(value.clone(), scale));
             if field.touched {
                 field.conflict = field.baseline != *value;
             } else if field.baseline != *value {
                 let revision = field.revision + 1;
-                *field = FieldDraft::new(value.clone());
+                *field = FieldDraft::new(value.clone(), scale);
                 field.revision = revision;
             }
         }
@@ -65,14 +80,28 @@ impl PropertyForm {
     }
     pub fn edit(&mut self, spec: &PropertySpec, raw: String) {
         if let Some(field) = self.fields.get_mut(&spec.key) {
-            field.parsed = spec.parse(&raw).map_err(|error| error.to_string());
+            field.parsed = if spec.value_type == editor_core::PropertyType::Color
+                && raw.trim().eq_ignore_ascii_case(&field.baseline.text())
+            {
+                Ok(field.baseline.clone())
+            } else if field.scale != 1. {
+                raw.trim()
+                    .parse::<f64>()
+                    .map_err(|error| error.to_string())
+                    .and_then(|number| {
+                        spec.parse(&((number / field.scale) as f32).to_string())
+                            .map_err(|error| error.to_string())
+                    })
+            } else {
+                spec.parse(&raw).map_err(|error| error.to_string())
+            };
             field.raw = raw;
             field.touched = true;
         }
     }
     pub fn set_value(&mut self, spec: &PropertySpec, value: PropertyValue) {
         if let Some(field) = self.fields.get_mut(&spec.key) {
-            field.raw = value.text();
+            field.raw = display_value(&value, field.scale);
             field.parsed = spec
                 .validate(&value)
                 .map(|_| value)
@@ -117,12 +146,16 @@ impl PropertyForm {
         };
         (crate::properties::provider(kind).validate_change)(&self.current, id, value)?;
 
-        Ok(PropertyPatch { expected, changes })
+        Ok(PropertyPatch {
+            scope: Default::default(),
+            expected,
+            changes,
+        })
     }
     pub fn reload_field(&mut self, id: PropertyKey) {
         if let Some(value) = self.current.get(&id) {
             let revision = self.fields.get(&id).map_or(0, |field| field.revision + 1);
-            let mut field = FieldDraft::new(value.clone());
+            let mut field = FieldDraft::new(value.clone(), self.fields[&id].scale);
             field.revision = revision;
             self.fields.insert(id, field);
         }
@@ -167,7 +200,17 @@ impl PropertyForms {
             );
             let current = editor.document().unwrap().property_values(&target.object)?;
             form.sync(target.object.kind, current);
-            let patch = form.patch(target.object.kind, id)?;
+            let mut patch = form.patch(target.object.kind, id)?;
+            if property_specs(target.object.kind)
+                .iter()
+                .any(|spec| spec.key == id && spec.keyframed)
+            {
+                anyhow::ensure!(
+                    editor.document().unwrap().property_scope(&target.object) == target.scope,
+                    "Keyform target changed"
+                );
+                patch.scope = target.scope.clone();
+            }
             if !patch.changes.is_empty() {
                 let context = editor
                     .editing_context_token()

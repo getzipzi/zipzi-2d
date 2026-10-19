@@ -32,6 +32,7 @@ struct ChoiceKey {
 }
 
 pub(super) struct SelectControl {
+    pub(super) reference_scroll: UniformListScrollHandle,
     key: ChoiceKey,
     state: Entity<SelectState<SearchableVec<Choice>>>,
     choices: Vec<Choice>,
@@ -40,8 +41,8 @@ pub(super) struct SelectControl {
 
 pub(super) struct FieldControl {
     pub input: Entity<InputState>,
-    displayed: String,
-    settled: u64,
+    pub(super) displayed: String,
+    pub(super) settled: u64,
     number: Option<Entity<SlideNumberInput>>,
     _events: Vec<Subscription>,
 }
@@ -124,6 +125,7 @@ impl PropertiesPanel {
             self.cancel_preview(cx);
             self.controls.clear();
             self.selects.clear();
+            self.colors.clear();
             self.epoch += 1;
             self.definition = next.as_ref().map_or_else(Default::default, |target| {
                 properties::definition(target.object.kind)
@@ -180,7 +182,7 @@ impl PropertiesPanel {
         }
     }
 
-    fn allowed(&self, epoch: u64, window: &mut Window, cx: &mut App) -> bool {
+    pub(super) fn allowed(&self, epoch: u64, window: &mut Window, cx: &mut App) -> bool {
         self.visible
             && !self.disabled
             && self.epoch == epoch
@@ -201,7 +203,7 @@ impl PropertiesPanel {
             })
     }
 
-    fn field_spec(&self, id: PropertyKey) -> properties::FieldSpec {
+    pub(super) fn field_spec(&self, id: PropertyKey) -> properties::FieldSpec {
         self.definition.field(id).unwrap()
     }
 
@@ -241,11 +243,19 @@ impl PropertiesPanel {
         cx.notify();
     }
 
-    fn set_value(&mut self, id: PropertyKey, value: PropertyValue, cx: &mut Context<Self>) {
+    pub(super) fn set_value(
+        &mut self,
+        id: PropertyKey,
+        value: PropertyValue,
+        cx: &mut Context<Self>,
+    ) {
         let Some(target) = self.target.clone() else {
             return;
         };
         let spec = self.field_spec(id);
+        if spec.binding.readonly {
+            return;
+        }
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |state, cx| {
                 if let Some(form) = state.property_forms.entries.get_mut(&target) {
@@ -282,7 +292,7 @@ impl PropertiesPanel {
         cx.notify();
     }
 
-    fn begin_preview(&mut self, id: PropertyKey, cx: &mut Context<Self>) {
+    pub(super) fn begin_preview(&mut self, id: PropertyKey, cx: &mut Context<Self>) {
         self.cancel_preview(cx);
         let Some(target) = self.target.clone() else {
             return;
@@ -290,6 +300,7 @@ impl PropertiesPanel {
         let Some(owner) = self.owner.upgrade() else {
             return;
         };
+        let keyframed = self.field_spec(id).binding.keyframed;
         let result = owner.update(cx, |state, _| {
             let form = state
                 .property_forms
@@ -297,6 +308,9 @@ impl PropertiesPanel {
                 .get(&target)
                 .ok_or_else(|| anyhow::anyhow!("Form ended"))?;
             let mut patch = form.patch(target.object.kind, id)?;
+            if keyframed {
+                patch.scope = target.scope.clone();
+            }
             patch.changes.insert(id, form.fields[&id].baseline.clone());
             let context = state
                 .editor
@@ -318,6 +332,24 @@ impl PropertiesPanel {
     }
 
     fn update_preview(&mut self, id: PropertyKey, value: f64, cx: &mut Context<Self>) {
+        let field = self.field_spec(id);
+        let value = value / field.scale;
+        let raw = if field.binding.value_type == editor_core::PropertyType::Integer {
+            (value as i64).to_string()
+        } else {
+            (value as f32).to_string()
+        };
+        if let Ok(value) = field.binding.parse(&raw) {
+            self.update_preview_value(id, value, cx);
+        }
+    }
+
+    pub(super) fn update_preview_value(
+        &mut self,
+        id: PropertyKey,
+        value: PropertyValue,
+        cx: &mut Context<Self>,
+    ) {
         let Some((field, token)) = self.preview.clone() else {
             return;
         };
@@ -334,17 +366,14 @@ impl PropertiesPanel {
                     return;
                 };
                 let previous = form.fields[&id].clone();
-                let raw = if spec.value_type == editor_core::PropertyType::Integer {
-                    (value as i64).to_string()
-                } else {
-                    (value as f32).to_string()
-                };
-                form.edit(&spec, raw);
-                let result = form
-                    .patch(target.object.kind, id)
-                    .and_then(|patch| state.editor.update_property_edit(&token, &patch));
-                if let Err(error) = &result {
-                    // Keep the candidate and its text at the last valid preview.
+                form.set_value(&spec, value);
+                let result = form.patch(target.object.kind, id).and_then(|mut patch| {
+                    if spec.keyframed {
+                        patch.scope = target.scope.clone();
+                    }
+                    state.editor.update_property_edit(&token, &patch)
+                });
+                if let Err(error) = result {
                     form.fields.insert(id, previous);
                     state.set_edit_error(error.to_string(), cx);
                 }
@@ -354,7 +383,7 @@ impl PropertiesPanel {
         cx.notify();
     }
 
-    fn finish_preview(&mut self, cx: &mut Context<Self>) {
+    pub(super) fn finish_preview(&mut self, cx: &mut Context<Self>) {
         let Some((id, token)) = self.preview.take() else {
             return;
         };
@@ -388,6 +417,11 @@ impl PropertiesPanel {
         let Some((id, token)) = self.preview.take() else {
             return;
         };
+        if let Some(color) = self.colors.get_mut(&id) {
+            color
+                .state
+                .update(cx, |state, cx| state.cancel_silently(cx));
+        }
         if let Some(control) = self.controls.get(&id).and_then(|c| c.number.clone()) {
             control.update(cx, |number, cx| number.reset_drag(cx));
         }
@@ -409,6 +443,11 @@ impl PropertiesPanel {
         cx: &mut Context<Self>,
     ) -> Option<(PropertyTarget, PropertyKey, editor_core::PropertyEditToken)> {
         let (id, token) = self.preview.take()?;
+        if let Some(color) = self.colors.get(&id) {
+            color
+                .state
+                .update(cx, |state, cx| state.cancel_silently(cx));
+        }
         if let Some(number) = self.controls.get(&id).and_then(|c| c.number.clone()) {
             number.update(cx, |number, cx| number.reset_drag(cx));
         }
@@ -441,12 +480,18 @@ impl PropertiesPanel {
         }
         self.controls.clear();
         self.selects.clear();
+        self.colors.clear();
         self.epoch += 1;
         self.snapshot = None;
         preview.and_then(|(id, token)| self.target.clone().map(|target| (target, id, token)))
     }
 
-    fn ensure_control(&mut self, id: PropertyKey, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn ensure_control(
+        &mut self,
+        id: PropertyKey,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if self.controls.contains_key(&id) {
             return;
         }
@@ -495,15 +540,23 @@ impl PropertiesPanel {
             },
         );
         let mut events = vec![text];
-        let number = spec.binding.preview.then(|| {
+        let number = (spec.binding.preview
+            && matches!(
+                spec.editor,
+                FieldEditor::Number | FieldEditor::OptionalNumber
+            ))
+        .then(|| {
             let number = cx.new(|cx| {
-                let control = SlideNumberInput::new(
+                let mut control = SlideNumberInput::new(
                     input.clone(),
                     t!(spec.label).into_owned(),
                     self.number_options(id),
                     window,
                     cx,
                 );
+                if spec.scale == 100. {
+                    control = control.suffix("%");
+                }
                 if spec.binding.value_type == editor_core::PropertyType::Integer {
                     control.truncate_to_integer()
                 } else {
@@ -553,7 +606,7 @@ impl PropertiesPanel {
         );
     }
 
-    fn render_select(
+    pub(super) fn render_select(
         &mut self,
         id: PropertyKey,
         disabled: bool,
@@ -561,7 +614,18 @@ impl PropertiesPanel {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let spec = self.field_spec(id);
-        let value = self.form.fields[&id].raw.clone();
+        let references = spec.editor == FieldEditor::References;
+        let draft = &self.form.fields[&id];
+        let selected = match &draft.parsed {
+            Ok(PropertyValue::References(ids)) => ids.clone(),
+            _ => vec![],
+        };
+        let value = if references {
+            String::new()
+        } else {
+            draft.raw.clone()
+        };
+        let desired = (!references).then_some(&value);
         let key = ChoiceKey {
             revision: self
                 .owner
@@ -575,7 +639,7 @@ impl PropertiesPanel {
                 })
                 .unwrap_or_default(),
             locale: rust_i18n::locale().to_string(),
-            value: value.clone(),
+            value: draft.raw.clone(),
         };
         if self
             .selects
@@ -597,7 +661,10 @@ impl PropertiesPanel {
                 .unwrap_or_default();
 
             // Retain imported unknown values until the user explicitly replaces them.
-            if !choices.iter().any(|choice| choice.value == value) {
+            if references {
+                choices.retain(|choice| !selected.contains(&choice.value));
+            }
+            if !references && !choices.iter().any(|choice| choice.value == value) {
                 choices.push(Choice {
                     label: value.clone().into(),
                     value: value.clone(),
@@ -626,13 +693,25 @@ impl PropertiesPanel {
                             return;
                         }
                         if let SelectEvent::Confirm(Some(value)) = event {
-                            this.set_value(id, PropertyValue::Text(value.clone()), cx);
+                            if references {
+                                let mut ids = match &this.form.fields[&id].parsed {
+                                    Ok(PropertyValue::References(ids)) => ids.clone(),
+                                    _ => vec![],
+                                };
+                                if !ids.contains(value) {
+                                    ids.push(value.clone());
+                                }
+                                this.set_value(id, PropertyValue::References(ids), cx);
+                            } else {
+                                this.set_value(id, PropertyValue::Text(value.clone()), cx);
+                            }
                         }
                     },
                 );
                 self.selects.insert(
                     id,
                     SelectControl {
+                        reference_scroll: UniformListScrollHandle::new(),
                         key: ChoiceKey {
                             revision: key.revision,
                             locale: key.locale.clone(),
@@ -651,7 +730,7 @@ impl PropertiesPanel {
                     state.set_selected_value(&value, window, cx);
                 });
                 control.choices = choices;
-            } else if control.state.read(cx).selected_value() != Some(&value) {
+            } else if control.state.read(cx).selected_value() != desired {
                 control
                     .state
                     .update(cx, |state, cx| state.set_selected_value(&value, window, cx));
@@ -661,7 +740,7 @@ impl PropertiesPanel {
         let control = &self.selects[&id];
         // A rejected selection can leave the widget ahead of the restored form,
         // even when the cached choices and committed value did not change.
-        if control.state.read(cx).selected_value() != Some(&value) {
+        if control.state.read(cx).selected_value() != desired {
             control
                 .state
                 .update(cx, |state, cx| state.set_selected_value(&value, window, cx));
@@ -678,13 +757,17 @@ impl PropertiesPanel {
                     .id(SharedString::from(format!("property-select-{}", id.name())))
                     .accessibility_label(t!(self.field_spec(id).label))
                     .disabled(disabled)
+                    .when(references, |select| {
+                        select.placeholder(t!("properties.add_mask"))
+                    })
                     .w_full(),
             )
             .into_any_element()
     }
 
     fn number_options(&self, id: PropertyKey) -> SlideNumberOptions {
-        let spec = self.field_spec(id).binding;
+        let field = self.field_spec(id);
+        let spec = field.binding;
         let (min, max) = self
             .field_spec(id)
             .number_bounds(self.form.committed_values());
@@ -693,11 +776,12 @@ impl PropertiesPanel {
                 .parsed
                 .as_ref()
                 .ok()
-                .and_then(PropertyValue::number)
-                .unwrap_or(0.),
-            min,
-            max,
-            step: spec.step,
+                .and_then(|value| value.text().parse::<f64>().ok())
+                .unwrap_or(0.)
+                * field.scale,
+            min: min * field.scale,
+            max: max * field.scale,
+            step: spec.step * field.scale,
             drag_distance: None,
             disabled: self.disabled,
         }
@@ -714,8 +798,23 @@ impl PropertiesPanel {
         };
         let spec = self.field_spec(id);
         let epoch = self.epoch;
-        let disabled = self.disabled || window.has_active_dialog(cx);
-        let body = if spec.editor == FieldEditor::Toggle {
+        let unavailable = spec.binding.keyframed
+            && self
+                .target
+                .as_ref()
+                .is_some_and(|target| target.scope == editor_core::PropertyScope::InterpolatedMesh);
+        let disabled =
+            self.disabled || spec.binding.readonly || unavailable || window.has_active_dialog(cx);
+        let body = if unavailable {
+            div()
+                .text_color(cx.theme().muted_foreground)
+                .child(t!("properties.select_keyform"))
+                .into_any_element()
+        } else if spec.editor == FieldEditor::Color {
+            self.render_color(id, disabled, window, cx)
+        } else if spec.editor == FieldEditor::References {
+            self.render_references(id, disabled, window, cx)
+        } else if spec.editor == FieldEditor::Toggle {
             let checked = matches!(field.parsed, Ok(PropertyValue::Bool(true)));
             Checkbox::new(SharedString::from(format!("property-toggle-{}", id.name())))
                 .xsmall()
@@ -770,7 +869,10 @@ impl PropertiesPanel {
                 );
             }
             if self.form.numeric_visible(id) {
-                let numeric = spec.editor != FieldEditor::Text;
+                let numeric = matches!(
+                    spec.editor,
+                    FieldEditor::Number | FieldEditor::OptionalNumber
+                );
                 let editor = if let Some(number) = &number {
                     number.update(cx, |number, cx| {
                         number.configure(t!(spec.label).into_owned(), options, cx)
@@ -787,6 +889,7 @@ impl PropertiesPanel {
                                 .text_align(TextAlign::Right)
                                 .font_family(".AppleSystemUIFontMonospaced")
                         })
+                        .when(spec.scale == 100., |input| input.suffix("%"))
                         .into_any_element()
                 };
                 body = body.child(
@@ -812,8 +915,20 @@ impl PropertiesPanel {
         if !self.allowed(self.epoch, window, cx) {
             return false;
         }
+        if self.composing_input(window, cx) {
+            return false;
+        }
         if self.preview.is_some() {
             self.cancel_preview(cx);
+            return true;
+        }
+        if let Some(color) = self
+            .colors
+            .values()
+            .find(|color| color.state.read(cx).owns_focus(window, cx))
+            .map(|color| color.state.clone())
+        {
+            color.update(cx, |state, cx| state.cancel(cx));
             return true;
         }
         let Some((&id, _)) = self
@@ -868,7 +983,12 @@ impl PropertiesPanel {
     }
 
     pub(crate) fn composing_input(&self, window: &mut Window, cx: &mut App) -> bool {
-        self.controls
+        self.colors.values().any(|control| {
+            control
+                .state
+                .update(cx, |state, cx| state.composing(window, cx))
+        }) || self
+            .controls
             .iter()
             .find(|(_, control)| control.input.read(cx).focus_handle(cx).is_focused(window))
             .map(|(&id, _)| id)
@@ -909,7 +1029,25 @@ impl PropertiesPanel {
         if action == CancelProperty {
             return self.escape(window, cx);
         }
+        if let Some(color) = self
+            .colors
+            .values()
+            .find(|color| color.state.read(cx).owns_focus(window, cx))
+            .map(|color| color.state.clone())
+        {
+            color.update(cx, |state, cx| state.accept(window, cx));
+            return true;
+        }
         if self.preview.is_some() {
+            if let Some(color) = self
+                .preview
+                .as_ref()
+                .and_then(|(id, _)| self.colors.get(id))
+                .map(|control| control.state.clone())
+            {
+                color.update(cx, |state, cx| state.accept(window, cx));
+                return true;
+            }
             self.finish_preview(cx);
             return true;
         }

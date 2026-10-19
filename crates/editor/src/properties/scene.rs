@@ -9,21 +9,17 @@ pub(super) const PROVIDER: PropertyProvider = PropertyProvider {
 };
 
 fn fields(kind: ObjectKind) -> FormDefinition {
+    if kind == ObjectKind::Mesh {
+        return super::mesh::fields();
+    }
     use FieldEditor::*;
-    use editor_core::property::{deformer, glue, mesh, offscreen, part, texture};
+    use editor_core::property::{deformer, glue, offscreen, part, texture};
     let fields: &[_] = match kind {
         ObjectKind::Part => &[
             (part::NAME, "properties.name", Text),
             (part::RUNTIME_ID, "properties.runtime_id", Text),
             (part::ENABLED, "properties.enabled", Toggle),
             (part::DRAW_ORDER, "properties.draw_order", Number),
-        ],
-        ObjectKind::Mesh => &[
-            (mesh::NAME, "properties.name", Text),
-            (mesh::RUNTIME_ID, "properties.runtime_id", Text),
-            (mesh::ENABLED, "properties.enabled", Toggle),
-            (mesh::DRAW_ORDER, "properties.draw_order", OptionalNumber),
-            (mesh::OPACITY, "properties.opacity", Number),
         ],
         ObjectKind::Deformer => &[
             (deformer::NAME, "properties.name", Text),

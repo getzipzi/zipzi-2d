@@ -22,6 +22,8 @@ mod keyboard;
 mod locks;
 #[path = "cases/mesh_generation.rs"]
 mod mesh_generation;
+#[path = "cases/mesh_properties.rs"]
+mod mesh_properties;
 #[path = "cases/mesh_thumbnails.rs"]
 mod mesh_thumbnails;
 #[path = "cases/panels.rs"]

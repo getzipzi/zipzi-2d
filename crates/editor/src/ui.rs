@@ -1,4 +1,5 @@
 pub(crate) mod about;
+pub(crate) mod color_picker;
 pub(crate) mod compact;
 pub(crate) mod export;
 pub(crate) mod form_dialog;
