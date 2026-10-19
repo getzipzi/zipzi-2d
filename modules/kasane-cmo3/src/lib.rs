@@ -9,6 +9,7 @@ pub use import::test_support;
 pub use import::{animation_model_paths, import_animation, import_model, ImportedModel};
 mod can3;
 mod canvas;
+mod expression_semantics;
 pub use can3::{
     encode_can3, encode_cubism, inspect_can3, inspect_cubism, Can3Artifact, Can3Options,
     CubismArtifact, CubismOptions,

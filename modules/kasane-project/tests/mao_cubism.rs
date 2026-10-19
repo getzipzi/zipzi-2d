@@ -131,6 +131,8 @@ fn local_mao_exports_linked_editable_cubism_projects() {
     }
     let options = CubismOptions {
         base_name: "mao".into(),
+        bake_animation: false,
+        auto_frame_rate: false,
         model: kasane_project::Cmo3Options {
             model_name: "Nijiiro Mao".into(),
             loss_policy: LossPolicy::Allow,

@@ -14,6 +14,287 @@ fn key(n: u32, time: f32, value: f32) -> MotionKey {
         value,
     }
 }
+
+#[test]
+fn automatic_time_grid_preserves_millisecond_rounded_beziers_at_sixty_fps() {
+    let (mut doc, _) = fixture();
+    let mut clip = make_clip();
+    clip.events.clear();
+    clip.tracks.push(MotionTrack {
+        id: uuid(10),
+        target: MotionTrackTarget::Parameter {
+            parameter_id: PARAM.into(),
+        },
+        initial: key(11, 0., 0.),
+        segments: Arc::new(vec![
+            MotionSegment::Linear {
+                end: key(12, 0.017, -0.2),
+            },
+            MotionSegment::Bezier {
+                control1: MotionPoint {
+                    time: 0.139,
+                    value: 0.8,
+                },
+                control2: MotionPoint {
+                    time: 0.261,
+                    value: -0.7,
+                },
+                end: key(13, 0.383, 0.6),
+            },
+            MotionSegment::Linear {
+                end: key(14, 1., 1.),
+            },
+        ]),
+        fade_in: None,
+        fade_out: None,
+        extensions: Default::default(),
+    });
+    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    let mut second = make_clip();
+    second.id = uuid(200);
+    second.name = "Same declared FPS".into();
+    second.events.clear();
+    assert!(doc.create_motion(second).status.is_ok());
+    let mut other_rate = make_clip();
+    other_rate.id = uuid(300);
+    other_rate.name = "Independent 24 FPS group".into();
+    other_rate.fps = 24.;
+    other_rate.events.clear();
+    assert!(doc.create_motion(other_rate).status.is_ok());
+    let options = Can3Options {
+        auto_frame_rate: true,
+        bake_animation: true,
+        ..Default::default()
+    };
+    let artifact = encode_can3(&doc, &options).unwrap();
+    assert!(!artifact.report.has_loss());
+    assert!(!artifact
+        .report
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "CAN3_BAKED_TRACK"));
+    let mut returned = fixture().0;
+    import_animation(&artifact.bytes, &mut returned).unwrap();
+    let after = returned.get_motion(&clip.id).unwrap();
+    assert_eq!(after.fps, 60.);
+    assert_eq!(returned.get_motion(&uuid(200)).unwrap().fps, 60.);
+    assert_eq!(returned.get_motion(&uuid(300)).unwrap().fps, 24.);
+    let track = &after.tracks[0];
+    assert_eq!(track.keys().count(), 4);
+    assert_eq!(track.segments.len(), clip.tracks[0].segments.len());
+    assert_eq!(track.segments[0].end().time, 1. / 60.);
+    assert_eq!(track.segments[1].end().time, 23. / 60.);
+    let MotionSegment::Bezier {
+        control1, control2, ..
+    } = &track.segments[1]
+    else {
+        panic!("Bezier was lost")
+    };
+    assert_eq!(control1.value, 0.8);
+    assert_eq!(control2.value, -0.7);
+    let before = kasane_animation::CompiledCurve::from(&clip.tracks[0]);
+    let result = kasane_animation::CompiledCurve::from(track);
+    for step in 0..=100 {
+        let fraction = step as f32 / 100.;
+        let source = 0.017 + (0.383 - 0.017) * fraction;
+        let output = 1. / 60. + (22. / 60.) * fraction;
+        let a = kasane_animation::sample_motion_curve(&before, source, true);
+        let b = kasane_animation::sample_motion_curve(&result, output, true);
+        assert!(
+            (a - b).abs() < 0.00001,
+            "Bezier fraction {fraction}: {a} != {b}"
+        );
+    }
+}
+
+#[test]
+fn automatic_grid_keeps_unrestricted_bezier_time_handles() {
+    let (mut doc, _) = fixture();
+    let mut clip = make_clip();
+    clip.restricted_beziers = false;
+    clip.events.clear();
+    clip.tracks.push(MotionTrack {
+        id: uuid(10),
+        target: MotionTrackTarget::Parameter {
+            parameter_id: PARAM.into(),
+        },
+        initial: key(11, 0.017, 0.),
+        segments: Arc::new(vec![MotionSegment::Bezier {
+            control1: MotionPoint {
+                time: 0.05,
+                value: 0.9,
+            },
+            control2: MotionPoint {
+                time: 0.3,
+                value: -0.7,
+            },
+            end: key(12, 0.383, 0.6),
+        }]),
+        fade_in: None,
+        fade_out: None,
+        extensions: Default::default(),
+    });
+    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    let artifact = encode_can3(
+        &doc,
+        &Can3Options {
+            auto_frame_rate: true,
+            bake_animation: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(!artifact.report.has_loss());
+    let mut returned = fixture().0;
+    import_animation(&artifact.bytes, &mut returned).unwrap();
+    let after = returned.get_motion(&clip.id).unwrap();
+    assert_eq!(after.fps, 60.);
+    assert!(!after.restricted_beziers);
+    assert_eq!(after.tracks[0].keys().count(), 2);
+    let before = kasane_animation::CompiledCurve::from(&clip.tracks[0]);
+    let result = kasane_animation::CompiledCurve::from(&after.tracks[0]);
+    for step in 0..=100 {
+        let fraction = step as f32 / 100.;
+        let a = kasane_animation::sample_motion_curve(&before, 0.017 + 0.366 * fraction, false);
+        let b =
+            kasane_animation::sample_motion_curve(&result, 1. / 60. + 22. / 60. * fraction, false);
+        assert!((a - b).abs() < 0.00002, "fraction {fraction}: {a} != {b}");
+    }
+}
+
+#[test]
+fn automatic_time_grid_repairs_only_inverse_step_boundaries() {
+    let (mut doc, _) = fixture();
+    let mut clip = make_clip();
+    clip.events.clear();
+    clip.tracks.push(MotionTrack {
+        id: uuid(10),
+        target: MotionTrackTarget::Parameter {
+            parameter_id: PARAM.into(),
+        },
+        initial: key(11, 0., 0.),
+        segments: Arc::new(vec![
+            MotionSegment::Bezier {
+                control1: MotionPoint {
+                    time: 0.167,
+                    value: 0.2,
+                },
+                control2: MotionPoint {
+                    time: 0.333,
+                    value: 0.8,
+                },
+                end: key(12, 0.5, 1.),
+            },
+            MotionSegment::InverseStepped {
+                end: key(13, 0.517, -0.5),
+            },
+            MotionSegment::Linear {
+                end: key(14, 1., 0.),
+            },
+        ]),
+        fade_in: None,
+        fade_out: None,
+        extensions: Default::default(),
+    });
+    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    let artifact = encode_can3(
+        &doc,
+        &Can3Options {
+            auto_frame_rate: true,
+            bake_animation: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(!artifact.report.has_loss());
+    assert!(artifact
+        .report
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "CAN3_INVERSE_STEP_REPAIRED"));
+    assert!(!artifact
+        .report
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "CAN3_BAKED_TRACK"));
+    let mut returned = fixture().0;
+    import_animation(&artifact.bytes, &mut returned).unwrap();
+    let after = returned.get_motion(&clip.id).unwrap();
+    assert_eq!(after.fps, 60.);
+    assert_eq!(after.tracks[0].keys().count(), 5);
+    assert!(matches!(
+        after.tracks[0].segments[0],
+        MotionSegment::Bezier { .. }
+    ));
+    let a = kasane_animation::CompiledCurve::from(&clip.tracks[0]);
+    let b = kasane_animation::CompiledCurve::from(&after.tracks[0]);
+    for frame in 0..=60 {
+        let time = frame as f32 / 60.;
+        // Restore the source's millisecond-rounded final short interval.
+        let source = if frame >= 31 {
+            0.517 + (time - 31. / 60.) * (1. - 0.517) / (1. - 31. / 60.)
+        } else {
+            time
+        };
+        let expected = kasane_animation::sample_motion_curve(&a, source, true);
+        let actual = kasane_animation::sample_motion_curve(&b, time, true);
+        assert!(
+            (expected - actual).abs() < 0.00001,
+            "frame {frame}: {expected} != {actual}"
+        );
+    }
+}
+
+#[test]
+fn unsupported_precision_uses_only_explicit_baking_fallback() {
+    let (mut doc, _) = fixture();
+    let mut clip = make_clip();
+    clip.events.clear();
+    clip.tracks.push(MotionTrack {
+        id: uuid(10),
+        target: MotionTrackTarget::Parameter {
+            parameter_id: PARAM.into(),
+        },
+        initial: key(11, 0., 0.),
+        segments: Arc::new(vec![MotionSegment::Linear {
+            end: key(12, 0.012345, 1.),
+        }]),
+        fade_in: None,
+        fade_out: None,
+        extensions: Default::default(),
+    });
+    assert!(doc.create_motion(clip).status.is_ok());
+    assert!(matches!(
+        encode_can3(
+            &doc,
+            &Can3Options {
+                auto_frame_rate: true,
+                ..Default::default()
+            }
+        ),
+        Err(Cmo3Error::Unsupported(_))
+    ));
+    let artifact = encode_can3(
+        &doc,
+        &Can3Options {
+            auto_frame_rate: true,
+            bake_animation: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(artifact
+        .report
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "CAN3_TIME_GRID_UNRESOLVED"));
+    assert!(artifact
+        .report
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "CAN3_BAKED_TRACK"));
+    assert!(!artifact.report.has_loss());
+}
 fn make_clip() -> MotionClip {
     MotionClip {
         id: uuid(100),
@@ -163,6 +444,8 @@ fn linked_animation_preserves_scenes_curves_ids_and_metadata() {
     .is_err());
     let opts = CubismOptions {
         base_name: "角色".into(),
+        bake_animation: false,
+        auto_frame_rate: false,
         model: Cmo3Options {
             loss_policy: LossPolicy::Allow,
             ..Default::default()
@@ -613,4 +896,250 @@ fn delayed_bezier_tracks_retain_absolute_frames() {
         artifact.can3.bytes,
     )
     .unwrap();
+}
+
+#[test]
+fn baked_expression_blends_keep_default_model_poses_and_source_data() {
+    let (mut doc, png) = fixture();
+    let mut parameter = doc.get_parameter(PARAM).unwrap().clone();
+    parameter.default_value = 0.5;
+    assert!(doc.replace_parameter(parameter).status.is_ok());
+    for (index, blend, value) in [
+        (300, ExpressionBlend::Add, 0.25),
+        (301, ExpressionBlend::Multiply, 0.2),
+        (302, ExpressionBlend::Overwrite, -0.7),
+        (303, ExpressionBlend::Multiply, -5.),
+        (304, ExpressionBlend::Overwrite, 5.),
+    ] {
+        assert!(doc
+            .create_expression(ExpressionAsset {
+                id: uuid(index),
+                name: format!("{blend:?}_{index}"),
+                file_type: Some("Live2D Expression".into()),
+                fade_in: Some(0.3),
+                fade_out: Some(0.5),
+                entries: vec![ExpressionEntry {
+                    target: ExpressionTarget::Resolved {
+                        parameter_id: PARAM.into()
+                    },
+                    blend: Some(blend),
+                    value,
+                    extensions: Default::default(),
+                }],
+                extensions: Default::default(),
+                opaque_source_ids: None,
+                opaque_source_content_hash: None,
+            })
+            .status
+            .is_ok());
+    }
+    let before = doc.clone();
+    assert!(!encode_can3(&doc, &Can3Options::default())
+        .unwrap()
+        .report
+        .has_loss());
+    let options = CubismOptions {
+        bake_animation: true,
+        ..Default::default()
+    };
+    let pair = encode_cubism(&doc, &|_: &ImageAsset| Ok(png.clone()), &options).unwrap();
+    assert!(!pair.report.has_loss());
+    assert_eq!(
+        pair.report
+            .diagnostics
+            .iter()
+            .filter(|d| d.code == "CAN3_EXPRESSION_SEMANTICS")
+            .count(),
+        4
+    );
+    let mut returned = import_model(&pair.cmo3.bytes).unwrap().document;
+    import_animation(&pair.can3.bytes, &mut returned).unwrap();
+    for (index, pose) in [(300, 0.75), (301, 0.1), (302, -0.7), (303, -1.), (304, 1.)] {
+        let expression = returned.get_expression(&uuid(index)).unwrap();
+        assert_eq!(expression.entries.len(), 1);
+        assert_eq!(expression.fade_in, Some(0.3));
+        assert_eq!(expression.fade_out, Some(0.5));
+        assert_eq!(
+            expression.entries,
+            doc.get_expression(&uuid(index)).unwrap().entries
+        );
+        assert!(
+            (expression.source_scene().unwrap().tracks[0].initial.value - pose).abs() < 0.00001
+        );
+    }
+    for baseline in [-1., 0., 0.5, 1.] {
+        for id in doc.expression_order() {
+            let mut expected = kasane_animation::ExpressionPreview::new(&doc);
+            let mut actual = kasane_animation::ExpressionPreview::new(&returned);
+            for preview in [&mut expected, &mut actual] {
+                preview.set_base_parameter(PARAM, baseline).unwrap();
+                preview.schedule_expression(id, 0.).unwrap();
+            }
+            for dt in [0., 0.05, 0.1, 0.15, 0.3] {
+                assert_eq!(
+                    expected.advance(dt).unwrap().parameters,
+                    actual.advance(dt).unwrap().parameters
+                );
+            }
+        }
+    }
+    assert!(doc.same_content(&before));
+    // Exercise a moving baseline, fades and expression cross-fades together.
+    let mut clip = make_clip();
+    clip.looping = false;
+    clip.events.clear();
+    clip.tracks.push(MotionTrack {
+        id: uuid(600),
+        target: MotionTrackTarget::Parameter {
+            parameter_id: PARAM.into(),
+        },
+        initial: key(601, 0., 0.8),
+        segments: Arc::new(vec![MotionSegment::Linear {
+            end: key(602, 1., -0.8),
+        }]),
+        fade_in: Some(0.),
+        fade_out: Some(0.),
+        extensions: Default::default(),
+    });
+    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    assert!(returned.create_motion(clip.clone()).status.is_ok());
+    let mut expected = kasane_animation::MotionPreview::new(&doc);
+    let mut actual = kasane_animation::MotionPreview::new(&returned);
+    for preview in [&mut expected, &mut actual] {
+        preview.schedule_motion(&clip.id, 0.).unwrap();
+        preview.schedule_expression(&uuid(301), 0.1).unwrap();
+        preview.schedule_expression(&uuid(302), 0.5).unwrap();
+        preview.schedule_expression(&uuid(300), 0.8).unwrap();
+    }
+    for _ in 0..90 {
+        assert_eq!(
+            expected.advance(1. / 60.).unwrap().parameters,
+            actual.advance(1. / 60.).unwrap().parameters
+        );
+    }
+    let target = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/cmo3-acceptance/expression-semantics");
+    std::fs::create_dir_all(&target).unwrap();
+    std::fs::write(target.join("model.cmo3"), &pair.cmo3.bytes).unwrap();
+    std::fs::write(target.join("model.can3"), &pair.can3.bytes).unwrap();
+    assert_eq!(before.expression_order(), doc.expression_order());
+}
+
+#[test]
+fn baking_retains_frame_samples_when_keys_collide_and_inverse_steps_jump() {
+    let (mut doc, _) = fixture();
+    let mut clip = make_clip();
+    clip.duration = 1.017;
+    clip.events.clear();
+    clip.tracks.push(MotionTrack {
+        id: uuid(10),
+        target: MotionTrackTarget::Parameter {
+            parameter_id: PARAM.into(),
+        },
+        initial: key(11, 0., -0.5),
+        segments: Arc::new(vec![
+            MotionSegment::Linear {
+                end: key(12, 0.01, 0.8),
+            },
+            MotionSegment::Linear {
+                end: key(13, 0.017, -0.2),
+            },
+            MotionSegment::Bezier {
+                control1: MotionPoint {
+                    time: 0.09,
+                    value: 0.9,
+                },
+                control2: MotionPoint {
+                    time: 0.22,
+                    value: -0.8,
+                },
+                end: key(14, 0.41, 0.3),
+            },
+            MotionSegment::InverseStepped {
+                end: key(15, 0.6, 0.7),
+            },
+            MotionSegment::Stepped {
+                end: key(16, 1.017, -0.9),
+            },
+        ]),
+        fade_in: None,
+        fade_out: None,
+        extensions: Default::default(),
+    });
+    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    let artifact = encode_can3(
+        &doc,
+        &Can3Options {
+            bake_animation: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(!artifact.report.has_loss());
+    assert!(artifact
+        .report
+        .diagnostics
+        .iter()
+        .any(|d| d.code == "CAN3_BAKED_TRACK"));
+    let mut returned = fixture().0;
+    import_animation(&artifact.bytes, &mut returned).unwrap();
+    let after = returned.get_motion(&clip.id).unwrap();
+    let curve = kasane_animation::CompiledCurve::from(&clip.tracks[0]);
+    let actual = kasane_animation::CompiledCurve::from(&after.tracks[0]);
+    for frame in 0..=31 {
+        let time = frame as f32 / clip.fps;
+        let expected = kasane_animation::sample_motion_curve(&curve, time, clip.restricted_beziers);
+        let value = kasane_animation::sample_motion_curve(&actual, time, after.restricted_beziers);
+        assert!(
+            (expected - value).abs() < 0.00001,
+            "frame {frame}: {expected} != {value}"
+        );
+    }
+    let keys: Vec<_> = after.tracks[0].keys().collect();
+    assert!(keys.windows(2).all(|pair| pair[0].time < pair[1].time));
+}
+
+#[test]
+fn baking_keeps_exact_curves_and_still_rejects_unsupported_targets() {
+    let (mut doc, _) = fixture();
+    let mut clip = make_clip();
+    clip.events.clear();
+    clip.tracks.push(MotionTrack {
+        id: uuid(10),
+        target: MotionTrackTarget::Parameter {
+            parameter_id: PARAM.into(),
+        },
+        initial: key(11, 0., -0.5),
+        segments: Arc::new(vec![MotionSegment::Linear {
+            end: key(12, 1., 0.8),
+        }]),
+        fade_in: None,
+        fade_out: None,
+        extensions: Default::default(),
+    });
+    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    let strict = encode_can3(&doc, &Can3Options::default()).unwrap();
+    let baked = encode_can3(
+        &doc,
+        &Can3Options {
+            bake_animation: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(strict.bytes, baked.bytes);
+    clip.tracks[0].target = MotionTrackTarget::Model {
+        runtime_id: "EyeBlink".into(),
+    };
+    assert!(doc.replace_motion(clip).status.is_ok());
+    assert!(matches!(
+        encode_can3(
+            &doc,
+            &Can3Options {
+                bake_animation: true,
+                ..Default::default()
+            }
+        ),
+        Err(Cmo3Error::Unsupported(_))
+    ));
 }

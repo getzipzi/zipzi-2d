@@ -12,6 +12,8 @@ test-support = []
 
 [dependencies]
 kasane-core = { path = "../kasane-core" }
+kasane-animation = { path = "../kasane-animation" }
+kasane-live2d = { path = "../kasane-live2d" }
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true

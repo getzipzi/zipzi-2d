@@ -183,9 +183,25 @@ fn import_with_namespace(
 
 pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status> {
     let settings = document.model3_settings();
+    // Name is a label with no embedded runtime IDs. Other extension payloads
+    // remain opaque and must still pass the namespace and strict-export guards.
+    let opaque = settings
+        .extensions
+        .iter()
+        .any(|(key, value)| key != "Name" || !value.is_string())
+        || settings
+            .groups
+            .iter()
+            .flatten()
+            .any(|group| !group.extensions.is_empty())
+        || settings
+            .hit_areas
+            .iter()
+            .flatten()
+            .any(|area| !area.extensions.is_empty());
     // Known fields are remapped by identity. Only opaque payloads need a
     // namespace-wide guard because their embedded IDs cannot be rewritten.
-    if (settings.has_extensions() || settings.user_data.is_some())
+    if (opaque || settings.user_data.is_some())
         && settings
             .source_runtime_ids
             .as_ref()
@@ -196,7 +212,7 @@ pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status
             "Opaque model3/UserData namespace changed",
         ));
     }
-    if settings.has_extensions() {
+    if opaque {
         return Err(Status::error(
             "UNSUPPORTED_MODEL3_FIELD",
             "Unmodeled model3 fields require explicit resolution",
@@ -219,6 +235,9 @@ pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status
         ))
     };
     let mut output = Map::new();
+    if let Some(name) = settings.extensions.get("Name") {
+        output.insert("Name".into(), name.clone());
+    }
     if let Some(groups) = &settings.groups {
         let wire = groups
             .iter()
@@ -283,6 +302,42 @@ pub fn validate_user_data(document: &Document, bytes: &[u8]) -> Result<(), Statu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn model_name_exports_after_runtime_namespace_changes_but_unknown_fields_stay_strict() {
+        let mut document = Document::new();
+        assert!(document
+            .initialize(
+                "00000000-0000-4000-8000-000000000001",
+                kasane_core::ModelSetup::default()
+            )
+            .is_ok());
+        let source = serde_json::json!({"Name":"Original label"});
+        let settings = import_settings(&document, &source).unwrap();
+        assert!(document.set_model3_settings(settings).status.is_ok());
+        // A label is independent of the parameter namespace captured on import.
+        assert!(document
+            .create_parameter(kasane_core::Parameter {
+                id: "00000000-0000-4000-8000-000000000002".into(),
+                runtime_id: "ParamX".into(),
+                name: "X".into(),
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        assert_eq!(export_settings(&document).unwrap()["Name"], source["Name"]);
+        for source in [
+            serde_json::json!({"Name":42}),
+            serde_json::json!({"Name":"Original label", "Unknown":true}),
+        ] {
+            let settings = import_settings(&document, &source).unwrap();
+            assert!(document.set_model3_settings(settings).status.is_ok());
+            assert_eq!(
+                export_settings(&document).unwrap_err().code,
+                "UNSUPPORTED_MODEL3_FIELD"
+            );
+        }
+    }
 
     #[test]
     fn unknown_file_references_are_preserved_and_block_strict_export() {

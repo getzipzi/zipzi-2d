@@ -219,7 +219,14 @@ impl TransferSnapshot {
                     })
                 };
                 let options = kasane_cmo3::Cmo3Options {
-                    model_name: name.into(),
+                    model_name: self
+                        .document
+                        .model3_settings()
+                        .extensions
+                        .get("Name")
+                        .and_then(|value| value.as_str())
+                        .unwrap_or(name)
+                        .into(),
                     ..Default::default()
                 };
                 if self.document.motion_order().is_empty()
@@ -235,6 +242,8 @@ impl TransferSnapshot {
                         &kasane_cmo3::CubismOptions {
                             base_name: name.into(),
                             model: options,
+                            bake_animation: true,
+                            auto_frame_rate: true,
                         },
                     )
                     .map_err(codec)?;

@@ -200,7 +200,10 @@ pub(crate) fn inspect_with_animation(
     }) || model3.layout.as_ref().is_some_and(|v| !v.is_empty())
         || model3.hit_areas.as_ref().is_some_and(|v| !v.is_empty())
         || model3.user_data.is_some()
-        || model3.has_extensions()
+        // Name is the model label, supplied through Cmo3Options::model_name.
+        || model3.extensions.iter().any(|(key, value)| key != "Name" || !value.is_string())
+        || model3.groups.iter().flatten().any(|group| !group.extensions.is_empty())
+        || model3.hit_areas.iter().flatten().any(|area| !area.extensions.is_empty())
     {
         loss(doc.id(),"MODEL3_METADATA","Runtime effect groups, layout, hit areas and UserData require a separate model3 package export");
     }

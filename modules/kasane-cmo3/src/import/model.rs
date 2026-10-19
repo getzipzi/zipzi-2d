@@ -52,6 +52,13 @@ pub(super) fn read(
             },
         },
     ))?;
+    if g.field(root, "name")?.is_some() {
+        let mut settings = document.model3_settings().clone();
+        settings
+            .extensions
+            .insert("Name".into(), g.text(root, "name")?.into());
+        edit(document.set_model3_settings(settings))?;
+    }
     let parameters = g.list(g.req(root, "parameterSourceSet")?, "_sources")?;
     for n in parameters {
         let kind = g

@@ -16,7 +16,7 @@ public final class ReadCmo3 {
         try { check(args); System.exit(0); }
         catch (Throwable error) { error.printStackTrace(); System.exit(1); }
     }
-    private static void check(String[] args) throws Exception {
+    private static java.util.Map<String,String> check(String[] args) throws Exception {
         ArchiveReader archive = new ArchiveReader(new File(args[0]));
         byte[] xml = archive.getFirstFileByTag("main_xml");
         Document doc = new SAXBuilder().build(new java.io.ByteArrayInputStream(xml));
@@ -41,10 +41,37 @@ public final class ReadCmo3 {
         java.lang.reflect.Field errors = com.live2d.serialize.XmlParam.class.getDeclaredField("errorList");
         errors.setAccessible(true);
         if (!((java.util.Map<?,?>)errors.get(reader)).isEmpty()) throw new AssertionError("Cubism reported serialization errors: " + errors.get(reader));
+        // Do not retain the entire input DOM while the native serializer builds
+        // another DOM. Large, baked CAN3 files otherwise need several copies.
+        doc = null;
+        xml = null;
+        reader = null;
+        System.gc();
         if (root instanceof com.live2d.cubism.doc.animation.CAnimation) {
-            checkAnimation((com.live2d.cubism.doc.animation.CAnimation)root, new File(args[0]));
-            archive.close();
-            return;
+            com.live2d.cubism.doc.animation.CAnimation animation = (com.live2d.cubism.doc.animation.CAnimation)root;
+            checkAnimation(animation, new File(args[0]));
+            int next = 1;
+            if (args.length > next && !args[next].equals("--resave")) {
+                checkAnimationValues(animation, new File(args[next++]));
+            }
+            java.util.Map<String,String> operations = expressionOperations(animation);
+            if (args.length > next && args[next].equals("--resave")) {
+                File saved = new File(args[next + 1]);
+                if (saved.exists()) throw new AssertionError("Refusing to overwrite native save destination");
+                if (!animation.saveAnimation(saved, false)) throw new AssertionError("Cubism save failed");
+                archive.close();
+                archive = null;
+                animation = null;
+                root = null;
+                System.gc();
+                java.util.Map<String,String> reloaded = check(next > 1
+                    ? new String[]{saved.getAbsolutePath(), args[1]}
+                    : new String[]{saved.getAbsolutePath()});
+                if (!operations.equals(reloaded)) throw new AssertionError("Expression operations changed during Cubism save/reload");
+                System.out.println("Expression operations: " + operations.size() + " preserved through native save/reload");
+            }
+            if (archive != null) archive.close();
+            return operations;
         }
         if (!(root instanceof CModelSource)) throw new AssertionError("Unknown Cubism root: " + root);
         CModelSource model = (CModelSource)root;
@@ -62,6 +89,24 @@ public final class ReadCmo3 {
         }
         if (args.length > 1) checkGeometry(model, instance, new File(args[1]), Double.parseDouble(args[2]));
         archive.close();
+        return java.util.Collections.emptyMap();
+    }
+    private static java.util.Map<String,String> expressionOperations(com.live2d.cubism.doc.animation.CAnimation animation) {
+        java.util.Map<String,String> result = new HashMap<>();
+        for (com.live2d.cubism.doc.animation.CSceneSource scene : animation.getScenes()) {
+            for (com.live2d.cubism.doc.animation.movie.track.ICMvTrack_Source track : scene.getAllTracks()) {
+                if (!(track instanceof com.live2d.cubism.doc.animation.movie.track.CMvTrack_Live2DModel_Source)) continue;
+                com.live2d.cubism.doc.animation.movie.track.CMvTrack_Live2DModel_Source model =
+                    (com.live2d.cubism.doc.animation.movie.track.CMvTrack_Live2DModel_Source)track;
+                for (com.live2d.cubism.doc.animation.movie.effect.ICMvEffect effect : model.getEffectManager().getEffectList()) {
+                    for (com.live2d.cubism.doc.animation.movie.effect.attr.ICMvAttr attr : effect.getAttrList()) {
+                        Object operation = attr.getOptionParam("KASANE_EXPRESSION_ENTRY_V1");
+                        if (operation != null) result.put(scene.getSceneName() + "/" + attr.getId().getIdString(), operation.toString());
+                    }
+                }
+            }
+        }
+        return result;
     }
     private static void checkGeometry(CModelSource model, com.live2d.cubism.doc.model.CModel instance,
                                       File reference, double tolerance) throws Exception {
@@ -122,6 +167,84 @@ public final class ReadCmo3 {
         if (orderedPoses > 0) System.out.println("Draw order: " + orderedPoses + " poses match Kasane back-to-front");
         if (maximum > tolerance) throw new AssertionError("Geometry error exceeds " + tolerance + " px: " + worst);
     }
+    private static void checkAnimationValues(com.live2d.cubism.doc.animation.CAnimation animation, File reference) throws Exception {
+        java.util.List<?> cases;
+        try (java.io.Reader input = new java.io.FileReader(reference, java.nio.charset.StandardCharsets.UTF_8)) {
+            cases = (java.util.List<?>)new org.json.simple.parser.JSONParser().parse(input);
+        }
+        int samples = 0;
+        double maximumError = 0;
+        double maximumGeometryError = 0;
+        double maximumRelativeError = 0;
+        for (Object item : cases) {
+            java.util.Map<?,?> expectedScene = (java.util.Map<?,?>)item;
+            String name = (String)expectedScene.get("name");
+            com.live2d.cubism.doc.animation.CSceneSource scene = null;
+            for (com.live2d.cubism.doc.animation.CSceneSource candidate : animation.getScenes()) {
+                if (candidate.getSceneName().equals(name)) scene = candidate;
+            }
+            if (scene == null) throw new AssertionError("Missing scene: " + name);
+            if (expectedScene.containsKey("fps") && Math.abs(scene.getMovieInfo().getFps() - ((Number)expectedScene.get("fps")).doubleValue()) > 0.000001) {
+                throw new AssertionError("Unexpected scene FPS: " + name + " " + scene.getMovieInfo().getFps());
+            }
+            HashMap<String,com.live2d.cubism.doc.animation.movie.effect.attr.CMvAttrF> attributes = new HashMap<>();
+            for (com.live2d.cubism.doc.animation.movie.track.ICMvTrack_Source track : scene.getAllTracks()) {
+                if (!(track instanceof com.live2d.cubism.doc.animation.movie.track.CMvTrack_Live2DModel_Source)) continue;
+                com.live2d.cubism.doc.animation.movie.track.CMvTrack_Live2DModel_Source model =
+                    (com.live2d.cubism.doc.animation.movie.track.CMvTrack_Live2DModel_Source)track;
+                for (com.live2d.cubism.doc.animation.movie.effect.ICMvEffect effect : model.getEffectManager().getEffectList()) {
+                    for (com.live2d.cubism.doc.animation.movie.effect.attr.ICMvAttr attr : effect.getAttrList()) {
+                        if (attr instanceof com.live2d.cubism.doc.animation.movie.effect.attr.CMvAttrF) {
+                            attributes.put(attr.getId().getIdString(), (com.live2d.cubism.doc.animation.movie.effect.attr.CMvAttrF)attr);
+                        }
+                    }
+                }
+            }
+            for (Object channel : (java.util.List<?>)expectedScene.get("tracks")) {
+                java.util.Map<?,?> expected = (java.util.Map<?,?>)channel;
+                String id = (String)expected.get("attribute");
+                com.live2d.cubism.doc.animation.movie.effect.attr.CMvAttrF attr = attributes.get(id);
+                if (attr == null) throw new AssertionError("Missing channel: " + name + "/" + id);
+                java.util.List<?> values = (java.util.List<?>)expected.get("values");
+                for (int frame = 0; frame < values.size(); frame++) {
+                    double actual = attr.getValueData().getDoubleValue(frame);
+                    double value = ((Number)values.get(frame)).doubleValue();
+                    double error = Math.abs(actual - value);
+                    maximumError = Math.max(maximumError, error);
+                    double[] geometry = exactSequenceValue(attr, frame);
+                    maximumGeometryError = Math.max(maximumGeometryError, Math.abs(geometry[0] - value));
+                    maximumRelativeError = Math.max(maximumRelativeError, Math.max(0, error - 0.0001) / Math.max(geometry[1], 0.0001));
+                    if (!Double.isFinite(actual) || !Double.isFinite(geometry[0]) || !Double.isFinite(geometry[1]) || Math.abs(geometry[0] - value) > 0.0001
+                        || error > 0.0001 + 0.005 * geometry[1]) {
+                        throw new AssertionError(name + "/" + id + " frame " + frame + ": " + actual + " != " + value + curveDetails(attr,frame));
+                    }
+                    samples++;
+                }
+                if (expected.containsKey("checks")) {
+                    for (Object check : (java.util.List<?>)expected.get("checks")) {
+                        java.util.Map<?,?> row = (java.util.Map<?,?>)check;
+                        double frame = ((Number)row.get("frame")).doubleValue();
+                        double value = ((Number)row.get("value")).doubleValue();
+                        double actual = attr.getValueData().getDoubleValue(frame);
+                        double error = Math.abs(actual - value);
+                        maximumError = Math.max(maximumError, error);
+                        double[] geometry = exactSequenceValue(attr, frame);
+                        maximumGeometryError = Math.max(maximumGeometryError, Math.abs(geometry[0] - value));
+                        maximumRelativeError = Math.max(maximumRelativeError, Math.max(0, error - 0.0001) / Math.max(geometry[1], 0.0001));
+                        if (!Double.isFinite(actual) || !Double.isFinite(geometry[0]) || !Double.isFinite(geometry[1]) || Math.abs(geometry[0] - value) > 0.0001
+                            || error > 0.0001 + 0.005 * geometry[1]) {
+                            throw new AssertionError(name + "/" + id + " subframe " + frame + ": " + actual + " != " + value);
+                        }
+                        samples++;
+                    }
+                }
+            }
+        }
+        System.out.println("Animation: " + cases.size() + " scenes, " + samples
+            + " samples, maximum serialized-curve error " + maximumGeometryError
+            + ", maximum native-evaluator error " + maximumError
+            + ", maximum excess error / segment range " + maximumRelativeError);
+    }
     private static void checkAnimation(com.live2d.cubism.doc.animation.CAnimation animation, File file) throws Exception {
         animation.setFile(file);
         animation.setup();
@@ -153,6 +276,60 @@ public final class ReadCmo3 {
             }
             System.out.println("Objects: scene " + scene.getSceneName() + ", " + duration + " frames at " + fps + " FPS");
         }
+    }
+
+    private static double cubic(double a, double b, double c, double d, double t) {
+        double s = 1 - t;
+        return s*s*s*a + 3*s*s*t*b + 3*s*t*t*c + t*t*t*d;
+    }
+
+    // Independently evaluate the actual anchors/controls read by Cubism. Its
+    // interactive evaluator approximates Bezier inversion, so validate stored
+    // geometry tightly (1e-4), and bound native playback separately by 0.5% of
+    // the local control-polygon value range. Linear/step curves stay at 1e-4.
+    private static double[] exactSequenceValue(com.live2d.cubism.doc.animation.movie.effect.attr.CMvAttrF attr, double frame) {
+        if (!(attr.getValueData() instanceof com.live2d.cubism.doc.animation.movie.effect.attr.value.CMutableSequence)) {
+            return new double[]{attr.getValueData().getDoubleValue(frame), 0};
+        }
+        com.live2d.cubism.doc.animation.movie.effect.attr.value.CMutableSequence seq = (com.live2d.cubism.doc.animation.movie.effect.attr.value.CMutableSequence)attr.getValueData();
+        com.live2d.cubism.doc.animation.movie.effect.attr.value.CBezierPt[] points = seq.getPoints();
+        if (frame <= points[0].getPos()) return new double[]{points[0].getAnchor$cubism().getDoubleValue(), 0};
+        for (int n = 0; n + 1 < points.length; n++) {
+            if (frame < points[n+1].getPos()) {
+                double a = points[n].getAnchor$cubism().getDoubleValue();
+                double d = points[n+1].getAnchor$cubism().getDoubleValue();
+                String type = seq.getCurveTypes().get(n).toString();
+                if (type.equals("STEP")) return new double[]{a, 0};
+                if (type.equals("INVERSE_STEP")) return new double[]{frame == points[n].getPos() ? a : d, 0};
+                if (type.equals("LINEAR")) return new double[]{a + (d-a)*(frame-points[n].getPos())/(points[n+1].getPos()-points[n].getPos()), 0};
+                if (!type.equals("BEZIER")) throw new AssertionError("Unsupported reference curve: " + type);
+                double b = points[n].getNext$cubism().getDoubleValue();
+                double c = points[n+1].getPrev$cubism().getDoubleValue();
+                double low = 0, high = 1;
+                for (int iteration = 0; iteration < 48; iteration++) {
+                    double t = (low+high)*0.5;
+                    double x = cubic(points[n].getPos(), points[n].getNext$cubism().getPosF(), points[n+1].getPrev$cubism().getPosF(), points[n+1].getPos(), t);
+                    if (x < frame) low = t; else high = t;
+                }
+                return new double[]{cubic(a,b,c,d,(low+high)*0.5), Math.max(Math.max(a,b),Math.max(c,d))-Math.min(Math.min(a,b),Math.min(c,d))};
+            }
+        }
+        return new double[]{points[points.length-1].getAnchor$cubism().getDoubleValue(), 0};
+    }
+
+    private static String curveDetails(com.live2d.cubism.doc.animation.movie.effect.attr.CMvAttrF attr, double frame) {
+        if (!(attr.getValueData() instanceof com.live2d.cubism.doc.animation.movie.effect.attr.value.CMutableSequence)) return "";
+        com.live2d.cubism.doc.animation.movie.effect.attr.value.CMutableSequence seq = (com.live2d.cubism.doc.animation.movie.effect.attr.value.CMutableSequence)attr.getValueData();
+        com.live2d.cubism.doc.animation.movie.effect.attr.value.CBezierPt[] points = seq.getPoints();
+        for (int n=0;n+1<points.length;n++) {
+            if (points[n].getPos() <= frame && frame < points[n+1].getPos()) {
+                return " curve=" + seq.getCurveTypes().get(n) + " anchor=" + points[n].getPos() + "," + points[n].getAnchor$cubism().getDoubleValue()
+                    + " next=" + points[n].getNext$cubism().getPosF() + "," + points[n].getNext$cubism().getDoubleValue()
+                    + " prev=" + points[n+1].getPrev$cubism().getPosF() + "," + points[n+1].getPrev$cubism().getDoubleValue()
+                    + " end=" + points[n+1].getPos() + "," + points[n+1].getAnchor$cubism().getDoubleValue();
+            }
+        }
+        return "";
     }
 
 }

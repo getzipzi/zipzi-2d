@@ -239,25 +239,26 @@ fn expression_engineering_roundtrip_preserves_setup_and_uses_current_entries() {
     let expression = reopened.get_expression(&uuid(100)).unwrap();
     assert_eq!(expression.name, "Edited expression");
     assert_eq!(expression.entries[0].value, -0.25);
-    assert_eq!(expression.entries[0].blend, Some(ExpressionBlend::Add));
+    assert_eq!(expression.entries[0].blend, None);
     let scene = expression.source_scene().unwrap();
     assert_eq!(scene.duration, 8. / 30.);
     assert_eq!(scene.tracks[0].initial.value, 0.25);
     assert_eq!(scene.tracks[1].initial.value, 0.);
-    let mut unsupported = expression.clone();
-    unsupported.entries[0].blend = Some(ExpressionBlend::Multiply);
-    assert!(reopened.replace_expression(unsupported).status.is_ok());
+    let mut multiply = expression.clone();
+    multiply.entries[0].blend = Some(ExpressionBlend::Multiply);
+    assert!(reopened.replace_expression(multiply).status.is_ok());
     let report = inspect_cubism(&reopened).unwrap();
     assert!(report
         .diagnostics
         .iter()
-        .any(|d| d.code == "CAN3_EXPRESSION_BLEND"));
+        .any(|d| d.code == "CAN3_EXPRESSION_SEMANTICS"));
+    assert!(!report.has_loss());
     assert!(encode_cubism(
         &reopened,
         &|_: &kasane_core::ImageAsset| Ok(png.clone()),
         &Default::default()
     )
-    .is_err());
+    .is_ok());
 }
 
 #[test]

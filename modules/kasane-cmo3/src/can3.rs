@@ -1,6 +1,9 @@
 //! Editable animation export. CAN3 references a sibling CMO3 rather than
 //! embedding a second model; both codecs use the same source object GUIDs.
 mod attributes;
+mod bake;
+mod grid;
+mod inverse;
 mod scene;
 mod schema;
 
@@ -30,6 +33,14 @@ pub struct Can3Options {
     pub animation_name: String,
     pub loss_policy: LossPolicy,
     pub obfuscation_key: i32,
+    /// Allow inverse-step boundary repair on inferred grids, or resample
+    /// incompatible curves at the declared rate when no grid is inferred.
+    /// Conversions are Info; unsupported features still obey loss_policy.
+    /// Runtime expression operations are always preserved alongside scene poses.
+    pub bake_animation: bool,
+    /// Infer a common anchor grid per declared-FPS group before any fallback
+    /// baking. Millisecond-rounded anchors may be restored within 0.5 ms.
+    pub auto_frame_rate: bool,
 }
 impl Default for Can3Options {
     fn default() -> Self {
@@ -38,6 +49,8 @@ impl Default for Can3Options {
             animation_name: "Kasane Animation".into(),
             loss_policy: LossPolicy::Reject,
             obfuscation_key: 0x4b617361,
+            bake_animation: false,
+            auto_frame_rate: false,
         }
     }
 }
@@ -45,18 +58,26 @@ impl Default for Can3Options {
 pub struct Can3Artifact {
     pub bytes: Vec<u8>,
     pub report: Cmo3Report,
+    /// Standard exp3 files and their registration manifest. Paired publication
+    /// writes these beside CAN3; standalone CAN3 still embeds the operations.
+    pub expression_files: BTreeMap<String, Vec<u8>>,
 }
 /// A shared basename ensures that animation links and published model names agree.
 #[derive(Debug, Clone)]
 pub struct CubismOptions {
     pub base_name: String,
     pub model: Cmo3Options,
+    /// See Can3Options::bake_animation. Disabled by default for strict callers.
+    pub bake_animation: bool,
+    pub auto_frame_rate: bool,
 }
 impl Default for CubismOptions {
     fn default() -> Self {
         Self {
             base_name: "model".into(),
             model: Cmo3Options::default(),
+            bake_animation: false,
+            auto_frame_rate: false,
         }
     }
 }
@@ -99,12 +120,21 @@ pub(crate) fn validate_name(name: &str) -> Result<(), Cmo3Error> {
 
 /// Inspect animation losses without resources, archive creation or input mutation.
 pub fn inspect_can3(doc: &Document) -> Result<Cmo3Report, Cmo3Error> {
-    prepare(doc).map(|(_, _, report)| report)
+    prepare(doc, false, false).map(|(_, _, report)| report)
 }
 /// Inspect the paired export; motions are carried by CAN3 rather than lost in CMO3.
 pub fn inspect_cubism(doc: &Document) -> Result<Cmo3Report, Cmo3Error> {
+    inspect_cubism_with_baking(doc, false, false)
+}
+fn inspect_cubism_with_baking(
+    doc: &Document,
+    bake: bool,
+    auto: bool,
+) -> Result<Cmo3Report, Cmo3Error> {
     let mut report = crate::export::inspect_with_animation(doc, true)?;
-    report.diagnostics.extend(inspect_can3(doc)?.diagnostics);
+    report
+        .diagnostics
+        .extend(prepare(doc, bake, auto)?.2.diagnostics);
     Ok(report)
 }
 /// Encode animation only, linking the CMO3 filename supplied by the caller.
@@ -115,12 +145,13 @@ pub fn encode_can3(doc: &Document, options: &Can3Options) -> Result<Can3Artifact
             "CAN3 model_file_name must end with .cmo3".into(),
         ));
     }
-    let (scenes, canvas, report) = prepare(doc)?;
+    let (scenes, canvas, report) = prepare(doc, options.bake_animation, options.auto_frame_rate)?;
     reject(&report, options.loss_policy)?;
     let xml = Animation::new(doc, canvas, options).build(&scenes)?;
     Ok(Can3Artifact {
         bytes: crate::caff::encode(Vec::new(), &xml, options.obfuscation_key)?,
         report,
+        expression_files: crate::expression_semantics::files(doc)?,
     })
 }
 /// Encode a linked pair entirely in memory. All loss checks precede image I/O.
@@ -130,7 +161,7 @@ pub fn encode_cubism(
     options: &CubismOptions,
 ) -> Result<CubismArtifact, Cmo3Error> {
     validate_name(&options.base_name)?;
-    let report = inspect_cubism(doc)?;
+    let report = inspect_cubism_with_baking(doc, options.bake_animation, options.auto_frame_rate)?;
     reject(&report, options.model.loss_policy)?;
     let model_file_name = format!("{}.cmo3", options.base_name);
     let animation_file_name = format!("{}.can3", options.base_name);
@@ -141,6 +172,8 @@ pub fn encode_cubism(
             animation_name: options.model.model_name.clone(),
             loss_policy: options.model.loss_policy,
             obfuscation_key: options.model.obfuscation_key,
+            bake_animation: options.bake_animation,
+            auto_frame_rate: options.auto_frame_rate,
         },
     )?;
     let cmo3 = crate::export::encode_with_animation(doc, assets, &options.model, true)?;
@@ -230,11 +263,17 @@ struct Scene {
     tracks: Vec<Track>,
     events: BTreeMap<i32, String>,
 }
-fn keys(track: &MotionTrack, fps: f32, report: &mut Cmo3Report) -> Result<Vec<Key>, Cmo3Error> {
+fn keys(
+    track: &MotionTrack,
+    fps: f32,
+    report: &mut Cmo3Report,
+    inferred: bool,
+    restricted: bool,
+) -> Result<Vec<Key>, Cmo3Error> {
     let mut keys: Vec<_> = track
         .keys()
         .map(|key| {
-            let frame = frame(key.time, fps, &key.id, report)?;
+            let frame = grid::frame(key.time, fps, &key.id, report, inferred)?;
             Ok(Key {
                 frame,
                 value: f64::from(key.value),
@@ -252,14 +291,27 @@ fn keys(track: &MotionTrack, fps: f32, report: &mut Cmo3Report) -> Result<Vec<Ke
             MotionSegment::Bezier {
                 control1, control2, ..
             } => {
-                keys[index].next = (
-                    f64::from(control1.time) * f64::from(fps),
-                    f64::from(control1.value),
-                );
-                keys[index + 1].prev = (
-                    f64::from(control2.time) * f64::from(fps),
-                    f64::from(control2.value),
-                );
+                let start_time = if index == 0 {
+                    track.initial.time
+                } else {
+                    track.segments[index - 1].end().time
+                };
+                let end_time = segment.end().time;
+                let start_frame = f64::from(keys[index].frame);
+                let span = f64::from(keys[index + 1].frame) - start_frame;
+                let handle = |time: f32, fraction: f64| {
+                    if !inferred {
+                        f64::from(time) * f64::from(fps)
+                    } else if restricted {
+                        start_frame + span * fraction
+                    } else {
+                        start_frame
+                            + span * (f64::from(time) - f64::from(start_time))
+                                / (f64::from(end_time) - f64::from(start_time))
+                    }
+                };
+                keys[index].next = (handle(control1.time, 1. / 3.), f64::from(control1.value));
+                keys[index + 1].prev = (handle(control2.time, 2. / 3.), f64::from(control2.value));
                 "BEZIER"
             }
         };
@@ -328,13 +380,15 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
             );
             continue;
         };
-        if entry.blend.unwrap_or(ExpressionBlend::Add) != ExpressionBlend::Add {
-            loss(report, &asset.id, "CAN3_EXPRESSION_BLEND", "CAN3 initial values import as Add expressions; Multiply and Overwrite require unavailable blend metadata");
-            continue;
-        }
+        let blend = entry.blend.unwrap_or(ExpressionBlend::Add);
         // CAN3 stores absolute poses; Add expressions store an offset from the
         // model default. Reconstruct the pose using the current parameter.
-        let value = doc.get_parameter(parameter_id).unwrap().default_value + entry.value;
+        let default = doc.get_parameter(parameter_id).unwrap().default_value;
+        let value = match blend {
+            ExpressionBlend::Add => default + entry.value,
+            ExpressionBlend::Multiply => default * entry.value,
+            ExpressionBlend::Overwrite => entry.value,
+        };
         if !value.is_finite() {
             loss(
                 report,
@@ -344,6 +398,9 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
             );
             continue;
         }
+        // Match expression playback: clamp the target before applying its fade.
+        let parameter = doc.get_parameter(parameter_id).unwrap();
+        let value = value.clamp(parameter.minimum, parameter.maximum);
         if !targets.insert(parameter_id) {
             loss(report, &asset.id, "CAN3_EXPRESSION_COLLISION", "Repeated expression parameters cannot be represented by a single CAN3 initial value");
             continue;
@@ -371,6 +428,13 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
         track.initial.value = value;
         clip.tracks.push(track);
     }
+    if asset
+        .entries
+        .iter()
+        .any(|entry| entry.blend.unwrap_or(ExpressionBlend::Add) != ExpressionBlend::Add)
+    {
+        bake::info(report, &asset.id, "CAN3_EXPRESSION_SEMANTICS", "Original expression operations are embedded for reimport and exported as standard exp3 companions for Viewer/SDK motion blending. Animator scenes preview default-model poses; native CAN3 scene blending does not implement per-parameter Multiply");
+    }
     if clip
         .tracks
         .iter()
@@ -386,7 +450,11 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
     clip
 }
 
-fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error> {
+fn prepare(
+    doc: &Document,
+    bake: bool,
+    auto: bool,
+) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error> {
     if let Some(issue) = doc.validate_structure().first() {
         return Err(Cmo3Error::InvalidDocument(format!(
             "{}: {}",
@@ -412,19 +480,40 @@ fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error
         );
     }
     let mut scenes = Vec::new();
+    let mut sample_budget = 10_000_000usize;
     let expressions: Vec<_> = doc
         .expression_order()
         .iter()
         .map(|id| expression_clip(doc, doc.get_expression(id).unwrap(), &mut report))
         .collect();
-    for clip in doc
+    let clips: Vec<_> = doc
         .motion_order()
         .iter()
         .map(|id| doc.get_motion(id).unwrap())
         .chain(expressions.iter())
-    {
+        .collect();
+    let grids = if auto {
+        grid::detect(&clips)
+    } else {
+        BTreeMap::new()
+    };
+    for clip in clips {
+        let inferred = grids.contains_key(&clip.fps.to_bits());
+        let fps = grids.get(&clip.fps.to_bits()).copied().unwrap_or(clip.fps);
         let id = &clip.id;
-        let frames = frame(clip.duration, clip.fps, id, &mut report)?;
+        let mut timing = Cmo3Report::default();
+        let frames = grid::frame(clip.duration, fps, id, &mut timing, inferred)?;
+        if inferred {
+            bake::info(&mut report, id, "CAN3_TIME_GRID", &format!("Detected {fps} FPS anchor grid from declared {} FPS; maximum timestamp adjustment {:.6} ms. Authored keys and Bezier shapes are retained; loop transitions use the inferred scene FPS", clip.fps, grid::maximum_shift(clip,fps)*1000.));
+        } else if auto {
+            bake::info(&mut report, id, "CAN3_TIME_GRID_UNRESOLVED", "No collision-free common time grid up to 240 FPS was found; explicit fallback baking or loss rejection is used at the declared frame rate");
+        }
+        if bake {
+            for diagnostic in &mut timing.diagnostics {
+                diagnostic.severity = DiagnosticSeverity::Info;
+            }
+        }
+        report.diagnostics.extend(timing.diagnostics);
         if frames == 0 {
             loss(
                 &mut report,
@@ -437,7 +526,7 @@ fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error
             name: clip.name.clone(),
             guid: clip.id.clone(),
             frames: frames.max(1),
-            fps: f64::from(clip.fps),
+            fps: f64::from(fps),
             looping: clip.looping,
             restricted: clip.restricted_beziers,
             fade_in: millis(clip.fade_in, id, &mut report)?.unwrap_or(-1),
@@ -463,15 +552,17 @@ fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error
                 loss(&mut report, &track.id, "CAN3_UNSUPPORTED_TARGET", "Unresolved, EyeBlink, LipSync and other model effect curves are omitted; use parameter curves for editable animation");
                 continue;
             }
-            if track.segments.iter().enumerate().any(|(index, segment)| {
-                matches!(segment, MotionSegment::InverseStepped { .. })
-                    && segment.end().value
-                        != if index == 0 {
-                            track.initial.value
-                        } else {
-                            track.segments[index - 1].end().value
-                        }
-            }) {
+            if !bake
+                && track.segments.iter().enumerate().any(|(index, segment)| {
+                    matches!(segment, MotionSegment::InverseStepped { .. })
+                        && segment.end().value
+                            != if index == 0 {
+                                track.initial.value
+                            } else {
+                                track.segments[index - 1].end().value
+                            }
+                })
+            {
                 loss(&mut report, &track.id, "CAN3_INVERSE_STEP_BOUNDARY", "Animator displays the anchor value at the first frame of an inverse-step segment, while Kasane samples its endpoint; authored keys and segment types are retained");
             }
             let target_key = match &track.target {
@@ -490,13 +581,23 @@ fn prepare(doc: &Document) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error
             }
             scene.tracks.push(Track {
                 target: track.target.clone(),
-                keys: keys(track, clip.fps, &mut report)?,
+                keys: if inferred && bake {
+                    inverse::repair(
+                        keys(track, fps, &mut report, true, clip.restricted_beziers)?,
+                        &track.id,
+                        &mut report,
+                    )
+                } else if bake && bake::needs_baking(track, clip.fps) {
+                    bake::keys(track, clip, &mut report, &mut sample_budget)?
+                } else {
+                    keys(track, fps, &mut report, inferred, clip.restricted_beziers)?
+                },
                 fade_in: millis(track.fade_in, &track.id, &mut report)?,
                 fade_out: millis(track.fade_out, &track.id, &mut report)?,
             });
         }
         for event in &clip.events {
-            let frame = frame(event.time, clip.fps, &event.id, &mut report)?;
+            let frame = grid::frame(event.time, fps, &event.id, &mut report, inferred)?;
             if scene.events.insert(frame, event.value.clone()).is_some() {
                 loss(&mut report, &event.id, "CAN3_EVENT_COLLISION", "CAN3 permits one user-data event per frame; the last event at that frame is retained");
             }

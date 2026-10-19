@@ -608,6 +608,20 @@ pub(crate) fn encode_with_animation(
     if options.loss_policy == LossPolicy::Reject && report.has_loss() {
         return Err(Cmo3Error::Unsupported(report));
     }
+    // The common model3 Name extension is a label we can represent natively.
+    // An explicitly supplied output label still takes precedence.
+    let mut resolved_options = options.clone();
+    if options.model_name == Cmo3Options::default().model_name {
+        if let Some(name) = doc
+            .model3_settings()
+            .extensions
+            .get("Name")
+            .and_then(|v| v.as_str())
+        {
+            resolved_options.model_name = name.into();
+        }
+    }
+    let options = &resolved_options;
     let mut frame = kasane_core::DrawableFrame::default();
     // Editable source geometry precedes additive morphs and Glue. Keyform
     // pools still retain every authored pose; only this independent rest copy

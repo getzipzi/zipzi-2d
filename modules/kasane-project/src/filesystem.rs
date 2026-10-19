@@ -142,6 +142,8 @@ impl Drop for Stage {
 #[derive(Debug, Default)]
 pub struct Publication {
     pub warnings: Vec<String>,
+    /// Content conversion notes; these do not indicate a durability failure.
+    pub notices: Vec<String>,
 }
 impl Publication {
     pub fn durable(&self) -> bool {

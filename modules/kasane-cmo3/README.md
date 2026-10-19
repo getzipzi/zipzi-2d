@@ -64,10 +64,11 @@ callers should surface the report instead of silently discarding it.
 
 For paired export, `encode_project_cubism`, `encode_document_cubism` and
 `DocumentSession::encode_cubism` return the linked artifact. `publish_cubism`
-publishes both files and `export-report.json` into a managed output directory.
+publishes both files, `export-report.json`, and standard expression companions
+indexed by `expressions.json` into a managed output directory.
 It stages all files before replacing an existing export and restores the old
 pair if the commit rename fails. Replacement refuses directories containing
-files other than the same model/animation filenames and report, protecting
+files other than the same model/animation filenames, report and declared expression companions, protecting
 source projects and unrelated files. The parent directory must already exist.
 Directory replacement uses a backup/rename sequence; it is rollback-safe on
 reported failures, but does not promise a crash-atomic two-file transaction.
@@ -146,6 +147,22 @@ fractional frame positions. Times are rounded to the nearest frame, and fades
 to the nearest millisecond. Changes beyond float noise produce loss diagnostics.
 Scenes shorter than one frame also report their extension to the minimum duration.
 Colliding anchors/events retain the last item only with `LossPolicy::Allow`.
+With `auto_frame_rate`, export infers a collision-free anchor grid from keys,
+events and duration, including timestamps rounded to milliseconds. Clips with
+the same declared FPS share a grid; different declared FPS groups stay separate.
+Detection prefers the declared rate, then common rates and declared-rate
+multiples up to 240 FPS. Ambiguous sparse data cannot identify an authoring rate
+uniquely. The report records the chosen rate and maximum timestamp adjustment.
+Anchors retain their positions on this grid. Restricted Bezier handles use the
+one-third/two-thirds span required by runtime evaluation; unrestricted handles
+retain their normalized time positions. Control values remain unchanged.
+With both `auto_frame_rate` and `bake_animation`, inverse-step boundaries are
+adapted locally, splitting preceding Beziers exactly and adding a guard key one
+frame before a jump. Interpolation within that final frame can differ. When no
+grid is found, explicit `bake_animation` falls back to sampling incompatible
+tracks at their declared FPS. It does not bake every motion by default.
+Subframe interpolation, loop seams and rounded scene duration can still differ;
+conversions are recorded in the report. Other unsupported features remain strict losses.
 Duplicate tracks (including normalized part-ID collisions) retain the first.
 Inverse-stepped segments retain their authored keys/type, but Animator displays
 the anchor value at the first frame of the segment while Kasane samples its
@@ -170,8 +187,13 @@ metadata. Parameter entries import as Add offsets (scene initial value minus
 model default), including zero offsets. Runtime exp3 output omits this metadata
 and emits these Add offsets.
 Engineering re-export uses current expression entries while retaining scene
-setup. Multiply/Overwrite expressions have unavailable CAN3 blend semantics and are
-explicit export losses. Pose and other runtime sidecars still require the
+setup. All expression operations, including Multiply/Overwrite and their
+unclamped source values, are now embedded in native attribute option maps for
+reimport and emitted as standard exp3 companions for Viewer/SDK playback.
+These maps survive native Cubism saves; they do not add per-parameter Multiply
+to Animator's own scene player. See [expression semantics](EXPRESSION-SEMANTICS.md)
+for pose editing, zero defaults, and preservation limits.
+Pose and other runtime sidecars still require the
 existing runtime package exporter. Paired export carries motion clips in CAN3;
 standalone CMO3 export continues to report their omission.
 
@@ -220,7 +242,8 @@ altering the document. Editable exports retain the source keys and duration.
 runtime or editable grouped publication. Unsaved artwork is held through shared
 immutable pixels and encoded on the export worker, independently of the live
 session. Model-only editable groups omit an empty CAN3. Transfer adapters always
-use strict loss handling.
+use strict loss handling. The editor additionally enables time-grid detection
+and explicit boundary repair/fallback baking for animation transfers.
 
 ## Validation
 

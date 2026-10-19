@@ -169,6 +169,19 @@ impl Animation<'_> {
                     attr.options.push(
                         s(format!("live2dParam:{}", parameter.runtime_id)).named("KEY_PARAM_ID"),
                     );
+                    if let Some(expression) = self.doc.get_expression(&scene.guid) {
+                        if let Some(entry) = expression.entries.iter().find(|entry| {
+                            matches!(&entry.target, ExpressionTarget::Resolved { parameter_id: id } if id == parameter_id)
+                        }) {
+                            let semantics = crate::expression_semantics::Entry {
+                                scene: scene.guid.clone(), parameter: parameter_id.clone(),
+                                blend: entry.blend, value: entry.value,
+                                pose: track.keys[0].value as f32, default: parameter.default_value,
+                            };
+                            attr.options.push(s(serde_json::to_string(&semantics).expect("finite expression operations serialize"))
+                                .named(crate::expression_semantics::KEY));
+                        }
+                    }
                     let r = self.float(
                         &ctx,
                         attr,

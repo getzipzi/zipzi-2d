@@ -21,6 +21,72 @@ fn field<'a, 'input>(node: roxmltree::Node<'a, 'input>, name: &str) -> roxmltree
         .unwrap()
 }
 
+#[test]
+fn runtime_model_name_maps_to_native_label_but_unknown_metadata_stays_strict() {
+    let (mut doc, png) = fixture();
+    let mut settings = doc.model3_settings().clone();
+    settings
+        .extensions
+        .insert("Name".into(), serde_json::json!("Original label"));
+    assert!(doc.set_model3_settings(settings.clone()).status.is_ok());
+    for explicit in [None, Some("Chosen label")] {
+        let mut options = Cmo3Options::default();
+        if let Some(name) = explicit {
+            options.model_name = name.into();
+        }
+        let artifact = encode_cmo3(&doc, &|_: &ImageAsset| Ok(png.clone()), &options).unwrap();
+        assert!(!artifact.report.has_loss());
+        let imported = import_model(&artifact.bytes).unwrap();
+        let expected = serde_json::json!(explicit.unwrap_or("Original label"));
+        assert_eq!(
+            imported.document.model3_settings().extensions.get("Name"),
+            Some(&expected)
+        );
+        let reexported = encode_cmo3(
+            &imported.document,
+            &|asset: &ImageAsset| Ok(imported.images[&asset.source].clone()),
+            &Cmo3Options::default(),
+        )
+        .unwrap();
+        let reopened = import_model(&reexported.bytes).unwrap();
+        assert_eq!(
+            reopened.document.model3_settings().extensions.get("Name"),
+            Some(&expected)
+        );
+        let entries = archive(&artifact.bytes);
+        let xml = String::from_utf8(
+            entries
+                .iter()
+                .find(|e| e.0 == "main.xml")
+                .unwrap()
+                .3
+                .clone(),
+        )
+        .unwrap();
+        let parsed = roxmltree::Document::parse(&xml).unwrap();
+        let model = parsed
+            .descendants()
+            .find(|n| n.has_tag_name("CModelSource") && n.attribute("xs.ref").is_none())
+            .unwrap();
+        assert_eq!(
+            field(model, "name").text(),
+            Some(explicit.unwrap_or("Original label"))
+        );
+    }
+    settings
+        .extensions
+        .insert("Unknown".into(), serde_json::json!(true));
+    assert!(doc.set_model3_settings(settings).status.is_ok());
+    assert!(matches!(
+        encode_cmo3(
+            &doc,
+            &|_: &ImageAsset| panic!("metadata rejection must precede image I/O"),
+            &Cmo3Options::default()
+        ),
+        Err(Cmo3Error::Unsupported(_))
+    ));
+}
+
 fn exported_origin(xml: &roxmltree::Document<'_>) -> Vec2 {
     let info = xml
         .descendants()

@@ -48,7 +48,8 @@ pub fn publish_can3(artifact: &Can3Artifact, destination: &Path) -> Result<Publi
     crate::cmo3::publish_bytes(&artifact.bytes, destination, &NativeFileSystem)
 }
 /// Publish both files in a managed directory. Existing directories may contain
-/// only the same two filenames and export-report.json; other content is refused.
+/// only the same two filenames, export-report.json and expression companions
+/// declared in expressions.json; other content is refused.
 /// Replacement stages both files first and rolls back if the directory rename fails.
 pub fn publish_cubism(
     artifact: &CubismArtifact,
@@ -58,6 +59,60 @@ pub fn publish_cubism(
 }
 fn status(s: kasane_core::Status) -> Cmo3Error {
     Cmo3Error::InvalidDocument(format!("{}: {}", s.code, s.message))
+}
+fn validate_expression_filename(name: &str) -> Result<(), Cmo3Error> {
+    if name == "expressions.json" {
+        return Ok(());
+    }
+    let id = name
+        .strip_prefix("expression-")
+        .and_then(|s| s.strip_suffix(".exp3.json"));
+    if !id.is_some_and(|id| id.len() == 36 && uuid::Uuid::parse_str(id).is_ok()) {
+        return Err(Cmo3Error::InvalidDocument(
+            "Unsafe Cubism expression companion filename".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn previous_expression_files(destination: &Path) -> Result<Vec<String>, Cmo3Error> {
+    let path = destination.join("expressions.json");
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+    if fs::symlink_metadata(&path)?.file_type().is_symlink() {
+        return Err(Cmo3Error::InvalidDocument(
+            "Expression manifest must not be a symbolic link".into(),
+        ));
+    }
+    declared_expression_files(&fs::read(path)?)
+}
+
+fn declared_expression_files(bytes: &[u8]) -> Result<Vec<String>, Cmo3Error> {
+    let manifest: serde_json::Value = serde_json::from_slice(bytes)
+        .map_err(|error| Cmo3Error::InvalidDocument(error.to_string()))?;
+    if manifest["Version"] != 1 {
+        return Err(Cmo3Error::InvalidDocument(
+            "Unsupported expression companion manifest".into(),
+        ));
+    }
+    let mut names = vec!["expressions.json".into()];
+    let items = manifest["Expressions"].as_array().ok_or_else(|| {
+        Cmo3Error::InvalidDocument("Invalid expression companion manifest".into())
+    })?;
+    for item in items {
+        let name = item["File"].as_str().ok_or_else(|| {
+            Cmo3Error::InvalidDocument("Missing expression companion filename".into())
+        })?;
+        validate_expression_filename(name)?;
+        if name == "expressions.json" || names.iter().any(|previous| previous == name) {
+            return Err(Cmo3Error::InvalidDocument(
+                "Duplicate expression companion filename".into(),
+            ));
+        }
+        names.push(name.into());
+    }
+    Ok(names)
 }
 fn publish_with_filesystem(
     artifact: &CubismArtifact,
@@ -71,6 +126,28 @@ fn publish_with_filesystem(
         artifact.animation_file_name.as_str(),
         "export-report.json",
     ];
+    for name in artifact.can3.expression_files.keys() {
+        validate_expression_filename(name)?;
+    }
+    if !artifact.can3.expression_files.is_empty() {
+        let manifest = artifact
+            .can3
+            .expression_files
+            .get("expressions.json")
+            .ok_or_else(|| {
+                Cmo3Error::InvalidDocument("Missing expression companion manifest".into())
+            })?;
+        let declared = declared_expression_files(manifest)?;
+        if declared.len() != artifact.can3.expression_files.len()
+            || declared
+                .iter()
+                .any(|name| !artifact.can3.expression_files.contains_key(name))
+        {
+            return Err(Cmo3Error::InvalidDocument(
+                "Expression companions do not match their manifest".into(),
+            ));
+        }
+    }
     for name in &names {
         if !matches!(
             Path::new(name).components().collect::<Vec<_>>().as_slice(),
@@ -101,9 +178,14 @@ fn publish_with_filesystem(
     let _lock = io::lock(parent).map_err(status)?;
     io::reject_symlink(&destination).map_err(status)?;
     if destination.exists() {
+        let previous = previous_expression_files(&destination)?;
         for entry in fs::read_dir(&destination)? {
             let entry = entry?;
-            if !entry.file_type()?.is_file() || !names.iter().any(|name| entry.file_name() == *name)
+            if !entry.file_type()?.is_file()
+                || !(names.iter().any(|name| entry.file_name() == *name)
+                    || previous
+                        .iter()
+                        .any(|name| entry.file_name() == name.as_str()))
             {
                 return Err(Cmo3Error::InvalidDocument(
                     "Refusing to replace a directory containing unmanaged files".into(),
@@ -118,6 +200,9 @@ fn publish_with_filesystem(
             &stage.0.join(&artifact.animation_file_name),
             &artifact.can3.bytes,
         )?;
+    }
+    for (name, bytes) in &artifact.can3.expression_files {
+        files.write_new(&stage.0.join(name), bytes)?;
     }
     let report = serde_json::to_vec_pretty(&artifact.report)
         .map_err(|e| Cmo3Error::InvalidDocument(e.to_string()))?;
@@ -142,6 +227,11 @@ fn publish_with_filesystem(
         return Err(error.into());
     }
     let mut publication = Publication::finish(files, parent);
+    if !artifact.report.diagnostics.is_empty() {
+        publication.notices.push(
+            "Cubism export completed. See export-report.json for details of any pose, curve or timing conversions.".into()
+        );
+    }
     if let Err(error) = fs::remove_dir_all(&backup.0) {
         let recovery = backup.preserve();
         publication.warnings.push(format!(
@@ -233,6 +323,7 @@ mod tests {
             can3: Can3Artifact {
                 bytes: b"new animation".to_vec(),
                 report: Default::default(),
+                expression_files: Default::default(),
             },
             report: Default::default(),
         };
@@ -278,6 +369,7 @@ pub fn publish_cubism_model(
         can3: Can3Artifact {
             bytes: Vec::new(),
             report: Default::default(),
+            expression_files: Default::default(),
         },
         report,
     };

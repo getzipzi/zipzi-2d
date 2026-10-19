@@ -11,7 +11,7 @@ use kasane_core::{
     },
     Document,
 };
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 fn id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
@@ -78,6 +78,7 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
         let mut events = Vec::new();
         let mut other_animation = false;
         let mut has_model = false;
+        let mut expression_operations = BTreeMap::new();
         for source in g.list(g.req(scene, "trackSourceSet")?, "_sources")? {
             if source.has_tag_name("CMvTrack_Group_Source") {
                 continue;
@@ -144,6 +145,20 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
                         continue;
                     }
                     let sequence = g.req(attr, "valueData")?;
+                    let operation = g
+                        .field(attr, "optionParam")?
+                        .map(|options| g.field(options, crate::expression_semantics::KEY))
+                        .transpose()?
+                        .flatten()
+                        .map(|value| {
+                            serde_json::from_str::<crate::expression_semantics::Entry>(
+                                value.text().unwrap_or(""),
+                            )
+                            .map_err(|error| {
+                                invalid(format!("Invalid CAN3 expression operation: {error}"))
+                            })
+                        })
+                        .transpose()?;
                     let unkeyed = g.list(sequence, "points")?.is_empty();
                     // An unkeyed Part still has a scene-local initial value.
                     // Only the untouched default (fully visible) can be omitted.
@@ -161,6 +176,7 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
                         // edited baseValue is a real initial override even
                         // when the source contains no explicit key at all.
                         if unkeyed
+                            && operation.is_none()
                             && g.number::<f32>(sequence, "baseValue")? == parameter.default_value
                         {
                             continue;
@@ -174,6 +190,19 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
                         }
                         MotionTrackTarget::PartOpacity { part_id: guid }
                     };
+                    if let Some(operation) = operation {
+                        let MotionTrackTarget::Parameter { parameter_id } = &target else {
+                            return Err(invalid(
+                                "Expression operation is attached to a non-parameter channel",
+                            ));
+                        };
+                        if expression_operations
+                            .insert(parameter_id.clone(), operation)
+                            .is_some()
+                        {
+                            return Err(invalid("Duplicate CAN3 expression operation"));
+                        }
+                    }
                     tracks.push(track(&g, attr, target, fps)?);
                 }
             }
@@ -251,11 +280,12 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
                 opaque_source_content_hash: None,
             },
             other_animation,
+            expression_operations,
         ));
     }
     // Validate in a candidate: a late bad scene cannot partially modify a caller.
     let mut candidate = document.fork_candidate();
-    for (mut clip, other_animation) in clips {
+    for (mut clip, other_animation, expression_operations) in clips {
         clip.preserve_source_key_range();
         let status = candidate.validate_motion(&clip);
         if !status.is_ok() {
@@ -274,21 +304,25 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
                 entries: clip
                     .tracks
                     .iter()
-                    .filter_map(|track| {
+                    .filter(|track| matches!(track.target, MotionTrackTarget::Parameter { .. }))
+                    .map(|track| {
                         let MotionTrackTarget::Parameter { parameter_id } = &track.target else {
-                            return None;
+                            unreachable!();
                         };
-                        Some(ExpressionEntry {
+                        let default = candidate.get_parameter(parameter_id).unwrap().default_value;
+                        if let Some(operation) = expression_operations.get(parameter_id) {
+                            return operation.restore(parameter_id, default, track.initial.value);
+                        }
+                        Ok(ExpressionEntry {
                             target: ExpressionTarget::Resolved {
                                 parameter_id: parameter_id.clone(),
                             },
-                            value: track.initial.value
-                                - candidate.get_parameter(parameter_id).unwrap().default_value,
+                            value: track.initial.value - default,
                             blend: Some(ExpressionBlend::Add),
                             extensions: Default::default(),
                         })
                     })
-                    .collect(),
+                    .collect::<Result<Vec<_>>>()?,
                 extensions: Default::default(),
                 opaque_source_ids: None,
                 opaque_source_content_hash: None,
@@ -447,6 +481,72 @@ fn track(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn copied_expression_scene_restores_operations_with_a_new_guid() {
+        let parameter = id();
+        let original_scene = id();
+        let copied_scene = id();
+        let mut base = Document::new();
+        assert!(base
+            .initialize(&id(), kasane_core::ModelSetup::default())
+            .is_ok());
+        assert!(base
+            .create_parameter(kasane_core::Parameter {
+                id: parameter.clone(),
+                runtime_id: "P".into(),
+                name: "P".into(),
+                default_value: 0.5,
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        let entries = vec![ExpressionEntry {
+            target: ExpressionTarget::Resolved {
+                parameter_id: parameter,
+            },
+            blend: Some(ExpressionBlend::Multiply),
+            value: -5.,
+            extensions: Default::default(),
+        }];
+        let mut source = base.clone();
+        assert!(source
+            .create_expression(ExpressionAsset {
+                id: original_scene.clone(),
+                name: "Expression".into(),
+                file_type: None,
+                fade_in: None,
+                fade_out: None,
+                entries: entries.clone(),
+                extensions: Default::default(),
+                opaque_source_ids: None,
+                opaque_source_content_hash: None,
+            })
+            .status
+            .is_ok());
+        let artifact = crate::encode_can3(&source, &Default::default()).unwrap();
+        let archive = super::super::archive::read(&artifact.bytes).unwrap();
+        let xml = std::str::from_utf8(&archive["main.xml"]).unwrap();
+        // A native copy changes the scene identity but retains attribute options.
+        let xml = xml.replace(
+            &format!("uuid=\"{original_scene}\""),
+            &format!("uuid=\"{copied_scene}\""),
+        );
+        let bytes = crate::caff::encode(Vec::new(), xml.as_bytes(), 0).unwrap();
+        let mut reopened = base.clone();
+        read(&bytes, &mut base).unwrap();
+        assert_eq!(base.expression_order(), [copied_scene.clone()]);
+        assert_eq!(base.get_expression(&copied_scene).unwrap().entries, entries);
+        // Re-export must attach the operations to the new identity as well.
+        let bytes = crate::encode_can3(&base, &Default::default())
+            .unwrap()
+            .bytes;
+        read(&bytes, &mut reopened).unwrap();
+        assert_eq!(
+            reopened.get_expression(&copied_scene).unwrap().entries,
+            entries
+        );
+    }
 
     #[test]
     fn unkeyed_parameter_base_value_imports_as_an_additive_expression() {

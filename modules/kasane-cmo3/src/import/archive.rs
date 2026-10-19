@@ -26,7 +26,10 @@ pub fn read(bytes: &[u8]) -> Result<HashMap<String, Vec<u8>>> {
         // Real Cubism archives use only the low 32 bits of this slot.
         let offset = (reader.u64()? as u32) as usize;
         let size = reader.u32()? as usize;
-        if reader.byte()? != 1 {
+        let flags = reader.byte()?;
+        // Cubism's native saver emits clear entries (flag 0) with XOR key 0.
+        // Our writer and obfuscated native projects use flag 1.
+        if flags != 1 && !(flags == 0 && key == 0) {
             return Err(invalid("Unsupported CAFF entry flags"));
         }
         let compression = reader.byte()?;
@@ -70,6 +73,32 @@ struct Reader<'a> {
     bytes: &'a [u8],
     at: usize,
     key: i32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn native_clear_entries_work_and_unknown_flags_still_fail() {
+        let xml = b"<native-save/>";
+        let mut archive = crate::caff::encode(Vec::new(), xml, 0).unwrap();
+        let mut table = Reader {
+            bytes: &archive,
+            at: 54,
+            key: 0,
+        };
+        assert_eq!(table.u32().unwrap(), 1);
+        assert_eq!(table.string().unwrap(), "main.xml");
+        assert_eq!(table.string().unwrap(), "main_xml");
+        table.u64().unwrap();
+        table.u32().unwrap();
+        let flag = table.at;
+        archive[flag] = 0;
+        assert_eq!(read(&archive).unwrap()["main.xml"], xml);
+        archive[flag] = 2;
+        assert!(read(&archive).is_err());
+    }
 }
 impl Reader<'_> {
     fn take(&mut self, n: usize) -> Result<&[u8]> {

@@ -5,6 +5,94 @@ use kasane_project::{
 };
 
 #[test]
+fn expression_companions_keep_runtime_blends_and_publish_as_one_managed_group() {
+    let temp = std::env::temp_dir().join(format!("kasane-expressions-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir(&temp).unwrap();
+    let output = temp.join("avatar");
+    let mut doc = Document::new();
+    assert!(doc
+        .initialize(
+            &uuid::Uuid::new_v4().to_string(),
+            Canvas::new(128., 64., Vec2::default(), 32.)
+        )
+        .is_ok());
+    let parameter = uuid::Uuid::new_v4().to_string();
+    assert!(doc
+        .create_parameter(kasane_core::Parameter {
+            id: parameter.clone(),
+            runtime_id: "ParamX".into(),
+            name: "X".into(),
+            ..Default::default()
+        })
+        .status
+        .is_ok());
+    let expression = uuid::Uuid::new_v4().to_string();
+    assert!(doc
+        .create_expression(ExpressionAsset {
+            id: expression.clone(),
+            name: "Smile".into(),
+            file_type: Some("Live2D Expression".into()),
+            fade_in: Some(0.3),
+            fade_out: Some(0.5),
+            entries: vec![ExpressionEntry {
+                target: ExpressionTarget::Resolved {
+                    parameter_id: parameter
+                },
+                value: 0.2,
+                blend: Some(ExpressionBlend::Multiply),
+                extensions: Default::default()
+            }],
+            extensions: Default::default(),
+            opaque_source_ids: None,
+            opaque_source_content_hash: None,
+        })
+        .status
+        .is_ok());
+    let options = CubismOptions {
+        base_name: "avatar".into(),
+        ..Default::default()
+    };
+    let encode = |doc: &Document| {
+        kasane_cmo3::encode_cubism(doc, &|_: &kasane_core::ImageAsset| unreachable!(), &options)
+            .unwrap()
+    };
+    let artifact = encode(&doc);
+    assert_eq!(artifact.can3.expression_files.len(), 2);
+    let file = format!("expression-{expression}.exp3.json");
+    let expected: serde_json::Value =
+        serde_json::from_str(&kasane_project::export_expression3(&doc, &expression).unwrap())
+            .unwrap();
+    let actual: serde_json::Value =
+        serde_json::from_slice(&artifact.can3.expression_files[&file]).unwrap();
+    assert_eq!(expected, actual);
+    assert!(publish_cubism(&artifact, &output).unwrap().durable());
+    assert_eq!(
+        std::fs::read(output.join(&file)).unwrap(),
+        artifact.can3.expression_files[&file]
+    );
+    publish_cubism(&artifact, &output).unwrap();
+    let mut unsafe_artifact = artifact.clone();
+    unsafe_artifact
+        .can3
+        .expression_files
+        .insert("../escape.exp3.json".into(), b"keep".to_vec());
+    assert!(publish_cubism(&unsafe_artifact, &output).is_err());
+    assert!(!temp.join("escape.exp3.json").exists());
+    std::fs::write(output.join("unrelated.exp3.json"), b"keep").unwrap();
+    assert!(publish_cubism(&artifact, &output).is_err());
+    assert_eq!(
+        std::fs::read(output.join("unrelated.exp3.json")).unwrap(),
+        b"keep"
+    );
+    std::fs::remove_file(output.join("unrelated.exp3.json")).unwrap();
+    assert!(doc.erase_object(&expression).status.is_ok());
+    publish_cubism(&encode(&doc), &output).unwrap();
+    assert!(!output.join(&file).exists());
+    assert!(!output.join("expressions.json").exists());
+    std::fs::remove_dir_all(temp).unwrap();
+}
+
+#[test]
 fn saved_projects_publish_a_consistent_animation_model_pair() {
     let temp = std::env::temp_dir().join(format!("kasane-can3-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir(&temp).unwrap();
