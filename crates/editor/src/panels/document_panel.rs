@@ -1,5 +1,5 @@
 //! Independent Dock identities backed by the same document projection and context.
-use crate::{EditorView, t, ui::compact};
+use crate::{EditorView, t};
 use editor_core::{
     DocumentId, EditorCommand, ObjectIndex, ObjectKind, ObjectRef, PanelKind, RelationKind,
 };
@@ -19,8 +19,6 @@ fn includes(panel: PanelKind, kind: ObjectKind) -> bool {
             K::BlendBinding | K::BlendKeyTable | K::BlendConstraint
         ),
         PanelKind::Glue => kind == K::Glue,
-        PanelKind::Motions => matches!(kind, K::MotionGroup | K::Motion | K::MotionTrack),
-        PanelKind::Expressions => kind == K::Expression,
         PanelKind::Physics => matches!(kind, K::Physics | K::PhysicsGroup),
         PanelKind::Pose => matches!(kind, K::Pose | K::PoseGroup | K::PoseEntry),
         PanelKind::Resources => matches!(kind, K::Texture | K::Attachment),
@@ -137,19 +135,6 @@ impl DocumentPanel {
                 })
             })
             .cursor_pointer()
-            .when(
-                matches!(self.kind, PanelKind::Motions | PanelKind::Expressions),
-                |row| {
-                    row.h(compact::rem(compact::ROW))
-                        .py_0()
-                        .border_0()
-                        .flex()
-                        .items_center()
-                        .gap(compact::rem(compact::PADDING))
-                        .overflow_hidden()
-                        .whitespace_nowrap()
-                },
-            )
             .child(
                 div()
                     .min_w_0()

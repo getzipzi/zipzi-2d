@@ -253,23 +253,3 @@ fn track_style<T: Styled>(element: T, theme: &gpui_kit::component::Theme) -> T {
         .h(crate::ui::compact::rem(TRACK_HEIGHT))
         .bg(theme.muted_foreground.opacity(0.55))
 }
-
-pub(crate) fn readonly_track(parameter: &ParameterValue, value: f32, cx: &App) -> Div {
-    let visual = ParameterVisual {
-        kind: Default::default(),
-        repeat: false,
-        keys: Vec::new(),
-    };
-    div()
-        .w_full()
-        .h(crate::ui::compact::rem(crate::ui::compact::ROW))
-        .flex()
-        .items_center()
-        .child(track_style(div(), cx.theme()).children(track_marks(
-            parameter,
-            &visual,
-            value,
-            cx.theme(),
-            None,
-        )))
-}

@@ -667,7 +667,7 @@ fn leaving_animation_cancels_ruler_drag_and_old_pointer_events(cx: &mut TestAppC
 }
 
 #[gpui_kit::test]
-fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_parameters_are_read_only(
+fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_authoring_is_unchanged(
     cx: &mut TestAppContext,
 ) {
     let (document, assets) = document_fixture::diagnostic_animation_document().unwrap();
@@ -700,31 +700,8 @@ fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_parameters_
                     .present_animation(frame.identity, frame.snapshot)
             );
             view.notify_animation(cx);
-            view.dock.as_ref().unwrap().show(
-                editor_core::PanelKind::AnimationParameters,
-                None,
-                window,
-                cx,
-            );
         });
         window.render_frame(cx);
-        assert!(window.try_find("AnimationParameters").is_some());
-        let expected = harness
-            .view
-            .read(cx)
-            .displayed_animation()
-            .unwrap()
-            .parameters[&authoring[0].id];
-        assert_eq!(
-            window.find(("animation-parameter", 0usize)).value(),
-            Some(format!("{expected:.4}").as_str())
-        );
-        let row = window.find(("animation-parameter", 0usize));
-        window.drag(
-            row.bounds().center(),
-            row.bounds().center() + gpui_kit::point(gpui_kit::px(40.), gpui_kit::px(0.)),
-            cx,
-        );
         harness.view.read_with(cx, |view, _| {
             assert_eq!(
                 view.editor
@@ -750,27 +727,8 @@ fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_parameters_
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
             assert!(!view.editor.document().unwrap().modified());
         });
-        // Closing the opt-in panel does not affect playback or the document.
-        harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::AnimationParameters, window, cx)
-        });
-        window.render_frame(cx);
-        assert!(window.try_find("AnimationParameters").is_none());
-        assert!(
-            harness
-                .view
-                .read(cx)
-                .dock
-                .as_ref()
-                .unwrap()
-                .area
-                .read(cx)
-                .layout(gpui_kit::component::dock::DockPlacement::Right)
-                .is_none()
-        );
         window.click("workspace-modeling", cx);
         window.render_frame(cx);
-        assert!(window.try_find("AnimationParameters").is_none());
         assert!(window.try_find("animation-timeline").is_none());
     })
     .unwrap();

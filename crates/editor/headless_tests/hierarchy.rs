@@ -345,7 +345,7 @@ fn default_layout_has_independent_document_panels(cx: &mut TestAppContext) {
             dock.document_panels[&editor_core::PanelKind::Keyforms].entity_id(),
         );
         assert!(dock.area.read(cx).panel(keyforms).is_none());
-        assert_eq!(dock.document_panels.len(), 10);
+        assert_eq!(dock.document_panels.len(), 8);
     });
 }
 

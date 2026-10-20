@@ -109,10 +109,10 @@ fn switching_uses_distinct_viewport_types_and_keeps_document_and_modeling_tool(
         assert!(window.try_find("animation-timeline").is_some());
         assert!(window.try_find("AnimationMotions").is_some());
         assert!(window.try_find("AnimationInfo").is_some());
+        assert!(window.try_find("animation-open-parameters").is_none());
         let motions = window.find("AnimationMotions").bounds();
         let expressions = window.find("AnimationExpressions").bounds();
         let info = window.find("AnimationInfo").bounds();
-        let parameters = window.find("AnimationParameters").bounds();
         let canvas_bounds = window.find("canvas-body").bounds();
         let playback = window.find("animation-timeline").bounds();
         assert!(playback.left() <= motions.left());
@@ -123,7 +123,6 @@ fn switching_uses_distinct_viewport_types_and_keeps_document_and_modeling_tool(
             window.find("AnimationMotions").visible()
                 && window.find("AnimationExpressions").visible()
         );
-        assert!(info.bottom() <= parameters.top());
         assert!(motions.right() <= canvas_bounds.left());
         assert!(info.left() >= canvas_bounds.right());
         harness.view.read_with(cx, |view, cx| {
@@ -474,7 +473,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
         window.render_frame(cx);
         harness.view.update(cx, |view, cx| {
             view.dock.as_ref().unwrap().show(
-                editor_core::PanelKind::AnimationParameters,
+                editor_core::PanelKind::AnimationPhysics,
                 None,
                 window,
                 cx,
@@ -506,8 +505,11 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
             let dock = view.dock.as_ref().unwrap();
             let area = dock.area.read(cx);
             assert!(
-                area.panel(PanelId::from(dock.animation_parameters.entity_id()))
-                    .is_some()
+                area.panel(PanelId::from(
+                    dock.animation_inspectors[&editor_core::PanelKind::AnimationPhysics]
+                        .entity_id()
+                ))
+                .is_some()
             );
             assert!(
                 area.panel(PanelId::from(dock.animation_expressions.entity_id()))
@@ -556,8 +558,11 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
             let dock = view.dock.as_ref().unwrap();
             let area = dock.area.read(cx);
             assert!(
-                area.panel(PanelId::from(dock.animation_parameters.entity_id()))
-                    .is_some()
+                area.panel(PanelId::from(
+                    dock.animation_inspectors[&editor_core::PanelKind::AnimationPhysics]
+                        .entity_id()
+                ))
+                .is_none()
             );
             assert!(
                 area.panel(PanelId::from(dock.animation_expressions.entity_id()))

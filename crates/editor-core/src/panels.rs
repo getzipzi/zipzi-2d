@@ -44,8 +44,6 @@ panels! {
     (Keyforms, Some(C::Keyforms), Some(Modeling), Bottom, 0, false),
     (BlendShapes, Some(C::BlendShapes), Some(Modeling), Right, 0, false),
     (Glue, Some(C::Glue), Some(Modeling), Right, 0, false),
-    (Motions, Some(C::Motions), Some(Modeling), Right, 0, false),
-    (Expressions, Some(C::Expressions), Some(Modeling), Right, 0, false),
     (Physics, Some(C::Physics), Some(Modeling), Right, 0, false),
     (Pose, Some(C::Pose), Some(Modeling), Right, 0, false),
     (Resources, Some(C::Resources), Some(Modeling), Right, 0, false),
@@ -53,7 +51,6 @@ panels! {
     (AnimationTimeline, Some(C::AnimationTimeline), Some(Animation), Bottom, 0, true),
     (AnimationExpressions, Some(C::Expressions), Some(Animation), Left, 1, true),
     (AnimationInfo, Some(C::AnimationInfo), Some(Animation), Right, 0, true),
-    (AnimationParameters, Some(C::AnimationParameters), Some(Animation), Right, 1, true),
     (AnimationPhysics, Some(C::Physics), Some(Animation), Right, 1, false),
     (AnimationPose, Some(C::Pose), Some(Animation), Right, 1, false),
 }
@@ -73,14 +70,12 @@ impl PanelKind {
         matches!(self, Self::ModelingViewport | Self::AnimationViewport)
     }
 
-    pub const DOCUMENT_PANELS: [Self; 10] = [
+    pub const DOCUMENT_PANELS: [Self; 8] = [
         Self::DrawOrder,
         Self::Relations,
         Self::Keyforms,
         Self::BlendShapes,
         Self::Glue,
-        Self::Motions,
-        Self::Expressions,
         Self::Physics,
         Self::Pose,
         Self::Resources,

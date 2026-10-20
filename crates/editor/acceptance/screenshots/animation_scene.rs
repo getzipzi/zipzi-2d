@@ -380,24 +380,11 @@ pub(crate) fn animation_playback_screenshots(
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         assert!(!view.editor.document().unwrap().modified());
     });
-    harness.cx.update_window(harness.window, |_, window, cx| {
-        harness.view.update(cx, |view, cx| {
-            view.dock.as_ref().unwrap().show(
-                editor_core::PanelKind::AnimationParameters,
-                None,
-                window,
-                cx,
-            )
-        });
-    })?;
-    let parameters = harness.capture()?;
-    save(&parameters, directory, "animation-readonly-parameters.png")?;
     // Verify localized resource feedback with actual rendered UI, before playback.
     let (document, diagnostics_assets) = fixture::diagnostic_animation_document()?;
     i18n::activate(Some("zh-CN"));
-    harness.cx.update_window(harness.window, |_, window, cx| {
+    harness.cx.update_window(harness.window, |_, _, cx| {
         harness.view.update(cx, |view, cx| {
-            view.run_command(editor_core::CommandId::AnimationParameters, window, cx);
             view.editor = Editor::from_document(document);
             view.editor
                 .set_workspace(editor_core::WorkspaceKind::Animation)

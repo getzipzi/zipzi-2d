@@ -329,22 +329,23 @@ fn collapsed_bottom_selector_reopens_the_selected_panel(cx: &mut TestAppContext)
 
 #[gpui_kit::test]
 fn animation_add_menu_places_panel_in_the_clicked_group_and_restores_it(cx: &mut TestAppContext) {
-    use editor_core::{CommandId, WorkspaceKind};
+    use editor_core::{CommandId, PanelKind, WorkspaceKind};
     let harness = setup(cx);
-    let (area, motions, parameters, group) = cx
+    let (area, motions, physics, group) = cx
         .update_window(harness.window, |_, window, cx| {
             harness.view.update(cx, |view, cx| {
                 view.run_command(CommandId::AnimationWorkspace, window, cx);
-                view.run_command(CommandId::AnimationParameters, window, cx);
             });
             window.render_frame(cx);
             window.simulate_next_frame(cx);
-            let (area, motions, parameters) = harness.view.read_with(cx, |view, _| {
+            let (area, motions, physics) = harness.view.read_with(cx, |view, _| {
                 let dock = view.dock.as_ref().unwrap();
                 (
                     dock.area.clone(),
                     PanelId::from(dock.animation_motions.entity_id()),
-                    PanelId::from(dock.animation_parameters.entity_id()),
+                    PanelId::from(
+                        dock.animation_inspectors[&PanelKind::AnimationPhysics].entity_id(),
+                    ),
                 )
             });
             let group = area
@@ -364,7 +365,7 @@ fn animation_add_menu_places_panel_in_the_clicked_group_and_restores_it(cx: &mut
                     .is_none()
             );
             right_click_header_padding(window, format!("dock-header-{}", group.as_u64()), cx);
-            (area, motions, parameters, group)
+            (area, motions, physics, group)
         })
         .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
@@ -375,12 +376,12 @@ fn animation_add_menu_places_panel_in_the_clicked_group_and_restores_it(cx: &mut
         window.within("submenu").click(0usize, cx);
         window.render_frame(cx);
         let tree = area.read(cx).layout(DockPlacement::Center).unwrap();
-        assert_eq!(tree.find_panel_node(parameters), Some(group));
+        assert_eq!(tree.find_panel_node(physics), Some(group));
         let PaneRef::Tabs { panels, active_ix } = tree.find_node(group).unwrap().kind() else {
             panic!("tabs")
         };
-        assert_eq!(panels[active_ix], parameters);
-        assert!(window.find("AnimationParameters").visible());
+        assert_eq!(panels[active_ix], physics);
+        assert!(window.find("AnimationPhysics").visible());
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::ModelingWorkspace, window, cx);
             view.run_command(CommandId::AnimationWorkspace, window, cx);
@@ -388,10 +389,7 @@ fn animation_add_menu_places_panel_in_the_clicked_group_and_restores_it(cx: &mut
         window.render_frame(cx);
         window.simulate_next_frame(cx);
         let tree = area.read(cx).layout(DockPlacement::Center).unwrap();
-        assert_eq!(
-            tree.find_panel_node(parameters),
-            tree.find_panel_node(motions)
-        );
+        assert_eq!(tree.find_panel_node(physics), tree.find_panel_node(motions));
         crate::docking::validate_layout(&area.read(cx).dump(cx), WorkspaceKind::Animation).unwrap();
         assert!(harness.view.read(cx).edit_error.is_none());
     })
@@ -410,16 +408,17 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
             harness.view.update(cx, |view, cx| {
                 view.run_command(CommandId::AnimationWorkspace, window, cx);
                 view.run_command(CommandId::ResetLayout, window, cx);
-                view.run_command(CommandId::AnimationParameters, window, cx);
             });
             window.render_frame(cx);
             window.simulate_next_frame(cx);
-            let (area, info, parameters) = harness.view.read_with(cx, |view, _| {
+            let (area, info, physics) = harness.view.read_with(cx, |view, _| {
                 let dock = view.dock.as_ref().unwrap();
                 (
                     dock.area.clone(),
                     PanelId::from(dock.animation_info.entity_id()),
-                    PanelId::from(dock.animation_parameters.entity_id()),
+                    PanelId::from(
+                        dock.animation_inspectors[&PanelKind::AnimationPhysics].entity_id(),
+                    ),
                 )
             });
             let node = area
@@ -435,31 +434,27 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     placement,
                     size: None,
                 };
-                dock.show(PanelKind::AnimationParameters, Some(target), window, cx);
-                dock.show(PanelKind::AnimationParameters, Some(target), window, cx);
+                dock.show(PanelKind::AnimationPhysics, Some(target), window, cx);
+                dock.show(PanelKind::AnimationPhysics, Some(target), window, cx);
                 dock.show(PanelKind::MeshTree, Some(target), window, cx);
             });
             window.render_frame(cx);
             let tree = area.read(cx).layout(DockPlacement::Center).unwrap();
-            assert!(tree.find_panel_node(parameters).is_some());
-            assert_ne!(tree.find_panel_node(parameters), tree.find_panel_node(info));
-            assert_eq!(
-                tree.panels().filter(|panel| *panel == parameters).count(),
-                1
-            );
+            assert!(tree.find_panel_node(physics).is_some());
+            assert_ne!(tree.find_panel_node(physics), tree.find_panel_node(info));
+            assert_eq!(tree.panels().filter(|panel| *panel == physics).count(), 1);
             let info_bounds = window.find("AnimationInfo").bounds();
-            let params_bounds = window.find("AnimationParameters").bounds();
+            let physics_bounds = window.find("AnimationPhysics").bounds();
             match placement {
-                Placement::Right => assert!(params_bounds.left() >= info_bounds.right()),
-                Placement::Bottom => assert!(params_bounds.top() >= info_bounds.bottom()),
+                Placement::Right => assert!(physics_bounds.left() >= info_bounds.right()),
+                Placement::Bottom => assert!(physics_bounds.top() >= info_bounds.bottom()),
                 _ => unreachable!(),
             }
             harness.view.update(cx, |view, cx| {
                 view.run_command(CommandId::ResetLayout, window, cx);
-                view.run_command(CommandId::AnimationParameters, window, cx);
                 let dock = view.dock.as_ref().unwrap();
                 dock.show(
-                    PanelKind::AnimationParameters,
+                    PanelKind::AnimationPhysics,
                     Some(InsertTarget::Tabs {
                         node,
                         ix: None,
@@ -469,7 +464,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     cx,
                 );
                 assert!(
-                    !dock.contains(PanelKind::AnimationParameters, cx),
+                    !dock.contains(PanelKind::AnimationPhysics, cx),
                     "a stale menu target must not fall back elsewhere"
                 );
                 let canvas = dock.viewport_panel_id();
@@ -481,7 +476,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     .find_panel_node(canvas)
                     .unwrap();
                 dock.show(
-                    PanelKind::AnimationParameters,
+                    PanelKind::AnimationPhysics,
                     Some(InsertTarget::Tabs {
                         node,
                         ix: None,
@@ -491,7 +486,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     cx,
                 );
                 assert!(
-                    dock.contains(PanelKind::AnimationParameters, cx),
+                    dock.contains(PanelKind::AnimationPhysics, cx),
                     "canvas accepts grouped panels"
                 );
             });
@@ -508,7 +503,6 @@ fn adding_to_collapsed_dock_reveals_the_new_panel(cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::AnimationWorkspace, window, cx);
-            view.run_command(CommandId::AnimationParameters, window, cx);
         });
         window.render_frame(cx);
         window.simulate_next_frame(cx);
@@ -532,7 +526,7 @@ fn adding_to_collapsed_dock_reveals_the_new_panel(cx: &mut TestAppContext) {
                 .find_panel_node(PanelId::from(dock.animation_info.entity_id()))
                 .unwrap();
             dock.show(
-                PanelKind::AnimationParameters,
+                PanelKind::AnimationPhysics,
                 Some(InsertTarget::Tabs {
                     node,
                     ix: None,
@@ -544,7 +538,7 @@ fn adding_to_collapsed_dock_reveals_the_new_panel(cx: &mut TestAppContext) {
             assert!(dock.area.read(cx).is_dock_open(DockPlacement::Bottom));
         });
         window.render_frame(cx);
-        assert!(window.find("AnimationParameters").visible());
+        assert!(window.find("AnimationPhysics").visible());
     })
     .unwrap();
 }
@@ -596,7 +590,6 @@ fn global_add_menu_splits_beside_canvas_in_animation(cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::AnimationWorkspace, window, cx);
-            view.run_command(CommandId::AnimationParameters, window, cx);
         });
         window.render_frame(cx);
         window.simulate_next_frame(cx);
@@ -608,7 +601,7 @@ fn global_add_menu_splits_beside_canvas_in_animation(cx: &mut TestAppContext) {
         window.within("submenu").click(0usize, cx);
         window.render_frame(cx);
         let canvas = window.find("canvas-body").bounds();
-        let panel = window.find("AnimationParameters").bounds();
+        let panel = window.find("AnimationPhysics").bounds();
         assert!(panel.left() >= canvas.right());
         assert!(panel.size.width > px(0.));
         assert!(harness.view.read(cx).edit_error.is_none());
@@ -618,13 +611,13 @@ fn global_add_menu_splits_beside_canvas_in_animation(cx: &mut TestAppContext) {
         window.render_frame(cx);
         window.click("workspace-layout-menu", cx);
         window.render_frame(cx);
-        // Right, Below, separator, Reset Layout.
-        window.within("popup-menu").click(3usize, cx);
+        window.click("workspace-reset-layout", cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(window.find("AnimationParameters").visible());
+        assert!(window.try_find("AnimationPhysics").is_none());
+        assert!(window.find("AnimationInfo").visible());
         assert!(window.find("AnimationMotions").visible());
     })
     .unwrap();
@@ -637,11 +630,10 @@ fn adding_before_next_frame_is_saved_when_leaving_workspace(cx: &mut TestAppCont
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::AnimationWorkspace, window, cx);
-            view.run_command(CommandId::AnimationParameters, window, cx);
             view.dock
                 .as_ref()
                 .unwrap()
-                .show(PanelKind::AnimationParameters, None, window, cx);
+                .show(PanelKind::AnimationPhysics, None, window, cx);
             view.run_command(CommandId::ModelingWorkspace, window, cx);
         });
         let saved = cx
@@ -651,7 +643,7 @@ fn adding_before_next_frame_is_saved_when_leaving_workspace(cx: &mut TestAppCont
             .unwrap()
             .unwrap();
         fn contains(node: &gpui_kit::component::dock::PanelState) -> bool {
-            node.panel_name == "AnimationParameters" || node.children.iter().any(contains)
+            node.panel_name == "AnimationPhysics" || node.children.iter().any(contains)
         }
         assert!(contains(&saved.layout.center));
     })

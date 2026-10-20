@@ -238,7 +238,6 @@ impl EditorView {
                 App::notify(cx, dock.timeline.entity_id());
             }
             App::notify(cx, dock.animation_info.entity_id());
-            App::notify(cx, dock.animation_parameters.entity_id());
             for kind in [
                 editor_core::PanelKind::AnimationPhysics,
                 editor_core::PanelKind::AnimationPose,

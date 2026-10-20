@@ -1,7 +1,6 @@
 //! Playback projections. These controls never edit the authoring document.
 pub(crate) mod inspectors;
 pub(crate) use crate::properties::expression_info;
-mod parameters;
 mod resources;
 use crate::{EditorView, t};
 use gpui_kit::component::{
@@ -20,13 +19,11 @@ pub struct AnimationPanel {
     focus: FocusHandle,
     _observe: Subscription,
     resources: resources::ResourceList,
-    parameters: parameters::PreviewParameters,
 }
 impl AnimationPanel {
     pub fn new(owner: WeakEntity<EditorView>, kind: PanelKind, cx: &mut App) -> Entity<Self> {
         cx.new(|cx| Self {
             resources: resources::ResourceList::default(),
-            parameters: parameters::PreviewParameters::default(),
             _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
             owner,
             kind,
@@ -48,31 +45,8 @@ impl AnimationPanel {
             || !state
                 .editor
                 .command_available(state.editor.command(command));
-        let parameters_owner = self.owner.clone();
         let reset_owner = self.owner.clone();
         super::toolbar::PanelToolbar::new("animation-info-toolbar")
-            .action(move |_| {
-                Button::new("animation-open-parameters")
-                    .icon(IconName::SlidersHorizontal)
-                    .accessibility_label(t!("workspace.parameters").into_owned())
-                    .tooltip(t!("workspace.parameters_hint"))
-                    .disabled(disabled)
-                    .on_click(move |_, window, cx| {
-                        _ = parameters_owner.update(cx, |owner, cx| {
-                            if !owner.modal && !window.has_active_dialog(cx) {
-                                if let Some(dock) = &owner.dock {
-                                    dock.show(
-                                        editor_core::PanelKind::AnimationParameters,
-                                        None,
-                                        window,
-                                        cx,
-                                    );
-                                }
-                                cx.notify();
-                            }
-                        });
-                    })
-            })
             .action(move |_| {
                 Button::new("animation-reset")
                     .icon(IconName::RotateCcw)
@@ -106,9 +80,7 @@ impl Panel for AnimationPanel {
     fn inner_padding(&self, _: &App) -> bool {
         !matches!(
             self.kind,
-            PanelKind::AnimationMotions
-                | PanelKind::AnimationExpressions
-                | PanelKind::AnimationParameters
+            PanelKind::AnimationMotions | PanelKind::AnimationExpressions
         )
     }
 
@@ -133,9 +105,6 @@ impl Render for AnimationPanel {
             PanelKind::AnimationMotions | PanelKind::AnimationExpressions
         ) {
             return self.render_resources(window, cx);
-        }
-        if matches!(self.kind, PanelKind::AnimationParameters) {
-            return self.render_parameters(cx);
         }
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();

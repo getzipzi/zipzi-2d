@@ -5,6 +5,14 @@ fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Res
     let (doc, dir) = support::sample_document()?;
     let mut editor = crate::support::editor_from_document(doc);
     support::attach_viewports(&mut editor);
+    for id in [CommandId::Motions, CommandId::Expressions] {
+        assert!(!editor.command_available(editor.command(id)));
+    }
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    for id in [CommandId::Motions, CommandId::Expressions] {
+        assert!(editor.command_available(editor.command(id)));
+    }
+    editor.set_workspace(WorkspaceKind::Modeling)?;
     editor.execute(EditorCommand::SetObjectVisible {
         object: editor
             .document()

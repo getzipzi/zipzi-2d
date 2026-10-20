@@ -35,7 +35,6 @@ pub struct DockWorkspace {
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_info: Entity<crate::panels::animation_panel::AnimationPanel>,
-    pub animation_parameters: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_inspectors:
         HashMap<PanelKind, Entity<crate::panels::animation_panel::AnimationPanel>>,
     pub properties: Entity<crate::panels::PropertiesPanel>,
@@ -154,9 +153,6 @@ impl DockWorkspace {
                         }
                         PanelKind::AnimationInfo => {
                             area.remove_panel(self.animation_info.clone(), window, cx)
-                        }
-                        PanelKind::AnimationParameters => {
-                            area.remove_panel(self.animation_parameters.clone(), window, cx)
                         }
                         PanelKind::AnimationTimeline => {
                             area.remove_panel(self.timeline.clone(), window, cx)
