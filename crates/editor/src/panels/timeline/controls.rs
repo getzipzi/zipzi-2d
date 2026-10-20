@@ -44,13 +44,6 @@ impl Timeline {
                 allowed,
             ),
             (
-                "timeline-pan",
-                IconName::Hand,
-                t!("timeline.pan_hint").into_owned(),
-                self.pan_tool,
-                allowed,
-            ),
-            (
                 "timeline-snap",
                 IconName::Magnet,
                 t!("timeline.snap_hint").into_owned(),
@@ -116,7 +109,7 @@ impl Timeline {
             {
                 continue;
             }
-            if self.header_tiny || (self.header_compact && *id != "timeline-pan") {
+            if self.header_compact {
                 continue;
             }
             let id = *id;
@@ -167,9 +160,6 @@ impl Timeline {
                     .dropdown_menu(move |mut menu, _, cx| {
                         menu = crate::ui::compact::menu(menu);
                         for (id, icon, label, selected, enabled) in &actions {
-                            if !tiny && *id == "timeline-pan" {
-                                continue;
-                            }
                             let id = *id;
                             let label = label.clone();
                             let weak = weak.clone();
@@ -253,6 +243,11 @@ impl Timeline {
             );
         }
         tools.into_any_element()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn toggle_pan_tool_for_test(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.activate_tool("timeline-pan", window, cx);
     }
 
     fn activate_tool(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {

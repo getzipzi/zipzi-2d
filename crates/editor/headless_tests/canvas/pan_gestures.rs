@@ -11,7 +11,8 @@ use gpui_kit::{
 fn hand_tool_drags_canvas_and_select_tool_restores_mode(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("tool_hand", cx);
+        window.hover("canvas-body", cx);
+        window.press("h", cx);
         harness.view.read_with(cx, |view, cx| {
             assert!(
                 view.dock
@@ -209,7 +210,7 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
         assert!(window.try_find("tool_select").is_some());
         assert!(window.try_find("tool_mesh").is_none());
         assert!(window.try_find("tool_deformer").is_none());
-        assert!(window.try_find("tool_hand").is_some());
+        assert!(window.try_find("tool_hand").is_none());
 
         // A configured button becomes visible through registration.
         harness.view.update(cx, |view, cx| {
@@ -632,7 +633,8 @@ fn continuous_pan_does_not_notify_document_panels(cx: &mut TestAppContext) {
     let initial_pan = harness.view.read_with(cx, |view, _| view.editor.view().pan);
     let from = cx
         .update_window(harness.window, |_, window, cx| {
-            window.click("tool_hand", cx);
+            window.hover("canvas-body", cx);
+            window.press("h", cx);
             let from = window.find("canvas-body").bounds().center();
             window.dispatch_event(
                 MouseDownEvent {
@@ -734,7 +736,8 @@ fn canvas_ui_cpu_benchmark(cx: &mut TestAppContext) {
                 });
             });
             window.render_frame(cx);
-            window.click("tool_hand", cx);
+            window.hover("canvas-body", cx);
+            window.press("h", cx);
             let from = window.find("canvas-body").bounds().center();
             window.dispatch_event(
                 MouseDownEvent {

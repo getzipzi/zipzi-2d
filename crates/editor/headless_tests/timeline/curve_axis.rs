@@ -297,7 +297,7 @@ fn parameter_ranges_normalize_independently_and_axis_ticks_pan_with_curves(
     for button in [MouseButton::Left, MouseButton::Middle] {
         if button == MouseButton::Left {
             cx.update_window(harness.window, |_, window, cx| {
-                super::tool(window, "timeline-pan", cx)
+                super::toggle_pan_tool(&harness, window, cx)
             })
             .unwrap();
         }
@@ -376,7 +376,7 @@ fn parameter_ranges_normalize_independently_and_axis_ticks_pan_with_curves(
         }
         if button == MouseButton::Left {
             cx.update_window(harness.window, |_, window, cx| {
-                super::tool(window, "timeline-pan", cx)
+                super::toggle_pan_tool(&harness, window, cx)
             })
             .unwrap();
         }

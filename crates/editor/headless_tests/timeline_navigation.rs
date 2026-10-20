@@ -67,7 +67,7 @@ fn shift_wheel_and_hand_and_middle_drag_pan_without_asset_edits(cx: &mut TestApp
             assert!(after.0 < before.0);
             assert!((after.1 - after.0 - 0.5).abs() < 1e-9);
         }
-        window.click("timeline-pan", cx);
+        super::timeline::toggle_pan_tool(&harness, window, cx);
         window.render_frame(cx);
         let before = harness
             .view
@@ -93,7 +93,7 @@ fn shift_wheel_and_hand_and_middle_drag_pan_without_asset_edits(cx: &mut TestApp
                 > before
         );
         assert!(harness.view.read(cx).editor.timeline_edit().is_none());
-        window.click("timeline-pan", cx);
+        super::timeline::toggle_pan_tool(&harness, window, cx);
         window.render_frame(cx);
         let before = harness
             .view

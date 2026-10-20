@@ -105,7 +105,7 @@ fn switching_uses_distinct_viewport_types_and_keeps_document_and_modeling_tool(
         assert!(window.try_find("tool_select").is_none());
         assert!(window.try_find("tool_glue").is_none());
         assert!(window.try_find("tool_generate_mesh").is_none());
-        assert!(window.try_find("tool_hand").is_some());
+        assert!(window.try_find("tool_hand").is_none());
         assert!(window.try_find("animation-timeline").is_some());
         assert!(window.try_find("AnimationMotions").is_some());
         assert!(window.try_find("properties-panel").is_some());
@@ -272,7 +272,8 @@ fn middle_button_trackpad_and_hand_navigation_work_in_both_workspaces(cx: &mut T
                 .to_platform_input(),
                 cx,
             );
-            window.click("tool_hand", cx);
+            window.hover("canvas-body", cx);
+            window.press("h", cx);
             window.render_frame(cx);
             let from = window.find("canvas-body").bounds().center();
             window.drag(from, from + point(px(12.), px(8.)), cx);

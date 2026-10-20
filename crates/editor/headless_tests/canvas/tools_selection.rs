@@ -632,7 +632,8 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
                 .points
                 .clone()
         });
-        window.click("tool_hand", cx);
+        window.hover("canvas-body", cx);
+        window.press("h", cx);
         let bounds = window.find("canvas-body").bounds();
         let start = bounds.center();
         window.drag(start, start + point(px(20.), px(0.)), cx);

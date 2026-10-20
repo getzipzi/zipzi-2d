@@ -59,7 +59,7 @@ fn popover_keeps_keyboard_priority_when_pointer_returns_to_viewport(cx: &mut Tes
 fn viewport_toolbar_retains_local_shortcut_and_menu_target(cx: &mut TestAppContext) {
     let h = setup(cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.hover("tool_hand", cx);
+        window.hover("tool_select", cx);
         let before = h.view.read(cx).editor.view().zoom;
         assert!(matches!(
             h.view.read(cx).hovered_target(window, cx),
@@ -550,13 +550,13 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
         assert!(status_bar.read(cx).hints().is_empty());
 
-        window.click("timeline-pan", cx);
+        super::timeline::toggle_pan_tool(&h, window, cx);
         window.render_frame(cx);
         assert_eq!(
             status_bar.read(cx).hint_context(),
             Some(HintContext::TimelinePanTool)
         );
-        window.click("timeline-pan", cx);
+        super::timeline::toggle_pan_tool(&h, window, cx);
         window.render_frame(cx);
         assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
 

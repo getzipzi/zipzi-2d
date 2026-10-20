@@ -20,3 +20,25 @@ pub(super) fn tool(window: &mut gpui_kit::Window, id: &str, cx: &mut gpui_kit::A
     }
     window.render_frame(cx);
 }
+
+// Exercise retained pan behavior independently of the hidden toolbar control.
+pub(super) fn toggle_pan_tool(
+    harness: &super::Harness,
+    window: &mut gpui_kit::Window,
+    cx: &mut gpui_kit::App,
+) {
+    use gpui_kit::test::TestWindowExt;
+    assert!(window.try_find("timeline-pan").is_none());
+    let timeline = harness
+        .view
+        .read(cx)
+        .dock
+        .as_ref()
+        .unwrap()
+        .timeline
+        .clone();
+    timeline.update(cx, |timeline, cx| {
+        timeline.toggle_pan_tool_for_test(window, cx)
+    });
+    window.render_frame(cx);
+}

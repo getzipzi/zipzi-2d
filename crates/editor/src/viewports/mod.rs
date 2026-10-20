@@ -390,11 +390,13 @@ impl Render for ViewportSurface {
             })
             .children(error.map(|e| div().absolute().p_4().child(e)))
             .child(self.overlay_element(overlay, palette, capture, cx))
-            .child(toolbar::CanvasToolbar {
-                owner: owner.clone(),
-                canvas: cx.entity(),
-                modal,
-                items: self.toolbar.items(),
+            .when(!self.toolbar.items().is_empty(), |element| {
+                element.child(toolbar::CanvasToolbar {
+                    owner: owner.clone(),
+                    canvas: cx.entity(),
+                    modal,
+                    items: self.toolbar.items(),
+                })
             })
             .children(controls.map(|render| render(self, modal, cx)))
             .children(interaction_label.map(|label| {

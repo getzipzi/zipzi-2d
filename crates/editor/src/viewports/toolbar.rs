@@ -41,11 +41,6 @@ impl ToolbarRegistry {
                 command: CommandId::GlueTool,
             },
             ToolbarItemConfig {
-                id: "tool_hand",
-                icon: IconName::Hand,
-                command: CommandId::HandTool,
-            },
-            ToolbarItemConfig {
                 id: "tool_generate_mesh",
                 icon: IconName::Grid2x2,
                 command: CommandId::GenerateMesh,
@@ -57,13 +52,7 @@ impl ToolbarRegistry {
     }
 
     pub(crate) fn navigation() -> Self {
-        Self {
-            items: vec![ToolbarItemConfig {
-                id: "tool_hand",
-                icon: IconName::Hand,
-                command: CommandId::HandTool,
-            }],
-        }
+        Self::default()
     }
     pub(crate) fn register(&mut self, item: ToolbarItemConfig) -> Result<(), &'static str> {
         if self
