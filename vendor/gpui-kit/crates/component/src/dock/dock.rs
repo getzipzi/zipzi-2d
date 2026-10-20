@@ -21,7 +21,7 @@ use crate::{
     dock::{
         DockSkin, SkinShared, invalid_panel::InvalidPanel, panel_handle, tab_panel::TabGroupSkin,
     },
-    resizable::render_resize_handle,
+    resizable::render_resize_handle_with_line,
     resize_handle,
 };
 
@@ -54,7 +54,12 @@ impl DockAreaRenderer for DockSkin {
         window: &mut Window,
         cx: &mut App,
     ) -> Option<AnyElement> {
-        Some(render_resize_handle(handle, window, cx))
+        Some(render_resize_handle_with_line(
+            handle,
+            self.resize_handle_line_visible.get(),
+            window,
+            cx,
+        ))
     }
 
     fn split_frame(&self, node: NodeId, _: Axis, _: &mut Window, cx: &mut App) -> Stateful<Div> {
@@ -139,14 +144,22 @@ impl DockSkin {
             _ => HandleEdge::Leading,
         };
 
-        resize_handle(id, placement.axis()).inside(edge).on_drag(
-            ResizePanel,
-            move |info, _, _, cx| {
+        let line_visible = self.resize_handle_line_visible.get();
+        resize_handle(id, placement.axis())
+            .with_appearance(Rc::new(move |handle, window, cx| {
+                Some(render_resize_handle_with_line(
+                    handle,
+                    line_visible,
+                    window,
+                    cx,
+                ))
+            }))
+            .inside(edge)
+            .on_drag(ResizePanel, move |info, _, _, cx| {
                 cx.stop_propagation();
                 shared.resizing_dock().set(Some(placement));
                 cx.new(|_| info.clone())
-            },
-        )
+            })
     }
 }
 

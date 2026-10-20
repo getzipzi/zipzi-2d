@@ -31,12 +31,15 @@ Tooltip 回归见 [tooltips.rs](../crates/editor/headless_tests/tooltips.rs)，�
 
 回归见 [compact_popups.rs](../crates/editor/headless_tests/compact_popups.rs)，覆盖明暗主题、三档 UI 缩放、两种子菜单构造方式、多行内容，以及真实编辑器对话框中的普通/可搜索 Select。右键菜单动作继续由现有 Dock、Canvas 和参数管理测试覆盖。真实 Metal 截图使用 `KASANE_SCREENSHOT_SCENE=compact-popups`。
 
-更新 Kit 时，将该包、README、五份测试引用文件及根工作区清单替换为新固定 commit 的对应内容，再适配并应用 `kit-workspace.patch`、`compact-menu.patch` 和 `compact-tooltip.patch`。更新精简工作区中的 Git revisions，重新核对补丁是否仍需要，以新基线重新生成三份补丁，并更新根目录依赖和 lockfile。
+Dock 的修改见 [dock-handle-line.patch](dock-handle-line.patch)：`DockSkin::with_resize_handle_line(false)` 可在安装 skin 前关闭内部 split 和外部 dock handle 的常驻细线，保留原生胶囊动画、命中范围和拖动行为，默认仍显示细线。编辑器关闭此选项，让 panel 间隙保持工作区底色；无细线时，竖向胶囊向左偏移 0.5px，横向胶囊向上偏移 0.5px，以对齐间隙。Timeline Metal 截图检查底部间隙不出现额外横线。
+
+更新 Kit 时，将该包、README、五份测试引用文件及根工作区清单替换为新固定 commit 的对应内容，再适配并应用 `kit-workspace.patch`、`compact-menu.patch`、`compact-tooltip.patch` 和 `dock-handle-line.patch`。更新精简工作区中的 Git revisions，重新核对补丁是否仍需要，以新基线重新生成补丁，并更新根目录依赖和 lockfile。
 
 ```sh
 git apply --reverse --check vendor/kit-workspace.patch
 git apply --reverse --check vendor/compact-menu.patch
 git apply --reverse --check vendor/compact-tooltip.patch
+git apply --reverse --check vendor/dock-handle-line.patch
 cargo test --locked -p kasane-editor --lib headless_tests::compact_popups
 cargo test --locked -p kasane-editor --lib headless_tests::tooltips
 ```
@@ -96,9 +99,10 @@ git apply --reverse --check vendor/list-height-estimates.patch
 git apply --reverse --check vendor/kit-workspace.patch
 git apply --reverse --check vendor/compact-menu.patch
 git apply --reverse --check vendor/compact-tooltip.patch
+git apply --reverse --check vendor/dock-handle-line.patch
 ```
 
-反向检查不能单独证明没有遗漏改动。核对补丁覆盖完整性时，应在临时目录准备上述原始发布包和 Kit 保留文件，按相同 `vendor/` 路径布局应用全部六份补丁，再逐文件比对重建结果与当前依赖包目录；文件集合及内容均应一致。
+反向检查不能单独证明没有遗漏改动。核对补丁覆盖完整性时，应在临时目录准备上述原始发布包和 Kit 保留文件，按相同 `vendor/` 路径布局应用所列补丁，再逐文件比对重建结果与当前依赖包目录；文件集合及内容均应一致。
 
 补丁使用仓库根目录相对路径，可应用到按相同目录布局放置的原始 0.1.7 发布包。更新 GPUI 时，应以新发布包为基线重新核对上述三份补丁涉及的 14 个文件，检查上游是否已修复缓存边界及列表高度估计，重新生成仍需要的补丁并更新统计，运行合成测试、完整 UI 截图测试和两个应用构建。原生 Metal 集成细节见 [native-metal.md](../docs/archive/native-metal.md)。
 

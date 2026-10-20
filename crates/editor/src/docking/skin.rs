@@ -198,16 +198,10 @@ impl DockAreaRenderer for EditorDockSkin {
     fn render_split_handle(
         &self,
         handle: &ResizeHandleContext,
-        _: &mut Window,
+        window: &mut Window,
         cx: &mut App,
     ) -> Option<AnyElement> {
-        let color =
-            if handle.is_active() || handle.state() == gpui_kit::base::ResizeHandleState::Hovered {
-                cx.theme().primary.opacity(0.6)
-            } else {
-                compact::workspace(cx)
-            };
-        Some(gpui_kit::div().size_full().bg(color).into_any_element())
+        self.component.render_split_handle(handle, window, cx)
     }
 
     fn render_dock(
@@ -221,28 +215,12 @@ impl DockAreaRenderer for EditorDockSkin {
         if dock.placement() != DockPlacement::Bottom {
             return chrome;
         }
-        let background = compact::workspace(cx);
-        // Only hide the outer handle's resting hairline, above the panel frame.
-        // Kit retains its drag band and tracker; its deferred hover pill paints last.
         div()
             .id("editor-bottom-dock")
             .test_support()
             .relative()
             .size_full()
             .child(chrome)
-            .child(
-                gpui_kit::canvas(
-                    |_, _, _| (),
-                    move |bounds, _, window, _| {
-                        window.paint_quad(gpui_kit::fill(bounds, background));
-                    },
-                )
-                .absolute()
-                .top_0()
-                .left_0()
-                .w_full()
-                .h(px(1.)),
-            )
             .into_any_element()
     }
 

@@ -72,7 +72,20 @@ pub(crate) fn render_resize_handle(
     window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
+    render_resize_handle_with_line(handle, true, window, cx)
+}
+
+/// Keep the native indicator and geometry when a dock hides its hairline.
+pub(crate) fn render_resize_handle_with_line(
+    handle: &ResizeHandleContext,
+    line_visible: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
     let axis = handle.axis();
+    // Align line-free dock indicators with the panel gutter: left for a
+    // vertical indicator, up for a horizontal one. Keep the drag band intact.
+    let indicator_offset = if line_visible { px(0.) } else { px(-0.5) };
     let (target_length, target_opacity) = indicator(handle.state());
     let motion = cx.theme().motion_tokens();
     let policy = Transition::new(motion.duration_fast).easing(motion.easing_move.clone());
@@ -105,7 +118,7 @@ pub(crate) fn render_resize_handle(
         // nothing to give: shrinking it collapses the divider.
         .flex_none()
         .flex()
-        .bg(cx.theme().border)
+        .when(line_visible, |line| line.bg(cx.theme().border))
         // Along the hairline the pill is far shorter than the line, so centring
         // it there is safe. Across the hairline it is thicker than the line and
         // has to overhang, and neither flex alignment can be trusted to centre
@@ -128,11 +141,11 @@ pub(crate) fn render_resize_handle(
                     Axis::Horizontal => pill
                         .w(INDICATOR_THICKNESS)
                         .h(length)
-                        .ml((INDICATOR_THICKNESS - px(1.)) * -0.5),
+                        .ml((INDICATOR_THICKNESS - px(1.)) * -0.5 + indicator_offset),
                     _ => pill
                         .h(INDICATOR_THICKNESS)
                         .w(length)
-                        .mt((INDICATOR_THICKNESS - px(1.)) * -0.5),
+                        .mt((INDICATOR_THICKNESS - px(1.)) * -0.5 + indicator_offset),
                 });
             // A hugging handle's hairline is its container's outermost pixel,
             // so the pill's outer pixel lies past the boundary, where a dock's

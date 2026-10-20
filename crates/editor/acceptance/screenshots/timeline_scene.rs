@@ -42,8 +42,9 @@ pub(crate) fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Resul
     harness.cx.update_window(harness.window, |_, window, cx| {
         let bounds = window.find("editor-bottom-dock").bounds();
         let scale = window.scale_factor();
-        let expected =
-            (gpui_kit::Rgba::from(crate::ui::compact::workspace(cx)).r * 255.).round() as u8;
+        let background = gpui_kit::Rgba::from(crate::ui::compact::workspace(cx));
+        let expected = [background.r, background.g, background.b]
+            .map(|channel| (channel * 255.).round() as u8);
         for fraction in [0.25, 0.5, 0.75] {
             let x = ((bounds.left().as_f32() + bounds.size.width.as_f32() * fraction) * scale)
                 .floor() as u32;
@@ -52,7 +53,8 @@ pub(crate) fn timeline_screenshots(directory: &std::path::Path) -> anyhow::Resul
             anyhow::ensure!(
                 pixel.0[..3]
                     .iter()
-                    .all(|channel| channel.abs_diff(expected) <= 3),
+                    .zip(expected)
+                    .all(|(channel, expected)| channel.abs_diff(expected) <= 3),
                 "Extra line above Timeline at ({x}, {y}): {:?}",
                 pixel.0
             );

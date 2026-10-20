@@ -116,7 +116,7 @@ impl DockWorkspace {
             .map(|(kind, region)| (panels[kind].view().entity_id(), region.clone()))
             .collect();
         let area = cx.new(|cx| {
-            let skin = DockSkin::new(cx);
+            let skin = DockSkin::new(cx).with_resize_handle_line(false);
             DockArea::new(
                 "kasane-workspace",
                 Some(layout_version(workspace)),

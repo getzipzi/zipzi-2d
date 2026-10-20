@@ -122,6 +122,7 @@ impl SkinShared {
 /// clone and the installed renderer are the same skin.
 pub struct DockSkin {
     shared: Rc<SkinShared>,
+    resize_handle_line_visible: Cell<bool>,
 }
 
 impl DockSkin {
@@ -158,11 +159,19 @@ impl DockSkin {
                 close_button_visible: Cell::new(false),
                 resizing_dock: Cell::new(None),
             }),
+            resize_handle_line_visible: Cell::new(true),
         })
     }
 
     pub(crate) fn shared(&self) -> &Rc<SkinShared> {
         &self.shared
+    }
+
+    /// Configure the divider beneath split and dock-edge indicators before
+    /// installing the skin. Hiding it preserves the native indicator animations.
+    pub fn with_resize_handle_line(self: Rc<Self>, visible: bool) -> Rc<Self> {
+        self.resize_handle_line_visible.set(visible);
+        self
     }
 
     /// Whether a single-panel tab group draws a plain title or a full tab bar.
