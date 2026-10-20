@@ -50,7 +50,7 @@ impl Render for EditorView {
                 .properties
                 .update(cx, |panel, cx| panel.set_visible(visible, cx));
             if let Some((target, id, token)) = cleanup {
-                self.editor.cancel_property_edit(&token);
+                token.cancel(&mut self.editor);
                 if let Some(form) = self.property_forms.entries.get_mut(&target) {
                     form.reload_field(id);
                 }
@@ -58,8 +58,11 @@ impl Render for EditorView {
                 if let Some(form) = self.property_forms.entries.get_mut(&target) {
                     if composing {
                         form.reload_field(id);
-                    } else if let Some(spec) = editor_core::property_specs(target.object.kind)
+                    } else if let Some(spec) = target
+                        .definition(&self.editor)
+                        .fields
                         .iter()
+                        .map(|field| &field.binding)
                         .find(|s| s.key == id)
                     {
                         if form.fields[&id].raw != raw {

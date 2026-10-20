@@ -12,9 +12,19 @@ pub(crate) fn render(
 ) -> AnyElement {
     let index = doc.object_index();
     let name = index.name(object).to_owned();
-    let tooltip = name.clone();
     let kind = (properties::provider(object.kind).type_name)(doc, object);
     let locked = doc.ensure_editable(std::slice::from_ref(object)).is_err();
+    render_title(prefix, name, kind, locked, cx)
+}
+
+pub(crate) fn render_title(
+    prefix: &'static str,
+    name: String,
+    kind: SharedString,
+    locked: bool,
+    cx: &App,
+) -> AnyElement {
+    let tooltip = name.clone();
     div()
         .id(SharedString::from(format!("{prefix}-identity")))
         .test_support()

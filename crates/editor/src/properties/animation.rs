@@ -1,14 +1,14 @@
 //! Animation field definitions and context detail provider.
 use super::details::DetailSource;
-use super::scene::part_name;
 use super::*;
 use editor_core::{AnimationCatalog, AnimationSession};
-use kasane_core::document::{ExpressionBlend, ExpressionTarget, MotionTrackTarget, PosePartRef};
+use kasane_core::document::{ExpressionBlend, ExpressionTarget};
 use std::collections::HashMap;
 
 pub(super) const PROVIDER: PropertyProvider = PropertyProvider {
     fields,
     editable_in: |_| true,
+    show_readonly: |field| !field.starts_with("events[") && !field.starts_with("entries["),
     ..PropertyProvider::DEFAULT
 };
 fn fields(kind: ObjectKind) -> FormDefinition {
@@ -17,6 +17,8 @@ fn fields(kind: ObjectKind) -> FormDefinition {
     let fields: &[_] = match kind {
         ObjectKind::Motion => &[
             (motion::NAME, "properties.name", Text),
+            (motion::DURATION, "timeline.duration", Number),
+            (motion::FPS, "timeline.fps", Number),
             (motion::LOOPING, "properties.looping", Toggle),
             (motion::FADE_IN, "properties.fade_in", OptionalNumber),
             (motion::FADE_OUT, "properties.fade_out", OptionalNumber),
@@ -32,8 +34,10 @@ fn fields(kind: ObjectKind) -> FormDefinition {
 }
 pub(super) fn details_source(editor: &Editor) -> Option<DetailSource> {
     let animation = editor.animation()?;
+    let inspected = editor.active_inspection()?.object()?;
     Some(DetailSource {
         dependencies: vec![
+            Some(inspected.id.clone()),
             animation
                 .motion
                 .as_ref()
@@ -54,6 +58,10 @@ pub(super) fn details_source(editor: &Editor) -> Option<DetailSource> {
                 document,
                 editor.animation().unwrap(),
                 &document.animation_catalog(),
+                editor
+                    .active_inspection()
+                    .and_then(|inspection| inspection.object())
+                    .as_ref(),
             )
         },
     })
@@ -63,75 +71,37 @@ fn rows(
     document: &Document,
     animation: &AnimationSession,
     catalog: &AnimationCatalog,
+    inspected: Option<&ObjectRef>,
 ) -> Vec<DetailRow> {
-    let mut rows = vec![
-        DetailRow::Hint(t!("workspace.properties_hint").into()),
-        DetailRow::Heading(t!("workspace.selected_motion").into()),
-    ];
+    let mut rows = Vec::new();
+    let motion_selected = inspected.is_some_and(|object| object.kind == ObjectKind::Motion);
     let resource = catalog
         .motions
         .iter()
         .find(|r| animation.motion.as_ref() == Some(&r.selection));
-    if let Some(resource) = resource {
-        rows.extend([
-            DetailRow::property(
-                "animation-property-motion",
-                t!("workspace.resource_name"),
-                resource.name.clone(),
-            ),
-            DetailRow::property(
+    if motion_selected {
+        if let Some(resource) = resource {
+            rows.push(DetailRow::property(
                 "animation-property-registration",
                 t!("workspace.registration"),
                 resource.selection.entry.as_ref().map_or_else(
                     || t!("workspace.ungrouped").into_owned(),
                     |(group, index)| format!("{group} [{}]", index + 1),
                 ),
-            ),
-            DetailRow::property(
-                "animation-property-duration",
-                t!("workspace.duration"),
-                format!("{:.3} s", resource.duration),
-            ),
-            DetailRow::property(
-                "animation-property-fps",
-                t!("workspace.frame_rate"),
-                format!("{:.1} fps", resource.fps),
-            ),
-            DetailRow::property(
-                "animation-property-loop",
-                t!("workspace.playback_mode"),
-                if resource.looping {
-                    t!("workspace.looping")
-                } else {
-                    t!("workspace.once")
-                },
-            ),
-            DetailRow::property(
-                "animation-property-fades",
-                t!("workspace.effective_fades"),
-                t!(
-                    "workspace.fades",
-                    fade_in = format!("{:.3}", resource.fade_in),
-                    fade_out = format!("{:.3}", resource.fade_out)
-                ),
-            ),
-        ]);
-        if !resource.playable() {
-            rows.push(DetailRow::text(t!("workspace.invalid_duration")));
-        }
-        if let Some(sound) = &resource.sound {
-            rows.push(DetailRow::field(
-                "animation-property-sound",
-                t!("workspace.sound"),
-                sound.clone(),
             ));
-            rows.push(DetailRow::text(t!("workspace.sound_unsupported")));
+            if !resource.playable() {
+                rows.push(DetailRow::text(t!("workspace.invalid_duration")));
+            }
+            if let Some(sound) = &resource.sound {
+                rows.push(DetailRow::field(
+                    "animation-property-sound",
+                    t!("workspace.sound"),
+                    sound.clone(),
+                ));
+                rows.push(DetailRow::text(t!("workspace.sound_unsupported")));
+            }
         }
-    } else {
-        rows.push(DetailRow::Text {
-            id: Some("animation-property-no-motion".into()),
-            value: t!("workspace.select_motion").into(),
-        });
+        return rows;
     }
     // Resolve names once, rather than scanning the parameter catalog per track.
     let names: HashMap<_, _> = catalog
@@ -153,11 +123,9 @@ fn rows(
     rows.push(DetailRow::Heading(
         t!("workspace.selected_expression").into(),
     ));
-    if let Some(resource) = catalog
-        .expressions
-        .iter()
-        .find(|r| animation.expression.as_ref() == Some(&r.id))
-    {
+    if let Some(resource) = catalog.expressions.iter().find(|r| {
+        inspected.is_some_and(|object| object.kind == ObjectKind::Expression && object.id == r.id)
+    }) {
         rows.push(DetailRow::property(
             "animation-property-expression",
             t!("workspace.resource_name"),
@@ -192,47 +160,6 @@ fn rows(
             id: Some("animation-property-no-expression".into()),
             value: t!("workspace.none").into(),
         });
-    }
-    if let Some(clip) = resource.and_then(|r| document.motion_definition(&r.selection.clip_id)) {
-        rows.push(DetailRow::Heading(t!("workspace.track_targets").into()));
-        for (index, track) in clip.tracks.iter().enumerate() {
-            let target = match &track.target {
-                MotionTrackTarget::Parameter { parameter_id } => parameter_name(parameter_id),
-                MotionTrackTarget::PartOpacity { part_id } => part_name(
-                    document,
-                    &PosePartRef::Resolved {
-                        part_id: part_id.clone(),
-                    },
-                )
-                .into(),
-                MotionTrackTarget::Model { runtime_id } => {
-                    t!("workspace.model_channel", target = runtime_id).into()
-                }
-                MotionTrackTarget::Unresolved {
-                    category,
-                    runtime_id,
-                } => t!(
-                    "workspace.unresolved_binding",
-                    target = format!("{category}: {runtime_id}")
-                )
-                .into(),
-            };
-            rows.push(DetailRow::field(
-                ("animation-property-track", index),
-                target,
-                t!("workspace.track_segments", count = track.segments.len()),
-            ));
-        }
-        if !clip.events.is_empty() {
-            rows.push(DetailRow::Heading(t!("workspace.motion_events").into()));
-            for (index, event) in clip.events.iter().enumerate() {
-                rows.push(DetailRow::field(
-                    ("animation-property-event", index),
-                    format!("{:.3} s", event.time),
-                    event.value.clone(),
-                ));
-            }
-        }
     }
     rows
 }

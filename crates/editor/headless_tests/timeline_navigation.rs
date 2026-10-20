@@ -201,11 +201,15 @@ fn transport_buttons_and_shortcuts_share_endpoints_and_key_navigation(cx: &mut T
             2.
         );
         window.click("timeline-start", cx);
-        window.click("timeline-next-frame", cx);
+        crate::headless_tests::timeline::tool(window, "timeline-next-frame", cx);
         assert!(
             (harness.view.read(cx).editor.animation().unwrap().edit_time - 1. / 60.).abs() < 1e-6
         );
-        window.click("timeline-previous-frame", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        crate::headless_tests::timeline::tool(window, "timeline-previous-frame", cx);
         assert_eq!(
             harness.view.read(cx).editor.animation().unwrap().edit_time,
             0.

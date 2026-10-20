@@ -809,7 +809,6 @@ pub(super) fn panel_icon(name: &str) -> IconName {
         Some(Physics | AnimationPhysics) => IconName::Activity,
         Some(Pose | AnimationPose) => IconName::Bone,
         Some(Resources) => IconName::Folder,
-        Some(AnimationInfo) => IconName::Info,
         Some(AnimationTimeline) => IconName::ChartLine,
         None => IconName::LayoutGrid,
     }

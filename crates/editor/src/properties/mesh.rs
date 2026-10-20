@@ -22,6 +22,7 @@ pub(super) fn fields() -> FormDefinition {
             field(CULLING, "properties.culling", Toggle),
             field(ENABLED, "properties.enabled", Toggle),
         ],
+        ..Default::default()
     }
 }
 

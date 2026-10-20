@@ -37,6 +37,7 @@ fn parameter_fields(_: ObjectKind) -> FormDefinition {
             field(KIND, "parameter.kind", Select).choices(false, kinds),
             field(GROUP_ID, "parameter.group", Select).choices(true, groups),
         ],
+        ..Default::default()
     }
 }
 

@@ -360,6 +360,9 @@ impl AnimationPanel {
         } else {
             for (index, resource) in catalog.expressions.iter().enumerate() {
                 let selected = animation.expression.as_ref() == Some(&resource.id);
+                let active = state
+                    .displayed_animation()
+                    .is_some_and(|frame| frame.active_expressions.contains(&resource.id));
                 let valid = resource.unresolved_targets.is_empty();
                 let cursor = choices.len();
                 if selected {
@@ -390,13 +393,6 @@ impl AnimationPanel {
                     )
                     .test_support()
                     .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
-                    .when(!valid, |row| {
-                        row.child(
-                            Icon::new(IconName::TriangleAlert)
-                                .xsmall()
-                                .text_color(theme.yellow),
-                        )
-                    })
                     .child(
                         div()
                             .flex_1()
@@ -405,6 +401,33 @@ impl AnimationPanel {
                             .text_ellipsis()
                             .child(resource.name.clone()),
                     )
+                    .when(!valid, |row| {
+                        row.child(
+                            div()
+                                .id(("animation-expression-warning", index))
+                                .test_support()
+                                .flex_shrink_0()
+                                .child(
+                                    Icon::new(IconName::TriangleAlert)
+                                        .xsmall()
+                                        .text_color(theme.yellow),
+                                ),
+                        )
+                    })
+                    .when(active, |row| {
+                        row.child(
+                            div()
+                                .id(("animation-expression-active", index))
+                                .test_support()
+                                .flex_shrink_0()
+                                .aria_label(t!("workspace.expression_active").into_owned())
+                                .tooltip(|window, cx| {
+                                    Tooltip::new(t!("workspace.expression_active").into_owned())
+                                        .build(window, cx)
+                                })
+                                .child(Icon::new(IconName::Eye).xsmall().text_color(theme.primary)),
+                        )
+                    })
                     .on_click(cx.listener(move |panel, _, window, cx| {
                         if valid {
                             panel.resources.view.cursor = Some(cursor);

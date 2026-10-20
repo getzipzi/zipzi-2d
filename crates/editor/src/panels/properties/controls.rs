@@ -103,7 +103,15 @@ impl PropertiesPanel {
         let Some(owner) = self.owner.upgrade() else {
             return;
         };
-        let next = target(&owner.read(cx).editor);
+        let next = if self
+            .preview
+            .as_ref()
+            .is_some_and(|(_, token)| token.retains_target(&owner.read(cx).editor))
+        {
+            self.target.clone()
+        } else {
+            target(&owner.read(cx).editor)
+        };
         let context = owner.read(cx).editor.editing_context_token();
         if self.target != next || self.context != context {
             if self.preview.is_none() {
@@ -128,11 +136,9 @@ impl PropertiesPanel {
                                 } else if form.fields[&id].revision == settled
                                     && form.fields[&id].raw != raw
                                 {
-                                    let spec = editor_core::property_specs(previous.object.kind)
-                                        .iter()
-                                        .find(|s| s.key == id)
-                                        .unwrap();
-                                    form.edit(spec, raw);
+                                    if let Some(spec) = self.definition.field(id) {
+                                        form.edit(&spec.binding, raw);
+                                    }
                                 }
                             }
                         }
@@ -170,7 +176,7 @@ impl PropertiesPanel {
             self.colors.clear();
             self.epoch += 1;
             self.definition = next.as_ref().map_or_else(Default::default, |target| {
-                properties::definition(target.object.kind)
+                target.definition(&owner.read(cx).editor)
             });
             self.target = next;
             self.context = context;
@@ -179,7 +185,7 @@ impl PropertiesPanel {
         if self
             .preview
             .as_ref()
-            .is_some_and(|(_, token)| !owner.read(cx).editor.property_edit_owned(token))
+            .is_some_and(|(_, token)| !token.owned(&owner.read(cx).editor))
         {
             self.cancel_preview(cx);
         }
@@ -191,15 +197,14 @@ impl PropertiesPanel {
         self.disabled = state.modal
             || state.editor.is_busy()
             || state.editor.exiting()
-            || !(properties::provider(target.object.kind).editable_in)(target.context)
-            || state.editor.document().is_none_or(|doc| {
-                doc.ensure_editable(std::slice::from_ref(&target.object))
-                    .is_err()
-            });
-        let snapshot = state
-            .editor
-            .document()
-            .map(|doc| (target.clone(), doc.model_generation()));
+            || !target.editable(&state.editor);
+        let snapshot = state.editor.document().map(|doc| {
+            (
+                target.clone(),
+                doc.model_generation(),
+                target.sample_time(&state.editor),
+            )
+        });
         if snapshot == self.snapshot {
             if let Some(form) = state.property_forms.entries.get(target) {
                 if form != &self.form {
@@ -210,13 +215,14 @@ impl PropertiesPanel {
             }
             return;
         }
-        let values = state
-            .editor
-            .document()
-            .and_then(|doc| doc.property_values(&target.object).ok());
+        self.definition = target.definition(&state.editor);
+        let values = target.values(&state.editor).ok();
         if let Some(values) = values {
             self.form = owner.update(cx, |state, _| {
-                state.property_forms.sync(target, values).clone()
+                state
+                    .property_forms
+                    .sync(target, target.definition(&state.editor), values)
+                    .clone()
             });
             self.snapshot = snapshot;
         } else {
@@ -235,7 +241,11 @@ impl PropertiesPanel {
                     && !state.editor.is_busy()
                     && !state.editor.exiting()
                     && state.editor.editing_context_token() == self.context
-                    && target(&state.editor) == self.target
+                    && (target(&state.editor) == self.target
+                        || self
+                            .preview
+                            .as_ref()
+                            .is_some_and(|(_, token)| token.owned(&state.editor)))
                     && self.target.as_ref().is_some_and(|target| {
                         state.editor.document().is_some_and(|doc| {
                             doc.ensure_editable(std::slice::from_ref(&target.object))
@@ -257,15 +267,64 @@ impl PropertiesPanel {
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |state, cx| {
                 if let Some(form) = state.property_forms.entries.get_mut(&target) {
-                    form.edit(&spec, raw);
+                    form.edit(&spec, raw.clone());
                 }
                 cx.notify();
             });
         }
+        if self.field_spec(id).live_text {
+            let value = self.form_value(id, cx);
+            match value {
+                Some(Ok(value)) => {
+                    if self.preview.is_none() {
+                        self.begin_preview(id, cx);
+                    }
+                    if !self.try_update_preview_value(id, value, cx) {
+                        self.cancel_preview(cx);
+                        if let Some(owner) = self.owner.upgrade() {
+                            owner.update(cx, |state, _| {
+                                if let Some(form) = state.property_forms.entries.get_mut(&target) {
+                                    form.edit(&spec, raw);
+                                }
+                            });
+                        }
+                    }
+                }
+                Some(Err(raw)) => {
+                    self.cancel_preview(cx);
+                    if let Some(owner) = self.owner.upgrade() {
+                        owner.update(cx, |state, _| {
+                            if let Some(form) = state.property_forms.entries.get_mut(&target) {
+                                form.edit(&spec, raw);
+                            }
+                        });
+                    }
+                }
+                None => self.cancel_preview(cx),
+            }
+        }
         cx.notify();
     }
 
+    fn form_value(&self, id: PropertyKey, cx: &App) -> Option<Result<PropertyValue, String>> {
+        let owner = self.owner.upgrade()?;
+        let field = &owner
+            .read(cx)
+            .property_forms
+            .entries
+            .get(self.target.as_ref()?)?
+            .fields[&id];
+        if !field.dirty() {
+            return None;
+        }
+        Some(field.parsed.clone().map_err(|_| field.raw.clone()))
+    }
+
     fn commit_field(&mut self, id: PropertyKey, cx: &mut Context<Self>) {
+        if self.preview.as_ref().is_some_and(|(field, _)| *field == id) {
+            self.finish_preview(cx);
+            return;
+        }
         let Some(target) = self.target.clone() else {
             return;
         };
@@ -320,13 +379,10 @@ impl PropertiesPanel {
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |state, cx| {
                 if let (Some(values), Some(form)) = (
-                    state
-                        .editor
-                        .document()
-                        .and_then(|doc| doc.property_values(&target.object).ok()),
+                    target.values(&state.editor).ok(),
                     state.property_forms.entries.get_mut(&target),
                 ) {
-                    form.sync(target.object.kind, values);
+                    form.sync_definition(target.definition(&state.editor), values);
                     form.reload_field(id);
                 }
                 state.clear_edit_error(cx);
@@ -356,13 +412,7 @@ impl PropertiesPanel {
                 patch.scope = target.scope.clone();
             }
             patch.changes.insert(id, form.fields[&id].baseline.clone());
-            let context = state
-                .editor
-                .editing_context_token()
-                .ok_or_else(|| anyhow::anyhow!("Editing context changed"))?;
-            state
-                .editor
-                .begin_property_edit(context, target.object.clone(), &patch)
+            properties::begin_edit(&mut state.editor, &target, &patch)
         });
         match result {
             Ok(token) => self.preview = Some((id, token)),
@@ -394,20 +444,29 @@ impl PropertiesPanel {
         value: PropertyValue,
         cx: &mut Context<Self>,
     ) {
+        self.try_update_preview_value(id, value, cx);
+    }
+
+    fn try_update_preview_value(
+        &mut self,
+        id: PropertyKey,
+        value: PropertyValue,
+        cx: &mut Context<Self>,
+    ) -> bool {
         let Some((field, token)) = self.preview.clone() else {
-            return;
+            return false;
         };
         if field != id {
-            return;
+            return false;
         }
         let Some(target) = self.target.clone() else {
-            return;
+            return false;
         };
         let spec = self.field_spec(id).binding;
         if let Some(owner) = self.owner.upgrade() {
-            owner.update(cx, |state, cx| {
+            let updated = owner.update(cx, |state, cx| {
                 let Some(form) = state.property_forms.entries.get_mut(&target) else {
-                    return;
+                    return false;
                 };
                 let previous = form.fields[&id].clone();
                 form.set_value(&spec, value);
@@ -415,16 +474,37 @@ impl PropertiesPanel {
                     if spec.keyframed {
                         patch.scope = target.scope.clone();
                     }
-                    state.editor.update_property_edit(&token, &patch)
+                    // A scrub back to the baseline must replace the previous candidate too.
+                    patch
+                        .changes
+                        .insert(id, form.fields[&id].parsed.clone().unwrap());
+                    properties::update_edit(&mut state.editor, &token, &patch)
                 });
+                let updated = result.is_ok();
                 if let Err(error) = result {
                     form.fields.insert(id, previous);
                     state.set_edit_error(error.to_string(), cx);
                 }
                 state.redraw(cx);
+                updated
             });
+            cx.notify();
+            return updated;
         }
-        cx.notify();
+        false
+    }
+
+    pub(super) fn finish_text_preview(&mut self, cx: &mut Context<Self>) {
+        if let Some((id, _)) = self.preview.as_ref() {
+            let id = *id;
+            if self.field_spec(id).live_text {
+                if let Some(control) = self.controls.get(&id) {
+                    let raw = control.input.read(cx).value().to_string();
+                    self.edit_text(id, raw, cx);
+                }
+            }
+        }
+        self.finish_preview(cx);
     }
 
     pub(super) fn finish_preview(&mut self, cx: &mut Context<Self>) {
@@ -438,15 +518,12 @@ impl PropertiesPanel {
             return;
         };
         owner.update(cx, |state, cx| {
-            let result = state.editor.finish_property_edit(&token);
+            let result = token.finish(&mut state.editor);
             if let (Some(values), Some(form)) = (
-                state
-                    .editor
-                    .document()
-                    .and_then(|doc| doc.property_values(&target.object).ok()),
+                target.values(&state.editor).ok(),
                 state.property_forms.entries.get_mut(&target),
             ) {
-                form.sync(target.object.kind, values);
+                form.sync_definition(target.definition(&state.editor), values);
                 form.reload_field(id);
             }
             if let Err(error) = result {
@@ -471,7 +548,7 @@ impl PropertiesPanel {
         }
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |state, cx| {
-                state.editor.cancel_property_edit(&token);
+                token.cancel(&mut state.editor);
                 if let Some(target) = &self.target {
                     if let Some(form) = state.property_forms.entries.get_mut(target) {
                         form.reload_field(id);
@@ -485,7 +562,7 @@ impl PropertiesPanel {
     pub(crate) fn take_preview(
         &mut self,
         cx: &mut Context<Self>,
-    ) -> Option<(PropertyTarget, PropertyKey, editor_core::PropertyEditToken)> {
+    ) -> Option<(PropertyTarget, PropertyKey, properties::PreviewToken)> {
         let (id, token) = self.preview.take()?;
         if let Some(color) = self.colors.get(&id) {
             color
@@ -508,7 +585,7 @@ impl PropertiesPanel {
         &mut self,
         visible: bool,
         cx: &mut Context<Self>,
-    ) -> Option<(PropertyTarget, PropertyKey, editor_core::PropertyEditToken)> {
+    ) -> Option<(PropertyTarget, PropertyKey, properties::PreviewToken)> {
         if self.visible == visible {
             return None;
         }
@@ -583,7 +660,20 @@ impl PropertiesPanel {
                 }
             },
         );
-        let mut events = vec![text];
+        let focus = input.read(cx).focus_handle(cx);
+        let blur = cx.on_blur(&focus, window, move |this, _, cx| {
+            if this.epoch == epoch
+                && this.preview.as_ref().is_some_and(|(field, _)| *field == id)
+                && this
+                    .controls
+                    .get(&id)
+                    .and_then(|control| control.number.as_ref())
+                    .is_none_or(|number| !number.read(cx).is_sliding())
+            {
+                this.finish_text_preview(cx);
+            }
+        });
+        let mut events = vec![text, blur];
         let number = (spec.binding.preview
             && matches!(
                 spec.editor,
@@ -826,8 +916,8 @@ impl PropertiesPanel {
             min: min * field.scale,
             max: max * field.scale,
             step: spec.step * field.scale,
-            drag_distance: None,
-            disabled: self.disabled,
+            drag_distance: field.drag_distance,
+            disabled: self.disabled || spec.readonly,
         }
     }
 
@@ -963,7 +1053,14 @@ impl PropertiesPanel {
             return false;
         }
         if self.preview.is_some() {
+            let text_preview = self
+                .preview
+                .as_ref()
+                .is_some_and(|(id, _)| self.field_spec(*id).live_text);
             self.cancel_preview(cx);
+            if text_preview {
+                window.focus(&self.focus, cx);
+            }
             return true;
         }
         if let Some(color) = self
@@ -1092,7 +1189,7 @@ impl PropertiesPanel {
                 color.update(cx, |state, cx| state.accept(window, cx));
                 return true;
             }
-            self.finish_preview(cx);
+            self.finish_text_preview(cx);
             return true;
         }
         let Some((&id, _)) = self

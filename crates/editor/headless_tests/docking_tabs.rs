@@ -415,7 +415,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                 let dock = view.dock.as_ref().unwrap();
                 (
                     dock.area.clone(),
-                    PanelId::from(dock.animation_info.entity_id()),
+                    PanelId::from(dock.properties.entity_id()),
                     PanelId::from(
                         dock.animation_inspectors[&PanelKind::AnimationPhysics].entity_id(),
                     ),
@@ -443,7 +443,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
             assert!(tree.find_panel_node(physics).is_some());
             assert_ne!(tree.find_panel_node(physics), tree.find_panel_node(info));
             assert_eq!(tree.panels().filter(|panel| *panel == physics).count(), 1);
-            let info_bounds = window.find("AnimationInfo").bounds();
+            let info_bounds = window.find("properties-panel").bounds();
             let physics_bounds = window.find("AnimationPhysics").bounds();
             match placement {
                 Placement::Right => assert!(physics_bounds.left() >= info_bounds.right()),
@@ -509,10 +509,10 @@ fn adding_to_collapsed_dock_reveals_the_new_panel(cx: &mut TestAppContext) {
         harness.view.update(cx, |view, cx| {
             let dock = view.dock.as_ref().unwrap();
             dock.area.update(cx, |area, cx| {
-                area.remove_panel(dock.animation_info.clone(), window, cx);
+                area.remove_panel(dock.properties.clone(), window, cx);
                 area.set_dock(
                     DockPlacement::Bottom,
-                    DockLayout::tabs().panel_view(panel_handle(dock.animation_info.clone()), cx),
+                    DockLayout::tabs().panel_view(panel_handle(dock.properties.clone()), cx),
                     window,
                     cx,
                 );
@@ -523,7 +523,7 @@ fn adding_to_collapsed_dock_reveals_the_new_panel(cx: &mut TestAppContext) {
                 .read(cx)
                 .layout(DockPlacement::Bottom)
                 .unwrap()
-                .find_panel_node(PanelId::from(dock.animation_info.entity_id()))
+                .find_panel_node(PanelId::from(dock.properties.entity_id()))
                 .unwrap();
             dock.show(
                 PanelKind::AnimationPhysics,
@@ -617,7 +617,7 @@ fn global_add_menu_splits_beside_canvas_in_animation(cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         assert!(window.try_find("AnimationPhysics").is_none());
-        assert!(window.find("AnimationInfo").visible());
+        assert!(window.find("properties-panel").visible());
         assert!(window.find("AnimationMotions").visible());
     })
     .unwrap();

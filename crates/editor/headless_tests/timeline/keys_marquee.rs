@@ -84,7 +84,7 @@ fn empty_motion_inline_value_creates_one_key_at_the_head_and_can_cancel(cx: &mut
 fn keyboard_copy_paste_delete_is_scoped_and_number_text_has_priority(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
-    let (key, pasted) = cx
+    let (key, _pasted) = cx
         .update_window(harness.window, |_, window, cx| {
             window.click("workspace-animation", cx);
             window.render_frame(cx);
@@ -124,8 +124,8 @@ fn keyboard_copy_paste_delete_is_scoped_and_number_text_has_priority(cx: &mut Te
         })
         .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        let field = format!("timeline-number-KeyValue({pasted:?})");
-        window.click(field.clone(), cx);
+        let field = "property-input-selection_value";
+        window.click(field, cx);
         window.press("cmd-a", cx);
         window.input("0.25", cx);
         window.render_frame(cx);

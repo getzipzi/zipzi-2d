@@ -84,7 +84,7 @@ impl PropertyValue {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PropertySpec {
     pub key: PropertyKey,
     pub path: &'static str,

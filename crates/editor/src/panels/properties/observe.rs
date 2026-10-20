@@ -10,6 +10,8 @@ pub(super) struct ObservedState {
     locale: String,
     blocked: bool,
     preview_owned: bool,
+    playing: bool,
+    sample_time: Option<u32>,
 }
 
 impl PropertiesPanel {
@@ -21,10 +23,13 @@ impl PropertiesPanel {
             details: properties::Details::key(&state.editor),
             locale: rust_i18n::locale().to_string(),
             blocked: state.modal || state.editor.is_busy() || state.editor.exiting(),
+            playing: state.editor.animation().is_some_and(|a| a.playing),
+            sample_time: properties::target(&state.editor)
+                .and_then(|target| target.sample_time(&state.editor)),
             preview_owned: self
                 .preview
                 .as_ref()
-                .is_none_or(|(_, token)| state.editor.property_edit_owned(token)),
+                .is_none_or(|(_, token)| token.owned(&state.editor)),
         }
     }
 

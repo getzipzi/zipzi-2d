@@ -205,8 +205,19 @@ impl Timeline {
             .timeline_view()
             .cloned()
             .unwrap_or_default();
+        let _ = owner.update(cx, |owner, cx| {
+            if let Some(document) = owner.editor.active_id() {
+                let _ = owner.editor.inspect_timeline_selection(document);
+                cx.notify();
+            }
+        });
         let additive = event.modifiers.shift || event.modifiers.secondary();
         match hit {
+            Some(Ok(Some(Hit::Curve(channel)))) => {
+                self.change_view(move |view| view.curve_focus = Some(channel), cx);
+                cx.stop_propagation();
+                return;
+            }
             Some(Err(())) => {
                 self.error = Some(t!("timeline.ambiguous").into_owned());
                 cx.notify();
@@ -233,6 +244,8 @@ impl Timeline {
                 if !state.keys.contains(&anchor) {
                     self.select_keys(vec![anchor.clone()], additive, false, cx);
                 }
+                let channel = projection.tracks[&anchor.track_id].channel.clone();
+                self.change_view(move |view| view.curve_focus = Some(channel), cx);
                 if !self.editable(window, cx) {
                     return;
                 }
@@ -271,6 +284,8 @@ impl Timeline {
                 }
             }
             Some(Ok(Some(Hit::Handle { end, handle }))) => {
+                let channel = projection.tracks[&end.track_id].channel.clone();
+                self.change_view(move |view| view.curve_focus = Some(channel), cx);
                 if !self.editable(window, cx) {
                     return;
                 }
@@ -306,6 +321,7 @@ impl Timeline {
                         if !additive {
                             view.keys.clear();
                             view.events.clear();
+                            view.curve_focus = None;
                             view.channels.clear();
                         }
                         view.events.insert(selected);
@@ -351,6 +367,7 @@ impl Timeline {
                         |view| {
                             view.keys.clear();
                             view.events.clear();
+                            view.curve_focus = None;
                         },
                         cx,
                     );
@@ -454,6 +471,7 @@ impl Timeline {
                 self.change_view(
                     move |view| {
                         view.keys = selected.into_iter().collect();
+                        view.curve_focus = None;
                         view.events = selected_events.into_iter().collect();
                         for row in projection.rows.iter() {
                             if row.keys.iter().any(|key| view.keys.contains(key)) {
@@ -622,7 +640,9 @@ impl Timeline {
             };
             moved = self.pan_by(-horizontal, 0., false, cx);
         } else {
-            moved = self.pan_by(0., -delta.y, false, cx);
+            let curve_pan = state.mode == TimelineDisplayMode::Curves
+                && self.graph.get().contains(&event.position);
+            moved = self.pan_by(0., -delta.y, curve_pan, cx);
         }
         if moved && self.gesture.is_some() {
             self.move_pointer(

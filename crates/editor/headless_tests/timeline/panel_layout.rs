@@ -117,7 +117,7 @@ fn timeline_panel_can_move_share_tabs_and_restore_its_workspace_layout(cx: &mut 
             window.simulate_next_frame(cx);
             let dock = harness.view.read(cx).dock.as_ref().unwrap();
             let panel = PanelId::from(dock.timeline.entity_id());
-            let info = PanelId::from(dock.animation_info.entity_id());
+            let info = PanelId::from(dock.properties.entity_id());
             let area = dock.area.clone();
             let node = area
                 .read(cx)

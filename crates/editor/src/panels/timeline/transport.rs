@@ -234,7 +234,20 @@ impl Timeline {
                         }),
                     );
                 }
-                menu
+                let weak = weak.clone();
+                menu.item(
+                    PopupMenuItem::element(|_, _| {
+                        div()
+                            .id("animation-reset")
+                            .test_support()
+                            .child(t!("workspace.reset_preview"))
+                    })
+                    .on_click(move |_, window, cx| {
+                        let _ = weak.update(cx, |owner, cx| {
+                            owner.run_command(CommandId::ResetAnimation, window, cx)
+                        });
+                    }),
+                )
             })
             .into_any_element()
         });
@@ -245,21 +258,37 @@ impl Timeline {
             transport,
         );
         let tools = self.tools(window, cx);
+        let time_display = div()
+            .id("timeline-time")
+            .test_support()
+            .flex_shrink_0()
+            .text_size(compact::rem(compact::CAPTION))
+            .font_family(".AppleSystemUIFontMonospaced")
+            .tooltip(move |window, cx| {
+                gpui_kit::component::tooltip::Tooltip::new(time_hint.clone()).build(window, cx)
+            })
+            .child(if self.header_compact {
+                format!("{time:.2}")
+            } else {
+                time_label
+            });
         let left = div()
             .flex_1()
             .min_w_0()
             .flex()
             .items_center()
             .gap(compact::rem(6.))
-            .child(
-                div()
-                    .id("timeline-motion-name")
-                    .test_support()
-                    .min_w_0()
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .when(!self.header_compact, |label| label.child(name)),
-            )
+            .when(!self.header_compact, |left| {
+                left.child(
+                    div()
+                        .id("timeline-motion-name")
+                        .test_support()
+                        .min_w_0()
+                        .overflow_hidden()
+                        .text_ellipsis()
+                        .child(name),
+                )
+            })
             .when_some(self.error.clone(), |left, error| {
                 left.child(
                     div()
@@ -274,7 +303,9 @@ impl Timeline {
                         .child(Icon::new(IconName::TriangleAlert).xsmall()),
                 )
             })
-            .children(preview);
+            .children(preview)
+            .child(time_display)
+            .child(self.render_playback_speed(allowed));
         let center = div()
             .flex_shrink_0()
             .flex()
@@ -287,23 +318,6 @@ impl Timeline {
             .items_center()
             .justify_end()
             .gap(compact::rem(6.))
-            .child(
-                div()
-                    .id("timeline-time")
-                    .test_support()
-                    .flex_shrink_0()
-                    .text_size(compact::rem(compact::CAPTION))
-                    .font_family(".AppleSystemUIFontMonospaced")
-                    .tooltip(move |window, cx| {
-                        gpui_kit::component::tooltip::Tooltip::new(time_hint.clone())
-                            .build(window, cx)
-                    })
-                    .child(if self.header_compact {
-                        format!("{time:.2}")
-                    } else {
-                        time_label
-                    }),
-            )
             .child(tools);
         div()
             .id("timeline-toolbar")

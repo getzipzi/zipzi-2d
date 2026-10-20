@@ -1,50 +1,7 @@
 //! Translate typed feedback at display time, so changing locale also updates errors.
 use crate::t;
-use editor_core::{AnimationDiagnostic, AnimationFailure};
+use editor_core::AnimationFailure;
 
-pub fn diagnostic_text(diagnostic: &AnimationDiagnostic) -> String {
-    use AnimationDiagnostic::*;
-    match diagnostic {
-        MissingAttachment { path } => t!("workspace.missing_file", path = path).into_owned(),
-        UnresolvedMotion {
-            motion,
-            category,
-            target,
-        } => t!(
-            "workspace.motion_target_missing",
-            motion = motion,
-            category = category,
-            target = target
-        )
-        .into_owned(),
-        UnsupportedChannel { motion, channel } => t!(
-            "workspace.unsupported_channel",
-            motion = motion,
-            channel = channel
-        )
-        .into_owned(),
-        PartOpacityWithoutPose { motion, part } => {
-            t!("workspace.part_without_pose", motion = motion, part = part).into_owned()
-        }
-        UnresolvedExpression { expression, target } => t!(
-            "workspace.expression_target_missing",
-            expression = expression,
-            target = target
-        )
-        .into_owned(),
-        UnresolvedPhysics { target } => {
-            t!("workspace.physics_target_missing", target = target).into_owned()
-        }
-        UnresolvedPose { target } => {
-            t!("workspace.pose_target_missing", target = target).into_owned()
-        }
-        SoundUnsupported { motion, file } => {
-            t!("workspace.sound_not_played", motion = motion, file = file).into_owned()
-        }
-        PhysicsStepLimit => t!("workspace.physics_step_limit").into_owned(),
-        RuntimeCoverage { detail } => t!("workspace.runtime_detail", detail = detail).into_owned(),
-    }
-}
 pub fn failure_text(failure: &AnimationFailure) -> String {
     use AnimationFailure::*;
     use kasane_sdk::AnimationError as E;

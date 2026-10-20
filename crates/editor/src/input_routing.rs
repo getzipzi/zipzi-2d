@@ -162,7 +162,15 @@ impl EditorView {
         if let Some(dock) = self.input_dock() {
             for (&kind, region) in &dock.input_regions {
                 if dock.displayed(kind, cx) {
-                    regions.push((LocalTarget::Panel(kind), region.clone()));
+                    let target = if kind == editor_core::PanelKind::Properties {
+                        self.editor
+                            .timeline_binding(dock.properties.read(cx).timeline_id)
+                            .map(LocalTarget::Timeline)
+                    } else {
+                        None
+                    }
+                    .unwrap_or(LocalTarget::Panel(kind));
+                    regions.push((target, region.clone()));
                 }
             }
             if dock.displayed(editor_core::PanelKind::AnimationTimeline, cx) {

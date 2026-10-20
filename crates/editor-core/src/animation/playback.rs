@@ -55,6 +55,19 @@ impl Editor {
         animation.pause();
         Ok(())
     }
+    pub fn set_animation_playback_speed(&mut self, document: DocumentId, speed: f32) -> Result<()> {
+        self.ensure_animation_target(document)?;
+        ensure!(
+            speed.is_finite() && (0.25..=4.).contains(&speed),
+            "Invalid playback speed"
+        );
+        self.active_session_mut()
+            .unwrap()
+            .animation
+            .playback
+            .playback_speed = speed;
+        Ok(())
+    }
     pub fn animation_viewport_revision(&self) -> Option<u64> {
         self.active_id()
             .zip(self.primary_viewport_id())

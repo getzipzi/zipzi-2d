@@ -287,12 +287,12 @@ fn navigation_keeps_playing_modal_and_workspace_switch_pause_and_panels_reopen(
                 .dock
                 .as_ref()
                 .unwrap()
-                .animation_info
+                .properties
                 .entity_id(),
         );
         for visible in [false, true] {
             harness.view.update(cx, |view, cx| {
-                view.run_command(CommandId::AnimationInfo, window, cx)
+                view.run_command(CommandId::Properties, window, cx)
             });
             window.render_frame(cx);
             let area = harness.view.read(cx).dock.as_ref().unwrap().area.read(cx);
@@ -345,6 +345,8 @@ fn expression_controls_preserve_pause_clear_at_current_time_and_reset(cx: &mut T
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
         super::animation::click_expression(window, 0, cx);
+        window.render_frame(cx);
+        window.click("animation-preview-mode", cx);
         window.render_frame(cx);
         window.click("animation-reset", cx);
         let animation = harness.view.read(cx).editor.animation().unwrap();
@@ -678,9 +680,28 @@ fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_authoring_i
     cx.update_window(harness.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
-        for index in 0..5usize {
-            assert!(window.try_find(("animation-diagnostic", index)).is_some());
-        }
+        assert!(
+            window
+                .try_find("animation-preview-details-toggle")
+                .is_none()
+        );
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .animation_catalog()
+                .diagnostics_for(None)
+                .len(),
+            5
+        );
+        assert!(
+            window
+                .find(("animation-expression-warning", 3usize))
+                .visible()
+        );
         super::animation::click_expression(window, 3, cx);
         harness.view.read_with(cx, |view, _| {
             assert!(view.editor.animation().unwrap().expression.is_none());
@@ -768,6 +789,120 @@ fn display_callbacks_sample_fractional_time_and_stop_after_pause(cx: &mut TestAp
         assert_eq!(view.editor.animation().unwrap().time, first);
         assert!(!view.animation_clock_running);
         assert!(view.animation_anchor.is_none());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn playback_speed_select_changes_clock_without_retiming_motion(cx: &mut TestAppContext) {
+    use editor_core::AnimationPreviewMode;
+    use std::time::{Duration, Instant};
+
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        window.render_frame(cx);
+        window.click("timeline-playback-speed", cx);
+        window.render_frame(cx);
+        for _ in 0..3 {
+            window.press("down", cx);
+        }
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.animation().unwrap().playback_speed, 2.);
+        assert!(!view.editor.animation().unwrap().playing);
+        assert_eq!(view.editor.animation().unwrap().time, 0.);
+        assert!(view.editor.timeline_edit().is_none());
+    });
+    let original = harness.view.read_with(cx, |view, _| {
+        view.editor
+            .document()
+            .unwrap()
+            .motion_definition(
+                &view
+                    .editor
+                    .animation()
+                    .unwrap()
+                    .motion
+                    .as_ref()
+                    .unwrap()
+                    .clip_id,
+            )
+            .unwrap()
+            .clone()
+    });
+    for mode in [AnimationPreviewMode::Editing, AnimationPreviewMode::Result] {
+        cx.update_window(harness.window, |_, window, cx| {
+            let anchor = Instant::now() - Duration::from_millis(100);
+            harness.view.update(cx, |view, cx| {
+                let document = view.editor.active_id().unwrap();
+                view.editor
+                    .set_animation_preview_mode(document, mode)
+                    .unwrap();
+                view.editor.seek_animation(document, 0.5).unwrap();
+                view.run_command(CommandId::PlayPause, window, cx);
+                view.animation_anchor = Some((anchor, 0.5));
+                view.schedule_animation_frame(window, cx);
+            });
+            let before = anchor.elapsed().as_secs_f32();
+            window.simulate_next_frame(cx);
+            let after = anchor.elapsed().as_secs_f32();
+            let time = harness.view.read(cx).editor.animation().unwrap().time;
+            assert!(time >= 0.5 + before * 2. - 0.00001, "{mode:?}: {time}");
+            assert!(time <= 0.5 + after * 2. + 0.00001, "{mode:?}: {time}");
+        })
+        .unwrap();
+    }
+    let time = harness
+        .view
+        .read_with(cx, |view, _| view.editor.animation().unwrap().time);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click("timeline-playback-speed", cx);
+        window.render_frame(cx);
+        window.press("down", cx);
+        window.press("down", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        let animation = view.editor.animation().unwrap();
+        assert_eq!(animation.playback_speed, 4.);
+        assert!(animation.playing);
+        assert!(animation.time >= time);
+        let document = view.editor.document().unwrap();
+        assert_eq!(
+            document
+                .motion_definition(&animation.motion.as_ref().unwrap().clip_id)
+                .unwrap(),
+            &original
+        );
+        assert_eq!(document.history_lengths(), (0, 0));
+        assert!(!document.modified());
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-modeling", cx);
+        window.render_frame(cx);
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .animation()
+                .unwrap()
+                .playback_speed,
+            4.
+        );
+        assert!(window.find("timeline-playback-speed").visible());
     })
     .unwrap();
 }

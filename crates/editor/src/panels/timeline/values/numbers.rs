@@ -47,41 +47,6 @@ impl Timeline {
                     value: 0.,
                 })
             }
-            Field::KeyTime(key) | Field::KeyValue(key) => {
-                let point = projection.key(key)?;
-                Some(TimelineCommand::SetKey {
-                    key: key.clone(),
-                    time: point.time,
-                    value: point.value,
-                })
-            }
-            Field::EventTime(id) | Field::EventValue(id) => {
-                let event = projection.events.iter().find(|event| &event.id == id)?;
-                Some(TimelineCommand::Event {
-                    id: Some(id.clone()),
-                    time: event.time as f64,
-                    value: event.value.clone(),
-                })
-            }
-            Field::Scale => Some(TimelineCommand::ScaleTime(
-                view.editor
-                    .document()?
-                    .motion_definition(&projection.clip_id)?
-                    .duration as f64,
-            )),
-            _ => {
-                let clip = view
-                    .editor
-                    .document()?
-                    .motion_definition(&projection.clip_id)?;
-                Some(TimelineCommand::Timing {
-                    duration: clip.duration,
-                    fps: clip.fps,
-                    looping: clip.looping,
-                    fade_in: clip.fade_in,
-                    fade_out: clip.fade_out,
-                })
-            }
         }
     }
     pub(super) fn ensure_field(
@@ -151,21 +116,11 @@ impl Timeline {
                                 .as_ref()
                                 .is_some_and(|edit| edit.field == text_field);
                             let displayed = &this.fields[&text_field].displayed;
-                            let unchanged = if matches!(text_field, Field::EventValue(_)) {
-                                &value == displayed
-                            } else {
-                                value
-                                    .parse::<f64>()
-                                    .ok()
-                                    .zip(displayed.parse::<f64>().ok())
-                                    .is_some_and(|(a, b)| {
-                                        if matches!(text_field, Field::Scale) {
-                                            a == b
-                                        } else {
-                                            a as f32 == b as f32
-                                        }
-                                    })
-                            };
+                            let unchanged = value
+                                .parse::<f64>()
+                                .ok()
+                                .zip(displayed.parse::<f64>().ok())
+                                .is_some_and(|(a, b)| a as f32 == b as f32);
                             if !active && unchanged {
                                 return;
                             }
@@ -259,19 +214,15 @@ impl Timeline {
         sliding: bool,
         cx: &mut Context<Self>,
     ) {
-        let numeric = if matches!(field, Field::EventValue(_)) {
-            None
-        } else {
-            match value.parse::<f64>() {
-                Ok(value) if value.is_finite() => Some(value),
-                _ => {
-                    if !sliding {
-                        self.cancel_number_candidate(&field, cx);
-                    }
-                    self.error = Some(t!("timeline.invalid_number").into_owned());
-                    cx.notify();
-                    return;
+        let numeric = match value.parse::<f64>() {
+            Ok(value) if value.is_finite() => value,
+            _ => {
+                if !sliding {
+                    self.cancel_number_candidate(&field, cx);
                 }
+                self.error = Some(t!("timeline.invalid_number").into_owned());
+                cx.notify();
+                return;
             }
         };
         if self
@@ -311,28 +262,8 @@ impl Timeline {
         let edit = self.number_edit.as_mut().unwrap();
         edit.sliding |= sliding;
         let mut command = edit.command.clone();
-        match (&field, &mut command) {
-            (Field::RowValue(_), TimelineCommand::WriteValue { value, .. }) => {
-                *value = numeric.unwrap() as f32
-            }
-            (Field::KeyTime(_), TimelineCommand::SetKey { time, .. }) => *time = numeric.unwrap(),
-            (Field::KeyValue(_), TimelineCommand::SetKey { value, .. }) => {
-                *value = numeric.unwrap() as f32
-            }
-            (Field::EventTime(_), TimelineCommand::Event { time, .. }) => *time = numeric.unwrap(),
-            (Field::EventValue(_), TimelineCommand::Event { value: text, .. }) => *text = value,
-            (Field::Scale, TimelineCommand::ScaleTime(duration)) => *duration *= numeric.unwrap(),
-            (Field::Duration, TimelineCommand::Timing { duration, .. }) => {
-                *duration = numeric.unwrap() as f32
-            }
-            (Field::Fps, TimelineCommand::Timing { fps, .. }) => *fps = numeric.unwrap() as f32,
-            (Field::FadeIn, TimelineCommand::Timing { fade_in, .. }) => {
-                *fade_in = Some(numeric.unwrap() as f32)
-            }
-            (Field::FadeOut, TimelineCommand::Timing { fade_out, .. }) => {
-                *fade_out = Some(numeric.unwrap() as f32)
-            }
-            _ => return,
+        if let TimelineCommand::WriteValue { value, .. } = &mut command {
+            *value = numeric as f32;
         }
         let token = edit.token;
         self.update_candidate(token, command, cx);

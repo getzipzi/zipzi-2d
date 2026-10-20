@@ -31,37 +31,6 @@ impl AnimationPanel {
         })
     }
 }
-impl AnimationPanel {
-    fn render_info_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        use gpui_kit::assets::IconName;
-        let dialog = window.has_active_dialog(cx);
-        let Some(owner) = self.owner.upgrade() else {
-            return Empty.into_any_element();
-        };
-        let state = owner.read(cx);
-        let disabled = state.modal || dialog;
-        let command = editor_core::CommandId::ResetAnimation;
-        let reset_disabled = disabled
-            || !state
-                .editor
-                .command_available(state.editor.command(command));
-        let reset_owner = self.owner.clone();
-        super::toolbar::PanelToolbar::new("animation-info-toolbar")
-            .action(move |_| {
-                Button::new("animation-reset")
-                    .icon(IconName::RotateCcw)
-                    .accessibility_label(t!("workspace.reset_preview").into_owned())
-                    .tooltip(t!("workspace.reset_hint"))
-                    .disabled(reset_disabled)
-                    .on_click(move |_, window, cx| {
-                        _ = reset_owner
-                            .update(cx, |owner, cx| owner.run_command(command, window, cx));
-                    })
-            })
-            .into_any_element()
-    }
-}
-
 impl EventEmitter<PanelEvent> for AnimationPanel {}
 impl Focusable for AnimationPanel {
     fn focus_handle(&self, _: &App) -> FocusHandle {
@@ -90,11 +59,7 @@ impl Panel for AnimationPanel {
 }
 impl crate::docking::header::PanelHeader for AnimationPanel {
     fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        if matches!(self.kind, PanelKind::AnimationInfo) {
-            self.render_info_header(window, cx)
-        } else {
-            self.render_header_toolbar(window, cx)
-        }
+        self.render_header_toolbar(window, cx)
     }
 }
 
@@ -113,9 +78,6 @@ impl Render for AnimationPanel {
         let Some(document) = state.editor.document() else {
             return div().p_3().child(t!("editor.welcome")).into_any_element();
         };
-        let animation = state.editor.animation().unwrap();
-        let catalog = document.animation_catalog();
-        let resources = &catalog.motions;
         let snapshot = state.displayed_animation();
         let mut content = div()
             .id(self.kind.name())
@@ -134,118 +96,6 @@ impl Render for AnimationPanel {
             }
             PanelKind::AnimationPose => {
                 content = inspectors::pose(content.gap_1(), document, snapshot, cx);
-            }
-            PanelKind::AnimationInfo => {
-                let status = if animation.error.is_some() {
-                    t!("workspace.failed")
-                } else if animation.playing {
-                    t!("workspace.playing")
-                } else if animation.presented.is_none() {
-                    t!("workspace.evaluating")
-                } else {
-                    t!("workspace.paused")
-                };
-                content = content.child(div().id("animation-status").test_support().child(status));
-                if let Some(error) = &animation.error {
-                    content = content.child(
-                        div()
-                            .text_color(cx.theme().danger)
-                            .child(super::animation_feedback::failure_text(error)),
-                    );
-                }
-                if let Some(snapshot) = snapshot {
-                    content = content
-                        .child(
-                            div()
-                                .id("animation-presented-time")
-                                .test_support()
-                                .child(t!(
-                                    "workspace.presented_time",
-                                    time = format!("{:.3}", snapshot.time)
-                                )),
-                        )
-                        .child(t!(
-                            "workspace.model_opacity",
-                            value = format!("{:.3}", snapshot.model_opacity)
-                        ));
-                }
-                if resources.is_empty() && catalog.expressions.is_empty() {
-                    content = content.child(t!("workspace.no_resources"));
-                }
-                if let Some(resource) = resources
-                    .iter()
-                    .find(|r| animation.motion.as_ref() == Some(&r.selection))
-                {
-                    content = content.child(resource.name.clone());
-                    if !resource.playable() {
-                        content = content.child(t!("workspace.invalid_duration"));
-                    }
-                } else {
-                    content = content.child(t!("workspace.select_motion"));
-                }
-                let name = |id: &str| {
-                    catalog
-                        .expressions
-                        .iter()
-                        .find(|r| r.id == id)
-                        .map_or_else(|| id.to_string(), |r| r.name.clone())
-                };
-                content = content.child(format!(
-                    "{}: {}",
-                    t!("workspace.selected_expression"),
-                    animation
-                        .expression
-                        .as_ref()
-                        .map_or_else(|| t!("workspace.none").into_owned(), |id| name(id))
-                ));
-                if let Some(snapshot) = snapshot {
-                    content = content.child(format!(
-                        "{}: {}",
-                        t!("workspace.active_expressions"),
-                        if snapshot.active_expressions.is_empty() {
-                            t!("workspace.none").into_owned()
-                        } else {
-                            snapshot
-                                .active_expressions
-                                .iter()
-                                .map(|id| name(id))
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        }
-                    ));
-                    if !snapshot.fired_events.is_empty() {
-                        content = content.child(t!("workspace.frame_events"));
-                        for event in &snapshot.fired_events {
-                            let motion = resources
-                                .iter()
-                                .find(|r| r.selection.clip_id == event.motion_id)
-                                .map_or_else(|| event.motion_id.clone(), |r| r.name.clone());
-                            content = content.child(format!("{}: {}", motion, event.value));
-                        }
-                    }
-                }
-                for (label, loaded) in [("Physics", catalog.physics), ("Pose", catalog.pose)] {
-                    content = content.child(format!(
-                        "{label}: {}",
-                        if loaded {
-                            t!("workspace.loaded")
-                        } else {
-                            t!("workspace.absent")
-                        }
-                    ));
-                }
-                let diagnostics = catalog.diagnostics_for(snapshot);
-                if !diagnostics.is_empty() {
-                    content = content.child(t!("workspace.diagnostics"));
-                    for (index, diagnostic) in diagnostics.iter().enumerate() {
-                        content = content.child(
-                            div()
-                                .id(("animation-diagnostic", index))
-                                .test_support()
-                                .child(super::animation_feedback::diagnostic_text(diagnostic)),
-                        );
-                    }
-                }
             }
             _ => unreachable!("invalid animation panel kind"),
         }

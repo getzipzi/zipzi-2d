@@ -314,8 +314,9 @@ impl EditorView {
                 };
                 // Display cadence chooses the sample time, never the physics
                 // integration step. The SDK retains its canonical 60 Hz history.
+                let speed = this.editor.animation().unwrap().playback_speed;
                 this.editor
-                    .advance_animation_clock(time + anchor.elapsed().as_secs_f32());
+                    .advance_animation_clock(time + anchor.elapsed().as_secs_f32() * speed);
                 this.request_preview();
                 if !this.editor.animation().is_some_and(|a| a.playing) {
                     this.animation_anchor = None;

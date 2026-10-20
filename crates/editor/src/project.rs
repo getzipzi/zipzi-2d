@@ -100,8 +100,11 @@ impl EditorView {
         {
             if target.document == id && self.editor.editing_context() == Some(target.context) {
                 if let Some(form) = self.property_forms.entries.get_mut(&target) {
-                    let spec = editor_core::property_specs(target.object.kind)
+                    let spec = target
+                        .definition(&self.editor)
+                        .fields
                         .iter()
+                        .map(|field| field.binding)
                         .find(|spec| spec.key == field)
                         .unwrap();
                     if form
@@ -109,7 +112,7 @@ impl EditorView {
                         .get(&field)
                         .is_some_and(|value| value.raw != raw)
                     {
-                        form.edit(spec, raw);
+                        form.edit(&spec, raw);
                     }
                 }
             }
@@ -123,14 +126,36 @@ impl EditorView {
                     .update(cx, |panel, cx| panel.take_preview(cx))
             })
         {
-            let _ = self.editor.finish_property_edit(&token);
-            if let Some(form) = self.property_forms.entries.get_mut(&target) {
-                if let Some(values) = self
-                    .editor
-                    .document()
-                    .and_then(|doc| doc.property_values(&target.object).ok())
+            // Input events can still be queued when Save arrives. Apply the
+            // captured text before settling its candidate, just as Enter does.
+            let result = (|| {
+                let form = self
+                    .property_forms
+                    .entries
+                    .get(&target)
+                    .ok_or_else(|| anyhow::anyhow!("Form ended"))?;
+                let mut patch = form.patch(target.object.kind, field)?;
+                if patch.changes.is_empty() {
+                    token.cancel(&mut self.editor);
+                    return Ok(());
+                }
+                if target
+                    .definition(&self.editor)
+                    .field(field)
+                    .is_some_and(|spec| spec.binding.keyframed)
                 {
-                    form.sync(target.object.kind, values);
+                    patch.scope = target.scope.clone();
+                }
+                properties::update_edit(&mut self.editor, &token, &patch)?;
+                token.finish(&mut self.editor)
+            })();
+            if let Err(error) = result {
+                token.cancel(&mut self.editor);
+                self.set_edit_error(error.to_string(), cx);
+            }
+            if let Some(form) = self.property_forms.entries.get_mut(&target) {
+                if let Some(values) = target.values(&self.editor).ok() {
+                    form.sync_definition(target.definition(&self.editor), values);
                     form.reload_field(field);
                 }
             }

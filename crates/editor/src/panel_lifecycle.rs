@@ -111,6 +111,12 @@ impl EditorView {
             let visible = visible && self.viewport_scene.is_none();
             self.editor
                 .set_timeline_visible(dock.timeline.read(cx).id, visible);
+            let inspector_visible = window.is_visible()
+                && dock.displayed(editor_core::PanelKind::Properties, cx)
+                && crate::properties::target(&self.editor)
+                    .is_some_and(|target| target.timeline.is_some());
+            self.editor
+                .set_timeline_visible(dock.properties.read(cx).timeline_id, inspector_visible);
         }
     }
 }

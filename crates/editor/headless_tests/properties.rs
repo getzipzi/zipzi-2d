@@ -429,6 +429,7 @@ fn properties_external_conflict_restores_latest_value_without_overwriting_it(
     harness.view.read_with(cx, |view, _| {
         assert!(view.edit_error.is_some());
         let target = crate::properties::PropertyTarget {
+            timeline: None,
             scope: Default::default(),
             document: view.editor.active_id().unwrap(),
             context: editor_core::EditingContext::Modeling,

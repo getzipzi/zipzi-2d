@@ -115,6 +115,7 @@ impl Timeline {
             self.cancel(window, cx);
         }
         self.sync_search(window, cx);
+        self.sync_playback_speed(window, cx);
     }
 
     fn reconcile_target(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -147,8 +148,7 @@ impl Timeline {
                 });
             } else {
                 self.fields.clear();
-                self.slider = None;
-                self.range_selection.clear();
+                self.range_key = None;
                 self.error = None;
             }
             self.scene.borrow_mut().scene = None;

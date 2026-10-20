@@ -3,10 +3,14 @@
 mod animation;
 mod details;
 mod document;
+mod editing;
 pub(crate) mod form;
 mod mesh;
 mod parameter;
 mod scene;
+pub(crate) mod timeline;
+pub(crate) use editing::{PreviewToken, begin_edit, update_edit};
+pub(crate) use timeline::details as selection_details;
 
 use crate::t;
 use editor_core::{
@@ -25,6 +29,7 @@ pub(crate) struct PropertyTarget {
     pub context: EditingContext,
     pub object: ObjectRef,
     pub scope: editor_core::PropertyScope,
+    pub timeline: Option<timeline::TimelineTarget>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -53,6 +58,8 @@ pub(crate) struct FieldSpec {
     pub choices: Option<fn(&Document) -> Vec<Choice>>,
     pub scale: f64,
     bounds: Option<fn(&PropertyValues, PropertyKey) -> (f64, f64)>,
+    pub live_text: bool,
+    pub drag_distance: Option<f64>,
 }
 impl FieldSpec {
     fn new(binding: PropertySpec, label: &'static str, editor: FieldEditor) -> Self {
@@ -75,6 +82,8 @@ impl FieldSpec {
             searchable: false,
             choices: None,
             bounds: None,
+            live_text: false,
+            drag_distance: None,
             scale: 1.,
         }
     }
@@ -107,9 +116,18 @@ impl FieldSpec {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub(crate) struct FormDefinition {
     pub fields: Vec<FieldSpec>,
+    pub navigation: Option<NavigationSpec>,
+}
+
+/// Selection changes supplied by a provider, separate from authored properties.
+#[derive(Clone)]
+pub(crate) struct NavigationSpec {
+    pub label: &'static str,
+    pub choices: Vec<Choice>,
+    pub select: fn(&mut Editor, &PropertyTarget, &str) -> anyhow::Result<()>,
 }
 impl FormDefinition {
     fn new(fields: &[(PropertySpec, &'static str, FieldEditor)]) -> Self {
@@ -118,6 +136,7 @@ impl FormDefinition {
                 .iter()
                 .map(|&(binding, label, editor)| FieldSpec::new(binding, label, editor))
                 .collect(),
+            navigation: None,
         }
     }
     pub fn fields(&self) -> impl Iterator<Item = &FieldSpec> {
@@ -166,6 +185,7 @@ pub(crate) fn definition(kind: ObjectKind) -> FormDefinition {
 
 pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
     let inspection = editor.active_inspection()?;
+    let timeline = timeline::target(editor, &inspection);
     let object = inspection.object().or_else(|| {
         if inspection.context != EditingContext::Modeling {
             return None;
@@ -182,11 +202,8 @@ pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
         context: inspection.context,
         scope: editor.document()?.property_scope(&object),
         object,
+        timeline,
     })
-}
-
-pub(crate) fn empty_message() -> SharedString {
-    t!("workspace.select_motion").into()
 }
 
 fn details_source(editor: &Editor) -> Option<details::DetailSource> {
@@ -198,3 +215,5 @@ fn details_source(editor: &Editor) -> Option<details::DetailSource> {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod timeline_tests;

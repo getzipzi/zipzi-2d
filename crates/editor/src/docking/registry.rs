@@ -32,7 +32,6 @@ impl DockWorkspace {
         let animation_motions = AnimationPanel::new(owner.clone(), PanelKind::AnimationMotions, cx);
         let animation_expressions =
             AnimationPanel::new(owner.clone(), PanelKind::AnimationExpressions, cx);
-        let animation_info = AnimationPanel::new(owner.clone(), PanelKind::AnimationInfo, cx);
 
         let animation_inspectors: HashMap<_, _> =
             [PanelKind::AnimationPhysics, PanelKind::AnimationPose]
@@ -57,10 +56,6 @@ impl DockWorkspace {
             (
                 PanelKind::AnimationExpressions,
                 panel_handle(animation_expressions.clone()),
-            ),
-            (
-                PanelKind::AnimationInfo,
-                panel_handle(animation_info.clone()),
             ),
             (PanelKind::Properties, panel_handle(properties.clone())),
             (PanelKind::MeshTree, panel_handle(mesh_tree.clone())),
@@ -98,7 +93,6 @@ impl DockWorkspace {
         header::register(&mut headers, &timeline, cx);
         header::register(&mut headers, &animation_motions, cx);
         header::register(&mut headers, &animation_expressions, cx);
-        header::register(&mut headers, &animation_info, cx);
         let headers = Rc::new(headers);
         let input_regions: HashMap<_, crate::input_routing::InputRegion> = panels
             .keys()
@@ -163,7 +157,6 @@ impl DockWorkspace {
             timeline,
             animation_motions,
             animation_expressions,
-            animation_info,
             animation_inspectors,
             properties,
             mesh_tree,

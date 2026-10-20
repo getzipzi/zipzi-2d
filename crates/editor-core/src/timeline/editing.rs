@@ -518,6 +518,11 @@ impl Editor {
         }
         Ok(())
     }
+    pub fn timeline_baseline_projection(&self) -> Option<Arc<TimelineProjection>> {
+        self.timeline_edit()
+            .map(|edit| edit.original_projection.clone())
+            .or_else(|| self.timeline_projection())
+    }
     pub fn timeline_edit(&self) -> Option<&TimelineEdit> {
         self.active_session()?.animation.timeline.edit.as_ref()
     }
@@ -557,6 +562,9 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
         let mut view = state.view.clone();
         update(&mut view);
+        let selection_changed = state.view.channels != view.channels
+            || state.view.keys != view.keys
+            || state.view.events != view.events;
         ensure!(
             view.time_range.0.is_finite()
                 && view.time_range.1.is_finite()
@@ -566,6 +574,13 @@ impl Editor {
             "Invalid timeline view"
         );
         self.cancel_timeline_edit();
+        if selection_changed {
+            self.active_session_mut()
+                .unwrap()
+                .animation
+                .playback
+                .inspected = None;
+        }
         let state = self
             .active_session_mut()
             .unwrap()

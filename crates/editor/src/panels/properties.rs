@@ -2,6 +2,7 @@ mod controls;
 mod observe;
 mod rich_controls;
 mod rows;
+mod selection;
 use crate::properties;
 use crate::ui::property_details as details;
 use rows::{Row, RowProjectionKey};
@@ -20,6 +21,7 @@ use gpui_kit::{prelude::*, *};
 use std::sync::Arc;
 
 pub struct PropertiesPanel {
+    pub(crate) timeline_id: editor_core::TimelineId,
     target: Option<PropertyTarget>,
     form: PropertyForm,
     definition: properties::FormDefinition,
@@ -30,14 +32,14 @@ pub struct PropertiesPanel {
     controls: std::collections::HashMap<PropertyKey, FieldControl>,
     selects: std::collections::HashMap<PropertyKey, controls::SelectControl>,
     colors: std::collections::HashMap<PropertyKey, rich_controls::ColorControl>,
-    preview: Option<(PropertyKey, editor_core::PropertyEditToken)>,
+    preview: Option<(PropertyKey, properties::PreviewToken)>,
     epoch: u64,
     context: Option<editor_core::EditingContextToken>,
-    snapshot: Option<(PropertyTarget, u64)>,
+    snapshot: Option<(PropertyTarget, u64, Option<u32>)>,
     disabled: bool,
     visible: bool,
     scroll: ListState,
-    scroll_key: Option<(DocumentId, ObjectRef)>,
+    scroll_key: Option<PropertyTarget>,
     rows: Arc<[Row]>,
     rows_key: Option<RowProjectionKey>,
     fold_revision: u64,
@@ -60,13 +62,15 @@ impl PropertiesPanel {
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
             cx.on_release(|this: &mut Self, cx| {
+                let panel = this.timeline_id;
                 let owner = this.owner.clone();
                 let preview = this.preview.take();
                 let target = this.target.clone();
                 cx.defer(move |cx| {
                     if let Some((id, token)) = preview {
                         let _ = owner.update(cx, |state, cx| {
-                            state.editor.cancel_property_edit(&token);
+                            state.editor.unregister_timeline(panel);
+                            token.cancel(&mut state.editor);
                             if let Some(target) = target {
                                 if let Some(form) = state.property_forms.entries.get_mut(&target) {
                                     form.reload_field(id);
@@ -79,6 +83,7 @@ impl PropertiesPanel {
             })
             .detach();
             Self {
+                timeline_id: editor_core::TimelineId::new(),
                 target: None,
                 form: PropertyForm::default(),
                 definition: Default::default(),
@@ -154,10 +159,13 @@ impl PropertiesPanel {
             return div().into_any_element();
         };
         let state = owner.read(cx);
-        let (Some(doc), Some(target)) = (state.editor.document(), &self.target) else {
-            return div().into_any_element();
+        let Some(target) = &self.target else {
+            return Empty.into_any_element();
         };
-        crate::ui::object_identity::render("property", doc, &target.object, cx)
+        let Some((name, kind, locked)) = target.title(&state.editor) else {
+            return Empty.into_any_element();
+        };
+        crate::ui::object_identity::render_title("property", name, kind, locked, cx)
     }
 
     #[cfg(any(test, feature = "test-support"))]
@@ -174,6 +182,7 @@ impl PropertiesPanel {
     #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn last_row_id(&self) -> Option<ElementId> {
         match self.rows.last()? {
+            Row::Navigation => Some("property-navigation".into()),
             Row::Value { field, .. } => {
                 Some(SharedString::from(format!("object-property-{field}")).into())
             }
@@ -209,6 +218,7 @@ impl PropertiesPanel {
             self.row_builds += 1;
         }
         let content = match row {
+            Row::Navigation => self.render_navigation(cx),
             Row::Field(id) => self.render_field(*id, window, cx),
             Row::Detail(row) => details::render(row, cx),
             Row::Group {
@@ -516,6 +526,21 @@ impl Render for PropertiesPanel {
             .flex()
             .flex_col()
             .track_focus(&self.focus)
+            .capture_any_mouse_down(cx.listener(|this, event: &MouseDownEvent, _, cx| {
+                let finish = this.preview.as_ref().is_some_and(|(id, _)| {
+                    this.field_spec(*id).live_text
+                        && this.controls.get(id).is_some_and(|control| {
+                            !control
+                                .input
+                                .read(cx)
+                                .input_bounds()
+                                .contains(&event.position)
+                        })
+                });
+                if finish {
+                    this.finish_text_preview(cx);
+                }
+            }))
             .on_action(
                 cx.listener(|this, action: &crate::actions::RunCommand, window, cx| {
                     if !matches!(
@@ -537,10 +562,7 @@ impl Render for PropertiesPanel {
                 }),
             )
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
-                if event.keystroke.key == "escape"
-                    && this.preview.is_some()
-                    && this.escape(window, cx)
-                {
+                if event.keystroke.key == "escape" && this.escape(window, cx) {
                     cx.stop_propagation();
                 }
             }))
@@ -568,16 +590,7 @@ impl Render for PropertiesPanel {
             self.rows_key = None;
             self.scroll_key = None;
             self.scroll.reset(0);
-            return root
-                .child(
-                    div()
-                        .id("properties-empty")
-                        .test_support()
-                        .p_3()
-                        .text_color(cx.theme().muted_foreground)
-                        .child(properties::empty_message()),
-                )
-                .into_any_element();
+            return root.into_any_element();
         }
         self.sync_rows(&state.editor, document, doc, cx);
         let rows = self.rows.clone();

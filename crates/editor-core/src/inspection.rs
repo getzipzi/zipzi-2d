@@ -18,6 +18,7 @@ pub enum InspectionSource {
         expression: Option<String>,
         channels: Vec<TimelineRowId>,
         keys: Vec<TimelineKeyRef>,
+        events: Vec<String>,
     },
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -74,6 +75,9 @@ impl Editor {
                     keys: timeline
                         .map(|view| view.keys.iter().cloned().collect())
                         .unwrap_or_default(),
+                    events: timeline
+                        .map(|view| view.events.iter().cloned().collect())
+                        .unwrap_or_default(),
                 }
             }
         };
@@ -83,6 +87,15 @@ impl Editor {
             token,
             source,
         })
+    }
+    pub fn inspect_timeline_selection(&mut self, document: DocumentId) -> anyhow::Result<()> {
+        self.ensure_animation_target(document)?;
+        self.active_session_mut()
+            .unwrap()
+            .animation
+            .playback
+            .inspected = None;
+        Ok(())
     }
     pub fn inspect_animation_resource(
         &mut self,
@@ -100,6 +113,7 @@ impl Editor {
                     .is_some(),
             "Resource no longer exists"
         );
+        self.cancel_timeline_edit();
         self.active_session_mut()
             .unwrap()
             .animation

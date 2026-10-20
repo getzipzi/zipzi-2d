@@ -3,7 +3,7 @@ use super::slide_number_input::{press, release, slide};
 use super::{Harness, document_fixture, setup_with_document};
 use editor_core::{CommandId, TimelineChannelId, TimelineCommand};
 use gpui_kit::test::TestWindowExt;
-use gpui_kit::{AppContext as _, Focusable, ScrollDelta, TestAppContext, point, px};
+use gpui_kit::{AppContext as _, Focusable, TestAppContext, point, px};
 
 fn animation(cx: &mut TestAppContext) -> Harness {
     let (document, assets) = document_fixture::animation_document().unwrap();
@@ -190,32 +190,21 @@ fn deferred_deactivation_preserves_a_newer_edit(cx: &mut TestAppContext) {
 fn motion_property_scrubs_use_unit_steps_and_commit_once(cx: &mut TestAppContext) {
     let harness = animation(cx);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("timeline-properties", cx);
+        window.click(("animation-motion", 0usize), cx);
         window.render_frame(cx);
     })
     .unwrap();
     for (field, expected) in [
-        ("Duration", 2.01_f32),
-        ("Fps", 61.),
-        ("FadeIn", 0.01),
-        ("FadeOut", 0.01),
-        ("Scale", 2.02),
+        ("duration", 2.01_f32),
+        ("fps", 61.),
+        ("fade_in", 0.1),
+        ("fade_out", 0.1),
     ] {
-        cx.update_window(harness.window, |_, window, cx| {
-            let bounds = window.find(format!("timeline-number-{field}")).bounds();
-            let viewport = window.find("timeline-inspector").bounds();
-            window.scroll(
-                "timeline-inspector",
-                ScrollDelta::Pixels(point(px(0.), viewport.center().y - bounds.center().y)),
-                cx,
-            );
-        })
-        .unwrap();
         let end = cx
             .update_window(harness.window, |_, window, cx| {
                 window.render_frame(cx);
                 let origin = window
-                    .find(format!("timeline-number-{field}"))
+                    .find(format!("property-input-{field}"))
                     .bounds()
                     .center();
                 let end = origin + point(px(8.), px(0.));
@@ -225,25 +214,30 @@ fn motion_property_scrubs_use_unit_steps_and_commit_once(cx: &mut TestAppContext
             })
             .unwrap();
         harness.view.read_with(cx, |view, _| {
-            let clip = view
-                .editor
-                .timeline_edit()
-                .expect("scrub candidate")
-                .candidate
-                .clip();
-            let actual = match field {
-                "Duration" | "Scale" => clip.duration,
-                "Fps" => clip.fps,
-                "FadeIn" => clip.fade_in.unwrap(),
-                "FadeOut" => clip.fade_out.unwrap(),
-                _ => unreachable!(),
-            };
+            let target = crate::properties::target(&view.editor).unwrap();
+            let form = &view.property_forms.entries[&target];
+            let spec = target
+                .definition(&view.editor)
+                .fields
+                .into_iter()
+                .find(|spec| spec.binding.key.name() == field)
+                .unwrap();
+            let actual = form.fields[&spec.binding.key]
+                .parsed
+                .as_ref()
+                .unwrap()
+                .number()
+                .unwrap() as f32;
             assert!((actual - expected).abs() < 0.00001, "{field}: {actual}");
             assert_eq!(view.editor.document().unwrap().history_lengths().0, 0);
         });
         cx.update_window(harness.window, |_, window, cx| {
             release(window, end, cx);
             window.render_frame(cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
             assert!(harness.view.read(cx).editor.timeline_edit().is_none());
             assert_eq!(
                 harness
@@ -291,10 +285,10 @@ fn selected_keys_never_expose_edit_head_value_controls(cx: &mut TestAppContext) 
                 view.redraw(cx);
             });
             window.render_frame(cx);
-            let inspector = window.within("timeline-inspector");
+            let inspector = window.within("properties-panel");
             assert!(
                 inspector
-                    .try_find(format!("timeline-number-KeyValue({key:?})"))
+                    .try_find("property-input-selection_value")
                     .is_some()
             );
             assert!(
@@ -313,8 +307,8 @@ fn selected_keys_never_expose_edit_head_value_controls(cx: &mut TestAppContext) 
         window.render_frame(cx);
         assert!(
             window
-                .within("timeline-inspector")
-                .try_find(format!("timeline-number-RowValue({:?})", row.id))
+                .within("properties-panel")
+                .try_find("property-input-selection_value")
                 .is_some()
         );
     })
@@ -425,7 +419,7 @@ fn side_dock_keeps_graph_and_tools_accessible(cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         let dock = harness.view.read(cx).dock.as_ref().unwrap();
         let panel = PanelId::from(dock.timeline.entity_id());
-        let info = PanelId::from(dock.animation_info.entity_id());
+        let info = PanelId::from(dock.properties.entity_id());
         let area = dock.area.clone();
         let node = area
             .read(cx)
@@ -453,9 +447,22 @@ fn side_dock_keeps_graph_and_tools_accessible(cx: &mut TestAppContext) {
         window.render_frame(cx);
         assert!(window.find("timeline-graph").bounds().size.width >= px(150.));
         assert!(window.find("timeline-graph").bounds().size.height >= px(50.));
-        assert!(window.find("animation-preview-mode").visible());
+        if window.try_find("animation-preview-mode").is_none() {
+            window.click("timeline-more", cx);
+            window.render_frame(cx);
+            assert!(window.find("animation-preview-mode").visible());
+            window.press("escape", cx);
+            window.render_frame(cx);
+        } else {
+            assert!(window.find("animation-preview-mode").visible());
+        }
         assert!(window.find("timeline-more").visible());
         assert!(window.try_find("timeline-inspector").is_none());
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
         let key = harness
             .view
             .read(cx)
@@ -549,18 +556,30 @@ fn side_dock_keeps_graph_and_tools_accessible(cx: &mut TestAppContext) {
             .view
             .update(cx, |view, cx| view.run_command(CommandId::Undo, window, cx));
         window.render_frame(cx);
-        window.click("timeline-more", cx);
+        window.click(("animation-motion", 0usize), cx);
+        let dock = harness.view.read(cx).dock.as_ref().unwrap();
+        let area = dock.area.clone();
+        let properties = PanelId::from(dock.properties.entity_id());
+        area.update(cx, |area, cx| area.select_panel(properties, window, cx));
         window.render_frame(cx);
-        window.click("timeline-menu-properties", cx);
-        window.render_frame(cx);
-        assert!(window.find("timeline-number-Duration").visible());
-        assert!(window.find("timeline-graph").bounds().size.width >= px(150.));
+        assert!(window.find("property-input-duration").visible());
     })
     .unwrap();
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        window.click("timeline-inspector-close", cx);
+        let panel = gpui_kit::component::dock::PanelId::from(
+            harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .timeline
+                .entity_id(),
+        );
+        let area = harness.view.read(cx).dock.as_ref().unwrap().area.clone();
+        area.update(cx, |area, cx| area.select_panel(panel, window, cx));
         window.render_frame(cx);
         assert!(window.try_find("timeline-inspector").is_none());
         assert_eq!(
@@ -626,53 +645,6 @@ fn keyboard_navigation_reveals_hidden_keys_and_preserves_zoom(cx: &mut TestAppCo
         let time = f64::from(view.editor.animation().unwrap().edit_time);
         let range = view.editor.timeline_view().unwrap().time_range;
         assert!(range.0 < time && range.1 > time);
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
-    })
-    .unwrap();
-}
-
-#[gpui_kit::test]
-fn key_list_reveals_keys_outside_the_time_range(cx: &mut TestAppContext) {
-    let harness = animation(cx);
-    cx.update_window(harness.window, |_, window, cx| {
-        harness.view.update(cx, |view, cx| {
-            let d = view.editor.active_id().unwrap();
-            let p = view.editor.timeline_projection().unwrap();
-            let row = p
-                .rows
-                .iter()
-                .find(|r| r.track_id.is_some())
-                .unwrap()
-                .id
-                .clone();
-            view.editor
-                .update_timeline_view(d, |s| {
-                    s.time_range = (0., 0.1);
-                    s.channels.insert(row);
-                })
-                .unwrap();
-            view.redraw(cx);
-        });
-        window.render_frame(cx);
-        window.scroll(
-            "timeline-inspector",
-            ScrollDelta::Pixels(point(px(0.), px(-10000.))),
-            cx,
-        );
-    })
-    .unwrap();
-    cx.update_window(harness.window, |_, window, cx| {
-        window.click("timeline-key-list", cx);
-        window.render_frame(cx);
-        window.press("up", cx);
-        window.press("enter", cx);
-        window.render_frame(cx);
-        let view = harness.view.read(cx);
-        let s = view.editor.timeline_view().unwrap();
-        let p = view.editor.timeline_projection().unwrap();
-        let key = p.key(s.keys.first().expect("selected key")).unwrap();
-        assert_eq!(key.time, 2.);
-        assert!(s.time_range.0 < key.time && s.time_range.1 > key.time);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
     })
     .unwrap();

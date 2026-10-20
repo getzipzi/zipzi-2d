@@ -123,6 +123,8 @@ pub struct TimelineViewState {
     pub normalized: bool,
     pub snap: bool,
     pub channels: BTreeSet<TimelineRowId>,
+    /// The channel whose units the curve ruler displays, without hiding peers.
+    pub curve_focus: Option<TimelineChannelId>,
     pub keys: BTreeSet<TimelineKeyRef>,
     pub events: BTreeSet<String>,
     pub reveal_row: Option<TimelineRowId>,
@@ -136,9 +138,10 @@ impl Default for TimelineViewState {
             mode: TimelineDisplayMode::Overview,
             time_range: (0., 2.),
             scroll: 0.,
-            normalized: false,
+            normalized: true,
             snap: true,
             channels: BTreeSet::new(),
+            curve_focus: None,
             keys: BTreeSet::new(),
             events: BTreeSet::new(),
             reveal_row: None,
@@ -219,6 +222,13 @@ impl TimelineClipState {
             .retain(|id| self.projection.events.iter().any(|event| &event.id == id));
         let ids: HashSet<_> = self.visible.iter().map(|row| &row.id).collect();
         self.view.channels.retain(|row| ids.contains(row));
+        if self.view.curve_focus.as_ref().is_some_and(|channel| {
+            !self.visible.iter().any(|row| {
+                self.view.channels.contains(&row.id) && row.channel.as_ref() == Some(channel)
+            })
+        }) {
+            self.view.curve_focus = None;
+        }
     }
 }
 

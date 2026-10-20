@@ -138,6 +138,7 @@ fn optional_numbers_preserve_resource_default_and_explicit_zero() {
 fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
     let mut editor = Editor::new().unwrap();
     let target = PropertyTarget {
+        timeline: None,
         scope: Default::default(),
         document: editor.active_id().unwrap(),
         context: EditingContext::Modeling,
@@ -148,6 +149,7 @@ fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
     let mut forms = PropertyForms::default();
     forms.sync(
         &target,
+        target.definition(&editor),
         editor
             .document()
             .unwrap()

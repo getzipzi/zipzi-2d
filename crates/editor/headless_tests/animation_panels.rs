@@ -172,7 +172,7 @@ fn motion_groups_collapse_without_changing_selection(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn expression_rows_omit_status_and_icon_clears_expression(cx: &mut TestAppContext) {
+fn expression_rows_show_active_icon_at_the_end_and_clear_without_editing(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
@@ -216,6 +216,12 @@ fn expression_rows_omit_status_and_icon_clears_expression(cx: &mut TestAppContex
                 .len(),
             1
         );
+        let row = window.find(("animation-expression", 0usize)).bounds();
+        let active = window
+            .find(("animation-expression-active", 0usize))
+            .bounds();
+        assert!(active.center().x > row.center().x);
+        assert!(active.right() <= row.right());
         assert!(window.find("animation-clear-expression").visible());
         window.click("animation-clear-expression", cx);
         let animation = harness.view.read(cx).editor.animation().unwrap();
@@ -288,21 +294,13 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
         reveal_property(window, "property-group-$details", cx);
         window.click("property-group-$details", cx);
         window.render_frame(cx);
-        reveal_property(window, "animation-property-motion", cx);
-        assert_eq!(
-            window.find("animation-property-motion").label(),
-            Some("Once")
-        );
+        assert_eq!(window.find("property-title-name").label(), Some("Once"));
         reveal_property(window, "animation-property-registration", cx);
         assert_eq!(
             window.find("animation-property-registration").label(),
             Some("Idle [1]")
         );
-        reveal_property(window, "animation-property-fades", cx);
-        assert_eq!(
-            window.find("animation-property-fades").label(),
-            Some("Fade in 0.000 s / out 0.000 s")
-        );
+
         window.click(("animation-motion", 1usize), cx);
         window.render_frame(cx);
         reveal_property(window, "animation-property-registration", cx);
@@ -310,11 +308,7 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
             window.find("animation-property-registration").label(),
             Some("Idle [2]")
         );
-        reveal_property(window, "animation-property-fades", cx);
-        assert_eq!(
-            window.find("animation-property-fades").label(),
-            Some("Fade in 1.000 s / out 0.000 s")
-        );
+
         super::animation::click_expression(window, 0, cx);
         window.render_frame(cx);
         reveal_property(window, "animation-property-expression", cx);
@@ -331,12 +325,15 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
         );
         window.click("animation-clear-expression", cx);
         window.render_frame(cx);
-        reveal_property(window, "animation-property-no-expression", cx);
-        assert!(window.try_find("animation-property-expression").is_none());
         assert!(
-            window
-                .try_find("animation-property-no-expression")
-                .is_some()
+            harness
+                .view
+                .read(cx)
+                .editor
+                .animation()
+                .unwrap()
+                .expression
+                .is_none()
         );
         let document = harness.view.read(cx).editor.document().unwrap();
         assert_eq!(document.history_lengths(), (0, 0));
@@ -550,7 +547,6 @@ fn inspector_commands_restore_separate_workspace_layouts(cx: &mut TestAppContext
             view.run_command(CommandId::ResetLayout, window, cx);
             let dock = view.dock.as_ref().unwrap();
             assert!(dock.contains(PanelKind::Properties, cx));
-            assert!(dock.contains(PanelKind::AnimationInfo, cx));
             assert!(!dock.contains(PanelKind::AnimationPhysics, cx));
             assert!(!dock.contains(PanelKind::AnimationPose, cx));
         });
@@ -585,6 +581,12 @@ fn paused_expression_clicks_show_only_the_latest_expression_as_active(cx: &mut T
                     window
                         .try_find(("animation-expression-status", index))
                         .is_none()
+                );
+                assert_eq!(
+                    window
+                        .try_find(("animation-expression-active", index))
+                        .is_some(),
+                    index == selected
                 );
             }
             let view = harness.view.read(cx);

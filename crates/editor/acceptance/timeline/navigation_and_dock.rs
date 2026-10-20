@@ -147,22 +147,15 @@ pub(crate) fn canvas_dock_resize(
     let mut report = serde_json::Map::new();
     for (name, workspace, properties) in [
         ("modeling", WorkspaceKind::Modeling, false),
-        ("animation_info", WorkspaceKind::Animation, false),
         ("animation_properties", WorkspaceKind::Animation, true),
     ] {
         update(h, |v, w, cx| {
             v.switch_workspace(workspace, w, cx);
             if workspace == WorkspaceKind::Animation {
-                v.dock.as_ref().unwrap().show(
-                    if properties {
-                        PanelKind::Properties
-                    } else {
-                        PanelKind::AnimationInfo
-                    },
-                    None,
-                    w,
-                    cx,
-                );
+                v.dock
+                    .as_ref()
+                    .unwrap()
+                    .show(PanelKind::Properties, None, w, cx);
             } else {
                 v.editor
                     .execute(editor_core::EditorCommand::SelectObjects(Vec::new()))
@@ -198,7 +191,10 @@ pub(crate) fn canvas_dock_resize(
         }
         let (origin, width) = h.cx.update_window(h.window, |_, w, _| {
             let b = w.find("canvas-body").bounds();
-            (point(b.right(), b.top() + px(60.)), b.size.width)
+            let x = w
+                .try_find("resize-handle-right")
+                .map_or(b.right(), |handle| handle.bounds().center().x);
+            (point(x, b.top() + px(60.)), b.size.width)
         })?;
         pointer(h, origin, 0)?;
         pump(h)?;
@@ -273,7 +269,7 @@ pub(crate) fn canvas_dock_resize(
         })?;
         ensure!(
             after != width,
-            "native drag missed the right dock resize handle"
+            "native drag missed the right dock resize handle in {name}"
         );
         if properties {
             h.capture()?
@@ -290,13 +286,9 @@ pub(crate) fn canvas_dock_resize(
                     row.bounds().top() >= bounds.top() && row.bounds().bottom() <= bounds.bottom()
                 })
             };
-            h.cx.update_window(h.window, |_, w, _| {
-                ensure!(
-                    w.try_find(last.clone()).is_none(),
-                    "offscreen Properties rows were laid out"
-                );
-                Ok::<_, anyhow::Error>(())
-            })??;
+            // Motion details no longer repeat the entire timeline. Small
+            // inspectors may already fit; larger lists still have to reach
+            // their final row after a real dock resize and native scrolling.
             for _ in 0..4 {
                 h.cx.update_window(h.window, |_, w, cx| {
                     w.dispatch_event(

@@ -23,4 +23,17 @@ pub const FADE_OUT: PropertySpec = PropertySpec::new(
 .range(0., f32::MAX as f64, 0.1)
 .preview();
 
-pub const FIELDS: &[PropertySpec] = &[NAME, LOOPING, FADE_IN, FADE_OUT];
+pub const DURATION: PropertySpec = PropertySpec::new(
+    ObjectKind::Motion,
+    "duration",
+    "duration",
+    PropertyType::Float,
+)
+.range(0.001, 1e6, 0.01)
+.preview();
+pub const FPS: PropertySpec =
+    PropertySpec::new(ObjectKind::Motion, "fps", "fps", PropertyType::Float)
+        .range(0.001, 1e5, 1.)
+        .preview();
+
+pub const FIELDS: &[PropertySpec] = &[NAME, DURATION, FPS, LOOPING, FADE_IN, FADE_OUT];

@@ -5,6 +5,82 @@ use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext, point, px};
 
 #[gpui_kit::test]
+fn overlapping_events_can_be_selected_and_edited_individually(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        window.render_frame(cx);
+        for _ in 0..2 {
+            crate::headless_tests::timeline::tool(window, "timeline-add-event", cx);
+            window.render_frame(cx);
+        }
+        window.click("timeline-row-Events", cx);
+        window.render_frame(cx);
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .timeline_view()
+                .unwrap()
+                .events
+                .is_empty()
+        );
+    })
+    .unwrap();
+    for (index, text) in [(0usize, "first"), (1usize, "second")] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click("property-navigation", cx);
+            window.render_frame(cx);
+            window.click(("property-navigation-choice", index), cx);
+            window.render_frame(cx);
+            let view = harness.view.read(cx);
+            let projection = view.editor.timeline_projection().unwrap();
+            assert_eq!(
+                view.editor
+                    .timeline_view()
+                    .unwrap()
+                    .events
+                    .iter()
+                    .collect::<Vec<_>>(),
+                vec![&projection.events[index].id]
+            );
+            assert_eq!(
+                view.editor.document().unwrap().history_lengths(),
+                (2 + index, 0)
+            );
+            window.click("property-input-event_value", cx);
+            window.input(text, cx);
+            window.press("enter", cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            let view = harness.view.read(cx);
+            let projection = view.editor.timeline_projection().unwrap();
+            assert_eq!(projection.events[index].value, text);
+            assert_eq!(projection.events[0].time, projection.events[1].time);
+            assert_eq!(
+                view.editor.document().unwrap().history_lengths(),
+                (3 + index, 0)
+            );
+            window.click("timeline-row-Events", cx);
+            window.render_frame(cx);
+        })
+        .unwrap();
+    }
+    harness.view.read_with(cx, |view, _| {
+        let projection = view.editor.timeline_projection().unwrap();
+        assert_eq!(projection.events[0].value, "first");
+        assert_eq!(projection.events[1].value, "second");
+    });
+}
+
+#[gpui_kit::test]
 fn event_editing_resize_and_view_controls_preserve_history_boundaries(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
@@ -22,9 +98,9 @@ fn event_editing_resize_and_view_controls_preserve_history_boundaries(cx: &mut T
         });
         window.render_frame(cx);
         assert!(window.find("animation-timeline").bounds().size.height > before);
-        window.click("timeline-seconds", cx);
-        window.click("timeline-fit", cx);
-        window.click("timeline-snap", cx);
+        crate::headless_tests::timeline::tool(window, "timeline-seconds", cx);
+        crate::headless_tests::timeline::tool(window, "timeline-fit", cx);
+        crate::headless_tests::timeline::tool(window, "timeline-snap", cx);
         window.render_frame(cx);
         assert_eq!(
             harness
@@ -36,7 +112,7 @@ fn event_editing_resize_and_view_controls_preserve_history_boundaries(cx: &mut T
                 .history_lengths(),
             (0, 0)
         );
-        window.click("timeline-add-event", cx);
+        crate::headless_tests::timeline::tool(window, "timeline-add-event", cx);
         window.render_frame(cx);
         let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
         assert_eq!(projection.events.len(), 1);
@@ -61,7 +137,9 @@ fn event_editing_resize_and_view_controls_preserve_history_boundaries(cx: &mut T
                 .history_lengths(),
             (1, 0)
         );
-        window.click("timeline-delete", cx);
+        crate::keybindings::reset(cx).unwrap();
+        window.hover("timeline-graph", cx);
+        window.press("backspace", cx);
         window.render_frame(cx);
     })
     .unwrap();
@@ -99,12 +177,12 @@ fn event_text_enter_commits_once_and_same_time_events_remain_distinct(cx: &mut T
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
         window.render_frame(cx);
-        window.click("timeline-add-event", cx);
+        crate::headless_tests::timeline::tool(window, "timeline-add-event", cx);
         window.render_frame(cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("timeline-event-value", cx);
+        window.click("property-input-event_value", cx);
         window.input("hello", cx);
     })
     .unwrap();
@@ -120,24 +198,23 @@ fn event_text_enter_commits_once_and_same_time_events_remain_distinct(cx: &mut T
         window.render_frame(cx);
     })
     .unwrap();
+    cx.run_until_parked();
     harness.view.read_with(cx, |view, _| {
         assert!(view.editor.timeline_edit().is_none());
         assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
     });
     cx.update_window(harness.window, |_, window, cx| {
         window.scroll(
-            "timeline-inspector",
+            "object-properties",
             gpui_kit::ScrollDelta::Pixels(point(px(0.), px(-10000.))),
             cx,
         );
-        window.click("timeline-add-event", cx);
+        crate::headless_tests::timeline::tool(window, "timeline-add-event", cx);
         window.render_frame(cx);
         let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
         assert_eq!(projection.events.len(), 2);
         assert_eq!(projection.events[0].time, projection.events[1].time);
         assert_ne!(projection.events[0].id, projection.events[1].id);
-        window.click("timeline-event-list", cx);
-        window.render_frame(cx);
         assert_eq!(
             harness
                 .view
@@ -153,7 +230,7 @@ fn event_text_enter_commits_once_and_same_time_events_remain_distinct(cx: &mut T
 }
 
 #[gpui_kit::test]
-fn explicit_time_scale_previews_and_enter_commits_all_times_together(cx: &mut TestAppContext) {
+fn motion_fade_toggles_use_shared_properties(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
@@ -161,49 +238,22 @@ fn explicit_time_scale_previews_and_enter_commits_all_times_together(cx: &mut Te
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
         window.render_frame(cx);
-        window.click("timeline-properties", cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click(("animation-motion", 0usize), cx);
         window.render_frame(cx);
         window.scroll(
-            "timeline-inspector",
-            gpui_kit::ScrollDelta::Pixels(point(px(0.), px(-10000.))),
-            cx,
-        );
-    })
-    .unwrap();
-    cx.update_window(harness.window, |_, window, cx| {
-        window.click("timeline-number-Scale", cx);
-        window.press("cmd-a", cx);
-        window.input("2", cx);
-    })
-    .unwrap();
-    harness.view.read_with(cx, |view, _| {
-        let clip = view.editor.timeline_edit().unwrap().candidate.clip();
-        assert_eq!(clip.duration, 4.);
-        assert_eq!(clip.tracks[0].segments[0].end().time, 4.);
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
-    });
-    cx.update_window(harness.window, |_, window, cx| {
-        window.press("enter", cx);
-        window.render_frame(cx);
-    })
-    .unwrap();
-    harness.view.read_with(cx, |view, _| {
-        assert!(view.editor.timeline_edit().is_none());
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
-        assert_eq!(view.editor.timeline_projection().unwrap().duration, 4.);
-    });
-    cx.update_window(harness.window, |_, window, cx| {
-        window.scroll(
-            "timeline-inspector",
+            "object-properties",
             gpui_kit::ScrollDelta::Pixels(point(px(0.), px(10000.))),
             cx,
         );
         window.scroll(
-            "timeline-inspector",
+            "object-properties",
             gpui_kit::ScrollDelta::Pixels(point(px(0.), px(-90.))),
             cx,
         );
-        window.click("timeline-fade-default-FadeIn", cx);
+        window.click("property-custom-fade_in", cx);
         window.render_frame(cx);
         let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
         assert_eq!(
@@ -218,10 +268,10 @@ fn explicit_time_scale_previews_and_enter_commits_all_times_together(cx: &mut Te
                 .fade_in,
             None
         );
-        window.click("timeline-fade-custom-FadeIn", cx);
+        window.click("property-custom-fade_in", cx);
         window.render_frame(cx);
         let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
-        assert_eq!(projection.duration, 4.);
+        assert_eq!(projection.duration, 2.);
         assert_eq!(
             harness
                 .view
@@ -242,7 +292,7 @@ fn explicit_time_scale_previews_and_enter_commits_all_times_together(cx: &mut Te
                 .document()
                 .unwrap()
                 .history_lengths(),
-            (3, 0)
+            (2, 0)
         );
     })
     .unwrap();
@@ -282,18 +332,21 @@ fn committing_on_blur_keeps_the_next_field_focused_and_uses_the_new_asset(cx: &m
         })
         .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("timeline-number-KeyValue({key:?})"), cx);
+        window.click("property-input-selection_value", cx);
         window.press("cmd-a", cx);
         window.input("0.25", cx);
     })
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
-        window.click(format!("timeline-number-KeyTime({key:?})"), cx);
+        window.click("property-input-selection_time", cx);
     })
     .unwrap();
     cx.run_until_parked();
     harness.view.read_with(cx, |view, _| {
-        assert!(view.editor.timeline_edit().is_none());
+        assert!(
+            view.editor.timeline_edit().is_none(),
+            "the previous property must commit before focusing the next one"
+        );
         assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
     });
     cx.update_window(harness.window, |_, window, cx| {
@@ -317,11 +370,11 @@ fn committing_on_blur_keeps_the_next_field_focused_and_uses_the_new_asset(cx: &m
     });
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        window.click(format!("timeline-number-KeyValue({key:?})"), cx);
+        window.click("property-input-selection_value", cx);
         let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
             panic!("key value input not focused")
         };
-        assert_eq!(input.read(cx).value().as_ref(), "0.2");
+        assert_eq!(input.read(cx).value().as_ref(), "0.25");
         window.blur(cx);
     })
     .unwrap();
@@ -329,7 +382,7 @@ fn committing_on_blur_keeps_the_next_field_focused_and_uses_the_new_asset(cx: &m
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         let origin = window
-            .find(format!("timeline-number-KeyValue({key:?})"))
+            .find("property-input-selection_value")
             .bounds()
             .center();
         // The scrub must start at the precise 0.25, rather than the displayed 0.2.
@@ -397,7 +450,7 @@ fn invalid_inspector_text_does_not_commit_the_last_valid_intermediate_value(
         .unwrap();
     for invalid in ["-", "999999"] {
         cx.update_window(harness.window, |_, window, cx| {
-            window.click(format!("timeline-number-KeyValue({key:?})"), cx);
+            window.click("property-input-selection_value", cx);
             window.press("cmd-a", cx);
             window.input("0.25", cx);
         })
@@ -426,4 +479,190 @@ fn invalid_inspector_text_does_not_commit_the_last_valid_intermediate_value(
             );
         });
     }
+}
+
+fn selected_key_fixture(
+    cx: &mut TestAppContext,
+) -> (super::super::Harness, editor_core::TimelineKeyRef, f32) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    let result = cx
+        .update_window(harness.window, |_, window, cx| {
+            window.activate_window();
+            window.click("workspace-animation", cx);
+            window.render_frame(cx);
+            window.click(("animation-motion", 0usize), cx);
+            window.render_frame(cx);
+            let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
+            let key_data = &projection.tracks.values().next().unwrap().keys[0];
+            let key = key_data.reference.clone();
+            let original = key_data.value;
+            let position = harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .timeline
+                .read(cx)
+                .key_position(&key)
+                .unwrap()
+                + point(px(2.), px(0.));
+            press(window, position, cx);
+            release(window, position, cx);
+            window.render_frame(cx);
+            (key, original)
+        })
+        .unwrap();
+    (harness, result.0, result.1)
+}
+
+fn settle_input(
+    harness: &super::super::Harness,
+    how: &str,
+    window: &mut gpui_kit::Window,
+    cx: &mut gpui_kit::App,
+) {
+    match how {
+        "enter" => window.press("enter", cx),
+        "blur" => window.blur(cx),
+        "save" => harness.view.update(cx, |view, cx| {
+            assert!(view.prepare_property_inputs(view.editor.active_id().unwrap(), window, cx));
+        }),
+        _ => unreachable!(),
+    }
+    window.render_frame(cx);
+}
+
+#[gpui_kit::test]
+fn returning_live_text_to_baseline_discards_the_candidate(cx: &mut TestAppContext) {
+    let (harness, key, original) = selected_key_fixture(cx);
+    for how in ["enter", "blur", "save"] {
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click("property-input-selection_value", cx);
+            window.press("cmd-a", cx);
+            window.input("0.25", cx);
+            window.render_frame(cx);
+        })
+        .unwrap();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.press("cmd-a", cx);
+            window.input(&original.to_string(), cx);
+            settle_input(&harness, how, window, cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.timeline_edit().is_none(), "{how}");
+            assert_eq!(
+                view.editor
+                    .timeline_projection()
+                    .unwrap()
+                    .key(&key)
+                    .unwrap()
+                    .value,
+                original,
+                "{how}"
+            );
+            assert_eq!(
+                view.editor.document().unwrap().history_lengths(),
+                (0, 0),
+                "{how}"
+            );
+        });
+    }
+}
+
+#[gpui_kit::test]
+fn colliding_key_time_discards_the_last_valid_candidate(cx: &mut TestAppContext) {
+    let (harness, key, _) = selected_key_fixture(cx);
+    for how in ["enter", "blur", "save"] {
+        let (original, collision) = harness.view.read_with(cx, |view, _| {
+            let p = view.editor.timeline_projection().unwrap();
+            (
+                p.key(&key).unwrap().time,
+                p.tracks[&key.track_id].keys.last().unwrap().time,
+            )
+        });
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click("property-input-selection_time", cx);
+            window.press("cmd-a", cx);
+            window.input("0.5", cx);
+            window.render_frame(cx);
+        })
+        .unwrap();
+        cx.update_window(harness.window, |_, window, cx| {
+            window.press("cmd-a", cx);
+            window.input(&collision.to_string(), cx);
+            settle_input(&harness, how, window, cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+        harness.view.read_with(cx, |view, _| {
+            assert!(view.editor.timeline_edit().is_none(), "{how}");
+            assert_eq!(
+                view.editor
+                    .timeline_projection()
+                    .unwrap()
+                    .key(&key)
+                    .unwrap()
+                    .time,
+                original,
+                "{how}"
+            );
+            assert_eq!(
+                view.editor.document().unwrap().history_lengths(),
+                (0, 0),
+                "{how}"
+            );
+        });
+    }
+}
+
+#[gpui_kit::test]
+fn scrubbing_selection_value_back_to_baseline_creates_no_history(cx: &mut TestAppContext) {
+    let (harness, key, original) = selected_key_fixture(cx);
+    let origin = cx
+        .update_window(harness.window, |_, window, cx| {
+            let origin = window
+                .find("property-input-selection_value")
+                .bounds()
+                .center();
+            press(window, origin, cx);
+            slide(window, origin + point(px(20.), px(0.)), false, cx);
+            origin
+        })
+        .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        assert_ne!(
+            view.editor
+                .timeline_projection()
+                .unwrap()
+                .key(&key)
+                .unwrap()
+                .value,
+            original
+        );
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        slide(window, origin, false, cx);
+    })
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        release(window, origin, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.editor
+                .timeline_projection()
+                .unwrap()
+                .key(&key)
+                .unwrap()
+                .value,
+            original
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+    });
 }

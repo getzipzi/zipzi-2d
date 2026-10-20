@@ -118,7 +118,7 @@ impl crate::docking::header::PanelHeader for Timeline {
 
     fn header_resized(&mut self, width: Pixels, cx: &mut Context<Self>) {
         let compact = width < compact::scaled(COMPACT_WIDTH, cx);
-        let tiny = width < crate::ui::compact::scaled(260., cx);
+        let tiny = width < crate::ui::compact::scaled(360., cx);
         if self.header_compact != compact || self.header_tiny != tiny {
             self.header_tiny = tiny;
             self.header_compact = compact;
@@ -302,14 +302,6 @@ impl Render for Timeline {
                 });
             }
         }
-        let inspector = self
-            .inspector_visible()
-            .then(|| self.render_inspector(&projection, &state, f64::from(time), window, cx));
-        let (inline_inspector, floating_inspector) = if self.compact {
-            (None, inspector)
-        } else {
-            (inspector, None)
-        };
         let ruler_bounds = self.ruler.clone();
         let mut left = div()
             .id("timeline-rows")
@@ -323,11 +315,14 @@ impl Render for Timeline {
             .border_color(cx.theme().border);
         let first = (state.scroll as f32 / self.row_height()).floor() as usize;
         let count = (self.body_height / self.row_height()).ceil() as usize + 2;
+        let axis_channels = axis::channels(&projection, &state);
+        let axis_reference = axis::reference(&axis_channels, &state);
         for (index, row) in rows.iter().enumerate().skip(first).take(count) {
             left = left.child(self.row(
                 row,
                 &state,
                 &projection,
+                axis_reference.map(|channel| &channel.id),
                 f64::from(time),
                 index as f32 * self.row_height() - state.scroll as f32,
                 window,
@@ -359,6 +354,19 @@ impl Render for Timeline {
         });
         let ruler_projection = projection.clone();
         let ruler_state = state.clone();
+        let axis_caption = axis_reference.map_or_else(
+            || {
+                if state.normalized {
+                    t!("timeline.normalized_axis").into_owned()
+                } else {
+                    t!("timeline.value").into_owned()
+                }
+            },
+            |channel| channel.name.clone(),
+        );
+        let axis_color = axis_reference.map_or(cx.theme().muted_foreground, |channel| {
+            drawing::channel_color(&projection, &channel.id)
+        });
         let graph = div()
             .flex_1()
             .min_w_0()
@@ -416,6 +424,26 @@ impl Render for Timeline {
                         self.tracks
                             .clone()
                             .cached(StyleRefinement::default().size_full()),
+                    )
+                    .when(
+                        state.mode == TimelineDisplayMode::Curves && !axis_channels.is_empty(),
+                        |graph| {
+                            graph.child(
+                                div()
+                                    .id("timeline-axis-units")
+                                    .test_support()
+                                    .absolute()
+                                    .top(compact::rem(4.))
+                                    .right(compact::rem(8.))
+                                    .max_w(compact::rem(180.))
+                                    .overflow_hidden()
+                                    .text_ellipsis()
+                                    .text_size(compact::rem(10.))
+                                    .text_color(axis_color)
+                                    .bg(cx.theme().background)
+                                    .child(axis_caption),
+                            )
+                        },
                     )
                     .child(
                         div()
@@ -500,13 +528,8 @@ impl Render for Timeline {
                             .child(left),
                     ),
             )
-            .child(graph)
-            .when_some(inline_inspector, |body, inspector| body.child(inspector));
-        panel = panel
-            .child(body)
-            .when_some(floating_inspector, |panel, inspector| {
-                panel.child(inspector)
-            });
+            .child(graph);
+        panel = panel.child(body);
         panel.into_any_element()
     }
 }

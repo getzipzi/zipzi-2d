@@ -19,6 +19,7 @@ fn wheel_zoom_interpolates_proportionally_and_keeps_anchor_on_every_frame(cx: &m
         window.render_frame(cx);
     })
     .unwrap();
+    cx.run_until_parked();
     let notifications = Rc::new(Cell::new(0));
     let count = notifications.clone();
     let _observe =

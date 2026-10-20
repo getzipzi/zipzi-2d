@@ -22,6 +22,7 @@ pub(super) enum Row {
         value: String,
     },
     Field(PropertyKey),
+    Navigation,
     Detail(properties::DetailRow),
 }
 impl Row {
@@ -40,8 +41,10 @@ pub(super) struct RowProjectionKey {
     details: Option<properties::DetailKey>,
     locale: String,
     fields: Vec<PropertyKey>,
+    navigation: bool,
     folds: u64,
     row_height: Pixels,
+    editable: bool,
 }
 
 impl PropertiesPanel {
@@ -58,7 +61,7 @@ impl PropertiesPanel {
         let details_expanded = !self.collapsed.contains("$details");
         let key = RowProjectionKey {
             target: target.clone(),
-            revision: if details_expanded {
+            revision: if details_expanded || self.definition.navigation.is_some() {
                 doc.properties_revision()
             } else {
                 0
@@ -73,8 +76,10 @@ impl PropertiesPanel {
                 .filter(|spec| self.form.fields.contains_key(&spec.binding.key))
                 .map(|spec| spec.binding.key)
                 .collect(),
+            navigation: self.definition.navigation.is_some(),
             folds: self.fold_revision,
             row_height: compact::scaled(compact::ROW + compact::GAP, cx),
+            editable: target.editable(editor),
         };
         if self.rows_key.as_ref() == Some(&key) {
             return;
@@ -94,13 +99,25 @@ impl PropertiesPanel {
                 .filter(|spec| self.form.fields.contains_key(&spec.binding.key))
                 .map(|spec| Row::Field(spec.binding.key)),
         );
+        if !target.has_object_details() {
+            rows.extend(
+                properties::selection_details(target, editor)
+                    .into_iter()
+                    .map(Row::Detail),
+            );
+        }
+        if self.definition.navigation.is_some() {
+            rows.push(Row::Navigation);
+        }
         let collapsed = self.collapsed.contains("$details");
-        rows.push(Row::Group {
-            key: "$details".into(),
-            label: t!("properties.details").into_owned(),
-            collapsed,
-        });
-        if !collapsed {
+        if target.has_object_details() {
+            rows.push(Row::Group {
+                key: "$details".into(),
+                label: t!("properties.details").into_owned(),
+                collapsed,
+            });
+        }
+        if !collapsed && target.has_object_details() {
             rows.extend(self.details.rows(editor).iter().cloned().map(Row::Detail));
             let key = (
                 document,
@@ -155,7 +172,7 @@ impl PropertiesPanel {
                 }
             }
         }
-        let key = (document, inspected);
+        let key = target.clone();
         let changed = self.rows.as_ref() != rows.as_slice();
         if self.scroll_key.as_ref() != Some(&key) {
             self.scroll.reset_with_uniform_height(

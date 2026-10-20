@@ -20,6 +20,7 @@ impl AnimationSession {
             head_located: true,
             preview_mode: AnimationPreviewMode::default(),
             preview_loop: true,
+            playback_speed: 1.,
             candidate: None,
             result_position: None,
             playing: false,

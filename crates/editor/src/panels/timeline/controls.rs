@@ -38,17 +38,8 @@ impl Timeline {
             ),
             (
                 "timeline-view",
-                if state.mode == TimelineDisplayMode::Curves {
-                    IconName::ChartLine
-                } else {
-                    IconName::List
-                },
-                t!(if state.mode == TimelineDisplayMode::Curves {
-                    "timeline.curves"
-                } else {
-                    "timeline.overview"
-                })
-                .into_owned(),
+                IconName::ChartLine,
+                t!("timeline.curves").into_owned(),
                 state.mode == TimelineDisplayMode::Curves,
                 allowed,
             ),
@@ -92,32 +83,11 @@ impl Timeline {
                 allowed && state.mode == TimelineDisplayMode::Curves,
             ),
             (
-                "timeline-properties",
-                IconName::Settings,
-                t!("timeline.properties").into_owned(),
-                self.show_properties,
-                allowed,
-            ),
-            (
                 "timeline-add-event",
                 IconName::MessageSquarePlus,
                 t!("timeline.add_event").into_owned(),
                 false,
                 editable,
-            ),
-            (
-                "timeline-delete",
-                IconName::Trash,
-                t!("timeline.delete").into_owned(),
-                false,
-                editable && (!state.keys.is_empty() || !state.events.is_empty()),
-            ),
-            (
-                "timeline-inspector-toggle",
-                IconName::PanelRight,
-                t!("timeline.inspector").into_owned(),
-                self.inspector_visible(),
-                allowed,
             ),
         ];
         for (id, _, _, _, enabled) in &mut actions {
@@ -146,10 +116,7 @@ impl Timeline {
             {
                 continue;
             }
-            if self.header_tiny
-                || (self.header_compact
-                    && !matches!(*id, "timeline-pan" | "timeline-inspector-toggle"))
-            {
+            if self.header_tiny || (self.header_compact && *id != "timeline-pan") {
                 continue;
             }
             let id = *id;
@@ -160,20 +127,16 @@ impl Timeline {
                         | "timeline-next-frame"
                         | "timeline-fit"
                         | "timeline-add-event"
-                        | "timeline-delete"
                 ),
                 |button| button.toggled(*selected),
             ))
-            .icon(*icon)
+            .icon(tool_icon(id, *icon))
             .accessibility_label(label.clone())
             .tooltip(label.clone())
             .selected(*selected)
             .disabled(!enabled)
             .on_click(cx.listener(move |this, _, window, cx| this.activate_tool(id, window, cx)));
-            if matches!(
-                id,
-                "timeline-snap" | "timeline-add-event" | "timeline-delete"
-            ) {
+            if matches!(id, "timeline-snap" | "timeline-add-event") {
                 edit_buttons.push(button);
             } else {
                 view_buttons.push(button);
@@ -204,8 +167,7 @@ impl Timeline {
                     .dropdown_menu(move |mut menu, _, cx| {
                         menu = crate::ui::compact::menu(menu);
                         for (id, icon, label, selected, enabled) in &actions {
-                            if !tiny && matches!(*id, "timeline-pan" | "timeline-inspector-toggle")
-                            {
+                            if !tiny && *id == "timeline-pan" {
                                 continue;
                             }
                             let id = *id;
@@ -221,7 +183,7 @@ impl Timeline {
                                         .test_support()
                                         .child(label.clone())
                                 })
-                                .icon(*icon)
+                                .icon(tool_icon(id, *icon))
                                 .checked(*selected)
                                 .disabled(!enabled)
                                 .on_click(move |_, window, cx| {
@@ -352,11 +314,6 @@ impl Timeline {
             "timeline-normalized" => {
                 self.change_view(|view| view.normalized = !view.normalized, cx)
             }
-            "timeline-properties" => {
-                self.show_properties = !self.show_properties;
-                self.inspector_open = Some(true);
-            }
-            "timeline-inspector-toggle" => self.inspector_open = Some(!self.inspector_visible()),
             "timeline-add-event" => self.add_event(window, cx),
             _ => unreachable!(),
         }
@@ -368,6 +325,7 @@ impl Timeline {
         row: &TimelineRow,
         state: &TimelineViewState,
         projection: &TimelineProjection,
+        axis_reference: Option<&editor_core::TimelineChannelId>,
         time: f64,
         top: f32,
         window: &mut Window,
@@ -375,6 +333,10 @@ impl Timeline {
     ) -> AnyElement {
         let id = row.id.clone();
         let selected = state.channels.contains(&id);
+        let channel = row.channel.clone();
+        let focused = state.mode == TimelineDisplayMode::Curves
+            && channel.is_some()
+            && channel.as_ref() == axis_reference;
         let group = row.channel.is_none() && row.id != TimelineRowId::Events
             || row
                 .channel
@@ -416,15 +378,27 @@ impl Timeline {
                     }
                     window.focus(&this.focus, cx);
                     let id = id.clone();
+                    let channel = channel.clone();
                     let additive = event.modifiers.shift || event.modifiers.secondary();
                     this.finish_number(cx);
+                    let _ = this.owner.update(cx, |owner, cx| {
+                        if let Some(document) = owner.editor.active_id() {
+                            let _ = owner.editor.inspect_timeline_selection(document);
+                            cx.notify();
+                        }
+                    });
                     this.change_view(
                         move |view| {
                             if !additive {
-                                view.channels.clear();
+                                if view.mode != TimelineDisplayMode::Curves
+                                    || !view.channels.contains(&id)
+                                {
+                                    view.channels.clear();
+                                }
                                 view.keys.clear();
                                 view.events.clear();
                             }
+                            view.curve_focus = if additive { None } else { channel };
                             if !view.channels.insert(id.clone()) && additive {
                                 view.channels.remove(&id);
                             }
@@ -459,15 +433,85 @@ impl Timeline {
                     })),
             );
         }
-        element = element.child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .overflow_hidden()
-                .text_ellipsis()
-                .text_xs()
-                .child(name),
-        );
+        let mut title = div()
+            .flex_1()
+            .min_w_0()
+            .overflow_hidden()
+            .flex()
+            .flex_col()
+            .child(
+                div()
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .text_xs()
+                    .when(
+                        state.mode == TimelineDisplayMode::Curves && selected,
+                        |title| title.line_height(compact::rem(12.)),
+                    )
+                    .when(focused, |title| {
+                        title.text_color(drawing::channel_color(
+                            projection,
+                            row.channel.as_ref().unwrap(),
+                        ))
+                    })
+                    .child(name),
+            );
+        if state.mode == TimelineDisplayMode::Curves && selected {
+            if let Some((min, max)) = row
+                .channel
+                .as_ref()
+                .and_then(|id| projection.channel(id))
+                .and_then(|channel| channel.range)
+            {
+                title = title.child(
+                    div()
+                        .text_size(compact::rem(9.))
+                        .line_height(compact::rem(10.))
+                        .text_color(cx.theme().muted_foreground)
+                        .child(format!(
+                            "{} … {}",
+                            axis::number(f64::from(min)),
+                            axis::number(f64::from(max))
+                        )),
+                );
+            }
+        }
+        element = element.child(title);
+        if row.id == TimelineRowId::Events {
+            let fired = self
+                .owner
+                .upgrade()
+                .map(|owner| {
+                    owner
+                        .read(cx)
+                        .displayed_animation()
+                        .map(|frame| {
+                            frame
+                                .fired_events
+                                .iter()
+                                .filter(|event| event.motion_id == projection.clip_id)
+                                .map(|event| event.value.clone())
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default()
+                })
+                .unwrap_or_default();
+            if !fired.is_empty() {
+                let hint = fired.join("\n");
+                element = element.child(
+                    div()
+                        .id("timeline-fired-events")
+                        .test_support()
+                        .flex_shrink_0()
+                        .text_color(cx.theme().primary)
+                        .child(t!("workspace.frame_events_count", count = fired.len()))
+                        .tooltip(move |window, cx| {
+                            gpui_kit::component::tooltip::Tooltip::new(hint.clone())
+                                .build(window, cx)
+                        }),
+                );
+            }
+        }
         if let Some(channel) = row.channel.as_ref().and_then(|id| projection.channel(id)) {
             if row.track_id.is_some() || channel.tracks.len() <= 1 {
                 let value = projection
@@ -476,7 +520,7 @@ impl Timeline {
                 element = element.child(
                     div().w(compact::rem(62.)).flex_shrink_0().child(
                         self.number(
-                            inspector::Field::RowValue(row.id.clone()),
+                            values::Field::RowValue(row.id.clone()),
                             value as f64,
                             channel
                                 .range
@@ -551,6 +595,15 @@ impl Timeline {
     }
 }
 
+fn tool_icon(id: &str, fallback: IconName) -> gpui_kit::component::Icon {
+    if id == "timeline-view" {
+        gpui_kit::component::Icon::default()
+            .data(include_bytes!("../../../assets/icons/bezier-curve.svg"))
+    } else {
+        gpui_kit::component::Icon::new(fallback)
+    }
+}
+
 fn tool_command(id: &str) -> Option<editor_core::CommandId> {
     use editor_core::CommandId::*;
     Some(match id {
@@ -560,7 +613,6 @@ fn tool_command(id: &str) -> Option<editor_core::CommandId> {
         "end" => TimelineEnd,
         "timeline-previous-frame" => TimelinePreviousFrame,
         "timeline-next-frame" => TimelineNextFrame,
-        "timeline-delete" => TimelineDelete,
         _ => return None,
     })
 }

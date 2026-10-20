@@ -345,6 +345,11 @@ impl crate::Editor {
             "Keys no longer exist"
         );
         state.reveal(keys);
+        self.active_session_mut()
+            .unwrap()
+            .animation
+            .playback
+            .inspected = None;
         Ok(())
     }
 }

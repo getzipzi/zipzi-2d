@@ -3,6 +3,7 @@ use kasane_sdk::{CompiledSegment, MotionBezierHandle, sample_motion_curve};
 
 #[derive(Clone)]
 pub(super) enum Hit {
+    Curve(editor_core::TimelineChannelId),
     Key(TimelineKeyRef),
     Summary(Vec<TimelineKeyRef>),
     Event(String),
@@ -18,7 +19,8 @@ pub(super) struct Marker {
 }
 struct Stroke {
     points: Vec<Point<Pixels>>,
-    color: usize,
+    color: Hsla,
+    channel: Option<editor_core::TimelineChannelId>,
 }
 #[derive(Clone, PartialEq)]
 struct SceneKey {
@@ -29,10 +31,12 @@ struct SceneKey {
     scroll: f64,
     mode: TimelineDisplayMode,
     channels: Vec<TimelineRowId>,
+    curve_focus: Option<editor_core::TimelineChannelId>,
     keys: Vec<TimelineKeyRef>,
     events: Vec<String>,
     range: (f64, f64),
     normalized: bool,
+    axis_labels: (String, String),
     row_height: f32,
 }
 pub(super) struct Scene {
@@ -41,6 +45,7 @@ pub(super) struct Scene {
     _rows: Arc<[TimelineRow]>,
     strokes: Vec<Stroke>,
     pub markers: Vec<Marker>,
+    pub ticks: Vec<super::axis::Tick>,
 }
 #[derive(Default)]
 pub(super) struct SceneCache {
@@ -50,7 +55,32 @@ pub(super) struct SceneCache {
 }
 impl Scene {
     pub fn hit(&self, position: Point<Pixels>) -> Result<Option<Hit>, ()> {
-        hit_markers_scaled(&self.markers, position, 6. * self.key.row_height / ROW)
+        let marker = hit_markers_scaled(&self.markers, position, 6. * self.key.row_height / ROW)?;
+        if marker.is_some() {
+            return Ok(marker);
+        }
+        let p = point(position.x.as_f32(), position.y.as_f32());
+        let mut closest = None;
+        let mut distance = (5. * self.key.row_height / ROW).powi(2);
+        for stroke in &self.strokes {
+            let Some(channel) = &stroke.channel else {
+                continue;
+            };
+            for pair in stroke.points.windows(2) {
+                let a = point(pair[0].x.as_f32(), pair[0].y.as_f32());
+                let b = point(pair[1].x.as_f32(), pair[1].y.as_f32());
+                let dx = b.x - a.x;
+                let dy = b.y - a.y;
+                let t = (((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy).max(1e-12))
+                    .clamp(0., 1.);
+                let d = (p.x - a.x - t * dx).powi(2) + (p.y - a.y - t * dy).powi(2);
+                if d < distance {
+                    distance = d;
+                    closest = Some(Hit::Curve(channel.clone()));
+                }
+            }
+        }
+        Ok(closest)
     }
 }
 
@@ -150,7 +180,7 @@ pub(super) fn y_value(y: f32, range: (f64, f64), height: f32, row_height: f32) -
         - (y - 8. * row_height / ROW) as f64 / curve_height(height, row_height) as f64
             * (range.1 - range.0)
 }
-fn curve_height(height: f32, row_height: f32) -> f32 {
+pub(super) fn curve_height(height: f32, row_height: f32) -> f32 {
     // Preserve the normal event lane, but share the limited height in short docks.
     (height - row_height.min(height * 0.2) - 16. * row_height / ROW).max(1.)
 }
@@ -201,7 +231,7 @@ fn unanimated_channels<'a>(
         .filter_map(|row| row.channel.as_ref().and_then(|id| projection.channel(id)))
         .filter(|channel| channel.tracks.is_empty())
 }
-fn channel_range(channel: &TimelineChannel) -> (f64, f64) {
+pub(super) fn channel_range(channel: &TimelineChannel) -> (f64, f64) {
     channel.range.map_or((0., 1.), |(a, b)| {
         if a < b {
             (a as f64, b as f64)
@@ -216,15 +246,14 @@ impl Timeline {
         projection: &TimelineProjection,
         state: &TimelineViewState,
     ) {
-        let selected: Vec<_> = state.channels.iter().cloned().collect();
-        if selected == self.range_selection && state.normalized == self.normalized {
+        let key = super::axis::RangeKey::new(projection, state);
+        if self.range_key.as_ref() == Some(&key) {
             return;
         }
         if self.gesture.is_some() || self.number_edit.is_some() {
             return;
         }
-        self.range_selection = selected;
-        self.normalized = state.normalized;
+        self.range_key = Some(key);
         let mut min = f64::INFINITY;
         let mut max = f64::NEG_INFINITY;
         for track in selected_tracks(projection, state) {
@@ -275,12 +304,18 @@ fn build_scene(
     let row_height = key.row_height;
     let width = key.size.width.as_f32();
     let height = key.size.height.as_f32();
+    let ticks = if state.mode == TimelineDisplayMode::Curves {
+        super::axis::ticks(projection, state, key.range, height, row_height)
+    } else {
+        vec![]
+    };
     let mut scene = Scene {
         key,
         _projection: projection.clone(),
         _rows: rows.clone(),
         strokes: vec![],
         markers: vec![],
+        ticks,
     };
     let x = |time| px(time_x(time, state.time_range, width));
     if state.mode == TimelineDisplayMode::Overview {
@@ -324,7 +359,8 @@ fn build_scene(
             }
         }
     } else {
-        for (index, track) in selected_tracks(projection, state).into_iter().enumerate() {
+        for track in selected_tracks(projection, state) {
+            let color = channel_color(projection, &track.channel);
             let scale = track_range(projection, &track.id);
             let y = |value: f32| {
                 px(value_y(
@@ -427,7 +463,8 @@ fn build_scene(
             ));
             scene.strokes.push(Stroke {
                 points,
-                color: index,
+                color,
+                channel: Some(track.channel.clone()),
             });
             for key in track.visible_keys(start, end) {
                 scene.markers.push(Marker {
@@ -449,7 +486,8 @@ fn build_scene(
                         let point = position(f64::from(control.time), control.value);
                         scene.strokes.push(Stroke {
                             points: vec![position(anchor.time, anchor.value), point],
-                            color: index,
+                            color,
+                            channel: None,
                         });
                         scene.markers.push(Marker {
                             position: point,
@@ -471,7 +509,8 @@ fn build_scene(
             let y = px(value_y(value, scene.key.range, height, row_height));
             scene.strokes.push(Stroke {
                 points: vec![point(px(0.), y), point(px(width), y)],
-                color: scene.strokes.len(),
+                color: channel_color(projection, &channel.id),
+                channel: Some(channel.id.clone()),
             });
         }
         for event in &projection.events {
@@ -485,7 +524,15 @@ fn build_scene(
     }
     scene
 }
-fn color(index: usize) -> Hsla {
+pub(super) fn channel_color(
+    projection: &TimelineProjection,
+    channel: &editor_core::TimelineChannelId,
+) -> Hsla {
+    let index = projection
+        .channels
+        .iter()
+        .position(|entry| &entry.id == channel)
+        .unwrap_or(0);
     rgb([0x55a9ed, 0xe7a65e, 0x79bb83, 0xc58de7, 0xe77e98, 0x61bfc3][index % 6]).into()
 }
 fn line(window: &mut Window, a: Point<Pixels>, b: Point<Pixels>, color: Hsla, width: f32) {
@@ -658,6 +705,7 @@ impl TracksLayer {
                 && old.state.scroll == state.scroll
                 && old.state.mode == state.mode
                 && old.state.channels == state.channels
+                && old.state.curve_focus == state.curve_focus
                 && old.state.keys == state.keys
                 && old.state.events == state.events
                 && old.state.normalized == state.normalized
@@ -766,10 +814,15 @@ fn paint_scene(
         scroll: state.scroll,
         mode: state.mode,
         channels: state.channels.iter().cloned().collect(),
+        curve_focus: state.curve_focus.clone(),
         keys: state.keys.iter().cloned().collect(),
         events: state.events.iter().cloned().collect(),
         range,
         normalized: state.normalized,
+        axis_labels: (
+            t!("properties.minimum").into_owned(),
+            t!("properties.maximum").into_owned(),
+        ),
         row_height: ROW * compact::scale(cx),
     };
     if cache.scene.as_ref().is_none_or(|scene| scene.key != key) {
@@ -828,26 +881,35 @@ fn paint_scene(
                 );
             }
         } else {
-            let intervals = (curve_height(height, row_height) / 28.)
-                .floor()
-                .clamp(1., 4.) as usize;
-            for n in 0..=intervals {
-                let value = range.0 + (range.1 - range.0) * n as f64 / intervals as f64;
-                let y = value_y(value, range, height, row_height);
+            let channels = super::axis::channels(projection, state);
+            let axis_color = super::axis::reference(&channels, state)
+                .map(|channel| channel_color(projection, &channel.id));
+            for tick in &scene.ticks {
+                let y = value_y(tick.value, range, height, row_height);
                 line(
                     window,
                     bounds.origin + point(px(0.), px(y)),
                     bounds.origin + point(px(width), px(y)),
-                    theme.border.opacity(0.4),
+                    if tick.boundary {
+                        axis_color.unwrap_or(theme.primary).opacity(0.4)
+                    } else {
+                        theme.border.opacity(0.4)
+                    },
                     1.,
                 );
-                label(
-                    window,
-                    cx,
-                    bounds.origin + point(px(4.), px((y - 7.).clamp(0., (height - 14.).max(0.)))),
-                    format!("{value:.2}"),
-                    theme.muted_foreground,
-                );
+                if !tick.label.is_empty() {
+                    label(
+                        window,
+                        cx,
+                        bounds.origin + point(px(4.), px(y - compact::scaled(14., cx).as_f32())),
+                        tick.label.clone(),
+                        if tick.boundary {
+                            axis_color.unwrap_or(theme.foreground)
+                        } else {
+                            axis_color.unwrap_or(theme.muted_foreground)
+                        },
+                    );
+                }
             }
             if scene.strokes.is_empty() {
                 label(
@@ -867,12 +929,13 @@ fn paint_scene(
                     path.line_to(bounds.origin + *point);
                 }
                 if let Ok(path) = path.build() {
-                    window.paint_path(path, color(stroke.color));
+                    window.paint_path(path, stroke.color);
                 }
             }
         }
         for marker in &scene.markers {
             let selected = match &marker.hit {
+                Hit::Curve(_) => false,
                 Hit::Key(key) => state.keys.contains(key),
                 Hit::Event(id) => state.events.contains(id),
                 Hit::Handle { .. } => true,

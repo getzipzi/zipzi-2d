@@ -274,7 +274,7 @@ fn moving_timeline_to_a_side_group_releases_the_empty_bottom_dock(cx: &mut TestA
             .read(cx)
             .layout(DockPlacement::Center)
             .unwrap()
-            .find_panel_node(PanelId::from(dock.animation_info.entity_id()))
+            .find_panel_node(PanelId::from(dock.properties.entity_id()))
             .unwrap();
         area.update(cx, |area, cx| {
             area.move_panel(

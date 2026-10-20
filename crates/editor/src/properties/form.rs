@@ -55,11 +55,34 @@ fn display_value(value: &PropertyValue, scale: f64) -> String {
 pub(crate) struct PropertyForm {
     pub fields: BTreeMap<PropertyKey, FieldDraft>,
     current: PropertyValues,
+    specs: Vec<PropertySpec>,
 }
 impl PropertyForm {
+    #[cfg(test)]
     pub fn sync(&mut self, kind: ObjectKind, values: PropertyValues) {
-        let definition = crate::properties::definition(kind);
-        for spec in property_specs(kind) {
+        self.sync_definition(crate::properties::definition(kind), values);
+    }
+    pub fn sync_definition(
+        &mut self,
+        definition: crate::properties::FormDefinition,
+        values: PropertyValues,
+    ) {
+        let mut specs: BTreeMap<_, _> = values
+            .keys()
+            .next()
+            .into_iter()
+            .flat_map(|key| property_specs(key.object_kind()))
+            .map(|spec| (spec.key, *spec))
+            .collect();
+        specs.extend(
+            definition
+                .fields
+                .iter()
+                .map(|field| (field.binding.key, field.binding)),
+        );
+        self.specs = specs.into_values().collect();
+        self.fields.retain(|key, _| values.contains_key(key));
+        for spec in &self.specs {
             let Some(value) = values.get(&spec.key) else {
                 continue;
             };
@@ -121,7 +144,8 @@ impl PropertyForm {
 
     /// Dependencies come from the object, never from another field's draft.
     pub fn patch(&self, kind: ObjectKind, id: PropertyKey) -> anyhow::Result<PropertyPatch> {
-        let spec = property_specs(kind)
+        let spec = self
+            .specs
             .iter()
             .find(|s| s.key == id)
             .ok_or_else(|| anyhow::anyhow!("This property is read only"))?;
@@ -134,7 +158,8 @@ impl PropertyForm {
             .parsed
             .as_ref()
             .map_err(|error| anyhow::anyhow!("{error}"))?;
-        let expected: PropertyValues = property_specs(kind)
+        let expected: PropertyValues = self
+            .specs
             .iter()
             .filter(|s| s.same_group(spec))
             .filter_map(|s| self.current.get(&s.key).map(|v| (s.key, v.clone())))
@@ -177,9 +202,21 @@ pub(crate) struct PropertyForms {
     pub entries: HashMap<PropertyTarget, PropertyForm>,
 }
 impl PropertyForms {
-    pub fn sync(&mut self, target: &PropertyTarget, values: PropertyValues) -> &PropertyForm {
+    pub fn sync(
+        &mut self,
+        target: &PropertyTarget,
+        definition: crate::properties::FormDefinition,
+        values: PropertyValues,
+    ) -> &PropertyForm {
+        // Transient sampled selections have no drafts to restore after leaving
+        // them. Keep one per document instead of retaining every seek time.
+        if !target.has_object_details() {
+            self.entries.retain(|key, _| {
+                key.document != target.document || key.has_object_details() || key == target
+            });
+        }
         let form = self.entries.entry(target.clone()).or_default();
-        form.sync(target.object.kind, values);
+        form.sync_definition(definition, values);
         form
     }
     pub fn commit(
@@ -198,8 +235,8 @@ impl PropertyForms {
                     && editor.editing_context() == Some(target.context),
                 "Editing context changed"
             );
-            let current = editor.document().unwrap().property_values(&target.object)?;
-            form.sync(target.object.kind, current);
+            let current = target.values(editor)?;
+            form.sync_definition(target.definition(editor), current);
             let mut patch = form.patch(target.object.kind, id)?;
             if property_specs(target.object.kind)
                 .iter()
@@ -212,19 +249,12 @@ impl PropertyForms {
                 patch.scope = target.scope.clone();
             }
             if !patch.changes.is_empty() {
-                let context = editor
-                    .editing_context_token()
-                    .ok_or_else(|| anyhow::anyhow!("Editing context changed"))?;
-                editor.commit_properties(context, target.object.clone(), patch)?;
+                target.commit(editor, patch)?;
             }
             Ok(())
         })();
-        if let Some(values) = editor
-            .document()
-            .filter(|_| editor.active_id() == Some(target.document))
-            .and_then(|doc| doc.property_values(&target.object).ok())
-        {
-            form.sync(target.object.kind, values);
+        if let Ok(values) = target.values(editor) {
+            form.sync_definition(target.definition(editor), values);
         }
         form.reload_field(id);
         result

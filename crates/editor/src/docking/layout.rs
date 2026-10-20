@@ -17,8 +17,8 @@ pub(super) fn layout_file(workspace: WorkspaceKind) -> &'static str {
 pub(super) fn layout_version(workspace: WorkspaceKind) -> usize {
     match workspace {
         WorkspaceKind::Modeling => 5,
-        // Timeline is now part of the dock layout rather than window chrome.
-        WorkspaceKind::Animation => 6,
+        // Three columns above a full-width timeline.
+        WorkspaceKind::Animation => 8,
     }
 }
 

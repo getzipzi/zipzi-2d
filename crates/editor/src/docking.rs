@@ -34,7 +34,6 @@ pub struct DockWorkspace {
     pub timeline_id: editor_core::TimelineId,
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,
-    pub animation_info: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_inspectors:
         HashMap<PanelKind, Entity<crate::panels::animation_panel::AnimationPanel>>,
     pub properties: Entity<crate::panels::PropertiesPanel>,
@@ -151,9 +150,6 @@ impl DockWorkspace {
                         PanelKind::AnimationExpressions => {
                             area.remove_panel(self.animation_expressions.clone(), window, cx)
                         }
-                        PanelKind::AnimationInfo => {
-                            area.remove_panel(self.animation_info.clone(), window, cx)
-                        }
                         PanelKind::AnimationTimeline => {
                             area.remove_panel(self.timeline.clone(), window, cx)
                         }
@@ -216,7 +212,7 @@ impl DockWorkspace {
     }
 
     /// Add once at an explicit live target, or reveal an existing singleton.
-    pub(super) fn show(
+    pub(crate) fn show(
         &self,
         kind: PanelKind,
         target: Option<InsertTarget>,
@@ -328,7 +324,7 @@ mod tests {
         };
         assert!(validate_layout(&state, WorkspaceKind::Modeling).is_ok());
         assert!(validate_layout(&state, WorkspaceKind::Animation).is_err());
-        state.version = Some(6);
+        state.version = Some(8);
         state.center = PanelState::new("AnimationViewport");
         // A deliberately closed Timeline is still a valid new Animation layout.
         assert!(validate_layout(&state, WorkspaceKind::Animation).is_ok());

@@ -70,6 +70,8 @@ pub struct AnimationSession {
     pub(crate) head_located: bool,
     pub preview_mode: AnimationPreviewMode,
     pub preview_loop: bool,
+    /// Preview clock multiplier; never changes the authored motion timing.
+    pub playback_speed: f32,
     pub candidate: Option<TimelineCandidateIdentity>,
     result_position: Option<kasane_sdk::MotionPlaybackPosition>,
     pub playing: bool,

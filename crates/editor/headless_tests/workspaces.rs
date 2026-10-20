@@ -108,15 +108,16 @@ fn switching_uses_distinct_viewport_types_and_keeps_document_and_modeling_tool(
         assert!(window.try_find("tool_hand").is_some());
         assert!(window.try_find("animation-timeline").is_some());
         assert!(window.try_find("AnimationMotions").is_some());
-        assert!(window.try_find("AnimationInfo").is_some());
+        assert!(window.try_find("properties-panel").is_some());
         assert!(window.try_find("animation-open-parameters").is_none());
         let motions = window.find("AnimationMotions").bounds();
         let expressions = window.find("AnimationExpressions").bounds();
-        let info = window.find("AnimationInfo").bounds();
+        let info = window.find("properties-panel").bounds();
         let canvas_bounds = window.find("canvas-body").bounds();
         let playback = window.find("animation-timeline").bounds();
         assert!(playback.left() <= motions.left());
         assert!(playback.right() >= info.right());
+        assert!(info.bottom() <= playback.top());
         assert!(canvas_bounds.bottom() <= playback.top());
         assert!(motions.bottom() <= expressions.top());
         assert!(
@@ -128,9 +129,11 @@ fn switching_uses_distinct_viewport_types_and_keeps_document_and_modeling_tool(
         harness.view.read_with(cx, |view, cx| {
             let dock = view.dock.as_ref().unwrap();
             let tree = dock.area.read(cx).layout(DockPlacement::Center).unwrap();
-            let info = tree.find_panel_node(PanelId::from(dock.animation_info.entity_id()));
-            let properties = tree.find_panel_node(PanelId::from(dock.properties.entity_id()));
-            assert_eq!(info, properties, "Info and Properties share tabs");
+            assert!(
+                tree.find_panel_node(PanelId::from(dock.properties.entity_id()))
+                    .is_some()
+            );
+            assert!(dock.area.read(cx).layout(DockPlacement::Right).is_none());
         });
         harness.view.read_with(cx, |view, _| {
             assert_eq!(view.editor.workspace(), WorkspaceKind::Animation);
@@ -569,7 +572,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
                     .is_some()
             );
             assert!(
-                area.panel(PanelId::from(dock.animation_info.entity_id()))
+                area.panel(PanelId::from(dock.properties.entity_id()))
                     .is_some()
             );
         });

@@ -1,9 +1,11 @@
 //! Animation editing UI. Geometry and input use the same cached, clipped scene.
+mod axis;
 mod controls;
 mod drawing;
 mod input;
-mod inspector;
 mod lifecycle;
+mod playback_speed;
+mod values;
 use lifecycle::Target;
 pub(crate) use lifecycle::TimelineOperation;
 mod navigation;
@@ -23,7 +25,7 @@ use gpui_kit::component::{
     ActiveTheme, Disableable, Selectable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
-    input::{Input, InputEvent, InputState},
+    input::{InputEvent, InputState},
     menu::{DropdownMenu, PopupMenuItem},
 };
 use gpui_kit::{prelude::*, *};
@@ -31,7 +33,6 @@ use std::{cell::Cell, collections::HashMap, rc::Rc, sync::Arc};
 
 const ROW: f32 = 24.;
 const LEFT: f32 = 248.;
-const INSPECTOR: f32 = 220.;
 const RULER: f32 = 24.;
 const COMPACT_WIDTH: f32 = 900.;
 const COMPACT_LEFT: f32 = 160.;
@@ -58,6 +59,7 @@ pub struct Timeline {
     tracks: Entity<drawing::TracksLayer>,
     search: Entity<InputState>,
     search_placeholder: String,
+    playback_speed: Option<playback_speed::Control>,
     context: Option<Target>,
     graph: Rc<Cell<Bounds<Pixels>>>,
     ruler: Rc<Cell<Bounds<Pixels>>>,
@@ -66,19 +68,15 @@ pub struct Timeline {
     edge_scroll: Option<Task<()>>,
     pointer: Point<Pixels>,
     pan_tool: bool,
-    number_edit: Option<inspector::NumberEdit>,
-    fields: HashMap<inspector::Field, inspector::FieldControl>,
-    slider: Option<inspector::ChannelSlider>,
+    number_edit: Option<values::NumberEdit>,
+    fields: HashMap<values::Field, values::FieldControl>,
     scene: Rc<std::cell::RefCell<drawing::SceneCache>>,
     value_range: (f64, f64),
-    range_selection: Vec<TimelineRowId>,
-    normalized: bool,
+    range_key: Option<axis::RangeKey>,
     seconds: bool,
-    show_properties: bool,
     compact: bool,
     header_compact: bool,
     header_tiny: bool,
-    inspector_open: Option<bool>,
     error: Option<String>,
     _search_events: Subscription,
     _observe: Subscription,
@@ -139,10 +137,6 @@ impl Timeline {
 
     fn row_height(&self) -> f32 {
         ROW * self.ui_scale
-    }
-
-    fn inspector_visible(&self) -> bool {
-        self.inspector_open.unwrap_or(!self.compact)
     }
 
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
@@ -224,6 +218,7 @@ impl Timeline {
                 focus,
                 search,
                 search_placeholder: t!("timeline.search").into_owned(),
+                playback_speed: None,
                 context: None,
                 graph: Rc::new(Cell::new(Bounds::default())),
                 ruler: Rc::new(Cell::new(Bounds::default())),
@@ -234,17 +229,13 @@ impl Timeline {
                 pan_tool: false,
                 number_edit: None,
                 fields: HashMap::new(),
-                slider: None,
                 scene,
                 value_range: (-1., 1.),
-                range_selection: vec![],
-                normalized: false,
+                range_key: None,
                 seconds: false,
-                show_properties: false,
                 compact: false,
                 header_compact: false,
                 header_tiny: false,
-                inspector_open: None,
                 error: None,
             }
         })
@@ -290,7 +281,7 @@ impl Timeline {
                 .and_then(|a| a.result_playback_position())
                 .map_or(0., |p| f64::from(p.period)),
         );
-        self.range_selection.clear();
+        self.range_key = None;
         self.change_view(|view| view.time_range = (0., end.max(0.001)), cx);
     }
     fn select_keys(
@@ -321,7 +312,9 @@ impl Timeline {
                 if !additive {
                     view.keys.clear();
                     view.events.clear();
-                    view.channels.clear();
+                    if view.mode != TimelineDisplayMode::Curves || reveal {
+                        view.channels.clear();
+                    }
                 }
                 if reveal {
                     if let Some(key) = keys.first().and_then(|key| projection.key(key)) {
@@ -397,6 +390,31 @@ impl Timeline {
     }
     pub(crate) fn scene_builds(&self) -> u64 {
         self.scene.borrow().builds
+    }
+
+    #[cfg(test)]
+    pub(crate) fn axis_ticks(&self) -> Vec<(f64, String, f32)> {
+        let cache = self.scene.borrow();
+        let Some(scene) = &cache.scene else {
+            return vec![];
+        };
+        scene
+            .ticks
+            .iter()
+            .map(|tick| {
+                (
+                    tick.value,
+                    tick.label.clone(),
+                    self.graph.get().top().as_f32()
+                        + drawing::value_y(
+                            tick.value,
+                            self.value_range,
+                            self.graph.get().size.height.as_f32(),
+                            self.row_height(),
+                        ),
+                )
+            })
+            .collect()
     }
     #[cfg(test)]
     pub(crate) fn handle_position(&self, key: &TimelineKeyRef) -> Option<Point<Pixels>> {

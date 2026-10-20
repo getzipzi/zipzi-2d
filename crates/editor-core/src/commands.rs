@@ -19,8 +19,6 @@ pub enum CommandId {
     ClearExpression,
     #[serde(rename = "animation.reset")]
     ResetAnimation,
-    #[serde(rename = "panel.animation-info")]
-    AnimationInfo,
     #[serde(rename = "panel.animation-timeline")]
     AnimationTimeline,
     #[serde(rename = "timeline.delete")]
@@ -204,7 +202,6 @@ specs![
         false,
         []
     ),
-    (AnimationInfo, "workspace.info", Window, false, []),
     (AnimationTimeline, "timeline.title", Window, false, []),
     (
         TimelineDelete,
