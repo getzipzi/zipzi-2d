@@ -14,7 +14,7 @@ mod motion_preview;
 mod motion_runtime;
 mod parameter_values;
 mod physics;
-pub use physics::PhysicsPreview;
+pub use physics::{PhysicsOutputSnapshot, PhysicsPreview, PhysicsRigSnapshot};
 mod pose;
 pub use motion_preview::{
     MotionEventFired, MotionOperation, MotionOperationKind, MotionPlaybackPosition, MotionPreview,

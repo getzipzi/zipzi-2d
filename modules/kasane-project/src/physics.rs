@@ -186,6 +186,7 @@ pub fn export_physics3(document: &Document) -> Result<Option<String>, PhysicsPro
     }
     let mut data = asset.data.clone();
     for (rig_index, rig) in data.settings.iter_mut().enumerate() {
+        let rig = std::sync::Arc::make_mut(rig);
         for (index, input) in rig.inputs.iter_mut().enumerate() {
             input.source.id = mapped_id(
                 document,

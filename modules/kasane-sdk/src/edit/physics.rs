@@ -1,6 +1,6 @@
 use super::EditSession;
 use crate::types::SdkError;
-use kasane_core::document::PhysicsAsset;
+use kasane_core::document::{PhysicsAsset, PhysicsPatch};
 use kasane_core::ChangeKind;
 use kasane_project::{import_physics3, PhysicsDiagnostic, PhysicsProjectError};
 
@@ -31,6 +31,13 @@ impl EditSession<'_> {
         let id = asset.id.clone();
         let result = self.document().set_physics(asset);
         self.record(result, "set_physics", &id)
+    }
+
+    /// Apply a typed field patch while sharing untouched rigs with history/snapshots.
+    pub fn patch_physics(&mut self, patch: &PhysicsPatch) -> Result<(), SdkError> {
+        self.ensure_active("patch_physics")?;
+        let result = self.document().patch_physics(patch);
+        self.record(result, "patch_physics", &patch.asset_id)
     }
 
     pub fn import_physics3(

@@ -163,7 +163,7 @@ pub struct PhysicsDefinition {
     #[serde(rename = "Meta")]
     pub meta: PhysicsMeta,
     #[serde(rename = "PhysicsSettings")]
-    pub settings: Vec<PhysicsSetting>,
+    pub settings: Vec<std::sync::Arc<PhysicsSetting>>,
     #[serde(flatten)]
     pub extensions: BTreeMap<String, Value>,
 }
@@ -269,132 +269,9 @@ fn validate(physics: &PhysicsDefinition, writer: bool) -> Result<(), PhysicsVali
                 "setting ID must be unique and nonempty",
             ));
         }
-        if setting.vertices.is_empty() {
-            return Err(error(
-                "EMPTY_VERTICES",
-                format!("{path}.Vertices"),
-                "rig needs at least one vertex",
-            ));
-        }
-        for (i, input) in setting.inputs.iter().enumerate() {
-            let item = format!("{path}.Input[{i}]");
-            if input.source.target != "Parameter"
-                || input.source.id.is_empty()
-                || input.source.id.contains('\0')
-            {
-                return Err(error(
-                    "INVALID_INPUT_TARGET",
-                    format!("{item}.Source"),
-                    "input must refer to a Parameter ID",
-                ));
-            }
-            finite(input.weight, format!("{item}.Weight"))?;
-            if writer {
-                check_extensions(
-                    &input.source.extensions,
-                    &format!("{item}.Source"),
-                    &["Target", "Id"],
-                )?;
-                check_extensions(
-                    &input.extensions,
-                    &item,
-                    &["Source", "Weight", "Type", "Reflect"],
-                )?;
-            }
-        }
-        for (i, output) in setting.outputs.iter().enumerate() {
-            let item = format!("{path}.Output[{i}]");
-            if output.destination.target != "Parameter"
-                || output.destination.id.is_empty()
-                || output.destination.id.contains('\0')
-            {
-                return Err(error(
-                    "INVALID_OUTPUT_TARGET",
-                    format!("{item}.Destination"),
-                    "output must refer to a Parameter ID",
-                ));
-            }
-            if output.vertex_index >= setting.vertices.len() {
-                return Err(error(
-                    "INVALID_VERTEX_INDEX",
-                    format!("{item}.VertexIndex"),
-                    "output vertex is absent",
-                ));
-            }
-            finite(output.weight, format!("{item}.Weight"))?;
-            finite(output.scale, format!("{item}.Scale"))?;
-            if writer {
-                check_extensions(
-                    &output.destination.extensions,
-                    &format!("{item}.Destination"),
-                    &["Target", "Id"],
-                )?;
-                check_extensions(
-                    &output.extensions,
-                    &item,
-                    &[
-                        "Destination",
-                        "VertexIndex",
-                        "Scale",
-                        "Weight",
-                        "Type",
-                        "Reflect",
-                    ],
-                )?;
-            }
-        }
-        for (i, vertex) in setting.vertices.iter().enumerate() {
-            let item = format!("{path}.Vertices[{i}]");
-            for (label, value) in [
-                ("Position.X", vertex.position.x),
-                ("Position.Y", vertex.position.y),
-                ("Mobility", vertex.mobility),
-                ("Delay", vertex.delay),
-                ("Acceleration", vertex.acceleration),
-                ("Radius", vertex.radius),
-            ] {
-                finite(value, format!("{item}.{label}"))?;
-            }
-            if writer {
-                check_extensions(
-                    &vertex.extensions,
-                    &item,
-                    &["Position", "Mobility", "Delay", "Acceleration", "Radius"],
-                )?;
-            }
-        }
-        for (label, range) in [
-            ("Position", setting.normalization.position),
-            ("Angle", setting.normalization.angle),
-        ] {
-            for (field, value) in [
-                ("Minimum", range.minimum),
-                ("Default", range.default),
-                ("Maximum", range.maximum),
-            ] {
-                finite(value, format!("{path}.Normalization.{label}.{field}"))?;
-            }
-            if range.minimum > range.default || range.default > range.maximum {
-                return Err(error(
-                    "INVALID_NORMALIZATION",
-                    format!("{path}.Normalization.{label}"),
-                    "normalization default must be within range",
-                ));
-            }
-        }
-        if writer {
-            check_extensions(
-                &setting.normalization.extensions,
-                &format!("{path}.Normalization"),
-                &["Position", "Angle"],
-            )?;
-            check_extensions(
-                &setting.extensions,
-                &path,
-                &["Id", "Input", "Output", "Vertices", "Normalization"],
-            )?;
-        }
+        validate_setting(setting, &path, writer)?;
     }
+
     let dictionary_ids: HashSet<_> = physics
         .meta
         .dictionary
@@ -439,6 +316,143 @@ fn validate(physics: &PhysicsDefinition, writer: bool) -> Result<(), PhysicsVali
                 &["Id", "Name"],
             )?;
         }
+    }
+    Ok(())
+}
+
+/// Validate a single rig after a local edit; asset identity is checked separately.
+pub fn validate_physics_setting(setting: &PhysicsSetting) -> Result<(), PhysicsValidationError> {
+    validate_setting(setting, "$", false)
+}
+fn validate_setting(
+    setting: &PhysicsSetting,
+    path: &str,
+    writer: bool,
+) -> Result<(), PhysicsValidationError> {
+    if setting.vertices.is_empty() {
+        return Err(error(
+            "EMPTY_VERTICES",
+            format!("{path}.Vertices"),
+            "rig needs at least one vertex",
+        ));
+    }
+    for (i, input) in setting.inputs.iter().enumerate() {
+        let item = format!("{path}.Input[{i}]");
+        if input.source.target != "Parameter"
+            || input.source.id.is_empty()
+            || input.source.id.contains('\0')
+        {
+            return Err(error(
+                "INVALID_INPUT_TARGET",
+                format!("{item}.Source"),
+                "input must refer to a Parameter ID",
+            ));
+        }
+        finite(input.weight, format!("{item}.Weight"))?;
+        if writer {
+            check_extensions(
+                &input.source.extensions,
+                &format!("{item}.Source"),
+                &["Target", "Id"],
+            )?;
+            check_extensions(
+                &input.extensions,
+                &item,
+                &["Source", "Weight", "Type", "Reflect"],
+            )?;
+        }
+    }
+    for (i, output) in setting.outputs.iter().enumerate() {
+        let item = format!("{path}.Output[{i}]");
+        if output.destination.target != "Parameter"
+            || output.destination.id.is_empty()
+            || output.destination.id.contains('\0')
+        {
+            return Err(error(
+                "INVALID_OUTPUT_TARGET",
+                format!("{item}.Destination"),
+                "output must refer to a Parameter ID",
+            ));
+        }
+        if output.vertex_index >= setting.vertices.len() {
+            return Err(error(
+                "INVALID_VERTEX_INDEX",
+                format!("{item}.VertexIndex"),
+                "output vertex is absent",
+            ));
+        }
+        finite(output.weight, format!("{item}.Weight"))?;
+        finite(output.scale, format!("{item}.Scale"))?;
+        if writer {
+            check_extensions(
+                &output.destination.extensions,
+                &format!("{item}.Destination"),
+                &["Target", "Id"],
+            )?;
+            check_extensions(
+                &output.extensions,
+                &item,
+                &[
+                    "Destination",
+                    "VertexIndex",
+                    "Scale",
+                    "Weight",
+                    "Type",
+                    "Reflect",
+                ],
+            )?;
+        }
+    }
+    for (i, vertex) in setting.vertices.iter().enumerate() {
+        let item = format!("{path}.Vertices[{i}]");
+        for (label, value) in [
+            ("Position.X", vertex.position.x),
+            ("Position.Y", vertex.position.y),
+            ("Mobility", vertex.mobility),
+            ("Delay", vertex.delay),
+            ("Acceleration", vertex.acceleration),
+            ("Radius", vertex.radius),
+        ] {
+            finite(value, format!("{item}.{label}"))?;
+        }
+        if writer {
+            check_extensions(
+                &vertex.extensions,
+                &item,
+                &["Position", "Mobility", "Delay", "Acceleration", "Radius"],
+            )?;
+        }
+    }
+    for (label, range) in [
+        ("Position", setting.normalization.position),
+        ("Angle", setting.normalization.angle),
+    ] {
+        for (field, value) in [
+            ("Minimum", range.minimum),
+            ("Default", range.default),
+            ("Maximum", range.maximum),
+        ] {
+            finite(value, format!("{path}.Normalization.{label}.{field}"))?;
+        }
+        if range.minimum > range.default || range.default > range.maximum {
+            return Err(error(
+                "INVALID_NORMALIZATION",
+                format!("{path}.Normalization.{label}"),
+                "normalization default must be within range",
+            ));
+        }
+    }
+    if writer {
+        check_extensions(
+            &setting.normalization.extensions,
+            &format!("{path}.Normalization"),
+            &["Position", "Angle"],
+        )?;
+        check_extensions(
+            &setting.extensions,
+            &path,
+            &["Id", "Input", "Output", "Vertices", "Normalization"],
+        )?;
     }
     Ok(())
 }

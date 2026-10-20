@@ -31,6 +31,10 @@ pub struct MotionEventFired {
 /// Combined values after Motion, Expression, Physics and Pose evaluation.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct MotionSnapshot {
+    /// Optional inspector observations. Collected explicitly by a host after
+    /// evaluation, so replay checkpoints do not allocate debug data per step.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub physics: Vec<crate::PhysicsRigSnapshot>,
     /// Absolute preview time in seconds.
     pub time: f32,
     /// Final parameter values keyed by parameter UUID.
@@ -75,6 +79,12 @@ pub struct MotionOperation {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case")]
 pub enum MotionOperationKind {
+    SetPhysicsEnabled {
+        enabled: bool,
+    },
+    SetPhysicsStabilizedStart {
+        enabled: bool,
+    },
     Created,
     Reset,
     SetBaseParameter {
@@ -136,6 +146,8 @@ pub struct MotionPreview {
     snapshot: MotionSnapshot,
     pose: PoseRuntime,
     physics: PhysicsRuntime,
+    physics_enabled: bool,
+    physics_stabilized_start: bool,
     expressions: ExpressionRuntime,
     motion: MotionRuntime,
     cache: SeekCache,
@@ -193,9 +205,12 @@ impl MotionPreview {
             },
             motion: MotionRuntime::new(parameters.clone()),
             physics: PhysicsRuntime::new(&document),
+            physics_enabled: true,
+            physics_stabilized_start: false,
             expressions: ExpressionRuntime::default(),
             base,
             snapshot: MotionSnapshot {
+                physics: Vec::new(),
                 time: 0.0,
                 parameters,
                 part_opacity_channels: virtual_controls,
@@ -213,6 +228,34 @@ impl MotionPreview {
     /// Return the captured document revision, not the current authoring-session revision.
     pub fn document_revision(&self) -> u64 {
         self.document.revision()
+    }
+
+    /// Rebuild this detached preview when comparing with physics bypassed.
+    /// Schedules are retained; the authoring document is untouched.
+    pub fn set_physics_enabled(&mut self, enabled: bool) {
+        if self.physics_enabled != enabled {
+            self.physics_enabled = enabled;
+            self.reset_state();
+            self.commit_operation(MotionOperationKind::SetPhysicsEnabled { enabled });
+        }
+    }
+
+    /// Start replay at equilibrium for the configured baseline parameters.
+    /// Intended for detached rig audition; schedules and the document are retained.
+    pub fn set_physics_stabilized_start(&mut self, enabled: bool) {
+        if self.physics_stabilized_start != enabled {
+            self.physics_stabilized_start = enabled;
+            self.reset_state();
+            self.commit_operation(MotionOperationKind::SetPhysicsStabilizedStart { enabled });
+        }
+    }
+
+    pub fn physics_snapshot(&self) -> Vec<crate::PhysicsRigSnapshot> {
+        if self.physics_enabled {
+            self.physics.snapshot(&self.document)
+        } else {
+            Vec::new()
+        }
     }
     /// Associate the preview with an observer session and generation.
     /// This metadata does not change playback, schedules or cached checkpoints.
@@ -501,9 +544,13 @@ impl MotionPreview {
         self.pose
             .reset(&self.document, &mut parameters, &mut virtual_controls);
         self.physics.reset(&self.document);
+        if self.physics_enabled && self.physics_stabilized_start {
+            self.physics.stabilize(&self.document, &mut parameters);
+        }
         self.expressions.reset();
         self.motion.reset(parameters.clone());
         self.snapshot = MotionSnapshot {
+            physics: Vec::new(),
             time: 0.0,
             parameters,
             part_opacity_channels: virtual_controls,
@@ -531,12 +578,14 @@ impl MotionPreview {
         self.expressions
             .evaluate(&self.document, time, &mut self.snapshot.parameters);
         self.snapshot.active_expressions = self.expressions.active_ids();
-        self.physics.evaluate(
-            &self.document,
-            &mut self.snapshot.parameters,
-            dt,
-            &mut self.snapshot.coverage,
-        );
+        if self.physics_enabled {
+            self.physics.evaluate(
+                &self.document,
+                &mut self.snapshot.parameters,
+                dt,
+                &mut self.snapshot.coverage,
+            );
+        }
         self.pose.update(
             &self.document,
             &self.snapshot.parameters,
@@ -560,6 +609,9 @@ impl MotionPreview {
     /// Does not advance time or run Motion/Expression/Pose. Does not seed checkpoints;
     /// subsequent seek still replays the original baseline and scheduled inputs.
     pub fn stabilize_physics(&mut self) {
+        if !self.physics_enabled {
+            return;
+        }
         self.canonical_step = None;
         self.physics
             .stabilize(&self.document, &mut self.snapshot.parameters);
@@ -587,6 +639,8 @@ impl MotionPreview {
     ) -> Result<&MotionSnapshot, AnimationError> {
         let mut steps = crate::replay::ReplaySteps::new(time)?;
         let mut candidate = Self::from_shared(Arc::clone(&self.document), Arc::clone(&self.curves));
+        candidate.physics_enabled = self.physics_enabled;
+        candidate.physics_stabilized_start = self.physics_stabilized_start;
         candidate.source_identity = self.source_identity;
         candidate
             .operation

@@ -55,10 +55,31 @@ struct RigState {
     particles: Vec<Particle>,
     current: Vec<f32>,
     previous: Vec<f32>,
+    inputs: Vec<f32>,
+    outputs: Vec<Option<PhysicsOutputSnapshot>>,
+}
+
+/// Read-only observation of one rig. Positions are the latest solved physics
+/// step, not model-space attachment points or interpolated render geometry.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PhysicsRigSnapshot {
+    pub id: String,
+    pub particles: Vec<[f32; 2]>,
+    pub inputs: Vec<f32>,
+    pub outputs: Vec<Option<PhysicsOutputSnapshot>>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PhysicsOutputSnapshot {
+    pub raw: f32,
+    pub before: f32,
+    pub after: f32,
+    pub clamped: bool,
 }
 
 #[derive(Clone)]
 pub(crate) struct PhysicsRuntime {
+    solved: bool,
     remaining: f32,
     initialized_inputs: bool,
     parameter_cache: BTreeMap<String, f32>,
@@ -175,7 +196,13 @@ impl PhysicsRuntime {
             + self
                 .rigs
                 .iter()
-                .map(|v| vec_bytes(&v.particles) + vec_bytes(&v.current) + vec_bytes(&v.previous))
+                .map(|v| {
+                    vec_bytes(&v.particles)
+                        + vec_bytes(&v.current)
+                        + vec_bytes(&v.previous)
+                        + vec_bytes(&v.inputs)
+                        + vec_bytes(&v.outputs)
+                })
                 .sum::<usize>()
     }
     pub(crate) fn new(document: &Document) -> Self {
@@ -218,12 +245,15 @@ impl PhysicsRuntime {
                             particles,
                             current: vec![0.0; setting.outputs.len()],
                             previous: vec![0.0; setting.outputs.len()],
+                            inputs: Vec::new(),
+                            outputs: vec![None; setting.outputs.len()],
                         }
                     })
                     .collect()
             })
             .unwrap_or_default();
         Self {
+            solved: false,
             remaining: 0.0,
             initialized_inputs: false,
             input_cache: parameter_cache.clone(),
@@ -234,6 +264,38 @@ impl PhysicsRuntime {
 
     pub(crate) fn reset(&mut self, document: &Document) {
         *self = Self::new(document);
+    }
+
+    pub(crate) fn snapshot(&self, document: &Document) -> Vec<PhysicsRigSnapshot> {
+        if !self.solved {
+            return Vec::new();
+        }
+        let Some(asset) = document.physics() else {
+            return Vec::new();
+        };
+        if asset
+            .referenced_runtime_ids()
+            .iter()
+            .any(|id| !asset.parameter_bindings.contains_key(*id))
+        {
+            return Vec::new();
+        }
+        asset
+            .data
+            .settings
+            .iter()
+            .zip(&self.rigs)
+            .map(|(setting, rig)| PhysicsRigSnapshot {
+                id: setting.id.clone(),
+                particles: rig
+                    .particles
+                    .iter()
+                    .map(|p| [p.position.x, p.position.y])
+                    .collect(),
+                inputs: rig.inputs.clone(),
+                outputs: rig.outputs.clone(),
+            })
+            .collect()
     }
 
     pub(crate) fn evaluate(
@@ -273,6 +335,7 @@ impl PhysicsRuntime {
         // an interpolation of previous/current rig outputs.
         let mut count = 0;
         while self.remaining >= step && count < 100_000 {
+            self.solved = true;
             count += 1;
             let weight = step / self.remaining;
             for (id, value) in parameters.iter() {
@@ -283,6 +346,18 @@ impl PhysicsRuntime {
             }
             for (setting, rig) in asset.data.settings.iter().zip(&mut self.rigs) {
                 rig.previous.clone_from(&rig.current);
+                rig.inputs = setting
+                    .inputs
+                    .iter()
+                    .map(|input| {
+                        asset
+                            .parameter_bindings
+                            .get(&input.source.id)
+                            .and_then(|id| self.parameter_cache.get(id))
+                            .copied()
+                            .unwrap_or(0.)
+                    })
+                    .collect();
                 let (translation, angle) =
                     read_inputs(document, asset, setting, &self.parameter_cache);
                 let radian = (-angle).to_radians();
@@ -305,13 +380,13 @@ impl PhysicsRuntime {
             diagnostics.push("Physics: step limit reached".into());
         }
         let alpha = self.remaining / step;
-        for (setting, rig) in asset.data.settings.iter().zip(&self.rigs) {
+        for (setting, rig) in asset.data.settings.iter().zip(&mut self.rigs) {
             for (index, output) in setting.outputs.iter().enumerate() {
                 if output.vertex_index == 0 {
                     continue;
                 }
                 let value = rig.previous[index] * (1.0 - alpha) + rig.current[index] * alpha;
-                write_output(document, asset, output, value, parameters);
+                rig.outputs[index] = write_output(document, asset, output, value, parameters);
             }
         }
     }
@@ -325,9 +400,22 @@ impl PhysicsRuntime {
             return;
         };
         self.parameter_cache = parameters.clone();
+        self.solved = true;
         self.input_cache = parameters.clone();
         self.initialized_inputs = true;
         for (setting, rig) in asset.data.settings.iter().zip(&mut self.rigs) {
+            rig.inputs = setting
+                .inputs
+                .iter()
+                .map(|input| {
+                    asset
+                        .parameter_bindings
+                        .get(&input.source.id)
+                        .and_then(|id| parameters.get(id))
+                        .copied()
+                        .unwrap_or(0.)
+                })
+                .collect();
             let (translation, angle) = read_inputs(document, asset, setting, parameters);
             let radian = (-angle).to_radians();
             let x = translation.x * radian.cos() - translation.y * radian.sin();
@@ -360,7 +448,7 @@ impl PhysicsRuntime {
                 let value = output_value(output, &rig.particles);
                 rig.current[index] = value;
                 rig.previous[index] = value;
-                write_output(document, asset, output, value, parameters);
+                rig.outputs[index] = write_output(document, asset, output, value, parameters);
             }
         }
     }
@@ -505,13 +593,9 @@ fn write_output(
     output: &PhysicsOutput,
     raw: f32,
     values: &mut BTreeMap<String, f32>,
-) {
-    let Some(id) = asset.parameter_bindings.get(&output.destination.id) else {
-        return;
-    };
-    let Some(parameter) = document.get_parameter(id) else {
-        return;
-    };
+) -> Option<PhysicsOutputSnapshot> {
+    let id = asset.parameter_bindings.get(&output.destination.id)?;
+    let parameter = document.get_parameter(id)?;
     let value = (raw * output.scale).clamp(parameter.minimum, parameter.maximum);
     let current = values.get(id).copied().unwrap_or(parameter.default_value);
     let weight = output.weight / 100.0;
@@ -524,6 +608,12 @@ fn write_output(
             current * (1.0 - weight) + value * weight
         },
     );
+    Some(PhysicsOutputSnapshot {
+        raw,
+        before: current,
+        after: values[id],
+        clamped: value != raw * output.scale,
+    })
 }
 
 #[cfg(test)]
@@ -557,6 +647,30 @@ mod tests {
                 .is_ok());
         }
         import_physics3(&doc, PHYSICS, source).unwrap().candidate
+    }
+
+    #[test]
+    fn preview_bypass_and_stabilized_baseline_survive_cold_seek() {
+        let doc = document(include_str!(
+            "../../../tests/fixtures/animation_cpu/thirty.physics3.json"
+        ));
+        let mut preview = crate::MotionPreview::new(&doc);
+        preview.set_base_parameter(X, 1.).unwrap();
+        preview.set_physics_stabilized_start(true);
+        preview.seek(0.).unwrap();
+        let initial = preview.physics_snapshot();
+        assert_eq!(initial[0].particles.len(), 2);
+        assert_eq!(initial[0].particles[0][0], initial[0].particles[1][0]);
+        preview.advance_to_with_progress(0.5, |_, _| true).unwrap();
+        preview.seek(0.).unwrap();
+        assert_eq!(initial, preview.physics_snapshot());
+        preview.set_physics_enabled(false);
+        preview.seek(0.5).unwrap();
+        assert!(preview.physics_snapshot().is_empty());
+        assert_eq!(preview.snapshot().parameters[Y], 0.);
+        preview.set_physics_enabled(true);
+        preview.seek(0.).unwrap();
+        assert_eq!(initial, preview.physics_snapshot());
     }
 
     #[test]

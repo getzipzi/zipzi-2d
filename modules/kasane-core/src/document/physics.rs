@@ -4,8 +4,10 @@ use std::collections::{BTreeMap, HashSet};
 use crate::physics::{validate_physics_definition, PhysicsDefinition};
 use serde::{Deserialize, Serialize};
 
+mod patch;
 use super::{Document, StructureIssue};
 use crate::types::{ChangeKind, EditResult, Status};
+pub use patch::{PhysicsPatch, PhysicsProperty};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -21,6 +23,33 @@ pub struct PhysicsAsset {
 }
 
 impl PhysicsAsset {
+    /// Choose a wire key for a parameter UUID without changing existing bindings
+    /// or resolving unrelated channels. The caller must insert the returned key
+    /// into `parameter_bindings` and reference it from the new channel.
+    pub fn parameter_binding_key(&self, parameter_id: &str, runtime_id: &str) -> String {
+        self.parameter_binding_key_in(&self.parameter_bindings, parameter_id, runtime_id)
+    }
+
+    fn parameter_binding_key_in(
+        &self,
+        bindings: &BTreeMap<String, String>,
+        parameter_id: &str,
+        runtime_id: &str,
+    ) -> String {
+        if let Some((key, _)) = bindings.iter().find(|(_, id)| id.as_str() == parameter_id) {
+            return key.clone();
+        }
+        // Wire keys survive renames, including unresolved references.
+        let referenced = self.referenced_runtime_ids();
+        let mut key = runtime_id.to_owned();
+        let mut suffix = 0;
+        while bindings.contains_key(&key) || referenced.contains(key.as_str()) {
+            suffix += 1;
+            key = format!("{runtime_id}~{suffix}");
+        }
+        key
+    }
+
     pub fn referenced_runtime_ids(&self) -> HashSet<&str> {
         self.data
             .settings
@@ -41,7 +70,7 @@ impl PhysicsAsset {
 
 impl Document {
     pub fn physics(&self) -> Option<&PhysicsAsset> {
-        self.content.physics.as_ref()
+        self.content.physics.as_deref()
     }
 
     pub fn set_physics(&mut self, asset: PhysicsAsset) -> EditResult {
@@ -67,11 +96,11 @@ impl Document {
         if !status.is_ok() {
             return self.failed(status);
         }
-        if self.content.physics.as_ref() == Some(&asset) {
+        if self.content.physics.as_deref() == Some(&asset) {
             return self.failed(Status::ok());
         }
         let id = asset.id.clone();
-        self.content.physics = Some(asset);
+        self.content.physics = Some(std::sync::Arc::new(asset));
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 

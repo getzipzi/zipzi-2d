@@ -38,7 +38,7 @@ pub use motions::{
     MotionClip, MotionEvent, MotionGroup, MotionKey, MotionPoint, MotionRegistration,
     MotionSegment, MotionTrack, MotionTrackTarget,
 };
-pub use physics::PhysicsAsset;
+pub use physics::{PhysicsAsset, PhysicsPatch, PhysicsProperty};
 pub use pose::{PoseAsset, PoseEntry, PosePartRef};
 pub use structure::StructureIssue;
 pub use validation::*;
@@ -131,7 +131,7 @@ struct DocumentContent {
     motion_order: Vec<String>,
     motion_groups: Vec<MotionGroup>,
     pose: Option<PoseAsset>,
-    physics: Option<PhysicsAsset>,
+    physics: Option<Arc<PhysicsAsset>>,
     missing_attachments: Vec<String>,
     model3_settings: Model3Settings,
     package_attachments: Vec<PackageAttachment>,

@@ -52,6 +52,7 @@ impl MotionEditingPreview {
             #[cfg(test)]
             curve_compilations: 0,
             snapshot: MotionSnapshot {
+                physics: Vec::new(),
                 time: 0.,
                 parameters,
                 part_opacity_channels: controls,

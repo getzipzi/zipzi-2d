@@ -18,8 +18,8 @@ pub use diagnostics::{GeometryBounds, GeometryChecks, GeometryDiagnostic, Geomet
 pub use edit::EditSession;
 pub use kasane_animation::{
     apply_model_opacity, AnimationError, ExpressionPreview, ExpressionTransition, MotionEventFired,
-    MotionPreview, MotionSnapshot, PhysicsPreview, PreviewGeometryTimings, RuntimeSnapshot,
-    SeekCacheStats,
+    MotionPreview, MotionSnapshot, PhysicsOutputSnapshot, PhysicsPreview, PhysicsRigSnapshot,
+    PreviewGeometryTimings, RuntimeSnapshot, SeekCacheStats,
 };
 pub use kasane_animation::{
     motion_bezier_time_is_monotonic, sample_motion_curve, CompiledCurve, MotionEditingPreview,
