@@ -6,6 +6,7 @@ pub(crate) mod form_dialog;
 pub(crate) mod mesh_generation;
 pub(crate) mod mesh_generation_preview;
 mod mesh_preview;
+pub(crate) mod object_identity;
 pub(crate) mod property_details;
 pub(crate) mod slide_number_input;
 

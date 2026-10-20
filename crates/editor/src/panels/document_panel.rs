@@ -1,5 +1,5 @@
 //! Independent Dock identities backed by the same document projection and context.
-use crate::{EditorView, t};
+use crate::{EditorView, t, ui::compact};
 use editor_core::{
     DocumentId, EditorCommand, ObjectIndex, ObjectKind, ObjectRef, PanelKind, RelationKind,
 };
@@ -10,6 +10,8 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 use std::sync::Arc;
+
+mod relations;
 
 fn includes(panel: PanelKind, kind: ObjectKind) -> bool {
     use ObjectKind as K;
@@ -427,38 +429,13 @@ impl BasePanel for DocumentPanel {
     }
 }
 impl Panel for DocumentPanel {
+    fn inner_padding(&self, _: &App) -> bool {
+        self.kind != PanelKind::Relations
+    }
     fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         SharedString::from(t!(self.kind.label()).into_owned())
     }
 }
-impl crate::docking::header::PanelHeader for DocumentPanel {
-    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        use gpui_kit::component::{Disableable, button::Button};
-        let dialog = window.has_active_dialog(cx);
-        let Some(owner) = self.owner.upgrade() else {
-            return Empty.into_any_element();
-        };
-        let state = owner.read(cx);
-        let Some(document) = state.editor.active_id() else {
-            return Empty.into_any_element();
-        };
-        let disabled = dialog || state.modal || state.editor.is_busy();
-        let back = cx.listener(move |this, _, window, cx| {
-            this.run(document, EditorCommand::NavigateBack, window, cx)
-        });
-        super::toolbar::PanelToolbar::new("relations-toolbar")
-            .action(move |_| {
-                Button::new("relation-back")
-                    .icon(gpui_kit::assets::IconName::ArrowLeft)
-                    .accessibility_label(t!("editor.navigate_back").into_owned())
-                    .tooltip(t!("editor.navigate_back"))
-                    .disabled(disabled)
-                    .on_click(back)
-            })
-            .into_any_element()
-    }
-}
-
 impl Render for DocumentPanel {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.row_sequence = 0;
@@ -475,6 +452,9 @@ impl Render for DocumentPanel {
         let Some(document) = state.editor.active_id() else {
             return div().into_any_element();
         };
+        if self.kind == PanelKind::Relations {
+            return self.relations(doc, document, cx);
+        }
         let index = doc.object_index();
         let context = doc.context().clone();
         let parameters = doc.parameters();
@@ -488,64 +468,6 @@ impl Render for DocumentPanel {
             body = body
                 .h_full()
                 .child(self.keyforms(index, context, parameters, document, disabled, cx));
-        } else if self.kind == PanelKind::Relations {
-            if let Some(r) = context.inspected.as_ref() {
-                body = body.child(
-                    div()
-                        .p_2()
-                        .child(format!("{} · {:?}", index.name(r), r.kind)),
-                );
-                for incoming in [false, true] {
-                    let relations: Vec<_> = if incoming {
-                        index.incoming(r).collect()
-                    } else {
-                        index.outgoing(r).collect()
-                    };
-                    for e in relations {
-                        let target = if incoming { &e.source } else { &e.target };
-                        body = body.child(self.row(
-                            &index,
-                            target,
-                            format!("{} {}", e.kind.label(incoming), e.detail),
-                            document,
-                            false,
-                            cx,
-                        ));
-                    }
-                }
-                let paths = index.influences_for(r);
-                body = body.child(
-                    div()
-                        .id("relations-indirect-toggle")
-                        .p_2()
-                        .cursor_pointer()
-                        .child(format!(
-                            "{} · {}",
-                            t!("editor.indirect_influences"),
-                            paths.len()
-                        ))
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.indirect = !this.indirect;
-                            cx.notify();
-                        })),
-                );
-                if self.indirect {
-                    for path in paths {
-                        for (i, target) in path.path.iter().enumerate() {
-                            body = body.child(self.row(
-                                &index,
-                                target,
-                                format!("{} →", i + 1),
-                                document,
-                                false,
-                                cx,
-                            ));
-                        }
-                    }
-                }
-            } else {
-                body = body.child(t!("editor.choose_object"));
-            }
         } else if self.kind == PanelKind::DrawOrder {
             body = body.child(div().p_2().child(t!("editor.draw_order_direction")));
             // The scene cache is evaluated by core/preview, independent of panel visibility.

@@ -99,11 +99,6 @@ impl DockWorkspace {
         header::register(&mut headers, &animation_motions, cx);
         header::register(&mut headers, &animation_expressions, cx);
         header::register(&mut headers, &animation_info, cx);
-        header::register(
-            &mut headers,
-            &document_panels[&editor_core::PanelKind::Relations],
-            cx,
-        );
         let headers = Rc::new(headers);
         let input_regions: HashMap<_, crate::input_routing::InputRegion> = panels
             .keys()
