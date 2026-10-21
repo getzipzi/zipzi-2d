@@ -106,7 +106,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
             .keyforms
             .iter()
             .map(|f| MeshKeyformWire {
-                keys: f.keys.clone(),
+                samples: f.samples.clone(),
                 positions: f.positions.iter().map(|p| [p.x, p.y]).collect(),
                 appearance: Some(AppearanceWire::from(&f.appearance)),
                 draw_order: f.draw_order,
@@ -132,7 +132,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
                     kasane_core::SceneTrack::Warp { keyforms, .. } => keyforms[i].bezier.clone(),
                     _ => None,
                 },
-                keys: f.keys.to_vec(),
+                samples: sb.track.sample_ids(i).to_vec(),
                 positions: f.positions.iter().map(|p| [p.x, p.y]).collect(),
                 rotation: RotationPoseWire::from(&f.rotation),
                 appearance: Some(AppearanceWire::from(&f.appearance)),
@@ -153,8 +153,8 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
         blend_key_tables_wire.push(BlendShapeKeyTableWire {
             id: t.id.clone(),
             parameter_id: t.parameter_id.clone(),
-            keys: t.keys.clone(),
-            base_key_idx: t.base_key_idx,
+            samples: t.samples.clone(),
+            base_sample_id: t.base_sample_id.clone(),
         });
     }
 
@@ -164,8 +164,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
         blend_constraints_wire.push(BlendShapeConstraintWire {
             id: c.id.clone(),
             parameter_id: c.parameter_id.clone(),
-            keys: c.keys.clone(),
-            weights: c.weights.clone(),
+            samples: c.samples.clone(),
         });
     }
 
@@ -177,6 +176,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
                 forms
                     .iter()
                     .map(|f| DeltaMeshKeyformWire {
+                        sample_id: f.sample_id.clone(),
                         positions: f.positions.iter().map(|p| [p.x, p.y]).collect(),
                         opacity: f.opacity,
                         draw_order: f.draw_order,
@@ -189,6 +189,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
                 forms
                     .iter()
                     .map(|f| DeltaWarpKeyformWire {
+                        sample_id: f.sample_id.clone(),
                         points: f.points.iter().map(|p| [p.x, p.y]).collect(),
                         opacity: f.opacity,
                         multiply: f.multiply,
@@ -200,6 +201,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
                 forms
                     .iter()
                     .map(|f| DeltaRotationKeyformWire {
+                        sample_id: f.sample_id.clone(),
                         origin: f.origin.map(|p| [p.x, p.y]),
                         angle: f.angle,
                         scale: f.scale,
@@ -213,6 +215,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
                 forms
                     .iter()
                     .map(|f| DeltaPartKeyformWire {
+                        sample_id: f.sample_id.clone(),
                         draw_order: f.draw_order,
                     })
                     .collect(),
@@ -221,6 +224,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
                 forms
                     .iter()
                     .map(|f| DeltaGlueKeyformWire {
+                        sample_id: f.sample_id.clone(),
                         intensity: f.intensity,
                     })
                     .collect(),
@@ -229,6 +233,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
                 forms
                     .iter()
                     .map(|f| DeltaOffscreenKeyformWire {
+                        sample_id: f.sample_id.clone(),
                         opacity: f.opacity,
                         multiply: f.multiply,
                         screen: f.screen,
@@ -296,7 +301,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
 
     let project = ProjectWire {
         format: "kasane-directory-project".to_string(),
-        format_version: 14,
+        format_version: 15,
         document: DocumentWire {
             id: document.id().to_string(),
             export_settings: document.export_settings(),

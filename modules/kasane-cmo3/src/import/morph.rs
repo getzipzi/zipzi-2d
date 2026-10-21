@@ -58,6 +58,8 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                 let base_key_idx = keys.iter().position(|k| *k == 0.).unwrap();
                 let table = id();
                 edit(document.create_blend_key_table(BlendShapeKeyTable {
+                    samples: Default::default(),
+                    base_sample_id: Default::default(),
                     id: table.clone(),
                     parameter_id: parameter.clone(),
                     keys: keys.clone(),
@@ -82,6 +84,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                         values.dedup();
                         let constraint = id();
                         edit(document.create_blend_constraint(BlendShapeConstraint {
+                            samples: Default::default(),
                             id: constraint.clone(),
                             parameter_id: parameter,
                             keys: values.iter().map(|v| v.0).collect(),
@@ -115,6 +118,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                                 return Err(invalid("Morph vertex count differs"));
                             }
                             Ok(DeltaMeshKeyform {
+                                sample_id: Default::default(),
                                 positions: pts
                                     .iter()
                                     .zip(&base_points)
@@ -148,6 +152,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                                         return Err(invalid("Morph control point count differs"));
                                     }
                                     Ok(DeltaWarpKeyform {
+                                        sample_id: Default::default(),
                                         points: pts
                                             .iter()
                                             .zip(&base_points)
@@ -177,6 +182,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                                         return Err(invalid("Morph changes reflection flags"));
                                     }
                                     Ok(DeltaRotationKeyform {
+                                        sample_id: Default::default(),
                                         origin: Some(Vec2::new(
                                             (r.origin.x - rest.origin.x) as f32,
                                             (r.origin.y - rest.origin.y) as f32,
@@ -207,6 +213,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                                         return Ok(DeltaPartKeyform::default());
                                     }
                                     Ok(DeltaPartKeyform {
+                                        sample_id: Default::default(),
                                         draw_order: g.number::<f32>(*n, "drawOrder")? - rest,
                                     })
                                 })
@@ -225,6 +232,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                                         return Ok(DeltaGlueKeyform::default());
                                     }
                                     Ok(DeltaGlueKeyform {
+                                        sample_id: Default::default(),
                                         intensity: g.number::<f32>(*n, "intensity")? - rest,
                                     })
                                 })

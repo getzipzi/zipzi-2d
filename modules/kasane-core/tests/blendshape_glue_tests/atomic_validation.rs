@@ -10,6 +10,8 @@ fn parameter_edits_validate_blend_dependents_atomically() {
     let mut doc = create_base_document();
     assert!(doc
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: KEY_TABLE.into(),
             parameter_id: PARAM_BS.into(),
             keys: vec![0.0, 1.0],
@@ -30,6 +32,7 @@ fn parameter_edits_validate_blend_dependents_atomically() {
     // Constraints may reference normal parameters, as the Core does.
     assert!(doc
         .create_blend_constraint(BlendShapeConstraint {
+            samples: Default::default(),
             id: CONSTRAINT.into(),
             parameter_id: PARAM_NORM.into(),
             keys: vec![-1.0, 1.0],
@@ -66,6 +69,8 @@ fn warp_grid_edits_validate_blend_dependents_atomically() {
         .is_ok());
     assert!(doc
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: KEY_TABLE.into(),
             parameter_id: PARAM_BS.into(),
             keys: vec![0.0, 1.0],
@@ -108,6 +113,8 @@ fn topology_edit_updates_all_dependencies_atomically() {
     let mut doc = create_base_document();
     assert!(doc
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: KEY_TABLE.into(),
             parameter_id: PARAM_BS.into(),
             keys: vec![0.0, 1.0],

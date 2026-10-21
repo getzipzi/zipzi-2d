@@ -23,6 +23,17 @@ impl Document {
     }
 
     pub(super) fn canonicalize_binding(&self, b: &mut MeshBinding) -> Status {
+        if let Err(s) = self.normalize_owner_axes(&b.id, &mut b.axes) {
+            return s;
+        }
+        if let Err(s) = self.check_binding_ids(
+            &b.id,
+            b.axes.iter().flat_map(|a| {
+                std::iter::once(a.id.clone()).chain(a.samples.iter().map(|s| s.id.clone()))
+            }),
+        ) {
+            return s;
+        }
         if !valid_uuid(&b.id) {
             return Status::error(
                 "INVALID_ID",
@@ -43,7 +54,15 @@ impl Document {
                 );
             }
         }
-        if b.axes.is_empty() || b.axes.len() > 16 {
+        // An undriven binding owns no duplicate of the Mesh's base shape.
+        if b.axes.iter().all(|a| a.parameter_id.is_empty()) {
+            return if b.keyforms.is_empty() {
+                Status::ok()
+            } else {
+                Status::error("ZERO_AXIS_KEYFORMS", "Edit the target base shape instead")
+            };
+        }
+        if b.axes.len() > 16 {
             return Status::error(
                 "INVALID_BINDING",
                 format!("{}: bindings support 1..16 axes", b.id),
@@ -51,7 +70,7 @@ impl Document {
         }
         let mut total = 1usize;
         let mut seen = HashSet::new();
-        for axis in &b.axes {
+        for axis in b.axes.iter().filter(|a| !a.parameter_id.is_empty()) {
             let p = match self.get_parameter(&axis.parameter_id) {
                 Some(p) => p,
                 None => {
@@ -98,8 +117,17 @@ impl Document {
         }
         let mut ordered = vec![MeshKeyform::default(); total];
         let mut occupied = vec![false; total];
-        for form in b.keyforms.drain(..) {
-            if form.keys.len() != b.axes.len() || form.positions.len() != mesh.vertex_ids.len() {
+        for mut form in b.keyforms.drain(..) {
+            if let Err(s) = super::binding_authoring::identity::coordinates(
+                &b.axes,
+                &mut form.keys,
+                &mut form.samples,
+            ) {
+                return s;
+            }
+            if form.keys.len() != b.axes.iter().filter(|a| !a.parameter_id.is_empty()).count()
+                || form.positions.len() != mesh.vertex_ids.len()
+            {
                 return Status::error(
                     "INVALID_LENGTH",
                     format!(
@@ -124,7 +152,12 @@ impl Document {
             }
             let mut index = 0usize;
             let mut stride = 1usize;
-            for (a, axis) in b.axes.iter().enumerate() {
+            for (a, axis) in b
+                .axes
+                .iter()
+                .filter(|a| !a.parameter_id.is_empty())
+                .enumerate()
+            {
                 let key_pos = match axis.keys.iter().position(|&k| k == form.keys[a]) {
                     Some(idx) => idx,
                     None => {
@@ -151,6 +184,9 @@ impl Document {
     }
 
     pub fn create_binding(&mut self, mut b: MeshBinding) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&b.mesh_id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -172,6 +208,12 @@ impl Document {
     }
 
     pub fn replace_binding(&mut self, mut b: MeshBinding) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&b.mesh_id) {
+            return self.failed(status);
+        }
+        if let Err(status) = self.authoring_unlocked(&b.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -200,7 +242,10 @@ impl Document {
         )
     }
 
-    pub fn set_mesh_keyform(&mut self, id: &str, form: MeshKeyform) -> EditResult {
+    pub fn set_mesh_keyform(&mut self, id: &str, mut form: MeshKeyform) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -211,7 +256,14 @@ impl Document {
             Some(old) => old.clone(),
             None => return self.failed(Status::error("MISSING_BINDING", id)),
         };
-        let it = b.keyforms.iter_mut().find(|f| f.keys == form.keys);
+        if let Err(s) = super::binding_authoring::identity::coordinates(
+            &b.axes,
+            &mut form.keys,
+            &mut form.samples,
+        ) {
+            return self.failed(s);
+        }
+        let it = b.keyforms.iter_mut().find(|f| f.samples == form.samples);
         let changes_order = match it {
             Some(f) => {
                 let changes_order = f.draw_order != form.draw_order;
@@ -253,6 +305,17 @@ impl Document {
     }
 
     pub(super) fn canonicalize_scene_binding(&self, b: &mut SceneBinding) -> Status {
+        if let Err(s) = self.normalize_owner_axes(&b.id, &mut b.axes) {
+            return s;
+        }
+        if let Err(s) = self.check_binding_ids(
+            &b.id,
+            b.axes.iter().flat_map(|a| {
+                std::iter::once(a.id.clone()).chain(a.samples.iter().map(|s| s.id.clone()))
+            }),
+        ) {
+            return s;
+        }
         if !valid_uuid(&b.id) {
             return Status::error("INVALID_ID", &b.id);
         }
@@ -266,12 +329,27 @@ impl Document {
                 return Status::error("BINDING_CONFLICT", b.target_id());
             }
         }
-        if b.axes.is_empty() || b.axes.len() > 16 {
+        let target_matches = match &b.track {
+            SceneTrack::Warp { .. } => t.is_some_and(|t| t.kind() == TransformKind::Warp),
+            SceneTrack::Rotation { .. } => t.is_some_and(|t| t.kind() == TransformKind::Rotation),
+            SceneTrack::Part { .. } => p.is_some(),
+        };
+        if !target_matches {
+            return Status::error("INVALID_BINDING_TARGET", &b.id);
+        }
+        if b.axes.iter().all(|a| a.parameter_id.is_empty()) {
+            return if b.track.is_empty() {
+                Status::ok()
+            } else {
+                Status::error("ZERO_AXIS_KEYFORMS", &b.id)
+            };
+        }
+        if b.axes.len() > 16 {
             return Status::error("INVALID_BINDING", &b.id);
         }
         let mut total = 1usize;
         let mut seen = HashSet::new();
-        for a in &b.axes {
+        for a in b.axes.iter().filter(|a| !a.parameter_id.is_empty()) {
             let param = match self.get_parameter(&a.parameter_id) {
                 Some(param) => param,
                 None => return Status::error("MISSING_PARAMETER", &a.parameter_id),
@@ -353,15 +431,37 @@ impl Document {
                 }
             }
         }
+        let normalize = |keys: &mut Vec<f32>, samples: &mut Vec<String>| {
+            super::binding_authoring::identity::coordinates(&b.axes, keys, samples)
+        };
+        let status: Result<(), Status> = match &mut b.track {
+            SceneTrack::Warp { keyforms, .. } => keyforms
+                .iter_mut()
+                .try_for_each(|f| normalize(&mut f.keys, &mut f.samples)),
+            SceneTrack::Rotation { keyforms, .. } => keyforms
+                .iter_mut()
+                .try_for_each(|f| normalize(&mut f.keys, &mut f.samples)),
+            SceneTrack::Part { keyforms, .. } => keyforms
+                .iter_mut()
+                .try_for_each(|f| normalize(&mut f.keys, &mut f.samples)),
+        };
+        if let Err(s) = status {
+            return s;
+        }
         let mut ordered = vec![0; total];
         let mut occupied = vec![false; total];
         for (source_slot, f) in b.track.samples().enumerate() {
-            if f.keys.len() != b.axes.len() {
+            if f.keys.len() != b.axes.iter().filter(|a| !a.parameter_id.is_empty()).count() {
                 return Status::error("INVALID_LENGTH", &b.id);
             }
             let mut index = 0usize;
             let mut stride = 1usize;
-            for (a, axis) in b.axes.iter().enumerate() {
+            for (a, axis) in b
+                .axes
+                .iter()
+                .filter(|a| !a.parameter_id.is_empty())
+                .enumerate()
+            {
                 let key_pos = match axis.keys.iter().position(|&k| k == f.keys[a]) {
                     Some(pos) => pos,
                     None => return Status::error("INVALID_KEY_COMBINATION", &b.id),
@@ -400,6 +500,9 @@ impl Document {
     }
 
     pub fn create_scene_binding(&mut self, mut b: SceneBinding) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(b.target_id()) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &b.id));
         }
@@ -419,6 +522,12 @@ impl Document {
     }
 
     pub fn replace_scene_binding(&mut self, mut b: SceneBinding) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(b.target_id()) {
+            return self.failed(status);
+        }
+        if let Err(status) = self.authoring_unlocked(&b.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &b.id));
         }
@@ -445,6 +554,9 @@ impl Document {
         binding: SceneBinding,
         offscreen: Offscreen,
     ) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&binding.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &binding.id));
         }
@@ -490,7 +602,10 @@ impl Document {
         )
     }
 
-    pub fn set_scene_keyform(&mut self, id: &str, f: SceneKeyform) -> EditResult {
+    pub fn set_scene_keyform(&mut self, id: &str, mut f: SceneKeyform) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", id));
         }
@@ -498,6 +613,14 @@ impl Document {
             Some(old) => old.clone(),
             None => return self.failed(Status::error("MISSING_BINDING", id)),
         };
+        let (keys, samples) = match &mut f {
+            SceneKeyform::Warp(f) => (&mut f.keys, &mut f.samples),
+            SceneKeyform::Rotation(f) => (&mut f.keys, &mut f.samples),
+            SceneKeyform::Part(f) => (&mut f.keys, &mut f.samples),
+        };
+        if let Err(s) = super::binding_authoring::identity::coordinates(&b.axes, keys, samples) {
+            return self.failed(s);
+        }
         let status = b.track.replace(f);
         if !status.is_ok() {
             return self.failed(status);

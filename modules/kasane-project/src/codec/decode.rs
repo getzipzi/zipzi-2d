@@ -107,11 +107,11 @@ pub fn decode_project(text: &str) -> Result<Document, Status> {
     let header: serde_json::Value =
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
     if header.get("format").and_then(|v| v.as_str()) == Some("kasane-directory-project")
-        && header.get("format_version").and_then(|v| v.as_u64()) != Some(14)
+        && header.get("format_version").and_then(|v| v.as_u64()) != Some(15)
     {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
-            "Only directory-project version 14 is supported; reimport the source asset",
+            "Only directory-project version 15 is supported; reimport the source asset",
         ));
     }
     let root: ProjectWire = match serde_json::from_str(text) {
@@ -151,7 +151,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
     }
 
-    if root.format_version != 14 {
+    if root.format_version != 15 {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             format!(
@@ -186,6 +186,82 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         }
     };
 
+    for (id, samples) in root
+        .document
+        .bindings
+        .iter()
+        .flat_map(|b| &b.axes)
+        .chain(root.document.scene_bindings.iter().flat_map(|b| &b.axes))
+        .map(|a| (&a.id, &a.samples))
+        .chain(
+            root.document
+                .glues
+                .iter()
+                .filter_map(|g| g.binding.as_ref())
+                .flat_map(|b| &b.axes)
+                .map(|a| (&a.id, &a.samples)),
+        )
+    {
+        if !kasane_core::document::valid_uuid(id)
+            || samples
+                .iter()
+                .any(|s| !kasane_core::document::valid_uuid(&s.id))
+        {
+            return Err(Status::error(
+                "INVALID_ID",
+                "Native axis/sample identity is required",
+            ));
+        }
+    }
+    // Native sources already own their identities. Only external import/creation
+    // APIs may synthesize IDs from implicit numeric coordinates.
+    let valid = kasane_core::document::valid_uuid;
+    for table in &root.document.blend_key_tables {
+        if table.samples.iter().any(|s| !valid(&s.id))
+            || (!table.samples.is_empty() && !valid(&table.base_sample_id))
+        {
+            return Err(Status::error(
+                "INVALID_ID",
+                "Native table/sample identity is required",
+            ));
+        }
+    }
+    for constraint in &root.document.blend_constraints {
+        if constraint.samples.iter().any(|s| !valid(&s.id)) {
+            return Err(Status::error(
+                "INVALID_ID",
+                "Native constraint sample identity is required",
+            ));
+        }
+    }
+    for glue in &root.document.glues {
+        if glue.binding.as_ref().is_some_and(|b| {
+            b.keyforms
+                .iter()
+                .any(|f| f.samples.is_empty() || f.samples.iter().any(|id| !valid(id)))
+        }) {
+            return Err(Status::error(
+                "INVALID_SAMPLE_REFERENCE",
+                "Native Glue coordinates are required",
+            ));
+        }
+    }
+    for binding in &root.document.blend_bindings {
+        let invalid = match &binding.keyforms {
+            DeltaKeyformsWire::Mesh(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Warp(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Rotation(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Part(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Glue(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Offscreen(f) => f.iter().any(|f| !valid(&f.sample_id)),
+        };
+        if invalid {
+            return Err(Status::error(
+                "INVALID_SAMPLE_REFERENCE",
+                "Native delta sample identity is required",
+            ));
+        }
+    }
     let doc = root.document;
 
     // Check prototype relationships
@@ -308,7 +384,8 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
             .keyforms
             .into_iter()
             .map(|f| MeshKeyform {
-                keys: f.keys,
+                samples: f.samples,
+                keys: vec![],
                 positions: f.positions.iter().map(|p| Vec2::new(p[0], p[1])).collect(),
                 appearance: f.appearance.map(Appearance::from).unwrap_or_default(),
                 draw_order: f.draw_order,
@@ -334,8 +411,9 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                     .keyforms
                     .into_iter()
                     .map(|f| WarpKeyform {
+                        samples: f.samples,
                         bezier: f.bezier.clone(),
-                        keys: f.keys,
+                        keys: vec![],
                         positions: f
                             .positions
                             .into_iter()
@@ -351,7 +429,8 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                     .keyforms
                     .into_iter()
                     .map(|f| RotationKeyform {
-                        keys: f.keys,
+                        samples: f.samples,
+                        keys: vec![],
                         rotation: f.rotation.into(),
                         appearance: f.appearance.map(Appearance::from).unwrap_or_default(),
                     })
@@ -363,7 +442,8 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                     .keyforms
                     .into_iter()
                     .map(|f| PartKeyform {
-                        keys: f.keys,
+                        samples: f.samples,
+                        keys: vec![],
                         draw_order: f.draw_order,
                     })
                     .collect(),
@@ -388,10 +468,12 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
 
     for t in doc.blend_key_tables {
         let res = candidate.create_blend_key_table(BlendShapeKeyTable {
+            samples: t.samples,
+            base_sample_id: t.base_sample_id,
             id: t.id,
             parameter_id: t.parameter_id,
-            keys: t.keys,
-            base_key_idx: t.base_key_idx,
+            keys: vec![],
+            base_key_idx: 0,
         });
         if !res.status.is_ok() {
             return Err(res.status);
@@ -400,10 +482,11 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
 
     for c in doc.blend_constraints {
         let res = candidate.create_blend_constraint(BlendShapeConstraint {
+            samples: c.samples,
             id: c.id,
             parameter_id: c.parameter_id,
-            keys: c.keys,
-            weights: c.weights,
+            keys: vec![],
+            weights: vec![],
         });
         if !res.status.is_ok() {
             return Err(res.status);
@@ -467,6 +550,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                 forms
                     .into_iter()
                     .map(|f| DeltaMeshKeyform {
+                        sample_id: f.sample_id,
                         positions: f
                             .positions
                             .into_iter()
@@ -483,6 +567,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                 forms
                     .into_iter()
                     .map(|f| DeltaWarpKeyform {
+                        sample_id: f.sample_id,
                         points: f
                             .points
                             .into_iter()
@@ -498,6 +583,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                 forms
                     .into_iter()
                     .map(|f| DeltaRotationKeyform {
+                        sample_id: f.sample_id,
                         origin: f.origin.map(|p| Vec2::new(p[0], p[1])),
                         angle: f.angle,
                         scale: f.scale,
@@ -511,6 +597,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                 forms
                     .into_iter()
                     .map(|f| DeltaPartKeyform {
+                        sample_id: f.sample_id,
                         draw_order: f.draw_order,
                     })
                     .collect(),
@@ -519,6 +606,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                 forms
                     .into_iter()
                     .map(|f| DeltaGlueKeyform {
+                        sample_id: f.sample_id,
                         intensity: f.intensity,
                     })
                     .collect(),
@@ -527,6 +615,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
                 forms
                     .into_iter()
                     .map(|f| DeltaOffscreenKeyform {
+                        sample_id: f.sample_id,
                         opacity: f.opacity,
                         multiply: f.multiply,
                         screen: f.screen,

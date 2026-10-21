@@ -53,6 +53,9 @@ impl Document {
         for edit in staged {
             match edit {
                 DocumentEdit::VertexPositions(update) => {
+                    if let Err(status) = self.authoring_unlocked(&update.mesh_id) {
+                        return self.failed(status);
+                    }
                     let Some(mesh) = self.content.meshes.get(&update.mesh_id) else {
                         return self.failed(Status::error("MISSING_MESH", "Mesh does not exist."));
                     };
@@ -90,6 +93,9 @@ impl Document {
                     }
                 }
                 DocumentEdit::MeshName { mesh_id, name } => {
+                    if let Err(status) = self.authoring_unlocked(&mesh_id) {
+                        return self.failed(status);
+                    }
                     let Some(mesh) = self.content.meshes.get(&mesh_id) else {
                         return self.failed(Status::error("MISSING_MESH", "Mesh does not exist."));
                     };

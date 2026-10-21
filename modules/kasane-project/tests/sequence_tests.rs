@@ -205,6 +205,8 @@ fn build_initial_document() -> (Document, Vec<String>) {
         id: binding_id,
         mesh_id: mesh_id.clone(),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: param_ids[0].clone(),
             keys: vec![-1.0, 0.0, 1.0],
         }],

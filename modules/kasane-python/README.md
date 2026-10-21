@@ -130,6 +130,41 @@ unique display name. If names collide, use IDs. `evaluate_snapshot()` returns
 the full drawable and render-plan data; `evaluate()` returns a smaller geometry
 view.
 
+## Stable binding conversions
+
+`binding_source()` exposes the native axis/sample IDs and ID-based keyform
+coordinates; the existing tuple snapshots remain numeric views. Use stable IDs
+when moving samples or changing a grid:
+
+```python
+source = session.binding_source(binding_id)["source"]["value"]
+sample_id = source["axes"][0]["samples"][1]["id"]
+address = session.binding_field_address(sample_id)
+plan = session.plan_binding_field_patch(address, {"SampleValue": 0.8})
+print(plan.cost)  # combinations, payload, temporary bytes, history estimate
+print(plan.affected_ids, plan.losses)
+session.execute_binding_plan(plan)
+```
+
+Capture a new field address after changing its sampling/driver context. Undo
+restores source IDs, but never revives deleted handles or expired addresses.
+`plan_binding_authoring()` accepts the shared Rust `BindingAuthoringEdit` enum
+shape; `edit.binding_authoring()` composes that same intent with other writes
+inside one edit. For example, create an undriven Mesh binding with
+`{"Grid": {"Create": {"id": binding_id, "target": {"Mesh": mesh_id}}}}`.
+Use `Grid.Edit` with `GridOperation` for axes and ordinary samples, and
+`Blend` with `BlendAuthoringEdit` for shared tables/constraints. Plans validate
+all shared users, locks, memory limits and the current baseline. Dropping a
+plan cancels it without publishing. A stale plan must be rebuilt.
+
+Pending axes are persisted with an empty `parameter_id`; they are excluded
+from the runtime grid. Activating the first axis copies the latest base shape.
+Clearing/removing an active axis requires an explicit `Slice` or `Resample`
+reduction. Shared table base changes compensate every representable user;
+constrained or discrete cases that cannot preserve behavior are rejected.
+Native projects use directory-project version 15; older experimental native
+schemas require reimporting the original source.
+
 ## Import and export
 
 CDI display metadata is editable in the same history transaction as model

@@ -17,7 +17,16 @@ pub(super) fn validate_preflight(
             "Commit or cancel edits before export",
         ));
     }
-
+    if let Some(omission) = doc.binding_export_omissions().first() {
+        return Err(Status::error(
+            if omission.code == "ZERO_AXIS_BINDING" {
+                "ZERO_AXIS_BINDING_NOT_REPRESENTABLE"
+            } else {
+                "NEEDS_CONFIGURATION"
+            },
+            format!("{}: {}", omission.object_id, omission.code),
+        ));
+    }
     let has_v53_features = doc.offscreen_count() > 0
         || doc
             .mesh_order()
@@ -132,4 +141,45 @@ pub(super) fn validate_preflight(
     }
 
     Ok((export_version, frame))
+}
+
+#[cfg(test)]
+mod authoring_tests {
+    use super::*;
+    #[test]
+    fn zero_axis_binding_is_rejected_before_runtime_encoding() {
+        use kasane_core::{Canvas, ImageAsset, Mesh, MeshBinding};
+        let id = |n: u32| format!("00000000-0000-4000-8000-{n:012x}");
+        let mut d = Document::new();
+        assert!(d.initialize(id(1), Canvas::default()).is_ok());
+        assert!(d
+            .add_asset(ImageAsset {
+                id: id(2),
+                source: "assets/texture.png".into(),
+                width: 1,
+                height: 1,
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        assert!(d
+            .create_mesh(Mesh {
+                id: id(3),
+                texture_asset_id: id(2),
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        assert!(d
+            .create_binding(MeshBinding {
+                id: id(4),
+                mesh_id: id(3),
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        assert!(d.validate_structure().is_empty());
+        let error = validate_preflight(&d, Moc3ExportVersion::Auto).unwrap_err();
+        assert_eq!(error.code, "ZERO_AXIS_BINDING_NOT_REPRESENTABLE");
+    }
 }

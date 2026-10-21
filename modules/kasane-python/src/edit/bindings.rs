@@ -17,11 +17,17 @@ impl NativeEdit {
                 mesh_id,
                 axes: axes
                     .into_iter()
-                    .map(|(parameter_id, keys)| BindingAxis { parameter_id, keys })
+                    .map(|(parameter_id, keys)| BindingAxis {
+                        id: Default::default(),
+                        samples: Default::default(),
+                        parameter_id,
+                        keys,
+                    })
                     .collect(),
                 keyforms: forms
                     .into_iter()
                     .map(|(keys, positions, appearance, draw_order)| MeshKeyform {
+                        samples: Default::default(),
                         keys,
                         positions: positions
                             .into_iter()
@@ -51,11 +57,17 @@ impl NativeEdit {
                 mesh_id,
                 axes: axes
                     .into_iter()
-                    .map(|(parameter_id, keys)| BindingAxis { parameter_id, keys })
+                    .map(|(parameter_id, keys)| BindingAxis {
+                        id: Default::default(),
+                        samples: Default::default(),
+                        parameter_id,
+                        keys,
+                    })
                     .collect(),
                 keyforms: forms
                     .into_iter()
                     .map(|(keys, positions, appearance, draw_order)| MeshKeyform {
+                        samples: Default::default(),
                         keys,
                         positions: positions
                             .into_iter()
@@ -77,6 +89,7 @@ impl NativeEdit {
             .push(Command::SetMeshKeyform(
                 id,
                 MeshKeyform {
+                    samples: Default::default(),
                     keys,
                     positions: positions
                         .into_iter()
@@ -168,5 +181,19 @@ impl NativeEdit {
             ))
             .map_err(|error| sdk_failure(py, error))?;
         Ok(())
+    }
+}
+
+#[pymethods]
+impl NativeEdit {
+    fn binding_authoring_json(&mut self, py: Python<'_>, value: &str) -> PyResult<()> {
+        self.ensure_open(py, "binding_authoring")?;
+        let intent = serde_json::from_str(value).map_err(|e| {
+            self.failed = true;
+            PyValueError::new_err(e.to_string())
+        })?;
+        self.commands
+            .push(Command::BindingAuthoring(intent))
+            .map_err(|e| sdk_failure(py, e))
     }
 }

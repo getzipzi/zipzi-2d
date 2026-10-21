@@ -19,6 +19,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 enum Command {
+    BindingAuthoring(kasane_sdk::BindingAuthoringEdit),
     AddPng(kasane_core::ImageAsset),
     CreateRectangle(Box<kasane_core::Mesh>),
     CreateMesh(Box<kasane_core::Mesh>),

@@ -100,6 +100,17 @@ impl Document {
                 });
             }
         }
+        for child in self.binding_identities() {
+            if !valid_uuid(&child.id) || !all_ids.insert(child.id.clone()) {
+                issues.push(StructureIssue {
+                    object_id: child.id,
+                    status: Status::error(
+                        "INVALID_BINDING_IDENTITY",
+                        "Missing or duplicated axis/sample identity",
+                    ),
+                });
+            }
+        }
         for expression in self.content.expressions.values() {
             for entry in &expression.entries {
                 if !all_ids.insert(entry.id.clone()) {

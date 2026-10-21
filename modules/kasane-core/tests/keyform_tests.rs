@@ -68,6 +68,8 @@ fn test_keyform_data_editing_and_evaluation() {
         id: id(5),
         mesh_id: id(3),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(4),
             keys: vec![-1.0, 0.0, 1.0],
         }],

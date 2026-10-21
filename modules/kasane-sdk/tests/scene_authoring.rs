@@ -174,6 +174,8 @@ fn parts_transforms_and_distinct_parent_relations_publish_atomically() {
 fn scene_tracks_require_complete_typed_forms_and_support_replacement() {
     let mut sdk = session();
     let axis = BindingAxis {
+        id: Default::default(),
+        samples: Default::default(),
         parameter_id: id(7),
         keys: vec![0.0, 1.0],
     };
@@ -202,10 +204,12 @@ fn scene_tracks_require_complete_typed_forms_and_support_replacement() {
                 target_id: id(4).into(),
                 keyforms: vec![
                     PartKeyform {
+                        samples: Default::default(),
                         keys: vec![1.0],
                         draw_order: 10.0,
                     },
                     PartKeyform {
+                        samples: Default::default(),
                         keys: vec![0.0],
                         draw_order: 0.0,
                     },
@@ -262,6 +266,7 @@ fn scene_tracks_require_complete_typed_forms_and_support_replacement() {
         bad.set_scene_keyform(
             &id(9),
             SceneKeyform::Part(PartKeyform {
+                samples: Default::default(),
                 keys: vec![0.0],
                 draw_order: 3.0,
             })
@@ -277,6 +282,7 @@ fn scene_tracks_require_complete_typed_forms_and_support_replacement() {
         edit.set_scene_keyform(
             &id(8),
             SceneKeyform::Part(PartKeyform {
+                samples: Default::default(),
                 keys: vec![1.0],
                 draw_order: 20.0,
             }),
@@ -323,12 +329,15 @@ fn incomplete_scene_binding_rolls_back_its_batch() {
         edit.create_scene_binding(SceneBinding {
             id: id(8),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id(7),
                 keys: vec![0.0, 1.0]
             }],
             track: SceneTrack::Part {
                 target_id: id(4).into(),
                 keyforms: vec![PartKeyform {
+                    samples: Default::default(),
                     keys: vec![0.0],
                     draw_order: 0.0
                 }],
@@ -419,6 +428,8 @@ fn bezier_authoring_rejects_invalid_metadata_and_incomplete_grid_migration_atomi
         e.create_scene_binding(SceneBinding {
             id: id(10),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id(7),
                 keys: vec![0., 1.],
             }],

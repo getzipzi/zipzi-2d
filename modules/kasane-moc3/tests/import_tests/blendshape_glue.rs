@@ -34,6 +34,8 @@ fn blend_colors_and_fractional_orders_match_core_and_roundtrip() {
         .is_ok());
     assert!(doc
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: id(401),
             parameter_id: id(400),
             keys: vec![0.0, 1.0, 2.0],
@@ -218,15 +220,23 @@ fn animated_glue_roundtrips_and_matches_core() {
         .is_ok());
     let mut glue = multi.get_glue(&multi.glue_order()[0]).unwrap().clone();
     let grid = glue.binding.as_mut().unwrap();
-    grid.axes.push(kasane_core::types::BindingAxis {
-        parameter_id: id(411),
-        keys: vec![0.0, 1.0],
-    });
+    let axis = kasane_core::types::BindingAxis::new(id(411), vec![0., 1.]);
+    for form in &mut grid.keyforms {
+        form.samples.push(axis.samples[0].id.clone());
+    }
     grid.keyforms.extend(
         [0.25, 0.75, 1.25]
             .into_iter()
-            .map(|intensity| kasane_core::types::GlueKeyform { intensity }),
+            .enumerate()
+            .map(|(i, intensity)| kasane_core::types::GlueKeyform {
+                samples: vec![
+                    grid.axes[0].samples[i].id.clone(),
+                    axis.samples[1].id.clone(),
+                ],
+                intensity,
+            }),
     );
+    grid.axes.push(axis);
     assert!(multi.replace_glue(glue).status.is_ok());
     let encoded = encode_moc3(&multi).unwrap();
     let mut runtime = PurismModelInstance::new(&encoded.bytes);
@@ -429,6 +439,8 @@ fn joint_offscreen_edit_survives_project_and_moc3_roundtrip() {
     let mut binding = SceneBinding {
         id: id(912),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(911),
             keys: vec![-1.0, 1.0],
         }],

@@ -37,8 +37,18 @@ pub(crate) fn inspect_with_animation(
         })
     };
     let mut targets = BTreeSet::new();
+    for omitted in doc.binding_export_omissions() {
+        loss(
+            &omitted.object_id,
+            &omitted.code,
+            "The export projection omits this undriven or pending binding contribution",
+        );
+    }
     for id in doc.blend_binding_order() {
         let binding = doc.get_blend_binding(id).unwrap();
+        if !doc.blend_binding_active(binding) {
+            continue;
+        }
         let table = doc.get_blend_key_table(&binding.key_table_id).unwrap();
         if table.keys[table.base_key_idx] != 0. {
             loss(

@@ -166,6 +166,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     let mut keyforms = Vec::new();
                     for k in 0..key_len as usize {
                         keyforms.push(kasane_core::types::GlueKeyform {
+                            samples: Default::default(),
                             intensity: read_f32(
                                 self.bytes,
                                 offsets[section::GLUE_KEY_SRC_INTENSITY] as usize

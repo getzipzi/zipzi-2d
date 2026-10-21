@@ -445,6 +445,8 @@ fn morph_roundtrip_uses_interpolated_default_pose_and_appearance() {
         .is_ok());
     let mut binding = source.binding_for_mesh(MESH).unwrap().clone();
     binding.axes.push(BindingAxis {
+        id: Default::default(),
+        samples: Default::default(),
         parameter_id: uuid(9),
         keys: vec![-1., 1.],
     });
@@ -453,6 +455,7 @@ fn morph_roundtrip_uses_interpolated_default_pose_and_appearance() {
         .flat_map(|y| {
             binding.keyforms.iter().cloned().map(move |mut form| {
                 form.keys.push(y);
+                form.samples.clear(); // External numeric grid input; derive new coordinates.
                 for p in &mut form.positions {
                     p.y += y * 8.;
                 }
@@ -477,6 +480,8 @@ fn morph_roundtrip_uses_interpolated_default_pose_and_appearance() {
         .is_ok());
     assert!(source
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: uuid(11),
             parameter_id: uuid(10),
             keys: vec![0., 1.],

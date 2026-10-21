@@ -136,11 +136,14 @@ fn build_1d_case() -> (Document, Vec<Vec<f32>>) {
             id: id(30),
             mesh_id: m_id,
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: p_id,
                 keys: vec![-1.0, 0.0, 1.0],
             }],
             keyforms: vec![
                 MeshKeyform {
+                    samples: Default::default(),
                     keys: vec![-1.0],
                     positions: vec![
                         Vec2::new(-40.0, 30.0),
@@ -155,6 +158,7 @@ fn build_1d_case() -> (Document, Vec<Vec<f32>>) {
                     draw_order: None,
                 },
                 MeshKeyform {
+                    samples: Default::default(),
                     keys: vec![0.0],
                     positions: vec![
                         Vec2::new(-30.0, 30.0),
@@ -166,6 +170,7 @@ fn build_1d_case() -> (Document, Vec<Vec<f32>>) {
                     draw_order: None,
                 },
                 MeshKeyform {
+                    samples: Default::default(),
                     keys: vec![1.0],
                     positions: vec![
                         Vec2::new(-20.0, 30.0),
@@ -238,10 +243,14 @@ fn build_2d_case() -> (Document, Vec<Vec<f32>>) {
         mesh_id: m_id,
         axes: vec![
             BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: p_x,
                 keys: vec![-1.0, 1.0],
             },
             BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: p_y,
                 keys: vec![-1.0, 1.0],
             },
@@ -252,6 +261,7 @@ fn build_2d_case() -> (Document, Vec<Vec<f32>>) {
     for &y in &[-1.0f32, 1.0] {
         for &x in &[-1.0f32, 1.0] {
             b.keyforms.push(MeshKeyform {
+                samples: Default::default(),
                 keys: vec![x, y],
                 positions: vec![
                     Vec2::new(x * 10.0, 40.0 + y * 10.0),
@@ -489,6 +499,8 @@ fn build_nested_deformers_case() -> (Document, Vec<Vec<f32>>) {
         .create_scene_binding(SceneBinding {
             id: sid(60),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: p_id,
                 keys: vec![-1.0, 0.0, 1.0],
             }],

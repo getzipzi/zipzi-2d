@@ -96,6 +96,9 @@ impl Document {
     }
 
     pub fn replace_parameter(&mut self, p: Parameter) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&p.id) {
+            return self.failed(status);
+        }
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.replace_parameter");
         if self.mutation_blocked() {

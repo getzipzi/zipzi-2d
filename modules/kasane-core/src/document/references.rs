@@ -4,6 +4,18 @@ use crate::types::{ChangeKind, EditResult, Status};
 impl Document {
     pub fn references_to(&self, id: &str) -> Vec<String> {
         let mut refs = Vec::new();
+        if let Some(child) = self.binding_identity(id) {
+            refs.push(child.owner.clone());
+            if self.get_blend_key_table(&child.owner).is_some() {
+                refs.extend(
+                    self.content
+                        .blend_bindings
+                        .values()
+                        .filter(|b| b.key_table_id == child.owner)
+                        .map(|b| b.id.clone()),
+                );
+            }
+        }
         for m in &self.content.mesh_order {
             if self.content.meshes[m].texture_asset_id == id {
                 refs.push(m.clone());
@@ -199,11 +211,69 @@ impl Document {
     }
 
     pub fn erase_object(&mut self, id: &str) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
                 "Commit or cancel first",
             ));
+        }
+        if let Some(child) = self.binding_identity(id) {
+            let edit = if child.kind == super::BindingIdentityKind::Axis {
+                super::BindingGridEdit::Edit {
+                    owner: child.owner,
+                    operation: super::GridOperation::RemoveAxis {
+                        axis_id: child.id,
+                        reduction: None,
+                        keep_pending: false,
+                    },
+                }
+            } else if child.axis.is_some() {
+                super::BindingGridEdit::Edit {
+                    owner: child.owner,
+                    operation: super::GridOperation::DeleteSample {
+                        sample_id: child.id,
+                    },
+                }
+            } else {
+                let plan = if self.get_blend_key_table(&child.owner).is_some() {
+                    self.plan_blend_authoring(
+                        super::BlendAuthoringEdit::Table {
+                            id: child.owner,
+                            operation: super::BlendTableOperation::Delete {
+                                sample_id: child.id,
+                                replacement_base: None,
+                            },
+                        },
+                        super::AuthoringLimits::default(),
+                    )
+                } else {
+                    let c = self.get_blend_constraint(&child.owner).unwrap();
+                    self.plan_blend_authoring(
+                        super::BlendAuthoringEdit::Constraint {
+                            id: c.id.clone(),
+                            parameter_id: c.parameter_id.clone(),
+                            samples: c
+                                .samples
+                                .iter()
+                                .filter(|s| s.id != child.id)
+                                .cloned()
+                                .collect(),
+                        },
+                        super::AuthoringLimits::default(),
+                    )
+                };
+                return match plan {
+                    Ok(p) => self.apply_blend_authoring_plan(&p),
+                    Err(s) => self.failed(s),
+                };
+            };
+            return match self.plan_binding_grid(edit, super::AuthoringLimits::default()) {
+                Ok(p) => self.apply_binding_grid_plan(&p),
+                Err(s) => self.failed(s),
+            };
         }
         if id == self.content.id || !self.contains_id(id) {
             return self.failed(Status::error("MISSING_OBJECT", id));

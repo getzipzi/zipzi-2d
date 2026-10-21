@@ -5,8 +5,10 @@ use kasane_core::document::ExpressionTarget;
 use kasane_core::{ChangeKind, Document};
 use serde::Serialize;
 use std::collections::{BTreeSet, HashSet};
+mod binding;
 mod motion;
 mod physics;
+pub use binding::BindingReferenceChange;
 pub use motion::{MotionReferenceChange, MotionReferenceValue};
 pub use physics::{PhysicsReferenceChange, PhysicsReferenceValue};
 
@@ -30,6 +32,14 @@ pub struct EntityRef {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CollectionRef {
+    DeformationChildren {
+        document_id: String,
+        parent_id: String,
+    },
+    BindingGrid {
+        document_id: String,
+        binding_id: String,
+    },
     Physics {
         document_id: String,
         owner: Option<String>,
@@ -63,6 +73,7 @@ pub struct ChangeSet {
     pub references: Vec<ReferenceChange>,
     pub motion_references: Vec<MotionReferenceChange>,
     pub physics_references: Vec<PhysicsReferenceChange>,
+    pub binding_references: Vec<BindingReferenceChange>,
     pub resource_content: Vec<EntityRef>,
     pub categories: BTreeSet<ChangeCategory>,
     pub full_invalidation: bool,
@@ -78,6 +89,9 @@ impl ChangeSet {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.physics_references {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+        }
+        for edge in &mut inverse.binding_references {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         inverse
@@ -98,6 +112,14 @@ impl ChangeSet {
                 .collections
                 .iter()
                 .map(|c| match c {
+                    CollectionRef::DeformationChildren {
+                        document_id,
+                        parent_id,
+                    } => document_id.capacity() + parent_id.capacity(),
+                    CollectionRef::BindingGrid {
+                        document_id,
+                        binding_id,
+                    } => document_id.capacity() + binding_id.capacity(),
                     CollectionRef::Physics {
                         document_id,
                         owner,
@@ -166,6 +188,18 @@ impl ChangeSet {
                 })
                 .sum::<usize>()
             + self.categories.len() * (std::mem::size_of::<ChangeCategory>() + 64)
+            + self
+                .binding_references
+                .iter()
+                .map(|r| {
+                    std::mem::size_of::<BindingReferenceChange>()
+                        + r.entity.id.capacity()
+                        + r.entity.document_id.capacity()
+                        + r.field.capacity()
+                        + r.before.as_ref().map_or(0, String::capacity)
+                        + r.after.as_ref().map_or(0, String::capacity)
+                })
+                .sum::<usize>()
     }
 }
 
@@ -296,6 +330,8 @@ pub(crate) fn summarize(
     }
     motion::summarize_motion(before, after, &mut out);
     physics::summarize_physics(before, after, &mut out);
+    binding::summarize_bindings(before, after, object_ids, &mut out);
+    binding::summarize_binding_children(before, after, object_ids, &mut out);
     // Persistent authoring flags affect capabilities even when domain content
     // is unchanged. Derive them from both states so undo uses the same summary.
     if before.editor_state() != after.editor_state() {

@@ -11,6 +11,7 @@ pub(crate) fn blend_binding_from_tuple(data: BlendBindingDataTuple) -> PyResult<
                     .map(
                         |(positions, _, _, _, opacity, draw_order, _, multiply, screen)| {
                             DeltaMeshKeyform {
+                                sample_id: Default::default(),
                                 positions: positions
                                     .into_iter()
                                     .map(|(x, y)| Vec2::new(x, y))
@@ -32,6 +33,7 @@ pub(crate) fn blend_binding_from_tuple(data: BlendBindingDataTuple) -> PyResult<
                     .into_iter()
                     .map(
                         |(points, _, _, _, opacity, _, _, multiply, screen)| DeltaWarpKeyform {
+                            sample_id: Default::default(),
                             points: points.into_iter().map(|(x, y)| Vec2::new(x, y)).collect(),
                             opacity,
                             multiply: multiply.map(|(r, g, b)| [r, g, b]),
@@ -49,6 +51,7 @@ pub(crate) fn blend_binding_from_tuple(data: BlendBindingDataTuple) -> PyResult<
                     .map(
                         |(_, origin, angle, scale, opacity, _, _, multiply, screen)| {
                             DeltaRotationKeyform {
+                                sample_id: Default::default(),
                                 origin: origin.map(|(x, y)| Vec2::new(x, y)),
                                 angle,
                                 scale,
@@ -68,7 +71,10 @@ pub(crate) fn blend_binding_from_tuple(data: BlendBindingDataTuple) -> PyResult<
                     .into_iter()
                     .map(|(_, _, _, _, _, draw_order, _, _, _)| {
                         draw_order
-                            .map(|draw_order| DeltaPartKeyform { draw_order })
+                            .map(|draw_order| DeltaPartKeyform {
+                                sample_id: Default::default(),
+                                draw_order,
+                            })
                             .ok_or_else(|| PyValueError::new_err("Part delta requires draw_order"))
                     })
                     .collect::<PyResult<_>>()?,
@@ -81,7 +87,10 @@ pub(crate) fn blend_binding_from_tuple(data: BlendBindingDataTuple) -> PyResult<
                     .into_iter()
                     .map(|(_, _, _, _, _, _, intensity, _, _)| {
                         intensity
-                            .map(|intensity| DeltaGlueKeyform { intensity })
+                            .map(|intensity| DeltaGlueKeyform {
+                                sample_id: Default::default(),
+                                intensity,
+                            })
                             .ok_or_else(|| PyValueError::new_err("Glue delta requires intensity"))
                     })
                     .collect::<PyResult<_>>()?,
@@ -95,6 +104,7 @@ pub(crate) fn blend_binding_from_tuple(data: BlendBindingDataTuple) -> PyResult<
                     .map(|(_, _, _, _, opacity, _, _, multiply, screen)| {
                         opacity
                             .map(|opacity| DeltaOffscreenKeyform {
+                                sample_id: Default::default(),
                                 opacity,
                                 multiply: multiply.map(|(r, g, b)| [r, g, b]),
                                 screen: screen.map(|(r, g, b)| [r, g, b]),

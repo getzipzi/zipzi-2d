@@ -383,19 +383,31 @@ impl Default for Part {
 pub struct WarpKeyform {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bezier: Option<crate::WarpBezier>,
+    /// Import-only numeric coordinates; canonical documents derive these from samples.
+    #[serde(skip)]
     pub keys: Vec<f32>,
+    #[serde(default)]
+    pub samples: Vec<String>,
     pub positions: Vec<Vec2>,
     pub appearance: Appearance,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct RotationKeyform {
+    /// Import-only numeric coordinates; canonical documents derive these from samples.
+    #[serde(skip)]
     pub keys: Vec<f32>,
+    #[serde(default)]
+    pub samples: Vec<String>,
     pub rotation: RotationPose,
     pub appearance: Appearance,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct PartKeyform {
+    /// Import-only numeric coordinates; canonical documents derive these from samples.
+    #[serde(skip)]
     pub keys: Vec<f32>,
+    #[serde(default)]
+    pub samples: Vec<String>,
     pub draw_order: f32,
 }
 /// A single typed replacement; a track only accepts its matching variant.
@@ -520,22 +532,34 @@ pub enum BlendShapeTargetKind {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlendShapeKeyTable {
+    #[serde(default)]
+    pub samples: Vec<BindingSample>,
+    #[serde(default)]
+    pub base_sample_id: String,
     pub id: String,
     pub parameter_id: String,
+    #[serde(skip)]
     pub keys: Vec<f32>,
+    #[serde(skip)]
     pub base_key_idx: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlendShapeConstraint {
+    #[serde(default)]
+    pub samples: Vec<ConstraintSample>,
     pub id: String,
     pub parameter_id: String,
+    #[serde(skip)]
     pub keys: Vec<f32>,
+    #[serde(skip)]
     pub weights: Vec<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DeltaMeshKeyform {
+    #[serde(default)]
+    pub sample_id: String,
     pub positions: Vec<Vec2>,
     pub opacity: Option<f32>,
     pub draw_order: Option<f32>,
@@ -545,6 +569,8 @@ pub struct DeltaMeshKeyform {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DeltaWarpKeyform {
+    #[serde(default)]
+    pub sample_id: String,
     pub points: Vec<Vec2>,
     pub opacity: Option<f32>,
     pub multiply: Option<[f32; 3]>,
@@ -553,6 +579,8 @@ pub struct DeltaWarpKeyform {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DeltaRotationKeyform {
+    #[serde(default)]
+    pub sample_id: String,
     pub origin: Option<Vec2>,
     pub angle: Option<f32>,
     pub scale: Option<f32>,
@@ -563,16 +591,22 @@ pub struct DeltaRotationKeyform {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DeltaPartKeyform {
+    #[serde(default)]
+    pub sample_id: String,
     pub draw_order: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DeltaGlueKeyform {
+    #[serde(default)]
+    pub sample_id: String,
     pub intensity: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct DeltaOffscreenKeyform {
+    #[serde(default)]
+    pub sample_id: String,
     pub opacity: f32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub multiply: Option<[f32; 3]>,
@@ -649,12 +683,58 @@ pub struct GlueBinding {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GlueKeyform {
+    #[serde(default)]
+    pub samples: Vec<String>,
     pub intensity: f32,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BindingSample {
+    pub id: String,
+    pub value: f32,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConstraintSample {
+    pub id: String,
+    pub value: f32,
+    pub weight: f32,
+}
+impl BindingAxis {
+    pub fn new(parameter_id: impl Into<String>, keys: Vec<f32>) -> Self {
+        let samples = keys
+            .iter()
+            .map(|&value| BindingSample {
+                id: uuid::Uuid::new_v4().to_string(),
+                value,
+            })
+            .collect();
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            parameter_id: parameter_id.into(),
+            keys,
+            samples,
+        }
+    }
+    pub fn set_values(&mut self, values: Vec<f32>) {
+        assert_eq!(
+            values.len(),
+            self.samples.len(),
+            "Use a grid conversion to change sample count"
+        );
+        for (sample, &value) in self.samples.iter_mut().zip(&values) {
+            sample.value = value;
+        }
+        self.keys = values;
+    }
+}
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct BindingAxis {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub samples: Vec<BindingSample>,
     pub parameter_id: String,
+    #[serde(skip)]
     pub keys: Vec<f32>,
 }
 
@@ -741,7 +821,11 @@ impl Default for Offscreen {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct MeshKeyform {
+    /// Import-only numeric coordinates; canonical documents derive these from samples.
+    #[serde(skip)]
     pub keys: Vec<f32>,
+    #[serde(default)]
+    pub samples: Vec<String>,
     pub positions: Vec<Vec2>,
     pub appearance: Appearance,
     pub draw_order: Option<f32>,
@@ -822,6 +906,13 @@ impl SceneTrack {
     }
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+    pub fn sample_ids(&self, index: usize) -> &[String] {
+        match self {
+            Self::Warp { keyforms, .. } => &keyforms[index].samples,
+            Self::Rotation { keyforms, .. } => &keyforms[index].samples,
+            Self::Part { keyforms, .. } => &keyforms[index].samples,
+        }
     }
     pub fn sample(&self, index: usize) -> SceneSample<'_> {
         match self {

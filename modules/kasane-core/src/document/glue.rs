@@ -66,12 +66,16 @@ impl Document {
             );
         }
         if let Some(binding) = &glue.binding {
-            if binding.axes.is_empty() || binding.axes.len() > 16 {
+            if binding.axes.len() > 16 {
                 return Status::error("INVALID_BINDING", "Glue requires 1..16 axes");
             }
-            let mut total = 1usize;
+            let mut total = if binding.axes.iter().all(|a| a.parameter_id.is_empty()) {
+                0usize
+            } else {
+                1usize
+            };
             let mut seen = HashSet::new();
-            for axis in &binding.axes {
+            for axis in binding.axes.iter().filter(|a| !a.parameter_id.is_empty()) {
                 let Some(p) = self.get_parameter(&axis.parameter_id) else {
                     return Status::error("MISSING_PARAMETER", &axis.parameter_id);
                 };
@@ -98,6 +102,24 @@ impl Document {
             if binding.keyforms.len() != total {
                 return Status::error("INCOMPLETE_KEYFORMS", &glue.id);
             }
+            let active: Vec<_> = binding
+                .axes
+                .iter()
+                .filter(|a| !a.parameter_id.is_empty())
+                .collect();
+            for (mut slot, f) in binding.keyforms.iter().enumerate() {
+                let expected: Vec<_> = active
+                    .iter()
+                    .map(|a| {
+                        let i = slot % a.samples.len();
+                        slot /= a.samples.len();
+                        &a.samples[i].id
+                    })
+                    .collect();
+                if f.samples.iter().ne(expected.into_iter()) {
+                    return Status::error("INVALID_SAMPLE_REFERENCE", &glue.id);
+                }
+            }
             if binding.keyforms.iter().any(|k| !k.intensity.is_finite()) {
                 return Status::error("INVALID_GLUE", "Glue keyform intensity must be finite");
             }
@@ -105,7 +127,23 @@ impl Document {
         Status::ok()
     }
 
-    pub fn create_glue(&mut self, glue: Glue) -> EditResult {
+    pub fn create_glue(&mut self, mut glue: Glue) -> EditResult {
+        if let Some(b) = &mut glue.binding {
+            if let Err(s) = self.normalize_owner_axes(&glue.id, &mut b.axes) {
+                return self.failed(s);
+            }
+            if let Err(s) = self.check_binding_ids(
+                &glue.id,
+                b.axes.iter().flat_map(|a| {
+                    std::iter::once(a.id.clone()).chain(a.samples.iter().map(|s| s.id.clone()))
+                }),
+            ) {
+                return self.failed(s);
+            }
+        }
+        if let Err(s) = self.normalize_glue_forms(&mut glue) {
+            return self.failed(s);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &glue.id));
         }
@@ -136,7 +174,26 @@ impl Document {
         self.changed(ChangeKind::Structure, affected, vec![id, mesh_a, mesh_b])
     }
 
-    pub fn replace_glue(&mut self, glue: Glue) -> EditResult {
+    pub fn replace_glue(&mut self, mut glue: Glue) -> EditResult {
+        if let Some(b) = &mut glue.binding {
+            if let Err(s) = self.normalize_owner_axes(&glue.id, &mut b.axes) {
+                return self.failed(s);
+            }
+            if let Err(s) = self.check_binding_ids(
+                &glue.id,
+                b.axes.iter().flat_map(|a| {
+                    std::iter::once(a.id.clone()).chain(a.samples.iter().map(|s| s.id.clone()))
+                }),
+            ) {
+                return self.failed(s);
+            }
+        }
+        if let Err(status) = self.authoring_unlocked(&glue.id) {
+            return self.failed(status);
+        }
+        if let Err(s) = self.normalize_glue_forms(&mut glue) {
+            return self.failed(s);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &glue.id));
         }

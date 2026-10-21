@@ -189,6 +189,8 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
         let sb = SceneBinding {
             id: make_id(0x0006, t),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: out_params[0].clone(),
                 keys: vec![-1., 0., 1.],
             }],
@@ -243,10 +245,14 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
             mesh_id: mesh_id.clone(),
             axes: vec![
                 BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: out_params[1].clone(),
                     keys: vec![-1.0, 0.0, 1.0],
                 },
                 BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: out_params[2].clone(),
                     keys: vec![-1.0, 1.0],
                 },

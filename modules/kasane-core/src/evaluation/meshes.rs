@@ -43,7 +43,9 @@ pub(super) fn evaluate(
             && part_slot.is_none_or(|slot| state.enabled_parts[slot])
             && parent_slot.is_none_or(|slot| state.transforms[slot].enabled);
 
-        let b = doc.binding_for_mesh(id);
+        let b = doc
+            .binding_for_mesh(id)
+            .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()));
         let selection = prepared.mesh_selections[mesh_index].map(|slot| &state.selections[slot]);
         if let Some(sel) = selection {
             d.visible &= sel.enabled;
@@ -82,7 +84,7 @@ pub(super) fn evaluate(
                 order = sum;
             }
 
-            let mut bs_list = doc.iter_blend_bindings_for_target(id).peekable();
+            let mut bs_list = doc.iter_active_blend_bindings_for_target(id).peekable();
             if bs_list.peek().is_some() {
                 order = f32_to_i32(order + 0.001) as f32;
                 for bs in bs_list {

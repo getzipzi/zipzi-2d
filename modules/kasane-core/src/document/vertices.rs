@@ -43,6 +43,9 @@ impl Document {
         let mut changed_mesh_set = HashSet::new();
 
         for update in updates {
+            if let Err(status) = self.authoring_unlocked(&update.mesh_id) {
+                return self.failed(status);
+            }
             let mesh = match self.content.meshes.get(&update.mesh_id) {
                 Some(m) => m,
                 None => return self.failed(Status::error("MISSING_MESH", "Mesh does not exist.")),

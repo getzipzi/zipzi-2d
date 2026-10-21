@@ -179,6 +179,26 @@ class Session:
         """Return explicit root registrations, including stable IDs and overrides."""
         return json.loads(self._native.motion_roots_json())
 
+    def binding_source(self, owner_id: str) -> dict | None:
+        """Read native binding source, including stable axis/sample identities."""
+        raw = self._native.binding_source_json(owner_id)
+        return None if raw is None else json.loads(raw)
+
+    def binding_field_address(self, object_id: str):
+        """Capture an axis/sample address with non-rewindable context protection."""
+        return self._native.binding_field_address(object_id)
+
+    def plan_binding_field_patch(self, address, patch: Mapping[str, object]):
+        """Plan a field patch after validating its identity and captured context."""
+        return self._native.plan_binding_field_patch_json(address, json.dumps(dict(patch)))
+
+    def plan_binding_authoring(self, intent: Mapping[str, object]):
+        """Plan binding changes through the shared Rust SDK rules."""
+        return self._native.plan_binding_authoring_json(json.dumps(dict(intent)))
+
+    def execute_binding_plan(self, plan) -> Version:
+        return self._native.execute_binding_plan(plan)
+
     def plan_physics_authoring(self, intent: Mapping[str, object]):
         """Plan a PhysicsEdit; inspect affected_ids before accepting."""
         return self._native.plan_physics_authoring_json(json.dumps(intent))

@@ -1,5 +1,6 @@
 mod assets;
 mod attachments;
+mod binding_authoring;
 mod bindings;
 mod blendshapes;
 mod canvas;
@@ -28,6 +29,7 @@ mod vertices;
 pub use attachments::{
     valid_attachment_path, AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment,
 };
+pub use binding_authoring::*;
 pub use checkpoint::DocumentCheckpoint;
 pub use display_info::{
     CdiCombinedSet, CdiNamespaceIds, CdiParameterEntry, CdiParameterGroup, CdiParameterRef,
@@ -88,6 +90,7 @@ pub struct Document {
     // keeps read-only queries thread-safe without repeating deep comparisons.
     modified_cache: OnceLock<bool>,
     lookup: OnceLock<DocumentLookup>,
+    binding_lookup: OnceLock<Arc<binding_authoring::identity::BindingLookup>>,
     expression_entries: OnceLock<HashMap<String, (String, usize)>>,
     motion_lookup: OnceLock<Arc<motions::MotionLookup>>,
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
@@ -149,7 +152,7 @@ struct DocumentContent {
 }
 
 impl Document {
-    pub const SCHEMA_VERSION: u32 = 6;
+    pub const SCHEMA_VERSION: u32 = 7;
 
     pub fn new() -> Self {
         Self::default()
@@ -323,6 +326,7 @@ impl Document {
         }
         self.batch_build_active = false;
         self.lookup.take();
+        self.binding_lookup.take();
         self.expression_entries.take();
         self.motion_lookup.take();
         self.prepared.take();
@@ -337,7 +341,8 @@ impl Document {
     }
 
     pub fn contains_id(&self, id: &str) -> bool {
-        self.contains_base_identity(id)
+        self.binding_identity(id).is_some()
+            || self.contains_base_identity(id)
             || self.get_motion_track(id).is_some()
             || self.get_motion_key(id).is_some()
             || self.get_motion_event(id).is_some()
@@ -423,6 +428,21 @@ impl Document {
         }) {
             self.motion_lookup.take();
         }
+        if kind == ChangeKind::Structure && !self.content.editor_state.is_empty() {
+            self.binding_lookup.take();
+            // Owned sample deletion also deletes its authoring-only flags.
+            let removed: Vec<_> = self
+                .content
+                .editor_state
+                .objects
+                .keys()
+                .filter(|id| !self.contains_id(id))
+                .cloned()
+                .collect();
+            for id in removed {
+                self.content.editor_state.objects.remove(&id);
+            }
+        }
         self.snapshot_identity = Arc::new(());
         // Batch construction mutates content without advancing revision too.
         self.modified_cache.take();
@@ -432,6 +452,7 @@ impl Document {
             }
             if kind == ChangeKind::Structure {
                 self.lookup.take();
+                self.binding_lookup.take();
                 self.prepared.take();
             }
             return EditResult {
@@ -451,6 +472,7 @@ impl Document {
         // References only change with structure edits; vertex drags retain the index.
         if kind == ChangeKind::Structure {
             self.lookup.take();
+            self.binding_lookup.take();
             self.prepared.take();
         }
         self.revision += 1;

@@ -258,10 +258,14 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
                 mesh_id: mesh_id.clone(),
                 axes: vec![
                     BindingAxis {
+                        id: Default::default(),
+                        samples: Default::default(),
                         parameter_id: out_params[0].clone(),
                         keys: vec![-1.0, 0.0, 1.0],
                     },
                     BindingAxis {
+                        id: Default::default(),
+                        samples: Default::default(),
                         parameter_id: out_params[1].clone(),
                         keys: vec![-1.0, 1.0],
                     },

@@ -67,6 +67,8 @@ impl<'a> Moc3DecoderContext<'a> {
             check_status!(
                 self.doc
                     .create_blend_key_table(BlendShapeKeyTable {
+                        samples: Default::default(),
+                        base_sample_id: Default::default(),
                         id: bkt_id,
                         parameter_id,
                         keys,
@@ -124,6 +126,7 @@ impl<'a> Moc3DecoderContext<'a> {
             check_status!(
                 self.doc
                     .create_blend_constraint(BlendShapeConstraint {
+                        samples: Default::default(),
                         id: bsc_id,
                         parameter_id,
                         keys,
@@ -373,7 +376,10 @@ impl<'a> Moc3DecoderContext<'a> {
                             offsets[section::PART_KEY_SRC_DRAW_ORDER] as usize
                                 + (key_bs_off + k) * 4,
                         )?;
-                        forms.push(DeltaPartKeyform { draw_order });
+                        forms.push(DeltaPartKeyform {
+                            sample_id: Default::default(),
+                            draw_order,
+                        });
                     }
                     DeltaKeyforms::Part(forms)
                 }
@@ -413,6 +419,7 @@ impl<'a> Moc3DecoderContext<'a> {
                             ki,
                         )?;
                         forms.push(DeltaWarpKeyform {
+                            sample_id: Default::default(),
                             points,
                             opacity: Some(op),
                             multiply: mul,
@@ -454,6 +461,7 @@ impl<'a> Moc3DecoderContext<'a> {
                             ki,
                         )?;
                         forms.push(DeltaRotationKeyform {
+                            sample_id: Default::default(),
                             origin: Some(origin),
                             angle: Some(self.import_angle(ang)),
                             scale: Some(sc),
@@ -502,6 +510,7 @@ impl<'a> Moc3DecoderContext<'a> {
                             ki,
                         )?;
                         forms.push(DeltaMeshKeyform {
+                            sample_id: Default::default(),
                             positions,
                             opacity: Some(op),
                             draw_order: Some(d_order),
@@ -519,7 +528,10 @@ impl<'a> Moc3DecoderContext<'a> {
                             self.bytes,
                             offsets[section::GLUE_KEY_SRC_INTENSITY] as usize + ki * 4,
                         )?;
-                        forms.push(DeltaGlueKeyform { intensity });
+                        forms.push(DeltaGlueKeyform {
+                            sample_id: Default::default(),
+                            intensity,
+                        });
                     }
                     DeltaKeyforms::Glue(forms)
                 }
@@ -537,6 +549,7 @@ impl<'a> Moc3DecoderContext<'a> {
                             ki,
                         )?;
                         forms.push(DeltaOffscreenKeyform {
+                            sample_id: Default::default(),
                             opacity: op,
                             multiply: mul,
                             screen: scr,

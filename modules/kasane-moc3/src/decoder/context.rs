@@ -314,6 +314,8 @@ impl<'a> Moc3DecoderContext<'a> {
             }
 
             axes.push(BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: self.mapping.parameter_by_index[p].clone(),
                 keys,
             });

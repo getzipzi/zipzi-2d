@@ -7,7 +7,7 @@ use crate::{Appearance, PreviewValues};
 pub enum PropertyPatch {
     Mesh {
         id: String,
-        keyform: Option<(String, Vec<f32>)>,
+        keyform: Option<(String, Vec<String>)>,
         appearance: Appearance,
         draw_order: Option<f32>,
     },
@@ -55,7 +55,7 @@ impl PropertyPatch {
         Ok(match self {
             Self::Mesh { id, keyform, .. } => {
                 let mesh = doc.get_mesh(id).ok_or_else(missing)?;
-                let (appearance, draw_order) = if let Some((binding, keys)) = keyform {
+                let (appearance, draw_order) = if let Some((binding, samples)) = keyform {
                     let binding = doc
                         .get_binding(binding)
                         .filter(|b| b.mesh_id == *id)
@@ -63,7 +63,10 @@ impl PropertyPatch {
                     let form = binding
                         .keyforms
                         .iter()
-                        .find(|f| f.keys == *keys)
+                        .find(|f| {
+                            f.samples.len() == samples.len()
+                                && f.samples.iter().all(|id| samples.contains(id))
+                        })
                         .ok_or_else(missing)?;
                     (form.appearance, form.draw_order)
                 } else {
@@ -135,6 +138,25 @@ impl Document {
         if let Err(status) = patch.current(self) {
             return self.failed(status);
         }
+        let target = match patch {
+            PropertyPatch::Mesh { id, keyform, .. } => {
+                if let Some((binding, _)) = keyform {
+                    if let Err(s) = self.authoring_unlocked(binding) {
+                        return self.failed(s);
+                    }
+                }
+                Some(id)
+            }
+            PropertyPatch::Parameter { id, .. }
+            | PropertyPatch::Part { id, .. }
+            | PropertyPatch::Glue { id, .. } => Some(id),
+            _ => None,
+        };
+        if let Some(id) = target {
+            if let Err(s) = self.authoring_unlocked(id) {
+                return self.failed(s);
+            }
+        }
         match patch {
             PropertyPatch::Mesh {
                 id,
@@ -154,7 +176,7 @@ impl Document {
                 }
                 let order_changed;
                 let mut objects = vec![id.clone()];
-                if let Some((binding, keys)) = keyform {
+                if let Some((binding, samples)) = keyform {
                     let form = self
                         .content
                         .bindings
@@ -162,7 +184,10 @@ impl Document {
                         .unwrap()
                         .keyforms
                         .iter_mut()
-                        .find(|f| f.keys == *keys)
+                        .find(|f| {
+                            f.samples.len() == samples.len()
+                                && f.samples.iter().all(|id| samples.contains(id))
+                        })
                         .unwrap();
                     order_changed = form.draw_order != *draw_order;
                     form.appearance = *appearance;

@@ -53,6 +53,17 @@ impl Document {
     }
 
     pub fn validate_offscreen(&self, os: &Offscreen) -> Status {
+        let klen = self
+            .binding_for_scene(&os.part_id)
+            .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+            .map_or(1, |binding| binding.track.len());
+        self.validate_offscreen_key_count(os, klen)
+    }
+    pub(in crate::document) fn validate_offscreen_key_count(
+        &self,
+        os: &Offscreen,
+        klen: usize,
+    ) -> Status {
         if !valid_uuid(&os.id) {
             return Status::error("INVALID_ID", format!("{}: invalid UUID", os.id));
         }
@@ -106,9 +117,6 @@ impl Document {
                 }
             }
         }
-        let klen = self
-            .binding_for_scene(&os.part_id)
-            .map_or(1, |binding| binding.track.len());
         if !os.part_keyform_indices.is_empty() && os.part_keyform_indices.len() != klen {
             return Status::error(
                 "INVALID_LENGTH",
@@ -137,6 +145,9 @@ impl Document {
     }
 
     pub fn create_offscreen(&mut self, offscreen: Offscreen) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&offscreen.part_id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &offscreen.id));
         }
@@ -163,6 +174,11 @@ impl Document {
     }
 
     pub fn replace_offscreen(&mut self, offscreen: Offscreen) -> EditResult {
+        for id in [&offscreen.id, &offscreen.part_id] {
+            if let Err(status) = self.authoring_unlocked(id) {
+                return self.failed(status);
+            }
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &offscreen.id));
         }

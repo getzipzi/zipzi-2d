@@ -266,6 +266,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 appearance.opacity = opacity;
 
                 keyforms.push(MeshKeyform {
+                    samples: Default::default(),
                     keys: if is_bound {
                         Self::combo_keys(&axes, k)
                     } else {

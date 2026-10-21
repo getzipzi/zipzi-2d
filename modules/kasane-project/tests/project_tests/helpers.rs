@@ -149,6 +149,8 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
         id: id(7),
         mesh_id: id(4),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(6),
             keys: vec![-1.0, 0.0, 1.0],
         }],
@@ -156,6 +158,7 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
     };
     for &k in &[-1.0f32, 0.0, 1.0] {
         let mut kf = MeshKeyform {
+            samples: Default::default(),
             keys: vec![k],
             positions: doc.get_mesh(&id(4)).unwrap().base_positions.clone(),
             appearance: Appearance::default(),
@@ -177,6 +180,7 @@ pub(crate) fn scene_binding(doc: &mut Document) {
             keyforms: [-1., 1.]
                 .into_iter()
                 .map(|key| WarpKeyform {
+                    samples: Default::default(),
                     bezier: None,
                     keys: vec![key],
                     positions: w.points.clone(),
@@ -189,6 +193,7 @@ pub(crate) fn scene_binding(doc: &mut Document) {
             keyforms: [-1., 1.]
                 .into_iter()
                 .map(|key| RotationKeyform {
+                    samples: Default::default(),
                     keys: vec![key],
                     rotation: r.pose,
                     appearance: transform.appearance,
@@ -199,6 +204,8 @@ pub(crate) fn scene_binding(doc: &mut Document) {
     let binding = kasane_core::SceneBinding {
         id: sid(99),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(6),
             keys: vec![-1., 1.],
         }],

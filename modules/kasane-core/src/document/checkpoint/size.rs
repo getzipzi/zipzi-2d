@@ -118,12 +118,7 @@ no_extra!(
     u32,
     Vec2,
     GlueVertexPair,
-    GlueKeyform,
     OffscreenKeyform,
-    DeltaRotationKeyform,
-    DeltaPartKeyform,
-    DeltaGlueKeyform,
-    DeltaOffscreenKeyform,
     MotionPoint
 );
 
@@ -459,12 +454,15 @@ impl ExtraBytes for PackageAttachment {
 }
 impl ExtraBytes for BindingAxis {
     fn extra_bytes(&self) -> usize {
-        self.parameter_id.capacity() + self.keys.extra_bytes()
+        self.id.capacity()
+            + self.samples.extra_bytes()
+            + self.parameter_id.capacity()
+            + self.keys.extra_bytes()
     }
 }
 impl ExtraBytes for MeshKeyform {
     fn extra_bytes(&self) -> usize {
-        self.keys.extra_bytes() + self.positions.extra_bytes()
+        self.samples.extra_bytes() + self.keys.extra_bytes() + self.positions.extra_bytes()
     }
 }
 impl ExtraBytes for MeshBinding {
@@ -477,7 +475,8 @@ impl ExtraBytes for MeshBinding {
 }
 impl ExtraBytes for WarpKeyform {
     fn extra_bytes(&self) -> usize {
-        self.keys.extra_bytes()
+        self.samples.extra_bytes()
+            + self.keys.extra_bytes()
             + self.positions.extra_bytes()
             + self.bezier.as_ref().map_or(0, |b| {
                 b.nodes.capacity() * std::mem::size_of::<crate::WarpBezierNode>()
@@ -486,12 +485,12 @@ impl ExtraBytes for WarpKeyform {
 }
 impl ExtraBytes for RotationKeyform {
     fn extra_bytes(&self) -> usize {
-        self.keys.extra_bytes()
+        self.samples.extra_bytes() + self.keys.extra_bytes()
     }
 }
 impl ExtraBytes for PartKeyform {
     fn extra_bytes(&self) -> usize {
-        self.keys.extra_bytes()
+        self.samples.extra_bytes() + self.keys.extra_bytes()
     }
 }
 impl ExtraBytes for SceneTrack {
@@ -524,12 +523,17 @@ impl ExtraBytes for DrawOrderGroup {
 }
 impl ExtraBytes for BlendShapeKeyTable {
     fn extra_bytes(&self) -> usize {
-        self.id.capacity() + self.parameter_id.capacity() + self.keys.extra_bytes()
+        self.samples.extra_bytes()
+            + self.base_sample_id.capacity()
+            + self.id.capacity()
+            + self.parameter_id.capacity()
+            + self.keys.extra_bytes()
     }
 }
 impl ExtraBytes for BlendShapeConstraint {
     fn extra_bytes(&self) -> usize {
-        self.id.capacity()
+        self.samples.extra_bytes()
+            + self.id.capacity()
             + self.parameter_id.capacity()
             + self.keys.extra_bytes()
             + self.weights.extra_bytes()
@@ -537,12 +541,12 @@ impl ExtraBytes for BlendShapeConstraint {
 }
 impl ExtraBytes for DeltaMeshKeyform {
     fn extra_bytes(&self) -> usize {
-        self.positions.extra_bytes()
+        self.sample_id.capacity() + self.positions.extra_bytes()
     }
 }
 impl ExtraBytes for DeltaWarpKeyform {
     fn extra_bytes(&self) -> usize {
-        self.points.extra_bytes()
+        self.sample_id.capacity() + self.points.extra_bytes()
     }
 }
 impl ExtraBytes for DeltaKeyforms {
@@ -661,5 +665,41 @@ impl ExtraBytes for super::super::PhysicsTarget {
             Self::Resolved { parameter_id } => parameter_id.capacity(),
             Self::Unresolved { runtime_id } => runtime_id.capacity(),
         }
+    }
+}
+
+impl ExtraBytes for crate::BindingSample {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity()
+    }
+}
+impl ExtraBytes for crate::ConstraintSample {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity()
+    }
+}
+impl ExtraBytes for GlueKeyform {
+    fn extra_bytes(&self) -> usize {
+        self.samples.extra_bytes()
+    }
+}
+impl ExtraBytes for DeltaRotationKeyform {
+    fn extra_bytes(&self) -> usize {
+        self.sample_id.capacity()
+    }
+}
+impl ExtraBytes for DeltaPartKeyform {
+    fn extra_bytes(&self) -> usize {
+        self.sample_id.capacity()
+    }
+}
+impl ExtraBytes for DeltaGlueKeyform {
+    fn extra_bytes(&self) -> usize {
+        self.sample_id.capacity()
+    }
+}
+impl ExtraBytes for DeltaOffscreenKeyform {
+    fn extra_bytes(&self) -> usize {
+        self.sample_id.capacity()
     }
 }

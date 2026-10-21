@@ -33,6 +33,8 @@ fn test_glue_blendshape_asymmetric_weights() {
     assert!(doc.create_glue(glue).status.is_ok());
 
     let bkt = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: KEY_TABLE.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -47,8 +49,14 @@ fn test_glue_blendshape_asymmetric_weights() {
         key_table_id: KEY_TABLE.to_string(),
         constraint_ids: vec![],
         keyforms: DeltaKeyforms::Glue(vec![
-            DeltaGlueKeyform { intensity: 0.0 },
-            DeltaGlueKeyform { intensity: 1.0 },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.0,
+            },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 1.0,
+            },
         ]),
     };
     assert!(doc.create_blend_binding(binding).status.is_ok());
@@ -137,6 +145,8 @@ fn test_glue_blendshape_ordered_multiple_glues() {
     assert!(doc.create_glue(glue2).status.is_ok());
 
     let bkt = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: KEY_TABLE.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -152,8 +162,14 @@ fn test_glue_blendshape_ordered_multiple_glues() {
         key_table_id: KEY_TABLE.to_string(),
         constraint_ids: vec![],
         keyforms: DeltaKeyforms::Glue(vec![
-            DeltaGlueKeyform { intensity: 0.0 },
-            DeltaGlueKeyform { intensity: 1.0 },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.0,
+            },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 1.0,
+            },
         ]),
     };
     assert!(doc.create_blend_binding(b1).status.is_ok());
@@ -167,8 +183,14 @@ fn test_glue_blendshape_ordered_multiple_glues() {
         key_table_id: KEY_TABLE.to_string(),
         constraint_ids: vec![],
         keyforms: DeltaKeyforms::Glue(vec![
-            DeltaGlueKeyform { intensity: 0.0 },
-            DeltaGlueKeyform { intensity: 1.0 },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.0,
+            },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 1.0,
+            },
         ]),
     };
     assert!(doc.create_blend_binding(b2).status.is_ok());
@@ -231,6 +253,8 @@ fn test_glue_blendshape_faceless_endpoints() {
     assert!(doc.create_glue(glue).status.is_ok());
 
     let bkt = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: KEY_TABLE.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -245,8 +269,14 @@ fn test_glue_blendshape_faceless_endpoints() {
         key_table_id: KEY_TABLE.to_string(),
         constraint_ids: vec![],
         keyforms: DeltaKeyforms::Glue(vec![
-            DeltaGlueKeyform { intensity: 0.0 },
-            DeltaGlueKeyform { intensity: 1.0 },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.0,
+            },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 1.0,
+            },
         ]),
     };
     assert!(doc.create_blend_binding(binding).status.is_ok());
@@ -298,6 +328,8 @@ fn test_glue_blendshape_seam_a_b_a() {
     assert!(doc.create_glue(glue).status.is_ok());
 
     let bkt = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: KEY_TABLE.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -312,8 +344,14 @@ fn test_glue_blendshape_seam_a_b_a() {
         key_table_id: KEY_TABLE.to_string(),
         constraint_ids: vec![],
         keyforms: DeltaKeyforms::Glue(vec![
-            DeltaGlueKeyform { intensity: 0.0 },
-            DeltaGlueKeyform { intensity: 0.6 },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.0,
+            },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.6,
+            },
         ]),
     };
     assert!(doc.create_blend_binding(binding).status.is_ok());

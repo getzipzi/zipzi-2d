@@ -410,6 +410,8 @@ fn test_animated_keyforms_1d_2d_3d() {
 
         for a in 0..dimensions {
             b.axes.push(BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id(6 + a),
                 keys: keys.clone(),
             });
@@ -418,6 +420,7 @@ fn test_animated_keyforms_1d_2d_3d() {
         let total: usize = keys.len().pow(dimensions as u32);
         for i in 0..total {
             let mut f = MeshKeyform {
+                samples: Default::default(),
                 keys: Vec::new(),
                 positions: doc.get_mesh(&id(4)).unwrap().base_positions.clone(),
                 appearance: Appearance::default(),
@@ -614,6 +617,7 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
                         let mut appearance = t.appearance;
                         appearance.opacity += key * 0.05;
                         WarpKeyform {
+                            samples: Default::default(),
                             bezier: None,
                             keys: vec![key],
                             positions,
@@ -635,6 +639,7 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
                         let mut appearance = t.appearance;
                         appearance.opacity += key * 0.05;
                         RotationKeyform {
+                            samples: Default::default(),
                             keys: vec![key],
                             rotation,
                             appearance,
@@ -647,6 +652,8 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
             .create_scene_binding(SceneBinding {
                 id: sid(if t.id == root.id { 5 } else { 6 }),
                 axes: vec![BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: id(6),
                     keys: vec![-1.0, 0.0, 1.0]
                 }],
@@ -687,6 +694,8 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
     let mut part_binding = SceneBinding {
         id: sid(7),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(6),
             keys: vec![-1.0, 0.0, 1.0],
         }],
@@ -701,6 +710,7 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
             .part_keyforms_mut()
             .unwrap()
             .push(PartKeyform {
+                samples: Default::default(),
                 keys: vec![key],
                 draw_order: key * 20.0 + 20.0,
             });

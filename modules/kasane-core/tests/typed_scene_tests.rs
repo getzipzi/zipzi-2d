@@ -38,6 +38,8 @@ fn document() -> Document {
 }
 fn axes() -> Vec<BindingAxis> {
     vec![BindingAxis {
+        id: Default::default(),
+        samples: Default::default(),
         parameter_id: id(2),
         keys: vec![-1., 1.],
     }]
@@ -103,6 +105,7 @@ fn wrong_track_and_single_form_types_fail_without_mutation() {
         doc.set_scene_keyform(
             &id(4),
             SceneKeyform::Part(PartKeyform {
+                samples: Default::default(),
                 keys: vec![-1.],
                 draw_order: 2.,
             })

@@ -210,6 +210,10 @@ class Edit:
         """Replace a known-field clip using a detached motion snapshot."""
         self._call(lambda: self._native.replace_motion_json(json.dumps(dict(clip, track_order=clip.get("track_order", [])))))
 
+    def binding_authoring(self, intent: Mapping[str, object]) -> None:
+        """Apply a stable-ID grid, shared BlendShape, range, or parent intent."""
+        self._call(lambda: self._native.binding_authoring_json(json.dumps(dict(intent))))
+
     def physics_authoring(self, intent: Mapping[str, object]) -> None:
         """Apply a typed PhysicsEdit intent with the operation discriminator."""
         self._call(lambda: self._native.physics_authoring_json(json.dumps(intent)))

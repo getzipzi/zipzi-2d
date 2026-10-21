@@ -8,7 +8,7 @@ impl Exporter<'_> {
             let m = self.doc.get_mesh(id).unwrap();
             let owner = self.source(id);
             let uvs: Vec<_> = m.uvs.iter().map(|uv| Vec2::new(uv.x, 1. - uv.y)).collect();
-            let binding = self.doc.binding_for_mesh(id);
+            let binding = self.doc.binding_for_mesh(id).filter(|b| !b.axes.is_empty());
             let rest = self.rest[id].clone();
             let mut guids = Vec::new();
             let mut forms = Vec::new();

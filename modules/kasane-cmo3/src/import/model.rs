@@ -161,6 +161,7 @@ pub(super) fn read(
                         .iter()
                         .map(|(keys, form)| {
                             Ok(WarpKeyform {
+                                samples: Default::default(),
                                 keys: keys.clone(),
                                 positions: positions(g, *form, &parent, canvas)?,
                                 appearance: appearance(g, *form)?,
@@ -186,6 +187,7 @@ pub(super) fn read(
                         .iter()
                         .map(|(keys, form)| {
                             Ok(RotationKeyform {
+                                samples: Default::default(),
                                 keys: keys.clone(),
                                 rotation: rotation(*form, &parent, canvas)?,
                                 appearance: appearance(g, *form)?,
@@ -243,6 +245,7 @@ pub(super) fn read(
                         .iter()
                         .map(|(keys, n)| {
                             Ok(PartKeyform {
+                                samples: Default::default(),
                                 keys: keys.clone(),
                                 draw_order: g.number(*n, "drawOrder")?,
                             })
@@ -447,6 +450,7 @@ pub(super) fn read(
                 .iter()
                 .map(|(keys, n)| {
                     Ok(MeshKeyform {
+                        samples: Default::default(),
                         keys: keys.clone(),
                         positions: positions(g, *n, &parent, canvas)?,
                         appearance: appearance(g, *n)?,
@@ -505,6 +509,7 @@ pub(super) fn read(
                     .iter()
                     .map(|(_, n)| {
                         Ok(GlueKeyform {
+                            samples: Default::default(),
                             intensity: g.number(*n, "intensity")?,
                         })
                     })
@@ -610,6 +615,8 @@ pub(super) fn grid<'a>(g: &Graph<'a>, source: Node<'a>) -> Result<(Vec<BindingAx
             .map(|n| super::graph::parse(n.text().unwrap_or("")))
             .collect::<Result<_>>()?;
         axes.push(BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: g.guid(*b, "parameterGuid")?,
             keys,
         });

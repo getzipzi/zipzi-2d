@@ -282,6 +282,8 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
         .is_ok());
     assert!(d
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: table.into(),
             parameter_id: driver.into(),
             keys: vec![0., 1.],
@@ -291,6 +293,7 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
         .is_ok());
     assert!(d
         .create_blend_constraint(BlendShapeConstraint {
+            samples: Default::default(),
             id: constraint.into(),
             parameter_id: PARAM.into(),
             keys: vec![-1., 1.],
@@ -419,10 +422,21 @@ fn offscreen_material_and_keyed_glue_remain_editable() {
             intensity: 1.,
             binding: Some(GlueBinding {
                 axes: vec![BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: PARAM.into(),
                     keys: vec![-1., 1.]
                 }],
-                keyforms: vec![GlueKeyform { intensity: 0. }, GlueKeyform { intensity: 1. }]
+                keyforms: vec![
+                    GlueKeyform {
+                        samples: Default::default(),
+                        intensity: 0.
+                    },
+                    GlueKeyform {
+                        samples: Default::default(),
+                        intensity: 1.
+                    }
+                ]
             })
         })
         .status

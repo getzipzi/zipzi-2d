@@ -147,7 +147,7 @@ pub(super) struct TransformWire {
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct MeshKeyformWire {
-    pub(super) keys: Vec<f32>,
+    pub(super) samples: Vec<String>,
     pub(super) positions: Vec<[f32; 2]>,
     #[serde(default)]
     pub(super) appearance: Option<AppearanceWire>,
@@ -159,7 +159,7 @@ pub(super) struct MeshKeyformWire {
 pub(super) struct SceneKeyformWire {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) bezier: Option<kasane_core::WarpBezier>,
-    pub(super) keys: Vec<f32>,
+    pub(super) samples: Vec<String>,
     pub(super) positions: Vec<[f32; 2]>,
     pub(super) rotation: RotationPoseWire,
     #[serde(default)]
@@ -186,46 +186,46 @@ pub(super) struct SceneBindingWire {
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BindingAxisWire {
+    pub(super) id: String,
     pub(super) parameter_id: String,
-    pub(super) keys: Vec<f32>,
+    pub(super) samples: Vec<kasane_core::BindingSample>,
 }
-
 impl From<&BindingAxis> for BindingAxisWire {
     fn from(b: &BindingAxis) -> Self {
         Self {
+            id: b.id.clone(),
             parameter_id: b.parameter_id.clone(),
-            keys: b.keys.clone(),
+            samples: b.samples.clone(),
         }
     }
 }
-
 impl From<BindingAxisWire> for BindingAxis {
     fn from(b: BindingAxisWire) -> Self {
         Self {
+            id: b.id,
             parameter_id: b.parameter_id,
-            keys: b.keys,
+            samples: b.samples,
+            keys: vec![],
         }
     }
 }
-
 #[derive(Serialize, Deserialize)]
 pub(super) struct BlendShapeKeyTableWire {
     pub(super) id: String,
     pub(super) parameter_id: String,
-    pub(super) keys: Vec<f32>,
-    pub(super) base_key_idx: usize,
+    pub(super) samples: Vec<kasane_core::BindingSample>,
+    pub(super) base_sample_id: String,
 }
-
 #[derive(Serialize, Deserialize)]
 pub(super) struct BlendShapeConstraintWire {
     pub(super) id: String,
     pub(super) parameter_id: String,
-    pub(super) keys: Vec<f32>,
-    pub(super) weights: Vec<f32>,
+    pub(super) samples: Vec<kasane_core::ConstraintSample>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct DeltaMeshKeyformWire {
+    pub(super) sample_id: String,
     pub(super) positions: Vec<[f32; 2]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) opacity: Option<f32>,
@@ -239,6 +239,7 @@ pub(super) struct DeltaMeshKeyformWire {
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct DeltaWarpKeyformWire {
+    pub(super) sample_id: String,
     pub(super) points: Vec<[f32; 2]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) opacity: Option<f32>,
@@ -250,6 +251,7 @@ pub(super) struct DeltaWarpKeyformWire {
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct DeltaRotationKeyformWire {
+    pub(super) sample_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) origin: Option<[f32; 2]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -266,16 +268,19 @@ pub(super) struct DeltaRotationKeyformWire {
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct DeltaPartKeyformWire {
+    pub(super) sample_id: String,
     pub(super) draw_order: f32,
 }
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct DeltaGlueKeyformWire {
+    pub(super) sample_id: String,
     pub(super) intensity: f32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub(super) struct DeltaOffscreenKeyformWire {
+    pub(super) sample_id: String,
     pub(super) opacity: f32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(super) multiply: Option<[f32; 3]>,

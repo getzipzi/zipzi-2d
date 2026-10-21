@@ -72,6 +72,8 @@ pub(crate) fn appearance_tuple(value: Appearance) -> AppearanceTuple {
 
 pub(crate) fn object_kind(value: &str) -> PyResult<ObjectKind> {
     match value {
+        "binding_axis" => Ok(ObjectKind::BindingAxis),
+        "binding_sample" => Ok(ObjectKind::BindingSample),
         "asset" => Ok(ObjectKind::Asset),
         "mesh" => Ok(ObjectKind::Mesh),
         "parameter" => Ok(ObjectKind::Parameter),
@@ -109,6 +111,8 @@ pub(crate) fn object_kind(value: &str) -> PyResult<ObjectKind> {
 
 pub(crate) fn object_kind_name(kind: ObjectKind) -> &'static str {
     match kind {
+        ObjectKind::BindingAxis => "binding_axis",
+        ObjectKind::BindingSample => "binding_sample",
         ObjectKind::Asset => "asset",
         ObjectKind::Mesh => "mesh",
         ObjectKind::Parameter => "parameter",

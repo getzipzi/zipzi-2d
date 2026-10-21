@@ -10,6 +10,8 @@ fn test_blendshape_key_table_and_constraint_crud() {
 
     // Key table targeting normal parameter should fail
     let bad_table = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: KEY_TABLE.to_string(),
         parameter_id: PARAM_NORM.to_string(),
         keys: vec![0.0, 1.0],
@@ -19,6 +21,8 @@ fn test_blendshape_key_table_and_constraint_crud() {
 
     // Valid key table
     let table = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: KEY_TABLE.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -26,10 +30,14 @@ fn test_blendshape_key_table_and_constraint_crud() {
     };
     assert!(doc.create_blend_key_table(table.clone()).status.is_ok());
     assert_eq!(doc.blend_key_table_order(), &[KEY_TABLE]);
-    assert_eq!(doc.get_blend_key_table(KEY_TABLE), Some(&table));
+    let stored = doc.get_blend_key_table(KEY_TABLE).unwrap();
+    assert_eq!(stored.keys, table.keys);
+    assert_eq!(stored.base_sample_id, stored.samples[table.base_key_idx].id);
+    assert_ne!(stored.samples[0].id, stored.samples[1].id);
 
     // Valid constraint
     let constraint = BlendShapeConstraint {
+        samples: Default::default(),
         id: CONSTRAINT.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -40,7 +48,10 @@ fn test_blendshape_key_table_and_constraint_crud() {
         .status
         .is_ok());
     assert_eq!(doc.blend_constraint_order(), &[CONSTRAINT]);
-    assert_eq!(doc.get_blend_constraint(CONSTRAINT), Some(&constraint));
+    let stored = doc.get_blend_constraint(CONSTRAINT).unwrap();
+    assert_eq!(stored.keys, constraint.keys);
+    assert_eq!(stored.weights, constraint.weights);
+    assert_ne!(stored.samples[0].id, stored.samples[1].id);
 
     // Erase parameter should fail because it's referenced by key table and constraint
     let erase_res = doc.erase_object(PARAM_BS);
@@ -54,6 +65,8 @@ fn test_blendshape_binding_and_mesh_topology_guard() {
     let mut doc = create_base_document();
 
     let table = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: KEY_TABLE.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -62,6 +75,7 @@ fn test_blendshape_binding_and_mesh_topology_guard() {
     assert!(doc.create_blend_key_table(table).status.is_ok());
 
     let constraint = BlendShapeConstraint {
+        samples: Default::default(),
         id: CONSTRAINT.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -69,7 +83,7 @@ fn test_blendshape_binding_and_mesh_topology_guard() {
     };
     assert!(doc.create_blend_constraint(constraint).status.is_ok());
 
-    let binding = BlendShapeBinding {
+    let mut binding = BlendShapeBinding {
         id: BINDING_BS.to_string(),
         target_id: MESH_A.to_string(),
         target_kind: BlendShapeTargetKind::Mesh,
@@ -94,6 +108,14 @@ fn test_blendshape_binding_and_mesh_topology_guard() {
             },
         ]),
     };
+    if let DeltaKeyforms::Mesh(forms) = &mut binding.keyforms {
+        for (form, sample) in forms
+            .iter_mut()
+            .zip(&doc.get_blend_key_table(KEY_TABLE).unwrap().samples)
+        {
+            form.sample_id = sample.id.clone();
+        }
+    }
     assert!(doc.create_blend_binding(binding.clone()).status.is_ok());
     assert_eq!(doc.blend_binding_order(), &[BINDING_BS]);
     assert_eq!(doc.get_blend_binding(BINDING_BS), Some(&binding));
@@ -198,6 +220,8 @@ fn test_blendshape_evaluation() {
 
     // Create blend key table on PARAM_BS (range 0.0..1.0, keys [0.0, 1.0], base_key = 0)
     let bkt = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: KEY_TABLE.to_string(),
         parameter_id: PARAM_BS.to_string(),
         keys: vec![0.0, 1.0],
@@ -208,6 +232,7 @@ fn test_blendshape_evaluation() {
     // Create a constraint on param_bs2 (range 0.0..1.0):
     // at 0.0 weight is 1.0, at 1.0 weight is 0.0
     let bsc = BlendShapeConstraint {
+        samples: Default::default(),
         id: CONSTRAINT.to_string(),
         parameter_id: param_bs2.to_string(),
         keys: vec![0.0, 1.0],
@@ -230,6 +255,7 @@ fn test_blendshape_evaluation() {
                 ..Default::default()
             },
             DeltaMeshKeyform {
+                sample_id: Default::default(),
                 positions: vec![
                     Vec2::new(5.0, 10.0),
                     Vec2::new(5.0, 10.0),

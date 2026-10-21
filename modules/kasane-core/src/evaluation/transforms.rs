@@ -133,7 +133,9 @@ pub(super) fn evaluate(
         if let Some(w) = t.warp() {
             state.points.extend_from_slice(&w.points);
         }
-        let b = doc.binding_for_scene(id);
+        let b = doc
+            .binding_for_scene(id)
+            .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()));
         let selection = prepared
             .scene_selections
             .get(id)
@@ -199,7 +201,7 @@ pub(super) fn evaluate(
                 transform_state.pose.origin = origin;
             }
 
-            let mut bs_list = doc.iter_blend_bindings_for_target(id).peekable();
+            let mut bs_list = doc.iter_active_blend_bindings_for_target(id).peekable();
             if bs_list.peek().is_some() {
                 for bs in bs_list {
                     match (&bs.keyforms, t.kind()) {

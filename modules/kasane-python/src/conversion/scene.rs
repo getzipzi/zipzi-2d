@@ -5,6 +5,7 @@ pub(crate) fn scene_form_from_tuple(kind: &str, value: SceneFormTuple) -> PyResu
     match kind {
         "warp" if pose.is_none() && draw_order.is_none() && appearance.is_some() => {
             Ok(SceneKeyform::Warp(WarpKeyform {
+                samples: Default::default(),
                 bezier: None,
                 keys,
                 positions: positions
@@ -21,6 +22,7 @@ pub(crate) fn scene_form_from_tuple(kind: &str, value: SceneFormTuple) -> PyResu
                 && appearance.is_some() =>
         {
             Ok(SceneKeyform::Rotation(RotationKeyform {
+                samples: Default::default(),
                 keys,
                 rotation: pose_from_tuple(pose.expect("checked")),
                 appearance: appearance_from_tuple(appearance.expect("checked")),
@@ -33,6 +35,7 @@ pub(crate) fn scene_form_from_tuple(kind: &str, value: SceneFormTuple) -> PyResu
                 && draw_order.is_some() =>
         {
             Ok(SceneKeyform::Part(PartKeyform {
+                samples: Default::default(),
                 keys,
                 draw_order: draw_order.expect("checked"),
             }))
@@ -91,7 +94,12 @@ pub(crate) fn scene_binding_from_tuples(
         id,
         axes: axes
             .into_iter()
-            .map(|(parameter_id, keys)| BindingAxis { parameter_id, keys })
+            .map(|(parameter_id, keys)| BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
+                parameter_id,
+                keys,
+            })
             .collect(),
         track,
     })

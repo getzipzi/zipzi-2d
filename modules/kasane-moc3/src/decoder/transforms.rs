@@ -142,6 +142,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     appearance.opacity = opacity;
 
                     keyforms.push(WarpKeyform {
+                        samples: Default::default(),
                         bezier: None,
                         keys: if is_bound {
                             Self::combo_keys(&axes, k)
@@ -273,6 +274,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     appearance.opacity = opacity;
 
                     keyforms.push(RotationKeyform {
+                        samples: Default::default(),
                         keys: if is_bound {
                             Self::combo_keys(&axes, k)
                         } else {

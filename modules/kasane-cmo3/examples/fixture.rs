@@ -126,6 +126,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             id: "00000000-0000-4000-8000-000000001004".into(),
             mesh_id: mesh.into(),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: parameter.into(),
                 keys: vec![-1., 0., 1.]
             }],

@@ -286,6 +286,7 @@ impl Document {
             .collect();
         if invalidate {
             self.lookup.take();
+            self.binding_lookup.take();
             self.prepared.take();
         }
     }
@@ -296,6 +297,7 @@ impl Document {
         if evaluation_changed {
             self.evaluation_revision = self.revision;
             self.lookup.take();
+            self.binding_lookup.take();
             self.prepared.take();
         }
     }

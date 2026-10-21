@@ -248,6 +248,8 @@ fn repeated_blend_target_groups_are_not_silently_merged() {
         .is_ok());
     assert!(doc
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: id(421),
             parameter_id: id(420),
             keys: vec![0.0, 1.0],

@@ -113,6 +113,8 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
     let kt_id = id(101);
     assert!(doc
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: kt_id.clone(),
             parameter_id: bs_param_id.clone(),
             keys: vec![0.0, 1.0],
@@ -124,6 +126,7 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
     let c_id = id(102);
     assert!(doc
         .create_blend_constraint(BlendShapeConstraint {
+            samples: Default::default(),
             id: c_id.clone(),
             parameter_id: bs_param_id.clone(),
             keys: vec![0.0, 1.0],
@@ -193,12 +196,20 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
             intensity: 1.0,
             binding: Some(kasane_core::types::GlueBinding {
                 axes: vec![BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: glue_parameter,
                     keys: vec![0.0, 1.0]
                 }],
                 keyforms: vec![
-                    kasane_core::types::GlueKeyform { intensity: 0.0 },
-                    kasane_core::types::GlueKeyform { intensity: 1.0 }
+                    kasane_core::types::GlueKeyform {
+                        samples: Default::default(),
+                        intensity: 0.0
+                    },
+                    kasane_core::types::GlueKeyform {
+                        samples: Default::default(),
+                        intensity: 1.0
+                    }
                 ],
             }),
         })
@@ -207,7 +218,7 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
 
     let encoded = encode_project(&doc).expect("encode_project failed");
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 14);
+    assert_eq!(wire["format_version"], 15);
     for field in [
         "blend_key_tables",
         "blend_constraints",
@@ -341,7 +352,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     assert!(doc.create_offscreen(offscreen.clone()).status.is_ok());
     let encoded = encode_project(&doc).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 14);
+    assert_eq!(wire["format_version"], 15);
     assert!(wire["document"]["offscreens"][0].get("enabled").is_none());
     assert!(
         decode_project(&encoded)
@@ -355,7 +366,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     assert!(doc.replace_offscreen(offscreen.clone()).status.is_ok());
     let encoded = encode_project(&doc).unwrap();
     let mut wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 14);
+    assert_eq!(wire["format_version"], 15);
     assert_eq!(wire["document"]["offscreens"][0]["enabled"], false);
     assert_eq!(
         decode_project(&encoded).unwrap().get_offscreen(&id(10)),
@@ -381,7 +392,7 @@ fn test_project_v4_preserves_repeat_parameter() {
 
     let encoded = encode_project(&doc).expect("encode_project failed");
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 14);
+    assert_eq!(wire["format_version"], 15);
     assert_eq!(wire["document"]["parameters"][0]["repeat"], true);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
@@ -451,6 +462,8 @@ fn test_project_v4_blendshape_glue_roundtrip() {
     assert!(doc.create_parameter(param_bs).status.is_ok());
 
     let bkt = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: id(23),
         parameter_id: id(22),
         keys: vec![0.0, 1.0],
@@ -459,6 +472,7 @@ fn test_project_v4_blendshape_glue_roundtrip() {
     assert!(doc.create_blend_key_table(bkt).status.is_ok());
 
     let constraint = BlendShapeConstraint {
+        samples: Default::default(),
         id: id(24),
         parameter_id: id(6),
         keys: vec![0.0, 1.0],
@@ -473,8 +487,14 @@ fn test_project_v4_blendshape_glue_roundtrip() {
         key_table_id: id(23),
         constraint_ids: vec![id(24)],
         keyforms: DeltaKeyforms::Glue(vec![
-            DeltaGlueKeyform { intensity: 0.0 },
-            DeltaGlueKeyform { intensity: 0.5 },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.0,
+            },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.5,
+            },
         ]),
     };
     assert!(doc.create_blend_binding(binding).status.is_ok());

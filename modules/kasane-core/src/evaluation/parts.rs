@@ -13,7 +13,10 @@ pub(super) fn evaluate(doc: &Document, prepared: &PreparedEvaluation, state: &mu
         let mut enabled = p.enabled
             && prepared.part_parents[slot].is_none_or(|parent| state.enabled_parts[parent]);
         let mut order = p.draw_order;
-        if let Some(b) = doc.binding_for_scene(id) {
+        if let Some(b) = doc
+            .binding_for_scene(id)
+            .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+        {
             let s = &state.selections[prepared.scene_selections[id]];
             enabled &= s.enabled;
             if s.enabled {
@@ -23,7 +26,7 @@ pub(super) fn evaluate(doc: &Document, prepared: &PreparedEvaluation, state: &mu
                 }
             }
         }
-        let mut bs_list = doc.iter_blend_bindings_for_target(id).peekable();
+        let mut bs_list = doc.iter_active_blend_bindings_for_target(id).peekable();
         if bs_list.peek().is_some() {
             order = f32_to_i32(order + 0.001) as f32;
             for bs in bs_list {

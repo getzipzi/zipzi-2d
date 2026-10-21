@@ -221,6 +221,8 @@ fn binding_index_tracks_retarget_delete_and_restore() {
         id: id(11),
         mesh_id: id(3),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: parameter,
             keys: vec![0.],
         }],
@@ -327,6 +329,8 @@ fn keyform_order_edit_invalidates_prepared_group_bounds() {
             id: id(11),
             mesh_id: id(3),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id(10),
                 keys: vec![0.]
             }],
@@ -404,6 +408,8 @@ fn prepared_selection_tracks_precision_axes_and_restored_documents() {
                 id: id(mesh + 10),
                 mesh_id: id(mesh),
                 axes: vec![BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: parameter.clone(),
                     keys: vec![-1., 0., 1.]
                 }],
@@ -440,7 +446,8 @@ fn prepared_selection_tracks_precision_axes_and_restored_documents() {
     assert_eq!(snapped, zero.drawables[0].positions);
     // One binding diverges from the shared grid; the other must stay snapped.
     let mut b = doc.get_binding(&id(13)).unwrap().clone();
-    b.axes[0].keys = vec![-1., 1.];
+    b.axes[0].keys.remove(1);
+    b.axes[0].samples.remove(1);
     b.keyforms.remove(1);
     assert!(doc.replace_binding(b).status.is_ok());
     assert!(evaluator.evaluate(&doc, &values, &mut frame).is_ok());
@@ -495,6 +502,8 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
     }
     assert!(doc
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: id(22),
             parameter_id: id(20),
             keys: vec![0., 1.],
@@ -503,6 +512,7 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
         .status
         .is_ok());
     let mut constraint = BlendShapeConstraint {
+        samples: Default::default(),
         id: id(23),
         parameter_id: id(21),
         keys: vec![0., 1.],

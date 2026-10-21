@@ -604,7 +604,15 @@ pub(crate) fn encode_with_animation(
     options: &Cmo3Options,
     animation: bool,
 ) -> Result<Cmo3Artifact, Cmo3Error> {
-    let mut report = inspect_with_animation(doc, animation)?;
+    let projection =
+        if options.loss_policy == LossPolicy::Allow && !doc.binding_export_omissions().is_empty() {
+            Some(doc.available_binding_export())
+        } else {
+            None
+        };
+    let original = doc;
+    let doc = projection.as_ref().unwrap_or(doc);
+    let mut report = inspect_with_animation(original, animation)?;
     if options.loss_policy == LossPolicy::Reject && report.has_loss() {
         return Err(Cmo3Error::Unsupported(report));
     }
@@ -629,14 +637,7 @@ pub(crate) fn encode_with_animation(
     let rest_doc = if doc.blend_binding_order().is_empty() && doc.glue_order().is_empty() {
         std::borrow::Cow::Borrowed(doc)
     } else {
-        let mut candidate = doc.fork_candidate();
-        for id in doc.blend_binding_order().iter().chain(doc.glue_order()) {
-            let result = candidate.erase_object(id);
-            if !result.status.is_ok() {
-                return Err(Cmo3Error::InvalidDocument(result.status.message));
-            }
-        }
-        std::borrow::Cow::Owned(candidate)
+        std::borrow::Cow::Owned(doc.authoring_rest_projection())
     };
     let status = kasane_core::evaluation::evaluate_frame_including_hidden(
         &rest_doc,

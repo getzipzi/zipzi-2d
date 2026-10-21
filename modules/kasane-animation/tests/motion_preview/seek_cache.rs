@@ -118,6 +118,8 @@ fn geometry_workspace_preserves_owned_frames_and_shared_reads() {
             id: binding.into(),
             mesh_id: mesh.into(),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: PARAM.into(),
                 keys: vec![0., 1.]
             }],

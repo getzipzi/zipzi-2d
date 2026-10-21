@@ -75,6 +75,8 @@ fn create_cyclic_fixture() -> (Document, String, String) {
         id: binding_id,
         mesh_id: mesh_id.clone(),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: param_id.clone(),
             keys: vec![-1.0, 0.0, 1.0],
         }],
@@ -308,6 +310,8 @@ fn test_cyclic_constraint_and_blendshape_combination() {
     let kt_id = id(11);
     assert!(d
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: kt_id.clone(),
             parameter_id: bs_param_id.clone(),
             keys: vec![0.0, 1.0],
@@ -320,6 +324,7 @@ fn test_cyclic_constraint_and_blendshape_combination() {
     let c_id = id(12);
     assert!(d
         .create_blend_constraint(BlendShapeConstraint {
+            samples: Default::default(),
             id: c_id.clone(),
             parameter_id: cyclic_param_id.clone(),
             keys: vec![-1.0, 0.0, 1.0],
@@ -339,6 +344,7 @@ fn test_cyclic_constraint_and_blendshape_combination() {
             constraint_ids: vec![c_id],
             keyforms: DeltaKeyforms::Mesh(vec![
                 DeltaMeshKeyform {
+                    sample_id: Default::default(),
                     positions: vec![
                         Vec2::new(10.0, 10.0),
                         Vec2::new(10.0, 10.0),
@@ -350,6 +356,7 @@ fn test_cyclic_constraint_and_blendshape_combination() {
                     screen: None,
                 },
                 DeltaMeshKeyform {
+                    sample_id: Default::default(),
                     positions: vec![
                         Vec2::new(50.0, 50.0),
                         Vec2::new(50.0, 50.0),

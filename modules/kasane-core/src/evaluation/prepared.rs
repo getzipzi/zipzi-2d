@@ -191,6 +191,7 @@ impl PreparedEvaluation {
         let mut intern = |axes: &[BindingAxis]| {
             let key: Vec<_> = axes
                 .iter()
+                .filter(|a| !a.parameter_id.is_empty())
                 .map(|axis| {
                     (
                         parameter_slots[axis.parameter_id.as_str()],
@@ -202,6 +203,7 @@ impl PreparedEvaluation {
                 let slot = selections.len();
                 selections.push(
                     axes.iter()
+                        .filter(|a| !a.parameter_id.is_empty())
                         .map(|axis| SelectionAxis {
                             parameter: parameter_slots[axis.parameter_id.as_str()],
                             keys: axis.keys.clone(),
@@ -221,16 +223,25 @@ impl PreparedEvaluation {
             .iter()
             .map(|id| {
                 doc.binding_for_mesh(id)
+                    .filter(|binding| binding.axes.iter().any(|a| !a.parameter_id.is_empty()))
                     .map(|binding| intern(&binding.axes))
             })
             .collect();
         let mut scene_selections = HashMap::new();
         for id in doc.scene_binding_order() {
             let binding = doc.get_scene_binding(id).unwrap();
-            scene_selections.insert(binding.target_id().to_owned(), intern(&binding.axes));
+            if binding.axes.iter().any(|a| !a.parameter_id.is_empty()) {
+                scene_selections.insert(binding.target_id().to_owned(), intern(&binding.axes));
+            }
         }
         for id in doc.glue_order() {
-            if let Some(binding) = &doc.get_glue(id).unwrap().binding {
+            if let Some(binding) = doc
+                .get_glue(id)
+                .unwrap()
+                .binding
+                .as_ref()
+                .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+            {
                 scene_selections.insert(id.clone(), intern(&binding.axes));
             }
         }
@@ -241,6 +252,9 @@ impl PreparedEvaluation {
         let mut blend_binding_selections = HashMap::new();
         for id in doc.blend_binding_order() {
             let binding = doc.get_blend_binding(id).unwrap();
+            if !doc.blend_binding_active(binding) {
+                continue;
+            }
             let key = (binding.key_table_id.clone(), binding.constraint_ids.clone());
             let slot = *blend_slots.entry(key).or_insert_with(|| {
                 let table = doc.get_blend_key_table(&binding.key_table_id).unwrap();

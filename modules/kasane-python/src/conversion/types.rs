@@ -99,11 +99,17 @@ pub(crate) fn mesh_binding_from_tuple(data: MeshBindingDataTuple) -> MeshBinding
         mesh_id,
         axes: axes
             .into_iter()
-            .map(|(parameter_id, keys)| BindingAxis { parameter_id, keys })
+            .map(|(parameter_id, keys)| BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
+                parameter_id,
+                keys,
+            })
             .collect(),
         keyforms: forms
             .into_iter()
             .map(|(keys, positions, appearance, draw_order)| MeshKeyform {
+                samples: Default::default(),
                 keys,
                 positions: positions
                     .into_iter()

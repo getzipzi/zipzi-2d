@@ -17,6 +17,29 @@ impl Document {
         if !valid_uuid(&table.id) {
             return Status::error("INVALID_ID", &table.id);
         }
+        if table.keys != table.samples.iter().map(|s| s.value).collect::<Vec<_>>()
+            || (!table.samples.is_empty()
+                && table
+                    .samples
+                    .get(table.base_key_idx)
+                    .is_none_or(|s| s.id != table.base_sample_id))
+        {
+            return Status::error("STALE_SAMPLE_VALUES", &table.id);
+        }
+        if table.parameter_id.is_empty() {
+            return if table.samples.is_empty() && table.base_sample_id.is_empty()
+                || !table.samples.is_empty()
+                    && table
+                        .keys
+                        .iter()
+                        .enumerate()
+                        .all(|(i, k)| k.is_finite() && (i == 0 || *k > table.keys[i - 1]))
+            {
+                Status::ok()
+            } else {
+                Status::error("INVALID_KEYS", &table.id)
+            };
+        }
         let param = match self.get_parameter(&table.parameter_id) {
             Some(p) => p,
             None => return Status::error("MISSING_PARAMETER", &table.parameter_id),
@@ -48,7 +71,10 @@ impl Document {
         Status::ok()
     }
 
-    pub fn create_blend_key_table(&mut self, table: BlendShapeKeyTable) -> EditResult {
+    pub fn create_blend_key_table(&mut self, mut table: BlendShapeKeyTable) -> EditResult {
+        if let Err(status) = self.normalize_table(&mut table) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &table.id));
         }
@@ -67,7 +93,13 @@ impl Document {
         self.changed(ChangeKind::Structure, meshes, vec![id, param_id])
     }
 
-    pub fn replace_blend_key_table(&mut self, table: BlendShapeKeyTable) -> EditResult {
+    pub fn replace_blend_key_table(&mut self, mut table: BlendShapeKeyTable) -> EditResult {
+        if let Err(status) = self.normalize_table(&mut table) {
+            return self.failed(status);
+        }
+        if let Err(status) = self.authoring_unlocked(&table.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &table.id));
         }
@@ -77,6 +109,21 @@ impl Document {
         let s = self.validate_blend_key_table(&table);
         if !s.is_ok() {
             return self.failed(s);
+        }
+        let old = self.get_blend_key_table(&table.id).unwrap();
+        if (old.base_sample_id != table.base_sample_id
+            || old
+                .samples
+                .iter()
+                .map(|s| &s.id)
+                .ne(table.samples.iter().map(|s| &s.id)))
+            && self
+                .content
+                .blend_bindings
+                .values()
+                .any(|b| b.key_table_id == table.id)
+        {
+            return self.failed(Status::error("SHARED_BLEND_CONVERSION_REQUIRED", &table.id));
         }
         for b in self.content.blend_bindings.values() {
             if b.key_table_id == table.id && b.keyforms.len() != table.keys.len() {
@@ -107,6 +154,33 @@ impl Document {
     pub(super) fn validate_blend_constraint(&self, constraint: &BlendShapeConstraint) -> Status {
         if !valid_uuid(&constraint.id) {
             return Status::error("INVALID_ID", &constraint.id);
+        }
+        if constraint.keys
+            != constraint
+                .samples
+                .iter()
+                .map(|s| s.value)
+                .collect::<Vec<_>>()
+            || constraint.weights
+                != constraint
+                    .samples
+                    .iter()
+                    .map(|s| s.weight)
+                    .collect::<Vec<_>>()
+        {
+            return Status::error("STALE_SAMPLE_VALUES", &constraint.id);
+        }
+        if constraint.parameter_id.is_empty() {
+            return if constraint.samples.iter().enumerate().all(|(i, s)| {
+                s.value.is_finite()
+                    && s.weight.is_finite()
+                    && s.weight >= 0.
+                    && (i == 0 || s.value > constraint.samples[i - 1].value)
+            }) {
+                Status::ok()
+            } else {
+                Status::error("INVALID_KEYS", &constraint.id)
+            };
         }
         let param = match self.get_parameter(&constraint.parameter_id) {
             Some(p) => p,
@@ -144,7 +218,10 @@ impl Document {
         Status::ok()
     }
 
-    pub fn create_blend_constraint(&mut self, constraint: BlendShapeConstraint) -> EditResult {
+    pub fn create_blend_constraint(&mut self, mut constraint: BlendShapeConstraint) -> EditResult {
+        if let Err(status) = self.normalize_constraint(&mut constraint) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &constraint.id));
         }
@@ -165,7 +242,13 @@ impl Document {
         self.changed(ChangeKind::Structure, meshes, vec![id, param_id])
     }
 
-    pub fn replace_blend_constraint(&mut self, constraint: BlendShapeConstraint) -> EditResult {
+    pub fn replace_blend_constraint(&mut self, mut constraint: BlendShapeConstraint) -> EditResult {
+        if let Err(status) = self.normalize_constraint(&mut constraint) {
+            return self.failed(status);
+        }
+        if let Err(status) = self.authoring_unlocked(&constraint.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &constraint.id));
         }
@@ -197,6 +280,21 @@ impl Document {
         self.iter_blend_bindings_for_target(target_id).collect()
     }
 
+    pub fn blend_binding_active(&self, b: &BlendShapeBinding) -> bool {
+        self.get_blend_key_table(&b.key_table_id)
+            .is_some_and(|t| !t.parameter_id.is_empty() && !t.keys.is_empty())
+            && b.constraint_ids.iter().all(|id| {
+                self.get_blend_constraint(id)
+                    .is_some_and(|c| !c.parameter_id.is_empty() && !c.keys.is_empty())
+            })
+    }
+    pub(crate) fn iter_active_blend_bindings_for_target<'a>(
+        &'a self,
+        id: &str,
+    ) -> impl Iterator<Item = &'a BlendShapeBinding> {
+        self.iter_blend_bindings_for_target(id)
+            .filter(|b| self.blend_binding_active(b))
+    }
     pub(crate) fn iter_blend_bindings_for_target(
         &self,
         target_id: &str,
@@ -213,25 +311,43 @@ impl Document {
         if !valid_uuid(&b.id) {
             return Status::error("INVALID_ID", &b.id);
         }
-        let key_table = match self.get_blend_key_table(&b.key_table_id) {
-            Some(kt) => kt,
-            None => return Status::error("MISSING_KEY_TABLE", &b.key_table_id),
+        let key_table = if b.key_table_id.is_empty() {
+            None
+        } else {
+            match self.get_blend_key_table(&b.key_table_id) {
+                Some(t) => Some(t),
+                None => return Status::error("MISSING_KEY_TABLE", &b.key_table_id),
+            }
         };
         for c_id in &b.constraint_ids {
             if !self.content.blend_constraints.contains_key(c_id) {
                 return Status::error("MISSING_CONSTRAINT", c_id);
             }
         }
-        if b.keyforms.len() != key_table.keys.len() {
+        if b.keyforms.len() != key_table.map_or(0, |t| t.keys.len()) {
             return Status::error(
                 "INCOMPLETE_KEYFORMS",
                 format!(
                     "{}: keyforms length {} does not match key table {}",
                     b.id,
                     b.keyforms.len(),
-                    key_table.keys.len()
+                    key_table.map_or(0, |t| t.keys.len())
                 ),
             );
+        }
+        let expected: Vec<_> = key_table.map_or_else(Vec::new, |t| {
+            t.samples.iter().map(|s| s.id.as_str()).collect()
+        });
+        let ids: Vec<_> = match &b.keyforms {
+            DeltaKeyforms::Mesh(f) => f.iter().map(|f| f.sample_id.as_str()).collect(),
+            DeltaKeyforms::Warp(f) => f.iter().map(|f| f.sample_id.as_str()).collect(),
+            DeltaKeyforms::Rotation(f) => f.iter().map(|f| f.sample_id.as_str()).collect(),
+            DeltaKeyforms::Part(f) => f.iter().map(|f| f.sample_id.as_str()).collect(),
+            DeltaKeyforms::Glue(f) => f.iter().map(|f| f.sample_id.as_str()).collect(),
+            DeltaKeyforms::Offscreen(f) => f.iter().map(|f| f.sample_id.as_str()).collect(),
+        };
+        if ids != expected {
+            return Status::error("INVALID_SAMPLE_REFERENCE", &b.id);
         }
         match (&b.target_kind, &b.keyforms) {
             (BlendShapeTargetKind::Mesh, DeltaKeyforms::Mesh(forms)) => {
@@ -451,7 +567,13 @@ impl Document {
         Status::ok()
     }
 
-    pub fn create_blend_binding(&mut self, b: BlendShapeBinding) -> EditResult {
+    pub fn create_blend_binding(&mut self, mut b: BlendShapeBinding) -> EditResult {
+        if let Err(status) = self.normalize_blend_forms(&mut b) {
+            return self.failed(status);
+        }
+        if let Err(status) = self.authoring_unlocked(&b.target_id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &b.id));
         }
@@ -471,7 +593,16 @@ impl Document {
         self.changed(ChangeKind::Structure, meshes, vec![id, target, key_table])
     }
 
-    pub fn replace_blend_binding(&mut self, b: BlendShapeBinding) -> EditResult {
+    pub fn replace_blend_binding(&mut self, mut b: BlendShapeBinding) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&b.target_id) {
+            return self.failed(status);
+        }
+        if let Err(status) = self.normalize_blend_forms(&mut b) {
+            return self.failed(status);
+        }
+        if let Err(status) = self.authoring_unlocked(&b.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &b.id));
         }

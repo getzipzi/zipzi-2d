@@ -60,6 +60,8 @@ impl NativeEdit {
         self.ensure_open(py, "create_blend_key_table")?;
         self.commands
             .push(Command::CreateBlendKeyTable(BlendShapeKeyTable {
+                samples: Default::default(),
+                base_sample_id: Default::default(),
                 id,
                 parameter_id,
                 keys,
@@ -80,6 +82,8 @@ impl NativeEdit {
         self.ensure_open(py, "replace_blend_key_table")?;
         self.commands
             .push(Command::ReplaceBlendKeyTable(BlendShapeKeyTable {
+                samples: Default::default(),
+                base_sample_id: Default::default(),
                 id,
                 parameter_id,
                 keys,
@@ -100,6 +104,7 @@ impl NativeEdit {
         self.ensure_open(py, "create_blend_constraint")?;
         self.commands
             .push(Command::CreateBlendConstraint(BlendShapeConstraint {
+                samples: Default::default(),
                 id,
                 parameter_id,
                 keys,
@@ -120,6 +125,7 @@ impl NativeEdit {
         self.ensure_open(py, "replace_blend_constraint")?;
         self.commands
             .push(Command::ReplaceBlendConstraint(BlendShapeConstraint {
+                samples: Default::default(),
                 id,
                 parameter_id,
                 keys,

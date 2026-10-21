@@ -54,17 +54,21 @@ fn binding(sdk: &AuthoringSession) -> MeshBinding {
         id: BINDING_ID.into(),
         mesh_id: MESH_ID.into(),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: PARAMETER_ID.into(),
             keys: vec![0.0, 1.0],
         }],
         keyforms: vec![
             MeshKeyform {
+                samples: Default::default(),
                 keys: vec![0.0],
                 positions: base,
                 appearance: Appearance::default(),
                 draw_order: None,
             },
             MeshKeyform {
+                samples: Default::default(),
                 keys: vec![1.0],
                 positions: shifted,
                 appearance: Appearance::default(),
@@ -171,3 +175,9 @@ fn keyform_replacement_and_repeat_mapping_use_core_rules() {
         .unwrap();
     assert_eq!(sample(&sdk, 1.25), (0.25, 47.5, false));
 }
+
+#[path = "binding_authoring/conversions.rs"]
+mod conversions;
+
+#[path = "binding_authoring/stable_domains.rs"]
+mod stable_domains;

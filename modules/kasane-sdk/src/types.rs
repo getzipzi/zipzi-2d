@@ -126,6 +126,8 @@ pub enum ObjectKind {
     Mesh,
     Parameter,
     MeshBinding,
+    BindingAxis,
+    BindingSample,
     Part,
     Transform,
     SceneBinding,

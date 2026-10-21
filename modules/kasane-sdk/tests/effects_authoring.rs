@@ -30,6 +30,8 @@ fn part_binding_and_offscreen_mapping_resize_together() {
         edit.create_scene_binding(SceneBinding {
             id: id(104),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id(102),
                 keys: vec![0.0, 1.0],
             }],
@@ -37,10 +39,12 @@ fn part_binding_and_offscreen_mapping_resize_together() {
                 target_id: id(103).into(),
                 keyforms: vec![
                     PartKeyform {
+                        samples: Default::default(),
                         keys: vec![0.0],
                         draw_order: 0.0,
                     },
                     PartKeyform {
+                        samples: Default::default(),
                         keys: vec![1.0],
                         draw_order: 10.0,
                     },
@@ -73,11 +77,13 @@ fn part_binding_and_offscreen_mapping_resize_together() {
     let version = sdk.version();
     let mut binding = sdk.scene_binding(&id(104)).unwrap();
     binding.axes[0].keys = vec![0.0, 0.5, 1.0];
+    binding.axes[0].samples.clear(); // Numeric adapter preserves unchanged samples.
     binding.track = SceneTrack::Part {
         target_id: id(103).into(),
         keyforms: [0.0, 0.5, 1.0]
             .into_iter()
             .map(|key| PartKeyform {
+                samples: Default::default(),
                 keys: vec![key],
                 draw_order: key * 10.0,
             })
@@ -158,12 +164,15 @@ fn effect_families_share_one_publish_and_failed_replacement_preserves_it() {
             ..Default::default()
         })?;
         edit.create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: id(8),
             parameter_id: id(6),
             keys: vec![0.0, 1.0],
             base_key_idx: 0,
         })?;
         edit.create_blend_constraint(BlendShapeConstraint {
+            samples: Default::default(),
             id: id(9),
             parameter_id: id(7),
             keys: vec![0.0, 1.0],
@@ -236,6 +245,7 @@ fn effect_families_share_one_publish_and_failed_replacement_preserves_it() {
     let mut edit = sdk.begin_edit("invalid effect", None).unwrap();
     assert_eq!(
         edit.replace_blend_constraint(BlendShapeConstraint {
+            samples: Default::default(),
             id: id(9),
             parameter_id: id(7),
             keys: vec![0.0, 1.0],

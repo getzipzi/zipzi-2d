@@ -46,7 +46,7 @@ fn unified_flags_are_atomic_sparse_metadata_with_history_and_cleanup() {
     assert!(Arc::ptr_eq(&frame, &s.preview_frame().unwrap()));
     let bytes = encode_project(s.document()).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&bytes).unwrap();
-    assert_eq!(wire["format_version"], 14);
+    assert_eq!(wire["format_version"], 15);
     assert!(wire["document"].get("object_locks").is_none());
     assert!(wire["document"].get("deformer_display").is_none());
     let loaded = decode_project(&bytes).unwrap();
@@ -69,10 +69,22 @@ fn unified_flags_are_atomic_sparse_metadata_with_history_and_cleanup() {
         .edit("Invalid", None, |e| e.replace_editor_state(invalid))
         .is_err());
     assert_eq!(s.history_lengths(), history);
+    assert_eq!(
+        s.edit("Erase locked", None, |e| e.erase_object(&id(2)))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "OBJECT_LOCKED"
+    );
+    let mut unlocked = s.document().editor_state().clone();
+    unlocked.objects.get_mut(&id(2)).unwrap().locked = false;
+    s.edit("Unlock", None, |e| e.replace_editor_state(unlocked))
+        .unwrap();
     s.edit("Erase", None, |e| e.erase_object(&id(2))).unwrap();
     assert!(s.document().editor_state().is_empty());
     s.undo().unwrap();
-    assert!(s.document().editor_state().get(&id(2)).locked);
+    assert!(s.document().editor_state().get(&id(2)).hidden_in_editor);
+    assert!(!s.document().editor_state().get(&id(2)).locked);
 }
 
 #[test]

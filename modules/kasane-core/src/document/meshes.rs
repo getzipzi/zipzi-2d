@@ -144,6 +144,9 @@ impl Document {
     }
 
     pub fn replace_mesh(&mut self, mesh: Mesh) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&mesh.id) {
+            return self.failed(status);
+        }
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.replace_mesh");
         if self.mutation_blocked() {
@@ -156,7 +159,9 @@ impl Document {
             Some(m) => m,
             None => return self.failed(Status::error("MISSING_MESH", "Mesh does not exist.")),
         };
-        if self.binding_for_mesh(&mesh.id).is_some()
+        if self
+            .binding_for_mesh(&mesh.id)
+            .is_some_and(|b| !b.axes.is_empty())
             && (previous.vertex_ids != mesh.vertex_ids || previous.triangles != mesh.triangles)
         {
             return self.failed(Status::error(
@@ -271,6 +276,9 @@ impl Document {
 
     /// Replace bound topology and its complete keyform set as one validated edit.
     pub fn replace_mesh_with_keyforms(&mut self, mesh: Mesh, binding: MeshBinding) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&mesh.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -322,6 +330,9 @@ impl Document {
         glues: Vec<Glue>,
         vertex_mapping: HashMap<VertexId, Option<VertexId>>,
     ) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&mesh.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &mesh.id));
         }
@@ -373,6 +384,15 @@ impl Document {
             return self.failed(Status::error("INCOMPLETE_DEPENDENCIES", &mesh.id));
         }
         let ordinary_id = binding.as_ref().map(|b| b.id.clone());
+        for id in ordinary_id
+            .iter()
+            .chain(&expected_blends)
+            .chain(&expected_glues)
+        {
+            if let Err(status) = self.authoring_unlocked(id) {
+                return self.failed(status);
+            }
+        }
         let mut candidate = self.clone();
         if let Some(b) = &binding {
             candidate.content.bindings.remove(&b.id);
@@ -400,7 +420,10 @@ impl Document {
             }
             candidate.content.bindings.insert(b.id.clone(), b);
         }
-        for b in blend_bindings {
+        for mut b in blend_bindings {
+            if let Err(status) = candidate.normalize_blend_forms(&mut b) {
+                return self.failed(status);
+            }
             let status = candidate.validate_blend_binding(&b);
             if !status.is_ok() {
                 return self.failed(status);
@@ -409,10 +432,6 @@ impl Document {
             candidate.lookup.take();
         }
         for g in glues {
-            let status = candidate.validate_glue(&g);
-            if !status.is_ok() {
-                return self.failed(status);
-            }
             // Reuse replacement validation, including runtime-ID uniqueness.
             candidate
                 .content
@@ -474,6 +493,9 @@ impl Document {
     /// Preserve prepared topology for a property-only edit. Parameter keyforms
     /// and parent appearance are still applied by the normal evaluator.
     pub fn set_mesh_opacity(&mut self, id: &str, opacity: f32) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -497,6 +519,9 @@ impl Document {
     }
 
     pub fn rename_mesh(&mut self, id: &str, name: String) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",

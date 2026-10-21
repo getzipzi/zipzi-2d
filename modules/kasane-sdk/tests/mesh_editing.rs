@@ -233,6 +233,8 @@ fn rectangle_grid_preserves_bound_surface_and_history() {
                 id: binding_id.into(),
                 mesh_id: MESH_ID.into(),
                 axes: vec![BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: parameter_id.into(),
                     keys: vec![0., 1.],
                 }],

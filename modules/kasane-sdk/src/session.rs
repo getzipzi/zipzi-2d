@@ -36,6 +36,8 @@ pub struct AuthoringSession {
     pub(crate) redo: Vec<HistoryEntry>,
     pub(crate) events: Vec<EditReceipt>,
     pub(crate) history_limits: HistoryLimits,
+    pub(crate) binding_contexts: HashMap<String, (String, u64)>,
+    pub(crate) authoring_limits: kasane_core::document::AuthoringLimits,
     pub(crate) incarnations: HashMap<ObjectKey, u64>,
     pub(crate) next_incarnation: u64,
     // Owner-dependent field addresses must not revive after a move and undo.
@@ -179,6 +181,8 @@ impl AuthoringSession {
             redo: Vec::new(),
             events: Vec::new(),
             history_limits,
+            authoring_limits: Default::default(),
+            binding_contexts: HashMap::new(),
             incarnations: HashMap::new(),
             physics_contexts: HashMap::new(),
             expression_entry_contexts: HashMap::new(),
@@ -573,6 +577,8 @@ impl AuthoringSession {
             categories: Default::default(),
             object_ids: Vec::new(),
             erased_keys: HashSet::new(),
+            authoring_limits: self.authoring_limits,
+            binding_cost: None,
         })
     }
 
@@ -827,6 +833,36 @@ impl AuthoringSession {
                 .or_default();
             *epoch = epoch.checked_add(1).expect("content epoch exhausted");
         }
+        if changes.full_invalidation {
+            self.binding_contexts.clear();
+        }
+        let mut owners: std::collections::BTreeSet<String> =
+            receipt.object_ids.iter().cloned().collect();
+        if changes.full_invalidation
+            || changes
+                .modified
+                .iter()
+                .any(|e| e.kind == ObjectKind::Parameter)
+                && changes
+                    .categories
+                    .contains(&crate::ChangeCategory::Topology)
+        {
+            owners.extend(document.binding_identities().into_iter().map(|i| i.owner));
+        }
+        for owner in owners {
+            if let Some(signature) = document.binding_context_signature(&owner) {
+                if self
+                    .binding_contexts
+                    .get(&owner)
+                    .is_none_or(|c| c.0 != signature)
+                {
+                    self.binding_contexts
+                        .insert(owner, (signature, document.revision()));
+                }
+            } else {
+                self.binding_contexts.remove(&owner);
+            }
+        }
         self.events.push(receipt);
     }
 
@@ -864,6 +900,12 @@ impl AuthoringSession {
 
 pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bool {
     match kind {
+        ObjectKind::BindingAxis => doc
+            .binding_identity(id)
+            .is_some_and(|i| i.kind == kasane_core::document::BindingIdentityKind::Axis),
+        ObjectKind::BindingSample => doc
+            .binding_identity(id)
+            .is_some_and(|i| i.kind == kasane_core::document::BindingIdentityKind::Sample),
         ObjectKind::Asset => doc.get_asset(id).is_some(),
         ObjectKind::Mesh => doc.get_mesh(id).is_some(),
         ObjectKind::Parameter => doc.get_parameter(id).is_some(),
@@ -1020,5 +1062,12 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
             }));
         }
     }
+    keys.extend(doc.binding_identities_iter().map(|i| ObjectKey {
+        kind: match i.kind {
+            kasane_core::document::BindingIdentityKind::Axis => ObjectKind::BindingAxis,
+            kasane_core::document::BindingIdentityKind::Sample => ObjectKind::BindingSample,
+        },
+        id: i.id.clone(),
+    }));
     keys
 }

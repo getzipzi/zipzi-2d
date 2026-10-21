@@ -136,6 +136,8 @@ fn main() {
     assert!(doc.create_glue(glue).status.is_ok());
 
     let bkt = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: id(8),
         parameter_id: id(4),
         keys: vec![0.0, 1.0],
@@ -144,6 +146,7 @@ fn main() {
     assert!(doc.create_blend_key_table(bkt).status.is_ok());
 
     let constraint = BlendShapeConstraint {
+        samples: Default::default(),
         id: id(9),
         parameter_id: id(3),
         keys: vec![0.0, 1.0],
@@ -158,8 +161,14 @@ fn main() {
         key_table_id: id(8),
         constraint_ids: vec![id(9)],
         keyforms: DeltaKeyforms::Glue(vec![
-            DeltaGlueKeyform { intensity: 0.0 },
-            DeltaGlueKeyform { intensity: 0.6 },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.0,
+            },
+            DeltaGlueKeyform {
+                sample_id: Default::default(),
+                intensity: 0.6,
+            },
         ]),
     };
     assert!(doc.create_blend_binding(binding).status.is_ok());

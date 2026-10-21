@@ -62,7 +62,10 @@ pub use changes::{ChangeCategory, ChangeSet, CollectionRef, EntityRef, Reference
 mod motion_authoring;
 pub use motion_authoring::*;
 
+pub use changes::BindingReferenceChange;
 pub use changes::{MotionReferenceChange, MotionReferenceValue};
 
 mod physics_authoring;
 pub use physics_authoring::*;
+mod binding_authoring;
+pub use binding_authoring::*;

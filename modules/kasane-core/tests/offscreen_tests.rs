@@ -207,6 +207,8 @@ fn test_offscreen_evaluation_and_blendshapes() {
     let sb = SceneBinding {
         id: id(30),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(20),
             keys: vec![0.0, 1.0],
         }],
@@ -214,10 +216,12 @@ fn test_offscreen_evaluation_and_blendshapes() {
             target_id: (id(3)).into(),
             keyforms: vec![
                 PartKeyform {
+                    samples: Default::default(),
                     keys: vec![0.0],
                     draw_order: 0.0,
                 },
                 PartKeyform {
+                    samples: Default::default(),
                     keys: vec![1.0],
                     draw_order: 10.0,
                 },
@@ -254,6 +258,8 @@ fn test_offscreen_evaluation_and_blendshapes() {
 
     // BlendShapeBinding on Offscreen id(40) adding +0.4 opacity
     let bkt = BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
         id: id(50),
         parameter_id: id(21),
         keys: vec![0.0, 1.0],
@@ -273,6 +279,7 @@ fn test_offscreen_evaluation_and_blendshapes() {
                 ..Default::default()
             },
             DeltaOffscreenKeyform {
+                sample_id: Default::default(),
                 opacity: 0.4,
                 multiply: Some([0.5, 0.5, 0.5]),
                 screen: Some([0.1, 0.1, 0.1]),
@@ -563,6 +570,8 @@ fn part_binding_edits_preserve_offscreen_mapping_invariants() {
     let binding = SceneBinding {
         id: id(30),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(20),
             keys: vec![-1.0, 1.0],
         }],
@@ -581,6 +590,7 @@ fn part_binding_edits_preserve_offscreen_mapping_invariants() {
         },
     };
     assert!(doc.create_scene_binding(binding.clone()).status.is_ok());
+    let binding = doc.get_scene_binding(&id(30)).unwrap().clone();
     assert!(doc
         .create_offscreen(Offscreen {
             id: id(10),
@@ -598,6 +608,7 @@ fn part_binding_edits_preserve_offscreen_mapping_invariants() {
     let revision = doc.revision();
     let mut shorter = binding.clone();
     shorter.axes[0].keys.pop();
+    shorter.axes[0].samples.pop();
     shorter.track.part_keyforms_mut().unwrap().pop();
     assert!(!doc.replace_scene_binding(shorter).status.is_ok());
     assert_eq!(doc.revision(), revision);
@@ -619,6 +630,8 @@ fn joint_part_offscreen_edit_is_atomic_and_snapshot_safe() {
     let mut binding = SceneBinding {
         id: id(30),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(20),
             keys: vec![-1.0, 1.0],
         }],
@@ -637,6 +650,7 @@ fn joint_part_offscreen_edit_is_atomic_and_snapshot_safe() {
         },
     };
     assert!(doc.create_scene_binding(binding.clone()).status.is_ok());
+    binding = doc.get_scene_binding(&id(30)).unwrap().clone();
     let mut os = Offscreen {
         id: id(10),
         runtime_id: "OS".into(),
@@ -657,9 +671,18 @@ fn joint_part_offscreen_edit_is_atomic_and_snapshot_safe() {
     assert!(doc.create_offscreen(os.clone()).status.is_ok());
     let before = doc.clone();
     binding.axes[0].keys.insert(1, 0.0);
+    let sample_id = uuid::Uuid::new_v4().to_string();
+    binding.axes[0].samples.insert(
+        1,
+        kasane_core::BindingSample {
+            id: sample_id.clone(),
+            value: 0.,
+        },
+    );
     binding.track.part_keyforms_mut().unwrap().insert(
         1,
         PartKeyform {
+            samples: vec![sample_id],
             keys: vec![0.0],
             ..Default::default()
         },

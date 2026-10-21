@@ -682,3 +682,35 @@ Attachment records have IDs independent of package paths. Sound and UserData
 use `{"kind": "resolved", "attachment_id": id}` or an explicit unresolved path.
 `package_attachments()` returns `None` for missing content and `b""` for a configured
 zero-byte file. Imported path conveniences bind loaded files to stable IDs.
+
+### Binding authoring and stable sampling (C4)
+
+`Session.binding_source(owner_id)` returns `None` or a detached
+`{"source": {"kind": ..., "value": ...}, "version": ...}` record. The source
+contains persistent axis IDs, samples with `{id, value}` (and constraint
+`weight`), keyform sample ID combinations, and shared table `base_sample_id`.
+Numeric `keys`, parallel weights and base indices in the tuple snapshots are
+compiled views. Native projects use directory-project version 15.
+
+`Session.plan_binding_authoring(intent)` and `Edit.binding_authoring(intent)`
+accept the Rust `BindingAuthoringEdit` enum representation. `Grid` supports
+Mesh/Scene/Glue zero-axis and pending bindings, `AddAxis`, `SetParameter`,
+`RemapParameter`, `ReorderAxes`, `InsertSample`, `MoveSample`, `DeleteSample` and
+`RemoveAxis`. Active-axis removal/clearing requires an explicit `Slice` or
+`Resample` reduction. `Blend` supports shared tables, constraints and bindings;
+table edits convert every user, and base changes compensate each representable
+target. An incompatible table switch requires an explicit reset.
+
+Plans expose `version`, `cost` (combinations, payload, temporary bytes, history
+estimate), `affected_ids`, and shared conversion `losses`. Execute with
+`Session.execute_binding_plan(plan)`; stale plans must be rebuilt. Dropping a
+plan publishes nothing. `Session.binding_field_address(axis_or_sample_id)`
+captures a context-protected address, and
+`Session.plan_binding_field_patch(address, patch)` accepts `SampleValue`,
+`ConstraintSample`, or `AxisParameter` patches. Undo never revives an expired
+address or a deleted object's old handle. Use `handle("binding_axis", id)` or
+`handle("binding_sample", id)` for these child entities.
+
+The tuple replacement adapters retain IDs at unchanged numeric coordinates;
+use stable-ID intents for moves and conversions. See the
+[stable binding example](README.md#stable-binding-conversions).

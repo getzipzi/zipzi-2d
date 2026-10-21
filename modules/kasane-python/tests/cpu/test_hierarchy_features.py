@@ -424,3 +424,69 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         self.assertEqual(model.version, version)
         model.undo()
         self.assertEqual(model.blend_key_table(BLEND_TABLE).keys, [0, 1])
+
+    def test_binding_stable_source_addresses_pending_axes_and_history(self):
+        model = session()
+        with model.edit("base") as edit:
+            edit.add_png_asset(ASSET, "texture", TEXTURE)
+            edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
+            edit.create_parameter(PARAMETER, "Open", 0, 1, 0)
+            edit.binding_authoring({"Grid": {"Create": {"id": BINDING, "target": {"Mesh": MESH}}}})
+        self.assertEqual(model.binding_source(BINDING)["source"]["value"]["axes"], [])
+        axis, low, high = (str(uuid4()) for _ in range(3))
+        intent = {"Grid": {"Edit": {"owner": BINDING, "operation": {"AddAxis": {"axis": {
+            "id": axis, "parameter_id": "", "samples": [{"id": low, "value": 0}, {"id": high, "value": 1}]
+        }}}}}}
+        plan = model.plan_binding_authoring(intent)
+        self.assertEqual(plan.version, model.version)
+        self.assertGreater(plan.cost[2], 0)
+        self.assertIn(BINDING, plan.affected_ids)
+        self.assertEqual(plan.losses, [])
+        model.execute_binding_plan(plan)
+        handle = model.handle("binding_sample", high)
+        address = model.binding_field_address(axis)
+        activate = model.plan_binding_field_patch(address, {"AxisParameter": {"parameter_id": PARAMETER, "reduction": None}})
+        model.execute_binding_plan(activate)
+        source = model.binding_source(BINDING)["source"]["value"]
+        self.assertEqual(source["axes"][0]["id"], axis)
+        self.assertEqual(source["keyforms"][1]["samples"], [high])
+        model.resolve_handle(handle)
+        before = model.version
+        with self.assertRaises(kasane.SdkFailure) as stale:
+            model.plan_binding_field_patch(address, {"AxisParameter": {"parameter_id": "", "reduction": {"Slice": 0}}})
+        self.assertEqual(stale.exception.code, "STALE_FIELD_ADDRESS")
+        self.assertEqual(model.version, before)
+        with TemporaryDirectory() as root:
+            result = model.save(Path(root) / "stable")
+            reopened = kasane.open_project(result.manifest)
+            self.assertEqual(reopened.binding_source(BINDING)["source"], model.binding_source(BINDING)["source"])
+        sample_address = model.binding_field_address(high)
+        model.execute_binding_plan(model.plan_binding_field_patch(sample_address, {"SampleValue": 0.8}))
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_binding_field_patch(sample_address, {"SampleValue": 0.7})
+        self.assertIsNone(model.binding_source(str(uuid4())))
+
+    def test_shared_blend_table_conversion_and_stale_plan_are_atomic(self):
+        model = session()
+        with model.edit("base") as edit:
+            edit.add_png_asset(ASSET, "texture", TEXTURE)
+            edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
+            edit.create_parameter(BLEND_PARAMETER, "Blend", -1, 1, 0, kind="blend_shape")
+            edit.binding_authoring({"Blend": {"CreateTable": {"table": {"id": BLEND_TABLE, "parameter_id": "", "samples": [], "base_sample_id": ""}}}})
+            edit.binding_authoring({"Blend": {"CreateBinding": {"id": BLEND_MESH, "target_id": MESH, "target_kind": "mesh", "key_table_id": BLEND_TABLE}}})
+        samples = [str(uuid4()), str(uuid4())]
+        for sample, value in zip(samples, [-1, 1]):
+            with model.edit("sample") as edit:
+                edit.binding_authoring({"Blend": {"Table": {"id": BLEND_TABLE, "operation": {"Insert": {"sample": {"id": sample, "value": value}}}}}})
+        activate = {"Blend": {"Table": {"id": BLEND_TABLE, "operation": {"SetParameter": {"parameter_id": BLEND_PARAMETER}}}}}
+        plan = model.plan_binding_authoring(activate)
+        with model.edit("unrelated") as edit:
+            edit.rename_mesh(MESH, "new name")
+        before = model.version
+        with self.assertRaises(kasane.SdkFailure):
+            model.execute_binding_plan(plan)
+        self.assertEqual(model.version, before)
+        model.execute_binding_plan(model.plan_binding_authoring(activate))
+        self.assertEqual(model.binding_source(BLEND_TABLE)["source"]["value"]["base_sample_id"], samples[0])
+        self.assertEqual(model.validate_structure(), [])

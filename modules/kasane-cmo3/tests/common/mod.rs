@@ -49,6 +49,8 @@ pub fn fixture() -> (Document, Vec<u8>) {
             id: "00000000-0000-4000-8000-000000000005".into(),
             mesh_id: MESH.into(),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: PARAM.into(),
                 keys: vec![-1., 0., 1.]
             }],

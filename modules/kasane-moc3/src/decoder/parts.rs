@@ -104,6 +104,7 @@ impl<'a> Moc3DecoderContext<'a> {
                         base_draw_order
                     };
                     keyforms.push(PartKeyform {
+                        samples: Default::default(),
                         keys: Self::combo_keys(&axes, k),
                         draw_order: d_order,
                     });

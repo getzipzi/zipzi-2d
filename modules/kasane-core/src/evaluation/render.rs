@@ -71,7 +71,10 @@ pub(super) fn evaluate(
             let mut scr_color = [0.0f32, 0.0, 0.0, 1.0];
 
             if owner_enabled {
-                if let Some(b) = doc.binding_for_scene(part_id) {
+                if let Some(b) = doc
+                    .binding_for_scene(part_id)
+                    .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+                {
                     let s = &state.selections[prepared.scene_selections[part_id]];
                     let mut interp_opa = 0.0f32;
                     let mut interp_mul = [0.0f32; 3];
@@ -134,7 +137,7 @@ pub(super) fn evaluate(
                 }
 
                 // Apply blendshapes
-                for bs in doc.iter_blend_bindings_for_target(os_id) {
+                for bs in doc.iter_active_blend_bindings_for_target(os_id) {
                     if let DeltaKeyforms::Offscreen(ref forms) = bs.keyforms {
                         for &(kf_idx, eff_w) in state.blend_selections
                             [prepared.blend_binding_selections[&bs.id]]

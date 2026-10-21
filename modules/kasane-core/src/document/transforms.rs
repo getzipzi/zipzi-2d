@@ -104,6 +104,9 @@ impl Document {
     }
 
     pub fn replace_transform(&mut self, t: Transform) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&t.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &t.id));
         }
@@ -169,6 +172,9 @@ impl Document {
         t: Transform,
         binding: Option<crate::SceneBinding>,
     ) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&t.id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &t.id));
         }
@@ -182,6 +188,11 @@ impl Document {
             return self.failed(Status::error("INVALID_WARP_AUTHORING", &t.id));
         }
         let existing = self.binding_for_scene(&t.id);
+        if let Some(b) = existing {
+            if let Err(status) = self.authoring_unlocked(&b.id) {
+                return self.failed(status);
+            }
+        }
         if existing.map(|b| b.id.as_str()) != binding.as_ref().map(|b| b.id.as_str())
             || binding.as_ref().is_some_and(|b| {
                 b.target_id() != t.id || !matches!(b.track, crate::SceneTrack::Warp { .. })

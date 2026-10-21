@@ -110,11 +110,14 @@ fn create_m1_fixture_doc() -> Document {
         id: id(6),
         mesh_id: id(5),
         axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
             parameter_id: id(3),
             keys: vec![-30.0, 0.0, 30.0],
         }],
         keyforms: vec![
             MeshKeyform {
+                samples: Default::default(),
                 keys: vec![-30.0],
                 positions: vec![
                     Vec2::new(200.0, 150.0),
@@ -130,6 +133,7 @@ fn create_m1_fixture_doc() -> Document {
                 draw_order: Some(12.0),
             },
             MeshKeyform {
+                samples: Default::default(),
                 keys: vec![0.0],
                 positions: vec![
                     Vec2::new(220.0, 140.0),
@@ -145,6 +149,7 @@ fn create_m1_fixture_doc() -> Document {
                 draw_order: Some(15.0),
             },
             MeshKeyform {
+                samples: Default::default(),
                 keys: vec![30.0],
                 positions: vec![
                     Vec2::new(240.0, 130.0),

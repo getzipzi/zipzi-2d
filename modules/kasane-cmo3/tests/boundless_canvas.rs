@@ -138,6 +138,8 @@ fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
         .is_ok());
     assert!(doc
         .create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: table.into(),
             parameter_id: driver.into(),
             keys: vec![0., 1.],

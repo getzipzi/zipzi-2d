@@ -22,6 +22,8 @@ pub struct EditSession<'a> {
     pub(crate) categories: std::collections::BTreeSet<crate::ChangeCategory>,
     pub(crate) object_ids: Vec<String>,
     pub(crate) erased_keys: HashSet<ObjectKey>,
+    pub(crate) authoring_limits: kasane_core::document::AuthoringLimits,
+    pub(crate) binding_cost: Option<kasane_core::document::ConversionCost>,
 }
 
 mod cdi;
@@ -258,8 +260,11 @@ impl EditSession<'_> {
     ) -> Result<(), SdkError> {
         self.ensure_active("replace_warp_authoring")?;
         let id = transform.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_warp_authoring(transform, binding);
-        self.record(result, "replace_warp_authoring", &id)
+        self.record(result, "replace_warp_authoring", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn replace_transform(&mut self, transform: Transform) -> Result<(), SdkError> {
         self.ensure_active("replace_transform")?;
@@ -445,6 +450,7 @@ impl EditSession<'_> {
             return Err(self.abort_with(error));
         }
         let id = replacement.mesh.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_mesh_topology(
             replacement.mesh,
             replacement.binding,
@@ -452,7 +458,9 @@ impl EditSession<'_> {
             replacement.glues,
             replacement.vertex_mapping,
         );
-        self.record(result, "replace_topology", &id)
+        self.record(result, "replace_topology", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn create_binding(&mut self, binding: MeshBinding) -> Result<(), SdkError> {
         self.ensure_active("create_binding")?;
@@ -463,8 +471,11 @@ impl EditSession<'_> {
     pub fn replace_binding(&mut self, binding: MeshBinding) -> Result<(), SdkError> {
         self.ensure_active("replace_binding")?;
         let id = binding.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_binding(binding);
-        self.record(result, "replace_binding", &id)
+        self.record(result, "replace_binding", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn set_mesh_keyform(
         &mut self,
@@ -484,8 +495,11 @@ impl EditSession<'_> {
     pub fn replace_scene_binding(&mut self, binding: SceneBinding) -> Result<(), SdkError> {
         self.ensure_active("replace_scene_binding")?;
         let id = binding.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_scene_binding(binding);
-        self.record(result, "replace_scene_binding", &id)
+        self.record(result, "replace_scene_binding", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn set_scene_keyform(
         &mut self,
@@ -505,8 +519,11 @@ impl EditSession<'_> {
     pub fn replace_blend_key_table(&mut self, table: BlendShapeKeyTable) -> Result<(), SdkError> {
         self.ensure_active("replace_blend_key_table")?;
         let id = table.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_blend_key_table(table);
-        self.record(result, "replace_blend_key_table", &id)
+        self.record(result, "replace_blend_key_table", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn create_blend_constraint(
         &mut self,
@@ -523,8 +540,11 @@ impl EditSession<'_> {
     ) -> Result<(), SdkError> {
         self.ensure_active("replace_blend_constraint")?;
         let id = constraint.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_blend_constraint(constraint);
-        self.record(result, "replace_blend_constraint", &id)
+        self.record(result, "replace_blend_constraint", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn create_blend_binding(&mut self, binding: BlendShapeBinding) -> Result<(), SdkError> {
         self.ensure_active("create_blend_binding")?;
@@ -535,8 +555,11 @@ impl EditSession<'_> {
     pub fn replace_blend_binding(&mut self, binding: BlendShapeBinding) -> Result<(), SdkError> {
         self.ensure_active("replace_blend_binding")?;
         let id = binding.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_blend_binding(binding);
-        self.record(result, "replace_blend_binding", &id)
+        self.record(result, "replace_blend_binding", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn create_glue(&mut self, glue: Glue) -> Result<(), SdkError> {
         self.ensure_active("create_glue")?;
@@ -547,8 +570,11 @@ impl EditSession<'_> {
     pub fn replace_glue(&mut self, glue: Glue) -> Result<(), SdkError> {
         self.ensure_active("replace_glue")?;
         let id = glue.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_glue(glue);
-        self.record(result, "replace_glue", &id)
+        self.record(result, "replace_glue", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn create_offscreen(&mut self, offscreen: Offscreen) -> Result<(), SdkError> {
         self.ensure_active("create_offscreen")?;
@@ -569,10 +595,13 @@ impl EditSession<'_> {
     ) -> Result<(), SdkError> {
         self.ensure_active("replace_part_binding_with_offscreen")?;
         let id = binding.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self
             .document()
             .replace_part_binding_with_offscreen(binding, offscreen);
-        self.record(result, "replace_part_binding_with_offscreen", &id)
+        self.record(result, "replace_part_binding_with_offscreen", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub fn update_positions(
         &mut self,
@@ -601,6 +630,9 @@ impl EditSession<'_> {
             error.expected_version = Some(Box::new(self.before));
             error.actual_version = Some(Box::new(session.version()));
             return Err(error);
+        }
+        if let Some(cost) = self.binding_cost {
+            crate::binding_authoring::check_cost(cost, session.authoring_limits)?;
         }
         let candidate = self.candidate.take().expect("edit candidate exists");
         if let Some(issue) = candidate.validate_structure().into_iter().next() {

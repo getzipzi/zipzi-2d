@@ -17,7 +17,11 @@ pub(super) fn evaluate(
 
         for (glue_slot, gid) in glue_order.iter().enumerate() {
             if let Some(glue) = doc.get_glue(gid) {
-                let mut intensity = if let Some(binding) = &glue.binding {
+                let mut intensity = if let Some(binding) = glue
+                    .binding
+                    .as_ref()
+                    .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+                {
                     let selection = &state.selections[prepared.scene_selections[gid]];
                     selection
                         .indices
@@ -29,7 +33,7 @@ pub(super) fn evaluate(
                     glue.intensity
                 };
 
-                let mut bs_list = doc.iter_blend_bindings_for_target(gid).peekable();
+                let mut bs_list = doc.iter_active_blend_bindings_for_target(gid).peekable();
                 if bs_list.peek().is_some() {
                     for bs in bs_list {
                         if let DeltaKeyforms::Glue(ref forms) = bs.keyforms {

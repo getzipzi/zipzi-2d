@@ -21,11 +21,19 @@ pub(crate) fn glue_from_tuple(data: GlueDataTuple, runtime_id: String) -> Glue {
         binding: binding.map(|(axes, forms)| GlueBinding {
             axes: axes
                 .into_iter()
-                .map(|(parameter_id, keys)| BindingAxis { parameter_id, keys })
+                .map(|(parameter_id, keys)| BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
+                    parameter_id,
+                    keys,
+                })
                 .collect(),
             keyforms: forms
                 .into_iter()
-                .map(|intensity| GlueKeyform { intensity })
+                .map(|intensity| GlueKeyform {
+                    samples: Default::default(),
+                    intensity,
+                })
                 .collect(),
         }),
     }

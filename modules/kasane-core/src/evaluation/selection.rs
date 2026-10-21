@@ -227,6 +227,9 @@ pub fn evaluate_blend_binding(
     values: &HashMap<String, f32>,
     b: &BlendShapeBinding,
 ) -> Vec<(usize, f32)> {
+    if !doc.blend_binding_active(b) {
+        return vec![];
+    }
     let kt = match doc.get_blend_key_table(&b.key_table_id) {
         Some(kt) => kt,
         None => return Vec::new(),
@@ -512,6 +515,7 @@ mod selection_tests {
                 .is_ok());
         }
         let constraint = BlendShapeConstraint {
+            samples: Default::default(),
             id: id(5),
             parameter_id: id(3),
             keys: vec![-1., 0., 1.],
@@ -522,6 +526,8 @@ mod selection_tests {
             .status
             .is_ok());
         let mut table = BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: id(4),
             parameter_id: id(2),
             keys: vec![0.],
@@ -589,6 +595,8 @@ mod selection_tests {
             .is_ok());
         let binding = vec![
             BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id.into(),
                 keys: vec![-1., 0., 1.]
             };
@@ -642,6 +650,8 @@ mod selection_tests {
         }
         let binding = vec![
             BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id.into(),
                 keys: vec![0.]
             };
