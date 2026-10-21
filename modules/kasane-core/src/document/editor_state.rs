@@ -87,7 +87,9 @@ impl Document {
                     || self.content.expressions.contains_key(id)
                     || self.get_expression_entry(id).is_some()
                     || self.motion_identity_exists(id)
-                    || self.get_attachment(id).is_some();
+                    || self.get_attachment(id).is_some()
+                    || self.physics_owner(id).is_some()
+                    || self.physics().is_some_and(|a| a.id == *id);
                 (!valid).then(|| StructureIssue {
                     object_id: id.clone(),
                     status: Status::error(

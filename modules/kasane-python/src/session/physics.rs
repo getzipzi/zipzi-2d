@@ -36,3 +36,48 @@ impl NativeSession {
             .map_err(|error| sdk_failure(py, error))
     }
 }
+
+#[pyclass]
+pub(crate) struct NativePhysicsPlan {
+    inner: kasane_sdk::PhysicsEditPlan,
+}
+#[pymethods]
+impl NativePhysicsPlan {
+    #[getter]
+    fn version(&self) -> (u64, u64, u64) {
+        version_tuple(self.inner.version())
+    }
+    #[getter]
+    fn affected_ids(&self) -> Vec<String> {
+        self.inner.affected_ids().to_vec()
+    }
+}
+#[pymethods]
+impl NativeSession {
+    fn plan_physics_authoring_json(
+        &self,
+        py: Python<'_>,
+        value: &str,
+    ) -> PyResult<NativePhysicsPlan> {
+        let intent = serde_json::from_str(value)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        let s = self.inner.lock().map_err(|_| poisoned())?;
+        Ok(NativePhysicsPlan {
+            inner: s
+                .plan_physics_edit(intent)
+                .map_err(|e| sdk_failure(py, e))?,
+        })
+    }
+    fn execute_physics_plan(
+        &self,
+        py: Python<'_>,
+        plan: &NativePhysicsPlan,
+    ) -> PyResult<(u64, u64, u64)> {
+        self.ensure_idle(py, "execute_physics_plan")?;
+        let mut s = self.inner.lock().map_err(|_| poisoned())?;
+        self.ensure_idle(py, "execute_physics_plan")?;
+        s.execute_physics_plan(&plan.inner)
+            .map(|r| version_tuple(r.after))
+            .map_err(|e| sdk_failure(py, e))
+    }
+}

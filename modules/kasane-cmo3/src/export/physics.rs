@@ -26,7 +26,10 @@ impl Exporter<'_> {
                         .field("guid", data_guid)
                         .field(
                             "source",
-                            guid("CParameterGuid", &asset.parameter_bindings[&v.source.id]),
+                            guid(
+                                "CParameterGuid",
+                                v.source.parameter_id().expect("validated physics input"),
+                            ),
                         )
                         .field("angleScale", f(0))
                         .field(
@@ -57,10 +60,15 @@ impl Exporter<'_> {
                             "destination",
                             guid(
                                 "CParameterGuid",
-                                &asset.parameter_bindings[&v.destination.id],
+                                v.destination
+                                    .parameter_id()
+                                    .expect("validated physics output"),
                             ),
                         )
-                        .field("vertexIndex", i(v.vertex_index))
+                        .field(
+                            "vertexIndex",
+                            i(rig.node_index(&v.node_id).expect("validated physics node")),
+                        )
                         .field(
                             "translationScale",
                             N::new("GVector2")
@@ -126,7 +134,7 @@ impl Exporter<'_> {
                 N::new("CPhysicsSettingsSource")
                     .field("name", s(name))
                     .field("guid", g)
-                    .field("id", ident("CPhysicsSettingId", &rig.id))
+                    .field("id", ident("CPhysicsSettingId", &rig.external_id))
                     .field("inputs", N::list("carray_list", inputs))
                     .field("outputs", N::list("carray_list", outputs))
                     .field("vertices", N::list("carray_list", vertices))

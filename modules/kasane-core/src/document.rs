@@ -42,9 +42,7 @@ pub use motions::{
     MotionEvent, MotionGroup, MotionKey, MotionPlan, MotionPoint, MotionProjection,
     MotionRegistration, MotionSegment, MotionTrack, MotionTrackTarget,
 };
-pub use physics::{
-    PhysicsAsset, PhysicsAssetProperty, PhysicsPatch, PhysicsProperty, PhysicsRigPatch,
-};
+pub use physics::*;
 pub use pose::{PoseAsset, PoseEntry, PosePartRef};
 pub use property::PropertyPatch;
 pub use structure::StructureIssue;
@@ -376,6 +374,10 @@ impl Document {
             || self.get_motion_group(id).is_some()
             || self.get_motion_registration(id).is_some()
             || self.get_attachment(id).is_some()
+            || self.get_physics_group(id).is_some()
+            || self.get_physics_input(id).is_some()
+            || self.get_physics_output(id).is_some()
+            || self.get_physics_node(id).is_some()
             || self.content.motions.contains_key(id)
             || self.content.pose.as_ref().is_some_and(|pose| pose.id == id)
             || self

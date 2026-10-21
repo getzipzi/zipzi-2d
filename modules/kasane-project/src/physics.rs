@@ -40,19 +40,26 @@ fn error(
 
 fn namespace(document: &Document, asset: &PhysicsAsset) -> BTreeMap<String, String> {
     asset
-        .parameter_bindings
+        .data
+        .settings
         .iter()
-        .filter_map(|(runtime, id)| {
+        .flat_map(|g| {
+            g.inputs
+                .iter()
+                .map(|v| &v.source)
+                .chain(g.outputs.iter().map(|v| &v.destination))
+        })
+        .filter_map(|t| t.parameter_id())
+        .filter_map(|id| {
             document
                 .get_parameter(id)
-                .map(|parameter| (runtime.clone(), parameter.runtime_id.clone()))
+                .map(|p| (id.to_owned(), p.runtime_id.clone()))
         })
         .collect()
 }
 
 fn content_hash(asset: &PhysicsAsset) -> String {
-    let bytes = serde_json::to_vec(&(&asset.data, &asset.parameter_bindings))
-        .expect("physics content serializes");
+    let bytes = serde_json::to_vec(&asset.data).expect("physics content serializes");
     crate::content_sha256(&bytes)
 }
 
@@ -92,13 +99,9 @@ pub fn import_physics3(
             );
         }
     }
-    let mut asset = PhysicsAsset {
-        id: id.into(),
-        data,
-        parameter_bindings: bindings,
-        opaque_source_ids: None,
-        opaque_source_content_hash: None,
-    };
+    let mut asset =
+        PhysicsAsset::from_wire(id.into(), data, |runtime| bindings.get(runtime).cloned())
+            .map_err(|s| error(s.code, "$", s.message))?;
     // Unknown extensions cannot be remapped safely when model IDs change.
     if has_extensions(&asset) {
         asset.opaque_source_ids = Some(namespace(document, &asset));
@@ -153,12 +156,11 @@ fn has_extensions(asset: &PhysicsAsset) -> bool {
         || data.settings.iter().any(|rig| {
             !rig.extensions.is_empty()
                 || !rig.normalization.extensions.is_empty()
-                || rig
-                    .inputs
-                    .iter()
-                    .any(|item| !item.extensions.is_empty() || !item.source.extensions.is_empty())
+                || rig.inputs.iter().any(|item| {
+                    !item.extensions.is_empty() || !item.reference_extensions.is_empty()
+                })
                 || rig.outputs.iter().any(|item| {
-                    !item.extensions.is_empty() || !item.destination.extensions.is_empty()
+                    !item.extensions.is_empty() || !item.reference_extensions.is_empty()
                 })
                 || rig.vertices.iter().any(|item| !item.extensions.is_empty())
         })
@@ -184,43 +186,94 @@ pub fn export_physics3(document: &Document) -> Result<Option<String>, PhysicsPro
             ));
         }
     }
-    let mut data = asset.data.clone();
-    for (rig_index, rig) in data.settings.iter_mut().enumerate() {
-        let rig = std::sync::Arc::make_mut(rig);
-        for (index, input) in rig.inputs.iter_mut().enumerate() {
-            input.source.id = mapped_id(
-                document,
-                asset,
-                &input.source.id,
-                format!("$.PhysicsSettings[{rig_index}].Input[{index}].Source.Id"),
-            )?;
-        }
-        for (index, output) in rig.outputs.iter_mut().enumerate() {
-            output.destination.id = mapped_id(
-                document,
-                asset,
-                &output.destination.id,
-                format!("$.PhysicsSettings[{rig_index}].Output[{index}].Destination.Id"),
-            )?;
+    for g in &asset.data.settings {
+        for (id, target) in g
+            .inputs
+            .iter()
+            .map(|v| (&v.id, &v.source))
+            .chain(g.outputs.iter().map(|v| (&v.id, &v.destination)))
+        {
+            if let Some(reason) = target.disabled_reason() {
+                return Err(error(
+                    match reason {
+                        kasane_core::document::PhysicsDisabledReason::NeedsConfiguration => {
+                            "NEEDS_CONFIGURATION"
+                        }
+                        _ => "UNRESOLVED_PARAMETER",
+                    },
+                    id,
+                    format!("{reason:?}"),
+                ));
+            }
         }
     }
+    let data = asset.data.to_wire(|t| {
+        document
+            .get_parameter(t.parameter_id().expect("validated target"))
+            .expect("valid parameter")
+            .runtime_id
+            .clone()
+    });
     encode_physics3(&data)
         .map(Some)
         .map_err(|failure| error(failure.code, failure.path, failure.message))
 }
 
-fn mapped_id(
+/// Export only the channels accepted by the same projection used for preview.
+/// Opaque payload protection is deliberately identical to strict export.
+pub fn export_available_physics3(
     document: &Document,
-    asset: &PhysicsAsset,
-    runtime_id: &str,
-    path: String,
-) -> Result<String, PhysicsProjectError> {
-    let id = asset
-        .parameter_bindings
-        .get(runtime_id)
-        .ok_or_else(|| error("UNRESOLVED_PARAMETER", &path, runtime_id))?;
-    document
-        .get_parameter(id)
-        .map(|parameter| parameter.runtime_id.clone())
-        .ok_or_else(|| error("MISSING_PARAMETER", path, id))
+) -> Result<Option<String>, PhysicsProjectError> {
+    let Some(asset) = document.physics() else {
+        return Ok(None);
+    };
+    if has_extensions(asset) {
+        if asset.opaque_source_ids.as_ref() != Some(&namespace(document, asset)) {
+            return Err(error(
+                "OPAQUE_NAMESPACE_CHANGED",
+                "$",
+                "parameter namespace changed",
+            ));
+        }
+        if asset.opaque_source_content_hash.as_deref() != Some(content_hash(asset).as_str()) {
+            return Err(error(
+                "OPAQUE_CONTENT_CHANGED",
+                "$",
+                "physics content changed",
+            ));
+        }
+    }
+    let Some(mut projection) = document
+        .physics_projection()
+        .map_err(|s| error(s.code, "$", s.message))?
+    else {
+        return Ok(None);
+    };
+    if has_extensions(asset) && !projection.disabled.is_empty() {
+        return Err(error(
+            "OPAQUE_CONTENT_CHANGED",
+            "$",
+            "cannot omit opaque channels",
+        ));
+    }
+    for g in &mut projection.executable.data.settings {
+        let g = std::sync::Arc::make_mut(g);
+        for v in &mut g.inputs {
+            v.source.id = document
+                .get_parameter(&v.source.id)
+                .unwrap()
+                .runtime_id
+                .clone();
+        }
+        for v in &mut g.outputs {
+            v.destination.id = document
+                .get_parameter(&v.destination.id)
+                .unwrap()
+                .runtime_id
+                .clone();
+        }
+    }
+    encode_physics3(&projection.executable.data)
+        .map(Some)
+        .map_err(|e| error(e.code, e.path, e.message))
 }

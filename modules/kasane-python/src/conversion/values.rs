@@ -96,6 +96,11 @@ pub(crate) fn object_kind(value: &str) -> PyResult<ObjectKind> {
         "attachment" => Ok(ObjectKind::Attachment),
         "motion" => Ok(ObjectKind::Motion),
         "pose" => Ok(ObjectKind::Pose),
+        "physics" => Ok(ObjectKind::Physics),
+        "physics_group" => Ok(ObjectKind::PhysicsGroup),
+        "physics_input" => Ok(ObjectKind::PhysicsInput),
+        "physics_output" => Ok(ObjectKind::PhysicsOutput),
+        "physics_node" => Ok(ObjectKind::PhysicsNode),
         _ => Err(PyValueError::new_err(format!(
             "Unknown object kind: {value}"
         ))),
@@ -129,6 +134,10 @@ pub(crate) fn object_kind_name(kind: ObjectKind) -> &'static str {
         ObjectKind::Motion => "motion",
         ObjectKind::Pose => "pose",
         ObjectKind::Physics => "physics",
+        ObjectKind::PhysicsGroup => "physics_group",
+        ObjectKind::PhysicsInput => "physics_input",
+        ObjectKind::PhysicsOutput => "physics_output",
+        ObjectKind::PhysicsNode => "physics_node",
     }
 }
 

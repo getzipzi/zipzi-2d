@@ -1,6 +1,6 @@
 //! Typed local writes. Unchanged rigs remain shared with snapshots and history.
 use super::*;
-use crate::physics::{validate_physics_setting, PhysicsAxis, PhysicsRange, PhysicsSetting};
+use crate::physics::{PhysicsAxis, PhysicsRange};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -25,20 +25,66 @@ pub struct PhysicsRigPatch {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PhysicsProperty {
     Name(String),
-    InputWeight { index: usize, value: f32 },
-    InputAxis { index: usize, value: PhysicsAxis },
-    InputReflect { index: usize, value: bool },
-    InputParameter { index: usize, parameter_id: String },
-    OutputWeight { index: usize, value: f32 },
-    OutputScale { index: usize, value: f32 },
-    OutputAxis { index: usize, value: PhysicsAxis },
-    OutputReflect { index: usize, value: bool },
-    OutputParameter { index: usize, parameter_id: String },
-    OutputVertex { index: usize, value: usize },
-    VertexRadius { index: usize, value: f32 },
-    VertexMobility { index: usize, value: f32 },
-    VertexDelay { index: usize, value: f32 },
-    VertexAcceleration { index: usize, value: f32 },
+    InputWeight {
+        id: String,
+        value: f32,
+    },
+    InputAxis {
+        id: String,
+        value: PhysicsAxis,
+    },
+    InputReflect {
+        id: String,
+        value: bool,
+    },
+    InputParameter {
+        id: String,
+        target: PhysicsTarget,
+    },
+    OutputWeight {
+        id: String,
+        value: f32,
+    },
+    OutputScale {
+        id: String,
+        value: f32,
+    },
+    OutputAxis {
+        id: String,
+        value: PhysicsAxis,
+    },
+    OutputReflect {
+        id: String,
+        value: bool,
+    },
+    OutputParameter {
+        id: String,
+        target: PhysicsTarget,
+    },
+    OutputNode {
+        id: String,
+        node_id: String,
+    },
+    VertexPosition {
+        id: String,
+        value: crate::physics::PhysicsVector,
+    },
+    VertexRadius {
+        id: String,
+        value: f32,
+    },
+    VertexMobility {
+        id: String,
+        value: f32,
+    },
+    VertexDelay {
+        id: String,
+        value: f32,
+    },
+    VertexAcceleration {
+        id: String,
+        value: f32,
+    },
     PositionNormalization(PhysicsRange),
     AngleNormalization(PhysicsRange),
 }
@@ -47,11 +93,10 @@ struct Prepared {
     rig: Option<Arc<PhysicsSetting>>,
     fps: Option<Option<f32>>,
     name: Option<String>,
-    bindings: Option<BTreeMap<String, String>>,
 }
 impl Prepared {
     fn changed(&self) -> bool {
-        self.rig.is_some() || self.fps.is_some() || self.name.is_some() || self.bindings.is_some()
+        self.rig.is_some() || self.fps.is_some() || self.name.is_some()
     }
 }
 impl Document {
@@ -68,6 +113,7 @@ impl Document {
             .physics()
             .filter(|asset| asset.id == patch.asset_id)
             .ok_or_else(|| Status::error("MISSING_PHYSICS", &patch.asset_id))?;
+        self.physics_unlocked(&asset.id)?;
         let mut fps = None;
         for change in &patch.asset_changes {
             match change {
@@ -89,7 +135,6 @@ impl Document {
                 rig: None,
                 fps,
                 name: None,
-                bindings: None,
             });
         };
         let index = asset
@@ -105,14 +150,13 @@ impl Document {
             .any(|change| !matches!(change, PhysicsProperty::Name(_)));
         let mut rig = edits_rig.then(|| original.as_ref().clone());
         let mut name = None;
-        let mut bindings = None;
-        let mut binding_changed = false;
         macro_rules! item {
             ($collection:ident,$i:expr) => {
                 rig.as_mut()
                     .unwrap()
                     .$collection
-                    .get_mut(*$i)
+                    .iter_mut()
+                    .find(|v| v.id == *$i)
                     .ok_or_else(|| {
                         Status::error(
                             "INVALID_PHYSICS_INDEX",
@@ -125,83 +169,39 @@ impl Document {
             use PhysicsProperty::*;
             match change {
                 Name(value) => name = Some(value.clone()),
-                InputWeight { index, value } => item!(inputs, index).weight = *value,
-                InputAxis { index, value } => item!(inputs, index).kind = *value,
-                InputReflect { index, value } => item!(inputs, index).reflect = *value,
-                OutputWeight { index, value } => item!(outputs, index).weight = *value,
-                OutputScale { index, value } => item!(outputs, index).scale = *value,
-                OutputAxis { index, value } => item!(outputs, index).kind = *value,
-                OutputReflect { index, value } => item!(outputs, index).reflect = *value,
-                OutputVertex { index, value } => item!(outputs, index).vertex_index = *value,
-                VertexRadius { index, value } => item!(vertices, index).radius = *value,
-                VertexMobility { index, value } => item!(vertices, index).mobility = *value,
-                VertexDelay { index, value } => item!(vertices, index).delay = *value,
-                VertexAcceleration { index, value } => item!(vertices, index).acceleration = *value,
+                InputWeight { id, value } => item!(inputs, id).weight = *value,
+                InputAxis { id, value } => item!(inputs, id).kind = *value,
+                InputReflect { id, value } => item!(inputs, id).reflect = *value,
+                OutputWeight { id, value } => item!(outputs, id).weight = *value,
+                OutputScale { id, value } => item!(outputs, id).scale = *value,
+                OutputAxis { id, value } => item!(outputs, id).kind = *value,
+                OutputReflect { id, value } => item!(outputs, id).reflect = *value,
+                OutputNode { id, node_id } => item!(outputs, id).node_id = node_id.clone(),
+                VertexPosition { id, value } => item!(vertices, id).position = *value,
+                VertexRadius { id, value } => item!(vertices, id).radius = *value,
+                VertexMobility { id, value } => item!(vertices, id).mobility = *value,
+                VertexDelay { id, value } => item!(vertices, id).delay = *value,
+                VertexAcceleration { id, value } => item!(vertices, id).acceleration = *value,
                 PositionNormalization(value) => {
                     rig.as_mut().unwrap().normalization.position = *value
                 }
                 AngleNormalization(value) => rig.as_mut().unwrap().normalization.angle = *value,
-                InputParameter {
-                    index,
-                    parameter_id,
-                }
-                | OutputParameter {
-                    index,
-                    parameter_id,
-                } => {
-                    let parameter = self
-                        .get_parameter(parameter_id)
-                        .ok_or_else(|| Status::error("MISSING_PARAMETER", parameter_id))?;
-                    let current_runtime = parameter.runtime_id.as_str();
-                    if current_runtime.is_empty() {
-                        return Err(Status::error(
-                            "INVALID_PHYSICS_TARGET",
-                            "Parameter needs a runtime ID",
-                        ));
-                    }
-                    let map = bindings.get_or_insert_with(|| asset.parameter_bindings.clone());
-                    let runtime =
-                        asset.parameter_binding_key_in(map, parameter_id, current_runtime);
-                    let reference = if matches!(change, InputParameter { .. }) {
-                        &mut item!(inputs, index).source
-                    } else {
-                        &mut item!(outputs, index).destination
-                    };
-                    reference.target = "Parameter".into();
-                    reference.id = runtime.clone();
-                    map.insert(runtime, parameter_id.clone());
-                    binding_changed = true;
-                }
+                InputParameter { id, target } => item!(inputs, id).source = target.clone(),
+                OutputParameter { id, target } => item!(outputs, id).destination = target.clone(),
             }
         }
         if let Some(rig) = &rig {
-            validate_physics_setting(rig).map_err(|error| {
-                Status::error(error.code, format!("{}: {}", error.path, error.message))
-            })?;
+            self.validate_native_physics_rig(rig)?;
         }
-        if binding_changed {
-            let referenced: HashSet<&str> = asset
-                .data
-                .settings
-                .iter()
-                .enumerate()
-                .flat_map(|(i, old)| {
-                    let setting = if i == index {
-                        rig.as_ref().unwrap()
-                    } else {
-                        old.as_ref()
-                    };
-                    setting
-                        .inputs
-                        .iter()
-                        .map(|i| i.source.id.as_str())
-                        .chain(setting.outputs.iter().map(|o| o.destination.id.as_str()))
-                })
-                .collect();
-            bindings
-                .as_mut()
-                .unwrap()
-                .retain(|runtime, _| referenced.contains(runtime.as_str()));
+        self.physics_unlocked(&patch.group_id)?;
+        for change in &patch.changes {
+            if let Some(id) = change.entity_id() {
+                // The typed item lookup above already proved membership in
+                // this unlocked group. Do not scan other rigs for its owner.
+                if self.editor_state().get(id).locked {
+                    return Err(Status::error("OBJECT_LOCKED", id));
+                }
+            }
         }
         let current_name = asset
             .data
@@ -215,7 +215,6 @@ impl Document {
             rig: rig.filter(|rig| rig != original.as_ref()).map(Arc::new),
             fps,
             name: name.filter(|name| Some(name.as_str()) != current_name),
-            bindings: bindings.filter(|bindings| bindings != &asset.parameter_bindings),
         })
     }
     /// Validate without mutating a candidate or aborting its SDK edit.
@@ -232,14 +231,49 @@ impl Document {
         if !prepared.changed() {
             return self.failed(Status::ok());
         }
+        let evaluation_changed = prepared.rig.is_some() || prepared.fps.is_some();
         let asset = Arc::make_mut(self.content.physics.as_mut().unwrap());
-        if let Some(rig) = prepared.rig {
-            asset.data.settings[prepared.index] = rig;
+        prepared.apply(asset, patch);
+        let result = self.changed(ChangeKind::Metadata, vec![], vec![patch.asset_id.clone()]);
+        if evaluation_changed {
+            self.evaluation_revision = self.revision;
         }
-        if let Some(fps) = prepared.fps {
+        result
+    }
+}
+impl PhysicsProperty {
+    pub fn entity_id(&self) -> Option<&str> {
+        use PhysicsProperty::*;
+        match self {
+            InputWeight { id, .. }
+            | InputAxis { id, .. }
+            | InputReflect { id, .. }
+            | InputParameter { id, .. }
+            | OutputWeight { id, .. }
+            | OutputScale { id, .. }
+            | OutputAxis { id, .. }
+            | OutputReflect { id, .. }
+            | OutputParameter { id, .. }
+            | OutputNode { id, .. }
+            | VertexPosition { id, .. }
+            | VertexRadius { id, .. }
+            | VertexMobility { id, .. }
+            | VertexDelay { id, .. }
+            | VertexAcceleration { id, .. } => Some(id),
+            _ => None,
+        }
+    }
+}
+
+impl Prepared {
+    fn apply(self, asset: &mut PhysicsAsset, patch: &PhysicsPatch) {
+        if let Some(rig) = self.rig {
+            asset.data.settings[self.index] = rig;
+        }
+        if let Some(fps) = self.fps {
             asset.data.meta.fps = fps;
         }
-        if let Some(name) = prepared.name {
+        if let Some(name) = self.name {
             asset
                 .data
                 .meta
@@ -249,9 +283,5 @@ impl Document {
                 .expect("validated physics dictionary")
                 .name = name;
         }
-        if let Some(bindings) = prepared.bindings {
-            asset.parameter_bindings = bindings;
-        }
-        self.changed(ChangeKind::Metadata, vec![], vec![patch.asset_id.clone()])
     }
 }

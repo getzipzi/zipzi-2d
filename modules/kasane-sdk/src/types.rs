@@ -147,6 +147,10 @@ pub enum ObjectKind {
     Attachment,
     Pose,
     Physics,
+    PhysicsGroup,
+    PhysicsInput,
+    PhysicsOutput,
+    PhysicsNode,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

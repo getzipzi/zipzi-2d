@@ -236,11 +236,12 @@ fn physics(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()>
     let data: PhysicsDefinition =
         serde_json::from_value(json!({"Version":3,"Meta":meta,"PhysicsSettings":rigs}))
             .map_err(|e| invalid(e.to_string()))?;
-    edit(document.set_physics(PhysicsAsset {
-        id: id(),
-        data,
-        parameter_bindings,
-        opaque_source_ids: None,
-        opaque_source_content_hash: None,
-    }))
+    edit(
+        document.set_physics(
+            PhysicsAsset::from_wire(id(), data, |runtime| {
+                parameter_bindings.get(runtime).cloned()
+            })
+            .map_err(|s| invalid(s.message))?,
+        ),
+    )
 }

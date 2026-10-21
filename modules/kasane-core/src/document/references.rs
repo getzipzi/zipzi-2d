@@ -174,9 +174,19 @@ impl Document {
             }
         }
         if let Some(physics) = &self.content.physics {
-            for (runtime_id, parameter_id) in &physics.parameter_bindings {
-                if parameter_id == id {
-                    refs.push(format!("physics {} parameter {runtime_id}", physics.id));
+            for output in self.physics_node_users(id) {
+                refs.push(format!("physics {} output {output}", physics.id));
+            }
+            for g in &physics.data.settings {
+                for (entry, target) in g
+                    .inputs
+                    .iter()
+                    .map(|v| (&v.id, &v.source))
+                    .chain(g.outputs.iter().map(|v| (&v.id, &v.destination)))
+                {
+                    if target.parameter_id() == Some(id) {
+                        refs.push(format!("physics {} entry {entry}", physics.id));
+                    }
                 }
             }
         }
@@ -197,6 +207,16 @@ impl Document {
         }
         if id == self.content.id || !self.contains_id(id) {
             return self.failed(Status::error("MISSING_OBJECT", id));
+        }
+        if self.physics_owner(id).is_some() || self.physics().is_some_and(|a| a.id == id) {
+            let plan = match self.plan_physics_edit(super::PhysicsEdit::Delete {
+                ids: vec![id.into()],
+                node_replacements: Default::default(),
+            }) {
+                Ok(p) => p,
+                Err(s) => return self.failed(s),
+            };
+            return self.apply_physics_plan(&plan);
         }
         let motion_edit = if self.get_motion(id).is_some() {
             Some(super::MotionEdit::DeleteClip { id: id.into() })

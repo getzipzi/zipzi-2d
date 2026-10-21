@@ -6,7 +6,11 @@ use crate::AnimationError;
 use kasane_core::physics::{
     PhysicsAxis, PhysicsInput, PhysicsOutput, PhysicsRange, PhysicsSetting,
 };
-use kasane_core::{document::PhysicsAsset, Document};
+use kasane_core::{
+    document::{ExecutablePhysics, PhysicsProjection},
+    Document,
+};
+use std::sync::Arc;
 
 #[derive(Clone, Copy, Default)]
 struct Vector {
@@ -65,6 +69,9 @@ struct RigState {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PhysicsRigSnapshot {
     pub id: String,
+    pub input_ids: Vec<String>,
+    pub output_ids: Vec<String>,
+    pub node_ids: Vec<String>,
     pub particles: Vec<[f32; 2]>,
     /// Weighted, normalized angle in degrees used by the latest solved step.
     /// Rotate the Y-down solver coordinates by this angle to display a fixed
@@ -84,6 +91,7 @@ pub struct PhysicsOutputSnapshot {
 
 #[derive(Clone)]
 pub(crate) struct PhysicsRuntime {
+    projection: Option<Arc<PhysicsProjection>>,
     solved: bool,
     remaining: f32,
     initialized_inputs: bool,
@@ -195,7 +203,8 @@ impl PhysicsPreview {
 impl PhysicsRuntime {
     pub(crate) fn heap_bytes(&self) -> usize {
         use crate::seek_cache::{map_bytes, vec_bytes};
-        map_bytes(&self.parameter_cache)
+        self.projection.as_ref().map_or(0, |p| p.estimated_bytes())
+            + map_bytes(&self.parameter_cache)
             + map_bytes(&self.input_cache)
             + vec_bytes(&self.rigs)
             + self
@@ -211,6 +220,10 @@ impl PhysicsRuntime {
                 .sum::<usize>()
     }
     pub(crate) fn new(document: &Document) -> Self {
+        let projection = document
+            .physics_projection()
+            .expect("validated physics topology")
+            .map(Arc::new);
         let parameter_cache = document
             .parameter_order()
             .iter()
@@ -221,8 +234,9 @@ impl PhysicsRuntime {
                 )
             })
             .collect::<BTreeMap<_, _>>();
-        let rigs = document
-            .physics()
+        let rigs = projection
+            .as_ref()
+            .map(|p| &p.executable)
             .map(|asset| {
                 asset
                     .data
@@ -259,6 +273,7 @@ impl PhysicsRuntime {
             })
             .unwrap_or_default();
         Self {
+            projection,
             solved: false,
             remaining: 0.0,
             initialized_inputs: false,
@@ -272,27 +287,25 @@ impl PhysicsRuntime {
         *self = Self::new(document);
     }
 
-    pub(crate) fn snapshot(&self, document: &Document) -> Vec<PhysicsRigSnapshot> {
+    pub(crate) fn snapshot(&self, _document: &Document) -> Vec<PhysicsRigSnapshot> {
         if !self.solved {
             return Vec::new();
         }
-        let Some(asset) = document.physics() else {
+        let Some(projection) = &self.projection else {
             return Vec::new();
         };
-        if asset
-            .referenced_runtime_ids()
-            .iter()
-            .any(|id| !asset.parameter_bindings.contains_key(*id))
-        {
-            return Vec::new();
-        }
+        let asset = &projection.executable;
         asset
             .data
             .settings
             .iter()
             .zip(&self.rigs)
-            .map(|(setting, rig)| PhysicsRigSnapshot {
-                id: setting.id.clone(),
+            .zip(&projection.groups)
+            .map(|((_setting, rig), slots)| PhysicsRigSnapshot {
+                id: slots.group_id.clone(),
+                input_ids: slots.inputs.runtime_to_native.clone(),
+                output_ids: slots.outputs.runtime_to_native.clone(),
+                node_ids: slots.nodes.clone(),
                 input_angle: rig.input_angle,
                 particles: rig
                     .particles
@@ -312,15 +325,16 @@ impl PhysicsRuntime {
         dt: f32,
         diagnostics: &mut Vec<String>,
     ) {
-        let Some(asset) = document.physics() else {
+        let Some(projection) = &self.projection else {
             return;
         };
-        for runtime in asset.referenced_runtime_ids() {
-            if !asset.parameter_bindings.contains_key(runtime) {
-                diagnostics.push(format!("Physics: unresolved parameter {runtime}"));
-                return;
-            }
-        }
+        let asset = &projection.executable;
+        diagnostics.extend(
+            projection
+                .disabled
+                .iter()
+                .map(|v| format!("Physics: {:?} channel {}", v.reason, v.id)),
+        );
         if dt <= 0.0 {
             return;
         }
@@ -400,9 +414,10 @@ impl PhysicsRuntime {
         document: &Document,
         parameters: &mut BTreeMap<String, f32>,
     ) {
-        let Some(asset) = document.physics() else {
+        let Some(projection) = &self.projection else {
             return;
         };
+        let asset = &projection.executable;
         self.parameter_cache = parameters.clone();
         self.solved = true;
         self.input_cache = parameters.clone();
@@ -458,7 +473,7 @@ impl PhysicsRuntime {
 
 fn read_inputs(
     document: &Document,
-    asset: &PhysicsAsset,
+    asset: &ExecutablePhysics,
     setting: &PhysicsSetting,
     values: &BTreeMap<String, f32>,
 ) -> (Vector, f32) {
@@ -592,7 +607,7 @@ fn output_value(output: &PhysicsOutput, particles: &[Particle]) -> f32 {
 
 fn write_output(
     document: &Document,
-    asset: &PhysicsAsset,
+    asset: &ExecutablePhysics,
     output: &PhysicsOutput,
     raw: f32,
     values: &mut BTreeMap<String, f32>,

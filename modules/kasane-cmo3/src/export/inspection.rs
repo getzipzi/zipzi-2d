@@ -79,11 +79,14 @@ pub(crate) fn inspect_with_animation(
         }) {
             loss(&asset.id,"PHYSICS_Y", "Cubism editable physics supports X and angle inputs/outputs; Y channels are omitted");
         }
-        if asset
-            .referenced_runtime_ids()
-            .iter()
-            .any(|id| !asset.parameter_bindings.contains_key(*id))
-        {
+        if asset.data.settings.iter().any(|g| {
+            g.inputs
+                .iter()
+                .any(|v| v.source.disabled_reason().is_some())
+                || g.outputs
+                    .iter()
+                    .any(|v| v.destination.disabled_reason().is_some())
+        }) {
             return Err(Cmo3Error::InvalidDocument(
                 "Physics has unresolved parameter references".into(),
             ));
@@ -117,11 +120,11 @@ pub(crate) fn inspect_with_animation(
                     || rig
                         .inputs
                         .iter()
-                        .any(|v| !v.extensions.is_empty() || !v.source.extensions.is_empty())
+                        .any(|v| !v.extensions.is_empty() || !v.reference_extensions.is_empty())
                     || rig
                         .outputs
                         .iter()
-                        .any(|v| !v.extensions.is_empty() || !v.destination.extensions.is_empty())
+                        .any(|v| !v.extensions.is_empty() || !v.reference_extensions.is_empty())
                     || rig.vertices.iter().any(|v| !v.extensions.is_empty())
             })
         {

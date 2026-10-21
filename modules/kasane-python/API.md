@@ -239,11 +239,26 @@ their runtime IDs on export and appear in preview coverage diagnostics.
 `Session.pose()` mapping; `import_pose3(id, text)` reports unresolved Parts.
 `Session.export_pose3()` returns `None` when no Pose exists.
 
-`Edit.create_physics(id, physics3, parameter_bindings)` stores a typed
-physics3 record and a mapping from runtime parameter IDs to project UUIDs.
-`replace_physics()` accepts `Session.physics()`; `import_physics3(id, text)`
-reports unresolved parameter IDs. `Session.export_physics3()` returns `None`
-when there is no Physics asset. `Session.physics_preview()` captures a
+`Edit.create_physics(id, name="Physics")` creates a native singleton root and a
+legal group in one transaction, returning the group UUID. Native groups,
+inputs, outputs and nodes have independent UUIDs; outputs refer to node UUIDs.
+`Edit.physics_authoring(intent)` accepts the typed `PhysicsEdit` enum through
+its `operation` discriminator. Creation, field patches, group execution order,
+channel moves/copies, dedicated node chain operations and joint node deletion
+with explicit replacement references all use the same Rust domain planner.
+`Session.plan_physics_authoring(intent)` returns a version-bound plan with
+`affected_ids`; `execute_physics_plan(plan)` rejects stale plans. `handle()`
+accepts `physics`, `physics_group`, `physics_input`, `physics_output`, and
+`physics_node`. Deletion followed by Undo does not revive an old handle.
+
+`replace_physics()` accepts the native `Session.physics()` snapshot;
+`import_physics3(id, text)` explicitly converts external records and reports
+unresolved parameters. Group external IDs remain separate from native UUIDs.
+New channels have `{"kind": "unspecified"}` parameter targets; they can be
+saved, and preview omits only those channels without renormalizing weights.
+Strict `Session.export_physics3()` diagnoses unspecified/unresolved targets and
+never writes internal UUIDs. It returns `None` when there is no Physics asset.
+`Session.physics_preview()` captures a
 detached stateful simulator with `set_parameter()`, `advance(dt)`,
 `stabilize()`, `reset()`, `parameters()`, and `diagnostics()`.
 

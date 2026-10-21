@@ -180,6 +180,35 @@ class CpuMotionAnimationTests(unittest.TestCase):
         model.undo()
         self.assertEqual(model.model3_settings(), before)
 
+    def test_physics_native_channels_plans_and_handle_lifetimes(self):
+        model = session()
+        asset, channel = str(uuid4()), str(uuid4())
+        with model.edit("default physics") as edit:
+            group = edit.create_physics(asset, "Rig")
+            edit.physics_authoring({"operation": "create_input", "group_id": group,
+                                    "id": channel, "before": None})
+        native = model.physics()
+        self.assertEqual(native["data"]["settings"][0]["inputs"][0]["source"],
+                         {"kind": "unspecified"})
+        handle = model.handle("physics_input", channel)
+        with self.assertRaises(kasane.SdkFailure) as failure:
+            model.export_physics3()
+        self.assertEqual(failure.exception.code, "NEEDS_CONFIGURATION")
+        plan = model.plan_physics_authoring({"operation": "delete", "ids": [channel],
+                                            "node_replacements": {}})
+        self.assertIn(channel, plan.affected_ids)
+        model.execute_physics_plan(plan)
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.resolve_handle(handle)
+        self.assertEqual(model.physics(), native)
+        with self.assertRaises(kasane.SdkFailure):
+            model.execute_physics_plan(plan)
+        with TemporaryDirectory() as directory:
+            destination = Path(directory).resolve() / "project"
+            model.save(destination)
+            self.assertEqual(kasane.open_project(destination).physics(), native)
+
     def test_physics_authoring_preview_and_project_roundtrip(self):
         model = session()
         other = "00000000-0000-4000-8000-0000000000ae"

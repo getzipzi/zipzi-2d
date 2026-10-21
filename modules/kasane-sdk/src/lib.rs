@@ -63,3 +63,6 @@ mod motion_authoring;
 pub use motion_authoring::*;
 
 pub use changes::{MotionReferenceChange, MotionReferenceValue};
+
+mod physics_authoring;
+pub use physics_authoring::*;

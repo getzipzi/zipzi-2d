@@ -179,6 +179,14 @@ class Session:
         """Return explicit root registrations, including stable IDs and overrides."""
         return json.loads(self._native.motion_roots_json())
 
+    def plan_physics_authoring(self, intent: Mapping[str, object]):
+        """Plan a PhysicsEdit; inspect affected_ids before accepting."""
+        return self._native.plan_physics_authoring_json(json.dumps(intent))
+
+    def execute_physics_plan(self, plan) -> Version:
+        """Publish a Physics plan against its captured SDK version."""
+        return self._native.execute_physics_plan(plan)
+
     def plan_motion_authoring(self, intent: Mapping[str, object]):
         """Plan a typed operation; inspect affected_ids and migrated_to_root before execution."""
         return self._native.plan_motion_authoring_json(json.dumps(intent))

@@ -41,6 +41,7 @@ pub struct AuthoringSession {
     // Owner-dependent field addresses must not revive after a move and undo.
     pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) attachment_content_epochs: HashMap<String, u64>,
+    pub(crate) physics_contexts: HashMap<String, (String, u64)>,
     pub(crate) expression_entry_contexts: HashMap<String, (String, u64)>,
 }
 
@@ -179,6 +180,7 @@ impl AuthoringSession {
             events: Vec::new(),
             history_limits,
             incarnations: HashMap::new(),
+            physics_contexts: HashMap::new(),
             expression_entry_contexts: HashMap::new(),
             motion_contexts: HashMap::new(),
             attachment_content_epochs: HashMap::new(),
@@ -706,6 +708,17 @@ impl AuthoringSession {
         let changes = &receipt.changes;
         if changes.full_invalidation {
             self.motion_contexts.clear();
+            self.physics_contexts.clear();
+            if let Some(asset) = document.physics() {
+                for group in &asset.data.settings {
+                    self.physics_contexts
+                        .insert(group.id.clone(), (asset.id.clone(), document.revision()));
+                    for id in group.entity_ids().skip(1) {
+                        self.physics_contexts
+                            .insert(id.into(), (group.id.clone(), document.revision()));
+                    }
+                }
+            }
             self.expression_entry_contexts.clear();
             for owner in document
                 .expression_order()
@@ -777,6 +790,34 @@ impl AuthoringSession {
                 }
             } else {
                 self.motion_contexts.remove(&entity.id);
+            }
+        }
+        for entity in changes
+            .created
+            .iter()
+            .chain(&changes.deleted)
+            .chain(&changes.modified)
+        {
+            if !matches!(
+                entity.kind,
+                ObjectKind::PhysicsGroup
+                    | ObjectKind::PhysicsInput
+                    | ObjectKind::PhysicsOutput
+                    | ObjectKind::PhysicsNode
+            ) {
+                continue;
+            }
+            if let Some(owner) = document.physics_owner(&entity.id) {
+                if self
+                    .physics_contexts
+                    .get(&entity.id)
+                    .is_none_or(|v| v.0 != owner)
+                {
+                    self.physics_contexts
+                        .insert(entity.id.clone(), (owner.into(), document.revision()));
+                }
+            } else {
+                self.physics_contexts.remove(&entity.id);
             }
         }
         for entity in &changes.resource_content {
@@ -855,6 +896,10 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
         ObjectKind::MotionEvent => doc.get_motion_event(id).is_some(),
         ObjectKind::Attachment => doc.get_attachment(id).is_some(),
         ObjectKind::Pose => doc.pose().is_some_and(|pose| pose.id == id),
+        ObjectKind::PhysicsGroup => doc.get_physics_group(id).is_some(),
+        ObjectKind::PhysicsInput => doc.get_physics_input(id).is_some(),
+        ObjectKind::PhysicsOutput => doc.get_physics_output(id).is_some(),
+        ObjectKind::PhysicsNode => doc.get_physics_node(id).is_some(),
         ObjectKind::Physics => doc.physics().is_some_and(|physics| physics.id == id),
     }
 }
@@ -954,6 +999,26 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
             kind: ObjectKind::Physics,
             id: physics.id.clone(),
         });
+    }
+    if let Some(asset) = doc.physics() {
+        for g in &asset.data.settings {
+            keys.insert(ObjectKey {
+                kind: ObjectKind::PhysicsGroup,
+                id: g.id.clone(),
+            });
+            keys.extend(g.inputs.iter().map(|v| ObjectKey {
+                kind: ObjectKind::PhysicsInput,
+                id: v.id.clone(),
+            }));
+            keys.extend(g.outputs.iter().map(|v| ObjectKey {
+                kind: ObjectKind::PhysicsOutput,
+                id: v.id.clone(),
+            }));
+            keys.extend(g.vertices.iter().map(|v| ObjectKey {
+                kind: ObjectKind::PhysicsNode,
+                id: v.id.clone(),
+            }));
+        }
     }
     keys
 }

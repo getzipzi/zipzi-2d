@@ -6,7 +6,9 @@ use kasane_core::{ChangeKind, Document};
 use serde::Serialize;
 use std::collections::{BTreeSet, HashSet};
 mod motion;
+mod physics;
 pub use motion::{MotionReferenceChange, MotionReferenceValue};
+pub use physics::{PhysicsReferenceChange, PhysicsReferenceValue};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -28,6 +30,11 @@ pub struct EntityRef {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CollectionRef {
+    Physics {
+        document_id: String,
+        owner: Option<String>,
+        role: String,
+    },
     Motion {
         document_id: String,
         owner: Option<String>,
@@ -55,6 +62,7 @@ pub struct ChangeSet {
     pub collections: Vec<CollectionRef>,
     pub references: Vec<ReferenceChange>,
     pub motion_references: Vec<MotionReferenceChange>,
+    pub physics_references: Vec<PhysicsReferenceChange>,
     pub resource_content: Vec<EntityRef>,
     pub categories: BTreeSet<ChangeCategory>,
     pub full_invalidation: bool,
@@ -67,6 +75,9 @@ impl ChangeSet {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.motion_references {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+        }
+        for edge in &mut inverse.physics_references {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         inverse
@@ -87,6 +98,15 @@ impl ChangeSet {
                 .collections
                 .iter()
                 .map(|c| match c {
+                    CollectionRef::Physics {
+                        document_id,
+                        owner,
+                        role,
+                    } => {
+                        document_id.capacity()
+                            + owner.as_ref().map_or(0, String::capacity)
+                            + role.capacity()
+                    }
                     CollectionRef::Motion {
                         document_id,
                         owner,
@@ -131,6 +151,18 @@ impl ChangeSet {
                         + r.field.capacity()
                         + motion_target_bytes(&r.before)
                         + motion_target_bytes(&r.after)
+                })
+                .sum::<usize>()
+            + self
+                .physics_references
+                .iter()
+                .map(|r| {
+                    std::mem::size_of::<PhysicsReferenceChange>()
+                        + r.entity.id.capacity()
+                        + r.entity.document_id.capacity()
+                        + r.field.capacity()
+                        + physics_target_bytes(&r.before)
+                        + physics_target_bytes(&r.after)
                 })
                 .sum::<usize>()
             + self.categories.len() * (std::mem::size_of::<ChangeCategory>() + 64)
@@ -263,6 +295,7 @@ pub(crate) fn summarize(
         }
     }
     motion::summarize_motion(before, after, &mut out);
+    physics::summarize_physics(before, after, &mut out);
     // Persistent authoring flags affect capabilities even when domain content
     // is unchanged. Derive them from both states so undo uses the same summary.
     if before.editor_state() != after.editor_state() {
@@ -294,7 +327,13 @@ pub(crate) fn summarize(
             key.id == *id
                 && !matches!(
                     key.kind,
-                    ObjectKind::Expression | ObjectKind::ExpressionEntry
+                    ObjectKind::Expression
+                        | ObjectKind::ExpressionEntry
+                        | ObjectKind::Physics
+                        | ObjectKind::PhysicsGroup
+                        | ObjectKind::PhysicsInput
+                        | ObjectKind::PhysicsOutput
+                        | ObjectKind::PhysicsNode
                 )
         }) {
             out.modified.push(entity(key.kind, id));
@@ -348,5 +387,21 @@ fn motion_target_bytes(value: &Option<MotionReferenceValue>) -> usize {
             } => category.capacity() + runtime_id.capacity(),
         },
         _ => 0,
+    }
+}
+
+fn physics_target_bytes(value: &Option<PhysicsReferenceValue>) -> usize {
+    match value {
+        Some(PhysicsReferenceValue::Node { id }) => id.capacity(),
+        Some(PhysicsReferenceValue::Parameter { target }) => match target {
+            kasane_core::document::PhysicsTarget::Resolved { parameter_id } => {
+                parameter_id.capacity()
+            }
+            kasane_core::document::PhysicsTarget::Unresolved { runtime_id } => {
+                runtime_id.capacity()
+            }
+            _ => 0,
+        },
+        None => 0,
     }
 }

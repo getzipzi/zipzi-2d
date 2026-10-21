@@ -29,8 +29,11 @@ impl EditSession<'_> {
     pub fn set_physics(&mut self, asset: PhysicsAsset) -> Result<(), SdkError> {
         self.ensure_active("set_physics")?;
         let id = asset.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().set_physics(asset);
-        self.record(result, "set_physics", &id)
+        self.record(result, "set_physics", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
 
     /// Apply a typed field patch while sharing untouched rigs with history/snapshots.
@@ -48,7 +51,9 @@ impl EditSession<'_> {
         self.ensure_active("import_physics3")?;
         let imported = import_physics3(self.candidate_document(), id, text)
             .map_err(|error| self.abort_with(project_error(error, "import_physics3")))?;
+        let before = crate::session::keys_in(self.candidate_document());
         self.candidate = Some(imported.candidate);
+        self.track_removed_objects(before);
         self.kind = super::merge_kind(self.kind, ChangeKind::Metadata);
         if !self.object_ids.iter().any(|item| item == id) {
             self.object_ids.push(id.into());

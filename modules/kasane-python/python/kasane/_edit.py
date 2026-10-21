@@ -210,6 +210,10 @@ class Edit:
         """Replace a known-field clip using a detached motion snapshot."""
         self._call(lambda: self._native.replace_motion_json(json.dumps(dict(clip, track_order=clip.get("track_order", [])))))
 
+    def physics_authoring(self, intent: Mapping[str, object]) -> None:
+        """Apply a typed PhysicsEdit intent with the operation discriminator."""
+        self._call(lambda: self._native.physics_authoring_json(json.dumps(intent)))
+
     def motion_authoring(self, intent: Mapping[str, object]) -> None:
         """Apply a typed MotionEdit intent (op discriminator) in this transaction."""
         self._call(lambda: self._native.motion_authoring_json(json.dumps(intent)))
@@ -324,14 +328,12 @@ class Edit:
             self._native.abort()
             raise
 
-    def create_physics(self, physics_id: str, physics3: Mapping[str, object],
-                       parameter_bindings: Mapping[str, str]) -> None:
-        """Store typed physics3 rigs with runtime-ID to parameter-UUID bindings."""
-        self._call(lambda: self._native.set_physics_json(json.dumps({
-            "id": physics_id, "data": dict(physics3),
-            "parameter_bindings": dict(parameter_bindings),
-            "opaque_source_ids": None, "opaque_source_content_hash": None,
-        })))
+    def create_physics(self, physics_id: str, name: str = "Physics") -> str:
+        """Create the singleton root and one legal group in this transaction."""
+        group_id = str(uuid4())
+        self.physics_authoring({"operation": "create_group", "asset_id": physics_id,
+                                "id": group_id, "name": name, "before": None})
+        return group_id
 
     def replace_physics(self, physics: Mapping[str, object]) -> None:
         """Replace a known-field Physics asset from a detached snapshot."""

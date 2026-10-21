@@ -40,7 +40,8 @@ pub use package::{
     RuntimeValidation,
 };
 pub use physics::{
-    export_physics3, import_physics3, PhysicsDiagnostic, PhysicsImport, PhysicsProjectError,
+    export_available_physics3, export_physics3, import_physics3, PhysicsDiagnostic, PhysicsImport,
+    PhysicsProjectError,
 };
 pub use pose::{export_pose3, import_pose3, PoseDiagnostic, PoseImport, PoseProjectError};
 pub use resources::{content_sha256, decode_png, is_valid_asset_path, AssetData, TextureData};

@@ -87,6 +87,7 @@ enum Command {
     SetMotionTiming(String, f32, f32, bool, Option<f32>, Option<f32>),
     SetPose(kasane_core::document::PoseAsset),
     SetPhysics(kasane_core::document::PhysicsAsset),
+    EditPhysics(kasane_core::document::PhysicsEdit),
     SetModel3Settings(kasane_core::document::Model3Settings),
     SetPackageAttachments(Vec<kasane_core::document::PackageAttachment>),
 }

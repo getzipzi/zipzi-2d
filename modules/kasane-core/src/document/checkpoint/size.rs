@@ -370,13 +370,57 @@ impl ExtraBytes for PoseAsset {
 }
 impl ExtraBytes for PhysicsAsset {
     fn extra_bytes(&self) -> usize {
-        // Physics vectors and nested extension maps are charged conservatively
-        // against their serialized size, including collection spare capacity.
         self.id.capacity()
-            + serde_json::to_vec(&self.data).map_or(0, |bytes| bytes.len() * 2)
-            + self.parameter_bindings.extra_bytes()
+            + self.data.extra_bytes()
             + self.opaque_source_ids.extra_bytes()
             + self.opaque_source_content_hash.extra_bytes()
+    }
+}
+impl ExtraBytes for super::super::PhysicsDefinition {
+    fn extra_bytes(&self) -> usize {
+        self.settings.extra_bytes()
+            + self.extensions.extra_bytes()
+            + self.meta.extensions.extra_bytes()
+            + self.meta.forces.extensions.extra_bytes()
+            + self.meta.dictionary.extra_bytes()
+    }
+}
+impl ExtraBytes for crate::physics::PhysicsDictionaryEntry {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity() + self.name.capacity() + self.extensions.extra_bytes()
+    }
+}
+impl ExtraBytes for super::super::PhysicsSetting {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity()
+            + self.external_id.capacity()
+            + self.inputs.extra_bytes()
+            + self.outputs.extra_bytes()
+            + self.vertices.extra_bytes()
+            + self.normalization.extensions.extra_bytes()
+            + self.extensions.extra_bytes()
+    }
+}
+impl ExtraBytes for super::super::PhysicsInput {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity()
+            + self.source.extra_bytes()
+            + self.reference_extensions.extra_bytes()
+            + self.extensions.extra_bytes()
+    }
+}
+impl ExtraBytes for super::super::PhysicsOutput {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity()
+            + self.destination.extra_bytes()
+            + self.reference_extensions.extra_bytes()
+            + self.node_id.capacity()
+            + self.extensions.extra_bytes()
+    }
+}
+impl ExtraBytes for super::super::PhysicsNode {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity() + self.extensions.extra_bytes()
     }
 }
 impl ExtraBytes for ModelTargetRef {
@@ -606,6 +650,16 @@ impl ExtraBytes for super::super::AttachmentRef {
         match self {
             Self::Resolved { attachment_id } => attachment_id.capacity(),
             Self::Unresolved { path } => path.capacity(),
+        }
+    }
+}
+
+impl ExtraBytes for super::super::PhysicsTarget {
+    fn extra_bytes(&self) -> usize {
+        match self {
+            Self::Unspecified => 0,
+            Self::Resolved { parameter_id } => parameter_id.capacity(),
+            Self::Unresolved { runtime_id } => runtime_id.capacity(),
         }
     }
 }
