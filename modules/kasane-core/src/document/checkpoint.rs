@@ -47,15 +47,21 @@ impl DocumentCheckpoint {
 
 impl Document {
     pub fn estimated_content_bytes(&self) -> usize {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.document_size");
         size::estimated_content_bytes(&self.content)
     }
     pub fn checkpoint(&self) -> DocumentCheckpoint {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.checkpoint_clone");
         DocumentCheckpoint(self.content.clone())
     }
 
     /// Build an isolated edit candidate. Its saved baseline and evaluation caches
     /// are deliberately absent; only `publish_candidate` can commit it.
     pub fn fork_candidate(&self) -> Document {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.fork_candidate");
         let mut candidate = Document::new();
         let mut content = self.checkpoint();
         candidate.swap_checkpoint(&mut content, true);
@@ -72,6 +78,8 @@ impl Document {
         declared_kind: ChangeKind,
         identity_changed: bool,
     ) -> Result<bool, Status> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.publish_candidate");
         if self.transaction_active || candidate.transaction_active || candidate.batch_build_active {
             return Err(Status::error("EDIT_ACTIVE", "Finish the active edit first"));
         }
@@ -206,6 +214,8 @@ impl Document {
 
     /// Swap all persistent content while retaining the saved baseline.
     fn swap_checkpoint(&mut self, checkpoint: &mut DocumentCheckpoint, invalidate: bool) {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.checkpoint_swap_indexes");
         self.modified_cache.take();
         std::mem::swap(&mut self.content, &mut checkpoint.0);
         self.mesh_runtime_ids = self

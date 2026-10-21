@@ -40,6 +40,35 @@ impl EditSession<'_> {
         self.before
     }
 
+    /// Apply a scalar field patch to this candidate. Failed preview updates are
+    /// recoverable and leave the edit active, unlike ordinary failed edit methods.
+    pub fn preview_property(
+        &mut self,
+        patch: &kasane_core::document::PropertyPatch,
+        preview: &mut kasane_core::preview::PreviewState,
+        values: kasane_core::PreviewValues,
+    ) -> Result<(), SdkError> {
+        self.ensure_active("preview_property")?;
+        let result = self.document().preview_property(patch, preview, values);
+        if !result.status.is_ok() {
+            return Err(SdkError::from_status(
+                result.status,
+                "preview_property",
+                Vec::new(),
+            ));
+        }
+        self.record(result, "preview_property", "")
+    }
+
+    pub fn patch_property(
+        &mut self,
+        patch: &kasane_core::document::PropertyPatch,
+    ) -> Result<(), SdkError> {
+        self.ensure_active("patch_property")?;
+        let result = self.document().patch_property(patch);
+        self.record(result, "patch_property", "")
+    }
+
     fn document(&mut self) -> &mut Document {
         self.candidate.as_mut().expect("edit candidate exists")
     }
@@ -547,6 +576,8 @@ impl EditSession<'_> {
 
     /// Publish an owned edit workspace to its original session.
     pub fn commit_to(mut self, session: &mut AuthoringSession) -> Result<EditReceipt, SdkError> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("sdk.commit");
         self.ensure_active("commit")?;
         if session.version() != self.before {
             let mut error = SdkError::new("STALE_VERSION", "Document version changed", "commit");

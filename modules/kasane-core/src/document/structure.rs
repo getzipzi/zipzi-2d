@@ -14,6 +14,8 @@ impl Document {
     /// Validate all persistent collections and references without reading resources
     /// or changing this document. Restored checkpoints use the same checks.
     pub fn validate_structure(&self) -> Vec<StructureIssue> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.validate_structure");
         let mut issues = Vec::new();
         let mut initialized = Document::new();
         let status = initialized.initialize(self.content.id.clone(), self.model_setup());

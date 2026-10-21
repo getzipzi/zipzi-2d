@@ -56,6 +56,8 @@ impl Prepared {
 }
 impl Document {
     fn prepare_physics_patch(&self, patch: &PhysicsPatch) -> Result<Prepared, Status> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.prepare_physics_patch");
         if self.mutation_blocked() {
             return Err(Status::error(
                 "TRANSACTION_ACTIVE",

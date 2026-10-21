@@ -355,3 +355,71 @@ fn model_space_and_source_reference_are_separate_project_fields() {
     let reopened = kasane_project::decode_project(&json).unwrap();
     assert!(reopened.same_content(before.document()));
 }
+
+#[test]
+fn scalar_preview_rejections_preserve_candidate_frame_and_transaction() {
+    use kasane_core::{document::PropertyPatch, preview::PreviewState, Parameter};
+    let mut sdk = AuthoringSession::new(&id(1), kasane_core::ModelSetup::default()).unwrap();
+    sdk.edit("parameter", None, |edit| {
+        edit.create_parameter(Parameter {
+            id: id(2),
+            runtime_id: "P".into(),
+            minimum: -1.,
+            maximum: 1.,
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    let before = sdk.version();
+    let mut edit = sdk.begin_owned_edit("drag", None).unwrap();
+    let patch = |value| PropertyPatch::Parameter {
+        id: id(2),
+        minimum: -1.,
+        maximum: 1.,
+        default_value: value,
+        decimal_places: 6,
+    };
+    let mut preview = PreviewState::default();
+    edit.preview_property(&patch(0.25), &mut preview, Default::default())
+        .unwrap();
+    let frame = preview.frame(edit.candidate_document(), 0).unwrap();
+    let revision = edit.candidate_document().revision();
+    // Mutation succeeds, evaluation fails: undo just this update, including its revision.
+    assert!(edit
+        .preview_property(&patch(0.5), &mut preview, [(id(99), 0.)].into())
+        .is_err());
+    assert_eq!(edit.candidate_document().revision(), revision);
+    assert_eq!(
+        edit.candidate_document()
+            .get_parameter(&id(2))
+            .unwrap()
+            .default_value,
+        0.25
+    );
+    assert!(Arc::ptr_eq(
+        &frame,
+        &preview.frame(edit.candidate_document(), 0).unwrap()
+    ));
+    // A validation failure must also keep this same transaction usable.
+    assert!(edit
+        .preview_property(&patch(2.), &mut preview, Default::default())
+        .is_err());
+    edit.preview_property(&patch(0.75), &mut preview, Default::default())
+        .unwrap();
+    assert_eq!(frame.parameters[0].value, 0.25);
+    assert_eq!(
+        preview
+            .frame(edit.candidate_document(), 0)
+            .unwrap()
+            .parameters[0]
+            .value,
+        0.75
+    );
+    edit.commit_to(&mut sdk).unwrap();
+    assert_eq!(sdk.version().revision, before.revision + 1);
+    sdk.undo().unwrap();
+    assert_eq!(
+        sdk.document().get_parameter(&id(2)).unwrap().default_value,
+        0.
+    );
+}

@@ -67,7 +67,8 @@ fn session() -> AuthoringSession {
                 time: 0.5,
                 value: "cue".into(),
                 extensions: Default::default(),
-            }],
+            }]
+            .into(),
             extensions: Default::default(),
             meta_extensions: Default::default(),
             opaque_source_ids: None,

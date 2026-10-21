@@ -4,8 +4,7 @@ Kasane 2D provides a Rust authoring SDK, Python bindings, and a WGPU renderer
 
 Start with the [Python SDK README](modules/kasane-python/README.md) and
 [Python API reference](modules/kasane-python/API.md). See
-[architecture](docs/ARCHITECTURE.md) and [validation](docs/VALIDATION.md) for
-the implementation and checks. The [model inventory](models/README.md) records
+[architecture](docs/ARCHITECTURE.md). The [model inventory](models/README.md) records
 local models used by tests and benchmarks.
 
 ## Build and test
@@ -31,17 +30,6 @@ the source tree and tests project creation, import, editing, save, and export.
 An observe-enabled wheel can also run GPU and pinned image-reference checks;
 `--full` additionally requires official and Purism Core probes. See the
 [tool guide](tools/README.md) for the complete commands.
-
-## Acknowledgements
-
-This project builds on upstream open-source projects:
-
-- [PurismCore](https://github.com/SakuraMotion/PurismCore) by the Sakura Motion
-  Project is included through a forked Git submodule as an alternative Cubism
-  Core-compatible provider under its MIT License.
-
-The maintainers and contributors of those projects are not responsible for,
-and do not necessarily endorse, the changes made in this repository.
 
 ## License and third-party rights
 

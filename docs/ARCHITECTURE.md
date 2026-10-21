@@ -18,6 +18,13 @@ Python wheel (kasane.Session) → kasane-sdk → kasane-core / kasane-project / 
 负责工程与资源读写，不保存历史栈。交互编辑在隔离候选中预览，提交时生成一个历史步骤；
 取消、无变化或失败的编辑保留原有 redo 分支，保存由 SDK 协调历史资源路径与已保存基线。
 
+Motion 描述与曲线负载分别复制：`MotionClip` 的 tracks / events 使用
+`SharedVec`，描述字段修改保留共享负载，曲线编辑通过写时复制分离。
+类型化标量 patch 只检查修改字段及其依赖；Fade 无需重复遍历曲线，
+Duration / FPS 需要检查既有轨道末端和事件的时间边界、半帧容差与源时间范围。
+SDK 正式发布仍执行完整结构校验。共享存储保持原有 JSON 数组编码，历史内存预算
+按每个检查点完整计费，避免共享分配导致低估。
+
 ## SDK 与 Python 包的职责
 
 `kasane-python` 是一个发行包，内部同时包含 PyO3 Rust 扩展和纯 Python 代码；它不是与 `kasane-sdk` 并列的第二套工程内核。区分代码位置时看**谁拥有规则、谁会使用规则**，不以实现语言或文件长度决定。

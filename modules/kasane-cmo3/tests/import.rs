@@ -36,8 +36,9 @@ fn initial_scene(n: u32, frames: f32) -> MotionClip {
             fade_in: None,
             fade_out: None,
             extensions: Default::default(),
-        }],
-        events: Vec::new(),
+        }]
+        .into(),
+        events: Default::default(),
         extensions: Default::default(),
         meta_extensions: Default::default(),
         opaque_source_ids: None,

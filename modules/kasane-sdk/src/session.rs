@@ -109,6 +109,8 @@ impl AuthoringSession {
     /// Clone the committed document and source path under the caller's lock.
     /// History, events, and mutable preview state are not copied or changed.
     pub fn read_snapshot(&self) -> AuthoringSnapshot {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("sdk.read_snapshot");
         let started = std::time::Instant::now();
         let document = self.project.document().clone();
         AuthoringSnapshot {
@@ -533,6 +535,8 @@ impl AuthoringSession {
         label: impl Into<String>,
         expected: Option<Version>,
     ) -> Result<EditSession<'static>, SdkError> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("sdk.begin_owned_edit");
         let version = self.version();
         if let Some(value) = expected.filter(|value| *value != version) {
             let mut error =

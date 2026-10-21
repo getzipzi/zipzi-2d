@@ -99,14 +99,23 @@ impl PreviewState {
         generation: u64,
         values: PreviewValues,
     ) -> Result<bool, Status> {
-        if self.values == values {
-            self.frame(doc, generation)?;
-            return Ok(false);
+        let changed = self.values != values;
+        if !changed {
+            let key = FrameKey {
+                generation,
+                document_revision: doc.evaluation_revision(),
+                preview_revision: self.revision,
+            };
+            if let Some((cached_key, Ok(_))) = &self.cached {
+                if *cached_key == key {
+                    return Ok(false);
+                }
+            }
         }
         let frame = self.evaluate(doc, &values)?;
         self.invalidate();
         self.values = values;
-        self.revision += 1;
+        self.revision += u64::from(changed);
         self.cached = Some((
             FrameKey {
                 generation,
@@ -115,6 +124,6 @@ impl PreviewState {
             },
             Ok(frame),
         ));
-        Ok(true)
+        Ok(changed)
     }
 }

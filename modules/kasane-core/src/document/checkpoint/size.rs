@@ -49,6 +49,12 @@ impl<T: ExtraBytes> ExtraBytes for Vec<T> {
         self.capacity() * size_of::<T>() + self.iter().map(ExtraBytes::extra_bytes).sum::<usize>()
     }
 }
+impl<T: ExtraBytes> ExtraBytes for crate::SharedVec<T> {
+    fn extra_bytes(&self) -> usize {
+        // Charge each shared vector conservatively in every checkpoint.
+        2 * size_of::<usize>() + size_of::<Vec<T>>() + (**self).extra_bytes()
+    }
+}
 impl<T: ExtraBytes> ExtraBytes for Option<T> {
     fn extra_bytes(&self) -> usize {
         self.as_ref().map_or(0, ExtraBytes::extra_bytes)
@@ -539,6 +545,8 @@ impl ExtraBytes for Offscreen {
 }
 
 pub(super) fn estimated_content_bytes(content: &DocumentContent) -> usize {
+    #[cfg(feature = "bench-instrumentation")]
+    let _benchmark_span = crate::benchmark::span("core.estimate_content_size");
     size_of::<DocumentContent>()
         + content.id.extra_bytes()
         + content.assets.extra_bytes()

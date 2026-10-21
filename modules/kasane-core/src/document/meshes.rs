@@ -144,6 +144,8 @@ impl Document {
     }
 
     pub fn replace_mesh(&mut self, mesh: Mesh) -> EditResult {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.replace_mesh");
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",

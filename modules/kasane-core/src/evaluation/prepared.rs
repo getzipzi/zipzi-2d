@@ -77,6 +77,8 @@ pub(crate) struct PreparedEvaluation {
 }
 impl PreparedEvaluation {
     pub(crate) fn new(doc: &Document) -> Result<Self, Status> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.prepare_evaluation");
         let groups = crate::draw_order::resolved_groups(doc);
         let totals: HashMap<_, _> =
             crate::draw_order::descendant_counts_with_offscreens(doc, &groups)

@@ -189,6 +189,8 @@ impl MotionClipCandidate {
         document: &Document,
         change: impl FnOnce(&mut MotionClip) -> Result<(), SdkError>,
     ) -> Result<(), SdkError> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("sdk.motion_candidate_apply");
         let mut clip = self.clip.clone();
         change(&mut clip)?;
         validate(document, &clip)?;

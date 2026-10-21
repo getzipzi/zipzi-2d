@@ -127,8 +127,8 @@ pub struct MotionClip {
     pub restricted_beziers: bool,
     pub fade_in: Option<f32>,
     pub fade_out: Option<f32>,
-    pub tracks: Vec<MotionTrack>,
-    pub events: Vec<MotionEvent>,
+    pub tracks: crate::SharedVec<MotionTrack>,
+    pub events: crate::SharedVec<MotionEvent>,
     pub extensions: BTreeMap<String, Value>,
     pub meta_extensions: BTreeMap<String, Value>,
     pub opaque_source_ids: Option<BTreeMap<String, String>>,
@@ -330,6 +330,8 @@ impl Document {
 
     /// Validate a complete candidate without changing the document or history.
     pub fn validate_motion(&self, clip: &MotionClip) -> Status {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.validate_motion");
         if !super::valid_uuid(&clip.id) {
             return Status::error("INVALID_MOTION_ID", &clip.id);
         }
@@ -360,35 +362,20 @@ impl Document {
         {
             return Status::error("DUPLICATE_MOTION_NAME", &clip.name);
         }
-        if !clip.duration.is_finite() || clip.duration <= 0.0 {
-            return Status::error("INVALID_MOTION_DURATION", &clip.id);
+        let status = validate_properties(
+            &clip.id,
+            clip.duration,
+            clip.fps,
+            clip.fade_in,
+            clip.fade_out,
+        );
+        if !status.is_ok() {
+            return status;
         }
-        if !clip.fps.is_finite() || clip.fps <= 0.0 {
-            return Status::error("INVALID_MOTION_FPS", &clip.id);
-        }
-        if [clip.fade_in, clip.fade_out]
-            .into_iter()
-            .flatten()
-            .any(|value| !value.is_finite() || value < 0.0)
-        {
-            return Status::error("INVALID_MOTION_FADE", &clip.id);
-        }
-        let source_range = match clip.meta_extensions.get(SOURCE_RANGE) {
-            Some(value) => match serde_json::from_value::<MotionSourceRange>(value.clone()) {
-                Ok(range)
-                    if range.start.is_finite()
-                        && range.end.is_finite()
-                        && range.start <= 0.
-                        && range.end >= 0. =>
-                {
-                    Some(range)
-                }
-                _ => return Status::error("INVALID_MOTION_SOURCE_RANGE", &clip.id),
-            },
-            None => None,
+        let (minimum_time, maximum_time) = match time_range(clip, clip.duration) {
+            Ok(range) => range,
+            Err(status) => return status,
         };
-        let minimum_time = source_range.map_or(0., |r| r.start);
-        let maximum_time = source_range.map_or(clip.duration, |r| r.end.max(clip.duration));
         let mut ids = HashSet::new();
         for (index, track) in clip.tracks.iter().enumerate() {
             if !super::valid_uuid(&track.id)
@@ -528,6 +515,68 @@ impl Document {
         Status::ok()
     }
 
+    /// Scalar edits retain track identities, points and source metadata. Only
+    /// changing duration/FPS can invalidate existing key or event time bounds.
+    pub(super) fn patch_motion_properties(
+        &mut self,
+        id: &str,
+        duration: f32,
+        fps: f32,
+        fade_in: Option<f32>,
+        fade_out: Option<f32>,
+    ) -> EditResult {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = crate::benchmark::span("core.patch_motion_properties");
+        let status = validate_properties(id, duration, fps, fade_in, fade_out);
+        if !status.is_ok() {
+            return self.failed(status);
+        }
+        let clip = self.get_motion(id).expect("property target checked");
+        if (clip.duration, clip.fps, clip.fade_in, clip.fade_out)
+            == (duration, fps, fade_in, fade_out)
+        {
+            return self.failed(Status::ok());
+        }
+        if clip.duration != duration || clip.fps != fps {
+            #[cfg(feature = "bench-instrumentation")]
+            let _span = crate::benchmark::span("core.validate_motion_timing");
+            let (minimum, maximum) = match time_range(clip, duration) {
+                Ok(range) => range,
+                Err(status) => return self.failed(status),
+            };
+            let tolerance = (0.5 / fps).max(0.0001);
+            for (index, track) in clip.tracks.iter().enumerate() {
+                if track.initial.time < minimum || track.initial.time > maximum {
+                    return self.failed(Status::error(
+                        "INVALID_MOTION_POINT",
+                        format!("{id}.tracks[{index}].initial"),
+                    ));
+                }
+                // End times are already ordered and validated, so the last
+                // endpoint bounds every segment in this immutable track.
+                if track
+                    .segments
+                    .last()
+                    .is_some_and(|s| s.end().time > maximum + tolerance)
+                {
+                    return self.failed(Status::error(
+                        "INVALID_MOTION_POINT",
+                        format!("{id}.tracks[{index}].segments"),
+                    ));
+                }
+            }
+            if clip.events.iter().any(|event| event.time > duration) {
+                return self.failed(Status::error("INVALID_MOTION_EVENT_TIME", id));
+            }
+        }
+        let clip = std::sync::Arc::make_mut(self.content.motions.get_mut(id).unwrap());
+        clip.duration = duration;
+        clip.fps = fps;
+        clip.fade_in = fade_in;
+        clip.fade_out = fade_out;
+        self.changed(ChangeKind::Metadata, Vec::new(), vec![id.to_owned()])
+    }
+
     pub(super) fn validate_motions(&self) -> Vec<StructureIssue> {
         let mut issues = Vec::new();
         for id in &self.content.motion_order {
@@ -550,4 +599,48 @@ impl Document {
         }
         issues
     }
+}
+
+fn validate_properties(
+    id: &str,
+    duration: f32,
+    fps: f32,
+    fade_in: Option<f32>,
+    fade_out: Option<f32>,
+) -> Status {
+    if !duration.is_finite() || duration <= 0.0 {
+        return Status::error("INVALID_MOTION_DURATION", id);
+    }
+    if !fps.is_finite() || fps <= 0.0 {
+        return Status::error("INVALID_MOTION_FPS", id);
+    }
+    if [fade_in, fade_out]
+        .into_iter()
+        .flatten()
+        .any(|value| !value.is_finite() || value < 0.0)
+    {
+        return Status::error("INVALID_MOTION_FADE", id);
+    }
+    Status::ok()
+}
+
+fn time_range(clip: &MotionClip, duration: f32) -> Result<(f32, f32), Status> {
+    let source_range = match clip.meta_extensions.get(SOURCE_RANGE) {
+        Some(value) => match serde_json::from_value::<MotionSourceRange>(value.clone()) {
+            Ok(range)
+                if range.start.is_finite()
+                    && range.end.is_finite()
+                    && range.start <= 0.
+                    && range.end >= 0. =>
+            {
+                Some(range)
+            }
+            _ => return Err(Status::error("INVALID_MOTION_SOURCE_RANGE", &clip.id)),
+        },
+        None => None,
+    };
+    Ok((
+        source_range.map_or(0., |r| r.start),
+        source_range.map_or(duration, |r| r.end.max(duration)),
+    ))
 }

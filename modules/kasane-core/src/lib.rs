@@ -1,3 +1,5 @@
+#[cfg(feature = "bench-instrumentation")]
+pub mod benchmark;
 pub mod deformers;
 pub mod document;
 pub mod draw_order;
@@ -7,6 +9,8 @@ pub mod image;
 pub mod keyforms;
 pub mod physics;
 pub mod preview;
+mod shared_vec;
+pub use shared_vec::SharedVec;
 pub mod types;
 
 pub use document::Document;

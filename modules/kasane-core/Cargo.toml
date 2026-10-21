@@ -6,6 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 description = "Core document model, geometry, deformers and evaluation for Kasane 2D"
 
+[features]
+# Synchronous, thread-local spans for opt-in editor editing benchmarks.
+bench-instrumentation = []
+
 [dependencies]
 png = { workspace = true }
 serde = { workspace = true }

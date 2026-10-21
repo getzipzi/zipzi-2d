@@ -17,6 +17,7 @@ mod parameters;
 mod parts;
 mod physics;
 mod pose;
+mod property;
 mod references;
 mod structure;
 mod transactions;
@@ -42,6 +43,7 @@ pub use physics::{
     PhysicsAsset, PhysicsAssetProperty, PhysicsPatch, PhysicsProperty, PhysicsRigPatch,
 };
 pub use pose::{PoseAsset, PoseEntry, PosePartRef};
+pub use property::PropertyPatch;
 pub use structure::StructureIssue;
 pub use validation::*;
 
@@ -246,6 +248,8 @@ impl Document {
     }
 
     pub fn same_content(&self, other: &Document) -> bool {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.same_content");
         self.content == other.content
     }
 

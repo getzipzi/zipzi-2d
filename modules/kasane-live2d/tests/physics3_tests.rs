@@ -25,7 +25,7 @@ fn physics3_roundtrip_recounts_and_preserves_fps_presence() {
 fn physics3_invalid_targets_and_unknown_numeric_extension_are_explicit() {
     let source = include_str!("../../../tests/fixtures/animation_cpu/thirty.physics3.json");
     let mut physics = decode_physics3(source).unwrap();
-    physics.settings[0].outputs[0].vertex_index = 2;
+    std::sync::Arc::make_mut(&mut physics.settings[0]).outputs[0].vertex_index = 2;
     assert_eq!(
         encode_physics3(&physics).unwrap_err().code,
         "INVALID_VERTEX_INDEX"

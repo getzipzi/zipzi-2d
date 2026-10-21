@@ -96,6 +96,8 @@ impl Document {
     }
 
     pub fn replace_parameter(&mut self, p: Parameter) -> EditResult {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.replace_parameter");
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -109,24 +111,59 @@ impl Document {
         if !s.is_ok() {
             return self.failed(s);
         }
-        // Validate dependent keyforms against the proposed range before committing.
-        let mut candidate = self.clone();
-        candidate.content.parameters.insert(p.id.clone(), p.clone());
+        // Dependency validation only reads the proposed parameter and existing
+        // bindings. Restore the slot on rejection; no revisions or caches change
+        // until the complete replacement has been accepted.
+        let id = p.id.clone();
+        let old = self.content.parameters.insert(id.clone(), p).unwrap();
+        let proposed = &self.content.parameters[&id];
+        let dependencies_changed = old.minimum != proposed.minimum
+            || old.maximum != proposed.maximum
+            || old.kind != proposed.kind;
+        let structure_changed =
+            dependencies_changed || old.decimal_places != proposed.decimal_places;
+        let meshes = match self.parameter_dependents(&id, dependencies_changed) {
+            Ok(meshes) => meshes,
+            Err(status) => {
+                self.content.parameters.insert(id, old);
+                return self.failed(status);
+            }
+        };
+        self.changed(
+            if structure_changed {
+                ChangeKind::Structure
+            } else {
+                ChangeKind::Positions
+            },
+            meshes,
+            vec![id],
+        )
+    }
+
+    fn parameter_dependents(&self, id: &str, validate: bool) -> Result<Vec<String>, Status> {
         let mut meshes = Vec::new();
         for binding in self.content.bindings.values() {
-            if binding.axes.iter().any(|axis| axis.parameter_id == p.id) {
-                let status = candidate.canonicalize_binding(&mut binding.clone());
+            if binding.axes.iter().any(|axis| axis.parameter_id == *id) {
+                let status = if validate {
+                    self.canonicalize_binding(&mut binding.clone())
+                } else {
+                    Status::ok()
+                };
                 if !status.is_ok() {
-                    return self.failed(status);
+                    return Err(status);
                 }
                 meshes.push(binding.mesh_id.clone());
             }
         }
         for binding in self.content.scene_bindings.values() {
-            if binding.axes.iter().any(|axis| axis.parameter_id == p.id) {
-                let status = candidate.canonicalize_scene_binding(&mut binding.clone());
+            if binding.axes.iter().any(|axis| axis.parameter_id == *id) {
+                let status = if validate {
+                    self.canonicalize_scene_binding(&mut binding.clone())
+                } else {
+                    Status::ok()
+                };
                 if !status.is_ok() {
-                    return self.failed(status);
+                    return Err(status);
                 }
                 meshes = self.content.mesh_order.clone();
             }
@@ -135,11 +172,15 @@ impl Document {
             if glue
                 .binding
                 .as_ref()
-                .is_some_and(|b| b.axes.iter().any(|a| a.parameter_id == p.id))
+                .is_some_and(|b| b.axes.iter().any(|a| a.parameter_id == *id))
             {
-                let status = candidate.validate_glue(glue);
+                let status = if validate {
+                    self.validate_glue(glue)
+                } else {
+                    Status::ok()
+                };
                 if !status.is_ok() {
-                    return self.failed(status);
+                    return Err(status);
                 }
                 meshes = self.content.mesh_order.clone();
             }
@@ -148,11 +189,15 @@ impl Document {
             .content
             .blend_key_tables
             .values()
-            .filter(|t| t.parameter_id == p.id)
+            .filter(|t| t.parameter_id == *id)
         {
-            let status = candidate.validate_blend_key_table(table);
+            let status = if validate {
+                self.validate_blend_key_table(table)
+            } else {
+                Status::ok()
+            };
             if !status.is_ok() {
-                return self.failed(status);
+                return Err(status);
             }
             meshes = self.content.mesh_order.clone();
         }
@@ -160,18 +205,20 @@ impl Document {
             .content
             .blend_constraints
             .values()
-            .filter(|c| c.parameter_id == p.id)
+            .filter(|c| c.parameter_id == *id)
         {
-            let status = candidate.validate_blend_constraint(constraint);
+            let status = if validate {
+                self.validate_blend_constraint(constraint)
+            } else {
+                Status::ok()
+            };
             if !status.is_ok() {
-                return self.failed(status);
+                return Err(status);
             }
             meshes = self.content.mesh_order.clone();
         }
         meshes.sort();
         meshes.dedup();
-        let id = p.id.clone();
-        self.content.parameters.insert(id.clone(), p);
-        self.changed(ChangeKind::Structure, meshes, vec![id])
+        Ok(meshes)
     }
 }

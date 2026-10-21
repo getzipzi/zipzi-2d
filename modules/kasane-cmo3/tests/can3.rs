@@ -305,13 +305,14 @@ fn make_clip() -> MotionClip {
         restricted_beziers: true,
         fade_in: Some(0.25),
         fade_out: Some(0.5),
-        tracks: Vec::new(),
+        tracks: Default::default(),
         events: vec![MotionEvent {
             id: uuid(101),
             time: 0.5,
             value: "事件 <你好>\n".into(),
             extensions: Default::default(),
-        }],
+        }]
+        .into(),
         extensions: Default::default(),
         meta_extensions: Default::default(),
         opaque_source_ids: None,
@@ -646,7 +647,7 @@ fn quantization_and_collisions_are_reported_before_asset_io() {
         fade_out: None,
         extensions: Default::default(),
     });
-    clip.events = vec![
+    *clip.events = vec![
         MotionEvent {
             id: uuid(101),
             time: 0.,

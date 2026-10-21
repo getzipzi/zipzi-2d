@@ -135,6 +135,8 @@ fn evaluate_into(
     include_hidden_geometry: bool,
     mut timings: Option<&mut EvaluationTimings>,
 ) -> Status {
+    #[cfg(feature = "bench-instrumentation")]
+    let _benchmark_span = crate::benchmark::span("core.evaluate");
     let mut stage_start = timings.as_ref().map(|_| Instant::now());
     macro_rules! record_stage {
         ($field:ident) => {

@@ -161,6 +161,14 @@ fn late_geometry_failure_preserves_request_and_published_snapshot() {
             .code,
         "NON_FINITE"
     );
+    // Failure with unchanged inputs must preserve the cached successful frame too.
+    assert_eq!(
+        state
+            .replace(&doc, 1, [(id(2), 0.5)].into())
+            .unwrap_err()
+            .code,
+        "NON_FINITE"
+    );
     assert_eq!(state.values()[&id(2)], 0.5);
     assert_eq!(state.revision(), revision);
     assert!(Arc::ptr_eq(&frame, &state.frame(&saved, 1).unwrap()));
