@@ -116,6 +116,7 @@ impl TimelineProjection {
             kasane_core::benchmark::span("editor.timeline_incremental_projection");
         if previous.id != next.id
             || previous.tracks.len() != next.tracks.len()
+            || previous.track_order != next.track_order
             || previous.restricted_beziers != next.restricted_beziers
         {
             return None;
@@ -211,7 +212,7 @@ impl TimelineProjection {
                 },
             );
         }
-        for track in &clip.tracks {
+        for track in clip.display_tracks() {
             let id = TimelineChannelId::from_target(&track.target);
             if result.channel(&id).is_none() {
                 let (name, diagnostic) = match &id {
@@ -226,7 +227,7 @@ impl TimelineProjection {
                 result.add_channel(clip, id, name.clone(), name, None, 0., vec![diagnostic]);
             }
         }
-        for track in &clip.tracks {
+        for track in clip.display_tracks() {
             let channel = TimelineChannelId::from_target(&track.target);
             let editable = result.channel(&channel).unwrap().editable;
             let all: Vec<_> = track.keys().collect();

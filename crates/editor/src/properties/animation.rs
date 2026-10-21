@@ -52,11 +52,11 @@ pub(super) fn details_source(
             target
                 .motion
                 .as_ref()
-                .and_then(|motion| motion.entry.as_ref().map(|(group, _)| group.clone())),
+                .and_then(|motion| motion.entry.clone()),
             target
                 .motion
                 .as_ref()
-                .and_then(|motion| motion.entry.as_ref().map(|(_, index)| index.to_string())),
+                .and_then(|motion| motion.entry.clone()),
         ],
         build: |editor, target| {
             let document = editor.document().unwrap();
@@ -82,9 +82,9 @@ fn rows(
             rows.push(DetailRow::property(
                 "animation-property-registration",
                 t!("workspace.registration"),
-                resource.selection.entry.as_ref().map_or_else(
+                resource.group.as_ref().map_or_else(
                     || t!("workspace.ungrouped").into_owned(),
-                    |(group, index)| format!("{group} [{}]", index + 1),
+                    |group| format!("{group} [{}]", resource.entry_index + 1),
                 ),
             ));
             if !resource.playable() {

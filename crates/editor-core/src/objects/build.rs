@@ -293,30 +293,60 @@ impl ObjectIndex {
                 }
             }
         }
-        for (i, g) in m.motion_groups().iter().enumerate() {
-            let r = ObjectRef::new(K::MotionGroup, i.to_string());
+        for g in m.motion_groups() {
+            let r = ObjectRef::new(K::MotionGroup, &g.id);
             s.add(r.clone(), &g.name, json!(g), None);
             for e in &g.entries {
                 s.edge(
                     &r,
                     R::Contains,
-                    ObjectRef::new(K::Motion, &e.clip_id),
-                    format!("fade in {:?}, fade out {:?}", e.fade_in, e.fade_out),
+                    ObjectRef::new(K::MotionRegistration, &e.id),
+                    "",
                 );
-                if let Some(sound) = &e.sound {
-                    s.ref_edge(&r, R::Resource, K::Attachment, sound);
-                }
+            }
+        }
+        for e in m.motion_registrations() {
+            let r = ObjectRef::new(K::MotionRegistration, &e.id);
+            s.add(
+                r.clone(),
+                m.get_motion(&e.clip_id)
+                    .map_or("Missing motion", |c| c.name.as_str()),
+                json!(e),
+                None,
+            );
+            s.ref_edge(&r, R::Resource, K::Motion, &e.clip_id);
+            if let Some(reference) = &e.sound {
+                let target = match reference {
+                    kasane_core::document::AttachmentRef::Resolved { attachment_id } => {
+                        ObjectRef::new(K::Attachment, attachment_id)
+                    }
+                    kasane_core::document::AttachmentRef::Unresolved { path } => {
+                        s.unresolved("sound", path)
+                    }
+                };
+                s.edge(&r, R::Resource, target, "");
             }
         }
         for id in m.motion_order() {
             if let Some(x) = m.get_motion(id) {
                 let r = ObjectRef::new(K::Motion, id);
-                s.add(r.clone(),&x.name,json!({"name":x.name,"duration":x.duration,"fps":x.fps,"looping":x.looping,"fade_in":x.fade_in,"fade_out":x.fade_out,"events":x.events,"extensions":x.extensions}),None);
+                s.add(
+                    r.clone(),
+                    &x.name,
+                    super::motions::motion_properties(x),
+                    None,
+                );
                 for t in &x.tracks {
-                    let tr = ObjectRef::new(K::MotionTrack, format!("{id}/{}", t.id));
+                    let tr = ObjectRef::new(K::MotionTrack, &t.id);
                     s.add(tr.clone(),format!("Track {}",t.id),json!({"target":t.target,"initial":t.initial,"segments":t.segments.len(),"fade_in":t.fade_in,"fade_out":t.fade_out,"extensions":t.extensions}),None);
                     s.edge(&r, R::Contains, tr.clone(), "");
+                    for k in t.keys() {
+                        let kr = ObjectRef::new(K::MotionKey, &k.id);
+                        s.add(kr.clone(), format!("Key {}", k.time), json!(k), None);
+                        s.edge(&tr, R::Contains, kr, "");
+                    }
                     let target = match &t.target {
+                        MotionTrackTarget::Unspecified => s.unresolved("NeedsConfiguration", &t.id),
                         MotionTrackTarget::Parameter { parameter_id } => {
                             ObjectRef::new(K::Parameter, parameter_id)
                         }
@@ -337,6 +367,13 @@ impl ObjectIndex {
                     };
                     s.edge(&tr, R::MotionWrites, target, detail);
                 }
+            }
+        }
+        for id in m.motion_order() {
+            for e in &m.get_motion(id).unwrap().events {
+                let r = ObjectRef::new(K::MotionEvent, &e.id);
+                s.add(r.clone(), &e.value, json!(e), None);
+                s.edge(&ObjectRef::new(K::Motion, id), R::Contains, r, "");
             }
         }
         for id in m.expression_order() {
@@ -475,14 +512,26 @@ impl ObjectIndex {
         }
         for x in m.package_attachments() {
             s.add(
-                ObjectRef::new(K::Attachment, &x.path),
+                ObjectRef::new(K::Attachment, &x.id),
                 &x.path,
-                json!({"path":x.path,"bytes":x.bytes.len()}),
+                json!({"path":x.path,"bytes":x.bytes.as_ref().map(|b|b.len())}),
                 None,
             );
+            if x.bytes.is_none() {
+                s.objects.last_mut().unwrap().diagnostic =
+                    Some("NeedsConfiguration: attachment content".into());
+            }
         }
         if let Some(path) = &m.model3_settings().user_data {
-            s.ref_edge(&doc, R::Resource, K::Attachment, path);
+            let target = match path {
+                kasane_core::document::AttachmentRef::Resolved { attachment_id } => {
+                    ObjectRef::new(K::Attachment, attachment_id)
+                }
+                kasane_core::document::AttachmentRef::Unresolved { path } => {
+                    s.unresolved("UserData", path)
+                }
+            };
+            s.edge(&doc, R::Resource, target, "");
         }
         for area in m.model3_settings().hit_areas.iter().flatten() {
             let target = match &area.mesh {

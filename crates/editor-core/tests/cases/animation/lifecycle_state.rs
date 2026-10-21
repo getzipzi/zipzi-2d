@@ -131,7 +131,8 @@ fn registrations_keep_distinct_fades_and_unregistered_clips_remain_playable() ->
         resources[1].selection.clip_id
     );
     assert_ne!(resources[0].selection.entry, resources[1].selection.entry);
-    assert!(resources[2].selection.entry.is_none());
+    assert!(resources[2].selection.entry.is_some());
+    assert!(resources[2].group.is_none());
     let mut evaluator = AnimationEvaluator::default();
     select(&mut editor, 0)?;
     editor.toggle_animation()?;

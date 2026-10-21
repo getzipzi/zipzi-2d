@@ -4,3 +4,5 @@ mod lifecycle_state;
 mod navigation_scrubbing;
 mod physics_catalog;
 mod physics_editing;
+
+mod motion_authoring;

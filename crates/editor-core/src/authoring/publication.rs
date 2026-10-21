@@ -34,6 +34,80 @@ impl Document {
             return;
         }
         let changes = &receipt.changes;
+        let motion_only = changes.references.is_empty()
+            && changes
+                .collections
+                .iter()
+                .all(|c| matches!(c, kasane_sdk::CollectionRef::Motion { .. }))
+            && !changes.full_invalidation
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .all(|e| {
+                    matches!(
+                        e.kind,
+                        SdkKind::Motion
+                            | SdkKind::MotionGroup
+                            | SdkKind::MotionRegistration
+                            | SdkKind::MotionTrack
+                            | SdkKind::MotionKey
+                            | SdkKind::MotionEvent
+                            | SdkKind::Attachment
+                    )
+                })
+            && (!changes.created.is_empty()
+                || !changes.deleted.is_empty()
+                || !changes.modified.is_empty()
+                || !changes.collections.is_empty()
+                || !changes.motion_references.is_empty());
+        if motion_only {
+            let previous = self.animation_input_revision;
+            if changes.created.is_empty()
+                && changes.deleted.is_empty()
+                && changes.collections.is_empty()
+                && changes.motion_references.is_empty()
+                && changes.modified.iter().all(|e| {
+                    matches!(
+                        e.kind,
+                        SdkKind::Motion | SdkKind::MotionGroup | SdkKind::MotionRegistration
+                    )
+                })
+            {
+                let previous_revision = self.projection_revision;
+                self.invalidate_projection(false);
+                let mut cache = self.object_index.lock().unwrap();
+                if let Some((revision, index)) = cache.as_mut() {
+                    if *revision == previous_revision
+                        && changes.modified.iter().all(|e| {
+                            let kind = match e.kind {
+                                SdkKind::Motion => ObjectKind::Motion,
+                                SdkKind::MotionGroup => ObjectKind::MotionGroup,
+                                SdkKind::MotionRegistration => ObjectKind::MotionRegistration,
+                                _ => unreachable!(),
+                            };
+                            Arc::make_mut(index).refresh_motion_properties(
+                                self.model(),
+                                &ObjectRef::new(kind, &e.id),
+                            )
+                        })
+                    {
+                        *revision = self.projection_revision;
+                    }
+                }
+                self.session.drain_events();
+            } else {
+                self.after_history(false);
+            }
+            if !changes
+                .categories
+                .contains(&ChangeCategory::EvaluationInputs)
+            {
+                self.animation_input_revision = previous;
+            }
+            return;
+        }
         let expression_only = !changes.full_invalidation
             && !changes.categories.contains(&ChangeCategory::Topology)
             && (!changes.created.is_empty()

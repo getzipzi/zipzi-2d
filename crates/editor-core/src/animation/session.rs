@@ -29,7 +29,8 @@ impl AnimationSession {
             loop_position: false,
             presented: None,
             error: None,
-            model_generation: document.model_generation(),
+            model_generation: document.animation_generation(),
+            document_revision: document.model_generation(),
             preview_generation: 1,
             source: None,
             frames: provenance::FrameSequence::default(),
@@ -109,11 +110,12 @@ impl AnimationSession {
         self.error = None;
     }
     pub(crate) fn reconcile(&mut self, document: &Document) {
-        let generation = document.model_generation();
-        if generation == self.model_generation {
+        let generation = document.animation_generation();
+        let revision = document.model_generation();
+        if generation == self.model_generation && revision == self.document_revision {
             return;
         }
-        self.model_generation = generation;
+        self.document_revision = revision;
         if self
             .inspected
             .as_ref()
@@ -121,6 +123,20 @@ impl AnimationSession {
         {
             self.inspected = None;
         }
+        // Library additions/removals do not change existing playback inputs.
+        // Still retire a deleted active registration without activating a sibling.
+        let motion_removed = self.motion.as_ref().is_some_and(|selection| {
+            selection.entry.as_ref().is_some_and(|id| {
+                document
+                    .model()
+                    .get_motion_registration(id)
+                    .is_none_or(|(_, entry)| entry.clip_id != selection.clip_id)
+            })
+        });
+        if generation == self.model_generation && !motion_removed {
+            return;
+        }
+        self.model_generation = generation;
         self.source = None;
         self.rebuild();
         if self.motion.is_none() && self.expression.is_none() && self.expressions.is_empty() {

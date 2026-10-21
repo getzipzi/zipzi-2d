@@ -149,12 +149,23 @@ impl AnimationCatalog {
                 issues.insert(diagnostic);
             }
         }
-        for group in model.motion_groups() {
-            for (index, entry) in group.entries.iter().enumerate() {
+        for (group, entries) in model
+            .motion_groups()
+            .iter()
+            .map(|g| (Some(g.name.as_str()), g.entries.as_slice()))
+            .chain(std::iter::once((None, model.motion_roots())))
+        {
+            for (index, entry) in entries.iter().enumerate() {
                 if let Some(file) = &entry.sound {
                     issues.insert(AnimationDiagnostic::SoundUnsupported {
-                        motion: format!("{}[{}]", group.name, index + 1),
-                        file: file.clone(),
+                        motion: group.map_or_else(
+                            || model.get_motion(&entry.clip_id).unwrap().name.clone(),
+                            |name| format!("{}[{}]", name, index + 1),
+                        ),
+                        file: model
+                            .attachment_path(file)
+                            .unwrap_or("missing attachment")
+                            .to_owned(),
                     });
                 }
             }

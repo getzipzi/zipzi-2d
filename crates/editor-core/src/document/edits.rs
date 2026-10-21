@@ -173,7 +173,17 @@ impl Document {
             );
             if changed {
                 let parameter = matches!(&pending.original, PendingOriginal::Properties(object, _, _) if object.kind == crate::ObjectKind::Parameter);
-                pending.edit.commit_to(&mut self.session)?;
+                let receipt = pending.edit.commit_to(&mut self.session)?;
+                if property
+                    .as_ref()
+                    .is_none_or(|p| p.kind != crate::ObjectKind::Motion)
+                    || receipt
+                        .changes
+                        .categories
+                        .contains(&kasane_sdk::ChangeCategory::EvaluationInputs)
+                {
+                    self.animation_input_revision = receipt.after.revision;
+                }
                 if parameter {
                     self.reconcile_parameter_preview()?;
                 }

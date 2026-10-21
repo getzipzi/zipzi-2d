@@ -28,3 +28,6 @@ pub struct ExpressionAuthoringCapabilities {
 pub enum AuthoringSessionReason {
     CandidateActive,
 }
+
+#[path = "authoring/motion.rs"]
+mod motion;

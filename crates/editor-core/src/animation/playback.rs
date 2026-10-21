@@ -113,12 +113,21 @@ impl Editor {
     pub fn select_motion(
         &mut self,
         document: DocumentId,
-        selection: MotionSelection,
+        mut selection: MotionSelection,
     ) -> Result<()> {
         self.ensure_animation_target(document)?;
         self.set_physics_manual(document, false)?;
         self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
+        if selection.entry.is_none() {
+            selection.entry = session
+                .document()
+                .model()
+                .motion_roots()
+                .iter()
+                .find(|e| e.clip_id == selection.clip_id)
+                .map(|e| e.id.clone());
+        }
         ensure!(
             session
                 .document()
@@ -133,6 +142,8 @@ impl Editor {
             &selection.clip_id,
         ));
         session.animation.playback.motion = Some(selection);
+        // A newly registered entry may not exist in the ongoing run's snapshot.
+        session.animation.playback.source = None;
         session.animation.playback.time = 0.;
         session.animation.playback.new_run();
         session.reconcile_animation();

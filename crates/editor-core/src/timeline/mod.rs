@@ -48,6 +48,10 @@ impl TimelineChannelId {
     pub fn from_target(target: &kasane_core::document::MotionTrackTarget) -> Self {
         use kasane_core::document::MotionTrackTarget as T;
         match target {
+            T::Unspecified => Self::Unresolved {
+                category: "NeedsConfiguration".into(),
+                runtime_id: String::new(),
+            },
             T::Parameter { parameter_id } => Self::Parameter(parameter_id.clone()),
             T::Model { runtime_id } => Self::Model(runtime_id.clone()),
             T::PartOpacity { part_id } => Self::PartOpacity(part_id.clone()),

@@ -212,11 +212,7 @@ impl AnimationPanel {
         if motion_panel {
             let mut previous: Option<Option<String>> = None;
             for (index, resource) in catalog.motions.iter().enumerate() {
-                let group = resource
-                    .selection
-                    .entry
-                    .as_ref()
-                    .map(|(name, _)| name.clone());
+                let group = resource.group.clone();
                 let group_name = match &group {
                     None => t!("workspace.ungrouped").into_owned(),
                     Some(name) if name.is_empty() => t!("workspace.unnamed_group").into_owned(),
@@ -227,9 +223,7 @@ impl AnimationPanel {
                     let count = catalog
                         .motions
                         .iter()
-                        .filter(|r| {
-                            r.selection.entry.as_ref().map(|(name, _)| name) == group.as_ref()
-                        })
+                        .filter(|r| r.group.as_ref() == group.as_ref())
                         .count();
                     let key = group.clone();
                     list = list.child(
@@ -302,7 +296,8 @@ impl AnimationPanel {
                     )
                     .test_support()
                     .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
-                    .when_some(resource.selection.entry.as_ref(), |row, (_, entry)| {
+                    .when_some(resource.selection.entry.as_ref(), |row, _| {
+                        let entry = resource.entry_index;
                         row.child(
                             div()
                                 .text_color(theme.muted_foreground)

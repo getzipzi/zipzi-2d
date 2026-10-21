@@ -4,15 +4,16 @@ use super::*;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MotionSelection {
     pub clip_id: String,
-    /// Keep both registration position and clip identity. A reordered entry
-    /// must never silently play a different clip.
-    pub entry: Option<(String, usize)>,
+    /// Stable registration identity; None requests the Clip root registration.
+    pub entry: Option<String>,
 }
 
 #[derive(Clone, Debug)]
 pub struct MotionResource {
     pub selection: MotionSelection,
     pub name: String,
+    pub group: Option<String>,
+    pub entry_index: usize,
     pub duration: f32,
     pub looping: bool,
     pub sound: Option<String>,
@@ -97,20 +98,29 @@ impl Document {
     pub fn motion_resources(&self) -> Vec<MotionResource> {
         let model = self.model();
         let mut result = Vec::new();
-        let mut registered = HashSet::new();
-        for group in model.motion_groups() {
-            for (index, entry) in group.entries.iter().enumerate() {
+        for (group, entries) in model
+            .motion_groups()
+            .iter()
+            .map(|g| (Some(g.name.clone()), g.entries.as_slice()))
+            .chain(std::iter::once((None, model.motion_roots())))
+        {
+            for (index, entry) in entries.iter().enumerate() {
                 if let Some(clip) = model.get_motion(&entry.clip_id) {
-                    registered.insert(clip.id.clone());
                     result.push(MotionResource {
                         selection: MotionSelection {
                             clip_id: clip.id.clone(),
-                            entry: Some((group.name.clone(), index)),
+                            entry: Some(entry.id.clone()),
                         },
+                        group: group.clone(),
+                        entry_index: index,
                         name: clip.name.clone(),
                         duration: clip.duration,
                         looping: clip.looping,
-                        sound: entry.sound.clone(),
+                        sound: entry
+                            .sound
+                            .as_ref()
+                            .and_then(|r| model.attachment_path(r))
+                            .map(str::to_owned),
                         fps: clip.fps,
                         fade_in: entry.fade_in.or(clip.fade_in).unwrap_or(1.),
                         fade_out: entry.fade_out.or(clip.fade_out).unwrap_or(1.),
@@ -118,27 +128,6 @@ impl Document {
                         events: clip.events.len(),
                     });
                 }
-            }
-        }
-        for id in model.motion_order() {
-            if !registered.contains(id)
-                && let Some(clip) = model.get_motion(id)
-            {
-                result.push(MotionResource {
-                    selection: MotionSelection {
-                        clip_id: id.clone(),
-                        entry: None,
-                    },
-                    name: clip.name.clone(),
-                    duration: clip.duration,
-                    looping: clip.looping,
-                    sound: None,
-                    fps: clip.fps,
-                    fade_in: clip.fade_in.unwrap_or(1.),
-                    fade_out: clip.fade_out.unwrap_or(1.),
-                    tracks: clip.tracks.len(),
-                    events: clip.events.len(),
-                });
             }
         }
         result

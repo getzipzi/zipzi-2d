@@ -109,8 +109,17 @@ fn double_click_play_restart_and_keyboard_browsing_preserve_transport_contract(
         let animation = harness.view.read(cx).editor.animation().unwrap();
         assert!(!animation.playing);
         assert_eq!(
-            animation.motion.as_ref().unwrap().entry.as_ref().unwrap().1,
-            1
+            animation.motion.as_ref().unwrap().entry.clone(),
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .motion_resources()[1]
+                .selection
+                .entry
+                .clone()
         );
         window.press("space", cx);
         assert!(harness.view.read(cx).editor.animation().unwrap().playing);
@@ -159,8 +168,17 @@ fn motion_groups_collapse_without_changing_selection(cx: &mut TestAppContext) {
         assert!(window.find(("animation-motion", 2usize)).visible());
         let animation = harness.view.read(cx).editor.animation().unwrap();
         assert_eq!(
-            animation.motion.as_ref().unwrap().entry.as_ref().unwrap().1,
-            0
+            animation.motion.as_ref().unwrap().entry.clone(),
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .motion_resources()[0]
+                .selection
+                .entry
+                .clone()
         );
         assert!(!animation.playing);
         window.click(("animation-motion-group", 0usize), cx);

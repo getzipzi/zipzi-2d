@@ -44,8 +44,8 @@ pub(crate) fn result_parity(h: &mut Harness) -> anyhow::Result<()> {
         }
         sdk.set_physics_stabilized_start(request.physics.stabilized);
         let motion = request.motion.as_ref().unwrap();
-        if let Some((group, index)) = &motion.entry {
-            sdk.schedule_motion_entry(group, *index, 0.)?;
+        if let Some(id) = &motion.entry {
+            sdk.schedule_motion_registration(id, 0.)?;
         } else {
             sdk.schedule_motion(&motion.clip_id, 0.)?;
         }

@@ -132,6 +132,7 @@ pub(super) fn fixture(
             extensions: Default::default(),
         });
         edit.create_motion(MotionClip {
+            track_order: Vec::new(),
             id: id(4),
             name: "Fixture".into(),
             duration: 2.,

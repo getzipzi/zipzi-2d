@@ -143,6 +143,7 @@ pub struct Document {
     selected: Option<String>,
     context: crate::PanelContext,
     projection_revision: u64,
+    animation_input_revision: u64,
     preview_revision: u64,
     object_state_index: std::sync::Mutex<Option<(u64, Arc<ObjectStateIndex>)>>,
     object_index: std::sync::Mutex<Option<(u64, Arc<crate::ObjectIndex>)>>,
@@ -174,9 +175,14 @@ impl Document {
     /// Topology also has an unversioned cache and must be cleared explicitly.
     fn invalidate_projection(&mut self, topology_changed: bool) {
         self.projection_revision += 1;
+        self.animation_input_revision = self.session.version().revision;
         if topology_changed {
             self.canvas_topology.get_mut().unwrap().take();
         }
+    }
+
+    pub(crate) fn animation_generation(&self) -> u64 {
+        self.animation_input_revision
     }
 
     pub fn model_generation(&self) -> u64 {
@@ -258,7 +264,9 @@ impl Document {
     fn from_session(session: AuthoringSession) -> Result<Self> {
         let textures = textures::DocumentTextures::new(&session)?;
         let projection = Arc::new(crate::ObjectIndex::build(session.document()));
+        let animation_input_revision = session.version().revision;
         Ok(Self {
+            animation_input_revision,
             session,
             import_name: None,
             context: crate::PanelContext::default(),

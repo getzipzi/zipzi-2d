@@ -347,7 +347,7 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
         edit.import_expression3(&expression,"Smile",r#"{"Type":"Live2D Expression","Parameters":[{"Id":"ParamX","Value":0.4,"Blend":"Add"},{"Id":"UnknownParameter","Value":1,"Blend":"Multiply"}]}"#)?;
         edit.import_physics3(&physics,&physics_text)?;
         edit.import_pose3(&pose,r#"{"Type":"Live2D Pose","Groups":[[{"Id":"Part0","Link":["Part1"]},{"Id":"Part1"}]]}"#)?;
-        edit.set_package_attachments(vec![kasane_core::document::PackageAttachment{path:"notes.txt".into(),bytes:b"Unused attachment".to_vec()}])?;
+        edit.set_package_attachments(vec![kasane_core::document::PackageAttachment{id:uuid::Uuid::new_v4().to_string(),path:"notes.txt".into(),bytes:Some(std::sync::Arc::new(b"Unused attachment".to_vec()))}])?;
         Ok(())
     })?;
     sdk.save_project(&saved.manifest, None)?;
@@ -429,7 +429,13 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
     }
     doc.navigate(unknown.reference.clone())?;
     assert_eq!(doc.context().inspected.as_ref(), Some(&unknown.reference));
-    let attachment = ObjectRef::new(K::Attachment, "notes.txt");
+    let attachment = index
+        .objects
+        .iter()
+        .find(|o| o.reference.kind == K::Attachment && o.name == "notes.txt")
+        .unwrap()
+        .reference
+        .clone();
     assert!(index.get(&attachment).is_some());
     assert_eq!(index.incoming(&attachment).count(), 0);
     assert!(doc.mesh_tree().iter().any(|p| {

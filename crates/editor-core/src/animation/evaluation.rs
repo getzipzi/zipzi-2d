@@ -164,20 +164,14 @@ impl AnimationEvaluator {
             let version = request.source.snapshot.version();
             preview.bind_session_identity(version.session_id, version.generation);
             if let Some(motion) = &request.motion.as_ref().filter(|_| !request.physics.manual) {
-                if let Some((group, index)) = &motion.entry {
-                    let registered = request
-                        .source
-                        .snapshot
-                        .document()
-                        .motion_groups()
-                        .iter()
-                        .find(|item| &item.name == group)
-                        .and_then(|item| item.entries.get(*index));
+                if let Some(id) = &motion.entry {
                     ensure!(
-                        registered.is_some_and(|entry| entry.clip_id == motion.clip_id),
+                        document
+                            .get_motion_registration(id)
+                            .is_some_and(|(_, e)| e.clip_id == motion.clip_id),
                         "Motion registration changed"
                     );
-                    preview.schedule_motion_entry(group, *index, 0.)?;
+                    preview.schedule_motion_registration(id, 0.)?;
                 } else {
                     preview.schedule_motion(&motion.clip_id, 0.)?;
                 }

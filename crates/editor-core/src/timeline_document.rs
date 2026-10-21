@@ -36,6 +36,7 @@ impl Document {
         let id = uuid::Uuid::new_v4().to_string();
         self.session.edit("New motion", None, |edit| {
             edit.create_motion(MotionClip {
+                track_order: Vec::new(),
                 id: id.clone(),
                 name,
                 duration: 2.,

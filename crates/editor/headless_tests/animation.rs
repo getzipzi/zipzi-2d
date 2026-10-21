@@ -224,7 +224,18 @@ fn motion_selection_space_button_and_menu_share_transport_and_repeat_guard(
             .as_ref()
             .unwrap()
             .entry;
-        assert_eq!(entry.as_ref().unwrap().1, 1);
+        assert_eq!(
+            entry,
+            &harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .motion_resources()[1]
+                .selection
+                .entry
+        );
         window.click("animation-play-pause", cx);
         window.render_frame(cx);
         window.click("timeline-start", cx);

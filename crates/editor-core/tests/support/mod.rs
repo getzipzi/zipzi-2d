@@ -369,6 +369,7 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
     let parameter_id = session.parameter_ids()[0].clone();
     let clip = Uuid::new_v4().to_string();
     let make_clip = |id: String, name: &str, looping: bool, duration: f32| MotionClip {
+        track_order: vec![],
         id,
         name: name.into(),
         duration,
@@ -437,19 +438,24 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
         }
         edit.create_motion(make_clip(clip.clone(), "Once", false, 2.))?;
         edit.create_motion(make_clip(Uuid::new_v4().to_string(), "Loop", true, 1.))?;
-        edit.set_motion_groups(vec![MotionGroup {
-            name: "Idle".into(),
-            entries: [0., 1.]
-                .into_iter()
-                .map(|fade| MotionRegistration {
-                    clip_id: clip.clone(),
-                    fade_in: Some(fade),
-                    fade_out: Some(0.),
-                    sound: Some("test.wav".into()),
-                    extensions: Default::default(),
-                })
-                .collect(),
-        }])
+        edit.set_motion_library(
+            vec![MotionGroup {
+                id: uuid::Uuid::new_v4().to_string(),
+                name: "Idle".into(),
+                entries: [0., 1.]
+                    .into_iter()
+                    .map(|fade| MotionRegistration {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        clip_id: clip.clone(),
+                        fade_in: Some(fade),
+                        fade_out: Some(0.),
+                        sound: Some("test.wav".into()),
+                        extensions: Default::default(),
+                    })
+                    .collect(),
+            }],
+            vec![],
+        )
     })?;
     session.save_project(&path, None)?;
     Ok((Document::open(&path)?, assets))

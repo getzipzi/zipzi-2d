@@ -481,7 +481,7 @@ impl Document {
             });
         let previous_revision = self.projection_revision;
         let receipt = edit.commit_to(&mut self.session)?;
-        if object.kind == ObjectKind::Expression {
+        if matches!(object.kind, ObjectKind::Expression | ObjectKind::Motion) {
             if receipt.changed {
                 self.pristine_blank = false;
             }

@@ -65,7 +65,10 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
     assert_eq!(returned.mesh_order().len(), original.mesh_order().len());
     assert_eq!(returned.motion_order().len(), 27);
     assert_eq!(returned.expression_order().len(), 8);
-    assert_eq!(returned.motion_groups(), original.motion_groups());
+    assert_eq!(
+        external_motion_groups(returned.motion_groups()),
+        external_motion_groups(original.motion_groups())
+    );
     let mut animation_reference = Vec::new();
     for id in original.expression_order() {
         let before = original.get_expression(id).unwrap();
@@ -658,7 +661,10 @@ fn mao_runtime_returns_to_cubism_with_part_names_and_motion_groups() -> anyhow::
     let mut returned = session()?;
     returned.import_cubism(&returned_path.join("returned.can3"), None)?;
     assert_eq!(part_names(returned.document()), expected);
-    assert_eq!(returned.document().motion_groups(), groups);
+    assert_eq!(
+        external_motion_groups(returned.document().motion_groups()),
+        external_motion_groups(&groups)
+    );
     assert_eq!(returned.document().motion_order().len(), 7);
     assert_eq!(returned.document().expression_order().len(), 8);
     let final_runtime = temp.path().join("final-runtime");
@@ -704,4 +710,17 @@ fn can3_without_its_associated_model_does_not_replace_the_active_document() -> a
     assert_eq!(editor.active_id(), original);
     assert_eq!(editor.document_count(), 1);
     Ok(())
+}
+
+fn external_motion_groups(
+    groups: &[kasane_core::document::MotionGroup],
+) -> Vec<kasane_core::document::MotionGroup> {
+    let mut groups = groups.to_vec();
+    for group in &mut groups {
+        group.id.clear();
+        for entry in &mut group.entries {
+            entry.id.clear();
+        }
+    }
+    groups
 }

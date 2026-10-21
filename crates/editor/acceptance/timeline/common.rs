@@ -78,7 +78,7 @@ pub(crate) fn select(h: &mut Harness, group: &str) -> anyhow::Result<()> {
             .animation_catalog()
             .motions
             .iter()
-            .find(|m| m.selection.entry.as_ref().is_some_and(|(g, _)| g == group))
+            .find(|m| m.group.as_deref() == Some(group))
             .context("missing variant")?
             .selection
             .clone();

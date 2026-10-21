@@ -13,10 +13,7 @@ pub use evaluation::{AnimationEvaluated, AnimationEvaluator};
 use kasane_sdk::{AuthoringSnapshot, ExpressionTransition, MotionPreview, MotionSnapshot};
 pub use provenance::{AnimationIdentity, AnimationRequest};
 pub use resources::{ExpressionResource, ExpressionTrigger, MotionResource, MotionSelection};
-use std::{
-    collections::HashSet,
-    sync::{Arc, OnceLock},
-};
+use std::sync::{Arc, OnceLock};
 
 pub struct AnimationSource {
     /// Immutable committed model shared by all revisions of a gesture.
@@ -82,6 +79,7 @@ pub struct AnimationSession {
     pub presented: Option<Arc<MotionSnapshot>>,
     pub error: Option<AnimationFailure>,
     pub model_generation: u64,
+    document_revision: u64,
     pub preview_generation: u64,
     pub(crate) source: Option<Arc<AnimationSource>>,
     frames: provenance::FrameSequence,
