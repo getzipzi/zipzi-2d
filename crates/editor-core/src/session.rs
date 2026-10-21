@@ -142,7 +142,7 @@ impl DocumentSession {
             }
             _ => {}
         }
-        if self.document.property_edit_serial().is_some()
+        if self.document.has_inspector_edit()
             && !matches!(
                 &command,
                 EditorCommand::FinishEdit | EditorCommand::CancelEdit
@@ -181,7 +181,7 @@ impl DocumentSession {
             None
         };
         let had_pending = self.document.has_pending_edit();
-        let had_property = self.document.property_edit_serial().is_some();
+        let had_property = self.document.has_inspector_edit();
         let evaluation_before = self.document.evaluation_revision();
         let history_state = matches!(&command, EditorCommand::Undo | EditorCommand::Redo)
             .then(|| self.document.model().editor_state().clone());

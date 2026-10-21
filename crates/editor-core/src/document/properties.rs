@@ -481,6 +481,13 @@ impl Document {
             });
         let previous_revision = self.projection_revision;
         let receipt = edit.commit_to(&mut self.session)?;
+        if object.kind == ObjectKind::Expression {
+            if receipt.changed {
+                self.pristine_blank = false;
+            }
+            self.consume_authoring_receipt(&receipt, false);
+            return Ok(());
+        }
         self.session.drain_events();
         if receipt.changed {
             self.pristine_blank = false;

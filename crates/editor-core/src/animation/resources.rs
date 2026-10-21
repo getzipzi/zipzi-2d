@@ -34,6 +34,7 @@ pub struct ExpressionResource {
     pub id: String,
     pub name: String,
     pub unresolved_targets: Vec<String>,
+    pub disabled_entries: Vec<kasane_core::document::DisabledExpressionEntry>,
     pub fade_in: f32,
     pub fade_out: f32,
     pub parameters: usize,
@@ -59,6 +60,10 @@ impl Document {
                 Some(ExpressionResource {
                     id: id.clone(),
                     name: expression.name.clone(),
+                    disabled_entries: model
+                        .expression_projection(id)
+                        .expect("validated expression projects")
+                        .disabled,
                     fade_in: expression.fade_in.unwrap_or(1.),
                     fade_out: expression.fade_out.unwrap_or(1.),
                     parameters: expression.entries.len(),

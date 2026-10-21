@@ -149,11 +149,7 @@ impl Editor {
             .iter()
             .find(|r| r.id == expression_id)
             .ok_or_else(|| anyhow::anyhow!("Expression no longer exists"))?;
-        ensure!(
-            resource.unresolved_targets.is_empty(),
-            "Unresolved expression targets: {}",
-            resource.unresolved_targets.join(", ")
-        );
+        let _ = resource; // Per-entry diagnostics do not prevent activation.
         let animation = &mut session.animation.playback;
         animation.inspected = Some(crate::ObjectRef::new(
             crate::ObjectKind::Expression,

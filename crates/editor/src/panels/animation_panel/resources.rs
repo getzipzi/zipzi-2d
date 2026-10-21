@@ -371,9 +371,7 @@ impl AnimationPanel {
                 if selected {
                     selected_cursor = Some(cursor);
                 }
-                if valid {
-                    choices.push((row_index, Choice::Expression(resource.id.clone())));
-                }
+                choices.push((row_index, Choice::Expression(resource.id.clone())));
                 row_index += 1;
                 let expression = resource.id.clone();
                 let hint = if valid {
@@ -389,8 +387,8 @@ impl AnimationPanel {
                     self.resource_row(
                         ("animation-expression", index),
                         selected,
-                        if valid { cursor } else { usize::MAX },
-                        disabled || !valid,
+                        cursor,
+                        disabled,
                         window,
                         cx,
                     )
@@ -432,16 +430,14 @@ impl AnimationPanel {
                         )
                     })
                     .on_click(cx.listener(move |panel, _, window, cx| {
-                        if valid {
-                            panel.resources.view.cursor = Some(cursor);
-                            panel.choose(
-                                id,
-                                Choice::Expression(expression.clone()),
-                                false,
-                                window,
-                                cx,
-                            );
-                        }
+                        panel.resources.view.cursor = Some(cursor);
+                        panel.choose(
+                            id,
+                            Choice::Expression(expression.clone()),
+                            false,
+                            window,
+                            cx,
+                        );
                     })),
                 );
             }

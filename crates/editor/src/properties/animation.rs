@@ -136,6 +136,7 @@ fn rows(
         if let Some(expression) = document.expression_definition(&resource.id) {
             for (index, entry) in expression.entries.iter().enumerate() {
                 let target = match &entry.target {
+                    ExpressionTarget::Unspecified => t!("workspace.none").into(),
                     ExpressionTarget::Resolved { parameter_id } => parameter_name(parameter_id),
                     ExpressionTarget::Unresolved { runtime_id } => {
                         t!("workspace.unresolved_binding", target = runtime_id).into()

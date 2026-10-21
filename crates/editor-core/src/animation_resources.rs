@@ -45,6 +45,10 @@ pub enum AnimationDiagnostic {
         motion: String,
         part: String,
     },
+    UnconfiguredExpressionEntry {
+        expression: String,
+        entry_id: String,
+    },
     UnresolvedExpression {
         expression: String,
         target: String,
@@ -160,6 +164,12 @@ impl AnimationCatalog {
                 continue;
             };
             for entry in &expression.entries {
+                if entry.target == ExpressionTarget::Unspecified {
+                    issues.insert(AnimationDiagnostic::UnconfiguredExpressionEntry {
+                        expression: expression.name.clone(),
+                        entry_id: entry.id.clone(),
+                    });
+                }
                 if let ExpressionTarget::Unresolved { runtime_id } = &entry.target {
                     issues.insert(AnimationDiagnostic::UnresolvedExpression {
                         expression: expression.name.clone(),

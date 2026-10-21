@@ -53,8 +53,7 @@ impl Editor {
         let session = self.entry_mut(document)?.session_mut();
         if let Some(session) = session {
             session.animation.playback.pause();
-            if reason != EditingLifecycle::Save && session.document.property_edit_serial().is_some()
-            {
+            if reason != EditingLifecycle::Save && session.document.has_inspector_edit() {
                 session.document.cancel_edit();
                 session.animation.playback.property_preview_changed();
                 session.invalidate_scene();

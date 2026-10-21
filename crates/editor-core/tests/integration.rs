@@ -57,3 +57,6 @@ mod workspaces;
 mod transfer;
 #[path = "cases/transfer_roundtrip/mod.rs"]
 mod transfer_roundtrip;
+
+#[path = "cases/expression_authoring.rs"]
+mod expression_authoring;

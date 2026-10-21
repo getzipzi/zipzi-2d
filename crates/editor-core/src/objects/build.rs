@@ -344,7 +344,21 @@ impl ObjectIndex {
                 let r = ObjectRef::new(K::Expression, id);
                 s.add(r.clone(), &x.name, json!(x), None);
                 for e in &x.entries {
+                    let er = ObjectRef::new(K::ExpressionEntry, &e.id);
+                    s.add(er.clone(), &e.id, json!(e), None);
+                    let diagnostic = match &e.target {
+                        ExpressionTarget::Unspecified => {
+                            Some("Parameter needs configuration".into())
+                        }
+                        ExpressionTarget::Unresolved { runtime_id } => {
+                            Some(format!("Unresolved parameter: {runtime_id}"))
+                        }
+                        _ => None,
+                    };
+                    s.objects.last_mut().unwrap().diagnostic = diagnostic;
+                    s.edge(&er, R::EntryOf, r.clone(), "");
                     let target = match &e.target {
+                        ExpressionTarget::Unspecified => continue,
                         ExpressionTarget::Resolved { parameter_id } => {
                             ObjectRef::new(K::Parameter, parameter_id)
                         }
@@ -352,6 +366,7 @@ impl ObjectIndex {
                             s.unresolved("expression parameter", runtime_id)
                         }
                     };
+                    s.edge(&er, R::ExpressionWrites, target.clone(), "");
                     s.edge(
                         &r,
                         R::ExpressionWrites,

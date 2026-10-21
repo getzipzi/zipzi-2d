@@ -609,7 +609,7 @@ impl crate::Editor {
         // A new inspector gesture replaces the previous inspector candidate.
         // Committing it here would invalidate the already checked baseline
         // when both gestures edit the same field.
-        let end = if self.document().unwrap().property_edit_serial().is_some() {
+        let end = if self.document().unwrap().has_inspector_edit() {
             crate::EditorCommand::CancelEdit
         } else {
             crate::EditorCommand::FinishEdit

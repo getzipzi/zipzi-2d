@@ -88,9 +88,11 @@ enum Gesture {
     Opacity,
     Controls,
     Properties(u64),
+    ExpressionEntry(Uuid),
 }
 
 enum PendingOriginal {
+    ExpressionEntry(kasane_sdk::ExpressionEntryAddress),
     Controls(crate::control_edit::EditOriginal),
     Properties(
         crate::ObjectRef,
@@ -101,12 +103,18 @@ enum PendingOriginal {
 impl PendingOriginal {
     fn id(&self) -> &str {
         match self {
+            Self::ExpressionEntry(address) => address.entry_id(),
             Self::Controls(original) => original.id(),
             Self::Properties(object, _, _) => &object.id,
         }
     }
     fn unchanged(&self, model: &kasane_core::Document) -> bool {
         match self {
+            Self::ExpressionEntry(address) => model
+                .get_expression_entry(address.entry_id())
+                .is_some_and(|(_, entry)| {
+                    kasane_sdk::ExpressionEntryFields::from(entry) == *address.expected()
+                }),
             Self::Controls(original) => original.unchanged(model),
             Self::Properties(object, values, scope) => {
                 Document::property_values_in(model, object, scope)
@@ -148,6 +156,12 @@ pub struct Document {
     pristine_blank: bool,
 }
 
+#[path = "authoring.rs"]
+mod authoring;
+pub use authoring::{
+    AuthoringSessionReason, ExpressionAuthoringCapabilities, ExpressionEntryEditToken,
+    OperationResult,
+};
 mod edits;
 mod physics;
 mod projection;
@@ -177,8 +191,8 @@ impl Document {
         crate::AnimationSource {
             snapshot: Arc::new(self.session.read_snapshot()),
             properties: self
-                .property_edit_serial()
-                .map(|_| Arc::new(self.model().fork_candidate())),
+                .has_inspector_edit()
+                .then(|| Arc::new(self.model().fork_candidate())),
             textures: self.textures.snapshot(),
             candidate: None,
             materialized: Default::default(),
@@ -427,7 +441,7 @@ impl Document {
             objects.iter().all(|r| index.get(r).is_some()),
             "Object no longer exists"
         );
-        self.finish_edit()?;
+        self.finish_context_edit()?;
         let mut unique = Vec::new();
         for object in objects {
             if !unique.contains(&object) {
@@ -456,7 +470,7 @@ impl Document {
             self.model().get_parameter(id).is_some(),
             "Parameter not found"
         );
-        self.finish_edit()?;
+        self.finish_context_edit()?;
         let r = crate::ObjectRef::new(crate::ObjectKind::Parameter, id);
         self.context.parameter_focus = Some(r.clone());
         self.context.inspected = Some(r);
@@ -485,13 +499,13 @@ impl Document {
         } else if object.kind.is_edit_target() {
             self.select_object(object)
         } else {
-            self.finish_edit()?;
+            self.finish_context_edit()?;
             self.context.inspected = Some(object);
             Ok(())
         }
     }
     pub fn navigate_back(&mut self) -> Result<()> {
-        self.finish_edit()?;
+        self.finish_context_edit()?;
         if let Some(n) = self.context.back.pop() {
             self.context.selections = n.selections;
             self.context.selection = n.selection;

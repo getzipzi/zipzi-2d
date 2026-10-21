@@ -21,7 +21,7 @@ impl Document {
             Gesture::Rename => "Rename layer",
             Gesture::Opacity => "Change opacity",
             Gesture::Controls => "Edit canvas controls",
-            Gesture::Properties(_) => unreachable!(),
+            Gesture::Properties(_) | Gesture::ExpressionEntry(_) => unreachable!(),
         };
         self.pending = Some(PendingEdit {
             kind,
@@ -157,6 +157,10 @@ impl Document {
     }
 
     pub fn finish_edit(&mut self) -> Result<()> {
+        if let Some(token) = self.expression_edit_token() {
+            self.commit_expression_entry_edit(token)?;
+            return Ok(());
+        }
         let changed = self.pending_changed();
         if let Some(pending) = self.pending.take() {
             let previous_revision = self.projection_revision;
@@ -189,6 +193,25 @@ impl Document {
 
     pub fn cancel_edit(&mut self) {
         if let Some(pending) = self.pending.take() {
+            if let PendingOriginal::ExpressionEntry(address) = &pending.original {
+                let references_changed = pending
+                    .edit
+                    .candidate_document()
+                    .get_expression_entry(address.entry_id())
+                    .unwrap()
+                    .1
+                    .target
+                    != address.expected().target;
+                let previous_revision = self.projection_revision;
+                self.invalidate_expression_projection();
+                if !references_changed {
+                    self.refresh_expression_index(
+                        previous_revision,
+                        &[address.owner_id().to_owned()],
+                    );
+                }
+                return;
+            }
             let previous_revision = self.projection_revision;
             let property = match &pending.original {
                 PendingOriginal::Properties(object, _, _) => Some(object.clone()),
@@ -222,10 +245,11 @@ impl Document {
         self.finish_edit()?;
         let before = self.evaluation_revision();
         let state = self.model().editor_state().clone();
-        change(&mut self.session)?;
+        let receipt = change(&mut self.session)?;
         self.refresh_textures()?;
         self.reconcile_parameter_preview()?;
-        self.after_history(
+        self.consume_authoring_receipt(
+            &receipt,
             before != self.evaluation_revision() || state == *self.model().editor_state(),
         );
         Ok(())

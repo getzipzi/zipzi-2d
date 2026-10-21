@@ -260,12 +260,12 @@ fn diagnostics_are_available_before_play_and_do_not_duplicate_sdk_coverage() -> 
         invalid.blends,
         vec![kasane_core::document::ExpressionBlend::Add]
     );
-    assert!(
-        editor
-            .select_expression(editor.active_id().unwrap(), invalid.id.clone())
-            .is_err()
+    editor.select_expression(editor.active_id().unwrap(), invalid.id.clone())?;
+    assert_eq!(
+        editor.animation().unwrap().expression.as_deref(),
+        Some(invalid.id.as_str())
     );
-    assert!(editor.animation().unwrap().expression.is_none());
+    editor.clear_expression()?;
     editor.select_motion(
         editor.active_id().unwrap(),
         catalog.motions[3].selection.clone(),

@@ -2,6 +2,7 @@
 mod bindings;
 mod build;
 mod context;
+mod expressions;
 mod influences;
 mod properties;
 mod table;

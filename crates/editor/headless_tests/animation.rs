@@ -669,7 +669,7 @@ fn leaving_animation_cancels_ruler_drag_and_old_pointer_events(cx: &mut TestAppC
 }
 
 #[gpui_kit::test]
-fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_authoring_is_unchanged(
+fn diagnostics_precede_playback_incomplete_expressions_are_playable_without_authoring_edits(
     cx: &mut TestAppContext,
 ) {
     let (document, assets) = document_fixture::diagnostic_animation_document().unwrap();
@@ -703,8 +703,18 @@ fn diagnostics_precede_playback_invalid_expressions_are_disabled_and_authoring_i
                 .visible()
         );
         super::animation::click_expression(window, 3, cx);
-        harness.view.read_with(cx, |view, _| {
-            assert!(view.editor.animation().unwrap().expression.is_none());
+        harness.view.update(cx, |view, _| {
+            let id = &view
+                .editor
+                .document()
+                .unwrap()
+                .animation_catalog()
+                .expressions[3]
+                .id;
+            assert_eq!(
+                view.editor.animation().unwrap().expression.as_ref(),
+                Some(id)
+            );
             assert!(view.edit_error.is_none());
         });
         window.click(("animation-motion", 0usize), cx);

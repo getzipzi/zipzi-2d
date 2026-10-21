@@ -34,11 +34,12 @@ mod workspace_kind;
 pub use workspace_kind::WorkspaceKind;
 
 pub use document::{
-    AlphaMeshOptions, Document, Layer, MeshGenerationOptions, MeshGenerationPreview,
+    AlphaMeshOptions, AuthoringSessionReason, Document, ExpressionAuthoringCapabilities,
+    ExpressionEntryEditToken, Layer, MeshGenerationOptions, MeshGenerationPreview,
     MeshGenerationSource, MeshGridOptions, NewParameter, ObjectState, ObjectStateIndex,
-    ParameterCreateError, ParameterDraft, ParameterExportDiagnostic, ParameterGroupDraft,
-    ParameterGroupOption, ParameterGroupValue, ParameterKey, ParameterManagementError,
-    ParameterValidationError, ParameterValue, ParameterVisual,
+    OperationResult, ParameterCreateError, ParameterDraft, ParameterExportDiagnostic,
+    ParameterGroupDraft, ParameterGroupOption, ParameterGroupValue, ParameterKey,
+    ParameterManagementError, ParameterValidationError, ParameterValue, ParameterVisual,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};

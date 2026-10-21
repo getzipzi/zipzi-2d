@@ -422,6 +422,7 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
                 fade_in: Some(0.2),
                 fade_out: Some(0.3),
                 entries: vec![ExpressionEntry {
+                    id: uuid::Uuid::new_v4().to_string(),
                     target: ExpressionTarget::Resolved {
                         parameter_id: parameter_id.clone(),
                     },
@@ -557,6 +558,7 @@ pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
             fade_in: None,
             fade_out: None,
             entries: vec![ExpressionEntry {
+                id: uuid::Uuid::new_v4().to_string(),
                 target: ExpressionTarget::Unresolved {
                     runtime_id: "MissingExpressionParam".into(),
                 },
