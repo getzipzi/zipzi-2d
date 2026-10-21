@@ -53,6 +53,7 @@ struct Particle {
 #[derive(Clone)]
 struct RigState {
     particles: Vec<Particle>,
+    input_angle: f32,
     current: Vec<f32>,
     previous: Vec<f32>,
     inputs: Vec<f32>,
@@ -65,6 +66,10 @@ struct RigState {
 pub struct PhysicsRigSnapshot {
     pub id: String,
     pub particles: Vec<[f32; 2]>,
+    /// Weighted, normalized angle in degrees used by the latest solved step.
+    /// Rotate the Y-down solver coordinates by this angle to display a fixed
+    /// gravity direction with rotating input axes.
+    pub input_angle: f32,
     pub inputs: Vec<f32>,
     pub outputs: Vec<Option<PhysicsOutputSnapshot>>,
 }
@@ -243,6 +248,7 @@ impl PhysicsRuntime {
                             .collect();
                         RigState {
                             particles,
+                            input_angle: 0.,
                             current: vec![0.0; setting.outputs.len()],
                             previous: vec![0.0; setting.outputs.len()],
                             inputs: Vec::with_capacity(setting.inputs.len()),
@@ -287,6 +293,7 @@ impl PhysicsRuntime {
             .zip(&self.rigs)
             .map(|(setting, rig)| PhysicsRigSnapshot {
                 id: setting.id.clone(),
+                input_angle: rig.input_angle,
                 particles: rig
                     .particles
                     .iter()
@@ -411,6 +418,7 @@ impl PhysicsRuntime {
                     .unwrap_or(0.)
             }));
             let (translation, angle) = read_inputs(document, asset, setting, parameters);
+            rig.input_angle = angle;
             let radian = (-angle).to_radians();
             let x = translation.x * radian.cos() - translation.y * radian.sin();
             let y = x * radian.sin() + translation.y * radian.cos();
@@ -506,6 +514,7 @@ fn update_particles(
     angle: f32,
     step: f32,
 ) {
+    rig.input_angle = angle;
     rig.particles[0].position = translation;
     let gravity = Vector {
         x: angle.to_radians().sin(),
@@ -641,6 +650,43 @@ mod tests {
                 .is_ok());
         }
         import_physics3(&doc, PHYSICS, source).unwrap().candidate
+    }
+
+    #[test]
+    fn observations_keep_the_normalized_angle_of_the_solved_particles() {
+        for (reflect, weight, expected) in [(true, 100., 90.), (false, 50., -45.)] {
+            let mut source: serde_json::Value = serde_json::from_str(include_str!(
+                "../../../tests/fixtures/animation_cpu/thirty.physics3.json"
+            ))
+            .unwrap();
+            let setting = &mut source["PhysicsSettings"][0];
+            setting["Input"][0]["Type"] = "Angle".into();
+            setting["Input"][0]["Reflect"] = reflect.into();
+            setting["Input"][0]["Weight"] = weight.into();
+            setting["Normalization"]["Angle"]["Minimum"] = (-90.).into();
+            setting["Normalization"]["Angle"]["Maximum"] = 90.into();
+            let doc = document(&source.to_string());
+            let mut preview = PhysicsPreview::new(&doc);
+            preview.set_parameter(X, 1.).unwrap();
+            preview.stabilize();
+            let stable = preview.state.snapshot(&doc);
+            assert_eq!(stable[0].input_angle, expected);
+            let tip = stable[0].particles[1];
+            assert!((tip[0] - expected.to_radians().sin()).abs() < 1e-5);
+            assert!((tip[1] - expected.to_radians().cos()).abs() < 1e-5);
+
+            preview.set_parameter(X, -1.).unwrap();
+            // Input changes between fixed steps must not rotate older particles.
+            preview.advance(1. / 60.).unwrap();
+            let pending = preview.state.snapshot(&doc);
+            assert_eq!(pending[0].input_angle, stable[0].input_angle);
+            assert_eq!(pending[0].particles, stable[0].particles);
+            assert_eq!(pending[0].inputs, stable[0].inputs);
+            preview.advance(1. / 60.).unwrap();
+            assert_eq!(preview.state.snapshot(&doc)[0].input_angle, -expected);
+            // Observation copies retain their original frame after later steps.
+            assert_eq!(stable[0].input_angle, expected);
+        }
     }
 
     #[test]
