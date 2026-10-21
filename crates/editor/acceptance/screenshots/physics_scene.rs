@@ -38,8 +38,8 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
                         .settings
                         .first()
                         .and_then(|r| r.inputs.first())
-                        .and_then(|input| asset.parameter_bindings.get(&input.source.id))
-                        .cloned()
+                        .and_then(|input| input.source.parameter_id())
+                        .map(str::to_owned)
                     {
                         view.editor
                             .set_physics_input(view.editor.active_id().unwrap(), &id, 10.)

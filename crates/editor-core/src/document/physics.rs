@@ -26,12 +26,10 @@ impl Document {
         let mut edit = self.session.begin_owned_edit("Edit physics", None)?;
         edit.set_physics(asset)?;
         let receipt = edit.commit_to(&mut self.session)?;
-        self.session.drain_events();
         if receipt.changed {
             self.pristine_blank = false;
-            self.invalidate_projection(true);
-            self.context.reconcile(&self.object_index());
         }
+        self.consume_authoring_receipt(&receipt, false);
         Ok(())
     }
 }

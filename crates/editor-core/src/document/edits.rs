@@ -168,6 +168,18 @@ impl Document {
                 PendingOriginal::Properties(object, _, _) => Some(object.clone()),
                 _ => None,
             };
+            if changed
+                && property
+                    .as_ref()
+                    .is_some_and(|p| p.kind == crate::ObjectKind::PhysicsGroup)
+            {
+                let receipt = pending.edit.commit_to(&mut self.session)?;
+                if receipt.changed {
+                    self.pristine_blank = false;
+                }
+                self.consume_authoring_receipt(&receipt, false);
+                return Ok(());
+            }
             self.invalidate_projection(
                 matches!(pending.kind, Gesture::Rename) || pending.topology_changed,
             );

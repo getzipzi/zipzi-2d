@@ -19,7 +19,10 @@ use gpui_kit::component::{
     select::{SearchableVec, SelectState},
 };
 use gpui_kit::{prelude::*, *};
-use kasane_core::{document::PhysicsAsset, physics::*};
+use kasane_core::{
+    document::{PhysicsAsset, PhysicsEdit, PhysicsSetting},
+    physics::PhysicsAxis,
+};
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -89,43 +92,36 @@ impl PropertiesPanel {
         self.physics.drawing = Default::default();
         cx.notify();
     }
-    fn physics_commit(&mut self, mut asset: PhysicsAsset, cx: &mut Context<Self>) {
-        editor_core::reconcile_physics_asset(&mut asset);
+    fn physics_apply(&mut self, intent: PhysicsEdit, cx: &mut Context<Self>) -> bool {
+        self.physics_cancel(cx);
         let Some(context) = self.physics.context else {
-            return;
+            return false;
         };
         let result = self
             .owner
             .update(cx, |owner, cx| {
-                anyhow::ensure!(
-                    owner.editor.editing_context_token_valid(context) && !owner.modal,
-                    "Physics context changed"
-                );
-                let revision = owner.editor.document().unwrap().model_generation();
-                let result = owner
-                    .editor
-                    .execute(editor_core::EditorCommand::ReplacePhysics {
-                        asset,
-                        expected_revision: revision,
-                    });
+                let result = (|| {
+                    anyhow::ensure!(
+                        owner.editor.editing_context_token_valid(context) && !owner.modal,
+                        "Physics context changed"
+                    );
+                    let plan = owner
+                        .editor
+                        .plan_physics_authoring(context.document, intent)?;
+                    owner
+                        .editor
+                        .execute_physics_authoring(context.document, &plan)?;
+                    Ok(())
+                })();
                 owner.animation_anchor = None;
                 owner.redraw(cx);
                 result
             })
             .unwrap_or_else(|e| Err(e.into()));
-        self.physics.error = result.err().map(|e| e.to_string());
+        let succeeded = result.is_ok();
+        self.physics.error = result.err().map(|e: anyhow::Error| e.to_string());
         cx.notify();
-    }
-    fn physics_mutate(
-        &mut self,
-        cx: &mut Context<Self>,
-        change: impl FnOnce(&mut PhysicsAsset, &str),
-    ) {
-        self.physics_cancel(cx);
-        if let Some(mut asset) = self.physics_asset(cx) {
-            change(&mut asset, &self.physics.group);
-            self.physics_commit(asset, cx);
-        }
+        succeeded
     }
     fn physics_session(
         &mut self,
@@ -248,7 +244,7 @@ impl PropertiesPanel {
                     object
                         == editor_core::ObjectRef::new(
                             editor_core::ObjectKind::PhysicsGroup,
-                            format!("{}/{}", asset.id, rig.id),
+                            rig.id.clone(),
                         )
                 })
                 .map(|rig| rig.id.clone())
@@ -363,11 +359,39 @@ impl PropertiesPanel {
             .node
             .max(1)
             .min(rig.vertices.len().saturating_sub(1));
-        let unresolved = asset
-            .referenced_runtime_ids()
-            .into_iter()
-            .filter(|id| !asset.parameter_bindings.contains_key(*id))
+        let targets: Vec<_> = asset
+            .data
+            .settings
+            .iter()
+            .flat_map(|g| {
+                g.inputs
+                    .iter()
+                    .map(|v| &v.source)
+                    .chain(g.outputs.iter().map(|v| &v.destination))
+            })
             .collect::<Vec<_>>();
+        let unconfigured = targets
+            .iter()
+            .filter(|t| matches!(t, kasane_core::document::PhysicsTarget::Unspecified))
+            .count();
+        let unresolved = targets
+            .iter()
+            .filter_map(|t| match t {
+                kasane_core::document::PhysicsTarget::Unresolved { runtime_id } => {
+                    Some(runtime_id.as_str())
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        if unconfigured > 0 {
+            body = body.child(
+                div()
+                    .id("physics-unconfigured")
+                    .test_support()
+                    .text_color(cx.theme().warning)
+                    .child(t!("physics.unconfigured", count = unconfigured).into_owned()),
+            );
+        }
         if !unresolved.is_empty() {
             body = body.child(
                 div()
@@ -545,11 +569,10 @@ impl PropertiesPanel {
                 cx,
             ));
             if let Some(output) = rig.outputs.get(self.physics.output) {
-                let i = self.physics.output;
-                if output.vertex_index == 0 || output.kind != PhysicsAxis::Angle {
+                if rig.node_index(&output.node_id) == Some(0) || output.kind != PhysicsAxis::Angle {
                     body = body.child(
                         self.physics_note(
-                            if output.vertex_index == 0 {
+                            if rig.node_index(&output.node_id) == Some(0) {
                                 t!("physics.root_output")
                             } else {
                                 t!("physics.translation_output")
@@ -561,7 +584,13 @@ impl PropertiesPanel {
                 }
                 if let Some(result) = trace
                     .as_ref()
-                    .and_then(|rig| rig.outputs.get(i))
+                    .and_then(|trace| {
+                        trace
+                            .output_ids
+                            .iter()
+                            .position(|id| id == &output.id)
+                            .and_then(|slot| trace.outputs.get(slot))
+                    })
                     .and_then(Option::as_ref)
                 {
                     if result.clamped {
@@ -611,11 +640,4 @@ pub(crate) fn group_name<'a>(asset: &'a PhysicsAsset, id: &'a str) -> &'a str {
         .iter()
         .find(|entry| entry.id == id)
         .map_or(id, |entry| entry.name.as_str())
-}
-pub(crate) fn new_asset() -> PhysicsAsset {
-    let id = uuid::Uuid::new_v4().to_string();
-    serde_json::from_value(serde_json::json!({"id":id,"opaque_source_ids":null,"parameter_bindings":{},"data":{
-        "Version":3,"Meta":{"PhysicsSettingCount":1,"TotalInputCount":0,"TotalOutputCount":0,"VertexCount":2,"Fps":30,"EffectiveForces":{"Gravity":{"X":0,"Y":-1},"Wind":{"X":0,"Y":0}},"PhysicsDictionary":[{"Id":"PhysicsSetting1","Name":t!("physics.new_group").into_owned()}]},
-        "PhysicsSettings":[{"Id":"PhysicsSetting1","Input":[],"Output":[],"Vertices":[{"Position":{"X":0,"Y":0},"Mobility":1,"Delay":1,"Acceleration":1,"Radius":0},{"Position":{"X":0,"Y":10},"Mobility":0.95,"Delay":0.8,"Acceleration":1,"Radius":10}],"Normalization":{"Position":{"Minimum":-10,"Default":0,"Maximum":10},"Angle":{"Minimum":-10,"Default":0,"Maximum":10}}}]
-    }})).expect("valid default physics")
 }

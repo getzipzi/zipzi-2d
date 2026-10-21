@@ -1,13 +1,10 @@
 //! Physics groups are navigated independently of animation playback.
 use super::*;
-use crate::panels::{
-    properties::physics::{group_name, new_asset},
-    toolbar::PanelToolbar,
-};
+use crate::panels::{properties::physics::group_name, toolbar::PanelToolbar};
 use crate::ui::compact;
 use editor_core::{DocumentId, ObjectKind, ObjectRef};
 use gpui_kit::assets::IconName;
-use kasane_core::{document::PhysicsAsset, physics::PhysicsDictionaryEntry};
+use kasane_core::document::{PhysicsAsset, PhysicsEdit};
 
 fn selected(editor: &editor_core::Editor, asset: &PhysicsAsset) -> Option<usize> {
     let object = editor.active_inspection()?.object()?;
@@ -15,10 +12,10 @@ fn selected(editor: &editor_core::Editor, asset: &PhysicsAsset) -> Option<usize>
         .data
         .settings
         .iter()
-        .position(|rig| object == reference(asset, &rig.id))
+        .position(|rig| object == reference(&rig.id))
 }
-fn reference(asset: &PhysicsAsset, group: &str) -> ObjectRef {
-    ObjectRef::new(ObjectKind::PhysicsGroup, format!("{}/{}", asset.id, group))
+fn reference(group: &str) -> ObjectRef {
+    ObjectRef::new(ObjectKind::PhysicsGroup, group)
 }
 
 impl AnimationPanel {
@@ -65,68 +62,93 @@ impl AnimationPanel {
             // An unfinished value belongs to the previous inspector selection.
             let _ = owner.editor.execute(editor_core::EditorCommand::CancelEdit);
             let doc = owner.editor.document().unwrap();
-            let revision = doc.model_generation();
-            let mut asset = doc.physics_definition().cloned().unwrap_or_else(new_asset);
-            let position = selected(&owner.editor, &asset);
-            let next;
-            match action {
-                0 | 1 => {
-                    // The default asset already contains its first group.
-                    if doc.physics_definition().is_some() {
-                        let mut rig = if action == 1 {
-                            let Some(i) = position else {
-                                return;
-                            };
-                            asset.data.settings[i].clone()
-                        } else {
-                            new_asset().data.settings.remove(0)
-                        };
-                        let name = if action == 1 {
-                            t!("physics.copy_name", name = group_name(&asset, &rig.id)).into_owned()
-                        } else {
-                            t!("physics.new_group").into_owned()
-                        };
-                        std::sync::Arc::make_mut(&mut rig).id = uuid::Uuid::new_v4().to_string();
-                        asset.data.meta.dictionary.push(PhysicsDictionaryEntry {
-                            id: rig.id.clone(),
-                            name,
-                            extensions: Default::default(),
-                        });
-                        asset.data.settings.push(rig);
+            let asset = doc.physics_definition();
+            let position = asset.and_then(|a| selected(&owner.editor, a));
+            let group = position.and_then(|i| asset.map(|a| a.data.settings[i].id.clone()));
+            let intent = match action {
+                0 => PhysicsEdit::CreateGroup {
+                    asset_id: asset
+                        .map_or_else(|| uuid::Uuid::new_v4().to_string(), |a| a.id.clone()),
+                    id: uuid::Uuid::new_v4().to_string(),
+                    name: t!("physics.new_group").into_owned(),
+                    before: None,
+                },
+                1 => {
+                    let Some(id) = group.clone() else {
+                        return;
+                    };
+                    PhysicsEdit::Duplicate {
+                        ids: vec![id],
+                        group_id: None,
+                        before: None,
                     }
-                    next = asset.data.settings.len().checked_sub(1);
                 }
                 2 => {
-                    let Some(i) = position else {
+                    let Some(id) = group.clone() else {
                         return;
                     };
-                    let id = asset.data.settings.remove(i).id.clone();
-                    asset.data.meta.dictionary.retain(|entry| entry.id != id);
-                    next = (!asset.data.settings.is_empty())
-                        .then(|| i.min(asset.data.settings.len() - 1));
+                    PhysicsEdit::Delete {
+                        ids: vec![id],
+                        node_replacements: Default::default(),
+                    }
                 }
                 3 | 4 => {
-                    let Some(i) = position else {
+                    let (Some(id), Some(i), Some(a)) = (group.clone(), position, asset) else {
                         return;
                     };
-                    let j = if action == 3 {
-                        i.saturating_sub(1)
+                    let before = if action == 3 {
+                        a.data.settings.get(i.saturating_sub(1))
                     } else {
-                        (i + 1).min(asset.data.settings.len() - 1)
-                    };
-                    asset.data.settings.swap(i, j);
-                    next = Some(j);
+                        a.data.settings.get(i + 2)
+                    }
+                    .map(|g| g.id.clone());
+                    if before.as_ref() == Some(&id) {
+                        return;
+                    }
+                    PhysicsEdit::ReorderGroups {
+                        ids: vec![id],
+                        before,
+                    }
                 }
-                _ => unreachable!(),
-            }
-            editor_core::reconcile_physics_asset(&mut asset);
-            let object = next.map(|i| reference(&asset, &asset.data.settings[i].id));
-            let result = owner
-                .editor
-                .execute(editor_core::EditorCommand::ReplacePhysics {
-                    asset,
-                    expected_revision: revision,
-                });
+                _ => return,
+            };
+            let mut object = group.map(|id| ObjectRef::new(ObjectKind::PhysicsGroup, id));
+            let result = (|| {
+                let plan = owner.editor.plan_physics_authoring(document, intent)?;
+                let result = owner.editor.execute_physics_authoring(document, &plan)?;
+                if let Some(created) = result
+                    .suggested_selection
+                    .iter()
+                    .find(|r| r.kind == ObjectKind::PhysicsGroup)
+                {
+                    object = Some(created.clone());
+                }
+                if object.as_ref().is_some_and(|r| {
+                    !owner
+                        .editor
+                        .document()
+                        .unwrap()
+                        .object_index()
+                        .get(r)
+                        .is_some()
+                }) {
+                    object = owner
+                        .editor
+                        .document()
+                        .unwrap()
+                        .physics_definition()
+                        .and_then(|a| {
+                            let next = position
+                                .unwrap_or(0)
+                                .min(a.data.settings.len().saturating_sub(1));
+                            a.data
+                                .settings
+                                .get(next)
+                                .map(|g| ObjectRef::new(ObjectKind::PhysicsGroup, &g.id))
+                        });
+                }
+                Ok(())
+            })();
             if result.is_ok()
                 && let Some(object) = object
             {
@@ -259,10 +281,10 @@ impl AnimationPanel {
             .data
             .settings
             .iter()
-            .map(|rig| reference(asset, &rig.id))
+            .map(|rig| reference(&rig.id))
             .collect();
         for (i, rig) in asset.data.settings.iter().enumerate() {
-            let object = reference(asset, &rig.id);
+            let object = reference(&rig.id);
             root = root.child(
                 self.resource_row(
                     ("physics-group-row", i),

@@ -88,7 +88,16 @@ fn visible(editor: &Editor, object: &ObjectRef, spec: PropertySpec) -> Result<Pr
     if object.kind == ObjectKind::PhysicsGroup {
         let asset = editor.document().unwrap().physics_definition().unwrap();
         let group = schema::physics::group(asset, object)?;
-        return Ok(PropertyValue::Float(group.vertices[1].mobility));
+        let id = spec
+            .key
+            .entity_id()
+            .context("missing physics node address")?;
+        let node = group
+            .vertices
+            .iter()
+            .find(|node| node.id == id)
+            .context("missing physics node")?;
+        return Ok(PropertyValue::Float(node.mobility));
     }
     let index = editor.document().unwrap().object_index();
     spec.read(
@@ -572,7 +581,7 @@ fn main() -> Result<()> {
                 .settings
                 .iter()
                 .find(|g| g.vertices.len() > 1)
-                .map(|g| ObjectRef::new(ObjectKind::PhysicsGroup, format!("{}/{}", a.id, g.id)))
+                .map(|g| ObjectRef::new(ObjectKind::PhysicsGroup, &g.id))
         });
     samples.rows.push(json!({
         "type":"metadata", "schema_version":1, "model":path,
@@ -773,7 +782,9 @@ fn main() -> Result<()> {
     }
     if let Some(target) = physics {
         let mut spec = schema::physics::MOBILITY;
-        spec.key = spec.key.at(1);
+        let asset = editor.document().unwrap().physics_definition().unwrap();
+        let node = &schema::physics::group(asset, &target)?.vertices[1];
+        spec.key = spec.key.for_entity(&node.id);
         run!(
             "physics_mobility_commit",
             commit_case(

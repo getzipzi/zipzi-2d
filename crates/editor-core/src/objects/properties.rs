@@ -39,6 +39,56 @@ impl super::ObjectIndex {
         true
     }
 
+    pub(crate) fn refresh_physics_properties(
+        &mut self,
+        model: &kasane_core::Document,
+        owners: &[String],
+    ) -> bool {
+        let Some(asset) = model.physics() else {
+            return false;
+        };
+        let root = super::ObjectRef::new(ObjectKind::Physics, &asset.id);
+        let Some(&slot) = self.structure.slots.get(&root) else {
+            return false;
+        };
+        let payload = json!({"meta":asset.data.meta,"extensions":asset.data.extensions});
+        let fps_changed =
+            self.objects[slot].properties["meta"].get("Fps") != payload["meta"].get("Fps");
+        if self.objects[slot].properties != payload {
+            self.objects[slot].properties = payload;
+        }
+        if fps_changed {
+            self.refresh_physics_fps(asset);
+        }
+        owners.iter().all(|id| {
+            self.refresh_physics_preview(
+                model,
+                &super::ObjectRef::new(ObjectKind::PhysicsGroup, id),
+            )
+        })
+    }
+
+    // FPS belongs to the asset even though each group exposes it in Properties.
+    // Asset-only receipts have no modified group, so synchronize it independently.
+    fn refresh_physics_fps(&mut self, asset: &kasane_core::document::PhysicsAsset) {
+        let fps = json!(asset.data.meta.fps.unwrap_or(30.));
+        let changed: Vec<_> = asset
+            .data
+            .settings
+            .iter()
+            .filter_map(|group| {
+                self.structure
+                    .slots
+                    .get(&super::ObjectRef::new(ObjectKind::PhysicsGroup, &group.id))
+                    .copied()
+            })
+            .filter(|&slot| self.objects[slot].properties["fps"] != fps)
+            .collect();
+        for slot in changed {
+            self.objects[slot].properties["fps"] = fps.clone();
+        }
+    }
+
     fn refresh_physics_preview(
         &mut self,
         model: &kasane_core::Document,
@@ -65,20 +115,9 @@ impl super::ObjectIndex {
             .find(|entry| entry.id == rig.id)
             .map_or_else(|| rig.id.clone(), |entry| entry.name.clone());
         info.properties["name"] = json!(info.name);
-        info.properties["fps"] = fps.clone();
+        info.properties["fps"] = fps;
         if fps_changed {
-            let groups: Vec<_> = self
-                .objects
-                .iter()
-                .enumerate()
-                .filter(|(_, info)| {
-                    info.reference.kind == ObjectKind::PhysicsGroup && info.properties["fps"] != fps
-                })
-                .map(|(slot, _)| slot)
-                .collect();
-            for slot in groups {
-                self.objects[slot].properties["fps"] = fps.clone();
-            }
+            self.refresh_physics_fps(asset);
         }
         let root = super::ObjectRef::new(ObjectKind::Physics, &asset.id);
         if let Some(&slot) = self.structure.slots.get(&root) {
@@ -89,6 +128,67 @@ impl super::ObjectIndex {
                     meta["Fps"] = fps;
                 } else if let Some(meta) = meta.as_object_mut() {
                     meta.remove("Fps");
+                }
+            }
+        }
+        let children = rig
+            .inputs
+            .iter()
+            .map(|v| (ObjectKind::PhysicsInput, &v.id, json!(v)))
+            .chain(
+                rig.outputs
+                    .iter()
+                    .map(|v| (ObjectKind::PhysicsOutput, &v.id, json!(v))),
+            )
+            .chain(
+                rig.vertices
+                    .iter()
+                    .map(|v| (ObjectKind::PhysicsNode, &v.id, json!(v))),
+            );
+        for (kind, id, payload) in children {
+            let child = super::ObjectRef::new(kind, id);
+            let Some(&slot) = self.structure.slots.get(&child) else {
+                return false;
+            };
+            if self.objects[slot].properties != payload {
+                self.objects[slot].properties = payload;
+            }
+        }
+        for input in &rig.inputs {
+            let child = super::ObjectRef::new(ObjectKind::PhysicsInput, &input.id);
+            let slot = self.structure.slots[&child];
+            let name = format!("{:?} input", input.kind);
+            if self.objects[slot].name != name {
+                self.objects[slot].name = name;
+            }
+            let detail = format!(
+                "{:?} · weight {} · reflect {}; saved configuration",
+                input.kind, input.weight, input.reflect
+            );
+            for &edge in self.structure.outgoing.get(&child).into_iter().flatten() {
+                if self.relations[edge].kind == super::RelationKind::PhysicsInput
+                    && self.relations[edge].detail != detail
+                {
+                    self.relations[edge].detail = detail.clone();
+                }
+            }
+        }
+        for output in &rig.outputs {
+            let child = super::ObjectRef::new(ObjectKind::PhysicsOutput, &output.id);
+            let slot = self.structure.slots[&child];
+            let name = format!("{:?} output", output.kind);
+            if self.objects[slot].name != name {
+                self.objects[slot].name = name;
+            }
+            let detail = format!(
+                "{:?} · node {} · weight {} · scale {}; saved configuration",
+                output.kind, output.node_id, output.weight, output.scale
+            );
+            for &edge in self.structure.outgoing.get(&child).into_iter().flatten() {
+                if self.relations[edge].kind == super::RelationKind::PhysicsOutput
+                    && self.relations[edge].detail != detail
+                {
+                    self.relations[edge].detail = detail.clone();
                 }
             }
         }
@@ -110,8 +210,8 @@ impl super::ObjectIndex {
                         return false;
                     };
                     format!(
-                        "{:?} · vertex {} · weight {} · scale {}; saved configuration",
-                        output.kind, output.vertex_index, output.weight, output.scale
+                        "{:?} · node {} · weight {} · scale {}; saved configuration",
+                        output.kind, output.node_id, output.weight, output.scale
                     )
                 }
                 _ => continue,

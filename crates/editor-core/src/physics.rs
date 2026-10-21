@@ -125,17 +125,5 @@ impl Editor {
 
 /// Keep only referenced bindings and derive wire counts after structural edits.
 pub fn reconcile_physics_asset(asset: &mut PhysicsAsset) {
-    let referenced: std::collections::HashSet<_> = asset
-        .referenced_runtime_ids()
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
-    asset
-        .parameter_bindings
-        .retain(|id, _| referenced.contains(id));
-    let (settings, inputs, outputs, vertices) = asset.data.actual_counts();
-    asset.data.meta.setting_count = settings;
-    asset.data.meta.input_count = inputs;
-    asset.data.meta.output_count = outputs;
-    asset.data.meta.vertex_count = vertices;
+    asset.reconcile_counts();
 }

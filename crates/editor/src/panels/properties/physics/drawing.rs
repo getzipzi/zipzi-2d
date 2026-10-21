@@ -143,8 +143,10 @@ impl PropertiesPanel {
                                 .iter()
                                 .find(|r| r.id == this.physics.group)
                             {
-                                if let Some(output) =
-                                    rig.outputs.iter().position(|o| o.vertex_index == index)
+                                if let Some(output) = rig
+                                    .outputs
+                                    .iter()
+                                    .position(|o| rig.node_index(&o.node_id) == Some(index))
                                 {
                                     this.physics.output = output;
                                 }

@@ -7,8 +7,16 @@ fn adding_physics_channels_preserves_bindings_after_runtime_id_reuse(cx: &mut Te
     use editor_core::{ObjectKind, ObjectRef};
     let (mut document, assets) = document_fixture::combined_animation_document().unwrap();
     let original = document.physics_definition().unwrap().clone();
-    let input = original.parameter_bindings["ParamX"].clone();
-    let output = original.parameter_bindings["ParamY"].clone();
+    let input = original.data.settings[0].inputs[0]
+        .source
+        .parameter_id()
+        .unwrap()
+        .to_owned();
+    let output = original.data.settings[0].outputs[0]
+        .destination
+        .parameter_id()
+        .unwrap()
+        .to_owned();
     document
         .set_object_property(
             &ObjectRef::new(ObjectKind::Parameter, &output),
@@ -52,7 +60,6 @@ fn adding_physics_channels_preserves_bindings_after_runtime_id_reuse(cx: &mut Te
                     .unwrap()
                     .physics_definition()
                     .unwrap();
-                assert_eq!(asset.parameter_bindings, original.parameter_bindings);
                 let rig = &asset.data.settings[0];
                 assert_eq!(rig.inputs[0], original.data.settings[0].inputs[0]);
                 assert_eq!(rig.outputs[0], original.data.settings[0].outputs[0]);
@@ -60,11 +67,14 @@ fn adding_physics_channels_preserves_bindings_after_runtime_id_reuse(cx: &mut Te
                 if output_channel {
                     assert_eq!(rig.outputs.len(), 2);
                     assert_eq!(
-                        asset.parameter_bindings[&rig.outputs[1].destination.id],
-                        input
+                        rig.outputs[1].destination,
+                        kasane_core::document::PhysicsTarget::Unspecified
                     );
                 } else {
-                    assert_eq!(asset.parameter_bindings[&rig.inputs[1].source.id], input);
+                    assert_eq!(
+                        rig.inputs[1].source,
+                        kasane_core::document::PhysicsTarget::Unspecified
+                    );
                 }
             });
         }
@@ -324,7 +334,11 @@ fn manual_input_drag_updates_before_release_and_uses_one_decimal_display(cx: &mu
     use super::slide_number_input::{press, release, slide};
     let (document, assets) = document_fixture::combined_animation_document().unwrap();
     let asset = document.physics_definition().unwrap();
-    let parameter = asset.parameter_bindings[&asset.data.settings[0].inputs[0].source.id].clone();
+    let parameter = asset.data.settings[0].inputs[0]
+        .source
+        .parameter_id()
+        .unwrap()
+        .to_owned();
     let harness = setup_with_document(cx, document, assets);
     cx.simulate_window_resize(harness.window, size(px(1200.), px(1000.)));
     let control = format!("physics-number-Manual({parameter:?})");
@@ -415,4 +429,87 @@ fn manual_input_drag_updates_before_release_and_uses_one_decimal_display(cx: &mu
         assert!(!animation.physics_preview.manual);
         assert!(animation.playing);
     });
+}
+
+#[gpui_kit::test]
+fn rejected_physics_node_deletion_keeps_the_selected_node(cx: &mut TestAppContext) {
+    use kasane_core::document::{PhysicsEdit, PhysicsPatch, PhysicsProperty, PhysicsRigPatch};
+    let (document, assets) = document_fixture::combined_animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.resize(size(px(1100.), px(1200.)));
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::AnimationWorkspace, window, cx);
+            view.dock
+                .as_ref()
+                .unwrap()
+                .show(PanelKind::AnimationPhysics, None, window, cx);
+        });
+        window.render_frame(cx);
+        window.click(("physics-group-row", 0usize), cx);
+        window.render_frame(cx);
+        window.click("physics-fold-physics-inputs", cx);
+        window.render_frame(cx);
+        window.click("physics-add-node", cx);
+        window.render_frame(cx);
+        let selected = harness.view.update(cx, |view, cx| {
+            let document = view.editor.active_id().unwrap();
+            let asset = view
+                .editor
+                .document()
+                .unwrap()
+                .physics_definition()
+                .unwrap()
+                .clone();
+            let rig = &asset.data.settings[0];
+            let selected = rig.vertices.len() - 1;
+            let plan = view
+                .editor
+                .plan_physics_authoring(
+                    document,
+                    PhysicsEdit::Patch {
+                        patch: PhysicsPatch {
+                            asset_id: asset.id.clone(),
+                            asset_changes: vec![],
+                            rig: Some(PhysicsRigPatch {
+                                group_id: rig.id.clone(),
+                                changes: vec![PhysicsProperty::OutputNode {
+                                    id: rig.outputs[0].id.clone(),
+                                    node_id: rig.vertices[selected].id.clone(),
+                                }],
+                            }),
+                        },
+                    },
+                )
+                .unwrap();
+            view.editor
+                .execute_physics_authoring(document, &plan)
+                .unwrap();
+            view.redraw(cx);
+            selected
+        });
+        window.render_frame(cx);
+        let before = harness.view.read_with(cx, |view, _| {
+            view.editor.document().unwrap().history_lengths()
+        });
+        let control = format!("physics-number-Vertex({selected}, 0)");
+        assert!(window.try_find(control.clone()).is_some());
+        window.click("physics-delete-node", cx);
+        window.render_frame(cx);
+        assert!(
+            window.try_find(control).is_some(),
+            "rejected deletion must preserve the inspected node"
+        );
+        harness.view.read_with(cx, |view, _| {
+            let document = view.editor.document().unwrap();
+            assert_eq!(document.history_lengths(), before);
+            assert_eq!(
+                document.physics_definition().unwrap().data.settings[0]
+                    .vertices
+                    .len(),
+                selected + 1
+            );
+        });
+    })
+    .unwrap();
 }

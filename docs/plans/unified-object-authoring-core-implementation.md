@@ -127,7 +127,7 @@ cargo test --manifest-path ../kasane-2d/Cargo.toml --locked --release \
 
 `./scripts/test.sh` 首次在既有开发启动超时用例失败，脚本隔离重跑全部通过。单独运行完整 Rust/原生工作区时，Timeline 首帧等待曾超时；随后以同样的验收逻辑单独重跑，完整通过导入边界、真实/密集曲线编辑、取消、播放、画布导航、dock 调整、SDK 结果对照与保存往返。没有修改测试的超时策略，也不把第一次完整脚本执行记为成功。
 
-原生模型按项目未发布的约定采用破坏性修改，不新增旧原生文件迁移。C3–C6 与完整 UI 统一尚未实施。
+原生模型按项目未发布的约定采用破坏性修改，不新增旧原生文件迁移。C2 交付时 C3–C6 与完整 UI 统一尚未实施；C3 的后续交付见下文。
 
 ### C2 review 修复
 
@@ -152,3 +152,133 @@ Motion 库专项 22 项通过、1 项性能测量默认忽略，Editor Motion au
 重跑 `test_dev.py` 仍有同一失败；编译结束后单项及完整 44 项脚本套件均通过。
 未修改开发脚本或放宽超时断言。中间一轮领域测试曾出现 Mao 项目锁占用，
 最终完整领域套件的同一用例通过；上述数量来自最终完成的测试轮。
+
+## C3：Physics 条目、节点与运行投影
+
+2026 年 10 月 21 日：实现覆盖相邻 `kasane-2d` 与本仓库；验收结果在本节末尾记录。
+
+- **原生模型与外部身份**：`document::PhysicsDefinition` / `PhysicsSetting` /
+  `PhysicsInput` / `PhysicsOutput` / `PhysicsNode` 与 physics3 DTO 分开。
+  Group、Input、Output、Node 都有独立 UUID；Group 的 `external_id` 保留外部组标识，
+  名称继续只由原生 dictionary 提供。输出保存 `node_id`，转换时才生成
+  `VertexIndex`。`PhysicsTarget` 区分未指定、稳定参数 UUID 与导入未解析引用。
+  原生计数由集合长度派生；不再保存 runtime ID 到 UUID 的第二份绑定表。
+- **领域操作与原子校验**：`PhysicsEdit` / `PhysicsPlan` 提供根资源与默认组的
+  联合创建、空通道创建、字段补丁、输入/输出跨组移动、组执行顺序、组和通道复制、
+  节点插入/专用重排/复制，以及带显式节点替换的联合删除。组复制重建全部拥有内容
+  的 ID 并重映射输出节点，外部参数引用保持共享。移动保留文档来源顺序；输出在
+  新组没有合法节点时拒绝，专用转移可按输出 ID 指定新节点。删除被输出使用的节点
+  默认拒绝并返回使用者；根节点不能单独移走或删除，删除节点不能把已有双节点链
+  缩为单节点。删除组或根资源包含其拥有内容。失败和 no-op 不改变历史。
+- **SDK、字段地址与锁定**：`plan_physics_edit` / `execute_physics_plan` 和
+  `EditSession::edit_physics` 共用 core 规则与唯一历史。计划绑定 SDK Version 与
+  core 快照身份；新增实体全部进入既有 ObjectHandle/incarnation 体系。
+  `PhysicsFieldAddress` 捕获条目/节点、拥有者句柄、字段基线与不回退的拥有者上下文
+  epoch；项目载入/替换时初始化拥有者上下文，同组重排后仍定位原实体，跨组移动再 Undo 也不能复活旧地址。
+  `physics_capabilities` / `physics_collection` 提供类型化查询。
+  持久化锁定覆盖根、组及子条目，字段补丁、整资源替换、规划及通用删除不能绕过。
+  同事务删除再以原 ID 创建也会使旧句柄失效。
+- **运行投影与观察**：`physics_projection` 单独过滤未指定/未解析通道，不重归一化
+  其他权重；结构非法和不存在的采样节点仍拒绝。每组保留双向通道槽位映射和节点
+  顺序。`PhysicsRuntime` 在构建时持有共享投影，seek checkpoint 共享它，求解循环
+  不逐帧重新过滤原生资源。`PhysicsRigSnapshot` 带原生 Group、Input、Output、Node
+  ID；Editor 的输入观察值及输出详情通过 ID 查槽位，避免中间通道省略后误定位。
+  既有求解器数值行为和测试预览继续由原有轨迹回归验证。
+- **发布与 Editor 接入**：ChangeSet 增加 Physics 集合和参数/节点引用变化，报告
+  实际实体增删改、标签、顺序、拓扑与求值输入；Undo/Redo 使用实际恢复方向。
+  editor-core 的 `plan_physics_authoring` / `execute_physics_authoring` 附加选择
+  建议，不激活 Motion/Expression。现有组/通道/节点结构按钮接入领域意图，数值
+  候选继续使用局部字段补丁和已有取消/提交生命周期。重复字段的 `PropertyKey`
+  改为携带实体 UUID；旧下标字段写入被拒绝。Physics 属性提交、结构操作和历史
+  共用回执消费；字段和标签可增量刷新载荷，保留无关索引行及 Canvas 拓扑缓存，
+  标签变化不重建动画预览。全量新菜单和交互仍归后续 UI 阶段。
+- **保存、格式与 Python**：原生保存保留全部 ID、空通道、语义顺序、未解析引用与
+  扩展内容，不提供旧原生格式迁移。physics3 与 CMO3 显式转换内部身份和节点引用，
+  不把内部 UUID 写入外部格式；严格导出区分 `NEEDS_CONFIGURATION` 与
+  `UNRESOLVED_PARAMETER`。`plan_available_physics_export` / `export_physics_plan`
+  列出省略通道并拒绝旧版本的接受结果，使用与预览同源的过滤规则；不透明内容
+  保留已有内容与命名空间保护。Python 的 `physics_authoring`、只读规划/执行及
+  新句柄类型调用同一 SDK；`create_physics(id, name)` 联合创建根与合法默认组并
+  返回组 ID，`replace_physics` 接收新的原生快照。
+- **规划和存储成本**：结构规划浅复制 Physics 根与组 Arc，不复制场景几何；字段
+  规划保留类型化局部补丁，执行时复用局部校验与写入。控件绑定稳定字段键时借用当前资产，避免逐控件
+  复制根元数据。字段写入保留未变组共享，历史内存估算改为类型化字段统计，不再序列化
+  整份 Physics 数据。Release 专项沿用同一写入微基准，结果见下表。
+
+验收入口：
+
+```sh
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
+  -p kasane-sdk --test physics_authoring --test physics_editing
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
+  -p kasane-core -p kasane-sdk -p kasane-animation -p kasane-project -p kasane-cmo3
+env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace \
+  --features kasane-editor/test-support
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked --release \
+  -p kasane-sdk --test physics_editing physics_field_patch_benchmark -- --ignored --nocapture
+```
+
+最终验证：相邻五个领域包 **434 项通过、2 项默认忽略**；Editor 工作区 **734 项通过、
+5 项默认忽略**，另通过三个本地模型的原生动画、Metal 截图及完整 Timeline 验收。
+Physics 专项为 14 项 authoring 加 6 项字段编辑回归；Editor Physics 集成专项 9 项。
+这些专项均包含在全量结果内，不重复相加。最终 Python wheel 在仓库外隔离环境通过
+55 项 CPU 测试；44 项 Editor 脚本测试通过。格式与 diff 检查通过。
+控件字段绑定的借用优化后，相关 11 项 UI/表单测试再次通过。Mao 属性链基准在
+`unique` 与 `retained` 两种旧索引读者策略下完成最小冒烟校验（2 samples、1 warmup、
+2 updates），均返回 `validated=true`；该冒烟不作为新的延迟分布或前后 A/B 结论。
+
+无其他构建/验收进程运行时，直接执行已构建的 Release Physics 微基准三轮，中位数：
+
+| 配置 | 整资源 setter | 字段 patch（包含保留旧读者的 fork） |
+| --- | ---: | ---: |
+| 16 组 × 4 节点，2000 次交替写入 | 54.51 μs/次 | 4.37 μs/次 |
+| 192 组 × 24 节点，600 次交替写入 | 2084.68 μs/次 | 20.37 μs/次 |
+
+该测量沿用[字段补丁基准](../benchmarks/2026-10-20-physics-patches.md)的工作负载与计时边界，
+采用新的稳定身份模型，未做保存前后二进制的严格 A/B；不能据此推断整体界面帧率。
+测量前修正了锁定检查对整个物理资源的重复拥有者扫描；普通字段补丁只校验当前组与
+直接条目标记，已验证的成员关系不会再触发全资源扫描。
+
+中间验收修正了新增观测用例的零时刻初始化、旧组合 ID 断言，以及删除当前物理组后的
+相邻组检查目标恢复。补充了保存重开后首次同组重排仍可使用原字段地址的回归，重载后
+旧地址仍被拒绝。早期重叠的领域测试曾遇到 Mao 项目锁占用，最终完成的领域套件中
+同一用例通过；没有放宽断言或超时。上述通过数来自最终完成的测试轮。
+
+C4–C6 与完整 UI 统一仍待实施。
+
+### C3 review 修复
+
+2026 年 10 月 21 日：复核两个工作区的未提交实现，补充以下修复与回归。
+
+- Physics 根资源的 FPS 补丁没有 modified group，原增量刷新因此漏掉所有组的
+  Properties 缓存。现在独立同步资产级 FPS，并覆盖 Undo/Redo；仅在 FPS 改变时
+  查询物理组，不为普通字段编辑扫描场景对象。
+- Input/Output 的轴类型变化会更新字段，但原对象索引名称仍显示旧轴。增量刷新
+  同步通道名称，同时保留未变化对象行和旧快照。
+- 合法的单节点导入 rig 删除输入/输出时，原逻辑无条件要求至少两个节点。
+  最短链校验现在只针对实际删节点；通道删除保持节点链不变并可一次撤销。
+- 节点删除因输出引用而被拒绝时，原 Properties 面板仍会切换到相邻节点。
+  结构操作返回成功状态，只有成功后才调整通道/节点选择；新增 UI 回归检查
+  拒绝后的选中节点和历史均保持。
+- Physics 根 ID 与已有 Parameter 等对象冲突时，原只读规划会成功、提交才拒绝。
+  ID 唯一性检查归入共享验证，规划与执行使用相同规则。
+- `PhysicsEdit::Patch` 原先构建整资源替换计划，执行进入 `set_physics` 并扫描
+  全模型身份集合。计划现在保留类型化局部 patch，执行复用 `patch_physics`；
+  SDK 的直接统一 patch 同样复用该入口，字段计划不扫描删除身份。
+  保留版本/快照检查和提交校验，回归对照三个入口的 ChangeSet、共享组和 Undo。
+- 默认空 Physics 资源直接构造类型化数据，移除通过 JSON 中间值创建资源的逻辑；
+  字段锁定检查复用 `entity_id()`，移除重复字段枚举分派。
+
+本轮新增 6 项回归。验证范围聚焦 Physics SDK、Editor 集成及 UI/表单，未重跑
+全工作区、原生截图/Timeline 验收、Python wheel 或 Release 性能基准。
+
+最终验证：SDK Physics **23 项通过、1 项性能测试默认忽略**；editor-core Physics
+**19 项通过**（1 项单元、18 项集成）；Editor Physics UI/表单 **12 项通过**。
+共 54 项通过，新增回归包含在这些数字内。两个仓库的格式与 diff 检查通过。
+
+```sh
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+  --test physics_authoring --test physics_editing
+cargo test --locked -p editor-core --lib --test integration physics
+cargo test --locked -p kasane-editor --lib physics
+```

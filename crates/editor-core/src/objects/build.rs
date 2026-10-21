@@ -427,7 +427,7 @@ impl ObjectIndex {
                 None,
             );
             for g in &x.data.settings {
-                let gr = ObjectRef::new(K::PhysicsGroup, format!("{}/{}", x.id, g.id));
+                let gr = ObjectRef::new(K::PhysicsGroup, &g.id);
                 let name = x
                     .data
                     .meta
@@ -441,42 +441,67 @@ impl ObjectIndex {
                 s.add(gr.clone(), name, payload, None);
                 s.edge(&r, R::Contains, gr.clone(), "");
                 for input in &g.inputs {
-                    let target = if input.source.target == "Parameter" {
-                        x.parameter_bindings
-                            .get(&input.source.id)
-                            .map(|id| ObjectRef::new(K::Parameter, id))
-                    } else {
-                        None
-                    }
-                    .unwrap_or_else(|| s.unresolved("physics input", &input.source.id));
-                    s.edge(
-                        &gr,
-                        R::PhysicsInput,
-                        target,
-                        format!(
-                            "{:?} · weight {} · reflect {}; saved configuration",
-                            input.kind, input.weight, input.reflect
-                        ),
+                    let item = ObjectRef::new(K::PhysicsInput, &input.id);
+                    s.add(
+                        item.clone(),
+                        format!("{:?} input", input.kind),
+                        json!(input),
+                        None,
                     );
+                    s.objects.last_mut().unwrap().diagnostic =
+                        input.source.disabled_reason().map(|r| format!("{r:?}"));
+                    s.edge(&gr, R::Contains, item.clone(), "");
+                    let target = input
+                        .source
+                        .parameter_id()
+                        .map(|id| ObjectRef::new(K::Parameter, id))
+                        .unwrap_or_else(|| {
+                            s.unresolved("physics input", &format!("{:?}", input.source))
+                        });
+                    let detail = format!(
+                        "{:?} · weight {} · reflect {}; saved configuration",
+                        input.kind, input.weight, input.reflect
+                    );
+                    s.edge(&gr, R::PhysicsInput, target.clone(), detail.clone());
+                    s.edge(&item, R::PhysicsInput, target, detail);
                 }
                 for output in &g.outputs {
-                    let target = if output.destination.target == "Parameter" {
-                        x.parameter_bindings
-                            .get(&output.destination.id)
-                            .map(|id| ObjectRef::new(K::Parameter, id))
-                    } else {
-                        None
-                    }
-                    .unwrap_or_else(|| s.unresolved("physics output", &output.destination.id));
-                    s.edge(
-                        &gr,
-                        R::PhysicsOutput,
-                        target,
-                        format!(
-                            "{:?} · vertex {} · weight {} · scale {}; saved configuration",
-                            output.kind, output.vertex_index, output.weight, output.scale
-                        ),
+                    let item = ObjectRef::new(K::PhysicsOutput, &output.id);
+                    s.add(
+                        item.clone(),
+                        format!("{:?} output", output.kind),
+                        json!(output),
+                        None,
                     );
+                    s.objects.last_mut().unwrap().diagnostic = output
+                        .destination
+                        .disabled_reason()
+                        .map(|r| format!("{r:?}"));
+                    s.edge(&gr, R::Contains, item.clone(), "");
+                    let target = output
+                        .destination
+                        .parameter_id()
+                        .map(|id| ObjectRef::new(K::Parameter, id))
+                        .unwrap_or_else(|| {
+                            s.unresolved("physics output", &format!("{:?}", output.destination))
+                        });
+                    let detail = format!(
+                        "{:?} · node {} · weight {} · scale {}; saved configuration",
+                        output.kind, output.node_id, output.weight, output.scale
+                    );
+                    s.edge(&gr, R::PhysicsOutput, target.clone(), detail.clone());
+                    s.edge(&item, R::PhysicsOutput, target, detail);
+                    s.edge(
+                        &item,
+                        R::PhysicsSample,
+                        ObjectRef::new(K::PhysicsNode, &output.node_id),
+                        "sample node",
+                    );
+                }
+                for (i, node) in g.vertices.iter().enumerate() {
+                    let item = ObjectRef::new(K::PhysicsNode, &node.id);
+                    s.add(item.clone(), format!("Node {i}"), json!(node), None);
+                    s.edge(&gr, R::Contains, item, "");
                 }
             }
         }

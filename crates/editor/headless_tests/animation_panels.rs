@@ -507,7 +507,7 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
             view.editor.active_inspection().unwrap().object().unwrap(),
             editor_core::ObjectRef::new(
                 editor_core::ObjectKind::PhysicsGroup,
-                format!("{}/{}", asset.id, asset.data.settings[0].id)
+                asset.data.settings[0].id.clone()
             )
         );
         assert!(view.editor.animation().unwrap().motion.is_some());

@@ -136,9 +136,9 @@ impl PropertiesPanel {
                 self.physics.input == i
             };
             let source = if output {
-                &rig.outputs[i].destination.id
+                &rig.outputs[i].destination
             } else {
-                &rig.inputs[i].source.id
+                &rig.inputs[i].source
             };
             let parameter = crate::properties::physics::field_key(
                 if output {
@@ -147,10 +147,12 @@ impl PropertiesPanel {
                     "input_parameter"
                 },
                 i,
+                rig,
             );
             let axis = crate::properties::physics::field_key(
                 if output { "output_axis" } else { "input_axis" },
                 i,
+                rig,
             );
             let reflect = crate::properties::physics::field_key(
                 if output {
@@ -159,11 +161,12 @@ impl PropertiesPanel {
                     "input_reflect"
                 },
                 i,
+                rig,
             );
             let mut cells = vec![self.render_field_control(parameter, window, cx)];
             if output {
                 cells.push(self.render_field_control(
-                    crate::properties::physics::field_key("output_node", i),
+                    crate::properties::physics::field_key("output_node", i, rig),
                     window,
                     cx,
                 ));
@@ -201,13 +204,17 @@ impl PropertiesPanel {
             ));
             cells.push(self.render_field_control(reflect, window, cx));
             let observed = if output {
-                asset
-                    .parameter_bindings
-                    .get(source)
-                    .and_then(|id| values.get(id))
-                    .copied()
+                source.parameter_id().and_then(|id| values.get(id)).copied()
             } else {
-                trace.and_then(|trace| trace.inputs.get(i)).copied()
+                trace
+                    .and_then(|trace| {
+                        trace
+                            .input_ids
+                            .iter()
+                            .position(|id| id == &rig.inputs[i].id)
+                            .and_then(|slot| trace.inputs.get(slot))
+                    })
+                    .copied()
             };
             let mut value = div()
                 .id(SharedString::from(format!(
@@ -219,9 +226,8 @@ impl PropertiesPanel {
                 .text_align(TextAlign::Right)
                 .text_size(compact::rem(compact::CAPTION));
             if let Some((settings, parameter)) = manual.and_then(|settings| {
-                asset
-                    .parameter_bindings
-                    .get(source)
+                source
+                    .parameter_id()
                     .and_then(|id| parameters.iter().find(|p| &p.id == id))
                     .map(|parameter| (settings, parameter))
             }) {
@@ -258,7 +264,7 @@ impl PropertiesPanel {
                     .child(observed.map_or_else(|| "—".into(), |v| format_one_decimal(v as f64)));
             }
             cells.push(value.into_any_element());
-            let node = output.then(|| rig.outputs[i].vertex_index);
+            let node = output.then(|| rig.node_index(&rig.outputs[i].node_id).unwrap_or(0));
             let mut row = div()
                 .id(SharedString::from(format!("physics-{prefix}-row-{i}")))
                 .test_support()

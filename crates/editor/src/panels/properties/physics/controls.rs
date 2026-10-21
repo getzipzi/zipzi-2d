@@ -52,7 +52,17 @@ impl PropertiesPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        if let Some(spec) = field.spec() {
+        let spec = self.owner.upgrade().and_then(|owner| {
+            let view = owner.read(cx);
+            let asset = view.editor.document()?.physics_definition()?;
+            asset
+                .data
+                .settings
+                .iter()
+                .find(|g| g.id == self.physics.group)
+                .and_then(|g| field.spec(g))
+        });
+        if let Some(spec) = spec {
             let id = spec.key;
             return div()
                 .id(SharedString::from(format!("physics-number-{field:?}")))
@@ -318,7 +328,16 @@ impl PropertiesPanel {
         let (Some(source), Some(target)) = (source, self.target.clone()) else {
             return;
         };
-        let node = self.physics.node;
+        let Some(node_id) = self.physics_asset(cx).and_then(|a| {
+            a.data
+                .settings
+                .iter()
+                .find(|g| g.id == self.physics.group)
+                .and_then(|g| g.vertices.get(self.physics.node))
+                .map(|v| v.id.clone())
+        }) else {
+            return;
+        };
         let result = self
             .owner
             .update(cx, |owner, cx| {
@@ -333,7 +352,9 @@ impl PropertiesPanel {
                         (schema::ACCELERATION, source.acceleration),
                     ]
                     .into_iter()
-                    .map(|(spec, value)| (spec.key.at(node), PropertyValue::Float(value)))
+                    .map(|(spec, value)| {
+                        (spec.key.for_entity(&node_id), PropertyValue::Float(value))
+                    })
                     .collect();
                     let expected = changes
                         .keys()
@@ -408,75 +429,73 @@ impl PropertiesPanel {
                     if !this.physics_allowed(epoch, window, cx) {
                         return;
                     }
-                    let parameter = this.owner.upgrade().and_then(|owner| {
-                        owner
-                            .read(cx)
-                            .editor
-                            .document()?
-                            .animation_catalog()
-                            .parameters
-                            .first()
-                            .map(|p| (p.id.clone(), p.runtime_id.clone()))
-                    });
-                    this.physics_mutate(cx, move |asset, group| {
-                        let Some(rig_index) =
-                            asset.data.settings.iter().position(|r| r.id == group)
-                        else {
-                            return;
-                        };
-                        if action == 0 {
-                            let (id, mut runtime) =
-                                parameter.unwrap_or_else(|| (String::new(), "Parameter".into()));
-                            if !id.is_empty() {
-                                runtime = asset.parameter_binding_key(&id, &runtime);
-                                asset.parameter_bindings.insert(runtime.clone(), id);
-                            }
-                            let reference = PhysicsParameterRef {
-                                target: "Parameter".into(),
-                                id: runtime,
-                                extensions: Default::default(),
-                            };
-                            let rig = std::sync::Arc::make_mut(&mut asset.data.settings[rig_index]);
-                            if output {
-                                rig.outputs.push(PhysicsOutput {
-                                    destination: reference,
-                                    vertex_index: usize::from(rig.vertices.len() > 1),
-                                    scale: 1.,
-                                    weight: 100.,
-                                    kind: PhysicsAxis::Angle,
-                                    reflect: false,
-                                    extensions: Default::default(),
-                                })
-                            } else {
-                                rig.inputs.push(PhysicsInput {
-                                    source: reference,
-                                    weight: 100.,
-                                    kind: PhysicsAxis::X,
-                                    reflect: false,
-                                    extensions: Default::default(),
-                                })
+                    let Some(asset) = this.physics_asset(cx) else {
+                        return;
+                    };
+                    let Some(g) = asset
+                        .data
+                        .settings
+                        .iter()
+                        .find(|g| g.id == this.physics.group)
+                    else {
+                        return;
+                    };
+                    let ids: Vec<_> = if output {
+                        g.outputs.iter().map(|v| v.id.clone()).collect()
+                    } else {
+                        g.inputs.iter().map(|v| v.id.clone()).collect()
+                    };
+                    let group_id = g.id.clone();
+                    let intent = if action == 0 {
+                        let id = uuid::Uuid::new_v4().to_string();
+                        if output {
+                            PhysicsEdit::CreateOutput {
+                                group_id,
+                                id,
+                                node_id: g.vertices.get(1).unwrap_or(&g.vertices[0]).id.clone(),
+                                before: None,
                             }
                         } else {
-                            let rig = std::sync::Arc::make_mut(&mut asset.data.settings[rig_index]);
+                            PhysicsEdit::CreateInput {
+                                group_id,
+                                id,
+                                before: None,
+                            }
+                        }
+                    } else {
+                        let Some(id) = ids.get(index).cloned() else {
+                            return;
+                        };
+                        if action == 1 {
+                            PhysicsEdit::Delete {
+                                ids: vec![id],
+                                node_replacements: Default::default(),
+                            }
+                        } else {
+                            let before = if action == 2 {
+                                ids.get(index - 1).cloned()
+                            } else {
+                                ids.get(index + 2).cloned()
+                            };
                             if output {
-                                match action {
-                                    1 => {
-                                        rig.outputs.remove(index);
-                                    }
-                                    2 => rig.outputs.swap(index, index - 1),
-                                    _ => rig.outputs.swap(index, index + 1),
+                                PhysicsEdit::MoveOutputs {
+                                    ids: vec![id],
+                                    group_id,
+                                    before,
+                                    node_replacements: Default::default(),
                                 }
                             } else {
-                                match action {
-                                    1 => {
-                                        rig.inputs.remove(index);
-                                    }
-                                    2 => rig.inputs.swap(index, index - 1),
-                                    _ => rig.inputs.swap(index, index + 1),
+                                PhysicsEdit::MoveInputs {
+                                    ids: vec![id],
+                                    group_id,
+                                    before,
                                 }
                             }
                         }
-                    });
+                    };
+                    if !this.physics_apply(intent, cx) {
+                        return;
+                    }
                     let next = match action {
                         0 => len,
                         2 => index.saturating_sub(1),
@@ -531,18 +550,29 @@ impl PropertiesPanel {
                 )
                 .on_click(cx.listener(move |this, _, window, cx| {
                     if this.physics_allowed(epoch, window, cx) {
-                        this.physics_mutate(cx, |asset, group| {
-                            if let Some(rig) =
-                                asset.data.settings.iter_mut().find(|r| r.id == group)
+                        if let Some(asset) = this.physics_asset(cx) {
+                            if let Some(g) = asset
+                                .data
+                                .settings
+                                .iter()
+                                .find(|g| g.id == this.physics.group)
                             {
-                                let rig = std::sync::Arc::make_mut(rig);
-                                let mut vertex = rig.vertices.last().unwrap().clone();
-                                vertex.radius = vertex.radius.max(1.);
-                                vertex.position.y += vertex.radius;
-                                rig.vertices.push(vertex);
+                                let mut node = g.vertices.last().unwrap().clone();
+                                node.id = uuid::Uuid::new_v4().to_string();
+                                node.radius = node.radius.max(1.);
+                                node.position.y += node.radius;
+                                if this.physics_apply(
+                                    PhysicsEdit::InsertNode {
+                                        group_id: g.id.clone(),
+                                        node,
+                                        before: None,
+                                    },
+                                    cx,
+                                ) {
+                                    this.physics.node = len;
+                                }
                             }
-                        });
-                        this.physics.node = len;
+                        }
                         cx.notify();
                     }
                 })),
@@ -556,21 +586,26 @@ impl PropertiesPanel {
                 )
                 .on_click(cx.listener(move |this, _, window, cx| {
                     if this.physics_allowed(epoch, window, cx) {
-                        this.physics_mutate(cx, move |asset, group| {
-                            if let Some(rig) =
-                                asset.data.settings.iter_mut().find(|r| r.id == group)
+                        if let Some(asset) = this.physics_asset(cx) {
+                            if let Some(g) = asset
+                                .data
+                                .settings
+                                .iter()
+                                .find(|g| g.id == this.physics.group)
                             {
-                                let rig = std::sync::Arc::make_mut(rig);
-                                rig.vertices.remove(node);
-                                rig.outputs.retain(|o| o.vertex_index != node);
-                                for output in &mut rig.outputs {
-                                    if output.vertex_index > node {
-                                        output.vertex_index -= 1;
+                                if let Some(v) = g.vertices.get(node) {
+                                    if this.physics_apply(
+                                        PhysicsEdit::Delete {
+                                            ids: vec![v.id.clone()],
+                                            node_replacements: Default::default(),
+                                        },
+                                        cx,
+                                    ) {
+                                        this.physics.node = node.saturating_sub(1).max(1);
                                     }
                                 }
                             }
-                        });
-                        this.physics.node = node.saturating_sub(1).max(1);
+                        }
                         cx.notify();
                     }
                 })),

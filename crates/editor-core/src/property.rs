@@ -14,6 +14,7 @@ pub struct PropertyKey {
     object: ObjectKind,
     name: &'static str,
     index: Option<usize>,
+    entity: Option<uuid::Uuid>,
 }
 impl PropertyKey {
     pub const fn new(object: ObjectKind, name: &'static str) -> Self {
@@ -21,6 +22,7 @@ impl PropertyKey {
             object,
             name,
             index: None,
+            entity: None,
         }
     }
     /// Array element identity for providers with repeated fields.
@@ -28,10 +30,21 @@ impl PropertyKey {
         self.index = Some(index);
         self
     }
+    pub fn for_entity(mut self, id: &str) -> Self {
+        self.entity = Some(uuid::Uuid::parse_str(id).expect("stable entity UUID"));
+        self.index = None;
+        self
+    }
+    pub fn entity_id(self) -> Option<String> {
+        self.entity.map(|id| id.to_string())
+    }
     pub const fn index(self) -> Option<usize> {
         self.index
     }
     pub fn identity(self) -> String {
+        if let Some(id) = self.entity {
+            return format!("{}-{id}", self.name);
+        }
         self.index
             .map_or_else(|| self.name.to_owned(), |i| format!("{}-{i}", self.name))
     }
@@ -168,7 +181,7 @@ impl PropertySpec {
     fn accepts(&self, key: PropertyKey) -> bool {
         self.key == key
             || (self.indexed
-                && key.index.is_some()
+                && (key.index.is_some() || key.entity.is_some())
                 && self.key.object == key.object
                 && self.key.name == key.name)
     }

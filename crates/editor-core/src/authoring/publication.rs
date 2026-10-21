@@ -34,6 +34,83 @@ impl Document {
             return;
         }
         let changes = &receipt.changes;
+        let physics_only = !changes.full_invalidation
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .any(|e| {
+                    matches!(
+                        e.kind,
+                        SdkKind::Physics
+                            | SdkKind::PhysicsGroup
+                            | SdkKind::PhysicsInput
+                            | SdkKind::PhysicsOutput
+                            | SdkKind::PhysicsNode
+                    )
+                })
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .all(|e| {
+                    matches!(
+                        e.kind,
+                        SdkKind::Physics
+                            | SdkKind::PhysicsGroup
+                            | SdkKind::PhysicsInput
+                            | SdkKind::PhysicsOutput
+                            | SdkKind::PhysicsNode
+                    )
+                });
+        if physics_only {
+            let previous = self.animation_input_revision;
+            if changes.created.is_empty()
+                && changes.deleted.is_empty()
+                && changes.collections.is_empty()
+                && changes.physics_references.is_empty()
+                && !changes.categories.contains(&ChangeCategory::EditorState)
+            {
+                let owners = changes
+                    .modified
+                    .iter()
+                    .filter_map(|e| {
+                        if e.kind == SdkKind::PhysicsGroup {
+                            Some(e.id.clone())
+                        } else {
+                            self.model()
+                                .physics_owner(&e.id)
+                                .filter(|id| self.model().get_physics_group(id).is_some())
+                                .map(str::to_owned)
+                        }
+                    })
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .into_iter()
+                    .collect::<Vec<_>>();
+                let previous_revision = self.projection_revision;
+                self.invalidate_projection(false);
+                let mut cache = self.object_index.lock().unwrap();
+                if let Some((revision, index)) = cache.as_mut() {
+                    if *revision == previous_revision
+                        && Arc::make_mut(index).refresh_physics_properties(self.model(), &owners)
+                    {
+                        *revision = self.projection_revision;
+                    }
+                }
+                self.session.drain_events();
+            } else {
+                self.after_history(false);
+            }
+            if !changes
+                .categories
+                .contains(&ChangeCategory::EvaluationInputs)
+            {
+                self.animation_input_revision = previous;
+            }
+            return;
+        }
         let motion_only = changes.references.is_empty()
             && changes
                 .collections

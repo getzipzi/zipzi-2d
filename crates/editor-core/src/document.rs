@@ -161,7 +161,7 @@ pub struct Document {
 mod authoring;
 pub use authoring::{
     AuthoringSessionReason, ExpressionAuthoringCapabilities, ExpressionEntryEditToken,
-    OperationResult,
+    OperationResult, PhysicsAuthoringCapabilities,
 };
 mod edits;
 mod physics;

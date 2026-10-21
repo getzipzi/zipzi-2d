@@ -89,7 +89,8 @@ pub const INPUT_PARAMETER: PropertySpec = PropertySpec::new(
     "input_parameter",
     PropertyType::Text,
 )
-.indexed();
+.indexed()
+.allow_empty();
 pub const INPUT_AXIS: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
     "input_axis",
@@ -110,7 +111,8 @@ pub const OUTPUT_PARAMETER: PropertySpec = PropertySpec::new(
     "output_parameter",
     PropertyType::Text,
 )
-.indexed();
+.indexed()
+.allow_empty();
 pub const OUTPUT_AXIS: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
     "output_axis",
@@ -219,13 +221,12 @@ pub const FIELDS: &[PropertySpec] = &[
 pub fn group<'a>(
     asset: &'a PhysicsAsset,
     object: &ObjectRef,
-) -> Result<&'a kasane_core::physics::PhysicsSetting> {
-    let prefix = format!("{}/", asset.id);
-    let id = object
-        .id
-        .strip_prefix(&prefix)
-        .filter(|_| object.kind == ObjectKind::PhysicsGroup)
-        .ok_or_else(|| anyhow::anyhow!("Physics group changed"))?;
+) -> Result<&'a kasane_core::document::PhysicsSetting> {
+    ensure!(
+        object.kind == ObjectKind::PhysicsGroup,
+        "Physics group changed"
+    );
+    let id = object.id.as_str();
     asset
         .data
         .settings
@@ -252,52 +253,67 @@ pub fn values(model: &kasane_core::Document, object: &ObjectRef) -> Result<Prope
         FPS.key,
         PropertyValue::Float(asset.data.meta.fps.unwrap_or(30.)),
     );
-    let parameter = |id: &str| {
-        PropertyValue::Text(
-            asset
-                .parameter_bindings
-                .get(id)
-                .cloned()
-                .unwrap_or_else(|| format!("unresolved:{id}")),
-        )
+    let parameter = |target: &kasane_core::document::PhysicsTarget| {
+        PropertyValue::Text(match target {
+            kasane_core::document::PhysicsTarget::Unspecified => String::new(),
+            kasane_core::document::PhysicsTarget::Resolved { parameter_id } => parameter_id.clone(),
+            kasane_core::document::PhysicsTarget::Unresolved { runtime_id } => {
+                format!("unresolved:{runtime_id}")
+            }
+        })
     };
-    for (i, input) in rig.inputs.iter().enumerate() {
-        values.insert(INPUT_WEIGHT.key.at(i), PropertyValue::Float(input.weight));
+    for input in &rig.inputs {
         values.insert(
-            INPUT_AXIS.key.at(i),
+            INPUT_WEIGHT.key.for_entity(&input.id),
+            PropertyValue::Float(input.weight),
+        );
+        values.insert(
+            INPUT_AXIS.key.for_entity(&input.id),
             PropertyValue::Text(format!("{:?}", input.kind)),
         );
-        values.insert(INPUT_REFLECT.key.at(i), PropertyValue::Bool(input.reflect));
-        values.insert(INPUT_PARAMETER.key.at(i), parameter(&input.source.id));
-    }
-    for (i, output) in rig.outputs.iter().enumerate() {
-        values.insert(OUTPUT_WEIGHT.key.at(i), PropertyValue::Float(output.weight));
-        values.insert(OUTPUT_SCALE.key.at(i), PropertyValue::Float(output.scale));
         values.insert(
-            OUTPUT_AXIS.key.at(i),
+            INPUT_REFLECT.key.for_entity(&input.id),
+            PropertyValue::Bool(input.reflect),
+        );
+        values.insert(
+            INPUT_PARAMETER.key.for_entity(&input.id),
+            parameter(&input.source),
+        );
+    }
+    for output in &rig.outputs {
+        values.insert(
+            OUTPUT_WEIGHT.key.for_entity(&output.id),
+            PropertyValue::Float(output.weight),
+        );
+        values.insert(
+            OUTPUT_SCALE.key.for_entity(&output.id),
+            PropertyValue::Float(output.scale),
+        );
+        values.insert(
+            OUTPUT_AXIS.key.for_entity(&output.id),
             PropertyValue::Text(format!("{:?}", output.kind)),
         );
         values.insert(
-            OUTPUT_REFLECT.key.at(i),
+            OUTPUT_REFLECT.key.for_entity(&output.id),
             PropertyValue::Bool(output.reflect),
         );
         values.insert(
-            OUTPUT_PARAMETER.key.at(i),
-            parameter(&output.destination.id),
+            OUTPUT_PARAMETER.key.for_entity(&output.id),
+            parameter(&output.destination),
         );
         values.insert(
-            OUTPUT_NODE.key.at(i),
-            PropertyValue::Text(output.vertex_index.to_string()),
+            OUTPUT_NODE.key.for_entity(&output.id),
+            PropertyValue::Text(output.node_id.clone()),
         );
     }
-    for (i, vertex) in rig.vertices.iter().enumerate().skip(1) {
+    for vertex in rig.vertices.iter().skip(1) {
         for (spec, value) in [
             (RADIUS, vertex.radius),
             (MOBILITY, vertex.mobility),
             (DELAY, vertex.delay),
             (ACCELERATION, vertex.acceleration),
         ] {
-            values.insert(spec.key.at(i), PropertyValue::Float(value));
+            values.insert(spec.key.for_entity(&vertex.id), PropertyValue::Float(value));
         }
     }
     for (spec, value) in [
@@ -335,7 +351,24 @@ pub(crate) fn patch(
     for (key, value) in changes {
         let spec = property_spec(*key).ok_or_else(|| anyhow::anyhow!("Physics field changed"))?;
         spec.validate(value)?;
-        let index = key.index().unwrap_or(0);
+        let entity_id = key.entity_id();
+        ensure!(
+            key.index().is_none(),
+            "Physics fields require stable entity addresses"
+        );
+        let id = || {
+            entity_id
+                .clone()
+                .ok_or_else(|| anyhow::anyhow!("Missing physics entity address"))
+        };
+        let target = || {
+            let parameter_id = value.text();
+            if parameter_id.is_empty() {
+                kasane_core::document::PhysicsTarget::Unspecified
+            } else {
+                kasane_core::document::PhysicsTarget::Resolved { parameter_id }
+            }
+        };
         let number = || value.number().unwrap() as f32;
         let boolean = || {
             if let PropertyValue::Bool(value) = value {
@@ -360,59 +393,59 @@ pub(crate) fn patch(
                 continue;
             }
             "input_weight" => InputWeight {
-                index,
+                id: id()?,
                 value: number(),
             },
             "input_axis" => InputAxis {
-                index,
+                id: id()?,
                 value: axis()?,
             },
             "input_reflect" => InputReflect {
-                index,
+                id: id()?,
                 value: boolean(),
             },
             "input_parameter" => InputParameter {
-                index,
-                parameter_id: value.text(),
+                id: id()?,
+                target: target(),
             },
             "output_weight" => OutputWeight {
-                index,
+                id: id()?,
                 value: number(),
             },
             "output_scale" => OutputScale {
-                index,
+                id: id()?,
                 value: number(),
             },
             "output_axis" => OutputAxis {
-                index,
+                id: id()?,
                 value: axis()?,
             },
             "output_reflect" => OutputReflect {
-                index,
+                id: id()?,
                 value: boolean(),
             },
             "output_parameter" => OutputParameter {
-                index,
-                parameter_id: value.text(),
+                id: id()?,
+                target: target(),
             },
-            "output_node" => OutputVertex {
-                index,
-                value: value.text().parse()?,
+            "output_node" => OutputNode {
+                id: id()?,
+                node_id: value.text(),
             },
             "radius" => VertexRadius {
-                index,
+                id: id()?,
                 value: number(),
             },
             "mobility" => VertexMobility {
-                index,
+                id: id()?,
                 value: number(),
             },
             "delay" => VertexDelay {
-                index,
+                id: id()?,
                 value: number(),
             },
             "acceleration" => VertexAcceleration {
-                index,
+                id: id()?,
                 value: number(),
             },
             name if name.starts_with("position_") || name.starts_with("angle_") => {

@@ -481,7 +481,10 @@ impl Document {
             });
         let previous_revision = self.projection_revision;
         let receipt = edit.commit_to(&mut self.session)?;
-        if matches!(object.kind, ObjectKind::Expression | ObjectKind::Motion) {
+        if matches!(
+            object.kind,
+            ObjectKind::Expression | ObjectKind::Motion | ObjectKind::PhysicsGroup
+        ) {
             if receipt.changed {
                 self.pristine_blank = false;
             }
@@ -763,28 +766,30 @@ mod tests {
         use crate::property::physics as schema;
         let mut doc = Document::new_blank()?;
         let asset_id = uuid::Uuid::new_v4().to_string();
-        let mut asset: kasane_core::document::PhysicsAsset = serde_json::from_value(
-            serde_json::json!({
-            "id":asset_id,"opaque_source_ids":null,"parameter_bindings":{},"data":{
-                "Version":3,"Meta":{"PhysicsSettingCount":1,"TotalInputCount":0,"TotalOutputCount":0,"VertexCount":2,"Fps":30,"EffectiveForces":{"Gravity":{"X":0,"Y":-1},"Wind":{"X":0,"Y":0}},"PhysicsDictionary":[{"Id":"Rig","Name":"Rig"}]},
-                "PhysicsSettings":[{"Id":"Rig","Input":[],"Output":[],"Vertices":[{"Position":{"X":0,"Y":0},"Mobility":1,"Delay":1,"Acceleration":1,"Radius":0},{"Position":{"X":0,"Y":1},"Mobility":0.95,"Delay":0.8,"Acceleration":1,"Radius":1}],"Normalization":{"Position":{"Minimum":-1,"Default":0,"Maximum":1},"Angle":{"Minimum":-1,"Default":0,"Maximum":1}}}]
-            }}),
-        )?;
-        let mut other = (*asset.data.settings[0]).clone();
-        other.id = "Other".into();
-        asset.data.settings.push(Arc::new(other));
-        let mut entry = asset.data.meta.dictionary[0].clone();
-        entry.id = "Other".into();
-        entry.name = "Other".into();
-        asset.data.meta.dictionary.push(entry);
-        asset.data.meta.setting_count = 2;
-        asset.data.meta.vertex_count = 4;
+        let mut asset = kasane_core::document::PhysicsAsset::empty(asset_id.clone());
+        let group_id = uuid::Uuid::new_v4().to_string();
+        let other_id = uuid::Uuid::new_v4().to_string();
+        for (id, name) in [(&group_id, "Rig"), (&other_id, "Other")] {
+            let group = kasane_core::document::PhysicsAsset::default_group(id.clone(), name.into());
+            asset.data.settings.push(Arc::new(group));
+            asset
+                .data
+                .meta
+                .dictionary
+                .push(kasane_core::physics::PhysicsDictionaryEntry {
+                    id: id.clone(),
+                    name: name.into(),
+                    extensions: Default::default(),
+                });
+        }
+        asset.reconcile_counts();
+        let node_id = asset.data.settings[0].vertices[1].id.clone();
         doc.session
             .edit("Fixture", None, |edit| edit.set_physics(asset))?;
         doc.invalidate_projection(true);
-        let object = ObjectRef::new(ObjectKind::PhysicsGroup, format!("{asset_id}/Rig"));
+        let object = ObjectRef::new(ObjectKind::PhysicsGroup, &group_id);
         let initial = doc.property_values(&object)?;
-        let key = schema::MOBILITY.key.at(1);
+        let key = schema::MOBILITY.key.for_entity(&node_id);
         let patch = |value| PropertyPatch {
             scope: PropertyScope::Object,
             expected: [(key, initial[&key].clone())].into(),
@@ -804,7 +809,7 @@ mod tests {
             for info in snapshot
                 .objects
                 .iter()
-                .filter(|info| info.reference != object)
+                .filter(|info| info.reference != object && info.reference.id != node_id)
             {
                 assert!(std::ptr::eq(info, index.get(&info.reference).unwrap()));
             }
@@ -823,7 +828,7 @@ mod tests {
             let patch = doc.object_property_patch(&object, "fps", &serde_json::json!(60.))?;
             let serial = doc.begin_property_edit(&object, &patch)?;
             doc.update_property_edit(&object, serial, &patch)?;
-            let other = ObjectRef::new(ObjectKind::PhysicsGroup, format!("{asset_id}/Other"));
+            let other = ObjectRef::new(ObjectKind::PhysicsGroup, &other_id);
             assert_eq!(
                 doc.object_index().get(&other).unwrap().properties["fps"],
                 60.

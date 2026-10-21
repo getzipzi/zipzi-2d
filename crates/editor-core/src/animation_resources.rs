@@ -56,6 +56,9 @@ pub enum AnimationDiagnostic {
     UnresolvedPhysics {
         target: String,
     },
+    UnconfiguredPhysicsChannel {
+        channel_id: String,
+    },
     UnresolvedPose {
         target: String,
     },
@@ -190,13 +193,25 @@ impl AnimationCatalog {
             }
         }
         if let Some(physics) = model.physics() {
-            for target in physics.referenced_runtime_ids() {
-                if !physics.parameter_bindings.contains_key(target) {
-                    let issue = AnimationDiagnostic::UnresolvedPhysics {
-                        target: target.into(),
+            for (channel_id, target) in physics.data.settings.iter().flat_map(|g| {
+                g.inputs
+                    .iter()
+                    .map(|v| (&v.id, &v.source))
+                    .chain(g.outputs.iter().map(|v| (&v.id, &v.destination)))
+            }) {
+                if let Some(reason) = target.disabled_reason() {
+                    let issue = match target {
+                        kasane_core::document::PhysicsTarget::Unresolved { runtime_id } => {
+                            AnimationDiagnostic::UnresolvedPhysics {
+                                target: runtime_id.clone(),
+                            }
+                        }
+                        _ => AnimationDiagnostic::UnconfiguredPhysicsChannel {
+                            channel_id: channel_id.clone(),
+                        },
                     };
                     coverage.insert(
-                        format!("Physics: unresolved parameter {target}"),
+                        format!("Physics: {reason:?} channel {channel_id}"),
                         issue.clone(),
                     );
                     issues.insert(issue);

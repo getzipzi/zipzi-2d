@@ -7,10 +7,7 @@ fn fixture() -> (Editor, tempfile::TempDir) {
     let mut editor = Editor::from_document(document);
     editor.set_workspace(WorkspaceKind::Animation).unwrap();
     let asset = editor.document().unwrap().physics_definition().unwrap();
-    let object = ObjectRef::new(
-        ObjectKind::PhysicsGroup,
-        format!("{}/{}", asset.id, asset.data.settings[0].id),
-    );
+    let object = ObjectRef::new(ObjectKind::PhysicsGroup, asset.data.settings[0].id.clone());
     editor
         .inspect_animation_resource(editor.active_id().unwrap(), object)
         .unwrap();
@@ -20,7 +17,17 @@ fn fixture() -> (Editor, tempfile::TempDir) {
 fn physics_zero_fps_commits_through_the_form_and_supports_undo_redo() {
     let (mut editor, _assets) = fixture();
     let target = target(&editor).unwrap();
-    let spec = physics::NumberField::Fps.spec().unwrap();
+    let spec = physics::NumberField::Fps
+        .spec(
+            &editor
+                .document()
+                .unwrap()
+                .physics_definition()
+                .unwrap()
+                .data
+                .settings[0],
+        )
+        .unwrap();
     let original = target.values(&editor).unwrap()[&spec.key].clone();
     let mut form = PropertyForm::default();
     form.sync_definition(target.definition(&editor), target.values(&editor).unwrap());
@@ -57,7 +64,17 @@ fn physics_zero_fps_commits_through_the_form_and_supports_undo_redo() {
 fn physics_uses_shared_form_baselines_and_one_owned_history_step() {
     let (mut editor, _assets) = fixture();
     let target = target(&editor).unwrap();
-    let spec = physics::NumberField::InputWeight(0).spec().unwrap();
+    let spec = physics::NumberField::InputWeight(0)
+        .spec(
+            &editor
+                .document()
+                .unwrap()
+                .physics_definition()
+                .unwrap()
+                .data
+                .settings[0],
+        )
+        .unwrap();
     let original = target.values(&editor).unwrap()[&spec.key].clone();
     let mut form = PropertyForm::default();
     form.sync_definition(target.definition(&editor), target.values(&editor).unwrap());
@@ -119,7 +136,20 @@ fn shared_form_commits_mapping_name_and_rejects_stale_or_invalid_physics_fields(
         .definition(&editor)
         .fields
         .into_iter()
-        .find(|s| s.binding.key == physics::field_key("input_axis", 0))
+        .find(|s| {
+            s.binding.key
+                == physics::field_key(
+                    "input_axis",
+                    0,
+                    &editor
+                        .document()
+                        .unwrap()
+                        .physics_definition()
+                        .unwrap()
+                        .data
+                        .settings[0],
+                )
+        })
         .unwrap()
         .binding;
     forms.sync(
@@ -144,7 +174,17 @@ fn shared_form_commits_mapping_name_and_rejects_stale_or_invalid_physics_fields(
         .edit(&axis, "unknown".into());
     assert!(forms.commit(&mut editor, &target, axis.key).is_err());
     assert_eq!(editor.document().unwrap().history_lengths(), (2, 0));
-    let node = physics::field_key("output_node", 0);
+    let node = physics::field_key(
+        "output_node",
+        0,
+        &editor
+            .document()
+            .unwrap()
+            .physics_definition()
+            .unwrap()
+            .data
+            .settings[0],
+    );
     let mut form = PropertyForm::default();
     form.sync_definition(target.definition(&editor), target.values(&editor).unwrap());
     let spec = target.definition(&editor).field(node).unwrap().binding;

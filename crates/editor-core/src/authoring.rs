@@ -31,3 +31,10 @@ pub enum AuthoringSessionReason {
 
 #[path = "authoring/motion.rs"]
 mod motion;
+#[path = "authoring/physics.rs"]
+mod physics;
+#[derive(Debug, Clone)]
+pub struct PhysicsAuthoringCapabilities {
+    pub domain: kasane_sdk::PhysicsCapabilities,
+    pub session_reason: Option<AuthoringSessionReason>,
+}

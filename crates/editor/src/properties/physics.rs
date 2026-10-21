@@ -1,4 +1,4 @@
-//! Physics fields use the ordinary property form and whole-asset SDK transactions.
+//! Physics fields use the ordinary property form and typed local SDK patches.
 use super::*;
 use kasane_core::document::PhysicsAsset;
 
@@ -19,7 +19,7 @@ pub(crate) enum NumberField {
     Manual(String),
 }
 impl NumberField {
-    pub(crate) fn spec(&self) -> Option<PropertySpec> {
+    pub(crate) fn spec(&self, rig: &kasane_core::document::PhysicsSetting) -> Option<PropertySpec> {
         use editor_core::property::physics as schema;
         let (base, index) = match *self {
             Self::Fps => (schema::FPS, None),
@@ -55,7 +55,7 @@ impl NumberField {
         };
         let mut spec = base;
         if let Some(i) = index {
-            spec.key = spec.key.at(i);
+            spec.key = field_key(base.key.name(), i, rig);
         }
         Some(spec)
     }
@@ -76,8 +76,19 @@ impl NumberField {
     }
 }
 
-pub(crate) fn field_key(name: &'static str, index: usize) -> PropertyKey {
-    PropertyKey::new(ObjectKind::PhysicsGroup, name).at(index)
+pub(crate) fn field_key(
+    name: &'static str,
+    index: usize,
+    rig: &kasane_core::document::PhysicsSetting,
+) -> PropertyKey {
+    let id = if name.starts_with("input_") {
+        &rig.inputs[index].id
+    } else if name.starts_with("output_") {
+        &rig.outputs[index].id
+    } else {
+        &rig.vertices[index].id
+    };
+    PropertyKey::new(ObjectKind::PhysicsGroup, name).for_entity(id)
 }
 fn mapping_specs(asset: &PhysicsAsset, object: &ObjectRef) -> Vec<FieldSpec> {
     let Ok(group) = resolve(asset, object) else {
@@ -101,7 +112,7 @@ fn mapping_specs(asset: &PhysicsAsset, object: &ObjectRef) -> Vec<FieldSpec> {
                     ("input_reflect", "physics.reflect", FieldEditor::Toggle),
                 ]
             } {
-                let binding = editor_core::property_spec(field_key(name, i)).unwrap();
+                let binding = editor_core::property_spec(field_key(name, i, rig)).unwrap();
                 let mut spec = FieldSpec::new(binding, label, editor);
                 spec.searchable = name.ends_with("parameter");
                 specs.push(spec);
@@ -119,6 +130,7 @@ fn choices(document: &Document, object: &ObjectRef, key: PropertyKey) -> Option<
             .parameters()
             .into_iter()
             .map(|p| (p.id, p.name))
+            .chain(std::iter::once((String::new(), "—".into())))
             .collect()
     } else if key.name().ends_with("axis") {
         vec![
@@ -128,7 +140,12 @@ fn choices(document: &Document, object: &ObjectRef, key: PropertyKey) -> Option<
         ]
     } else if key.name() == "output_node" {
         (1..rig.vertices.len())
-            .map(|i| (i.to_string(), format!("{} {i}", t!("physics.segment"))))
+            .map(|i| {
+                (
+                    rig.vertices[i].id.clone(),
+                    format!("{} {i}", t!("physics.segment")),
+                )
+            })
             .collect()
     } else {
         return None;
@@ -176,8 +193,13 @@ pub(super) fn definition(editor: &Editor, object: &ObjectRef) -> FormDefinition 
             .unwrap_or_default()
             .into_iter()
             .map(|field| {
-                let mut spec =
-                    FieldSpec::new(field.spec().unwrap(), field.label(), FieldEditor::Number);
+                let mut spec = FieldSpec::new(
+                    field
+                        .spec(editor_core::property::physics::group(asset, object).unwrap())
+                        .unwrap(),
+                    field.label(),
+                    FieldEditor::Number,
+                );
                 spec.live_text = true;
                 spec
             }),
