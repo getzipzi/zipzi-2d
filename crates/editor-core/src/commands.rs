@@ -581,7 +581,9 @@ impl Editor {
         let checked = match command.id {
             ModelingWorkspace => self.workspace() == crate::WorkspaceKind::Modeling,
             AnimationWorkspace => self.workspace() == crate::WorkspaceKind::Animation,
-            PlayPause => self.animation().is_some_and(|animation| animation.playing),
+            PlayPause => self
+                .animation()
+                .is_some_and(|animation| animation.playing && !animation.physics_preview.manual),
             SelectTool => !animation_navigation && self.active_tool() == crate::ToolId::Select,
             GlueTool => !animation_navigation && self.active_tool() == crate::ToolId::Glue,
             HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,

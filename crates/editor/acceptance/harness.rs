@@ -27,6 +27,9 @@ pub(super) struct Harness {
 
 impl Harness {
     pub(super) fn new() -> anyhow::Result<Self> {
+        Self::with_size(1100., 740.)
+    }
+    pub(super) fn with_size(width: f32, height: f32) -> anyhow::Result<Self> {
         let mut cx = HeadlessAppContext::with_platform(
             gpui_kit::platform::current_platform(true).text_system(),
             Arc::new(AllAssets),
@@ -52,7 +55,7 @@ impl Harness {
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(Bounds::new(
                         point(px(0.), px(0.)),
-                        size(px(1100.), px(740.)),
+                        size(px(width), px(height)),
                     ))),
                     // A TestWindow has no OS window. Logical visibility allows canvas measurement.
                     show: true,

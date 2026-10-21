@@ -80,6 +80,9 @@ impl AnimationPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        if self.kind == PanelKind::AnimationPhysics {
+            return self.physics_list_toolbar(window, cx);
+        }
         let Some(owner) = self.owner.upgrade() else {
             return Empty.into_any_element();
         };
@@ -509,7 +512,7 @@ impl AnimationPanel {
             .into_any_element()
     }
 
-    fn resource_row(
+    pub(super) fn resource_row(
         &self,
         id: (&'static str, usize),
         selected: bool,

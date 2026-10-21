@@ -104,13 +104,18 @@ impl Editor {
     ) -> anyhow::Result<()> {
         self.ensure_animation_target(document)?;
         anyhow::ensure!(
-            matches!(object.kind, ObjectKind::Motion | ObjectKind::Expression)
-                && self
-                    .document()
-                    .unwrap()
-                    .object_index()
-                    .get(&object)
-                    .is_some(),
+            matches!(
+                object.kind,
+                ObjectKind::Motion
+                    | ObjectKind::Expression
+                    | ObjectKind::Physics
+                    | ObjectKind::PhysicsGroup
+            ) && self
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&object)
+                .is_some(),
             "Resource no longer exists"
         );
         self.cancel_timeline_edit();

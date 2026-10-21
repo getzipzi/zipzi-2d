@@ -1,5 +1,6 @@
 mod controls;
 mod observe;
+pub(crate) mod physics;
 mod rich_controls;
 mod rows;
 mod selection;
@@ -21,6 +22,7 @@ use gpui_kit::{prelude::*, *};
 use std::sync::Arc;
 
 pub struct PropertiesPanel {
+    physics: physics::PhysicsState,
     pub(crate) timeline_id: editor_core::TimelineId,
     target: Option<PropertyTarget>,
     form: PropertyForm,
@@ -83,6 +85,7 @@ impl PropertiesPanel {
             })
             .detach();
             Self {
+                physics: physics::PhysicsState::new(),
                 timeline_id: editor_core::TimelineId::new(),
                 target: None,
                 form: PropertyForm::default(),
@@ -114,7 +117,12 @@ impl PropertiesPanel {
                 renders: 0,
                 #[cfg(test)]
                 row_builds: 0,
-                collapsed: ["$details".into()].into(),
+                collapsed: [
+                    "$details".into(),
+                    "physics-normalization".into(),
+                    "physics-global".into(),
+                ]
+                .into(),
                 focus: cx.focus_handle(),
                 observed: None,
                 _observe: cx.observe_in(
@@ -212,6 +220,50 @@ impl PropertiesPanel {
         self.controls[&id].input.clone()
     }
 
+    fn property_group(
+        &self,
+        key: String,
+        label: String,
+        collapsed: bool,
+        cx: &Context<Self>,
+    ) -> Button {
+        Button::new(SharedString::from(format!("property-group-{key}")))
+            .ghost()
+            .xsmall()
+            .h(compact::rem(compact::ROW))
+            .w_full()
+            .justify_start()
+            .accessibility_label(label.clone())
+            .child(
+                div()
+                    .flex()
+                    .w_full()
+                    .items_center()
+                    .gap(compact::rem(6.))
+                    .child(
+                        gpui_kit::component::Icon::new(if collapsed {
+                            gpui_kit::assets::IconName::ChevronRight
+                        } else {
+                            gpui_kit::assets::IconName::ChevronDown
+                        })
+                        .xsmall(),
+                    )
+                    .child(
+                        div()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(cx.theme().foreground)
+                            .child(label),
+                    ),
+            )
+            .on_click(cx.listener(move |this, _, _, cx| {
+                if !this.collapsed.remove(&key) {
+                    this.collapsed.insert(key.clone());
+                }
+                this.fold_revision += 1;
+                cx.notify();
+            }))
+    }
+
     fn render_row(&mut self, row: &Row, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         #[cfg(test)]
         {
@@ -225,46 +277,9 @@ impl PropertiesPanel {
                 key,
                 label,
                 collapsed,
-            } => {
-                let label = label.clone();
-                let key = key.clone();
-                Button::new(SharedString::from(format!("property-group-{key}")))
-                    .ghost()
-                    .xsmall()
-                    .h(compact::rem(compact::ROW))
-                    .w_full()
-                    .justify_start()
-                    .accessibility_label(label.clone())
-                    .child(
-                        div()
-                            .flex()
-                            .w_full()
-                            .items_center()
-                            .gap(compact::rem(6.))
-                            .child(
-                                gpui_kit::component::Icon::new(if *collapsed {
-                                    gpui_kit::assets::IconName::ChevronRight
-                                } else {
-                                    gpui_kit::assets::IconName::ChevronDown
-                                })
-                                .xsmall(),
-                            )
-                            .child(
-                                div()
-                                    .font_weight(FontWeight::MEDIUM)
-                                    .text_color(cx.theme().foreground)
-                                    .child(label),
-                            ),
-                    )
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        if !this.collapsed.remove(&key) {
-                            this.collapsed.insert(key.clone());
-                        }
-                        this.fold_revision += 1;
-                        cx.notify();
-                    }))
-                    .into_any_element()
-            }
+            } => self
+                .property_group(key.clone(), label.clone(), *collapsed, cx)
+                .into_any_element(),
             Row::Array {
                 key,
                 label,
@@ -515,6 +530,7 @@ impl Render for PropertiesPanel {
         {
             self.renders += 1;
         }
+        self.physics.visible = false;
         self.sync_form(window, cx);
         self.remember_observed(cx);
         let root = div()
@@ -591,6 +607,15 @@ impl Render for PropertiesPanel {
             self.scroll_key = None;
             self.scroll.reset(0);
             return root.into_any_element();
+        }
+        if self
+            .target
+            .as_ref()
+            .is_some_and(|target| target.object.kind == editor_core::ObjectKind::PhysicsGroup)
+        {
+            let summary = self.summary(cx);
+            let physics = self.render_physics(window, cx);
+            return root.child(summary).child(physics).into_any_element();
         }
         self.sync_rows(&state.editor, document, doc, cx);
         let rows = self.rows.clone();

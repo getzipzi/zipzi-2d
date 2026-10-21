@@ -343,9 +343,7 @@ fn animation_add_menu_places_panel_in_the_clicked_group_and_restores_it(cx: &mut
                 (
                     dock.area.clone(),
                     PanelId::from(dock.animation_motions.entity_id()),
-                    PanelId::from(
-                        dock.animation_inspectors[&PanelKind::AnimationPhysics].entity_id(),
-                    ),
+                    PanelId::from(dock.animation_inspectors[&PanelKind::AnimationPose].entity_id()),
                 )
             });
             let group = area
@@ -381,7 +379,7 @@ fn animation_add_menu_places_panel_in_the_clicked_group_and_restores_it(cx: &mut
             panic!("tabs")
         };
         assert_eq!(panels[active_ix], physics);
-        assert!(window.find("AnimationPhysics").visible());
+        assert!(window.find("AnimationPose").visible());
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::ModelingWorkspace, window, cx);
             view.run_command(CommandId::AnimationWorkspace, window, cx);
@@ -416,9 +414,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                 (
                     dock.area.clone(),
                     PanelId::from(dock.properties.entity_id()),
-                    PanelId::from(
-                        dock.animation_inspectors[&PanelKind::AnimationPhysics].entity_id(),
-                    ),
+                    PanelId::from(dock.animation_inspectors[&PanelKind::AnimationPose].entity_id()),
                 )
             });
             let node = area
@@ -434,8 +430,8 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     placement,
                     size: None,
                 };
-                dock.show(PanelKind::AnimationPhysics, Some(target), window, cx);
-                dock.show(PanelKind::AnimationPhysics, Some(target), window, cx);
+                dock.show(PanelKind::AnimationPose, Some(target), window, cx);
+                dock.show(PanelKind::AnimationPose, Some(target), window, cx);
                 dock.show(PanelKind::MeshTree, Some(target), window, cx);
             });
             window.render_frame(cx);
@@ -444,7 +440,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
             assert_ne!(tree.find_panel_node(physics), tree.find_panel_node(info));
             assert_eq!(tree.panels().filter(|panel| *panel == physics).count(), 1);
             let info_bounds = window.find("properties-panel").bounds();
-            let physics_bounds = window.find("AnimationPhysics").bounds();
+            let physics_bounds = window.find("AnimationPose").bounds();
             match placement {
                 Placement::Right => assert!(physics_bounds.left() >= info_bounds.right()),
                 Placement::Bottom => assert!(physics_bounds.top() >= info_bounds.bottom()),
@@ -454,7 +450,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                 view.run_command(CommandId::ResetLayout, window, cx);
                 let dock = view.dock.as_ref().unwrap();
                 dock.show(
-                    PanelKind::AnimationPhysics,
+                    PanelKind::AnimationPose,
                     Some(InsertTarget::Tabs {
                         node,
                         ix: None,
@@ -464,7 +460,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     cx,
                 );
                 assert!(
-                    !dock.contains(PanelKind::AnimationPhysics, cx),
+                    !dock.contains(PanelKind::AnimationPose, cx),
                     "a stale menu target must not fall back elsewhere"
                 );
                 let canvas = dock.viewport_panel_id();
@@ -476,7 +472,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     .find_panel_node(canvas)
                     .unwrap();
                 dock.show(
-                    PanelKind::AnimationPhysics,
+                    PanelKind::AnimationPose,
                     Some(InsertTarget::Tabs {
                         node,
                         ix: None,
@@ -486,7 +482,7 @@ fn targeted_panel_splits_preserve_direction_and_reject_stale_or_foreign_targets(
                     cx,
                 );
                 assert!(
-                    dock.contains(PanelKind::AnimationPhysics, cx),
+                    dock.contains(PanelKind::AnimationPose, cx),
                     "canvas accepts grouped panels"
                 );
             });
@@ -526,7 +522,7 @@ fn adding_to_collapsed_dock_reveals_the_new_panel(cx: &mut TestAppContext) {
                 .find_panel_node(PanelId::from(dock.properties.entity_id()))
                 .unwrap();
             dock.show(
-                PanelKind::AnimationPhysics,
+                PanelKind::AnimationPose,
                 Some(InsertTarget::Tabs {
                     node,
                     ix: None,
@@ -538,7 +534,7 @@ fn adding_to_collapsed_dock_reveals_the_new_panel(cx: &mut TestAppContext) {
             assert!(dock.area.read(cx).is_dock_open(DockPlacement::Bottom));
         });
         window.render_frame(cx);
-        assert!(window.find("AnimationPhysics").visible());
+        assert!(window.find("AnimationPose").visible());
     })
     .unwrap();
 }
@@ -601,7 +597,7 @@ fn global_add_menu_splits_beside_canvas_in_animation(cx: &mut TestAppContext) {
         window.within("submenu").click(0usize, cx);
         window.render_frame(cx);
         let canvas = window.find("canvas-body").bounds();
-        let panel = window.find("AnimationPhysics").bounds();
+        let panel = window.find("AnimationPose").bounds();
         assert!(panel.left() >= canvas.right());
         assert!(panel.size.width > px(0.));
         assert!(harness.view.read(cx).edit_error.is_none());
@@ -616,7 +612,7 @@ fn global_add_menu_splits_beside_canvas_in_animation(cx: &mut TestAppContext) {
     .unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(window.try_find("AnimationPhysics").is_none());
+        assert!(window.try_find("AnimationPose").is_none());
         assert!(window.find("properties-panel").visible());
         assert!(window.find("AnimationMotions").visible());
     })

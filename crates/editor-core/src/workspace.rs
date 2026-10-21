@@ -280,17 +280,19 @@ impl Editor {
                 || matches!(
                     command,
                     EditorCommand::Undo
+                        | EditorCommand::ReplacePhysics { .. }
                         | EditorCommand::Redo
                         | EditorCommand::FinishEdit
                         | EditorCommand::CancelEdit
                 )
                 || matches!(&command, EditorCommand::SetObjectProperties { object, .. }
-                    if matches!(object.kind, crate::ObjectKind::Motion | crate::ObjectKind::Expression)),
+                    if matches!(object.kind, crate::ObjectKind::Motion | crate::ObjectKind::Expression | crate::ObjectKind::PhysicsGroup)),
             "Modeling commands are unavailable in Animation"
         );
         if matches!(
             &command,
             EditorCommand::CreateParameter(_)
+                | EditorCommand::ReplacePhysics { .. }
                 | EditorCommand::GenerateMeshGrid { .. }
                 | EditorCommand::ApplyMeshGeneration(_)
                 | EditorCommand::CreateParameterChecked { .. }

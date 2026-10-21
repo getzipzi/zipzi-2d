@@ -7,6 +7,7 @@ mod editing;
 pub(crate) mod form;
 mod mesh;
 mod parameter;
+pub(crate) mod physics;
 mod scene;
 pub(crate) mod timeline;
 pub(crate) use editing::{PreviewToken, begin_edit, update_edit};
@@ -149,6 +150,7 @@ impl FormDefinition {
 
 pub(crate) struct PropertyProvider {
     fields: fn(ObjectKind) -> FormDefinition,
+    pub choices: fn(&Document, &ObjectRef, PropertyKey) -> Option<Vec<Choice>>,
     pub type_name: fn(&Document, &ObjectRef) -> SharedString,
     pub editable_in: fn(EditingContext) -> bool,
     pub show_readonly: fn(&str) -> bool,
@@ -157,6 +159,7 @@ pub(crate) struct PropertyProvider {
 impl PropertyProvider {
     const DEFAULT: Self = Self {
         fields: |_| FormDefinition::default(),
+        choices: |_, _, _| None,
         type_name,
         editable_in: |context| context == EditingContext::Modeling,
         show_readonly: |_| true,
@@ -174,6 +177,7 @@ pub(crate) fn provider(kind: ObjectKind) -> &'static PropertyProvider {
         ObjectKind::Parameter => &parameter::PARAMETER,
         ObjectKind::ParameterGroup => &parameter::GROUP,
         ObjectKind::Motion | ObjectKind::Expression => &animation::PROVIDER,
+        ObjectKind::PhysicsGroup => &physics::PROVIDER,
         ObjectKind::Document => &document::PROVIDER,
         _ => &scene::PROVIDER,
     }
@@ -217,3 +221,6 @@ fn details_source(editor: &Editor) -> Option<details::DetailSource> {
 mod tests;
 #[cfg(test)]
 mod timeline_tests;
+
+#[cfg(test)]
+mod physics_tests;

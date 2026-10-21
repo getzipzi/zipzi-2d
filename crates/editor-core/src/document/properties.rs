@@ -3,6 +3,27 @@ use super::*;
 use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValues};
 use anyhow::bail;
 
+enum PropertyPayload {
+    Object(serde_json::Value),
+    Physics(kasane_core::document::PhysicsPatch),
+}
+impl PropertyPayload {
+    fn json(self) -> Result<serde_json::Value> {
+        if let Self::Object(value) = self {
+            Ok(value)
+        } else {
+            bail!("Expected object payload")
+        }
+    }
+    fn json_ref(&self) -> Result<&serde_json::Value> {
+        if let Self::Object(value) = self {
+            Ok(value)
+        } else {
+            bail!("Expected object payload")
+        }
+    }
+}
+
 impl Document {
     /// Committed values remain stable while an inspector candidate is displayed.
     pub fn property_values(&self, object: &ObjectRef) -> Result<PropertyValues> {
@@ -98,6 +119,10 @@ impl Document {
             .find(|s| s.path == field)
             .ok_or_else(|| anyhow!("This property is read only"))?;
         let current = self.property_values(object)?;
+        ensure!(
+            current.contains_key(&spec.key),
+            "This property requires an element index"
+        );
         let expected = crate::property_specs(object.kind)
             .iter()
             .filter(|s| s.same_group(spec))
@@ -118,7 +143,7 @@ impl Document {
         &self,
         object: &ObjectRef,
         patch: &PropertyPatch,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<PropertyPayload> {
         self.ensure_editable(std::slice::from_ref(object))?;
         let specs = crate::property_specs(object.kind);
         let current = self.property_values(object)?;
@@ -130,10 +155,10 @@ impl Document {
             );
         }
         for (id, value) in &patch.changes {
-            let spec = specs
-                .iter()
-                .find(|s| s.key == *id)
+            let spec = crate::property_spec(*id)
+                .filter(|spec| spec.key.object_kind() == object.kind)
                 .ok_or_else(|| anyhow!("This property is read only"))?;
+            ensure!(patch.expected.contains_key(id), "Missing property baseline");
             spec.validate(value)?;
             ensure!(!spec.readonly, "This property is read only");
             if spec.keyframed {
@@ -149,10 +174,18 @@ impl Document {
             ensure!(
                 specs
                     .iter()
-                    .filter(|s| s.same_group(spec))
+                    .filter(|s| s.same_group(&spec))
                     .all(|s| patch.expected.contains_key(&s.key)),
                 "Missing property baseline"
             );
+        }
+        if object.kind == ObjectKind::PhysicsGroup {
+            return crate::property::physics::patch(
+                self.session.document(),
+                object,
+                &patch.changes,
+            )
+            .map(PropertyPayload::Physics);
         }
         let mut payload = if object.kind == ObjectKind::Mesh {
             if patch.mesh_presentation_only(object.kind) {
@@ -174,7 +207,7 @@ impl Document {
                 .expect("validated property key");
             spec.write(&mut payload, value)?;
         }
-        Ok(payload)
+        Ok(PropertyPayload::Object(payload))
     }
 
     fn apply_properties(
@@ -182,8 +215,12 @@ impl Document {
         edit: &mut EditSession<'_>,
         object: &ObjectRef,
         patch: &PropertyPatch,
-        payload: serde_json::Value,
+        payload: PropertyPayload,
     ) -> Result<()> {
+        if let PropertyPayload::Physics(patch) = payload {
+            return Ok(edit.patch_physics(&patch)?);
+        }
+        let payload = payload.json()?;
         if object.kind != ObjectKind::Mesh {
             return replace(edit, object.kind, payload);
         }
@@ -285,12 +322,15 @@ impl Document {
     ) -> Result<()> {
         let payload = self.checked_payload(object, patch)?;
         if object.kind == ObjectKind::Parameter {
-            self.parameter_from_payload(object, payload)?;
+            self.parameter_from_payload(object, payload.json()?)?;
         } else if object.kind == ObjectKind::ParameterGroup {
             self.validate_parameter_group(
                 Some(&object.id),
-                &self.parameter_group_from_payload(&object.id, &payload)?,
+                &self.parameter_group_from_payload(&object.id, payload.json_ref()?)?,
             )?;
+        } else if let PropertyPayload::Physics(patch) = payload {
+            let status = self.session.document().validate_physics_patch(&patch);
+            ensure!(status.is_ok(), "{}: {}", status.code, status.message);
         } else {
             let mut edit = self.session.begin_owned_edit("Validate properties", None)?;
             self.apply_properties(&mut edit, object, patch, payload)?;
@@ -315,11 +355,11 @@ impl Document {
         self.finish_edit()?;
         let payload = self.checked_payload(object, patch)?;
         if object.kind == ObjectKind::Parameter {
-            let draft = self.parameter_from_payload(object, payload)?;
+            let draft = self.parameter_from_payload(object, payload.json()?)?;
             return self.update_parameter(&object.id, draft, self.parameter_model_revision());
         }
         if object.kind == ObjectKind::ParameterGroup {
-            let draft = self.parameter_group_from_payload(&object.id, &payload)?;
+            let draft = self.parameter_group_from_payload(&object.id, payload.json_ref()?)?;
             return self.update_parameter_group(&object.id, draft, self.parameter_model_revision());
         }
         let mut edit = self
@@ -385,9 +425,8 @@ impl Document {
             patch
                 .changes
                 .keys()
-                .all(|id| crate::property_specs(object.kind)
-                    .iter()
-                    .any(|s| s.key == *id && s.preview)),
+                .all(|id| crate::property_spec(*id)
+                    .is_some_and(|s| s.key.object_kind() == object.kind && s.preview)),
             "This property does not support preview"
         );
         self.validate_object_properties(object, patch)
@@ -411,7 +450,7 @@ impl Document {
                 .begin_owned_edit("Edit object property", None)?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
-            topology_changed: true,
+            topology_changed: object.kind != ObjectKind::PhysicsGroup,
         });
         Ok(serial)
     }
@@ -430,12 +469,37 @@ impl Document {
             patch
                 .changes
                 .keys()
-                .all(|id| crate::property_specs(object.kind)
-                    .iter()
-                    .any(|s| s.key == *id && s.preview)),
+                .all(|id| crate::property_spec(*id)
+                    .is_some_and(|s| s.key.object_kind() == object.kind && s.preview)),
             "This property does not support preview"
         );
         let payload = self.checked_payload(object, patch)?;
+        if let PropertyPayload::Physics(patch) = payload {
+            // Local SDK patches are atomic. Validate before touching the owned edit
+            // so invalid text preserves the last good candidate and its token.
+            let pending = self.pending.as_mut().unwrap();
+            let status = pending
+                .edit
+                .candidate_document()
+                .validate_physics_patch(&patch);
+            ensure!(status.is_ok(), "{}: {}", status.code, status.message);
+            pending.edit.patch_physics(&patch)?;
+            pending.changed.take();
+            let previous = self.projection_revision;
+            self.projection_revision += 1;
+            if let Some((revision, index)) = self.object_index.get_mut().unwrap() {
+                if *revision == previous
+                    && Arc::make_mut(index).refresh_property_preview(
+                        pending.edit.candidate_document(),
+                        object,
+                        false,
+                    )
+                {
+                    *revision = self.projection_revision;
+                }
+            }
+            return Ok(());
+        }
         // Each update starts from committed data; rejected candidates never damage
         // the last good preview or become the basis of the next update.
         let mut edit = self
@@ -509,6 +573,53 @@ mod tests {
     use super::*;
     use crate::{NewParameter, PropertyValue};
     use std::sync::atomic::Ordering;
+
+    #[test]
+    fn physics_field_candidates_reuse_indexes_and_keep_scalar_preview_snapshots_independent()
+    -> Result<()> {
+        use crate::property::physics as schema;
+        let mut doc = Document::new_blank()?;
+        let asset_id = uuid::Uuid::new_v4().to_string();
+        let asset: kasane_core::document::PhysicsAsset = serde_json::from_value(
+            serde_json::json!({
+            "id":asset_id,"opaque_source_ids":null,"parameter_bindings":{},"data":{
+                "Version":3,"Meta":{"PhysicsSettingCount":1,"TotalInputCount":0,"TotalOutputCount":0,"VertexCount":2,"Fps":30,"EffectiveForces":{"Gravity":{"X":0,"Y":-1},"Wind":{"X":0,"Y":0}},"PhysicsDictionary":[{"Id":"Rig","Name":"Rig"}]},
+                "PhysicsSettings":[{"Id":"Rig","Input":[],"Output":[],"Vertices":[{"Position":{"X":0,"Y":0},"Mobility":1,"Delay":1,"Acceleration":1,"Radius":0},{"Position":{"X":0,"Y":1},"Mobility":0.95,"Delay":0.8,"Acceleration":1,"Radius":1}],"Normalization":{"Position":{"Minimum":-1,"Default":0,"Maximum":1},"Angle":{"Minimum":-1,"Default":0,"Maximum":1}}}]
+            }}),
+        )?;
+        doc.session
+            .edit("Fixture", None, |edit| edit.set_physics(asset))?;
+        doc.invalidate_projection(true);
+        let object = ObjectRef::new(ObjectKind::PhysicsGroup, format!("{asset_id}/Rig"));
+        let initial = doc.property_values(&object)?;
+        let key = schema::MOBILITY.key.at(1);
+        let patch = |value| PropertyPatch {
+            scope: PropertyScope::Object,
+            expected: [(key, initial[&key].clone())].into(),
+            changes: [(key, PropertyValue::Float(value))].into(),
+        };
+        let serial = doc.begin_property_edit(&object, &patch(0.2))?;
+        let snapshot = doc.object_index();
+        let old = snapshot.get(&object).unwrap().properties.clone();
+        let builds = doc.object_index_builds.load(Ordering::Relaxed);
+        let topology = doc.canvas_topology();
+        for value in [0.2, 0.4, 0.7] {
+            doc.update_property_edit(&object, serial, &patch(value))?;
+            let index = doc.object_index();
+            assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
+            assert_eq!(snapshot.get(&object).unwrap().properties, old);
+            let rebuilt = crate::ObjectIndex::build(doc.model());
+            assert_eq!(
+                index.get(&object).unwrap().properties,
+                rebuilt.get(&object).unwrap().properties
+            );
+            assert_eq!(doc.property_values(&object)?[&key], initial[&key]);
+        }
+        doc.cancel_edit();
+        assert_eq!(doc.property_values(&object)?, initial);
+        Ok(())
+    }
 
     #[test]
     fn mesh_presentation_commits_preserve_index_snapshots_and_relations() -> Result<()> {

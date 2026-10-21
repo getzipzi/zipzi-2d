@@ -115,6 +115,13 @@ impl DocumentSession {
         // Reject invalid property writes before releasing any current owner.
         // The document revalidates immediately before publication as well.
         match &command {
+            EditorCommand::ReplacePhysics {
+                asset,
+                expected_revision,
+            } => {
+                self.document
+                    .validate_physics_edit(asset, *expected_revision)?;
+            }
             EditorCommand::SetObjectProperties { object, patch } => {
                 self.document.validate_object_properties(object, patch)?;
             }
@@ -320,6 +327,10 @@ impl DocumentSession {
             EditorCommand::SetObjectProperties { object, patch } => {
                 self.document.set_object_properties(&object, &patch)
             }
+            EditorCommand::ReplacePhysics {
+                asset,
+                expected_revision,
+            } => self.document.replace_physics(asset, expected_revision),
             EditorCommand::Select(id) => self.document.select(&id),
             EditorCommand::SelectObject(r) => self.document.select_object(r),
             EditorCommand::FocusParameter(id) => self.document.focus_parameter(&id),

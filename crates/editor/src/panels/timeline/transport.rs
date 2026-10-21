@@ -9,7 +9,7 @@ impl Timeline {
         let view = owner.read(cx);
         let animation = view.editor.animation();
         let document = view.editor.active_id();
-        let playing = animation.is_some_and(|a| a.playing);
+        let playing = animation.is_some_and(|a| a.playing && !a.physics_preview.manual);
         let mode = animation.map_or(AnimationPreviewMode::default(), |a| a.preview_mode);
         let looping = animation.is_none_or(|a| a.preview_loop);
         let resource = view.editor.document().and_then(|document| {

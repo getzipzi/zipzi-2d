@@ -28,6 +28,68 @@ impl super::ObjectIndex {
         true
     }
 
+    fn refresh_physics_preview(
+        &mut self,
+        model: &kasane_core::Document,
+        object: &super::ObjectRef,
+    ) -> bool {
+        let Some(asset) = model.physics() else {
+            return false;
+        };
+        let Ok(rig) = crate::property::physics::group(asset, object) else {
+            return false;
+        };
+        let Some(&slot) = self.slots.get(object) else {
+            return false;
+        };
+        self.objects[slot].properties = json!(rig);
+        self.objects[slot].name = asset
+            .data
+            .meta
+            .dictionary
+            .iter()
+            .find(|entry| entry.id == rig.id)
+            .map_or_else(|| rig.id.clone(), |entry| entry.name.clone());
+        self.objects[slot].properties["name"] = json!(self.objects[slot].name);
+        self.objects[slot].properties["fps"] = json!(asset.data.meta.fps.unwrap_or(30.));
+        let root = super::ObjectRef::new(ObjectKind::Physics, &asset.id);
+        if let Some(&slot) = self.slots.get(&root) {
+            let meta = &mut self.objects[slot].properties["meta"];
+            if let Some(fps) = asset.data.meta.fps {
+                meta["Fps"] = json!(fps);
+            } else if let Some(meta) = meta.as_object_mut() {
+                meta.remove("Fps");
+            }
+        }
+        let mut inputs = rig.inputs.iter();
+        let mut outputs = rig.outputs.iter();
+        for &edge in self.outgoing.get(object).into_iter().flatten() {
+            let edge = &mut self.relations[edge];
+            match edge.kind {
+                super::RelationKind::PhysicsInput => {
+                    let Some(input) = inputs.next() else {
+                        return false;
+                    };
+                    edge.detail = format!(
+                        "{:?} · weight {} · reflect {}; saved configuration",
+                        input.kind, input.weight, input.reflect
+                    );
+                }
+                super::RelationKind::PhysicsOutput => {
+                    let Some(output) = outputs.next() else {
+                        return false;
+                    };
+                    edge.detail = format!(
+                        "{:?} · vertex {} · weight {} · scale {}; saved configuration",
+                        output.kind, output.vertex_index, output.weight, output.scale
+                    );
+                }
+                _ => {}
+            }
+        }
+        true
+    }
+
     /// Appearance candidates preserve identities and relation edges. Copy their
     /// payloads without rebuilding bindings or influence paths.
     pub(crate) fn refresh_property_preview(
@@ -36,6 +98,9 @@ impl super::ObjectIndex {
         object: &super::ObjectRef,
         keyform_order_changed: bool,
     ) -> bool {
+        if object.kind == ObjectKind::PhysicsGroup {
+            return self.refresh_physics_preview(model, object);
+        }
         let Ok(values) = crate::property::values_from(model, object) else {
             return false;
         };

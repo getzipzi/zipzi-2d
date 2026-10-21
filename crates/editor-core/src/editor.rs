@@ -4,6 +4,10 @@ use std::path::PathBuf;
 
 /// UI-independent editing intent. Model changes always go through Document and the SDK.
 pub enum EditorCommand {
+    ReplacePhysics {
+        asset: kasane_core::document::PhysicsAsset,
+        expected_revision: u64,
+    },
     CreateParameter(crate::NewParameter),
     CreateParameterChecked {
         draft: crate::ParameterDraft,

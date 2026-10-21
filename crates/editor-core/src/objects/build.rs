@@ -360,8 +360,8 @@ impl ObjectIndex {
                 json!({"meta":x.data.meta,"extensions":x.data.extensions}),
                 None,
             );
-            for (i, g) in x.data.settings.iter().enumerate() {
-                let gr = ObjectRef::new(K::PhysicsGroup, format!("{}/{}", x.id, i));
+            for g in &x.data.settings {
+                let gr = ObjectRef::new(K::PhysicsGroup, format!("{}/{}", x.id, g.id));
                 let name = x
                     .data
                     .meta
@@ -369,7 +369,10 @@ impl ObjectIndex {
                     .iter()
                     .find(|d| d.id == g.id)
                     .map_or(g.id.as_str(), |d| d.name.as_str());
-                s.add(gr.clone(), name, json!(g), None);
+                let mut payload = json!(g);
+                payload["name"] = json!(name);
+                payload["fps"] = json!(x.data.meta.fps.unwrap_or(30.));
+                s.add(gr.clone(), name, payload, None);
                 s.edge(&r, R::Contains, gr.clone(), "");
                 for input in &g.inputs {
                     let target = if input.source.target == "Parameter" {

@@ -263,6 +263,7 @@ fn model(
             vec![1.125, 0.25, 1.125]
         } {
             let mut request = editor_core::AnimationRequest {
+                physics: Default::default(),
                 identity: request.identity,
                 source: request.source.clone(),
                 motion: request.motion.clone(),

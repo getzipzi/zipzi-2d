@@ -11,6 +11,8 @@ impl AnimationSession {
     }
     pub(crate) fn new(document: &Document) -> Self {
         Self {
+            physics_preview: Default::default(),
+            physics_return: None,
             inspected: None,
             motion: None,
             expression: None,
@@ -33,6 +35,10 @@ impl AnimationSession {
             frames: provenance::FrameSequence::default(),
             scrubbing: false,
         }
+    }
+    pub(crate) fn physics_input_changed(&mut self) {
+        self.frames.mark_target_dirty();
+        self.error = None;
     }
     pub(crate) fn property_preview_changed(&mut self) {
         self.source = None;
@@ -69,8 +75,11 @@ impl AnimationSession {
         self.scrubbing = false;
         self.frames.barrier();
     }
-    pub(super) fn rebuild(&mut self) {
+    pub(crate) fn rebuild(&mut self) {
+        // Configuration changes must keep a running manual trial alive.
+        let manual_playing = self.physics_preview.manual && self.playing;
         self.pause();
+        self.playing = manual_playing;
         self.preview_generation += 1;
         self.presented = None;
         self.error = None;
@@ -118,6 +127,15 @@ impl AnimationSession {
             return;
         }
         let catalog = document.animation_catalog();
+        if self.physics_preview.manual {
+            self.physics_preview
+                .baseline
+                .retain(|id, _| catalog.parameters.iter().any(|p| &p.id == id));
+            self.physics_preview
+                .inputs
+                .retain(|input| catalog.parameters.iter().any(|p| p.id == input.parameter));
+            return;
+        }
         if let Some(selection) = &self.motion {
             if let Some(resource) = catalog.motions.iter().find(|r| &r.selection == selection) {
                 self.time = if !resource.playable() {

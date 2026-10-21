@@ -281,6 +281,7 @@ fn properties_follow_registration_and_expression_without_authoring_edits(cx: &mu
     let (document, assets) = document_fixture::animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
+        window.resize(gpui_kit::size(gpui_kit::px(1100.), gpui_kit::px(1500.)));
         window.click("workspace-animation", cx);
         harness.view.update(cx, |view, cx| {
             view.dock
@@ -347,13 +348,6 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
     use editor_core::PanelKind;
     let (document, assets) = document_fixture::combined_animation_document().unwrap();
     let catalog = document.animation_catalog();
-    let input = catalog
-        .parameters
-        .iter()
-        .find(|p| p.runtime_id == "ParamX")
-        .unwrap()
-        .id
-        .clone();
     let output = catalog
         .parameters
         .iter()
@@ -381,18 +375,29 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
         });
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
+        harness.view.update(cx, |view, cx| {
+            view.dock
+                .as_ref()
+                .unwrap()
+                .show(PanelKind::AnimationPhysics, None, window, cx);
+        });
+        window.render_frame(cx);
+        window.click(("physics-group-row", 0usize), cx);
         let (input_value, output_value, opacity) = harness.view.update(cx, |view, cx| {
             view.dock
                 .as_ref()
                 .unwrap()
                 .show(PanelKind::AnimationPhysics, None, window, cx);
             view.editor.seek_animation(original, 0.25).unwrap();
+            view.editor
+                .set_animation_preview_mode(original, editor_core::AnimationPreviewMode::Result)
+                .unwrap();
             let request = view.editor.animation_request().unwrap();
             let frame = AnimationEvaluator::default()
                 .evaluate(&request, |_, _| true)
                 .unwrap();
             let values = (
-                frame.snapshot.parameters[&input],
+                frame.snapshot.physics[0].inputs[0],
                 frame.snapshot.parameters[&output],
                 frame.snapshot.part_opacities[&part_id],
             );
@@ -410,11 +415,11 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
         );
         assert_eq!(
             window.find("animation-physics-input-0-0").label(),
-            Some(format!("{input_value:.4}").as_str())
+            Some(crate::ui::slide_number_input::format_one_decimal(input_value as f64).as_str())
         );
         assert_eq!(
             window.find("animation-physics-output-0-0").label(),
-            Some(format!("{output_value:.4}").as_str())
+            Some(crate::ui::slide_number_input::format_one_decimal(output_value as f64).as_str())
         );
         harness.view.update(cx, |view, cx| {
             view.dock
@@ -473,27 +478,21 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
         window.render_frame(cx);
         assert!(window.try_find("animation-physics-empty").is_none());
         assert!(window.try_find("animation-physics-input-0-0").is_some());
+        let view = harness.view.read(cx);
+        let asset = view
+            .editor
+            .document()
+            .unwrap()
+            .physics_definition()
+            .unwrap();
         assert_eq!(
-            harness
-                .view
-                .read(cx)
-                .editor
-                .animation()
-                .unwrap()
-                .motion
-                .as_ref()
-                .unwrap()
-                .clip_id,
-            harness
-                .view
-                .read(cx)
-                .editor
-                .active_inspection()
-                .unwrap()
-                .object()
-                .unwrap()
-                .id
+            view.editor.active_inspection().unwrap().object().unwrap(),
+            editor_core::ObjectRef::new(
+                editor_core::ObjectKind::PhysicsGroup,
+                format!("{}/{}", asset.id, asset.data.settings[0].id)
+            )
         );
+        assert!(view.editor.animation().unwrap().motion.is_some());
     })
     .unwrap();
 }
@@ -507,7 +506,6 @@ fn inspector_commands_restore_separate_workspace_layouts(cx: &mut TestAppContext
         window.click("workspace-animation", cx);
         window.render_frame(cx);
         harness.view.update(cx, |view, cx| {
-            view.run_command(CommandId::Physics, window, cx);
             view.run_command(CommandId::Pose, window, cx);
             let dock = view.dock.as_ref().unwrap();
             for kind in [
@@ -547,7 +545,7 @@ fn inspector_commands_restore_separate_workspace_layouts(cx: &mut TestAppContext
             view.run_command(CommandId::ResetLayout, window, cx);
             let dock = view.dock.as_ref().unwrap();
             assert!(dock.contains(PanelKind::Properties, cx));
-            assert!(!dock.contains(PanelKind::AnimationPhysics, cx));
+            assert!(dock.contains(PanelKind::AnimationPhysics, cx));
             assert!(!dock.contains(PanelKind::AnimationPose, cx));
         });
     })

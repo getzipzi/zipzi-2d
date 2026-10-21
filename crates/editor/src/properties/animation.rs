@@ -35,6 +35,12 @@ fn fields(kind: ObjectKind) -> FormDefinition {
 pub(super) fn details_source(editor: &Editor) -> Option<DetailSource> {
     let animation = editor.animation()?;
     let inspected = editor.active_inspection()?.object()?;
+    if matches!(
+        inspected.kind,
+        ObjectKind::PhysicsGroup | ObjectKind::Physics
+    ) {
+        return None;
+    }
     Some(DetailSource {
         dependencies: vec![
             Some(inspected.id.clone()),

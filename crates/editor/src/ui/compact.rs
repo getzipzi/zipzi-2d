@@ -228,3 +228,35 @@ pub fn property_row(label: impl Into<SharedString>, value: impl IntoElement, cx:
                 .child(value),
         )
 }
+
+/// A dense, non-wrapping field row for single and paired inspector columns.
+pub fn inline_property_row(
+    label: impl Into<SharedString>,
+    value: impl IntoElement,
+    cx: &App,
+) -> Div {
+    let label = label.into();
+    let tooltip = label.clone();
+    div()
+        .flex()
+        .items_center()
+        .min_w_0()
+        .min_h(rem(NUMBER_CONTROL))
+        .gap(rem(GAP))
+        .text_size(rem(BODY))
+        .child(
+            div()
+                .id(SharedString::from(format!("property-label-{label}")))
+                .test_support()
+                .w(rem(80.))
+                .max_w(relative(0.55))
+                .flex_shrink_0()
+                .truncate()
+                .text_color(cx.theme().muted_foreground)
+                .tooltip(move |window, cx| {
+                    gpui_kit::component::tooltip::Tooltip::new(tooltip.clone()).build(window, cx)
+                })
+                .child(label),
+        )
+        .child(div().flex_1().min_w_0().child(value))
+}

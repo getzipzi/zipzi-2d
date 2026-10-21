@@ -13,10 +13,27 @@ use std::collections::BTreeMap;
 pub struct PropertyKey {
     object: ObjectKind,
     name: &'static str,
+    index: Option<usize>,
 }
 impl PropertyKey {
     pub const fn new(object: ObjectKind, name: &'static str) -> Self {
-        Self { object, name }
+        Self {
+            object,
+            name,
+            index: None,
+        }
+    }
+    /// Array element identity for providers with repeated fields.
+    pub const fn at(mut self, index: usize) -> Self {
+        self.index = Some(index);
+        self
+    }
+    pub const fn index(self) -> Option<usize> {
+        self.index
+    }
+    pub fn identity(self) -> String {
+        self.index
+            .map_or_else(|| self.name.to_owned(), |i| format!("{}-{i}", self.name))
     }
     pub const fn name(self) -> &'static str {
         self.name
@@ -99,6 +116,7 @@ pub struct PropertySpec {
     pub preview: bool,
     pub readonly: bool,
     pub keyframed: bool,
+    indexed: bool,
 }
 impl PropertySpec {
     pub const fn new(
@@ -121,7 +139,20 @@ impl PropertySpec {
             preview: false,
             readonly: false,
             keyframed: false,
+            indexed: false,
         }
+    }
+    /// Descriptor for repeated fields; the concrete key carries its element index.
+    pub const fn indexed(mut self) -> Self {
+        self.indexed = true;
+        self
+    }
+    fn accepts(&self, key: PropertyKey) -> bool {
+        self.key == key
+            || (self.indexed
+                && key.index.is_some()
+                && self.key.object == key.object
+                && self.key.name == key.name)
     }
     pub const fn range(mut self, min: f64, max: f64, step: f64) -> Self {
         self.min = min;
@@ -317,6 +348,7 @@ pub mod offscreen;
 pub mod parameter;
 pub mod parameter_group;
 pub mod part;
+pub mod physics;
 pub mod texture;
 
 /// Only object dispatch lives here; each schema owns all of its field definitions.
@@ -333,8 +365,17 @@ pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
         ObjectKind::Glue => glue::FIELDS,
         ObjectKind::Motion => motion::FIELDS,
         ObjectKind::Expression => expression::FIELDS,
+        ObjectKind::PhysicsGroup => physics::FIELDS,
         _ => &[],
     }
+}
+
+pub fn property_spec(key: PropertyKey) -> Option<PropertySpec> {
+    let mut spec = *property_specs(key.object_kind())
+        .iter()
+        .find(|spec| spec.accepts(key))?;
+    spec.key = key;
+    Some(spec)
 }
 
 pub type PropertyValues = BTreeMap<PropertyKey, PropertyValue>;
@@ -439,6 +480,9 @@ pub(crate) fn values_from(
     model: &kasane_core::Document,
     object: &ObjectRef,
 ) -> Result<PropertyValues> {
+    if object.kind == ObjectKind::PhysicsGroup {
+        return physics::values(model, object);
+    }
     let payload = object_payload(model, object)?;
     property_specs(object.kind)
         .iter()
@@ -475,7 +519,10 @@ impl crate::Editor {
         );
         ensure!(
             self.editing_context() == Some(crate::EditingContext::Modeling)
-                || matches!(object.kind, ObjectKind::Motion | ObjectKind::Expression),
+                || matches!(
+                    object.kind,
+                    ObjectKind::Motion | ObjectKind::Expression | ObjectKind::PhysicsGroup
+                ),
             "Preview is unavailable for this object in Animation"
         );
         ensure!(

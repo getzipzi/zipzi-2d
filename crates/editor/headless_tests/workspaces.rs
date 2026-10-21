@@ -566,7 +566,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
                     dock.animation_inspectors[&editor_core::PanelKind::AnimationPhysics]
                         .entity_id()
                 ))
-                .is_none()
+                .is_some()
             );
             assert!(
                 area.panel(PanelId::from(dock.animation_expressions.entity_id()))

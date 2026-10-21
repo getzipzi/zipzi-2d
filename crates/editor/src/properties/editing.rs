@@ -81,6 +81,9 @@ impl PropertyTarget {
     }
 
     pub(crate) fn definition(&self, editor: &Editor) -> FormDefinition {
+        if self.object.kind == ObjectKind::PhysicsGroup {
+            return physics::definition(editor, &self.object);
+        }
         self.timeline.as_ref().map_or_else(
             || definition(self.object.kind),
             |target| target.definition(editor),

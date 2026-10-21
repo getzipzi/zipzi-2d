@@ -15,6 +15,13 @@ use gpui_kit::component::{
     select::{SearchableVec, Select, SelectEvent, SelectItem, SelectState},
 };
 
+#[derive(Clone, Copy)]
+enum FieldLayout {
+    Row,
+    Inline,
+    Cell,
+}
+
 impl SelectItem for Choice {
     type Value = String;
     fn title(&self) -> SharedString {
@@ -590,6 +597,9 @@ impl PropertiesPanel {
             return None;
         }
         self.visible = visible;
+        if !visible {
+            self.physics.visible = false;
+        }
         if visible {
             return None;
         }
@@ -789,7 +799,18 @@ impl PropertiesPanel {
                 .upgrade()
                 .and_then(|owner| {
                     owner.read(cx).editor.document().map(|document| {
-                        spec.choices.expect("Select requires a choices provider")(document)
+                        self.target
+                            .as_ref()
+                            .and_then(|target| {
+                                (properties::provider(target.object.kind).choices)(
+                                    document,
+                                    &target.object,
+                                    id,
+                                )
+                            })
+                            .unwrap_or_else(|| {
+                                spec.choices.expect("Select requires a choices provider")(document)
+                            })
                     })
                 })
                 .unwrap_or_default();
@@ -888,7 +909,10 @@ impl PropertiesPanel {
                     .h(compact::rem(compact::NUMBER_CONTROL))
                     .py(compact::rem(0.))
                     .line_height(compact::rem(14.))
-                    .id(SharedString::from(format!("property-select-{}", id.name())))
+                    .id(SharedString::from(format!(
+                        "property-select-{}",
+                        id.identity()
+                    )))
                     .accessibility_label(t!(self.field_spec(id).label))
                     .disabled(disabled)
                     .when(references, |select| {
@@ -927,6 +951,31 @@ impl PropertiesPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        self.render_field_layout(id, FieldLayout::Row, window, cx)
+    }
+    pub(super) fn render_inline_field(
+        &mut self,
+        id: PropertyKey,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        self.render_field_layout(id, FieldLayout::Inline, window, cx)
+    }
+    pub(super) fn render_field_control(
+        &mut self,
+        id: PropertyKey,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        self.render_field_layout(id, FieldLayout::Cell, window, cx)
+    }
+    fn render_field_layout(
+        &mut self,
+        id: PropertyKey,
+        layout: FieldLayout,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let Some(field) = self.form.fields.get(&id).cloned() else {
             return div().into_any_element();
         };
@@ -950,16 +999,19 @@ impl PropertiesPanel {
             self.render_references(id, disabled, window, cx)
         } else if spec.editor == FieldEditor::Toggle {
             let checked = matches!(field.parsed, Ok(PropertyValue::Bool(true)));
-            Checkbox::new(SharedString::from(format!("property-toggle-{}", id.name())))
-                .xsmall()
-                .checked(checked)
-                .disabled(disabled)
-                .on_click(cx.listener(move |this, checked, window, cx| {
-                    if this.allowed(epoch, window, cx) {
-                        this.set_value(id, PropertyValue::Bool(*checked), cx);
-                    }
-                }))
-                .into_any_element()
+            Checkbox::new(SharedString::from(format!(
+                "property-toggle-{}",
+                id.identity()
+            )))
+            .xsmall()
+            .checked(checked)
+            .disabled(disabled)
+            .on_click(cx.listener(move |this, checked, window, cx| {
+                if this.allowed(epoch, window, cx) {
+                    this.set_value(id, PropertyValue::Bool(*checked), cx);
+                }
+            }))
+            .into_any_element()
         } else if spec.editor == FieldEditor::Select {
             self.render_select(id, disabled, window, cx)
         } else {
@@ -986,12 +1038,16 @@ impl PropertiesPanel {
             if spec.editor == FieldEditor::OptionalNumber {
                 let custom = self.form.numeric_visible(id);
                 body = body.child(
-                    Checkbox::new(SharedString::from(format!("property-custom-{}", id.name())))
-                        .label(t!("properties.custom").into_owned())
-                        .xsmall()
-                        .checked(custom)
-                        .disabled(disabled)
-                        .on_click(cx.listener(move |this, custom: &bool, window, cx| {
+                    Checkbox::new(SharedString::from(format!(
+                        "property-custom-{}",
+                        id.identity()
+                    )))
+                    .label(t!("properties.custom").into_owned())
+                    .xsmall()
+                    .checked(custom)
+                    .disabled(disabled)
+                    .on_click(cx.listener(
+                        move |this, custom: &bool, window, cx| {
                             if this.allowed(epoch, window, cx) {
                                 this.set_value(
                                     id,
@@ -999,7 +1055,8 @@ impl PropertiesPanel {
                                     cx,
                                 );
                             }
-                        })),
+                        },
+                    )),
                 );
             }
             if self.form.numeric_visible(id) {
@@ -1028,7 +1085,10 @@ impl PropertiesPanel {
                 };
                 body = body.child(
                     div()
-                        .id(SharedString::from(format!("property-input-{}", id.name())))
+                        .id(SharedString::from(format!(
+                            "property-input-{}",
+                            id.identity()
+                        )))
                         .test_support()
                         .flex_1()
                         .min_w_0()
@@ -1039,10 +1099,17 @@ impl PropertiesPanel {
             body.into_any_element()
         };
         let label = t!(spec.label).into_owned();
-        compact::property_row(label, body, cx)
-            .id(SharedString::from(format!("object-property-{}", id.name())))
-            .test_support()
-            .into_any_element()
+        let row = match layout {
+            FieldLayout::Row => compact::property_row(label, body, cx),
+            FieldLayout::Inline => compact::inline_property_row(label, body, cx),
+            FieldLayout::Cell => div().min_w_0().w_full().child(body),
+        };
+        row.id(SharedString::from(format!(
+            "object-property-{}",
+            id.identity()
+        )))
+        .test_support()
+        .into_any_element()
     }
 
     pub(super) fn escape(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {

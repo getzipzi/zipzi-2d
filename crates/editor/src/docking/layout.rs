@@ -18,7 +18,7 @@ pub(super) fn layout_version(workspace: WorkspaceKind) -> usize {
     match workspace {
         WorkspaceKind::Modeling => 5,
         // Three columns above a full-width timeline.
-        WorkspaceKind::Animation => 8,
+        WorkspaceKind::Animation => 10,
     }
 }
 
@@ -45,7 +45,7 @@ impl DockWorkspace {
                     spec.available(self.workspace) && spec.default_visible && spec.region == region
                 })
                 .collect();
-            specs.sort_by_key(|spec| (spec.group, animation && spec.kind == PanelKind::Properties));
+            specs.sort_by_key(|spec| (spec.group, animation && spec.kind != PanelKind::Properties));
             for spec in specs {
                 let group = groups
                     .remove(&spec.group)

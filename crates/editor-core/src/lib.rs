@@ -1,5 +1,7 @@
 //! UI-independent editor coordination, SDK-backed document editing and CPU-only previews.
 mod animation;
+mod physics;
+pub use physics::*;
 mod animation_resources;
 mod parameter_layout;
 pub use parameter_layout::{ParameterLayout, ParameterRow};
@@ -16,7 +18,7 @@ pub mod property;
 pub use inspection::*;
 pub use property::{
     PropertyEditToken, PropertyKey, PropertyPatch, PropertyScope, PropertySpec, PropertyType,
-    PropertyValue, PropertyValues, property_specs,
+    PropertyValue, PropertyValues, property_spec, property_specs,
 };
 mod editor;
 mod objects;

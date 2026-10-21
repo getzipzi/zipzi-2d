@@ -650,6 +650,7 @@ impl Editor {
         label: impl Into<String>,
     ) -> Result<TimelineCandidateIdentity> {
         self.ensure_animation_target(document)?;
+        self.set_physics_manual(document, false)?;
         ensure!(
             !self.animation().unwrap().playing,
             "Pause before editing the timeline"

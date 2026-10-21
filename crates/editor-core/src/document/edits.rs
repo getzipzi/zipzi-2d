@@ -156,8 +156,7 @@ impl Document {
         let changed = self.pending_changed();
         if let Some(pending) = self.pending.take() {
             self.invalidate_projection(
-                matches!(pending.kind, Gesture::Rename | Gesture::Properties(_))
-                    || pending.topology_changed,
+                matches!(pending.kind, Gesture::Rename) || pending.topology_changed,
             );
             if changed {
                 let parameter = matches!(&pending.original, PendingOriginal::Properties(object, _, _) if object.kind == crate::ObjectKind::Parameter);
@@ -175,8 +174,7 @@ impl Document {
     pub fn cancel_edit(&mut self) {
         if let Some(pending) = self.pending.take() {
             self.invalidate_projection(
-                matches!(pending.kind, Gesture::Rename | Gesture::Properties(_))
-                    || pending.topology_changed,
+                matches!(pending.kind, Gesture::Rename) || pending.topology_changed,
             );
         }
     }

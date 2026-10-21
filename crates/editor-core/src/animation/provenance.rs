@@ -7,6 +7,7 @@ pub(super) struct FrameSequence {
     requested: Option<AnimationIdentity>,
     floor: u64,
     shown: u64,
+    target_dirty: bool,
 }
 impl FrameSequence {
     pub(super) fn latest(&self) -> Option<AnimationIdentity> {
@@ -17,6 +18,13 @@ impl FrameSequence {
     }
     pub(super) fn record(&mut self, identity: AnimationIdentity) {
         self.requested = Some(identity);
+        self.target_dirty = false;
+    }
+    pub(super) fn target_dirty(&self) -> bool {
+        self.target_dirty
+    }
+    pub(super) fn mark_target_dirty(&mut self) {
+        self.target_dirty = true;
     }
 
     pub(super) fn next(&self) -> u64 {
@@ -54,6 +62,7 @@ pub struct AnimationIdentity {
 
 #[derive(Clone)]
 pub struct AnimationRequest {
+    pub physics: crate::PhysicsPreviewSettings,
     pub identity: AnimationIdentity,
     pub source: Arc<AnimationSource>,
     pub motion: Option<MotionSelection>,
@@ -73,6 +82,7 @@ impl AnimationRequest {
             && Arc::ptr_eq(&self.source, &other.source)
             && self.motion == other.motion
             && self.expressions == other.expressions
+            && self.physics == other.physics
     }
 }
 
@@ -149,7 +159,9 @@ impl Editor {
     ) {
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.frames.shown = identity.request;
-        if animation.preview_mode == AnimationPreviewMode::Result {
+        if animation.preview_mode == AnimationPreviewMode::Result
+            && !animation.physics_preview.manual
+        {
             animation.result_position = animation
                 .motion
                 .as_ref()
@@ -161,7 +173,7 @@ impl Editor {
                 })
                 .cloned();
         }
-        if animation.playing || !animation.head_located {
+        if (animation.playing || !animation.head_located) && !animation.physics_preview.manual {
             animation.edit_time = animation
                 .motion
                 .as_ref()

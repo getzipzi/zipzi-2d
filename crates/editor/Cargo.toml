@@ -6,9 +6,10 @@ license.workspace = true
 
 [features]
 debug-tools = ["dep:gpui-fps"]
-test-support = ["gpui-kit/test-support", "dep:tempfile", "dep:uuid", "image/png"]
+test-support = ["gpui-kit/test-support", "dep:tempfile", "image/png"]
 
 [dependencies]
+uuid.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 gpui-kit.workspace = true
@@ -25,7 +26,6 @@ image = { version = "0.25.10", default-features = false }
 metal.workspace = true
 objc2.workspace = true
 tempfile = { workspace = true, optional = true }
-uuid = { workspace = true, optional = true }
 
 [[bin]]
 name = "kasane-editor"

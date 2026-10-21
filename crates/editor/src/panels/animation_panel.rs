@@ -1,6 +1,7 @@
-//! Playback projections. These controls never edit the authoring document.
+//! Animation resources, physics authoring and presented-frame inspectors.
 pub(crate) mod inspectors;
 pub(crate) use crate::properties::expression_info;
+mod physics_list;
 mod resources;
 use crate::{EditorView, t};
 use gpui_kit::component::{
@@ -49,7 +50,9 @@ impl Panel for AnimationPanel {
     fn inner_padding(&self, _: &App) -> bool {
         !matches!(
             self.kind,
-            PanelKind::AnimationMotions | PanelKind::AnimationExpressions
+            PanelKind::AnimationMotions
+                | PanelKind::AnimationExpressions
+                | PanelKind::AnimationPhysics
         )
     }
 
@@ -65,6 +68,22 @@ impl crate::docking::header::PanelHeader for AnimationPanel {
 
 impl Render for AnimationPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let content = self.render_content(window, cx);
+        div()
+            .size_full()
+            .min_w_0()
+            .min_h_0()
+            .bg(cx.theme().background)
+            .text_color(cx.theme().foreground)
+            .child(content)
+    }
+}
+
+impl AnimationPanel {
+    fn render_content(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        if self.kind == PanelKind::AnimationPhysics {
+            return self.render_physics_list(window, cx);
+        }
         if matches!(
             self.kind,
             PanelKind::AnimationMotions | PanelKind::AnimationExpressions
@@ -92,7 +111,7 @@ impl Render for AnimationPanel {
         match self.kind {
             PanelKind::AnimationExpressions | PanelKind::AnimationMotions => unreachable!(),
             PanelKind::AnimationPhysics => {
-                content = inspectors::physics(content.gap_1(), document, snapshot, cx);
+                unreachable!("physics has a dedicated renderer");
             }
             PanelKind::AnimationPose => {
                 content = inspectors::pose(content.gap_1(), document, snapshot, cx);

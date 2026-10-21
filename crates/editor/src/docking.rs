@@ -324,7 +324,7 @@ mod tests {
         };
         assert!(validate_layout(&state, WorkspaceKind::Modeling).is_ok());
         assert!(validate_layout(&state, WorkspaceKind::Animation).is_err());
-        state.version = Some(8);
+        state.version = Some(super::layout::layout_version(WorkspaceKind::Animation));
         state.center = PanelState::new("AnimationViewport");
         // A deliberately closed Timeline is still a valid new Animation layout.
         assert!(validate_layout(&state, WorkspaceKind::Animation).is_ok());

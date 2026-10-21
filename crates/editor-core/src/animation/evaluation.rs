@@ -18,6 +18,7 @@ pub struct AnimationEvaluator {
     source: Option<Arc<AnimationSource>>,
     editing: Option<kasane_sdk::MotionEditingPreview>,
     completed: Option<(AnimationRequest, AnimationEvaluated)>,
+    physics: crate::PhysicsPreviewSettings,
 }
 impl AnimationEvaluator {
     /// Detached SDK cache accounting for profiling; preview state is unchanged.
@@ -51,16 +52,18 @@ impl AnimationEvaluator {
         progress: impl FnMut(u32, u32) -> bool,
     ) -> Result<AnimationEvaluated> {
         let id = request.identity;
-        if id.preview_mode == AnimationPreviewMode::Editing {
-            if self.identity.is_none_or(|previous| {
-                previous.document != id.document
-                    || previous.model_generation != id.model_generation
-                    || previous.preview_mode != id.preview_mode
-                    || !self
-                        .source
-                        .as_ref()
-                        .is_some_and(|source| source.same_document(&request.source))
-            }) {
+        if id.preview_mode == AnimationPreviewMode::Editing && !request.physics.manual {
+            if self.editing.is_none()
+                || self.identity.is_none_or(|previous| {
+                    previous.document != id.document
+                        || previous.model_generation != id.model_generation
+                        || previous.preview_mode != id.preview_mode
+                        || !self
+                            .source
+                            .as_ref()
+                            .is_some_and(|source| source.same_document(&request.source))
+                })
+            {
                 self.editing = Some(kasane_sdk::MotionEditingPreview::new(
                     request.source.document(),
                 ));
@@ -104,10 +107,26 @@ impl AnimationEvaluator {
                 snapshot,
             });
         }
+        // Runtime/manual evaluation updates the shared source identity. Any
+        // editing cache retained here would no longer have its own provenance.
+        self.editing = None;
         let reusable = self.identity.is_some_and(|previous| {
-            previous.document == id.document
+            self.preview.is_some()
+                && previous.document == id.document
                 && previous.model_generation == id.model_generation
                 && self.motion == request.motion
+                && self.physics.manual == request.physics.manual
+                && self.physics.bypass == request.physics.bypass
+                && self.physics.baseline == request.physics.baseline
+                && self.physics.stabilized == request.physics.stabilized
+                && request.physics.inputs.starts_with(&self.physics.inputs)
+                && request.physics.inputs[self.physics.inputs.len()..]
+                    .iter()
+                    .all(|input| {
+                        self.preview
+                            .as_ref()
+                            .is_some_and(|preview| input.time >= preview.snapshot().time)
+                    })
                 && previous.candidate == id.candidate
                 && previous.preview_mode == id.preview_mode
                 && self
@@ -132,9 +151,14 @@ impl AnimationEvaluator {
                 .as_deref()
                 .unwrap_or_else(|| snapshot.document());
             let mut preview = MotionPreview::new(document);
+            preview.set_physics_enabled(!request.physics.bypass);
+            for (id, value) in &request.physics.baseline {
+                preview.set_base_parameter(id, *value)?;
+            }
+            preview.set_physics_stabilized_start(request.physics.stabilized);
             let version = request.source.snapshot.version();
             preview.bind_session_identity(version.session_id, version.generation);
-            if let Some(motion) = &request.motion {
+            if let Some(motion) = &request.motion.as_ref().filter(|_| !request.physics.manual) {
                 if let Some((group, index)) = &motion.entry {
                     let registered = request
                         .source
@@ -153,23 +177,41 @@ impl AnimationEvaluator {
                     preview.schedule_motion(&motion.clip_id, 0.)?;
                 }
             }
-            preview.replace_expression_schedule_with_transitions(expressions())?;
+            if !request.physics.manual {
+                preview.replace_expression_schedule_with_transitions(expressions())?;
+            }
+            for input in &request.physics.inputs {
+                preview.schedule_parameter_input(&input.parameter, input.time, input.value)?;
+            }
             self.preview = Some(preview);
             self.motion.clone_from(&request.motion);
-        } else if self
-            .identity
-            .is_some_and(|previous| previous.preview_generation != id.preview_generation)
+        } else if !request.physics.manual
+            && self
+                .identity
+                .is_some_and(|previous| previous.preview_generation != id.preview_generation)
         {
             self.preview
                 .as_mut()
                 .unwrap()
                 .replace_expression_schedule_with_transitions(expressions())?;
         }
+        if reusable && request.physics.manual {
+            for input in &request.physics.inputs[self.physics.inputs.len()..] {
+                self.preview.as_mut().unwrap().schedule_parameter_input(
+                    &input.parameter,
+                    input.time,
+                    input.value,
+                )?;
+            }
+        }
+        self.physics = request.physics.clone();
         self.identity = Some(id);
         self.source = Some(request.source.clone());
         let preview = self.preview.as_mut().unwrap();
         preview.advance_to_with_progress(id.time, progress)?;
-        let snapshot = Arc::new(preview.snapshot().clone());
+        let mut snapshot = preview.snapshot().clone();
+        snapshot.physics = preview.physics_snapshot();
+        let snapshot = Arc::new(snapshot);
         let frame = Arc::new(preview.evaluate_drawables()?);
         Ok(AnimationEvaluated {
             identity: AnimationIdentity {

@@ -8,6 +8,7 @@ impl Editor {
         mode: AnimationPreviewMode,
     ) -> Result<()> {
         self.ensure_animation_target(document)?;
+        self.set_physics_manual(document, false)?;
         self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
         let animation = &mut session.animation.playback;
@@ -93,7 +94,7 @@ impl Editor {
             if a.preview_mode == AnimationPreviewMode::Editing && a.motion.is_none() {
                 return false;
             }
-            a.playing
+            (a.playing && !a.physics_preview.manual)
                 || (a.motion.is_none() && a.expression.is_some())
                 || a.motion.as_ref().is_some_and(|selection| {
                     self.document().is_some_and(|d| {
@@ -115,6 +116,7 @@ impl Editor {
         selection: MotionSelection,
     ) -> Result<()> {
         self.ensure_animation_target(document)?;
+        self.set_physics_manual(document, false)?;
         self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
         ensure!(
@@ -138,6 +140,7 @@ impl Editor {
     }
     pub fn select_expression(&mut self, document: DocumentId, expression_id: String) -> Result<()> {
         self.ensure_animation_target(document)?;
+        self.set_physics_manual(document, false)?;
         self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
         let catalog = session.document().animation_catalog();
@@ -213,6 +216,7 @@ impl Editor {
             .active_id()
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
+        self.set_physics_manual(id, false)?;
         self.cancel_timeline_edit();
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.motion = None;
@@ -246,6 +250,7 @@ impl Editor {
         timeline: bool,
     ) -> Result<()> {
         self.ensure_animation_target(document)?;
+        self.set_physics_manual(document, false)?;
         self.timeline_scrub_owner = None;
         self.cancel_timeline_edit();
         ensure!(time.is_finite() && time >= 0., "Invalid animation time");
@@ -310,18 +315,20 @@ impl Editor {
                     session.animation.playback.playing && !session.animation.playback.scrubbing
                 }) {
                     session.animation.playback.time = frame.time;
-                    session.animation.playback.edit_time = session
-                        .animation
-                        .playback
-                        .motion
-                        .as_ref()
-                        .and_then(|motion| {
-                            frame
-                                .motion_positions
-                                .iter()
-                                .find(|position| position.motion_id == motion.clip_id)
-                        })
-                        .map_or(frame.time, |position| position.local_time);
+                    if !session.animation.playback.physics_preview.manual {
+                        session.animation.playback.edit_time = session
+                            .animation
+                            .playback
+                            .motion
+                            .as_ref()
+                            .and_then(|motion| {
+                                frame
+                                    .motion_positions
+                                    .iter()
+                                    .find(|position| position.motion_id == motion.clip_id)
+                            })
+                            .map_or(frame.time, |position| position.local_time);
+                    }
                 }
                 session.animation.playback.pause();
             }
@@ -334,6 +341,11 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
         self.cancel_timeline_edit();
+        // Global transport always controls Animation, including when a manual
+        // physics trial is running on its separate clock.
+        if self.animation().unwrap().physics_preview.manual {
+            self.set_physics_manual(id, false)?;
+        }
         if self.animation().unwrap().playing {
             self.pause_animation();
             return Ok(());
@@ -383,6 +395,9 @@ impl Editor {
             .active_id()
             .ok_or_else(|| anyhow::anyhow!("No active document"))?;
         self.ensure_animation_target(id)?;
+        if self.animation().unwrap().physics_preview.manual {
+            return self.reset_physics_inputs(id);
+        }
         self.cancel_timeline_edit();
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
         animation.locate(0.);
@@ -404,6 +419,10 @@ impl Editor {
                 .and_then(|selection| catalog.motions.iter().find(|r| &r.selection == selection));
             let animation = &mut session.animation.playback;
             if !animation.playing {
+                return;
+            }
+            if animation.physics_preview.manual {
+                animation.time = target.max(animation.time);
                 return;
             }
             if let Some(motion) = motion {
@@ -470,9 +489,11 @@ impl Editor {
             source
         };
         let animation = &mut session.animation.playback;
-        if animation.frames.latest().is_some_and(|previous| {
-            previous.time == animation.time && previous.candidate == animation.candidate
-        }) {
+        if !animation.frames.target_dirty()
+            && animation.frames.latest().is_some_and(|previous| {
+                previous.time == animation.time && previous.candidate == animation.candidate
+            })
+        {
             return None;
         }
         // Monotonic across barriers and recipe changes, including repeated seeks to zero.
@@ -491,6 +512,7 @@ impl Editor {
         };
         animation.frames.record(identity);
         Some(AnimationRequest {
+            physics: animation.physics_preview.clone(),
             identity,
             source,
             motion: animation.motion.clone(),

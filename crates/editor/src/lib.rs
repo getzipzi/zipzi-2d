@@ -237,10 +237,16 @@ impl EditorView {
             if !editing_candidate {
                 App::notify(cx, dock.timeline.entity_id());
             }
-            for kind in [
-                editor_core::PanelKind::AnimationPhysics,
-                editor_core::PanelKind::AnimationPose,
-            ] {
+            if dock.displayed(editor_core::PanelKind::Properties, cx)
+                && self
+                    .editor
+                    .active_inspection()
+                    .and_then(|i| i.object())
+                    .is_some_and(|o| o.kind == editor_core::ObjectKind::PhysicsGroup)
+            {
+                App::notify(cx, dock.properties.entity_id());
+            }
+            for kind in [editor_core::PanelKind::AnimationPose] {
                 if dock.contains(kind, cx) {
                     App::notify(cx, dock.animation_inspectors[&kind].entity_id());
                 }

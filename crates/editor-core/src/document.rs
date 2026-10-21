@@ -147,6 +147,7 @@ pub struct Document {
 }
 
 mod edits;
+mod physics;
 mod projection;
 mod properties;
 mod textures;

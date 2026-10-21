@@ -67,6 +67,8 @@ env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact cargo test --locke
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=compact-popups cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Mesh properties, Part identity and Parameter validation in English and Chinese:
 env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=properties cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
+# Physics group list and compact Properties inspector in English and Chinese:
+env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=physics cargo test --locked -p kasane-editor --features test-support --test headless_screenshot
 # Imported motion edge cases, editing and canvas navigation acceptance (local Mao asset):
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --features test-support --test timeline_acceptance
 # Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:
@@ -82,6 +84,8 @@ KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-ben
 
 ## References
 
+- [Physics field patches](docs/benchmarks/2026-10-20-physics-patches.md): shared SDK storage,
+  generic property editing, and release write-cost measurements.
 - [UI performance](docs/references/ui-performance.md): optional guidance on redraws,
   virtualization, rendering costs, and choosing regression checks. Agents and
   contributors can decide whether to consult it based on the task.
