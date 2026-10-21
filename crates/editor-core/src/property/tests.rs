@@ -102,3 +102,20 @@ fn object_schemas_have_unique_keys_and_paths_in_their_own_namespace() {
         }
     }
 }
+
+#[test]
+fn preview_capability_write_backend_and_effects_are_independent() {
+    let structural = PropertySpec::new(ObjectKind::Mesh, "custom", "custom", PropertyType::Float);
+    let preview = structural.preview();
+    assert!(preview.preview);
+    assert_eq!(preview.write, PropertyWrite::ReplaceObject);
+    assert_eq!(preview.effect, PropertyEffect::Structure);
+
+    let scalar = structural.scalar().affects(PropertyEffect::DrawOrder);
+    assert!(!scalar.preview);
+    assert_eq!(scalar.preview().write, PropertyWrite::ScalarPatch);
+    assert_eq!(scalar.preview().effect, PropertyEffect::DrawOrder);
+    assert_eq!(mesh::NAME.write, PropertyWrite::ReplaceObject);
+    assert_eq!(mesh::NAME.effect, PropertyEffect::Properties);
+    assert!(!mesh::NAME.preview);
+}

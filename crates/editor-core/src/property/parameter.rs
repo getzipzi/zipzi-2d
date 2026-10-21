@@ -1,5 +1,5 @@
 //! Parameter authoring properties. Identity, storage and editing policy live together.
-use super::{PropertySpec, PropertyType};
+use super::{PropertyEffect, PropertySpec, PropertyType};
 use crate::ObjectKind;
 
 pub const NAME: PropertySpec =
@@ -18,6 +18,8 @@ pub const MINIMUM: PropertySpec = PropertySpec::new(
     PropertyType::Float,
 )
 .grouped("range")
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const MAXIMUM: PropertySpec = PropertySpec::new(
     ObjectKind::Parameter,
@@ -26,6 +28,8 @@ pub const MAXIMUM: PropertySpec = PropertySpec::new(
     PropertyType::Float,
 )
 .grouped("range")
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const DEFAULT_VALUE: PropertySpec = PropertySpec::new(
     ObjectKind::Parameter,
@@ -34,6 +38,8 @@ pub const DEFAULT_VALUE: PropertySpec = PropertySpec::new(
     PropertyType::Float,
 )
 .grouped("range")
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const DECIMAL_PLACES: PropertySpec = PropertySpec::new(
     ObjectKind::Parameter,
@@ -42,6 +48,8 @@ pub const DECIMAL_PLACES: PropertySpec = PropertySpec::new(
     PropertyType::Integer,
 )
 .range(0., 9., 1.)
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const REPEAT: PropertySpec = PropertySpec::new(
     ObjectKind::Parameter,

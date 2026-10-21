@@ -16,6 +16,8 @@ impl CanvasScene {
         Self::build(document, source, Some(self))
     }
     fn build(document: &Document, source: SceneSnapshot, previous: Option<&Self>) -> Self {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.canvas_geometry_build");
         let topology = document.canvas_topology();
         let index = topology.index.clone();
         let previous = previous.filter(|previous| previous.topology.same_geometry(&topology));
@@ -180,6 +182,8 @@ impl CanvasScene {
     /// Reuse immutable positions while publishing the new opacity, masks and
     /// render plan for picking. Older presented frames retain their own source.
     pub(crate) fn with_appearance(&self, document: &Document, source: SceneSnapshot) -> Self {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.canvas_geometry_appearance");
         let topology = document.canvas_topology();
         if !self.topology.same_geometry(&topology) {
             return Self::new(document, source);

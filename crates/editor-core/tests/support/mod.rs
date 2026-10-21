@@ -401,8 +401,9 @@ pub fn animation_document() -> anyhow::Result<(Document, TempDir)> {
             fade_in: None,
             fade_out: None,
             extensions: Default::default(),
-        }],
-        events: vec![],
+        }]
+        .into(),
+        events: vec![].into(),
         extensions: Default::default(),
         meta_extensions: Default::default(),
         opaque_source_ids: None,

@@ -97,6 +97,8 @@ impl DocumentSession {
         self.modeling.tools.active
     }
     pub(crate) fn invalidate_scene(&mut self) {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.invalidate_scene");
         self.scene_revision += 1;
         self.cache = None;
         self.previous_geometry = self
@@ -113,7 +115,8 @@ impl DocumentSession {
     }
     pub fn execute(&mut self, command: EditorCommand) -> Result<()> {
         // Reject invalid property writes before releasing any current owner.
-        // The document revalidates immediately before publication as well.
+        // Keep the checked candidate through owner cancellation and publication.
+        let mut prepared_properties = None;
         match &command {
             EditorCommand::ReplacePhysics {
                 asset,
@@ -123,7 +126,10 @@ impl DocumentSession {
                     .validate_physics_edit(asset, *expected_revision)?;
             }
             EditorCommand::SetObjectProperties { object, patch } => {
-                self.document.validate_object_properties(object, patch)?;
+                prepared_properties = Some((
+                    patch.clone(),
+                    self.document.prepare_object_properties(object, patch)?,
+                ));
             }
             EditorCommand::SetObjectProperty {
                 object,
@@ -131,7 +137,8 @@ impl DocumentSession {
                 value,
             } => {
                 let patch = self.document.object_property_patch(object, field, value)?;
-                self.document.validate_object_properties(object, &patch)?;
+                let prepared = self.document.prepare_object_properties(object, &patch)?;
+                prepared_properties = Some((patch, prepared));
             }
             _ => {}
         }
@@ -323,9 +330,20 @@ impl DocumentSession {
                 object,
                 field,
                 value,
-            } => self.document.set_object_property(&object, &field, value),
+            } => {
+                let _ = (field, value);
+                let (patch, prepared) = prepared_properties
+                    .take()
+                    .expect("property candidate prepared");
+                self.document
+                    .set_prepared_properties(&object, &patch, prepared)
+            }
             EditorCommand::SetObjectProperties { object, patch } => {
-                self.document.set_object_properties(&object, &patch)
+                let (_, prepared) = prepared_properties
+                    .take()
+                    .expect("property candidate prepared");
+                self.document
+                    .set_prepared_properties(&object, &patch, prepared)
             }
             EditorCommand::ReplacePhysics {
                 asset,
@@ -390,6 +408,8 @@ impl DocumentSession {
         self.document.save(path)
     }
     pub fn scene(&mut self) -> Result<(SceneSnapshot, Arc<CanvasScene>)> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.scene");
         if self.cache.is_none() {
             let scene = self.document.snapshot()?;
             if self.geometry.is_none() {

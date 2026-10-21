@@ -123,6 +123,8 @@ struct PendingEdit {
     preview: PreviewState,
     changed: OnceLock<bool>,
     topology_changed: bool,
+    draw_groups_changed: bool,
+    property_write: Option<crate::property::PropertyWrite>,
 }
 
 /// The SDK owns all persistent model state and history. Selection is editor state.
@@ -170,6 +172,8 @@ impl Document {
         self.session.version().revision
     }
     pub(crate) fn animation_source(&self) -> crate::AnimationSource {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.animation_source");
         crate::AnimationSource {
             snapshot: Arc::new(self.session.read_snapshot()),
             properties: self

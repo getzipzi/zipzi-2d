@@ -101,6 +101,22 @@ impl PropertyValue {
     }
 }
 
+/// The write implementation is independent of whether a control previews it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum PropertyWrite {
+    ReplaceObject,
+    ScalarPatch,
+}
+
+/// Effects on editor structural projections. Core edits independently own
+/// runtime evaluation invalidation. The default rebuilds editor structure.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum PropertyEffect {
+    Structure,
+    Properties,
+    DrawOrder,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PropertySpec {
     pub key: PropertyKey,
@@ -109,7 +125,8 @@ pub struct PropertySpec {
     group: Option<&'static str>,
     trim_text: bool,
     allow_empty: bool,
-    pub(crate) refresh_draw_groups: bool,
+    pub(crate) write: PropertyWrite,
+    pub(crate) effect: PropertyEffect,
     pub min: f64,
     pub max: f64,
     pub step: f64,
@@ -132,7 +149,8 @@ impl PropertySpec {
             group: None,
             trim_text: false,
             allow_empty: false,
-            refresh_draw_groups: false,
+            write: PropertyWrite::ReplaceObject,
+            effect: PropertyEffect::Structure,
             min: -(f32::MAX as f64),
             max: f32::MAX as f64,
             step: 0.1,
@@ -184,9 +202,12 @@ impl PropertySpec {
         self.allow_empty = true;
         self
     }
-    pub const fn draw_order_preview(mut self) -> Self {
-        self.preview = true;
-        self.refresh_draw_groups = true;
+    pub(crate) const fn scalar(mut self) -> Self {
+        self.write = PropertyWrite::ScalarPatch;
+        self
+    }
+    pub(crate) const fn affects(mut self, effect: PropertyEffect) -> Self {
+        self.effect = effect;
         self
     }
     pub fn same_group(&self, other: &Self) -> bool {
@@ -402,13 +423,38 @@ pub struct PropertyPatch {
 }
 
 impl PropertyPatch {
-    /// Positions, connectivity and hierarchy are unaffected by these mesh edits.
+    pub(crate) fn uses_scalar_patch(&self, kind: ObjectKind) -> bool {
+        // An empty drag update restores the committed descriptor. Keep that
+        // reset on the scalar path without serializing motion curves/geometry.
+        if self.changes.is_empty() {
+            return property_specs(kind)
+                .iter()
+                .any(|s| s.write == PropertyWrite::ScalarPatch);
+        }
+        self.changes.keys().all(|id| {
+            property_spec(*id).is_some_and(|s| {
+                s.key.object_kind() == kind && s.write == PropertyWrite::ScalarPatch
+            })
+        })
+    }
+
+    pub(crate) fn preserves_structure(&self) -> bool {
+        self.changes
+            .keys()
+            .all(|id| property_spec(*id).is_some_and(|s| s.effect != PropertyEffect::Structure))
+    }
+
+    pub(crate) fn affects_draw_groups(&self) -> bool {
+        self.changes
+            .keys()
+            .any(|id| property_spec(*id).is_some_and(|s| s.effect == PropertyEffect::DrawOrder))
+    }
+
     pub(crate) fn mesh_presentation_only(&self, kind: ObjectKind) -> bool {
         kind == ObjectKind::Mesh
-            && self
-                .changes
-                .keys()
-                .all(|key| [mesh::NAME.key, mesh::ENABLED.key, mesh::OPACITY.key].contains(key))
+            && self.changes.keys().all(|key| {
+                property_spec(*key).is_some_and(|s| s.effect == PropertyEffect::Properties)
+            })
     }
 }
 
@@ -422,6 +468,8 @@ pub struct PropertyEditToken {
 }
 
 pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) -> Result<Value> {
+    #[cfg(feature = "bench-instrumentation")]
+    let _benchmark_span = kasane_core::benchmark::span("editor.object_payload");
     use ObjectKind as K;
     macro_rules! get {
         ($method:ident) => {
@@ -476,6 +524,29 @@ pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) 
     })
 }
 
+/// Inspector reads need descriptors, not geometry, motion curves or expression entries.
+pub(crate) fn inspector_payload(
+    model: &kasane_core::Document,
+    object: &ObjectRef,
+) -> Result<Value> {
+    Ok(match object.kind {
+        ObjectKind::Mesh => mesh::inspector_payload(model, &object.id, &PropertyScope::Object)?,
+        ObjectKind::Motion => {
+            let c = model
+                .get_motion(&object.id)
+                .ok_or_else(|| anyhow::anyhow!("Motion no longer exists"))?;
+            serde_json::json!({"name":c.name,"duration":c.duration,"fps":c.fps,"looping":c.looping,"fade_in":c.fade_in,"fade_out":c.fade_out})
+        }
+        ObjectKind::Expression => {
+            let e = model
+                .get_expression(&object.id)
+                .ok_or_else(|| anyhow::anyhow!("Expression no longer exists"))?;
+            serde_json::json!({"name":e.name,"fade_in":e.fade_in,"fade_out":e.fade_out})
+        }
+        _ => object_payload(model, object)?,
+    })
+}
+
 pub(crate) fn values_from(
     model: &kasane_core::Document,
     object: &ObjectRef,
@@ -483,7 +554,7 @@ pub(crate) fn values_from(
     if object.kind == ObjectKind::PhysicsGroup {
         return physics::values(model, object);
     }
-    let payload = object_payload(model, object)?;
+    let payload = inspector_payload(model, object)?;
     property_specs(object.kind)
         .iter()
         .map(|spec| Ok((spec.key, spec.read(&payload)?)))

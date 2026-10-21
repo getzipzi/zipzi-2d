@@ -1,5 +1,5 @@
 //! Document authoring properties. Identity, storage and editing policy live together.
-use super::{PropertySpec, PropertyType};
+use super::{PropertyEffect, PropertySpec, PropertyType};
 use crate::ObjectKind;
 
 pub const PIXELS_PER_UNIT: PropertySpec = PropertySpec::new(
@@ -23,6 +23,8 @@ pub const PADDING_PIXELS: PropertySpec = PropertySpec::new(
     PropertyType::Float,
 )
 .range(0., f32::MAX as f64, 1.)
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const MINIMUM_EXTENT: PropertySpec = PropertySpec::new(
     ObjectKind::Document,
@@ -31,6 +33,8 @@ pub const MINIMUM_EXTENT: PropertySpec = PropertySpec::new(
     PropertyType::Float,
 )
 .range(0., f32::MAX as f64, 1.)
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 
 pub const FIELDS: &[PropertySpec] = &[

@@ -11,6 +11,7 @@ pub const NAME: PropertySpec =
 pub const FPS: PropertySpec =
     PropertySpec::new(ObjectKind::PhysicsGroup, "fps", "fps", PropertyType::Float)
         .range(0.0, 240.0, 1.0)
+        .affects(PropertyEffect::Properties)
         .preview();
 pub const INPUT_WEIGHT: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -20,6 +21,7 @@ pub const INPUT_WEIGHT: PropertySpec = PropertySpec::new(
 )
 .range(0.0, 100.0, 0.1)
 .indexed()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const OUTPUT_WEIGHT: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -29,6 +31,7 @@ pub const OUTPUT_WEIGHT: PropertySpec = PropertySpec::new(
 )
 .range(0.0, 100.0, 0.1)
 .indexed()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const OUTPUT_SCALE: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -38,6 +41,7 @@ pub const OUTPUT_SCALE: PropertySpec = PropertySpec::new(
 )
 .range(-10000.0, 10000.0, 0.1)
 .indexed()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const RADIUS: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -47,6 +51,7 @@ pub const RADIUS: PropertySpec = PropertySpec::new(
 )
 .range(0.0, 10000.0, 0.1)
 .indexed()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const MOBILITY: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -56,6 +61,7 @@ pub const MOBILITY: PropertySpec = PropertySpec::new(
 )
 .range(0.0, 1.0, 0.01)
 .indexed()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const DELAY: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -65,6 +71,7 @@ pub const DELAY: PropertySpec = PropertySpec::new(
 )
 .range(0.0, 10000.0, 0.01)
 .indexed()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const ACCELERATION: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -74,6 +81,7 @@ pub const ACCELERATION: PropertySpec = PropertySpec::new(
 )
 .range(0.0, 10000.0, 0.01)
 .indexed()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const INPUT_PARAMETER: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -132,6 +140,7 @@ pub const POSITION_MINIMUM: PropertySpec = PropertySpec::new(
 )
 .range(-10000.0, 10000.0, 0.1)
 .grouped("position")
+.affects(PropertyEffect::Properties)
 .preview();
 pub const POSITION_DEFAULT: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -141,6 +150,7 @@ pub const POSITION_DEFAULT: PropertySpec = PropertySpec::new(
 )
 .range(-10000.0, 10000.0, 0.1)
 .grouped("position")
+.affects(PropertyEffect::Properties)
 .preview();
 pub const POSITION_MAXIMUM: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -150,6 +160,7 @@ pub const POSITION_MAXIMUM: PropertySpec = PropertySpec::new(
 )
 .range(-10000.0, 10000.0, 0.1)
 .grouped("position")
+.affects(PropertyEffect::Properties)
 .preview();
 pub const ANGLE_MINIMUM: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -159,6 +170,7 @@ pub const ANGLE_MINIMUM: PropertySpec = PropertySpec::new(
 )
 .range(-10000.0, 10000.0, 0.1)
 .grouped("angle")
+.affects(PropertyEffect::Properties)
 .preview();
 pub const ANGLE_DEFAULT: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -168,6 +180,7 @@ pub const ANGLE_DEFAULT: PropertySpec = PropertySpec::new(
 )
 .range(-10000.0, 10000.0, 0.1)
 .grouped("angle")
+.affects(PropertyEffect::Properties)
 .preview();
 pub const ANGLE_MAXIMUM: PropertySpec = PropertySpec::new(
     ObjectKind::PhysicsGroup,
@@ -177,6 +190,7 @@ pub const ANGLE_MAXIMUM: PropertySpec = PropertySpec::new(
 )
 .range(-10000.0, 10000.0, 0.1)
 .grouped("angle")
+.affects(PropertyEffect::Properties)
 .preview();
 pub const FIELDS: &[PropertySpec] = &[
     NAME,

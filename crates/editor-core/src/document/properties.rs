@@ -27,6 +27,8 @@ impl PropertyPayload {
 impl Document {
     /// Committed values remain stable while an inspector candidate is displayed.
     pub fn property_values(&self, object: &ObjectRef) -> Result<PropertyValues> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.property_values");
         Self::property_values_in(
             self.session.document(),
             object,
@@ -139,11 +141,7 @@ impl Document {
         })
     }
 
-    fn checked_payload(
-        &self,
-        object: &ObjectRef,
-        patch: &PropertyPatch,
-    ) -> Result<PropertyPayload> {
+    fn validate_property_baseline(&self, object: &ObjectRef, patch: &PropertyPatch) -> Result<()> {
         self.ensure_editable(std::slice::from_ref(object))?;
         let specs = crate::property_specs(object.kind);
         let current = self.property_values(object)?;
@@ -179,6 +177,18 @@ impl Document {
                 "Missing property baseline"
             );
         }
+        Ok(())
+    }
+
+    fn checked_payload(
+        &self,
+        object: &ObjectRef,
+        patch: &PropertyPatch,
+    ) -> Result<PropertyPayload> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.checked_payload");
+        self.validate_property_baseline(object, patch)?;
+        let specs = crate::property_specs(object.kind);
         if object.kind == ObjectKind::PhysicsGroup {
             return crate::property::physics::patch(
                 self.session.document(),
@@ -188,7 +198,7 @@ impl Document {
             .map(PropertyPayload::Physics);
         }
         let mut payload = if object.kind == ObjectKind::Mesh {
-            if patch.mesh_presentation_only(object.kind) {
+            if patch.mesh_presentation_only(object.kind) || patch.uses_scalar_patch(object.kind) {
                 crate::property::mesh::inspector_payload(
                     self.session.document(),
                     &object.id,
@@ -197,6 +207,8 @@ impl Document {
             } else {
                 crate::property::mesh::payload(self.session.document(), &object.id, &patch.scope)?
             }
+        } else if patch.uses_scalar_patch(object.kind) {
+            crate::property::inspector_payload(self.session.document(), object)?
         } else {
             crate::property::object_payload(self.session.document(), object)?
         };
@@ -217,10 +229,15 @@ impl Document {
         patch: &PropertyPatch,
         payload: PropertyPayload,
     ) -> Result<()> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.apply_properties");
         if let PropertyPayload::Physics(patch) = payload {
             return Ok(edit.patch_physics(&patch)?);
         }
         let payload = payload.json()?;
+        if patch.uses_scalar_patch(object.kind) {
+            return Ok(edit.patch_property(&self.scalar_patch(object, patch, &payload)?)?);
+        }
         if object.kind != ObjectKind::Mesh {
             return replace(edit, object.kind, payload);
         }
@@ -235,6 +252,7 @@ impl Document {
             next.name = serde_json::from_value(payload["name"].clone())?;
             next.enabled = serde_json::from_value(payload["enabled"].clone())?;
             next.appearance = serde_json::from_value(payload["appearance"].clone())?;
+            next.draw_order = serde_json::from_value(payload["draw_order"].clone())?;
             next
         } else {
             serde_json::from_value(payload.clone())?
@@ -283,6 +301,64 @@ impl Document {
         Ok(())
     }
 
+    fn scalar_patch(
+        &self,
+        object: &ObjectRef,
+        patch: &PropertyPatch,
+        payload: &serde_json::Value,
+    ) -> Result<kasane_core::document::PropertyPatch> {
+        use kasane_core::document::PropertyPatch as P;
+        let id = object.id.clone();
+        fn read<T: serde::de::DeserializeOwned>(p: &serde_json::Value, key: &str) -> Result<T> {
+            Ok(serde_json::from_value(p[key].clone())?)
+        }
+        Ok(match object.kind {
+            ObjectKind::Mesh => P::Mesh {
+                id,
+                keyform: crate::property::mesh::keyform(
+                    self.session.document(),
+                    &object.id,
+                    &patch.scope,
+                )?
+                .map(|(binding, form)| (binding.to_owned(), form.keys.clone())),
+                appearance: read(payload, "appearance")?,
+                draw_order: read(payload, "draw_order")?,
+            },
+            ObjectKind::Parameter => P::Parameter {
+                id,
+                minimum: read(payload, "minimum")?,
+                maximum: read(payload, "maximum")?,
+                default_value: read(payload, "default_value")?,
+                decimal_places: read(payload, "decimal_places")?,
+            },
+            ObjectKind::Part => P::Part {
+                id,
+                draw_order: read(payload, "draw_order")?,
+            },
+            ObjectKind::Glue => P::Glue {
+                id,
+                intensity: read(payload, "intensity")?,
+            },
+            ObjectKind::Motion => P::Motion {
+                id,
+                duration: read(payload, "duration")?,
+                fps: read(payload, "fps")?,
+                fade_in: read(payload, "fade_in")?,
+                fade_out: read(payload, "fade_out")?,
+            },
+            ObjectKind::Expression => P::Expression {
+                id,
+                fade_in: read(payload, "fade_in")?,
+                fade_out: read(payload, "fade_out")?,
+            },
+            ObjectKind::Document => P::Export {
+                padding_pixels: read(&payload["export_settings"], "padding_pixels")?,
+                minimum_extent: read(&payload["export_settings"], "minimum_extent")?,
+            },
+            _ => bail!("This property does not support scalar patches"),
+        })
+    }
+
     fn parameter_from_payload(
         &self,
         object: &ObjectRef,
@@ -300,7 +376,6 @@ impl Document {
         draft.repeat = p.repeat;
         draft.kind = p.kind;
         draft.group_id = (!group.is_empty()).then_some(group);
-        self.validate_parameter_update(&object.id, &draft)?;
         Ok(draft)
     }
 
@@ -320,22 +395,41 @@ impl Document {
         object: &ObjectRef,
         patch: &PropertyPatch,
     ) -> Result<()> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.validate_properties");
+        if object.kind == ObjectKind::PhysicsGroup {
+            let PropertyPayload::Physics(patch) = self.checked_payload(object, patch)? else {
+                unreachable!()
+            };
+            let status = self.session.document().validate_physics_patch(&patch);
+            ensure!(status.is_ok(), "{}: {}", status.code, status.message);
+            return Ok(());
+        }
+        self.prepare_object_properties(object, patch).map(|_| ())
+    }
+
+    pub(crate) fn prepare_object_properties(
+        &self,
+        object: &ObjectRef,
+        patch: &PropertyPatch,
+    ) -> Result<Option<EditSession<'static>>> {
         let payload = self.checked_payload(object, patch)?;
         if object.kind == ObjectKind::Parameter {
-            self.parameter_from_payload(object, payload.json()?)?;
-        } else if object.kind == ObjectKind::ParameterGroup {
+            let draft = self.parameter_from_payload(object, payload.json()?)?;
+            return self.prepare_parameter_update(&object.id, &draft).map(Some);
+        }
+        if object.kind == ObjectKind::ParameterGroup {
             self.validate_parameter_group(
                 Some(&object.id),
                 &self.parameter_group_from_payload(&object.id, payload.json_ref()?)?,
             )?;
-        } else if let PropertyPayload::Physics(patch) = payload {
-            let status = self.session.document().validate_physics_patch(&patch);
-            ensure!(status.is_ok(), "{}: {}", status.code, status.message);
-        } else {
-            let mut edit = self.session.begin_owned_edit("Validate properties", None)?;
-            self.apply_properties(&mut edit, object, patch, payload)?;
+            return Ok(None);
         }
-        Ok(())
+        let mut edit = self
+            .session
+            .begin_owned_edit("Edit object properties", None)?;
+        self.apply_properties(&mut edit, object, patch, payload)?;
+        Ok(Some(edit))
     }
 
     pub fn set_object_properties(
@@ -343,8 +437,18 @@ impl Document {
         object: &ObjectRef,
         patch: &PropertyPatch,
     ) -> Result<()> {
-        // Validate before ending another edit: a rejected patch has no side effects.
-        self.validate_object_properties(object, patch)?;
+        let prepared = self.prepare_object_properties(object, patch)?;
+        self.set_prepared_properties(object, patch, prepared)
+    }
+
+    pub(crate) fn set_prepared_properties(
+        &mut self,
+        object: &ObjectRef,
+        patch: &PropertyPatch,
+        prepared: Option<EditSession<'static>>,
+    ) -> Result<()> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.set_properties");
         if patch
             .changes
             .iter()
@@ -353,19 +457,28 @@ impl Document {
             return Ok(());
         }
         self.finish_edit()?;
-        let payload = self.checked_payload(object, patch)?;
-        if object.kind == ObjectKind::Parameter {
-            let draft = self.parameter_from_payload(object, payload.json()?)?;
-            return self.update_parameter(&object.id, draft, self.parameter_model_revision());
-        }
-        if object.kind == ObjectKind::ParameterGroup {
+        // Ending another owner may change the keyform scope or field baseline
+        // without advancing the SDK version (for example, preview navigation).
+        self.validate_property_baseline(object, patch)?;
+        let prepared = if prepared
+            .as_ref()
+            .is_some_and(|edit| edit.base_version() != self.session.version())
+        {
+            self.prepare_object_properties(object, patch)?
+        } else {
+            prepared
+        };
+        let Some(edit) = prepared else {
+            let payload = self.checked_payload(object, patch)?;
             let draft = self.parameter_group_from_payload(&object.id, payload.json_ref()?)?;
             return self.update_parameter_group(&object.id, draft, self.parameter_model_revision());
-        }
-        let mut edit = self
-            .session
-            .begin_owned_edit("Edit object properties", None)?;
-        self.apply_properties(&mut edit, object, patch, payload)?;
+        };
+        let preserves_structure = patch.preserves_structure()
+            && (object.kind != ObjectKind::Parameter || {
+                let old = self.session.document().get_parameter(&object.id).unwrap();
+                let next = edit.candidate_document().get_parameter(&object.id).unwrap();
+                old.name == next.name && old.runtime_id == next.runtime_id
+            });
         let previous_revision = self.projection_revision;
         let receipt = edit.commit_to(&mut self.session)?;
         self.session.drain_events();
@@ -373,28 +486,69 @@ impl Document {
             self.pristine_blank = false;
             let presentation_only = patch.mesh_presentation_only(object.kind);
             use crate::property::mesh;
-            self.invalidate_projection(!presentation_only);
-            if presentation_only {
-                if patch.changes.contains_key(&mesh::NAME.key) {
-                    if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
-                        let name = &self.session.document().get_mesh(&object.id).unwrap().name;
-                        Arc::make_mut(topology).rename(object, name);
-                    }
+            self.invalidate_projection(!preserves_structure);
+            if object.kind == ObjectKind::Mesh && patch.changes.contains_key(&mesh::NAME.key) {
+                if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
+                    let name = &self.session.document().get_mesh(&object.id).unwrap().name;
+                    Arc::make_mut(topology).rename(object, name);
                 }
+            }
+            if presentation_only {
                 let mut cache = self.object_index.lock().unwrap();
                 if let Some((revision, index)) = cache.as_mut() {
-                    if *revision == previous_revision
-                        && Arc::make_mut(index)
-                            .refresh_mesh_presentation(self.session.document(), object)
+                    if *revision == previous_revision && {
+                        #[cfg(feature = "bench-instrumentation")]
+                        let _benchmark_cow =
+                            kasane_core::benchmark::span(if Arc::strong_count(index) > 1 {
+                                "editor.object_index_cow_clone"
+                            } else {
+                                "editor.object_index_unique"
+                            });
+                        Arc::make_mut(index)
+                    }
+                    .refresh_mesh_presentation(self.session.document(), object)
                     {
                         *revision = self.projection_revision;
                     }
                 }
             }
+            if preserves_structure && !presentation_only {
+                self.refresh_property_index(previous_revision, object, patch.affects_draw_groups());
+            }
+            if object.kind == ObjectKind::Parameter {
+                self.reconcile_parameter_preview()?;
+            }
             let index = self.object_index();
             self.context.reconcile(&index);
         }
         Ok(())
+    }
+
+    pub(super) fn refresh_property_index(
+        &self,
+        previous_revision: u64,
+        object: &ObjectRef,
+        draw_groups_changed: bool,
+    ) {
+        let mut cache = self.object_index.lock().unwrap();
+        if let Some((revision, index)) = cache.as_mut() {
+            if *revision == previous_revision && {
+                #[cfg(feature = "bench-instrumentation")]
+                let _benchmark_cow =
+                    kasane_core::benchmark::span(if Arc::strong_count(index) > 1 {
+                        "editor.object_index_cow_clone"
+                    } else {
+                        "editor.object_index_unique"
+                    });
+                Arc::make_mut(index).refresh_property_preview(
+                    self.model(),
+                    object,
+                    draw_groups_changed,
+                )
+            } {
+                *revision = self.projection_revision;
+            }
+        }
     }
 
     pub(crate) fn property_edit_serial(&self) -> Option<u64> {
@@ -437,6 +591,8 @@ impl Document {
         object: &ObjectRef,
         patch: &PropertyPatch,
     ) -> Result<u64> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.begin_property_candidate");
         self.validate_property_preview(object, patch)?;
         self.finish_edit()?;
         let original = Self::property_values_in(self.session.document(), object, &patch.scope)?;
@@ -450,7 +606,14 @@ impl Document {
                 .begin_owned_edit("Edit object property", None)?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
-            topology_changed: object.kind != ObjectKind::PhysicsGroup,
+            topology_changed: !patch.preserves_structure(),
+            draw_groups_changed: patch.affects_draw_groups(),
+            property_write: patch
+                .changes
+                .keys()
+                .next()
+                .and_then(|key| crate::property_spec(*key))
+                .map(|s| s.write),
         });
         Ok(serial)
     }
@@ -461,6 +624,8 @@ impl Document {
         serial: u64,
         patch: &PropertyPatch,
     ) -> Result<()> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.update_property_candidate");
         ensure!(
             self.property_edit_matches(serial, object),
             "Property edit ended"
@@ -488,55 +653,66 @@ impl Document {
             let previous = self.projection_revision;
             self.projection_revision += 1;
             if let Some((revision, index)) = self.object_index.get_mut().unwrap() {
-                if *revision == previous
-                    && Arc::make_mut(index).refresh_property_preview(
-                        pending.edit.candidate_document(),
-                        object,
-                        false,
-                    )
-                {
+                if *revision == previous && {
+                    #[cfg(feature = "bench-instrumentation")]
+                    let _benchmark_cow =
+                        kasane_core::benchmark::span(if Arc::strong_count(index) > 1 {
+                            "editor.object_index_cow_clone"
+                        } else {
+                            "editor.object_index_unique"
+                        });
+                    Arc::make_mut(index)
+                }
+                .refresh_property_preview(
+                    pending.edit.candidate_document(),
+                    object,
+                    false,
+                ) {
                     *revision = self.projection_revision;
                 }
             }
             return Ok(());
         }
-        // Each update starts from committed data; rejected candidates never damage
-        // the last good preview or become the basis of the next update.
-        let mut edit = self
-            .session
-            .begin_owned_edit("Edit object property", None)?;
-        self.apply_properties(&mut edit, object, patch, payload)?;
-        let keyform_order = |model: &kasane_core::Document| {
-            crate::property::mesh::keyform(model, &object.id, &patch.scope)
-                .map(|form| form.map(|(_, form)| form.draw_order))
-        };
-        let keyform_order_changed = keyform_order(edit.candidate_document())?
-            != keyform_order(self.pending.as_ref().unwrap().edit.candidate_document())?;
-        let mut preview = PreviewState::default();
-        preview
-            .replace(
-                edit.candidate_document(),
-                0,
-                self.session.preview_values().clone(),
-            )
-            .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
+        let keyform_order_changed =
+            self.pending.as_ref().unwrap().draw_groups_changed || patch.affects_draw_groups();
         let previous_revision = self.projection_revision;
-        let pending = self.pending.as_mut().unwrap();
-        pending.edit = edit;
-        pending.preview = preview;
-        pending.changed.take();
-        // Scalar candidates do not change canvas topology or relation edges.
-        self.projection_revision += 1;
-        if let Some((revision, index)) = self.object_index.get_mut().unwrap() {
-            if *revision == previous_revision
-                && Arc::make_mut(index).refresh_property_preview(
-                    pending.edit.candidate_document(),
-                    object,
-                    keyform_order_changed,
+        if self.pending.as_ref().unwrap().property_write
+            == Some(crate::property::PropertyWrite::ScalarPatch)
+        {
+            let scalar = self.scalar_patch(object, patch, payload.json_ref()?)?;
+            let pending = self.pending.as_mut().unwrap();
+            pending.edit.preview_property(
+                &scalar,
+                &mut pending.preview,
+                self.session.preview_values().clone(),
+            )?;
+        } else {
+            // Preview capability does not require a scalar backend. Full object
+            // writes retain isolated replacement and atomic preview validation.
+            let mut edit = self
+                .session
+                .begin_owned_edit("Edit object property", None)?;
+            self.apply_properties(&mut edit, object, patch, payload)?;
+            let mut preview = PreviewState::default();
+            preview
+                .replace(
+                    edit.candidate_document(),
+                    0,
+                    self.session.preview_values().clone(),
                 )
-            {
-                *revision = self.projection_revision;
-            }
+                .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
+            let pending = self.pending.as_mut().unwrap();
+            pending.edit = edit;
+            pending.preview = preview;
+        }
+        let pending = self.pending.as_mut().unwrap();
+        pending.changed.take();
+        pending.draw_groups_changed |= keyform_order_changed;
+        pending.topology_changed |= !patch.preserves_structure();
+        let structure_changed = pending.topology_changed;
+        self.invalidate_projection(structure_changed);
+        if !structure_changed {
+            self.refresh_property_index(previous_revision, object, keyform_order_changed);
         }
         Ok(())
     }
@@ -580,13 +756,22 @@ mod tests {
         use crate::property::physics as schema;
         let mut doc = Document::new_blank()?;
         let asset_id = uuid::Uuid::new_v4().to_string();
-        let asset: kasane_core::document::PhysicsAsset = serde_json::from_value(
+        let mut asset: kasane_core::document::PhysicsAsset = serde_json::from_value(
             serde_json::json!({
             "id":asset_id,"opaque_source_ids":null,"parameter_bindings":{},"data":{
                 "Version":3,"Meta":{"PhysicsSettingCount":1,"TotalInputCount":0,"TotalOutputCount":0,"VertexCount":2,"Fps":30,"EffectiveForces":{"Gravity":{"X":0,"Y":-1},"Wind":{"X":0,"Y":0}},"PhysicsDictionary":[{"Id":"Rig","Name":"Rig"}]},
                 "PhysicsSettings":[{"Id":"Rig","Input":[],"Output":[],"Vertices":[{"Position":{"X":0,"Y":0},"Mobility":1,"Delay":1,"Acceleration":1,"Radius":0},{"Position":{"X":0,"Y":1},"Mobility":0.95,"Delay":0.8,"Acceleration":1,"Radius":1}],"Normalization":{"Position":{"Minimum":-1,"Default":0,"Maximum":1},"Angle":{"Minimum":-1,"Default":0,"Maximum":1}}}]
             }}),
         )?;
+        let mut other = (*asset.data.settings[0]).clone();
+        other.id = "Other".into();
+        asset.data.settings.push(Arc::new(other));
+        let mut entry = asset.data.meta.dictionary[0].clone();
+        entry.id = "Other".into();
+        entry.name = "Other".into();
+        asset.data.meta.dictionary.push(entry);
+        asset.data.meta.setting_count = 2;
+        asset.data.meta.vertex_count = 4;
         doc.session
             .edit("Fixture", None, |edit| edit.set_physics(asset))?;
         doc.invalidate_projection(true);
@@ -609,6 +794,13 @@ mod tests {
             assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
             assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
             assert_eq!(snapshot.get(&object).unwrap().properties, old);
+            for info in snapshot
+                .objects
+                .iter()
+                .filter(|info| info.reference != object)
+            {
+                assert!(std::ptr::eq(info, index.get(&info.reference).unwrap()));
+            }
             let rebuilt = crate::ObjectIndex::build(doc.model());
             assert_eq!(
                 index.get(&object).unwrap().properties,
@@ -618,6 +810,38 @@ mod tests {
         }
         doc.cancel_edit();
         assert_eq!(doc.property_values(&object)?, initial);
+        assert_eq!(doc.object_index().get(&object).unwrap().properties, old);
+        assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+        for finish in [false, true] {
+            let patch = doc.object_property_patch(&object, "fps", &serde_json::json!(60.))?;
+            let serial = doc.begin_property_edit(&object, &patch)?;
+            doc.update_property_edit(&object, serial, &patch)?;
+            let other = ObjectRef::new(ObjectKind::PhysicsGroup, format!("{asset_id}/Other"));
+            assert_eq!(
+                doc.object_index().get(&other).unwrap().properties["fps"],
+                60.
+            );
+            if finish {
+                doc.finish_edit()?;
+            } else {
+                doc.cancel_edit();
+            }
+            let index = doc.object_index();
+            let rebuilt = crate::ObjectIndex::build(doc.model());
+            for target in [
+                &object,
+                &other,
+                &ObjectRef::new(ObjectKind::Physics, &asset_id),
+            ] {
+                assert_eq!(
+                    index.get(target).unwrap().properties,
+                    rebuilt.get(target).unwrap().properties
+                );
+            }
+            assert_eq!(snapshot.get(&object).unwrap().properties, old);
+            assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
+        }
         Ok(())
     }
 
@@ -660,6 +884,15 @@ mod tests {
             let index = doc.object_index();
             assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
             assert_eq!(old.get(&object).unwrap().properties, old_payload);
+            // Only the edited record detaches; large descriptor payloads,
+            // relation records, bindings and lookup paths stay shared.
+            for info in old.objects.iter().filter(|info| info.reference != object) {
+                assert!(std::ptr::eq(info, index.get(&info.reference).unwrap()));
+            }
+            assert_eq!(old.bindings.as_ptr(), index.bindings.as_ptr());
+            for (before, after) in old.relations.iter().zip(&index.relations) {
+                assert!(std::ptr::eq(before, after));
+            }
             let rebuilt = crate::ObjectIndex::build(doc.model());
             let actual = index.get(&object).unwrap();
             let expected = rebuilt.get(&object).unwrap();
@@ -687,6 +920,53 @@ mod tests {
                 committed
             );
         }
+        // A mixed presentation/order submission takes the generic refresh path.
+        let old_index = doc.object_index();
+        let old_topology = doc.canvas_topology();
+        let old = old_index.get(&object).unwrap();
+        let old_payload = old.properties.clone();
+        let patch = PropertyPatch {
+            scope: PropertyScope::Object,
+            expected: doc.property_values(&object)?,
+            changes: [
+                (
+                    crate::property::mesh::NAME.key,
+                    crate::PropertyValue::Text("Mixed update".into()),
+                ),
+                (
+                    crate::property::mesh::ENABLED.key,
+                    crate::PropertyValue::Bool(true),
+                ),
+                (
+                    crate::property::mesh::DRAW_ORDER.key,
+                    crate::PropertyValue::OptionalFloat(Some(42.)),
+                ),
+            ]
+            .into(),
+        };
+        doc.set_object_properties(&object, &patch)?;
+        let rebuilt = crate::ObjectIndex::build(doc.model());
+        let index = doc.object_index();
+        let actual = index.get(&object).unwrap();
+        let expected = rebuilt.get(&object).unwrap();
+        assert_eq!(actual.name, expected.name);
+        assert_eq!(actual.enabled, expected.enabled);
+        assert_eq!(actual.properties, expected.properties);
+        assert_eq!(index.draw_groups, rebuilt.draw_groups);
+        assert_eq!(doc.canvas_topology().index.name(&object), "Mixed update");
+        assert_eq!(old_index.get(&object).unwrap().properties, old_payload);
+        assert_eq!(old_topology.index.name(&object), old.name);
+        doc.undo()?;
+        assert_eq!(
+            doc.object_index().get(&object).unwrap().properties,
+            old_payload
+        );
+        doc.redo()?;
+        assert_eq!(
+            doc.object_index().get(&object).unwrap().properties,
+            expected.properties
+        );
+        assert_eq!(doc.canvas_topology().index.name(&object), "Mixed update");
         Ok(())
     }
 
@@ -751,10 +1031,20 @@ mod tests {
                 doc.object_index().get(&object).unwrap().properties,
                 old_payload
             );
+            assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
             let patch = doc.object_property_patch(&object, spec.path, &serde_json::json!(0.5))?;
             let serial = doc.begin_property_edit(&object, &patch)?;
             doc.update_property_edit(&object, serial, &patch)?;
             doc.finish_edit()?;
+            let rebuilt = crate::ObjectIndex::build(doc.model());
+            assert_eq!(
+                doc.object_index().get(&object).unwrap().properties,
+                rebuilt.get(&object).unwrap().properties
+            );
+            assert_eq!(doc.object_index().draw_groups, rebuilt.draw_groups);
+            assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
             assert_eq!(
                 doc.property_values(&object)?[&field],
                 PropertyValue::Float(0.5)

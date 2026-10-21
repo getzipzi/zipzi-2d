@@ -125,6 +125,23 @@ def analyze(records, budget_ms=1000 / 120):
             "preview_outcomes":dict(collections.Counter(r["outcome"] for r in preview)),
             "metrics_ms":metrics,
         }
+        chain_names = {
+            stage for tick in ticks for stage, record in groups[tick["id"]].items()
+            if stage.startswith(("editor.", "core.", "sdk.")) and "calls" in record["fields"]
+        }
+        if chain_names:
+            result["cases"][name]["chain_stages"] = {
+                "measurement":"instrumented UI-thread synchronous wall time; background workers excluded",
+                "stages":{},
+            }
+            for stage in sorted(chain_names):
+                values = [groups[tick["id"]].get(stage, {}).get("fields", {}) for tick in ticks]
+                result["cases"][name]["chain_stages"]["stages"][stage] = {
+                    "calls":sum(value.get("calls", 0) for value in values),
+                    "inputs_with_calls":sum(value.get("calls", 0) > 0 for value in values),
+                    "self_ms":frame.quantiles([value.get("self_ns", 0)/1e6 for value in values]),
+                    "inclusive_ms":frame.quantiles([value.get("inclusive_ns", 0)/1e6 for value in values]),
+                }
     return rows, result
 
 

@@ -1,5 +1,5 @@
 //! Expression authoring properties. Identity, storage and editing policy live together.
-use super::{PropertySpec, PropertyType};
+use super::{PropertyEffect, PropertySpec, PropertyType};
 use crate::ObjectKind;
 
 pub const NAME: PropertySpec =
@@ -11,6 +11,8 @@ pub const FADE_IN: PropertySpec = PropertySpec::new(
     PropertyType::OptionalFloat,
 )
 .range(0., f32::MAX as f64, 0.1)
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const FADE_OUT: PropertySpec = PropertySpec::new(
     ObjectKind::Expression,
@@ -19,6 +21,8 @@ pub const FADE_OUT: PropertySpec = PropertySpec::new(
     PropertyType::OptionalFloat,
 )
 .range(0., f32::MAX as f64, 0.1)
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 
 pub const FIELDS: &[PropertySpec] = &[NAME, FADE_IN, FADE_OUT];

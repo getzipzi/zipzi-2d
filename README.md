@@ -77,6 +77,8 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --features te
 ./scripts/timeline-number-benchmark.sh target/timeline-number-benchmark-run 96
 # Mesh properties and complete RGB/HSV color picker in a native window:
 ./scripts/properties-benchmark.sh target/properties-benchmark-run 300 120
+# Paired Release editing-chain totals, nested stage attribution and work counts:
+python3 scripts/property-chain-benchmark.py models/local/mao/runtime/mao_pro.model3.json target/property-chain-run --reader-policy unique
 # Continuous Animation workspace drags in a native window (no per-input frame wait):
 KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=canvas ./scripts/window-benchmark.sh MODEL target/animation-canvas-drag 2400 240
 KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-benchmark.sh MODEL target/animation-number-drag 2400 240
@@ -84,6 +86,13 @@ KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-ben
 
 ## References
 
+- [Property editing chain benchmark](docs/references/property-chain-benchmark.md):
+  measurement boundaries, paired probes, snapshot ownership controls and reproduction.
+  [Mao baseline and bottlenecks](docs/benchmarks/2026-10-21-property-chain.md)
+  record the initial measurements before refactoring.
+  [Refactor comparison](docs/benchmarks/2026-10-21-property-chain-refactor.md)
+  records the same workloads run against saved before/after binaries, including
+  the follow-up changes to property policies, index snapshots and Motion storage.
 - [Physics field patches](docs/benchmarks/2026-10-20-physics-patches.md): shared SDK storage,
   generic property editing, and release write-cost measurements.
 - [UI performance](docs/references/ui-performance.md): optional guidance on redraws,

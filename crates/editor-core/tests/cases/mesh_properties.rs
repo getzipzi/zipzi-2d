@@ -178,6 +178,43 @@ fn mesh_properties_all_supported_blend_pairs_keep_both_dimensions() -> anyhow::R
 }
 
 #[test]
+fn mixed_mesh_descriptors_preserve_the_stored_keyform_draw_order() -> anyhow::Result<()> {
+    let (mut doc, _assets) = support::rectangle_document(true)?;
+    let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
+    doc.set_object_property(&object, "draw_order", serde_json::json!(42.))?;
+    for (spec, value) in [
+        (fields::OPACITY, PropertyValue::Float(0.4)),
+        (fields::MULTIPLY, PropertyValue::Color([0.2, 0.5, 1.])),
+        (fields::SCREEN, PropertyValue::Color([0.3, 0., 0.])),
+    ] {
+        let before = doc.property_values(&object)?;
+        let mut change = patch(&doc, &object, spec, value.clone());
+        let name = patch(
+            &doc,
+            &object,
+            fields::NAME,
+            PropertyValue::Text("Renamed".into()),
+        );
+        change.expected.extend(name.expected);
+        change.changes.extend(name.changes);
+        doc.set_object_properties(&object, &change)?;
+        let after = doc.property_values(&object)?;
+        assert_eq!(after[&spec.key], value);
+        assert_eq!(
+            after[&fields::DRAW_ORDER.key],
+            PropertyValue::OptionalFloat(Some(42.))
+        );
+        assert_eq!(
+            after[&fields::NAME.key],
+            PropertyValue::Text("Renamed".into())
+        );
+        doc.undo()?;
+        assert_eq!(doc.property_values(&object)?, before);
+    }
+    Ok(())
+}
+
+#[test]
 fn mesh_properties_keyform_targets_preview_cancel_history_and_parameter_navigation()
 -> anyhow::Result<()> {
     let (doc, assets) = support::rectangle_document(true)?;
@@ -207,10 +244,16 @@ fn mesh_properties_keyform_targets_preview_cancel_history_and_parameter_navigati
         let doc = editor.document().unwrap();
         let history = doc.history_lengths();
         let groups = doc.object_index().draw_groups.clone();
+        let previous_index = doc.object_index();
         let change = patch(doc, &object, spec, value.clone());
         let context = editor.editing_context_token().unwrap();
         let token = editor.begin_property_edit(context, object.clone(), &change)?;
         editor.update_property_edit(&token, &change)?;
+        let candidate_index = editor.document().unwrap().object_index();
+        assert!(std::ptr::eq(
+            previous_index.get(&object).unwrap(),
+            candidate_index.get(&object).unwrap()
+        ));
         assert_eq!(editor.document().unwrap().history_lengths(), history);
         assert_eq!(
             editor.document().unwrap().property_values(&object)?,

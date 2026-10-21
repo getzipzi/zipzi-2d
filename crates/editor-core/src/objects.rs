@@ -4,24 +4,33 @@ mod build;
 mod context;
 mod influences;
 mod properties;
+mod table;
 mod types;
 
 use kasane_core::Document as Model;
+use kasane_core::SharedVec;
 use properties::deformer_properties;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 pub use bindings::BindingInfo;
 pub use context::{NavigationContext, PanelContext};
 pub use influences::{InfluencePath, ParameterBindings};
 pub use properties::editable_property;
+pub use table::{SnapshotIter, SnapshotTable};
 pub use types::{ObjectInfo, ObjectKind, ObjectRef, Relation, RelationKind};
 
 #[derive(Clone, Debug, Default)]
 pub struct ObjectIndex {
-    pub objects: Vec<ObjectInfo>,
-    pub relations: Vec<Relation>,
-    pub bindings: Vec<BindingInfo>,
-    pub draw_groups: Vec<kasane_core::draw_order::DrawOrderGroup>,
+    pub objects: SnapshotTable<ObjectInfo>,
+    pub relations: SnapshotTable<Relation>,
+    pub bindings: SharedVec<BindingInfo>,
+    pub draw_groups: SharedVec<kasane_core::draw_order::DrawOrderGroup>,
+    structure: Arc<ObjectStructure>,
+}
+
+/// Slot maps and dependency paths change only when rebuilding the structure.
+#[derive(Clone, Debug, Default)]
+struct ObjectStructure {
     slots: HashMap<ObjectRef, usize>,
     outgoing: HashMap<ObjectRef, Vec<usize>>,
     incoming: HashMap<ObjectRef, Vec<usize>>,
@@ -30,10 +39,13 @@ pub struct ObjectIndex {
 }
 impl ObjectIndex {
     pub fn get(&self, r: &ObjectRef) -> Option<&ObjectInfo> {
-        self.slots.get(r).map(|&i| &self.objects[i])
+        self.structure.slots.get(r).map(|&i| &self.objects[i])
     }
     pub fn binding(&self, r: &ObjectRef) -> Option<&BindingInfo> {
-        self.binding_slots.get(r).map(|&i| &self.bindings[i])
+        self.structure
+            .binding_slots
+            .get(r)
+            .map(|&i| &self.bindings[i])
     }
     pub fn parameter(&self, id: &str) -> &ParameterBindings {
         static EMPTY: ParameterBindings = ParameterBindings {
@@ -41,17 +53,19 @@ impl ObjectIndex {
             blend: Vec::new(),
             indirect: Vec::new(),
         };
-        self.parameters.get(id).unwrap_or(&EMPTY)
+        self.structure.parameters.get(id).unwrap_or(&EMPTY)
     }
     pub fn outgoing(&self, r: &ObjectRef) -> impl Iterator<Item = &Relation> {
-        self.outgoing
+        self.structure
+            .outgoing
             .get(r)
             .into_iter()
             .flatten()
             .map(|&i| &self.relations[i])
     }
     pub fn incoming(&self, r: &ObjectRef) -> impl Iterator<Item = &Relation> {
-        self.incoming
+        self.structure
+            .incoming
             .get(r)
             .into_iter()
             .flatten()
@@ -64,7 +78,7 @@ impl ObjectIndex {
     /// Refresh the inspector payload without rebuilding the influence graph.
     pub(crate) fn refresh_deformer(&mut self, model: &Model, object: &ObjectRef) {
         if let Some(transform) = model.get_transform(&object.id) {
-            if let Some(&slot) = self.slots.get(object) {
+            if let Some(&slot) = self.structure.slots.get(object) {
                 self.objects[slot].properties = deformer_properties(transform);
             }
         }
@@ -83,7 +97,8 @@ impl ObjectIndex {
             })
     }
     pub fn influences_for(&self, target: &ObjectRef) -> Vec<&InfluencePath> {
-        self.parameters
+        self.structure
+            .parameters
             .values()
             .flat_map(|p| &p.indirect)
             .filter(|p| &p.target == target)

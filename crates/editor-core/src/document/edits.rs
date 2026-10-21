@@ -30,6 +30,8 @@ impl Document {
             preview: PreviewState::default(),
             changed: OnceLock::new(),
             topology_changed: false,
+            draw_groups_changed: false,
+            property_write: None,
         });
         Ok(())
     }
@@ -52,6 +54,8 @@ impl Document {
             preview: PreviewState::default(),
             changed: OnceLock::new(),
             topology_changed: false,
+            draw_groups_changed: false,
+            property_write: None,
         });
         Ok(())
     }
@@ -155,6 +159,11 @@ impl Document {
     pub fn finish_edit(&mut self) -> Result<()> {
         let changed = self.pending_changed();
         if let Some(pending) = self.pending.take() {
+            let previous_revision = self.projection_revision;
+            let property = match &pending.original {
+                PendingOriginal::Properties(object, _, _) => Some(object.clone()),
+                _ => None,
+            };
             self.invalidate_projection(
                 matches!(pending.kind, Gesture::Rename) || pending.topology_changed,
             );
@@ -167,15 +176,34 @@ impl Document {
                 self.session.drain_events();
                 self.pristine_blank = false;
             }
+            if let Some(object) = property {
+                self.refresh_property_index(
+                    previous_revision,
+                    &object,
+                    pending.draw_groups_changed,
+                );
+            }
         }
         Ok(())
     }
 
     pub fn cancel_edit(&mut self) {
         if let Some(pending) = self.pending.take() {
+            let previous_revision = self.projection_revision;
+            let property = match &pending.original {
+                PendingOriginal::Properties(object, _, _) => Some(object.clone()),
+                _ => None,
+            };
             self.invalidate_projection(
                 matches!(pending.kind, Gesture::Rename) || pending.topology_changed,
             );
+            if let Some(object) = property {
+                self.refresh_property_index(
+                    previous_revision,
+                    &object,
+                    pending.draw_groups_changed,
+                );
+            }
         }
     }
 

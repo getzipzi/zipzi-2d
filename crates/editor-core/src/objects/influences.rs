@@ -68,9 +68,10 @@ impl ObjectIndex {
                 path.pop();
             }
         }
-        for (id, p) in &mut self.parameters {
+        let structure = std::sync::Arc::make_mut(&mut self.structure);
+        for (id, p) in &mut structure.parameters {
             for r in p.regular.iter().chain(&p.blend) {
-                let b = &self.bindings[self.binding_slots[r]];
+                let b = &self.bindings[structure.binding_slots[r]];
                 let mut path = vec![
                     ObjectRef::new(ObjectKind::Parameter, id),
                     r.clone(),

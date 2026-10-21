@@ -23,7 +23,11 @@ if ioreg -n Root -d1 | rg '"IOConsoleLocked" = Yes' > /dev/null; then
     exit 2
 fi
 if [[ "${KASANE_BENCH_PROPERTIES:-0}" == 1 ]]; then
-    cargo build --locked --profile "$cargo_profile" -p kasane-editor --features test-support > "$output/build.log" 2>&1
+    features=test-support
+    if [[ "${KASANE_BENCH_CHAIN_STAGES:-0}" == 1 ]]; then
+        features=test-support,bench-instrumentation
+    fi
+    cargo build --locked --profile "$cargo_profile" -p kasane-editor --features "$features" > "$output/build.log" 2>&1
 else
     cargo build --locked --profile "$cargo_profile" -p kasane-editor > "$output/build.log" 2>&1
 fi

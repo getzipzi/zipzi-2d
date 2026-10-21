@@ -32,6 +32,18 @@ def fixture(case="idle"):
 
 
 class PropertiesTraceTests(unittest.TestCase):
+    def test_chain_probes_follow_tick_identity_exclude_warmup_and_keep_noops(self):
+        records = fixture() + [
+            event(100, "properties_tick", 1, case=report.CASES.index("idle"), sample=0, warmup=1, timer_late_ns=0),
+            event(100, "core.fork_candidate", 2, calls=99, inclusive_ns=900, self_ns=800),
+            event(2, "core.fork_candidate", 19, calls=1, inclusive_ns=90, self_ns=40),
+        ]
+        stages = report.analyze(records)[1]["cases"]["idle"]["chain_stages"]["stages"]
+        self.assertEqual(stages["core.fork_candidate"]["calls"], 1)
+        self.assertEqual(stages["core.fork_candidate"]["inputs_with_calls"], 1)
+        self.assertEqual(stages["core.fork_candidate"]["self_ms"]["count"], 2)
+        self.assertEqual(stages["core.fork_candidate"]["inclusive_ms"]["max"], 90/1e6)
+
     def test_idle_does_not_require_gpu_work_or_invent_presentation_latency(self):
         rows, result = report.analyze(fixture())
         self.assertEqual(result["issues"], [])

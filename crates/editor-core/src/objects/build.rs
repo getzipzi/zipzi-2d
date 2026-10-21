@@ -17,7 +17,9 @@ impl ObjectIndex {
         enabled: Option<bool>,
     ) {
         let name = name.into();
-        self.slots.insert(r.clone(), self.objects.len());
+        std::sync::Arc::make_mut(&mut self.structure)
+            .slots
+            .insert(r.clone(), self.objects.len());
         self.objects.push(ObjectInfo {
             name: if name.is_empty() { r.id.clone() } else { name },
             reference: r,
@@ -34,8 +36,17 @@ impl ObjectIndex {
         detail: impl Into<String>,
     ) {
         let i = self.relations.len();
-        self.outgoing.entry(source.clone()).or_default().push(i);
-        self.incoming.entry(target.clone()).or_default().push(i);
+        let structure = std::sync::Arc::make_mut(&mut self.structure);
+        structure
+            .outgoing
+            .entry(source.clone())
+            .or_default()
+            .push(i);
+        structure
+            .incoming
+            .entry(target.clone())
+            .or_default()
+            .push(i);
         self.relations.push(Relation {
             source: source.clone(),
             target,
@@ -77,7 +88,7 @@ impl ObjectIndex {
                 info.reference.clone(),
                 format!("{} keys", axis.keys.len()),
             );
-            let p = self
+            let p = std::sync::Arc::make_mut(&mut self.structure)
                 .parameters
                 .entry(axis.parameter_id.clone())
                 .or_default();
@@ -97,15 +108,18 @@ impl ObjectIndex {
             info.target.clone(),
             "",
         );
-        self.binding_slots
+        std::sync::Arc::make_mut(&mut self.structure)
+            .binding_slots
             .insert(info.reference.clone(), self.bindings.len());
         self.bindings.push(info);
     }
     pub fn build(m: &Model) -> Self {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.object_index_build");
         use ObjectKind as K;
         use RelationKind as R;
         let mut s = Self {
-            draw_groups: kasane_core::draw_order::resolved_groups(m),
+            draw_groups: kasane_core::draw_order::resolved_groups(m).into(),
             ..Default::default()
         };
         let doc = ObjectRef::new(K::Document, m.id());
@@ -129,7 +143,7 @@ impl ObjectIndex {
             if let Some(x) = m.get_mesh(id) {
                 let r = ObjectRef::new(K::Mesh, id);
                 s.add(r.clone(),&x.name,json!({"id":x.id,"name":x.name,"runtime_id":x.runtime_id,"part_id":x.part_id,"deformer_id":x.deformer_id,"texture_asset_id":x.texture_asset_id,"appearance":x.appearance,"draw_order":x.draw_order,"blend_mode":x.blend_mode,"enabled":x.enabled,"double_sided":x.double_sided,"inverted_mask":x.inverted_mask,"masks":x.masks,"vertices":x.vertex_ids.len(),"triangles":x.triangles.len()}),Some(x.enabled));
-                let slot = *s.slots.get(&r).unwrap();
+                let slot = *s.structure.slots.get(&r).unwrap();
                 crate::property::mesh::inspector_fields(x, &mut s.objects[slot].properties);
                 s.ref_edge(&r, R::PartOwner, K::Part, &x.part_id);
                 s.ref_edge(&r, R::DeformParent, K::Deformer, &x.deformer_id);

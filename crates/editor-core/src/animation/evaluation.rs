@@ -30,6 +30,8 @@ impl AnimationEvaluator {
         request: &AnimationRequest,
         mut progress: impl FnMut(u32, u32) -> bool,
     ) -> Result<AnimationEvaluated> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.animation_evaluate");
         if let Some((previous, frame)) = &self.completed {
             if previous.same_pose(request) {
                 if !progress(0, 0) {
@@ -64,9 +66,12 @@ impl AnimationEvaluator {
                             .is_some_and(|source| source.same_document(&request.source))
                 })
             {
-                self.editing = Some(kasane_sdk::MotionEditingPreview::new(
-                    request.source.document(),
-                ));
+                self.editing = Some({
+                    #[cfg(feature = "bench-instrumentation")]
+                    let _benchmark_preview =
+                        kasane_core::benchmark::span("editor.new_motion_editing_preview");
+                    kasane_sdk::MotionEditingPreview::new(request.source.document())
+                });
             }
             let mut progress = progress;
             if !progress(0, 1) {

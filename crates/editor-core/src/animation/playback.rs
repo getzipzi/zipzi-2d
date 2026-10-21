@@ -462,6 +462,8 @@ impl Editor {
         Ok(())
     }
     pub fn animation_request(&mut self) -> Option<AnimationRequest> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.animation_request");
         let document = self.active_id()?;
         if self.is_busy() || self.exiting() {
             return None;

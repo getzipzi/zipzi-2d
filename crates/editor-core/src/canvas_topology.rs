@@ -105,6 +105,8 @@ impl CanvasTopology {
         }
     }
     pub fn new(model: &kasane_core::Document) -> Self {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.canvas_topology_build");
         let mut index = CanvasObjectIndex::default();
         let mut meshes = HashMap::new();
         let mut controls = HashMap::new();

@@ -7,6 +7,7 @@ license.workspace = true
 [features]
 debug-tools = ["dep:gpui-fps"]
 test-support = ["gpui-kit/test-support", "dep:tempfile", "image/png"]
+bench-instrumentation = ["editor-core/bench-instrumentation"]
 
 [dependencies]
 uuid.workspace = true

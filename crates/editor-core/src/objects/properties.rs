@@ -12,19 +12,30 @@ impl super::ObjectIndex {
         let Some(mesh) = model.get_mesh(&object.id) else {
             return false;
         };
-        let Some(&slot) = self.slots.get(object) else {
+        let Some(&slot) = self.structure.slots.get(object) else {
             return false;
         };
-        let info = &mut self.objects[slot];
-        info.name = if mesh.name.is_empty() {
+        let name = if mesh.name.is_empty() {
             object.id.clone()
         } else {
             mesh.name.clone()
         };
+        let appearance = json!(mesh.appearance);
+        let previous = &self.objects[slot];
+        if previous.name == name
+            && previous.enabled == Some(mesh.enabled)
+            && previous.properties["name"] == mesh.name
+            && previous.properties["enabled"] == mesh.enabled
+            && previous.properties["appearance"] == appearance
+        {
+            return true;
+        }
+        let info = &mut self.objects[slot];
+        info.name = name;
         info.enabled = Some(mesh.enabled);
         info.properties["name"] = json!(mesh.name);
         info.properties["enabled"] = json!(mesh.enabled);
-        info.properties["appearance"] = json!(mesh.appearance);
+        info.properties["appearance"] = appearance;
         true
     }
 
@@ -39,52 +50,74 @@ impl super::ObjectIndex {
         let Ok(rig) = crate::property::physics::group(asset, object) else {
             return false;
         };
-        let Some(&slot) = self.slots.get(object) else {
+        let Some(&slot) = self.structure.slots.get(object) else {
             return false;
         };
-        self.objects[slot].properties = json!(rig);
-        self.objects[slot].name = asset
+        let fps = json!(asset.data.meta.fps.unwrap_or(30.));
+        let fps_changed = self.objects[slot].properties["fps"] != fps;
+        let info = &mut self.objects[slot];
+        info.properties = json!(rig);
+        info.name = asset
             .data
             .meta
             .dictionary
             .iter()
             .find(|entry| entry.id == rig.id)
             .map_or_else(|| rig.id.clone(), |entry| entry.name.clone());
-        self.objects[slot].properties["name"] = json!(self.objects[slot].name);
-        self.objects[slot].properties["fps"] = json!(asset.data.meta.fps.unwrap_or(30.));
+        info.properties["name"] = json!(info.name);
+        info.properties["fps"] = fps.clone();
+        if fps_changed {
+            let groups: Vec<_> = self
+                .objects
+                .iter()
+                .enumerate()
+                .filter(|(_, info)| {
+                    info.reference.kind == ObjectKind::PhysicsGroup && info.properties["fps"] != fps
+                })
+                .map(|(slot, _)| slot)
+                .collect();
+            for slot in groups {
+                self.objects[slot].properties["fps"] = fps.clone();
+            }
+        }
         let root = super::ObjectRef::new(ObjectKind::Physics, &asset.id);
-        if let Some(&slot) = self.slots.get(&root) {
-            let meta = &mut self.objects[slot].properties["meta"];
-            if let Some(fps) = asset.data.meta.fps {
-                meta["Fps"] = json!(fps);
-            } else if let Some(meta) = meta.as_object_mut() {
-                meta.remove("Fps");
+        if let Some(&slot) = self.structure.slots.get(&root) {
+            let fps = asset.data.meta.fps.map(|fps| json!(fps));
+            if self.objects[slot].properties["meta"].get("Fps") != fps.as_ref() {
+                let meta = &mut self.objects[slot].properties["meta"];
+                if let Some(fps) = fps {
+                    meta["Fps"] = fps;
+                } else if let Some(meta) = meta.as_object_mut() {
+                    meta.remove("Fps");
+                }
             }
         }
         let mut inputs = rig.inputs.iter();
         let mut outputs = rig.outputs.iter();
-        for &edge in self.outgoing.get(object).into_iter().flatten() {
-            let edge = &mut self.relations[edge];
-            match edge.kind {
+        for &edge in self.structure.outgoing.get(object).into_iter().flatten() {
+            let detail = match self.relations[edge].kind {
                 super::RelationKind::PhysicsInput => {
                     let Some(input) = inputs.next() else {
                         return false;
                     };
-                    edge.detail = format!(
+                    format!(
                         "{:?} · weight {} · reflect {}; saved configuration",
                         input.kind, input.weight, input.reflect
-                    );
+                    )
                 }
                 super::RelationKind::PhysicsOutput => {
                     let Some(output) = outputs.next() else {
                         return false;
                     };
-                    edge.detail = format!(
+                    format!(
                         "{:?} · vertex {} · weight {} · scale {}; saved configuration",
                         output.kind, output.vertex_index, output.weight, output.scale
-                    );
+                    )
                 }
-                _ => {}
+                _ => continue,
+            };
+            if self.relations[edge].detail != detail {
+                self.relations[edge].detail = detail;
             }
         }
         true
@@ -98,37 +131,57 @@ impl super::ObjectIndex {
         object: &super::ObjectRef,
         keyform_order_changed: bool,
     ) -> bool {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.object_index_refresh");
         if object.kind == ObjectKind::PhysicsGroup {
             return self.refresh_physics_preview(model, object);
         }
-        let Ok(values) = crate::property::values_from(model, object) else {
+        if object.kind == ObjectKind::Mesh && !self.refresh_mesh_presentation(model, object) {
+            return false;
+        }
+        let Ok(values) =
+            crate::Document::property_values_in(model, object, &crate::PropertyScope::Object)
+        else {
             return false;
         };
-        let Some(&slot) = self.slots.get(object) else {
+        let Some(&slot) = self.structure.slots.get(object) else {
             return false;
         };
         let mut draw_order_changed = keyform_order_changed;
+        let mut updates = Vec::new();
         for spec in crate::property_specs(object.kind)
             .iter()
-            .filter(|s| s.preview)
+            .filter(|s| s.effect != crate::property::PropertyEffect::Structure)
         {
             let Some(value) = values.get(&spec.key) else {
                 return false;
             };
-            let mut field = &mut self.objects[slot].properties;
+            let mut field = &self.objects[slot].properties;
             for key in spec.path.split('.') {
-                let Some(next) = field.get_mut(key) else {
+                let Some(next) = field.get(key) else {
                     return false;
                 };
                 field = next;
             }
             let value = value.json();
-            draw_order_changed |= spec.refresh_draw_groups && *field != value;
-            *field = value;
+            if *field != value {
+                draw_order_changed |= spec.effect == crate::property::PropertyEffect::DrawOrder;
+                updates.push((spec.path, value));
+            }
+        }
+        if !updates.is_empty() {
+            let properties = &mut self.objects[slot].properties;
+            for (path, value) in updates {
+                let mut field = &mut *properties;
+                for key in path.split('.') {
+                    field = field.get_mut(key).expect("property path checked");
+                }
+                *field = value;
+            }
         }
         if draw_order_changed {
             // Draw-order candidates also affect the resolved group bounds.
-            self.draw_groups = kasane_core::draw_order::resolved_groups(model);
+            self.draw_groups = kasane_core::draw_order::resolved_groups(model).into();
         }
         true
     }

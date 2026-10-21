@@ -140,7 +140,7 @@ pub(super) fn fixture(
             restricted_beziers: false,
             fade_in: Some(1.),
             fade_out: Some(1.),
-            tracks,
+            tracks: tracks.into(),
             events: vec![
                 MotionEvent {
                     id: id(40),
@@ -154,7 +154,8 @@ pub(super) fn fixture(
                     value: "A".into(),
                     extensions: Default::default(),
                 },
-            ],
+            ]
+            .into(),
             extensions: if opaque {
                 [("Future".into(), serde_json::json!(true))].into()
             } else {

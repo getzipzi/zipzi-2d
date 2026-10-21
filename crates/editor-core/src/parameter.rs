@@ -293,20 +293,47 @@ impl Document {
     }
 
     pub fn validate_parameter_update(&self, id: &str, draft: &ParameterDraft) -> Result<()> {
-        self.parameter_draft(id)?;
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.validate_parameter_update");
+        self.prepare_parameter_update(id, draft).map(|_| ())
+    }
+
+    pub(crate) fn prepare_parameter_update(
+        &self,
+        id: &str,
+        draft: &ParameterDraft,
+    ) -> Result<kasane_sdk::EditSession<'static>> {
+        let old = self.parameter_draft(id)?;
         self.ensure_editable(&[ObjectRef::new(ObjectKind::Parameter, id)])?;
         self.validate_parameter_fields(draft, Some(id))?;
-        let mut candidate = self.model().fork_candidate();
-        let result = candidate.replace_parameter(draft.parameter(id));
-        if !result.status.is_ok() {
+        let parameter = draft.parameter(id);
+        let mut edit = self.session.begin_owned_edit("Edit parameter", None)?;
+        if let Err(error) = edit.replace_parameter(parameter.clone()) {
             return Err(ParameterManagementError::Dependency {
-                code: result.status.code,
-                message: result.status.message,
+                code: error.code.into(),
+                message: error.message.into(),
                 references: self.parameter_delete_references(id)?,
             }
             .into());
         }
-        Ok(())
+        if old.group_id != draft.group_id {
+            edit.replace_display_info(self.parameter_move_info(
+                id,
+                crate::ParameterDestination::Group(draft.group_id.clone()),
+            )?)?;
+        }
+        // The checked candidate is the one that will be published. Evaluate before
+        // publication when the new range clamps a session preview input.
+        let mut values = self.session.preview_values().clone();
+        if let Some(value) = values.get_mut(id) {
+            *value = value.clamp(parameter.minimum, parameter.maximum);
+        }
+        if &values != self.session.preview_values() {
+            kasane_core::preview::PreviewState::default()
+                .replace(edit.candidate_document(), 0, values)
+                .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
+        }
+        Ok(edit)
     }
 
     pub fn update_parameter(
@@ -315,44 +342,17 @@ impl Document {
         draft: ParameterDraft,
         expected: u64,
     ) -> Result<()> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.update_parameter");
         self.check_parameter_version(expected)?;
-        self.validate_parameter_update(id, &draft)?;
+        let edit = self.prepare_parameter_update(id, &draft)?;
         let old = self.parameter_draft(id)?;
-        let parameter = draft.parameter(id);
-        if self.model().get_parameter(id) == Some(&parameter) && old.group_id == draft.group_id {
+        if self.model().get_parameter(id) == Some(&draft.parameter(id))
+            && old.group_id == draft.group_id
+        {
             return Ok(());
         }
-        // Preview replacement evaluates the candidate. Check it before publication so
-        // an evaluation error cannot report a failed edit after history was committed.
-        let mut candidate = self.model().fork_candidate();
-        let result = candidate.replace_parameter(parameter.clone());
-        ensure!(result.status.is_ok(), "{}", result.status.message);
-        let mut preview_values = self.session.preview_values().clone();
-        if let Some(value) = preview_values.get_mut(id) {
-            *value = value.clamp(parameter.minimum, parameter.maximum);
-        }
-        if &preview_values != self.session.preview_values() {
-            let mut preview = kasane_core::preview::PreviewState::default();
-            preview
-                .replace(&candidate, 0, preview_values)
-                .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
-        }
-        let info = if old.group_id != draft.group_id {
-            Some(self.parameter_move_info(
-                id,
-                crate::ParameterDestination::Group(draft.group_id.clone()),
-            )?)
-        } else {
-            None
-        };
-        self.session.edit("Edit parameter", None, |edit| {
-            edit.replace_parameter(parameter)?;
-            if let Some(info) = info {
-                edit.replace_display_info(info)?;
-            }
-            Ok(())
-        })?;
-        // Property submissions can settle an old input after navigation.
+        edit.commit_to(&mut self.session)?;
         self.parameter_management_changed()
     }
 

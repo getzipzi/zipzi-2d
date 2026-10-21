@@ -1,12 +1,13 @@
 //! Mesh authoring properties. Identity, storage and editing policy live together.
-use super::{PropertyScope, PropertySpec, PropertyType};
+use super::{PropertyEffect, PropertyScope, PropertySpec, PropertyType};
 use crate::ObjectKind;
 use anyhow::{Result, ensure};
 use kasane_core::{BlendMode, Mesh};
 use serde_json::{Value, json};
 
 pub const NAME: PropertySpec =
-    PropertySpec::new(ObjectKind::Mesh, "name", "name", PropertyType::Text);
+    PropertySpec::new(ObjectKind::Mesh, "name", "name", PropertyType::Text)
+        .affects(PropertyEffect::Properties);
 pub const RUNTIME_ID: PropertySpec = PropertySpec::new(
     ObjectKind::Mesh,
     "runtime_id",
@@ -15,7 +16,8 @@ pub const RUNTIME_ID: PropertySpec = PropertySpec::new(
 )
 .trimmed();
 pub const ENABLED: PropertySpec =
-    PropertySpec::new(ObjectKind::Mesh, "enabled", "enabled", PropertyType::Bool);
+    PropertySpec::new(ObjectKind::Mesh, "enabled", "enabled", PropertyType::Bool)
+        .affects(PropertyEffect::Properties);
 pub const DRAW_ORDER: PropertySpec = PropertySpec::new(
     ObjectKind::Mesh,
     "draw_order",
@@ -24,7 +26,9 @@ pub const DRAW_ORDER: PropertySpec = PropertySpec::new(
 )
 .range(-32768., 32767., 1.)
 .keyframed()
-.draw_order_preview();
+.scalar()
+.affects(PropertyEffect::DrawOrder)
+.preview();
 pub const OPACITY: PropertySpec = PropertySpec::new(
     ObjectKind::Mesh,
     "opacity",
@@ -33,6 +37,8 @@ pub const OPACITY: PropertySpec = PropertySpec::new(
 )
 .range(0., 1., 0.01)
 .keyframed()
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 
 pub const PART: PropertySpec =
@@ -60,6 +66,8 @@ pub const MULTIPLY: PropertySpec = PropertySpec::new(
     PropertyType::Color,
 )
 .keyframed()
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const SCREEN: PropertySpec = PropertySpec::new(
     ObjectKind::Mesh,
@@ -68,6 +76,8 @@ pub const SCREEN: PropertySpec = PropertySpec::new(
     PropertyType::Color,
 )
 .keyframed()
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 pub const COLOR_BLEND: PropertySpec = PropertySpec::new(
     ObjectKind::Mesh,
@@ -166,6 +176,8 @@ pub(crate) fn payload(
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Value> {
+    #[cfg(feature = "bench-instrumentation")]
+    let _benchmark_span = kasane_core::benchmark::span("editor.mesh_full_json");
     let mesh = model
         .get_mesh(id)
         .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
@@ -184,6 +196,8 @@ pub(crate) fn inspector_payload(
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Value> {
+    #[cfg(feature = "bench-instrumentation")]
+    let _benchmark_span = kasane_core::benchmark::span("editor.mesh_inspector_json");
     let mesh = model
         .get_mesh(id)
         .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;

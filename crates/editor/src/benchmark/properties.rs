@@ -392,6 +392,10 @@ pub(super) async fn run(
             let late = Instant::now()
                 .saturating_duration_since(deadline)
                 .as_nanos() as u64;
+            // Only the opt-in benchmark build records editor/SDK work on this
+            // UI thread. Collection ends before reporting or verification.
+            #[cfg(feature = "bench-instrumentation")]
+            let chain_capture = kasane_core::benchmark::Capture::start();
             let scope = frame_trace::InputScope::begin(210 + index as u64);
             let tick = scope.id();
             frame_trace::emit(
@@ -598,6 +602,18 @@ pub(super) async fn run(
                 }
             }
             drop(scope); // Include effect flushing and SDK subscriptions in dispatch time.
+            #[cfg(feature = "bench-instrumentation")]
+            for (stage, measurement) in chain_capture.finish() {
+                frame_trace::emit(
+                    tick,
+                    stage,
+                    &[
+                        ("calls", measurement.calls),
+                        ("inclusive_ns", measurement.inclusive_ns),
+                        ("self_ns", measurement.self_ns),
+                    ],
+                );
+            }
             let next = value(view, cx, &object, field)?;
             let next_live = live(view, cx, field)?;
             let did_change = next != previous || next_live != previous_live;

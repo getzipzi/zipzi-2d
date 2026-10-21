@@ -1,5 +1,5 @@
 //! Part authoring properties. Identity, storage and editing policy live together.
-use super::{PropertySpec, PropertyType};
+use super::{PropertyEffect, PropertySpec, PropertyType};
 use crate::ObjectKind;
 
 pub const NAME: PropertySpec =
@@ -20,6 +20,8 @@ pub const DRAW_ORDER: PropertySpec = PropertySpec::new(
     PropertyType::Float,
 )
 .range(-(f32::MAX as f64), f32::MAX as f64, 1.)
-.draw_order_preview();
+.scalar()
+.affects(PropertyEffect::DrawOrder)
+.preview();
 
 pub const FIELDS: &[PropertySpec] = &[NAME, RUNTIME_ID, ENABLED, DRAW_ORDER];

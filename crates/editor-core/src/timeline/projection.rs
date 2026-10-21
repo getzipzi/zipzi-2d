@@ -99,7 +99,7 @@ pub struct TimelineProjection {
     pub editable: bool,
     pub channels: Arc<Vec<TimelineChannel>>,
     pub tracks: HashMap<String, Arc<TimelineTrack>>,
-    pub events: Vec<MotionEvent>,
+    pub events: kasane_core::SharedVec<MotionEvent>,
     pub rows: Arc<Vec<TimelineRow>>,
 }
 
@@ -111,6 +111,9 @@ impl TimelineProjection {
         previous: &MotionClip,
         next: &MotionClip,
     ) -> Option<Self> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span =
+            kasane_core::benchmark::span("editor.timeline_incremental_projection");
         if previous.id != next.id
             || previous.tracks.len() != next.tracks.len()
             || previous.restricted_beziers != next.restricted_beziers
@@ -151,6 +154,8 @@ impl TimelineProjection {
         Self::from_clip(document, clip)
     }
     pub(crate) fn from_clip(document: &crate::Document, clip: &MotionClip) -> Result<Self> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = kasane_core::benchmark::span("editor.timeline_full_projection");
         let model = document.model();
         let mut result = Self {
             clip_id: clip.id.clone(),

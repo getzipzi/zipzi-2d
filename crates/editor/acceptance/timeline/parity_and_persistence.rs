@@ -38,6 +38,11 @@ pub(crate) fn result_parity(h: &mut Harness) -> anyhow::Result<()> {
         })??;
         let mut sdk =
             kasane_sdk::MotionPreview::new(request.source.materialized_snapshot()?.document());
+        sdk.set_physics_enabled(!request.physics.bypass);
+        for (id, value) in &request.physics.baseline {
+            sdk.set_base_parameter(id, *value)?;
+        }
+        sdk.set_physics_stabilized_start(request.physics.stabilized);
         let motion = request.motion.as_ref().unwrap();
         if let Some((group, index)) = &motion.entry {
             sdk.schedule_motion_entry(group, *index, 0.)?;
@@ -50,11 +55,18 @@ pub(crate) fn result_parity(h: &mut Harness) -> anyhow::Result<()> {
                 .iter()
                 .map(|e| (e.expression_id.as_str(), e.time, e.transition)),
         )?;
+        for input in &request.physics.inputs {
+            sdk.schedule_parameter_input(&input.parameter, input.time, input.value)?;
+        }
         sdk.seek(request.identity.time)?;
+        // Seek snapshots omit optional inspector observations. The editor
+        // explicitly collects them, so compare the same complete snapshot.
+        let mut expected = sdk.snapshot().clone();
+        expected.physics = sdk.physics_snapshot();
         let mut evaluator = AnimationEvaluator::default();
         let evaluated = evaluator.evaluate(&request, |_, _| true)?;
         ensure!(
-            *evaluated.snapshot == *sdk.snapshot(),
+            *evaluated.snapshot == expected,
             "real result snapshot diverged from SDK"
         );
         ensure!(
@@ -69,7 +81,7 @@ pub(crate) fn result_parity(h: &mut Harness) -> anyhow::Result<()> {
                 .unwrap()
                 .presented
                 .as_deref()
-                == Some(sdk.snapshot())),
+                == Some(&expected)),
             "presented result diverged from SDK"
         );
     }

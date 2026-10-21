@@ -1,5 +1,5 @@
 //! Glue authoring properties. Identity, storage and editing policy live together.
-use super::{PropertySpec, PropertyType};
+use super::{PropertyEffect, PropertySpec, PropertyType};
 use crate::ObjectKind;
 
 pub const NAME: PropertySpec =
@@ -18,6 +18,8 @@ pub const INTENSITY: PropertySpec = PropertySpec::new(
     PropertyType::Float,
 )
 .range(0., 1., 0.01)
+.scalar()
+.affects(PropertyEffect::Properties)
 .preview();
 
 pub const FIELDS: &[PropertySpec] = &[NAME, RUNTIME_ID, INTENSITY];
