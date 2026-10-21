@@ -884,3 +884,76 @@ fn canvas_in_a_side_dock_remains_a_valid_target_for_new_panels(cx: &mut TestAppC
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn properties_lock_uses_the_left_header_toolbar_and_updates_without_owner_redraw(
+    cx: &mut TestAppContext,
+) {
+    let harness = setup(cx);
+    let (area, panel) = harness.view.read_with(cx, |view, _| {
+        let dock = view.dock.as_ref().unwrap();
+        (
+            dock.area.clone(),
+            PanelId::from(dock.properties.entity_id()),
+        )
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        let dock = harness.view.read(cx).dock.as_ref().unwrap();
+        let layout = DockLayout::h_split()
+            .child(
+                DockLayout::tabs().panel_view(panel_handle(dock.properties.clone()), cx),
+                Some(px(240.)),
+            )
+            .child(
+                DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
+                None,
+            );
+        area.update(cx, |area, cx| area.set_center(layout, window, cx));
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let header_id = selector(&area, panel, cx).replace("dock-selector-", "dock-header-");
+        let header = window.find(header_id.clone()).bounds();
+        let tab = window.find(format!("dock-tab-{panel:?}")).bounds();
+        let button = window
+            .within(header_id)
+            .within("properties-panel-toolbar")
+            .find("property-inspection-lock");
+        assert!(button.bounds().left() >= tab.right());
+        assert!(button.bounds().right() < header.center().x);
+        assert_eq!(
+            button.bounds().size.height,
+            crate::ui::compact::scaled(crate::ui::compact::HEADER_CONTROL, cx)
+        );
+        assert_eq!(button.checked(), Some(false));
+        window.click("property-inspection-lock", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-inspection-lock").checked(),
+            Some(true)
+        );
+        // Mouse activation preserves the editor's current focus. The button
+        // remains reachable through the shared toolbar's keyboard traversal.
+        for _ in 0..64 {
+            window.focus_next(cx);
+            window.render_frame(cx);
+            if window.find("property-inspection-lock").focused() == Some(true) {
+                break;
+            }
+        }
+        assert_eq!(
+            window.find("property-inspection-lock").focused(),
+            Some(true)
+        );
+        window.press("space", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-inspection-lock").checked(),
+            Some(false)
+        );
+    })
+    .unwrap();
+}

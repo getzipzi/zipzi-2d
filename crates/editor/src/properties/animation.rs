@@ -1,7 +1,7 @@
 //! Animation field definitions and context detail provider.
 use super::details::DetailSource;
 use super::*;
-use editor_core::{AnimationCatalog, AnimationSession};
+use editor_core::AnimationCatalog;
 use kasane_core::document::{ExpressionBlend, ExpressionTarget};
 use std::collections::HashMap;
 
@@ -32,9 +32,13 @@ fn fields(kind: ObjectKind) -> FormDefinition {
     };
     FormDefinition::new(fields)
 }
-pub(super) fn details_source(editor: &Editor) -> Option<DetailSource> {
-    let animation = editor.animation()?;
-    let inspected = editor.active_inspection()?.object()?;
+pub(super) fn details_source(
+    editor: &Editor,
+    target: Option<&PropertyTarget>,
+) -> Option<DetailSource> {
+    editor.animation()?;
+    let target = target?;
+    let inspected = &target.object;
     if matches!(
         inspected.kind,
         ObjectKind::PhysicsGroup | ObjectKind::Physics
@@ -44,47 +48,35 @@ pub(super) fn details_source(editor: &Editor) -> Option<DetailSource> {
     Some(DetailSource {
         dependencies: vec![
             Some(inspected.id.clone()),
-            animation
-                .motion
-                .as_ref()
-                .map(|motion| motion.clip_id.clone()),
-            animation
+            target.motion.as_ref().map(|motion| motion.clip_id.clone()),
+            target
                 .motion
                 .as_ref()
                 .and_then(|motion| motion.entry.as_ref().map(|(group, _)| group.clone())),
-            animation
+            target
                 .motion
                 .as_ref()
                 .and_then(|motion| motion.entry.as_ref().map(|(_, index)| index.to_string())),
-            animation.expression.clone(),
         ],
-        build: |editor| {
+        build: |editor, target| {
             let document = editor.document().unwrap();
-            rows(
-                document,
-                editor.animation().unwrap(),
-                &document.animation_catalog(),
-                editor
-                    .active_inspection()
-                    .and_then(|inspection| inspection.object())
-                    .as_ref(),
-            )
+            rows(document, &document.animation_catalog(), target)
         },
     })
 }
 
 fn rows(
     document: &Document,
-    animation: &AnimationSession,
     catalog: &AnimationCatalog,
-    inspected: Option<&ObjectRef>,
+    target: Option<&PropertyTarget>,
 ) -> Vec<DetailRow> {
+    let inspected = target.map(|target| &target.object);
     let mut rows = Vec::new();
     let motion_selected = inspected.is_some_and(|object| object.kind == ObjectKind::Motion);
     let resource = catalog
         .motions
         .iter()
-        .find(|r| animation.motion.as_ref() == Some(&r.selection));
+        .find(|r| target.and_then(|target| target.motion.as_ref()) == Some(&r.selection));
     if motion_selected {
         if let Some(resource) = resource {
             rows.push(DetailRow::property(

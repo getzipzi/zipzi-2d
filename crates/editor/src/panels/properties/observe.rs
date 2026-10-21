@@ -16,16 +16,18 @@ pub(super) struct ObservedState {
 
 impl PropertiesPanel {
     fn observed_state(&self, state: &EditorView) -> ObservedState {
+        let target = self.resolved_target(&state.editor);
         ObservedState {
-            target: properties::target(&state.editor),
             context: state.editor.editing_context_token(),
             revision: state.editor.document().map(|doc| doc.properties_revision()),
-            details: properties::Details::key(&state.editor),
+            details: properties::Details::key(&state.editor, target.as_ref()),
             locale: rust_i18n::locale().to_string(),
             blocked: state.modal || state.editor.is_busy() || state.editor.exiting(),
             playing: state.editor.animation().is_some_and(|a| a.playing),
-            sample_time: properties::target(&state.editor)
+            sample_time: target
+                .as_ref()
                 .and_then(|target| target.sample_time(&state.editor)),
+            target,
             preview_owned: self
                 .preview
                 .as_ref()

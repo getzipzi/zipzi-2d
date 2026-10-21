@@ -67,6 +67,8 @@ minimize = "Minimize"
 zoom_window = "Zoom Window"
 
 [editor]
+lock_inspection = "Lock inspected object"
+unlock_inspection = "Unlock inspected object"
 general_properties = "General"
 ui_scale = "UI Scale"
 color_theme = "Color Theme"

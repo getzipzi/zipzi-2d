@@ -63,7 +63,7 @@ impl DetailRow {
 
 pub(super) struct DetailSource {
     pub dependencies: Vec<Option<String>>,
-    pub build: fn(&Editor) -> Vec<DetailRow>,
+    pub build: fn(&Editor, Option<&PropertyTarget>) -> Vec<DetailRow>,
 }
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct DetailKey {
@@ -80,18 +80,18 @@ pub(crate) struct Details {
     pub builds: u64,
 }
 impl Details {
-    pub fn key(editor: &Editor) -> Option<DetailKey> {
+    pub fn key(editor: &Editor, target: Option<&PropertyTarget>) -> Option<DetailKey> {
         Some(DetailKey {
             document: editor.active_id()?,
             revision: editor.document()?.properties_revision(),
             context: editor.editing_context()?,
-            dependencies: super::details_source(editor)?.dependencies,
+            dependencies: super::details_source(editor, target)?.dependencies,
             locale: rust_i18n::locale().to_string(),
         })
     }
 
-    pub fn rows(&mut self, editor: &Editor) -> Arc<[DetailRow]> {
-        let Some(source) = super::details_source(editor) else {
+    pub fn rows(&mut self, editor: &Editor, target: Option<&PropertyTarget>) -> Arc<[DetailRow]> {
+        let Some(source) = super::details_source(editor, target) else {
             return Arc::from([]);
         };
         let (Some(document), Some(id), Some(context)) = (
@@ -109,7 +109,7 @@ impl Details {
             locale: rust_i18n::locale().to_string(),
         };
         if self.key.as_ref() != Some(&key) {
-            self.rows = (source.build)(editor).into();
+            self.rows = (source.build)(editor, target).into();
             self.key = Some(key);
             self.builds += 1;
         }

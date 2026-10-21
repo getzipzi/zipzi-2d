@@ -139,6 +139,7 @@ fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
     let mut editor = Editor::new().unwrap();
     let target = PropertyTarget {
         timeline: None,
+        motion: None,
         scope: Default::default(),
         document: editor.active_id().unwrap(),
         context: EditingContext::Modeling,

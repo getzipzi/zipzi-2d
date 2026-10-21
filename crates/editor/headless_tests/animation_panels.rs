@@ -621,3 +621,64 @@ fn paused_expression_clicks_show_only_the_latest_expression_as_active(cx: &mut T
     })
     .unwrap();
 }
+
+#[gpui_kit::test]
+fn inspection_lock_keeps_motion_registration_and_sound(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.resize(gpui_kit::size(gpui_kit::px(1100.), gpui_kit::px(1500.)));
+        window.click("workspace-animation", cx);
+        harness.view.update(cx, |view, cx| {
+            view.dock
+                .as_ref()
+                .unwrap()
+                .show(editor_core::PanelKind::Properties, None, window, cx);
+        });
+        window.render_frame(cx);
+        // The second registration proves the pin stores more than the clip ID.
+        window.click(("animation-motion", 1usize), cx);
+        window.render_frame(cx);
+        window.click("property-inspection-lock", cx);
+        reveal_property(window, "property-group-$details", cx);
+        window.click("property-group-$details", cx);
+        window.render_frame(cx);
+        reveal_property(window, "animation-property-registration", cx);
+        assert_eq!(
+            window.find("animation-property-registration").label(),
+            Some("Idle [2]")
+        );
+        for index in [0, 2] {
+            harness.view.update(cx, |view, cx| {
+                let motion = view.editor.document().unwrap().motion_resources()[index]
+                    .selection
+                    .clone();
+                view.editor
+                    .select_motion(view.editor.active_id().unwrap(), motion)
+                    .unwrap();
+                view.redraw(cx);
+            });
+            window.render_frame(cx);
+            assert_eq!(window.find("property-title-name").label(), Some("Once"));
+            reveal_property(window, "animation-property-registration", cx);
+            assert_eq!(
+                window.find("animation-property-registration").label(),
+                Some("Idle [2]")
+            );
+            reveal_property(window, "animation-property-sound", cx);
+            assert_eq!(
+                window.find("animation-property-sound").label(),
+                Some("test.wav")
+            );
+        }
+        window.click("property-inspection-lock", cx);
+        window.render_frame(cx);
+        assert_eq!(window.find("property-title-name").label(), Some("Loop"));
+        reveal_property(window, "animation-property-registration", cx);
+        assert_eq!(
+            window.find("animation-property-registration").label(),
+            Some("Ungrouped")
+        );
+    })
+    .unwrap();
+}

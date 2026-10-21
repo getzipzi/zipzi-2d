@@ -54,7 +54,7 @@ impl PropertiesPanel {
                 !owner.modal
                     && !owner.editor.is_busy()
                     && !owner.editor.exiting()
-                    && crate::properties::target(&owner.editor) == self.target
+                    && self.resolved_target(&owner.editor) == self.target
                     && self
                         .physics
                         .context
@@ -238,11 +238,7 @@ impl PropertiesPanel {
         let Some(asset) = document.physics_definition().cloned() else {
             return body.into_any_element();
         };
-        let selected = owner
-            .read(cx)
-            .editor
-            .active_inspection()
-            .and_then(|i| i.object());
+        let selected = self.target.as_ref().map(|target| target.object.clone());
         let group = selected.and_then(|object| {
             asset
                 .data

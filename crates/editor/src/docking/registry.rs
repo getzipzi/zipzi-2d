@@ -90,6 +90,13 @@ impl DockWorkspace {
         header::register(&mut headers, &mesh_tree, cx);
         header::register(&mut headers, &deformer_tree, cx);
         header::register(&mut headers, &parameters, cx);
+        header::register_with_state(
+            &mut headers,
+            &properties,
+            window,
+            cx,
+            crate::panels::PropertiesPanel::header_state,
+        );
         header::register(&mut headers, &timeline, cx);
         header::register(&mut headers, &animation_motions, cx);
         header::register(&mut headers, &animation_expressions, cx);

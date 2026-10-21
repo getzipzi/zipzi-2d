@@ -45,7 +45,7 @@ impl PropertiesPanel {
                                     || state.editor.is_busy()
                                     || state.editor.exiting()
                                     || state.editor.editing_context_token() != context
-                                    || properties::target(&state.editor).as_ref() != Some(&target)
+                                    || this.resolved_target(&state.editor).as_ref() != Some(&target)
                                 {
                                     return;
                                 }

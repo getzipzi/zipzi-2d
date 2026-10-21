@@ -2,7 +2,6 @@ use super::*;
 use crate::properties::{
     self, Choice, FieldEditor, PropertyTarget,
     form::{self as property_form, PropertyForm},
-    target,
 };
 use crate::ui::slide_number_input::{
     SlideNumberChange, SlideNumberGesture, SlideNumberInput, SlideNumberOptions,
@@ -110,6 +109,20 @@ impl PropertiesPanel {
         let Some(owner) = self.owner.upgrade() else {
             return;
         };
+        if self
+            .locked_target
+            .as_ref()
+            .is_some_and(|(context, target)| {
+                let state = owner.read(cx);
+                state.editor.inspection_context_token() != Some(*context)
+                    || state
+                        .editor
+                        .document()
+                        .is_some_and(|doc| doc.object_index().get(&target.object).is_none())
+            })
+        {
+            self.locked_target = None;
+        }
         let next = if self
             .preview
             .as_ref()
@@ -117,7 +130,7 @@ impl PropertiesPanel {
         {
             self.target.clone()
         } else {
-            target(&owner.read(cx).editor)
+            self.resolved_target(&owner.read(cx).editor)
         };
         let context = owner.read(cx).editor.editing_context_token();
         if self.target != next || self.context != context {
@@ -248,7 +261,7 @@ impl PropertiesPanel {
                     && !state.editor.is_busy()
                     && !state.editor.exiting()
                     && state.editor.editing_context_token() == self.context
-                    && (target(&state.editor) == self.target
+                    && (self.resolved_target(&state.editor) == self.target
                         || self
                             .preview
                             .as_ref()

@@ -67,7 +67,7 @@ impl PropertiesPanel {
                 0
             },
             details: details_expanded
-                .then(|| properties::Details::key(editor))
+                .then(|| properties::Details::key(editor, Some(target)))
                 .flatten(),
             locale: rust_i18n::locale().to_string(),
             fields: self
@@ -118,7 +118,13 @@ impl PropertiesPanel {
             });
         }
         if !collapsed && target.has_object_details() {
-            rows.extend(self.details.rows(editor).iter().cloned().map(Row::Detail));
+            rows.extend(
+                self.details
+                    .rows(editor, Some(target))
+                    .iter()
+                    .cloned()
+                    .map(Row::Detail),
+            );
             let key = (
                 document,
                 inspected.clone(),

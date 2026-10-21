@@ -1,7 +1,7 @@
 //! Motion and expression resource descriptions.
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MotionSelection {
     pub clip_id: String,
     /// Keep both registration position and clip identity. A reordered entry

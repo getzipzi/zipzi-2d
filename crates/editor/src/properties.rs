@@ -31,6 +31,7 @@ pub(crate) struct PropertyTarget {
     pub object: ObjectRef,
     pub scope: editor_core::PropertyScope,
     pub timeline: Option<timeline::TimelineTarget>,
+    pub motion: Option<editor_core::MotionSelection>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -201,7 +202,29 @@ pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
             .first()
             .map(|info| info.reference.clone())
     })?;
+    let motion = (inspection.context == EditingContext::Animation
+        && object.kind == ObjectKind::Motion
+        && timeline.is_none())
+    .then(|| {
+        editor
+            .animation()?
+            .motion
+            .as_ref()
+            .filter(|motion| motion.clip_id == object.id)
+            .cloned()
+            .or_else(|| {
+                editor
+                    .document()?
+                    .animation_catalog()
+                    .motions
+                    .iter()
+                    .find(|resource| resource.selection.clip_id == object.id)
+                    .map(|resource| resource.selection.clone())
+            })
+    })
+    .flatten();
     Some(PropertyTarget {
+        motion,
         document: inspection.document,
         context: inspection.context,
         scope: editor.document()?.property_scope(&object),
@@ -210,9 +233,12 @@ pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
     })
 }
 
-fn details_source(editor: &Editor) -> Option<details::DetailSource> {
+fn details_source(
+    editor: &Editor,
+    target: Option<&PropertyTarget>,
+) -> Option<details::DetailSource> {
     match editor.editing_context()? {
-        EditingContext::Animation => animation::details_source(editor),
+        EditingContext::Animation => animation::details_source(editor, target),
         EditingContext::Modeling => None,
     }
 }

@@ -430,6 +430,7 @@ fn properties_external_conflict_restores_latest_value_without_overwriting_it(
         assert!(view.edit_error.is_some());
         let target = crate::properties::PropertyTarget {
             timeline: None,
+            motion: None,
             scope: Default::default(),
             document: view.editor.active_id().unwrap(),
             context: editor_core::EditingContext::Modeling,
@@ -1079,4 +1080,297 @@ fn document_properties_exclude_import_export_settings(cx: &mut TestAppContext) {
         assert_eq!(document.export_settings(), export_settings);
         assert_eq!(document.history_lengths(), (0, 0));
     });
+}
+
+#[gpui_kit::test]
+fn inspection_lock_keeps_editing_the_pinned_object_and_unlock_follows_selection(
+    cx: &mut TestAppContext,
+) {
+    use editor_core::{EditorCommand, ObjectKind, PropertyValue};
+    let harness = setup(cx);
+    let (first, second) = harness.view.read_with(cx, |view, _| {
+        let first = view.editor.active_inspection().unwrap().object().unwrap();
+        let second = view
+            .editor
+            .document()
+            .unwrap()
+            .object_index()
+            .objects
+            .iter()
+            .find(|info| info.reference.kind == ObjectKind::Mesh && info.reference != first)
+            .unwrap()
+            .reference
+            .clone();
+        (first, second)
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("property-inspection-lock", cx);
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::Navigate(second.clone()))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+    })
+    .unwrap();
+    fill(&harness, "property-input-name", "Pinned mesh", cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.press("enter", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-title-name").label(),
+            Some("Pinned mesh")
+        );
+    })
+    .unwrap();
+    harness.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(doc.context().inspected.as_ref(), Some(&second));
+        assert_eq!(
+            doc.property_values(&first).unwrap()[&schema::mesh::NAME.key],
+            PropertyValue::Text("Pinned mesh".into())
+        );
+        assert_ne!(
+            doc.property_values(&second).unwrap()[&schema::mesh::NAME.key],
+            PropertyValue::Text("Pinned mesh".into())
+        );
+    });
+    let second_name = harness.view.read_with(cx, |view, _| {
+        view.editor
+            .document()
+            .unwrap()
+            .object_index()
+            .name(&second)
+            .to_string()
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("property-inspection-lock", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-title-name").label(),
+            Some(second_name.as_str())
+        );
+        // A workspace round trip must discard the pin even when the panel was hidden.
+        window.click("property-inspection-lock", cx);
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .set_workspace(editor_core::WorkspaceKind::Animation)
+                .unwrap();
+            view.editor
+                .set_workspace(editor_core::WorkspaceKind::Modeling)
+                .unwrap();
+            view.editor
+                .execute(EditorCommand::Navigate(first.clone()))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-title-name").label(),
+            Some("Pinned mesh")
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn inspection_lock_clears_when_object_is_deleted_or_document_changes(cx: &mut TestAppContext) {
+    use editor_core::{EditorCommand, ObjectKind, ObjectRef};
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
+    let parameter = ObjectRef::new(ObjectKind::Parameter, &document.parameters()[0].id);
+    document.navigate(parameter.clone()).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("property-inspection-lock", cx);
+        harness.view.update(cx, |view, cx| {
+            let expected_version = view.editor.document().unwrap().parameter_model_revision();
+            view.editor
+                .execute(EditorCommand::DeleteParameter {
+                    id: parameter.id.clone(),
+                    expected_version,
+                })
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("property-title-type").label(), Some("Document"));
+        // Undo restores the object, but must not restore its former inspector pin.
+        harness.view.update(cx, |view, cx| {
+            view.editor.execute(EditorCommand::Undo).unwrap();
+            view.editor
+                .execute(EditorCommand::Navigate(parameter.clone()))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        harness.view.update(cx, |view, cx| {
+            let document_object = view
+                .editor
+                .document()
+                .unwrap()
+                .object_index()
+                .objects
+                .iter()
+                .find(|info| info.reference.kind == ObjectKind::Document)
+                .unwrap()
+                .reference
+                .clone();
+            view.editor
+                .execute(EditorCommand::Navigate(document_object))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("property-title-type").label(), Some("Document"));
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::Navigate(parameter.clone()))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        window.click("property-inspection-lock", cx);
+        harness.view.update(cx, |view, cx| {
+            let previous = view.editor.active_id().unwrap();
+            view.editor.new_document().unwrap();
+            view.editor.activate(previous).unwrap();
+            let document_object = view
+                .editor
+                .document()
+                .unwrap()
+                .object_index()
+                .objects
+                .iter()
+                .find(|info| info.reference.kind == ObjectKind::Document)
+                .unwrap()
+                .reference
+                .clone();
+            view.editor
+                .execute(EditorCommand::Navigate(document_object))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        assert_eq!(window.find("property-title-type").label(), Some("Document"));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn inspection_lock_can_pin_and_unpin_readonly_objects(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("property-inspection-lock", cx);
+        harness.view.update(cx, |view, cx| {
+            let object = view.editor.active_inspection().unwrap().object().unwrap();
+            view.editor
+                .execute(editor_core::EditorCommand::SetObjectsLocked {
+                    objects: vec![object],
+                    locked: true,
+                })
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        window.click("property-inspection-lock", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-inspection-lock").checked(),
+            Some(false)
+        );
+        window.click("property-inspection-lock", cx);
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-inspection-lock").checked(),
+            Some(true)
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn inspection_lock_survives_save_and_transient_editing_barriers(cx: &mut TestAppContext) {
+    use editor_core::{EditingLifecycle, EditorCommand, ObjectKind};
+    let harness = setup(cx);
+    let pinned_name = harness.view.read_with(cx, |view, _| {
+        let object = view.editor.active_inspection().unwrap().object().unwrap();
+        view.editor
+            .document()
+            .unwrap()
+            .object_index()
+            .name(&object)
+            .to_owned()
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("property-inspection-lock", cx);
+        harness.view.update(cx, |view, cx| {
+            let object = view
+                .editor
+                .document()
+                .unwrap()
+                .object_index()
+                .objects
+                .iter()
+                .find(|info| info.reference.kind == ObjectKind::Document)
+                .unwrap()
+                .reference
+                .clone();
+            view.editor
+                .execute(EditorCommand::Navigate(object))
+                .unwrap();
+            let id = view.editor.active_id().unwrap();
+            view.editor
+                .end_editing(id, EditingLifecycle::BlockingUi)
+                .unwrap();
+            view.editor
+                .end_editing(id, EditingLifecycle::WindowDeactivated)
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-inspection-lock").checked(),
+            Some(true)
+        );
+    })
+    .unwrap();
+    // Exercise the actual ownership transfer: no Document is available while saving.
+    let path = harness._assets.path().join("pinned-save.kasane");
+    let task = harness.view.update(cx, |view, cx| {
+        let task = view
+            .editor
+            .prepare_save(view.editor.active_id().unwrap(), &path, false)
+            .unwrap();
+        view.redraw(cx);
+        task
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-inspection-lock").checked(),
+            Some(true)
+        );
+    })
+    .unwrap();
+    let mut completion = task.run();
+    harness.view.update(cx, |view, cx| {
+        view.editor.finish_save(&mut completion).unwrap();
+        view.redraw(cx);
+    });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("property-inspection-lock").checked(),
+            Some(true)
+        );
+        assert_eq!(
+            window.find("property-title-name").label(),
+            Some(pinned_name.as_str())
+        );
+        window.click("property-inspection-lock", cx);
+        window.render_frame(cx);
+        assert_eq!(window.find("property-title-type").label(), Some("Document"));
+    })
+    .unwrap();
 }

@@ -58,6 +58,7 @@ pub struct Editor {
     workspace_revision: u64,
     pub(crate) context_generation: u64,
     pub(crate) editing_epoch: u64,
+    pub(crate) inspection_generation: u64,
     documents: Vec<Entry>,
     active: Option<DocumentId>,
     loads: HashMap<OperationId, (DocumentId, Option<PathBuf>)>,
@@ -87,6 +88,7 @@ impl Editor {
             workspace_revision: 0,
             context_generation: 0,
             editing_epoch: 0,
+            inspection_generation: 0,
             documents: Vec::new(),
             active: None,
             loads: HashMap::new(),
@@ -117,6 +119,7 @@ impl Editor {
         self.documents.push(Entry::new(id, self.workspace, session));
         self.advance_editing_context();
         self.active = Some(id);
+        self.inspection_generation += 1;
         self.refresh_viewport_bindings();
         id
     }
@@ -149,6 +152,7 @@ impl Editor {
         ensure!(!self.exiting(), "Workspace is closing");
         self.end_editing(id, EditingLifecycle::ContextChange)?;
         self.entry_mut(id)?.context = context;
+        self.inspection_generation += 1;
         self.invalidate_primary_presentation();
         Ok(())
     }
@@ -182,6 +186,7 @@ impl Editor {
             return;
         }
         self.workspace = workspace;
+        self.inspection_generation += 1;
         self.advance_editing_context();
         self.workspace_revision += 1;
         self.refresh_viewport_bindings();
@@ -333,6 +338,7 @@ impl Editor {
         }
         self.advance_editing_context();
         self.active = Some(id);
+        self.inspection_generation += 1;
         self.restore_active_workspace();
         self.refresh_viewport_bindings();
         // The UI releases the inactive document's GPU image. Reissue a paused

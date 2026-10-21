@@ -50,7 +50,21 @@ impl Inspection {
         }
     }
 }
+/// Inspector identity survives saves and transient editing barriers, but not
+/// document/context switches (including a switch away and back between frames).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InspectionContextToken {
+    document: DocumentId,
+    generation: u64,
+}
 impl Editor {
+    pub fn inspection_context_token(&self) -> Option<InspectionContextToken> {
+        Some(InspectionContextToken {
+            document: self.active_id()?,
+            generation: self.inspection_generation,
+        })
+    }
+
     pub fn inspection(&self, context: EditingContext) -> Option<Inspection> {
         let document = self.document()?;
         let token = self.editing_context_token()?;

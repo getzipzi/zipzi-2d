@@ -13,7 +13,7 @@ use crate::{EditorView, t, ui::compact};
 use controls::FieldControl;
 use editor_core::{DocumentId, ObjectRef, PropertyKey};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable, WindowExt,
+    ActiveTheme, Disableable, Selectable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
     scroll::ScrollableElement,
@@ -25,6 +25,7 @@ pub struct PropertiesPanel {
     physics: physics::PhysicsState,
     pub(crate) timeline_id: editor_core::TimelineId,
     target: Option<PropertyTarget>,
+    locked_target: Option<(editor_core::InspectionContextToken, PropertyTarget)>,
     form: PropertyForm,
     definition: properties::FormDefinition,
     details: properties::Details,
@@ -88,6 +89,7 @@ impl PropertiesPanel {
                 physics: physics::PhysicsState::new(),
                 timeline_id: editor_core::TimelineId::new(),
                 target: None,
+                locked_target: None,
                 form: PropertyForm::default(),
                 definition: Default::default(),
                 details: Default::default(),
@@ -161,7 +163,51 @@ impl Panel for PropertiesPanel {
     }
 }
 
+impl crate::docking::header::PanelHeader for PropertiesPanel {
+    fn header_min_width(&self) -> Pixels {
+        px(compact::HEADER_CONTROL)
+    }
+
+    fn render_header(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let button = self
+            .inspection_lock_button(cx)
+            .disabled(self.inspection_lock_disabled(window, cx));
+        super::toolbar::PanelToolbar::new("properties-panel-toolbar")
+            .action(move |_| button)
+            .into_any_element()
+    }
+}
+
 impl PropertiesPanel {
+    pub(crate) fn header_state(
+        panel: &Entity<Self>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (bool, bool, String) {
+        panel.update(cx, |panel, cx| {
+            (
+                panel.locked_target.is_some(),
+                panel.inspection_lock_disabled(window, cx),
+                rust_i18n::locale().to_string(),
+            )
+        })
+    }
+
+    fn resolved_target(&self, editor: &editor_core::Editor) -> Option<PropertyTarget> {
+        if let Some((context, target)) = &self.locked_target {
+            if editor.inspection_context_token() == Some(*context)
+                && editor
+                    .document()
+                    .is_some_and(|doc| doc.object_index().get(&target.object).is_some())
+            {
+                let mut target = target.clone();
+                target.scope = editor.document()?.property_scope(&target.object);
+                return Some(target);
+            }
+        }
+        properties::target(editor)
+    }
+
     fn summary(&self, cx: &mut Context<Self>) -> AnyElement {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
@@ -174,6 +220,62 @@ impl PropertiesPanel {
             return Empty.into_any_element();
         };
         crate::ui::object_identity::render_title("property", name, kind, locked, cx)
+    }
+
+    fn inspection_lock_button(&self, cx: &mut Context<Self>) -> Button {
+        let pinned = self.locked_target.is_some();
+        let label = if pinned {
+            t!("editor.unlock_inspection")
+        } else {
+            t!("editor.lock_inspection")
+        };
+        Button::new("property-inspection-lock")
+            .icon(if pinned {
+                gpui_kit::assets::IconName::Lock
+            } else {
+                gpui_kit::assets::IconName::LockOpen
+            })
+            .selected(pinned)
+            .toggled(pinned)
+            .accessibility_label(label.clone())
+            .tooltip(label)
+            .on_click(cx.listener(|this, _, window, cx| {
+                this.toggle_inspection_lock(window, cx);
+            }))
+    }
+
+    fn inspection_lock_disabled(&self, window: &mut Window, cx: &mut App) -> bool {
+        !self.visible
+            || self.owner.upgrade().is_none_or(|owner| {
+                let state = owner.read(cx);
+                state.modal || state.editor.is_busy() || state.editor.exiting()
+            })
+            || window.has_active_dialog(cx)
+            || self
+                .target
+                .as_ref()
+                .is_none_or(|target| !target.has_object_details())
+    }
+
+    fn toggle_inspection_lock(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.sync_form(window, cx);
+        if self.inspection_lock_disabled(window, cx) {
+            return;
+        }
+        self.finish_text_preview(cx);
+        if self.locked_target.is_some() {
+            self.locked_target = None;
+        } else if let (Some(context), Some(target)) = (
+            self.owner
+                .upgrade()
+                .and_then(|owner| owner.read(cx).editor.inspection_context_token()),
+            self.target.clone(),
+        ) {
+            self.locked_target = Some((context, target));
+        }
+        self.sync_form(window, cx);
+        self.remember_observed(cx);
+        cx.notify();
     }
 
     #[cfg(any(test, feature = "test-support"))]

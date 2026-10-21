@@ -66,6 +66,8 @@ minimize = "最小化"
 zoom_window = "缩放窗口"
 
 [editor]
+lock_inspection = "锁定检查对象"
+unlock_inspection = "解锁检查对象"
 general_properties = "常规"
 ui_scale = "界面缩放"
 color_theme = "颜色主题"

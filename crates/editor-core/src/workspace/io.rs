@@ -252,6 +252,7 @@ impl Editor {
         let index = self.documents.iter().position(|e| e.id == id).unwrap();
         self.documents.remove(index);
         if self.active == Some(id) {
+            self.inspection_generation += 1;
             self.advance_editing_context();
             self.active = self
                 .documents
