@@ -21,7 +21,9 @@ if [ ! -d ../kasane-2d/modules ]; then
   exit 1
 fi
 
-# The workspace disables incremental builds; enable them for this dev session.
+# Keep dev builds separate from tests, even when CARGO_TARGET_DIR is inherited.
+dev_target_dir="$PWD/target/dev"
+# Enable incremental builds for this dev session.
 export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-1}"
 
 app="$PWD/target/$name Dev.app"
@@ -166,7 +168,7 @@ case "${2:-watch}" in
     mkdir -p target
     log="target/dev-build-$package.log"
     # GPUI FPS is temporarily disabled; omit the optional debug-tools feature.
-    if ! cargo build --locked -p "$package" >"$log" 2>&1; then
+    if ! cargo build --locked --target-dir "$dev_target_dir" -p "$package" >"$log" 2>&1; then
       printf 'Build failed; full output: %s\n' "$log" >&2
       tail -n 80 "$log" >&2
       exit 1
@@ -223,7 +225,7 @@ case "${2:-watch}" in
 
     run_log="$PWD/target/dev-run-$package.log"
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-    cp "target/debug/$package" "$executable.new.$$"
+    cp "$dev_target_dir/debug/$package" "$executable.new.$$"
     mv "$executable.new.$$" "$executable"
     cp LICENSE "$app/Contents/Resources/LICENSE"
     if [ -f "$icon_asset" ]; then
@@ -281,7 +283,7 @@ PLIST
     ;;
   run)
     exec env MTL_HUD_ENABLED=1 MTL_HUD_ALIGNMENT=bottomleft MTL_HUD_SCALE=0.16 \
-      cargo run --locked -p "$package"
+      cargo run --locked --target-dir "$dev_target_dir" -p "$package"
     ;;
   *)
     printf 'usage: %s [editor] [watch|run]\n' "$0" >&2

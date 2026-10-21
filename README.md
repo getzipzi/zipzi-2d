@@ -23,6 +23,8 @@ brew install watchexec
 ./scripts/dev.sh
 ```
 
+`dev.sh` uses `target/dev/` for Cargo builds (both watch and run modes)
+
 ## Test
 
 The full suite requires macOS and Metal. The test script checks formatting,

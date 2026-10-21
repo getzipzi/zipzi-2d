@@ -1,4 +1,5 @@
 """Dev lifecycle regression tests. Uses fake tools; never starts a GUI app."""
+import json
 import os
 from pathlib import Path
 import shutil
@@ -45,15 +46,20 @@ int main(void) {
         (self.root.parent / "kasane-2d/modules").mkdir(parents=True)
         shutil.copy(SCRIPT, self.root / "scripts/dev.sh")
         (self.root / "LICENSE").write_text("Dev lifecycle fixture license\n")
-        (self.root / "target/debug").mkdir(parents=True)
-        shutil.copy(self._stub_binary, self.root / "target/debug/kasane-editor")
         self.bin = self.root / "tools"
         self.bin.mkdir()
+        shutil.copy(self._stub_binary, self.bin / "stub-editor")
         self.tool("cargo", """
-import os,time,pathlib
+import json,os,time,pathlib,shutil,sys
+args=sys.argv[1:]
+target=pathlib.Path(args[args.index('--target-dir')+1] if '--target-dir' in args else os.environ.get('CARGO_TARGET_DIR','target'))
+with open('cargo-invocations.jsonl','a') as f:
+    f.write(json.dumps({'args':args,'target_dir':str(target.resolve())})+'\\n')
 pathlib.Path('build-started').touch()
 while pathlib.Path('hold-build').exists(): time.sleep(0.02)
-raise SystemExit(int(os.environ.get('BUILD_FAIL','0')))
+if os.environ.get('BUILD_FAIL'): raise SystemExit(int(os.environ['BUILD_FAIL']))
+(target/'debug').mkdir(parents=True,exist_ok=True)
+shutil.copy('tools/stub-editor',target/'debug/kasane-editor')
 """)
         self.tool("open", """
 import os,pathlib,subprocess,sys
@@ -151,6 +157,36 @@ while True:
         self.run_reload(expected=1, BUILD_FAIL='1')
         self.assertTrue(self.alive(pid))
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
+
+    def test_reload_build_and_run_use_separate_target_from_tests(self):
+        inherited_target = self.root / 'test target'
+        (inherited_target / 'debug').mkdir(parents=True)
+        test_binary = inherited_target / 'debug/kasane-editor'
+        test_binary.write_text('test build must not be replaced or launched\n')
+        self.run_reload(CARGO_TARGET_DIR=str(inherited_target))
+        code, output = self.result(self.start('run', CARGO_TARGET_DIR=str(inherited_target)))
+        self.assertEqual(code, 0, output)
+
+        invocations = [json.loads(line) for line in
+                       (self.root / 'cargo-invocations.jsonl').read_text().splitlines()]
+        self.assertEqual([entry['args'][0] for entry in invocations], ['build', 'run'])
+        expected_target = str((self.root / 'target/dev').resolve())
+        self.assertTrue(all(entry['target_dir'] == expected_target for entry in invocations))
+        self.assertFalse((self.root / 'target/debug').exists())
+        self.assertEqual(test_binary.read_text(), 'test build must not be replaced or launched\n')
+        app_binary = self.root / 'target/Kasane Editor Dev.app/Contents/MacOS/kasane-editor'
+        self.assertEqual(app_binary.read_bytes(), self._stub_binary.read_bytes())
+
+    def test_watcher_reload_uses_separate_target(self):
+        watcher = self.start('watch')
+        self.wait_for(lambda:(self.root/'target/dev-kasane-editor.watch.lock/owner').exists())
+        (self.root / 'trigger-reload').touch()
+        self.wait_for(lambda:self.pid_file.exists() and self.pid_file.stat().st_size > 0)
+        self.assertTrue((self.root / 'target/dev/debug/kasane-editor').exists())
+        self.assertFalse((self.root / 'target/debug').exists())
+        os.kill(int(self.pid_file.read_text()), 15)
+        code, output = self.result(watcher)
+        self.assertEqual(code, 0, output)
 
     def test_concurrent_reload_is_rejected(self):
         (self.root/'hold-build').touch()
