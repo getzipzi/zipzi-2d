@@ -414,15 +414,15 @@ pub fn property_spec(key: PropertyKey) -> Option<PropertySpec> {
 
 pub type PropertyValues = BTreeMap<PropertyKey, PropertyValue>;
 
-/// The pose destination captured when the inspector starts editing. Float keys
-/// use their exact bits so navigation cannot redirect a draft to another form.
+/// The pose destination captured when the inspector starts editing. Stable
+/// sample IDs keep the destination independent of numeric parameter placement.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub enum PropertyScope {
     #[default]
     Object,
     MeshKeyform {
         binding: String,
-        keys: Vec<u32>,
+        samples: Vec<String>,
     },
     InterpolatedMesh,
 }

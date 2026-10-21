@@ -244,7 +244,7 @@ Physics 专项为 14 项 authoring 加 6 项字段编辑回归；Editor Physics 
 旧地址仍被拒绝。早期重叠的领域测试曾遇到 Mao 项目锁占用，最终完成的领域套件中
 同一用例通过；没有放宽断言或超时。上述通过数来自最终完成的测试轮。
 
-C4–C6 与完整 UI 统一仍待实施。
+C3 交付时，C4–C6 与完整 UI 统一仍待实施；C4 的后续进展见下文。
 
 ### C3 review 修复
 
@@ -282,3 +282,208 @@ cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
 cargo test --locked -p editor-core --lib --test integration physics
 cargo test --locked -p kasane-editor --lib physics
 ```
+
+## C4：首批转换原语（实施中，未完成 C4）
+
+2026 年 10 月 21 日：首批代码同时落在相邻 `kasane-2d` 与本仓库。当前交付
+Mesh 网格转换、参数范围联合修改及静态仿射 Mesh 改父级；不将本节视为完整 C4 验收。
+
+- **Mesh 零轴与网格转换**：core 的 `MeshGridEdit` / `MeshGridPlan` 支持从目标
+  创建零轴 Binding、增加轴、重排轴、插入/移动/删除采样值，以及显式切片或重采样
+  后删轴。零轴必须没有 Keyform，求值、Properties 和既有顶点工具读取 Mesh 的基础字段。
+  激活首轴从最新基础字段生成网格；扩轴复制全部旧网格，不使用当前预览形态。
+  删末轴同时写回选定形态的坐标、颜色、透明度与 draw order，清空网格。
+  插值使用 Mesh 各通道的数值规则，缺省 draw order 按目标的有效值处理。
+  插点只声明保留底层分段多线性插值；运行时在新点附近的精度吸附可能改变结果，
+  `GridGuarantee::InterpolantPreserved` 明确区分此项，未声称完整参数域数值恒等。
+- **参数范围联合修改**：`ParameterRangeEdit` / `ParameterRangePlan` 提供保留关键值
+  或按旧范围到新范围的递增仿射映射。规划覆盖所有 Mesh/Scene/Glue 轴、共享
+  BlendShape KeyTable 和 Constraint；执行联合更新关键值与 Mesh/Scene Keyform 坐标。
+  形态、权重、基准下标和 Offscreen 映射顺序保持；共享表/约束全部使用者进入影响与
+  锁定检查。通过“先改参数”和“先改网格”均失败、合法最终组合一次成功的回归。
+  映射后浮点值合并、越界或任一使用者锁定时整体拒绝，不放宽普通 setter 的检查。
+- **改父级首批矩阵**：`ReparentEdit` / `ReparentPlan` 为 Mesh 与 Rotation/Warp
+  提供 `KeepLocalData`，检查循环、源/目标/后代锁定，多选按文档投影顺序规范化并排除
+  已选祖先包含的后代。无绑定或带普通 MeshBinding 的 Mesh，在根与无驱动、可逆的
+  静态 Rotation 链之间支持 `PreserveEditState` / `PreserveParameterDomain`。
+  使用与求值相同的旋转、反射与父级角度/缩放继承规则，转换基础坐标和每个形态。
+  计划报告模型单位下的容差、采样最大误差与包含多线性累加舍入的保守误差预算；
+  保证仅覆盖 Glue 之前的几何。颜色/透明度继承、启用/参数域可见性及 Glue/有状态
+  动画明确列入未保证效果。奇异父级、带驱动父级、非线性 Warp、BlendShape Mesh
+  或变形器子树的保持策略返回具体的未证明原因；其 KeepLocalData 仍可用。
+- **预算、事务与发布**：SDK `BindingAuthoringEdit` / `BindingEditPlan` 和
+  `plan_binding_authoring` / `execute_binding_plan`、`EditSession::binding_authoring`
+  使用同一 core 规划、候选与历史。计划绑定 SDK Version 与 core 快照身份；在已被
+  其他写入改变的候选内复用旧计划也拒绝。完整笛卡尔积分配前检查溢出、组合数、
+  载荷/临时字节及历史预算；执行再次检查当前 SDK 会话预算。放弃计划、不变提交和
+  拒绝均不发布；no-op 保留 redo。范围规划只保存关键值写片段，不复制形态载荷。
+  ChangeSet 增加 `BindingGrid` / `DeformationChildren` 集合和 `BindingReferenceChange`，记录 Mesh/Transform
+  父级与绑定目标引用，Undo/Redo 交换正确方向。现有普通 setter、字段 patch、顶点
+  写入与事务补齐对应的持久化锁定检查；无标记文档直接走空状态快路径。
+- **Editor 与格式**：editor-core 的 `plan_binding_authoring` /
+  `execute_binding_authoring` 合成候选/Timeline 会话检查并消费同一回执；创建建议选择
+  Binding，不自动激活 Motion/Expression。原生格式沿用既有轴/形态字段，保存重开保留
+  零轴和全部基础字段；本次未变更 wire schema。MOC3 严格返回
+  `ZERO_AXIS_BINDING_NOT_REPRESENTABLE`；CMO3 默认拒绝并报告 `ZERO_AXIS_BINDING`，
+  显式允许损失后省略零轴 Binding、导出目标基础形态，保留诊断。
+
+当前 SDK 统一预算默认值为 **65,536 采样组合、64 MiB 转换临时字节、256 MiB 历史
+估算字节**，由会话 `authoring_limits` / `set_authoring_limits` 配置；不是面板配置。
+这些是本批有限的初始边界，已有精确边界/溢出回归，尚未按真实模型 Release 基准定型。
+字节值是保守载荷估算（含 SDK 候选及旧 checkpoint），不是 RSS/峰值内存实测。
+
+首批交付时尚缺稳定轴/采样身份、待配置轴、Scene/Glue 与共享 BlendShape 转换，
+以及 Python 入口。上述能力已由下一节继续交付；改父级扩展、完整转换影响地址、
+可中断长转换及真实模型容量/性能验收仍未完成。
+
+本批验收（均从 `kasane-editor` 目录执行）：
+
+```sh
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-core
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+  --test binding_authoring --test scene_authoring --test effects_authoring --test mesh_editing
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-moc3 --lib \
+  zero_axis_binding_is_rejected_before_runtime_encoding
+cargo test --locked -p editor-core --test integration binding_authoring
+cargo test --locked -p editor-core --test integration mesh
+cargo check --locked -p kasane-editor
+cargo fmt --all --check --manifest-path ../kasane-2d/Cargo.toml
+cargo fmt --all --check
+```
+
+结果：core **69 项**、SDK 相关专项 **31 项**（Binding 18、Scene 5、Effects 2、
+Mesh 6）、MOC3 零轴边界 **1 项**、Editor 新专项 **2 项**与既有 Mesh 筛选
+**32 项**通过，合计 **135 项**且上述分组互不重复。两仓库格式与 diff 检查通过；
+Editor 编译通过。新增回归共 18 项，已包含在上述数量内。
+
+按本批影响范围使用相关包和测试筛选，未执行完整工作区脚本、Python wheel、
+Metal 截图或真实模型 Release 基准；这些结果不构成完整 C4/C6 验收。
+
+
+## C4：稳定轴/采样身份、Scene/Glue 与共享 BlendShape 转换
+
+2026 年 10 月 22 日续：本节完成这三个领域切片，C4 整体仍在实施中。
+
+- **身份与持久化**：`BindingAxis.id` 与带 ID 的 `BindingSample` 是创作源数据；
+  Mesh/Scene/Glue Keyform 引用采样 ID 组合，DeltaKeyform 引用共享表采样 ID，
+  `base_sample_id` 取代原生基准下标，Constraint 将 ID、值和权重保存在同一条目。
+  数值 keys、基准下标与平行权重数组仅为编译缓存，不再写入原生文件。
+  数据接口 schema 由 6 升为 **7**，directory-project 由 14 升为 **15**，旧版明确拒绝。
+  原生加载严格检查 ID 与采样引用，不能把空 ID 当作外部导入请求而补发身份。
+  数值导入/创建适配器可以生成初始 ID；重放未改变的数值替换复用原 ID，
+  正式移动采样使用稳定 ID 转换。全局唯一性覆盖新子身份，保存重开保留原身份。
+- **SDK 生命周期与字段**：`BindingAxis` / `BindingSample` 纳入 SDK 对象键、
+  句柄、incarnation、反向引用与 ChangeSet；删除后 Undo 恢复数据也不能复活旧句柄。
+  `BindingFieldAddress` 捕获子项、拥有者和单调上下文 epoch，字段补丁复用领域规划。
+  纯轴重排保持稳定地址；驱动、采样域或参数域变化使旧地址失效，Undo 不回退 epoch。
+  整表替换、共享转换和重基准化也检查轴/采样与普通网格的持久化锁，删除拥有内容同步
+  清理其 editor flags。独立候选和借用候选使用同一有限预算，提交独立候选时再次检查
+  最新会话预算；失败、不变和放弃候选都不产生历史。
+- **普通网格**：`BindingGridEdit` / `BindingGridPlan` 与 `GridOperation` 覆盖
+  Mesh、Warp、Rotation、Part 和 Glue 的零轴、待配置轴、首轴激活、扩轴、重排、
+  按 ID 插/移/删点、显式切片/重采样降维，以及保留数值或映射数值的驱动更换。
+  待配置轴保存自身身份与采样，但不参与有效笛卡尔积；清空参数需要显式降维策略。
+  首轴激活读取最新基础数据，删末轴把选择结果写回目标，不复活旧形态副本。
+  Warp 联合处理兼容的 Bezier 控制器；Rotation 插值遇混合反射明确拒绝。
+  Part 联合重排/重采样 Offscreen 映射，保留重用槽、neutral sentinel 与静态外观，
+  新建插值槽按领域默认颜色生成，不按旧数组位置猜测对应关系。
+  旧 `MeshGridEdit` 入口在规划时翻译到同一转换器。
+- **共享 BlendShape**：`BlendAuthoringEdit` / `BlendAuthoringPlan` 支持待配置表、
+  约束和目标绑定，表可从空状态逐点配置；插值、移动、删除、显式替代基准、重基准化、
+  驱动更换/范围映射及绑定换表同步验证全部使用者。移动保留采样与 Delta 的对应；
+  约束值/权重按条目 ID 配对。换表在等价采样域上重映射，其他情况需显式接受 reset，
+  不允许隐式丢弃增量。插点、移动和兼容换表保留已有 Delta 的完整载荷，包括
+  可选通道及不参与执行的基准条目；新建和重基准化才重构形态。重基准化覆盖 Mesh、Warp、Rotation、Part、Glue、Offscreen，
+  同时补偿基础字段和普通网格，多个共享使用者的补偿累计到同一目标。
+  Offscreen 会物化需要补偿的中性槽。非单位约束、不可保持的 optional color 选择、
+  非整数/跨零离散绘制顺序、不可表达的 Bezier 位移等返回具体拒绝原因；
+  不通过只改表或只改目标的中间状态发布。计划报告受影响拥有者、预算与删除/reset 损失。
+- **运行与格式**：有效轴按紧凑数值缓存求值；零轴绑定不贡献独立形态。
+  未配置共享表或约束禁用整条 BlendBinding，保留源数据，不能将缺约束当作权重 1。
+  运行热路径复用 PreparedEvaluation 的有效选择，不逐帧复制/过滤文档。
+  SDK `plan_available_binding_export` 列出零轴、待配置轴/表/约束及间接禁用的使用者，
+  接受时检查版本；CMO3 默认拒绝，显式接受后导出相同可用投影并保留诊断。
+  MOC3 在编码前明确拒绝不可表达状态。外部重导入生成新的内部身份。
+- **Editor 与 Python**：editor-core 投影稳定轴/采样对象与关系，字段规划复用 SDK；
+  Properties 的 MeshKeyform 地址改为采样 ID 组合，现有预览与控制点工具只读取有效轴，
+  待配置 BlendBinding 不阻止基础控制点编辑。Python 的 `Edit.binding_authoring`、
+  `Session.plan_binding_authoring` / `execute_binding_plan`、`binding_source`、
+  `binding_field_address` / `plan_binding_field_patch` 走相同类型化 Rust 规划与候选；
+  source 查询返回原生轴/采样身份，计划可查询 affected IDs、预算与共享转换损失，
+  普通 tuple 查询继续提供数值视图。
+
+本节不把数值采样回归视为完整数学误差证明。**C4 剩余工作**：第 8.1 节完整改父级
+能力/支持矩阵及其场景前置能力；每类转换统一的保留/生成/删除/重映射稳定地址与
+参数域保证报告；可协作中断的长转换；真实模型容量、临时峰值与 Release 性能验收。
+当前默认预算仍为首批有限边界，尚未用真实模型基准定型。C5 的完整对象生命周期与
+后续 UI 操作统一不包含在本节交付中。
+
+本节验收命令（从 `kasane-editor` 执行）：
+
+```sh
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked --no-fail-fast \
+  -p kasane-core -p kasane-sdk -p kasane-project -p kasane-cmo3
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+  --test binding_authoring --test mesh_editing
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-moc3 \
+  --lib --test import_tests -- blendshape_glue zero_axis_binding_is_rejected_before_runtime_encoding
+cargo test --locked -p editor-core --test integration -- \
+  binding_authoring properties canvas_objects panels
+cargo check --locked -p kasane-editor
+cargo fmt --all --check --manifest-path ../kasane-2d/Cargo.toml
+cargo fmt --all --check
+```
+
+Python 在相邻 `kasane-2d` 执行 `uv run --locked maturin build --manifest-path
+modules/kasane-python/Cargo.toml --out target/c4-wheels`，安装 CPU wheel 到独立
+`target/c4-python` 环境，再运行 `modules/kasane-python/tests/test_cpu.py`。
+新增两项 Python 回归覆盖稳定 source、字段地址、待配置轴激活、共享表与过期计划。
+Pyright 与 Git HEAD 源文件逐条对比均为既有 **31 errors / 3 warnings**，本轮无新增诊断；
+这不是 Python 全量静态类型检查通过的声明。
+
+结果：四包命令共 **433 项通过、2 项既有忽略**（core 69、SDK 234、project 89、
+CMO3 41）。最终身份检查又补充了拓扑替换路径的同事务删除/重建回归，Binding 专项
+最终 **39 项**与 Mesh 专项 **6 项**通过；这些专项与四包结果重叠，不累加。
+MOC3 零轴边界 **1 项**及 BlendShape/Glue/Offscreen 往返 **6 项**、Editor 相关筛选
+**85 项**、最终 CPU wheel **57 项**通过。两仓库格式/diff 检查及 Editor 编译通过。
+未运行完整 workspace 脚本、Metal 截图、真实模型 Release 延迟或内存峰值基准；
+本节结果不代表完整 C4/C6 验收。
+
+## C4：未提交实现 review 修正
+
+2026 年 10 月 22 日：对两个工作区的 C4 实现做针对性 review，修复以下问题：
+
+- **共享 Offscreen 颜色转换**：运行时 Offscreen multiply 以 1 为中性值，
+  转换器现在先转为以 0 为中性的增量，再执行插值／重基准化，写回时恢复其表示。
+  避免插点和改基准后颜色跳变；回归比较完整参数区间上的 opacity、multiply、screen，
+  并检查 Undo/Redo 和原生保存往返。
+- **锁定与句柄生命周期**：Offscreen 绑定沿所属 Part 检查锁，直接替换 Offscreen、
+  BlendBinding 改目标及 Mesh/Warp 拓扑替换也验证被修改的拥有内容。
+  Warp 联合替换纳入 SDK 的删除身份跟踪，同事务删除／恢复采样不会复活旧句柄。
+- **待配置状态与改父级**：静态 Rotation 的待配置普通轴／BlendBinding 不再误判为
+  有效驱动；仿射转换的插值误差预算仅计算有效轴，待配置轴不会虚增维度。
+- **属性地址**：多轴 MeshKeyform 地址必须覆盖完整采样组合，重复同一个 SampleId
+  不能代替缺少的维度；合法的无序采样组合仍可解析。
+- **Editor 入口与 Warp 工具**：Binding 创作改用 Modeling 上下文检查，并在执行时
+  再次校验。控制点编辑保留零轴／待配置 Warp 绑定及其身份，通过所选 Keyform 槽位
+  决定写入基础形态还是有效网格；不再因遗漏绑定而提交失败。
+- **网格转换实现**：Mesh/Warp/Rotation 插值读取借用的源 Keyform，位置和 Bezier
+  辅助函数读取切片／引用，避免为读取标量字段反复复制整份形态。保持原有领域验证。
+
+以上修正不改变上一节列出的 C4 剩余交付范围。
+
+本轮新增 **8 项回归**（SDK 6 项、Editor 2 项）。针对性验证命令：
+
+```sh
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+  --test binding_authoring --test mesh_editing --test effects_authoring --test scene_authoring
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-core \
+  --test offscreen_tests --test typed_scene_tests --test keyform_tests --test blendshape_glue_tests
+cargo test --locked -p editor-core --test integration -- binding_authoring properties canvas_objects panels
+cargo check --locked -p kasane-editor
+```
+
+最终结果：SDK **58 项**、core **28 项**、Editor **87 项**均通过；Editor 编译及
+两仓库格式／diff 检查通过。编译仍报告 vendor GPUI/Cocoa 的既有警告及 `block`
+未来兼容性提示。本轮未运行全 workspace、原生截图、Python wheel 或真实模型
+Release 基准；不将本次 review 视为完整 C4/C6 验收。

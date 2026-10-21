@@ -349,7 +349,9 @@ impl Document {
     }
 
     pub fn mesh_grid_requires_square(&self, object: &ObjectRef) -> bool {
-        self.session.binding_for_mesh(&object.id).is_some()
+        self.session
+            .binding_for_mesh(&object.id)
+            .is_some_and(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
             || self.session.blend_binding_ids().iter().any(|id| {
                 self.session
                     .blend_binding(id)

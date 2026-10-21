@@ -244,6 +244,8 @@ pub(super) fn bound_deformer_editor(
         edit.create_scene_binding(SceneBinding {
             id: id(25),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id(24),
                 keys: vec![0., 1.],
             }],

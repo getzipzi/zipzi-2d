@@ -60,3 +60,6 @@ mod transfer_roundtrip;
 
 #[path = "cases/expression_authoring.rs"]
 mod expression_authoring;
+
+#[path = "cases/binding_authoring.rs"]
+mod binding_authoring;

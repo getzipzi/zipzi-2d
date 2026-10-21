@@ -391,12 +391,15 @@ fn drawing_fixture(explicit: bool) -> anyhow::Result<(Document, tempfile::TempDi
             id: id(202),
             mesh_id: ids[0].clone(),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: id(201),
                 keys: vec![0., 1.],
             }],
             keyforms: [(0., 900.), (1., 0.)]
                 .into_iter()
                 .map(|(key, draw_order)| MeshKeyform {
+                    samples: Default::default(),
                     keys: vec![key],
                     positions: meshes[0].base_positions.clone(),
                     appearance: Default::default(),

@@ -275,6 +275,8 @@ fn sample_document_with_options(
                 id: Uuid::new_v4().to_string(),
                 mesh_id: mesh.id.clone(),
                 axes: vec![BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id,
                     keys: vec![0., 1.],
                 }],
@@ -328,6 +330,8 @@ pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Docum
             axes: ids
                 .iter()
                 .map(|id| BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: id.clone(),
                     keys: keys.clone(),
                 })
@@ -338,6 +342,7 @@ pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Docum
                     .iter()
                     .flat_map(|&y| {
                         keys.iter().map(move |&x| PartKeyform {
+                            samples: Default::default(),
                             keys: vec![x, y],
                             draw_order: x + y,
                         })

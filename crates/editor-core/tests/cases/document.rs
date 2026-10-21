@@ -83,6 +83,8 @@ fn parameter_visuals_include_scene_binding_keyforms() -> anyhow::Result<()> {
         edit.create_scene_binding(SceneBinding {
             id: Uuid::new_v4().to_string(),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: parameter_id.clone(),
                 keys: vec![0., 1.],
             }],
@@ -90,10 +92,12 @@ fn parameter_visuals_include_scene_binding_keyforms() -> anyhow::Result<()> {
                 target_id: part_id.clone().into(),
                 keyforms: vec![
                     PartKeyform {
+                        samples: Default::default(),
                         keys: vec![0.],
                         draw_order: 0.,
                     },
                     PartKeyform {
+                        samples: Default::default(),
                         keys: vec![1.],
                         draw_order: 1.,
                     },
@@ -541,6 +545,8 @@ fn unused_blend_key_table_does_not_claim_bound_keyforms() -> anyhow::Result<()> 
             ..Default::default()
         })?;
         edit.create_blend_key_table(BlendShapeKeyTable {
+            samples: Default::default(),
+            base_sample_id: Default::default(),
             id: Uuid::new_v4().to_string(),
             parameter_id: parameter_id.clone(),
             keys: vec![0., 1.],

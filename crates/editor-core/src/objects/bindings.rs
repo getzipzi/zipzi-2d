@@ -13,23 +13,41 @@ pub struct BindingInfo {
 }
 impl BindingInfo {
     pub fn writable(&self) -> bool {
-        self.blend || self.axes.len() <= 2
+        self.blend
+            || self
+                .axes
+                .iter()
+                .filter(|a| !a.parameter_id.is_empty())
+                .count()
+                <= 2
     }
     pub fn layout(&self) -> String {
+        let active: Vec<_> = self
+            .axes
+            .iter()
+            .filter(|a| !a.parameter_id.is_empty())
+            .collect();
+        let pending = self.axes.len() - active.len();
         format!(
-            "{}D · {} = {}",
-            self.axes.len(),
-            self.axes
+            "{}D · {} = {}{}",
+            active.len(),
+            active
                 .iter()
-                .map(|a| a.keys.len().to_string())
+                .map(|a| a.samples.len().to_string())
                 .collect::<Vec<_>>()
                 .join(" × "),
-            self.points.len()
+            self.points.len(),
+            if pending == 0 {
+                String::new()
+            } else {
+                format!(" · {pending} pending")
+            }
         )
     }
 }
 /// Complete SDK grids vary the first axis fastest. Only used for implicit Glue/Blend slots.
 pub(super) fn grid_points(axes: &[BindingAxis]) -> Vec<Vec<f32>> {
+    let axes: Vec<_> = axes.iter().filter(|a| !a.parameter_id.is_empty()).collect();
     if axes.is_empty() {
         return Vec::new();
     }

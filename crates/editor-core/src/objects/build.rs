@@ -81,7 +81,7 @@ impl ObjectIndex {
     }
     fn add_binding(&mut self, info: BindingInfo) {
         self.add(info.reference.clone(), format!("{} · {}", info.target.id, info.layout()), json!({"axes": info.axes, "keyforms": info.points.len(), "read_only": !info.writable()}), None);
-        for axis in &info.axes {
+        for axis in info.axes.iter().filter(|a| !a.parameter_id.is_empty()) {
             self.edge(
                 &ObjectRef::new(ObjectKind::Parameter, &axis.parameter_id),
                 RelationKind::ParameterAxis,
@@ -188,6 +188,80 @@ impl ObjectIndex {
                 s.ref_edge(&r, R::ParameterGroup, K::ParameterGroup, group);
             }
         }
+        for child in m.binding_identities_iter() {
+            let kind = match child.kind {
+                kasane_core::document::BindingIdentityKind::Axis => K::BindingAxis,
+                kasane_core::document::BindingIdentityKind::Sample => K::BindingSample,
+            };
+            let value = if let Some(axis) = m
+                .get_binding(&child.owner)
+                .map(|b| b.axes.as_slice())
+                .or_else(|| m.get_scene_binding(&child.owner).map(|b| b.axes.as_slice()))
+                .or_else(|| {
+                    m.get_glue(&child.owner)
+                        .and_then(|g| g.binding.as_ref())
+                        .map(|b| b.axes.as_slice())
+                }) {
+                axis.iter().find(|a| a.id == child.id).map_or_else(
+                    || {
+                        axis.iter()
+                            .flat_map(|a| &a.samples)
+                            .find(|s| s.id == child.id)
+                            .map_or(json!({}), |s| json!({"value":s.value}))
+                    },
+                    |a| json!({"parameter_id":a.parameter_id,"samples":a.samples}),
+                )
+            } else if let Some(t) = m.get_blend_key_table(&child.owner) {
+                t.samples.iter().find(|s| s.id == child.id).map_or(
+                    json!({}),
+                    |s| json!({"value":s.value,"base":t.base_sample_id==s.id}),
+                )
+            } else if let Some(c) = m.get_blend_constraint(&child.owner) {
+                c.samples
+                    .iter()
+                    .find(|s| s.id == child.id)
+                    .map_or(json!({}), |s| json!({"value":s.value,"weight":s.weight}))
+            } else {
+                json!({})
+            };
+            if kind == K::BindingAxis {
+                if let Some(parameter) = value
+                    .get("parameter_id")
+                    .and_then(Value::as_str)
+                    .filter(|id| !id.is_empty())
+                {
+                    s.edge(
+                        &ObjectRef::new(K::Parameter, parameter),
+                        R::ParameterAxis,
+                        ObjectRef::new(kind, &child.id),
+                        "axis driver",
+                    );
+                }
+            }
+            s.add(
+                ObjectRef::new(kind, &child.id),
+                &child.id,
+                json!({"owner":child.owner,"axis":child.axis,"fields":value}),
+                None,
+            );
+            let owner_kind = if m.get_binding(&child.owner).is_some() {
+                K::MeshBinding
+            } else if m.get_scene_binding(&child.owner).is_some() {
+                K::SceneBinding
+            } else if m.get_glue(&child.owner).is_some() {
+                K::Glue
+            } else if m.get_blend_key_table(&child.owner).is_some() {
+                K::BlendKeyTable
+            } else {
+                K::BlendConstraint
+            };
+            s.edge(
+                &ObjectRef::new(kind, &child.id),
+                R::EntryOf,
+                ObjectRef::new(owner_kind, &child.owner),
+                "binding-owned identity",
+            );
+        }
         for id in m.binding_order() {
             if let Some(x) = m.get_binding(id) {
                 s.add_binding(BindingInfo {
@@ -240,24 +314,28 @@ impl ObjectIndex {
             if let Some(x) = m.get_blend_key_table(id) {
                 let r = ObjectRef::new(K::BlendKeyTable, id);
                 s.add(r.clone(), id, json!(x), None);
-                s.edge(
-                    &ObjectRef::new(K::Parameter, &x.parameter_id),
-                    R::ParameterAxis,
-                    r,
-                    "shared BlendShape table",
-                );
+                if !x.parameter_id.is_empty() {
+                    s.edge(
+                        &ObjectRef::new(K::Parameter, &x.parameter_id),
+                        R::ParameterAxis,
+                        r,
+                        "shared driver",
+                    );
+                }
             }
         }
         for id in m.blend_constraint_order() {
             if let Some(x) = m.get_blend_constraint(id) {
                 let r = ObjectRef::new(K::BlendConstraint, id);
                 s.add(r.clone(), id, json!(x), None);
-                s.edge(
-                    &ObjectRef::new(K::Parameter, &x.parameter_id),
-                    R::ParameterAxis,
-                    r,
-                    "constraint weights",
-                );
+                if !x.parameter_id.is_empty() {
+                    s.edge(
+                        &ObjectRef::new(K::Parameter, &x.parameter_id),
+                        R::ParameterAxis,
+                        r,
+                        "shared driver",
+                    );
+                }
             }
         }
         for id in m.blend_binding_order() {
@@ -274,6 +352,8 @@ impl ObjectIndex {
                     .get_blend_key_table(&x.key_table_id)
                     .map(|t| {
                         vec![BindingAxis {
+                            id: Default::default(),
+                            samples: t.samples.clone(),
                             parameter_id: t.parameter_id.clone(),
                             keys: t.keys.clone(),
                         }]

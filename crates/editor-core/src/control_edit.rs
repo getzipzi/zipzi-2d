@@ -86,12 +86,17 @@ impl ControlEdit {
         document.ensure_editable(std::slice::from_ref(object))?;
         let doc = document.model();
         ensure!(
-            doc.blend_bindings_for_target(&object.id).is_empty(),
+            doc.blend_bindings_for_target(&object.id)
+                .iter()
+                .all(|b| !doc.blend_binding_active(b)),
             "BlendShape editing requires an explicit blend target"
         );
         let describe_binding =
             |axes: &[kasane_core::BindingAxis], matches: bool| -> Result<String> {
-                ensure!(axes.len() <= 2, "This legacy binding is read-only");
+                ensure!(
+                    axes.iter().filter(|a| !a.parameter_id.is_empty()).count() <= 2,
+                    "This legacy binding is read-only"
+                );
                 ensure!(
                     matches,
                     "Select a stored keyform before editing this object"
@@ -99,6 +104,7 @@ impl ControlEdit {
                 Ok(format!(
                     "Keyform · {}",
                     axes.iter()
+                        .filter(|a| !a.parameter_id.is_empty())
                         .map(|axis| {
                             let value = scene
                                 .source
@@ -117,16 +123,20 @@ impl ControlEdit {
                 ))
             };
         let at_keys = |axes: &[kasane_core::BindingAxis], keys: &[f32]| {
-            axes.len() == keys.len()
-                && axes.iter().zip(keys).all(|(axis, key)| {
-                    scene
-                        .source
-                        .viewport_frame
-                        .parameters
-                        .iter()
-                        .find(|p| p.id == axis.parameter_id)
-                        .is_some_and(|p| (p.value - key).abs() < 1e-6)
-                })
+            axes.iter().filter(|a| !a.parameter_id.is_empty()).count() == keys.len()
+                && axes
+                    .iter()
+                    .filter(|a| !a.parameter_id.is_empty())
+                    .zip(keys)
+                    .all(|(axis, key)| {
+                        scene
+                            .source
+                            .viewport_frame
+                            .parameters
+                            .iter()
+                            .find(|p| p.id == axis.parameter_id)
+                            .is_some_and(|p| (p.value - key).abs() < 1e-6)
+                    })
         };
         match object.kind {
             ObjectKind::Mesh => {
@@ -135,7 +145,10 @@ impl ControlEdit {
                     doc.glues_for_mesh(&object.id).is_empty(),
                     "Meshes connected by Glue are read-only in the vertex tool"
                 );
-                if let Some(b) = doc.binding_for_mesh(&object.id) {
+                if let Some(b) = doc
+                    .binding_for_mesh(&object.id)
+                    .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+                {
                     return describe_binding(
                         &b.axes,
                         b.keyforms.iter().any(|f| at_keys(&b.axes, &f.keys)),
@@ -147,7 +160,10 @@ impl ControlEdit {
                     doc.get_transform(&object.id).is_some(),
                     "Deformer no longer exists"
                 );
-                if let Some(b) = doc.binding_for_scene(&object.id) {
+                if let Some(b) = doc
+                    .binding_for_scene(&object.id)
+                    .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+                {
                     return describe_binding(
                         &b.axes,
                         b.track.samples().any(|f| at_keys(&b.axes, f.keys)),
@@ -162,25 +178,34 @@ impl ControlEdit {
         document.ensure_editable(std::slice::from_ref(object))?;
         let doc = document.model();
         ensure!(
-            doc.blend_bindings_for_target(&object.id).is_empty(),
+            doc.blend_bindings_for_target(&object.id)
+                .iter()
+                .all(|b| !doc.blend_binding_active(b)),
             "BlendShape editing requires an explicit blend target"
         );
         let slot_for =
             |axes: &[kasane_core::BindingAxis], points: Vec<Vec<f32>>| -> Result<usize> {
-                ensure!(axes.len() <= 2, "This legacy binding is read-only");
+                ensure!(
+                    axes.iter().filter(|a| !a.parameter_id.is_empty()).count() <= 2,
+                    "This legacy binding is read-only"
+                );
                 points
                     .iter()
                     .position(|keys| {
-                        keys.len() == axes.len()
-                            && axes.iter().zip(keys).all(|(a, k)| {
-                                scene
-                                    .source
-                                    .viewport_frame
-                                    .parameters
-                                    .iter()
-                                    .find(|p| p.id == a.parameter_id)
-                                    .is_some_and(|p| (p.value - k).abs() < 1e-6)
-                            })
+                        keys.len() == axes.iter().filter(|a| !a.parameter_id.is_empty()).count()
+                            && axes
+                                .iter()
+                                .filter(|a| !a.parameter_id.is_empty())
+                                .zip(keys)
+                                .all(|(a, k)| {
+                                    scene
+                                        .source
+                                        .viewport_frame
+                                        .parameters
+                                        .iter()
+                                        .find(|p| p.id == a.parameter_id)
+                                        .is_some_and(|p| (p.value - k).abs() < 1e-6)
+                                })
                     })
                     .ok_or_else(|| {
                         anyhow::anyhow!("Select a stored keyform before editing this object")
@@ -195,7 +220,10 @@ impl ControlEdit {
                     doc.glues_for_mesh(&object.id).is_empty(),
                     "Meshes connected by Glue are read-only in the vertex tool"
                 );
-                if let Some(binding) = doc.binding_for_mesh(&object.id) {
+                if let Some(binding) = doc
+                    .binding_for_mesh(&object.id)
+                    .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+                {
                     let slot = slot_for(
                         &binding.axes,
                         binding.keyforms.iter().map(|f| f.keys.clone()).collect(),
@@ -223,44 +251,46 @@ impl ControlEdit {
                 let t = doc
                     .get_transform(&object.id)
                     .ok_or_else(|| anyhow::anyhow!("Deformer no longer exists"))?;
-                let (original, slot, positions, rotation) =
-                    if let Some(binding) = doc.binding_for_scene(&object.id) {
-                        let slot = slot_for(
-                            &binding.axes,
-                            binding.track.samples().map(|s| s.keys.to_vec()).collect(),
-                        )?;
-                        let sample = binding.track.sample(slot);
-                        let rotation = t.rotation().is_some();
-                        let positions = if rotation {
-                            vec![Vec2::new(
-                                sample.rotation.origin.x as f32,
-                                sample.rotation.origin.y as f32,
-                            )]
-                        } else {
-                            sample.positions.to_vec()
-                        };
-                        (
-                            EditOriginal::SceneBinding(binding.clone()),
-                            Some(slot),
-                            positions,
-                            rotation,
-                        )
-                    } else if let Some(w) = t.warp() {
-                        (
-                            EditOriginal::Transform(t.clone()),
-                            None,
-                            w.points.clone(),
-                            false,
-                        )
+                let (original, slot, positions, rotation) = if let Some(binding) = doc
+                    .binding_for_scene(&object.id)
+                    .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+                {
+                    let slot = slot_for(
+                        &binding.axes,
+                        binding.track.samples().map(|s| s.keys.to_vec()).collect(),
+                    )?;
+                    let sample = binding.track.sample(slot);
+                    let rotation = t.rotation().is_some();
+                    let positions = if rotation {
+                        vec![Vec2::new(
+                            sample.rotation.origin.x as f32,
+                            sample.rotation.origin.y as f32,
+                        )]
                     } else {
-                        let p = t.rotation().unwrap().pose.origin;
-                        (
-                            EditOriginal::Transform(t.clone()),
-                            None,
-                            vec![Vec2::new(p.x as f32, p.y as f32)],
-                            true,
-                        )
+                        sample.positions.to_vec()
                     };
+                    (
+                        EditOriginal::SceneBinding(binding.clone()),
+                        Some(slot),
+                        positions,
+                        rotation,
+                    )
+                } else if let Some(w) = t.warp() {
+                    (
+                        EditOriginal::Transform(t.clone()),
+                        None,
+                        w.points.clone(),
+                        false,
+                    )
+                } else {
+                    let p = t.rotation().unwrap().pose.origin;
+                    (
+                        EditOriginal::Transform(t.clone()),
+                        None,
+                        vec![Vec2::new(p.x as f32, p.y as f32)],
+                        true,
+                    )
+                };
                 let ids = (0..positions.len() as u32).collect();
                 (
                     original,
@@ -275,14 +305,19 @@ impl ControlEdit {
         };
         let warp = if object.kind == ObjectKind::Deformer && !rotation {
             let transform = doc.get_transform(&object.id).unwrap().clone();
+            // Keep undriven bindings in the write set; only the selected form
+            // determines whether this gesture edits a keyform or the base Warp.
             let binding = doc.binding_for_scene(&object.id).cloned();
             let warp = transform.warp().unwrap();
-            let stored = binding.as_ref().map_or(&warp.bezier, |b| {
-                let SceneTrack::Warp { keyforms, .. } = &b.track else {
-                    unreachable!("a Warp edit has Warp keyforms")
-                };
-                &keyforms[slot.unwrap()].bezier
-            });
+            let stored = binding
+                .as_ref()
+                .zip(slot)
+                .map_or(&warp.bezier, |(b, slot)| {
+                    let SceneTrack::Warp { keyforms, .. } = &b.track else {
+                        unreachable!("a Warp edit has Warp keyforms")
+                    };
+                    &keyforms[slot].bezier
+                });
             let controller = stored.clone().unwrap_or_else(|| {
                 kasane_core::WarpBezier::from_lattice(
                     warp.rows,
@@ -698,14 +733,14 @@ impl ControlEdit {
         w.rows = rows;
         w.columns = columns;
         w.points = resample(&old.points);
-        if let Some(b) = &mut binding {
+        if let Some((b, slot)) = binding.as_mut().zip(self.slot) {
             let SceneTrack::Warp { keyforms, .. } = &mut b.track else {
                 unreachable!()
             };
             for f in keyforms.iter_mut() {
                 f.positions = resample(&f.positions);
             }
-            let f = &mut keyforms[self.slot.unwrap()];
+            let f = &mut keyforms[slot];
             f.positions = positions;
             f.bezier = stored;
         } else {

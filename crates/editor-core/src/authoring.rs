@@ -29,6 +29,8 @@ pub enum AuthoringSessionReason {
     CandidateActive,
 }
 
+#[path = "authoring/binding.rs"]
+mod binding;
 #[path = "authoring/motion.rs"]
 mod motion;
 #[path = "authoring/physics.rs"]

@@ -12,6 +12,8 @@ pub enum ObjectKind {
     Parameter,
     ParameterGroup,
     MeshBinding,
+    BindingAxis,
+    BindingSample,
     SceneBinding,
     GlueBinding,
     BlendBinding,

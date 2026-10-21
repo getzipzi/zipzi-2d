@@ -75,16 +75,23 @@ pub(crate) fn authored(
     let model = document.model();
     let transform = model.get_transform(&object.id)?;
     let warp = transform.warp()?;
-    let (stored, positions) = if let Some(b) = model.binding_for_scene(&object.id) {
+    let (stored, positions) = if let Some(b) = model
+        .binding_for_scene(&object.id)
+        .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+    {
         let SceneTrack::Warp { keyforms, .. } = &b.track else {
             return None;
         };
         let form = keyforms.iter().find(|f| {
-            b.axes.iter().zip(&f.keys).all(|(a, k)| {
-                parameters
-                    .get(a.parameter_id.as_str())
-                    .is_some_and(|value| (value - k).abs() < 1e-6)
-            })
+            b.axes
+                .iter()
+                .filter(|a| !a.parameter_id.is_empty())
+                .zip(&f.keys)
+                .all(|(a, k)| {
+                    parameters
+                        .get(a.parameter_id.as_str())
+                        .is_some_and(|value| (value - k).abs() < 1e-6)
+                })
         })?;
         (&form.bezier, &form.positions)
     } else {

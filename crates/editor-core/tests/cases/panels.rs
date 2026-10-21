@@ -98,6 +98,8 @@ fn independent_parameter_bindings_stay_separate_and_target_counts_are_deduplicat
             edit.create_scene_binding(SceneBinding {
                 id: id(),
                 axes: vec![BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: params[i].clone(),
                     keys: vec![-1., 1.],
                 }],
@@ -105,10 +107,12 @@ fn independent_parameter_bindings_stay_separate_and_target_counts_are_deduplicat
                     target_id: targets[i].clone().into(),
                     keyforms: vec![
                         PartKeyform {
+                            samples: Default::default(),
                             keys: vec![-1.],
                             draw_order: 0.,
                         },
                         PartKeyform {
+                            samples: Default::default(),
                             keys: vec![1.],
                             draw_order: 1.,
                         },
@@ -167,6 +171,8 @@ fn inherited_influences_are_paths_not_direct_mesh_bindings() -> anyhow::Result<(
         edit.create_scene_binding(SceneBinding {
             id: binding.clone(),
             axes: vec![BindingAxis {
+                id: Default::default(),
+                samples: Default::default(),
                 parameter_id: p.clone(),
                 keys: vec![-1., 1.],
             }],
@@ -174,11 +180,13 @@ fn inherited_influences_are_paths_not_direct_mesh_bindings() -> anyhow::Result<(
                 target_id: parent.clone().into(),
                 keyforms: vec![
                     kasane_core::RotationKeyform {
+                        samples: Default::default(),
                         keys: vec![-1.],
                         rotation: Default::default(),
                         appearance: Default::default(),
                     },
                     kasane_core::RotationKeyform {
+                        samples: Default::default(),
                         keys: vec![1.],
                         rotation: Default::default(),
                         appearance: Default::default(),
@@ -338,10 +346,10 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
         for (i,r) in parameters.iter().enumerate(){edit.create_parameter(Parameter{id:r.clone(),runtime_id:format!("Param{}",["X","Y","Blend"][i]),kind:if i==2{ParameterKind::BlendShape}else{ParameterKind::Normal},..Default::default()})?;}
         for (i,r) in parts.iter().enumerate(){edit.create_part(Part{id:r.clone(),runtime_id:format!("Part{i}"),..Default::default()})?;}
         edit.set_mesh_part(&meshes[0],&parts[0])?;
-        edit.create_glue(Glue{id:glue.clone(),runtime_id:glue.clone(),name:"Seam".into(),mesh_a_id:meshes[0].clone(),mesh_b_id:meshes[1].clone(),intensity:0.,pairs:vec![GlueVertexPair{vertex_a:0,vertex_b:0,weight_a:1.,weight_b:1.}],binding:Some(GlueBinding{axes:vec![BindingAxis{parameter_id:parameters[0].clone(),keys:vec![-1.,1.]}],keyforms:vec![GlueKeyform{intensity:0.},GlueKeyform{intensity:1.}]})})?;
+        edit.create_glue(Glue{id:glue.clone(),runtime_id:glue.clone(),name:"Seam".into(),mesh_a_id:meshes[0].clone(),mesh_b_id:meshes[1].clone(),intensity:0.,pairs:vec![GlueVertexPair{vertex_a:0,vertex_b:0,weight_a:1.,weight_b:1.}],binding:Some(GlueBinding{axes:vec![BindingAxis{ id: Default::default(), samples: Default::default(),parameter_id:parameters[0].clone(),keys:vec![-1.,1.]}],keyforms:vec![GlueKeyform{ samples: Default::default(),intensity:0.},GlueKeyform{ samples: Default::default(),intensity:1.}]})})?;
         edit.create_offscreen(Offscreen{enabled: true,id:offscreen.clone(),runtime_id:offscreen.clone(),name:"Composition".into(),part_id:parts[0].clone(),blend_mode:0,flags:0,masks:vec![meshes[1].clone()],part_keyform_indices:vec![],keyforms:vec![OffscreenKeyform{opacity:1.,..Default::default()}]})?;
-        for r in [&table,&unused_table]{edit.create_blend_key_table(BlendShapeKeyTable{id:r.clone(),parameter_id:parameters[2].clone(),keys:vec![-1.,1.],base_key_idx:0})?;}
-        edit.create_blend_constraint(BlendShapeConstraint{id:constraint.clone(),parameter_id:parameters[1].clone(),keys:vec![-1.,1.],weights:vec![1.,1.]})?;
+        for r in [&table,&unused_table]{edit.create_blend_key_table(BlendShapeKeyTable{ samples: Default::default(), base_sample_id: Default::default(),id:r.clone(),parameter_id:parameters[2].clone(),keys:vec![-1.,1.],base_key_idx:0})?;}
+        edit.create_blend_constraint(BlendShapeConstraint{ samples: Default::default(),id:constraint.clone(),parameter_id:parameters[1].clone(),keys:vec![-1.,1.],weights:vec![1.,1.]})?;
         edit.create_blend_binding(BlendShapeBinding{id:blend.clone(),target_id:meshes[0].clone(),target_kind:BlendShapeTargetKind::Mesh,key_table_id:table.clone(),constraint_ids:vec![constraint.clone()],keyforms:DeltaKeyforms::Mesh(vec![DeltaMeshKeyform{positions:vec![kasane_core::Vec2::default();4],..Default::default()};2])})?;
         edit.import_motion3(&motion,"Idle",&motion_text)?;
         edit.import_expression3(&expression,"Smile",r#"{"Type":"Live2D Expression","Parameters":[{"Id":"ParamX","Value":0.4,"Blend":"Add"},{"Id":"UnknownParameter","Value":1,"Blend":"Multiply"}]}"#)?;

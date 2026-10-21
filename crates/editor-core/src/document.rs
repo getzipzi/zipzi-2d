@@ -544,10 +544,14 @@ impl Document {
             .points
             .get(point)
             .ok_or_else(|| anyhow!("Keyform not found"))?;
-        ensure!(keys.len() == b.axes.len(), "Invalid stored keyform");
+        ensure!(
+            keys.len() == b.axes.iter().filter(|a| !a.parameter_id.is_empty()).count(),
+            "Invalid stored keyform"
+        );
         let values = b
             .axes
             .iter()
+            .filter(|a| !a.parameter_id.is_empty())
             .zip(keys)
             .map(|(a, &v)| (a.parameter_id.clone(), v))
             .collect::<Vec<_>>();

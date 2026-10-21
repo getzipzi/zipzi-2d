@@ -574,3 +574,72 @@ fn rotation_gizmo_follows_canvas_scale_with_matching_pick_geometry() -> anyhow::
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }
+
+#[test]
+fn undriven_warp_binding_keeps_identity_during_control_drag() -> anyhow::Result<()> {
+    use kasane_sdk::{
+        BindingAuthoringEdit as E, BindingGridEdit as G, BindingGridTarget as T, GridOperation as O,
+    };
+    for pending_axis in [false, true] {
+        let (mut editor, _dir, object) = deformer_editor(false)?;
+        let document = editor.active_id().unwrap();
+        let binding = uuid::Uuid::new_v4().to_string();
+        let plan = editor.plan_binding_authoring(
+            document,
+            E::Grid(G::Create {
+                id: binding.clone(),
+                target: T::Scene(object.id.clone()),
+            }),
+        )?;
+        editor.execute_binding_authoring(document, &plan)?;
+        let axis = kasane_core::BindingAxis::new("", vec![-1., 1.]);
+        if pending_axis {
+            let plan = editor.plan_binding_authoring(
+                document,
+                E::Grid(G::Edit {
+                    owner: binding.clone(),
+                    operation: O::AddAxis { axis: axis.clone() },
+                }),
+            )?;
+            editor.execute_binding_authoring(document, &plan)?;
+        }
+        let before = control_points(&mut editor, &object)?;
+        let start = editor.overlay().vertices[0].position;
+        let history = editor.document().unwrap().history_lengths().0;
+        drag(
+            &mut editor,
+            start,
+            ViewportPoint {
+                x: start.x + 20.,
+                y: start.y,
+            },
+            false,
+        )?;
+        let after = control_points(&mut editor, &object)?;
+        assert!((after[0].x - before[0].x - 20.).abs() < 0.001);
+        assert_eq!(editor.document().unwrap().history_lengths().0, history + 1);
+        let check = |editor: &Editor| {
+            let index = editor.document().unwrap().object_index();
+            assert!(
+                index
+                    .get(&ObjectRef::new(ObjectKind::SceneBinding, &binding))
+                    .is_some()
+            );
+            if pending_axis {
+                assert!(
+                    index
+                        .get(&ObjectRef::new(ObjectKind::BindingAxis, &axis.id))
+                        .is_some()
+                );
+            }
+        };
+        check(&editor);
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(control_points(&mut editor, &object)?, before);
+        check(&editor);
+        editor.execute(EditorCommand::Redo)?;
+        assert_eq!(control_points(&mut editor, &object)?, after);
+        check(&editor);
+    }
+    Ok(())
+}

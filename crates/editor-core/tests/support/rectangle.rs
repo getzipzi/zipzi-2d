@@ -54,6 +54,8 @@ fn rectangle_with_texture(
                 id: id(905),
                 mesh_id: mesh.id.clone(),
                 axes: vec![BindingAxis {
+                    id: Default::default(),
+                    samples: Default::default(),
                     parameter_id: id(904),
                     keys: vec![0., 1.],
                 }],
@@ -83,6 +85,8 @@ fn rectangle_with_texture(
                 ..Default::default()
             })?;
             edit.create_blend_key_table(BlendShapeKeyTable {
+                samples: Default::default(),
+                base_sample_id: Default::default(),
                 id: id(907),
                 parameter_id: id(906),
                 keys: vec![0., 1.],

@@ -156,7 +156,7 @@ pub(crate) fn keyform<'a>(
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Option<(&'a str, &'a kasane_core::MeshKeyform)>> {
-    let PropertyScope::MeshKeyform { binding, keys } = scope else {
+    let PropertyScope::MeshKeyform { binding, samples } = scope else {
         return Ok(None);
     };
     let b = model
@@ -166,7 +166,9 @@ pub(crate) fn keyform<'a>(
     let form = b
         .keyforms
         .iter()
-        .find(|f| f.keys.iter().map(|v| v.to_bits()).eq(keys.iter().copied()))
+        .find(|f| {
+            f.samples.len() == samples.len() && f.samples.iter().all(|id| samples.contains(id))
+        })
         .ok_or_else(|| anyhow::anyhow!("Keyform no longer exists"))?;
     Ok(Some((&b.id, form)))
 }

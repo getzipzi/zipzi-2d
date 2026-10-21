@@ -41,46 +41,59 @@ impl Document {
             return PropertyScope::Object;
         }
         let model = self.session.document();
-        let Some(binding) = model.binding_for_mesh(&object.id) else {
+        let Some(binding) = model
+            .binding_for_mesh(&object.id)
+            .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+        else {
             return PropertyScope::Object;
         };
         let form = binding.keyforms.iter().find(|form| {
-            binding.axes.len() == form.keys.len()
-                && binding.axes.iter().zip(&form.keys).all(|(axis, key)| {
-                    model
-                        .get_parameter(&axis.parameter_id)
-                        .is_some_and(|parameter| {
-                            let value = self
-                                .session
-                                .preview_values()
-                                .get(&axis.parameter_id)
-                                .copied()
-                                .unwrap_or(parameter.default_value)
-                                .clamp(parameter.minimum, parameter.maximum);
-                            // Modeling preview inputs are constrained to the parameter
-                            // range, but repeating parameters still wrap its upper end.
-                            // Match runtime evaluation when choosing the authoring target.
-                            let value = if parameter.repeat {
-                                let range = parameter.maximum - parameter.minimum;
-                                let normalized = (value - parameter.minimum) / range;
-                                let wrapped =
-                                    (normalized - normalized.floor()) * range + parameter.minimum;
-                                if wrapped < parameter.minimum || wrapped >= parameter.maximum {
-                                    parameter.minimum
+            binding
+                .axes
+                .iter()
+                .filter(|a| !a.parameter_id.is_empty())
+                .count()
+                == form.keys.len()
+                && binding
+                    .axes
+                    .iter()
+                    .filter(|a| !a.parameter_id.is_empty())
+                    .zip(&form.keys)
+                    .all(|(axis, key)| {
+                        model
+                            .get_parameter(&axis.parameter_id)
+                            .is_some_and(|parameter| {
+                                let value = self
+                                    .session
+                                    .preview_values()
+                                    .get(&axis.parameter_id)
+                                    .copied()
+                                    .unwrap_or(parameter.default_value)
+                                    .clamp(parameter.minimum, parameter.maximum);
+                                // Modeling preview inputs are constrained to the parameter
+                                // range, but repeating parameters still wrap its upper end.
+                                // Match runtime evaluation when choosing the authoring target.
+                                let value = if parameter.repeat {
+                                    let range = parameter.maximum - parameter.minimum;
+                                    let normalized = (value - parameter.minimum) / range;
+                                    let wrapped = (normalized - normalized.floor()) * range
+                                        + parameter.minimum;
+                                    if wrapped < parameter.minimum || wrapped >= parameter.maximum {
+                                        parameter.minimum
+                                    } else {
+                                        wrapped
+                                    }
                                 } else {
-                                    wrapped
-                                }
-                            } else {
-                                value
-                            };
-                            (value - key).abs() < 1e-6
-                        })
-                })
+                                    value
+                                };
+                                (value - key).abs() < 1e-6
+                            })
+                    })
         });
         form.map_or(PropertyScope::InterpolatedMesh, |f| {
             PropertyScope::MeshKeyform {
                 binding: binding.id.clone(),
-                keys: f.keys.iter().map(|v| v.to_bits()).collect(),
+                samples: f.samples.clone(),
             }
         })
     }
@@ -320,7 +333,7 @@ impl Document {
                     &object.id,
                     &patch.scope,
                 )?
-                .map(|(binding, form)| (binding.to_owned(), form.keys.clone())),
+                .map(|(binding, form)| (binding.to_owned(), form.samples.clone())),
                 appearance: read(payload, "appearance")?,
                 draw_order: read(payload, "draw_order")?,
             },
