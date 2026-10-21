@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 mod patch;
 use super::{Document, StructureIssue};
 use crate::types::{ChangeKind, EditResult, Status};
-pub use patch::{PhysicsPatch, PhysicsProperty};
+pub use patch::{PhysicsAssetProperty, PhysicsPatch, PhysicsProperty, PhysicsRigPatch};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

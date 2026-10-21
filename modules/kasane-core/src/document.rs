@@ -38,7 +38,9 @@ pub use motions::{
     MotionClip, MotionEvent, MotionGroup, MotionKey, MotionPoint, MotionRegistration,
     MotionSegment, MotionTrack, MotionTrackTarget,
 };
-pub use physics::{PhysicsAsset, PhysicsPatch, PhysicsProperty};
+pub use physics::{
+    PhysicsAsset, PhysicsAssetProperty, PhysicsPatch, PhysicsProperty, PhysicsRigPatch,
+};
 pub use pose::{PoseAsset, PoseEntry, PosePartRef};
 pub use structure::StructureIssue;
 pub use validation::*;

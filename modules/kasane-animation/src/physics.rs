@@ -245,7 +245,7 @@ impl PhysicsRuntime {
                             particles,
                             current: vec![0.0; setting.outputs.len()],
                             previous: vec![0.0; setting.outputs.len()],
-                            inputs: Vec::new(),
+                            inputs: Vec::with_capacity(setting.inputs.len()),
                             outputs: vec![None; setting.outputs.len()],
                         }
                     })
@@ -346,18 +346,15 @@ impl PhysicsRuntime {
             }
             for (setting, rig) in asset.data.settings.iter().zip(&mut self.rigs) {
                 rig.previous.clone_from(&rig.current);
-                rig.inputs = setting
-                    .inputs
-                    .iter()
-                    .map(|input| {
-                        asset
-                            .parameter_bindings
-                            .get(&input.source.id)
-                            .and_then(|id| self.parameter_cache.get(id))
-                            .copied()
-                            .unwrap_or(0.)
-                    })
-                    .collect();
+                rig.inputs.clear();
+                rig.inputs.extend(setting.inputs.iter().map(|input| {
+                    asset
+                        .parameter_bindings
+                        .get(&input.source.id)
+                        .and_then(|id| self.parameter_cache.get(id))
+                        .copied()
+                        .unwrap_or(0.)
+                }));
                 let (translation, angle) =
                     read_inputs(document, asset, setting, &self.parameter_cache);
                 let radian = (-angle).to_radians();
@@ -404,18 +401,15 @@ impl PhysicsRuntime {
         self.input_cache = parameters.clone();
         self.initialized_inputs = true;
         for (setting, rig) in asset.data.settings.iter().zip(&mut self.rigs) {
-            rig.inputs = setting
-                .inputs
-                .iter()
-                .map(|input| {
-                    asset
-                        .parameter_bindings
-                        .get(&input.source.id)
-                        .and_then(|id| parameters.get(id))
-                        .copied()
-                        .unwrap_or(0.)
-                })
-                .collect();
+            rig.inputs.clear();
+            rig.inputs.extend(setting.inputs.iter().map(|input| {
+                asset
+                    .parameter_bindings
+                    .get(&input.source.id)
+                    .and_then(|id| parameters.get(id))
+                    .copied()
+                    .unwrap_or(0.)
+            }));
             let (translation, angle) = read_inputs(document, asset, setting, parameters);
             let radian = (-angle).to_radians();
             let x = translation.x * radian.cos() - translation.y * radian.sin();
@@ -647,6 +641,29 @@ mod tests {
                 .is_ok());
         }
         import_physics3(&doc, PHYSICS, source).unwrap().candidate
+    }
+
+    #[test]
+    fn observations_reuse_storage_and_remain_independent() {
+        let doc = document(include_str!(
+            "../../../tests/fixtures/animation_cpu/thirty.physics3.json"
+        ));
+        let mut preview = PhysicsPreview::new(&doc);
+        preview.set_parameter(X, 1.).unwrap();
+        preview.stabilize();
+        let pointer = preview.state.rigs[0].inputs.as_ptr();
+        let initial = preview.state.snapshot(&doc);
+        for _ in 0..100 {
+            preview.advance(1. / 30.).unwrap();
+            assert_eq!(preview.state.rigs[0].inputs.as_ptr(), pointer);
+        }
+        preview.set_parameter(X, -1.).unwrap();
+        preview.stabilize();
+        assert_eq!(preview.state.rigs[0].inputs.as_ptr(), pointer);
+        assert_ne!(preview.state.snapshot(&doc)[0].inputs, initial[0].inputs);
+        preview.reset();
+        assert!(preview.state.snapshot(&doc).is_empty());
+        assert_eq!(initial[0].inputs, vec![1.]);
     }
 
     #[test]

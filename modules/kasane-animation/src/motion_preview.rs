@@ -32,7 +32,9 @@ pub struct MotionEventFired {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct MotionSnapshot {
     /// Optional inspector observations. Collected explicitly by a host after
-    /// evaluation, so replay checkpoints do not allocate debug data per step.
+    /// evaluation. Advance/seek results leave this empty; populate it with
+    /// `snapshot.physics = preview.physics_snapshot();` when displaying an inspector.
+    /// Internal observations are retained in replay checkpoints for consistent seeks.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub physics: Vec<crate::PhysicsRigSnapshot>,
     /// Absolute preview time in seconds.
@@ -250,6 +252,11 @@ impl MotionPreview {
         }
     }
 
+    /// Copy observations without advancing simulation. Inputs are from the latest
+    /// solved step; outputs reflect the latest application to model parameters.
+    /// Returns empty when disabled, unresolved, or no step has been solved.
+    /// Reset clears observations unless stabilized start initializes equilibrium.
+    /// Returned data is owned and remains unchanged after later advances or resets.
     pub fn physics_snapshot(&self) -> Vec<crate::PhysicsRigSnapshot> {
         if self.physics_enabled {
             self.physics.snapshot(&self.document)

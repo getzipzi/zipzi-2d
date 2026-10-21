@@ -1,5 +1,7 @@
 use kasane_core::{
-    document::{PhysicsAsset, PhysicsPatch, PhysicsProperty as P},
+    document::{
+        PhysicsAsset, PhysicsAssetProperty, PhysicsPatch, PhysicsProperty as P, PhysicsRigPatch,
+    },
     Canvas, Parameter, Vec2,
 };
 use kasane_sdk::AuthoringSession;
@@ -35,7 +37,11 @@ fn session(groups: usize, nodes: usize) -> AuthoringSession {
                     ..Default::default()
                 })?;
             }
-            edit.set_physics(asset(groups, nodes))
+            let mut physics = asset(groups, nodes);
+            if groups == 0 {
+                physics.parameter_bindings.clear();
+            }
+            edit.set_physics(physics)
         })
         .unwrap();
     session
@@ -43,8 +49,11 @@ fn session(groups: usize, nodes: usize) -> AuthoringSession {
 fn patch(changes: Vec<P>) -> PhysicsPatch {
     PhysicsPatch {
         asset_id: ASSET.into(),
-        group_id: "Rig0".into(),
-        changes,
+        asset_changes: vec![],
+        rig: Some(PhysicsRigPatch {
+            group_id: "Rig0".into(),
+            changes,
+        }),
     }
 }
 #[test]
@@ -87,8 +96,7 @@ fn physics_patches_share_untouched_rigs_and_keep_snapshots_history_and_json_inde
 fn rejected_multi_field_patch_is_atomic_and_sdk_failure_cannot_commit() {
     let mut session = session(2, 3);
     let before = session.read_snapshot();
-    let invalid = patch(vec![
-        P::Fps(Some(60.)),
+    let mut invalid = patch(vec![
         P::VertexMobility {
             index: 1,
             value: 0.2,
@@ -98,6 +106,9 @@ fn rejected_multi_field_patch_is_atomic_and_sdk_failure_cannot_commit() {
             value: 999,
         },
     ]);
+    invalid
+        .asset_changes
+        .push(PhysicsAssetProperty::Fps(Some(60.)));
     assert!(!session.document().validate_physics_patch(&invalid).is_ok());
     let mut edit = session.begin_owned_edit("Invalid", None).unwrap();
     assert!(edit.patch_physics(&invalid).is_err());
@@ -253,5 +264,44 @@ fn physics_field_patch_benchmark() {
         }
         let patch_time = started.elapsed();
         println!("physics fields: groups={groups} nodes={nodes} iterations={iterations} setter_us/event={:.2} patch_us/event={:.2} speedup={:.2}x",setter.as_secs_f64()*1e6/iterations as f64,patch_time.as_secs_f64()*1e6/iterations as f64,setter.as_secs_f64()/patch_time.as_secs_f64());
+    }
+}
+
+#[test]
+fn asset_fps_patch_supports_empty_assets_and_preserves_history_on_noop_or_error() {
+    let mut session = session(0, 0);
+    let mut patch = PhysicsPatch {
+        asset_id: ASSET.into(),
+        asset_changes: vec![PhysicsAssetProperty::Fps(Some(60.))],
+        rig: None,
+    };
+    session
+        .edit("FPS", None, |edit| edit.patch_physics(&patch))
+        .unwrap();
+    assert_eq!(
+        session.document().physics().unwrap().data.meta.fps,
+        Some(60.)
+    );
+    session.undo().unwrap();
+    let history = session.history_lengths();
+    patch.asset_changes = vec![PhysicsAssetProperty::Fps(Some(30.))];
+    let (_, receipt) = session
+        .edit("Noop", None, |edit| edit.patch_physics(&patch))
+        .unwrap();
+    assert!(!receipt.changed);
+    assert_eq!(session.history_lengths(), history);
+    patch.asset_changes = vec![PhysicsAssetProperty::Fps(Some(f32::NAN))];
+    let before = session.read_snapshot();
+    assert!(session
+        .edit("Invalid", None, |edit| edit.patch_physics(&patch))
+        .is_err());
+    assert_eq!(session.document().physics(), before.document().physics());
+    assert_eq!(session.history_lengths(), history);
+    for fps in [Some(0.), None] {
+        patch.asset_changes = vec![PhysicsAssetProperty::Fps(fps)];
+        session
+            .edit("Variable FPS", None, |edit| edit.patch_physics(&patch))
+            .unwrap();
+        assert_eq!(session.document().physics().unwrap().data.meta.fps, fps);
     }
 }

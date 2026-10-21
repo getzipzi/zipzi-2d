@@ -4,14 +4,26 @@ use crate::physics::{validate_physics_setting, PhysicsAxis, PhysicsRange, Physic
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// Atomic asset edits plus optional rig edits; asset-only patches support empty assets.
 pub struct PhysicsPatch {
     pub asset_id: String,
+    pub asset_changes: Vec<PhysicsAssetProperty>,
+    pub rig: Option<PhysicsRigPatch>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum PhysicsAssetProperty {
+    /// None or zero follows the evaluation delta; positive values select a fixed step.
+    Fps(Option<f32>),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PhysicsRigPatch {
     pub group_id: String,
     pub changes: Vec<PhysicsProperty>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PhysicsProperty {
-    Fps(Option<f32>),
     Name(String),
     InputWeight { index: usize, value: f32 },
     InputAxis { index: usize, value: PhysicsAxis },
@@ -54,6 +66,30 @@ impl Document {
             .physics()
             .filter(|asset| asset.id == patch.asset_id)
             .ok_or_else(|| Status::error("MISSING_PHYSICS", &patch.asset_id))?;
+        let mut fps = None;
+        for change in &patch.asset_changes {
+            match change {
+                PhysicsAssetProperty::Fps(value) => {
+                    if value.is_some_and(|v| !v.is_finite() || v < 0.) {
+                        return Err(Status::error(
+                            "INVALID_FPS",
+                            "FPS must be nonnegative and finite",
+                        ));
+                    }
+                    fps = Some(*value);
+                }
+            }
+        }
+        let fps = fps.filter(|fps| *fps != asset.data.meta.fps);
+        let Some(patch) = &patch.rig else {
+            return Ok(Prepared {
+                index: 0,
+                rig: None,
+                fps,
+                name: None,
+                bindings: None,
+            });
+        };
         let index = asset
             .data
             .settings
@@ -64,9 +100,8 @@ impl Document {
         let edits_rig = patch
             .changes
             .iter()
-            .any(|change| !matches!(change, PhysicsProperty::Fps(_) | PhysicsProperty::Name(_)));
+            .any(|change| !matches!(change, PhysicsProperty::Name(_)));
         let mut rig = edits_rig.then(|| original.as_ref().clone());
-        let mut fps = None;
         let mut name = None;
         let mut bindings = None;
         let mut binding_changed = false;
@@ -87,15 +122,6 @@ impl Document {
         for change in &patch.changes {
             use PhysicsProperty::*;
             match change {
-                Fps(value) => {
-                    if value.is_some_and(|v| !v.is_finite() || v < 0.) {
-                        return Err(Status::error(
-                            "INVALID_FPS",
-                            "FPS must be nonnegative and finite",
-                        ));
-                    }
-                    fps = Some(*value);
-                }
                 Name(value) => name = Some(value.clone()),
                 InputWeight { index, value } => item!(inputs, index).weight = *value,
                 InputAxis { index, value } => item!(inputs, index).kind = *value,
@@ -185,7 +211,7 @@ impl Document {
         Ok(Prepared {
             index,
             rig: rig.filter(|rig| rig != original.as_ref()).map(Arc::new),
-            fps: fps.filter(|fps| *fps != asset.data.meta.fps),
+            fps,
             name: name.filter(|name| Some(name.as_str()) != current_name),
             bindings: bindings.filter(|bindings| bindings != &asset.parameter_bindings),
         })
@@ -195,7 +221,7 @@ impl Document {
         self.prepare_physics_patch(patch)
             .map_or_else(|error| error, |_| Status::ok())
     }
-    /// Atomically update fields in one rig. A rejected patch leaves all fields intact.
+    /// Atomically update asset fields and optionally one rig. A rejected patch leaves all fields intact.
     pub fn patch_physics(&mut self, patch: &PhysicsPatch) -> EditResult {
         let prepared = match self.prepare_physics_patch(patch) {
             Ok(prepared) => prepared,
@@ -217,7 +243,7 @@ impl Document {
                 .meta
                 .dictionary
                 .iter_mut()
-                .find(|entry| entry.id == patch.group_id)
+                .find(|entry| entry.id == patch.rig.as_ref().unwrap().group_id)
                 .expect("validated physics dictionary")
                 .name = name;
         }
