@@ -128,6 +128,7 @@ pub fn import_expression3(
                 }
             };
             ExpressionEntry {
+                id: uuid::Uuid::new_v4().to_string(),
                 target,
                 value: entry.value,
                 blend: entry.blend.map(|blend| match blend {
@@ -171,6 +172,22 @@ pub fn import_expression3(
 
 /// Emit a Framework-compatible exp3 file using current model runtime IDs.
 pub fn export_expression3(document: &Document, id: &str) -> Result<String, ExpressionProjectError> {
+    export_expression_entries(document, id, false)
+}
+
+/// Explicitly export the same executable subset used by preview. Callers should
+/// present the projection's disabled entries before accepting this loss.
+pub fn export_available_expression3(
+    document: &Document,
+    id: &str,
+) -> Result<String, ExpressionProjectError> {
+    export_expression_entries(document, id, true)
+}
+fn export_expression_entries(
+    document: &Document,
+    id: &str,
+    available_only: bool,
+) -> Result<String, ExpressionProjectError> {
     let asset = document
         .get_expression(id)
         .ok_or_else(|| error("MISSING_EXPRESSION", "$", id))?;
@@ -193,8 +210,21 @@ pub fn export_expression3(document: &Document, id: &str) -> Result<String, Expre
             return Err(error("OPAQUE_CONTENT_CHANGED", "$", "expression content changed since import; reimport to establish a new opaque-field baseline"));
         }
     }
+    let projection = document
+        .expression_projection(id)
+        .map_err(|s| error(s.code, "$", s.message))?;
+    if available_only && !projection.disabled.is_empty() && asset.has_extensions() {
+        return Err(error(
+            "OPAQUE_CONTENT_CHANGED",
+            "$",
+            "Omitting entries could alter opaque expression data",
+        ));
+    }
     let mut parameters = Vec::with_capacity(asset.entries.len());
     for (index, entry) in asset.entries.iter().enumerate() {
+        if available_only && projection.native_to_runtime[&entry.id].is_none() {
+            continue;
+        }
         let runtime_id = match &entry.target {
             ExpressionTarget::Resolved { parameter_id } => document
                 .get_parameter(parameter_id)
@@ -207,6 +237,13 @@ pub fn export_expression3(document: &Document, id: &str) -> Result<String, Expre
                 })?
                 .runtime_id
                 .clone(),
+            ExpressionTarget::Unspecified => {
+                return Err(error(
+                    "UNCONFIGURED_PARAMETER",
+                    format!("$.Parameters[{index}].Id"),
+                    format!("Entry {} has no parameter", entry.id),
+                ))
+            }
             ExpressionTarget::Unresolved { runtime_id } => {
                 return Err(error(
                     "UNRESOLVED_PARAMETER",

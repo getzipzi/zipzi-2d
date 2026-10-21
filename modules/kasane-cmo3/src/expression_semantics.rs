@@ -57,6 +57,7 @@ impl Entry {
             ));
         }
         Ok(ExpressionEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             target: ExpressionTarget::Resolved {
                 parameter_id: parameter.into(),
             },
@@ -73,7 +74,10 @@ pub(crate) fn files(doc: &Document) -> Result<BTreeMap<String, Vec<u8>>, Cmo3Err
     let mut manifest = Vec::new();
     for id in doc.expression_order() {
         let asset = doc.get_expression(id).unwrap();
-        let parameters = asset
+        let projection = doc
+            .expression_projection(id)
+            .map_err(|s| Cmo3Error::InvalidDocument(format!("{}: {}", s.code, s.message)))?;
+        let parameters = projection
             .entries
             .iter()
             .map(|entry| {
@@ -82,6 +86,9 @@ pub(crate) fn files(doc: &Document) -> Result<BTreeMap<String, Vec<u8>>, Cmo3Err
                         &doc.get_parameter(parameter_id).unwrap().runtime_id
                     }
                     ExpressionTarget::Unresolved { runtime_id } => runtime_id,
+                    ExpressionTarget::Unspecified => unreachable!(
+                        "CAN3 diagnostics reject unconfigured entries before sidecar emission"
+                    ),
                 };
                 Expression3Parameter {
                     id: runtime_id.clone(),

@@ -1,7 +1,7 @@
 //! Candidate-document edits and atomic publication.
 use std::collections::HashSet;
 
-use crate::session::{object_exists_in, AuthoringSession};
+use crate::session::{keys_in, object_exists_in, AuthoringSession};
 use crate::types::*;
 use kasane_core::draw_order::DrawOrderGroup;
 use kasane_core::{
@@ -19,6 +19,7 @@ pub struct EditSession<'a> {
     pub(crate) before: Version,
     pub(crate) aborted: bool,
     pub(crate) kind: ChangeKind,
+    pub(crate) categories: std::collections::BTreeSet<crate::ChangeCategory>,
     pub(crate) object_ids: Vec<String>,
     pub(crate) erased_keys: HashSet<ObjectKey>,
 }
@@ -69,10 +70,10 @@ impl EditSession<'_> {
         self.record(result, "patch_property", "")
     }
 
-    fn document(&mut self) -> &mut Document {
+    pub(crate) fn document(&mut self) -> &mut Document {
         self.candidate.as_mut().expect("edit candidate exists")
     }
-    fn record(
+    pub(crate) fn record(
         &mut self,
         result: EditResult,
         operation: &'static str,
@@ -84,6 +85,8 @@ impl EditSession<'_> {
             error.referrers = result.referrers.into_boxed_slice();
             return Err(error);
         }
+        self.categories
+            .extend(crate::changes::categories(result.changes.kind));
         self.kind = merge_kind(self.kind, result.changes.kind);
         for id in result.changes.object_ids {
             if !self.object_ids.contains(&id) {
@@ -92,7 +95,20 @@ impl EditSession<'_> {
         }
         Ok(())
     }
-    fn ensure_active(&self, operation: &'static str) -> Result<(), SdkError> {
+    pub(crate) fn track_expression_deletions(&mut self, ids: &[String]) {
+        for id in ids {
+            let key = ObjectKey {
+                kind: ObjectKind::ExpressionEntry,
+                id: id.clone(),
+            };
+            if self.base_keys.contains(&key)
+                && self.candidate_document().get_expression_entry(id).is_none()
+            {
+                self.erased_keys.insert(key);
+            }
+        }
+    }
+    pub(crate) fn ensure_active(&self, operation: &'static str) -> Result<(), SdkError> {
         if self.aborted {
             Err(SdkError::new(
                 "EDIT_ABORTED",
@@ -103,7 +119,7 @@ impl EditSession<'_> {
             Ok(())
         }
     }
-    fn abort_with(&mut self, error: SdkError) -> SdkError {
+    pub(crate) fn abort_with(&mut self, error: SdkError) -> SdkError {
         self.aborted = true;
         error
     }
@@ -166,8 +182,14 @@ impl EditSession<'_> {
             .cloned()
             .into_iter()
             .find(|key| key.id == id);
+        let children = self
+            .candidate_document()
+            .get_expression(id)
+            .map(|e| e.entries.iter().map(|e| e.id.clone()).collect::<Vec<_>>())
+            .unwrap_or_default();
         let result = self.document().erase_object(id);
         self.record(result, "erase_object", id)?;
+        self.track_expression_deletions(&children);
         if let Some(key) = original {
             self.erased_keys.insert(key);
         }
@@ -602,12 +624,44 @@ impl EditSession<'_> {
         let identity_changed = !identity_keys.is_empty();
         let changed = identity_changed || !session.project.document().same_content(&candidate);
         let before_keys = changed.then(|| session.object_keys());
+        let after_keys = changed.then(|| keys_in(&candidate));
+        let mut changes = if let (Some(keys), Some(after_keys)) = (&before_keys, &after_keys) {
+            crate::changes::summarize(
+                session.document(),
+                &candidate,
+                keys,
+                after_keys,
+                &self.object_ids,
+                &self.categories,
+            )
+        } else {
+            crate::ChangeSet::default()
+        };
+        for key in &identity_keys {
+            let entity = crate::EntityRef {
+                document_id: candidate.id().into(),
+                kind: key.kind,
+                id: key.id.clone(),
+            };
+            if !changes.created.contains(&entity) {
+                changes.created.push(entity.clone());
+            }
+            if !changes.deleted.contains(&entity) {
+                changes.deleted.push(entity);
+            }
+        }
         let previous = changed.then(|| session.project.document().checkpoint());
         let mut evict_count = 0usize;
         if let Some(checkpoint) = &previous {
             let limits = session.history_limits;
             let candidate_bytes = candidate.estimated_content_bytes();
             let entry_bytes = checkpoint.estimated_bytes()
+                + changes.estimated_bytes()
+                + self
+                    .object_ids
+                    .iter()
+                    .map(|id| id.capacity() + std::mem::size_of::<String>())
+                    .sum::<usize>()
                 + self.label.capacity()
                 + std::mem::size_of::<String>()
                 + identity_keys.capacity() * std::mem::size_of::<ObjectKey>()
@@ -653,8 +707,8 @@ impl EditSession<'_> {
                 .preview
                 .retain_parameters(session.project.document());
         }
-        if let Some(keys) = &before_keys {
-            session.refresh_incarnations(keys, &identity_keys);
+        if let (Some(keys), Some(after_keys)) = (&before_keys, &after_keys) {
+            session.refresh_incarnations_from_keys(keys, after_keys, &identity_keys);
         }
         if let Some(checkpoint) = previous {
             for _ in 0..evict_count {
@@ -662,6 +716,9 @@ impl EditSession<'_> {
             }
             session.done.push_back(HistoryEntry {
                 label: self.label.clone(),
+                changes: changes.clone(),
+                kind: self.kind,
+                object_ids: self.object_ids.clone(),
                 checkpoint,
                 identity_keys,
                 root: session.project.root(),
@@ -679,9 +736,10 @@ impl EditSession<'_> {
                 Vec::new()
             },
             changed,
+            changes,
         };
         if changed {
-            session.events.push(receipt.clone());
+            session.publish_receipt(receipt.clone());
         }
         Ok(receipt)
     }

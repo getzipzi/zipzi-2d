@@ -314,6 +314,7 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
                             return operation.restore(parameter_id, default, track.initial.value);
                         }
                         Ok(ExpressionEntry {
+                            id: uuid::Uuid::new_v4().to_string(),
                             target: ExpressionTarget::Resolved {
                                 parameter_id: parameter_id.clone(),
                             },
@@ -502,6 +503,7 @@ mod tests {
             .status
             .is_ok());
         let entries = vec![ExpressionEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             target: ExpressionTarget::Resolved {
                 parameter_id: parameter,
             },
@@ -536,15 +538,23 @@ mod tests {
         let mut reopened = base.clone();
         read(&bytes, &mut base).unwrap();
         assert_eq!(base.expression_order(), [copied_scene.clone()]);
-        assert_eq!(base.get_expression(&copied_scene).unwrap().entries, entries);
+        use kasane_core::document::ExpressionEntryFields;
+        let copied = &base.get_expression(&copied_scene).unwrap().entries;
+        assert_ne!(copied[0].id, entries[0].id);
+        assert_eq!(
+            ExpressionEntryFields::from(&copied[0]),
+            ExpressionEntryFields::from(&entries[0])
+        );
         // Re-export must attach the operations to the new identity as well.
         let bytes = crate::encode_can3(&base, &Default::default())
             .unwrap()
             .bytes;
         read(&bytes, &mut reopened).unwrap();
         assert_eq!(
-            reopened.get_expression(&copied_scene).unwrap().entries,
-            entries
+            ExpressionEntryFields::from(
+                &reopened.get_expression(&copied_scene).unwrap().entries[0]
+            ),
+            ExpressionEntryFields::from(&entries[0])
         );
     }
 

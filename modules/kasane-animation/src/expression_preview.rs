@@ -78,8 +78,9 @@ impl ExpressionPreview {
     /// Schedule an expression UUID at an absolute time in seconds; equal-time calls retain order.
     /// Activation starts on the first update at or after the scheduled time.
     /// Returns `InvalidTime` for nonfinite/negative time, `PastActivation` for past time,
-    /// `MissingExpression` for an unknown UUID, or `UnresolvedParameter` for unresolved
-    /// targets. Failure preserves state; Motion preview clears its cache on success.
+    /// or `MissingExpression` for an unknown UUID. Unconfigured and unresolved
+    /// entries are skipped by the shared expression projection. Failure preserves
+    /// state; Motion preview clears its cache on success.
     pub fn schedule_expression(&mut self, id: &str, time: f32) -> Result<(), AnimationError> {
         self.stage
             .schedule(&self.document, self.snapshot.time, id, time)

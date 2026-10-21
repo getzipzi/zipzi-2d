@@ -38,6 +38,8 @@ pub struct AuthoringSession {
     pub(crate) history_limits: HistoryLimits,
     pub(crate) incarnations: HashMap<ObjectKey, u64>,
     pub(crate) next_incarnation: u64,
+    // Owner-dependent field addresses must not revive after a move and undo.
+    pub(crate) expression_entry_contexts: HashMap<String, (String, u64)>,
 }
 
 /// Read-only document snapshot for bounded work outside an authoring lock.
@@ -175,6 +177,7 @@ impl AuthoringSession {
             events: Vec::new(),
             history_limits,
             incarnations: HashMap::new(),
+            expression_entry_contexts: HashMap::new(),
             next_incarnation: 1,
         })
     }
@@ -561,6 +564,7 @@ impl AuthoringSession {
             before: version,
             aborted: false,
             kind: ChangeKind::None,
+            categories: Default::default(),
             object_ids: Vec::new(),
             erased_keys: HashSet::new(),
         })
@@ -599,12 +603,13 @@ impl AuthoringSession {
             label: entry.label.clone(),
             before,
             after: self.version(),
-            kind: ChangeKind::Structure,
-            object_ids: Vec::new(),
+            kind: entry.kind,
+            object_ids: entry.object_ids.clone(),
             changed: true,
+            changes: entry.changes.inverted(),
         };
         self.redo.push(entry);
-        self.events.push(receipt.clone());
+        self.publish_receipt(receipt.clone());
         Ok(receipt)
     }
 
@@ -629,12 +634,13 @@ impl AuthoringSession {
             label: entry.label.clone(),
             before,
             after: self.version(),
-            kind: ChangeKind::Structure,
-            object_ids: Vec::new(),
+            kind: entry.kind,
+            object_ids: entry.object_ids.clone(),
             changed: true,
+            changes: entry.changes.clone(),
         };
         self.done.push_back(entry);
-        self.events.push(receipt.clone());
+        self.publish_receipt(receipt.clone());
         Ok(receipt)
     }
 
@@ -682,66 +688,55 @@ impl AuthoringSession {
     }
 
     pub(crate) fn object_keys(&self) -> HashSet<ObjectKey> {
-        let doc = self.project.document();
-        let mut keys: HashSet<_> = [
-            (ObjectKind::Asset, doc.asset_order()),
-            (ObjectKind::Mesh, doc.mesh_order()),
-            (ObjectKind::Parameter, doc.parameter_order()),
-            (ObjectKind::MeshBinding, doc.binding_order()),
-            (ObjectKind::Part, doc.part_order()),
-            (ObjectKind::Transform, doc.transform_order()),
-            (ObjectKind::SceneBinding, doc.scene_binding_order()),
-            (ObjectKind::BlendKeyTable, doc.blend_key_table_order()),
-            (ObjectKind::BlendConstraint, doc.blend_constraint_order()),
-            (ObjectKind::BlendBinding, doc.blend_binding_order()),
-            (ObjectKind::Glue, doc.glue_order()),
-            (ObjectKind::Offscreen, doc.offscreen_order()),
-        ]
-        .into_iter()
-        .flat_map(|(kind, ids)| {
-            ids.iter().map(move |id| ObjectKey {
-                kind,
-                id: id.clone(),
-            })
-        })
-        .collect();
-        if let Some(groups) = &doc.display_info().parameter_groups {
-            keys.extend(groups.iter().map(|group| ObjectKey {
-                kind: ObjectKind::CdiParameterGroup,
-                id: group.id.clone(),
-            }));
-        }
-        if let Some(sets) = &doc.display_info().combined_parameters {
-            keys.extend(sets.iter().map(|set| ObjectKey {
-                kind: ObjectKind::CdiCombinedSet,
-                id: set.id.clone(),
-            }));
-        }
-        keys.extend(doc.expression_order().iter().map(|id| ObjectKey {
-            kind: ObjectKind::Expression,
-            id: id.clone(),
-        }));
-        keys.extend(doc.motion_order().iter().map(|id| ObjectKey {
-            kind: ObjectKind::Motion,
-            id: id.clone(),
-        }));
-        if let Some(pose) = doc.pose() {
-            keys.insert(ObjectKey {
-                kind: ObjectKind::Pose,
-                id: pose.id.clone(),
-            });
-        }
-        if let Some(physics) = doc.physics() {
-            keys.insert(ObjectKey {
-                kind: ObjectKind::Physics,
-                id: physics.id.clone(),
-            });
-        }
-        keys
+        keys_in(self.document())
     }
 
     fn object_exists(&self, kind: ObjectKind, id: &str) -> bool {
         object_exists_in(self.project.document(), kind, id)
+    }
+
+    /// Every publication, including history and replacement, advances operation
+    /// validity from the same authoritative delta consumed by external clients.
+    pub(crate) fn publish_receipt(&mut self, receipt: EditReceipt) {
+        let document = self.project.document();
+        let changes = &receipt.changes;
+        if changes.full_invalidation {
+            self.expression_entry_contexts.clear();
+            for owner in document
+                .expression_order()
+                .iter()
+                .filter_map(|id| document.get_expression(id))
+            {
+                for entry in &owner.entries {
+                    self.expression_entry_contexts
+                        .insert(entry.id.clone(), (owner.id.clone(), document.revision()));
+                }
+            }
+        } else {
+            let ids: std::collections::BTreeSet<_> = changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .filter(|entity| entity.kind == ObjectKind::ExpressionEntry)
+                .map(|entity| &entity.id)
+                .collect();
+            for id in ids {
+                if let Some((owner, _)) = document.get_expression_entry(id) {
+                    if self
+                        .expression_entry_contexts
+                        .get(id)
+                        .is_none_or(|context| context.0 != owner.id)
+                    {
+                        self.expression_entry_contexts
+                            .insert(id.clone(), (owner.id.clone(), document.revision()));
+                    }
+                } else {
+                    self.expression_entry_contexts.remove(id);
+                }
+            }
+        }
+        self.events.push(receipt);
     }
 
     pub(crate) fn refresh_incarnations(
@@ -750,7 +745,16 @@ impl AuthoringSession {
         identity_keys: &HashSet<ObjectKey>,
     ) {
         let after = self.object_keys();
-        let mut changed: HashSet<_> = before.symmetric_difference(&after).cloned().collect();
+        self.refresh_incarnations_from_keys(before, &after, identity_keys);
+    }
+
+    pub(crate) fn refresh_incarnations_from_keys(
+        &mut self,
+        before: &HashSet<ObjectKey>,
+        after: &HashSet<ObjectKey>,
+        identity_keys: &HashSet<ObjectKey>,
+    ) {
+        let mut changed: HashSet<_> = before.symmetric_difference(after).cloned().collect();
         changed.extend(
             identity_keys
                 .iter()
@@ -792,8 +796,76 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
             .as_ref()
             .is_some_and(|sets| sets.iter().any(|set| set.id == id)),
         ObjectKind::Expression => doc.get_expression(id).is_some(),
+        ObjectKind::ExpressionEntry => doc.get_expression_entry(id).is_some(),
         ObjectKind::Motion => doc.get_motion(id).is_some(),
         ObjectKind::Pose => doc.pose().is_some_and(|pose| pose.id == id),
         ObjectKind::Physics => doc.physics().is_some_and(|physics| physics.id == id),
     }
+}
+
+pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
+    let mut keys: HashSet<_> = [
+        (ObjectKind::Asset, doc.asset_order()),
+        (ObjectKind::Mesh, doc.mesh_order()),
+        (ObjectKind::Parameter, doc.parameter_order()),
+        (ObjectKind::MeshBinding, doc.binding_order()),
+        (ObjectKind::Part, doc.part_order()),
+        (ObjectKind::Transform, doc.transform_order()),
+        (ObjectKind::SceneBinding, doc.scene_binding_order()),
+        (ObjectKind::BlendKeyTable, doc.blend_key_table_order()),
+        (ObjectKind::BlendConstraint, doc.blend_constraint_order()),
+        (ObjectKind::BlendBinding, doc.blend_binding_order()),
+        (ObjectKind::Glue, doc.glue_order()),
+        (ObjectKind::Offscreen, doc.offscreen_order()),
+    ]
+    .into_iter()
+    .flat_map(|(kind, ids)| {
+        ids.iter().map(move |id| ObjectKey {
+            kind,
+            id: id.clone(),
+        })
+    })
+    .collect();
+    if let Some(groups) = &doc.display_info().parameter_groups {
+        keys.extend(groups.iter().map(|group| ObjectKey {
+            kind: ObjectKind::CdiParameterGroup,
+            id: group.id.clone(),
+        }));
+    }
+    if let Some(sets) = &doc.display_info().combined_parameters {
+        keys.extend(sets.iter().map(|set| ObjectKey {
+            kind: ObjectKind::CdiCombinedSet,
+            id: set.id.clone(),
+        }));
+    }
+    keys.extend(doc.expression_order().iter().map(|id| ObjectKey {
+        kind: ObjectKind::Expression,
+        id: id.clone(),
+    }));
+    keys.extend(
+        doc.expression_order()
+            .iter()
+            .flat_map(|id| &doc.get_expression(id).unwrap().entries)
+            .map(|entry| ObjectKey {
+                kind: ObjectKind::ExpressionEntry,
+                id: entry.id.clone(),
+            }),
+    );
+    keys.extend(doc.motion_order().iter().map(|id| ObjectKey {
+        kind: ObjectKind::Motion,
+        id: id.clone(),
+    }));
+    if let Some(pose) = doc.pose() {
+        keys.insert(ObjectKey {
+            kind: ObjectKind::Pose,
+            id: pose.id.clone(),
+        });
+    }
+    if let Some(physics) = doc.physics() {
+        keys.insert(ObjectKey {
+            kind: ObjectKind::Physics,
+            id: physics.id.clone(),
+        });
+    }
+    keys
 }

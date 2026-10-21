@@ -171,6 +171,7 @@ pub(crate) type EventTuple = (
     String,
     Vec<String>,
     bool,
+    String,
 );
 pub(crate) type PoseTuple = (f64, f64, f32, f32, bool, bool);
 pub(crate) type AppearanceTuple = (f32, Point3Tuple, Point3Tuple);

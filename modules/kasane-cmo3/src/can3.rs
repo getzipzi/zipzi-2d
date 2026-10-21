@@ -374,9 +374,9 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
         let ExpressionTarget::Resolved { parameter_id } = &entry.target else {
             loss(
                 report,
-                &asset.id,
+                &entry.id,
                 "CAN3_EXPRESSION_TARGET",
-                "Unresolved expression parameters cannot be represented in CAN3",
+                "Unconfigured or unresolved expression parameters cannot be represented in CAN3",
             );
             continue;
         };

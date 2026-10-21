@@ -48,3 +48,13 @@ mod motion_edit;
 pub use motion_edit::{
     MotionBezierHandle, MotionClipCandidate, MotionInterpolation, MotionKeyMove, MotionKeyRef,
 };
+
+mod expression_edit;
+pub use expression_edit::{
+    CapabilityState, ExpressionCapabilities, ExpressionCollection, ExpressionEditPlan,
+    ExpressionEntryAddress, ExpressionEntryCandidate, ExpressionExportPlan,
+};
+pub use kasane_core::document::{ExpressionEdit, ExpressionEntryFields};
+
+mod changes;
+pub use changes::{ChangeCategory, ChangeSet, CollectionRef, EntityRef, ReferenceChange};

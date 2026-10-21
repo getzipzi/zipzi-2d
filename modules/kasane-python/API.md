@@ -188,6 +188,29 @@ while they exist. Reimporting establishes a new baseline for unknown fields.
 Package export writes registered expressions to `expressions/*.exp3.json` and
 references them from `model.model3.json`. Export filenames use safe readable
 asset names; case-insensitive collisions receive a short ID suffix.
+Expression entries have independent stable UUIDs in native projects.
+`Edit.create_expression_entry(owner, entry_id, before=None)` creates an
+unconfigured entry; `patch_expression_entry(entry_id, parameter_id, value,
+blend="default")` configures it or clears its target with `None`.
+`move_expression_entries(ids, destination, before=None)`,
+`duplicate_expression_entries(ids, new_ids, destination, before=None)`,
+`delete_expression_entries(ids)`, `duplicate_expression(source, id, name,
+entry_ids)` and `reorder_expressions(ids)` share Rust SDK domain validation
+and the transaction's single history entry. Positions use stable anchor IDs;
+multiple sources retain document order. Duplicate parameter targets are legal
+and the first matching entry retains Framework semantics.
+`Session.plan_expression_move(ids, destination, before=None)` validates without
+writing and returns affected expression and entry UUIDs; the eventual edit
+revalidates its baseline. `Session.handle("expression_entry", id)` remains valid
+across moves; deletion permanently invalidates it even after Undo restores the
+same UUID. `EditEvent.changes` exposes created/deleted/modified entities,
+collections, references, composable categories, and whole-project invalidation.
+
+Unconfigured and unresolved entries persist in native saves and are omitted
+from preview through the same projection. Strict exp3 export reports the missing
+target and never emits native entry UUIDs. Reimporting external files assigns
+fresh native entry identities.
+
 `Session.expression_preview()` captures a detached Expression stage.
 `ExpressionPreview.schedule_expression(id, time)` records activations;
 `advance(dt)` and `seek(time)` return `ExpressionSnapshot` with UUID keyed

@@ -276,7 +276,9 @@ fn new_project_failure_preserves_session_and_success_changes_generation() {
     assert!(sdk.mesh_ids().is_empty());
     assert_eq!(sdk.history_lengths(), (0, 0));
     assert!(sdk.preview_values().is_empty());
-    assert!(sdk.drain_events().is_empty());
+    let events = sdk.drain_events();
+    assert_eq!(events.len(), 1);
+    assert!(events[0].changes.full_invalidation);
     assert_eq!(
         sdk.resolve_handle(&old).unwrap_err().code.as_ref(),
         "STALE_HANDLE"

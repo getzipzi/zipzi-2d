@@ -35,6 +35,7 @@ fn expression_companions_keep_runtime_blends_and_publish_as_one_managed_group() 
             fade_in: Some(0.3),
             fade_out: Some(0.5),
             entries: vec![ExpressionEntry {
+                id: uuid::Uuid::new_v4().to_string(),
                 target: ExpressionTarget::Resolved {
                     parameter_id: parameter
                 },

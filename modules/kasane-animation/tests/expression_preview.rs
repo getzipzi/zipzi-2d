@@ -32,6 +32,7 @@ fn document() -> Document {
         fade_out: Some(0.0),
         entries: vec![
             ExpressionEntry {
+                id: uuid::Uuid::new_v4().to_string(),
                 target: ExpressionTarget::Resolved {
                     parameter_id: X.into(),
                 },
@@ -40,6 +41,7 @@ fn document() -> Document {
                 extensions: Default::default(),
             },
             ExpressionEntry {
+                id: uuid::Uuid::new_v4().to_string(),
                 target: ExpressionTarget::Resolved {
                     parameter_id: Y.into(),
                 },
@@ -60,6 +62,7 @@ fn document() -> Document {
         fade_in: None,
         fade_out: None,
         entries: vec![ExpressionEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             target: ExpressionTarget::Resolved {
                 parameter_id: X.into(),
             },
@@ -174,6 +177,7 @@ fn expression_clamps_target_before_fade_weight_like_framework() {
         let mut doc = document();
         let mut expression = doc.get_expression(FIRST).unwrap().clone();
         expression.entries = vec![ExpressionEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             target: ExpressionTarget::Resolved {
                 parameter_id: X.into(),
             },

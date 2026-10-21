@@ -70,6 +70,7 @@ pub struct EditReceipt {
     pub kind: ChangeKind,
     pub object_ids: Vec<String>,
     pub changed: bool,
+    pub changes: crate::ChangeSet,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -118,7 +119,8 @@ pub struct GeometrySnapshot {
     pub space: GeometrySpace,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ObjectKind {
     Asset,
     Mesh,
@@ -135,6 +137,7 @@ pub enum ObjectKind {
     CdiParameterGroup,
     CdiCombinedSet,
     Expression,
+    ExpressionEntry,
     Motion,
     Pose,
     Physics,
@@ -206,6 +209,9 @@ pub struct TopologyReplacement {
 
 pub(crate) struct HistoryEntry {
     pub(crate) label: String,
+    pub(crate) changes: crate::ChangeSet,
+    pub(crate) kind: ChangeKind,
+    pub(crate) object_ids: Vec<String>,
     pub(crate) checkpoint: DocumentCheckpoint,
     pub(crate) identity_keys: HashSet<ObjectKey>,
     pub(crate) root: PathBuf,
@@ -214,6 +220,12 @@ pub(crate) struct HistoryEntry {
 impl HistoryEntry {
     pub(crate) fn estimated_bytes(&self) -> usize {
         self.checkpoint.estimated_bytes()
+            + self.changes.estimated_bytes()
+            + self
+                .object_ids
+                .iter()
+                .map(|id| id.capacity() + std::mem::size_of::<String>())
+                .sum::<usize>()
             + self.label.capacity()
             + std::mem::size_of::<String>()
             + self.identity_keys.capacity() * std::mem::size_of::<ObjectKey>()

@@ -220,10 +220,22 @@ impl Document {
                 fade_in,
                 fade_out,
             } => {
-                let mut e = self.get_expression(id).unwrap().clone();
+                if self.editor_state().get(id).locked {
+                    return self.failed(Status::error("OBJECT_LOCKED", id));
+                }
+                if [fade_in, fade_out]
+                    .iter()
+                    .any(|fade| fade.is_some_and(|v| !v.is_finite() || v < 0.))
+                {
+                    return self.failed(Status::error("INVALID_EXPRESSION_FADE", id));
+                }
+                let e = self.content.expressions.get_mut(id).unwrap();
+                if e.fade_in == *fade_in && e.fade_out == *fade_out {
+                    return self.failed(Status::ok());
+                }
                 e.fade_in = *fade_in;
                 e.fade_out = *fade_out;
-                self.replace_expression(e)
+                self.changed(ChangeKind::Metadata, vec![], vec![id.clone()])
             }
             PropertyPatch::Export {
                 padding_pixels,
@@ -249,6 +261,7 @@ impl Document {
             Ok(p) => p,
             Err(s) => return self.failed(s),
         };
+        let snapshot_identity = self.snapshot_identity.clone();
         let revision = self.revision;
         let evaluation_revision = self.evaluation_revision;
         let modified = self.modified_cache.get().copied();
@@ -262,6 +275,7 @@ impl Document {
                 restored.status.is_ok(),
                 "Previously valid scalar property must be restorable"
             );
+            self.snapshot_identity = snapshot_identity;
             self.revision = revision;
             self.evaluation_revision = evaluation_revision;
             self.modified_cache.take();

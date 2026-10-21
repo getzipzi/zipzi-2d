@@ -87,6 +87,7 @@ pub(crate) fn object_kind(value: &str) -> PyResult<ObjectKind> {
         "cdi_parameter_group" => Ok(ObjectKind::CdiParameterGroup),
         "cdi_combined_set" => Ok(ObjectKind::CdiCombinedSet),
         "expression" => Ok(ObjectKind::Expression),
+        "expression_entry" => Ok(ObjectKind::ExpressionEntry),
         "motion" => Ok(ObjectKind::Motion),
         "pose" => Ok(ObjectKind::Pose),
         _ => Err(PyValueError::new_err(format!(
@@ -112,6 +113,7 @@ pub(crate) fn object_kind_name(kind: ObjectKind) -> &'static str {
         ObjectKind::CdiParameterGroup => "cdi_parameter_group",
         ObjectKind::CdiCombinedSet => "cdi_combined_set",
         ObjectKind::Expression => "expression",
+        ObjectKind::ExpressionEntry => "expression_entry",
         ObjectKind::Motion => "motion",
         ObjectKind::Pose => "pose",
         ObjectKind::Physics => "physics",

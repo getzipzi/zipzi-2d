@@ -113,6 +113,7 @@ pub(super) fn apply_command(
         Command::ReplaceCdiGroup(group) => edit.replace_parameter_group(group)?,
         Command::SetParameterGroup(id, group) => edit.set_parameter_group(&id, group.as_deref())?,
         Command::SetCombinedParameters(set) => edit.set_combined_parameters(set)?,
+        Command::EditExpression(intent) => edit.edit_expression(intent)?,
         Command::CreateExpression(expression) => edit.create_expression(expression)?,
         Command::ReplaceExpression(expression) => edit.replace_expression(expression)?,
         Command::CreateMotion(clip) => edit.create_motion(clip)?,

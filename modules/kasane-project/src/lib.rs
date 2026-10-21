@@ -20,8 +20,8 @@ pub use codec::{decode_project, encode_project};
 pub use codec::{decode_project_cbor, encode_project_cbor};
 pub use cubism::{encode_document_cubism, encode_project_cubism, publish_can3, publish_cubism};
 pub use expression::{
-    export_expression3, import_expression3, ExpressionDiagnostic, ExpressionImport,
-    ExpressionProjectError,
+    export_available_expression3, export_expression3, import_expression3, ExpressionDiagnostic,
+    ExpressionImport, ExpressionProjectError,
 };
 pub use filesystem::{FileSystem, NativeFileSystem, Publication};
 pub use kasane_cmo3::{

@@ -32,7 +32,7 @@ pub use display_info::{
     CdiPartEntry, DisplayInfo, DisplayInfoOrigin,
 };
 pub use editor_state::{EditorState, ObjectEditorState};
-pub use expressions::{ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget};
+pub use expressions::*;
 pub use hierarchy_order::HierarchyOrder;
 pub use model3::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
 pub use motions::{
@@ -70,6 +70,9 @@ impl<T> EmptyOr for Vec<T> {
 pub struct Document {
     content: DocumentContent,
 
+    // Clones share an unchanged snapshot; every content mutation creates a new
+    // identity, even when branch-local revision counters happen to coincide.
+    snapshot_identity: Arc<()>,
     revision: u64,
     evaluation_revision: u64,
     batch_build_active: bool,
@@ -84,6 +87,7 @@ pub struct Document {
     // keeps read-only queries thread-safe without repeating deep comparisons.
     modified_cache: OnceLock<bool>,
     lookup: OnceLock<DocumentLookup>,
+    expression_entries: OnceLock<HashMap<String, (String, usize)>>,
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
 }
 
@@ -166,6 +170,7 @@ impl Document {
                 "Source metadata and export settings must have finite valid dimensions and scale.",
             );
         }
+        self.snapshot_identity = Arc::new(());
         self.content.id = id_str;
         self.content.export_settings = setup.export;
         self.content.source_canvas = setup.source_canvas;
@@ -274,6 +279,7 @@ impl Document {
         self.saved_content = saved;
         // The source's cached result refers to its own saved baseline.
         self.modified_cache.take();
+        self.snapshot_identity = Arc::new(());
         self.revision = next_rev;
         self.evaluation_revision = next_rev;
         self.transaction_active = false;
@@ -314,7 +320,9 @@ impl Document {
         }
         self.batch_build_active = false;
         self.lookup.take();
+        self.expression_entries.take();
         self.prepared.take();
+        self.snapshot_identity = Arc::new(());
         self.revision = 1;
         self.evaluation_revision = 1;
         Status::ok()
@@ -351,6 +359,7 @@ impl Document {
                 .as_ref()
                 .is_some_and(|sets| sets.iter().any(|set| set.id == id))
             || self.content.expressions.contains_key(id)
+            || self.get_expression_entry(id).is_some()
             || self.content.motions.contains_key(id)
             || self.content.pose.as_ref().is_some_and(|pose| pose.id == id)
             || self
@@ -387,6 +396,7 @@ impl Document {
         mesh_ids: Vec<String>,
         mut object_ids: Vec<String>,
     ) -> EditResult {
+        self.snapshot_identity = Arc::new(());
         // Batch construction mutates content without advancing revision too.
         self.modified_cache.take();
         if self.batch_build_active {

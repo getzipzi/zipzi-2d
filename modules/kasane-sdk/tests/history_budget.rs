@@ -94,7 +94,7 @@ fn budget_rejection_preserves_redo_branch() {
     let asset_bytes = trial.estimated_content_bytes();
     let limits = HistoryLimits {
         max_steps: 50,
-        max_bytes: baseline + asset_bytes + 512,
+        max_bytes: baseline + asset_bytes + 4096,
     };
     let mut sdk = session(limits);
     sdk.edit("asset", None, |edit| edit.create_asset(asset()))
@@ -103,7 +103,7 @@ fn budget_rejection_preserves_redo_branch() {
     assert_eq!(sdk.history_lengths(), (0, 1));
     let version = sdk.version();
     let asset = asset();
-    let mesh = rectangle_mesh(
+    let mut mesh = rectangle_mesh(
         MESH_ID,
         "mesh",
         ASSET_ID,
@@ -111,6 +111,9 @@ fn budget_rejection_preserves_redo_branch() {
         Vec2::new(10.0, 10.0),
     )
     .unwrap();
+    // Leave room for bounded change summaries, then exceed the budget through
+    // actual authored payload rather than relying on a particular event layout.
+    mesh.name = "oversized mesh".repeat(1024);
     let result = sdk.edit("too large", None, |edit| {
         edit.create_asset(asset)?;
         edit.create_mesh(mesh)

@@ -266,6 +266,7 @@ impl ExtraBytes for DisplayInfo {
 impl ExtraBytes for ExpressionTarget {
     fn extra_bytes(&self) -> usize {
         match self {
+            Self::Unspecified => 0,
             Self::Resolved { parameter_id } => parameter_id.capacity(),
             Self::Unresolved { runtime_id } => runtime_id.capacity(),
         }
@@ -273,7 +274,7 @@ impl ExtraBytes for ExpressionTarget {
 }
 impl ExtraBytes for ExpressionEntry {
     fn extra_bytes(&self) -> usize {
-        self.target.extra_bytes() + self.extensions.extra_bytes()
+        self.id.capacity() + self.target.extra_bytes() + self.extensions.extra_bytes()
     }
 }
 impl ExtraBytes for ExpressionAsset {
@@ -588,4 +589,8 @@ pub(super) fn estimated_content_bytes(content: &DocumentContent) -> usize {
         + content.missing_attachments.extra_bytes()
         + content.model3_settings.extra_bytes()
         + content.package_attachments.extra_bytes()
+}
+
+pub(super) fn expression_entries_bytes(entries: &Vec<ExpressionEntry>) -> usize {
+    entries.extra_bytes()
 }

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
-from typing import Mapping
+from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
 from ._native import NativeSession, ObjectHandle, SdkFailure
@@ -141,6 +141,14 @@ class Session:
         """Return a detached expression asset snapshot, including unknown fields."""
         raw = self._native.expression_json(expression_id)
         return json.loads(raw) if raw is not None else None
+
+    def plan_expression_move(self, entry_ids: Sequence[str], destination: str,
+                             before: str | None = None) -> tuple[list[str], list[str]]:
+        """Read-only domain validation; returns affected owners and entry UUIDs.
+
+        The eventual edit revalidates against its own SDK transaction baseline.
+        """
+        return self._native.plan_expression_move(list(entry_ids), destination, before)
 
     def export_expression3(self, expression_id: str) -> str:
         """Encode one expression using current parameter runtime IDs."""
@@ -586,7 +594,7 @@ class Session:
 
     def drain_events(self) -> list[EditEvent]:
         """Consume edit and undo/redo events published since the last drain."""
-        return [EditEvent(*event) for event in self._native.drain_events()]
+        return [EditEvent(*event[:-1], json.loads(event[-1])) for event in self._native.drain_events()]
 
     def evaluate(self, values: Mapping[str, float]) -> Evaluation:
         """Evaluate parameter values to sampled parameters and runtime positions.

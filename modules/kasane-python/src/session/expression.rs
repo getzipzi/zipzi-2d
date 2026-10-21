@@ -33,6 +33,28 @@ impl NativeSession {
             .transpose()
     }
 
+    #[pyo3(signature = (ids, destination, before=None))]
+    fn plan_expression_move(
+        &self,
+        py: Python<'_>,
+        ids: Vec<String>,
+        destination: String,
+        before: Option<String>,
+    ) -> PyResult<(Vec<String>, Vec<String>)> {
+        let session = self.inner.lock().map_err(|_| poisoned())?;
+        let plan = session
+            .plan_expression_edit(kasane_sdk::ExpressionEdit::MoveEntries {
+                ids,
+                destination,
+                before,
+            })
+            .map_err(|e| sdk_failure(py, e))?;
+        Ok((
+            plan.affected_expressions().to_vec(),
+            plan.affected_entries().to_vec(),
+        ))
+    }
+
     fn export_expression3(&self, py: Python<'_>, id: &str) -> PyResult<String> {
         self.inner
             .lock()

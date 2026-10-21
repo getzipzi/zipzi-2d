@@ -920,6 +920,7 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
                 fade_in: Some(0.3),
                 fade_out: Some(0.5),
                 entries: vec![ExpressionEntry {
+                    id: uuid::Uuid::new_v4().to_string(),
                     target: ExpressionTarget::Resolved {
                         parameter_id: PARAM.into()
                     },
@@ -961,8 +962,10 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
         assert_eq!(expression.fade_in, Some(0.3));
         assert_eq!(expression.fade_out, Some(0.5));
         assert_eq!(
-            expression.entries,
-            doc.get_expression(&uuid(index)).unwrap().entries
+            kasane_core::document::ExpressionEntryFields::from(&expression.entries[0]),
+            kasane_core::document::ExpressionEntryFields::from(
+                &doc.get_expression(&uuid(index)).unwrap().entries[0]
+            )
         );
         assert!(
             (expression.source_scene().unwrap().tracks[0].initial.value - pose).abs() < 0.00001

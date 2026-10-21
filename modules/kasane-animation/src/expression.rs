@@ -45,6 +45,7 @@ pub(crate) struct ExpressionRuntime {
     activations: Vec<Activation>,
     next_activation: usize,
     playing: Vec<PlayingExpression>,
+    projections: BTreeMap<String, std::sync::Arc<kasane_core::document::ExpressionProjection>>,
 }
 impl ExpressionRuntime {
     pub(crate) fn first_schedule_difference(&self, other: &Self) -> Option<f32> {
@@ -75,6 +76,11 @@ impl ExpressionRuntime {
                 .iter()
                 .map(|v| v.expression_id.capacity())
                 .sum::<usize>()
+            + self
+                .projections
+                .iter()
+                .map(|(id, p)| id.capacity() + p.estimated_bytes())
+                .sum::<usize>()
             + vec_bytes(&self.playing)
             + self.playing.iter().map(|v| v.id.capacity()).sum::<usize>()
     }
@@ -103,17 +109,9 @@ impl ExpressionRuntime {
         if time < now {
             return Err(AnimationError::PastActivation);
         }
-        let expression = document
+        let _expression = document
             .get_expression(id)
             .ok_or_else(|| AnimationError::MissingExpression(id.into()))?;
-        for entry in &expression.entries {
-            if let ExpressionTarget::Unresolved { runtime_id } = &entry.target {
-                return Err(AnimationError::UnresolvedParameter {
-                    expression_id: id.into(),
-                    runtime_id: runtime_id.clone(),
-                });
-            }
-        }
         let insertion = self.activations.partition_point(|item| item.time <= time);
         self.activations.insert(
             insertion,
@@ -167,6 +165,22 @@ impl ExpressionRuntime {
         time: f32,
         values: &mut BTreeMap<String, f32>,
     ) {
+        for playing in &self.playing {
+            let stale = self
+                .projections
+                .get(&playing.id)
+                .is_none_or(|p| p.revision != document.revision());
+            if stale {
+                self.projections.insert(
+                    playing.id.clone(),
+                    std::sync::Arc::new(
+                        document
+                            .expression_projection(&playing.id)
+                            .expect("validated expression projects"),
+                    ),
+                );
+            }
+        }
         let mut components = BTreeMap::<String, Components>::new();
         let mut expression_weight = 0.0_f32;
         let mut latest_fade = 0.0_f32;
@@ -190,7 +204,8 @@ impl ExpressionRuntime {
             let weight = in_weight * out_weight;
             expression_weight += in_weight;
             latest_fade = weight;
-            for entry in &expression.entries {
+            let entries = &self.projections[&playing.id].entries;
+            for entry in entries {
                 if let ExpressionTarget::Resolved { parameter_id } = &entry.target {
                     components
                         .entry(parameter_id.clone())
@@ -206,7 +221,7 @@ impl ExpressionRuntime {
             for (id, slot) in &mut components {
                 let current = *values.get(id).expect("resolved parameter exists");
                 // Framework's manager finds the first matching entry.
-                let entry = expression.entries.iter().find(|entry| {
+                let entry = entries.iter().find(|entry| {
                     matches!(&entry.target, ExpressionTarget::Resolved { parameter_id } if parameter_id == id)
                 });
                 let desired = entry.map_or(

@@ -766,6 +766,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]
@@ -843,6 +844,7 @@ dependencies = [
  "pyo3",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]

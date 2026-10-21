@@ -83,7 +83,9 @@ impl Document {
                     || self.content.transforms.contains_key(id)
                     || self.content.parts.contains_key(id)
                     || self.content.offscreens.contains_key(id)
-                    || self.content.glues.contains_key(id);
+                    || self.content.glues.contains_key(id)
+                    || self.content.expressions.contains_key(id)
+                    || self.get_expression_entry(id).is_some();
                 (!valid).then(|| StructureIssue {
                     object_id: id.clone(),
                     status: Status::error(

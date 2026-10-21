@@ -44,7 +44,7 @@ impl AuthoringSession {
         self.project.import_cubism_authoring(path).map_err(|s| {
             SdkError::from_status(s, "import_cubism", vec![path.display().to_string()])
         })?;
-        self.reset_after_open(generation);
+        self.reset_after_open(generation, current);
         Ok(self.version())
     }
 
@@ -111,7 +111,9 @@ impl AuthoringSession {
         self.redo.clear();
         self.preview.reset();
         self.incarnations.clear();
+        self.expression_entry_contexts.clear();
         self.events.clear();
+        self.emit_replacement(current);
         Ok(self.version())
     }
 
@@ -152,7 +154,7 @@ impl AuthoringSession {
                 vec![path.display().to_string()],
             ));
         }
-        self.reset_after_open(generation);
+        self.reset_after_open(generation, current);
         Ok(result)
     }
 
@@ -336,7 +338,7 @@ impl AuthoringSession {
                 ));
             }
         }
-        self.reset_after_open(generation);
+        self.reset_after_open(generation, before);
         Ok(ImportReceipt {
             before,
             after: self.version(),
@@ -406,7 +408,7 @@ impl AuthoringSession {
                 ));
             }
         }
-        self.reset_after_open(generation);
+        self.reset_after_open(generation, before);
         Ok(ImportReceipt {
             before,
             after: self.version(),
@@ -455,7 +457,7 @@ impl AuthoringSession {
                 vec![source.display().to_string()],
             ));
         }
-        self.reset_after_open(generation);
+        self.reset_after_open(generation, before);
         Ok(PsdImportReceipt {
             before,
             after: self.version(),
@@ -503,7 +505,7 @@ impl AuthoringSession {
                 vec![source.display().to_string()],
             ));
         }
-        self.reset_after_open(generation);
+        self.reset_after_open(generation, before);
         Ok(PsdImportReceipt {
             before,
             after: self.version(),
@@ -554,13 +556,29 @@ impl AuthoringSession {
         Ok(result)
     }
 
-    fn reset_after_open(&mut self, generation: u64) {
+    fn reset_after_open(&mut self, generation: u64, before: Version) {
         self.generation = generation;
         self.done.clear();
         self.redo.clear();
         self.preview.reset();
         self.incarnations.clear();
+        self.expression_entry_contexts.clear();
         self.events.clear();
         self.refresh_incarnations(&HashSet::new(), &HashSet::new());
+        self.emit_replacement(before);
+    }
+    fn emit_replacement(&mut self, before: Version) {
+        self.publish_receipt(crate::EditReceipt {
+            label: "Replace project".into(),
+            before,
+            after: self.version(),
+            kind: kasane_core::ChangeKind::Structure,
+            object_ids: vec![self.document_id().into()],
+            changed: true,
+            changes: crate::ChangeSet {
+                full_invalidation: true,
+                ..Default::default()
+            },
+        });
     }
 }

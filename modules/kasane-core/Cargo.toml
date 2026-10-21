@@ -11,6 +11,7 @@ description = "Core document model, geometry, deformers and evaluation for Kasan
 bench-instrumentation = []
 
 [dependencies]
+uuid = { version = "1", features = ["v4"] }
 png = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

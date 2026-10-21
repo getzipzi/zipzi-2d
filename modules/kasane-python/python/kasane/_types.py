@@ -249,6 +249,8 @@ class EditEvent(NamedTuple):
     object_ids: list[str]
     changed: bool
 
+    changes: dict[str, object]
+
 
 class ParameterSnapshot(NamedTuple):
     """Versioned parameter definition and its sampling range."""

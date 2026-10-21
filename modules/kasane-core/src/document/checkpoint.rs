@@ -1,6 +1,6 @@
 use super::{Document, DocumentContent};
 use crate::types::{ChangeKind, ImageAsset, Status};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 mod size;
 
@@ -65,6 +65,7 @@ impl Document {
         let mut candidate = Document::new();
         let mut content = self.checkpoint();
         candidate.swap_checkpoint(&mut content, true);
+        candidate.snapshot_identity = self.snapshot_identity.clone();
         candidate.revision = self.revision;
         candidate.evaluation_revision = self.evaluation_revision;
         candidate
@@ -134,8 +135,15 @@ impl Document {
             && original.glue_order == content.glue_order
             && original.offscreens == content.offscreens
             && original.offscreen_order == content.offscreen_order
-            && original.expressions == content.expressions
-            && original.expression_order == content.expression_order
+            && original.expressions.len() == content.expressions.len()
+            && original.expressions.iter().all(|(id, old)| {
+                content.expressions.get(id).is_some_and(|new| {
+                    old.fade_in == new.fade_in
+                        && old.fade_out == new.fade_out
+                        && old.entries == new.entries
+                        && old.extensions == new.extensions
+                })
+            })
             && original.motions == content.motions
             && original.motion_order == content.motion_order
             && original.motion_groups == content.motion_groups
@@ -217,6 +225,7 @@ impl Document {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.checkpoint_swap_indexes");
         self.modified_cache.take();
+        self.expression_entries.take();
         std::mem::swap(&mut self.content, &mut checkpoint.0);
         self.mesh_runtime_ids = self
             .content
@@ -245,6 +254,7 @@ impl Document {
     }
 
     fn advance_checkpoint_revision(&mut self, evaluation_changed: bool) {
+        self.snapshot_identity = Arc::new(());
         self.revision += 1;
         if evaluation_changed {
             self.evaluation_revision = self.revision;
@@ -252,4 +262,8 @@ impl Document {
             self.prepared.take();
         }
     }
+}
+
+pub(super) fn expression_entries_bytes(entries: &Vec<super::ExpressionEntry>) -> usize {
+    size::expression_entries_bytes(entries)
 }

@@ -14,6 +14,40 @@ import kasane
 from .common import *
 
 class CpuMotionAnimationTests(unittest.TestCase):
+    def test_expression_entry_authoring_uses_sdk_identity_and_atomic_history(self):
+        model = session()
+        a, b, x, y = (str(uuid4()) for _ in range(4))
+        with model.edit("expression fixture") as edit:
+            edit.create_parameter(PARAMETER, "X", 0, 1, 0, runtime_id="ParamX")
+            edit.create_expression(a, "A", [])
+            edit.create_expression(b, "B", [])
+            edit.create_expression_entry(a, x)
+        self.assertEqual(model.expression(a)["entries"][0]["id"], x)
+        self.assertEqual(model.expression(a)["entries"][0]["target"], {"kind": "unspecified"})
+        handle = model.handle("expression_entry", x)
+        affected, entries = model.plan_expression_move([x], b)
+        self.assertEqual(set(affected), {a, b})
+        self.assertEqual(entries, [x])
+        with model.edit("configure and move") as edit:
+            edit.patch_expression_entry(x, PARAMETER, 0.4)
+            edit.move_expression_entries([x], b)
+        model.resolve_handle(handle)
+        self.assertAlmostEqual(model.expression(b)["entries"][0]["value"], 0.4)
+        self.assertEqual(json.loads(model.export_expression3(b))["Parameters"][0]["Id"], "ParamX")
+        with model.edit("copy") as edit:
+            edit.duplicate_expression_entries([x], [y], b)
+        self.assertEqual([e["id"] for e in model.expression(b)["entries"]], [x, y])
+        with model.edit("delete") as edit:
+            edit.delete_expression_entries([x])
+        model.drain_events()
+        model.undo()
+        restored = model.drain_events()[0].changes
+        self.assertTrue(any(e["id"] == x for e in restored["created"]))
+        self.assertFalse(restored["full_invalidation"])
+        with self.assertRaises(kasane.SdkFailure):
+            model.resolve_handle(handle)
+        self.assertEqual(model.expression(b)["entries"][0]["id"], x)
+
     def test_motion_operation_identity_is_read_only_and_tracks_success(self):
         model = kasane.Session(DOCUMENT, 100, 100, (50, 50))
         preview = model.motion_preview()

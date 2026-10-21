@@ -51,6 +51,7 @@ impl NativeSession {
                     format!("{:?}", receipt.kind),
                     receipt.object_ids,
                     receipt.changed,
+                    serde_json::to_string(&receipt.changes).expect("change metadata serializes"),
                 )
             })
             .collect())

@@ -120,10 +120,10 @@ impl Document {
             }
         }
         for expression in self.content.expressions.values() {
-            for (index, entry) in expression.entries.iter().enumerate() {
+            for entry in &expression.entries {
                 if matches!(&entry.target, ExpressionTarget::Resolved { parameter_id } if parameter_id == id)
                 {
-                    refs.push(format!("expression {} entry {index}", expression.id));
+                    refs.push(entry.id.clone());
                 }
             }
             if let Some(scene) = expression.source_scene() {
@@ -187,6 +187,24 @@ impl Document {
         }
         if id == self.content.id || !self.contains_id(id) {
             return self.failed(Status::error("MISSING_OBJECT", id));
+        }
+        if self.get_expression_entry(id).is_some() {
+            let plan = match self.plan_expression_edit(ExpressionEdit::DeleteEntries {
+                ids: vec![id.into()],
+            }) {
+                Ok(plan) => plan,
+                Err(status) => return self.failed(status),
+            };
+            return self.apply_expression_edit(&plan);
+        }
+        if let Some(asset) = self.get_expression(id) {
+            let plan = match self.plan_expression_edit(ExpressionEdit::Delete {
+                id: asset.id.clone(),
+            }) {
+                Ok(plan) => plan,
+                Err(status) => return self.failed(status),
+            };
+            return self.apply_expression_edit(&plan);
         }
         let metadata_only = self.content.expressions.contains_key(id)
             || self.content.motions.contains_key(id)

@@ -100,6 +100,19 @@ impl Document {
                 });
             }
         }
+        for expression in self.content.expressions.values() {
+            for entry in &expression.entries {
+                if !all_ids.insert(entry.id.clone()) {
+                    issues.push(StructureIssue {
+                        object_id: entry.id.clone(),
+                        status: Status::error(
+                            "DUPLICATE_ID",
+                            "Expression entry ID is used by another object",
+                        ),
+                    });
+                }
+            }
+        }
         for motion in self.content.motions.values() {
             for id in motion
                 .tracks

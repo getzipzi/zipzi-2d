@@ -128,6 +128,43 @@ class Edit:
             expression_id, name, list(entries), fade_in, fade_out
         ))
 
+    def create_expression_entry(self, owner: str, entry_id: str,
+                                before: str | None = None) -> None:
+        """Create a persistent entry with an unconfigured parameter target."""
+        self._call(lambda: self._native.create_expression_entry(owner, entry_id, before))
+
+    def patch_expression_entry(self, entry_id: str, parameter_id: str | None,
+                               value: float, blend: str = "default") -> None:
+        """Patch by stable entry UUID; None clears the parameter target."""
+        self._call(lambda: self._native.patch_expression_entry(
+            entry_id, parameter_id, value, blend))
+
+    def move_expression_entries(self, entry_ids: Sequence[str], destination: str,
+                                before: str | None = None) -> None:
+        """Move atomically in source document order; preserve entry UUIDs."""
+        self._call(lambda: self._native.move_expression_entries(
+            list(entry_ids), destination, before))
+
+    def duplicate_expression_entries(self, entry_ids: Sequence[str], new_ids: Sequence[str],
+                                     destination: str, before: str | None = None) -> None:
+        """Copy entries with new UUIDs, assigned in source document order."""
+        self._call(lambda: self._native.duplicate_expression_entries(
+            list(entry_ids), list(new_ids), destination, before))
+
+    def delete_expression_entries(self, entry_ids: Sequence[str]) -> None:
+        """Delete owned entries without deleting their referenced parameters."""
+        self._call(lambda: self._native.delete_expression_entries(list(entry_ids)))
+
+    def duplicate_expression(self, source: str, expression_id: str, name: str,
+                             entry_ids: Sequence[str]) -> None:
+        """Copy an expression and assign new UUIDs to its owned entries."""
+        self._call(lambda: self._native.duplicate_expression(
+            source, expression_id, name, list(entry_ids)))
+
+    def reorder_expressions(self, expression_ids: Sequence[str]) -> None:
+        """Set complete library order without changing preview activation."""
+        self._call(lambda: self._native.reorder_expressions(list(expression_ids)))
+
     def import_expression3(
         self, expression_id: str, name: str, text: str
     ) -> list[ExpressionDiagnostic]:
