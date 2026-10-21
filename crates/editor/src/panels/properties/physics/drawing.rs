@@ -6,6 +6,22 @@ pub(super) struct DrawingState {
     hits: Rc<RefCell<Vec<Point<Pixels>>>>,
 }
 
+/// The solver rotates gravity in its input frame. Undo that frame rotation for
+/// display so the input axes turn while gravity stays vertical.
+struct InputFrame {
+    sin: f32,
+    cos: f32,
+}
+impl InputFrame {
+    fn new(angle: f32) -> Self {
+        let (sin, cos) = angle.to_radians().sin_cos();
+        Self { sin, cos }
+    }
+    fn project(&self, [x, y]: [f32; 2]) -> [f32; 2] {
+        [self.cos * x - self.sin * y, self.sin * x + self.cos * y]
+    }
+}
+
 /// Center the live chain at paint time, independent of its rest structure.
 struct Fit {
     center: [f64; 2],
@@ -64,9 +80,17 @@ impl PropertiesPanel {
                 [0., y]
             })
             .collect::<Vec<_>>();
+        let trace = trace.filter(|r| r.particles.len() == reference.len());
+        let frame = InputFrame::new(trace.map_or(0., |r| r.input_angle));
         let positions = trace
-            .filter(|r| r.particles.len() == reference.len())
-            .map_or_else(|| reference.clone(), |r| r.particles.clone());
+            .map_or(reference.as_slice(), |r| r.particles.as_slice())
+            .iter()
+            .map(|p| frame.project(*p))
+            .collect::<Vec<_>>();
+        let reference = reference
+            .into_iter()
+            .map(|p| frame.project(p))
+            .collect::<Vec<_>>();
         let selected = self.physics.node;
         let hits = self.physics.drawing.hits.clone();
         let color = cx.theme().primary;
@@ -142,20 +166,22 @@ impl PropertiesPanel {
                         let points = positions.iter().copied().map(project).collect::<Vec<_>>();
                         hits.replace(points.clone());
                         window.with_content_mask(Some(ContentMask { bounds }), |window| {
-                            line(
-                                window,
-                                point(origin.x, bounds.top()),
-                                point(origin.x, bounds.bottom()),
-                                border,
-                                1.,
-                            );
-                            line(
-                                window,
-                                point(bounds.left(), origin.y),
-                                point(bounds.right(), origin.y),
-                                border,
-                                1.,
-                            );
+                            // Extend both rotated axes beyond the viewport, even
+                            // when a translated chain puts the origin offscreen.
+                            let extent = bounds
+                                .size
+                                .width
+                                .as_f32()
+                                .hypot(bounds.size.height.as_f32())
+                                + (origin.x - bounds.center().x)
+                                    .as_f32()
+                                    .hypot((origin.y - bounds.center().y).as_f32());
+                            for axis in [[1., 0.], [0., 1.]] {
+                                let direction = frame.project(axis);
+                                let delta =
+                                    point(px(direction[0] * extent), px(direction[1] * extent));
+                                line(window, origin - delta, origin + delta, border, 1.);
+                            }
                             for pair in reference.windows(2) {
                                 line(
                                     window,
@@ -284,8 +310,41 @@ fn text(window: &mut Window, cx: &mut App, origin: Point<Pixels>, value: String,
 
 #[cfg(test)]
 mod tests {
-    use super::Fit;
+    use super::{Fit, InputFrame};
     use gpui_kit::{Bounds, point, px, size};
+
+    #[test]
+    fn rotation_turns_axes_and_keeps_a_settled_pendulum_vertical() {
+        for angle in [-90_f32, -45., 0., 30., 90.] {
+            let frame = InputFrame::new(angle);
+            let (sin, cos) = angle.to_radians().sin_cos();
+            let root = [3., -2.];
+            let tip = [root[0] + 10. * sin, root[1] + 10. * cos];
+            let displayed_root = frame.project(root);
+            let displayed_tip = frame.project(tip);
+            assert!((displayed_tip[0] - displayed_root[0]).abs() < 1e-5);
+            assert!((displayed_tip[1] - displayed_root[1] - 10.).abs() < 1e-5);
+            let x_axis = frame.project([1., 0.]);
+            let y_axis = frame.project([0., 1.]);
+            assert_eq!(x_axis, [cos, sin]);
+            assert_eq!(y_axis, [-sin, cos]);
+
+            // Preserve a transient deflection instead of straightening the chain.
+            let bent = frame.project([tip[0] + 2. * cos, tip[1] - 2. * sin]);
+            assert!((bent[0] - displayed_tip[0] - 2.).abs() < 1e-5);
+            assert!((bent[1] - displayed_tip[1]).abs() < 1e-5);
+            let bounds = Bounds::new(point(px(100.), px(200.)), size(px(180.), px(120.)));
+            let fit = Fit::new(
+                [displayed_root, displayed_tip, bent].into_iter(),
+                bounds,
+                1.,
+            );
+            let root_hit = fit.project(displayed_root);
+            let tip_hit = fit.project(displayed_tip);
+            assert!((root_hit.x - tip_hit.x).abs() < px(0.01));
+            assert!(tip_hit.y > root_hit.y);
+        }
+    }
 
     #[test]
     fn auto_fit_keeps_bent_and_changed_chains_inside_resized_viewports() {
