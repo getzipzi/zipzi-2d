@@ -69,6 +69,8 @@ enum Command {
     SetParameterGroup(String, Option<String>),
     SetCombinedParameters(kasane_core::document::CdiCombinedSet),
     EditExpression(kasane_sdk::ExpressionEdit),
+    EditMotion(kasane_core::document::MotionEdit),
+    EditAttachment(kasane_core::document::AttachmentEdit),
     CreateExpression(kasane_core::document::ExpressionAsset),
     ReplaceExpression(kasane_core::document::ExpressionAsset),
     CreateMotion(kasane_core::document::MotionClip),

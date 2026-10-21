@@ -199,6 +199,27 @@ pub fn build_export_plan_with(
             doc.missing_attachments().join(", "),
         ));
     }
+    if doc.motion_roots().iter().any(|e| {
+        e.fade_in.is_some() || e.fade_out.is_some() || e.sound.is_some() || !e.extensions.is_empty()
+    }) {
+        return Err(Status::error(
+            "ROOT_REGISTRATION_NOT_REPRESENTABLE",
+            "Assign root registration overrides to an export group",
+        ));
+    }
+    for reference in doc
+        .motion_registrations()
+        .filter_map(|e| e.sound.as_ref())
+        .chain(doc.model3_settings().user_data.iter())
+    {
+        if !doc.attachment_available(reference) {
+            return Err(Status::error(
+                "MISSING_PACKAGE_ATTACHMENT",
+                doc.attachment_path(reference)
+                    .unwrap_or("unresolved attachment"),
+            ));
+        }
+    }
     let artifact = encode_moc3(doc)?;
     let cdi_json = export_cdi3(doc)
         .map_err(|error| Status::error(error.code, format!("{}: {}", error.path, error.message)))?;
@@ -251,7 +272,7 @@ pub fn build_export_plan_with(
                 .collect(),
         );
     }
-    if !motions.is_empty() {
+    if !motions.is_empty() || !doc.motion_groups().is_empty() {
         let mut groups = serde_json::Map::new();
         let mut registered = std::collections::HashSet::new();
         for group in doc.motion_groups() {
@@ -261,7 +282,10 @@ pub fn build_export_plan_with(
                 let mut value = serde_json::Map::new();
                 value.insert("File".into(), Value::String(path));
                 if let Some(sound) = &entry.sound {
-                    value.insert("Sound".into(), Value::String(sound.clone()));
+                    value.insert(
+                        "Sound".into(),
+                        Value::String(doc.attachment_path(sound).unwrap().to_string()),
+                    );
                 }
                 if let Some(fade) = entry.fade_in {
                     value.insert("FadeInTime".into(), serde_json::json!(fade));
@@ -289,10 +313,9 @@ pub fn build_export_plan_with(
             groups.insert(group.name.clone(), Value::Array(entries));
         }
         let remaining: Vec<_> = doc
-            .motion_order()
+            .motion_roots()
             .iter()
-            .filter(|id| !registered.contains(id.as_str()))
-            .map(|id| serde_json::json!({"File": motion_paths[id]}))
+            .map(|entry| serde_json::json!({"File": motion_paths[&entry.clip_id]}))
             .collect();
         if !remaining.is_empty() {
             groups
@@ -308,16 +331,17 @@ pub fn build_export_plan_with(
         model3[key] = value;
     }
     if let Some(path) = &doc.model3_settings().user_data {
-        model3["FileReferences"]["UserData"] = Value::String(path.clone());
+        model3["FileReferences"]["UserData"] =
+            Value::String(doc.attachment_path(path).unwrap().to_string());
     }
     let mut referenced = std::collections::HashSet::new();
     if let Some(path) = &doc.model3_settings().user_data {
-        referenced.insert(path.as_str());
+        referenced.insert(doc.attachment_path(path).unwrap());
     }
     for group in doc.motion_groups() {
         for entry in &group.entries {
             if let Some(path) = &entry.sound {
-                referenced.insert(path.as_str());
+                referenced.insert(doc.attachment_path(path).unwrap());
             }
         }
     }
@@ -358,8 +382,20 @@ pub fn build_export_plan_with(
         let attachment = managed
             .get(path)
             .ok_or_else(|| Status::error("MISSING_PACKAGE_ATTACHMENT", *path))?;
-        if doc.model3_settings().user_data.as_deref() == Some(*path) {
-            crate::model3::validate_user_data(doc, &attachment.bytes)?;
+        if doc
+            .model3_settings()
+            .user_data
+            .as_ref()
+            .and_then(|r| doc.attachment_path(r))
+            == Some(*path)
+        {
+            crate::model3::validate_user_data(
+                doc,
+                attachment
+                    .bytes
+                    .as_ref()
+                    .ok_or_else(|| Status::error("MISSING_PACKAGE_ATTACHMENT", *path))?,
+            )?;
         }
     }
     let model3_json = serde_json::to_string_pretty(&model3)
@@ -454,7 +490,12 @@ pub fn build_export_plan_with(
         add(
             path.into(),
             ExportFileKind::Attachment,
-            managed[path].bytes.clone(),
+            managed[path]
+                .bytes
+                .as_ref()
+                .ok_or_else(|| Status::error("MISSING_PACKAGE_ATTACHMENT", path))?
+                .as_ref()
+                .clone(),
         )?;
     }
     for slot in artifact.textures {

@@ -336,6 +336,7 @@ fn keys(
 
 fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Report) -> MotionClip {
     let mut clip = asset.source_scene().unwrap_or_else(|| MotionClip {
+        track_order: Vec::new(),
         id: asset.id.clone(),
         name: asset.name.clone(),
         duration: 1. / 30.,
@@ -604,13 +605,11 @@ fn prepare(
         }
         scenes.push(scene);
     }
-    if doc.motion_groups().iter().any(|group| {
-        group.entries.iter().any(|entry| {
-            entry.fade_in.is_some()
-                || entry.fade_out.is_some()
-                || entry.sound.is_some()
-                || !entry.extensions.is_empty()
-        })
+    if doc.motion_registrations().any(|entry| {
+        entry.fade_in.is_some()
+            || entry.fade_out.is_some()
+            || entry.sound.is_some()
+            || !entry.extensions.is_empty()
     }) {
         loss(&mut report, doc.id(), "CAN3_MOTION_REGISTRATIONS", "Registration-specific fades, sound references and opaque metadata cannot be represented by CAN3 playlists");
     }

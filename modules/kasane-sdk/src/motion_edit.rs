@@ -449,6 +449,7 @@ impl MotionClipCandidate {
                 track.segments = Arc::new(segments);
             }
             clip.tracks.retain(|t| !empty.contains(&t.id));
+            clip.track_order.retain(|id| !empty.contains(id));
             Ok(())
         })
     }

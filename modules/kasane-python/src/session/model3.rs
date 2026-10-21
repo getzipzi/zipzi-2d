@@ -2,14 +2,19 @@ use super::*;
 
 #[pymethods]
 impl NativeSession {
-    fn package_attachments(&self) -> PyResult<Vec<(String, Vec<u8>)>> {
+    fn package_attachments(&self) -> PyResult<Vec<(String, Option<Vec<u8>>)>> {
         Ok(self
             .inner
             .lock()
             .map_err(|_| poisoned())?
             .package_attachments()
             .into_iter()
-            .map(|attachment| (attachment.path, attachment.bytes))
+            .map(|attachment| {
+                (
+                    attachment.path,
+                    attachment.bytes.map(|b| b.as_ref().clone()),
+                )
+            })
             .collect())
     }
     fn model3_settings_json(&self) -> PyResult<String> {

@@ -1,5 +1,6 @@
 """Python context manager and typed authoring commands."""
 from __future__ import annotations
+from uuid import uuid4
 
 from pathlib import Path
 import json
@@ -207,11 +208,24 @@ class Edit:
 
     def replace_motion(self, clip: Mapping[str, object]) -> None:
         """Replace a known-field clip using a detached motion snapshot."""
-        self._call(lambda: self._native.replace_motion_json(json.dumps(dict(clip))))
+        self._call(lambda: self._native.replace_motion_json(json.dumps(dict(clip, track_order=clip.get("track_order", [])))))
+
+    def motion_authoring(self, intent: Mapping[str, object]) -> None:
+        """Apply a typed MotionEdit intent (op discriminator) in this transaction."""
+        self._call(lambda: self._native.motion_authoring_json(json.dumps(intent)))
+
+    def attachment_authoring(self, intent: Mapping[str, object]) -> None:
+        """Apply a typed AttachmentEdit intent through domain validation."""
+        self._call(lambda: self._native.attachment_authoring_json(json.dumps(intent)))
 
     def set_motion_groups(self, groups: Sequence[Mapping[str, object]]) -> None:
         """Replace model3 motion registrations; one clip may occur in several groups."""
-        self._call(lambda: self._native.set_motion_groups_json(json.dumps(list(groups))))
+        normalized = [dict(group, id=group.get("id", str(uuid4())), entries=[
+            dict(entry, id=entry.get("id", str(uuid4())), sound=(
+                {"kind": "unresolved", "path": entry["sound"]} if isinstance(entry.get("sound"), str) else entry.get("sound")
+            )) for entry in group["entries"]
+        ]) for group in groups]
+        self._call(lambda: self._native.set_motion_groups_json(json.dumps(normalized)))
 
     def create_motion_track(self, motion_id: str, track: Mapping[str, object]) -> None:
         """Append a track with a stable UUID and typed segment list."""
@@ -342,13 +356,13 @@ class Edit:
         """Set typed model3 metadata; group parameters and hit-area meshes use UUID references."""
         self._call(lambda: self._native.set_model3_settings_json(json.dumps({
             "groups": groups, "layout": layout, "hit_areas": hit_areas,
-            "user_data": user_data,
+            "user_data": {"kind":"unresolved","path":user_data} if isinstance(user_data,str) else user_data,
             "extensions": {}, "source_runtime_ids": None, "source_content": None,
         })))
 
     def replace_model3_settings(self, settings: Mapping[str, object]) -> None:
         """Replace the detached model3 metadata snapshot."""
-        self._call(lambda: self._native.set_model3_settings_json(json.dumps(dict(settings))))
+        self._call(lambda: self._native.set_model3_settings_json(json.dumps(dict(settings, user_data=({"kind":"unresolved","path":settings["user_data"]} if isinstance(settings.get("user_data"),str) else settings.get("user_data"))))))
 
     def set_package_attachments(self, attachments: Mapping[str, bytes]) -> None:
         """Store Sound/UserData file bytes in the project for standalone export."""

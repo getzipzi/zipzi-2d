@@ -106,6 +106,7 @@ fn saved_projects_publish_a_consistent_animation_model_pair() {
         .is_ok());
     assert!(doc
         .create_motion(MotionClip {
+            track_order: Vec::new(),
             id: "ca030000-0000-4000-8000-000000000002".into(),
             name: "Empty timeline".into(),
             duration: 2.,
@@ -191,6 +192,7 @@ fn removing_last_motion_replaces_pair_with_model_only_without_deleting_unmanaged
     let motion = uuid::Uuid::new_v4().to_string();
     assert!(doc
         .create_motion(MotionClip {
+            track_order: Vec::new(),
             id: motion.clone(),
             name: "Motion".into(),
             duration: 1.,

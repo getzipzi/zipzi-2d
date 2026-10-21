@@ -6,6 +6,12 @@ use serde_json::Value;
 
 use super::{Document, StructureIssue};
 use crate::types::{ChangeKind, EditResult, Status};
+mod authoring;
+pub(super) use authoring::MotionLookup;
+pub use authoring::{
+    DisabledMotionTrack, MotionContainer, MotionDisabledReason, MotionEdit, MotionPlan,
+    MotionProjection,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct MotionPoint {
@@ -73,6 +79,7 @@ impl MotionSegment {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum MotionTrackTarget {
+    Unspecified,
     Model {
         runtime_id: String,
     },
@@ -127,6 +134,8 @@ pub struct MotionClip {
     pub restricted_beziers: bool,
     pub fade_in: Option<f32>,
     pub fade_out: Option<f32>,
+    /// Display order only; tracks retain their execution order. Empty uses execution order.
+    pub track_order: Vec<String>,
     pub tracks: crate::SharedVec<MotionTrack>,
     pub events: crate::SharedVec<MotionEvent>,
     pub extensions: BTreeMap<String, Value>,
@@ -140,16 +149,18 @@ pub struct MotionClip {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MotionRegistration {
+    pub id: String,
     pub clip_id: String,
     pub fade_in: Option<f32>,
     pub fade_out: Option<f32>,
-    pub sound: Option<String>,
+    pub sound: Option<super::AttachmentRef>,
     pub extensions: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MotionGroup {
+    pub id: String,
     pub name: String,
     pub entries: Vec<MotionRegistration>,
 }
@@ -221,51 +232,133 @@ impl Document {
         if !self.initialized() {
             return self.failed(Status::error("NOT_INITIALIZED", "Initialize first"));
         }
-        let status = self.validate_motion_groups(&groups);
+        self.set_motion_library(groups, self.content.motion_roots.clone())
+    }
+    pub fn set_motion_library(
+        &mut self,
+        groups: Vec<MotionGroup>,
+        roots: Vec<MotionRegistration>,
+    ) -> EditResult {
+        if self.mutation_blocked() {
+            return self.failed(Status::error(
+                "TRANSACTION_ACTIVE",
+                "Commit or cancel first",
+            ));
+        }
+        if !self.initialized() {
+            return self.failed(Status::error("NOT_INITIALIZED", "Initialize first"));
+        }
+        for (kind, id) in groups.iter().map(|g| ("group", &g.id)).chain(
+            groups
+                .iter()
+                .flat_map(|g| &g.entries)
+                .chain(&roots)
+                .map(|e| ("registration", &e.id)),
+        ) {
+            if self.contains_id(id)
+                && match kind {
+                    "group" => self.get_motion_group(id).is_none(),
+                    _ => self.get_motion_registration(id).is_none(),
+                }
+            {
+                return self.failed(Status::error("DUPLICATE_ID", id));
+            }
+        }
+        let mut candidate = self.motion_authoring_candidate();
+        candidate.content.motion_groups = groups;
+        candidate.content.motion_roots = roots;
+        for id in self.motion_order() {
+            if !candidate.motion_registrations().any(|e| e.clip_id == *id) {
+                if let Some(entry) = self
+                    .motion_roots()
+                    .iter()
+                    .chain(self.motion_groups().iter().flat_map(|g| &g.entries))
+                    .find(|e| e.clip_id == *id)
+                {
+                    candidate.content.motion_roots.push(entry.clone());
+                }
+            }
+        }
+        candidate.ensure_motion_roots();
+        let status = candidate.validate_motion_groups(candidate.motion_groups());
         if !status.is_ok() {
             return self.failed(status);
         }
-        if self.content.motion_groups == groups {
+        if let Err(status) = self.validate_motion_changes_unlocked(&candidate) {
+            return self.failed(status);
+        }
+        if self.content.motion_groups == candidate.content.motion_groups
+            && self.content.motion_roots == candidate.content.motion_roots
+        {
             return self.failed(Status::ok());
         }
-        self.content.motion_groups = groups;
-        self.changed(ChangeKind::Metadata, Vec::new(), Vec::new())
-    }
-
-    fn validate_motion_groups(&self, groups: &[MotionGroup]) -> Status {
-        let mut names = HashSet::new();
-        for (index, group) in groups.iter().enumerate() {
-            // Live2D model3 permits an empty Motion group key; Mao uses it for
-            // its non-idle clips. It still has to be unique like any other key.
-            if group.name.contains('\0') || !names.insert(&group.name) {
-                return Status::error("INVALID_MOTION_GROUP", format!("groups[{index}]"));
+        let ids = self
+            .motion_groups()
+            .iter()
+            .map(|g| g.id.clone())
+            .chain(candidate.motion_groups().iter().map(|g| g.id.clone()))
+            .chain(self.motion_registrations().map(|e| e.id.clone()))
+            .chain(candidate.motion_registrations().map(|e| e.id.clone()))
+            .collect();
+        let flagged: Vec<_> = self
+            .editor_state()
+            .objects
+            .keys()
+            .filter(|id| {
+                self.get_motion_group(id).is_some() || self.get_motion_registration(id).is_some()
+            })
+            .cloned()
+            .collect();
+        self.content.motion_groups = candidate.content.motion_groups;
+        self.content.motion_roots = candidate.content.motion_roots;
+        for id in flagged {
+            if !self.motion_identity_exists(&id) {
+                self.content.editor_state.objects.remove(&id);
             }
-            for (entry_index, entry) in group.entries.iter().enumerate() {
-                if !self.content.motions.contains_key(&entry.clip_id) {
-                    return Status::error(
-                        "MISSING_MOTION",
-                        format!("groups[{index}].entries[{entry_index}]"),
-                    );
-                }
-                if [entry.fade_in, entry.fade_out]
-                    .into_iter()
-                    .flatten()
-                    .any(|v| !v.is_finite() || v < 0.0)
+        }
+        self.changed(ChangeKind::Metadata, vec![], ids)
+    }
+    pub(super) fn validate_motion_groups(&self, groups: &[MotionGroup]) -> Status {
+        let mut ids = HashSet::new();
+        let mut names = HashSet::new();
+        for g in groups {
+            if !super::valid_uuid(&g.id)
+                || !ids.insert(&g.id)
+                || (self.contains_id(&g.id) && self.get_motion_group(&g.id).is_none())
+            {
+                return Status::error("INVALID_MOTION_GROUP_ID", &g.id);
+            }
+            if g.name.contains('\0') || !names.insert(&g.name) {
+                return Status::error("INVALID_MOTION_GROUP", &g.name);
+            }
+        }
+        for e in groups
+            .iter()
+            .flat_map(|g| &g.entries)
+            .chain(self.motion_roots())
+        {
+            if !super::valid_uuid(&e.id)
+                || !ids.insert(&e.id)
+                || (self.contains_id(&e.id) && self.get_motion_registration(&e.id).is_none())
+            {
+                return Status::error("INVALID_MOTION_REGISTRATION_ID", &e.id);
+            }
+            if self.get_motion(&e.clip_id).is_none() {
+                return Status::error("MISSING_MOTION", &e.clip_id);
+            }
+            if [e.fade_in, e.fade_out]
+                .into_iter()
+                .flatten()
+                .any(|v| !v.is_finite() || v < 0.)
+            {
+                return Status::error("INVALID_MOTION_FADE", &e.id);
+            }
+            if let Some(reference) = &e.sound {
+                if self
+                    .attachment_path(reference)
+                    .is_none_or(|p| !super::valid_attachment_path(p))
                 {
-                    return Status::error(
-                        "INVALID_MOTION_FADE",
-                        format!("groups[{index}].entries[{entry_index}]"),
-                    );
-                }
-                if entry
-                    .sound
-                    .as_ref()
-                    .is_some_and(|sound| sound.is_empty() || sound.contains('\0'))
-                {
-                    return Status::error(
-                        "INVALID_MOTION_SOUND",
-                        format!("groups[{index}].entries[{entry_index}]"),
-                    );
+                    return Status::error("INVALID_MOTION_SOUND", &e.id);
                 }
             }
         }
@@ -292,6 +385,9 @@ impl Document {
         if self.contains_id(&clip.id) {
             return self.failed(Status::error("DUPLICATE_ID", &clip.id));
         }
+        if let Err(status) = self.validate_motion_unlocked(&clip) {
+            return self.failed(status);
+        }
         let status = self.validate_motion(&clip);
         if !status.is_ok() {
             return self.failed(status);
@@ -301,6 +397,7 @@ impl Document {
             .motions
             .insert(id.clone(), std::sync::Arc::new(clip));
         self.content.motion_order.push(id.clone());
+        self.ensure_motion_roots();
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
@@ -314,6 +411,9 @@ impl Document {
         if !self.content.motions.contains_key(&clip.id) {
             return self.failed(Status::error("MISSING_MOTION", &clip.id));
         }
+        if let Err(status) = self.validate_motion_unlocked(&clip) {
+            return self.failed(status);
+        }
         let status = self.validate_motion(&clip);
         if !status.is_ok() {
             return self.failed(status);
@@ -322,9 +422,26 @@ impl Document {
         if self.get_motion(&id) == Some(&clip) {
             return self.failed(Status::ok());
         }
+        let flagged: Vec<_> = self
+            .editor_state()
+            .objects
+            .keys()
+            .filter(|key| {
+                self.get_motion_track(key).is_some_and(|(c, _)| c.id == id)
+                    || self.get_motion_key(key).is_some_and(|(c, _, _)| c.id == id)
+                    || self.get_motion_event(key).is_some_and(|(c, _)| c.id == id)
+            })
+            .cloned()
+            .collect();
         self.content
             .motions
             .insert(id.clone(), std::sync::Arc::new(clip));
+        self.motion_lookup.take();
+        for key in flagged {
+            if !self.motion_identity_exists(&key) {
+                self.content.editor_state.objects.remove(&key);
+            }
+        }
         self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
     }
 
@@ -376,6 +493,13 @@ impl Document {
             Ok(range) => range,
             Err(status) => return status,
         };
+        if !clip.track_order.is_empty()
+            && (clip.track_order.len() != clip.tracks.len()
+                || clip.track_order.iter().collect::<HashSet<_>>()
+                    != clip.tracks.iter().map(|t| &t.id).collect::<HashSet<_>>())
+        {
+            return Status::error("INVALID_TRACK_ORDER", &clip.id);
+        }
         let mut ids = HashSet::new();
         for (index, track) in clip.tracks.iter().enumerate() {
             if !super::valid_uuid(&track.id)
@@ -387,7 +511,9 @@ impl Document {
                     format!("{}.tracks[{index}]", clip.id),
                 );
             }
-            if self.contains_id(&track.id) || nested_elsewhere.contains(track.id.as_str()) {
+            if self.contains_base_identity(&track.id)
+                || nested_elsewhere.contains(track.id.as_str())
+            {
                 return Status::error("DUPLICATE_ID", &track.id);
             }
             for key in track.keys() {
@@ -395,7 +521,7 @@ impl Document {
                     return Status::error("INVALID_MOTION_KEY_ID", &key.id);
                 }
                 if key.id == clip.id
-                    || self.contains_id(&key.id)
+                    || self.contains_base_identity(&key.id)
                     || nested_elsewhere.contains(key.id.as_str())
                 {
                     return Status::error("DUPLICATE_ID", &key.id);
@@ -502,7 +628,9 @@ impl Document {
                     format!("{}.events[{index}]", clip.id),
                 );
             }
-            if self.contains_id(&event.id) || nested_elsewhere.contains(event.id.as_str()) {
+            if self.contains_base_identity(&event.id)
+                || nested_elsewhere.contains(event.id.as_str())
+            {
                 return Status::error("DUPLICATE_ID", &event.id);
             }
             if !event.time.is_finite() || event.time < 0.0 || event.time > clip.duration {
@@ -529,6 +657,9 @@ impl Document {
         let _span = crate::benchmark::span("core.patch_motion_properties");
         let status = validate_properties(id, duration, fps, fade_in, fade_out);
         if !status.is_ok() {
+            return self.failed(status);
+        }
+        if let Err(status) = self.motion_unlocked(id) {
             return self.failed(status);
         }
         let clip = self.get_motion(id).expect("property target checked");

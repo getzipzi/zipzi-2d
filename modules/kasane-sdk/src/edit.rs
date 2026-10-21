@@ -174,25 +174,20 @@ impl EditSession<'_> {
         let result = self.document().replace_draw_order_groups(groups);
         self.record(result, "replace_draw_order_groups", &id)
     }
+    pub(crate) fn track_removed_objects(
+        &mut self,
+        before: std::collections::HashSet<crate::types::ObjectKey>,
+    ) {
+        let after = crate::session::keys_in(self.candidate_document());
+        self.erased_keys.extend(before.difference(&after).cloned());
+    }
+
     pub fn erase_object(&mut self, id: &str) -> Result<(), SdkError> {
         self.ensure_active("erase_object")?;
-        let original = self
-            .base_keys
-            .iter()
-            .cloned()
-            .into_iter()
-            .find(|key| key.id == id);
-        let children = self
-            .candidate_document()
-            .get_expression(id)
-            .map(|e| e.entries.iter().map(|e| e.id.clone()).collect::<Vec<_>>())
-            .unwrap_or_default();
+        let before_keys = crate::session::keys_in(self.candidate_document());
         let result = self.document().erase_object(id);
         self.record(result, "erase_object", id)?;
-        self.track_expression_deletions(&children);
-        if let Some(key) = original {
-            self.erased_keys.insert(key);
-        }
+        self.track_removed_objects(before_keys);
         Ok(())
     }
     pub fn create_asset(&mut self, asset: ImageAsset) -> Result<(), SdkError> {

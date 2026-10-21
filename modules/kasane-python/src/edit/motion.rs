@@ -30,6 +30,7 @@ impl NativeEdit {
         self.ensure_open(py, "create_motion")?;
         self.commands
             .push(Command::CreateMotion(MotionClip {
+                track_order: vec![],
                 id,
                 name,
                 duration,
@@ -225,5 +226,23 @@ impl NativeEdit {
                 id, duration, fps, looping, fade_in, fade_out,
             ))
             .map_err(|error| sdk_failure(py, error))
+    }
+}
+
+#[pymethods]
+impl NativeEdit {
+    fn motion_authoring_json(&mut self, py: Python<'_>, value: &str) -> PyResult<()> {
+        self.ensure_open(py, "motion_authoring")?;
+        let intent = parse(value, &mut self.failed)?;
+        self.commands
+            .push(Command::EditMotion(intent))
+            .map_err(|e| sdk_failure(py, e))
+    }
+    fn attachment_authoring_json(&mut self, py: Python<'_>, value: &str) -> PyResult<()> {
+        self.ensure_open(py, "attachment_authoring")?;
+        let intent = parse(value, &mut self.failed)?;
+        self.commands
+            .push(Command::EditAttachment(intent))
+            .map_err(|e| sdk_failure(py, e))
     }
 }

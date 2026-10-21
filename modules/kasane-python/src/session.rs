@@ -62,3 +62,5 @@ mod objects;
 mod physics;
 mod pose;
 mod project_io;
+
+pub(crate) use motion::NativeMotionPlan;

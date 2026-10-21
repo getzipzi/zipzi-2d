@@ -44,7 +44,7 @@ pub struct Model3Settings {
     pub groups: Option<Vec<ModelParameterGroup>>,
     pub layout: Option<BTreeMap<String, f64>>,
     pub hit_areas: Option<Vec<ModelHitArea>>,
-    pub user_data: Option<String>,
+    pub user_data: Option<super::AttachmentRef>,
     pub extensions: BTreeMap<String, Value>,
     /// Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.
     pub source_runtime_ids: Option<BTreeMap<String, String>>,
@@ -99,7 +99,7 @@ impl Document {
         self.changed(ChangeKind::Metadata, Vec::new(), Vec::new())
     }
 
-    fn validate_model3_settings(&self, settings: &Model3Settings) -> Status {
+    pub(super) fn validate_model3_settings(&self, settings: &Model3Settings) -> Status {
         let valid_target = |target: &ModelTargetRef, parameter: bool| match target {
             ModelTargetRef::Resolved { object_id } => {
                 if parameter {
@@ -140,14 +140,20 @@ impl Document {
                 "Layout requires named finite values",
             );
         }
-        if settings
-            .user_data
-            .as_ref()
-            .is_some_and(|path| !super::valid_attachment_path(path))
-        {
+        self.validate_model3_user_data(settings.user_data.as_ref())
+    }
+
+    pub(super) fn validate_model3_user_data(
+        &self,
+        reference: Option<&super::AttachmentRef>,
+    ) -> Status {
+        if reference.is_some_and(|path| {
+            self.attachment_path(path)
+                .is_none_or(|p| !super::valid_attachment_path(p))
+        }) {
             return Status::error(
                 "INVALID_ATTACHMENT_PATH",
-                settings.user_data.as_ref().unwrap(),
+                "Invalid UserData attachment reference",
             );
         }
         Status::ok()

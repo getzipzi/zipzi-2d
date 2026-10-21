@@ -343,6 +343,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
                     })
                     .collect(),
                 motion_groups: document.motion_groups().to_vec(),
+                motion_roots: document.motion_roots().to_vec(),
                 pose: document.pose().cloned(),
                 physics: document.physics().cloned(),
                 missing_attachments: document.missing_attachments().to_vec(),

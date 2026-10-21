@@ -97,6 +97,11 @@ pub enum MotionOperationKind {
         motion_id: String,
         time: f32,
     },
+    ScheduleMotionRegistration {
+        registration_id: String,
+        motion_id: String,
+        time: f32,
+    },
     ScheduleMotionEntry {
         group: String,
         index: usize,
@@ -359,6 +364,33 @@ impl MotionPreview {
         Ok(())
     }
 
+    /// Stable registration activation, including root registration overrides.
+    pub fn schedule_motion_registration(
+        &mut self,
+        id: &str,
+        time: f32,
+    ) -> Result<(), AnimationError> {
+        let (_, entry) = self
+            .document
+            .get_motion_registration(id)
+            .ok_or_else(|| AnimationError::MissingMotion(id.into()))?;
+        self.motion.schedule_motion(
+            &self.document,
+            self.snapshot.time,
+            &entry.clip_id,
+            time,
+            (entry.fade_in, entry.fade_out),
+        )?;
+        let motion_id = entry.clip_id.clone();
+        self.cache.clear();
+        self.canonical_step = None;
+        self.commit_operation(MotionOperationKind::ScheduleMotionRegistration {
+            registration_id: id.into(),
+            motion_id,
+            time,
+        });
+        Ok(())
+    }
     /// Set the retained checkpoint budget in bytes (default: 16 MiB).
     ///
     /// Every call clears checkpoints and seek statistics, even if the budget is

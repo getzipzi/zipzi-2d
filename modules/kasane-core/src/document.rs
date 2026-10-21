@@ -25,7 +25,9 @@ mod transforms;
 mod validation;
 mod vertices;
 
-pub use attachments::{valid_attachment_path, PackageAttachment};
+pub use attachments::{
+    valid_attachment_path, AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment,
+};
 pub use checkpoint::DocumentCheckpoint;
 pub use display_info::{
     CdiCombinedSet, CdiNamespaceIds, CdiParameterEntry, CdiParameterGroup, CdiParameterRef,
@@ -36,8 +38,9 @@ pub use expressions::*;
 pub use hierarchy_order::HierarchyOrder;
 pub use model3::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
 pub use motions::{
-    MotionClip, MotionEvent, MotionGroup, MotionKey, MotionPoint, MotionRegistration,
-    MotionSegment, MotionTrack, MotionTrackTarget,
+    DisabledMotionTrack, MotionClip, MotionContainer, MotionDisabledReason, MotionEdit,
+    MotionEvent, MotionGroup, MotionKey, MotionPlan, MotionPoint, MotionProjection,
+    MotionRegistration, MotionSegment, MotionTrack, MotionTrackTarget,
 };
 pub use physics::{
     PhysicsAsset, PhysicsAssetProperty, PhysicsPatch, PhysicsProperty, PhysicsRigPatch,
@@ -88,6 +91,7 @@ pub struct Document {
     modified_cache: OnceLock<bool>,
     lookup: OnceLock<DocumentLookup>,
     expression_entries: OnceLock<HashMap<String, (String, usize)>>,
+    motion_lookup: OnceLock<Arc<motions::MotionLookup>>,
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
 }
 
@@ -138,6 +142,7 @@ struct DocumentContent {
     motions: HashMap<String, std::sync::Arc<MotionClip>>,
     motion_order: Vec<String>,
     motion_groups: Vec<MotionGroup>,
+    motion_roots: Vec<MotionRegistration>,
     pose: Option<PoseAsset>,
     physics: Option<Arc<PhysicsAsset>>,
     missing_attachments: Vec<String>,
@@ -321,6 +326,7 @@ impl Document {
         self.batch_build_active = false;
         self.lookup.take();
         self.expression_entries.take();
+        self.motion_lookup.take();
         self.prepared.take();
         self.snapshot_identity = Arc::new(());
         self.revision = 1;
@@ -333,6 +339,13 @@ impl Document {
     }
 
     pub fn contains_id(&self, id: &str) -> bool {
+        self.contains_base_identity(id)
+            || self.get_motion_track(id).is_some()
+            || self.get_motion_key(id).is_some()
+            || self.get_motion_event(id).is_some()
+    }
+
+    fn contains_base_identity(&self, id: &str) -> bool {
         self.content.id == id
             || self.content.assets.contains_key(id)
             || self.content.parts.contains_key(id)
@@ -360,6 +373,9 @@ impl Document {
                 .is_some_and(|sets| sets.iter().any(|set| set.id == id))
             || self.content.expressions.contains_key(id)
             || self.get_expression_entry(id).is_some()
+            || self.get_motion_group(id).is_some()
+            || self.get_motion_registration(id).is_some()
+            || self.get_attachment(id).is_some()
             || self.content.motions.contains_key(id)
             || self.content.pose.as_ref().is_some_and(|pose| pose.id == id)
             || self
@@ -396,6 +412,15 @@ impl Document {
         mesh_ids: Vec<String>,
         mut object_ids: Vec<String>,
     ) -> EditResult {
+        if object_ids.iter().any(|id| {
+            self.content.motions.contains_key(id)
+                || self
+                    .motion_lookup
+                    .get()
+                    .is_some_and(|index| index.clips.contains(id))
+        }) {
+            self.motion_lookup.take();
+        }
         self.snapshot_identity = Arc::new(());
         // Batch construction mutates content without advancing revision too.
         self.modified_cache.take();

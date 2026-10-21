@@ -154,6 +154,9 @@ impl EditSession<'_> {
                     "create_motion_track",
                 ));
             }
+            if !clip.track_order.is_empty() {
+                clip.track_order.push(track.id.clone());
+            }
             clip.tracks.push(track);
             Ok(())
         })
@@ -241,6 +244,7 @@ impl EditSession<'_> {
         self.mutate_motion(id, "remove_motion_track", |clip| {
             let count = clip.tracks.len();
             clip.tracks.retain(|track| track.id != track_id);
+            clip.track_order.retain(|id| id != track_id);
             if clip.tracks.len() == count {
                 return Err(SdkError::new(
                     "MISSING_MOTION_TRACK",
@@ -299,6 +303,7 @@ impl EditSession<'_> {
             } else {
                 clip.events.push(event);
             }
+            clip.events.sort_by(|a, b| a.time.total_cmp(&b.time));
             Ok(())
         })
     }
@@ -354,16 +359,61 @@ impl EditSession<'_> {
     pub fn replace_motion(&mut self, clip: MotionClip) -> Result<(), SdkError> {
         self.ensure_active("replace_motion")?;
         let id = clip.id.clone();
+        let previous: Vec<_> = self
+            .candidate_document()
+            .get_motion(&id)
+            .into_iter()
+            .flat_map(|c| {
+                c.tracks
+                    .iter()
+                    .flat_map(|t| {
+                        std::iter::once((crate::ObjectKind::MotionTrack, t.id.clone())).chain(
+                            t.keys()
+                                .map(|k| (crate::ObjectKind::MotionKey, k.id.clone())),
+                        )
+                    })
+                    .chain(
+                        c.events
+                            .iter()
+                            .map(|e| (crate::ObjectKind::MotionEvent, e.id.clone())),
+                    )
+            })
+            .collect();
         let result = self.document().replace_motion(clip);
-        self.record(result, "replace_motion", &id)
+        self.record(result, "replace_motion", &id)?;
+        for (kind, id) in previous {
+            if !crate::session::object_exists_in(self.candidate_document(), kind, &id) {
+                self.erased_keys
+                    .insert(crate::types::ObjectKey { kind, id });
+            }
+        }
+        Ok(())
     }
 
     /// Replace ordered model3 registrations; entries reference existing clip UUIDs.
     /// One clip may appear in multiple entries with independent fades and Sound paths.
     pub fn set_motion_groups(&mut self, groups: Vec<MotionGroup>) -> Result<(), SdkError> {
         self.ensure_active("set_motion_groups")?;
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().set_motion_groups(groups);
-        self.record(result, "set_motion_groups", "model3.Motions")
+        self.record(result, "set_motion_groups", "model3.Motions")?;
+        let result = self.document().resolve_attachment_paths();
+        self.record(result, "set_motion_groups", "attachments")?;
+        self.track_removed_objects(before);
+        Ok(())
+    }
+
+    pub fn set_motion_library(
+        &mut self,
+        groups: Vec<MotionGroup>,
+        roots: Vec<kasane_core::document::MotionRegistration>,
+    ) -> Result<(), SdkError> {
+        self.ensure_active("set_motion_library")?;
+        let before = crate::session::keys_in(self.candidate_document());
+        let result = self.document().set_motion_library(groups, roots);
+        self.record(result, "set_motion_library", "model3.Motions")?;
+        self.track_removed_objects(before);
+        Ok(())
     }
 
     /// Import or replace a motion3 asset by UUID and name in the current transaction.

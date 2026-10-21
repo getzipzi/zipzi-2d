@@ -291,6 +291,7 @@ impl ExtraBytes for ExpressionAsset {
 impl ExtraBytes for MotionTrackTarget {
     fn extra_bytes(&self) -> usize {
         match self {
+            Self::Unspecified => 0,
             Self::Model { runtime_id } | Self::Unresolved { runtime_id, .. } => {
                 runtime_id.capacity()
                     + if let Self::Unresolved { category, .. } = self {
@@ -322,6 +323,7 @@ impl ExtraBytes for MotionClip {
     fn extra_bytes(&self) -> usize {
         self.id.capacity()
             + self.name.capacity()
+            + self.track_order.extra_bytes()
             + self.tracks.extra_bytes()
             + self.events.extra_bytes()
             + self.extensions.extra_bytes()
@@ -332,12 +334,15 @@ impl ExtraBytes for MotionClip {
 }
 impl ExtraBytes for MotionRegistration {
     fn extra_bytes(&self) -> usize {
-        self.clip_id.capacity() + self.sound.extra_bytes() + self.extensions.extra_bytes()
+        self.id.capacity()
+            + self.clip_id.capacity()
+            + self.sound.extra_bytes()
+            + self.extensions.extra_bytes()
     }
 }
 impl ExtraBytes for MotionGroup {
     fn extra_bytes(&self) -> usize {
-        self.name.capacity() + self.entries.extra_bytes()
+        self.id.capacity() + self.name.capacity() + self.entries.extra_bytes()
     }
 }
 impl ExtraBytes for PosePartRef {
@@ -405,7 +410,7 @@ impl ExtraBytes for Model3Settings {
 }
 impl ExtraBytes for PackageAttachment {
     fn extra_bytes(&self) -> usize {
-        self.path.capacity() + self.bytes.capacity()
+        self.id.capacity() + self.path.capacity() + self.bytes.as_ref().map_or(0, |b| b.capacity())
     }
 }
 impl ExtraBytes for BindingAxis {
@@ -584,6 +589,7 @@ pub(super) fn estimated_content_bytes(content: &DocumentContent) -> usize {
         + content.motions.extra_bytes()
         + content.motion_order.extra_bytes()
         + content.motion_groups.extra_bytes()
+        + content.motion_roots.extra_bytes()
         + content.pose.extra_bytes()
         + content.physics.extra_bytes()
         + content.missing_attachments.extra_bytes()
@@ -593,4 +599,13 @@ pub(super) fn estimated_content_bytes(content: &DocumentContent) -> usize {
 
 pub(super) fn expression_entries_bytes(entries: &Vec<ExpressionEntry>) -> usize {
     entries.extra_bytes()
+}
+
+impl ExtraBytes for super::super::AttachmentRef {
+    fn extra_bytes(&self) -> usize {
+        match self {
+            Self::Resolved { attachment_id } => attachment_id.capacity(),
+            Self::Unresolved { path } => path.capacity(),
+        }
+    }
 }

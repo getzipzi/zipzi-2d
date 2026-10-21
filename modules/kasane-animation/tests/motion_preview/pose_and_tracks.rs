@@ -268,6 +268,7 @@ fn registered_document(track_fades: bool) -> Document {
         .candidate;
     assert!(doc
         .set_motion_groups(vec![MotionGroup {
+            id: uuid::Uuid::new_v4().to_string(),
             name: "Idle".into(),
             entries: [
                 (None, None),
@@ -276,6 +277,7 @@ fn registered_document(track_fades: bool) -> Document {
             ]
             .into_iter()
             .map(|(fade_in, fade_out)| MotionRegistration {
+                id: uuid::Uuid::new_v4().to_string(),
                 clip_id: MOTION.into(),
                 fade_in,
                 fade_out,

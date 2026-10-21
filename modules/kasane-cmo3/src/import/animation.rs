@@ -264,6 +264,7 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
         };
         clips.push((
             MotionClip {
+                track_order: Vec::new(),
                 id: g.guid(scene, "guid")?,
                 name: g.text(scene, "sceneName")?,
                 duration: duration_frames / fps,
@@ -343,7 +344,7 @@ pub fn read(bytes: &[u8], document: &mut Document) -> Result<()> {
     if !groups.is_empty() {
         let mut combined = candidate.motion_groups().to_vec();
         combined.extend(groups);
-        let result = candidate.set_motion_groups(combined);
+        let result = candidate.set_motion_library(combined, vec![]);
         if !result.status.is_ok() {
             return Err(invalid(format!(
                 "{}: {}",
@@ -377,6 +378,7 @@ fn motion_groups(g: &Graph<'_>, root: Node<'_>) -> Result<Vec<MotionGroup>> {
                 return Err(invalid("Unsupported motion group playlist item"));
             }
             entries.push(MotionRegistration {
+                id: uuid::Uuid::new_v4().to_string(),
                 clip_id: g.guid(item, "guid")?,
                 fade_in: None,
                 fade_out: None,
@@ -385,6 +387,7 @@ fn motion_groups(g: &Graph<'_>, root: Node<'_>) -> Result<Vec<MotionGroup>> {
             });
         }
         groups.push(MotionGroup {
+            id: uuid::Uuid::new_v4().to_string(),
             name: g.text(playlist, "name")?,
             entries,
         });

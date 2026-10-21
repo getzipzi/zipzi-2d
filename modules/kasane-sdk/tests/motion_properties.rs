@@ -14,7 +14,7 @@ fn fixture(source_range: bool) -> AuthoringSession {
     let mut clip: MotionClip = serde_json::from_value(serde_json::json!({
         "id": id(2), "name": "Motion", "duration": 1., "fps": 30.,
         "looping": false, "restricted_beziers": true, "fade_in": null, "fade_out": null,
-        "tracks": [{"id": id(3), "target": {"kind": "model", "runtime_id": "Opacity"},
+        "track_order": [], "tracks": [{"id": id(3), "target": {"kind": "model", "runtime_id": "Opacity"},
             "initial": {"id": id(4), "time": 0., "value": 0.},
             "segments": [{"kind": "linear", "end": {"id": id(5), "time": 1.01, "value": 1.}}],
             "fade_in": null, "fade_out": null, "extensions": {}}],

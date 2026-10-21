@@ -154,6 +154,7 @@ fn motion_group_registration_is_separate_and_roundtrips() {
         .unwrap()
         .candidate;
     let registration = MotionRegistration {
+        id: uuid::Uuid::new_v4().to_string(),
         clip_id: MOTION.into(),
         fade_in: Some(0.5),
         fade_out: Some(0.25),
@@ -163,12 +164,17 @@ fn motion_group_registration_is_separate_and_roundtrips() {
     assert!(candidate
         .set_motion_groups(vec![
             MotionGroup {
+                id: uuid::Uuid::new_v4().to_string(),
                 name: "Idle".into(),
                 entries: vec![registration.clone()]
             },
             MotionGroup {
+                id: uuid::Uuid::new_v4().to_string(),
                 name: "".into(),
-                entries: vec![registration]
+                entries: vec![MotionRegistration {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    ..registration
+                }]
             },
         ])
         .status
@@ -211,6 +217,7 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
         .unwrap()
         .candidate;
     let entry = MotionRegistration {
+        id: uuid::Uuid::new_v4().to_string(),
         clip_id: MOTION.into(),
         fade_in: Some(0.4),
         fade_out: None,
@@ -220,14 +227,23 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
     assert!(candidate
         .set_motion_groups(vec![
             MotionGroup {
+                id: uuid::Uuid::new_v4().to_string(),
                 name: "Idle".into(),
                 entries: vec![entry.clone()]
             },
             MotionGroup {
+                id: uuid::Uuid::new_v4().to_string(),
                 name: "TapBody".into(),
-                entries: vec![entry]
+                entries: vec![MotionRegistration {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    ..entry
+                }]
             },
         ])
+        .status
+        .is_ok());
+    assert!(candidate
+        .set_motion_library(candidate.motion_groups().to_vec(), vec![])
         .status
         .is_ok());
     assert!(candidate.set_missing_attachments(Vec::new()).status.is_ok());

@@ -319,6 +319,7 @@ pub fn import_motion3(
         })
         .collect();
     let mut clip = MotionClip {
+        track_order: Vec::new(),
         id: id.into(),
         name: name.into(),
         duration: wire.meta.duration,
@@ -357,6 +358,13 @@ pub fn export_motion3(document: &Document, id: &str) -> Result<String, MotionPro
     let clip = document
         .get_motion(id)
         .ok_or_else(|| error("MISSING_MOTION", "$", id))?;
+    export_clip_motion3(document, clip)
+}
+
+fn export_clip_motion3(
+    document: &Document,
+    clip: &MotionClip,
+) -> Result<String, MotionProjectError> {
     if clip.has_extensions() {
         if clip.opaque_source_ids.as_ref() != Some(&namespace(document, Some(clip))) {
             return Err(error(
@@ -376,6 +384,13 @@ pub fn export_motion3(document: &Document, id: &str) -> Result<String, MotionPro
         .map(|(index, track)| {
             let path = format!("$.Curves[{index}].Id");
             let (target, runtime_id) = match &track.target {
+                MotionTrackTarget::Unspecified => {
+                    return Err(MotionProjectError {
+                        code: "NEEDS_CONFIGURATION".into(),
+                        path: "Curves".into(),
+                        message: format!("Track {} has no target", track.id),
+                    })
+                }
                 MotionTrackTarget::Model { runtime_id } => {
                     (MotionTarget::Model, runtime_id.clone())
                 }
@@ -693,4 +708,24 @@ mod source_range_tests {
         assert_eq!(initial.value, 9.);
         assert_eq!(segments[0].end().value, 9.);
     }
+}
+
+/// Uses the same authored-slot projection as motion preview. Opaque source
+/// protection still applies after omission; accepting a loss never bypasses it.
+pub fn export_available_motion3(
+    document: &Document,
+    id: &str,
+) -> Result<String, MotionProjectError> {
+    let projection = document
+        .motion_projection(id)
+        .map_err(|s| error(&s.code, "$", s.message))?;
+    if projection.disabled.is_empty() {
+        return export_motion3(document, id);
+    }
+    let mut clip = document.get_motion(id).unwrap().clone();
+    clip.tracks
+        .retain(|t| !projection.disabled.iter().any(|d| d.track_id == t.id));
+    clip.track_order
+        .retain(|id| clip.tracks.iter().any(|t| &t.id == id));
+    export_clip_motion3(document, &clip)
 }

@@ -624,3 +624,46 @@ import/export still uses the standard Live2D wire format.
 
 Saved observation scene bundles use schema 3, and run reports use schema 2.
 Earlier canvas-based scene bundles must be captured again.
+
+### Motion library authoring (C2)
+
+Motion groups and registrations have independent UUIDs. `Session.motion_roots()`
+returns explicit root registrations; a clip can appear in several registrations,
+each with its own fades and sound reference. `MotionClip.track_order` is display
+metadata and never replaces the execution order in `tracks`.
+
+`Edit.motion_authoring(intent)` accepts the typed `MotionEdit` enum, encoded with
+an `op` discriminator. `Edit.attachment_authoring(intent)` uses the corresponding
+`AttachmentEdit` enum. Both execute domain validation inside the current edit:
+
+```python
+with model.edit("Create motion library") as edit:
+    edit.motion_authoring({
+        "op": "create", "id": clip_id, "name": "Idle",
+        "registration_id": registration_id,
+        "destination": {"kind": "root"},
+    })
+    edit.motion_authoring({"op": "create_group", "id": group_id, "name": "Idle"})
+
+plan = model.plan_motion_authoring({
+    "op": "move_registrations", "ids": [registration_id],
+    "destination": {"kind": "group", "id": group_id}, "before": None,
+})
+print(plan.affected_ids, plan.migrated_to_root)
+model.execute_motion_plan(plan)
+```
+
+Plans bind the original SDK session and version. A concurrent edit requires a
+new plan. Deleting a group removes its registrations while retaining shared
+clips; the last registration moves to the root with its ID and overrides.
+Explicit `delete_clip` removes the clip and all its registrations.
+
+`create_track` can save an `unspecified` target. It remains disabled until
+`set_track_target` configures it. Track/key/event handles use their independent
+IDs, including after cross-owner moves. Deleting and undoing an entity requires
+a new handle.
+
+Attachment records have IDs independent of package paths. Sound and UserData
+use `{"kind": "resolved", "attachment_id": id}` or an explicit unresolved path.
+`package_attachments()` returns `None` for missing content and `b""` for a configured
+zero-byte file. Imported path conveniences bind loaded files to stable IDs.

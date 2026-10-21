@@ -56,6 +56,7 @@ fn capabilities(py: Python<'_>) -> PyResult<Py<PyDict>> {
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("SdkFailure", module.py().get_type::<SdkFailure>())?;
     module.add_class::<NativeSession>()?;
+    module.add_class::<session::NativeMotionPlan>()?;
     module.add_class::<NativeEdit>()?;
     module.add_class::<NativeExpressionPreview>()?;
     module.add_class::<NativeMotionPreview>()?;

@@ -297,6 +297,7 @@ fn unsupported_precision_uses_only_explicit_baking_fallback() {
 }
 fn make_clip() -> MotionClip {
     MotionClip {
+        track_order: Vec::new(),
         id: uuid(100),
         name: "动画 <一> & walk".into(),
         duration: 1.,
@@ -740,8 +741,10 @@ fn unsupported_effects_registrations_and_duplicate_tracks_are_explicit() {
     assert!(doc.create_motion(clip).status.is_ok());
     assert!(doc
         .set_motion_groups(vec![MotionGroup {
+            id: uuid::Uuid::new_v4().to_string(),
             name: "Idle".into(),
             entries: vec![MotionRegistration {
+                id: uuid::Uuid::new_v4().to_string(),
                 clip_id: uuid(100),
                 fade_in: None,
                 fade_out: None,

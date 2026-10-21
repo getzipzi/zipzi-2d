@@ -133,7 +133,7 @@ fn import_with_namespace(
         groups,
         hit_areas,
         layout,
-        user_data,
+        user_data: user_data.map(Into::into),
         extensions: model3
             .as_object()
             .into_iter()

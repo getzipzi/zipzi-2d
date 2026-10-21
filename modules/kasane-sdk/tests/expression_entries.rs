@@ -496,6 +496,7 @@ fn expression_copy_remaps_imported_source_scene_owned_identities() {
     let track_id = "00000000-0000-4000-8000-00000000e010";
     let key_id = "00000000-0000-4000-8000-00000000e011";
     expression.preserve_source_scene(&MotionClip {
+        track_order: Vec::new(),
         id: A.into(),
         name: "A source".into(),
         duration: 1.,

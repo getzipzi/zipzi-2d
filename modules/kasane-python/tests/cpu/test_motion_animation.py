@@ -14,6 +14,28 @@ import kasane
 from .common import *
 
 class CpuMotionAnimationTests(unittest.TestCase):
+    def test_motion_library_plans_keep_ids_migrate_last_registration_and_reject_stale(self):
+        model = session()
+        clip, registration, group, attachment = (str(uuid4()) for _ in range(4))
+        with model.edit("motion library") as edit:
+            edit.motion_authoring({"op": "create", "id": clip, "name": "Clip", "registration_id": registration, "destination": {"kind": "root"}})
+            edit.motion_authoring({"op": "create_group", "id": group, "name": "Group"})
+            edit.attachment_authoring({"op": "create", "id": attachment, "path": "voice.wav"})
+            edit.attachment_authoring({"op": "set_sound", "registration": registration, "reference": {"kind": "resolved", "attachment_id": attachment}})
+        handle = model.handle("motion_registration", registration)
+        plan = model.plan_motion_authoring({"op": "move_registrations", "ids": [registration], "destination": {"kind": "group", "id": group}, "before": None})
+        model.execute_motion_plan(plan)
+        model.resolve_handle(handle)
+        plan = model.plan_motion_authoring({"op": "delete_group", "id": group})
+        self.assertEqual(plan.migrated_to_root, [registration])
+        model.execute_motion_plan(plan)
+        self.assertEqual(model.motion_roots()[0]["id"], registration)
+        self.assertEqual(model.motion_roots()[0]["sound"]["attachment_id"], attachment)
+        with self.assertRaises(kasane.SdkFailure):
+            model.execute_motion_plan(plan)
+        model.undo()
+        model.resolve_handle(handle)
+
     def test_expression_entry_authoring_uses_sdk_identity_and_atomic_history(self):
         model = session()
         a, b, x, y = (str(uuid4()) for _ in range(4))
@@ -122,7 +144,8 @@ class CpuMotionAnimationTests(unittest.TestCase):
                 groups=[{"name":"EyeBlink","parameters":[{"kind":"resolved","object_id":PARAMETER}]}],
                 layout={"CenterX":0}, user_data="data.userdata3.json")
             edit.set_package_attachments({"data.userdata3.json": user_data})
-        self.assertEqual(model.model3_settings()["user_data"], "data.userdata3.json")
+        self.assertEqual(model.model3_settings()["user_data"]["kind"], "resolved")
+        model.resolve_handle(model.handle("attachment", model.model3_settings()["user_data"]["attachment_id"]))
         self.assertEqual(model.package_attachments()["data.userdata3.json"], user_data)
         with TemporaryDirectory() as directory:
             destination = Path(directory).resolve() / "project"

@@ -5,6 +5,8 @@ use kasane_core::document::ExpressionTarget;
 use kasane_core::{ChangeKind, Document};
 use serde::Serialize;
 use std::collections::{BTreeSet, HashSet};
+mod motion;
+pub use motion::{MotionReferenceChange, MotionReferenceValue};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -26,6 +28,11 @@ pub struct EntityRef {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CollectionRef {
+    Motion {
+        document_id: String,
+        owner: Option<String>,
+        role: String,
+    },
     Expressions {
         document_id: String,
     },
@@ -47,6 +54,8 @@ pub struct ChangeSet {
     pub modified: Vec<EntityRef>,
     pub collections: Vec<CollectionRef>,
     pub references: Vec<ReferenceChange>,
+    pub motion_references: Vec<MotionReferenceChange>,
+    pub resource_content: Vec<EntityRef>,
     pub categories: BTreeSet<ChangeCategory>,
     pub full_invalidation: bool,
 }
@@ -55,6 +64,9 @@ impl ChangeSet {
         let mut inverse = self.clone();
         std::mem::swap(&mut inverse.created, &mut inverse.deleted);
         for edge in &mut inverse.references {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+        }
+        for edge in &mut inverse.motion_references {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         inverse
@@ -75,6 +87,15 @@ impl ChangeSet {
                 .collections
                 .iter()
                 .map(|c| match c {
+                    CollectionRef::Motion {
+                        document_id,
+                        owner,
+                        role,
+                    } => {
+                        document_id.capacity()
+                            + owner.as_ref().map_or(0, |s| s.capacity())
+                            + role.capacity()
+                    }
                     CollectionRef::Expressions { document_id } => document_id.capacity(),
                     CollectionRef::ExpressionEntries {
                         document_id,
@@ -91,6 +112,25 @@ impl ChangeSet {
                         + r.entry.document_id.capacity()
                         + target_bytes(&r.before)
                         + target_bytes(&r.after)
+                })
+                .sum::<usize>()
+            + self
+                .resource_content
+                .iter()
+                .map(|e| {
+                    std::mem::size_of::<EntityRef>() + e.id.capacity() + e.document_id.capacity()
+                })
+                .sum::<usize>()
+            + self
+                .motion_references
+                .iter()
+                .map(|r| {
+                    std::mem::size_of::<MotionReferenceChange>()
+                        + r.entity.id.capacity()
+                        + r.entity.document_id.capacity()
+                        + r.field.capacity()
+                        + motion_target_bytes(&r.before)
+                        + motion_target_bytes(&r.after)
                 })
                 .sum::<usize>()
             + self.categories.len() * (std::mem::size_of::<ChangeCategory>() + 64)
@@ -222,6 +262,7 @@ pub(crate) fn summarize(
             }
         }
     }
+    motion::summarize_motion(before, after, &mut out);
     // Persistent authoring flags affect capabilities even when domain content
     // is unchanged. Derive them from both states so undo uses the same summary.
     if before.editor_state() != after.editor_state() {
@@ -281,6 +322,31 @@ fn target_bytes(target: &Option<ExpressionTarget>) -> usize {
     match target {
         Some(ExpressionTarget::Resolved { parameter_id }) => parameter_id.capacity(),
         Some(ExpressionTarget::Unresolved { runtime_id }) => runtime_id.capacity(),
+        _ => 0,
+    }
+}
+
+fn motion_target_bytes(value: &Option<MotionReferenceValue>) -> usize {
+    match value {
+        Some(MotionReferenceValue::Clip { id }) => id.capacity(),
+        Some(MotionReferenceValue::Attachment { reference }) => match reference {
+            kasane_core::document::AttachmentRef::Resolved { attachment_id } => {
+                attachment_id.capacity()
+            }
+            kasane_core::document::AttachmentRef::Unresolved { path } => path.capacity(),
+        },
+        Some(MotionReferenceValue::Track { target }) => match target {
+            kasane_core::document::MotionTrackTarget::Unspecified => 0,
+            kasane_core::document::MotionTrackTarget::Model { runtime_id } => runtime_id.capacity(),
+            kasane_core::document::MotionTrackTarget::Parameter { parameter_id } => {
+                parameter_id.capacity()
+            }
+            kasane_core::document::MotionTrackTarget::PartOpacity { part_id } => part_id.capacity(),
+            kasane_core::document::MotionTrackTarget::Unresolved {
+                category,
+                runtime_id,
+            } => category.capacity() + runtime_id.capacity(),
+        },
         _ => 0,
     }
 }

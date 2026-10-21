@@ -148,6 +148,16 @@ impl Document {
                 }
             }
         }
+        for entry in self.motion_registrations() {
+            if matches!(&entry.sound,Some(super::AttachmentRef::Resolved{attachment_id}) if attachment_id==id)
+            {
+                refs.push(format!("motion registration {} sound", entry.id));
+            }
+        }
+        if matches!(&self.model3_settings().user_data,Some(super::AttachmentRef::Resolved{attachment_id}) if attachment_id==id)
+        {
+            refs.push("model3 UserData".into());
+        }
         for group in &self.content.motion_groups {
             if group.entries.iter().any(|entry| entry.clip_id == id) {
                 refs.push(format!("motion group {}", group.name));
@@ -187,6 +197,46 @@ impl Document {
         }
         if id == self.content.id || !self.contains_id(id) {
             return self.failed(Status::error("MISSING_OBJECT", id));
+        }
+        let motion_edit = if self.get_motion(id).is_some() {
+            Some(super::MotionEdit::DeleteClip { id: id.into() })
+        } else if self.get_motion_group(id).is_some() {
+            Some(super::MotionEdit::DeleteGroup { id: id.into() })
+        } else if self.get_motion_registration(id).is_some() {
+            Some(super::MotionEdit::DeleteRegistrations {
+                ids: vec![id.into()],
+            })
+        } else if self.get_motion_track(id).is_some() {
+            Some(super::MotionEdit::DeleteTracks {
+                ids: vec![id.into()],
+            })
+        } else if self.get_motion_event(id).is_some() {
+            Some(super::MotionEdit::DeleteEvents {
+                ids: vec![id.into()],
+            })
+        } else {
+            None
+        };
+        if let Some(edit) = motion_edit {
+            let plan = match self.plan_motion_edit(edit) {
+                Ok(p) => p,
+                Err(s) => return self.failed(s),
+            };
+            return self.apply_motion_edit(&plan);
+        }
+        if self.get_motion_key(id).is_some() {
+            return self.failed(Status::error(
+                "USE_MOTION_KEY_OPERATION",
+                "Delete keys with the curve operation",
+            ));
+        }
+        if self.get_attachment(id).is_some() {
+            let plan =
+                match self.plan_attachment_edit(super::AttachmentEdit::Delete { id: id.into() }) {
+                    Ok(p) => p,
+                    Err(s) => return self.failed(s),
+                };
+            return self.apply_attachment_edit(&plan);
         }
         if self.get_expression_entry(id).is_some() {
             let plan = match self.plan_expression_edit(ExpressionEdit::DeleteEntries {
@@ -300,6 +350,8 @@ impl Document {
         self.content.offscreen_order.retain(|k| k != id);
         self.content.expressions.remove(id);
         self.content.expression_order.retain(|key| key != id);
+        self.content.motion_roots.retain(|e| e.clip_id != id);
+        self.content.package_attachments.retain(|a| a.id != id);
         self.content.motions.remove(id);
         self.content.motion_order.retain(|key| key != id);
         if self.content.pose.as_ref().is_some_and(|pose| pose.id == id) {

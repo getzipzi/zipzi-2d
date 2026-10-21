@@ -39,6 +39,8 @@ pub struct AuthoringSession {
     pub(crate) incarnations: HashMap<ObjectKey, u64>,
     pub(crate) next_incarnation: u64,
     // Owner-dependent field addresses must not revive after a move and undo.
+    pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
+    pub(crate) attachment_content_epochs: HashMap<String, u64>,
     pub(crate) expression_entry_contexts: HashMap<String, (String, u64)>,
 }
 
@@ -178,6 +180,8 @@ impl AuthoringSession {
             history_limits,
             incarnations: HashMap::new(),
             expression_entry_contexts: HashMap::new(),
+            motion_contexts: HashMap::new(),
+            attachment_content_epochs: HashMap::new(),
             next_incarnation: 1,
         })
     }
@@ -701,6 +705,7 @@ impl AuthoringSession {
         let document = self.project.document();
         let changes = &receipt.changes;
         if changes.full_invalidation {
+            self.motion_contexts.clear();
             self.expression_entry_contexts.clear();
             for owner in document
                 .expression_order()
@@ -735,6 +740,51 @@ impl AuthoringSession {
                     self.expression_entry_contexts.remove(id);
                 }
             }
+        }
+        for entity in changes
+            .created
+            .iter()
+            .chain(&changes.deleted)
+            .chain(&changes.modified)
+        {
+            let owner =
+                match entity.kind {
+                    ObjectKind::MotionRegistration => document
+                        .get_motion_registration(&entity.id)
+                        .map(|(owner, _)| match owner {
+                            kasane_core::document::MotionContainer::Root => None,
+                            kasane_core::document::MotionContainer::Group(id) => Some(id),
+                        }),
+                    ObjectKind::MotionTrack => document
+                        .get_motion_track(&entity.id)
+                        .map(|(c, _)| Some(c.id.clone())),
+                    ObjectKind::MotionKey => document
+                        .get_motion_key(&entity.id)
+                        .map(|(_, t, _)| Some(t.id.clone())),
+                    ObjectKind::MotionEvent => document
+                        .get_motion_event(&entity.id)
+                        .map(|(c, _)| Some(c.id.clone())),
+                    _ => continue,
+                };
+            if let Some(owner) = owner {
+                if self
+                    .motion_contexts
+                    .get(&entity.id)
+                    .is_none_or(|c| c.0 != owner)
+                {
+                    self.motion_contexts
+                        .insert(entity.id.clone(), (owner, document.revision()));
+                }
+            } else {
+                self.motion_contexts.remove(&entity.id);
+            }
+        }
+        for entity in &changes.resource_content {
+            let epoch = self
+                .attachment_content_epochs
+                .entry(entity.id.clone())
+                .or_default();
+            *epoch = epoch.checked_add(1).expect("content epoch exhausted");
         }
         self.events.push(receipt);
     }
@@ -798,6 +848,12 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
         ObjectKind::Expression => doc.get_expression(id).is_some(),
         ObjectKind::ExpressionEntry => doc.get_expression_entry(id).is_some(),
         ObjectKind::Motion => doc.get_motion(id).is_some(),
+        ObjectKind::MotionGroup => doc.get_motion_group(id).is_some(),
+        ObjectKind::MotionRegistration => doc.get_motion_registration(id).is_some(),
+        ObjectKind::MotionTrack => doc.get_motion_track(id).is_some(),
+        ObjectKind::MotionKey => doc.get_motion_key(id).is_some(),
+        ObjectKind::MotionEvent => doc.get_motion_event(id).is_some(),
+        ObjectKind::Attachment => doc.get_attachment(id).is_some(),
         ObjectKind::Pose => doc.pose().is_some_and(|pose| pose.id == id),
         ObjectKind::Physics => doc.physics().is_some_and(|physics| physics.id == id),
     }
@@ -855,6 +911,38 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
         kind: ObjectKind::Motion,
         id: id.clone(),
     }));
+    keys.extend(doc.motion_groups().iter().map(|g| ObjectKey {
+        kind: ObjectKind::MotionGroup,
+        id: g.id.clone(),
+    }));
+    keys.extend(doc.motion_registrations().map(|e| ObjectKey {
+        kind: ObjectKind::MotionRegistration,
+        id: e.id.clone(),
+    }));
+    keys.extend(doc.package_attachments().iter().map(|a| ObjectKey {
+        kind: ObjectKind::Attachment,
+        id: a.id.clone(),
+    }));
+    for clip in doc
+        .motion_order()
+        .iter()
+        .filter_map(|id| doc.get_motion(id))
+    {
+        for t in &clip.tracks {
+            keys.insert(ObjectKey {
+                kind: ObjectKind::MotionTrack,
+                id: t.id.clone(),
+            });
+            keys.extend(t.keys().map(|k| ObjectKey {
+                kind: ObjectKind::MotionKey,
+                id: k.id.clone(),
+            }));
+        }
+        keys.extend(clip.events.iter().map(|e| ObjectKey {
+            kind: ObjectKind::MotionEvent,
+            id: e.id.clone(),
+        }));
+    }
     if let Some(pose) = doc.pose() {
         keys.insert(ObjectKey {
             kind: ObjectKind::Pose,

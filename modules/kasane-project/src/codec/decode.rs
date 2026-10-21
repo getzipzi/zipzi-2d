@@ -576,7 +576,14 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
             return Err(result.status);
         }
     }
-    let result = candidate.set_motion_groups(animation_assets.motion_groups);
+    let result = candidate.set_package_attachments(animation_assets.package_attachments);
+    if !result.status.is_ok() {
+        return Err(result.status);
+    }
+    let result = candidate.set_motion_library(
+        animation_assets.motion_groups,
+        animation_assets.motion_roots,
+    );
     if !result.status.is_ok() {
         return Err(result.status);
     }
@@ -602,10 +609,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
     if !result.status.is_ok() {
         return Err(result.status);
     }
-    let result = candidate.set_package_attachments(animation_assets.package_attachments);
-    if !result.status.is_ok() {
-        return Err(result.status);
-    }
+
     let status = candidate.finish_batch_build();
     if !status.is_ok() {
         return Err(status);

@@ -175,6 +175,18 @@ class Session:
         raw = self._native.motion_json(motion_id)
         return json.loads(raw) if raw is not None else None
 
+    def motion_roots(self) -> list[dict[str, object]]:
+        """Return explicit root registrations, including stable IDs and overrides."""
+        return json.loads(self._native.motion_roots_json())
+
+    def plan_motion_authoring(self, intent: Mapping[str, object]):
+        """Plan a typed operation; inspect affected_ids and migrated_to_root before execution."""
+        return self._native.plan_motion_authoring_json(json.dumps(intent))
+
+    def execute_motion_plan(self, plan) -> Version:
+        """Execute the accepted plan, rejecting a changed document or session."""
+        return self._native.execute_motion_plan(plan)
+
     def motion_groups(self) -> list[dict[str, object]]:
         """Return model3 Motion registrations and per-entry overrides."""
         return json.loads(self._native.motion_groups_json())
@@ -205,8 +217,8 @@ class Session:
         """Return Groups, Layout, HitAreas, and unsupported extension fields."""
         return json.loads(self._native.model3_settings_json())
 
-    def package_attachments(self) -> dict[str, bytes]:
-        """Return detached managed Sound/UserData bytes keyed by package path."""
+    def package_attachments(self) -> dict[str, bytes | None]:
+        """Return managed bytes keyed by path; None means content is not configured."""
         return dict(self._native.package_attachments())
 
     def export_physics3(self) -> str | None:

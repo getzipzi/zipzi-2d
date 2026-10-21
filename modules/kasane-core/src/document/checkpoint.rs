@@ -144,9 +144,45 @@ impl Document {
                         && old.extensions == new.extensions
                 })
             })
-            && original.motions == content.motions
-            && original.motion_order == content.motion_order
-            && original.motion_groups == content.motion_groups
+            && original.motions.len() == content.motions.len()
+            && original.motions.iter().all(|(id, a)| {
+                content.motions.get(id).is_some_and(|b| {
+                    (
+                        a.duration,
+                        a.fps,
+                        a.looping,
+                        a.restricted_beziers,
+                        a.fade_in,
+                        a.fade_out,
+                        &a.tracks,
+                        &a.events,
+                        &a.extensions,
+                        &a.meta_extensions,
+                    ) == (
+                        b.duration,
+                        b.fps,
+                        b.looping,
+                        b.restricted_beziers,
+                        b.fade_in,
+                        b.fade_out,
+                        &b.tracks,
+                        &b.events,
+                        &b.extensions,
+                        &b.meta_extensions,
+                    )
+                })
+            })
+            && {
+                let registrations = |c: &DocumentContent| {
+                    c.motion_groups
+                        .iter()
+                        .flat_map(|g| &g.entries)
+                        .chain(&c.motion_roots)
+                        .map(|e| (e.id.clone(), (e.clip_id.clone(), e.fade_in, e.fade_out)))
+                        .collect::<std::collections::BTreeMap<_, _>>()
+                };
+                registrations(original) == registrations(content)
+            }
             && original.pose == content.pose
             && original.physics == content.physics
             && original.missing_attachments == content.missing_attachments
@@ -226,6 +262,7 @@ impl Document {
         let _benchmark_span = crate::benchmark::span("core.checkpoint_swap_indexes");
         self.modified_cache.take();
         self.expression_entries.take();
+        self.motion_lookup.take();
         std::mem::swap(&mut self.content, &mut checkpoint.0);
         self.mesh_runtime_ids = self
             .content

@@ -58,3 +58,8 @@ pub use kasane_core::document::{ExpressionEdit, ExpressionEntryFields};
 
 mod changes;
 pub use changes::{ChangeCategory, ChangeSet, CollectionRef, EntityRef, ReferenceChange};
+
+mod motion_authoring;
+pub use motion_authoring::*;
+
+pub use changes::{MotionReferenceChange, MotionReferenceValue};

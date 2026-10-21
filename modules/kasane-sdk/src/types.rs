@@ -139,6 +139,12 @@ pub enum ObjectKind {
     Expression,
     ExpressionEntry,
     Motion,
+    MotionGroup,
+    MotionRegistration,
+    MotionTrack,
+    MotionKey,
+    MotionEvent,
+    Attachment,
     Pose,
     Physics,
 }

@@ -13,6 +13,7 @@ fn uuid(n: u32) -> String {
 
 fn initial_scene(n: u32, frames: f32) -> MotionClip {
     MotionClip {
+        track_order: Vec::new(),
         id: uuid(n),
         // Deliberately no expression-name convention.
         name: format!("Scene {n}"),
@@ -53,6 +54,7 @@ fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_
     assert!(source.create_motion(initial_scene(100, 8.)).status.is_ok());
     assert!(source.create_motion(initial_scene(200, 8.)).status.is_ok());
     let registration = MotionRegistration {
+        id: uuid::Uuid::new_v4().to_string(),
         clip_id: uuid(100),
         fade_in: None,
         fade_out: None,
@@ -61,14 +63,29 @@ fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_
     };
     let groups = vec![
         MotionGroup {
+            id: uuid::Uuid::new_v4().to_string(),
             name: String::new(),
-            entries: vec![registration.clone(), registration.clone()],
+            entries: vec![
+                MotionRegistration {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    ..registration.clone()
+                },
+                MotionRegistration {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    ..registration.clone()
+                },
+            ],
         },
         MotionGroup {
+            id: uuid::Uuid::new_v4().to_string(),
             name: "Scenes".into(),
-            entries: vec![registration.clone()],
+            entries: vec![MotionRegistration {
+                id: uuid::Uuid::new_v4().to_string(),
+                ..registration.clone()
+            }],
         },
         MotionGroup {
+            id: uuid::Uuid::new_v4().to_string(),
             name: "空分组".into(),
             entries: Vec::new(),
         },
@@ -77,13 +94,19 @@ fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_
     let bytes = encode_can3(&source, &Default::default()).unwrap().bytes;
     let (mut imported, _) = fixture();
     import_animation(&bytes, &mut imported).unwrap();
-    assert_eq!(imported.motion_groups(), groups);
+    assert_eq!(
+        external_motion_groups(imported.motion_groups()),
+        external_motion_groups(&groups)
+    );
     assert_eq!(imported.motion_order(), [uuid(100)]);
     assert_eq!(imported.expression_order(), [uuid(200)]);
     let again = encode_can3(&imported, &Default::default()).unwrap().bytes;
     let (mut reopened, _) = fixture();
     import_animation(&again, &mut reopened).unwrap();
-    assert_eq!(reopened.motion_groups(), groups);
+    assert_eq!(
+        external_motion_groups(reopened.motion_groups()),
+        external_motion_groups(&groups)
+    );
     for unsupported in ["fade_in", "fade_out", "sound", "extension"] {
         let mut groups = groups.clone();
         let entry = &mut groups[0].entries[0];
@@ -105,6 +128,7 @@ fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_
     let (mut groups_only, png) = fixture();
     assert!(groups_only
         .set_motion_groups(vec![MotionGroup {
+            id: uuid::Uuid::new_v4().to_string(),
             name: "Empty".into(),
             entries: Vec::new(),
         }])
@@ -579,4 +603,17 @@ fn expression_source_scene_targets_block_deletion_until_detached() {
         assert!(imported.erase_object(target).status.is_ok());
     }
     assert!(imported.validate_structure().is_empty());
+}
+
+fn external_motion_groups(
+    groups: &[kasane_core::document::MotionGroup],
+) -> Vec<kasane_core::document::MotionGroup> {
+    let mut groups = groups.to_vec();
+    for group in &mut groups {
+        group.id.clear();
+        for entry in &mut group.entries {
+            entry.id.clear();
+        }
+    }
+    groups
 }

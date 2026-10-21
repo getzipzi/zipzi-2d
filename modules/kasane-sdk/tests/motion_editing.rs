@@ -35,6 +35,7 @@ fn session() -> AuthoringSession {
             ..Default::default()
         })?;
         e.create_motion(MotionClip {
+            track_order: Vec::new(),
             id: id(3),
             name: "Motion".into(),
             duration: 1.,

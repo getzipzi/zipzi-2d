@@ -438,6 +438,8 @@ pub(super) struct AnimationAssetsWire {
     #[serde(default)]
     pub(super) motion_groups: Vec<MotionGroup>,
     #[serde(default)]
+    pub(super) motion_roots: Vec<kasane_core::document::MotionRegistration>,
+    #[serde(default)]
     pub(super) pose: Option<PoseAsset>,
     #[serde(default)]
     pub(super) physics: Option<PhysicsAsset>,

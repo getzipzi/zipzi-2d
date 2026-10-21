@@ -293,6 +293,7 @@ fn transfer_replaces_removed_and_renamed_runtime_files_but_keeps_unmanaged_files
     let tmp = TestDirectory::new();
     let mut session = tmp.saved_session();
     let motion = MotionClip {
+        track_order: Vec::new(),
         id: id(800),
         name: "Original motion".into(),
         duration: 1.,

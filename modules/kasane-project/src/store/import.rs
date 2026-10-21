@@ -510,19 +510,21 @@ impl DocumentStore {
                         .map(|(key, value)| (key.clone(), value.clone()))
                         .collect();
                     registrations.push(kasane_core::document::MotionRegistration {
+                        id: uuid::Uuid::new_v4().to_string(),
                         clip_id,
                         fade_in,
                         fade_out,
-                        sound,
+                        sound: sound.map(Into::into),
                         extensions,
                     });
                 }
                 motion_groups.push(kasane_core::document::MotionGroup {
+                    id: uuid::Uuid::new_v4().to_string(),
                     name: group_name.clone(),
                     entries: registrations,
                 });
             }
-            let result = res.document.set_motion_groups(motion_groups);
+            let result = res.document.set_motion_library(motion_groups, vec![]);
             if !result.status.is_ok() {
                 return (ProjectResult::from_status(result.status), None, None);
             }
@@ -564,7 +566,14 @@ impl DocumentStore {
                     .motion_groups()
                     .iter()
                     .flat_map(|group| group.entries.iter())
-                    .filter_map(|entry| entry.sound.as_ref().map(|path| ("Sound", path.clone()))),
+                    .filter_map(|entry| {
+                        entry.sound.as_ref().map(|path| {
+                            (
+                                "Sound",
+                                res.document.attachment_path(path).unwrap().to_string(),
+                            )
+                        })
+                    }),
             );
         for (kind, path) in referenced_files {
             if !valid_attachment_path(&path) {
@@ -596,9 +605,17 @@ impl DocumentStore {
                     None,
                 );
             }
-            managed.push(PackageAttachment { path, bytes });
+            managed.push(PackageAttachment {
+                id: uuid::Uuid::new_v4().to_string(),
+                path,
+                bytes: Some(std::sync::Arc::new(bytes)),
+            });
         }
         let result = res.document.set_package_attachments(managed);
+        if !result.status.is_ok() {
+            return (ProjectResult::from_status(result.status), None, None);
+        }
+        let result = res.document.resolve_attachment_paths();
         if !result.status.is_ok() {
             return (ProjectResult::from_status(result.status), None, None);
         }

@@ -31,7 +31,8 @@ pub use kasane_cmo3::{
 pub use kasane_moc3::ImportReport;
 pub use kasane_psd::ImportReport as PsdImportReport;
 pub use motion::{
-    export_motion3, import_motion3, MotionDiagnostic, MotionImport, MotionProjectError,
+    export_available_motion3, export_motion3, import_motion3, MotionDiagnostic, MotionImport,
+    MotionProjectError,
 };
 pub use package::{
     build_export_plan, publish_export_plan, publish_package, ExportFile, ExportFileKind,

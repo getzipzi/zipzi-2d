@@ -181,6 +181,10 @@ impl MotionEditingPreview {
                         "{}: Model {runtime_id} mapping requires model3 Groups",
                         clip.id
                     )),
+                    MotionTrackTarget::Unspecified => snapshot.coverage.push(format!(
+                        "motion {} track {} needs configuration",
+                        clip.id, track.id
+                    )),
                     MotionTrackTarget::Unresolved {
                         category,
                         runtime_id,

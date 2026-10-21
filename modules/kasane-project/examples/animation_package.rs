@@ -61,8 +61,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?
     .candidate;
     let groups = vec![MotionGroup {
+        id: uuid::Uuid::new_v4().to_string(),
         name: "Idle".into(),
         entries: vec![MotionRegistration {
+            id: uuid::Uuid::new_v4().to_string(),
             clip_id: MOTION.into(),
             fade_in: None,
             fade_out: None,
@@ -99,12 +101,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !candidate
         .set_package_attachments(vec![
             PackageAttachment {
+                id: uuid::Uuid::new_v4().to_string(),
                 path: "sounds/probe.wav".into(),
-                bytes: b"RIFF\0\0\0\0WAVE".to_vec(),
+                bytes: Some(std::sync::Arc::new(b"RIFF\0\0\0\0WAVE".to_vec())),
             },
             PackageAttachment {
+                id: uuid::Uuid::new_v4().to_string(),
                 path: "data.userdata3.json".into(),
-                bytes: br#"{"Version":3,"UserData":[]}"#.to_vec(),
+                bytes: Some(std::sync::Arc::new(
+                    br#"{"Version":3,"UserData":[]}"#.to_vec(),
+                )),
             },
         ])
         .status
@@ -112,6 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         return Err("cannot add attachments".into());
     }
+    candidate.resolve_attachment_paths();
     session
         .publish_authoring_candidate(candidate, ChangeKind::Metadata, false)
         .map_err(|status| status.message)?;
