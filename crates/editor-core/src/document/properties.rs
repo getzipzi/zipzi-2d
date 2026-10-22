@@ -251,6 +251,26 @@ impl Document {
         if patch.uses_scalar_patch(object.kind) {
             return Ok(edit.patch_property(&self.scalar_patch(object, patch, &payload)?)?);
         }
+        if matches!(
+            object.kind,
+            ObjectKind::Mesh | ObjectKind::Deformer | ObjectKind::Glue | ObjectKind::Offscreen
+        ) && patch.changes.len() == 1
+            && patch
+                .changes
+                .keys()
+                .all(|key| crate::property_spec(*key).is_some_and(|s| s.path == "name"))
+        {
+            let expected = edit
+                .candidate_document()
+                .scene_field(&object.id, kasane_sdk::SceneField::Label)
+                .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
+            return Ok(edit.edit_scene(kasane_sdk::SceneEdit::Patch {
+                id: object.id.clone(),
+                expected,
+                value: kasane_sdk::SceneFieldValue::Label(payload["name"].as_str().unwrap().into()),
+                clear_glue_pairs: false,
+            })?);
+        }
         if object.kind != ObjectKind::Mesh {
             return replace(edit, object.kind, payload);
         }
@@ -497,7 +517,13 @@ impl Document {
         if matches!(
             object.kind,
             ObjectKind::Expression | ObjectKind::Motion | ObjectKind::PhysicsGroup
-        ) {
+        ) || (!receipt.changes.scene_fields.is_empty()
+            && receipt
+                .changes
+                .scene_fields
+                .iter()
+                .all(|f| f.field == kasane_sdk::SceneField::Label))
+        {
             if receipt.changed {
                 self.pristine_blank = false;
             }
@@ -883,7 +909,7 @@ mod tests {
             edit.create_mesh(kasane_core::Mesh {
                 id: object.id.clone(),
                 name: "Original".into(),
-                texture_asset_id: asset,
+                texture_asset_id: asset.into(),
                 vertex_ids: vec![0, 1, 2],
                 base_positions: vec![
                     kasane_core::Vec2::new(0., 0.),

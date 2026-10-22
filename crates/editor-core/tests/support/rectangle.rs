@@ -121,8 +121,8 @@ fn rectangle_with_texture(
                 id: id(910),
                 runtime_id: "seam".into(),
                 name: "Seam".into(),
-                mesh_a_id: mesh.id.clone(),
-                mesh_b_id: id(909),
+                mesh_a_id: (mesh.id.clone()).into(),
+                mesh_b_id: (id(909)).into(),
                 pairs: vec![GlueVertexPair {
                     vertex_a: 0,
                     vertex_b: 0,

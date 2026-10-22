@@ -124,6 +124,35 @@ impl ObjectIndex {
         };
         let doc = ObjectRef::new(K::Document, m.id());
         s.add(doc.clone(), "Document", json!({"export_settings":m.export_settings(),"source_canvas":m.source_canvas(),"model_settings":m.model3_settings(),"display_info":m.display_info(),"missing_attachments":m.missing_attachments(),"draw_groups":m.draw_order_groups()}), None);
+        for group in s.draw_groups.clone().iter() {
+            let role = ObjectRef::new(
+                K::DrawOrderGroup,
+                if group.owner.is_empty() {
+                    m.id()
+                } else {
+                    &group.owner
+                },
+            );
+            let name = if group.owner.is_empty() {
+                "Drawing"
+            } else {
+                m.get_part(&group.owner)
+                    .map_or(group.owner.as_str(), |p| p.name.as_str())
+            };
+            s.add(role.clone(), name, json!(group), None);
+            for item in &group.items {
+                s.ref_edge(
+                    &role,
+                    R::DrawMember,
+                    if m.get_mesh(item).is_some() {
+                        K::Mesh
+                    } else {
+                        K::Part
+                    },
+                    item,
+                );
+            }
+        }
         for id in m.part_order() {
             if let Some(x) = m.get_part(id) {
                 let r = ObjectRef::new(K::Part, id);
@@ -142,7 +171,7 @@ impl ObjectIndex {
         for id in m.mesh_order() {
             if let Some(x) = m.get_mesh(id) {
                 let r = ObjectRef::new(K::Mesh, id);
-                s.add(r.clone(),&x.name,json!({"id":x.id,"name":x.name,"runtime_id":x.runtime_id,"part_id":x.part_id,"deformer_id":x.deformer_id,"texture_asset_id":x.texture_asset_id,"appearance":x.appearance,"draw_order":x.draw_order,"blend_mode":x.blend_mode,"enabled":x.enabled,"double_sided":x.double_sided,"inverted_mask":x.inverted_mask,"masks":x.masks,"vertices":x.vertex_ids.len(),"triangles":x.triangles.len()}),Some(x.enabled));
+                s.add(r.clone(),&x.name,json!({"id":x.id,"name":x.name,"runtime_id":x.runtime_id,"part_id":x.part_id,"deformer_id":x.deformer_id,"texture_asset_id":x.texture_asset_id.as_str(),"texture_reference":x.texture_asset_id,"appearance":x.appearance,"draw_order":x.draw_order,"blend_mode":x.blend_mode,"enabled":x.enabled,"double_sided":x.double_sided,"inverted_mask":x.inverted_mask,"masks":x.masks,"vertices":x.vertex_ids.len(),"triangles":x.triangles.len()}),Some(x.enabled));
                 let slot = *s.structure.slots.get(&r).unwrap();
                 crate::property::mesh::inspector_fields(x, &mut s.objects[slot].properties);
                 s.ref_edge(&r, R::PartOwner, K::Part, &x.part_id);
@@ -669,6 +698,22 @@ impl ObjectIndex {
                     }
                 };
                 s.edge(&doc, R::Contains, target, &group.name);
+            }
+        }
+        let availability = m.scene_projection();
+        for slot in 0..s.objects.len() {
+            let info = &mut s.objects[slot];
+            if matches!(info.reference.kind, K::Mesh | K::Offscreen | K::Glue) {
+                let diagnostics: Vec<_> = availability
+                    .disabled
+                    .iter()
+                    .filter(|d| d.id == info.reference.id)
+                    .collect();
+                if !diagnostics.is_empty() {
+                    info.diagnostic =
+                        Some(format!("Needs configuration: {:?}", diagnostics[0].reason));
+                }
+                info.properties["availability"] = json!(diagnostics);
             }
         }
         // Missing endpoints stay navigable diagnostic objects, distinct from unused objects.

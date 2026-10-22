@@ -48,3 +48,7 @@ pub use pose::PoseAuthoringCapabilities;
 #[path = "authoring/organization.rs"]
 mod organization;
 pub use organization::OrganizationAuthoringCapabilities;
+
+#[path = "authoring/scene.rs"]
+mod scene;
+pub use scene::SceneAuthoringCapabilities;

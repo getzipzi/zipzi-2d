@@ -197,7 +197,10 @@ impl CanvasTopology {
                 continue;
             };
             index.add(K::Glue, id, &g.name, "", "");
-            let (Some(a), Some(b)) = (meshes.get(&g.mesh_a_id), meshes.get(&g.mesh_b_id)) else {
+            let (Some(a), Some(b)) = (
+                meshes.get(g.mesh_a_id.as_str()),
+                meshes.get(g.mesh_b_id.as_str()),
+            ) else {
                 continue;
             };
             let pairs = g
@@ -207,8 +210,8 @@ impl CanvasTopology {
                 .collect();
             glues.push(GlueTopology {
                 object: ObjectRef::new(K::Glue, id),
-                mesh_a: g.mesh_a_id.clone(),
-                mesh_b: g.mesh_b_id.clone(),
+                mesh_a: g.mesh_a_id.as_str().to_owned(),
+                mesh_b: g.mesh_b_id.as_str().to_owned(),
                 pairs,
             });
         }

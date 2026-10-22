@@ -60,3 +60,5 @@ mod binding_authoring;
 mod organization_authoring;
 #[path = "cases/pose_authoring.rs"]
 mod pose_authoring;
+#[path = "cases/scene_lifecycle.rs"]
+mod scene_lifecycle;

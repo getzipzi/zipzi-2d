@@ -9,6 +9,7 @@ pub enum ObjectKind {
     Mesh,
     Deformer,
     Offscreen,
+    DrawOrderGroup,
     Parameter,
     ParameterGroup,
     MeshBinding,
@@ -88,6 +89,7 @@ pub enum RelationKind {
     Mask,
     GlueA,
     GlueB,
+    DrawMember,
     Resource,
     Contains,
     ParameterGroup,
@@ -112,6 +114,8 @@ impl RelationKind {
     pub fn label(self, incoming: bool) -> &'static str {
         use RelationKind::*;
         match (self, incoming) {
+            (DrawMember, false) => "drawing member",
+            (DrawMember, true) => "drawn in",
             (PartOwner, false) => "belongs to Part",
             (PartOwner, true) => "owns",
             (DeformParent, false) => "deformed by",

@@ -1,8 +1,7 @@
 //! Persistent palette moves, validated against the complete document projection.
-use crate::{Document, ObjectRef, TreeNode};
+use crate::{Document, ObjectRef};
 use anyhow::{Result, anyhow, ensure};
 use kasane_sdk::{OrganizationCollection as C, OrganizationEdit as E};
-use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReorderPosition {
@@ -27,38 +26,6 @@ pub enum OrganizationDestination {
     },
     /// Append to a Part, or remove the Part assignment with `None`.
     Part(Option<String>),
-}
-
-fn collect_order(nodes: &[TreeNode], ids: &mut Vec<String>) {
-    for node in nodes {
-        if node.reference().is_some() {
-            ids.push(node.id.clone());
-        }
-        collect_order(&node.children, ids);
-    }
-}
-
-fn relocate<T: PartialEq>(
-    items: &mut Vec<T>,
-    source: &T,
-    target: &T,
-    position: ReorderPosition,
-) -> Result<()> {
-    let from = items
-        .iter()
-        .position(|item| item == source)
-        .ok_or_else(|| anyhow!("Source no longer exists"))?;
-    ensure!(
-        items.iter().any(|item| item == target),
-        "Target no longer exists"
-    );
-    if source == target {
-        return Ok(());
-    }
-    let item = items.remove(from);
-    let to = items.iter().position(|item| item == target).unwrap();
-    items.insert(to + usize::from(position == ReorderPosition::After), item);
-    Ok(())
 }
 
 impl Document {
@@ -128,72 +95,44 @@ impl Document {
                 },
             );
         }
-        self.ensure_tree_editable(source, deformer)?;
-        let mut tree = if deformer {
-            self.deformer_tree()
-        } else {
-            self.mesh_tree()
+        self.ensure_tree_editable(source, true)?;
+        self.ensure_tree_editable(target, true)?;
+        let parent = self
+            .model()
+            .scene_deformer_parent(&target.id)
+            .ok_or_else(|| anyhow!("Target has no deformation collection"))?;
+        let collection = kasane_sdk::SceneCollection::Deformation {
+            parent_id: (!parent.is_empty()).then(|| parent.to_owned()),
         };
-        fn siblings<'a>(
-            nodes: &'a mut Vec<TreeNode>,
-            source: &ObjectRef,
-        ) -> Option<&'a mut Vec<TreeNode>> {
-            if nodes
-                .iter()
-                .any(|node| node.reference().as_ref() == Some(source))
-            {
-                return Some(nodes);
-            }
-            for node in nodes {
-                if let Some(found) = siblings(&mut node.children, source) {
-                    return Some(found);
-                }
-            }
-            None
+        let mut members = self
+            .model()
+            .scene_collection(&collection)
+            .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
+        if parent.is_empty() {
+            members.retain(|id| {
+                self.model().get_transform(id).is_some()
+                    == self.model().get_transform(&target.id).is_some()
+            });
         }
-        let nodes =
-            siblings(&mut tree, source).ok_or_else(|| anyhow!("Object no longer exists"))?;
-        ensure!(
-            nodes
-                .iter()
-                .any(|node| node.reference().as_ref() == Some(target)),
-            "Only siblings can be reordered"
-        );
-        ensure!(
-            nodes
-                .iter()
-                .filter(|node| [Some(source), Some(target)].contains(&node.reference().as_ref()))
-                .all(|node| node.diagnostic.is_none()),
-            "Repair missing references before reordering"
-        );
-        let original: Vec<_> = nodes.iter().map(|node| node.id.clone()).collect();
-        let mut ids = original.clone();
-        relocate(&mut ids, &source.id, &target.id, position)?;
-        if ids == original {
-            return Ok(());
-        }
-        let ranks: HashMap<_, _> = ids
-            .iter()
-            .enumerate()
-            .map(|(i, id)| (id.as_str(), i))
-            .collect();
-        nodes.sort_by_key(|node| ranks[node.id.as_str()]);
-        let mut order = self.model().hierarchy_order().clone();
-        let ids = if deformer {
-            &mut order.deformation
+        let before = if position == ReorderPosition::Before {
+            Some(target.id.clone())
         } else {
-            &mut order.organization
+            members.retain(|id| id != &source.id);
+            let at = members
+                .iter()
+                .position(|id| id == &target.id)
+                .ok_or_else(|| anyhow!("Target no longer exists"))?;
+            members.get(at + 1).cloned()
         };
-        ids.clear();
-        collect_order(&tree, ids);
         self.finish_edit()?;
-        self.session.edit("Reorder hierarchy", None, |edit| {
-            edit.replace_hierarchy_order(order)
+        let plan = self.session.plan_scene_edit(kasane_sdk::SceneEdit::Move {
+            ids: vec![source.id.clone()],
+            destination: collection,
+            before,
         })?;
-        self.sorted();
+        self.execute_scene_authoring(&plan)?;
         Ok(())
     }
-
     pub fn move_parameter(
         &mut self,
         source: &str,
@@ -251,11 +190,6 @@ impl Document {
         })?;
         self.execute_organization_authoring(&plan)?;
         Ok(())
-    }
-    fn sorted(&mut self) {
-        self.session.drain_events();
-        self.pristine_blank = false;
-        self.invalidate_projection(false);
     }
 }
 fn placement_after(

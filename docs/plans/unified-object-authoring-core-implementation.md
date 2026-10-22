@@ -802,3 +802,102 @@ SDK 筛选 **96 项通过**，core 组织缓存 **1 项通过**，Editor 集成�
 
 本轮未运行完整 workspace、真实模型 Release 或截图验收；本节不提供新的性能测量数字。
 本轮代码暂留两仓库工作区，尚未提交。
+
+
+## C5 第三批：场景对象生命周期与集合
+
+2026 年 10 月 22 日：先提交上一批组织集合（SDK `4212429`、Editor `674cf3e`），
+随后完成 Mesh、Warp、Rotation、Offscreen、Glue 和 DrawOrderGroup 本体的生命周期。
+原生 core schema 为 **8**，目录项目格式为 **17**；不提供旧版迁移。
+此前章节描述的是各批次交付时的状态；独立场景对象复制现已贯通。
+
+- **统一计划与集合**：core `SceneEdit` / `ScenePlan`、SDK `plan_scene_edit` /
+  `execute_scene_plan` 和 `EditSession::edit_scene` 共用创建、类型化字段补丁、
+  多选移动／重排、复制与删除。`Organization`、`Deformation`、`Glues`、`Drawing`
+  与派生 `DrawingGroups` 分别表达组织、变形、连接管理及真实绘制关系。
+  组织移动保持变形父级和绘制关系；同父级变形排序只改 palette，跨父级走 C4
+  `Reparent` 及其转换报告、预算和取消。Glue 管理顺序不改变 Glue 执行顺序。
+- **合法待配置**：Mesh 纹理和 Glue 端点采用 `SceneReference`，区分 unspecified、
+  resolved 与 unresolved（保留 runtime ID）。空 Mesh、无纹理 Mesh、缺端点 Glue
+  均可保存和重开，resolved 引用仍必须有合法目标。新 Warp 使用给定范围或 source
+  canvas 的中性网格；新 Offscreen 必须有唯一合法 Part owner；Glue 不进入 Part／变形树。
+  更改 Glue 端点验证既有配对，或由调用者显式 `clear_glue_pairs` 原子清空。
+- **复制和删除**：`Selected` 复制所选对象及拥有的 Binding／Axis／Sample；
+  `DeformationSubtree` 显式包括实际变形后代，不借用 Part 组织闭包。
+  新 UUID 与 runtime ID 不冲突；内部父级、遮罩和 Glue 端点重映射，
+  外部纹理、Parameter、共享 Blend 表及 constraint 保持共享。
+  未指定 destination 时保留各自 Part 归属，显式 PartMembers 则指定副本归属。
+  Offscreen 副本必须有独立合法 owner。删除检查拥有闭包和外部 referrers，
+  拒绝仍有用户的对象，并清理拥有子对象和 editor flags；失败不发布部分结果。
+- **Offscreen 与绘制角色**：`TransferOffscreen` 显式给出新 Part 和 keyform 索引映射，
+  保持 Offscreen 身份；带 SceneBinding 的旧裸替换不允许隐式转移。
+  DrawOrderGroup 使用 owner Part ID，根使用 Document ID，对应独立角色句柄；
+  提供确保组、移动成员、修改范围、复制内容到独立空目标 Part、解散组。
+  根组不能删除；Offscreen owner 的组不能解散。解散展开绘制成员，保留 Part；
+  复制保留目标 Part 自身的属性与 compositor，不复制源 owner 的驱动属性。
+  角色列表顺序从绘制结构派生，移动组通过父组中的 Part 成员操作。
+- **地址、能力和发布**：字段地址包含 owning Part、字段及拓扑 epoch；移动往返和
+  Undo 不复活旧地址，删除／Undo 不复活旧句柄。绘制范围另有受上下文保护的地址。
+  typed 入口与旧 Glue 排序／绘制 replacement 均检查相关锁，根绘制组也检查成员。
+  ChangeSet 包含精确 scene field、方向明确的 reference 及 collection 变化。
+  标签补丁保留无关关系和几何缓存；Editor 结构列表显示待配置 Mesh／Glue，
+  Properties 显示类型化引用与用途诊断。变形树排序接到同一 SDK 计划。
+  计划结果给出定位建议，不自动激活动画或改动时钟。
+- **用途投影与渲染**：native 缓存几何、绘制、Glue、合成投影及来源槽位和原因链。
+  无纹理 Mesh 保留可求值几何；Glue 按端点几何可用性执行。
+  遮罩或祖先 Offscreen 不可用会沿依赖传播，不能产生未遮罩回落绘制。
+  Render 共用契约、Metal 和 WGPU 排除不可用贡献，同时保留原生来源索引。
+  MOC3／CMO3 默认严格诊断不可表达内容；本批没有新增“仅导出可用场景”入口。
+- **Python**：新增 scene planning、execution、collections、capabilities、projection、
+  field address 和 drawing range address，使用相同 Rust 规则。
+  计划公开 affected／copied IDs、effects、可选 conversion report 与 cost。
+
+本批仍未完成 Mesh 顶点／UV／三角形、Warp 控制点、GlueVertexPair 稳定身份及完整专用
+内容编辑；Offscreen 提供联合字段替换与映射转移，专用 keyform 内容操作仍留待后续。
+其他 C5 行为／资源引用集合及 C6 也未宣称完成。
+
+验证结果（不同筛选存在重叠，不累加）：
+
+| 检查 | 结果 |
+| --- | --- |
+| SDK 新 scene lifecycle | 19 项通过 |
+| SDK scene／组织／Binding／Pose／effects／history／handles 定向筛选 | 129 项通过 |
+| Editor scene／组织／排序／Properties／锁／面板／参数／Pose 集成筛选 | 81 项通过 |
+| 原生 UI hierarchy／sorting／properties／ui_performance／animation_panels | 65 项通过 |
+| Render scene contract | 8 项通过 |
+| Metal masks_atlas／offscreens_blending（含待配置像素回归） | 18 项通过 |
+| core typed scene／core／transform／offscreen／BlendShape Glue／checkpoint 定向目标 | 32 项通过 |
+| project／CDI／Motion／Pose codec 目标 | 61 项通过 |
+| MOC3 零三角形 Mesh 与 Rotation 重绑定导出回归 | 3 项通过 |
+| CMO3 export 目标 | 9 项通过 |
+| Python 当前 Debug extension | 64 项 CPU + 4 项 inspection 通过 |
+
+零三角形 Mesh 可由外部格式表达，保持其 MOC3 往返能力；运行绘制不可用不等于格式
+不可导出。外部 scene omission 诊断只收集待配置引用及其依赖链。
+
+主要复现命令：
+
+```sh
+# 相邻 kasane-2d
+cargo test --locked -p kasane-sdk --test integration -- \
+  scene_lifecycle:: organization_authoring:: scene_authoring:: effects_authoring:: \
+  hierarchy_order:: handles:: binding_authoring:: editor_state:: document_operations:: pose_authoring::
+cargo test --locked -p kasane-render --test scene_contract
+cargo test --locked -p kasane-render-metal --test metal_smoke -- masks_atlas:: offscreens_blending::
+cargo test --locked -p kasane-moc3 --test import_tests -- \
+  zero_triangle_mesh model_roundtrip::rotation_edit_rebinding_and_deletion_change_export
+cargo test --locked -p kasane-cmo3 --test export
+cargo check --locked -p kasane-moc3 -p kasane-cmo3 -p kasane-render-wgpu --tests --examples
+./tools/test.sh python
+# kasane-editor
+cargo test --locked -p editor-core --test integration -- \
+  scene_lifecycle:: organization_authoring:: sorting:: properties:: locks:: panels:: \
+  parameter_management:: pose_authoring::
+./scripts/test.sh ui -- headless_tests::hierarchy headless_tests::sorting \
+  headless_tests::properties headless_tests::ui_performance headless_tests::animation_panels
+cargo check --locked -p kasane-editor
+```
+
+两仓库的 `cargo fmt --all --check` 与 `git diff --check` 通过。保留既有第三方
+GPUI/Cocoa 警告和 `block` 未来兼容提示。没有运行完整 workspace、真实模型 Release、
+截图或 C6 综合性能验收；本批代码保留在两个工作区，尚未提交。

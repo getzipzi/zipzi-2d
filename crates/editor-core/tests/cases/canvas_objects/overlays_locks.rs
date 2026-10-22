@@ -258,8 +258,8 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
                 id: id.clone(),
                 runtime_id: id.clone(),
                 name: "Seam".into(),
-                mesh_a_id: meshes[0].clone(),
-                mesh_b_id: meshes[1].clone(),
+                mesh_a_id: (meshes[0].clone()).into(),
+                mesh_b_id: (meshes[1].clone()).into(),
                 intensity,
                 pairs: vec![
                     GlueVertexPair {

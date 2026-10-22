@@ -230,7 +230,7 @@ fn sample_document_with_options(
     let mesh = Mesh {
         id: mesh_id,
         name: "Diamond".into(),
-        texture_asset_id: asset_id,
+        texture_asset_id: (asset_id).into(),
         vertex_ids: vec![0, 1, 2, 3],
         base_positions: vec![
             Vec2::new(128., 24.),

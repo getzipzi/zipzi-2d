@@ -34,6 +34,131 @@ impl Document {
             return;
         }
         let changes = &receipt.changes;
+        let scene_kinds = |kind| {
+            matches!(
+                kind,
+                SdkKind::Part
+                    | SdkKind::Mesh
+                    | SdkKind::Transform
+                    | SdkKind::Offscreen
+                    | SdkKind::Glue
+                    | SdkKind::DrawOrderGroup
+                    | SdkKind::MeshBinding
+                    | SdkKind::SceneBinding
+                    | SdkKind::BlendBinding
+                    | SdkKind::BindingAxis
+                    | SdkKind::BindingSample
+            )
+        };
+        let scene_only = !changes.full_invalidation
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .any(|e| scene_kinds(e.kind))
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .all(|e| scene_kinds(e.kind));
+        if scene_only {
+            let previous_input = self.animation_input_revision;
+            let labels = !changes
+                .categories
+                .contains(&ChangeCategory::EvaluationInputs)
+                && !changes.categories.contains(&ChangeCategory::Content)
+                && changes.created.is_empty()
+                && changes.deleted.is_empty()
+                && changes.collections.is_empty()
+                && !changes.scene_fields.is_empty()
+                && changes
+                    .scene_fields
+                    .iter()
+                    .all(|f| f.field == kasane_sdk::SceneField::Label)
+                && !changes.categories.contains(&ChangeCategory::EditorState);
+            if labels {
+                let previous = self.projection_revision;
+                self.invalidate_projection(false);
+                let references: Vec<_> = changes
+                    .modified
+                    .iter()
+                    .filter_map(|e| {
+                        Some(ObjectRef::new(
+                            match e.kind {
+                                SdkKind::Part => ObjectKind::Part,
+                                SdkKind::Mesh => ObjectKind::Mesh,
+                                SdkKind::Transform => ObjectKind::Deformer,
+                                SdkKind::Offscreen => ObjectKind::Offscreen,
+                                SdkKind::Glue => ObjectKind::Glue,
+                                SdkKind::DrawOrderGroup => ObjectKind::DrawOrderGroup,
+                                _ => return None,
+                            },
+                            &e.id,
+                        ))
+                    })
+                    .collect();
+                let names: Vec<_> = references
+                    .iter()
+                    .filter_map(|r| {
+                        if r.kind == ObjectKind::Part {
+                            self.model()
+                                .get_part(&r.id)
+                                .map(|p| (r.clone(), p.name.clone()))
+                        } else {
+                            self.session
+                                .document()
+                                .scene_field(&r.id, kasane_sdk::SceneField::Label)
+                                .ok()
+                                .and_then(|v| {
+                                    if let kasane_sdk::SceneFieldValue::Label(name) = v {
+                                        Some((r.clone(), name))
+                                    } else {
+                                        None
+                                    }
+                                })
+                        }
+                    })
+                    .collect();
+                let mut cache = self.object_index.lock().unwrap();
+                if let Some((revision, index)) = cache.as_mut() {
+                    if *revision == previous
+                        && references
+                            .iter()
+                            .all(|r| Arc::make_mut(index).refresh_scene_label(self.model(), r))
+                    {
+                        *revision = self.projection_revision;
+                    }
+                }
+                drop(cache);
+                if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
+                    for (object, name) in names {
+                        Arc::make_mut(topology).rename(&object, &name);
+                    }
+                }
+                self.session.drain_events();
+            } else {
+                let structural = changes
+                    .created
+                    .iter()
+                    .chain(&changes.deleted)
+                    .any(|e| e.kind != SdkKind::DrawOrderGroup)
+                    || changes.scene_fields.iter().any(|f| {
+                        f.field == kasane_sdk::SceneField::Context
+                            && f.entity.kind != SdkKind::DrawOrderGroup
+                    })
+                    || changes.categories.contains(&ChangeCategory::Topology);
+                self.after_history(structural);
+            }
+            if !changes
+                .categories
+                .contains(&ChangeCategory::EvaluationInputs)
+            {
+                self.animation_input_revision = previous_input;
+            }
+            return;
+        }
         let organization_only = !changes.full_invalidation
             && (changes
                 .collections

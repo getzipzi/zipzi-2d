@@ -189,9 +189,6 @@ impl Document {
         let mut nodes = Vec::new();
         let mut references = Vec::new();
         for x in &index.objects {
-            if x.diagnostic.is_some() {
-                continue;
-            }
             let kind = match x.reference.kind {
                 K::Part if !deformer => TreeNodeKind::Part,
                 K::Mesh => TreeNodeKind::Mesh,
@@ -207,6 +204,7 @@ impl Document {
                 _ => continue,
             };
             let mut node = TreeNode::new(x.reference.id.clone(), x.name.clone(), kind);
+            node.diagnostic = x.diagnostic.clone();
             node.visible = Some(
                 !self
                     .model()

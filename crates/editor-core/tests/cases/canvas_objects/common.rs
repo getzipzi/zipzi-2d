@@ -98,7 +98,7 @@ pub(super) fn rich_document_with_canvas(
         e.create_mesh(Mesh {
             id: id(6),
             name: "Mesh".into(),
-            texture_asset_id: id(2),
+            texture_asset_id: (id(2)).into(),
             part_id: id(3),
             deformer_id: id(4),
             vertex_ids: vec![10, 11, 12, 13],

@@ -19,7 +19,7 @@ fn fixture() -> anyhow::Result<(Document, tempfile::TempDir)> {
             edit.create_mesh(Mesh {
                 id: uuid::Uuid::from_u128(index).to_string(),
                 name: format!("Mesh {index}"),
-                texture_asset_id: asset.clone(),
+                texture_asset_id: asset.clone().into(),
                 vertex_ids: vec![0, 1, 2],
                 base_positions: vec![
                     Vec2::new(24., 24.),

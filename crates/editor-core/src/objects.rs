@@ -8,6 +8,7 @@ mod motions;
 mod organization;
 mod pose;
 mod properties;
+mod scene;
 mod table;
 mod types;
 

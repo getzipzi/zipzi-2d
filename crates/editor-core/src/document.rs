@@ -162,7 +162,7 @@ mod authoring;
 pub use authoring::{
     AuthoringSessionReason, ExpressionAuthoringCapabilities, ExpressionEntryEditToken,
     OperationResult, OrganizationAuthoringCapabilities, PhysicsAuthoringCapabilities,
-    PoseAuthoringCapabilities,
+    PoseAuthoringCapabilities, SceneAuthoringCapabilities,
 };
 mod edits;
 mod physics;
