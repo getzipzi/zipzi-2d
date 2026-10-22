@@ -12,6 +12,7 @@ use geo::{
 };
 use kasane_core::Vec2;
 use spade::{handles::FixedVertexHandle, Point2, Triangulation};
+use std::collections::HashMap;
 
 struct Sampler {
     cdt: Cdt,
@@ -20,6 +21,60 @@ struct Sampler {
     remaining: usize,
     max_vertices: usize,
     extent: Option<[f64; 2]>,
+}
+
+// Keep sampling and its work budget identical for bulk boundaries and support rings.
+fn ring_points(
+    ring: &LineString<f64>,
+    spacing: f64,
+    minimum: usize,
+    mut remaining: usize,
+) -> Result<Vec<Coord<f64>>, SdkError> {
+    let perimeter: f64 = ring
+        .0
+        .windows(2)
+        .map(|p| (p[1].x - p[0].x).hypot(p[1].y - p[0].y))
+        .sum();
+    let spacing = spacing.min(perimeter / minimum as f64);
+    if spacing <= 0.0 {
+        return Err(error("ALPHA_MESH_GEOMETRY", "Boundary has zero length"));
+    }
+    // Allow 10% slack around the target, so an 81px segment does not become
+    // two 40.5px edges for an 80px target. Rounding to the nearest count can
+    // stretch edges by 50% and undersample dense presets; bound that slack.
+    // Every simplified corner and the explicit ring minimum remain.
+    let lengths: Vec<_> = ring
+        .0
+        .windows(2)
+        .map(|p| (p[1].x - p[0].x).hypot(p[1].y - p[0].y))
+        .collect();
+    let mut subdivisions: Vec<_> = lengths
+        .iter()
+        .map(|length| (length / (spacing * 1.1)).ceil().max(1.0))
+        .collect();
+    if subdivisions.iter().sum::<f64>() < minimum as f64 {
+        subdivisions = lengths
+            .iter()
+            .map(|length| (length / spacing).ceil().max(1.0))
+            .collect();
+    }
+    let mut points = Vec::new();
+    for (segment, steps) in ring.0.windows(2).zip(subdivisions) {
+        let [a, b] = [segment[0], segment[1]];
+        if steps > remaining as f64 {
+            return Err(limit());
+        }
+        remaining -= steps as usize;
+        for i in 0..steps as usize {
+            let t = i as f64 / steps;
+            let point = Coord {
+                x: a.x + (b.x - a.x) * t,
+                y: a.y + (b.y - a.y) * t,
+            };
+            points.push(point);
+        }
+    }
+    Ok(points)
 }
 
 impl Sampler {
@@ -66,56 +121,88 @@ impl Sampler {
         self.insert(p).map(Some)
     }
 
-    fn ring(
+    fn boundary(
+        &mut self,
+        outline: &MultiPolygon<f64>,
+        options: &AlphaMeshOptions,
+    ) -> Result<(), SdkError> {
+        let mut vertices = Vec::new();
+        let mut indices = HashMap::new();
+        let mut edges = Vec::new();
+        for polygon in &outline.0 {
+            for ring in std::iter::once(polygon.exterior()).chain(polygon.interiors()) {
+                let points = ring_points(
+                    ring,
+                    options.outside_spacing,
+                    options.minimum_boundary_points,
+                    self.remaining,
+                )?;
+                self.remaining -= points.len();
+                let mut handles = Vec::new();
+                for point in points {
+                    let point = self.point(point);
+                    // The CDT treats both signs of zero as the same position.
+                    let key = (
+                        if point.x == 0.0 { 0 } else { point.x.to_bits() },
+                        if point.y == 0.0 { 0 } else { point.y.to_bits() },
+                    );
+                    let index = *indices.entry(key).or_insert_with(|| {
+                        vertices.push(point);
+                        vertices.len() - 1
+                    });
+                    if vertices.len() > self.max_vertices {
+                        return Err(limit());
+                    }
+                    let handle = FixedVertexHandle::from_index(index);
+                    if handles.last() != Some(&handle) {
+                        handles.push(handle);
+                    }
+                }
+                if handles.len() < options.minimum_boundary_points {
+                    return Err(error(
+                        "ALPHA_MESH_GEOMETRY",
+                        "Boundary points collapse at f32 precision",
+                    ));
+                }
+                for i in 0..handles.len() {
+                    let (a, b) = (handles[i], handles[(i + 1) % handles.len()]);
+                    if a != b {
+                        edges.push([a.index(), b.index()]);
+                    }
+                    self.outline.push((a, b));
+                }
+            }
+        }
+        // Inputs are quantized and deduplicated first: stable bulk loading keeps
+        // these vertex handles valid, including point contacts between islands.
+        // Conflicting constraints must remain a geometry error, never a panic
+        // or a silently omitted edge.
+        let mut conflict = false;
+        self.cdt = Cdt::try_bulk_load_cdt(vertices, edges, |_| conflict = true)
+            .map_err(|e| error("ALPHA_MESH_GEOMETRY", &e.to_string()))?;
+        if conflict {
+            return Err(error(
+                "ALPHA_MESH_GEOMETRY",
+                "Alpha boundary constraints intersect",
+            ));
+        }
+        for vertex in self.cdt.vertices() {
+            self.occupied.insert(vertex.position());
+        }
+        Ok(())
+    }
+
+    fn support_ring(
         &mut self,
         ring: &LineString<f64>,
         spacing: f64,
         minimum: usize,
-        boundary: bool,
     ) -> Result<(), SdkError> {
-        let perimeter: f64 = ring
-            .0
-            .windows(2)
-            .map(|p| (p[1].x - p[0].x).hypot(p[1].y - p[0].y))
-            .sum();
-        let spacing = spacing.min(perimeter / minimum as f64);
-        if spacing <= 0.0 {
-            return Err(error("ALPHA_MESH_GEOMETRY", "Boundary has zero length"));
-        }
-        // Allow 10% slack around the target, so an 81px segment does not become
-        // two 40.5px edges for an 80px target. Rounding to the nearest count can
-        // stretch edges by 50% and undersample dense presets; bound that slack.
-        // Every simplified corner and the explicit ring minimum remain.
-        let lengths: Vec<_> = ring
-            .0
-            .windows(2)
-            .map(|p| (p[1].x - p[0].x).hypot(p[1].y - p[0].y))
-            .collect();
-        let mut subdivisions: Vec<_> = lengths
-            .iter()
-            .map(|length| (length / (spacing * 1.1)).ceil().max(1.0))
-            .collect();
-        if subdivisions.iter().sum::<f64>() < minimum as f64 {
-            subdivisions = lengths
-                .iter()
-                .map(|length| (length / spacing).ceil().max(1.0))
-                .collect();
-        }
         let mut handles = Vec::new();
-        for (segment, steps) in ring.0.windows(2).zip(subdivisions) {
-            let [a, b] = [segment[0], segment[1]];
-            if steps > self.remaining as f64 {
-                return Err(limit());
-            }
-            for i in 0..steps as usize {
-                let t = i as f64 / steps;
-                let handle = self.insert(Coord {
-                    x: a.x + (b.x - a.x) * t,
-                    y: a.y + (b.y - a.y) * t,
-                })?;
-                if handles.last() != Some(&handle) {
-                    handles.push(handle);
-                }
+        for point in ring_points(ring, spacing, minimum, self.remaining)? {
+            let handle = self.insert(point)?;
+            if handles.last() != Some(&handle) {
+                handles.push(handle);
             }
         }
         if handles.len() < minimum {
@@ -132,10 +219,6 @@ impl Sampler {
                     "Alpha boundary constraints intersect",
                 ));
             }
-        }
-        if boundary {
-            self.outline
-                .extend((0..handles.len()).map(|i| (handles[i], handles[(i + 1) % handles.len()])));
         }
         Ok(())
     }
@@ -158,16 +241,7 @@ pub(super) fn generate(
             .clip_to_image
             .then_some([mask.width as f64, mask.height as f64]),
     };
-    for polygon in &outline.0 {
-        for ring in std::iter::once(polygon.exterior()).chain(polygon.interiors()) {
-            sampler.ring(
-                ring,
-                options.outside_spacing,
-                options.minimum_boundary_points,
-                true,
-            )?;
-        }
-    }
+    sampler.boundary(outline, options)?;
     // Build the thin-feature support graph before adding internal constraints.
     let chains = if options.inside_margin > 0.0 {
         // Classify the actual sampled f32 boundary, including any split edges.
@@ -249,7 +323,7 @@ pub(super) fn generate(
     if options.inside_margin > 0.0 {
         for polygon in &inner.0 {
             for ring in std::iter::once(polygon.exterior()).chain(polygon.interiors()) {
-                sampler.ring(ring, options.inside_spacing, 3, false)?;
+                sampler.support_ring(ring, options.inside_spacing, 3)?;
             }
         }
         // A chordal-axis chain supplies support only outside the surviving core.
@@ -460,4 +534,84 @@ pub(super) fn generate(
         uvs,
         triangles: output,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use geo::Rect;
+
+    fn sampler(remaining: usize, max_vertices: usize) -> Sampler {
+        Sampler {
+            cdt: Cdt::new(),
+            occupied: Occupied::new(1.0),
+            outline: Vec::new(),
+            remaining,
+            max_vertices,
+            extent: None,
+        }
+    }
+
+    fn options() -> AlphaMeshOptions {
+        AlphaMeshOptions {
+            minimum_boundary_points: 4,
+            ..AlphaMeshOptions::standard()
+        }
+    }
+
+    #[test]
+    fn bulk_boundary_reuses_contacts_and_keeps_work_and_vertex_limits() {
+        let outline = MultiPolygon(vec![
+            Rect::new((-1.0, -1.0), (-0.0, -0.0)).to_polygon(),
+            Rect::new((0.0, 0.0), (1.0, 1.0)).to_polygon(),
+        ]);
+        let mut sampler = sampler(100, 7);
+        sampler.boundary(&outline, &options()).unwrap();
+        assert_eq!(sampler.cdt.num_vertices(), 7);
+        assert_eq!(sampler.cdt.num_constraints(), 8);
+        assert_eq!(sampler.remaining, 92);
+        let inside = classify::faces(&sampler.cdt, &sampler.outline).unwrap();
+        let area: f64 = sampler
+            .cdt
+            .inner_faces()
+            .filter(|f| inside[f.index()])
+            .map(|f| f.area())
+            .sum();
+        assert_eq!(area, 2.0);
+        for (remaining, vertices) in [(7, 7), (100, 6)] {
+            let error = self::sampler(remaining, vertices)
+                .boundary(&outline, &options())
+                .unwrap_err();
+            assert_eq!(error.code.as_ref(), "ALPHA_MESH_LIMIT");
+        }
+    }
+
+    #[test]
+    fn bulk_boundary_rejects_conflicts_and_f32_collapse() {
+        for ring in [
+            LineString::from(vec![
+                (0.0, 0.0),
+                (2.0, 2.0),
+                (0.0, 2.0),
+                (2.0, 0.0),
+                (0.0, 0.0),
+            ]),
+            Rect::new((0.0, 0.0), (1e-50, 1e-50))
+                .to_polygon()
+                .exterior()
+                .clone(),
+        ] {
+            let outline = MultiPolygon(vec![Polygon::new(ring, vec![])]);
+            let error = sampler(100, 100)
+                .boundary(
+                    &outline,
+                    &AlphaMeshOptions {
+                        minimum_boundary_points: 3,
+                        ..options()
+                    },
+                )
+                .unwrap_err();
+            assert_eq!(error.code.as_ref(), "ALPHA_MESH_GEOMETRY");
+        }
+    }
 }

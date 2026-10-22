@@ -1,10 +1,10 @@
-//! Broad-phase component queries. Exact geo predicates still decide topology;
-//! disjoint island bounds never need point or polygon-pair tests.
+//! Broad-phase component and segment queries. Exact geo predicates decide topology;
+//! disjoint bounds never need point, polygon-pair or segment-pair tests.
 use super::limit;
 use crate::SdkError;
 use geo::{
-    coordinate_position::CoordPos, dimensions::Dimensions, BoundingRect, Contains, MultiPolygon,
-    Point, Relate, Validation,
+    coordinate_position::CoordPos, dimensions::Dimensions, BoundingRect, Contains, Intersects,
+    MultiPolygon, Point, Polygon, Relate, RemoveRepeatedPoints, Validation,
 };
 use rstar::{
     primitives::{GeomWithData, Rectangle},
@@ -71,10 +71,56 @@ impl<'a> PolygonIndex<'a> {
 
 pub(super) fn is_valid(polygons: &MultiPolygon<f64>) -> Result<bool, SdkError> {
     // Validate rings before constructing bounds or running inter-polygon relate.
-    if polygons.0.iter().any(|polygon| !polygon.is_valid()) {
+    if polygons.0.iter().any(|polygon| !polygon_valid(polygon)) {
         return Ok(false);
     }
     PolygonIndex::new(polygons).valid_pairs(1_048_576)
+}
+
+fn polygon_valid(polygon: &Polygon<f64>) -> bool {
+    let ring = polygon.exterior();
+    // Keep geo's complete hole/exterior relationship checks. Simple short
+    // rings are also cheaper to validate without building an index.
+    if !polygon.interiors().is_empty() || ring.0.len() < 32 {
+        return polygon.is_valid();
+    }
+    if ring.0.iter().any(|p| !p.x.is_finite() || !p.y.is_finite())
+        || ring.remove_repeated_points().0.len() < 4
+    {
+        return false;
+    }
+    // Match geo 0.33's ring self-intersection predicate exactly, but only
+    // compare segment pairs with intersecting bounds. Raster offsets often
+    // have thousands of edges; the all-pairs check dominated their runtime.
+    let lines: Vec<_> = ring.lines().collect();
+    let tree = RTree::bulk_load(
+        lines
+            .iter()
+            .enumerate()
+            .map(|(id, line)| {
+                GeomWithData::new(
+                    Rectangle::from_corners(
+                        [line.start.x.min(line.end.x), line.start.y.min(line.end.y)],
+                        [line.start.x.max(line.end.x), line.start.y.max(line.end.y)],
+                    ),
+                    id,
+                )
+            })
+            .collect(),
+    );
+    for entry in &tree {
+        let line = &lines[entry.data];
+        for other in tree.locate_in_envelope_intersecting(&entry.envelope()) {
+            if other.data <= entry.data {
+                continue;
+            }
+            let other = &lines[other.data];
+            if line.intersects(other) && line.start != other.end && line.end != other.start {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 #[cfg(test)]
@@ -141,5 +187,50 @@ mod tests {
                 .as_ref(),
             "ALPHA_MESH_LIMIT"
         );
+    }
+
+    #[test]
+    fn indexed_ring_validation_matches_geo_for_large_and_degenerate_rings() {
+        let circle: Vec<_> = (0..64)
+            .map(|i| {
+                let angle = i as f64 * std::f64::consts::TAU / 64.0;
+                (angle.cos(), angle.sin())
+            })
+            .collect();
+        let mut cases = vec![circle.clone()];
+        let mut crossed = circle.clone();
+        crossed.swap(10, 40);
+        cases.push(crossed);
+        let mut repeated = circle.clone();
+        repeated.splice(8..8, [circle[7]; 4]);
+        cases.push(repeated);
+        let mut spike = circle.clone();
+        spike.splice(8..8, [(0.0, 0.0), circle[7]]);
+        cases.push(spike);
+        cases.push(vec![(0.0, 0.0); 64]);
+        cases.push((0..64).map(|i| (i as f64, 0.0)).collect());
+        for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let mut nonfinite = circle.clone();
+            nonfinite[20].0 = value;
+            cases.push(nonfinite);
+        }
+        // Seeded arbitrary walks exercise intersections and repeated endpoints.
+        let mut state = 0x532e_a90d_u32;
+        for _ in 0..128 {
+            cases.push(
+                (0..48)
+                    .map(|_| {
+                        state ^= state << 13;
+                        state ^= state >> 17;
+                        state ^= state << 5;
+                        ((state % 16) as f64, ((state >> 8) % 16) as f64)
+                    })
+                    .collect(),
+            );
+        }
+        for points in cases {
+            let polygon = Polygon::new(LineString::from(points), vec![]);
+            assert_eq!(polygon_valid(&polygon), polygon.is_valid(), "{polygon:?}");
+        }
     }
 }

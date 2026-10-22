@@ -13,4 +13,7 @@ benchmarks/cubism-matrix/artifacts/
 benchmarks/cubism-matrix/runners/native/build*/
 **/__pycache__/
 .venv/
+# maturin develop refreshes the native extension in the mixed Python package.
+/modules/kasane-python/python/kasane/_native*.so
+/modules/kasane-python/python/kasane/_native*.pyd
 output

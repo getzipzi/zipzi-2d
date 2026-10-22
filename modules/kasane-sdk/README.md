@@ -32,6 +32,19 @@ without invalidating runtime previews. Writers emit project v11. The old
 `ObjectLocks` and `DeformerDisplay` APIs and wire fields are removed, with no
 migration adapters.
 
+## Tests
+
+From the workspace root, `./tools/test.sh fast` runs SDK unit and ordinary CPU
+integration tests; add a module filter such as `physics_editing::` for local
+iteration. Ordinary suites share `tests/integration.rs`; register new CPU test
+modules there. The `alpha_mesh` target remains separate and runs in
+`./tools/test.sh regression` and `./tools/test.sh full`.
+
+```sh
+cargo test --locked -p kasane-sdk --test integration physics_editing::
+cargo test --locked -p kasane-sdk --test alpha_mesh
+```
+
 ## Alpha mesh generation
 
 `alpha_mesh_geometry(AlphaMask { width, height, alpha }, &AlphaMeshOptions)`

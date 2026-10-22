@@ -13,6 +13,14 @@ on an index is this build.
 
 ## Build and install
 
+For local iteration from the repository root, `./tools/test.sh python` refreshes
+a Debug development install and runs CPU/inspection tests; add `--observe` for
+GPU tests. Use `./tools/test.sh wheel` (or `wheel --observe`) for the packaged
+Release acceptance gate. Environments persist under `target/python-tests/`,
+and Rust build artifacts reuse the workspace `target/`. Test filters can be
+passed after `--`, for example
+`./tools/test.sh python -- -k history`.
+
 From the repository root:
 
 ```sh

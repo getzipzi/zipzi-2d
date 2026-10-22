@@ -5,6 +5,15 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Engine-independent authoring SDK for Kasane 2D"
+autotests = false
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+
+[[test]]
+name = "alpha_mesh"
+path = "tests/alpha_mesh.rs"
 
 [features]
 bench-instrumentation = ["kasane-core/bench-instrumentation"]
