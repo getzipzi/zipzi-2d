@@ -56,3 +56,7 @@ pub use scene::SceneAuthoringCapabilities;
 #[path = "authoring/content.rs"]
 mod content;
 pub use content::SceneContentAuthoringCapabilities;
+
+#[path = "authoring/references.rs"]
+mod references;
+pub use references::ReferenceAuthoringCapabilities;

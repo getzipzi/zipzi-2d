@@ -695,23 +695,91 @@ impl ObjectIndex {
             s.edge(&doc, R::Resource, target, "");
         }
         for area in m.model3_settings().hit_areas.iter().flatten() {
+            let r = ObjectRef::new(K::ModelHitArea, &area.id);
+            s.add(r.clone(), &area.name, json!(area), None);
+            s.edge(&doc, R::Contains, r.clone(), "HitArea");
             let target = match &area.mesh {
-                ModelTargetRef::Resolved { object_id } => ObjectRef::new(K::Mesh, object_id),
-                ModelTargetRef::Unresolved { runtime_id } => s.unresolved("hit area", runtime_id),
+                ModelTargetRef::Resolved { object_id } => Some(ObjectRef::new(K::Mesh, object_id)),
+                ModelTargetRef::Unresolved { runtime_id } => {
+                    Some(s.unresolved("hit area", runtime_id))
+                }
+                ModelTargetRef::Unspecified => None,
             };
-            s.edge(&doc, R::HitArea, target, &area.name);
+            if let Some(target) = target {
+                s.edge(&r, R::HitArea, target, "");
+            }
         }
         for group in m.model3_settings().groups.iter().flatten() {
-            for p in &group.parameters {
-                let target = match p {
+            let r = ObjectRef::new(K::ModelParameterGroup, &group.id);
+            s.add(r.clone(), &group.name, json!(group), None);
+            s.edge(&doc, R::Contains, r.clone(), "behavior group");
+            for (i, member) in group.parameters.iter().enumerate() {
+                let child = ObjectRef::new(K::ModelParameterMember, &member.id);
+                s.add(
+                    child.clone(),
+                    format!("Member {}", i + 1),
+                    json!(member),
+                    None,
+                );
+                s.edge(&r, R::Contains, child.clone(), "member");
+                let target = match &member.target {
                     ModelTargetRef::Resolved { object_id } => {
-                        ObjectRef::new(K::Parameter, object_id)
+                        Some(ObjectRef::new(K::Parameter, object_id))
                     }
                     ModelTargetRef::Unresolved { runtime_id } => {
-                        s.unresolved("model parameter group", runtime_id)
+                        Some(s.unresolved("model parameter group", runtime_id))
                     }
+                    ModelTargetRef::Unspecified => None,
                 };
-                s.edge(&doc, R::Contains, target, &group.name);
+                if let Some(target) = target {
+                    s.edge(&child, R::ReferenceTarget, target, "");
+                }
+            }
+        }
+        for set in m.display_info().combined_parameters.iter().flatten() {
+            let r = ObjectRef::new(K::CdiCombinedSet, &set.id);
+            s.add(r.clone(), "Combined parameters", json!(set), None);
+            s.edge(&doc, R::Contains, r.clone(), "combined set");
+            for (i, member) in set.members.iter().enumerate() {
+                let child = ObjectRef::new(K::CdiCombinedMember, &member.id);
+                s.add(
+                    child.clone(),
+                    format!("Member {}", i + 1),
+                    json!(member),
+                    None,
+                );
+                s.edge(&r, R::Contains, child.clone(), "member");
+                let target = match &member.target {
+                    kasane_core::document::CdiParameterRef::Resolved { parameter_id } => {
+                        Some(ObjectRef::new(K::Parameter, parameter_id))
+                    }
+                    kasane_core::document::CdiParameterRef::Unresolved { runtime_id } => {
+                        Some(s.unresolved("combined set", runtime_id))
+                    }
+                    kasane_core::document::CdiParameterRef::Unspecified => None,
+                };
+                if let Some(target) = target {
+                    s.edge(&child, R::ReferenceTarget, target, "");
+                }
+            }
+        }
+        for disabled in &m.reference_projection().disabled {
+            if let Some(identity) = m.reference_identity(&disabled.id) {
+                let kind = match identity.kind {
+                    kasane_core::document::ReferenceKind::ModelParameterGroup => {
+                        K::ModelParameterGroup
+                    }
+                    kasane_core::document::ReferenceKind::ModelParameterMember => {
+                        K::ModelParameterMember
+                    }
+                    kasane_core::document::ReferenceKind::ModelHitArea => K::ModelHitArea,
+                    kasane_core::document::ReferenceKind::CdiCombinedSet => K::CdiCombinedSet,
+                    kasane_core::document::ReferenceKind::CdiCombinedMember => K::CdiCombinedMember,
+                };
+                if let Some(&slot) = s.structure.slots.get(&ObjectRef::new(kind, &disabled.id)) {
+                    s.objects[slot].diagnostic =
+                        Some(format!("NeedsConfiguration: {:?}", disabled.reason));
+                }
             }
         }
         let availability = m.scene_projection();

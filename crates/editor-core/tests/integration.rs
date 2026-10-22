@@ -65,3 +65,6 @@ mod scene_lifecycle;
 
 #[path = "cases/scene_content.rs"]
 mod scene_content;
+
+#[path = "cases/reference_authoring.rs"]
+mod reference_authoring;

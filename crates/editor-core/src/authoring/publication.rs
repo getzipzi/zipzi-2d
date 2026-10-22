@@ -160,6 +160,67 @@ impl Document {
             }
             return;
         }
+        let reference_kinds = |k| {
+            matches!(
+                k,
+                SdkKind::ModelParameterGroup
+                    | SdkKind::ModelParameterMember
+                    | SdkKind::ModelHitArea
+                    | SdkKind::CdiCombinedSet
+                    | SdkKind::CdiCombinedMember
+            )
+        };
+        let reference_only = !changes.full_invalidation
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .any(|e| reference_kinds(e.kind))
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .all(|e| reference_kinds(e.kind));
+        if reference_only {
+            let previous_input = self.animation_input_revision;
+            let labels = changes.created.is_empty()
+                && changes.deleted.is_empty()
+                && changes.collections.is_empty()
+                && !changes.reference_fields.is_empty()
+                && changes
+                    .categories
+                    .iter()
+                    .all(|c| *c == ChangeCategory::Labels);
+            if labels {
+                let ids = changes
+                    .reference_fields
+                    .iter()
+                    .map(|f| f.entity.id.clone())
+                    .collect::<Vec<_>>();
+                let previous = self.projection_revision;
+                self.invalidate_projection(false);
+                let mut cache = self.object_index.lock().unwrap();
+                if let Some((revision, index)) = cache.as_mut() {
+                    if *revision == previous
+                        && Arc::make_mut(index).refresh_reference_labels(self.model(), &ids)
+                    {
+                        *revision = self.projection_revision;
+                    }
+                }
+                self.session.drain_events();
+            } else {
+                self.after_history(false);
+            }
+            if !changes
+                .categories
+                .contains(&ChangeCategory::EvaluationInputs)
+            {
+                self.animation_input_revision = previous_input;
+            }
+            return;
+        }
         let organization_only = !changes.full_invalidation
             && (changes
                 .collections

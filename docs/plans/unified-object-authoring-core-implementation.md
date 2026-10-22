@@ -2,7 +2,7 @@
 
 对应方案：[对象创作核心架构改造方案](unified-object-authoring-core.md)。本文件记录已交付的接口、实现边界与验收结果；完整目标范围和后续阶段仍由方案维护。
 
-截至 2026 年 10 月 22 日，**C1–C4 已完成，C5 已启动并交付 Pose 首批**；其他 C5 领域与 C6 仍待实施。以下按交付顺序保留
+截至 2026 年 10 月 22 日，**C1–C4 已完成，C5 已交付 Pose、参数／Part 组织、场景生命周期、专用内容和行为引用集合五批**；其他 C5 领域与 C6 仍待实施。以下按交付顺序保留
 历史阶段状态；C4 的支持矩阵与最终验收以对应的 C4 完成及 review 修正章节为准。
 
 ## C1 / Stage 1：Expression / ExpressionEntry
@@ -998,3 +998,104 @@ cargo check --locked -p kasane-editor
 两仓库 `cargo fmt --all --check`、`git diff --check` 通过；保留既有 GPUI/Cocoa、
 `block` 未来兼容及项目测试未使用 import 提示。未运行截图、真实模型 Release 或 C6
 综合性能验收。本批代码保留在两个工作区，尚未提交。
+
+
+## C5 第五批：行为对象与可编辑引用集合
+
+2026 年 10 月 22 日：先提交第四批专用内容（SDK `489b0f0`、Editor `7d79545`），
+再完成本节。core schema 为 **10**，目录项目格式为 **19**；旧格式拒绝加载，不做迁移。
+第四批“尚未提交”及行为引用待完成的说明是当时状态。
+
+- **原生身份与待配置数据**：ModelParameterGroup、ModelHitArea、CdiCombinedSet
+  以及两种参数成员都有全局 UUID；成员采用 `ReferenceEntry<T> { id, target }`，
+  不以目标 Parameter ID 或数组位置代替成员身份。目标区分 Unspecified、Resolved 和
+  Unresolved，导入 runtime ID 原样保留。空组、空集合、未指定目标合法保存；同拥有者
+  重复配置目标被拒绝，包括已解析和未解析引用实际对应同一 runtime ID 的情况。
+  CombinedSet 没有虚构名称字段。外部格式允许的空 HitArea 名称仍然有效。
+- **同一操作权威**：core `ReferenceEdit`／`ReferencePlan`、SDK
+  `plan_reference_edit`／`execute_reference_plan`／`EditSession::edit_references`
+  实现创建、字段补丁、多选排序／移动、复制、删除和显式接收拥有者的解散。
+  选择按原生顺序规范化；选中根覆盖其成员。集合接收匹配业务类型；跨拥有者移动保留
+  成员 UUID。`before` 是稳定身份；选中锚点只在同集合移动时作为 no-op，错误集合不
+  静默成功。复制生成根和拥有成员的新 UUID，并报告映射；Parameter／Mesh 目标仍共享。
+  同组复制已配置成员会触发重复目标检查。解散保留成员身份，若接收组产生重复目标则
+  整体失败；HitArea 不支持解散。删除只删除拥有闭包和 editor flags，不删除共享目标。
+- **身份、地址与锁**：新的 SDK ObjectKind／ObjectHandle 覆盖五种身份；成员移动和
+  排序保留句柄，删除后 Undo 不复活旧句柄。`ReferenceFieldAddress` 捕获实体、拥有者、
+  已解析目标的句柄生命周期、期望字段和单调 epoch；跨拥有者移动／字段变化后 Undo，
+  或在同一事务内删除并按原 UUID 重建目标，都不能复活旧地址。父组改名不影响成员地址。
+  能力查询复用原生锁规则；所属组、成员、场景对象、Part 和 Binding 的锁生效。
+  裸 model3／DisplayInfo 替换、删除入口也校验锁和身份，删除后同批重新插入记录会淘汰
+  旧句柄。计划绑定 snapshot 和 SDK version；失败原子回滚，no-op 不推进历史。
+- **其他引用选择**：Mesh masks、Offscreen masks、Blend binding `constraint_ids`
+  通过 `ReplaceSelection` 批量操作，保留原本的目标 ID 选择语义，不人为生成条目 UUID。
+  SDK `reference_selection_address`／`plan_reference_selection_patch` 捕获拥有对象、
+  已有目标句柄、字段和场景／Binding 上下文，统一执行缺失目标、重复目标、依赖环及锁
+  的 native 校验。`ReferenceEffects` 区分行为组、HitArea、CombinedSet、绘制和变形影响。
+- **运行投影与发布**：独立 `ReferenceProjection` 提供组／集合槽位、成员 UUID 到
+  压缩执行槽位、反向成员 UUID 及 HitArea 原始源槽位。待配置／未解析成员不进入有效
+  参数列表；空业务组保留身份并诊断，无执行贡献。无顶点 Mesh 不提供 HitArea；具有
+  顶点的 Mesh 不因缺纹理而失去 HitArea 能力。所有修改、候选安装和 checkpoint 恢复
+  正确失效引用索引及投影。行为元数据修改保留 frame evaluation revision；名称与关系
+  投影仍更新。`ChangeSet.reference_fields`／`reference_selections` 和引用集合变化明确
+  报告方向，Undo 交换前后值。删除依赖诊断报告准确的成员／HitArea 身份。
+- **Editor／Python**：Document 和 Editor 接通集合、能力、地址、计划与执行入口；
+  Editor 附加活动 Document／Timeline／候选手势限制，不改变活动动画与播放时钟。
+  ObjectIndex 展示根与成员节点、拥有关系和共享目标引用，提供缺项诊断；名称发布刷新
+  对象和 Document 内嵌 model_settings，保留无关关系和画布求值输入。
+  Python 提供同一 `reference_*` planning／execution／patch／capabilities API 和
+  `Edit.reference_authoring`。详细命令和规范 JSON 见相邻仓库 `modules/kasane-python/API.md`。
+  现有通用属性检查可查看这些节点；完整统一交互界面属于 C6，本批没有新增一套 UI 规则。
+- **保存和第三方格式**：native 项目保留根及成员 UUID；model3、CDI、CMO3 没有对应
+  authoring 身份槽位，导出按 runtime ID 引用目标，重新导入分配身份，不把自定义 UUID
+  写进外部格式。严格导出拒绝不可表示的待配置／未解析目标，并报告 native ID 或外部
+  字段路径；可表达的空集合仍可导出。model3 不透明扩展的既有严格导出约束继续生效。
+  CDI 导入现有文档时按完整有序成员内容匹配未使用原集合，保留匹配的根／成员身份；
+  外部集合重排不会按数组下标错误继承身份。旧 `set_combined_parameters` 按目标匹配
+  保留成员 ID；canonical model3 setter 需显式传入新 schema 的 UUID／target 结构。
+
+字段计划只持有所改字段；集合计划保存受影响元数据，最终校验使用隔离候选。
+本批新增 SDK **14 项**、Editor 集成 **3 项**、Python **2 项**回归。
+验证结果如下（筛选有重叠，不累加）：
+
+| 验证 | 结果 |
+| --- | --- |
+| SDK references／CDI／组织／Motion／场景／内容／句柄／状态／Binding／effects | 152 项通过，1 项按原设置忽略 |
+| 本批 reference SDK 最终定向回归 | 14 项通过 |
+| Editor references／场景／内容／Properties／锁／panels／组织 | 67 项通过 |
+| 原生 UI hierarchy／Properties／parameter groups／animation panels | 51 项通过 |
+| core CDI 与 checkpoint size | 4 项通过 |
+| project CDI／model3／project／Motion／Pose | 65 项通过 |
+| CMO3 export／import | 18 项通过 |
+| 当前 Debug Python extension | 68 项 CPU + 4 项 inspection 通过 |
+
+主要复现命令：
+
+```sh
+# 相邻 kasane-2d
+cargo test --locked -p kasane-sdk --test integration -- \
+  reference_authoring:: cdi_authoring:: organization_authoring:: motion_library:: \
+  scene_lifecycle:: scene_content:: handles:: editor_state:: binding_authoring:: effects_authoring::
+cargo test --locked -p kasane-core --test cdi_display_info_tests --test checkpoint_size_tests
+cargo test --locked -p kasane-project --test cdi_tests --test model3_tests \
+  --test project_tests --test motion_tests --test pose_tests
+cargo test --locked -p kasane-cmo3 --test export --test import
+cargo check --locked --keep-going -p kasane-core -p kasane-project -p kasane-cmo3 \
+  -p kasane-moc3 -p kasane-python --tests --examples
+./tools/test.sh python
+# kasane-editor
+cargo test --locked -p editor-core --test integration -- \
+  reference_authoring:: scene_lifecycle:: scene_content:: properties:: locks:: panels:: organization_authoring::
+./scripts/test.sh ui -- headless_tests::hierarchy headless_tests::properties \
+  headless_tests::parameter_groups headless_tests::animation_panels
+cargo check --locked -p kasane-editor
+```
+
+受影响 native 库的测试与示例编译、Editor 默认应用编译通过。两仓库
+`cargo fmt --all --check`、`git diff --check` 通过；保留既有第三方 GPUI/Cocoa／`block`
+提示和项目 CDI 测试 unused import 提示。没有运行完整 workspace suite、截图、真实模型
+Release 或 C6 综合性能验收。本批代码保留在两个工作区，尚未提交。
+
+本节完成覆盖表中的行为／引用集合一行。C5 仍需继续完成 Texture／ImageAsset 等资源和
+异步加载操作，以及 Document／Layout／ExportSettings／SourceCanvas、未解析内容、
+不透明扩展和跨领域依赖的全面覆盖核对；C6 尚未开始。

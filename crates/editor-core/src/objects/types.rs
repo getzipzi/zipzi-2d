@@ -22,6 +22,11 @@ pub enum ObjectKind {
     BlendConstraint,
     Glue,
     GlueVertexPair,
+    ModelParameterGroup,
+    ModelParameterMember,
+    ModelHitArea,
+    CdiCombinedSet,
+    CdiCombinedMember,
     MotionGroup,
     MotionRegistration,
     MotionKey,
@@ -80,6 +85,7 @@ pub struct ObjectInfo {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RelationKind {
+    ReferenceTarget,
     PartOwner,
     DeformParent,
     ParameterAxis,
@@ -115,6 +121,8 @@ impl RelationKind {
     pub fn label(self, incoming: bool) -> &'static str {
         use RelationKind::*;
         match (self, incoming) {
+            (ReferenceTarget, false) => "references",
+            (ReferenceTarget, true) => "referenced by",
             (DrawMember, false) => "drawing member",
             (DrawMember, true) => "drawn in",
             (PartOwner, false) => "belongs to Part",
