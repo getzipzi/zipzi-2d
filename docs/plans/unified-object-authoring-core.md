@@ -1,8 +1,8 @@
 # 对象创作核心架构改造方案
 
-日期：2026 年 10 月 21 日，进度更新于 10 月 22 日。状态：**C1–C5 已完成，C6 核心总验收尚未开始**。C5 的资源操作与完整覆盖核对已收尾，覆盖表 7 项均已落地；接口、领域限制和回归依据见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)与[实施记录](unified-object-authoring-core-implementation.md)。C4 的改父级支持矩阵、容量、协作取消及真实模型 Release 验收继续沿用已记录结果。
+日期：2026 年 10 月 21 日，进度更新于 10 月 22 日。状态：**C1–C6 已完成，核心已交付；全面 UI 统一尚未开始**。C5 的资源操作与完整覆盖核对已收尾，覆盖表 7 项均已落地；接口、领域限制和回归依据见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)与[实施记录](unified-object-authoring-core-implementation.md)。C4 的改父级支持矩阵、容量、协作取消及真实模型 Release 验收继续沿用已记录结果。
 
-第 4、5 节定义完整核心范围；已实现接口及边界以实施记录和覆盖矩阵为准。C6 汇总核心验收、性能复核和公共契约，随后进入 UI 统一实施。
+第 4、5 节定义完整核心范围；已实现接口及边界以实施记录和覆盖矩阵为准。C6 已完成核心验收、性能复核和公共契约定稿；验收映射、结果及边界见 [C6 交付记录](unified-object-authoring-c6-acceptance.md)，随后进入 UI 统一实施。
 
 先完成原生创作模型、SDK 与 editor-core 的统一对象能力，使创建、属性修改、集合移动、复制、删除和引用修复具有稳定身份、明确的领域规则和单一事务历史。随后按 [Editor UI 交互统一方案](unified-object-authoring-ui.md)接入新的界面操作。
 
@@ -519,7 +519,7 @@ SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附�
 | C3 Physics 条目与节点（已实现） | 完成类型化原生物理结构、节点身份、输入输出、执行顺序、运行槽位映射和 physics3 转换 | 待配置通道可保存；节点与输出引用联合修改正确；压缩运行槽位不误定位；测试预览及现有字段编辑不回退 |
 | C4 Binding 网格与变形父级（已完成） | 完成轴/采样点身份、零轴、网格与共享 BlendShape 转换、参数范围联合修改，以及第 8.1 节改父级支持矩阵；所需场景操作一并贯通 | 成功与拒绝案例均覆盖；基础形态无双重来源，容量预检有效，转换误差与保证可验收；不得以全拒绝代替要求支持的操作 |
 | C5 全领域扩展与覆盖核对（已完成） | 按下表完成 Parameter/Part 组织、场景对象、Pose、行为集合、绘制组织、资源附件及专用内容操作；补齐跨领域依赖传播 | 第 4、5 节每项均有实现、测试和必要适配；SDK 规划规则无 Editor 副本，未完成项不能归入“类型不支持” |
-| C6 核心验收与交付 | 汇总第 10、11 节检查，核对所有入口和 Undo/Redo 的变更记录，固定公共契约、支持矩阵、预算默认值及诊断说明 | 全领域目标完成、现有 Editor 可运行、性能回归通过，随后进入 UI 统一实施 |
+| C6 核心验收与交付（已完成） | 汇总第 10、11 节检查，核对所有入口和 Undo/Redo 的变更记录，固定公共契约、支持矩阵、预算默认值及诊断说明 | 全领域目标完成、现有 Editor 可运行、性能回归通过，随后进入 UI 统一实施 |
 
 先以 ExpressionEntry 验证待配置和子条目语义，再以 Motion、Physics、Binding 验证共享引用、语义顺序与复杂转换；Part/Parameter 不能作为唯一协议验证样本。C4 等步骤需要的前置对象能力应作为该切片的一部分提前贯通，不等待 C5 才修复依赖。必要的 Editor 适配贯穿每步，不再设一个末期集中修复编译和行为的阶段。
 
@@ -560,7 +560,7 @@ SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附�
 
 ### 9.4 实施进度
 
-C1–C5 已完成。C5 的完整操作、修复路径、来源边界和领域限制见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)；落地接口与验证结果见[核心架构改造实施记录](unified-object-authoring-core-implementation.md)。C6 核心总验收与之后的 UI 统一尚未开始。
+C1–C5 已完成。C5 的完整操作、修复路径、来源边界和领域限制见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)；落地接口与验证结果见[核心架构改造实施记录](unified-object-authoring-core-implementation.md)。C6 已完成 30 项场景验收映射、SDK 公共契约、完整 Editor 门禁和真实模型 Release 性能复核；参见 [C6 交付记录](unified-object-authoring-c6-acceptance.md)。UI 统一尚未开始。
 
 ## 10 核心验收
 
@@ -634,4 +634,4 @@ C1–C5 按下表策略落地。未来产品策略若调整，必须同步更新
 - 相邻 kasane-2d 的 `modules/kasane-core/src/types.rs`、`document.rs`、`document/motions.rs`、`document/pose.rs`、`document/display_info.rs`、`document/model3.rs`、`document/expressions.rs`、`document/physics.rs`、`physics.rs` 和 `draw_order.rs`。
 - 本轮契约核对还依据相邻 kasane-2d 的 `modules/kasane-sdk/src/session.rs`（句柄、incarnation、Undo/Redo）、`edit.rs`（候选、逐步校验和发布）、`modules/kasane-core/src/document/parameters.rs` 与 `bindings.rs`（参数和网格依赖校验）、`evaluation/meshes.rs`（纹理求值条件）、`modules/kasane-render/src/validation.rs`（遮罩引用完整性）。这些路径已随对应切片适配，当前支持边界与验收见覆盖矩阵和实施记录。
 
-上述是原设计依据；C1–C4 已完成的结构、入口、支持边界与验收见[实施记录](unified-object-authoring-core-implementation.md)，C5 的全部领域及覆盖核对已完成，C6 核心总验收仍待实施。
+上述是原设计依据；C1–C4 已完成的结构、入口、支持边界与验收见[实施记录](unified-object-authoring-core-implementation.md)，C5 的全部领域及覆盖核对已完成，C6 核心总验收已完成，证据与性能边界见 [C6 交付记录](unified-object-authoring-c6-acceptance.md)。

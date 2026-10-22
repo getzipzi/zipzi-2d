@@ -26,6 +26,8 @@ int main(void) {
     if (getenv("IGNORE_TERM")) signal(SIGTERM, SIG_IGN);
     const char *delay = getenv("READY_DELAY");
     if (delay) usleep((useconds_t)(atof(delay) * 1000000));
+    const char *gate = getenv("READY_GATE");
+    while (gate && access(gate, F_OK) == 0) usleep(1000);
     const char *path = getenv("KASANE_DEV_PID_FILE");
     if (path && !getenv("NO_READY")) {
         FILE *file = fopen(path, "w");
@@ -249,11 +251,16 @@ while True:
         self.assertEqual(len((self.root/'launches').read_text().splitlines()),1)
 
     def test_late_pid_after_timeout_is_recovered_on_next_reload(self):
-        code,output=self.run_reload(expected=None, READY_DELAY='2.5')
+        # Keep readiness blocked until the timeout has actually returned. A
+        # fixed delay races the shell's polling/ps overhead on busy machines.
+        gate=self.root/'hold-readiness'
+        gate.touch()
+        code,output=self.run_reload(expected=None, READY_GATE=str(gate))
         self.assertNotEqual(code,0,output)
         pid=int((self.root/'test-pids').read_text())
         pending=Path((self.root/'launches').read_text().strip())
         self.assertTrue(pending.exists())
+        gate.unlink()
         self.wait_for(lambda:pending.exists() and pending.stat().st_size > 0)
         self.assertEqual(int(pending.read_text()),pid)
         code,output=self.run_reload(expected=None)

@@ -1,6 +1,6 @@
 # 对象创建编辑分组与排序方案索引
 
-日期：2026 年 10 月 21 日，进度更新于 10 月 22 日。核心 C1–C5 已完成，C6 核心总验收尚未开始；全面 UI 统一尚未开始。详见[核心实施记录](unified-object-authoring-core-implementation.md)与 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)。
+日期：2026 年 10 月 21 日，进度更新于 10 月 22 日。核心 C1–C6 已完成并交付；全面 UI 统一尚未开始。详见 [C6 核心交付](unified-object-authoring-c6-acceptance.md)、[核心实施记录](unified-object-authoring-core-implementation.md)与 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)。
 
 原统一方案已拆成两份，按以下顺序实施。本文件只保留导航和范围边界，不再维护第三份方案正文。
 

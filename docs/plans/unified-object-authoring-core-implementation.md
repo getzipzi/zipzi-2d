@@ -2,7 +2,7 @@
 
 对应方案：[对象创作核心架构改造方案](unified-object-authoring-core.md)。本文件记录已交付的接口、实现边界与验收结果；完整目标范围和后续阶段仍由方案维护。
 
-截至 2026 年 10 月 22 日，**C1–C5 已完成，C6 核心总验收尚未开始**。C5 资源与完整覆盖核对在本轮一并收尾，范围见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)。以下按交付顺序保留历史状态；C4 的支持矩阵与最终验收以对应完成及 review 修正章节为准。
+截至 2026 年 10 月 22 日，**C1–C6 已完成，核心已交付；全面 UI 统一尚未开始**。C5 资源与完整覆盖核对在本轮一并收尾，范围见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)。以下按交付顺序保留历史状态；C4 的支持矩阵与最终验收以对应完成及 review 修正章节为准。
 
 ## C1 / Stage 1：Expression / ExpressionEntry
 
@@ -1044,7 +1044,7 @@ cargo check --locked -p kasane-editor
   对象和 Document 内嵌 model_settings，保留无关关系和画布求值输入。
   Python 提供同一 `reference_*` planning／execution／patch／capabilities API 和
   `Edit.reference_authoring`。详细命令和规范 JSON 见相邻仓库 `modules/kasane-python/API.md`。
-  现有通用属性检查可查看这些节点；完整统一交互界面属于 C6，本批没有新增一套 UI 规则。
+  现有通用属性检查可查看这些节点；完整统一交互界面属于后续 UI 阶段，本批没有新增一套 UI 规则。
 - **保存和第三方格式**：native 项目保留根及成员 UUID；model3、CDI、CMO3 没有对应
   authoring 身份槽位，导出按 runtime ID 引用目标，重新导入分配身份，不把自定义 UUID
   写进外部格式。严格导出拒绝不可表示的待配置／未解析目标，并报告 native ID 或外部
@@ -1349,3 +1349,34 @@ Python 首次筛选在 CPU 14 项通过后，因 inspection 无匹配用例返�
 Python 首次把多个关键词写成单个 `or` 表达式；unittest 不支持该筛选语法，因此零项
 匹配并返回退出码 5。改为重复 `-k` 后上述检查全部通过。未运行完整 workspace、
 原生截图或真实模型性能验收。
+
+
+## C6：核心总验收与公共契约（2026-10-22）
+
+完成 30 项核心场景的[验收映射](unified-object-authoring-c6-acceptance.md)，并在相邻 SDK
+固定 [公共契约](../../../kasane-2d/modules/kasane-sdk/AUTHORING.md)：类型化入口、句柄／
+地址／异步请求存活、领域锁、单历史、组合 ChangeSet、支持矩阵、默认预算和诊断处理。
+
+新增 SDK 跨领域单事务、末尾失败回滚及 12 类直接／规划执行的等价发布验收；
+补齐 Editor 混合事务的画布名称与父级缓存、可见性历史的预览代际，以及观察包从稳定
+Sample 恢复数值缓存的缺口。PSD／MOC3 测试按完整图像描述符和真实纹理适配；
+开发脚本迟到 PID 测试使用确定性就绪信号，保留原超时／恢复断言。具体触发条件、
+回归与边界见验收文档，不放宽严格导出或引入 Editor 领域副本。
+
+本轮 Editor 完整门禁：51 项工具、773 项 Rust 通过，5 项既有忽略；三个本地模型动画、
+原生 Metal、双视口截图、Timeline SDK 对照及保存往返通过。Properties／Physics
+英中专项截图通过并目视复核。SDK 工作区 regression 788 通过、2 项既有忽略，
+不含脚本排除的 alpha mesh 随机压力余项；最后 MOC3 真实纹理映射修正定向 11 通过。
+当前 Debug Python extension：CPU 72、inspection 4 通过。两仓格式与 diff 检查通过。
+
+真实模型 Release 查询／结构、Binding 容量、属性链和 Timeline 复核已完成；
+采样方法、原始输出及最终数字见[性能记录](../benchmarks/2026-10-22-core-authoring-c6.md)。
+未将 Debug Python 检查表述为 Release wheel 验收，未执行随机压力余项。
+C6 不交付全面 UI 菜单／焦点／快捷键／拖拽统一，下一阶段仍按 UI 方案实施。
+
+C6 交付结论：功能与公共契约、完整 Editor 门禁、SDK regression、真实模型性能与
+预算复核均完成。Mao Mesh Opacity 更新＋CPU 预览 p50 为 0.291 ms；能力查询及
+注册 hover 规划分别为 0.061／0.121 ms；两个模型的 Binding 实测分配峰值低于
+计划估算。原生 Dense Timeline 的拖动到 Metal draw p50 仍为 74.081 ms，作为
+现有性能边界保留，不宣称所有负载达到 60 FPS，也不据非配对历史数字声明提速。
+后续进入 UI 统一实施；C6 代码与记录保留在两仓工作区，未自动提交。

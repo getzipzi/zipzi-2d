@@ -274,6 +274,14 @@ impl Document {
             &receipt,
             before != self.evaluation_revision() || state == *self.model().editor_state(),
         );
+        // Visibility affects Editor preview even though it is not a runtime
+        // evaluation input. Lock-only history keeps the current playback source.
+        if !state
+            .hidden_objects()
+            .eq(self.model().editor_state().hidden_objects())
+        {
+            self.animation_input_revision = self.session.version().revision;
+        }
         Ok(())
     }
 

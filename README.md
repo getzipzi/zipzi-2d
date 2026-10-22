@@ -109,6 +109,10 @@ KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-ben
 
 ## References
 
+- [Core object authoring handoff](docs/plans/unified-object-authoring-c6-acceptance.md):
+  C1–C6 public contracts, 30 acceptance scenarios, native/SDK verification and
+  [Release performance boundaries](docs/benchmarks/2026-10-22-core-authoring-c6.md).
+
 - [Binding conversion budgets](docs/benchmarks/2026-10-22-binding-authoring.md):
   C4 preflight estimates, cooperative cancellation, and a real-model Release
   latency and live allocation probe with verified default budgets.

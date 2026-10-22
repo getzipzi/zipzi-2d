@@ -52,6 +52,71 @@ impl Document {
             return;
         }
         let changes = &receipt.changes;
+        if changes.full_invalidation {
+            self.after_history(true);
+            return;
+        }
+        // Canvas structure and labels can change alongside document metadata or
+        // another domain. Handle them before choosing a projection fast path.
+        let scene_kind = |kind| {
+            matches!(
+                kind,
+                SdkKind::Part
+                    | SdkKind::Mesh
+                    | SdkKind::Transform
+                    | SdkKind::Offscreen
+                    | SdkKind::Glue
+            )
+        };
+        let structure_changed = (changes.categories.contains(&ChangeCategory::Topology)
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .any(|entity| scene_kind(entity.kind)))
+            || changes.scene_fields.iter().any(|field| {
+                field.field == kasane_sdk::SceneField::Context && scene_kind(field.entity.kind)
+            })
+            || changes
+                .organization_references
+                .iter()
+                .any(|edge| scene_kind(edge.entity.kind));
+        if structure_changed {
+            self.canvas_topology.get_mut().unwrap().take();
+        } else if changes.categories.contains(&ChangeCategory::Labels)
+            && self.canvas_topology.get_mut().unwrap().is_some()
+        {
+            let names: Vec<_> = changes
+                .modified
+                .iter()
+                .filter_map(|entity| {
+                    let kind = match entity.kind {
+                        SdkKind::Part => ObjectKind::Part,
+                        SdkKind::Mesh => ObjectKind::Mesh,
+                        SdkKind::Transform => ObjectKind::Deformer,
+                        SdkKind::Offscreen => ObjectKind::Offscreen,
+                        SdkKind::Glue => ObjectKind::Glue,
+                        _ => return None,
+                    };
+                    self.session
+                        .document()
+                        .scene_field(&entity.id, kasane_sdk::SceneField::Label)
+                        .ok()
+                        .and_then(|value| match value {
+                            kasane_sdk::SceneFieldValue::Label(name) => {
+                                Some((ObjectRef::new(kind, &entity.id), name))
+                            }
+                            _ => None,
+                        })
+                })
+                .collect();
+            if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
+                for (object, name) in names {
+                    Arc::make_mut(topology).rename(&object, &name);
+                }
+            }
+        }
         let entities = || {
             changes
                 .created
@@ -176,38 +241,11 @@ impl Document {
                         ))
                     })
                     .collect();
-                let names: Vec<_> = references
-                    .iter()
-                    .filter_map(|r| {
-                        if r.kind == ObjectKind::Part {
-                            self.model()
-                                .get_part(&r.id)
-                                .map(|p| (r.clone(), p.name.clone()))
-                        } else {
-                            self.session
-                                .document()
-                                .scene_field(&r.id, kasane_sdk::SceneField::Label)
-                                .ok()
-                                .and_then(|v| {
-                                    if let kasane_sdk::SceneFieldValue::Label(name) = v {
-                                        Some((r.clone(), name))
-                                    } else {
-                                        None
-                                    }
-                                })
-                        }
-                    })
-                    .collect();
                 self.refresh_authoring_projection(|index, model| {
                     references
                         .iter()
                         .all(|r| index.refresh_scene_label(model, r))
                 });
-                if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
-                    for (object, name) in names {
-                        Arc::make_mut(topology).rename(&object, &name);
-                    }
-                }
             } else {
                 let structural = changes
                     .created
@@ -315,22 +353,6 @@ impl Document {
                         .all(|e| index.refresh_organization_properties(model, e.kind, &e.id))
                         && index.refresh_organization_document(model)
                 });
-                let part_names: Vec<_> = changes
-                    .modified
-                    .iter()
-                    .filter(|e| e.kind == SdkKind::Part)
-                    .filter_map(|e| {
-                        self.model()
-                            .get_part(&e.id)
-                            .map(|p| (e.id.clone(), p.name.clone()))
-                    })
-                    .collect();
-                if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
-                    for (id, name) in part_names {
-                        Arc::make_mut(topology)
-                            .rename(&ObjectRef::new(ObjectKind::Part, &id), &name);
-                    }
-                }
             } else {
                 let scene_changed = changes.created.iter().chain(&changes.deleted).any(|e| {
                     matches!(
@@ -547,5 +569,148 @@ impl Document {
             // structural edits rebuild relations, but never canvas topology.
             self.after_history(!expression_only && fallback_topology);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kasane_sdk::{DocumentAuthoringEdit, DocumentValue, SceneEdit, SceneFieldValue};
+
+    #[test]
+    fn mixed_document_and_scene_labels_refresh_canvas_through_history() -> anyhow::Result<()> {
+        let mut document = Document::new_blank()?;
+        let id = Uuid::new_v4().to_string();
+        document.session.edit("Mesh", None, |edit| {
+            edit.create_mesh(kasane_core::Mesh {
+                id: id.clone(),
+                name: "Before".into(),
+                ..Default::default()
+            })
+        })?;
+        document.after_history(true);
+        let object = ObjectRef::new(ObjectKind::Mesh, &id);
+        let before = document.canvas_topology();
+        let index = document.object_index();
+        let (_, receipt) = document.session.edit("Layout and label", None, |edit| {
+            edit.edit_document(DocumentAuthoringEdit::Patch {
+                expected: DocumentValue::Layout(None),
+                value: DocumentValue::Layout(Some(std::collections::BTreeMap::from([(
+                    "CenterX".into(),
+                    3.,
+                )]))),
+            })?;
+            edit.edit_scene(SceneEdit::Patch {
+                id: id.clone(),
+                expected: SceneFieldValue::Label("Before".into()),
+                value: SceneFieldValue::Label("After".into()),
+                clear_glue_pairs: false,
+            })
+        })?;
+        document.consume_authoring_receipt(&receipt, false);
+        assert_eq!(document.canvas_topology().index.name(&object), "After");
+        assert_eq!(document.object_index().get(&object).unwrap().name, "After");
+        assert_eq!(before.index.name(&object), "Before");
+        assert_eq!(index.get(&object).unwrap().name, "Before");
+        assert!(before.same_geometry(&document.canvas_topology()));
+        document.undo()?;
+        assert_eq!(document.canvas_topology().index.name(&object), "Before");
+        document.redo()?;
+        assert_eq!(document.canvas_topology().index.name(&object), "After");
+        assert!(before.same_geometry(&document.canvas_topology()));
+        assert!(document.session.drain_events().is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn mixed_metadata_and_organization_move_refresh_canvas_parentage() -> anyhow::Result<()> {
+        let mut document = Document::new_blank()?;
+        let mesh = Uuid::new_v4().to_string();
+        let part = Uuid::new_v4().to_string();
+        document.session.edit("Scene", None, |edit| {
+            edit.create_part(kasane_core::Part {
+                id: part.clone(),
+                ..Default::default()
+            })?;
+            edit.create_mesh(kasane_core::Mesh {
+                id: mesh.clone(),
+                ..Default::default()
+            })
+        })?;
+        document.after_history(true);
+        let object = ObjectRef::new(ObjectKind::Mesh, &mesh);
+        let previous = document.canvas_topology();
+        let (_, receipt) = document.session.edit("Move and layout", None, |edit| {
+            edit.edit_document(DocumentAuthoringEdit::Patch {
+                expected: DocumentValue::Layout(None),
+                value: DocumentValue::Layout(Some(Default::default())),
+            })?;
+            edit.edit_organization(kasane_sdk::OrganizationEdit::Move {
+                ids: vec![mesh.clone()],
+                destination: kasane_sdk::OrganizationCollection::PartMembers {
+                    part_id: Some(part.clone()),
+                },
+                before: None,
+            })
+        })?;
+        document.consume_authoring_receipt(&receipt, false);
+        assert_eq!(
+            document
+                .canvas_topology()
+                .index
+                .get(&object)
+                .unwrap()
+                .part_id,
+            part
+        );
+        assert!(previous.index.get(&object).unwrap().part_id.is_empty());
+        document.undo()?;
+        assert!(
+            document
+                .canvas_topology()
+                .index
+                .get(&object)
+                .unwrap()
+                .part_id
+                .is_empty()
+        );
+        document.redo()?;
+        assert_eq!(
+            document
+                .canvas_topology()
+                .index
+                .get(&object)
+                .unwrap()
+                .part_id,
+            part
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn physics_topology_does_not_rebuild_canvas_geometry() -> anyhow::Result<()> {
+        let mut document = Document::new_blank()?;
+        let topology = document.canvas_topology();
+        let plan =
+            document.plan_physics_authoring(kasane_core::document::PhysicsEdit::CreateGroup {
+                asset_id: Uuid::new_v4().to_string(),
+                id: Uuid::new_v4().to_string(),
+                name: "Physics".into(),
+                before: None,
+            })?;
+        let result = document.execute_physics_authoring(&plan)?;
+        assert!(
+            result
+                .receipt
+                .changes
+                .categories
+                .contains(&ChangeCategory::Topology)
+        );
+        assert!(Arc::ptr_eq(&topology, &document.canvas_topology()));
+        document.undo()?;
+        assert!(Arc::ptr_eq(&topology, &document.canvas_topology()));
+        document.redo()?;
+        assert!(Arc::ptr_eq(&topology, &document.canvas_topology()));
+        Ok(())
     }
 }
