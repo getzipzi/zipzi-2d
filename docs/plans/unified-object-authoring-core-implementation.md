@@ -1290,3 +1290,62 @@ cargo check --locked -p kasane-editor
 Python 首次筛选在 CPU 14 项通过后，因 inspection 无匹配用例返回退出码 5；补充该套
 检查的实际用例筛选后重跑通过。未运行完整 workspace、原生截图、真实模型性能或
 完整 CMO3/MOC3 授权模型往返；这些结果不包含在本轮通过声明中。
+
+
+### C5 适配层模板代码重构（2026-10-22）
+
+先将两轮审查修复提交为 kasane-2d `f23db9c`、kasane-editor `ee4c007`，再进行本轮
+重构。公共 API、错误分类和领域规划规则保持原有行为，提取重复执行步骤：
+
+- Editor：Document 共用候选手势检查；Editor 共用活动文档、busy/exiting 和 Timeline
+  检查；DocumentSession 共用操作成功后的动画协调。Pose 仍要求 Animation 工作区。
+- Editor 发布：七处投影缓存更新共用 revision 检查、写时复制、缓存版本推进和事件清理。
+  各域决定哪些属性可以原地刷新；刷新失败仍保留旧版本，下一次读取重建索引。
+- SDK：七个 C5 计划入口共用版本检查，过期计划中止整个候选事务；十二个原生应用路径
+  共用 ChangeSet 记录和退役身份追踪。Pose／Organization 的身份不变补丁仍跳过全量 ID
+  收集；场景成本、取消和资源请求处理仍在各域保持原顺序。
+- Python：十一个发布入口共用 session 锁、SDK 错误转换和版本返回；锁前、锁后均检查
+  active edit，保留等待锁期间可能启动编辑的保护。
+
+生产源码合计净减少 199 行（不含新增测试与本文）。没有引入通用领域枚举或生成全部
+领域 API 的宏。发布分类的 `*_only` 条件和各域选择建议尚未统一；它们包含真实的领域
+差异，本轮只合并执行步骤，不改变混合 ChangeSet 的分类策略。
+
+验证：SDK 原定向 189 项、Editor 原定向 82 项、Python CPU 14 项及 inspection 1 项
+均通过。另新增并单独通过三项边界回归：SDK 过期资源计划回滚先前候选修改；Editor
+活动 Timeline 手势拒绝资源发布且取消后原计划可执行；Python 活动 edit 拒绝发布且
+取消后原计划可执行。两仓格式检查与 diff 空白检查通过。未运行完整 workspace、
+原生截图和真实模型性能测试。
+
+### C5 模板收敛补充核对（2026-10-22）
+
+保留上一节已有的未提交重构，在其基础上继续收敛：
+
+- Binding、Expression、Motion、Physics 适配器复用 Document 手势检查；Binding、
+  Motion、Physics 的执行复用 DocumentSession 动画协调。原有 Modeling／Animation
+  工作区要求，以及规划和执行的检查时机保持不变。
+- 发布分类共用变更实体迭代和非空全集判定，减少重复的 `any`／`all` 条件。
+  保留各域集合、引用、full invalidation 条件和分支优先级；空集合仍按原策略处理。
+- SDK 八个字段地址入口共用身份验证和过期错误处理。领域继续提供各自的 epoch、
+  owner 和字段值判定；先检查全部捕获句柄，再求值过期条件，保留错误优先级。
+- Part 解散的 enabled／Binding／Offscreen／BlendBinding 状态判定由 core 的
+  `part_dissolve_state_representable` 统一提供，SDK capability 和实际规划共用。
+  此判定只覆盖自身状态，引用、锁与绘制顺序证明仍由原规划路径执行。
+
+新增资源字段地址回归：改名与 Undo 不复活旧地址；同 UUID 删除重建优先报告
+`STALE_HANDLE`；重新捕获的地址可以提交。既有 Part 解散回归增加 capability 与
+实际规划在普通／禁用 Part 上的一致性断言。
+
+相对本次开始时的工作区，生产源码继续净减少 149 行；两仓当前未提交重构相对 HEAD
+累计净减少 348 行，不含测试及文档。没有删除领域规则或引入生成式 API 框架。
+
+验证（本次实际执行）：
+
+- `cargo test --locked -p kasane-sdk --test integration -- authoring scene_`：191 通过。
+- `cargo test --locked -p editor-core --test integration -- authoring scene_ sorting:: properties::`：83 通过。
+- `./tools/test.sh python -- -k pose -k organization -k scene -k reference -k resource -k attachment -k document -k saved_mapping`：当前 Debug 扩展，CPU 15、inspection 1 通过。
+- 两仓 `cargo fmt --all -- --check`、`git diff --check` 通过。
+
+Python 首次把多个关键词写成单个 `or` 表达式；unittest 不支持该筛选语法，因此零项
+匹配并返回退出码 5。改为重复 `-k` 后上述检查全部通过。未运行完整 workspace、
+原生截图或真实模型性能验收。

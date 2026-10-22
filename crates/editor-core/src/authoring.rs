@@ -65,3 +65,44 @@ pub use references::ReferenceAuthoringCapabilities;
 mod resources;
 
 pub use resources::ResourceAuthoringCapabilities;
+
+impl Document {
+    fn ensure_authoring_idle(&self) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.pending.is_none(),
+            "Finish the active editor gesture first"
+        );
+        Ok(())
+    }
+}
+
+impl crate::Editor {
+    fn ensure_authoring_target(&self, id: crate::DocumentId, context: &str) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.active_id() == Some(id) && !self.is_busy() && !self.exiting(),
+            "{context} context changed"
+        );
+        self.active_session().unwrap().ensure_authoring_idle()
+    }
+}
+
+impl crate::DocumentSession {
+    fn ensure_authoring_idle(&self) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.animation.timeline.edit.is_none(),
+            "Finish the active Timeline gesture first"
+        );
+        Ok(())
+    }
+
+    /// Reconcile playback and Timeline only after a successful document operation.
+    fn execute_authoring(
+        &mut self,
+        operation: impl FnOnce(&mut Document) -> anyhow::Result<OperationResult>,
+    ) -> anyhow::Result<OperationResult> {
+        self.ensure_authoring_idle()?;
+        let result = operation(&mut self.document)?;
+        self.reconcile_animation();
+        Ok(result)
+    }
+}

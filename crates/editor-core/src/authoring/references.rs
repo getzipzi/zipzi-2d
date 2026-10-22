@@ -1,6 +1,6 @@
 //! Editor session checks around the native reference authoring rules.
 use super::*;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_sdk::{
     ReferenceCapabilities, ReferenceCollection, ReferenceEdit, ReferenceEditPlan,
     ReferenceFieldAddress, ReferenceFields, ReferenceSelectionAddress, ReferenceSelectionField,
@@ -66,10 +66,7 @@ impl Document {
         a: &ReferenceFieldAddress,
         f: ReferenceFields,
     ) -> Result<ReferenceEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_reference_field_patch(a, f)?)
     }
     pub fn plan_reference_selection_patch(
@@ -77,27 +74,18 @@ impl Document {
         a: &ReferenceSelectionAddress,
         targets: Vec<String>,
     ) -> Result<ReferenceEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_reference_selection_patch(a, targets)?)
     }
     pub fn plan_reference_authoring(&self, e: ReferenceEdit) -> Result<ReferenceEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_reference_edit(e)?)
     }
     pub fn execute_reference_authoring(
         &mut self,
         p: &ReferenceEditPlan,
     ) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_reference_plan(p)?;
         let suggested_selection = receipt
             .changes
@@ -118,28 +106,12 @@ impl Document {
     }
 }
 impl crate::Editor {
-    fn ensure_reference_target(&self, id: crate::DocumentId) -> Result<()> {
-        ensure!(
-            self.active_id() == Some(id) && !self.is_busy() && !self.exiting(),
-            "Reference context changed"
-        );
-        ensure!(
-            self.active_session()
-                .unwrap()
-                .animation
-                .timeline
-                .edit
-                .is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        Ok(())
-    }
     pub fn plan_reference_authoring(
         &self,
         id: crate::DocumentId,
         e: ReferenceEdit,
     ) -> Result<ReferenceEditPlan> {
-        self.ensure_reference_target(id)?;
+        self.ensure_authoring_target(id, "Reference")?;
         self.document().unwrap().plan_reference_authoring(e)
     }
     pub fn execute_reference_authoring(
@@ -147,10 +119,9 @@ impl crate::Editor {
         id: crate::DocumentId,
         p: &ReferenceEditPlan,
     ) -> Result<OperationResult> {
-        self.ensure_reference_target(id)?;
-        let s = self.active_session_mut().unwrap();
-        let result = s.document.execute_reference_authoring(p)?;
-        s.reconcile_animation();
-        Ok(result)
+        self.ensure_authoring_target(id, "Reference")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_reference_authoring(p))
     }
 }

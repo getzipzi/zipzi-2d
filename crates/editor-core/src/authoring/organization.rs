@@ -1,6 +1,6 @@
 //! Session coordination only. Collection rules and copy/delete closures live in SDK.
 use super::*;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_sdk::{
     OrganizationAddress, OrganizationCapabilities, OrganizationEdit, OrganizationEditPlan,
 };
@@ -51,20 +51,14 @@ impl Document {
         &self,
         intent: OrganizationEdit,
     ) -> Result<OrganizationEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_organization_edit(intent)?)
     }
     pub fn execute_organization_authoring(
         &mut self,
         plan: &OrganizationEditPlan,
     ) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_organization_plan(plan)?;
         let suggested_selection = receipt
             .changes
@@ -130,28 +124,12 @@ impl Document {
     }
 }
 impl crate::Editor {
-    fn ensure_organization_target(&self, id: crate::DocumentId) -> Result<()> {
-        ensure!(
-            self.active_id() == Some(id) && !self.is_busy() && !self.exiting(),
-            "Organization context changed"
-        );
-        ensure!(
-            self.active_session()
-                .unwrap()
-                .animation
-                .timeline
-                .edit
-                .is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        Ok(())
-    }
     pub fn plan_organization_authoring(
         &self,
         id: crate::DocumentId,
         intent: OrganizationEdit,
     ) -> Result<OrganizationEditPlan> {
-        self.ensure_organization_target(id)?;
+        self.ensure_authoring_target(id, "Organization")?;
         self.document().unwrap().plan_organization_authoring(intent)
     }
     pub fn execute_organization_authoring(
@@ -159,10 +137,9 @@ impl crate::Editor {
         id: crate::DocumentId,
         plan: &OrganizationEditPlan,
     ) -> Result<OperationResult> {
-        self.ensure_organization_target(id)?;
-        let session = self.active_session_mut().unwrap();
-        let result = session.document.execute_organization_authoring(plan)?;
-        session.reconcile_animation();
-        Ok(result)
+        self.ensure_authoring_target(id, "Organization")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_organization_authoring(plan))
     }
 }

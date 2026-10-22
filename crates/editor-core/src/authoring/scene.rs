@@ -1,6 +1,6 @@
 //! Editor session coordination; scene rules and copy closures live in the SDK.
 use super::*;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_sdk::{
     DrawingGroupAddress, SceneCapabilities, SceneEdit, SceneEditPlan, SceneField,
     SceneFieldAddress, SceneFieldValue,
@@ -56,10 +56,7 @@ impl Document {
         value: SceneFieldValue,
         clear_pairs: bool,
     ) -> Result<SceneEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self
             .session
             .plan_scene_field_patch(address, value, clear_pairs)?)
@@ -69,24 +66,15 @@ impl Document {
         address: &DrawingGroupAddress,
         range: [i32; 2],
     ) -> Result<SceneEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_drawing_range_patch(address, range)?)
     }
     pub fn plan_scene_authoring(&self, intent: SceneEdit) -> Result<SceneEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_scene_edit(intent)?)
     }
     pub fn execute_scene_authoring(&mut self, plan: &SceneEditPlan) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_scene_plan(plan)?;
         let suggested_selection = receipt
             .changes
@@ -117,28 +105,12 @@ impl Document {
     }
 }
 impl crate::Editor {
-    fn ensure_scene_target(&self, id: crate::DocumentId) -> Result<()> {
-        ensure!(
-            self.active_id() == Some(id) && !self.is_busy() && !self.exiting(),
-            "Scene context changed"
-        );
-        ensure!(
-            self.active_session()
-                .unwrap()
-                .animation
-                .timeline
-                .edit
-                .is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        Ok(())
-    }
     pub fn plan_scene_authoring(
         &self,
         id: crate::DocumentId,
         intent: SceneEdit,
     ) -> Result<SceneEditPlan> {
-        self.ensure_scene_target(id)?;
+        self.ensure_authoring_target(id, "Scene")?;
         self.document().unwrap().plan_scene_authoring(intent)
     }
     pub fn execute_scene_authoring(
@@ -146,10 +118,9 @@ impl crate::Editor {
         id: crate::DocumentId,
         plan: &SceneEditPlan,
     ) -> Result<OperationResult> {
-        self.ensure_scene_target(id)?;
-        let session = self.active_session_mut().unwrap();
-        let result = session.document.execute_scene_authoring(plan)?;
-        session.reconcile_animation();
-        Ok(result)
+        self.ensure_authoring_target(id, "Scene")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_scene_authoring(plan))
     }
 }

@@ -1,6 +1,6 @@
 //! Session coordination around the SDK's dedicated content rules.
 use super::*;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_sdk::{
     SceneContentAddress, SceneContentCapabilities, SceneContentEdit, SceneContentEditPlan,
     SceneContentTarget, SceneContentValue,
@@ -45,27 +45,18 @@ impl Document {
         address: &SceneContentAddress,
         value: SceneContentValue,
     ) -> Result<SceneContentEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_scene_content_patch(address, value)?)
     }
     pub fn plan_scene_content(&self, intent: SceneContentEdit) -> Result<SceneContentEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_scene_content(intent)?)
     }
     pub fn execute_scene_content(
         &mut self,
         plan: &SceneContentEditPlan,
     ) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_scene_content_plan(plan)?;
         if receipt.changed {
             self.pristine_blank = false;
@@ -87,28 +78,12 @@ impl Document {
     }
 }
 impl crate::Editor {
-    fn ensure_content_target(&self, id: crate::DocumentId) -> Result<()> {
-        ensure!(
-            self.active_id() == Some(id) && !self.is_busy() && !self.exiting(),
-            "Content context changed"
-        );
-        ensure!(
-            self.active_session()
-                .unwrap()
-                .animation
-                .timeline
-                .edit
-                .is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        Ok(())
-    }
     pub fn plan_scene_content(
         &self,
         id: crate::DocumentId,
         intent: SceneContentEdit,
     ) -> Result<SceneContentEditPlan> {
-        self.ensure_content_target(id)?;
+        self.ensure_authoring_target(id, "Content")?;
         self.document().unwrap().plan_scene_content(intent)
     }
     pub fn execute_scene_content(
@@ -116,10 +91,9 @@ impl crate::Editor {
         id: crate::DocumentId,
         plan: &SceneContentEditPlan,
     ) -> Result<OperationResult> {
-        self.ensure_content_target(id)?;
-        let session = self.active_session_mut().unwrap();
-        let result = session.document.execute_scene_content(plan)?;
-        session.reconcile_animation();
-        Ok(result)
+        self.ensure_authoring_target(id, "Content")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_scene_content(plan))
     }
 }

@@ -1,6 +1,6 @@
 //! Thin Editor adapter; Pose ownership and execution rules stay in SDK/core.
 use super::*;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_sdk::{PoseCapabilities, PoseEdit, PoseEditPlan, PoseFieldAddress, PoseFields};
 #[derive(Debug, Clone)]
 pub struct PoseAuthoringCapabilities {
@@ -29,17 +29,11 @@ impl Document {
         })
     }
     pub fn plan_pose_authoring(&self, intent: PoseEdit) -> Result<PoseEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_pose_edit(intent)?)
     }
     pub fn execute_pose_authoring(&mut self, plan: &PoseEditPlan) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_pose_plan(plan)?;
         let map = |kind| match kind {
             kasane_sdk::ObjectKind::Pose => Some(ObjectKind::Pose),
@@ -93,10 +87,7 @@ impl Document {
         address: &PoseFieldAddress,
         fields: PoseFields,
     ) -> Result<PoseEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_pose_field_patch(address, fields)?)
     }
 }
@@ -115,13 +106,8 @@ impl crate::Editor {
         plan: &PoseEditPlan,
     ) -> Result<OperationResult> {
         self.ensure_animation_target(document)?;
-        let session = self.active_session_mut().unwrap();
-        ensure!(
-            session.animation.timeline.edit.is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        let result = session.document.execute_pose_authoring(plan)?;
-        session.reconcile_animation();
-        Ok(result)
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_pose_authoring(plan))
     }
 }

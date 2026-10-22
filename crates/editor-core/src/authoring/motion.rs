@@ -1,23 +1,17 @@
 //! Editor adapters attach selection hints without activating playback.
 use super::*;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_core::document::{AttachmentEdit, MotionEdit};
 impl Document {
     pub fn plan_motion_authoring(&self, intent: MotionEdit) -> Result<kasane_sdk::MotionEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_motion_edit(intent)?)
     }
     pub fn execute_motion_authoring(
         &mut self,
         plan: &kasane_sdk::MotionEditPlan,
     ) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_motion_plan(plan)?;
         Ok(self.motion_operation_result(receipt))
     }
@@ -25,20 +19,14 @@ impl Document {
         &self,
         intent: AttachmentEdit,
     ) -> Result<kasane_sdk::AttachmentEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_attachment_edit(intent)?)
     }
     pub fn execute_attachment_authoring(
         &mut self,
         plan: &kasane_sdk::AttachmentEditPlan,
     ) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_attachment_plan(plan)?;
         Ok(self.motion_operation_result(receipt))
     }
@@ -88,13 +76,8 @@ impl crate::Editor {
         plan: &kasane_sdk::MotionEditPlan,
     ) -> Result<OperationResult> {
         self.ensure_animation_target(document)?;
-        let session = self.active_session_mut().unwrap();
-        ensure!(
-            session.animation.timeline.edit.is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        let result = session.document.execute_motion_authoring(plan)?;
-        session.reconcile_animation();
-        Ok(result)
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_motion_authoring(plan))
     }
 }

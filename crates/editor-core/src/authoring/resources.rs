@@ -1,6 +1,6 @@
 //! Resource loading and metadata plans attach editor context to SDK authority.
 use super::*;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_sdk::{
     AttachmentLoadToken, DocumentAuthoringEdit, DocumentEditPlan, ImageLoadToken, ResourceEdit,
     ResourceEditPlan,
@@ -11,13 +11,6 @@ pub struct ResourceAuthoringCapabilities {
     pub session_reason: Option<AuthoringSessionReason>,
 }
 impl Document {
-    fn ensure_resource_idle(&self) -> Result<()> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
-        Ok(())
-    }
     pub fn resource_collection(&self) -> Result<Vec<ObjectRef>> {
         Ok(self
             .session
@@ -58,7 +51,7 @@ impl Document {
         a: &kasane_sdk::AttachmentPathAddress,
         path: String,
     ) -> Result<kasane_sdk::AttachmentEditPlan> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_attachment_path_patch(a, path)?)
     }
     pub fn document_field_capability(
@@ -73,11 +66,11 @@ impl Document {
         )
     }
     pub fn plan_resource_authoring(&self, intent: ResourceEdit) -> Result<ResourceEditPlan> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_resource_edit(intent)?)
     }
     pub fn execute_resource_authoring(&mut self, p: &ResourceEditPlan) -> Result<OperationResult> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         let mut edit = self
             .session
             .begin_owned_edit("Edit resource", Some(p.version()))?;
@@ -92,11 +85,11 @@ impl Document {
         a: &kasane_sdk::ResourceNameAddress,
         name: String,
     ) -> Result<ResourceEditPlan> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_resource_name_patch(a, name)?)
     }
     pub fn image_load_token(&self, id: &str) -> Result<ImageLoadToken> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         Ok(self.session.image_load_token(id)?)
     }
     pub fn replace_image_content(
@@ -104,7 +97,7 @@ impl Document {
         t: &ImageLoadToken,
         c: Option<kasane_core::ImageContent>,
     ) -> Result<OperationResult> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         let edit = self.session.begin_image_content_edit(t, c)?;
         self.commit_resource_edit(edit)
     }
@@ -113,13 +106,13 @@ impl Document {
         t: &ImageLoadToken,
         image: &kasane_sdk::PreparedImageContent,
     ) -> Result<OperationResult> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         let receipt = self.session.replace_prepared_image_content(t, image)?;
         self.refresh_textures()?;
         Ok(self.resource_operation_result(receipt))
     }
     pub fn attachment_load_token(&self, id: &str) -> Result<AttachmentLoadToken> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         Ok(self.session.attachment_load_token(id)?)
     }
     pub fn replace_attachment_content(
@@ -127,7 +120,7 @@ impl Document {
         t: &AttachmentLoadToken,
         b: Option<Arc<Vec<u8>>>,
     ) -> Result<OperationResult> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         let receipt = self.session.replace_attachment_content(t, b)?;
         Ok(self.resource_operation_result(receipt))
     }
@@ -135,11 +128,11 @@ impl Document {
         &self,
         intent: DocumentAuthoringEdit,
     ) -> Result<DocumentEditPlan> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_document_edit(intent)?)
     }
     pub fn execute_document_authoring(&mut self, p: &DocumentEditPlan) -> Result<OperationResult> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_document_plan(p)?;
         Ok(self.resource_operation_result(receipt))
     }
@@ -154,7 +147,7 @@ impl Document {
         a: &kasane_sdk::DocumentFieldAddress,
         v: kasane_sdk::DocumentValue,
     ) -> Result<DocumentEditPlan> {
-        self.ensure_resource_idle()?;
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_document_field_patch(a, v)?)
     }
     fn resource_operation_result(&mut self, receipt: kasane_sdk::EditReceipt) -> OperationResult {
@@ -196,28 +189,12 @@ impl Document {
     }
 }
 impl crate::Editor {
-    fn ensure_resource_target(&self, id: crate::DocumentId) -> Result<()> {
-        ensure!(
-            self.active_id() == Some(id) && !self.is_busy() && !self.exiting(),
-            "Resource context changed"
-        );
-        ensure!(
-            self.active_session()
-                .unwrap()
-                .animation
-                .timeline
-                .edit
-                .is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        Ok(())
-    }
     pub fn plan_resource_authoring(
         &self,
         id: crate::DocumentId,
         intent: ResourceEdit,
     ) -> Result<ResourceEditPlan> {
-        self.ensure_resource_target(id)?;
+        self.ensure_authoring_target(id, "Resource")?;
         self.document().unwrap().plan_resource_authoring(intent)
     }
     pub fn execute_resource_authoring(
@@ -225,18 +202,17 @@ impl crate::Editor {
         id: crate::DocumentId,
         p: &ResourceEditPlan,
     ) -> Result<OperationResult> {
-        self.ensure_resource_target(id)?;
-        let s = self.active_session_mut().unwrap();
-        let r = s.document.execute_resource_authoring(p)?;
-        s.reconcile_animation();
-        Ok(r)
+        self.ensure_authoring_target(id, "Resource")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_resource_authoring(p))
     }
     pub fn plan_document_authoring(
         &self,
         id: crate::DocumentId,
         intent: DocumentAuthoringEdit,
     ) -> Result<DocumentEditPlan> {
-        self.ensure_resource_target(id)?;
+        self.ensure_authoring_target(id, "Resource")?;
         self.document().unwrap().plan_document_authoring(intent)
     }
     pub fn execute_document_authoring(
@@ -244,14 +220,13 @@ impl crate::Editor {
         id: crate::DocumentId,
         p: &DocumentEditPlan,
     ) -> Result<OperationResult> {
-        self.ensure_resource_target(id)?;
-        let s = self.active_session_mut().unwrap();
-        let r = s.document.execute_document_authoring(p)?;
-        s.reconcile_animation();
-        Ok(r)
+        self.ensure_authoring_target(id, "Resource")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_document_authoring(p))
     }
     pub fn image_load_token(&self, id: crate::DocumentId, asset: &str) -> Result<ImageLoadToken> {
-        self.ensure_resource_target(id)?;
+        self.ensure_authoring_target(id, "Resource")?;
         self.document().unwrap().image_load_token(asset)
     }
     pub fn replace_image_content(
@@ -260,11 +235,10 @@ impl crate::Editor {
         t: &ImageLoadToken,
         c: Option<kasane_core::ImageContent>,
     ) -> Result<OperationResult> {
-        self.ensure_resource_target(id)?;
-        let s = self.active_session_mut().unwrap();
-        let r = s.document.replace_image_content(t, c)?;
-        s.reconcile_animation();
-        Ok(r)
+        self.ensure_authoring_target(id, "Resource")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.replace_image_content(t, c))
     }
     pub fn replace_prepared_image_content(
         &mut self,
@@ -272,18 +246,17 @@ impl crate::Editor {
         t: &ImageLoadToken,
         image: &kasane_sdk::PreparedImageContent,
     ) -> Result<OperationResult> {
-        self.ensure_resource_target(id)?;
-        let s = self.active_session_mut().unwrap();
-        let r = s.document.replace_prepared_image_content(t, image)?;
-        s.reconcile_animation();
-        Ok(r)
+        self.ensure_authoring_target(id, "Resource")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.replace_prepared_image_content(t, image))
     }
     pub fn attachment_load_token(
         &self,
         id: crate::DocumentId,
         asset: &str,
     ) -> Result<AttachmentLoadToken> {
-        self.ensure_resource_target(id)?;
+        self.ensure_authoring_target(id, "Resource")?;
         self.document().unwrap().attachment_load_token(asset)
     }
     pub fn replace_attachment_content(
@@ -292,10 +265,9 @@ impl crate::Editor {
         t: &AttachmentLoadToken,
         b: Option<Arc<Vec<u8>>>,
     ) -> Result<OperationResult> {
-        self.ensure_resource_target(id)?;
-        let s = self.active_session_mut().unwrap();
-        let r = s.document.replace_attachment_content(t, b)?;
-        s.reconcile_animation();
-        Ok(r)
+        self.ensure_authoring_target(id, "Resource")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.replace_attachment_content(t, b))
     }
 }

@@ -25,6 +25,24 @@ impl Document {
         }
     }
 
+    /// Patch a cached projection only at its current revision. A failed patch
+    /// leaves the old revision in place so the next read rebuilds the index.
+    fn refresh_authoring_projection(
+        &mut self,
+        refresh: impl FnOnce(&mut crate::ObjectIndex, &kasane_core::Document) -> bool,
+    ) {
+        let previous = self.projection_revision;
+        self.invalidate_projection(false);
+        let mut cache = self.object_index.lock().unwrap();
+        if let Some((revision, index)) = cache.as_mut() {
+            if *revision == previous && refresh(Arc::make_mut(index), self.model()) {
+                *revision = self.projection_revision;
+            }
+        }
+        drop(cache);
+        self.session.drain_events();
+    }
+
     pub(in crate::document) fn consume_authoring_receipt(
         &mut self,
         receipt: &EditReceipt,
@@ -34,18 +52,18 @@ impl Document {
             return;
         }
         let changes = &receipt.changes;
-        let resources_only = changes
-            .created
-            .iter()
-            .chain(&changes.deleted)
-            .chain(&changes.modified)
-            .any(|e| e.kind == SdkKind::Asset)
-            && changes
+        let entities = || {
+            changes
                 .created
                 .iter()
                 .chain(&changes.deleted)
                 .chain(&changes.modified)
-                .all(|e| e.kind == SdkKind::Asset);
+        };
+        let only_entities = |matches: fn(SdkKind) -> bool| {
+            let mut entities = entities().peekable();
+            entities.peek().is_some() && entities.all(|e| matches(e.kind))
+        };
+        let resources_only = only_entities(|kind| kind == SdkKind::Asset);
         let document_only = changes
             .document_fields
             .iter()
@@ -83,26 +101,18 @@ impl Document {
                     )
                 });
             if labels || document_fields_only {
-                let previous_revision = self.projection_revision;
-                self.invalidate_projection(false);
                 let ids = changes
                     .modified
                     .iter()
                     .map(|e| e.id.clone())
                     .collect::<Vec<_>>();
-                let mut cache = self.object_index.lock().unwrap();
-                if let Some((revision, index)) = cache.as_mut() {
-                    if *revision == previous_revision
-                        && if labels {
-                            Arc::make_mut(index).refresh_resource_labels(self.model(), &ids)
-                        } else {
-                            Arc::make_mut(index).refresh_document_metadata(self.model())
-                        }
-                    {
-                        *revision = self.projection_revision;
+                self.refresh_authoring_projection(|index, model| {
+                    if labels {
+                        index.refresh_resource_labels(model, &ids)
+                    } else {
+                        index.refresh_document_metadata(model)
                     }
-                }
-                self.session.drain_events();
+                });
             } else {
                 self.after_history(changes.categories.contains(&ChangeCategory::Topology));
             }
@@ -131,19 +141,7 @@ impl Document {
                     | SdkKind::BindingSample
             )
         };
-        let scene_only = !changes.full_invalidation
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .any(|e| scene_kinds(e.kind))
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .all(|e| scene_kinds(e.kind));
+        let scene_only = !changes.full_invalidation && only_entities(scene_kinds);
         if scene_only {
             let previous_input = self.animation_input_revision;
             let labels = !changes
@@ -160,8 +158,6 @@ impl Document {
                     .all(|f| f.field == kasane_sdk::SceneField::Label)
                 && !changes.categories.contains(&ChangeCategory::EditorState);
             if labels {
-                let previous = self.projection_revision;
-                self.invalidate_projection(false);
                 let references: Vec<_> = changes
                     .modified
                     .iter()
@@ -202,23 +198,16 @@ impl Document {
                         }
                     })
                     .collect();
-                let mut cache = self.object_index.lock().unwrap();
-                if let Some((revision, index)) = cache.as_mut() {
-                    if *revision == previous
-                        && references
-                            .iter()
-                            .all(|r| Arc::make_mut(index).refresh_scene_label(self.model(), r))
-                    {
-                        *revision = self.projection_revision;
-                    }
-                }
-                drop(cache);
+                self.refresh_authoring_projection(|index, model| {
+                    references
+                        .iter()
+                        .all(|r| index.refresh_scene_label(model, r))
+                });
                 if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
                     for (object, name) in names {
                         Arc::make_mut(topology).rename(&object, &name);
                     }
                 }
-                self.session.drain_events();
             } else {
                 let structural = changes
                     .created
@@ -250,19 +239,7 @@ impl Document {
                     | SdkKind::CdiCombinedMember
             )
         };
-        let reference_only = !changes.full_invalidation
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .any(|e| reference_kinds(e.kind))
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .all(|e| reference_kinds(e.kind));
+        let reference_only = !changes.full_invalidation && only_entities(reference_kinds);
         if reference_only {
             let previous_input = self.animation_input_revision;
             let labels = changes.created.is_empty()
@@ -279,17 +256,9 @@ impl Document {
                     .iter()
                     .map(|f| f.entity.id.clone())
                     .collect::<Vec<_>>();
-                let previous = self.projection_revision;
-                self.invalidate_projection(false);
-                let mut cache = self.object_index.lock().unwrap();
-                if let Some((revision, index)) = cache.as_mut() {
-                    if *revision == previous
-                        && Arc::make_mut(index).refresh_reference_labels(self.model(), &ids)
-                    {
-                        *revision = self.projection_revision;
-                    }
-                }
-                self.session.drain_events();
+                self.refresh_authoring_projection(|index, model| {
+                    index.refresh_reference_labels(model, &ids)
+                });
             } else {
                 self.after_history(false);
             }
@@ -307,33 +276,23 @@ impl Document {
                 .iter()
                 .any(|c| matches!(c, kasane_sdk::CollectionRef::Organization { .. }))
                 || !changes.organization_references.is_empty()
-                || changes
-                    .created
-                    .iter()
-                    .chain(&changes.deleted)
-                    .chain(&changes.modified)
-                    .any(|e| {
-                        matches!(
-                            e.kind,
-                            SdkKind::Parameter | SdkKind::CdiParameterGroup | SdkKind::Part
-                        )
-                    }))
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .all(|e| {
+                || entities().any(|e| {
                     matches!(
                         e.kind,
-                        SdkKind::Parameter
-                            | SdkKind::CdiParameterGroup
-                            | SdkKind::Part
-                            | SdkKind::Mesh
-                            | SdkKind::Transform
-                            | SdkKind::Offscreen
+                        SdkKind::Parameter | SdkKind::CdiParameterGroup | SdkKind::Part
                     )
-                });
+                }))
+            && entities().all(|e| {
+                matches!(
+                    e.kind,
+                    SdkKind::Parameter
+                        | SdkKind::CdiParameterGroup
+                        | SdkKind::Part
+                        | SdkKind::Mesh
+                        | SdkKind::Transform
+                        | SdkKind::Offscreen
+                )
+            });
         if organization_only {
             let previous = self.animation_input_revision;
             let payload_only = changes.created.is_empty()
@@ -349,24 +308,13 @@ impl Document {
                     )
                 })
             {
-                let previous_revision = self.projection_revision;
-                self.invalidate_projection(false);
-                let mut cache = self.object_index.lock().unwrap();
-                if let Some((revision, index)) = cache.as_mut() {
-                    if *revision == previous_revision
-                        && changes.modified.iter().all(|e| {
-                            Arc::make_mut(index).refresh_organization_properties(
-                                self.model(),
-                                e.kind,
-                                &e.id,
-                            )
-                        })
-                        && Arc::make_mut(index).refresh_organization_document(self.model())
-                    {
-                        *revision = self.projection_revision;
-                    }
-                }
-                drop(cache);
+                self.refresh_authoring_projection(|index, model| {
+                    changes
+                        .modified
+                        .iter()
+                        .all(|e| index.refresh_organization_properties(model, e.kind, &e.id))
+                        && index.refresh_organization_document(model)
+                });
                 let part_names: Vec<_> = changes
                     .modified
                     .iter()
@@ -383,7 +331,6 @@ impl Document {
                             .rename(&ObjectRef::new(ObjectKind::Part, &id), &name);
                     }
                 }
-                self.session.drain_events();
             } else {
                 let scene_changed = changes.created.iter().chain(&changes.deleted).any(|e| {
                     matches!(
@@ -407,28 +354,12 @@ impl Document {
             return;
         }
         let pose_only = !changes.full_invalidation
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .any(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Pose | SdkKind::PoseGroup | SdkKind::PoseEntry | SdkKind::PoseLink
-                    )
-                })
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .all(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Pose | SdkKind::PoseGroup | SdkKind::PoseEntry | SdkKind::PoseLink
-                    )
-                });
+            && only_entities(|kind| {
+                matches!(
+                    kind,
+                    SdkKind::Pose | SdkKind::PoseGroup | SdkKind::PoseEntry | SdkKind::PoseLink
+                )
+            });
         if pose_only {
             let previous = self.animation_input_revision;
             if changes.created.is_empty()
@@ -441,29 +372,21 @@ impl Document {
                     .iter()
                     .all(|e| matches!(e.kind, SdkKind::Pose | SdkKind::PoseGroup))
             {
-                let previous_revision = self.projection_revision;
-                self.invalidate_projection(false);
-                let mut cache = self.object_index.lock().unwrap();
-                if let Some((revision, index)) = cache.as_mut() {
-                    if *revision == previous_revision
-                        && changes.modified.iter().all(|e| {
-                            Arc::make_mut(index).refresh_pose_properties(
-                                self.model(),
-                                &ObjectRef::new(
-                                    if e.kind == SdkKind::Pose {
-                                        ObjectKind::Pose
-                                    } else {
-                                        ObjectKind::PoseGroup
-                                    },
-                                    &e.id,
-                                ),
-                            )
-                        })
-                    {
-                        *revision = self.projection_revision;
-                    }
-                }
-                self.session.drain_events();
+                self.refresh_authoring_projection(|index, model| {
+                    changes.modified.iter().all(|e| {
+                        index.refresh_pose_properties(
+                            model,
+                            &ObjectRef::new(
+                                if e.kind == SdkKind::Pose {
+                                    ObjectKind::Pose
+                                } else {
+                                    ObjectKind::PoseGroup
+                                },
+                                &e.id,
+                            ),
+                        )
+                    })
+                });
             } else {
                 self.after_history(false);
             }
@@ -476,36 +399,16 @@ impl Document {
             return;
         }
         let physics_only = !changes.full_invalidation
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .any(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Physics
-                            | SdkKind::PhysicsGroup
-                            | SdkKind::PhysicsInput
-                            | SdkKind::PhysicsOutput
-                            | SdkKind::PhysicsNode
-                    )
-                })
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .all(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Physics
-                            | SdkKind::PhysicsGroup
-                            | SdkKind::PhysicsInput
-                            | SdkKind::PhysicsOutput
-                            | SdkKind::PhysicsNode
-                    )
-                });
+            && only_entities(|kind| {
+                matches!(
+                    kind,
+                    SdkKind::Physics
+                        | SdkKind::PhysicsGroup
+                        | SdkKind::PhysicsInput
+                        | SdkKind::PhysicsOutput
+                        | SdkKind::PhysicsNode
+                )
+            });
         if physics_only {
             let previous = self.animation_input_revision;
             if changes.created.is_empty()
@@ -530,17 +433,9 @@ impl Document {
                     .collect::<std::collections::BTreeSet<_>>()
                     .into_iter()
                     .collect::<Vec<_>>();
-                let previous_revision = self.projection_revision;
-                self.invalidate_projection(false);
-                let mut cache = self.object_index.lock().unwrap();
-                if let Some((revision, index)) = cache.as_mut() {
-                    if *revision == previous_revision
-                        && Arc::make_mut(index).refresh_physics_properties(self.model(), &owners)
-                    {
-                        *revision = self.projection_revision;
-                    }
-                }
-                self.session.drain_events();
+                self.refresh_authoring_projection(|index, model| {
+                    index.refresh_physics_properties(model, &owners)
+                });
             } else {
                 self.after_history(false);
             }
@@ -558,23 +453,18 @@ impl Document {
                 .iter()
                 .all(|c| matches!(c, kasane_sdk::CollectionRef::Motion { .. }))
             && !changes.full_invalidation
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .all(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Motion
-                            | SdkKind::MotionGroup
-                            | SdkKind::MotionRegistration
-                            | SdkKind::MotionTrack
-                            | SdkKind::MotionKey
-                            | SdkKind::MotionEvent
-                            | SdkKind::Attachment
-                    )
-                })
+            && entities().all(|e| {
+                matches!(
+                    e.kind,
+                    SdkKind::Motion
+                        | SdkKind::MotionGroup
+                        | SdkKind::MotionRegistration
+                        | SdkKind::MotionTrack
+                        | SdkKind::MotionKey
+                        | SdkKind::MotionEvent
+                        | SdkKind::Attachment
+                )
+            })
             && (!changes.created.is_empty()
                 || !changes.deleted.is_empty()
                 || !changes.modified.is_empty()
@@ -593,28 +483,17 @@ impl Document {
                     )
                 })
             {
-                let previous_revision = self.projection_revision;
-                self.invalidate_projection(false);
-                let mut cache = self.object_index.lock().unwrap();
-                if let Some((revision, index)) = cache.as_mut() {
-                    if *revision == previous_revision
-                        && changes.modified.iter().all(|e| {
-                            let kind = match e.kind {
-                                SdkKind::Motion => ObjectKind::Motion,
-                                SdkKind::MotionGroup => ObjectKind::MotionGroup,
-                                SdkKind::MotionRegistration => ObjectKind::MotionRegistration,
-                                _ => unreachable!(),
-                            };
-                            Arc::make_mut(index).refresh_motion_properties(
-                                self.model(),
-                                &ObjectRef::new(kind, &e.id),
-                            )
-                        })
-                    {
-                        *revision = self.projection_revision;
-                    }
-                }
-                self.session.drain_events();
+                self.refresh_authoring_projection(|index, model| {
+                    changes.modified.iter().all(|e| {
+                        let kind = match e.kind {
+                            SdkKind::Motion => ObjectKind::Motion,
+                            SdkKind::MotionGroup => ObjectKind::MotionGroup,
+                            SdkKind::MotionRegistration => ObjectKind::MotionRegistration,
+                            _ => unreachable!(),
+                        };
+                        index.refresh_motion_properties(model, &ObjectRef::new(kind, &e.id))
+                    })
+                });
             } else {
                 self.after_history(false);
             }
@@ -633,14 +512,9 @@ impl Document {
                 || !changes.modified.is_empty()
                 || !changes.collections.is_empty()
                 || !changes.references.is_empty())
-            && changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .all(|entity| {
-                    matches!(entity.kind, SdkKind::Expression | SdkKind::ExpressionEntry)
-                });
+            && entities().all(|entity| {
+                matches!(entity.kind, SdkKind::Expression | SdkKind::ExpressionEntry)
+            });
         if expression_only
             && changes.created.is_empty()
             && changes.deleted.is_empty()

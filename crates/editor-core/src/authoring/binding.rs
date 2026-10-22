@@ -11,20 +11,14 @@ impl Document {
         address: &kasane_sdk::BindingFieldAddress,
         patch: kasane_sdk::BindingFieldPatch,
     ) -> Result<BindingEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_binding_field_patch(address, patch)?)
     }
     pub fn reparent_support(
         &self,
         edit: &kasane_sdk::ReparentEdit,
     ) -> Result<kasane_sdk::ReparentSupport> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.reparent_support(edit)?)
     }
     pub fn plan_binding_authoring_with_control(
@@ -32,26 +26,17 @@ impl Document {
         intent: BindingAuthoringEdit,
         control: &kasane_sdk::ConversionControl,
     ) -> Result<BindingEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self
             .session
             .plan_binding_authoring_with_control(intent, control)?)
     }
     pub fn plan_binding_authoring(&self, intent: BindingAuthoringEdit) -> Result<BindingEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_binding_authoring(intent)?)
     }
     pub fn execute_binding_authoring(&mut self, plan: &BindingEditPlan) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_binding_plan(plan)?;
         let selection: Vec<_> = receipt
             .changes
@@ -128,13 +113,8 @@ impl crate::Editor {
         plan: &BindingEditPlan,
     ) -> Result<OperationResult> {
         self.ensure_binding_authoring_target(document)?;
-        let session = self.active_session_mut().unwrap();
-        ensure!(
-            session.animation.timeline.edit.is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        let result = session.document.execute_binding_authoring(plan)?;
-        session.reconcile_animation();
-        Ok(result)
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_binding_authoring(plan))
     }
 }

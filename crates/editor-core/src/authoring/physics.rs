@@ -1,15 +1,12 @@
 use super::*;
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use kasane_core::document::PhysicsEdit;
 impl Document {
     pub fn plan_physics_authoring(
         &self,
         intent: PhysicsEdit,
     ) -> Result<kasane_sdk::PhysicsEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_physics_edit(intent)?)
     }
     pub fn physics_authoring_capabilities(
@@ -37,10 +34,7 @@ impl Document {
         &mut self,
         plan: &kasane_sdk::PhysicsEditPlan,
     ) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_physics_plan(plan)?;
         let selection = receipt
             .changes
@@ -86,13 +80,8 @@ impl crate::Editor {
         plan: &kasane_sdk::PhysicsEditPlan,
     ) -> Result<OperationResult> {
         self.ensure_animation_target(document)?;
-        let session = self.active_session_mut().unwrap();
-        ensure!(
-            session.animation.timeline.edit.is_none(),
-            "Finish the active Timeline gesture first"
-        );
-        let result = session.document.execute_physics_authoring(plan)?;
-        session.reconcile_animation();
-        Ok(result)
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|document| document.execute_physics_authoring(plan))
     }
 }

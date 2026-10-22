@@ -223,3 +223,45 @@ fn asynchronous_resource_completion_rejects_a_different_active_document() -> any
     editor.replace_image_content(first, &token, None)?;
     Ok(())
 }
+
+#[test]
+fn resource_execution_rejects_timeline_gesture_without_consuming_plan() -> anyhow::Result<()> {
+    let (document, _assets) = super::support::combined_animation_document()?;
+    let mut editor = super::support::editor_from_document(document);
+    let document_id = editor.active_id().unwrap();
+    editor.set_workspace(editor_core::WorkspaceKind::Animation)?;
+    let motion = editor.document().unwrap().motion_resources()[0]
+        .selection
+        .clone();
+    editor.select_motion(document_id, motion)?;
+    let asset = id();
+    let plan = editor.plan_resource_authoring(
+        document_id,
+        R::Create {
+            id: asset.clone(),
+            name: "New".into(),
+            before: None,
+        },
+    )?;
+    editor.begin_timeline_edit(document_id, "Pending gesture")?;
+    let history = editor.document().unwrap().history_lengths();
+    let generation = editor.document().unwrap().model_generation();
+    let error = editor
+        .execute_resource_authoring(document_id, &plan)
+        .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "Finish the active Timeline gesture first"
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+    assert_eq!(editor.document().unwrap().model_generation(), generation);
+    editor.cancel_timeline_edit();
+    let result = editor.execute_resource_authoring(document_id, &plan)?;
+    assert!(result.receipt.changed);
+    assert_eq!(
+        result.suggested_selection,
+        vec![ObjectRef::new(ObjectKind::Texture, &asset)]
+    );
+    assert!(editor.animation().unwrap().motion.is_some());
+    Ok(())
+}

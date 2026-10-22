@@ -25,20 +25,14 @@ impl Document {
         })
     }
     pub fn plan_expression_authoring(&self, intent: ExpressionEdit) -> Result<ExpressionEditPlan> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         Ok(self.session.plan_expression_edit(intent)?)
     }
     pub fn execute_expression_authoring(
         &mut self,
         plan: &ExpressionEditPlan,
     ) -> Result<OperationResult> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         let receipt = self.session.execute_expression_plan(plan)?;
         self.expression_operation_result(receipt)
     }
@@ -49,10 +43,7 @@ impl Document {
         &mut self,
         address: &ExpressionEntryAddress,
     ) -> Result<ExpressionEntryEditToken> {
-        ensure!(
-            self.pending.is_none(),
-            "Finish the active editor gesture first"
-        );
+        self.ensure_authoring_idle()?;
         self.session
             .plan_expression_entry_patch(address, address.expected().clone())?;
         let token = ExpressionEntryEditToken(Uuid::new_v4());
