@@ -177,18 +177,6 @@ sleep 1
 wait "$chain_profile_pid"
 ```
 
-## Comparing saved before/after binaries
+## Refactor comparison
 
-The runner preserves plain binaries and fingerprints. After running the same
-workloads with a changed implementation, alternate saved binaries without
-recompiling the baseline:
-
-```sh
-python3 scripts/property-chain-compare.py target/before-run target/after-run target/comparison
-```
-
-This refuses changed workload source, model files, sampling parameters, compiler,
-recorded build settings (except the output directory) or binary hashes, validates
-every run through the original reporter, and saves all raw samples.
-It reports medians of per-process medians and medians of per-round
-speedup ratios separately. See the [refactor comparison](../benchmarks/2026-10-21-property-chain-refactor.md).
+The runner preserves plain binaries and fingerprints. See the [refactor comparison](../benchmarks/2026-10-21-property-chain-refactor.md) for historical before/after measurements across property policies and index snapshot changes.

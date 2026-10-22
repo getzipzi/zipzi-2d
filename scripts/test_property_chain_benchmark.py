@@ -79,42 +79,5 @@ class PropertyChainReportTests(unittest.TestCase):
             BENCH.validate(rows)
 
 
-class PropertyChainComparisonTests(unittest.TestCase):
-    def test_comparison_rejects_changed_workload_source_or_model(self):
-        spec = importlib.util.spec_from_file_location("chain_compare", Path(__file__).with_name("property-chain-compare.py"))
-        compare = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(compare)
-        before = {
-            "arguments": dict(model="mao", samples=60, warmup=10, updates=12, filter="all", reader_policy="unique", rounds=3),
-            "sources": {"kasane-editor/crates/editor-core/examples/property_chain_benchmark.rs": "same"},
-            "model_files": {"mao.moc3": "same"},
-            "rustc": "rustc test compiler",
-            "build_environment": {"RUSTFLAGS": "-C opt-level=3"},
-        }
-        compare.compatible(before, copy.deepcopy(before))
-        relocated = copy.deepcopy(before)
-        relocated["build_environment"]["CARGO_TARGET_DIR"] = "/tmp/isolated-build"
-        compare.compatible(before, relocated)
-        for section, key, value in [
-            ("arguments", "reader_policy", "retained"),
-            ("arguments", "updates", 1),
-            ("sources", "kasane-editor/crates/editor-core/examples/property_chain_benchmark.rs", "different"),
-            ("model_files", "mao.moc3", "different"),
-        ]:
-            after = copy.deepcopy(before)
-            after[section][key] = value
-            with self.assertRaises(ValueError):
-                compare.compatible(before, after)
-        for field, value in [
-            ("rustc", "different compiler"),
-            ("build_environment", {"RUSTFLAGS": "-C opt-level=0"}),
-            ("build_environment", {"CARGO_PROFILE_RELEASE_LTO": "true"}),
-        ]:
-            after = copy.deepcopy(before)
-            after[field] = value
-            with self.assertRaises(ValueError):
-                compare.compatible(before, after)
-
-
 if __name__ == "__main__":
     unittest.main()
