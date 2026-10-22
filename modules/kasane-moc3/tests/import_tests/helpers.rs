@@ -46,6 +46,25 @@ pub(crate) fn local_mao_moc3() -> PathBuf {
     workspace_root().join("models/local/mao/runtime/mao_pro.moc3")
 }
 
+// Geometry roundtrips need configured resources under the strict export
+// contract. Read real descriptors instead of inventing image dimensions/hashes.
+pub(crate) fn model_textures(moc: &std::path::Path) -> HashMap<usize, PathBuf> {
+    let model3 = moc.with_extension("model3.json");
+    let model: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&model3).unwrap()).unwrap();
+    model["FileReferences"]["Textures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+        .map(|(index, path)| (index, moc.parent().unwrap().join(path.as_str().unwrap())))
+        .collect()
+}
+
+pub(crate) fn fixture_textures() -> HashMap<usize, PathBuf> {
+    model_textures(&workspace_root().join("tests/fixtures/external_v50/model.moc3"))
+}
+
 pub(crate) struct PurismModelInstance {
     _moc_buffer: AlignedBuffer,
     _model_buffer: AlignedBuffer,

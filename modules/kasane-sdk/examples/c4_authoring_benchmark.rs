@@ -2,53 +2,10 @@
 //! cargo run --release -p kasane-sdk --example c4_authoring_benchmark -- MODEL3
 use kasane_core::{Canvas, Vec2};
 use kasane_sdk::{AuthoringSession, BindingAuthoringEdit, ConversionControl, MeshGridEdit};
-use std::{
-    alloc::{GlobalAlloc, Layout, System},
-    sync::atomic::{AtomicUsize, Ordering},
-    time::Instant,
-};
-struct CountingAllocator;
-static LIVE: AtomicUsize = AtomicUsize::new(0);
-static PEAK: AtomicUsize = AtomicUsize::new(0);
-fn added(n: usize) {
-    let live = LIVE.fetch_add(n, Ordering::Relaxed) + n;
-    PEAK.fetch_max(live, Ordering::Relaxed);
-}
-unsafe impl GlobalAlloc for CountingAllocator {
-    unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        let p = unsafe { System.alloc(l) };
-        if !p.is_null() {
-            added(l.size());
-        }
-        p
-    }
-    unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
-        let p = unsafe { System.alloc_zeroed(l) };
-        if !p.is_null() {
-            added(l.size());
-        }
-        p
-    }
-    unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
-        unsafe { System.dealloc(p, l) };
-        LIVE.fetch_sub(l.size(), Ordering::Relaxed);
-    }
-    unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
-        let q = unsafe { System.realloc(p, l, n) };
-        if !q.is_null() {
-            LIVE.fetch_sub(l.size(), Ordering::Relaxed);
-            added(n);
-        }
-        q
-    }
-}
-#[global_allocator]
-static ALLOCATOR: CountingAllocator = CountingAllocator;
-fn reset_peak() -> usize {
-    let base = LIVE.load(Ordering::Relaxed);
-    PEAK.store(base, Ordering::Relaxed);
-    base
-}
+use std::{sync::atomic::Ordering, time::Instant};
+#[path = "support/allocation.rs"]
+mod allocation;
+use allocation::{reset_peak, LIVE, PEAK};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::path::PathBuf::from(std::env::args().nth(1).expect("absolute model3 path"));
     let mut s = AuthoringSession::new(

@@ -18,6 +18,8 @@ use crate::{
 const MANIFEST_LIMIT: u64 = 64 * 1024 * 1024;
 const TEXTURE_FILE_LIMIT: u64 = 64 * 1024 * 1024;
 
+mod coordinates;
+
 #[derive(PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SceneBundle {
@@ -121,8 +123,9 @@ fn canonical_json(value: &Value, output: &mut Vec<u8>) -> Result<(), Observation
 fn scene_hash(bundle: &SceneBundle) -> Result<String, ObservationError> {
     let mut value =
         serde_json::to_value(bundle).map_err(|e| failure("BUNDLE_ENCODE", e.to_string()))?;
-    let decoded: SceneBundle = serde_json::from_value(value.clone())
+    let mut decoded: SceneBundle = serde_json::from_value(value.clone())
         .map_err(|e| failure("NONFINITE_SCENE", e.to_string()))?;
+    decoded.authoring.restore_binding_coordinates()?;
     if decoded != *bundle {
         return Err(failure(
             "NONFINITE_SCENE",
@@ -264,7 +267,7 @@ impl ResolvedObservation {
         if content.len() as u64 != manifest_size {
             return Err(failure("BUNDLE_IO", "Scene manifest changed while reading"));
         }
-        let bundle: SceneBundle = serde_json::from_slice(&content)
+        let mut bundle: SceneBundle = serde_json::from_slice(&content)
             .map_err(|e| failure("BUNDLE_FORMAT", e.to_string()))?;
         if bundle.schema_version != 6 || bundle.kind != "kasane-observe-scene" {
             return Err(failure(
@@ -272,6 +275,7 @@ impl ResolvedObservation {
                 "Unknown scene bundle version",
             ));
         }
+        bundle.authoring.restore_binding_coordinates()?;
         if bundle.textures.len() > 256 {
             return Err(failure(
                 "OBSERVATION_BUDGET_EXCEEDED",
@@ -485,6 +489,102 @@ mod tests {
     fn scene_hash_rejects_nonfinite_values() {
         let mut bundle = empty_bundle();
         bundle.requested.insert("parameter".into(), f32::NAN);
+        assert_eq!(scene_hash(&bundle).unwrap_err().code, "NONFINITE_SCENE");
+    }
+
+    #[test]
+    fn stable_binding_samples_restore_all_omitted_coordinate_caches() {
+        use kasane_core::*;
+        let mut bundle = empty_bundle();
+        let axis = BindingAxis::new("parameter", vec![0., 1.]);
+        let samples = vec![axis.samples[1].id.clone()];
+        bundle.authoring.bindings.push(MeshBinding {
+            id: "binding".into(),
+            mesh_id: "mesh".into(),
+            axes: vec![axis.clone()],
+            keyforms: vec![MeshKeyform {
+                keys: vec![1.],
+                samples: samples.clone(),
+                ..Default::default()
+            }],
+        });
+        for track in [
+            SceneTrack::Warp {
+                target_id: "warp".into(),
+                keyforms: vec![WarpKeyform {
+                    keys: vec![1.],
+                    samples: samples.clone(),
+                    ..Default::default()
+                }],
+            },
+            SceneTrack::Rotation {
+                target_id: "rotation".into(),
+                keyforms: vec![RotationKeyform {
+                    keys: vec![1.],
+                    samples: samples.clone(),
+                    ..Default::default()
+                }],
+            },
+            SceneTrack::Part {
+                target_id: "part".into(),
+                keyforms: vec![PartKeyform {
+                    keys: vec![1.],
+                    samples: samples.clone(),
+                    ..Default::default()
+                }],
+            },
+        ] {
+            bundle.authoring.scene_bindings.push(SceneBinding {
+                id: track.target_id().into(),
+                axes: vec![axis.clone()],
+                track,
+            });
+        }
+        bundle.authoring.glues.push(Glue {
+            binding: Some(GlueBinding {
+                axes: vec![axis.clone()],
+                keyforms: vec![GlueKeyform {
+                    samples,
+                    intensity: 0.5,
+                }],
+            }),
+            ..Default::default()
+        });
+        bundle.authoring.blend_key_tables.push(BlendShapeKeyTable {
+            id: "table".into(),
+            parameter_id: "parameter".into(),
+            samples: axis.samples.clone(),
+            base_sample_id: axis.samples[1].id.clone(),
+            keys: vec![0., 1.],
+            base_key_idx: 1,
+        });
+        bundle
+            .authoring
+            .blend_constraints
+            .push(BlendShapeConstraint {
+                id: "constraint".into(),
+                parameter_id: "parameter".into(),
+                samples: axis
+                    .samples
+                    .iter()
+                    .map(|sample| ConstraintSample {
+                        id: sample.id.clone(),
+                        value: sample.value,
+                        weight: 0.5,
+                    })
+                    .collect(),
+                keys: vec![0., 1.],
+                weights: vec![0.5; 2],
+            });
+        let digest = scene_hash(&bundle).unwrap();
+        let mut restored: SceneBundle =
+            serde_json::from_str(&serde_json::to_string(&bundle).unwrap()).unwrap();
+        restored.authoring.restore_binding_coordinates().unwrap();
+        assert_eq!(bundle.authoring, restored.authoring);
+        assert_eq!(scene_hash(&restored).unwrap(), digest);
+        restored.authoring.bindings[0].keyforms[0].samples[0] = "missing".into();
+        assert_eq!(scene_hash(&restored).unwrap_err().code, "BUNDLE_FORMAT");
+        bundle.authoring.bindings[0].axes[0].keys[0] = f32::NAN;
         assert_eq!(scene_hash(&bundle).unwrap_err().code, "NONFINITE_SCENE");
     }
 }

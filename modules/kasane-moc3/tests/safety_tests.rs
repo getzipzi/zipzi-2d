@@ -109,7 +109,12 @@ fn mutated_section_values_never_panic() {
 fn v6_references_and_stale_reports_are_checked_without_native_code() {
     use kasane_core::{Offscreen, OffscreenKeyform, Part};
     let original = fixture("external_v50_bs_glue");
-    let mut doc = import_from_bare_moc3(&original, &HashMap::new())
+    let textures = HashMap::from([(
+        0,
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/external_v50_bs_glue/texture_00.png"),
+    )]);
+    let mut doc = import_from_bare_moc3(&original, &textures)
         .unwrap()
         .document;
     let part = "12340000-1111-4111-8111-111111111111";

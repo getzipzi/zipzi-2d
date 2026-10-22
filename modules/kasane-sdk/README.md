@@ -13,8 +13,7 @@ Palette sorting uses `EditSession::replace_hierarchy_order(HierarchyOrder)`.
 `Document::hierarchy_order()` exposes independent organization and deformation
 ID ranks. These metadata edits participate in checkpoints, history budgets and
 project IO, preserve evaluation revisions, and are removed when their objects
-are erased. Version 6 projects may contain an optional `hierarchy_order` field;
-empty ordering is omitted and existing projects retain source ordering.
+are erased. Empty ordering is omitted and source ordering is the default.
 
 Parameter and parameter group display order use the ordered CDI collections in
 `DisplayInfo`. Replacing those collections preserves runtime parameter storage
@@ -24,11 +23,12 @@ visible parameter list, while retaining unresolved entries and extensions.
 
 Editor visibility and protection use `EditorState` and
 `EditSession::replace_editor_state`. The sparse map stores explicit
-`hidden_in_editor` and `locked` flags for Mesh, Transform, Part, Offscreen and Glue.
+`hidden_in_editor` and `locked` flags for supported native objects and owned rows.
 Editors resolve Part inheritance and composite visibility; deformation parentage
-does not propagate editor flags. SDK model writes ignore editor locks. Metadata
-participates in modified state, history budgets, deletion cleanup and undo/redo
-without invalidating runtime previews. Writers emit project v11. The old
+does not propagate editor flags. SDK writes enforce persistent locks, including
+direct replacements and dependent objects. Metadata participates in modified
+state, history budgets, deletion cleanup and undo/redo. Locks preserve runtime
+inputs; Editor visibility also refreshes the host preview. The old
 `ObjectLocks` and `DeformerDisplay` APIs and wire fields are removed, with no
 migration adapters.
 
@@ -173,7 +173,7 @@ commits preserve history and redo. The older index-based move method remains a
 low-level operation that leaves handles unchanged.
 
 ```sh
-cargo test --locked -p kasane-sdk --test motion_editing
+cargo test --locked -p kasane-sdk --test integration motion_editing::
 cargo test --locked -p kasane-project --test motion_tests
 ```
 

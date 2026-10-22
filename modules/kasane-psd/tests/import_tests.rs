@@ -122,6 +122,9 @@ fn pixel_import_preserves_png_pixels_ids_and_clipping_structure() {
             .document
             .get_asset(&pixel.id)
             .unwrap()
+            .content
+            .as_ref()
+            .unwrap()
             .sha256
             .is_empty());
     }

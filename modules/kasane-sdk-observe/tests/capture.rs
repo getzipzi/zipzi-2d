@@ -11,6 +11,62 @@ const MESH: &str = "00000000-0000-4000-8000-000000000003";
 const PARAMETER: &str = "00000000-0000-4000-8000-000000000004";
 
 #[test]
+fn saved_binding_capture_restores_numeric_caches_from_stable_samples() {
+    use kasane_core::{BindingAxis, MeshBinding, MeshKeyform};
+    let mut session =
+        AuthoringSession::new(DOCUMENT, Canvas::new(100., 100., Vec2::default(), 1.)).unwrap();
+    let png =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png");
+    let asset = prepare_png_asset(ASSET, "texture", &png).unwrap();
+    let mesh = rectangle_mesh(
+        MESH,
+        "face",
+        ASSET,
+        Vec2::new(40., 40.),
+        Vec2::new(60., 60.),
+    )
+    .unwrap();
+    let positions = mesh.base_positions.clone();
+    session
+        .edit("Bound mesh", None, |edit| {
+            edit.create_asset(asset)?;
+            edit.create_mesh(mesh)?;
+            edit.create_parameter(Parameter {
+                id: PARAMETER.into(),
+                ..Default::default()
+            })?;
+            edit.create_binding(MeshBinding {
+                id: "00000000-0000-4000-8000-000000000005".into(),
+                mesh_id: MESH.into(),
+                axes: vec![BindingAxis::new(PARAMETER, vec![0., 1.])],
+                keyforms: [0., 1.]
+                    .into_iter()
+                    .map(|key| MeshKeyform {
+                        keys: vec![key],
+                        positions: positions.clone(),
+                        ..Default::default()
+                    })
+                    .collect(),
+            })
+        })
+        .unwrap();
+    let capture = ResolvedObservation::capture(
+        ObservationInput::capture(&session, &PreviewValues::new()).unwrap(),
+    )
+    .unwrap();
+    let directory = std::env::temp_dir().join(format!("observe-binding-{}", uuid::Uuid::new_v4()));
+    capture.save_scene(&directory).unwrap();
+    let reopened = ResolvedObservation::open_scene(&directory).unwrap();
+    assert_eq!(capture.scene_digest(), reopened.scene_digest());
+    assert_eq!(capture.input().authoring(), reopened.input().authoring());
+    assert_eq!(
+        reopened.input().authoring().bindings[0].axes[0].keys,
+        vec![0., 1.]
+    );
+    std::fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
 fn batch_samples_one_document_snapshot_and_reuses_capture_identity() {
     let mut session = AuthoringSession::new(
         DOCUMENT,

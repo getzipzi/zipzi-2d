@@ -65,7 +65,7 @@ fn blend_colors_and_fractional_orders_match_core_and_roundtrip() {
         .status
         .is_ok());
     let encoded = encode_moc3(&doc).unwrap();
-    let imported = import_from_bare_moc3(&encoded.bytes, &HashMap::new())
+    let imported = import_from_bare_moc3(&encoded.bytes, &fixture_textures())
         .unwrap()
         .document;
     let forms = &imported
@@ -145,7 +145,7 @@ fn animated_glue_roundtrips_and_matches_core() {
     }
     let inspection = kasane_moc3::inspect_moc3_safety(&bytes).unwrap();
     assert!(inspection.unsupported_features.is_empty());
-    let imported = import_from_bare_moc3(&bytes, &HashMap::new())
+    let imported = import_from_bare_moc3(&bytes, &fixture_textures())
         .unwrap()
         .document;
     let glue = imported.get_glue(&imported.glue_order()[0]).unwrap();
@@ -293,7 +293,7 @@ fn test_cyclic_parameter_moc3_roundtrip_and_evaluation() {
     let rep_val = i32::from_le_bytes(encoded.bytes[rep_off..rep_off + 4].try_into().unwrap());
     assert_eq!(rep_val, 1, "Section 54 (param_src.repeat) must be 1");
 
-    let imported = import_from_bare_moc3(&encoded.bytes, &HashMap::new())
+    let imported = import_from_bare_moc3(&encoded.bytes, &fixture_textures())
         .expect("Import encoded cyclic model");
     let re_doc = &imported.document;
     assert!(
@@ -338,7 +338,7 @@ fn test_blendshape_glue_moc3_roundtrip_and_evaluation() {
     assert_eq!(inspection.counts.bs_glues, 1);
     assert_eq!(inspection.counts.glues, 1);
 
-    let res = import_from_bare_moc3(&bytes, &HashMap::new()).expect("Import v50 bs glue");
+    let res = import_from_bare_moc3(&bytes, &fixture_textures()).expect("Import v50 bs glue");
     let doc = &res.document;
 
     assert_eq!(doc.glue_order().len(), 1);
@@ -399,7 +399,7 @@ fn static_offscreen_export_preserves_appearance() {
     let mut before = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut before).is_ok());
     let exported = encode_moc3(&doc).unwrap();
-    let imported = import_from_bare_moc3(&exported.bytes, &HashMap::new()).unwrap();
+    let imported = import_from_bare_moc3(&exported.bytes, &fixture_textures()).unwrap();
     let mut after = DrawableFrame::default();
     assert!(evaluate_frame(&imported.document, &HashMap::new(), &mut after).is_ok());
     assert_eq!(before.offscreens[0].opacity, after.offscreens[0].opacity);
@@ -504,7 +504,7 @@ fn joint_offscreen_edit_survives_project_and_moc3_roundtrip() {
             kasane_project::decode_project(&kasane_project::encode_project(&doc).unwrap()).unwrap();
         assert_eq!(reopened.get_offscreen(&id(913)), Some(&os));
         let bytes = encode_moc3(&reopened).unwrap().bytes;
-        let imported = import_from_bare_moc3(&bytes, &HashMap::new())
+        let imported = import_from_bare_moc3(&bytes, &fixture_textures())
             .unwrap()
             .document;
         let imported_param = imported

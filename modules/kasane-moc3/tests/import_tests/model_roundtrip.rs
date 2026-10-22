@@ -94,7 +94,7 @@ fn test_import_m1_roundtrip() {
 #[test]
 fn test_post_import_editing() {
     let source = fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
-    let mut doc = import_from_bare_moc3(&source, &HashMap::new())
+    let mut doc = import_from_bare_moc3(&source, &fixture_textures())
         .unwrap()
         .document;
     let mesh_id = doc.mesh_order()[0].clone();
@@ -132,7 +132,7 @@ fn test_post_import_editing() {
     near(draw_edited.opacity, 0.42, 1.0);
     assert_eq!(draw_edited.draw_order, 42);
     let artifact = encode_moc3(&doc).unwrap();
-    let reimported = import_from_bare_moc3(&artifact.bytes, &HashMap::new()).unwrap();
+    let reimported = import_from_bare_moc3(&artifact.bytes, &fixture_textures()).unwrap();
     assert_eq!(
         reimported
             .document
@@ -213,7 +213,7 @@ fn import_regressions_match_document_and_runtime() {
         .collect();
     for name in ["binding_zero", "color_window", "canvas_y"] {
         let bytes = import_cases::variant(&source, name);
-        let imported = import_from_bare_moc3(&bytes, &HashMap::new()).unwrap();
+        let imported = import_from_bare_moc3(&bytes, &fixture_textures()).unwrap();
         assert_eq!(imported.document.binding_order().len(), 1, "{name}");
         assert_eq!(
             imported
@@ -231,7 +231,7 @@ fn import_regressions_match_document_and_runtime() {
 #[test]
 fn rotation_edit_rebinding_and_deletion_change_export() {
     let bytes = fs::read(workspace_root().join("tests/fixtures/external_v50/model.moc3")).unwrap();
-    let mut doc = import_from_bare_moc3(&bytes, &HashMap::new())
+    let mut doc = import_from_bare_moc3(&bytes, &fixture_textures())
         .unwrap()
         .document;
     let rot_id = doc
@@ -265,7 +265,7 @@ fn rotation_edit_rebinding_and_deletion_change_export() {
     assert!(doc.replace_binding(binding).status.is_ok());
     assert!(doc.erase_object(&old_param).status.is_ok());
     let rebound = encode_moc3(&doc).unwrap();
-    let reimported = import_from_bare_moc3(&rebound.bytes, &HashMap::new())
+    let reimported = import_from_bare_moc3(&rebound.bytes, &fixture_textures())
         .unwrap()
         .document;
     assert_eq!(reimported.parameter_order().len(), 2);
@@ -308,8 +308,8 @@ fn test_import_mao_full() {
     }
 
     let bytes = std::fs::read(&mao_path).expect("failed to read mao_pro.moc3");
-    let decoded =
-        import_from_bare_moc3(&bytes, &HashMap::new()).expect("failed to import mao_pro.moc3");
+    let decoded = import_from_bare_moc3(&bytes, &model_textures(&mao_path))
+        .expect("failed to import mao_pro.moc3");
     let doc = &decoded.document;
 
     // Verify element counts
@@ -468,11 +468,26 @@ fn test_mao_roundtrip_export_and_detached_reopening() {
 
     let orig_bytes = std::fs::read(&path).expect("failed to read mao_pro.moc3");
     let orig_res =
-        import_from_bare_moc3(&orig_bytes, &HashMap::new()).expect("initial import failed");
-    let orig_doc = &orig_res.document;
+        import_from_bare_moc3(&orig_bytes, &model_textures(&path)).expect("initial import failed");
+    let mut orig_doc = orig_res.document;
+    // The JSON codec expects package-relative asset descriptors. Keep the real
+    // imported dimensions/hash, rebasing only the source paths for this fixture.
+    for id in orig_doc.asset_order().to_vec() {
+        let mut asset = orig_doc.get_asset(&id).unwrap().clone();
+        let content = asset.content.as_mut().unwrap();
+        content.source = format!(
+            "assets/{}",
+            std::path::Path::new(&content.source)
+                .strip_prefix(path.parent().unwrap())
+                .unwrap()
+                .to_str()
+                .unwrap()
+        );
+        assert!(orig_doc.replace_asset(asset).status.is_ok());
+    }
 
-    // 1. Serialize Document to Project v2 format
-    let project_json = kasane_project::encode_project(orig_doc).expect("encode_project failed");
+    // 1. Serialize the complete native authoring document.
+    let project_json = kasane_project::encode_project(&orig_doc).expect("encode_project failed");
 
     // 2. Load into a fresh, completely detached Document (no orig_bytes reference)
     let detached_doc =
@@ -535,7 +550,7 @@ fn test_mao_roundtrip_export_and_detached_reopening() {
     );
 
     // 7. Re-import the exported MOC3 binary into a 3rd Document and verify lossless roundtrip
-    let reimported_res = import_from_bare_moc3(&exp_bytes, &HashMap::new())
+    let reimported_res = import_from_bare_moc3(&exp_bytes, &model_textures(&path))
         .expect("re-import of exported MOC3 failed");
     let reimported_doc = &reimported_res.document;
     assert_eq!(reimported_doc.mesh_order().len(), 260);
@@ -571,8 +586,8 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
     assert_eq!(inspection.counts.art_meshes, 134);
     assert_eq!(inspection.counts.glues, 26);
 
-    let decoded =
-        import_from_bare_moc3(&bytes, &HashMap::new()).expect("failed to import Hiyori.moc3");
+    let decoded = import_from_bare_moc3(&bytes, &model_textures(&moc_path))
+        .expect("failed to import Hiyori.moc3");
     let doc = &decoded.document;
 
     // Verify the 4 zero-triangle meshes exist in Document
@@ -652,8 +667,8 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
 
     // Export to MOC3 v5 and verify roundtrip
     let encoded = encode_moc3(doc).expect("failed to encode Hiyori");
-    let reimport =
-        import_from_bare_moc3(&encoded.bytes, &HashMap::new()).expect("failed to reimport Hiyori");
+    let reimport = import_from_bare_moc3(&encoded.bytes, &model_textures(&moc_path))
+        .expect("failed to reimport Hiyori");
     assert_eq!(reimport.document.mesh_order().len(), 134);
     assert_eq!(reimport.document.glue_order().len(), 26);
 
@@ -699,7 +714,8 @@ fn test_import_rice_and_mark_v3() {
         assert_eq!(inspection.counts.art_meshes as usize, expected_meshes);
         assert_eq!(inspection.counts.glues as usize, expected_glues);
 
-        let decoded = import_from_bare_moc3(&bytes, &HashMap::new()).expect("import failed");
+        let decoded =
+            import_from_bare_moc3(&bytes, &model_textures(&moc_path)).expect("import failed");
         let doc = &decoded.document;
         assert_eq!(doc.mesh_order().len(), expected_meshes);
         assert_eq!(doc.glue_order().len(), expected_glues);
@@ -734,8 +750,8 @@ fn test_import_rice_and_mark_v3() {
 
         // Encode and roundtrip
         let encoded = encode_moc3(doc).expect("encode failed");
-        let reimport =
-            import_from_bare_moc3(&encoded.bytes, &HashMap::new()).expect("reimport failed");
+        let reimport = import_from_bare_moc3(&encoded.bytes, &model_textures(&moc_path))
+            .expect("reimport failed");
         assert_eq!(reimport.document.mesh_order().len(), expected_meshes);
         assert_eq!(reimport.document.glue_order().len(), expected_glues);
     }
@@ -823,7 +839,8 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
 
     // Encode to MOC3 and verify zero triangles survive serialization
     let encoded = encode_moc3(&doc).expect("encode failed");
-    let reimport = import_from_bare_moc3(&encoded.bytes, &HashMap::new()).expect("reimport failed");
+    let reimport =
+        import_from_bare_moc3(&encoded.bytes, &fixture_textures()).expect("reimport failed");
     let re_mesh = reimport
         .document
         .get_mesh(&reimport.report.id_mapping.meshes["ZeroTriMesh"])
@@ -937,7 +954,7 @@ fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
         }
         let bytes = encode_moc3(&doc).unwrap().bytes;
         for bytes in [bytes.clone(), import_cases::variant(&bytes, "canvas_y")] {
-            let imported = import_from_bare_moc3(&bytes, &HashMap::new()).unwrap();
+            let imported = import_from_bare_moc3(&bytes, &fixture_textures()).unwrap();
             assert_runtime_matches(&imported.document, &bytes, &[vec![]]);
         }
     }
