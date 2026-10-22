@@ -73,3 +73,8 @@ pub use binding_authoring::*;
 
 mod pose_authoring;
 pub use pose_authoring::*;
+
+mod organization_authoring;
+pub use organization_authoring::*;
+
+pub use changes::OrganizationReferenceChange;

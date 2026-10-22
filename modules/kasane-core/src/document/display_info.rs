@@ -179,10 +179,30 @@ impl Document {
         if self.content.display_info == display_info {
             return self.failed(Status::ok());
         }
+        if let Err(status) = self.validate_organization_metadata_unlocked(&display_info) {
+            return self.failed(status);
+        }
         let previous = std::mem::replace(&mut self.content.display_info, display_info);
+        let old_editor_state = self.content.editor_state.clone();
+        for id in previous.parameter_groups.iter().flatten().map(|g| &g.id) {
+            if self
+                .content
+                .display_info
+                .parameter_groups
+                .iter()
+                .flatten()
+                .all(|g| g.id != *id)
+            {
+                self.content.editor_state.objects.remove(id);
+            }
+        }
         if let Some(issue) = self.validate_structure().into_iter().next() {
             self.content.display_info = previous;
+            self.content.editor_state = old_editor_state;
             return self.failed(issue.status);
+        }
+        if !super::organization::same_metadata_shape(&previous, &self.content.display_info) {
+            self.organization_index.take();
         }
         self.changed(
             ChangeKind::Metadata,
@@ -192,6 +212,9 @@ impl Document {
     }
 
     pub fn set_parameter_display_name(&mut self, id: &str, name: String) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -215,6 +238,9 @@ impl Document {
     }
 
     pub fn set_part_display_name(&mut self, id: &str, name: String) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -238,7 +264,26 @@ impl Document {
     }
 
     pub(super) fn validate_display_info(&self) -> Vec<StructureIssue> {
-        let info = &self.content.display_info;
+        self.validate_display_info_value(&self.content.display_info, &[], &[])
+    }
+    pub(super) fn validate_display_info_value(
+        &self,
+        info: &DisplayInfo,
+        parameters: &[crate::Parameter],
+        parts: &[crate::Part],
+    ) -> Vec<StructureIssue> {
+        let parameter = |id: &str| {
+            parameters
+                .iter()
+                .find(|p| p.id == id)
+                .or_else(|| self.get_parameter(id))
+        };
+        let part = |id: &str| {
+            parts
+                .iter()
+                .find(|p| p.id == id)
+                .or_else(|| self.get_part(id))
+        };
         let mut issues = Vec::new();
         let mut group_ids = std::collections::HashSet::new();
         let mut group_runtime_ids = std::collections::HashSet::new();
@@ -333,7 +378,7 @@ impl Document {
                 }
                 let runtime_id = match entry {
                     CdiParameterEntry::Resolved { parameter_id, .. } => {
-                        match self.get_parameter(parameter_id) {
+                        match parameter(parameter_id) {
                             Some(parameter) => parameter.runtime_id.as_str(),
                             None => {
                                 issue(
@@ -380,7 +425,7 @@ impl Document {
             for (index, entry) in entries.iter().enumerate() {
                 let path = format!("$.Parts[{index}]");
                 let runtime_id = match entry {
-                    CdiPartEntry::Resolved { part_id, .. } => match self.get_part(part_id) {
+                    CdiPartEntry::Resolved { part_id, .. } => match part(part_id) {
                         Some(part) => part.runtime_id.as_str(),
                         None => {
                             issue(
@@ -444,7 +489,7 @@ impl Document {
                 for (j, member) in set.members.iter().enumerate() {
                     let runtime_id = match member {
                         CdiParameterRef::Resolved { parameter_id } => {
-                            match self.get_parameter(parameter_id) {
+                            match parameter(parameter_id) {
                                 Some(parameter) => parameter.runtime_id.as_str(),
                                 None => {
                                     issue(&mut issues, parameter_id, "MISSING_PARAMETER", format!("$.CombinedParameters[{i}][{j}] references absent parameter"));

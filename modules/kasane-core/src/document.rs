@@ -14,7 +14,9 @@ mod meshes;
 mod model3;
 mod motions;
 mod offscreen;
+mod organization;
 mod parameters;
+pub use organization::*;
 mod parts;
 mod physics;
 mod pose;
@@ -93,6 +95,7 @@ pub struct Document {
     binding_lookup: OnceLock<Arc<binding_authoring::identity::BindingLookup>>,
     expression_entries: OnceLock<HashMap<String, (String, usize)>>,
     motion_lookup: OnceLock<Arc<motions::MotionLookup>>,
+    organization_index: OnceLock<Arc<organization::OrganizationIndex>>,
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
 }
 
@@ -446,6 +449,9 @@ impl Document {
             for id in removed {
                 self.content.editor_state.objects.remove(&id);
             }
+        }
+        if kind == ChangeKind::Structure {
+            self.organization_index.take();
         }
         self.snapshot_identity = Arc::new(());
         // Batch construction mutates content without advancing revision too.

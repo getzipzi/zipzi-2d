@@ -388,6 +388,7 @@ impl Document {
             e.referrers = refs;
             return e;
         }
+        self.organization_index.take();
         let mut meshes = Vec::new();
         if let Some(b) = self.get_binding(id) {
             meshes.push(b.mesh_id.clone());

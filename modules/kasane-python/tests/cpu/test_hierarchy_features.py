@@ -537,3 +537,64 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         self.assertEqual(model.geometry(MESH).parent_id, ROTATION)
         model.undo()
         self.assertIsNone(model.geometry(MESH).parent_id)
+
+    def test_organization_collections_copy_dissolve_and_history(self):
+        model = session()
+        first, nested, destination = (str(uuid4()) for _ in range(3))
+        for group, parent in [(first, None), (nested, first), (destination, None)]:
+            with model.edit("group") as edit:
+                edit.organization_authoring({"operation": "create_group", "group": {
+                    "id": group, "runtime_id": "G" + group, "name": "Empty",
+                    "parent_id": parent, "extensions": {},
+                }, "before": None})
+        with model.edit("parameter") as edit:
+            edit.create_parameter(PARAMETER, "value", -1, 1, 0)
+            edit.organization_authoring({"operation": "move", "ids": [PARAMETER],
+                "destination": {"kind": "parameters", "group_id": nested}, "before": None})
+        model.set_preview_parameter(PARAMETER, 0.6)
+        handle = model.handle("parameter", PARAMETER)
+        plan = model.plan_organization_authoring({"operation": "duplicate", "ids": [first],
+            "destination": {"kind": "parameter_groups", "parent_id": destination}, "before": None})
+        copies = dict(plan.copied_ids)
+        self.assertEqual(len(copies), 3)
+        self.assertEqual(plan.version, model.version)
+        self.assertTrue(json.loads(plan.effects_json)["drawing_preserved"])
+        model.execute_organization_plan(plan)
+        self.assertNotEqual(model.parameter(copies[PARAMETER]).runtime_id, model.parameter(PARAMETER).runtime_id)
+        self.assertAlmostEqual(model.preview_values[PARAMETER], 0.6)
+        model.resolve_handle(handle)
+        with self.assertRaises(kasane.SdkFailure):
+            model.execute_organization_plan(plan)
+        with model.edit("dissolve") as edit:
+            edit.organization_authoring({"operation": "delete", "ids": [copies[nested]], "policy": "dissolve"})
+        rows = model.display_info()["parameters"]
+        row = next(row for row in rows if row.get("parameter_id") == copies[PARAMETER])
+        self.assertEqual(row["group_id"], copies[first])
+        model.undo()
+        self.assertEqual(model.validate_structure(), [])
+        with TemporaryDirectory() as root:
+            saved = model.save(Path(root) / "organized")
+            reopened = kasane.open_project(saved.manifest)
+            self.assertEqual(reopened.display_info(), model.display_info())
+
+    def test_part_organization_copy_keeps_external_asset_and_deformer(self):
+        model = session()
+        with model.edit("scene") as edit:
+            edit.add_png_asset(ASSET, "texture", TEXTURE)
+            edit.create_rectangle(MESH, "face", ASSET, (0, 0), (1, 1))
+            edit.create_part(PART, "container")
+            edit.set_mesh_part(MESH, PART)
+        plan = model.plan_organization_authoring({"operation": "duplicate", "ids": [PART],
+            "destination": {"kind": "part_members", "part_id": None}, "before": None})
+        copies = dict(plan.copied_ids)
+        model.execute_organization_plan(plan)
+        self.assertEqual(model.mesh_record(copies[MESH]).part_id, copies[PART])
+        self.assertEqual(model.mesh_properties(copies[MESH]).texture_asset_id, ASSET)
+        copied = model.handle("mesh", copies[MESH])
+        with model.edit("delete contents") as edit:
+            edit.organization_authoring({"operation": "delete", "ids": [copies[PART]], "policy": "contents"})
+        self.assertIsNotNone(model.asset(ASSET))
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.resolve_handle(copied)
+        self.assertEqual(model.validate_structure(), [])

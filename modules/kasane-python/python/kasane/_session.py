@@ -6,7 +6,7 @@ import json
 from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
-from ._native import NativeSession, NativePosePlan, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
+from ._native import NativeSession, NativePosePlan, NativeOrganizationPlan, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
@@ -232,6 +232,14 @@ class Session:
     def export_motion3(self, motion_id: str) -> str:
         """Encode a clip with current runtime IDs, retaining unresolved imported runtime IDs."""
         return self._native.export_motion3(motion_id)
+
+    def plan_organization_authoring(self, intent: Mapping[str, object]) -> NativeOrganizationPlan:
+        """Plan organization, owned copy closure and dependency-safe deletion."""
+        return self._native.plan_organization_authoring_json(json.dumps(intent))
+
+    def execute_organization_plan(self, plan: NativeOrganizationPlan):
+        """Execute the accepted plan against its original SDK version."""
+        return self._native.execute_organization_plan(plan)
 
     def plan_pose_authoring(self, intent: Mapping[str, object]) -> NativePosePlan:
         """Plan Pose ownership, references and copy closure through the SDK."""

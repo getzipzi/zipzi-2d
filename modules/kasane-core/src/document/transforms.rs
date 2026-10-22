@@ -80,6 +80,9 @@ impl Document {
     }
 
     pub fn create_transform(&mut self, mut t: Transform) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(t.part()) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &t.id));
         }
@@ -104,7 +107,10 @@ impl Document {
     }
 
     pub fn replace_transform(&mut self, t: Transform) -> EditResult {
-        if let Err(status) = self.authoring_unlocked(&t.id) {
+        if let Err(status) = self
+            .authoring_unlocked(&t.id)
+            .and_then(|_| self.authoring_unlocked(t.part()))
+        {
             return self.failed(status);
         }
         if self.mutation_blocked() {
@@ -172,7 +178,10 @@ impl Document {
         t: Transform,
         binding: Option<crate::SceneBinding>,
     ) -> EditResult {
-        if let Err(status) = self.authoring_unlocked(&t.id) {
+        if let Err(status) = self
+            .authoring_unlocked(&t.id)
+            .and_then(|_| self.authoring_unlocked(t.part()))
+        {
             return self.failed(status);
         }
         if self.mutation_blocked() {

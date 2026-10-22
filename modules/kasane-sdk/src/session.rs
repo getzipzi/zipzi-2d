@@ -43,6 +43,7 @@ pub struct AuthoringSession {
     // Owner-dependent field addresses must not revive after a move and undo.
     pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) attachment_content_epochs: HashMap<String, u64>,
+    pub(crate) organization_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) pose_contexts: HashMap<String, (String, u64)>,
     pub(crate) physics_contexts: HashMap<String, (String, u64)>,
     pub(crate) expression_entry_contexts: HashMap<String, (String, u64)>,
@@ -187,6 +188,7 @@ impl AuthoringSession {
             incarnations: HashMap::new(),
             physics_contexts: HashMap::new(),
             pose_contexts: HashMap::new(),
+            organization_contexts: HashMap::new(),
             expression_entry_contexts: HashMap::new(),
             motion_contexts: HashMap::new(),
             attachment_content_epochs: HashMap::new(),
@@ -719,6 +721,7 @@ impl AuthoringSession {
             self.motion_contexts.clear();
             self.physics_contexts.clear();
             self.pose_contexts.clear();
+            self.organization_contexts.clear();
             if let Some(pose) = document.pose() {
                 for id in pose.entity_ids() {
                     if let Some(owner) = document.pose_owner(id) {
@@ -861,6 +864,37 @@ impl AuthoringSession {
                 }
             } else {
                 self.pose_contexts.remove(&entity.id);
+            }
+        }
+        for entity in changes
+            .created
+            .iter()
+            .chain(&changes.deleted)
+            .chain(&changes.modified)
+        {
+            if !matches!(
+                entity.kind,
+                ObjectKind::Parameter
+                    | ObjectKind::CdiParameterGroup
+                    | ObjectKind::Part
+                    | ObjectKind::Mesh
+                    | ObjectKind::Transform
+                    | ObjectKind::Offscreen
+            ) {
+                continue;
+            }
+            if crate::organization_authoring::kind(document, &entity.id).is_some() {
+                let owner = document.organization_owner(&entity.id).map(str::to_owned);
+                if self
+                    .organization_contexts
+                    .get(&entity.id)
+                    .is_none_or(|v| v.0 != owner)
+                {
+                    self.organization_contexts
+                        .insert(entity.id.clone(), (owner, document.revision()));
+                }
+            } else {
+                self.organization_contexts.remove(&entity.id);
             }
         }
         for entity in &changes.resource_content {

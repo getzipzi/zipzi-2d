@@ -140,6 +140,7 @@ pub(super) fn apply_command(
         }
         Command::SetPose(pose) => edit.set_pose(pose)?,
         Command::EditPose(intent) => edit.edit_pose(intent)?,
+        Command::EditOrganization(intent) => edit.edit_organization(intent)?,
         Command::BindingAuthoring(intent) => edit.binding_authoring(intent)?,
         Command::EditPhysics(intent) => edit.edit_physics(intent)?,
         Command::SetPhysics(physics) => edit.set_physics(physics)?,

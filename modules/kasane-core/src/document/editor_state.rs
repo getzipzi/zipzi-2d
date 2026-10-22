@@ -86,6 +86,7 @@ impl Document {
                     || self.content.offscreens.contains_key(id)
                     || self.content.glues.contains_key(id)
                     || self.content.parameters.contains_key(id)
+                    || self.get_parameter_group(id).is_some()
                     || self.content.bindings.contains_key(id)
                     || self.content.scene_bindings.contains_key(id)
                     || self.content.blend_key_tables.contains_key(id)

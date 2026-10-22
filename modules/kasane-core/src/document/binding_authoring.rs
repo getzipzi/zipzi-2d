@@ -163,8 +163,8 @@ pub(super) fn check_keys(parameter: &Parameter, keys: &[f32]) -> Result<(), Stat
     }
 }
 impl Document {
-    /// Check both projections of a scene object's persistent ownership. A binding
-    /// cannot be edited by bypassing a locked target or an ancestor container.
+    /// Locks inherit through organizational owners. Deformation parents protect
+    /// their own fields; reparent/conversion operations check affected parents explicitly.
     pub(super) fn authoring_unlocked(&self, id: &str) -> Result<(), Status> {
         if self.editor_state().is_empty() {
             return Ok(());
@@ -215,9 +215,17 @@ impl Document {
             if let Some(child) = self.binding_identity(id) {
                 return self.authoring_unlocked(&child.owner);
             } else if let Some(m) = self.get_mesh(id) {
-                pending.extend([m.part_id.as_str(), m.deformer_id.as_str()]);
+                pending.push(m.part_id.as_str());
             } else if let Some(t) = self.get_transform(id) {
-                pending.extend([t.part(), t.parent()]);
+                pending.push(t.part());
+            } else if self.get_parameter(id).is_some() {
+                if let Some(group) = self.parameter_group_for(id) {
+                    pending.push(group);
+                }
+            } else if let Some(group) = self.get_parameter_group(id) {
+                if let Some(parent) = group.parent_id.as_deref() {
+                    pending.push(parent);
+                }
             } else if let Some(p) = self.get_part(id) {
                 pending.push(&p.parent_id);
             } else if let Some(o) = self.get_offscreen(id) {

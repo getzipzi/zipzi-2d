@@ -144,7 +144,10 @@ impl Document {
     }
 
     pub fn replace_mesh(&mut self, mesh: Mesh) -> EditResult {
-        if let Err(status) = self.authoring_unlocked(&mesh.id) {
+        if let Err(status) = self
+            .authoring_unlocked(&mesh.id)
+            .and_then(|_| self.authoring_unlocked(&mesh.part_id))
+        {
             return self.failed(status);
         }
         #[cfg(feature = "bench-instrumentation")]
@@ -276,7 +279,10 @@ impl Document {
 
     /// Replace bound topology and its complete keyform set as one validated edit.
     pub fn replace_mesh_with_keyforms(&mut self, mesh: Mesh, binding: MeshBinding) -> EditResult {
-        if let Err(status) = self.authoring_unlocked(&mesh.id) {
+        if let Err(status) = self
+            .authoring_unlocked(&mesh.id)
+            .and_then(|_| self.authoring_unlocked(&mesh.part_id))
+        {
             return self.failed(status);
         }
         if self.mutation_blocked() {
@@ -330,7 +336,10 @@ impl Document {
         glues: Vec<Glue>,
         vertex_mapping: HashMap<VertexId, Option<VertexId>>,
     ) -> EditResult {
-        if let Err(status) = self.authoring_unlocked(&mesh.id) {
+        if let Err(status) = self
+            .authoring_unlocked(&mesh.id)
+            .and_then(|_| self.authoring_unlocked(&mesh.part_id))
+        {
             return self.failed(status);
         }
         if self.mutation_blocked() {

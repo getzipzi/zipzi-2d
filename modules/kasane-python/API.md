@@ -234,6 +234,52 @@ Imported Motion names default to the source file stem, so package export can
 retain names such as `mtn_01.motion3.json`. Imported virtual tracks retain
 their runtime IDs on export and appear in preview coverage diagnostics.
 
+`Edit.organization_authoring(intent)`, `Session.plan_organization_authoring(intent)`
+and `Session.execute_organization_plan(plan)` organize Parameters, nested
+ParameterGroups and Part subtrees through the same Rust SDK rules. Commands use
+an `operation` discriminator: `create_parameter`, `create_group`, `create_part`,
+`patch_group` (with complete `expected` and `group` records), `move`, `duplicate`,
+and `delete`. `set_parameter_group` is the membership-only compatibility command;
+`move` also places the parameter at a stable destination position.
+Collections use `kind`: `parameters` with `group_id`, `parameter_groups` with
+`parent_id`, or `part_members` with `part_id`. Use `None` for the root and
+`before` with a stable sibling ID, or `None` to append. Empty groups persist.
+Multiple selected IDs follow source order; selected descendants of selected
+ancestors are included once. Cycles, stale plans and locked sources or
+destinations fail atomically. A no-op preserves the redo stack.
+
+```python
+plan = model.plan_organization_authoring({
+    "operation": "move", "ids": [parameter_id],
+    "destination": {"kind": "parameters", "group_id": group_id},
+    "before": None,
+})
+model.execute_organization_plan(plan)
+```
+
+Plans expose `version`, `affected_ids`, `copied_ids` (old/new ID pairs) and
+`effects_json`. Parameter/Group copies generate fresh owned IDs and runtime IDs;
+external users continue referencing the originals. A group with unresolved CDI
+parameter rows cannot be duplicated until those references are repaired
+(`UNRESOLVED_PARAMETER_COPY_CONFLICT`); movement and dissolution preserve them.
+Part copies include their organization subtree and owned ordinary, scene and
+Blend bindings, remap owned axes/samples and internal deformation/mask references,
+and share external Parameters, textures and Blend tables. Drawing membership is
+exclusive: external drawing members remain with the original group and are
+listed in the effects report. Standalone scene-object copies belong to the
+remaining scene-authoring slice.
+
+`delete` accepts `policy: "contents"` or `"dissolve"`. Contents deletion checks
+external dependencies before removing owned resources. Dissolution preserves
+members and promotes them one level. A Part can dissolve only when its visibility
+and compositing state can be retained and flattening its drawing group is proven
+to preserve drawing order. Active Part bindings, disabled Parts and Offscreen
+owners return `PART_DISSOLVE_STATE_UNREPRESENTABLE`; unproven drawing order
+returns `PART_DISSOLVE_DRAW_ORDER_UNPROVEN`. Dormant bindings owned by a dissolved
+Part are removed. Part moves retain drawing membership and deformation parents;
+organization can change inherited visibility or compositing, reported in
+`effects_json`. Palette ordering alone does not change drawing order.
+
 `Edit.create_pose(id, groups, fade_in=None)` takes ordered groups of
 `(part_uuid, linked_part_uuids)` pairs. `replace_pose()` accepts a detached
 `Session.pose()` mapping; `import_pose3(id, text)` reports unresolved Parts.

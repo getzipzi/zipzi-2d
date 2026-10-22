@@ -31,6 +31,8 @@ mod motion_editing;
 mod motion_library;
 #[path = "motion_properties.rs"]
 mod motion_properties;
+#[path = "organization_authoring.rs"]
+mod organization_authoring;
 #[path = "physics_authoring.rs"]
 mod physics_authoring;
 #[path = "physics_editing.rs"]

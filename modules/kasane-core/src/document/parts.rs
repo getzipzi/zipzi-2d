@@ -41,6 +41,9 @@ impl Document {
     }
 
     pub fn create_part(&mut self, mut p: Part) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&p.parent_id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &p.id));
         }
@@ -65,6 +68,23 @@ impl Document {
     }
 
     pub fn replace_part(&mut self, p: Part) -> EditResult {
+        if let Err(status) = self
+            .authoring_unlocked(&p.id)
+            .and_then(|_| self.authoring_unlocked(&p.parent_id))
+        {
+            return self.failed(status);
+        }
+        if self
+            .get_part(&p.id)
+            .is_some_and(|old| old.parent_id != p.parent_id)
+        {
+            if let Err(status) = self.organization_subtree_unlocked(&[p.id.clone()]) {
+                return self.failed(status);
+            }
+        }
+        if self.get_part(&p.id) == Some(&p) {
+            return self.failed(Status::ok());
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &p.id));
         }

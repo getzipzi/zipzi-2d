@@ -7,10 +7,12 @@ use serde::Serialize;
 use std::collections::{BTreeSet, HashSet};
 mod binding;
 mod motion;
+mod organization;
 mod physics;
 mod pose;
 pub use binding::BindingReferenceChange;
 pub use motion::{MotionReferenceChange, MotionReferenceValue};
+pub use organization::OrganizationReferenceChange;
 pub use physics::{PhysicsReferenceChange, PhysicsReferenceValue};
 pub use pose::PoseReferenceChange;
 
@@ -34,6 +36,10 @@ pub struct EntityRef {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CollectionRef {
+    Organization {
+        document_id: String,
+        collection: kasane_core::document::OrganizationCollection,
+    },
     DeformationChildren {
         document_id: String,
         parent_id: String,
@@ -79,6 +85,7 @@ pub struct ChangeSet {
     pub collections: Vec<CollectionRef>,
     pub references: Vec<ReferenceChange>,
     pub motion_references: Vec<MotionReferenceChange>,
+    pub organization_references: Vec<OrganizationReferenceChange>,
     pub pose_references: Vec<PoseReferenceChange>,
     pub physics_references: Vec<PhysicsReferenceChange>,
     pub binding_references: Vec<BindingReferenceChange>,
@@ -94,6 +101,9 @@ impl ChangeSet {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.motion_references {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+        }
+        for edge in &mut inverse.organization_references {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.pose_references {
@@ -131,6 +141,22 @@ impl ChangeSet {
                         document_id,
                         binding_id,
                     } => document_id.capacity() + binding_id.capacity(),
+                    CollectionRef::Organization {
+                        document_id,
+                        collection,
+                    } => {
+                        document_id.capacity() + match collection {
+                            kasane_core::document::OrganizationCollection::Parameters {
+                                group_id,
+                            } => group_id.as_ref().map_or(0, String::capacity),
+                            kasane_core::document::OrganizationCollection::ParameterGroups {
+                                parent_id,
+                            } => parent_id.as_ref().map_or(0, String::capacity),
+                            kasane_core::document::OrganizationCollection::PartMembers {
+                                part_id,
+                            } => part_id.as_ref().map_or(0, String::capacity),
+                        }
+                    }
                     CollectionRef::Pose {
                         document_id,
                         owner,
@@ -216,6 +242,17 @@ impl ChangeSet {
                         + r.entity.document_id.capacity()
                         + pose::reference_bytes(&r.before)
                         + pose::reference_bytes(&r.after)
+                })
+                .sum::<usize>()
+            + self
+                .organization_references
+                .iter()
+                .map(|r| {
+                    std::mem::size_of::<OrganizationReferenceChange>()
+                        + r.entity.id.capacity()
+                        + r.entity.document_id.capacity()
+                        + r.before.as_ref().map_or(0, String::capacity)
+                        + r.after.as_ref().map_or(0, String::capacity)
                 })
                 .sum::<usize>()
             + self.categories.len() * (std::mem::size_of::<ChangeCategory>() + 64)
@@ -362,6 +399,7 @@ pub(crate) fn summarize(
     motion::summarize_motion(before, after, &mut out);
     physics::summarize_physics(before, after, &mut out);
     pose::summarize_pose(before, after, &mut out);
+    organization::summarize_organization(before, after, &mut out);
     binding::summarize_bindings(before, after, object_ids, &mut out);
     binding::summarize_binding_children(before, after, object_ids, &mut out);
     // Persistent authoring flags affect capabilities even when domain content

@@ -308,6 +308,10 @@ class Edit:
         INVALID_MOTION_FPS or INVALID_MOTION_FADE. SDK failure aborts this edit."""
         self._call(lambda: self._native.set_motion_timing(motion_id, duration, fps, looping, fade_in, fade_out))
 
+    def organization_authoring(self, intent: Mapping[str, object]) -> None:
+        """Apply a typed Parameter/ParameterGroup/Part collection command."""
+        self._call(lambda: self._native.organization_authoring_json(json.dumps(intent)))
+
     def pose_authoring(self, intent: Mapping[str, object]) -> None:
         """Apply a typed Pose command through the SDK in this transaction."""
         self._call(lambda: self._native.pose_authoring_json(json.dumps(intent)))

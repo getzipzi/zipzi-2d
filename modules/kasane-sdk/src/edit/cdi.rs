@@ -2,12 +2,9 @@
 //! before publication, so a failed edit cannot leave partial memberships.
 use super::EditSession;
 use crate::types::SdkError;
-use kasane_core::document::{
-    CdiCombinedSet, CdiParameterEntry, CdiParameterGroup, DisplayInfo, DisplayInfoOrigin,
-};
+use kasane_core::document::{CdiCombinedSet, CdiParameterGroup, DisplayInfo};
 use kasane_core::ChangeKind;
 use kasane_project::{import_cdi3, CdiProjectDiagnostic, CdiProjectError};
-use std::collections::BTreeMap;
 
 fn project_error(error: CdiProjectError, operation: &'static str) -> SdkError {
     let mut result = SdkError::new(&error.code, &error.message, operation);
@@ -19,8 +16,11 @@ impl EditSession<'_> {
     pub fn replace_display_info(&mut self, info: DisplayInfo) -> Result<(), SdkError> {
         self.ensure_active("replace_display_info")?;
         let id = self.document().id().to_owned();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().replace_display_info(info);
-        self.record(result, "replace_display_info", &id)
+        self.record(result, "replace_display_info", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
 
     pub fn set_parameter_display_name(
@@ -94,37 +94,14 @@ impl EditSession<'_> {
         {
             return Err(self.abort_with(SdkError::new(
                 "MISSING_PARAMETER",
-                "Parameter does not exist",
+                parameter_id,
                 "set_parameter_group",
             )));
         }
-        let mut info = self.candidate_document().display_info().clone();
-        if info.origin == DisplayInfoOrigin::Generated && info.parameters.is_none() {
-            info.parameters = Some(
-                self.candidate_document()
-                    .parameter_order()
-                    .iter()
-                    .map(|id| CdiParameterEntry::Resolved {
-                        parameter_id: id.clone(),
-                        group_id: None,
-                        extensions: BTreeMap::new(),
-                    })
-                    .collect(),
-            );
-        }
-        let entries = info.parameters.get_or_insert_with(Vec::new);
-        if let Some(CdiParameterEntry::Resolved { group_id: current, .. }) = entries.iter_mut().find(
-            |entry| matches!(entry, CdiParameterEntry::Resolved { parameter_id: id, .. } if id == parameter_id),
-        ) {
-            *current = group_id.map(str::to_owned);
-        } else {
-            entries.push(CdiParameterEntry::Resolved {
-                parameter_id: parameter_id.into(),
-                group_id: group_id.map(str::to_owned),
-                extensions: BTreeMap::new(),
-            });
-        }
-        self.replace_display_info(info)
+        self.edit_organization(kasane_core::document::OrganizationEdit::SetParameterGroup {
+            parameter_id: parameter_id.into(),
+            group_id: group_id.map(str::to_owned),
+        })
     }
 
     pub fn set_combined_parameters(&mut self, set: CdiCombinedSet) -> Result<(), SdkError> {
@@ -146,7 +123,9 @@ impl EditSession<'_> {
         let imported = import_cdi3(self.candidate_document(), text)
             .map_err(|error| self.abort_with(project_error(error, "import_cdi3")))?;
         let id = imported.candidate.id().to_owned();
+        let before = crate::session::keys_in(self.candidate_document());
         self.candidate = Some(imported.candidate);
+        self.track_removed_objects(before);
         self.kind = super::merge_kind(self.kind, ChangeKind::Metadata);
         if !self.object_ids.contains(&id) {
             self.object_ids.push(id);

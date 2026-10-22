@@ -267,6 +267,16 @@ impl Document {
         self.modified_cache.take();
         self.expression_entries.take();
         self.motion_lookup.take();
+        if invalidate
+            || !super::organization::same_metadata_shape(
+                &self.content.display_info,
+                &checkpoint.0.display_info,
+            )
+            || self.content.hierarchy_order.organization
+                != checkpoint.0.hierarchy_order.organization
+        {
+            self.organization_index.take();
+        }
         std::mem::swap(&mut self.content, &mut checkpoint.0);
         self.mesh_runtime_ids = self
             .content

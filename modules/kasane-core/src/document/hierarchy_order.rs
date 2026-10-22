@@ -1,7 +1,7 @@
 //! Palette order is independent of object storage and runtime draw order.
 use super::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -43,6 +43,43 @@ impl Document {
         }
         if self.content.hierarchy_order == order {
             return self.failed(Status::ok());
+        }
+        if !self.editor_state().is_empty()
+            && self.content.hierarchy_order.organization != order.organization
+        {
+            let previous = self.scene_organization_order();
+            let mut seen = HashSet::new();
+            let proposed: Vec<_> = order
+                .organization
+                .iter()
+                .chain(previous.iter())
+                .filter(|id| seen.insert(id.as_str()))
+                .cloned()
+                .collect();
+            let ranks = |ids: &[String]| {
+                let mut counts = HashMap::new();
+                let mut ranks = HashMap::new();
+                for id in ids {
+                    let owner = self.organization_owner(id).unwrap_or("");
+                    let partition = owner.is_empty() && self.get_part(id).is_some();
+                    let next = counts.entry((owner, partition)).or_insert(0usize);
+                    ranks.insert(id.clone(), *next);
+                    *next += 1;
+                }
+                ranks
+            };
+            let old = ranks(&previous);
+            let new = ranks(&proposed);
+            for id in &previous {
+                if old.get(id) != new.get(id) {
+                    if let Err(status) = self.organization_subtree_unlocked(&[id.clone()]) {
+                        return self.failed(status);
+                    }
+                }
+            }
+        }
+        if self.content.hierarchy_order.organization != order.organization {
+            self.organization_index.take();
         }
         self.content.hierarchy_order = order;
         self.changed(
