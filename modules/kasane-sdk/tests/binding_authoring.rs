@@ -176,8 +176,8 @@ fn keyform_replacement_and_repeat_mapping_use_core_rules() {
     assert_eq!(sample(&sdk, 1.25), (0.25, 47.5, false));
 }
 
-#[path = "binding_authoring/conversions.rs"]
+#[path = "binding_authoring/conversions/mod.rs"]
 mod conversions;
 
-#[path = "binding_authoring/stable_domains.rs"]
+#[path = "binding_authoring/stable_domains/mod.rs"]
 mod stable_domains;
