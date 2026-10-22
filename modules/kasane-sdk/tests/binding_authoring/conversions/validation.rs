@@ -150,3 +150,216 @@ fn each_budget_boundary_is_checked_without_allocating_a_grid() {
         "INVALID_KEYS"
     );
 }
+
+#[test]
+fn cooperative_cancel_during_grid_construction_and_before_commit_preserves_history() {
+    use kasane_sdk::ConversionControl;
+    let mut s = bound();
+    s.edit("redo sentinel", None, |e| {
+        e.create_parameter(Parameter {
+            id: Q.into(),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    s.undo().unwrap();
+    s.drain_events();
+    let version = s.version();
+    let history = s.history_state();
+    let intent = E::MeshGrid(G::InsertSample {
+        binding_id: BINDING_ID.into(),
+        parameter_id: PARAMETER_ID.into(),
+        value: 0.5,
+    });
+    // Cancels after entering lattice construction rather than at initial preflight.
+    let control = ConversionControl::with_progress(|n| n < 4);
+    assert_eq!(
+        s.plan_binding_authoring_with_control(intent.clone(), &control)
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "AUTHORING_CANCELLED"
+    );
+    assert_eq!(control.checkpoints(), 4);
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    assert!(s.drain_events().is_empty());
+    let control = ConversionControl::default();
+    let p = s
+        .plan_binding_authoring_with_control(intent.clone(), &control)
+        .unwrap();
+    control.cancel();
+    assert_eq!(
+        s.execute_binding_plan(&p).unwrap_err().code.as_ref(),
+        "AUTHORING_CANCELLED"
+    );
+    let control = ConversionControl::default();
+    let p = s
+        .plan_binding_authoring_with_control(intent, &control)
+        .unwrap();
+    let mut candidate = s.begin_owned_edit("cancel at commit", None).unwrap();
+    candidate.apply_binding_plan(&p).unwrap();
+    control.cancel();
+    assert_eq!(
+        candidate.commit_to(&mut s).unwrap_err().code.as_ref(),
+        "AUTHORING_CANCELLED"
+    );
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    assert!(s.drain_events().is_empty());
+    let control = ConversionControl::default();
+    let mut candidate = s.begin_owned_edit("composed candidate", None).unwrap();
+    candidate
+        .create_parameter(Parameter {
+            id: Q.into(),
+            ..Default::default()
+        })
+        .unwrap();
+    candidate
+        .binding_authoring_with_control(
+            E::MeshGrid(G::InsertSample {
+                binding_id: BINDING_ID.into(),
+                parameter_id: PARAMETER_ID.into(),
+                value: 0.5,
+            }),
+            &control,
+        )
+        .unwrap();
+    control.cancel();
+    assert_eq!(
+        candidate.commit_to(&mut s).unwrap_err().code.as_ref(),
+        "AUTHORING_CANCELLED"
+    );
+    assert!(s.parameter(Q).is_none());
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    s.redo().unwrap();
+    assert!(s.parameter(Q).is_some());
+}
+
+#[test]
+fn grid_report_names_stable_addresses_and_reconstruction_weights() {
+    use kasane_core::document::ConversionElement as A;
+    let mut s = bound();
+    let old = s.document().get_binding(BINDING_ID).unwrap().clone();
+    let p = s
+        .plan_binding_authoring(E::MeshGrid(G::InsertSample {
+            binding_id: BINDING_ID.into(),
+            parameter_id: PARAMETER_ID.into(),
+            value: 0.5,
+        }))
+        .unwrap();
+    let report = p.report();
+    assert_eq!(report.domain[0].interval.minimum, 0.);
+    assert_eq!(report.domain[0].interval.maximum, 1.);
+    assert!(report.deleted.is_empty());
+    assert_eq!(
+        report
+            .generated
+            .iter()
+            .filter(|a| matches!(a.element, A::Sample(_)))
+            .count(),
+        1
+    );
+    let reconstructed = report
+        .reconstructed
+        .iter()
+        .find(|r| r.sources.len() == 2)
+        .unwrap();
+    assert_eq!(
+        reconstructed
+            .sources
+            .iter()
+            .map(|(_, w)| w)
+            .copied()
+            .sum::<f32>(),
+        1.
+    );
+    assert!(reconstructed.sources.iter().all(|(a,_)|matches!(&a.element,A::Keyform(samples) if old.keyforms.iter().any(|f|f.samples==*samples))));
+    assert!(report.grid_guarantee.is_some());
+    s.execute_binding_plan(&p).unwrap();
+    let moved = s
+        .plan_binding_authoring(E::MeshGrid(G::MoveSample {
+            binding_id: BINDING_ID.into(),
+            parameter_id: PARAMETER_ID.into(),
+            from: 0.5,
+            to: 0.6,
+        }))
+        .unwrap();
+    assert!(moved.report().generated.is_empty());
+    assert!(moved.report().deleted.is_empty());
+    assert!(moved
+        .report()
+        .remapped
+        .iter()
+        .any(|r| r.before.value == Some(0.5) && r.after.value == Some(0.6)));
+    assert!(!moved.report().losses.is_empty());
+}
+
+#[test]
+fn cancellation_signal_can_interrupt_a_separate_planning_worker() {
+    use kasane_sdk::ConversionControl;
+    use std::sync::{Arc, Barrier};
+    let entered = Arc::new(Barrier::new(2));
+    let resume = Arc::new(Barrier::new(2));
+    let (worker_entered, worker_resume) = (entered.clone(), resume.clone());
+    let control = ConversionControl::with_progress(move |n| {
+        if n == 2 {
+            worker_entered.wait();
+            worker_resume.wait();
+        }
+        true
+    });
+    let worker_control = control.clone();
+    let thread = std::thread::spawn(move || {
+        let s = bound();
+        let version = s.version();
+        let result = s.plan_binding_authoring_with_control(
+            E::MeshGrid(G::InsertSample {
+                binding_id: BINDING_ID.into(),
+                parameter_id: PARAMETER_ID.into(),
+                value: 0.5,
+            }),
+            &worker_control,
+        );
+        assert_eq!(result.unwrap_err().code.as_ref(), "AUTHORING_CANCELLED");
+        assert_eq!(s.version(), version);
+    });
+    entered.wait();
+    control.cancel();
+    resume.wait();
+    thread.join().unwrap();
+    assert_eq!(control.checkpoints(), 2);
+}
+
+#[test]
+fn report_budget_rejection_precedes_cartesian_construction() {
+    let mut s = bound();
+    let baseline = s.document().estimated_content_bytes();
+    s.set_authoring_limits(AuthoringLimits {
+        max_conversion_bytes: baseline * 6 + 8_000,
+        ..Default::default()
+    })
+    .unwrap();
+    let control = kasane_sdk::ConversionControl::default();
+    let version = s.version();
+    let history = s.history_state();
+    let error = s
+        .plan_binding_authoring_with_control(
+            E::MeshGrid(G::InsertSample {
+                binding_id: BINDING_ID.into(),
+                parameter_id: PARAMETER_ID.into(),
+                value: 0.5,
+            }),
+            &control,
+        )
+        .unwrap_err();
+    assert_eq!(error.code.as_ref(), "AUTHORING_MEMORY_LIMIT");
+    assert_eq!(
+        control.checkpoints(),
+        2,
+        "only Mesh/Grid entry checkpoints, before lattice expansion"
+    );
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+}

@@ -77,6 +77,20 @@ fn parent_edit(strategy: ReparentStrategy, parent: &str) -> E {
         parent_id: parent.into(),
         strategy,
         tolerance: 0.001,
+        relative_tolerance: 1e-6,
+        context: Some(kasane_sdk::ReparentContext {
+            parameter_values: [(PARAMETER_ID.into(), 0.5)].into_iter().collect(),
+            parameter_domain: if strategy == ReparentStrategy::PreserveParameterDomain {
+                vec![kasane_core::document::ConversionDomain {
+                    parameter_id: PARAMETER_ID.into(),
+                    minimum: 0.,
+                    maximum: 1.,
+                }]
+            } else {
+                vec![]
+            },
+            edit_time_seconds: 0.,
+        }),
     })
 }
 

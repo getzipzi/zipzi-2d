@@ -66,4 +66,4 @@ mod project_io;
 pub(crate) use motion::NativeMotionPlan;
 
 mod binding;
-pub(crate) use binding::{NativeBindingFieldAddress, NativeBindingPlan};
+pub(crate) use binding::{NativeBindingFieldAddress, NativeBindingPlan, NativeConversionControl};

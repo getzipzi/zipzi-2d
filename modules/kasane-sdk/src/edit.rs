@@ -23,6 +23,7 @@ pub struct EditSession<'a> {
     pub(crate) object_ids: Vec<String>,
     pub(crate) erased_keys: HashSet<ObjectKey>,
     pub(crate) authoring_limits: kasane_core::document::AuthoringLimits,
+    pub(crate) binding_controls: Vec<kasane_core::document::ConversionControl>,
     pub(crate) binding_cost: Option<kasane_core::document::ConversionCost>,
 }
 
@@ -634,6 +635,11 @@ impl EditSession<'_> {
         if let Some(cost) = self.binding_cost {
             crate::binding_authoring::check_cost(cost, session.authoring_limits)?;
         }
+        for control in &self.binding_controls {
+            control
+                .check()
+                .map_err(|s| SdkError::from_status(s, "commit", vec![]))?;
+        }
         let candidate = self.candidate.take().expect("edit candidate exists");
         if let Some(issue) = candidate.validate_structure().into_iter().next() {
             return Err(SdkError::from_status(
@@ -724,6 +730,13 @@ impl EditSession<'_> {
                     "commit",
                 ));
             }
+        }
+        // Cancellation after this last check belongs to the next operation;
+        // publication and its history/event changes form one atomic boundary.
+        for control in &self.binding_controls {
+            control
+                .check()
+                .map_err(|s| SdkError::from_status(s, "commit", vec![]))?;
         }
         session
             .project

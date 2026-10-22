@@ -34,25 +34,7 @@ pub(super) fn evaluate(
                 format!("{}: range length must be positive", id),
             );
         }
-        let (v, clamped) = if p.repeat {
-            let normalized = (requested - p.minimum) / range_length;
-            let wrapped = if normalized.is_finite() {
-                normalized - normalized.floor()
-            } else {
-                // Finite f32 inputs can overflow during subtraction or division.
-                (((requested as f64 - p.minimum as f64) % range_length as f64)
-                    .rem_euclid(range_length as f64)
-                    / range_length as f64) as f32
-            };
-            let mut val = wrapped * range_length + p.minimum;
-            if val < p.minimum || val >= p.maximum {
-                val = p.minimum;
-            }
-            (val, false)
-        } else {
-            let clamped_val = requested.clamp(p.minimum, p.maximum);
-            (clamped_val, requested != clamped_val)
-        };
+        let (v, clamped) = normalize(p, requested);
         let sample = &mut state.frame.parameters[parameter_slot];
         sample.id.clone_from(id);
         sample.requested = requested;
@@ -72,4 +54,28 @@ pub(super) fn validate_preview(doc: &Document, preview: &super::types::PreviewVa
         }
     }
     Status::ok()
+}
+
+/// Same scalar normalization for runtime slots and captured authoring inputs.
+pub(super) fn normalize(p: &crate::Parameter, requested: f32) -> (f32, bool) {
+    let range_length = p.maximum - p.minimum;
+    if p.repeat {
+        let normalized = (requested - p.minimum) / range_length;
+        let wrapped = if normalized.is_finite() {
+            normalized - normalized.floor()
+        } else {
+            // Finite f32 inputs can overflow during subtraction or division.
+            (((requested as f64 - p.minimum as f64) % range_length as f64)
+                .rem_euclid(range_length as f64)
+                / range_length as f64) as f32
+        };
+        let mut val = wrapped * range_length + p.minimum;
+        if val < p.minimum || val >= p.maximum {
+            val = p.minimum;
+        }
+        (val, false)
+    } else {
+        let clamped_val = requested.clamp(p.minimum, p.maximum);
+        (clamped_val, requested != clamped_val)
+    }
 }

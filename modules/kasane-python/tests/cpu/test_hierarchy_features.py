@@ -490,3 +490,50 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         model.execute_binding_plan(model.plan_binding_authoring(activate))
         self.assertEqual(model.binding_source(BLEND_TABLE)["source"]["value"]["base_sample_id"], samples[0])
         self.assertEqual(model.validate_structure(), [])
+
+    def test_binding_conversion_report_and_cancelled_plan_do_not_publish(self):
+        import json
+        model = session()
+        with model.edit("base") as edit:
+            edit.add_png_asset(ASSET, "texture", TEXTURE)
+            edit.create_rectangle(MESH, "face", ASSET, (40, 40), (60, 60))
+        intent = {"Grid": {"Create": {"id": BINDING, "target": {"Mesh": MESH}}}}
+        before = model.version
+        control = model.binding_conversion_control()
+        plan = model.plan_binding_authoring(intent, control=control)
+        report = json.loads(plan.report_json)
+        self.assertIn(BINDING, report["affected"])
+        self.assertEqual(report["grid_guarantee"], "BaseShape")
+        self.assertTrue(any(a["owner"] == BINDING and a["element"] == "Object" for a in report["generated"]))
+        self.assertGreater(control.checkpoints, 0)
+        control.cancel()
+        with self.assertRaises(kasane.SdkFailure) as cancelled:
+            model.execute_binding_plan(plan)
+        self.assertEqual(cancelled.exception.code, "AUTHORING_CANCELLED")
+        self.assertEqual(model.version, before)
+        self.assertIsNone(model.binding_source(BINDING))
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_binding_authoring(intent, control=control)
+        model.execute_binding_plan(model.plan_binding_authoring(intent))
+        self.assertIsNotNone(model.binding_source(BINDING))
+
+    def test_reparent_support_and_report_capture_native_snapshot_and_model_tolerance(self):
+        model = session()
+        with model.edit("base") as edit:
+            edit.add_png_asset(ASSET, "texture", TEXTURE)
+            edit.create_rectangle(MESH, "face", ASSET, (0, 0), (1, 1))
+            edit.create_rotation_transform(ROTATION, "parent", kasane.RotationData(0, kasane.RotationPose((0.2, -0.3))))
+        edit = {"sources": [MESH], "parent_id": ROTATION, "strategy": "PreserveEditState", "tolerance": 1e-5, "relative_tolerance": 1e-6,
+                "context": {"parameter_values": {}, "parameter_domain": [], "edit_time_seconds": 0.5}}
+        self.assertEqual(model.reparent_support(edit), "RequiresConversionPlan")
+        plan = model.plan_binding_authoring({"Reparent": edit})
+        report = json.loads(plan.report_json)
+        guarantee = report["reparent_guarantee"]
+        self.assertEqual(guarantee["context"]["edit_time_seconds"], 0.5)
+        self.assertGreaterEqual(guarantee["reference_scale"], 1)
+        self.assertLessEqual(guarantee["error_bound"], guarantee["tolerance"] + guarantee["relative_tolerance"] * guarantee["reference_scale"])
+        self.assertTrue(any(row["after"]["parent_id"] == ROTATION for row in report["remapped"]))
+        model.execute_binding_plan(plan)
+        self.assertEqual(model.geometry(MESH).parent_id, ROTATION)
+        model.undo()
+        self.assertIsNone(model.geometry(MESH).parent_id)

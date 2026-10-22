@@ -6,6 +6,14 @@ use serde::{Deserialize, Serialize};
 
 pub(super) mod identity;
 pub use identity::{BindingIdentity, BindingIdentityKind};
+mod report;
+pub use report::{
+    ConversionAddress, ConversionDomain, ConversionElement, ConversionLocation,
+    ConversionOwnerDomain, ConversionReconstruction, ConversionRemapping, ConversionReport,
+    ParameterRangeConversion,
+};
+mod control;
+pub use control::ConversionControl;
 mod projection;
 pub use projection::BindingOmission;
 mod blend;
@@ -83,9 +91,12 @@ impl AuthoringLimits {
                 "Conversion byte count overflows",
             )
         };
-        // The plan and installed candidate may coexist during execution.
+        // Real-model allocation probes include candidate/checkpoint copies,
+        // identity sets, ChangeSet/context summaries and plan inventories. Six
+        // retained payloads leave headroom above the observed 3.3x commit peak;
+        // this remains a capacity estimate rather than an allocator/RSS limit.
         let temporary = retained_bytes
-            .checked_mul(2)
+            .checked_mul(6)
             .and_then(|n| {
                 payload
                     .checked_mul(2)

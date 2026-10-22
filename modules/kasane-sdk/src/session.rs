@@ -578,6 +578,7 @@ impl AuthoringSession {
             object_ids: Vec::new(),
             erased_keys: HashSet::new(),
             authoring_limits: self.authoring_limits,
+            binding_controls: vec![],
             binding_cost: None,
         })
     }

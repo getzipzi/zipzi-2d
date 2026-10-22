@@ -259,14 +259,47 @@ fn shared_base_removal_and_table_switch_preserve_retained_samples_or_require_res
             },
         }),
     );
-    apply(
-        &mut s,
-        E::Blend(B::SetBindingTable {
+    let switch = s
+        .plan_binding_authoring(E::Blend(B::SetBindingTable {
             id: id(1702),
             key_table_id: id(1990),
             reset: false,
-        }),
-    );
+        }))
+        .unwrap();
+    let target = s.document().get_blend_key_table(&id(1990)).unwrap();
+    assert_eq!(switch.report().reconstructed.len(), source.samples.len());
+    for domains in [&switch.report().domain, &switch.report().result_domain] {
+        let domain = domains.iter().find(|d| d.owner == id(1702)).unwrap();
+        assert_eq!(domain.interval.parameter_id, source.parameter_id);
+        assert_eq!(
+            domain.interval.minimum,
+            source.samples.first().unwrap().value
+        );
+        assert_eq!(
+            domain.interval.maximum,
+            source.samples.last().unwrap().value
+        );
+    }
+
+    for ((transfer, before), after) in switch
+        .report()
+        .reconstructed
+        .iter()
+        .zip(&source.samples)
+        .zip(&target.samples)
+    {
+        use kasane_core::document::ConversionElement::Keyform;
+        assert_eq!(
+            transfer.destination.element,
+            Keyform(vec![after.id.clone()])
+        );
+        assert_eq!(
+            transfer.sources[0].0.element,
+            Keyform(vec![before.id.clone()])
+        );
+        assert_eq!(transfer.sources[0].1, 1.);
+    }
+    s.execute_binding_plan(&switch).unwrap();
     for (i, value) in [-1., 1.].into_iter().enumerate() {
         assert_eq!(frame(&s, 0.37, value).drawables[0].positions, endpoints[i]);
     }
@@ -312,4 +345,89 @@ fn shared_base_removal_and_table_switch_preserve_retained_samples_or_require_res
         s.undo().unwrap();
     }
     assert!(s.resolve_handle(&handle).is_err());
+}
+
+#[test]
+fn affine_reparent_transforms_shared_mesh_deltas_without_translation_or_identity_loss() {
+    use kasane_sdk::{ReparentContext, ReparentEdit, ReparentStrategy};
+    let mut s = shared();
+    let root = id(2700);
+    s.edit("static reflected rotation", None, |e| {
+        e.create_transform(Transform {
+            id: root.clone(),
+            data: TransformData::Rotation(RotationTransform {
+                base_angle: 17.,
+                pose: RotationPose {
+                    angle: 23.,
+                    scale: 1.2,
+                    origin: PreciseVec2::new(5., -3.),
+                    reflect_x: true,
+                    ..Default::default()
+                },
+            }),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    let handles: Vec<_> = [1702, 1703]
+        .iter()
+        .map(|&n| s.handle(ObjectKind::BlendBinding, &id(n)).unwrap())
+        .collect();
+    let original: Vec<_> = (0..=8)
+        .flat_map(|p| (0..=8).map(move |b| (p, b)))
+        .map(|(p, b)| {
+            (
+                (p, b),
+                frame(&s, p as f32 / 8., b as f32 / 4. - 1.).drawables[0]
+                    .positions
+                    .clone(),
+            )
+        })
+        .collect();
+    let plan = s
+        .plan_binding_authoring(E::Reparent(ReparentEdit {
+            sources: vec![MESH_ID.into()],
+            parent_id: root.clone(),
+            strategy: ReparentStrategy::PreserveParameterDomain,
+            tolerance: 0.1,
+            relative_tolerance: 1e-6,
+            context: Some(ReparentContext {
+                parameter_values: Default::default(),
+                parameter_domain: vec![
+                    kasane_core::document::ConversionDomain {
+                        parameter_id: PARAMETER_ID.into(),
+                        minimum: 0.,
+                        maximum: 1.,
+                    },
+                    kasane_core::document::ConversionDomain {
+                        parameter_id: id(1700),
+                        minimum: -1.,
+                        maximum: 1.,
+                    },
+                ],
+                edit_time_seconds: 0.,
+            }),
+        }))
+        .unwrap();
+    assert!(plan.affected_ids().contains(&id(1702)));
+    assert!(plan.affected_ids().contains(&id(1703)));
+    assert!(plan.report().generated.is_empty());
+    assert!(plan.report().deleted.is_empty());
+    s.execute_binding_plan(&plan).unwrap();
+    for ((p, b), expected) in &original {
+        for (a, b) in frame(&s, *p as f32 / 8., *b as f32 / 4. - 1.).drawables[0]
+            .positions
+            .iter()
+            .zip(expected)
+        {
+            assert!((a.x - b.x).hypot(a.y - b.y) < 0.0001);
+        }
+    }
+    for handle in handles {
+        assert!(s.resolve_handle(&handle).is_ok());
+    }
+    roundtrip(&s);
+    s.undo().unwrap();
+    s.redo().unwrap();
+    assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, root);
 }

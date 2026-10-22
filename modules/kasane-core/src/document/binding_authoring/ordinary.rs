@@ -40,6 +40,8 @@ pub(super) enum GridFragment {
 }
 #[derive(Debug, Clone)]
 pub struct BindingGridPlan {
+    control: ConversionControl,
+    report: ConversionReport,
     pub(super) snapshot: Arc<()>,
     pub(super) fragment: GridFragment,
     cost: ConversionCost,
@@ -47,6 +49,9 @@ pub struct BindingGridPlan {
     affected: Vec<String>,
 }
 impl BindingGridPlan {
+    pub fn report(&self) -> &ConversionReport {
+        &self.report
+    }
     pub fn cost(&self) -> ConversionCost {
         self.cost
     }
@@ -77,6 +82,15 @@ impl Document {
         edit: BindingGridEdit,
         limits: AuthoringLimits,
     ) -> Result<BindingGridPlan, Status> {
+        self.plan_binding_grid_with_control(edit, limits, &ConversionControl::default())
+    }
+    pub fn plan_binding_grid_with_control(
+        &self,
+        edit: BindingGridEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<BindingGridPlan, Status> {
+        control.checkpoint()?;
         let (id, target, op, create) = match edit {
             BindingGridEdit::Create { id, target } => (id, target, None, true),
             BindingGridEdit::Edit { owner, operation } => {
@@ -145,14 +159,25 @@ impl Document {
                 .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &id))?,
             )
             .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &id))?;
+        let mut report_sources = vec![id.clone(), target_id.clone()];
+        if let Some(o) = self.offscreen_for_part(target_id) {
+            report_sources.push(o.id.clone());
+        }
+        report_sources.sort();
+        report_sources.dedup();
+        let grid_limits = self.reserve_report_limits(&report_sources, limits)?;
         let lattice = if let Some(op) = op {
-            self.convert_lattice(old_axes, op, bytes_per_form, limits)?
+            self.convert_lattice(old_axes, op, bytes_per_form, grid_limits, control)?
         } else {
             lattice::Lattice {
                 axes: vec![],
                 weights: vec![vec![(0, 1.)]],
                 coordinates: vec![vec![]],
-                cost: limits.check_grid(&[], bytes_per_form, self.estimated_content_bytes())?,
+                cost: grid_limits.check_grid(
+                    &[],
+                    bytes_per_form,
+                    self.estimated_content_bytes(),
+                )?,
                 guarantee: GridGuarantee::BaseShape,
             }
         };
@@ -165,6 +190,8 @@ impl Document {
         let driven = !active(&lattice.axes).is_empty();
         let old_driven = !active(old_axes).is_empty();
         let mut affected = vec![id.clone(), target_id.clone()];
+        let report_owner = id.clone();
+        let report_target = target_id.clone();
         let fragment = match target {
             BindingGridTarget::Mesh(t) => {
                 let mesh = self.get_mesh(&t).unwrap();
@@ -194,6 +221,7 @@ impl Document {
                 };
                 let mut forms = Vec::new();
                 for (w, coordinates) in lattice.weights.iter().zip(&lattice.coordinates) {
+                    control.checkpoint()?;
                     let f = if w.len() == 1 {
                         form(w[0].0).clone()
                     } else {
@@ -277,6 +305,7 @@ impl Document {
                         };
                         let mut forms = Vec::new();
                         for (w, coordinates) in lattice.weights.iter().zip(&lattice.coordinates) {
+                            control.checkpoint()?;
                             let f = if w.len() == 1 {
                                 form(w[0].0).clone()
                             } else {
@@ -325,6 +354,7 @@ impl Document {
                         };
                         let mut forms = Vec::new();
                         for (w, coordinates) in lattice.weights.iter().zip(&lattice.coordinates) {
+                            control.checkpoint()?;
                             let f = if w.len() == 1 {
                                 form(w[0].0).clone()
                             } else {
@@ -388,6 +418,7 @@ impl Document {
                     let mut out = os.clone();
                     let mut mapping = Vec::new();
                     for weights in &lattice.weights {
+                        control.checkpoint()?;
                         if weights.len() == 1 {
                             let index = os.keyform_index(
                                 weights[0].0,
@@ -517,15 +548,78 @@ impl Document {
         };
         affected.sort();
         affected.dedup();
+        let cost = self.conversion_report_cost(&affected, lattice.cost, limits)?;
+        let before = self.conversion_inventory(&affected, control);
+        let mut after = self.conversion_inventory(&affected, control);
+        match &fragment {
+            GridFragment::Mesh { binding, .. } => after.mesh(binding),
+            GridFragment::Scene {
+                binding, offscreen, ..
+            } => {
+                after.scene(binding);
+                if let Some(o) = offscreen {
+                    after.offscreen(o, Some(binding));
+                }
+            }
+            GridFragment::Glue(g) => after.glue(g),
+        }
+        let mut report = ConversionReport::between(before, after, &affected, format!("{:?}; domain interpolation uses native channel rules; precision snapping is excluded", lattice.guarantee), vec![]);
+        report.grid_guarantee = Some(lattice.guarantee.clone());
+        if matches!(
+            lattice.guarantee,
+            GridGuarantee::DimensionRemoved { .. }
+                | GridGuarantee::SamplesRemoved { .. }
+                | GridGuarantee::ParameterPlacementChanged
+        ) {
+            report.losses.push(format!(
+                "{:?}: parameter behavior changes; removed addresses are listed",
+                lattice.guarantee
+            ));
+        }
+        for (w, c) in lattice.weights.iter().zip(&lattice.coordinates) {
+            control.checkpoint()?;
+            let mut samples = c.clone();
+            samples.sort();
+            let destination = ConversionAddress {
+                owner: if driven {
+                    report_owner.clone()
+                } else {
+                    report_target.clone()
+                },
+                element: if driven {
+                    ConversionElement::Keyform(samples)
+                } else {
+                    ConversionElement::Base
+                },
+            };
+            report.reconstructed.push(ConversionReconstruction {
+                destination,
+                sources: w
+                    .iter()
+                    .map(|&(slot, weight)| {
+                        (
+                            self.grid_form_address(&report_owner, slot, &report_target),
+                            weight,
+                        )
+                    })
+                    .collect(),
+            });
+        }
+        control.check()?;
         Ok(BindingGridPlan {
+            control: control.clone(),
+            report,
             snapshot: self.snapshot_identity.clone(),
             fragment,
-            cost: lattice.cost,
+            cost,
             guarantee: lattice.guarantee,
             affected,
         })
     }
     pub fn apply_binding_grid_plan(&mut self, plan: &BindingGridPlan) -> EditResult {
+        if let Err(status) = plan.control.check() {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",

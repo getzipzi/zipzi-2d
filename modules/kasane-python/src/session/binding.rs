@@ -1,4 +1,24 @@
 use super::*;
+/// Independent cancellation remains callable while a planning worker owns the session lock.
+#[pyclass]
+pub(crate) struct NativeConversionControl {
+    inner: kasane_sdk::ConversionControl,
+}
+#[pymethods]
+impl NativeConversionControl {
+    fn cancel(&self) {
+        self.inner.cancel();
+    }
+    #[getter]
+    fn cancelled(&self) -> bool {
+        self.inner.is_cancelled()
+    }
+    #[getter]
+    fn checkpoints(&self) -> u64 {
+        self.inner.checkpoints()
+    }
+}
+
 #[pyclass]
 pub(crate) struct NativeBindingPlan {
     inner: kasane_sdk::BindingEditPlan,
@@ -18,6 +38,11 @@ impl NativeBindingPlan {
         self.inner.losses().to_vec()
     }
     #[getter]
+    fn report_json(&self) -> PyResult<String> {
+        serde_json::to_string(self.inner.report())
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    }
+    #[getter]
     fn cost(&self) -> (usize, usize, usize, usize) {
         let c = self.inner.cost();
         (
@@ -30,19 +55,40 @@ impl NativeBindingPlan {
 }
 #[pymethods]
 impl NativeSession {
+    fn binding_conversion_control(&self) -> NativeConversionControl {
+        NativeConversionControl {
+            inner: Default::default(),
+        }
+    }
+    #[pyo3(signature=(value, control=None))]
     fn plan_binding_authoring_json(
         &self,
         py: Python<'_>,
         value: &str,
+        control: Option<&NativeConversionControl>,
     ) -> PyResult<NativeBindingPlan> {
         let intent = serde_json::from_str(value)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        let control =
+            control.map_or_else(kasane_sdk::ConversionControl::default, |c| c.inner.clone());
+        let session = self.inner.clone();
+        let result = py.detach(move || {
+            let s = session.lock().map_err(|_| ())?;
+            Ok::<_, ()>(s.plan_binding_authoring_with_control(intent, &control))
+        });
+        match result {
+            Ok(Ok(inner)) => Ok(NativeBindingPlan { inner }),
+            Ok(Err(e)) => Err(sdk_failure(py, e)),
+            Err(()) => Err(poisoned()),
+        }
+    }
+    fn reparent_support_json(&self, py: Python<'_>, value: &str) -> PyResult<String> {
+        let edit = serde_json::from_str(value)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
         let s = self.inner.lock().map_err(|_| poisoned())?;
-        Ok(NativeBindingPlan {
-            inner: s
-                .plan_binding_authoring(intent)
-                .map_err(|e| sdk_failure(py, e))?,
-        })
+        let support = s.reparent_support(&edit).map_err(|e| sdk_failure(py, e))?;
+        serde_json::to_string(&support)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
     fn execute_binding_plan(
         &self,

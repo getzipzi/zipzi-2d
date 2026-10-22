@@ -43,7 +43,7 @@ pub enum AxisReduction {
     Slice(f32),
     Resample(f32),
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GridGuarantee {
     BaseShape,
     /// Piecewise multilinear Mesh positions, appearance and effective draw order
@@ -70,6 +70,9 @@ pub struct MeshGridPlan {
     domain: BindingGridPlan,
 }
 impl MeshGridPlan {
+    pub fn report(&self) -> &ConversionReport {
+        self.domain.report()
+    }
     pub fn guarantee(&self) -> &GridGuarantee {
         self.domain.guarantee()
     }
@@ -105,14 +108,24 @@ impl Document {
         edit: MeshGridEdit,
         limits: AuthoringLimits,
     ) -> Result<MeshGridPlan, Status> {
+        self.plan_mesh_grid_with_control(edit, limits, &ConversionControl::default())
+    }
+    pub fn plan_mesh_grid_with_control(
+        &self,
+        edit: MeshGridEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<MeshGridPlan, Status> {
+        control.checkpoint()?;
         if let MeshGridEdit::Create { id, mesh_id } = edit {
             return Ok(MeshGridPlan {
-                domain: self.plan_binding_grid(
+                domain: self.plan_binding_grid_with_control(
                     BindingGridEdit::Create {
                         id,
                         target: BindingGridTarget::Mesh(mesh_id),
                     },
                     limits,
+                    control,
                 )?,
             });
         }
@@ -178,12 +191,13 @@ impl Document {
             MeshGridEdit::Create { .. } => unreachable!(),
         };
         Ok(MeshGridPlan {
-            domain: self.plan_binding_grid(
+            domain: self.plan_binding_grid_with_control(
                 BindingGridEdit::Edit {
                     owner: b.id.clone(),
                     operation,
                 },
                 limits,
+                control,
             )?,
         })
     }

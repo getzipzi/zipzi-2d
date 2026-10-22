@@ -29,6 +29,8 @@ struct AxisWrite {
 }
 #[derive(Debug, Clone)]
 pub struct ParameterRangePlan {
+    control: ConversionControl,
+    report: ConversionReport,
     snapshot: Arc<()>,
     parameter: Parameter,
     old_min: f32,
@@ -41,6 +43,9 @@ pub struct ParameterRangePlan {
     cost: ConversionCost,
 }
 impl ParameterRangePlan {
+    pub fn report(&self) -> &ConversionReport {
+        &self.report
+    }
     pub fn cost(&self) -> ConversionCost {
         self.cost
     }
@@ -71,6 +76,15 @@ impl Document {
         edit: ParameterRangeEdit,
         limits: AuthoringLimits,
     ) -> Result<ParameterRangePlan, Status> {
+        self.plan_parameter_range_with_control(edit, limits, &ConversionControl::default())
+    }
+    pub fn plan_parameter_range_with_control(
+        &self,
+        edit: ParameterRangeEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<ParameterRangePlan, Status> {
+        control.checkpoint()?;
         let old = self
             .get_parameter(&edit.parameter_id)
             .ok_or_else(|| Status::error("MISSING_PARAMETER", &edit.parameter_id))?;
@@ -81,6 +95,7 @@ impl Document {
         p.default_value = edit.default_value;
         require_ok(self.validate_parameter(&p))?;
         let remap = |keys: &[f32]| -> Result<Vec<f32>, Status> {
+            control.checkpoint()?;
             let mapped: Vec<_> = keys
                 .iter()
                 .map(|&v| match edit.policy {
@@ -192,9 +207,23 @@ impl Document {
                     .filter(|(_, a)| a.parameter_id == p.id)
                 {
                     let keys = remap(&value.keys)?;
+                    self.authoring_unlocked(id)?;
+                    affected.push(id.clone());
+                    match owner {
+                        GridOwner::Mesh => {
+                            affected.push(self.get_binding(id).unwrap().mesh_id.clone())
+                        }
+                        GridOwner::Scene => {
+                            let target = self.get_scene_binding(id).unwrap().target_id();
+                            affected.push(target.into());
+                            if let Some(o) = self.offscreen_for_part(target) {
+                                self.authoring_unlocked(&o.id)?;
+                                affected.push(o.id.clone());
+                            }
+                        }
+                        GridOwner::Glue => {}
+                    }
                     if keys != value.keys {
-                        self.authoring_unlocked(id)?;
-                        affected.push(id.clone());
                         axes.push(AxisWrite {
                             owner,
                             id: id.clone(),
@@ -214,9 +243,9 @@ impl Document {
             .filter(|t| t.parameter_id == p.id)
         {
             let keys = remap(&t.keys)?;
+            self.authoring_unlocked(&t.id)?;
+            affected.push(t.id.clone());
             if keys != t.keys {
-                self.authoring_unlocked(&t.id)?;
-                affected.push(t.id.clone());
                 tables.push((t.id.clone(), keys));
             }
         }
@@ -227,37 +256,49 @@ impl Document {
             .filter(|c| c.parameter_id == p.id)
         {
             let keys = remap(&c.keys)?;
+            self.authoring_unlocked(&c.id)?;
+            affected.push(c.id.clone());
             if keys != c.keys {
-                self.authoring_unlocked(&c.id)?;
-                affected.push(c.id.clone());
                 constraints.push((c.id.clone(), keys));
             }
         }
         // Shared users are part of the accepted impact and lock check even though
         // the unchanged deltas/weights keep their sample correspondence.
         for b in self.content.blend_bindings.values() {
-            if tables.iter().any(|(id, _)| id == &b.key_table_id)
-                || constraints
-                    .iter()
-                    .any(|(id, _)| b.constraint_ids.contains(id))
+            if self
+                .get_blend_key_table(&b.key_table_id)
+                .is_some_and(|t| t.parameter_id == p.id)
+                || b.constraint_ids.iter().any(|id| {
+                    self.get_blend_constraint(id)
+                        .is_some_and(|c| c.parameter_id == p.id)
+                })
             {
                 self.authoring_unlocked(&b.id)?;
                 affected.push(b.id.clone());
                 affected.push(b.target_id.clone());
             }
         }
-        for a in &axes {
-            match a.owner {
-                GridOwner::Mesh => affected.push(self.get_binding(&a.id).unwrap().mesh_id.clone()),
-                GridOwner::Scene => {
-                    affected.push(self.get_scene_binding(&a.id).unwrap().target_id().into())
-                }
-                GridOwner::Glue => {}
-            }
-        }
         affected.sort();
         affected.dedup();
+        let cost = self.conversion_report_cost(&affected, cost, limits)?;
+        let before = self.conversion_inventory(&affected, control);
+        let mut after = self.conversion_inventory(&affected, control);
+        if edit.policy == ParameterRangePolicy::MapKeyValues {
+            after.remap_parameter(&p.id, |v| {
+                map_value(v, old.minimum, old.maximum, p.minimum, p.maximum)
+            });
+        }
+        let mut report = ConversionReport::between(before, after, &affected, format!("{:?}: sample identities, payloads and weights retained; mapped parameter placement; precision snapping may change",edit.policy), vec![]);
+        report.parameter_range = Some(ParameterRangeConversion {
+            parameter_id: p.id.clone(),
+            before: [old.minimum, old.maximum],
+            after: [p.minimum, p.maximum],
+            policy: edit.policy,
+        });
+        control.check()?;
         Ok(ParameterRangePlan {
+            control: control.clone(),
+            report,
             snapshot: self.snapshot_identity.clone(),
             old_min: old.minimum,
             old_max: old.maximum,
@@ -271,6 +312,9 @@ impl Document {
         })
     }
     pub fn apply_parameter_range_plan(&mut self, plan: &ParameterRangePlan) -> EditResult {
+        if let Err(status) = plan.control.check() {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",

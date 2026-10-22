@@ -256,3 +256,38 @@ fn owned_conversion_edits_keep_limits_and_recheck_them_at_publication() {
     s.undo().unwrap();
     assert!(s.document().editor_state().get(&id(1980)).hidden_in_editor);
 }
+
+#[test]
+fn shared_conversion_report_and_partial_work_cancellation_cover_all_users() {
+    let mut s = shared();
+    let table = s.document().get_blend_key_table(&id(1701)).unwrap().clone();
+    let intent = E::Blend(B::Table {
+        id: table.id.clone(),
+        operation: BO::SetBase {
+            sample_id: table.samples[2].id.clone(),
+        },
+    });
+    let plan = s.plan_binding_authoring(intent.clone()).unwrap();
+    assert!(plan.report().preserved.iter().any(|a| a.owner == id(1702)));
+    assert!(plan.report().preserved.iter().any(|a| a.owner == id(1703)));
+    assert!(plan
+        .report()
+        .remapped
+        .iter()
+        .any(|r| r.before.is_base && !r.after.is_base));
+    let version = s.version();
+    let history = s.history_state();
+    s.drain_events();
+    let control = kasane_sdk::ConversionControl::with_progress(|n| n < 5);
+    assert_eq!(
+        s.plan_binding_authoring_with_control(intent, &control)
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "AUTHORING_CANCELLED"
+    );
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    assert!(s.drain_events().is_empty());
+    assert_eq!(s.document().get_blend_key_table(&table.id), Some(&table));
+}

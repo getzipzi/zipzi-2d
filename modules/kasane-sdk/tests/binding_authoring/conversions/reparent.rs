@@ -8,6 +8,10 @@ fn static_affine_reparent_preserves_unbound_and_bound_mesh_over_domain() {
             ReparentStrategy::PreserveParameterDomain,
         ] {
             let mut s = if bound_mesh { bound() } else { fixture() };
+            if !bound_mesh {
+                s.edit("parameter", None, |e| e.create_parameter(parameter(false)))
+                    .unwrap();
+            }
             rotation(&mut s, 1.75);
             let original: Vec<_> = (0..=16)
                 .map(|i| frame(&s, i as f32 / 16., 0.).drawables[0].positions.clone())
@@ -151,6 +155,8 @@ fn parent_cycle_descendant_lock_nonlinear_and_nested_rotation_are_covered() {
         sources: vec![R.into()],
         parent_id: T.into(),
         strategy: ReparentStrategy::KeepLocalData,
+        relative_tolerance: 1e-6,
+        context: None,
         tolerance: 0.0,
     });
     assert_eq!(
@@ -173,6 +179,8 @@ fn parent_cycle_descendant_lock_nonlinear_and_nested_rotation_are_covered() {
             sources: vec![T.into()],
             parent_id: "".into(),
             strategy: ReparentStrategy::KeepLocalData,
+            relative_tolerance: 1e-6,
+            context: None,
             tolerance: 0.0
         }))
         .unwrap_err()
@@ -279,10 +287,14 @@ fn keep_local_multi_selection_moves_only_roots_and_undoes_together() {
             sources: vec![MESH_ID.into(), R.into()],
             parent_id: T.into(),
             strategy: ReparentStrategy::KeepLocalData,
+            relative_tolerance: 1e-6,
+            context: None,
             tolerance: 0.0,
         }),
     );
     assert_eq!(receipt.after.revision, before.revision + 1);
+    assert!(receipt.object_ids.iter().any(|id| id == MESH_ID));
+    assert!(receipt.object_ids.iter().any(|id| id == BINDING_ID));
     assert_eq!(s.document().get_transform(R).unwrap().parent(), T);
     assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, R);
     assert_eq!(s.document().get_mesh(MESH_ID).unwrap().base_positions, base);
@@ -328,7 +340,463 @@ fn pending_rotation_axes_do_not_block_static_reparent() {
         &mut s,
         parent_edit(ReparentStrategy::PreserveParameterDomain, R),
     );
-    for (a, b) in frame(&s, 0.5, 0.).drawables[0].positions.iter().zip(before) {
+    for (a, b) in frame(&s, 0.5, 0.).drawables[0]
+        .positions
+        .iter()
+        .zip(&before)
+    {
         assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
     }
+    // Configured singleton dimensions do not create interpolation corners or
+    // inflate its error envelope, even at the native 16-axis boundary.
+    s.undo().unwrap();
+    let pending: Vec<_> = s
+        .binding(BINDING_ID)
+        .unwrap()
+        .axes
+        .iter()
+        .filter(|a| a.parameter_id.is_empty())
+        .map(|a| a.id.clone())
+        .collect();
+    let drivers: Vec<_> = (0..pending.len())
+        .map(|i| format!("00000000-0000-4000-8000-{:012x}", 3000 + i))
+        .collect();
+    s.edit("singleton drivers", None, |e| {
+        for id in &drivers {
+            e.create_parameter(Parameter {
+                id: id.clone(),
+                ..Default::default()
+            })?;
+        }
+        Ok(())
+    })
+    .unwrap();
+    for (i, (axis, driver)) in pending.iter().zip(&drivers).enumerate() {
+        for operation in [
+            kasane_sdk::GridOperation::InsertSample {
+                axis_id: axis.clone(),
+                id: format!("00000000-0000-4000-8000-{:012x}", 3100 + i),
+                value: 0.,
+            },
+            kasane_sdk::GridOperation::SetParameter {
+                axis_id: axis.clone(),
+                parameter_id: driver.clone(),
+                reduction: None,
+            },
+        ] {
+            apply(
+                &mut s,
+                E::Grid(kasane_sdk::BindingGridEdit::Edit {
+                    owner: BINDING_ID.into(),
+                    operation,
+                }),
+            );
+        }
+    }
+    let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveParameterDomain, R) else {
+        panic!()
+    };
+    edit.context
+        .as_mut()
+        .unwrap()
+        .parameter_values
+        .extend(drivers.into_iter().map(|id| (id, 0.)));
+    apply(&mut s, E::Reparent(edit));
+    for (a, b) in frame(&s, 0.5, 0.).drawables[0]
+        .positions
+        .iter()
+        .zip(&before)
+    {
+        assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
+    }
+}
+
+fn driven_rotation(s: &mut AuthoringSession) {
+    rotation(s, 1.0);
+    s.edit("driver", None, |e| {
+        e.create_parameter(Parameter {
+            id: Q.into(),
+            minimum: 0.,
+            maximum: 1.,
+            ..Default::default()
+        })?;
+        e.create_scene_binding(kasane_core::SceneBinding {
+            id: T.into(),
+            axes: vec![BindingAxis::new(Q, vec![0., 1.])],
+            track: kasane_core::SceneTrack::Rotation {
+                target_id: R.into(),
+                keyforms: vec![
+                    kasane_core::RotationKeyform {
+                        keys: vec![0.],
+                        rotation: RotationPose {
+                            angle: -15.,
+                            scale: 0.8,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    kasane_core::RotationKeyform {
+                        keys: vec![1.],
+                        rotation: RotationPose {
+                            angle: 35.,
+                            scale: 1.4,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                ],
+            },
+        })
+    })
+    .unwrap();
+}
+
+#[test]
+fn driven_edit_snapshot_succeeds_without_claiming_a_varying_domain() {
+    let mut s = bound();
+    driven_rotation(&mut s);
+    let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveEditState, R) else {
+        panic!()
+    };
+    edit.context
+        .as_mut()
+        .unwrap()
+        .parameter_values
+        .insert(Q.into(), 0.37);
+    let original = frame(&s, 0.5, 0.37).drawables[0].positions.clone();
+    assert_eq!(
+        s.reparent_support(&edit).unwrap(),
+        kasane_sdk::ReparentSupport::RequiresConversionPlan
+    );
+    let plan = s.plan_binding_authoring(E::Reparent(edit.clone())).unwrap();
+    let BindingConversion::Reparent(p) = plan.conversion() else {
+        panic!()
+    };
+    assert_eq!(
+        p.guarantee().context.as_ref().unwrap().parameter_values[Q],
+        0.37
+    );
+    assert!(p.guarantee().reference_scale > 1.);
+    assert!(
+        p.guarantee().error_bound
+            <= p.guarantee().tolerance
+                + p.guarantee().relative_tolerance * p.guarantee().reference_scale
+    );
+    s.execute_binding_plan(&plan).unwrap();
+    for (a, b) in frame(&s, 0.5, 0.37).drawables[0]
+        .positions
+        .iter()
+        .zip(&original)
+    {
+        assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
+    }
+    assert!((frame(&s, 0.5, 0.9).drawables[0].positions[0].x - original[0].x).abs() > 0.1);
+    s.undo().unwrap();
+    edit.strategy = ReparentStrategy::PreserveParameterDomain;
+    edit.context
+        .as_mut()
+        .unwrap()
+        .parameter_domain
+        .push(kasane_core::document::ConversionDomain {
+            parameter_id: Q.into(),
+            minimum: 0.,
+            maximum: 1.,
+        });
+    let version = s.version();
+    let history = s.history_state();
+    assert_eq!(
+        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        "PARAMETER_DOMAIN_UNPROVEN"
+    );
+    assert_eq!(
+        s.plan_binding_authoring(E::Reparent(edit))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "PARAMETER_DOMAIN_UNPROVEN"
+    );
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+}
+
+#[test]
+fn preservation_requires_complete_finite_context_and_does_not_relax_tolerance() {
+    let mut s = bound();
+    rotation(&mut s, 1.75);
+    let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveEditState, R) else {
+        panic!()
+    };
+    let context = edit.context.take();
+    assert_eq!(
+        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        "REPARENT_CONTEXT_REQUIRED"
+    );
+    edit.context = Some(kasane_sdk::ReparentContext::default());
+    assert_eq!(
+        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        "MISSING_EDIT_PARAMETER"
+    );
+    edit.context = context;
+    edit.context
+        .as_mut()
+        .unwrap()
+        .parameter_values
+        .insert(PARAMETER_ID.into(), f32::NAN);
+    assert_eq!(
+        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        "INVALID_EDIT_PARAMETER"
+    );
+    edit.context
+        .as_mut()
+        .unwrap()
+        .parameter_values
+        .insert(PARAMETER_ID.into(), 0.5);
+    edit.tolerance = 1e-15;
+    edit.relative_tolerance = 0.;
+    let version = s.version();
+    let history = s.history_state();
+    assert_eq!(
+        s.plan_binding_authoring(E::Reparent(edit))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "REPARENT_TOLERANCE_EXCEEDED"
+    );
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+}
+
+#[test]
+fn support_matrix_includes_rotation_warp_subtrees_and_same_parent_noop() {
+    let mut s = bound();
+    rotation(&mut s, 1.0);
+    s.edit("warp", None, |e| {
+        e.create_transform(Transform {
+            id: T.into(),
+            data: TransformData::Warp(kasane_core::WarpTransform {
+                rows: 1,
+                columns: 1,
+                quad: true,
+                points: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(1., 0.),
+                    Vec2::new(0., 1.),
+                    Vec2::new(1., 1.),
+                ],
+                bezier: None,
+            }),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    for id in [R, T] {
+        let mut edit =
+            ReparentEdit::keep_local(vec![id.into()], if id == R { T.into() } else { R.into() });
+        assert_eq!(
+            s.reparent_support(&edit).unwrap(),
+            kasane_sdk::ReparentSupport::Available
+        );
+        let receipt = apply(&mut s, E::Reparent(edit.clone()));
+        assert!(receipt.changed);
+        assert_eq!(
+            s.reparent_support(&edit).unwrap(),
+            kasane_sdk::ReparentSupport::NoChange
+        );
+        let history = s.history_state();
+        assert!(!apply(&mut s, E::Reparent(edit.clone())).changed);
+        assert_eq!(s.history_state(), history);
+        s.undo().unwrap();
+        for strategy in [
+            ReparentStrategy::PreserveEditState,
+            ReparentStrategy::PreserveParameterDomain,
+        ] {
+            edit.strategy = strategy;
+            edit.context = Some(Default::default());
+            assert_eq!(
+                s.reparent_support(&edit).unwrap_err().code.as_ref(),
+                "SUBTREE_CONVERSION_UNPROVEN"
+            );
+            assert_eq!(
+                s.plan_binding_authoring(E::Reparent(edit.clone()))
+                    .unwrap_err()
+                    .code
+                    .as_ref(),
+                "SUBTREE_CONVERSION_UNPROVEN"
+            );
+        }
+    }
+}
+
+#[test]
+fn domain_can_fix_an_ancestor_driver_and_dynamic_singularity_requires_a_plan() {
+    let mut s = bound();
+    driven_rotation(&mut s);
+    let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveParameterDomain, R) else {
+        panic!()
+    };
+    edit.context
+        .as_mut()
+        .unwrap()
+        .parameter_values
+        .insert(Q.into(), 0.37);
+    let original: Vec<_> = (0..=8)
+        .map(|i| {
+            frame(&s, i as f32 / 8., 0.37).drawables[0]
+                .positions
+                .clone()
+        })
+        .collect();
+    apply(&mut s, E::Reparent(edit));
+    for (i, before) in original.iter().enumerate() {
+        for (a, b) in frame(&s, i as f32 / 8., 0.37).drawables[0]
+            .positions
+            .iter()
+            .zip(before)
+        {
+            assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
+        }
+    }
+    s.undo().unwrap();
+    let mut binding = s.document().get_scene_binding(T).unwrap().clone();
+    if let kasane_core::SceneTrack::Rotation { keyforms, .. } = &mut binding.track {
+        keyforms[0].rotation.scale = 0.;
+    }
+    s.edit("singular sample", None, |e| {
+        e.replace_scene_binding(binding)
+    })
+    .unwrap();
+    let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveEditState, R) else {
+        panic!()
+    };
+    edit.context
+        .as_mut()
+        .unwrap()
+        .parameter_values
+        .insert(Q.into(), 0.);
+    assert_eq!(
+        s.reparent_support(&edit).unwrap(),
+        kasane_sdk::ReparentSupport::RequiresConversionPlan
+    );
+    assert_eq!(
+        s.plan_binding_authoring(E::Reparent(edit))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "SINGULAR_PARENT"
+    );
+}
+
+#[test]
+fn snapshot_uses_runtime_blend_driver_normalization_and_rotation_clamps() {
+    use kasane_core::*;
+    let mut s = bound();
+    rotation(&mut s, 1.0);
+    s.edit("blend parent", None, |e| {
+        e.create_parameter(Parameter {
+            id: Q.into(),
+            kind: ParameterKind::BlendShape,
+            repeat: true,
+            ..Default::default()
+        })?;
+        e.create_blend_key_table(BlendShapeKeyTable {
+            id: T.into(),
+            parameter_id: Q.into(),
+            keys: vec![-1., 0., 1.],
+            base_key_idx: 1,
+            samples: vec![],
+            base_sample_id: String::new(),
+        })?;
+        e.create_blend_binding(BlendShapeBinding {
+            id: "00000000-0000-4000-8000-000000000499".into(),
+            target_id: R.into(),
+            target_kind: BlendShapeTargetKind::Rotation,
+            key_table_id: T.into(),
+            constraint_ids: vec![],
+            keyforms: DeltaKeyforms::Rotation(
+                [-0.5, 0., 0.5]
+                    .into_iter()
+                    .map(|v| DeltaRotationKeyform {
+                        angle: Some(v * 30.),
+                        scale: Some(v),
+                        origin: Some(Vec2::new(v, v)),
+                        ..Default::default()
+                    })
+                    .collect(),
+            ),
+        })
+    })
+    .unwrap();
+    for value in [0.37, 1.] {
+        let before = frame(&s, 0.5, value).drawables[0].positions.clone();
+        let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveEditState, R) else {
+            panic!()
+        };
+        edit.context
+            .as_mut()
+            .unwrap()
+            .parameter_values
+            .insert(Q.into(), value);
+        let plan = s.plan_binding_authoring(E::Reparent(edit)).unwrap();
+        assert_eq!(
+            plan.report()
+                .reparent_guarantee
+                .as_ref()
+                .unwrap()
+                .context
+                .as_ref()
+                .unwrap()
+                .parameter_values[Q],
+            value
+        );
+        s.execute_binding_plan(&plan).unwrap();
+        for (a, b) in frame(&s, 0.5, value).drawables[0]
+            .positions
+            .iter()
+            .zip(before)
+        {
+            assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
+        }
+        s.undo().unwrap();
+    }
+}
+
+#[test]
+fn reparent_budget_includes_driven_ancestor_sampling() {
+    let mut s = fixture();
+    driven_rotation(&mut s);
+    let edit = ReparentEdit {
+        strategy: ReparentStrategy::PreserveEditState,
+        tolerance: 0.001,
+        context: Some(kasane_sdk::ReparentContext {
+            parameter_values: [(Q.into(), 0.37)].into_iter().collect(),
+            ..Default::default()
+        }),
+        ..ReparentEdit::keep_local(vec![MESH_ID.into()], R.into())
+    };
+    let plan = s.plan_binding_authoring(E::Reparent(edit.clone())).unwrap();
+    assert_eq!(plan.cost().sample_combinations, 2);
+    let version = s.version();
+    let history = s.history_state();
+    s.set_authoring_limits(AuthoringLimits {
+        max_sample_combinations: 1,
+        ..Default::default()
+    })
+    .unwrap();
+    assert_eq!(
+        s.reparent_support(&edit).unwrap(),
+        kasane_sdk::ReparentSupport::RequiresConversionPlan
+    );
+    assert_eq!(
+        s.plan_binding_authoring(E::Reparent(edit))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "AUTHORING_GRID_LIMIT"
+    );
+    assert_eq!(
+        s.execute_binding_plan(&plan).unwrap_err().code.as_ref(),
+        "AUTHORING_GRID_LIMIT"
+    );
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
 }

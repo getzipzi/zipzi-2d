@@ -57,6 +57,7 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("SdkFailure", module.py().get_type::<SdkFailure>())?;
     module.add_class::<NativeSession>()?;
     module.add_class::<session::NativeBindingPlan>()?;
+    module.add_class::<session::NativeConversionControl>()?;
     module.add_class::<session::NativeBindingFieldAddress>()?;
     module.add_class::<session::NativeMotionPlan>()?;
     module.add_class::<NativeEdit>()?;

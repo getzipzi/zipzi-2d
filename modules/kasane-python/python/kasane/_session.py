@@ -6,7 +6,7 @@ import json
 from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
-from ._native import NativeSession, ObjectHandle, SdkFailure
+from ._native import NativeSession, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
@@ -192,9 +192,19 @@ class Session:
         """Plan a field patch after validating its identity and captured context."""
         return self._native.plan_binding_field_patch_json(address, json.dumps(dict(patch)))
 
-    def plan_binding_authoring(self, intent: Mapping[str, object]):
-        """Plan binding changes through the shared Rust SDK rules."""
-        return self._native.plan_binding_authoring_json(json.dumps(dict(intent)))
+    def binding_conversion_control(self) -> NativeConversionControl:
+        """Share a cancellation signal with a planning worker; call cancel from any thread."""
+        return self._native.binding_conversion_control()
+
+    def reparent_support(self, edit: Mapping[str, object]):
+        """Check relations, locks and drivers without allocating converted geometry."""
+        return json.loads(self._native.reparent_support_json(json.dumps(dict(edit))))
+
+    def plan_binding_authoring(
+        self, intent: Mapping[str, object], *, control: NativeConversionControl | None = None
+    ) -> NativeBindingPlan:
+        """Plan through the SDK; report_json exposes stable impacts and domain guarantees."""
+        return self._native.plan_binding_authoring_json(json.dumps(dict(intent)), control)
 
     def execute_binding_plan(self, plan) -> Version:
         return self._native.execute_binding_plan(plan)

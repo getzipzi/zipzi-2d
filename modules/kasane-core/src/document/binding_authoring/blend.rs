@@ -70,6 +70,8 @@ struct Writes {
 }
 #[derive(Debug, Clone)]
 pub struct BlendAuthoringPlan {
+    control: ConversionControl,
+    report: ConversionReport,
     snapshot: Arc<()>,
     writes: Writes,
     affected: Vec<String>,
@@ -77,6 +79,9 @@ pub struct BlendAuthoringPlan {
     losses: Vec<String>,
 }
 impl BlendAuthoringPlan {
+    pub fn report(&self) -> &ConversionReport {
+        &self.report
+    }
     pub fn losses(&self) -> &[String] {
         &self.losses
     }
@@ -119,9 +124,19 @@ impl Document {
         edit: BlendAuthoringEdit,
         limits: AuthoringLimits,
     ) -> Result<BlendAuthoringPlan, Status> {
+        self.plan_blend_authoring_with_control(edit, limits, &ConversionControl::default())
+    }
+    pub fn plan_blend_authoring_with_control(
+        &self,
+        edit: BlendAuthoringEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<BlendAuthoringPlan, Status> {
+        control.checkpoint()?;
         let mut writes = Writes::default();
         let mut affected = Vec::new();
         let mut losses = Vec::new();
+        let mut reconstructed = Vec::new();
         let mut cost = limits.check_conversion(1, 1024, self.estimated_content_bytes())?;
         match edit {
             BlendAuthoringEdit::CreateTable { mut table } => {
@@ -129,10 +144,11 @@ impl Document {
                     return Err(Status::error("DUPLICATE_ID", &table.id));
                 }
                 self.normalize_table(&mut table)?;
-                cost = limits.check_grid(
+                cost = self.grid_cost_with_report(
+                    &[table.id.clone()],
                     &[table.samples.len().max(1)],
-                    128,
-                    self.estimated_content_bytes(),
+                    4096,
+                    limits,
                 )?;
                 require_ok(self.validate_blend_key_table(&table))?;
                 affected.push(table.id.clone());
@@ -143,10 +159,11 @@ impl Document {
                     return Err(Status::error("DUPLICATE_ID", &constraint.id));
                 }
                 self.normalize_constraint(&mut constraint)?;
-                cost = limits.check_grid(
+                cost = self.grid_cost_with_report(
+                    &[constraint.id.clone()],
                     &[constraint.samples.len().max(1)],
-                    128,
-                    self.estimated_content_bytes(),
+                    4096,
+                    limits,
                 )?;
                 require_ok(self.validate_blend_constraint(&constraint))?;
                 affected.push(constraint.id.clone());
@@ -171,10 +188,11 @@ impl Document {
                             .ok_or_else(|| Status::error("MISSING_KEY_TABLE", &key_table_id))?,
                     )
                 };
-                cost = limits.check_grid(
+                cost = self.grid_cost_with_report(
+                    &[id.clone(), target_id.clone()],
                     &[table.map_or(1, |t| t.samples.len().max(1))],
-                    n * 4 + 128,
-                    self.estimated_content_bytes(),
+                    n * 4 + 4096,
+                    limits,
                 )?;
                 let forms = table.map_or_else(Vec::new, |t| {
                     t.samples
@@ -219,10 +237,15 @@ impl Document {
                     self.authoring_unlocked(&b.id)?;
                     affected.extend([b.id.clone(), b.target_id.clone()]);
                 }
-                cost = limits.check_grid(
+                let mut report_sources = affected.clone();
+                report_sources.push(id.clone());
+                report_sources.sort();
+                report_sources.dedup();
+                cost = self.grid_cost_with_report(
+                    &report_sources,
                     &[c.samples.len().max(1)],
-                    128,
-                    self.estimated_content_bytes(),
+                    4096,
+                    limits,
                 )?;
                 affected.push(id);
                 writes.constraints.push(c);
@@ -237,6 +260,13 @@ impl Document {
                     .ok_or_else(|| Status::error("MISSING_BINDING", &id))?
                     .clone();
                 self.authoring_unlocked(&id)?;
+                if b.key_table_id == key_table_id {
+                    cost = self.conversion_report_cost(
+                        &[b.id.clone(), b.target_id.clone()],
+                        cost,
+                        limits,
+                    )?;
+                }
                 if b.key_table_id != key_table_id {
                     let target = if key_table_id.is_empty() {
                         None
@@ -247,10 +277,11 @@ impl Document {
                         )
                     };
                     let n = self.delta_width(b.target_kind, &b.target_id)?;
-                    cost = limits.check_grid(
+                    cost = self.grid_cost_with_report(
+                        &[b.id.clone(), b.target_id.clone()],
                         &[target.map_or(1, |t| t.samples.len().max(1))],
-                        n * 4 + 128,
-                        self.estimated_content_bytes(),
+                        n * 4 + 4096,
+                        limits,
                     )?;
                     let old = self.get_blend_key_table(&b.key_table_id);
                     let compatible = old
@@ -266,6 +297,25 @@ impl Document {
                         losses.push(format!("{id}: existing deltas are reset"));
                     }
                     b.keyforms = if compatible && !reset {
+                        for (before, after) in
+                            old.unwrap().samples.iter().zip(&target.unwrap().samples)
+                        {
+                            reconstructed.push(ConversionReconstruction {
+                                destination: ConversionAddress {
+                                    owner: b.id.clone(),
+                                    element: ConversionElement::Keyform(vec![after.id.clone()]),
+                                },
+                                sources: vec![(
+                                    ConversionAddress {
+                                        owner: b.id.clone(),
+                                        element: ConversionElement::Keyform(vec![before
+                                            .id
+                                            .clone()]),
+                                    },
+                                    1.,
+                                )],
+                            });
+                        }
                         deltas::remap_ids(&b.keyforms, &target.unwrap().samples)
                     } else {
                         let forms = target.map_or_else(Vec::new, |t| {
@@ -303,6 +353,15 @@ impl Document {
                         table.samples.push(sample.clone());
                     }
                     BlendTableOperation::Move { sample_id, value } => {
+                        if old
+                            .samples
+                            .iter()
+                            .any(|s| s.id == *sample_id && s.value != *value)
+                        {
+                            losses.push(format!(
+                                "{id}: sample {sample_id} changes parameter placement"
+                            ));
+                        }
                         table
                             .samples
                             .iter_mut()
@@ -344,12 +403,18 @@ impl Document {
                         table.base_sample_id = sample_id.clone();
                     }
                     BlendTableOperation::SetParameter { parameter_id } => {
+                        if table.parameter_id != *parameter_id {
+                            losses.push(format!("{id}: driver/availability changes"));
+                        }
                         table.parameter_id = parameter_id.clone()
                     }
                     BlendTableOperation::RemapParameter {
                         parameter_id,
                         policy,
                     } => {
+                        if table.parameter_id != *parameter_id {
+                            losses.push(format!("{id}: driver parameter placement changes"));
+                        }
                         let previous = self
                             .get_parameter(&old.parameter_id)
                             .ok_or_else(|| Status::error("MISSING_PARAMETER", &old.parameter_id))?;
@@ -375,7 +440,18 @@ impl Document {
                 self.normalize_table(&mut table)?;
                 require_ok(self.validate_blend_key_table(&table))?;
                 if table == *old {
+                    cost = self.conversion_report_cost(&[id.clone()], cost, limits)?;
+                    let report = ConversionReport::between(
+                        self.conversion_inventory(&[id.clone()], control),
+                        self.conversion_inventory(&[id.clone()], control),
+                        &[id.clone()],
+                        "Unchanged".into(),
+                        vec![],
+                    );
+                    control.check()?;
                     return Ok(BlendAuthoringPlan {
+                        control: control.clone(),
+                        report,
                         snapshot: self.snapshot_identity.clone(),
                         writes: Writes {
                             tables: vec![table],
@@ -392,18 +468,34 @@ impl Document {
                     .values()
                     .filter(|b| b.key_table_id == id)
                     .collect();
-                let bytes = users.iter().try_fold(128usize, |n, b| {
+                let bytes = users.iter().try_fold(4096usize, |n, b| {
                     self.delta_width(b.target_kind, &b.target_id)?
                         .checked_mul(4)
-                        .and_then(|v| v.checked_add(n + 128))
+                        .and_then(|v| v.checked_add(n + 4096))
                         .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", &id))
                 })?;
-                cost = limits.check_grid(
+                let mut report_sources = vec![id.clone()];
+                for b in &users {
+                    report_sources.extend([b.id.clone(), b.target_id.clone()]);
+                    if rebase {
+                        if let Some(o) = self.binding_for_mesh(&b.target_id) {
+                            report_sources.push(o.id.clone());
+                        }
+                        if let Some(o) = self.binding_for_scene(&b.target_id) {
+                            report_sources.push(o.id.clone());
+                        }
+                    }
+                }
+                report_sources.sort();
+                report_sources.dedup();
+                cost = self.grid_cost_with_report(
+                    &report_sources,
                     &[table.samples.len().max(1)],
                     bytes,
-                    self.estimated_content_bytes(),
+                    limits,
                 )?;
                 for b in users {
+                    control.checkpoint()?;
                     self.authoring_unlocked(&b.id)?;
                     let mut next = b.clone();
                     let n = self.delta_width(b.target_kind, &b.target_id)?;
@@ -449,10 +541,11 @@ impl Document {
                                 &b.id,
                             ));
                         }
-                        self.rebase_target(&mut writes, b, &offset)?;
+                        self.rebase_target(&mut writes, b, &offset, control)?;
                     }
                     let mut forms = Vec::new();
                     for s in &table.samples {
+                        control.checkpoint()?;
                         let mut v = if let Some(i) = old.samples.iter().position(|k| k.id == s.id) {
                             if i == old.base_key_idx {
                                 DeltaVector::zero(n)
@@ -509,7 +602,49 @@ impl Document {
         self.validate_blend_writes(&writes)?;
         affected.sort();
         affected.dedup();
+        let before = self.conversion_inventory(&affected, control);
+        let mut after = self.conversion_inventory(&affected, control);
+        for t in &writes.tables {
+            after.table(t);
+        }
+        for c in &writes.constraints {
+            after.constraint(c);
+        }
+        for b in &writes.bindings {
+            after.blend(
+                b,
+                writes
+                    .tables
+                    .iter()
+                    .find(|t| t.id == b.key_table_id)
+                    .or_else(|| self.get_blend_key_table(&b.key_table_id)),
+            );
+        }
+        for b in &writes.mesh_bindings {
+            after.mesh(b);
+        }
+        for b in &writes.scene_bindings {
+            after.scene(b);
+        }
+        for g in &writes.glues {
+            after.glue(g);
+        }
+        for o in &writes.offscreens {
+            after.offscreen(
+                o,
+                writes
+                    .scene_bindings
+                    .iter()
+                    .find(|b| b.target_id() == o.part_id)
+                    .or_else(|| self.binding_for_scene(&o.part_id)),
+            );
+        }
+        let mut report = ConversionReport::between(before, after, &affected, "Shared sample correspondence and native delta channels; rebase compensates all users; changed placement/reset is not behavior preservation".into(), losses.clone());
+        report.reconstructed = reconstructed;
+        control.check()?;
         Ok(BlendAuthoringPlan {
+            control: control.clone(),
+            report,
             snapshot: self.snapshot_identity.clone(),
             writes,
             affected,
@@ -518,6 +653,9 @@ impl Document {
         })
     }
     pub fn apply_blend_authoring_plan(&mut self, p: &BlendAuthoringPlan) -> EditResult {
+        if let Err(status) = p.control.check() {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -561,6 +699,7 @@ impl Document {
         w: &mut Writes,
         b: &BlendShapeBinding,
         d: &DeltaVector,
+        control: &ConversionControl,
     ) -> Result<(), Status> {
         if let Some(binding) = self.binding_for_mesh(&b.target_id) {
             self.authoring_unlocked(&binding.id)?;
@@ -666,6 +805,7 @@ impl Document {
                             w.mesh_bindings.len() - 1
                         });
                     for f in &mut w.mesh_bindings[i].keyforms {
+                        control.checkpoint()?;
                         order_shift(f.draw_order.unwrap_or(previous_order), order)?;
                         positions(&mut f.positions);
                         f.appearance.opacity += offset[n * 2];
@@ -716,6 +856,7 @@ impl Document {
                     match &mut w.scene_bindings[i].track {
                         SceneTrack::Warp { keyforms, .. } => {
                             for f in keyforms {
+                                control.checkpoint()?;
                                 let n = f.positions.len();
                                 positions(&mut f.positions);
                                 controllers(&mut f.bezier, n)?;
@@ -724,6 +865,7 @@ impl Document {
                         }
                         SceneTrack::Rotation { keyforms, .. } => {
                             for f in keyforms {
+                                control.checkpoint()?;
                                 f.rotation.origin.x += f64::from(offset[0]);
                                 f.rotation.origin.y += f64::from(offset[1]);
                                 f.rotation.angle += offset[2];
@@ -763,6 +905,7 @@ impl Document {
                             w.scene_bindings.len() - 1
                         });
                     for f in w.scene_bindings[i].track.part_keyforms_mut().unwrap() {
+                        control.checkpoint()?;
                         order_shift(f.draw_order, offset[0])?;
                         f.draw_order += offset[0];
                     }
@@ -782,6 +925,7 @@ impl Document {
                 g.intensity += offset[0];
                 if let Some(grid) = &mut g.binding {
                     for f in &mut grid.keyforms {
+                        control.checkpoint()?;
                         f.intensity += offset[0];
                     }
                 }
@@ -827,6 +971,7 @@ impl Document {
                     }
                 }
                 for f in &mut g.keyforms {
+                    control.checkpoint()?;
                     f.opacity += offset[0];
                     if d.colors & 1 != 0 {
                         let mut c = f.multiply.unwrap_or([1.; 3]);

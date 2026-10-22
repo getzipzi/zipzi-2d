@@ -39,7 +39,6 @@ pub(super) struct Selection {
     pub(super) enabled: bool,
 }
 
-#[cfg(test)]
 pub(super) fn select<'a>(
     doc: &Document,
     values: &HashMap<String, f32>,
@@ -52,7 +51,7 @@ pub(super) fn select<'a>(
     out.weights.push(1.0);
     out.enabled = true;
     let mut stride = 1;
-    for axis in binding {
+    for axis in binding.iter().filter(|a| !a.parameter_id.is_empty()) {
         let p = doc.get_parameter(&axis.parameter_id).unwrap();
         let epsilon = 0.1f32.powi(p.decimal_places);
         let segment = find_key_segment(values[&p.id], &axis.keys, epsilon, epsilon * 1.5);

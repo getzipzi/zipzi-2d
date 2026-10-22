@@ -3,9 +3,10 @@ use crate::{AuthoringSession, EditReceipt, EditSession, SdkError, Version};
 pub use kasane_core::document::{
     AuthoringLimits, AxisReduction, BindingGridEdit, BindingGridPlan, BindingGridTarget,
     BindingIdentityKind, BlendAuthoringEdit, BlendAuthoringPlan, BlendTableOperation,
-    ConversionCost, GridGuarantee, GridOperation, MeshGridEdit, MeshGridPlan, ParameterRangeEdit,
-    ParameterRangePlan, ParameterRangePolicy, ReparentEdit, ReparentGuarantee, ReparentPlan,
-    ReparentStrategy,
+    ConversionControl, ConversionCost, ConversionReport, GridGuarantee, GridOperation,
+    MeshGridEdit, MeshGridPlan, ParameterRangeEdit, ParameterRangePlan, ParameterRangePolicy,
+    ReparentContext, ReparentEdit, ReparentGuarantee, ReparentPlan, ReparentStrategy,
+    ReparentSupport,
 };
 use kasane_core::Status;
 use serde::{Deserialize, Serialize};
@@ -39,10 +40,20 @@ impl BindingConversion {
 }
 #[derive(Debug, Clone)]
 pub struct BindingEditPlan {
+    control: ConversionControl,
     version: Version,
     conversion: BindingConversion,
 }
 impl BindingEditPlan {
+    pub fn report(&self) -> &ConversionReport {
+        match &self.conversion {
+            BindingConversion::Grid(p) => p.report(),
+            BindingConversion::Blend(p) => p.report(),
+            BindingConversion::MeshGrid(p) => p.report(),
+            BindingConversion::ParameterRange(p) => p.report(),
+            BindingConversion::Reparent(p) => p.report(),
+        }
+    }
     pub fn version(&self) -> Version {
         self.version
     }
@@ -59,10 +70,7 @@ impl BindingEditPlan {
         }
     }
     pub fn losses(&self) -> &[String] {
-        match &self.conversion {
-            BindingConversion::Blend(p) => p.losses(),
-            _ => &[],
-        }
+        &self.report().losses
     }
     pub fn cost(&self) -> ConversionCost {
         self.conversion.cost()
@@ -75,26 +83,32 @@ fn plan(
     document: &kasane_core::Document,
     edit: BindingAuthoringEdit,
     limits: AuthoringLimits,
+    control: &ConversionControl,
 ) -> Result<BindingConversion, Status> {
     match edit {
         BindingAuthoringEdit::Grid(e) => document
-            .plan_binding_grid(e, limits)
+            .plan_binding_grid_with_control(e, limits, control)
             .map(BindingConversion::Grid),
         BindingAuthoringEdit::Blend(e) => document
-            .plan_blend_authoring(e, limits)
+            .plan_blend_authoring_with_control(e, limits, control)
             .map(BindingConversion::Blend),
         BindingAuthoringEdit::MeshGrid(e) => document
-            .plan_mesh_grid(e, limits)
+            .plan_mesh_grid_with_control(e, limits, control)
             .map(BindingConversion::MeshGrid),
         BindingAuthoringEdit::ParameterRange(e) => document
-            .plan_parameter_range(e, limits)
+            .plan_parameter_range_with_control(e, limits, control)
             .map(BindingConversion::ParameterRange),
         BindingAuthoringEdit::Reparent(e) => document
-            .plan_reparent(e, limits)
+            .plan_reparent_with_control(e, limits, control)
             .map(BindingConversion::Reparent),
     }
 }
 impl AuthoringSession {
+    pub fn reparent_support(&self, edit: &ReparentEdit) -> Result<ReparentSupport, SdkError> {
+        self.document()
+            .reparent_support(edit)
+            .map_err(|s| error(s, "reparent_support"))
+    }
     pub fn authoring_limits(&self) -> AuthoringLimits {
         self.authoring_limits
     }
@@ -118,9 +132,17 @@ impl AuthoringSession {
         &self,
         edit: BindingAuthoringEdit,
     ) -> Result<BindingEditPlan, SdkError> {
+        self.plan_binding_authoring_with_control(edit, &ConversionControl::default())
+    }
+    pub fn plan_binding_authoring_with_control(
+        &self,
+        edit: BindingAuthoringEdit,
+        control: &ConversionControl,
+    ) -> Result<BindingEditPlan, SdkError> {
         Ok(BindingEditPlan {
+            control: control.clone(),
             version: self.version(),
-            conversion: plan(self.document(), edit, self.authoring_limits)
+            conversion: plan(self.document(), edit, self.authoring_limits, control)
                 .map_err(|s| error(s, "plan_binding_authoring"))?,
         })
     }
@@ -128,6 +150,9 @@ impl AuthoringSession {
         &mut self,
         plan: &BindingEditPlan,
     ) -> Result<EditReceipt, SdkError> {
+        plan.control
+            .check()
+            .map_err(|s| error(s, "execute_binding_plan"))?;
         check_cost(plan.cost(), self.authoring_limits)?;
         let (_, receipt) = self.edit("Edit binding authoring", Some(plan.version), |e| {
             e.apply_binding_plan(plan)
@@ -161,7 +186,12 @@ impl EditSession<'_> {
                 "apply_binding_plan",
             )));
         }
-        self.apply_binding_conversion(&plan.conversion)
+        plan.control
+            .check()
+            .map_err(|s| self.abort_with(error(s, "apply_binding_plan")))?;
+        self.apply_binding_conversion(&plan.conversion)?;
+        self.binding_controls.push(plan.control.clone());
+        Ok(())
     }
     fn apply_binding_conversion(&mut self, conversion: &BindingConversion) -> Result<(), SdkError> {
         let limits = self
@@ -191,14 +221,25 @@ impl EditSession<'_> {
     /// Multiple dependent fields are validated as one final state, never through
     /// temporarily relaxed setters. Composes with other operations in this edit.
     pub fn binding_authoring(&mut self, edit: BindingAuthoringEdit) -> Result<(), SdkError> {
+        self.binding_authoring_with_control(edit, &ConversionControl::default())
+    }
+    /// Plan against the current candidate, including prior writes in this edit,
+    /// and keep its cancellation lifetime through the final publication check.
+    pub fn binding_authoring_with_control(
+        &mut self,
+        edit: BindingAuthoringEdit,
+        control: &ConversionControl,
+    ) -> Result<(), SdkError> {
         self.ensure_active("binding_authoring")?;
         let limits = self
             .session
             .as_ref()
             .map_or(self.authoring_limits, |s| s.authoring_limits);
-        let conversion = plan(self.candidate_document(), edit, limits)
+        let conversion = plan(self.candidate_document(), edit, limits, control)
             .map_err(|s| self.abort_with(error(s, "binding_authoring")))?;
-        self.apply_binding_conversion(&conversion)
+        self.apply_binding_conversion(&conversion)?;
+        self.binding_controls.push(control.clone());
+        Ok(())
     }
 }
 

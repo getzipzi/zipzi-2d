@@ -212,6 +212,42 @@ fn range_maps_scene_glue_constraints_and_all_shared_blend_users() {
             policy: ParameterRangePolicy::MapKeyValues,
         })
     };
+    // Both policies affect the owning scene and Offscreen selection, even if
+    // no numeric key needs rewriting. All such dependencies honor locks.
+    for policy in [
+        ParameterRangePolicy::KeepKeyValues,
+        ParameterRangePolicy::MapKeyValues,
+    ] {
+        let edit = E::ParameterRange(ParameterRangeEdit {
+            parameter_id: PARAMETER_ID.into(),
+            minimum: -1.,
+            maximum: 2.,
+            default_value: 0.,
+            policy,
+        });
+        let plan = s.plan_binding_authoring(edit.clone()).unwrap();
+        for owner in [MESH_ID.to_string(), R.into(), id(530), id(532)] {
+            assert!(plan.report().affected.contains(&owner), "missing {owner}");
+            assert!(plan.report().preserved.iter().any(|a| a.owner == owner));
+        }
+        let mut flags = s.document().editor_state().clone();
+        flags.objects.insert(
+            id(532),
+            kasane_core::document::ObjectEditorState {
+                locked: true,
+                ..Default::default()
+            },
+        );
+        s.edit("lock offscreen", None, |e| e.replace_editor_state(flags))
+            .unwrap();
+        let version = s.version();
+        assert_eq!(
+            s.plan_binding_authoring(edit).unwrap_err().code.as_ref(),
+            "OBJECT_LOCKED"
+        );
+        assert_eq!(s.version(), version);
+        s.undo().unwrap();
+    }
     let receipt = apply(&mut s, intent(PARAMETER_ID));
     assert!(receipt.object_ids.contains(&id(523)) && receipt.object_ids.contains(&id(524)));
     assert_eq!(

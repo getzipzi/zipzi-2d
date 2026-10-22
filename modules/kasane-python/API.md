@@ -714,3 +714,39 @@ address or a deleted object's old handle. Use `handle("binding_axis", id)` or
 The tuple replacement adapters retain IDs at unchanged numeric coordinates;
 use stable-ID intents for moves and conversions. See the
 [stable binding example](README.md#stable-binding-conversions).
+
+C4 plans also expose `report_json`. Decode it with `json.loads` to inspect
+`preserved` identities, `rewritten` addresses, `generated`, `deleted`, `remapped`,
+source/result domains, reconstruction sources/weights, losses, and typed grid,
+parameter-range or reparent guarantees. Identity retention does not imply that
+field values stayed unchanged. Offscreen slots are topology addresses bound to
+the plan's baseline; ordinary keyforms use canonical sample-ID sets.
+
+For cooperative cancellation, create `control = session.binding_conversion_control()`
+and pass `control=control` to `plan_binding_authoring`. Planning releases the
+Python GIL; another thread may call `control.cancel()` without taking the session
+lock. The signal is permanent and shared with the resulting plan and any owned
+candidate. Cancellation raises `AUTHORING_CANCELLED` during planning or before
+publication. It neither creates history nor clears redo. `control.checkpoints`
+reports bounded work checkpoints, not a percentage or time estimate.
+
+`Session.reparent_support(edit)` performs cheap relation/lock/driver checks.
+`RequiresConversionPlan` means numeric sampling, capacity and error validation
+remain; it is not an accepted conversion. Preservation edits require `context`
+with explicit `parameter_values`, finite `edit_time_seconds`, and (for domain
+preservation) `parameter_domain` intervals `{parameter_id, minimum, maximum}`.
+Dependencies omitted from the intervals must have explicit fixed values.
+The snapshot uses native parameter evaluation before Glue; resolve Motion/Physics
+into these frozen values first. Appearance, visibility and future stateful
+animation are reported as unguaranteed effects.
+
+Use `tolerance=1e-5` and `relative_tolerance=1e-6` for the default model-space
+error policy. Plans report reference scale `max(1, original geometry AABB diagonal)`,
+sample error and a conservative interpolation/affine error bound; the acceptance
+threshold is `tolerance + relative_tolerance * reference_scale`. No automatic
+strategy downgrade or tolerance widening occurs. Static invertible Rotation
+chains support unbound, ordinary-grid and Mesh BlendShape positions; explicit
+snapshots also support driven Rotation parents. A varying ancestor driver,
+nonlinear Warp inverse, singular map or unproved transform-subtree preservation
+returns a specific error. Legal Rotation/Warp subtree moves retain
+`KeepLocalData` support.

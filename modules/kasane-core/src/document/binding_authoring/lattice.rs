@@ -81,6 +81,7 @@ impl Document {
         op: GridOperation,
         bytes_per_form: usize,
         limits: AuthoringLimits,
+        control: &ConversionControl,
     ) -> Result<Lattice, Status> {
         let mut axes = old.to_vec();
         let mut removed = None;
@@ -284,12 +285,25 @@ impl Document {
             }
         }
         let dims: Vec<_> = active(&axes).iter().map(|a| a.samples.len()).collect();
+        // Inventories/provenance coexist with old and new coordinates. Each edit
+        // changes at most one sampled dimension, hence at most two source slots.
+        let address_bytes = old
+            .len()
+            .max(axes.len())
+            .checked_mul(80)
+            .and_then(|n| n.checked_add(192))
+            .and_then(|n| n.checked_mul(8))
+            .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", "Conversion addresses"))?;
+        let bytes_per_form = bytes_per_form
+            .checked_add(address_bytes)
+            .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", "Conversion payload"))?;
         let cost = limits.check_grid(&dims, bytes_per_form, self.estimated_content_bytes())?;
         let new_active = active(&axes);
         let old_active = active(old);
         let mut weights = Vec::with_capacity(cost.sample_combinations);
         let mut coordinates = Vec::with_capacity(cost.sample_combinations);
         for mut slot in 0..cost.sample_combinations {
+            control.checkpoint()?;
             let combination: Vec<_> = new_active
                 .iter()
                 .map(|a| {
