@@ -14,15 +14,20 @@ impl EditSession<'_> {
     pub fn set_pose(&mut self, pose: PoseAsset) -> Result<(), SdkError> {
         self.ensure_active("set_pose")?;
         let id = pose.id.clone();
+        let before = crate::session::keys_in(self.candidate_document());
         let result = self.document().set_pose(pose);
-        self.record(result, "set_pose", &id)
+        self.record(result, "set_pose", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
 
     pub fn import_pose3(&mut self, id: &str, text: &str) -> Result<Vec<PoseDiagnostic>, SdkError> {
         self.ensure_active("import_pose3")?;
         let imported = import_pose3(self.candidate_document(), id, text)
             .map_err(|error| self.abort_with(project_error(error, "import_pose3")))?;
+        let before = crate::session::keys_in(self.candidate_document());
         self.candidate = Some(imported.candidate);
+        self.track_removed_objects(before);
         self.kind = super::merge_kind(self.kind, ChangeKind::Metadata);
         if !self.object_ids.iter().any(|item| item == id) {
             self.object_ids.push(id.into());

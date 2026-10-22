@@ -35,6 +35,8 @@ mod motion_properties;
 mod physics_authoring;
 #[path = "physics_editing.rs"]
 mod physics_editing;
+#[path = "pose_authoring.rs"]
+mod pose_authoring;
 #[path = "project_io.rs"]
 mod project_io;
 #[path = "scene_authoring.rs"]

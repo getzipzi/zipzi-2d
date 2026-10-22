@@ -176,11 +176,15 @@ impl Document {
             }
         }
         if let Some(pose) = &self.content.pose {
-            for (group_index, group) in pose.groups.iter().enumerate() {
-                for (entry_index, entry) in group.iter().enumerate() {
-                    if matches!(&entry.part, PosePartRef::Resolved { part_id } if part_id == id)
-                        || entry.links.as_ref().is_some_and(|links| links.iter().any(|target| matches!(target, PosePartRef::Resolved { part_id } if part_id == id))) {
-                        refs.push(format!("pose {} group {group_index} entry {entry_index}", pose.id));
+            for group in &pose.groups {
+                for entry in &group.entries {
+                    if matches!(&entry.part,PosePartRef::Resolved { part_id } if part_id==id) {
+                        refs.push(format!("pose {} entry {} Part", pose.id, entry.id));
+                    }
+                    for link in entry.links.iter().flatten() {
+                        if matches!(&link.target,PosePartRef::Resolved { part_id } if part_id==id) {
+                            refs.push(format!("pose {} link {} Part", pose.id, link.id));
+                        }
                     }
                 }
             }
@@ -345,6 +349,15 @@ impl Document {
                 Err(status) => return self.failed(status),
             };
             return self.apply_expression_edit(&plan);
+        }
+        if self.pose().is_some_and(|p| p.entity_ids().any(|v| v == id)) {
+            let plan = match self.plan_pose_edit(PoseEdit::Delete {
+                ids: vec![id.into()],
+            }) {
+                Ok(p) => p,
+                Err(s) => return self.failed(s),
+            };
+            return self.apply_pose_plan(&plan);
         }
         let metadata_only = self.content.expressions.contains_key(id)
             || self.content.motions.contains_key(id)

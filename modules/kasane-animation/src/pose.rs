@@ -7,6 +7,7 @@ use kasane_core::Document;
 #[derive(Clone)]
 pub(crate) struct PoseRuntime {
     pub(crate) opacities: BTreeMap<String, f32>,
+    projection: Option<std::sync::Arc<kasane_core::document::PoseProjection>>,
 }
 
 impl PoseRuntime {
@@ -20,6 +21,7 @@ impl PoseRuntime {
         virtual_controls: &mut BTreeMap<String, f32>,
     ) -> Self {
         let mut state = Self {
+            projection: None,
             opacities: document
                 .part_order()
                 .iter()
@@ -42,11 +44,15 @@ impl PoseRuntime {
             .map(|id| (id.clone(), 1.0))
             .collect();
         virtual_controls.clear();
-        let Some(pose) = document.pose() else {
+        self.projection = document
+            .pose_projection()
+            .expect("validated pose")
+            .map(std::sync::Arc::new);
+        let Some(pose) = &self.projection else {
             return;
         };
         for group in &pose.groups {
-            for (index, entry) in group.iter().enumerate() {
+            for (index, entry) in group.entries.iter().enumerate() {
                 if let PosePartRef::Resolved { part_id } = &entry.part {
                     self.opacities
                         .insert(part_id.clone(), if index == 0 { 1.0 } else { 0.0 });
@@ -58,7 +64,7 @@ impl PoseRuntime {
                         if index == 0 { 1.0 } else { 0.0 },
                     );
                     for link in entry.links.iter().flatten() {
-                        if let PosePartRef::Resolved { part_id } = link {
+                        if let PosePartRef::Resolved { part_id } = &link.target {
                             set_control(document, real, virtual_controls, part_id, 1.0);
                         }
                     }
@@ -79,13 +85,19 @@ impl PoseRuntime {
             return;
         };
         let fade = pose.fade_in.unwrap_or(0.5);
-        for (group_index, group) in pose.groups.iter().enumerate() {
-            if group.is_empty() {
+        let Some(projection) = &self.projection else {
+            return;
+        };
+        for disabled in &projection.disabled {
+            coverage.push(format!("pose item {} is unavailable", disabled.id));
+        }
+        for (group_index, group) in projection.groups.iter().enumerate() {
+            if group.entries.is_empty() {
                 continue;
             }
             let mut visible = None;
             let mut new_opacity = 1.0;
-            for (index, entry) in group.iter().enumerate() {
+            for (index, entry) in group.entries.iter().enumerate() {
                 let PosePartRef::Resolved { part_id } = &entry.part else {
                     coverage.push(format!(
                         "pose group {group_index} entry {index} has unresolved Part"
@@ -107,15 +119,15 @@ impl PoseRuntime {
                 }
             }
             let visible = visible.unwrap_or(0);
-            if group.iter().all(|entry| match &entry.part {
+            if group.entries.iter().all(|entry| match &entry.part {
                 PosePartRef::Resolved { part_id } => {
                     control(document, real, virtual_controls, part_id) <= 0.001
                 }
-                PosePartRef::Unresolved { .. } => true,
+                PosePartRef::Unspecified | PosePartRef::Unresolved { .. } => true,
             }) {
                 new_opacity = 1.0;
             }
-            for (index, entry) in group.iter().enumerate() {
+            for (index, entry) in group.entries.iter().enumerate() {
                 let PosePartRef::Resolved { part_id } = &entry.part else {
                     continue;
                 };
@@ -133,14 +145,14 @@ impl PoseRuntime {
                 }
             }
         }
-        for group in &pose.groups {
-            for entry in group {
+        for group in &projection.groups {
+            for entry in &group.entries {
                 let PosePartRef::Resolved { part_id } = &entry.part else {
                     continue;
                 };
                 let alpha = self.opacities.get(part_id).copied().unwrap_or(1.0);
                 for link in entry.links.iter().flatten() {
-                    if let PosePartRef::Resolved { part_id } = link {
+                    if let PosePartRef::Resolved { part_id } = &link.target {
                         self.opacities.insert(part_id.clone(), alpha);
                     }
                 }

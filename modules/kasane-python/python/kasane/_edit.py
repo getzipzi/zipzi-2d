@@ -308,12 +308,18 @@ class Edit:
         INVALID_MOTION_FPS or INVALID_MOTION_FADE. SDK failure aborts this edit."""
         self._call(lambda: self._native.set_motion_timing(motion_id, duration, fps, looping, fade_in, fade_out))
 
+    def pose_authoring(self, intent: Mapping[str, object]) -> None:
+        """Apply a typed Pose command through the SDK in this transaction."""
+        self._call(lambda: self._native.pose_authoring_json(json.dumps(intent)))
+
     def create_pose(self, pose_id: str, groups: Sequence[Sequence[tuple[str, Sequence[str]]]],
                     fade_in: float | None = None) -> None:
         """Create a Pose asset from ordered Part UUID groups and linked Part UUIDs."""
-        entries = [[{"part": {"kind": "resolved", "part_id": part_id},
-                     "links": [{"kind": "resolved", "part_id": linked} for linked in links],
-                     "extensions": {}} for part_id, links in group] for group in groups]
+        from uuid import uuid4
+        entries = [{"id": str(uuid4()), "name": f"Group {index + 1}", "entries": [
+            {"id": str(uuid4()), "part": {"kind": "resolved", "part_id": part_id},
+             "links": [{"id": str(uuid4()), "target": {"kind": "resolved", "part_id": linked}} for linked in links],
+             "extensions": {}} for part_id, links in group]} for index, group in enumerate(groups)]
         self._call(lambda: self._native.set_pose_json(json.dumps({
             "id": pose_id, "file_type": "Live2D Pose", "fade_in": fade_in,
             "groups": entries, "extensions": {}, "opaque_source_ids": None,

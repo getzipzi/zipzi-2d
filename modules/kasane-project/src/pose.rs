@@ -1,7 +1,7 @@
 //! pose3 runtime IDs to persistent Part UUIDs and strict export.
 use std::collections::{BTreeMap, HashMap};
 
-use kasane_core::document::{PoseAsset, PoseEntry, PosePartRef};
+use kasane_core::document::{PoseAsset, PoseEntry, PoseGroup, PoseLink, PosePartRef};
 use kasane_core::Document;
 use kasane_live2d::pose3::{decode_pose3, encode_pose3, Pose3, Pose3Part};
 use thiserror::Error;
@@ -52,8 +52,10 @@ fn namespace(document: &Document, pose: Option<&PoseAsset>) -> BTreeMap<String, 
         );
     }
     if let Some(pose) = pose {
-        for entry in pose.groups.iter().flatten() {
-            for target in std::iter::once(&entry.part).chain(entry.links.iter().flatten()) {
+        for entry in pose.groups.iter().flat_map(|g| &g.entries) {
+            for target in
+                std::iter::once(&entry.part).chain(entry.links.iter().flatten().map(|l| &l.target))
+            {
                 if let PosePartRef::Unresolved { runtime_id } = target {
                     ids.insert(format!("unresolved:{runtime_id}"), runtime_id.clone());
                 }
@@ -121,27 +123,31 @@ pub fn import_pose3(
         .groups
         .into_iter()
         .enumerate()
-        .map(|(group_index, group)| {
-            group
+        .map(|(group_index, group)| PoseGroup {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: format!("Group {}", group_index + 1),
+            entries: group
                 .into_iter()
                 .enumerate()
                 .map(|(index, part)| {
                     let path = format!("$.Groups[{group_index}][{index}]");
                     PoseEntry {
+                        id: uuid::Uuid::new_v4().to_string(),
                         part: target(part.id, format!("{path}.Id")),
                         links: part.links.map(|links| {
                             links
                                 .into_iter()
                                 .enumerate()
-                                .map(|(link_index, id)| {
-                                    target(id, format!("{path}.Link[{link_index}]"))
+                                .map(|(link_index, id)| PoseLink {
+                                    id: uuid::Uuid::new_v4().to_string(),
+                                    target: target(id, format!("{path}.Link[{link_index}]")),
                                 })
                                 .collect()
                         }),
                         extensions: part.extensions,
                     }
                 })
-                .collect()
+                .collect(),
         })
         .collect();
     let mut asset = PoseAsset {
@@ -169,6 +175,12 @@ pub fn import_pose3(
 }
 
 pub fn export_pose3(document: &Document) -> Result<Option<String>, PoseProjectError> {
+    export_pose(document, false)
+}
+pub fn export_available_pose3(document: &Document) -> Result<Option<String>, PoseProjectError> {
+    export_pose(document, true)
+}
+fn export_pose(document: &Document, available: bool) -> Result<Option<String>, PoseProjectError> {
     let Some(pose) = document.pose() else {
         return Ok(None);
     };
@@ -190,6 +202,7 @@ pub fn export_pose3(document: &Document) -> Result<Option<String>, PoseProjectEr
     }
     let runtime_id = |target: &PosePartRef, path: String| -> Result<String, PoseProjectError> {
         match target {
+            PosePartRef::Unspecified => Err(error("UNCONFIGURED_PART", path, "Choose a Part")),
             PosePartRef::Resolved { part_id } => document
                 .get_part(part_id)
                 .map(|part| part.runtime_id.clone())
@@ -199,12 +212,28 @@ pub fn export_pose3(document: &Document) -> Result<Option<String>, PoseProjectEr
             }
         }
     };
-    let groups = pose
-        .groups
+    let projection = document
+        .pose_projection()
+        .map_err(|s| error(s.code, "$", s.message))?
+        .unwrap();
+    if available && !projection.disabled.is_empty() && pose.has_extensions() {
+        return Err(error(
+            "OPAQUE_CONTENT_CHANGED",
+            "$",
+            "Cannot filter opaque Pose content",
+        ));
+    }
+    let source_groups = if available {
+        &projection.groups
+    } else {
+        &pose.groups
+    };
+    let groups = source_groups
         .iter()
         .enumerate()
         .map(|(group_index, group)| {
             group
+                .entries
                 .iter()
                 .enumerate()
                 .map(|(index, entry)| {
@@ -219,7 +248,10 @@ pub fn export_pose3(document: &Document) -> Result<Option<String>, PoseProjectEr
                                     .iter()
                                     .enumerate()
                                     .map(|(link_index, target)| {
-                                        runtime_id(target, format!("{path}.Link[{link_index}]"))
+                                        runtime_id(
+                                            &target.target,
+                                            format!("{path}.Link[{link_index}]"),
+                                        )
                                     })
                                     .collect::<Result<Vec<_>, _>>()
                             })

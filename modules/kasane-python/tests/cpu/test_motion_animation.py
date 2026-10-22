@@ -245,6 +245,42 @@ class CpuMotionAnimationTests(unittest.TestCase):
         model.undo()
         self.assertEqual(model.physics()["id"], PHYSICS)
 
+    def test_pose_plans_own_ids_pending_references_moves_and_stale_handles(self):
+        model = session()
+        pose, group, destination, entry, link = (str(uuid4()) for _ in range(5))
+        with model.edit("Pose draft") as edit:
+            edit.create_part(PART, "Part")
+            edit.pose_authoring({"operation": "create_group", "pose_id": pose, "id": group, "name": "Draft", "before": None})
+            edit.pose_authoring({"operation": "create_group", "pose_id": pose, "id": destination, "name": "Destination", "before": None})
+            edit.pose_authoring({"operation": "create_entry", "group_id": group, "id": entry, "before": None})
+            edit.pose_authoring({"operation": "create_link", "entry_id": entry, "id": link, "before": None})
+        source = model.pose()
+        self.assertEqual(source["groups"][0]["entries"][0]["id"], entry)
+        self.assertEqual(source["groups"][0]["entries"][0]["links"][0]["id"], link)
+        with self.assertRaises(kasane.SdkFailure):
+            model.export_pose3()
+        handle = model.handle("pose_entry", entry)
+        plan = model.plan_pose_authoring({"operation": "move", "ids": [entry], "destination": {"kind": "entries", "group_id": destination}, "before": None})
+        self.assertIn(entry, plan.affected_ids)
+        model.execute_pose_plan(plan)
+        model.resolve_handle(handle)
+        with self.assertRaises(kasane.SdkFailure):
+            model.execute_pose_plan(plan)
+        plan = model.plan_pose_authoring({"operation": "patch", "id": entry, "expected": {"kind": "entry", "part": {"kind": "unspecified"}}, "fields": {"kind": "entry", "part": {"kind": "resolved", "part_id": PART}}})
+        model.execute_pose_plan(plan)
+        with model.edit("Remove pending link") as edit:
+            edit.pose_authoring({"operation": "delete", "ids": [link]})
+        self.assertEqual(json.loads(model.export_pose3())["Groups"][1][0]["Id"], PART)
+        with TemporaryDirectory() as directory:
+            path = Path(directory).resolve() / "pose-project"
+            model.save(path)
+            self.assertEqual(kasane.open_project(path).pose(), model.pose())
+        with model.edit("Delete entry") as edit:
+            edit.pose_authoring({"operation": "delete", "ids": [entry]})
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.resolve_handle(handle)
+
     def test_pose_authoring_preview_and_project_roundtrip(self):
         model = session()
         with model.edit("parts") as edit:

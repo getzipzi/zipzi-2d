@@ -139,6 +139,7 @@ pub(super) fn apply_command(
             edit.set_motion_timing(&id, duration, fps, looping, fade_in, fade_out)?
         }
         Command::SetPose(pose) => edit.set_pose(pose)?,
+        Command::EditPose(intent) => edit.edit_pose(intent)?,
         Command::BindingAuthoring(intent) => edit.binding_authoring(intent)?,
         Command::EditPhysics(intent) => edit.edit_physics(intent)?,
         Command::SetPhysics(physics) => edit.set_physics(physics)?,

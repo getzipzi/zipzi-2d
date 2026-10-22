@@ -45,7 +45,7 @@ pub use motions::{
     MotionRegistration, MotionSegment, MotionTrack, MotionTrackTarget,
 };
 pub use physics::*;
-pub use pose::{PoseAsset, PoseEntry, PosePartRef};
+pub use pose::*;
 pub use property::PropertyPatch;
 pub use structure::StructureIssue;
 pub use validation::*;
@@ -144,7 +144,7 @@ struct DocumentContent {
     motion_order: Vec<String>,
     motion_groups: Vec<MotionGroup>,
     motion_roots: Vec<MotionRegistration>,
-    pose: Option<PoseAsset>,
+    pose: Option<Arc<PoseAsset>>,
     physics: Option<Arc<PhysicsAsset>>,
     missing_attachments: Vec<String>,
     model3_settings: Model3Settings,
@@ -384,7 +384,11 @@ impl Document {
             || self.get_physics_output(id).is_some()
             || self.get_physics_node(id).is_some()
             || self.content.motions.contains_key(id)
-            || self.content.pose.as_ref().is_some_and(|pose| pose.id == id)
+            || self
+                .content
+                .pose
+                .as_ref()
+                .is_some_and(|pose| pose.entity_ids().any(|v| v == id))
             || self
                 .content
                 .physics

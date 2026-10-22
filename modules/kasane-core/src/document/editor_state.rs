@@ -96,7 +96,8 @@ impl Document {
                     || self.motion_identity_exists(id)
                     || self.get_attachment(id).is_some()
                     || self.physics_owner(id).is_some()
-                    || self.physics().is_some_and(|a| a.id == *id);
+                    || self.physics().is_some_and(|a| a.id == *id)
+                    || self.pose().is_some_and(|a| a.entity_ids().any(|v| v == id));
                 (!valid).then(|| StructureIssue {
                     object_id: id.clone(),
                     status: Status::error(

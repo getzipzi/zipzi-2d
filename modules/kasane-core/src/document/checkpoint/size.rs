@@ -25,7 +25,7 @@ use super::super::{
     MotionClip, MotionEvent, MotionGroup, MotionKey, MotionPoint, MotionRegistration,
     MotionSegment, MotionTrack, MotionTrackTarget,
 };
-use super::super::{PoseAsset, PoseEntry, PosePartRef};
+use super::super::{PoseAsset, PoseEntry, PoseGroup, PoseLink, PosePartRef};
 use serde_json::Value;
 
 trait ExtraBytes {
@@ -340,9 +340,20 @@ impl ExtraBytes for MotionGroup {
         self.id.capacity() + self.name.capacity() + self.entries.extra_bytes()
     }
 }
+impl ExtraBytes for PoseGroup {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity() + self.name.capacity() + self.entries.extra_bytes()
+    }
+}
+impl ExtraBytes for PoseLink {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity() + self.target.extra_bytes()
+    }
+}
 impl ExtraBytes for PosePartRef {
     fn extra_bytes(&self) -> usize {
         match self {
+            Self::Unspecified => 0,
             Self::Resolved { part_id } => part_id.capacity(),
             Self::Unresolved { runtime_id } => runtime_id.capacity(),
         }
@@ -350,7 +361,10 @@ impl ExtraBytes for PosePartRef {
 }
 impl ExtraBytes for PoseEntry {
     fn extra_bytes(&self) -> usize {
-        self.part.extra_bytes() + self.links.extra_bytes() + self.extensions.extra_bytes()
+        self.id.capacity()
+            + self.part.extra_bytes()
+            + self.links.extra_bytes()
+            + self.extensions.extra_bytes()
     }
 }
 impl ExtraBytes for PoseAsset {

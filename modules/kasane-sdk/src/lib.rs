@@ -57,6 +57,7 @@ pub use expression_edit::{
 pub use kasane_core::document::{ExpressionEdit, ExpressionEntryFields};
 
 mod changes;
+pub use changes::PoseReferenceChange;
 pub use changes::{ChangeCategory, ChangeSet, CollectionRef, EntityRef, ReferenceChange};
 
 mod motion_authoring;
@@ -69,3 +70,6 @@ mod physics_authoring;
 pub use physics_authoring::*;
 mod binding_authoring;
 pub use binding_authoring::*;
+
+mod pose_authoring;
+pub use pose_authoring::*;

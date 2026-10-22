@@ -183,7 +183,11 @@ impl Document {
                 };
                 registrations(original) == registrations(content)
             }
-            && original.pose == content.pose
+            && match (original.pose.as_deref(), content.pose.as_deref()) {
+                (Some(a), Some(b)) => a.same_execution(b),
+                (None, None) => true,
+                _ => false,
+            }
             && original.physics == content.physics
             && original.missing_attachments == content.missing_attachments
             && original.model3_settings == content.model3_settings

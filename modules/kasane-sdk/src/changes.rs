@@ -8,9 +8,11 @@ use std::collections::{BTreeSet, HashSet};
 mod binding;
 mod motion;
 mod physics;
+mod pose;
 pub use binding::BindingReferenceChange;
 pub use motion::{MotionReferenceChange, MotionReferenceValue};
 pub use physics::{PhysicsReferenceChange, PhysicsReferenceValue};
+pub use pose::PoseReferenceChange;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -39,6 +41,11 @@ pub enum CollectionRef {
     BindingGrid {
         document_id: String,
         binding_id: String,
+    },
+    Pose {
+        document_id: String,
+        owner: Option<String>,
+        role: String,
     },
     Physics {
         document_id: String,
@@ -72,6 +79,7 @@ pub struct ChangeSet {
     pub collections: Vec<CollectionRef>,
     pub references: Vec<ReferenceChange>,
     pub motion_references: Vec<MotionReferenceChange>,
+    pub pose_references: Vec<PoseReferenceChange>,
     pub physics_references: Vec<PhysicsReferenceChange>,
     pub binding_references: Vec<BindingReferenceChange>,
     pub resource_content: Vec<EntityRef>,
@@ -86,6 +94,9 @@ impl ChangeSet {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.motion_references {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+        }
+        for edge in &mut inverse.pose_references {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.physics_references {
@@ -120,6 +131,15 @@ impl ChangeSet {
                         document_id,
                         binding_id,
                     } => document_id.capacity() + binding_id.capacity(),
+                    CollectionRef::Pose {
+                        document_id,
+                        owner,
+                        role,
+                    } => {
+                        document_id.capacity()
+                            + owner.as_ref().map_or(0, String::capacity)
+                            + role.capacity()
+                    }
                     CollectionRef::Physics {
                         document_id,
                         owner,
@@ -185,6 +205,17 @@ impl ChangeSet {
                         + r.field.capacity()
                         + physics_target_bytes(&r.before)
                         + physics_target_bytes(&r.after)
+                })
+                .sum::<usize>()
+            + self
+                .pose_references
+                .iter()
+                .map(|r| {
+                    std::mem::size_of::<PoseReferenceChange>()
+                        + r.entity.id.capacity()
+                        + r.entity.document_id.capacity()
+                        + pose::reference_bytes(&r.before)
+                        + pose::reference_bytes(&r.after)
                 })
                 .sum::<usize>()
             + self.categories.len() * (std::mem::size_of::<ChangeCategory>() + 64)
@@ -330,6 +361,7 @@ pub(crate) fn summarize(
     }
     motion::summarize_motion(before, after, &mut out);
     physics::summarize_physics(before, after, &mut out);
+    pose::summarize_pose(before, after, &mut out);
     binding::summarize_bindings(before, after, object_ids, &mut out);
     binding::summarize_binding_children(before, after, object_ids, &mut out);
     // Persistent authoring flags affect capabilities even when domain content
@@ -365,6 +397,10 @@ pub(crate) fn summarize(
                     key.kind,
                     ObjectKind::Expression
                         | ObjectKind::ExpressionEntry
+                        | ObjectKind::Pose
+                        | ObjectKind::PoseGroup
+                        | ObjectKind::PoseEntry
+                        | ObjectKind::PoseLink
                         | ObjectKind::Physics
                         | ObjectKind::PhysicsGroup
                         | ObjectKind::PhysicsInput

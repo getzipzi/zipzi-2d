@@ -85,11 +85,13 @@ impl Document {
         check_collection!(expressions, expression_order);
         check_collection!(motions, motion_order);
         if let Some(pose) = &self.content.pose {
-            if !all_ids.insert(pose.id.clone()) {
-                issues.push(StructureIssue {
-                    object_id: pose.id.clone(),
-                    status: Status::error("DUPLICATE_ID", "Pose ID is used by another object"),
-                });
+            for id in pose.entity_ids() {
+                if !all_ids.insert(id.to_owned()) {
+                    issues.push(StructureIssue {
+                        object_id: id.to_owned(),
+                        status: Status::error("DUPLICATE_ID", "Pose ID is used by another object"),
+                    });
+                }
             }
         }
         if let Some(physics) = &self.content.physics {

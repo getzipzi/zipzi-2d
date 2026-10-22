@@ -6,7 +6,7 @@ import json
 from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
-from ._native import NativeSession, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
+from ._native import NativeSession, NativePosePlan, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
@@ -232,6 +232,14 @@ class Session:
     def export_motion3(self, motion_id: str) -> str:
         """Encode a clip with current runtime IDs, retaining unresolved imported runtime IDs."""
         return self._native.export_motion3(motion_id)
+
+    def plan_pose_authoring(self, intent: Mapping[str, object]) -> NativePosePlan:
+        """Plan Pose ownership, references and copy closure through the SDK."""
+        return self._native.plan_pose_authoring_json(json.dumps(intent))
+
+    def execute_pose_plan(self, plan: NativePosePlan):
+        """Commit a plan only while its session version still matches."""
+        return self._native.execute_pose_plan(plan)
 
     def pose(self) -> dict[str, object] | None:
         """Return the detached Pose asset, if present."""

@@ -43,6 +43,7 @@ pub struct AuthoringSession {
     // Owner-dependent field addresses must not revive after a move and undo.
     pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) attachment_content_epochs: HashMap<String, u64>,
+    pub(crate) pose_contexts: HashMap<String, (String, u64)>,
     pub(crate) physics_contexts: HashMap<String, (String, u64)>,
     pub(crate) expression_entry_contexts: HashMap<String, (String, u64)>,
 }
@@ -185,6 +186,7 @@ impl AuthoringSession {
             binding_contexts: HashMap::new(),
             incarnations: HashMap::new(),
             physics_contexts: HashMap::new(),
+            pose_contexts: HashMap::new(),
             expression_entry_contexts: HashMap::new(),
             motion_contexts: HashMap::new(),
             attachment_content_epochs: HashMap::new(),
@@ -716,6 +718,15 @@ impl AuthoringSession {
         if changes.full_invalidation {
             self.motion_contexts.clear();
             self.physics_contexts.clear();
+            self.pose_contexts.clear();
+            if let Some(pose) = document.pose() {
+                for id in pose.entity_ids() {
+                    if let Some(owner) = document.pose_owner(id) {
+                        self.pose_contexts
+                            .insert(id.into(), (owner.into(), document.revision()));
+                    }
+                }
+            }
             if let Some(asset) = document.physics() {
                 for group in &asset.data.settings {
                     self.physics_contexts
@@ -825,6 +836,31 @@ impl AuthoringSession {
                 }
             } else {
                 self.physics_contexts.remove(&entity.id);
+            }
+        }
+        for entity in changes
+            .created
+            .iter()
+            .chain(&changes.deleted)
+            .chain(&changes.modified)
+        {
+            if !matches!(
+                entity.kind,
+                ObjectKind::PoseGroup | ObjectKind::PoseEntry | ObjectKind::PoseLink
+            ) {
+                continue;
+            }
+            if let Some(owner) = document.pose_owner(&entity.id) {
+                if self
+                    .pose_contexts
+                    .get(&entity.id)
+                    .is_none_or(|v| v.0 != owner)
+                {
+                    self.pose_contexts
+                        .insert(entity.id.clone(), (owner.into(), document.revision()));
+                }
+            } else {
+                self.pose_contexts.remove(&entity.id);
             }
         }
         for entity in &changes.resource_content {
@@ -939,6 +975,9 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
         ObjectKind::MotionEvent => doc.get_motion_event(id).is_some(),
         ObjectKind::Attachment => doc.get_attachment(id).is_some(),
         ObjectKind::Pose => doc.pose().is_some_and(|pose| pose.id == id),
+        ObjectKind::PoseGroup => doc.get_pose_group(id).is_some(),
+        ObjectKind::PoseEntry => doc.get_pose_entry(id).is_some(),
+        ObjectKind::PoseLink => doc.get_pose_link(id).is_some(),
         ObjectKind::PhysicsGroup => doc.get_physics_group(id).is_some(),
         ObjectKind::PhysicsInput => doc.get_physics_input(id).is_some(),
         ObjectKind::PhysicsOutput => doc.get_physics_output(id).is_some(),
@@ -1036,6 +1075,22 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
             kind: ObjectKind::Pose,
             id: pose.id.clone(),
         });
+        for group in &pose.groups {
+            keys.insert(ObjectKey {
+                kind: ObjectKind::PoseGroup,
+                id: group.id.clone(),
+            });
+            for entry in &group.entries {
+                keys.insert(ObjectKey {
+                    kind: ObjectKind::PoseEntry,
+                    id: entry.id.clone(),
+                });
+                keys.extend(entry.links.iter().flatten().map(|l| ObjectKey {
+                    kind: ObjectKind::PoseLink,
+                    id: l.id.clone(),
+                }));
+            }
+        }
     }
     if let Some(physics) = doc.physics() {
         keys.insert(ObjectKey {

@@ -170,7 +170,7 @@ from the runtime grid. Activating the first axis copies the latest base shape.
 Clearing/removing an active axis requires an explicit `Slice` or `Resample`
 reduction. Shared table base changes compensate every representable user;
 constrained or discrete cases that cannot preserve behavior are rejected.
-Native projects use directory-project version 15; older experimental native
+Native projects use directory-project version 16; older experimental native
 schemas require reimporting the original source.
 
 ## Import and export

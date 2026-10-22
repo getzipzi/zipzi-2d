@@ -238,6 +238,21 @@ their runtime IDs on export and appear in preview coverage diagnostics.
 `(part_uuid, linked_part_uuids)` pairs. `replace_pose()` accepts a detached
 `Session.pose()` mapping; `import_pose3(id, text)` reports unresolved Parts.
 `Session.export_pose3()` returns `None` when no Pose exists.
+Native `PoseGroup`, `PoseEntry` and `PoseLink` records have stable `id` fields;
+groups store `name` and `entries`, and links store `target`. Part references
+use `unspecified`, `resolved` or `unresolved` variants. Empty groups and pending
+rows survive native save. Strict pose3 export rejects pending references.
+
+`Edit.pose_authoring(intent)`, `Session.plan_pose_authoring(intent)` and
+`Session.execute_pose_plan(plan)` share Rust SDK rules. Commands use an
+`operation` discriminator (`create`, `create_group`, `create_entry`,
+`create_link`, `patch`, `move`, `duplicate`, `delete`, `dissolve_group`).
+Collections use `kind` (`groups`, `entries` with `group_id`, or `links` with
+`entry_id`). Placements use stable `before` IDs or `None` to append. Patches
+include typed `expected` and `fields` values. Copies create fresh owned IDs;
+Part targets remain shared. Dissolving requires a receiving group. Plans are
+bound to the SDK session version and reject stale execution.
+
 
 `Edit.create_physics(id, name="Physics")` creates a native singleton root and a
 legal group in one transaction, returning the group UUID. Native groups,
@@ -690,7 +705,7 @@ zero-byte file. Imported path conveniences bind loaded files to stable IDs.
 contains persistent axis IDs, samples with `{id, value}` (and constraint
 `weight`), keyform sample ID combinations, and shared table `base_sample_id`.
 Numeric `keys`, parallel weights and base indices in the tuple snapshots are
-compiled views. Native projects use directory-project version 15.
+compiled views. Native projects use directory-project version 16.
 
 `Session.plan_binding_authoring(intent)` and `Edit.binding_authoring(intent)`
 accept the Rust `BindingAuthoringEdit` enum representation. `Grid` supports

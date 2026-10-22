@@ -1,5 +1,5 @@
 //! Canonical replay checkpoints. The budget covers retained state estimates,
-//! excluding the shared document and temporary transactional seek state.
+//! excluding the shared document, its immutable Pose projection, and temporary transactional seek state.
 use crate::{
     expression::ExpressionRuntime, motion_runtime::MotionRuntime, physics::PhysicsRuntime,
     pose::PoseRuntime, MotionSnapshot,

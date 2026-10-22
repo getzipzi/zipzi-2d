@@ -71,7 +71,7 @@ fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
     );
     let project = encode_project(&imported.candidate).unwrap();
     let wire: Value = serde_json::from_str(&project).unwrap();
-    assert_eq!(wire["format_version"], 15);
+    assert_eq!(wire["format_version"], 16);
     let reopened = decode_project(&project).unwrap();
     assert_eq!(reopened.get_motion(MOTION), Some(clip));
     assert_eq!(encode_project(&reopened).unwrap(), project);
