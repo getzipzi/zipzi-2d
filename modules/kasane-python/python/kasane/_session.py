@@ -6,7 +6,7 @@ import json
 from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
-from ._native import NativeSession, NativeReferencePlan, NativeReferenceFieldAddress, NativeReferenceSelectionAddress, NativeSceneContentPlan, NativeSceneContentAddress, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
+from ._native import NativePreparedImageContent, NativeResourcePlan, NativeDocumentPlan, NativeAttachmentPlan, NativeResourceNameAddress, NativeDocumentFieldAddress, NativeImageLoadToken, NativeAttachmentLoadToken, NativeAttachmentPathAddress, NativeSession, NativeReferencePlan, NativeReferenceFieldAddress, NativeReferenceSelectionAddress, NativeSceneContentPlan, NativeSceneContentAddress, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
@@ -232,6 +232,87 @@ class Session:
     def export_motion3(self, motion_id: str) -> str:
         """Encode a clip with current runtime IDs, retaining unresolved imported runtime IDs."""
         return self._native.export_motion3(motion_id)
+
+    def plan_resource_authoring(self, intent: Mapping[str, object]) -> NativeResourcePlan:
+        return self._native.plan_resource_authoring_json(json.dumps(intent))
+
+    def execute_resource_plan(self, plan: NativeResourcePlan):
+        return self._native.execute_resource_plan(plan)
+
+    def plan_document_authoring(self, intent: Mapping[str, object]) -> NativeDocumentPlan:
+        return self._native.plan_document_authoring_json(json.dumps(intent))
+
+    def execute_document_plan(self, plan: NativeDocumentPlan):
+        return self._native.execute_document_plan(plan)
+
+    def plan_attachment_authoring(self, intent: Mapping[str, object]) -> NativeAttachmentPlan:
+        return self._native.plan_attachment_authoring_json(json.dumps(intent))
+
+    def execute_attachment_plan(self, plan: NativeAttachmentPlan):
+        return self._native.execute_attachment_plan(plan)
+
+    def image_load_token(self, resource_id: str) -> NativeImageLoadToken:
+        return self._native.image_load_token(resource_id)
+
+    def attachment_load_token(self, resource_id: str) -> NativeAttachmentLoadToken:
+        return self._native.attachment_load_token(resource_id)
+
+    def replace_image_content(self, token: NativeImageLoadToken, content: Mapping[str, object] | None):
+        return self._native.replace_image_content_json(token, json.dumps(content))
+
+    def prepare_image_load(self, path: str | Path) -> NativePreparedImageContent:
+        return self._native.prepare_image_load(str(path))
+
+    def replace_prepared_image_content(self, token: NativeImageLoadToken, image: NativePreparedImageContent):
+        return self._native.replace_prepared_image_content(token, image)
+
+    def prepare_image_content(self, resource_id: str, path: str | Path) -> dict[str, object]:
+        return json.loads(self._native.prepare_image_content_json(resource_id, str(path)))
+
+    def replace_attachment_content(self, token: NativeAttachmentLoadToken, content: bytes | None):
+        return self._native.replace_attachment_content(token, list(content) if content is not None else None)
+
+    def attachment_collection(self) -> list[ObjectHandle]:
+        return self._native.attachment_collection()
+
+    def attachment_capabilities(self, handle: ObjectHandle) -> dict[str, object]:
+        return json.loads(self._native.attachment_capabilities_json(handle))
+
+    def resource_collection_capabilities(self) -> dict[str, object]:
+        return json.loads(self._native.resource_collection_capabilities_json())
+
+    def attachment_collection_capabilities(self) -> dict[str, object]:
+        return json.loads(self._native.attachment_collection_capabilities_json())
+
+    def resource_collection(self) -> list[ObjectHandle]:
+        return self._native.resource_collection()
+
+    def resource_capabilities(self, handle: ObjectHandle) -> dict[str, object]:
+        return json.loads(self._native.resource_capabilities_json(handle))
+
+    def attachment_records(self) -> list[dict[str, object]]:
+        return json.loads(self._native.attachment_records_json())
+
+    def resource_name_address(self, resource_id: str) -> NativeResourceNameAddress:
+        return self._native.resource_name_address(resource_id)
+
+    def plan_resource_name_patch(self, address: NativeResourceNameAddress, name: str) -> NativeResourcePlan:
+        return self._native.plan_resource_name_patch(address, name)
+
+    def attachment_path_address(self, resource_id: str) -> NativeAttachmentPathAddress:
+        return self._native.attachment_path_address(resource_id)
+
+    def plan_attachment_path_patch(self, address: NativeAttachmentPathAddress, path: str) -> NativeAttachmentPlan:
+        return self._native.plan_attachment_path_patch(address, path)
+
+    def document_field_address(self, field: str) -> NativeDocumentFieldAddress:
+        return self._native.document_field_address_json(json.dumps(field))
+
+    def plan_document_field_patch(self, address: NativeDocumentFieldAddress, value: Mapping[str, object]) -> NativeDocumentPlan:
+        return self._native.plan_document_field_patch_json(address, json.dumps(value))
+
+    def document_field_capability(self, field: str) -> dict[str, object]:
+        return json.loads(self._native.document_field_capability_json(json.dumps(field)))
 
     def plan_reference_authoring(self, intent: Mapping[str, object]) -> NativeReferencePlan:
         return self._native.plan_reference_authoring_json(json.dumps(intent))

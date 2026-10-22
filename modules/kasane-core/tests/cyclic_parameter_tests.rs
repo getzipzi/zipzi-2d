@@ -23,12 +23,15 @@ fn create_cyclic_fixture() -> (Document, String, String) {
 
     assert!(d
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
             name: "asset".to_string(),
-            source: "memory://unloaded".to_string(),
-            width: 8,
-            height: 8,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "memory://unloaded".to_string(),
+                width: 8,
+                height: 8,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

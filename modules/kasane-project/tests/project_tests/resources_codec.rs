@@ -16,12 +16,15 @@ fn cached_asset_reads_still_validate_disk_content_and_metadata() {
     let path = root.join("assets/texture.png");
     let (_, hash) = create_test_png(&path);
     let mut asset = ImageAsset {
+        unresolved_source: None,
         id: id(2),
-        source: "assets/texture.png".into(),
-        width: 8,
-        height: 8,
-        sha256: hash.clone(),
-        ..Default::default()
+        name: String::new(),
+        content: Some(kasane_core::ImageContent {
+            source: "assets/texture.png".into(),
+            width: 8,
+            height: 8,
+            sha256: hash.clone(),
+        }),
     };
     let decoded = read_project_asset_if_changed(&root, &asset, None)
         .unwrap()
@@ -31,22 +34,22 @@ fn cached_asset_reads_still_validate_disk_content_and_metadata() {
     assert!(read_project_asset_if_changed(&root, &asset, cached)
         .unwrap()
         .is_none());
-    asset.width = 16;
+    asset.content.as_mut().unwrap().width = 16;
     assert_eq!(
         read_project_asset_if_changed(&root, &asset, cached)
             .unwrap_err()
             .code,
         "RESOURCE_DIMENSIONS"
     );
-    asset.width = 8;
-    asset.sha256 = "0".repeat(64);
+    asset.content.as_mut().unwrap().width = 8;
+    asset.content.as_mut().unwrap().sha256 = "0".repeat(64);
     assert_eq!(
         read_project_asset_if_changed(&root, &asset, cached)
             .unwrap_err()
             .code,
         "RESOURCE_HASH"
     );
-    asset.sha256 = hash.clone();
+    asset.content.as_mut().unwrap().sha256 = hash.clone();
     fs::write(&path, b"corrupt image").unwrap();
     assert_eq!(
         read_project_asset_if_changed(&root, &asset, cached)
@@ -78,12 +81,15 @@ fn store_png_verification_cache_detects_external_edits() {
         .is_ok());
     assert!(document
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
-            source: "assets/texture.png".into(),
-            width: 8,
-            height: 8,
-            sha256: hash,
-            ..Default::default()
+            name: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "assets/texture.png".into(),
+                width: 8,
+                height: 8,
+                sha256: hash,
+            }),
         })
         .status
         .is_ok());
@@ -95,7 +101,7 @@ fn store_png_verification_cache_detects_external_edits() {
     assert_eq!(store.diagnose(&document, &root)[0].code, "INVALID_PNG");
     fs::write(&path, &original).unwrap();
     let mut wrong = document.get_asset(&id(2)).unwrap().clone();
-    wrong.width = 9;
+    wrong.content.as_mut().unwrap().width = 9;
     assert!(document.replace_asset(wrong).status.is_ok());
     assert_eq!(
         store.diagnose(&document, &root)[0].code,
@@ -152,7 +158,7 @@ fn test_project_encode_decode_roundtrip() {
     assert_eq!(encoded.bytes().filter(|&byte| byte == b'\n').count(), 1);
     let root: serde_json::Value = serde_json::from_str(&encoded).unwrap();
     assert_eq!(root["format"], "kasane-directory-project");
-    assert_eq!(root["format_version"], 19);
+    assert_eq!(root["format_version"], 20);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
     assert!(before.same_content(&decoded));

@@ -7,7 +7,9 @@ use serde::Serialize;
 use std::collections::{BTreeSet, HashSet};
 mod binding;
 mod content;
+mod document;
 mod references;
+mod resources;
 pub use references::{ReferenceFieldChange, ReferenceSelectionChange};
 mod motion;
 mod organization;
@@ -42,6 +44,9 @@ pub struct EntityRef {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CollectionRef {
+    Resources {
+        document_id: String,
+    },
     References {
         document_id: String,
         collection: kasane_core::document::ReferenceCollection,
@@ -98,6 +103,7 @@ pub struct ReferenceChange {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
 pub struct ChangeSet {
+    pub document_fields: Vec<kasane_core::document::DocumentField>,
     pub created: Vec<EntityRef>,
     pub deleted: Vec<EntityRef>,
     pub modified: Vec<EntityRef>,
@@ -157,6 +163,8 @@ impl ChangeSet {
     }
     pub(crate) fn estimated_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
+            + self.document_fields.capacity()
+                * std::mem::size_of::<kasane_core::document::DocumentField>()
             + self.reference_fields.capacity() * std::mem::size_of::<ReferenceFieldChange>()
             + self
                 .reference_fields
@@ -205,6 +213,7 @@ impl ChangeSet {
                 .collections
                 .iter()
                 .map(|c| match c {
+                    CollectionRef::Resources { document_id } => document_id.capacity(),
                     CollectionRef::References {
                         document_id,
                         collection,
@@ -539,6 +548,8 @@ pub(crate) fn summarize(
     binding::summarize_binding_children(before, after, object_ids, &mut out);
     references::summarize_references(before, after, &mut out);
     content::summarize_content(before, after, object_ids, &mut out);
+    resources::summarize_resources(before, after, &mut out);
+    document::summarize_document(before, after, &mut out);
     // Persistent authoring flags affect capabilities even when domain content
     // is unchanged. Derive them from both states so undo uses the same summary.
     if before.editor_state() != after.editor_state() {

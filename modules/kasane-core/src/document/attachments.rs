@@ -198,6 +198,14 @@ pub enum AttachmentEdit {
     Delete {
         id: String,
     },
+    DeleteWithReplacement {
+        id: String,
+        replacement: Option<String>,
+    },
+    Reorder {
+        ids: Vec<String>,
+        before: Option<String>,
+    },
     SetSound {
         registration: String,
         reference: Option<AttachmentRef>,
@@ -226,6 +234,17 @@ impl Document {
                 if self.contains_id(&id) || self.motion_identity_exists(&id) {
                     return Err(Status::error("DUPLICATE_ID", id));
                 }
+                let path = if path.is_empty() {
+                    let mut path = "attachments/Attachment.bin".to_owned();
+                    let mut n = 2;
+                    while self.package_attachments().iter().any(|a| a.path == path) {
+                        path = format!("attachments/Attachment ({n}).bin");
+                        n += 1;
+                    }
+                    path
+                } else {
+                    path
+                };
                 c.content.package_attachments.push(PackageAttachment {
                     id,
                     path,
@@ -267,6 +286,70 @@ impl Document {
                 }
                 c.content.package_attachments.retain(|a| a.id != id);
             }
+            AttachmentEdit::Reorder { ids, before } => {
+                if ids.iter().collect::<HashSet<_>>().len() != ids.len() {
+                    return Err(Status::error("DUPLICATE_SELECTION", "Repeated attachment"));
+                }
+                for id in &ids {
+                    if self.get_attachment(id).is_none() {
+                        return Err(Status::error("MISSING_ATTACHMENT", id));
+                    }
+                    self.motion_unlocked(id)?;
+                }
+                if let Some(anchor) = &before {
+                    if self.get_attachment(anchor).is_none() {
+                        return Err(Status::error("INVALID_PLACEMENT", anchor));
+                    }
+                    self.motion_unlocked(anchor)?;
+                }
+                if !before.as_ref().is_some_and(|id| ids.contains(id)) {
+                    let selected: Vec<_> = c
+                        .package_attachments()
+                        .iter()
+                        .filter(|a| ids.contains(&a.id))
+                        .cloned()
+                        .collect();
+                    c.content
+                        .package_attachments
+                        .retain(|a| !ids.contains(&a.id));
+                    let at = before.as_ref().map_or(c.package_attachments().len(), |id| {
+                        c.package_attachments()
+                            .iter()
+                            .position(|a| a.id == *id)
+                            .unwrap()
+                    });
+                    c.content.package_attachments.splice(at..at, selected);
+                }
+            }
+            AttachmentEdit::DeleteWithReplacement { id, replacement } => {
+                if self.get_attachment(&id).is_none() {
+                    return Err(Status::error("MISSING_ATTACHMENT", &id));
+                }
+                if let Some(target) = &replacement {
+                    if target == &id || self.get_attachment(target).is_none() {
+                        return Err(Status::error("INVALID_ATTACHMENT_TARGET", target));
+                    }
+                }
+                let changed = |r: &Option<AttachmentRef>| matches!(r, Some(AttachmentRef::Resolved { attachment_id }) if attachment_id == &id);
+                let reference =
+                    replacement.map(|attachment_id| AttachmentRef::Resolved { attachment_id });
+                for e in c
+                    .content
+                    .motion_groups
+                    .iter_mut()
+                    .flat_map(|g| &mut g.entries)
+                    .chain(&mut c.content.motion_roots)
+                {
+                    if changed(&e.sound) {
+                        self.motion_unlocked(&e.id)?;
+                        e.sound = reference.clone();
+                    }
+                }
+                if changed(&c.content.model3_settings.user_data) {
+                    c.content.model3_settings.user_data = reference;
+                }
+                c.content.package_attachments.retain(|a| a.id != id);
+            }
             AttachmentEdit::SetSound {
                 registration,
                 reference,
@@ -293,24 +376,24 @@ impl Document {
                 c.content.model3_settings.user_data = reference
             }
         }
-        // Validate complete final state, without temporarily publishing invalid references.
-        let attachments = c.content.package_attachments.clone();
-        let result = self
-            .motion_authoring_candidate()
-            .set_package_attachments(attachments);
-        if !result.status.is_ok() {
-            return Err(result.status);
+        // Validate resource records on an isolated metadata workspace, then the
+        // complete final graph. Removed consumers were explicitly redirected above.
+        let mut final_state = self.fork_candidate();
+        final_state.content.motion_groups = c.content.motion_groups.clone();
+        final_state.content.motion_roots = c.content.motion_roots.clone();
+        final_state.content.model3_settings = c.content.model3_settings.clone();
+        let attachments = c.package_attachments().to_vec();
+        let r = final_state.set_package_attachments(attachments);
+        if !r.status.is_ok() {
+            return Err(r.status);
         }
-        self.validate_attachment_replacement(c.package_attachments())?;
-        let status = c.validate_motion_groups(c.motion_groups());
-        if !status.is_ok() {
-            return Err(status);
+        for old in self.package_attachments() {
+            if final_state.get_attachment(&old.id) != Some(old) {
+                self.motion_unlocked(&old.id)?;
+            }
         }
-        // Only UserData can change here. Scene references remain validated by
-        // the original document, whose geometry is not copied into this workspace.
-        let status = c.validate_model3_user_data(c.model3_settings().user_data.as_ref());
-        if !status.is_ok() {
-            return Err(status);
+        if let Some(issue) = final_state.validate_structure().into_iter().next() {
+            return Err(issue.status);
         }
         Ok(AttachmentPlan {
             snapshot: self.snapshot_identity.clone(),

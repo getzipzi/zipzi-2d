@@ -32,11 +32,15 @@ fn pose_virtual_controls_follow_official_motion_and_pose_frames() {
     let asset = "00000000-0000-4000-8000-000000000d09";
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: asset.into(),
-            source: "memory://test".into(),
-            width: 8,
-            height: 8,
-            ..Default::default()
+            name: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "memory://test".into(),
+                width: 8,
+                height: 8,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

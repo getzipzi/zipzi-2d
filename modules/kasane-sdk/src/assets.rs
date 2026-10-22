@@ -12,13 +12,19 @@ pub(crate) fn validate_asset_root(
     asset: &ImageAsset,
     operation: &'static str,
 ) -> Result<(), SdkError> {
-    if Path::new(&asset.source).is_absolute() {
+    if asset.content.is_none() {
+        return Ok(());
+    }
+    if Path::new(&asset.content.as_ref().unwrap().source).is_absolute() {
         return Ok(());
     }
     if root.as_os_str().is_empty()
         || !root.is_absolute()
-        || !is_valid_asset_path(&asset.source)
-        || root.join(&asset.source).to_str().is_none()
+        || !is_valid_asset_path(&asset.content.as_ref().unwrap().source)
+        || root
+            .join(&asset.content.as_ref().unwrap().source)
+            .to_str()
+            .is_none()
     {
         let mut error = SdkError::new(
             "INVALID_ASSET_BASE",
@@ -32,7 +38,7 @@ pub(crate) fn validate_asset_root(
 }
 
 fn resolved_source(root: &Path, asset: &ImageAsset) -> PathBuf {
-    let source = Path::new(&asset.source);
+    let source = Path::new(&asset.content.as_ref().unwrap().source);
     if source.is_absolute() {
         source.to_path_buf()
     } else {
@@ -49,29 +55,36 @@ pub(crate) fn relocate_history_assets(
     is_memory_asset: impl Fn(&ImageAsset) -> bool,
 ) {
     for asset in entry.checkpoint.assets() {
+        if asset.content.is_none() {
+            continue;
+        }
         if let (Some(old), Some(new)) = (old_assets.get(&asset.id), new_assets.get(&asset.id)) {
-            let same_content = asset.id == old.id
-                && asset.width == old.width
-                && asset.height == old.height
-                && asset.sha256 == old.sha256
-                && resolved_source(&entry.root, &asset) == resolved_source(old_root, old);
-            if same_content {
-                let relocated = entry.checkpoint.relocate_asset_storage(
-                    &asset,
-                    new.source.clone(),
-                    new.sha256.clone(),
-                );
-                debug_assert!(relocated);
-                continue;
+            if let (Some(old_content), Some(new_content)) = (&old.content, &new.content) {
+                let content = asset.content.as_ref().unwrap();
+                let same_content = content.width == old_content.width
+                    && content.height == old_content.height
+                    && content.sha256 == old_content.sha256
+                    && resolved_source(&entry.root, &asset) == resolved_source(old_root, old);
+                if same_content {
+                    let relocated = entry.checkpoint.relocate_asset_storage(
+                        &asset,
+                        new_content.source.clone(),
+                        new_content.sha256.clone(),
+                    );
+                    debug_assert!(relocated);
+                    continue;
+                }
             }
         }
-        if !Path::new(&asset.source).is_absolute() && !is_memory_asset(&asset) {
-            let absolute = entry.root.join(&asset.source);
+        if !Path::new(&asset.content.as_ref().unwrap().source).is_absolute()
+            && !is_memory_asset(&asset)
+        {
+            let absolute = entry.root.join(&asset.content.as_ref().unwrap().source);
             let absolute = absolute.to_str().expect("preflight checked path");
             let relocated = entry.checkpoint.relocate_asset_storage(
                 &asset,
                 absolute.to_owned(),
-                asset.sha256.clone(),
+                asset.content.as_ref().unwrap().sha256.clone(),
             );
             debug_assert!(relocated);
         }
@@ -103,12 +116,15 @@ pub fn prepare_png_asset(id: &str, name: &str, path: &Path) -> Result<ImageAsset
         )
     })?;
     Ok(ImageAsset {
+        unresolved_source: None,
         id: id.into(),
         name: name.into(),
-        source: source.into(),
-        width: data.width,
-        height: data.height,
-        sha256: data.sha256,
+        content: Some(kasane_core::ImageContent {
+            source: source.into(),
+            width: data.width,
+            height: data.height,
+            sha256: data.sha256,
+        }),
     })
 }
 
@@ -135,11 +151,16 @@ pub fn prepare_png_asset_from_base(
 /// Prepare a new source path for the same image bytes and dimensions. Submit
 /// the returned descriptor with `EditSession::replace_asset` inside an edit.
 pub fn prepare_relocated_asset(existing: &ImageAsset, path: &Path) -> Result<ImageAsset, SdkError> {
+    let content = existing.image_content().map_err(|s| {
+        SdkError::from_status(s, "prepare_relocated_asset", vec![existing.id.clone()])
+    })?;
     let prepared = prepare_png_asset(&existing.id, &existing.name, path).map_err(|mut error| {
         error.operation = "prepare_relocated_asset";
         error
     })?;
-    if prepared.width != existing.width || prepared.height != existing.height {
+    if prepared.content.as_ref().unwrap().width != content.width
+        || prepared.content.as_ref().unwrap().height != content.height
+    {
         let mut error = SdkError::new(
             "RESOURCE_DIMENSIONS",
             "Relocated PNG dimensions differ from the current asset",
@@ -148,7 +169,7 @@ pub fn prepare_relocated_asset(existing: &ImageAsset, path: &Path) -> Result<Ima
         error.object_ids.push(existing.id.clone());
         return Err(error);
     }
-    if !existing.sha256.is_empty() && prepared.sha256 != existing.sha256 {
+    if !content.sha256.is_empty() && prepared.content.as_ref().unwrap().sha256 != content.sha256 {
         let mut error = SdkError::new(
             "RESOURCE_HASH",
             "Relocated PNG content differs from the current asset",

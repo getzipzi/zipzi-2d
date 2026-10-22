@@ -29,12 +29,15 @@ fn create_base_doc() -> Document {
         .is_ok());
 
     let _ = doc.add_asset(ImageAsset {
+        unresolved_source: None,
         id: id(2),
         name: "Tex".to_string(),
-        source: "tex.png".to_string(),
-        width: 64,
-        height: 64,
-        sha256: "0".repeat(64),
+        content: Some(kasane_core::ImageContent {
+            source: "tex.png".to_string(),
+            width: 64,
+            height: 64,
+            sha256: "0".repeat(64),
+        }),
     });
 
     let part = Part {

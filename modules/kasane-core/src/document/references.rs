@@ -242,6 +242,24 @@ impl Document {
                 "Commit or cancel first",
             ));
         }
+        if self.get_asset(id).is_some() {
+            return match self.plan_resource_edit(super::ResourceEdit::Delete {
+                id: id.into(),
+                replacement: None,
+            }) {
+                Ok(plan) => self.apply_resource_plan(&plan),
+                Err(status) => {
+                    let refs = if status.code == "OBJECT_REFERENCED" {
+                        self.references_to(id)
+                    } else {
+                        vec![]
+                    };
+                    let mut result = self.failed(status);
+                    result.referrers = refs;
+                    result
+                }
+            };
+        }
         if self.reference_identity(id).is_some() {
             return match self.plan_reference_edit(ReferenceEdit::Delete {
                 ids: vec![id.into()],

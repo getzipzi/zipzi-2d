@@ -166,11 +166,15 @@ mod authoring_tests {
         assert!(d.initialize(id(1), Canvas::default()).is_ok());
         assert!(d
             .add_asset(ImageAsset {
+                unresolved_source: None,
                 id: id(2),
-                source: "assets/texture.png".into(),
-                width: 1,
-                height: 1,
-                ..Default::default()
+                name: String::new(),
+                content: Some(kasane_core::ImageContent {
+                    source: "assets/texture.png".into(),
+                    width: 1,
+                    height: 1,
+                    ..Default::default()
+                }),
             })
             .status
             .is_ok());

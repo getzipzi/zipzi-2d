@@ -24,10 +24,10 @@ fn test_document_session_lifecycle() {
     let mut doc = fixture_doc(&sha1, &sha2);
     // Update asset sources to relative to source_assets
     let mut a1 = doc.get_asset(&id(2)).unwrap().clone();
-    a1.source = "assets/0.png".to_string();
+    a1.content.as_mut().unwrap().source = "assets/0.png".to_string();
     doc.replace_asset(a1);
     let mut a2 = doc.get_asset(&id(3)).unwrap().clone();
-    a2.source = "assets/1.png".to_string();
+    a2.content.as_mut().unwrap().source = "assets/1.png".to_string();
     doc.replace_asset(a2);
 
     // Save project
@@ -39,11 +39,25 @@ fn test_document_session_lifecycle() {
     assert!(snapshot.manifest.exists());
     let short_source = format!("assets/{}.png", &sha1[..16]);
     assert_eq!(
-        snapshot.document.get_asset(&id(2)).unwrap().source,
+        snapshot
+            .document
+            .get_asset(&id(2))
+            .unwrap()
+            .content
+            .as_ref()
+            .unwrap()
+            .source,
         short_source
     );
     assert_eq!(
-        snapshot.document.get_asset(&id(3)).unwrap().source,
+        snapshot
+            .document
+            .get_asset(&id(3))
+            .unwrap()
+            .content
+            .as_ref()
+            .unwrap()
+            .source,
         short_source
     );
     assert_eq!(fs::read_dir(project_dir.join("assets")).unwrap().count(), 1);
@@ -70,7 +84,14 @@ fn test_document_session_lifecycle() {
     assert!(save_res.status.is_ok());
     assert!(!session.document().modified());
     assert_eq!(
-        session.document().get_asset(&id(2)).unwrap().source,
+        session
+            .document()
+            .get_asset(&id(2))
+            .unwrap()
+            .content
+            .as_ref()
+            .unwrap()
+            .source,
         short_source
     );
 
@@ -293,7 +314,13 @@ fn save_repairs_corrupt_asset_name_without_overwriting_old_bytes() {
     let tmp = TestDirectory::new();
     let (doc, input) = tmp.fixture();
     let destination = tmp.0.join("destination");
-    let sha = &doc.get_asset(&id(2)).unwrap().sha256;
+    let sha = &doc
+        .get_asset(&id(2))
+        .unwrap()
+        .content
+        .as_ref()
+        .unwrap()
+        .sha256;
     fs::create_dir_all(destination.join("assets")).unwrap();
     let corrupted = destination.join(format!("assets/{}.png", &sha[..16]));
     fs::write(&corrupted, b"partial old file").unwrap();
@@ -302,7 +329,14 @@ fn save_repairs_corrupt_asset_name_without_overwriting_old_bytes() {
     assert_eq!(fs::read(corrupted).unwrap(), b"partial old file");
     let snapshot = snapshot.unwrap();
     assert_eq!(
-        snapshot.document.get_asset(&id(2)).unwrap().source,
+        snapshot
+            .document
+            .get_asset(&id(2))
+            .unwrap()
+            .content
+            .as_ref()
+            .unwrap()
+            .source,
         format!("assets/{}.png", &sha[..24])
     );
     assert!(DocumentStore::new()

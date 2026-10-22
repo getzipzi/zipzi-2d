@@ -196,12 +196,15 @@ pub(crate) fn create_m1_fixture_doc() -> Document {
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
             name: "Tex0".to_string(),
-            source: "textures/0.png".to_string(),
-            width: 8,
-            height: 8,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "textures/0.png".to_string(),
+                width: 8,
+                height: 8,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

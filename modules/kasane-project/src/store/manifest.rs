@@ -202,6 +202,9 @@ impl DocumentStore {
         let mut candidate = document.fork_candidate();
         for id in document.asset_order() {
             let mut asset = document.get_asset(id).unwrap().clone();
+            if asset.content.is_none() {
+                continue;
+            }
             let data = self.read_verified_asset(source_root, &asset)?;
             // Start with 16 hex characters. Extend the hash prefix when an
             // occupied name belongs to different bytes; keep the full hash in
@@ -237,8 +240,8 @@ impl DocumentStore {
                     .write_new(&target, &data.bytes)
                     .map_err(io::io_error)?;
             }
-            asset.source = format!("assets/{name}");
-            asset.sha256 = data.sha256;
+            asset.content.as_mut().unwrap().source = format!("assets/{name}");
+            asset.content.as_mut().unwrap().sha256 = data.sha256;
             let edit = candidate.replace_asset(asset);
             if !edit.status.is_ok() {
                 return Err(edit.status);

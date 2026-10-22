@@ -15,12 +15,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let asset = "00000000-0000-4000-8000-000000001001";
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: asset.into(),
             name: "Artwork".into(),
-            source: "assets/texture.png".into(),
-            width: 2,
-            height: 2,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "assets/texture.png".into(),
+                width: 2,
+                height: 2,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

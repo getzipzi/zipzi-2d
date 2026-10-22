@@ -114,7 +114,7 @@ fn empty_roots_pending_members_and_hit_areas_are_native_and_persistent() {
     s.handle(ObjectKind::CdiCombinedMember, &id(201)).unwrap();
     let encoded = kasane_project::encode_project(s.document()).unwrap();
     let value: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(value["format_version"], 19);
+    assert_eq!(value["format_version"], 20);
     let d = kasane_project::decode_project(&encoded).unwrap();
     assert_eq!(d.model3_settings(), s.document().model3_settings());
     assert_eq!(d.display_info(), s.document().display_info());

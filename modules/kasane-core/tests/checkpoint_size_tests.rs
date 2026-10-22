@@ -14,12 +14,15 @@ fn document(extra_capacity: usize) -> Document {
         .is_ok());
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: ASSET_ID.into(),
             name: "texture".into(),
-            source: "/unused.png".into(),
-            width: 2,
-            height: 2,
-            sha256: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "/unused.png".into(),
+                width: 2,
+                height: 2,
+                sha256: String::new(),
+            }),
         })
         .status
         .is_ok());

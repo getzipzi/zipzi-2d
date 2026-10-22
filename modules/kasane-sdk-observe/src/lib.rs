@@ -34,6 +34,7 @@ pub struct ObservationInput {
     frame: DrawableFrame,
     assets: Vec<ImageAsset>,
     root: PathBuf,
+    memory_images: BTreeMap<String, kasane_project::PreparedImageContent>,
     source: ObservationSource,
     authoring: CapturedAuthoring,
 }
@@ -136,6 +137,11 @@ impl ResolvedObservation {
                 });
             }
             for asset in &input.assets {
+                asset.image_content().map_err(|e| ObservationError {
+                    code: e.code,
+                    message: e.message,
+                    asset_id: Some(asset.id.clone()),
+                })?;
                 if let Some(existing) = assets.insert(asset.id.clone(), asset.clone()) {
                     if existing != *asset {
                         return Err(ObservationError {
@@ -149,8 +155,8 @@ impl ResolvedObservation {
         }
         let expected_rgba = assets.values().try_fold(0u64, |total, asset| {
             total.checked_add(
-                u64::from(asset.width)
-                    .checked_mul(u64::from(asset.height))?
+                u64::from(asset.content.as_ref().unwrap().width)
+                    .checked_mul(u64::from(asset.content.as_ref().unwrap().height))?
                     .checked_mul(4)?,
             )
         });
@@ -164,12 +170,15 @@ impl ResolvedObservation {
         let textures: Vec<ResolvedTexture> = assets
             .into_values()
             .map(|asset| {
-                let data =
-                    read_project_asset(&first.root, &asset).map_err(|status| ObservationError {
-                        code: status.code,
-                        message: status.message,
-                        asset_id: Some(asset.id.clone()),
-                    })?;
+                let data = match first.memory_images.get(&asset.id) {
+                    Some(image) => image.read_asset(),
+                    None => read_project_asset(&first.root, &asset),
+                }
+                .map_err(|status| ObservationError {
+                    code: status.code,
+                    message: status.message,
+                    asset_id: Some(asset.id.clone()),
+                })?;
                 Ok(ResolvedTexture { asset, data })
             })
             .collect::<Result<_, _>>()?;
@@ -573,7 +582,16 @@ impl ObservationInput {
                 })
                 .collect(),
         };
+        let memory_images = assets
+            .iter()
+            .filter_map(|a| {
+                snapshot
+                    .memory_image(&a.id)
+                    .map(|image| (a.id.clone(), image.clone()))
+            })
+            .collect();
         Ok(Self {
+            memory_images,
             version,
             evaluation_revision,
             snapshot_clone_ns: snapshot.clone_elapsed_ns(),
@@ -593,12 +611,15 @@ impl ObservationInput {
         self.assets
             .iter()
             .map(|asset| {
-                let data =
-                    read_project_asset(&self.root, asset).map_err(|status| ObservationError {
-                        code: status.code,
-                        message: status.message,
-                        asset_id: Some(asset.id.clone()),
-                    })?;
+                let data = match self.memory_images.get(&asset.id) {
+                    Some(image) => image.read_asset(),
+                    None => read_project_asset(&self.root, asset),
+                }
+                .map_err(|status| ObservationError {
+                    code: status.code,
+                    message: status.message,
+                    asset_id: Some(asset.id.clone()),
+                })?;
                 Ok(ResolvedTexture {
                     asset: asset.clone(),
                     data,

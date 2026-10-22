@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
 
 use super::helpers::*;
 use kasane_core::evaluation::{evaluate_frame, DrawableFrame};
@@ -18,7 +17,7 @@ fn test_import_m1_roundtrip() {
     // Use an existing test texture
     tex_map.insert(
         0,
-        PathBuf::from("tests/fixtures/gpu/gpu-package/textures/0.png"),
+        workspace_root().join("tests/fixtures/gpu/gpu-package/textures/0.png"),
     );
     let import_res = import_from_bare_moc3(&encoded.bytes, &tex_map).expect("Import failed");
     let doc_imported = &import_res.document;
@@ -156,7 +155,7 @@ fn test_structural_editing() {
     let mut tex_map = HashMap::new();
     tex_map.insert(
         0,
-        PathBuf::from("tests/fixtures/gpu/gpu-package/textures/0.png"),
+        workspace_root().join("tests/fixtures/gpu/gpu-package/textures/0.png"),
     );
     let mut res = import_from_bare_moc3(&encoded.bytes, &tex_map).expect("Import failed");
     let doc = &mut res.document;
@@ -849,12 +848,15 @@ fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
             .is_ok());
         assert!(doc
             .add_asset(ImageAsset {
+                unresolved_source: None,
                 id: id(801),
                 name: "texture".into(),
-                source: "textures/0.png".into(),
-                sha256: "0".repeat(64),
-                width: 8,
-                height: 8,
+                content: Some(kasane_core::ImageContent {
+                    source: "textures/0.png".into(),
+                    sha256: "0".repeat(64),
+                    width: 8,
+                    height: 8,
+                }),
             })
             .status
             .is_ok());

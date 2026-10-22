@@ -182,13 +182,39 @@ impl Canvas {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
 pub struct ImageAsset {
+    /// Original imported path or external slot when no decoded content exists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unresolved_source: Option<String>,
     pub id: String,
     pub name: String,
+    pub content: Option<ImageContent>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+pub struct ImageContent {
     pub source: String,
     pub width: u32,
     pub height: u32,
     pub sha256: String,
+}
+impl ImageContent {
+    pub fn is_valid(&self) -> bool {
+        !self.source.is_empty() && !self.source.contains('\0') && self.width > 0 && self.height > 0
+    }
+}
+impl ImageAsset {
+    pub fn image_content(&self) -> Result<&ImageContent, Status> {
+        self.content
+            .as_ref()
+            .ok_or_else(|| match &self.unresolved_source {
+                Some(source) => {
+                    Status::error("MISSING_IMAGE_SOURCE", format!("{}: {source}", self.id))
+                }
+                None => Status::error("MISSING_IMAGE_CONTENT", &self.id),
+            })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

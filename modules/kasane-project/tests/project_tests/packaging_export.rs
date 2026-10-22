@@ -69,7 +69,11 @@ fn export_rejects_hash_mismatch_and_keeps_existing_package() {
             .write_image_data(&vec![255; 8 * 8 * 4])
             .unwrap();
     }
-    fs::write(session.root().join(&asset.source), buf).unwrap();
+    fs::write(
+        session.root().join(&asset.content.as_ref().unwrap().source),
+        buf,
+    )
+    .unwrap();
     assert_eq!(
         session.export_package(&destination).status.code,
         "RESOURCE_HASH"
@@ -138,7 +142,7 @@ fn package_writes_the_same_bytes_that_were_verified() {
     mesh.raw_blend_mode = Some(262);
     assert!(session.document_mut().replace_mesh(mesh).status.is_ok());
     let asset = session.document().get_asset(&id(2)).unwrap();
-    let source = session.root().join(&asset.source);
+    let source = session.root().join(&asset.content.as_ref().unwrap().source);
     let before = fs::read(&source).unwrap();
     let destination = tmp.0.join("package");
     let options = kasane_project::PackageOptions {
@@ -256,9 +260,16 @@ fn export_plan_is_inspectable_and_publication_never_reopens_sources() {
         assert!(plan.files().contains_key(&reference.from));
         assert!(plan.files().contains_key(&reference.to));
     }
-    let source = session
-        .root()
-        .join(&session.document().get_asset(&id(2)).unwrap().source);
+    let source = session.root().join(
+        &session
+            .document()
+            .get_asset(&id(2))
+            .unwrap()
+            .content
+            .as_ref()
+            .unwrap()
+            .source,
+    );
     fs::remove_file(source).unwrap();
     fs::create_dir(&destination).unwrap();
     fs::write(destination.join("old"), b"preserve").unwrap();

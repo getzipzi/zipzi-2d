@@ -108,11 +108,15 @@ fn late_geometry_failure_preserves_request_and_published_snapshot() {
     let mut doc = document();
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(3),
-            source: "texture.png".into(),
-            width: 1,
-            height: 1,
-            ..Default::default()
+            name: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "texture.png".into(),
+                width: 1,
+                height: 1,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

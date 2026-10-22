@@ -16,7 +16,15 @@ pub(crate) type ParameterTuple = (
     VersionTuple,
 );
 pub(crate) type MeshTuple = (String, String, Vec<u32>, Vec<PointTuple>, VersionTuple);
-pub(crate) type AssetTuple = (String, String, String, u32, u32, String, VersionTuple);
+pub(crate) type AssetTuple = (
+    String,
+    String,
+    Option<String>,
+    Option<u32>,
+    Option<u32>,
+    Option<String>,
+    VersionTuple,
+);
 pub(crate) type EvaluationTuple = (
     Vec<(String, f32, f32, bool)>,
     Vec<(String, Vec<PointTuple>)>,

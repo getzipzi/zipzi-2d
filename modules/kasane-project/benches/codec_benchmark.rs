@@ -26,25 +26,35 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
     let asset2 = make_id(0x0002, 2);
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: asset1.clone(),
             name: "texture_0".to_string(),
-            source: "assets/0000000000000000000000000000000000000000000000000000000000000001.png"
-                .to_string(),
-            width: 512,
-            height: 512,
-            sha256: "0000000000000000000000000000000000000000000000000000000000000001".to_string(),
+            content: Some(kasane_core::ImageContent {
+                source:
+                    "assets/0000000000000000000000000000000000000000000000000000000000000001.png"
+                        .to_string(),
+                width: 512,
+                height: 512,
+                sha256: "0000000000000000000000000000000000000000000000000000000000000001"
+                    .to_string(),
+            }),
         })
         .status
         .is_ok());
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: asset2.clone(),
             name: "texture_1".to_string(),
-            source: "assets/0000000000000000000000000000000000000000000000000000000000000002.png"
-                .to_string(),
-            width: 512,
-            height: 512,
-            sha256: "0000000000000000000000000000000000000000000000000000000000000002".to_string(),
+            content: Some(kasane_core::ImageContent {
+                source:
+                    "assets/0000000000000000000000000000000000000000000000000000000000000002.png"
+                        .to_string(),
+                width: 512,
+                height: 512,
+                sha256: "0000000000000000000000000000000000000000000000000000000000000002"
+                    .to_string(),
+            }),
         })
         .status
         .is_ok());
@@ -209,9 +219,9 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
             runtime_id: format!("Mesh_{}", m),
             name: format!("Mesh {}", m),
             texture_asset_id: if m % 2 == 0 {
-                asset1.clone()
+                asset1.clone().into()
             } else {
-                asset2.clone()
+                asset2.clone().into()
             },
             part_id: part_child.clone(),
             deformer_id: warp_child.clone(),

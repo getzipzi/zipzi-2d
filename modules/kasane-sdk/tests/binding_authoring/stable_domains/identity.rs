@@ -170,7 +170,7 @@ fn native_rejects_missing_shared_and_glue_identities_and_numeric_adapters_keep_i
     assert_eq!(s.binding(BINDING_ID).unwrap(), old);
     let mut d = s.document().fork_candidate();
     let mut a = d.get_asset(ASSET_ID).unwrap().clone();
-    a.source = "assets/texture.png".into();
+    a.content.as_mut().unwrap().source = "assets/texture.png".into();
     assert!(d.replace_asset(a).status.is_ok());
     let wire: serde_json::Value =
         serde_json::from_str(&kasane_project::encode_project(&d).unwrap()).unwrap();

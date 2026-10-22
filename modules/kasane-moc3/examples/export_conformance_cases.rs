@@ -62,24 +62,32 @@ fn base_doc() -> Document {
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
             name: "Tex0".to_string(),
-            source: "textures/0.png".to_string(),
-            width: 8,
-            height: 8,
-            sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string(),
+            content: Some(kasane_core::ImageContent {
+                source: "textures/0.png".to_string(),
+                width: 8,
+                height: 8,
+                sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                    .to_string(),
+            }),
         })
         .status
         .is_ok());
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(3),
             name: "Tex1".to_string(),
-            source: "textures/1.png".to_string(),
-            width: 8,
-            height: 8,
-            sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string(),
+            content: Some(kasane_core::ImageContent {
+                source: "textures/1.png".to_string(),
+                width: 8,
+                height: 8,
+                sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                    .to_string(),
+            }),
         })
         .status
         .is_ok());

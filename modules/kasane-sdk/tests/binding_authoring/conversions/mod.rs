@@ -39,7 +39,7 @@ fn frame(s: &AuthoringSession, p: f32, q: f32) -> kasane_core::DrawableFrame {
 fn grid_roundtrip(s: &AuthoringSession) {
     let mut document = s.document().fork_candidate();
     let mut asset = document.get_asset(ASSET_ID).unwrap().clone();
-    asset.source = "assets/texture.png".into();
+    asset.content.as_mut().unwrap().source = "assets/texture.png".into();
     assert!(document.replace_asset(asset).status.is_ok());
     let text = kasane_project::encode_project(&document).unwrap();
     let restored = kasane_project::decode_project(&text).unwrap();

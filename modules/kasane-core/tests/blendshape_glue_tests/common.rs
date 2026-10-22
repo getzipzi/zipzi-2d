@@ -20,12 +20,15 @@ pub fn create_base_document() -> Document {
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: ASSET.to_string(),
             name: "texture".to_string(),
-            source: "textures/tex.png".to_string(),
-            width: 100,
-            height: 100,
-            sha256: "0".repeat(64),
+            content: Some(kasane_core::ImageContent {
+                source: "textures/tex.png".to_string(),
+                width: 100,
+                height: 100,
+                sha256: "0".repeat(64),
+            }),
         })
         .status
         .is_ok());

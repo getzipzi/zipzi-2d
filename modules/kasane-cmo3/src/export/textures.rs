@@ -41,12 +41,16 @@ impl Exporter<'_> {
         let mut textures = HashMap::new();
         for id in self.doc.asset_order() {
             let asset = self.doc.get_asset(id).unwrap();
+            let content = asset.image_content().map_err(|e| Cmo3Error::Asset {
+                asset_id: id.clone(),
+                message: e.message,
+            })?;
             let bytes = resolver.read_png(asset)?;
             let image = kasane_core::image::decode_png(&bytes).map_err(|e| Cmo3Error::Asset {
                 asset_id: id.clone(),
                 message: e.message,
             })?;
-            if (image.width, image.height) != (asset.width, asset.height) {
+            if (image.width, image.height) != (content.width, content.height) {
                 return Err(Cmo3Error::Asset {
                     asset_id: id.clone(),
                     message: "PNG dimensions differ from the asset descriptor".into(),
@@ -56,8 +60,8 @@ impl Exporter<'_> {
             let path = self.embed(bytes);
             let resource = self.graph.add(
                 N::new("CImageResource")
-                    .attr("width", asset.width)
-                    .attr("height", asset.height)
+                    .attr("width", content.width)
+                    .attr("height", content.height)
                     .attr("type", "INT_ARGB")
                     .attr("imageFileBuf_size", size)
                     .attr("previewFileBuf_size", 0)
@@ -65,12 +69,12 @@ impl Exporter<'_> {
             );
             let atlas_guid = self.new_guid("CTextureAtlasGuid");
             let atlas_name = format!("TextureAtlas{}", atlases.len() + 1);
-            let cache = self.cache(resource.clone(), asset.width, asset.height);
+            let cache = self.cache(resource.clone(), content.width, content.height);
             let atlas = self.graph.add(
                 N::new("CTextureAtlas")
                     .field("name", s(&atlas_name))
-                    .field("width", i(asset.width))
-                    .field("height", i(asset.height))
+                    .field("width", i(content.width))
+                    .field("height", i(content.height))
                     .field("cachedAtlasImage", resource.clone())
                     .field("lockCachedAtlasImage", b(false))
                     .field("guid", atlas_guid.clone())

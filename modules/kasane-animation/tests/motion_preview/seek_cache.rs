@@ -92,11 +92,15 @@ fn geometry_workspace_preserves_owned_frames_and_shared_reads() {
     let binding = "00000000-0000-4000-8000-000000000e03";
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: asset.into(),
-            source: "memory://geometry".into(),
-            width: 8,
-            height: 8,
-            ..Default::default()
+            name: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "memory://geometry".into(),
+                width: 8,
+                height: 8,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

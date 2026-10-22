@@ -95,7 +95,7 @@ impl DocumentSession {
             };
             resources.insert(id.clone(), captured);
             if !self.has_memory_asset(asset) {
-                let p = Path::new(&asset.source);
+                let p = Path::new(&asset.content.as_ref().unwrap().source);
                 protected_paths.push(
                     fs::canonicalize(if p.is_absolute() {
                         p.to_path_buf()
@@ -129,7 +129,7 @@ impl DocumentSession {
             let old = document.get_asset(&asset_id).unwrap().clone();
             let bytes = imported
                 .images
-                .get(&old.source)
+                .get(&old.content.as_ref().unwrap().source)
                 .ok_or_else(|| Status::error("CUBISM_RESOURCE", "Missing imported image"))?;
             let texture = crate::decode_png(bytes)?;
             let asset = candidate.prepare_rgba_asset(

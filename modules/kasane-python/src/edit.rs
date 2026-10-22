@@ -19,6 +19,8 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 enum Command {
+    Resource(kasane_core::document::ResourceEdit),
+    DocumentAuthoring(kasane_sdk::DocumentAuthoringEdit),
     References(kasane_core::document::ReferenceEdit),
     BindingAuthoring(kasane_sdk::BindingAuthoringEdit),
     AddPng(kasane_core::ImageAsset),

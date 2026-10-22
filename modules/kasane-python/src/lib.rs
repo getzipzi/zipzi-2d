@@ -63,6 +63,15 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<session::NativePosePlan>()?;
     module.add_class::<session::NativeOrganizationPlan>()?;
     module.add_class::<session::NativeScenePlan>()?;
+    module.add_class::<session::NativePreparedImageContent>()?;
+    module.add_class::<session::NativeResourcePlan>()?;
+    module.add_class::<session::NativeDocumentPlan>()?;
+    module.add_class::<session::NativeAttachmentPlan>()?;
+    module.add_class::<session::NativeResourceNameAddress>()?;
+    module.add_class::<session::NativeDocumentFieldAddress>()?;
+    module.add_class::<session::NativeImageLoadToken>()?;
+    module.add_class::<session::NativeAttachmentLoadToken>()?;
+    module.add_class::<session::NativeAttachmentPathAddress>()?;
     module.add_class::<session::NativeReferencePlan>()?;
     module.add_class::<session::NativeReferenceFieldAddress>()?;
     module.add_class::<session::NativeReferenceSelectionAddress>()?;

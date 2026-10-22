@@ -120,7 +120,12 @@ impl Exporter<'_> {
                     .field("textureAtlasGuid", atlas_guid.clone())
                     .field(
                         "inputImageLocalToCanvasTransform",
-                        affine(fit_texture(&uvs, &rest, asset.width, asset.height)),
+                        affine(fit_texture(
+                            &uvs,
+                            &rest,
+                            asset.content.as_ref().unwrap().width,
+                            asset.content.as_ref().unwrap().height,
+                        )),
                     ),
             );
             let input_base = self.extension_base(&owner);

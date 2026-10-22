@@ -36,16 +36,34 @@ impl Document {
         if self.contains_id(&asset.id) {
             return self.failed(Status::error("DUPLICATE_ID", "Object ID already exists."));
         }
-        if asset.width == 0 || asset.height == 0 || asset.source.is_empty() {
+        if asset
+            .unresolved_source
+            .as_ref()
+            .is_some_and(|s| s.is_empty() || s.contains('\0'))
+            || (asset.content.is_some() && asset.unresolved_source.is_some())
+        {
+            return self.failed(Status::error("INVALID_ASSET", &asset.id));
+        }
+        if asset
+            .content
+            .as_ref()
+            .is_some_and(|content| !content.is_valid())
+        {
             return self.failed(Status::error(
                 "INVALID_ASSET",
                 "Asset requires source and positive pixel dimensions.",
             ));
         }
         let key = asset.id.clone();
+        if let Err(status) = self.authoring_unlocked(&key) {
+            return self.failed(status);
+        }
+        if self.get_asset(&key) == Some(&asset) {
+            return self.failed(Status::ok());
+        }
         self.content.assets.insert(key.clone(), asset);
         self.content.asset_order.push(key.clone());
-        self.changed(ChangeKind::Structure, Vec::new(), vec![key])
+        self.changed(ChangeKind::Metadata, Vec::new(), vec![key])
     }
 
     pub fn replace_asset(&mut self, asset: ImageAsset) -> EditResult {
@@ -55,12 +73,43 @@ impl Document {
         if !self.content.assets.contains_key(&asset.id) {
             return self.failed(Status::error("MISSING_ASSET", &asset.id));
         }
-        if asset.width == 0 || asset.height == 0 || asset.source.is_empty() {
+        if asset
+            .unresolved_source
+            .as_ref()
+            .is_some_and(|s| s.is_empty() || s.contains('\0'))
+            || (asset.content.is_some() && asset.unresolved_source.is_some())
+        {
+            return self.failed(Status::error("INVALID_ASSET", &asset.id));
+        }
+        if asset
+            .content
+            .as_ref()
+            .is_some_and(|content| !content.is_valid())
+        {
             return self.failed(Status::error("INVALID_ASSET", &asset.id));
         }
         let key = asset.id.clone();
+        if let Err(status) = self.authoring_unlocked(&key) {
+            return self.failed(status);
+        }
+        if self.get_asset(&key) == Some(&asset) {
+            return self.failed(Status::ok());
+        }
+        let metadata = self.get_asset(&key).unwrap().content == asset.content;
         self.content.assets.insert(key.clone(), asset);
-        let meshes = self.content.mesh_order.clone();
-        self.changed(ChangeKind::Resources, meshes, vec![key])
+        let meshes = if metadata {
+            vec![]
+        } else {
+            self.content.mesh_order.clone()
+        };
+        self.changed(
+            if metadata {
+                ChangeKind::Metadata
+            } else {
+                ChangeKind::Resources
+            },
+            meshes,
+            vec![key],
+        )
     }
 }

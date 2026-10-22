@@ -23,6 +23,7 @@ pub struct EditSession<'a> {
     pub(crate) object_ids: Vec<String>,
     pub(crate) erased_keys: HashSet<ObjectKey>,
     pub(crate) authoring_limits: kasane_core::document::AuthoringLimits,
+    pub(crate) resource_load_controls: Vec<std::sync::Arc<std::sync::atomic::AtomicBool>>,
     pub(crate) binding_controls: Vec<kasane_core::document::ConversionControl>,
     pub(crate) binding_cost: Option<kasane_core::document::ConversionCost>,
 }
@@ -650,6 +651,15 @@ impl EditSession<'_> {
         if let Some(cost) = self.binding_cost {
             crate::binding_authoring::check_cost(cost, session.authoring_limits)?;
         }
+        for control in &self.resource_load_controls {
+            if control.load(std::sync::atomic::Ordering::Acquire) {
+                return Err(SdkError::new(
+                    "CANCELLED",
+                    "Resource load cancelled",
+                    "commit",
+                ));
+            }
+        }
         for control in &self.binding_controls {
             control
                 .check()
@@ -748,6 +758,15 @@ impl EditSession<'_> {
         }
         // Cancellation after this last check belongs to the next operation;
         // publication and its history/event changes form one atomic boundary.
+        for control in &self.resource_load_controls {
+            if control.load(std::sync::atomic::Ordering::Acquire) {
+                return Err(SdkError::new(
+                    "CANCELLED",
+                    "Resource load cancelled",
+                    "commit",
+                ));
+            }
+        }
         for control in &self.binding_controls {
             control
                 .check()

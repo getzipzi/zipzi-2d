@@ -104,12 +104,15 @@ impl<'a> Moc3DecoderContext<'a> {
             texture_by_slot.insert(t.slot, t);
             check_status!(
                 doc.add_asset(kasane_core::types::ImageAsset {
+                    unresolved_source: (t.width == 0 || t.height == 0).then(|| t.source.clone()),
                     id: t.asset_id.clone(),
                     name: t.name.clone(),
-                    source: t.source.clone(),
-                    width: t.width,
-                    height: t.height,
-                    sha256: t.sha256.clone(),
+                    content: (t.width > 0 && t.height > 0).then(|| kasane_core::ImageContent {
+                        source: t.source.clone(),
+                        width: t.width,
+                        height: t.height,
+                        sha256: t.sha256.clone(),
+                    }),
                 })
                 .status
             );

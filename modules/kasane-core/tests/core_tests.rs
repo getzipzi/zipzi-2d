@@ -63,11 +63,15 @@ fn mesh_runtime_ids_remain_unique_after_replace_restore_and_erase() {
         .is_ok());
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: ASSET.to_string(),
-            source: "memory://test".into(),
-            width: 32,
-            height: 32,
-            ..Default::default()
+            name: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "memory://test".into(),
+                width: 32,
+                height: 32,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());
@@ -127,24 +131,30 @@ fn test_core_lifecycle_and_topology() {
     assert!(!doc.create_mesh(sample()).status.is_ok());
     assert!(!doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: DOC.to_string(),
             name: "bad".to_string(),
-            source: "memory://test".to_string(),
-            width: 32,
-            height: 32,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "memory://test".to_string(),
+                width: 32,
+                height: 32,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: ASSET.to_string(),
             name: "checker".to_string(),
-            source: "memory://test".to_string(),
-            width: 32,
-            height: 32,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "memory://test".to_string(),
+                width: 32,
+                height: 32,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

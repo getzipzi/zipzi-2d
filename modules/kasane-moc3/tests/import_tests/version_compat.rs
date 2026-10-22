@@ -248,8 +248,11 @@ fn test_v42_without_blendshapes() {
     assert_eq!(inspection.counts.blend_bindings, 0);
     assert_eq!(inspection.counts.blend_key_tables, 0);
 
-    let res =
-        import_from_bare_moc3(&bytes, &HashMap::new()).expect("Import without BS should succeed");
+    let res = import_from_bare_moc3(
+        &bytes,
+        &HashMap::from([(0, root.join("tests/fixtures/external_v42/texture_00.png"))]),
+    )
+    .expect("Import without BS should succeed");
     assert_eq!(res.document.blend_binding_order().len(), 0);
     assert_eq!(res.document.blend_key_table_order().len(), 0);
 
@@ -319,7 +322,8 @@ fn test_v6_export_and_preflight() {
     }
     let ren_bytes = fs::read(&ren_path).expect("read Ren");
     let ins_ren = kasane_moc3::inspect_moc3(&ren_bytes).expect("Ren inspection");
-    let decoded = kasane_moc3::decode_moc3(&ren_bytes, &ins_ren, &[]).expect("decode Ren");
+    assert_eq!(ins_ren.version, Moc3Version::Version53);
+    let decoded = import_from_bare_moc3(&ren_bytes,&HashMap::from([(0,root.join("third_party/CubismSdkForNative-5-r.5/Samples/Resources/Ren/Ren.2048/texture_00.png"))])).expect("decode Ren with its actual texture");
     let doc = &decoded.document;
 
     // 1. Re-export Ren with Auto -> should succeed and export v6
@@ -358,9 +362,12 @@ fn test_v6_export_and_preflight() {
 
     // 5. Test auto on a document without 5.3 features exports v5
     let v5_source = fs::read(root.join("tests/fixtures/external_v50/model.moc3")).unwrap();
-    let v5_doc = import_from_bare_moc3(&v5_source, &HashMap::new())
-        .unwrap()
-        .document;
+    let v5_doc = import_from_bare_moc3(
+        &v5_source,
+        &HashMap::from([(0, root.join("tests/fixtures/external_v50/texture_00.png"))]),
+    )
+    .unwrap()
+    .document;
     let v5_exported = kasane_moc3::encode_moc3(&v5_doc).expect("encode v5 doc auto");
     assert_eq!(v5_exported.bytes[4], 5); // Version 5
 }

@@ -134,7 +134,13 @@ impl ExtraBytes for MotionSegment {
 
 impl ExtraBytes for ImageAsset {
     fn extra_bytes(&self) -> usize {
-        self.id.capacity() + self.name.capacity() + self.source.capacity() + self.sha256.capacity()
+        self.id.capacity()
+            + self.name.capacity()
+            + self.unresolved_source.as_ref().map_or(0, String::capacity)
+            + self
+                .content
+                .as_ref()
+                .map_or(0, |c| c.source.capacity() + c.sha256.capacity())
     }
 }
 impl ExtraBytes for Part {

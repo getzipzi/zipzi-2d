@@ -170,8 +170,8 @@ pub fn import_from_model3_json(
                             asset_id: slot_id,
                             name: format!("Texture {slot}"),
                             source: source_str,
-                            width: 1,
-                            height: 1,
+                            width: 0,
+                            height: 0,
                             sha256: String::new(),
                         });
                     }
@@ -192,8 +192,8 @@ pub fn import_from_model3_json(
                         asset_id: slot_id,
                         name: format!("Texture {slot}"),
                         source: source_str,
-                        width: 1,
-                        height: 1,
+                        width: 0,
+                        height: 0,
                         sha256: String::new(),
                     });
                 }
@@ -219,7 +219,11 @@ pub fn import_from_model3_json(
     for id in document.mesh_order() {
         if let Some(m) = document.get_mesh(id) {
             if let Some(asset) = document.get_asset(&m.texture_asset_id) {
-                if asset.source.contains("unmapped_slot_")
+                if asset.content.is_none()
+                    && asset
+                        .unresolved_source
+                        .as_ref()
+                        .is_some_and(|s| s.starts_with("cubism-texture-slot:"))
                     && !diagnostics
                         .iter()
                         .any(|d| d.code == "UNMAPPED_TEXTURE_SLOT")
@@ -306,8 +310,8 @@ pub fn import_from_bare_moc3(
                         asset_id: slot_id,
                         name: format!("Texture {slot}"),
                         source: path.to_string_lossy().to_string(),
-                        width: 1,
-                        height: 1,
+                        width: 0,
+                        height: 0,
                         sha256: String::new(),
                     });
                 }
@@ -328,8 +332,8 @@ pub fn import_from_bare_moc3(
                     asset_id: slot_id,
                     name: format!("Texture {slot}"),
                     source: path.to_string_lossy().to_string(),
-                    width: 1,
-                    height: 1,
+                    width: 0,
+                    height: 0,
                     sha256: String::new(),
                 });
             }
@@ -342,7 +346,11 @@ pub fn import_from_bare_moc3(
     for id in document.mesh_order() {
         if let Some(m) = document.get_mesh(id) {
             if let Some(asset) = document.get_asset(&m.texture_asset_id) {
-                if asset.source.contains("unmapped_slot_")
+                if asset.content.is_none()
+                    && asset
+                        .unresolved_source
+                        .as_ref()
+                        .is_some_and(|s| s.starts_with("cubism-texture-slot:"))
                     && !diagnostics
                         .iter()
                         .any(|d| d.code == "UNMAPPED_TEXTURE_SLOT")

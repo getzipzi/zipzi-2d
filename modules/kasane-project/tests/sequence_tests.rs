@@ -71,23 +71,29 @@ fn build_initial_document() -> (Document, Vec<String>) {
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string();
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: asset1.clone(),
             name: "texture_0".to_string(),
-            source: "assets/0.png".to_string(),
-            sha256: fake_sha256.clone(),
-            width: 512,
-            height: 512,
+            content: Some(kasane_core::ImageContent {
+                source: "assets/0.png".to_string(),
+                sha256: fake_sha256.clone(),
+                width: 512,
+                height: 512,
+            }),
         })
         .status
         .is_ok());
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: asset2.clone(),
             name: "texture_1".to_string(),
-            source: "assets/1.png".to_string(),
-            sha256: fake_sha256,
-            width: 512,
-            height: 512,
+            content: Some(kasane_core::ImageContent {
+                source: "assets/1.png".to_string(),
+                sha256: fake_sha256,
+                width: 512,
+                height: 512,
+            }),
         })
         .status
         .is_ok());

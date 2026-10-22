@@ -27,12 +27,15 @@ fn hierarchical_transforms_and_warp(flag: u8) {
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
             name: "texture".to_string(),
-            source: "textures/0.png".to_string(),
-            width: 128,
-            height: 128,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "textures/0.png".to_string(),
+                width: 128,
+                height: 128,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

@@ -418,8 +418,8 @@ fn joint_offscreen_edit_survives_project_and_moc3_roundtrip() {
     use kasane_core::{Offscreen, OffscreenKeyform, Part, SceneBinding};
     let mut doc = create_m1_fixture_doc();
     let mut asset = doc.get_asset(&id(2)).unwrap().clone();
-    asset.sha256 = "0".repeat(64);
-    asset.source = "assets/textures/0.png".into();
+    asset.content.as_mut().unwrap().sha256 = "0".repeat(64);
+    asset.content.as_mut().unwrap().source = "assets/textures/0.png".into();
     assert!(doc.replace_asset(asset).status.is_ok());
     assert!(doc
         .create_part(Part {

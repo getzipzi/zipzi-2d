@@ -17,6 +17,7 @@ pub enum SceneDisabledReason {
     UnspecifiedReference,
     UnresolvedReference { runtime_id: String },
     EmptyGeometry,
+    MissingImageContent { asset_id: String },
     DependencyUnavailable { object_id: String },
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -73,6 +74,15 @@ impl Document {
                     if mesh.vertex_ids.is_empty() || mesh.triangles.is_empty() =>
                 {
                     Some(SceneDisabledReason::EmptyGeometry)
+                }
+                crate::SceneReference::Resolved { object_id }
+                    if self
+                        .get_asset(object_id)
+                        .is_none_or(|a| a.content.is_none()) =>
+                {
+                    Some(SceneDisabledReason::MissingImageContent {
+                        asset_id: object_id.clone(),
+                    })
                 }
                 _ => None,
             };
@@ -240,6 +250,7 @@ impl Document {
                 matches!(
                     v.reason,
                     SceneDisabledReason::UnspecifiedReference
+                        | SceneDisabledReason::MissingImageContent { .. }
                         | SceneDisabledReason::UnresolvedReference { .. }
                 )
             })

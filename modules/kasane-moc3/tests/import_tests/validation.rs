@@ -414,3 +414,27 @@ fn decoder_rejects_blendshape_references_without_core_guard() {
         assert_eq!(error.code, "INDEX_OUT_OF_BOUNDS", "section {section}");
     }
 }
+
+#[test]
+fn unavailable_image_sources_are_preserved_without_fabricated_dimensions() {
+    let artifact = encode_moc3(&create_m1_fixture_doc()).unwrap();
+    for (path, code) in [
+        (
+            workspace_root().join("missing-image-c5.png"),
+            "MISSING_TEXTURE",
+        ),
+        (workspace_root().join("Cargo.toml"), "CORRUPT_TEXTURE"),
+    ] {
+        let result =
+            import_from_bare_moc3(&artifact.bytes, &HashMap::from([(0, path.clone())])).unwrap();
+        assert!(!result.textures_complete);
+        assert!(result.diagnostics.iter().any(|d| d.code == code));
+        let asset = result
+            .document
+            .get_asset(&result.document.asset_order()[0])
+            .unwrap();
+        assert!(asset.content.is_none());
+        assert_eq!(asset.unresolved_source.as_deref(), path.to_str());
+        assert!(encode_moc3(&result.document).is_err());
+    }
+}

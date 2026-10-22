@@ -42,6 +42,10 @@ pub struct AuthoringSession {
     pub(crate) next_incarnation: u64,
     // Owner-dependent field addresses must not revive after a move and undo.
     pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
+    pub(crate) document_epochs: HashMap<kasane_core::document::DocumentField, u64>,
+    pub(crate) resource_loads:
+        std::sync::Mutex<HashMap<String, Arc<std::sync::atomic::AtomicBool>>>,
+    pub(crate) resource_names: HashMap<String, (String, u64)>,
     pub(crate) attachment_content_epochs: HashMap<String, u64>,
     pub(crate) reference_epochs: HashMap<String, u64>,
     pub(crate) selection_epochs:
@@ -62,6 +66,7 @@ pub struct AuthoringSnapshot {
     version: Version,
     project_path: Option<PathBuf>,
     clone_elapsed_ns: u64,
+    memory_images: HashMap<String, kasane_project::PreparedImageContent>,
 }
 
 impl AuthoringSnapshot {
@@ -87,6 +92,7 @@ impl AuthoringSnapshot {
         Ok(Self {
             document,
             version: self.version,
+            memory_images: self.memory_images.clone(),
             project_path: self.project_path.clone(),
             clone_elapsed_ns: started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
         })
@@ -94,6 +100,9 @@ impl AuthoringSnapshot {
 
     pub fn document(&self) -> &Document {
         &self.document
+    }
+    pub fn memory_image(&self, id: &str) -> Option<&kasane_project::PreparedImageContent> {
+        self.memory_images.get(id)
     }
 
     pub fn version(&self) -> Version {
@@ -127,7 +136,17 @@ impl AuthoringSession {
         let _benchmark_span = kasane_core::benchmark::span("sdk.read_snapshot");
         let started = std::time::Instant::now();
         let document = self.project.document().clone();
+        let memory_images = document
+            .asset_order()
+            .iter()
+            .filter_map(|id| {
+                self.project
+                    .memory_image(document.get_asset(id)?)
+                    .map(|image| (id.clone(), image))
+            })
+            .collect();
         AuthoringSnapshot {
+            memory_images,
             document,
             version: self.version(),
             project_path: self.project_path().map(std::path::Path::to_path_buf),
@@ -207,6 +226,9 @@ impl AuthoringSession {
             expression_entry_contexts: HashMap::new(),
             motion_contexts: HashMap::new(),
             attachment_content_epochs: HashMap::new(),
+            document_epochs: HashMap::new(),
+            resource_loads: Default::default(),
+            resource_names: HashMap::new(),
             next_incarnation,
         })
     }
@@ -597,6 +619,7 @@ impl AuthoringSession {
             object_ids: Vec::new(),
             erased_keys: HashSet::new(),
             authoring_limits: self.authoring_limits,
+            resource_load_controls: vec![],
             binding_controls: vec![],
             binding_cost: None,
         })
@@ -733,6 +756,12 @@ impl AuthoringSession {
         let document = self.project.document();
         let changes = &receipt.changes;
         if changes.full_invalidation {
+            for (_, flag) in self.resource_loads.lock().unwrap().drain() {
+                flag.store(true, Ordering::Release);
+            }
+            self.resource_names.clear();
+            self.document_epochs.clear();
+            self.attachment_content_epochs.clear();
             self.motion_contexts.clear();
             self.physics_contexts.clear();
             self.pose_contexts.clear();
@@ -916,6 +945,9 @@ impl AuthoringSession {
                 self.organization_contexts.remove(&entity.id);
             }
         }
+        for field in &changes.document_fields {
+            self.document_epochs.insert(*field, document.revision());
+        }
         for change in &changes.reference_fields {
             self.reference_epochs
                 .insert(change.entity.id.clone(), document.revision());
@@ -935,6 +967,33 @@ impl AuthoringSession {
         for field in &changes.scene_fields {
             self.scene_field_epochs
                 .insert((field.entity.id.clone(), field.field), document.revision());
+        }
+        for entity in changes.created.iter().chain(&changes.modified) {
+            let name = match entity.kind {
+                ObjectKind::Asset => document.get_asset(&entity.id).map(|a| a.name.as_str()),
+                ObjectKind::Attachment => {
+                    document.get_attachment(&entity.id).map(|a| a.path.as_str())
+                }
+                _ => None,
+            };
+            if let Some(name) = name {
+                if self
+                    .resource_names
+                    .get(&entity.id)
+                    .is_none_or(|v| v.0 != name)
+                {
+                    self.resource_names
+                        .insert(entity.id.clone(), (name.into(), document.revision()));
+                }
+            }
+        }
+        for entity in &changes.deleted {
+            if matches!(entity.kind, ObjectKind::Asset | ObjectKind::Attachment) {
+                self.resource_names.remove(&entity.id);
+                if let Some(flag) = self.resource_loads.lock().unwrap().remove(&entity.id) {
+                    flag.store(true, Ordering::Release);
+                }
+            }
         }
         for entity in &changes.resource_content {
             let epoch = self

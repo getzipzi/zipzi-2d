@@ -10,12 +10,15 @@ pub fn fixture() -> (Document, Vec<u8>) {
         .is_ok());
     assert!(d
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: ASSET.into(),
             name: "Texture".into(),
-            source: "assets/texture.png".into(),
-            width: 2,
-            height: 2,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "assets/texture.png".into(),
+                width: 2,
+                height: 2,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

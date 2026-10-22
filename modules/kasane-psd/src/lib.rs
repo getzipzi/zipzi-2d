@@ -541,12 +541,15 @@ impl Builder {
             })
             .unwrap_or_default();
         let result = self.document.add_asset(ImageAsset {
+            unresolved_source: None,
             id: asset_id.clone(),
             name: name.into(),
-            source: source.clone(),
-            width: image.width,
-            height: image.height,
-            sha256,
+            content: Some(kasane_core::ImageContent {
+                source: source.clone(),
+                width: image.width,
+                height: image.height,
+                sha256,
+            }),
         });
         check(result.status.code, result.status.message)?;
         if let Some(bytes) = png {

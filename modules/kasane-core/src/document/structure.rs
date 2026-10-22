@@ -213,7 +213,19 @@ impl Document {
             }
         };
         for (id, asset) in &self.content.assets {
-            if asset.width == 0 || asset.height == 0 || asset.source.is_empty() {
+            if asset
+                .unresolved_source
+                .as_ref()
+                .is_some_and(|s| s.is_empty() || s.contains('\0'))
+                || (asset.content.is_some() && asset.unresolved_source.is_some())
+            {
+                add_issue(id, Status::error("INVALID_ASSET", id));
+            }
+            if asset
+                .content
+                .as_ref()
+                .is_some_and(|content| !content.is_valid())
+            {
                 add_issue(id, Status::error("INVALID_ASSET", id));
             }
         }

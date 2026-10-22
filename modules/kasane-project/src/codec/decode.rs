@@ -107,11 +107,11 @@ pub fn decode_project(text: &str) -> Result<Document, Status> {
     let header: serde_json::Value =
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
     if header.get("format").and_then(|v| v.as_str()) == Some("kasane-directory-project")
-        && header.get("format_version").and_then(|v| v.as_u64()) != Some(19)
+        && header.get("format_version").and_then(|v| v.as_u64()) != Some(20)
     {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
-            "Only directory-project version 16 is supported; reimport the source asset",
+            "Only directory-project version 20 is supported; reimport the source asset",
         ));
     }
     let root: ProjectWire = match serde_json::from_str(text) {
@@ -151,7 +151,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
     }
 
-    if root.format_version != 19 {
+    if root.format_version != 20 {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             format!(
@@ -305,12 +305,16 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
     }
 
     for asset in doc.assets {
-        if !is_valid_asset_path(&asset.source)
-            || asset.sha256.len() != 64
-            || !asset
-                .sha256
-                .chars()
-                .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        if asset.content.is_some()
+            && (!is_valid_asset_path(&asset.content.as_ref().unwrap().source)
+                || asset.content.as_ref().unwrap().sha256.len() != 64
+                || !asset
+                    .content
+                    .as_ref()
+                    .unwrap()
+                    .sha256
+                    .chars()
+                    .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()))
         {
             return Err(Status::error(
                 "INVALID_PROJECT",

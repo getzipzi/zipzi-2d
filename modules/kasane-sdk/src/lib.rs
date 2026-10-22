@@ -93,3 +93,9 @@ mod reference_authoring;
 pub use reference_authoring::*;
 
 pub use changes::{ReferenceFieldChange, ReferenceSelectionChange};
+
+mod resource_authoring;
+pub use resource_authoring::*;
+
+mod document_authoring;
+pub use document_authoring::*;

@@ -39,8 +39,11 @@ impl DocumentCheckpoint {
         if asset != expected {
             return false;
         }
-        asset.source = source;
-        asset.sha256 = sha256;
+        let Some(content) = &mut asset.content else {
+            return false;
+        };
+        content.source = source;
+        content.sha256 = sha256;
         true
     }
 }
@@ -113,8 +116,26 @@ impl Document {
         // Compare borrowed data directly: metadata commits must not clone mesh
         // geometry merely to decide whether the prepared frame remains valid.
         original.id == content.id
-            && original.assets == content.assets
-            && original.asset_order == content.asset_order
+            && original
+                .assets
+                .values()
+                .filter(|a| a.content.is_some())
+                .count()
+                == content
+                    .assets
+                    .values()
+                    .filter(|a| a.content.is_some())
+                    .count()
+            && original
+                .assets
+                .iter()
+                .filter(|(_, a)| a.content.is_some())
+                .all(|(id, a)| {
+                    content
+                        .assets
+                        .get(id)
+                        .is_some_and(|b| a.content == b.content)
+                })
             && original.part_order == content.part_order
             && original.transform_order == content.transform_order
             && original.transforms == content.transforms
@@ -189,14 +210,6 @@ impl Document {
                 _ => false,
             }
             && original.physics == content.physics
-            && original.missing_attachments == content.missing_attachments
-            && original.model3_settings.layout == content.model3_settings.layout
-            && original.model3_settings.user_data == content.model3_settings.user_data
-            && original.model3_settings.extensions == content.model3_settings.extensions
-            && original.model3_settings.source_runtime_ids
-                == content.model3_settings.source_runtime_ids
-            && original.model3_settings.source_content == content.model3_settings.source_content
-            && original.package_attachments == content.package_attachments
             && original.meshes.len() == content.meshes.len()
             && original.meshes.iter().all(|(id, old)| {
                 content.meshes.get(id).is_some_and(|new| {

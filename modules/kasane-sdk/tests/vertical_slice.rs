@@ -120,8 +120,14 @@ fn shared_authoring_contract_matches_expected_results() {
 fn creates_png_rectangle_evaluates_and_undoes_all_content() {
     let path = fixture_png();
     let asset = prepare_png_asset(ASSET_ID, "asymmetric", &path).unwrap();
-    assert_eq!((asset.width, asset.height), (2, 2));
-    assert_eq!(asset.sha256.len(), 64);
+    assert_eq!(
+        (
+            asset.content.as_ref().unwrap().width,
+            asset.content.as_ref().unwrap().height
+        ),
+        (2, 2)
+    );
+    assert_eq!(asset.content.as_ref().unwrap().sha256.len(), 64);
     let mesh = rectangle_mesh(
         MESH_ID,
         "face",
@@ -142,7 +148,16 @@ fn creates_png_rectangle_evaluates_and_undoes_all_content() {
     assert!(receipt.changed);
     assert_eq!(receipt.after.revision, before.revision + 1);
     assert_eq!(sdk.asset_ids(), &[ASSET_ID]);
-    assert_eq!(sdk.asset(ASSET_ID).unwrap().sha256.len(), 64);
+    assert_eq!(
+        sdk.asset(ASSET_ID)
+            .unwrap()
+            .content
+            .as_ref()
+            .unwrap()
+            .sha256
+            .len(),
+        64
+    );
     assert_eq!(sdk.mesh_ids(), &[MESH_ID]);
     assert_eq!(
         sdk.mesh(MESH_ID).unwrap().triangles,

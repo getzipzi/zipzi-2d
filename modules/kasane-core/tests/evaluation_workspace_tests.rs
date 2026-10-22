@@ -39,11 +39,15 @@ fn document(count: usize) -> Document {
         .is_ok());
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
-            source: "tex.png".into(),
-            width: 64,
-            height: 64,
-            ..Default::default()
+            name: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "tex.png".into(),
+                width: 64,
+                height: 64,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());
@@ -296,7 +300,7 @@ fn metadata_reuses_preview_but_resources_and_restore_invalidate() {
     assert!(Arc::ptr_eq(&first, &preview.frame(&doc, 1).unwrap()));
     assert_eq!(preview.evaluation_count(), 1);
     let mut asset = doc.get_asset(&id(2)).unwrap().clone();
-    asset.source = "replacement.png".into();
+    asset.content.as_mut().unwrap().source = "replacement.png".into();
     assert_eq!(doc.replace_asset(asset).changes.kind, ChangeKind::Resources);
     let second = preview.frame(&doc, 1).unwrap();
     assert!(!Arc::ptr_eq(&first, &second));

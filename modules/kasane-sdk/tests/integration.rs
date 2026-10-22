@@ -53,3 +53,6 @@ mod scene_content;
 
 #[path = "reference_authoring.rs"]
 mod reference_authoring;
+
+#[path = "resource_authoring.rs"]
+mod resource_authoring;

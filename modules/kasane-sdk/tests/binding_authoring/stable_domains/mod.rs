@@ -43,7 +43,7 @@ fn op(s: &mut AuthoringSession, owner: &str, operation: O) -> kasane_sdk::EditRe
 fn roundtrip(s: &AuthoringSession) -> Document {
     let mut d = s.document().fork_candidate();
     let mut a = d.get_asset(ASSET_ID).unwrap().clone();
-    a.source = "assets/texture.png".into();
+    a.content.as_mut().unwrap().source = "assets/texture.png".into();
     assert!(d.replace_asset(a).status.is_ok());
     let text = kasane_project::encode_project(&d).unwrap();
     let out = kasane_project::decode_project(&text).unwrap();

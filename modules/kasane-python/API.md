@@ -695,13 +695,13 @@ runs one script and writes a JSON report containing captured stdout/stderr,
 exception details, and live session versions. The runner does not save a
 project automatically.
 
-Native projects write and read directory-project version **19** (core schema
+Native projects write and read directory-project version **20** (core schema
 **10**); older project versions are rejected without migration. Callers of
 `set_model3_settings()` must supply the native UUIDs and typed records shown
 above. Model3 package import/export uses the standard Live2D wire format and
 converts references using runtime IDs.
 
-Saved observation scene bundles use schema 3, and run reports use schema 2.
+Saved observation scene bundles use schema 6, and run reports use schema 2.
 Earlier canvas-based scene bundles must be captured again.
 
 ### Motion library authoring (C2)
@@ -754,7 +754,7 @@ zero-byte file. Imported path conveniences bind loaded files to stable IDs.
 contains persistent axis IDs, samples with `{id, value}` (and constraint
 `weight`), keyform sample ID combinations, and shared table `base_sample_id`.
 Numeric `keys`, parallel weights and base indices in the tuple snapshots are
-compiled views. Native projects use directory-project version 19.
+compiled views. Native projects use directory-project version 20.
 
 `Session.plan_binding_authoring(intent)` and `Edit.binding_authoring(intent)`
 accept the Rust `BindingAuthoringEdit` enum representation. `Grid` supports
@@ -819,7 +819,7 @@ returns a specific error. Legal Rotation/Warp subtree moves retain
 
 `Session.plan_scene_authoring(intent)`, `execute_scene_plan(plan)` and
 `Edit.scene_authoring(intent)` use the same native lifecycle rules. Native
-projects now use directory-project version **19** (core schema **10**).
+projects now use directory-project version **20** (core schema **11**).
 
 ```python
 from uuid import uuid4
@@ -895,7 +895,7 @@ capture expected values and a monotonic content epoch; topology/content changes
 and Undo expire them. Labels preserve content addresses. Plans expose `version`,
 `is_noop`, `affected_ids`, `report_json`, and `cost`. They publish atomically and
 accept the shared `binding_conversion_control()` cancellation signal. Native
-projects now use directory-project version **19**, core schema **10**.
+projects now use directory-project version **20**, core schema **11**.
 
 ```python
 vertex_id = model.geometry(mesh_id).vertex_ids[0]
@@ -1072,3 +1072,135 @@ ordered set contents, retains each matched set/member identity, and handles
 external set reorder without assigning identities by array index. Legacy
 `Edit.set_combined_parameters()` retains member IDs by matching targets;
 canonical native replacements must explicitly carry IDs.
+
+
+### Resource authoring and document metadata (C5 completion)
+
+Native directory projects use version **20**, core schema **11**. Older native
+projects are rejected without migration. Image records are now
+`{id, name, content: ImageContent | None, unresolved_source?: str}`; content holds
+`source`, `width`, `height` and `sha256`. A new resource has no content. An imported
+missing/corrupt image preserves its original path or external texture slot in
+`unresolved_source`, with no fabricated pixel dimensions. Successful content
+replacement clears the unresolved source while retaining the resource UUID.
+`AssetSnapshot.width`, `height` and `sha256` are `None` without content;
+`source` can still report an imported unresolved path.
+
+`Session.plan_resource_authoring(intent)`, `execute_resource_plan(plan)` and
+`Edit.resource_authoring(intent)` use native `ResourceEdit` operations:
+
+| Operation | Fields and behavior |
+| --- | --- |
+| `create` | `id`, `name`, `before`; empty name requests a unique default, content starts absent. |
+| `patch_name` | `id`, `expected` name, `name`; use protected name addresses for delayed edits. |
+| `set_content` | `id`, `expected` and `content`, each content is a descriptor or `None`. |
+| `duplicate` | `source`, fresh `id`, `name`, `before`; preserve shared immutable content and pending/unresolved state. |
+| `reorder` | `ids`, `before`; normalize selection to native order and retain stable identities. |
+| `delete` | `id`, `replacement`; `None` refuses referenced resources. Explicit `{"kind":"unspecified"}` detaches users; `{"kind":"resolved","object_id":...}` redirects them. |
+
+`resource_collection()` returns handles in native order.
+`resource_capabilities(handle)` and `resource_collection_capabilities()` expose
+the domain availability states. `resource_name_address(id)` and
+`plan_resource_name_patch(address, name)` protect identity and monotonic name
+context; Undo does not revive old addresses. Plans expose `version`, `is_noop`,
+`affected_ids` and `copied_ids`. Deletion checks every affected Mesh/Part lock
+and reports users. Replacement preserves authored Mesh geometry and UVs.
+
+The asynchronous loading path separates preparation and publication:
+
+```python
+from uuid import uuid4
+
+asset_id = str(uuid4())
+with model.edit("New texture") as edit:
+    edit.resource_authoring({"operation": "create", "id": asset_id, "name": ""})
+
+token = model.image_load_token(asset_id)
+# This call releases the GIL and holds no session editing lock. It can run in
+# a worker. The result owns immutable decoded pixels and encoded PNG bytes.
+image = model.prepare_image_load(Path("/absolute/image.png"))
+model.replace_prepared_image_content(token, image)
+```
+
+The prepared object exposes `width` and `height`. It remains usable if the source
+file disappears. Successful publication transfers shared ownership into project
+resources; save writes self-contained files. Read snapshots and observation
+captures retain the in-memory resource even after the source session is dropped.
+Preparation checks 64 MiB encoded PNG, 16,384 per dimension and 256 MiB RGBA limits.
+
+`token.cancel()` rejects later completion. Starting another image/attachment
+request for the same resource cancels the previous one. Tokens capture session,
+generation, resource incarnation and monotonic content epoch. Rename and attachment
+path edits preserve them; content edits/Undo, deletion/recreation and document
+replacement expire old requests. Cancellation is checked again at publication.
+Cancelled/stale/invalid completion publishes no history or half-installed content.
+Prepared data stays owned by its caller until dropped or successfully retained.
+`prepare_image_content(resource_id, path)` and `replace_image_content(token,
+content_descriptor_or_none)` remain descriptor-based conveniences; use
+`replace_image_content(model.image_load_token(asset_id), None)` to clear content.
+
+Without image content, Mesh geometry stays available while drawing is excluded.
+Unavailable masks disable their Mesh/Offscreen consumers through the dependency
+chain, including Offscreen contents. Geometry-only Glue and HitArea use their
+own availability checks. Strict foreign export diagnoses incomplete resources,
+including an unused empty image. Native saves preserve them.
+
+Attachment operations use `Session.plan_attachment_authoring(intent)`,
+`execute_attachment_plan(plan)` and `Edit.attachment_authoring(intent)`.
+`AttachmentEdit` uses the tag `op`: `create`, `replace`, `duplicate`, `delete`,
+`reorder`, `delete_with_replacement`, `set_sound`, `set_user_data`.
+`create` takes `id`, `path`; an empty path selects a unique default export path.
+`reorder` takes `ids`, `before`. `delete_with_replacement` takes `id`,
+`replacement` (receiving Attachment ID or `None` to remove references explicitly).
+Plain `delete` refuses referenced attachments. Copies share immutable bytes;
+replacing one record preserves the other.
+
+`attachment_collection()` returns stable handles; `attachment_records()` returns
+canonical records including UUID, path and optional bytes. Use
+`attachment_capabilities(handle)` / `attachment_collection_capabilities()` for
+availability. `attachment_path_address(id)` and
+`plan_attachment_path_patch(address, path)` retain target identity while rejecting
+stale paths after Undo. `attachment_load_token(id)`, `token.cancel()` and
+`replace_attachment_content(token, bytes_or_none)` provide the same guarded
+content publication. `None` means absent; `b""` is a present zero-byte attachment.
+Sound and UserData references use Attachment UUIDs, independent of export paths;
+their content availability does not block independent visual preview.
+
+Document metadata uses `Session.plan_document_authoring(intent)`,
+`execute_document_plan(plan)` and `Edit.document_authoring(intent)`.
+`document_field_address(field)` and `plan_document_field_patch(address, value)`
+use `layout` or `export_settings`; values are `{"field": field, "value": ...}`.
+For example:
+
+```python
+address = model.document_field_address("layout")
+model.execute_document_plan(model.plan_document_field_patch(address, {
+    "field": "layout", "value": {"CenterX": 0.0, "CenterY": 0.0},
+}))
+```
+
+`document_field_capability(field)` distinguishes available properties from source
+metadata. `source_canvas` is inspectable import provenance; generic patches return
+`SOURCE_METADATA_READ_ONLY`. Existing explicit source-canvas setters remain import
+boundary APIs. Opaque extensions/source namespace keep their typed read paths and
+strict export baselines. SDK ChangeSets carry `document_fields` and resource
+content/collection changes for commands, direct setters and history. Nonvisual
+metadata retains frame evaluation inputs; resource and parameter-group label
+publication reuses unrelated relationships.
+
+Explicit repair operations use `operation`:
+
+- `repair_missing_attachment`: `path`, `attachment_id` (UUID or `None`); rebind
+  known unresolved sound/UserData paths or explicitly remove them, checking users.
+- `repair_cdi_parameter`: `runtime_id`, `parameter_id` (UUID or `None`).
+- `repair_cdi_part`: `runtime_id`, `part_id` (UUID or `None`).
+
+CDI repair keeps supported group/extensions and target UUIDs. When the imported
+name yields to the target's authoritative name, `NativeDocumentPlan.losses`
+reports it. Wrong targets, duplicate memberships and locked users reject the
+whole plan. Other domain references continue using their native field/grid
+repair plans. Unparseable mandatory external structures remain import errors.
+
+Observation scene/packet bundles now use schema **6** for the new image record
+shape. Re-capture older bundles. All uniform menu/drag/drop/form work remains in
+the later UI phase; these APIs provide the completed C5 core operations.

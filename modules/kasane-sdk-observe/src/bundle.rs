@@ -155,7 +155,7 @@ impl ResolvedObservation {
     fn scene_bundle(&self) -> SceneBundle {
         let input = &self.input;
         SceneBundle {
-            schema_version: 5,
+            schema_version: 6,
             kind: "kasane-observe-scene".into(),
             capture_id: self.capture_id.clone(),
             scene_digest: self.scene_digest.clone(),
@@ -180,9 +180,10 @@ impl ResolvedObservation {
                 .iter()
                 .enumerate()
                 .map(|(index, texture)| BundleTexture {
-                    asset: ImageAsset {
-                        sha256: texture.data.sha256.clone(),
-                        ..texture.asset.clone()
+                    asset: {
+                        let mut asset = texture.asset.clone();
+                        asset.content.as_mut().unwrap().sha256 = texture.data.sha256.clone();
+                        asset
                     },
                     path: format!("texture-{index:03}.png"),
                 })
@@ -265,7 +266,7 @@ impl ResolvedObservation {
         }
         let bundle: SceneBundle = serde_json::from_slice(&content)
             .map_err(|e| failure("BUNDLE_FORMAT", e.to_string()))?;
-        if bundle.schema_version != 5 || bundle.kind != "kasane-observe-scene" {
+        if bundle.schema_version != 6 || bundle.kind != "kasane-observe-scene" {
             return Err(failure(
                 "UNSUPPORTED_BUNDLE_VERSION",
                 "Unknown scene bundle version",
@@ -290,6 +291,10 @@ impl ResolvedObservation {
                     "Invalid texture path or duplicate asset ID",
                 ));
             }
+            entry
+                .asset
+                .image_content()
+                .map_err(|e| failure("BUNDLE_FORMAT", e.message))?;
             let path = directory.join(&entry.path);
             let length = regular_file_size(&path)?;
             if length > TEXTURE_FILE_LIMIT {
@@ -302,8 +307,8 @@ impl ResolvedObservation {
                 .checked_add(length)
                 .and_then(|bytes| {
                     bytes.checked_add(
-                        u64::from(entry.asset.width)
-                            .checked_mul(u64::from(entry.asset.height))?
+                        u64::from(entry.asset.content.as_ref().unwrap().width)
+                            .checked_mul(u64::from(entry.asset.content.as_ref().unwrap().height))?
                             .checked_mul(4)?,
                     )
                 })
@@ -326,7 +331,12 @@ impl ResolvedObservation {
                     u32::from_be_bytes(header[4..].try_into().ok()?),
                 ))
             });
-            if declared_size != Some((entry.asset.width, entry.asset.height)) {
+            if declared_size
+                != Some((
+                    entry.asset.content.as_ref().unwrap().width,
+                    entry.asset.content.as_ref().unwrap().height,
+                ))
+            {
                 return Err(failure(
                     "BUNDLE_FORMAT",
                     "Texture PNG dimensions differ from descriptor",
@@ -334,9 +344,9 @@ impl ResolvedObservation {
             }
             let data: AssetData =
                 decode_png(&bytes).map_err(|e| failure("BUNDLE_FORMAT", e.message))?;
-            if data.sha256 != entry.asset.sha256
-                || data.width != entry.asset.width
-                || data.height != entry.asset.height
+            if data.sha256 != entry.asset.content.as_ref().unwrap().sha256
+                || data.width != entry.asset.content.as_ref().unwrap().width
+                || data.height != entry.asset.content.as_ref().unwrap().height
             {
                 return Err(failure(
                     "BUNDLE_HASH_MISMATCH",
@@ -380,6 +390,7 @@ impl ResolvedObservation {
                 frame: bundle.frame,
                 assets,
                 root: directory.to_path_buf(),
+                memory_images: Default::default(),
             },
             textures: textures.into(),
             capture_id,
@@ -402,7 +413,7 @@ mod tests {
 
     fn empty_bundle() -> SceneBundle {
         SceneBundle {
-            schema_version: 5,
+            schema_version: 6,
             kind: "kasane-observe-scene".into(),
             capture_id: String::new(),
             scene_digest: String::new(),

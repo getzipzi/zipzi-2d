@@ -23,7 +23,7 @@ use std::{
 
 /// Project persistence and resource state. Authoring history belongs to the SDK.
 pub struct DocumentSession {
-    store: DocumentStore,
+    pub(super) store: DocumentStore,
     document: Document,
     manifest: PathBuf,
     manifest_sha256: String,
@@ -328,9 +328,10 @@ impl DocumentSession {
                 .clone();
             // Keep draft sources distinct from the content-addressed paths
             // created by save, so saved files always get read from disk.
-            asset.source = format!("assets/.memory-psd/{}.png", pixels.id);
+            asset.content.as_mut().unwrap().source =
+                format!("assets/.memory-psd/{}.png", pixels.id);
             assets.insert(
-                asset.source.clone(),
+                asset.content.as_ref().unwrap().source.clone(),
                 Arc::new(MemoryAsset {
                     texture: TextureData {
                         rgba: pixels.rgba.into(),
@@ -408,12 +409,15 @@ impl DocumentSession {
                 })
             });
         Ok(ImageAsset {
+            unresolved_source: None,
             id: id.into(),
             name: name.into(),
-            source,
-            width,
-            height,
-            sha256: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source,
+                width,
+                height,
+                sha256: String::new(),
+            }),
         })
     }
 
@@ -460,7 +464,9 @@ impl DocumentSession {
         memory.validate_metadata(asset)?;
         let verified = memory.encoded_png()?;
         if validated_image.is_some_and(|(hash, width, height)| {
-            hash == verified.sha256 && width == asset.width && height == asset.height
+            hash == verified.sha256
+                && width == asset.content.as_ref().unwrap().width
+                && height == asset.content.as_ref().unwrap().height
         }) {
             return Ok(None);
         }
@@ -502,7 +508,13 @@ impl DocumentSession {
             }
         };
         let mut asset = existing;
-        asset.source = path.to_string_lossy().to_string();
+        if asset.content.is_none() {
+            return kasane_core::types::EditResult {
+                status: Status::error("MISSING_IMAGE_CONTENT", id),
+                ..Default::default()
+            };
+        }
+        asset.content.as_mut().unwrap().source = path.to_string_lossy().to_string();
         let data = match read_project_asset(Path::new(""), &asset) {
             Ok(d) => d,
             Err(s) => {
@@ -512,7 +524,7 @@ impl DocumentSession {
                 }
             }
         };
-        asset.sha256 = data.sha256;
+        asset.content.as_mut().unwrap().sha256 = data.sha256;
         self.document.replace_asset(asset)
     }
 
@@ -563,10 +575,13 @@ impl DocumentSession {
             }
         };
         let mut asset = existing;
-        asset.source = path.to_string_lossy().to_string();
-        asset.sha256 = data.sha256;
-        asset.width = data.width;
-        asset.height = data.height;
+        asset.unresolved_source = None;
+        asset.content = Some(kasane_core::ImageContent {
+            source: path.to_string_lossy().to_string(),
+            sha256: data.sha256,
+            width: data.width,
+            height: data.height,
+        });
         self.document.replace_asset(asset)
     }
 
@@ -631,7 +646,7 @@ mod memory_psd_tests {
         assert!(memory.png.get().is_none());
 
         let mut invalid = descriptor.clone();
-        invalid.width += 1;
+        invalid.content.as_mut().unwrap().width += 1;
         assert!(session.document.replace_asset(invalid).status.is_ok());
         assert_eq!(
             session.read_texture(&id).unwrap_err().code,
@@ -647,7 +662,17 @@ mod memory_psd_tests {
         let eager = import_psd(fixture).unwrap();
         let data = session.read_asset(&id).unwrap();
         assert_eq!(data.bytes, eager.assets[0].bytes);
-        assert_eq!(data.sha256, eager.document.get_asset(&id).unwrap().sha256);
+        assert_eq!(
+            data.sha256,
+            eager
+                .document
+                .get_asset(&id)
+                .unwrap()
+                .content
+                .as_ref()
+                .unwrap()
+                .sha256
+        );
         assert_eq!(data.rgba.as_slice(), first.rgba.as_ref());
         assert!(memory.png.get().is_some());
         assert!(session
@@ -656,7 +681,7 @@ mod memory_psd_tests {
             .is_none());
 
         let mut invalid = descriptor;
-        invalid.sha256 = "bad hash".into();
+        invalid.content.as_mut().unwrap().sha256 = "bad hash".into();
         assert!(session.document.replace_asset(invalid).status.is_ok());
         assert_eq!(session.read_texture(&id).unwrap_err().code, "RESOURCE_HASH");
         assert_eq!(session.read_asset(&id).unwrap_err().code, "RESOURCE_HASH");

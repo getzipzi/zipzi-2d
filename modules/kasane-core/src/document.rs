@@ -167,7 +167,7 @@ struct DocumentContent {
 }
 
 impl Document {
-    pub const SCHEMA_VERSION: u32 = 10;
+    pub const SCHEMA_VERSION: u32 = 11;
 
     pub fn new() -> Self {
         Self::default()
@@ -445,6 +445,9 @@ impl Document {
     ) -> EditResult {
         self.reference_index.take();
         self.reference_projection.take();
+        if matches!(kind, ChangeKind::Structure | ChangeKind::Resources) {
+            self.scene_projection.take();
+        }
         if object_ids.iter().any(|id| {
             self.content.motions.contains_key(id)
                 || self
@@ -551,3 +554,9 @@ impl Document {
         })
     }
 }
+
+mod resource_authoring;
+pub use resource_authoring::*;
+
+mod document_authoring;
+pub use document_authoring::*;

@@ -219,6 +219,7 @@ impl<'a> Moc3EncoderContext<'a> {
 
         for id in self.doc.asset_order() {
             let asset = self.doc.get_asset(id).unwrap();
+            let content = asset.image_content()?;
             let path = format!("textures/{}.png", result.textures.len());
             if !result.textures.is_empty() {
                 result.model3_json.push(',');
@@ -226,10 +227,10 @@ impl<'a> Moc3EncoderContext<'a> {
             result.model3_json.push_str(&format!("\n      \"{path}\""));
             result.textures.push(TextureSlot {
                 asset_id: id.clone(),
-                source: asset.source.clone(),
+                source: content.source.clone(),
                 package_path: path,
-                width: asset.width,
-                height: asset.height,
+                width: content.width,
+                height: content.height,
             });
         }
 

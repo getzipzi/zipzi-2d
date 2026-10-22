@@ -15,7 +15,9 @@ use std::{
 };
 
 pub(crate) use assets::asset_path;
-pub use assets::{read_project_asset, read_project_asset_if_changed};
+pub use assets::{
+    prepare_image_content, read_project_asset, read_project_asset_if_changed, PreparedImageContent,
+};
 pub use manifest::project_manifest;
 pub use session::DocumentSession;
 

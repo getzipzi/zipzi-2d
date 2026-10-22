@@ -49,7 +49,7 @@ pub use pose::{
 };
 pub use resources::{content_sha256, decode_png, is_valid_asset_path, AssetData, TextureData};
 pub use store::{
-    project_manifest, read_project_asset, DocumentSession, DocumentSnapshot, DocumentStore,
-    ProjectResult, ResourceDiagnostic,
+    prepare_image_content, project_manifest, read_project_asset, DocumentSession, DocumentSnapshot,
+    DocumentStore, PreparedImageContent, ProjectResult, ResourceDiagnostic,
 };
 pub use transfer::{resolve_model3_entry, TransferFormat, TransferSnapshot};

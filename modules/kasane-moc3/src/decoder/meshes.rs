@@ -94,12 +94,10 @@ impl<'a> Moc3DecoderContext<'a> {
                     check_status!(
                         self.doc
                             .add_asset(kasane_core::types::ImageAsset {
+                                unresolved_source: Some(format!("cubism-texture-slot:{slot}")),
                                 id: id.clone(),
                                 name: format!("Texture {slot} (Unmapped)"),
-                                source: format!("assets/textures/unmapped_slot_{slot}.png"),
-                                width: 1,
-                                height: 1,
-                                sha256: "0".repeat(64),
+                                content: None,
                             })
                             .status
                     );

@@ -758,3 +758,71 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         model.execute_reference_plan(model.plan_reference_authoring({"operation": "delete", "ids": [group]}))
         self.assertIsNotNone(model.parameter(PARAMETER))
         self.assertEqual(model.validate_structure(), [])
+
+
+    def test_empty_resource_content_load_cancel_copy_and_save(self):
+        model = session()
+        other = str(uuid4())
+        with model.edit("empty texture") as edit:
+            edit.resource_authoring({"operation": "create", "id": ASSET, "name": ""})
+            edit.create_rectangle(MESH, "Face", ASSET, (0, 0), (10, 10))
+        self.assertIsNone(model.asset(ASSET).width)
+        self.assertEqual(model.scene_projection()["drawing"], [])
+        old, token = model.image_load_token(ASSET), model.image_load_token(ASSET)
+        content = model.prepare_image_content(ASSET, TEXTURE)
+        with self.assertRaises(kasane.SdkFailure):
+            model.replace_image_content(old, content)
+        model.replace_image_content(token, content)
+        self.assertEqual(model.asset(ASSET).width, 2)
+        self.assertEqual(model.scene_projection()["drawing"], [MESH])
+        model.execute_resource_plan(model.plan_resource_authoring({"operation": "duplicate", "source": ASSET, "id": other, "name": "Copy"}))
+        clear = model.image_load_token(other)
+        model.replace_image_content(clear, None)
+        self.assertEqual(model.asset(ASSET).width, 2)
+        with TemporaryDirectory() as root:
+            saved = model.save(Path(root) / "resources")
+            reopened = kasane.open_project(saved.manifest)
+            self.assertIsNone(reopened.asset(other).source)
+            self.assertEqual(reopened.asset(ASSET).width, 2)
+            self.assertEqual(reopened.validate_structure(), [])
+
+    def test_attachment_load_paths_and_document_field_addresses(self):
+        model = session()
+        attachment = str(uuid4())
+        model.execute_attachment_plan(model.plan_attachment_authoring({"op": "create", "id": attachment, "path": "data/user.json"}))
+        self.assertIsNone(model.attachment_records()[0]["bytes"])
+        token = model.attachment_load_token(attachment)
+        model.replace_attachment_content(token, b"")
+        self.assertEqual(model.attachment_records()[0]["bytes"], [])
+        address = model.attachment_path_address(attachment)
+        model.execute_attachment_plan(model.plan_attachment_path_patch(address, "data/new.json"))
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_attachment_path_patch(address, "data/old.json")
+        address = model.document_field_address("layout")
+        before = model.evaluation_revision
+        model.execute_document_plan(model.plan_document_field_patch(address, {"field": "layout", "value": {"CenterX": 2.0}}))
+        self.assertEqual(model.evaluation_revision, before)
+        self.assertEqual(model.model3_settings()["layout"], {"CenterX": 2.0})
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_document_field_patch(address, {"field": "layout", "value": None})
+        self.assertIn("Unsupported", model.document_field_capability("source_canvas"))
+
+
+    def test_prepared_image_load_owns_pixels_after_source_removal(self):
+        model = session()
+        with model.edit("empty") as edit:
+            edit.resource_authoring({"operation": "create", "id": ASSET, "name": "Texture"})
+        token = model.image_load_token(ASSET)
+        with TemporaryDirectory() as root:
+            source = Path(root) / "input.png"
+            shutil.copyfile(TEXTURE, source)
+            image = model.prepare_image_load(source)
+            source.unlink()
+            model.replace_prepared_image_content(token, image)
+            self.assertEqual(model.asset(ASSET).width, 2)
+            saved = model.save(Path(root) / "prepared")
+            reopened = kasane.open_project(saved.manifest)
+            self.assertEqual(reopened.asset(ASSET).width, 2)
+            self.assertEqual(reopened.validate_structure(), [])

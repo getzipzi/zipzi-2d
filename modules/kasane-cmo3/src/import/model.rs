@@ -306,12 +306,15 @@ pub(super) fn read(
             let decoded = kasane_core::image::decode_png(&bytes).map_err(|s| invalid(s.message))?;
             let source = format!("assets/.memory-cubism/{texture_id}.png");
             edit(document.add_asset(ImageAsset {
+                unresolved_source: None,
                 id: texture_id.clone(),
                 name: path.into(),
-                source: source.clone(),
-                width: decoded.width,
-                height: decoded.height,
-                sha256: String::new(),
+                content: Some(kasane_core::ImageContent {
+                    source: source.clone(),
+                    width: decoded.width,
+                    height: decoded.height,
+                    sha256: String::new(),
+                }),
             }))?;
             images.insert(source, bytes);
             texture_ids.insert(path.to_string(), texture_id.clone());

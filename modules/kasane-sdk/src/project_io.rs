@@ -233,10 +233,15 @@ impl AuthoringSession {
         let mut unverified_history_ids = HashSet::new();
         for entry in self.done.iter().chain(&self.redo) {
             for asset in entry.checkpoint.assets() {
+                if asset.content.is_none() {
+                    continue;
+                }
                 if !self.project.has_memory_asset(&asset) {
                     validate_asset_root(&entry.root, &asset, "save_project")?;
                 }
-                if asset.sha256.is_empty() && !self.project.has_memory_asset(&asset) {
+                if asset.content.as_ref().unwrap().sha256.is_empty()
+                    && !self.project.has_memory_asset(&asset)
+                {
                     unverified_history_ids.insert(asset.id);
                 }
             }

@@ -113,7 +113,10 @@ fn captures_unpublished_project_and_keeps_old_frame_after_edit() {
     assert_eq!(input.assets().len(), 1);
     let textures = input.resolve_textures().unwrap();
     assert_eq!((textures[0].data.width, textures[0].data.height), (2, 2));
-    assert_eq!(textures[0].data.sha256, input.assets()[0].sha256);
+    assert_eq!(
+        textures[0].data.sha256,
+        input.assets()[0].content.as_ref().unwrap().sha256
+    );
     session
         .edit("move", None, |edit| {
             edit.update_positions(MESH, &[0], &[Vec2::new(50.0, 40.0)])
@@ -437,7 +440,7 @@ fn resolved_capture_rerenders_roi_after_source_disappears_and_restores_legacy_vi
     std::fs::write(&manifest_path, &manifest).unwrap();
     std::fs::write(
         &manifest_path,
-        manifest.replace("\"schema_version\": 5", "\"schema_version\": 99"),
+        manifest.replace("\"schema_version\": 6", "\"schema_version\": 99"),
     )
     .unwrap();
     assert_eq!(
@@ -466,9 +469,18 @@ fn resolved_capture_rerenders_roi_after_source_disappears_and_restores_legacy_vi
             .code,
         "BUNDLE_HASH_MISMATCH"
     );
+    let mut pending: serde_json::Value = serde_json::from_str(&manifest).unwrap();
+    pending["textures"][0]["asset"]["content"] = serde_json::Value::Null;
+    std::fs::write(&manifest_path, serde_json::to_vec(&pending).unwrap()).unwrap();
+    assert_eq!(
+        ResolvedObservation::open_scene(&scene_directory)
+            .unwrap_err()
+            .code,
+        "BUNDLE_FORMAT"
+    );
     let mut oversized: serde_json::Value = serde_json::from_str(&manifest).unwrap();
-    oversized["textures"][0]["asset"]["width"] = serde_json::json!(u32::MAX);
-    oversized["textures"][0]["asset"]["height"] = serde_json::json!(u32::MAX);
+    oversized["textures"][0]["asset"]["content"]["width"] = serde_json::json!(u32::MAX);
+    oversized["textures"][0]["asset"]["content"]["height"] = serde_json::json!(u32::MAX);
     std::fs::write(&manifest_path, serde_json::to_vec(&oversized).unwrap()).unwrap();
     assert_eq!(
         ResolvedObservation::open_scene(&scene_directory)
@@ -536,7 +548,7 @@ fn unhashed_source_is_hashed_in_bundle_and_reopens() {
     let source =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png");
     let mut asset = prepare_png_asset(ASSET, "texture", &source).unwrap();
-    asset.sha256.clear();
+    asset.content.as_mut().unwrap().sha256.clear();
     session
         .edit("unhashed texture", None, |edit| {
             edit.create_asset(asset)?;
@@ -561,8 +573,52 @@ fn unhashed_source_is_hashed_in_bundle_and_reopens() {
     let reopened = ResolvedObservation::open_scene(&directory).unwrap();
     assert_eq!(capture.scene_digest(), reopened.scene_digest());
     assert_eq!(
-        reopened.textures()[0].asset.sha256,
+        reopened.textures()[0]
+            .asset
+            .content
+            .as_ref()
+            .unwrap()
+            .sha256,
         capture.textures()[0].data.sha256
     );
     std::fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
+fn in_memory_image_content_survives_session_drop_in_a_readonly_capture() {
+    let mut session =
+        AuthoringSession::new(DOCUMENT, Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png");
+    let image = kasane_sdk::prepare_image_load(&path).unwrap();
+    session
+        .edit("Empty image", None, |edit| {
+            edit.edit_resource(kasane_sdk::ResourceEdit::Create {
+                id: ASSET.into(),
+                name: "Texture".into(),
+                before: None,
+            })?;
+            edit.create_mesh(
+                rectangle_mesh(
+                    MESH,
+                    "Face",
+                    ASSET,
+                    Vec2::new(40., 40.),
+                    Vec2::new(60., 60.),
+                )
+                .unwrap(),
+            )
+        })
+        .unwrap();
+    let token = session.image_load_token(ASSET).unwrap();
+    session
+        .replace_prepared_image_content(&token, &image)
+        .unwrap();
+    let input = ObservationInput::capture(&session, &PreviewValues::new()).unwrap();
+    drop(session);
+    drop(image);
+    let resolved = ResolvedObservation::capture(input).unwrap();
+    assert_eq!(resolved.textures().len(), 1);
+    assert_eq!(resolved.textures()[0].data.width, 2);
+    assert_eq!(resolved.textures()[0].data.rgba.len(), 16);
 }

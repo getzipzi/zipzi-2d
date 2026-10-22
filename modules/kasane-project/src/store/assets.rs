@@ -26,9 +26,10 @@ pub fn read_project_asset_if_changed(
         .map_err(|e| Status::error("PROJECT_IO", format!("{}: {}", asset.id, e)))?;
 
     if let Some((hash, width, height)) = validated_image {
-        if width == asset.width
-            && height == asset.height
-            && (asset.sha256.is_empty() || asset.sha256 == hash)
+        if width == asset.content.as_ref().unwrap().width
+            && height == asset.content.as_ref().unwrap().height
+            && (asset.content.as_ref().unwrap().sha256.is_empty()
+                || asset.content.as_ref().unwrap().sha256 == hash)
             && content_sha256(&bytes) == hash
         {
             return Ok(None);
@@ -40,14 +41,18 @@ pub fn read_project_asset_if_changed(
         s
     })?;
 
-    if data.width != asset.width || data.height != asset.height {
+    if data.width != asset.content.as_ref().unwrap().width
+        || data.height != asset.content.as_ref().unwrap().height
+    {
         return Err(Status::error(
             "RESOURCE_DIMENSIONS",
             format!("{}: PNG dimensions differ from metadata", asset.id),
         ));
     }
 
-    if !asset.sha256.is_empty() && data.sha256 != asset.sha256 {
+    if !asset.content.as_ref().unwrap().sha256.is_empty()
+        && data.sha256 != asset.content.as_ref().unwrap().sha256
+    {
         return Err(Status::error(
             "RESOURCE_HASH",
             format!("{}: PNG differs from saved SHA-256", asset.id),
@@ -87,13 +92,18 @@ impl MemoryAsset {
     }
 
     pub(super) fn validate_metadata(&self, asset: &ImageAsset) -> Result<(), Status> {
-        if self.texture.width != asset.width || self.texture.height != asset.height {
+        asset.image_content()?;
+        if self.texture.width != asset.content.as_ref().unwrap().width
+            || self.texture.height != asset.content.as_ref().unwrap().height
+        {
             return Err(Status::error(
                 "RESOURCE_DIMENSIONS",
                 format!("{}: PNG dimensions differ from metadata", asset.id),
             ));
         }
-        if !asset.sha256.is_empty() && self.encoded_png()?.sha256 != asset.sha256 {
+        if !asset.content.as_ref().unwrap().sha256.is_empty()
+            && self.encoded_png()?.sha256 != asset.content.as_ref().unwrap().sha256
+        {
             return Err(Status::error(
                 "RESOURCE_HASH",
                 format!("{}: PNG differs from saved SHA-256", asset.id),
@@ -124,7 +134,7 @@ impl DocumentStore {
         self.memory_assets
             .lock()
             .unwrap_or_else(|p| p.into_inner())
-            .get(&asset.source)
+            .get(&asset.content.as_ref()?.source)
             .cloned()
     }
 
@@ -168,13 +178,17 @@ impl DocumentStore {
                 dimensions
             }
         };
-        if width != asset.width || height != asset.height {
+        if width != asset.content.as_ref().unwrap().width
+            || height != asset.content.as_ref().unwrap().height
+        {
             return Err(Status::error(
                 "RESOURCE_DIMENSIONS",
                 format!("{}: PNG dimensions differ from metadata", asset.id),
             ));
         }
-        if !asset.sha256.is_empty() && sha256 != asset.sha256 {
+        if !asset.content.as_ref().unwrap().sha256.is_empty()
+            && sha256 != asset.content.as_ref().unwrap().sha256
+        {
             return Err(Status::error(
                 "RESOURCE_HASH",
                 format!("{}: PNG differs from saved SHA-256", asset.id),
@@ -190,9 +204,18 @@ impl DocumentStore {
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         for id in document.asset_order() {
             let asset = document.get_asset(id).unwrap();
+            if asset.content.is_none() {
+                continue;
+            }
             // MOC3 import assigns a hash only after successfully decoding the PNG.
-            if !asset.sha256.is_empty() {
-                verified.insert(asset.sha256.clone(), (asset.width, asset.height));
+            if !asset.content.as_ref().unwrap().sha256.is_empty() {
+                verified.insert(
+                    asset.content.as_ref().unwrap().sha256.clone(),
+                    (
+                        asset.content.as_ref().unwrap().width,
+                        asset.content.as_ref().unwrap().height,
+                    ),
+                );
             }
         }
     }
@@ -218,12 +241,16 @@ impl DocumentStore {
 }
 
 pub(crate) fn asset_path(root: &Path, asset: &ImageAsset) -> Result<PathBuf, Status> {
-    let path = Path::new(&asset.source);
+    let content = asset.image_content()?;
+    let path = Path::new(&content.source);
     if path.is_absolute() {
         return io::local_path(path);
     }
-    if !crate::resources::is_valid_asset_path(&asset.source) {
-        return Err(Status::error("INVALID_PATH", &asset.source));
+    if !crate::resources::is_valid_asset_path(&asset.content.as_ref().unwrap().source) {
+        return Err(Status::error(
+            "INVALID_PATH",
+            &asset.content.as_ref().unwrap().source,
+        ));
     }
     let root = io::local_path(root)?;
     let resolved = io::local_path(&root.join(path))?;
@@ -234,4 +261,109 @@ pub(crate) fn asset_path(root: &Path, asset: &ImageAsset) -> Result<PathBuf, Sta
         ));
     }
     Ok(resolved)
+}
+
+/// Validated immutable pixels and encoded bytes, prepared without an editing session.
+#[derive(Clone)]
+pub struct PreparedImageContent {
+    memory: Arc<MemoryAsset>,
+    content: kasane_core::ImageContent,
+}
+impl std::fmt::Debug for PreparedImageContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PreparedImageContent")
+            .field("content", &self.content)
+            .finish_non_exhaustive()
+    }
+}
+impl PreparedImageContent {
+    pub fn content(&self) -> &kasane_core::ImageContent {
+        &self.content
+    }
+    pub fn read_asset(&self) -> Result<AssetData, Status> {
+        if self.content.width != self.memory.texture.width
+            || self.content.height != self.memory.texture.height
+        {
+            return Err(Status::error("RESOURCE_DIMENSIONS", &self.content.source));
+        }
+        let png = self.memory.encoded_png()?;
+        if !self.content.sha256.is_empty() && self.content.sha256 != png.sha256 {
+            return Err(Status::error("RESOURCE_HASH", &self.content.source));
+        }
+        Ok(AssetData {
+            bytes: png.bytes.clone(),
+            rgba: self.memory.texture.rgba.to_vec(),
+            width: self.memory.texture.width,
+            height: self.memory.texture.height,
+            sha256: png.sha256.clone(),
+        })
+    }
+}
+pub fn prepare_image_content(path: &Path) -> Result<PreparedImageContent, Status> {
+    if !path.is_absolute() {
+        return Err(Status::error("INVALID_PATH", "PNG source must be absolute"));
+    }
+    let metadata = fs::metadata(path).map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?;
+    if metadata.len() > 64 * 1024 * 1024 {
+        return Err(Status::error("CAPACITY", "PNG source exceeds 64 MiB"));
+    }
+    let bytes = fs::read(path).map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?;
+    if bytes.len() > 64 * 1024 * 1024 {
+        return Err(Status::error("CAPACITY", "PNG source exceeds 64 MiB"));
+    }
+    if bytes.get(..8) == Some(b"\x89PNG\r\n\x1a\n") {
+        if let Some(header) = bytes.get(16..24) {
+            let width = u32::from_be_bytes(header[..4].try_into().unwrap());
+            let height = u32::from_be_bytes(header[4..].try_into().unwrap());
+            if width > 16384
+                || height > 16384
+                || u64::from(width) * u64::from(height) * 4 > 256 * 1024 * 1024
+            {
+                return Err(Status::error(
+                    "CAPACITY",
+                    "PNG pixels exceed resource limits",
+                ));
+            }
+        }
+    }
+    let data = decode_png(&bytes)?;
+    let content = kasane_core::ImageContent {
+        source: format!("assets/.memory-loaded/{}.png", data.sha256),
+        width: data.width,
+        height: data.height,
+        sha256: data.sha256.clone(),
+    };
+    let memory = MemoryAsset {
+        texture: TextureData {
+            rgba: data.rgba.into(),
+            width: data.width,
+            height: data.height,
+            cache_key: format!("png:{}", data.sha256),
+        },
+        png: OnceLock::from(Ok(VerifiedAsset {
+            bytes: data.bytes,
+            sha256: data.sha256,
+        })),
+    };
+    Ok(PreparedImageContent {
+        memory: Arc::new(memory),
+        content,
+    })
+}
+impl super::DocumentSession {
+    /// Called only after a successful SDK publication. Registration clones an Arc.
+    pub fn retain_prepared_image(&self, image: &PreparedImageContent) {
+        self.store
+            .memory_assets
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .entry(image.content.source.clone())
+            .or_insert_with(|| image.memory.clone());
+    }
+    pub fn memory_image(&self, asset: &ImageAsset) -> Option<PreparedImageContent> {
+        Some(PreparedImageContent {
+            memory: self.store.memory_asset(asset)?,
+            content: asset.content.clone()?,
+        })
+    }
 }

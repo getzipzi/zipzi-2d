@@ -29,12 +29,15 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
         asset_ids.push(aid.clone());
         assert!(doc
             .add_asset(ImageAsset {
+                unresolved_source: None,
                 id: aid,
                 name: format!("texture_{a}"),
-                source: format!("assets/{a}.png"),
-                width: 2048,
-                height: 2048,
-                ..Default::default()
+                content: Some(kasane_core::ImageContent {
+                    source: format!("assets/{a}.png"),
+                    width: 2048,
+                    height: 2048,
+                    sha256: String::new(),
+                }),
             })
             .status
             .is_ok());
@@ -219,7 +222,7 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
             id: mesh_id.clone(),
             runtime_id: format!("Mesh_{m}"),
             name: format!("Mesh {m}"),
-            texture_asset_id: asset_id,
+            texture_asset_id: asset_id.into(),
             part_id: root_part.clone(),
             deformer_id: def_id,
             draw_order: Some(m as f32 * 0.1),

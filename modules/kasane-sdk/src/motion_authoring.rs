@@ -241,6 +241,11 @@ pub struct AttachmentEditPlan {
     version: Version,
     domain: kasane_core::document::AttachmentPlan,
 }
+impl AttachmentEditPlan {
+    pub fn version(&self) -> Version {
+        self.version
+    }
+}
 impl AuthoringSession {
     pub fn plan_attachment_edit(
         &self,
@@ -372,13 +377,25 @@ impl AuthoringSession {
 /// Content requests follow a living attachment and a non-rewinding content epoch.
 #[derive(Debug, Clone)]
 pub struct AttachmentLoadToken {
+    cancelled: std::sync::Arc<std::sync::atomic::AtomicBool>,
     handle: ObjectHandle,
     epoch: u64,
 }
+impl AttachmentLoadToken {
+    pub fn cancel(&self) {
+        self.cancelled
+            .store(true, std::sync::atomic::Ordering::Release);
+    }
+}
 impl AuthoringSession {
     pub fn attachment_load_token(&self, id: &str) -> Result<AttachmentLoadToken, SdkError> {
+        let handle = self.handle(ObjectKind::Attachment, id)?;
+        self.document()
+            .motion_unlocked(id)
+            .map_err(|s| SdkError::from_status(s, "attachment_load_token", vec![id.into()]))?;
         Ok(AttachmentLoadToken {
-            handle: self.handle(ObjectKind::Attachment, id)?,
+            cancelled: self.begin_resource_load(id),
+            handle,
             epoch: *self.attachment_content_epochs.get(id).unwrap_or(&0),
         })
     }
@@ -388,6 +405,13 @@ impl AuthoringSession {
         bytes: Option<std::sync::Arc<Vec<u8>>>,
     ) -> Result<EditReceipt, SdkError> {
         self.resolve_handle(&token.handle)?;
+        if token.cancelled.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(SdkError::new(
+                "CANCELLED",
+                token.handle.id(),
+                "replace_attachment_content",
+            ));
+        }
         if self
             .attachment_content_epochs
             .get(token.handle.id())
@@ -412,7 +436,13 @@ impl AuthoringSession {
             expected,
             attachment,
         })?;
-        self.execute_attachment_plan(&plan)
+        let flag = token.cancelled.clone();
+        let (_, receipt) = self.edit("Load attachment content", Some(plan.version), |edit| {
+            edit.resource_load_controls.push(flag);
+            edit.apply_attachment_plan(&plan)
+        })?;
+        token.cancel();
+        Ok(receipt)
     }
 }
 

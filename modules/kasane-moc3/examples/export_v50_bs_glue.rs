@@ -38,12 +38,15 @@ fn main() {
         .is_ok());
 
     let _ = doc.add_asset(ImageAsset {
+        unresolved_source: None,
         id: id(2),
         name: "Texture0".to_string(),
-        source: "textures/0.png".to_string(),
-        width: 64,
-        height: 64,
-        sha256: "0".repeat(64),
+        content: Some(kasane_core::ImageContent {
+            source: "textures/0.png".to_string(),
+            width: 64,
+            height: 64,
+            sha256: "0".repeat(64),
+        }),
     });
 
     let param_norm = Parameter {

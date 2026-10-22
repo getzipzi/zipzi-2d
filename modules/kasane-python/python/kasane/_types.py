@@ -167,10 +167,10 @@ class AssetSnapshot(NamedTuple):
 
     id: str
     name: str
-    source: str
-    width: int
-    height: int
-    sha256: str
+    source: str | None
+    width: int | None
+    height: int | None
+    sha256: str | None
     version: Version
 
 

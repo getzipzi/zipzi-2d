@@ -5,6 +5,8 @@ pub(super) fn apply_command(
     command: Command,
 ) -> Result<(), kasane_sdk::SdkError> {
     match command {
+        Command::Resource(intent) => edit.edit_resource(intent)?,
+        Command::DocumentAuthoring(intent) => edit.edit_document(intent)?,
         Command::AddPng(asset) => edit.create_asset(asset)?,
         Command::CreateRectangle(mesh) => edit.create_mesh(*mesh)?,
         Command::CreateMesh(mesh) => edit.create_mesh(*mesh)?,

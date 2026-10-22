@@ -17,12 +17,15 @@ fn measure(meshes: u64) {
     .expect("valid document");
     sdk.edit("build", None, |edit| {
         edit.create_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
             name: "synthetic".into(),
-            source: "synthetic.png".into(),
-            width: 2,
-            height: 2,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "synthetic.png".into(),
+                width: 2,
+                height: 2,
+                ..Default::default()
+            }),
         })?;
         for index in 0..meshes {
             edit.create_mesh(rectangle_mesh(

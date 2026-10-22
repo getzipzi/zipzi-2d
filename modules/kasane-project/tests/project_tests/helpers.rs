@@ -53,24 +53,30 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
             name: "A".to_string(),
-            source: "assets/0.png".to_string(),
-            width: 8,
-            height: 8,
-            sha256: sha1.to_string(),
+            content: Some(kasane_core::ImageContent {
+                source: "assets/0.png".to_string(),
+                width: 8,
+                height: 8,
+                sha256: sha1.to_string(),
+            }),
         })
         .status
         .is_ok());
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(3),
             name: "B".to_string(),
-            source: "assets/1.png".to_string(),
-            width: 8,
-            height: 8,
-            sha256: sha2.to_string(),
+            content: Some(kasane_core::ImageContent {
+                source: "assets/1.png".to_string(),
+                width: 8,
+                height: 8,
+                sha256: sha2.to_string(),
+            }),
         })
         .status
         .is_ok());

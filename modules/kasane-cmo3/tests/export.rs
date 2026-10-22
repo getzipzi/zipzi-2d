@@ -44,7 +44,9 @@ fn runtime_model_name_maps_to_native_label_but_unknown_metadata_stays_strict() {
         );
         let reexported = encode_cmo3(
             &imported.document,
-            &|asset: &ImageAsset| Ok(imported.images[&asset.source].clone()),
+            &|asset: &ImageAsset| {
+                Ok(imported.images[&asset.content.as_ref().unwrap().source].clone())
+            },
             &Cmo3Options::default(),
         )
         .unwrap();
@@ -714,4 +716,26 @@ fn canvas_reversal_matches_runtime_geometry_texture_uvs_and_triangle_orientation
         .collect();
     assert_eq!(actual, expected);
     assert!(doc.same_content(&before));
+}
+
+#[test]
+fn an_unused_empty_image_is_reported_by_identity_before_reading_pixels() {
+    let (mut document, png) = fixture();
+    let id = "00000000-0000-4000-8000-000000000099";
+    assert!(document
+        .add_asset(ImageAsset {
+            id: id.into(),
+            name: "Draft".into(),
+            content: None,
+            unresolved_source: None
+        })
+        .status
+        .is_ok());
+    let error = encode_cmo3(
+        &document,
+        &|_: &ImageAsset| Ok(png.clone()),
+        &Cmo3Options::default(),
+    )
+    .unwrap_err();
+    assert!(matches!(error,Cmo3Error::Asset{asset_id,..} if asset_id==id));
 }

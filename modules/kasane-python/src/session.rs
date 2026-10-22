@@ -84,3 +84,10 @@ mod reference_authoring;
 pub(crate) use reference_authoring::{
     NativeReferenceFieldAddress, NativeReferencePlan, NativeReferenceSelectionAddress,
 };
+
+mod resources;
+pub(crate) use resources::{
+    NativeAttachmentLoadToken, NativeAttachmentPathAddress, NativeAttachmentPlan,
+    NativeDocumentFieldAddress, NativeDocumentPlan, NativeImageLoadToken,
+    NativePreparedImageContent, NativeResourceNameAddress, NativeResourcePlan,
+};

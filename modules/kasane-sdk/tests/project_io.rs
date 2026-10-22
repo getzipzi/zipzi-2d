@@ -80,7 +80,14 @@ fn psd_draft_keeps_assets_in_memory_until_save_and_relocates_history() {
     let texture_again = sdk.read_texture(&asset_id).unwrap();
     assert!(Arc::ptr_eq(&texture.rgba, &texture_again.rgba));
     assert!(!texture.cache_key.is_empty());
-    assert!(sdk.asset(&asset_id).unwrap().sha256.is_empty());
+    assert!(sdk
+        .asset(&asset_id)
+        .unwrap()
+        .content
+        .as_ref()
+        .unwrap()
+        .sha256
+        .is_empty());
     let original = sdk.read_asset(&asset_id).unwrap();
     assert_eq!(&*texture.rgba, original.rgba.as_slice());
     fs::remove_file(&source).unwrap();
@@ -94,7 +101,15 @@ fn psd_draft_keeps_assets_in_memory_until_save_and_relocates_history() {
         "{:?}",
         saved.history_warnings
     );
-    assert_eq!(sdk.asset(&asset_id).unwrap().sha256, original.sha256);
+    assert_eq!(
+        sdk.asset(&asset_id)
+            .unwrap()
+            .content
+            .as_ref()
+            .unwrap()
+            .sha256,
+        original.sha256
+    );
     assert!(!sdk.modified());
     assert_eq!(sdk.history_lengths(), (1, 0));
     assert_eq!(sdk.read_asset(&asset_id).unwrap().rgba, original.rgba);
@@ -110,7 +125,11 @@ fn psd_draft_keeps_assets_in_memory_until_save_and_relocates_history() {
     assert_eq!(reopened.read_asset(&asset_id).unwrap().rgba, original.rgba);
     let asset = sdk.asset(&asset_id).unwrap();
     fs::write(
-        saved.manifest.parent().unwrap().join(asset.source),
+        saved
+            .manifest
+            .parent()
+            .unwrap()
+            .join(&asset.content.as_ref().unwrap().source),
         b"changed",
     )
     .unwrap();
@@ -235,7 +254,9 @@ fn psd_import_publishes_assets_and_replaces_session_only_on_success() {
     assert!(sdk.mesh(MESH).is_none());
     assert!(sdk.diagnose_resources().is_empty());
     let asset = sdk.asset(&sdk.asset_ids()[0]).unwrap();
-    assert!(destination.join(&asset.source).exists());
+    assert!(destination
+        .join(&asset.content.as_ref().unwrap().source)
+        .exists());
     assert_eq!(sdk.mesh(&sdk.mesh_ids()[0]).unwrap().name, "face");
 
     let mut reopened =
@@ -490,7 +511,7 @@ fn save_relocates_unhashed_history_and_redo_reaches_saved_baseline() {
     let texture = temp.png("a.png", 10);
     let mut sdk = session(&texture, true);
     let mut asset = sdk.asset(ASSET).unwrap();
-    asset.sha256.clear();
+    asset.content.as_mut().unwrap().sha256.clear();
     sdk.edit("legacy resource", None, |edit| edit.replace_asset(asset))
         .unwrap();
     let mesh = sdk.mesh(MESH).unwrap();
@@ -514,8 +535,13 @@ fn save_relocates_unhashed_history_and_redo_reaches_saved_baseline() {
     assert!(!sdk.modified());
     assert!(sdk.diagnose_resources().is_empty());
     let saved_asset = sdk.asset(ASSET).unwrap();
-    assert!(saved_asset.source.starts_with("assets/"));
-    assert_eq!(saved_asset.sha256.len(), 64);
+    assert!(saved_asset
+        .content
+        .as_ref()
+        .unwrap()
+        .source
+        .starts_with("assets/"));
+    assert_eq!(saved_asset.content.as_ref().unwrap().sha256.len(), 64);
 
     sdk.undo().unwrap();
     assert_eq!(sdk.mesh(MESH).unwrap().base_positions, mesh.base_positions);
@@ -584,7 +610,10 @@ fn save_as_keeps_old_resource_for_same_id_and_new_resource_for_redo() {
     let second = temp.path("second");
     sdk.save_project(&second, None).unwrap();
     let saved = sdk.asset(ASSET).unwrap();
-    assert_ne!(old.sha256, saved.sha256);
+    assert_ne!(
+        old.content.as_ref().unwrap().sha256,
+        saved.content.as_ref().unwrap().sha256
+    );
     assert_eq!(
         sdk.project_path(),
         Some(second.join("project.kasane.json").as_path())
@@ -593,10 +622,16 @@ fn save_as_keeps_old_resource_for_same_id_and_new_resource_for_redo() {
 
     sdk.undo().unwrap();
     let restored = sdk.asset(ASSET).unwrap();
-    assert_eq!(restored.sha256, old.sha256);
     assert_eq!(
-        restored.source,
-        temp.path("first").join(&old.source).to_str().unwrap()
+        restored.content.as_ref().unwrap().sha256,
+        old.content.as_ref().unwrap().sha256
+    );
+    assert_eq!(
+        restored.content.as_ref().unwrap().source,
+        temp.path("first")
+            .join(&old.content.as_ref().unwrap().source)
+            .to_str()
+            .unwrap()
     );
     assert!(sdk.diagnose_resources().is_empty());
     assert!(sdk.modified());
@@ -618,10 +653,16 @@ fn deleted_historical_asset_is_rebased_to_its_original_project() {
     sdk.save_project(&temp.path("second"), None).unwrap();
     assert!(sdk.asset_ids().is_empty());
     sdk.undo().unwrap();
-    assert_eq!(sdk.asset(ASSET).unwrap().sha256, old.sha256);
     assert_eq!(
-        sdk.asset(ASSET).unwrap().source,
-        temp.path("first").join(old.source).to_str().unwrap()
+        sdk.asset(ASSET).unwrap().content.as_ref().unwrap().sha256,
+        old.content.as_ref().unwrap().sha256
+    );
+    assert_eq!(
+        sdk.asset(ASSET).unwrap().content.as_ref().unwrap().source,
+        temp.path("first")
+            .join(&old.content.as_ref().unwrap().source)
+            .to_str()
+            .unwrap()
     );
     assert!(sdk.diagnose_resources().is_empty());
     sdk.redo().unwrap();
@@ -682,7 +723,7 @@ fn failed_save_and_open_preserve_state_successful_open_resets_generation() {
     );
 
     let asset = sdk.asset(ASSET).unwrap();
-    fs::remove_file(path.join(&asset.source)).unwrap();
+    fs::remove_file(path.join(&asset.content.as_ref().unwrap().source)).unwrap();
     let opened = sdk.open_project(&path, None).unwrap();
     assert_eq!(opened.diagnostics.len(), 1);
     assert_eq!(opened.diagnostics[0].asset_id, ASSET);
@@ -801,17 +842,29 @@ fn relocation_requires_same_bytes_and_replacement_accepts_new_content() {
     );
     assert_eq!(sdk.version(), before);
     let relocated = prepare_relocated_asset(&asset, &relocated_path).unwrap();
-    assert_eq!(relocated.sha256, asset.sha256);
-    assert_ne!(relocated.source, asset.source);
+    assert_eq!(
+        relocated.content.as_ref().unwrap().sha256,
+        asset.content.as_ref().unwrap().sha256
+    );
+    assert_ne!(
+        relocated.content.as_ref().unwrap().source,
+        asset.content.as_ref().unwrap().source
+    );
     sdk.edit("relocate", None, |edit| edit.replace_asset(relocated))
         .unwrap();
     assert!(sdk.diagnose_resources().is_empty());
     let replacement = prepare_png_asset(ASSET, "texture", &changed).unwrap();
     sdk.edit("replace", None, |edit| edit.replace_asset(replacement))
         .unwrap();
-    assert_ne!(sdk.asset(ASSET).unwrap().sha256, asset.sha256);
+    assert_ne!(
+        sdk.asset(ASSET).unwrap().content.as_ref().unwrap().sha256,
+        asset.content.as_ref().unwrap().sha256
+    );
     sdk.undo().unwrap();
-    assert_eq!(sdk.asset(ASSET).unwrap().sha256, asset.sha256);
+    assert_eq!(
+        sdk.asset(ASSET).unwrap().content.as_ref().unwrap().sha256,
+        asset.content.as_ref().unwrap().sha256
+    );
 }
 
 #[test]

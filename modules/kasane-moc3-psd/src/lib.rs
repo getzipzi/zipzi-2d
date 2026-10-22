@@ -124,13 +124,16 @@ fn convert(imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error> {
     }
     let mut textures = HashMap::<String, DecodedImage>::new();
     let mut warnings = Vec::new();
-    for asset_id in imported
+    for reference in imported
         .document
         .mesh_order()
         .iter()
         .filter_map(|id| imported.document.get_mesh(id))
         .map(|mesh| &mesh.texture_asset_id)
     {
+        let asset_id = reference
+            .resolved_id()
+            .ok_or_else(|| Error::Model(format!("missing texture reference {reference:?}")))?;
         if textures.contains_key(asset_id) {
             continue;
         }
@@ -138,10 +141,13 @@ fn convert(imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error> {
             .document
             .get_asset(asset_id)
             .ok_or_else(|| Error::Model(format!("missing texture asset {asset_id}")))?;
-        let data = fs::read(&asset.source)?;
+        let content = asset
+            .image_content()
+            .map_err(|e| Error::InvalidInput(e.message))?;
+        let data = fs::read(&content.source)?;
         let image = decode_png(&data)
-            .map_err(|e| Error::InvalidInput(format!("{}: {}", asset.source, e.message)))?;
-        textures.insert(asset_id.clone(), image);
+            .map_err(|e| Error::InvalidInput(format!("{}: {}", content.source, e.message)))?;
+        textures.insert(asset_id.to_owned(), image);
     }
 
     let mut drawables: Vec<_> = frame.drawables.iter().collect();

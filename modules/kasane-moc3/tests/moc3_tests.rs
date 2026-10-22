@@ -54,24 +54,30 @@ fn fixture() -> Document {
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(2),
             name: "A".to_string(),
-            source: "textures/0.png".to_string(),
-            width: 8,
-            height: 8,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "textures/0.png".to_string(),
+                width: 8,
+                height: 8,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());
 
     assert!(doc
         .add_asset(ImageAsset {
+            unresolved_source: None,
             id: id(3),
             name: "B".to_string(),
-            source: "textures/1.png".to_string(),
-            width: 8,
-            height: 8,
-            ..Default::default()
+            content: Some(kasane_core::ImageContent {
+                source: "textures/1.png".to_string(),
+                width: 8,
+                height: 8,
+                ..Default::default()
+            }),
         })
         .status
         .is_ok());

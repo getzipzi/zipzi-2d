@@ -5,13 +5,17 @@ impl NativeSession {
     fn asset(&self, id: &str) -> PyResult<Option<AssetTuple>> {
         let session = self.inner.lock().map_err(|_| poisoned())?;
         Ok(session.asset(id).map(|asset| {
+            let content = asset.content;
             (
                 asset.id,
                 asset.name,
-                asset.source,
-                asset.width,
-                asset.height,
-                asset.sha256,
+                content
+                    .as_ref()
+                    .map(|c| c.source.clone())
+                    .or(asset.unresolved_source),
+                content.as_ref().map(|c| c.width),
+                content.as_ref().map(|c| c.height),
+                content.as_ref().map(|c| c.sha256.clone()),
                 version_tuple(session.version()),
             )
         }))

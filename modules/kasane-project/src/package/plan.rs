@@ -519,7 +519,9 @@ pub fn build_export_plan_with(
     }
     for id in doc.asset_order() {
         let asset = doc.get_asset(id).expect("asset");
-        if !asset_root.as_os_str().is_empty() || Path::new(&asset.source).is_absolute() {
+        if !asset_root.as_os_str().is_empty()
+            || Path::new(&asset.content.as_ref().unwrap().source).is_absolute()
+        {
             source_paths.push(asset_path(asset_root, asset)?);
         }
     }

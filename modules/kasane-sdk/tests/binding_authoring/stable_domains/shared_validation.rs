@@ -192,7 +192,7 @@ fn noop_shared_edits_preserve_redo_and_native_invalid_ids_are_rejected() {
     assert_eq!(s.history_state(), history);
     let mut d = s.document().fork_candidate();
     let mut a = d.get_asset(ASSET_ID).unwrap().clone();
-    a.source = "assets/texture.png".into();
+    a.content.as_mut().unwrap().source = "assets/texture.png".into();
     assert!(d.replace_asset(a).status.is_ok());
     let mut wire: serde_json::Value =
         serde_json::from_str(&kasane_project::encode_project(&d).unwrap()).unwrap();

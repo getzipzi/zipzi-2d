@@ -66,12 +66,15 @@ fn asset(s: &mut AuthoringSession) -> String {
     let a = id();
     s.edit("Asset", None, |e| {
         e.create_asset(ImageAsset {
+            unresolved_source: None,
             id: a.clone(),
-            source: "assets/texture.png".into(),
-            sha256: "0".repeat(64),
-            width: 1,
-            height: 1,
-            ..Default::default()
+            name: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "assets/texture.png".into(),
+                sha256: "0".repeat(64),
+                width: 1,
+                height: 1,
+            }),
         })
     })
     .unwrap();
@@ -219,7 +222,7 @@ fn pending_scene_objects_are_native_and_roundtrip_without_invented_targets() {
     assert!(s.scene_projection().glues.is_empty());
     let encoded = kasane_project::encode_project(s.document()).unwrap();
     let value: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(value["format_version"], 19);
+    assert_eq!(value["format_version"], 20);
     let reopened = kasane_project::decode_project(&encoded).unwrap();
     assert_eq!(
         reopened.get_mesh(&mesh).unwrap().texture_asset_id,

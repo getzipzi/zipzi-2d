@@ -445,12 +445,15 @@ fn scene() -> (
     let (asset, t, m, n) = (id(), id(), id(), id());
     s.edit("Scene", None, |e| {
         e.create_asset(ImageAsset {
+            unresolved_source: None,
             id: asset.clone(),
-            source: "assets/texture.png".into(),
-            sha256: "0".repeat(64),
-            width: 1,
-            height: 1,
-            ..Default::default()
+            name: String::new(),
+            content: Some(kasane_core::ImageContent {
+                source: "assets/texture.png".into(),
+                sha256: "0".repeat(64),
+                width: 1,
+                height: 1,
+            }),
         })?;
         e.create_transform(Transform {
             id: t.clone(),
