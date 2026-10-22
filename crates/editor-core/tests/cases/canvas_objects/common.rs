@@ -19,7 +19,11 @@ pub(super) fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     Ok((editor, dir))
 }
 pub(super) fn click(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyhow::Result<()> {
-    editor.canvas_input(CanvasInput::Down { point: p, shift })?;
+    editor.canvas_input(CanvasInput::Down {
+        point: p,
+        shift,
+        alt: false,
+    })?;
     editor.canvas_input(CanvasInput::Up { point: p })?;
     Ok(())
 }
@@ -152,6 +156,7 @@ pub(super) fn drag(
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up { point: end })?;
     Ok(())

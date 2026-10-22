@@ -11,6 +11,7 @@ fn warp_and_rotation_drags_present_intermediate_geometry_before_the_latest_pose(
         editor.canvas_input(CanvasInput::Down {
             point: start,
             shift: false,
+            alt: false,
         })?;
         let mut frames = Vec::new();
         for x in [10., 20., 30.] {
@@ -147,6 +148,7 @@ fn warp_gizmo_scales_all_points_and_cancels_as_one_edit() -> anyhow::Result<()> 
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
         point: end,
@@ -283,6 +285,7 @@ fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()>
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
         point: bent,

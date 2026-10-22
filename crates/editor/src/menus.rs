@@ -78,6 +78,7 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem, selected_theme: theme::ColorT
         item(CommandId::FitView),
         MenuItem::separator(),
         item(CommandId::SelectTool),
+        item(CommandId::LassoTool),
         item(CommandId::GlueTool),
         item(CommandId::HandTool),
         item(CommandId::GenerateMesh),

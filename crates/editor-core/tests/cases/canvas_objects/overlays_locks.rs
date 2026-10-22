@@ -83,6 +83,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
     editor.canvas_input(CanvasInput::Down {
         point,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
         point: ViewportPoint {
@@ -125,6 +126,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
         editor.canvas_input(CanvasInput::Down {
             point: handle,
             shift: false,
+            alt: false,
         })?;
         editor.canvas_input(CanvasInput::Move {
             point: end,
@@ -138,6 +140,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
         editor.canvas_input(CanvasInput::Down {
             point: handle,
             shift: false,
+            alt: false,
         })?;
         editor.canvas_input(CanvasInput::Move {
             point: end,
@@ -351,6 +354,7 @@ fn mesh_drag_reuses_binding_index_without_mutating_retained_snapshots() -> anyho
     editor.canvas_input(CanvasInput::Down {
         point,
         shift: false,
+        alt: false,
     })?;
     for distance in [10., 20., 30.] {
         editor.canvas_input(CanvasInput::Move {
@@ -383,6 +387,7 @@ fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -
         editor.canvas_input(CanvasInput::Down {
             point: start,
             shift: false,
+            alt: false,
         })?;
         let mut previous = original.clone();
         for distance in [10., 20.] {

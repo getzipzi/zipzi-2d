@@ -65,18 +65,28 @@ impl ModelingViewport {
                 label.clone()
             }
         });
-        let cursor = active_handle.map(|handle| {
-            use editor_core::DeformerHandle as H;
-            match handle {
-                H::Move => CursorStyle::OpenHand,
-                H::Rotate => CursorStyle::Crosshair,
-                H::Scale(1 | 5) => CursorStyle::ResizeUpDown,
-                H::Scale(3 | 7) => CursorStyle::ResizeLeftRight,
-                H::Scale(0 | 4) => CursorStyle::ResizeUpLeftDownRight,
-                H::Scale(_) => CursorStyle::ResizeUpRightDownLeft,
-                H::RotationScale => CursorStyle::Crosshair,
-            }
-        });
+        let cursor = active_handle
+            .map(|handle| {
+                use editor_core::DeformerHandle as H;
+                match handle {
+                    H::Move => CursorStyle::OpenHand,
+                    H::Rotate => CursorStyle::Crosshair,
+                    H::Scale(1 | 5) => CursorStyle::ResizeUpDown,
+                    H::Scale(3 | 7) => CursorStyle::ResizeLeftRight,
+                    H::Scale(0 | 4) => CursorStyle::ResizeUpLeftDownRight,
+                    H::Scale(_) => CursorStyle::ResizeUpRightDownLeft,
+                    H::RotationScale => CursorStyle::Crosshair,
+                }
+            })
+            .or_else(|| {
+                if overlay.active_component.is_some() {
+                    Some(CursorStyle::OpenHand)
+                } else if owner.editor.active_tool() == ToolId::Lasso {
+                    Some(CursorStyle::Crosshair)
+                } else {
+                    None
+                }
+            });
         SurfaceContent {
             image: frame.map(|f| (f.image.clone(), f.canvas.transform.metrics)),
             overlay,

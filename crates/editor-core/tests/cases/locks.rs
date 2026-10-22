@@ -188,6 +188,7 @@ fn lock_undo_redo_reuse_frames_and_live_picking_skips_locked_top_surface() -> an
     editor.canvas_input(CanvasInput::Down {
         point,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up { point })?;
     assert_eq!(editor.document().unwrap().context().selection, Some(lower));
@@ -228,6 +229,7 @@ fn locking_during_a_drag_cancels_unpublished_geometry_and_late_pointer_events() 
     editor.canvas_input(CanvasInput::Down {
         point,
         shift: false,
+        alt: false,
     })?;
     let moved = ViewportPoint {
         x: point.x + 30.,
@@ -268,6 +270,7 @@ fn rectangle_selection_never_adds_locked_objects_or_components() -> anyhow::Resu
     editor.canvas_input(CanvasInput::Down {
         point: ViewportPoint { x: 0., y: 0. },
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: ViewportPoint { x: 512., y: 512. },

@@ -33,6 +33,7 @@ fn cancel_command_only_releases_its_target_viewport() -> anyhow::Result<()> {
         CanvasInput::Down {
             point,
             shift: false,
+            alt: false,
         },
     )?;
     editor.canvas_interaction_input(
@@ -116,6 +117,7 @@ fn modeling_instances_share_content_but_keep_requests_images_and_hit_geometry_in
         CanvasInput::Down {
             point,
             shift: false,
+            alt: false,
         },
     )?;
     editor.canvas_interaction_input(
@@ -277,6 +279,7 @@ fn hover_and_marquee_overlays_belong_to_their_instance_and_binding() -> anyhow::
         CanvasInput::Down {
             point: ViewportPoint { x: 5., y: 5. },
             shift: false,
+            alt: false,
         },
     )?;
     editor.canvas_interaction_input(
@@ -309,6 +312,7 @@ fn hiding_or_destroying_a_domain_input_owner_cancels_its_candidate_without_a_ui_
             CanvasInput::Down {
                 point,
                 shift: false,
+                alt: false,
             },
         )?;
         editor.canvas_input_for(

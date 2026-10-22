@@ -57,6 +57,7 @@ fn main() -> anyhow::Result<()> {
                     editor.canvas_input(CanvasInput::Down {
                         point: p,
                         shift: false,
+                        alt: false,
                     })?;
                     editor.canvas_input(CanvasInput::Up { point: p })?;
                     assert!(!editor.gesture_active());
@@ -92,6 +93,7 @@ fn main() -> anyhow::Result<()> {
             editor.canvas_input(CanvasInput::Down {
                 point: start,
                 shift: false,
+                alt: false,
             })?;
             match editor.canvas_input(CanvasInput::Move {
                 point: ViewportPoint {
@@ -141,6 +143,7 @@ fn main() -> anyhow::Result<()> {
             editor.canvas_input(CanvasInput::Down {
                 point,
                 shift: false,
+                alt: false,
             })?;
             let changed = editor.canvas_input(CanvasInput::Move {
                 point: ViewportPoint {

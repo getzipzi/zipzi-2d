@@ -3,6 +3,7 @@
 mod drag;
 mod input;
 mod overlay;
+mod selection;
 
 use crate::control_edit::{ControlChange, ControlEdit};
 use crate::{
@@ -19,6 +20,7 @@ pub use overlay::{
 pub enum ToolId {
     #[default]
     Select,
+    Lasso,
     Glue,
     Hand,
 }
@@ -48,6 +50,8 @@ struct Press {
     target: Option<HitTarget>,
     component_surface: bool,
     shift: bool,
+    lasso: Option<selection::LassoGesture>,
+    warp_fine: bool,
     selection: Vec<ObjectRef>,
     current: ViewportPoint,
     dragged: bool,
@@ -70,6 +74,11 @@ impl ToolController {
         self.press
             .as_ref()
             .map(|press| press.version.binding.viewport)
+    }
+    pub(crate) fn lasso_active(&self) -> bool {
+        self.press
+            .as_ref()
+            .is_some_and(|press| press.lasso.is_some())
     }
     pub fn dragging(&self) -> bool {
         self.press.is_some()
@@ -120,8 +129,12 @@ impl ToolController {
     }
     pub fn set_tool(&mut self, tool: ToolId, document: &mut Document) -> bool {
         let changed = self.cancel(document);
+        let preserve_components = matches!(self.active, ToolId::Select | ToolId::Lasso)
+            && matches!(tool, ToolId::Select | ToolId::Lasso);
         self.active = tool;
-        self.clear();
+        if !preserve_components {
+            self.clear();
+        }
         changed
     }
 }
@@ -130,6 +143,7 @@ pub enum CanvasInput {
     Down {
         point: ViewportPoint,
         shift: bool,
+        alt: bool,
     },
     Move {
         point: ViewportPoint,

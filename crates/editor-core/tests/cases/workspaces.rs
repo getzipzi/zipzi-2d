@@ -282,6 +282,7 @@ fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> any
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
         point: ViewportPoint {

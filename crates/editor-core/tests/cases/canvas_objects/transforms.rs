@@ -19,6 +19,7 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
     editor.canvas_input(CanvasInput::Down {
         point: ViewportPoint { x: 1., y: 1. },
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: ViewportPoint { x: 510., y: 510. },
@@ -37,6 +38,7 @@ fn marquee_selected_vertices_across_meshes_move_in_one_transaction() -> anyhow::
     editor.canvas_input(CanvasInput::Down {
         point: p,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: ViewportPoint {
@@ -110,6 +112,7 @@ fn vertex_marquee_can_start_inside_selected_meshes_without_changing_objects() ->
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
         point: end,
@@ -177,6 +180,7 @@ fn invisible_offscreen_members_have_no_handles_and_are_excluded_from_marquee() -
     editor.canvas_input(CanvasInput::Down {
         point: ViewportPoint { x: 1., y: 1. },
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: ViewportPoint { x: 510., y: 510. },
@@ -289,6 +293,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         editor.canvas_input(CanvasInput::Down {
             point: start,
             shift: false,
+            alt: false,
         })?;
         editor.canvas_input(CanvasInput::Up { point: end })?;
         let after = position(&shown(&mut editor)?);
@@ -318,6 +323,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
     editor.canvas_input(CanvasInput::Down {
         point: points[1],
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up { point: end })?;
     let frame = shown(&mut editor)?;
@@ -351,6 +357,7 @@ fn pose_updates_share_topology_but_publish_independent_positions() -> anyhow::Re
     editor.canvas_input(CanvasInput::Down {
         point,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: ViewportPoint {
@@ -415,6 +422,7 @@ fn mesh_drag_reuses_unchanged_meshes_without_changing_old_frames() -> anyhow::Re
     editor.canvas_input(CanvasInput::Down {
         point,
         shift: false,
+        alt: false,
     })?;
     for dx in [20., 40.] {
         editor.canvas_input(CanvasInput::Move {

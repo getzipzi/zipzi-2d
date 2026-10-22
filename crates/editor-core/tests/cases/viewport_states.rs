@@ -186,6 +186,7 @@ fn resizing_another_instance_cannot_cancel_the_primary_modeling_candidate() -> a
         CanvasInput::Down {
             point,
             shift: false,
+            alt: false,
         },
     )?;
     editor.canvas_interaction_input(

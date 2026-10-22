@@ -33,6 +33,7 @@ fn commands_require_registered_targets_and_fixed_viewport_capabilities() -> anyh
     let binding = editor.viewport_binding(animation).unwrap();
     for id in [
         CommandId::SelectTool,
+        CommandId::LassoTool,
         CommandId::GlueTool,
         CommandId::GenerateMesh,
         CommandId::ToggleDeformers,
@@ -49,7 +50,8 @@ fn commands_require_registered_targets_and_fixed_viewport_capabilities() -> anyh
                 binding,
                 CanvasInput::Down {
                     point: ViewportPoint::default(),
-                    shift: false
+                    shift: false,
+                    alt: false,
                 }
             )
             .is_err()
@@ -140,6 +142,7 @@ fn delayed_cancellation_cannot_cancel_a_new_modeling_candidate() -> anyhow::Resu
         CanvasInput::Down {
             point: start,
             shift: false,
+            alt: false,
         },
     )?;
     editor.canvas_input_for(
@@ -167,6 +170,7 @@ fn delayed_cancellation_cannot_cancel_a_new_modeling_candidate() -> anyhow::Resu
         CanvasInput::Down {
             point: start,
             shift: false,
+            alt: false,
         },
     )?;
     editor.canvas_input_for(

@@ -255,6 +255,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     editor.canvas_input(CanvasInput::Down {
         point: p,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: ViewportPoint {
@@ -275,6 +276,7 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     editor.canvas_input(CanvasInput::Down {
         point: p,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: ViewportPoint {
@@ -330,6 +332,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift: false,
+        alt: false,
     })?;
     assert!(
         editor
@@ -355,6 +358,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
     editor.canvas_input(CanvasInput::Down {
         point: start,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up { point: end })?;
     let index = editor.document().unwrap().object_index();

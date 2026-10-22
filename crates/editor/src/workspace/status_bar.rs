@@ -20,6 +20,7 @@ pub(crate) enum TimelineCaptureKind {
 pub(crate) enum HintContext {
     Quiet,
     ViewportCapture { panning: bool },
+    LassoCapture,
     TimelineCapture(TimelineCaptureKind),
     ModelingTool(ToolId),
     TimelinePanTool,
@@ -164,7 +165,11 @@ pub(crate) fn resolve_hint_context(view: &EditorView, _cx: &App) -> HintContext 
     // 1. Active pointer/edit capture takes highest priority.
     if let Some((token, panning)) = view.input_router.viewport_capture.get() {
         if view.editor.viewport_interaction_valid(token) {
-            return HintContext::ViewportCapture { panning };
+            return if !panning && view.editor.lasso_active_for(token.binding) {
+                HintContext::LassoCapture
+            } else {
+                HintContext::ViewportCapture { panning }
+            };
         }
     }
     if let Some((operation, kind)) = view.input_router.timeline_capture.get() {
@@ -177,6 +182,7 @@ pub(crate) fn resolve_hint_context(view: &EditorView, _cx: &App) -> HintContext 
     if view.editor.active_id().is_some() {
         match view.editor.editing_context() {
             Some(EditingContext::Modeling) => match view.editor.active_tool() {
+                ToolId::Lasso => return HintContext::ModelingTool(ToolId::Lasso),
                 ToolId::Glue => return HintContext::ModelingTool(ToolId::Glue),
                 ToolId::Hand => return HintContext::ModelingTool(ToolId::Hand),
                 ToolId::Select => {}
@@ -249,6 +255,29 @@ fn build_hints(state: &StatusBarState) -> Vec<ShortcutHint> {
                     label: t!(CommandId::CancelGesture.spec().label).into_owned(),
                 });
             }
+        }
+        HintContext::ModelingTool(ToolId::Lasso) | HintContext::LassoCapture => {
+            hints.push(ShortcutHint {
+                key: t!("status.hint_drag").into_owned(),
+                label: t!("status.hint_lasso_select").into_owned(),
+            });
+            hints.push(ShortcutHint {
+                key: "Shift".into(),
+                label: t!("status.hint_add_selection").into_owned(),
+            });
+            hints.push(ShortcutHint {
+                key: "Option".into(),
+                label: t!("status.hint_remove_selection").into_owned(),
+            });
+            push_cmd_hint(
+                &mut hints,
+                bindings,
+                if state.hint_context == HintContext::LassoCapture {
+                    CommandId::CancelGesture
+                } else {
+                    CommandId::SelectTool
+                },
+            );
         }
         HintContext::ModelingTool(ToolId::Glue) => {
             hints.push(ShortcutHint {

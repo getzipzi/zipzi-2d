@@ -90,6 +90,7 @@ impl ViewportSurface {
         let mouse = view.clone();
         let overlay_renderer = self.overlay_renderer.clone();
         let primary = palette.selected;
+        let selection_fill = primary.opacity(0.12);
         canvas(
             move |bounds, window, cx| {
                 measure.update(cx, |this, cx| {
@@ -167,7 +168,7 @@ impl ViewportSurface {
                         bounds.origin + point(px(a.x.min(b.x)), px(a.y.min(b.y))),
                         size(px((b.x - a.x).abs()), px((b.y - a.y).abs())),
                     );
-                    window.paint_quad(fill(rect, primary.opacity(0.12)));
+                    window.paint_quad(fill(rect, selection_fill));
                     let p = |x, y| ViewportPoint { x, y };
                     mesh_edges::paint_edges(
                         &[
@@ -179,6 +180,40 @@ impl ViewportSurface {
                         bounds.origin,
                         |path| window.paint_path(path, primary),
                     );
+                }
+                if overlay.lasso.len() >= 2 {
+                    if let Some(path) = crate::canvas_overlay::polygon_fill_path(
+                        overlay
+                            .lasso
+                            .iter()
+                            .map(|p| bounds.origin + point(px(p.x), px(p.y))),
+                    ) {
+                        window.paint_path(path, selection_fill);
+                    }
+                    let edges: Vec<_> = overlay.lasso.windows(2).map(|p| (p[0], p[1])).collect();
+                    mesh_edges::paint_edges(&edges, bounds.origin, |path| {
+                        window.paint_path(path, primary);
+                    });
+                    let first = overlay.lasso[0];
+                    let last = *overlay.lasso.last().unwrap();
+                    let length = (last.x - first.x).hypot(last.y - first.y);
+                    // Bound the dash count when the captured pointer is far outside the viewport.
+                    let steps = (length / 8.).ceil().clamp(1., 4096.) as usize;
+                    let at = |t: f32| ViewportPoint {
+                        x: last.x + (first.x - last.x) * t,
+                        y: last.y + (first.y - last.y) * t,
+                    };
+                    let closure: Vec<_> = (0..steps)
+                        .map(|i| {
+                            (
+                                at(i as f32 / steps as f32),
+                                at((i as f32 + 0.5) / steps as f32),
+                            )
+                        })
+                        .collect();
+                    mesh_edges::paint_edges(&closure, bounds.origin, |path| {
+                        window.paint_path(path, primary.opacity(0.7));
+                    });
                 }
                 if capture {
                     let mouse = mouse.clone();

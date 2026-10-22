@@ -13,7 +13,11 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
 }
 
 fn down(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyhow::Result<()> {
-    editor.canvas_input(CanvasInput::Down { point: p, shift })?;
+    editor.canvas_input(CanvasInput::Down {
+        point: p,
+        shift,
+        alt: false,
+    })?;
     Ok(())
 }
 fn up(editor: &mut Editor, p: ViewportPoint) -> anyhow::Result<()> {

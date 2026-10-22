@@ -83,6 +83,7 @@ fn isolation_freezes_scope_and_filters_picking_overlays_and_marquee() -> anyhow:
         CanvasInput::Down {
             point: start,
             shift: false,
+            alt: false,
         },
     )?;
     editor.canvas_input_for(binding, CanvasInput::Up { point: end })?;

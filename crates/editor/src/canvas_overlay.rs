@@ -2,7 +2,8 @@
 use crate::mesh_edges;
 use editor_core::{OverlaySnapshot, OverlayVertexKind, ViewportPoint};
 use gpui_kit::{
-    Bounds, Hsla, PathBuilder, Pixels, Point, Window, fill, point, px, rgb, rgba, size,
+    Bounds, FillOptions, FillRule, Hsla, PathBuilder, PathStyle, Pixels, Point, Window, fill,
+    point, px, rgb, rgba, size,
 };
 
 const GLUE_MARKER_RADIUS: f32 = 5.;
@@ -217,6 +218,27 @@ fn ring(center: Point<Pixels>, r: f32, window: &mut impl Painter) {
         .border_color(rgb(0xffffff)),
     );
 }
+/// A closed, even-odd polygon with bounds that retain antialiased edge coverage.
+pub(crate) fn polygon_fill_path(
+    mut points: impl ExactSizeIterator<Item = Point<Pixels>>,
+) -> Option<gpui_kit::Path<Pixels>> {
+    if points.len() < 3 {
+        return None;
+    }
+    let mut path = PathBuilder::fill().with_style(PathStyle::Fill(
+        FillOptions::default().with_fill_rule(FillRule::EvenOdd),
+    ));
+    path.move_to(points.next()?);
+    for point in points {
+        path.line_to(point);
+    }
+    path.close();
+    path.build().ok().map(|mut path| {
+        path.bounds = path.bounds.dilate(px(1.));
+        path
+    })
+}
+
 fn diamond(
     center: Point<Pixels>,
     solid: bool,
@@ -233,31 +255,19 @@ fn diamond(
             center + point(px(-r), px(0.)),
         ]
     };
-    let polygon = |points: &[Point<Pixels>]| {
-        let mut path = PathBuilder::fill();
-        path.move_to(points[0]);
-        for &point in &points[1..] {
-            path.line_to(point);
-        }
-        path.close();
-        path.build().ok().map(|mut path| {
-            path.bounds = path.bounds.dilate(px(1.));
-            path
-        })
-    };
     // Both states use the same outer silhouette; the hollow border stays inside it.
     let outer = points(GLUE_MARKER_RADIUS);
-    if let Some(path) = polygon(&outer) {
+    if let Some(path) = polygon_fill_path(outer.into_iter()) {
         window.paint_path(path, if solid { color } else { p.hollow });
     }
     if !solid {
         let inner = points(GLUE_MARKER_RADIUS - std::f32::consts::SQRT_2);
-        if let Some(path) = polygon(&inner) {
+        if let Some(path) = polygon_fill_path(inner.into_iter()) {
             window.paint_path(path, p.surface);
         }
     }
     if half {
-        if let Some(path) = polygon(&outer[..3]) {
+        if let Some(path) = polygon_fill_path(outer[..3].iter().copied()) {
             window.paint_path(path, color);
         }
     }
@@ -380,6 +390,59 @@ pub(crate) fn paint_markers(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn polygon_fill_preserves_concavities_and_even_odd_overlap() {
+        let p = |x: f32, y: f32| point(px(100. + x), px(200. + y));
+        for (points, expected_area) in [
+            (
+                vec![
+                    p(0., 0.),
+                    p(10., 0.),
+                    p(10., 4.),
+                    p(4., 4.),
+                    p(4., 10.),
+                    p(0., 10.),
+                ],
+                64.,
+            ),
+            (vec![p(0., 0.), p(10., 10.), p(0., 10.), p(10., 0.)], 50.),
+            // Two identical loops cancel under even-odd filling, matching selection.
+            (
+                vec![
+                    p(0., 0.),
+                    p(10., 0.),
+                    p(10., 10.),
+                    p(0., 10.),
+                    p(0., 0.),
+                    p(10., 0.),
+                    p(10., 10.),
+                    p(0., 10.),
+                ],
+                0.,
+            ),
+        ] {
+            let path = polygon_fill_path(points.into_iter()).unwrap();
+            let area: f32 = path
+                .vertices
+                .chunks_exact(3)
+                .map(|triangle| {
+                    let a = triangle[0].xy_position;
+                    let b = triangle[1].xy_position;
+                    let c = triangle[2].xy_position;
+                    ((b.x - a.x).as_f32() * (c.y - a.y).as_f32()
+                        - (b.y - a.y).as_f32() * (c.x - a.x).as_f32())
+                    .abs()
+                        * 0.5
+                })
+                .sum();
+            assert!(
+                (area - expected_area).abs() < 0.001,
+                "area {area}, expected {expected_area}"
+            );
+        }
+    }
+
     #[test]
     fn glue_dashes_are_clipped_and_zero_length_pairs_have_no_line() {
         let pt = |x, y| ViewportPoint { x, y };

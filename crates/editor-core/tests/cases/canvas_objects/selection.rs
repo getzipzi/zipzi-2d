@@ -24,6 +24,7 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
     editor.canvas_input(CanvasInput::Down {
         point,
         shift: false,
+        alt: false,
     })?;
     assert_eq!(editor.document().unwrap().context().selections, selection);
     assert!(editor.overlay().marquee.is_none());
@@ -65,6 +66,7 @@ fn surface_press_cancellation_preserves_selection_and_components() -> anyhow::Re
         editor.canvas_input(CanvasInput::Down {
             point,
             shift: false,
+            alt: false,
         })?;
         if lost_button {
             editor.canvas_input(CanvasInput::Move {
@@ -96,6 +98,7 @@ fn object_marquee_can_start_on_an_unselected_surface() -> anyhow::Result<()> {
         editor.canvas_input(CanvasInput::Down {
             point,
             shift: false,
+            alt: false,
         })?;
         assert!(editor.document().unwrap().context().selections.is_empty());
         if move_event {
@@ -124,7 +127,11 @@ fn surface_marquee_uses_original_component_selection_and_shift() -> anyhow::Resu
         click(&mut editor, vertex, false)?;
         let selection = editor.document().unwrap().context().selections.clone();
         let point = ViewportPoint { x: 256., y: 256. };
-        editor.canvas_input(CanvasInput::Down { point, shift })?;
+        editor.canvas_input(CanvasInput::Down {
+            point,
+            shift,
+            alt: false,
+        })?;
         editor.canvas_input(CanvasInput::Move {
             point: ViewportPoint { x: 280., y: 280. },
             left_down: true,
@@ -332,6 +339,7 @@ fn shift_selection_and_marquee_share_document_selection_without_history() -> any
     editor.canvas_input(CanvasInput::Down {
         point: a,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
         point: b,
@@ -353,6 +361,7 @@ fn tool_state_is_per_document_and_vertex_click_opens_no_candidate() -> anyhow::R
     editor.canvas_input(CanvasInput::Down {
         point: p,
         shift: false,
+        alt: false,
     })?;
     assert!(!editor.document().unwrap().has_pending_edit());
     editor.canvas_input(CanvasInput::Move {
@@ -388,6 +397,7 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     editor.canvas_input(CanvasInput::Down {
         point: p,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Up {
         point: ViewportPoint {
@@ -419,6 +429,7 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     editor.canvas_input(CanvasInput::Down {
         point: p,
         shift: false,
+        alt: false,
     })?;
     assert!(
         editor
@@ -483,6 +494,7 @@ fn deselect_command_clears_all_selection_and_cancel_gesture_preserves_selection(
     editor.canvas_input(CanvasInput::Down {
         point: vertex_pos,
         shift: false,
+        alt: false,
     })?;
     editor.canvas_input(CanvasInput::Move {
         point: ViewportPoint {

@@ -45,7 +45,7 @@ pub struct ControlGeometry {
     /// Editor display only. Hidden controls still supply their children's coordinate space.
     pub visible: bool,
 }
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ComponentRef {
     pub object: ObjectRef,
     /// Stable VertexId for meshes, point index for deformer controls.

@@ -163,6 +163,7 @@ impl ViewportSurface {
                 CanvasInput::Down {
                     point: self.local(event.position),
                     shift: event.modifiers.shift,
+                    alt: event.modifiers.alt,
                 },
                 window,
                 cx,

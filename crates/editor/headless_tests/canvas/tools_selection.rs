@@ -56,6 +56,7 @@ fn losing_the_presented_frame_rolls_back_a_live_edit_and_notifies_observers(
             .canvas_input(editor_core::CanvasInput::Down {
                 point: start,
                 shift: false,
+                alt: false,
             })
             .unwrap();
         assert!(

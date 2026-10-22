@@ -15,6 +15,10 @@ impl ToolController {
         };
         press.current = point;
         press.dragged |= crate::picking::distance2(press.point, point) >= 9.;
+        if let Some(lasso) = &mut press.lasso {
+            lasso.sample(point);
+            return Ok(false);
+        }
         let Some(target) = press
             .target
             .as_ref()

@@ -36,6 +36,11 @@ impl ToolbarRegistry {
                 command: CommandId::SelectTool,
             },
             ToolbarItemConfig {
+                id: "tool_lasso",
+                icon: IconName::Lasso,
+                command: CommandId::LassoTool,
+            },
+            ToolbarItemConfig {
                 id: "tool_glue",
                 icon: IconName::Link,
                 command: CommandId::GlueTool,

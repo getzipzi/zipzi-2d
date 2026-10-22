@@ -1,6 +1,7 @@
 //! Pointer event dispatch, click selection, marquee selection, and edit completion.
+use super::selection::{LassoGesture, SelectionOperation, SelectionRegion};
 use super::{CanvasFrame, CanvasInput, Press, ToolController, ToolId};
-use crate::{ComponentRef, ControlKind, Document, HitTarget, ObjectKind, ObjectRef, ViewportPoint};
+use crate::{Document, HitTarget, ObjectKind};
 use anyhow::{Result, ensure};
 
 impl ToolController {
@@ -34,7 +35,7 @@ impl ToolController {
                 }
                 Ok(false)
             }
-            CanvasInput::Down { point, shift } => {
+            CanvasInput::Down { point, shift, alt } => {
                 ensure!(
                     point.x.is_finite() && point.y.is_finite(),
                     "Invalid pointer position"
@@ -84,6 +85,11 @@ impl ToolController {
                     _ => {}
                 }
                 if self.active != ToolId::Hand {
+                    let lasso = (self.active == ToolId::Lasso
+                        && hit
+                            .as_ref()
+                            .is_none_or(|hit| matches!(hit, HitTarget::Object(_))))
+                    .then(|| LassoGesture::new(point, shift, alt));
                     self.press = Some(Press {
                         version: frame.version,
                         point,
@@ -92,6 +98,8 @@ impl ToolController {
                         target: hit,
                         component_surface,
                         shift,
+                        lasso,
+                        warp_fine: self.warp_fine,
                         selection,
                         current: point,
                         dragged: false,
@@ -126,148 +134,51 @@ impl ToolController {
                     return Ok(false);
                 }
                 let changed = self.update(document, point)?;
-                let press = self.press.take().unwrap();
+                let mut press = self.press.take().unwrap();
+                if let Some(lasso) = &mut press.lasso {
+                    lasso.finish(point);
+                }
+                let region_target = matches!(&press.target, None | Some(HitTarget::Object(_)));
                 if press.edit.is_some() {
                     document.finish_edit()?;
-                } else if let Some(HitTarget::Object(object)) = &press.target
-                    && !press.dragged
-                {
-                    // Surface hits are candidates until release: dragging from
-                    // an unselected surface must still allow a marquee.
-                    let mut selection = if press.shift {
-                        press.selection.clone()
-                    } else {
-                        Vec::new()
+                } else if !press.dragged && press.target.is_none() && !press.component_surface {
+                    // Both tools use the press hit: a true miss clears selection, even with modifiers.
+                    document.select_objects(Vec::new())?;
+                    self.clear();
+                } else if press.dragged && region_target {
+                    let (region, operation) = match &press.lasso {
+                        Some(lasso) => (SelectionRegion::lasso(&lasso.points), lasso.operation),
+                        None => (
+                            Some(SelectionRegion::rectangle(press.point, point)),
+                            SelectionOperation::from_modifiers(press.shift, false),
+                        ),
                     };
-                    if press.shift && selection.contains(object) {
-                        selection.retain(|r| r != object);
-                    } else {
-                        selection.push(object.clone());
+                    if let Some(region) = region {
+                        self.select_region(document, &press, &region, operation)?;
                     }
-                    document.select_objects(selection)?;
-                    self.components.clear();
-                } else if press.target.is_none()
-                    || matches!(press.target, Some(HitTarget::Object(_)))
-                {
-                    let rectangle = press.dragged;
-                    if !rectangle && !press.component_surface {
-                        // A true hit-test miss clears selection, even with Shift.
-                        // Selected surfaces are retained for component selection.
-                        document.select_objects(Vec::new())?;
-                        self.clear();
-                    } else if (rectangle || press.component_surface)
-                        && press.selection.iter().any(|r| {
-                            !locks.is_locked(r)
-                                && match r.kind {
-                                    ObjectKind::Mesh => press.scene.mesh_visible(&r.id),
-                                    ObjectKind::Deformer => press
-                                        .scene
-                                        .controls
-                                        .iter()
-                                        .any(|c| c.object == *r && c.enabled && c.visible),
-                                    _ => false,
-                                }
-                        })
-                    {
-                        if !press.shift {
-                            self.components.clear();
-                        }
-                        if rectangle {
-                            for c in &press.scene.controls {
-                                if c.kind != ControlKind::Warp
-                                    || locks.is_locked(&c.object)
-                                    || !c.enabled
-                                    || !c.visible
-                                    || !press.selection.contains(&c.object)
-                                {
-                                    continue;
-                                }
-                                let points: Vec<_> = if let Some(bezier) = (!self.warp_fine)
-                                    .then(|| press.scene.bezier(&c.object.id))
-                                    .flatten()
-                                {
-                                    bezier
-                                        .anchors
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(i, p)| (crate::warp_bezier::component_id(i, 0), *p))
-                                        .collect()
-                                } else {
-                                    c.points
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(i, p)| (i as u32, *p))
-                                        .collect()
-                                };
-                                for (id, p) in points {
-                                    if in_rect(press.transform.to_viewport(p), press.point, point) {
-                                        let component = ComponentRef {
-                                            object: c.object.clone(),
-                                            id,
-                                        };
-                                        if !self.components.contains(&component) {
-                                            self.components.push(component);
-                                        }
-                                    }
-                                }
-                            }
-                            for r in &press.selection {
-                                if let Some(m) = press.scene.mesh(&r.id).filter(|_| {
-                                    r.kind == ObjectKind::Mesh
-                                        && !locks.is_locked(r)
-                                        && press.scene.mesh_visible(&r.id)
-                                }) {
-                                    for (id, p) in &m.vertices {
-                                        if in_rect(
-                                            press.transform.to_viewport(*p),
-                                            press.point,
-                                            point,
-                                        ) {
-                                            let c = ComponentRef {
-                                                object: r.clone(),
-                                                id: *id,
-                                            };
-                                            if !self.components.contains(&c) {
-                                                self.components.push(c);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else if self.active == ToolId::Select || self.active == ToolId::Glue {
+                } else if press.lasso.is_none() {
+                    if let Some(HitTarget::Object(object)) = &press.target {
+                        // Surface hits are candidates until release: dragging from
+                        // an unselected surface must still allow a marquee.
                         let mut selection = if press.shift {
                             press.selection.clone()
                         } else {
                             Vec::new()
                         };
-                        if rectangle {
-                            for m in press.scene.meshes.iter() {
-                                if !locks.is_locked(&ObjectRef::new(ObjectKind::Mesh, &m.id))
-                                    && press.scene.mesh_visible(&m.id)
-                                    && !m.vertices.is_empty()
-                                    && m.vertices.iter().all(|(_, p)| {
-                                        in_rect(press.transform.to_viewport(*p), press.point, point)
-                                    })
-                                {
-                                    let r = ObjectRef::new(ObjectKind::Mesh, &m.id);
-                                    if !selection.contains(&r) {
-                                        selection.push(r);
-                                    }
-                                }
-                            }
+                        if press.shift && selection.contains(object) {
+                            selection.retain(|r| r != object);
+                        } else {
+                            selection.push(object.clone());
                         }
                         document.select_objects(selection)?;
                         self.components.clear();
-                    } else if !press.shift {
+                    } else if region_target && !press.shift {
                         self.components.clear();
                     }
                 }
+
                 Ok(changed)
             }
         }
     }
-}
-fn in_rect(p: ViewportPoint, a: ViewportPoint, b: ViewportPoint) -> bool {
-    p.x >= a.x.min(b.x) && p.x <= a.x.max(b.x) && p.y >= a.y.min(b.y) && p.y <= a.y.max(b.y)
 }

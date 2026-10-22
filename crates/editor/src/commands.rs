@@ -111,6 +111,7 @@ impl EditorView {
                 if matches!(
                     id,
                     CommandId::SelectTool
+                        | CommandId::LassoTool
                         | CommandId::GlueTool
                         | CommandId::HandTool
                         | CommandId::CancelGesture

@@ -35,6 +35,7 @@ fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Res
         CommandId::Undo,
         CommandId::Save,
         CommandId::GlueTool,
+        CommandId::LassoTool,
         CommandId::ZoomIn,
     ] {
         assert!(!editor.command_available(editor.command(id)));

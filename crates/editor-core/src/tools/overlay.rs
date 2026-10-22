@@ -48,6 +48,8 @@ pub struct OverlaySnapshot {
     pub deformers: Vec<OverlayDeformer>,
     pub glues: Vec<OverlayGlue>,
     pub marquee: Option<(ViewportPoint, ViewportPoint)>,
+    /// Sampled freehand path, including the current pointer position.
+    pub lasso: Vec<ViewportPoint>,
     pub unavailable: Option<String>,
     pub target_label: Option<String>,
     pub gizmo_lines: Vec<(ViewportPoint, ViewportPoint)>,
@@ -55,6 +57,8 @@ pub struct OverlaySnapshot {
     pub handles: Vec<OverlayHandle>,
     pub interaction_label: Option<String>,
     pub active_handle: Option<crate::DeformerHandle>,
+    /// A component under the pointer, or captured by the current edit.
+    pub active_component: Option<ComponentRef>,
     pub origin_crosshair: Option<ViewportPoint>,
 }
 #[derive(Clone, Debug)]
@@ -90,17 +94,21 @@ impl ToolController {
         let mut out = OverlaySnapshot::default();
         let origin_pt = ModelPoint::default();
         out.origin_crosshair = Some(t.to_viewport(origin_pt));
-        out.active_handle = self
+        let active_target = self
             .press
             .as_ref()
             .filter(|press| press.version.binding == frame.version.binding)
             .and_then(|p| p.target.as_ref())
-            .or(hovered_target.as_ref())
-            .and_then(|hit| match hit {
-                HitTarget::DeformerHandle(_, handle) => Some(*handle),
-                HitTarget::RotationHandle(_) => Some(crate::DeformerHandle::Rotate),
-                _ => None,
-            });
+            .or(hovered_target.as_ref());
+        out.active_component = active_target.and_then(|hit| match hit {
+            HitTarget::Component(component) => Some(component.clone()),
+            _ => None,
+        });
+        out.active_handle = active_target.and_then(|hit| match hit {
+            HitTarget::DeformerHandle(_, handle) => Some(*handle),
+            HitTarget::RotationHandle(_) => Some(crate::DeformerHandle::Rotate),
+            _ => None,
+        });
         for r in selection {
             if r.kind == ObjectKind::Mesh {
                 if let Some(m) = scene.mesh(&r.id).filter(|_| scene.mesh_visible(&r.id)) {
@@ -367,7 +375,18 @@ impl ToolController {
             .as_ref()
             .filter(|press| press.version.binding == frame.version.binding)
         {
-            if p.dragged && (p.target.is_none() || matches!(p.target, Some(HitTarget::Object(_)))) {
+            if p.dragged
+                && let Some(lasso) = &p.lasso
+            {
+                out.lasso.clone_from(&lasso.points);
+                if out.lasso.last() != Some(&p.current) {
+                    out.lasso.push(p.current);
+                }
+            }
+            if p.lasso.is_none()
+                && p.dragged
+                && (p.target.is_none() || matches!(p.target, Some(HitTarget::Object(_))))
+            {
                 out.marquee = Some((p.point, p.current));
             }
             out.interaction_label = p.last.map(|change| match change {
@@ -390,6 +409,7 @@ impl ToolController {
             out.handles.clear();
             out.gizmo_lines.clear();
             out.active_handle = None;
+            out.active_component = None;
             out.unavailable = Some(error.to_string());
         }
         out

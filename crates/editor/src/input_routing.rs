@@ -317,7 +317,7 @@ impl EditorView {
                 target,
                 Some(LocalTarget::Viewport(binding))
                     if binding.kind == ViewportKind::Modeling
-                        && self.editor.active_tool() == ToolId::Select
+                        && matches!(self.editor.active_tool(), ToolId::Select | ToolId::Lasso)
                         && !self.editor.gesture_active_for(binding)
                         && self.editor.viewport_interaction_binding() != Some(binding)
             ) {

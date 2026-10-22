@@ -97,6 +97,8 @@ pub enum CommandId {
     FitView,
     #[serde(rename = "tool.select")]
     SelectTool,
+    #[serde(rename = "tool.lasso")]
+    LassoTool,
     #[serde(rename = "tool.hand")]
     HandTool,
     #[serde(rename = "tool.glue")]
@@ -343,6 +345,7 @@ specs![
     ),
     (FitView, "menu.fit_view", Viewport, false, []),
     (SelectTool, "editor.tool_select", Viewport, false, ["v"]),
+    (LassoTool, "editor.tool_lasso", Viewport, false, ["l"]),
     (
         GenerateMesh,
         "editor.tool_generate_mesh",
@@ -585,6 +588,7 @@ impl Editor {
                 .animation()
                 .is_some_and(|animation| animation.playing && !animation.physics_preview.manual),
             SelectTool => !animation_navigation && self.active_tool() == crate::ToolId::Select,
+            LassoTool => !animation_navigation && self.active_tool() == crate::ToolId::Lasso,
             GlueTool => !animation_navigation && self.active_tool() == crate::ToolId::Glue,
             HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,
             ToggleDeformers => self.deformer_visibility().all,
@@ -792,9 +796,10 @@ impl Editor {
             {
                 // Animation exposes navigation without changing the document's Modeling tool.
             }
-            SelectTool | GlueTool | HandTool => {
+            SelectTool | LassoTool | GlueTool | HandTool => {
                 let tool = match command.id {
                     SelectTool => crate::ToolId::Select,
+                    LassoTool => crate::ToolId::Lasso,
                     GlueTool => crate::ToolId::Glue,
                     _ => crate::ToolId::Hand,
                 };

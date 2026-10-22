@@ -313,6 +313,9 @@ impl Render for ViewportSurface {
         };
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
+        // Modeling capture can start before navigation has ever synchronized status.
+        self.viewport_capture
+            .get_or_init(|| state.input_router.viewport_capture.clone());
         let SurfaceContent {
             image,
             mut overlay,
