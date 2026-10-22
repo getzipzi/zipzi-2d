@@ -41,7 +41,8 @@ pub use document::{
     ParameterExportDiagnostic, ParameterGroupDraft, ParameterGroupOption, ParameterGroupValue,
     ParameterKey, ParameterManagementError, ParameterValidationError, ParameterValue,
     ParameterVisual, PhysicsAuthoringCapabilities, PoseAuthoringCapabilities,
-    ReferenceAuthoringCapabilities, SceneAuthoringCapabilities, SceneContentAuthoringCapabilities,
+    ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
+    SceneContentAuthoringCapabilities,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};

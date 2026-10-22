@@ -669,6 +669,12 @@ impl ObjectIndex {
         for id in m.asset_order() {
             if let Some(x) = m.get_asset(id) {
                 s.add(ObjectRef::new(K::Texture, id), &x.name, json!(x), None);
+                if x.content.is_none() {
+                    s.objects.last_mut().unwrap().diagnostic = Some(match &x.unresolved_source {
+                        Some(source) => format!("BrokenReference: image source {source}"),
+                        None => "NeedsConfiguration: image content".into(),
+                    });
+                }
             }
         }
         for x in m.package_attachments() {

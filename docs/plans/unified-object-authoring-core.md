@@ -1,8 +1,8 @@
 # 对象创作核心架构改造方案
 
-日期：2026 年 10 月 21 日，进度更新于 10 月 22 日。状态：C1（Stage 1，Expression / ExpressionEntry）、C2（Motion 库、注册及 Attachment 引用）、C3（Physics 条目与节点）与 C4（Binding 网格与变形父级）已完成。C4 包含稳定轴/采样身份、Mesh/Scene/Glue 网格、共享 BlendShape 转换、参数范围联合修改、第 8.1.2 节改父级支持矩阵、统一转换报告与协作取消；UI、Python 和真实模型 Release 验收通过，结果见[实施记录](unified-object-authoring-core-implementation.md)。C5 已启动，已交付 Pose 根资源、Group、Entry、Link，Parameter／ParameterGroup／Part 的组织与集合操作，以及 Mesh／Warp／Rotation／Offscreen／Glue／DrawOrderGroup 的生命周期和集合操作，以及 Mesh 顶点／UV／三角形、Warp 控制点、Glue 配对和 Offscreen Keyform／映射专用内容操作；第五批已交付 ModelParameterGroup／ModelHitArea／CdiCombinedSet 与成员引用集合，以及 masks／constraint_ids 批量选择操作；其他 C5 领域继续实施，C6 尚未开始。
+日期：2026 年 10 月 21 日，进度更新于 10 月 22 日。状态：**C1–C5 已完成，C6 核心总验收尚未开始**。C5 的资源操作与完整覆盖核对已收尾，覆盖表 7 项均已落地；接口、领域限制和回归依据见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)与[实施记录](unified-object-authoring-core-implementation.md)。C4 的改父级支持矩阵、容量、协作取消及真实模型 Release 验收继续沿用已记录结果。
 
-本次修订补齐运行投影、绑定网格转换、改父级保证、联合事务、句柄生命周期和跨层权威六项契约，并改为按领域纵向交付。第 4 节完整目标范围保持不变；已交付范围为 C1–C4 与实施记录中的 C5 Pose、参数／Part 组织、场景生命周期、专用内容及行为引用集合切片；其他内容仍规定拟实施的契约，不表示相关能力已经存在。
+第 4、5 节定义完整核心范围；已实现接口及边界以实施记录和覆盖矩阵为准。C6 汇总核心验收、性能复核和公共契约，随后进入 UI 统一实施。
 
 先完成原生创作模型、SDK 与 editor-core 的统一对象能力，使创建、属性修改、集合移动、复制、删除和引用修复具有稳定身份、明确的领域规则和单一事务历史。随后按 [Editor UI 交互统一方案](unified-object-authoring-ui.md)接入新的界面操作。
 
@@ -259,6 +259,8 @@ Mesh 顶点、UV、三角形、Warp 控制点、Bezier 控制柄、GlueVertexPai
 
 ### 5.2 必须调整的结构
 
+下表保留改造前的问题与结构设计；当前实现状态见 C5 覆盖矩阵。
+
 | 模型 | 当前问题 | 建议改动 |
 | --- | --- | --- |
 | Mesh | `texture_asset_id` 必须指向现有资源 | 允许未绑定纹理；空几何已合法，无须增加几何草稿对象 |
@@ -274,7 +276,7 @@ Mesh 顶点、UV、三角形、Warp 控制点、Bezier 控制柄、GlueVertexPai
 | PhysicsNode | Output 使用 vertex_index | 创作节点增加稳定 ID；运行时编译为索引，删除与调整链条同步验证 |
 | ModelHitArea | 无 ID，Mesh 引用需立即填写 | 增加 ID 与未指定 Mesh 状态 |
 | ModelParameterGroup | 名称承担定位用途 | 增加组 ID；新增的未完成成员使用稳定引用条目 |
-| ImageAsset | 资源记录要求实际图像信息 | 显式 `content: Option<ImageContent>`；尺寸和哈希在有内容时才存在 |
+| ImageAsset | 资源记录要求实际图像信息 | 显式 `content: Option<ImageContent>`；尺寸和哈希在有内容时才存在；导入不可用来源另存 `unresolved_source` |
 | PackageAttachment | path 同时承担身份和文件定位，bytes 必须存在 | 增加 ID；path 与内容可独立编辑；内容为空与零字节文件明确区分 |
 | Attachment 引用 | Motion sound、UserData 等使用路径 | 原生层改为 Attachment ID；导出再解析为路径，保留导入未解析状态 |
 | Glue | 两个 Mesh 端点立即必填 | 允许端点未配置；完整且有效时才参与计算；已有配对在换端点时验证或显式清空 |
@@ -516,7 +518,7 @@ SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附�
 | C2 Motion 库与注册（已实现） | 完成 Clip/注册分离、空组、根条目、覆盖、轨道展示顺序及轨道/关键帧/事件操作；随 sound 需求贯通 Attachment 身份与引用链路 | 重复注册、最后注册迁移、复制与删除闭包正确；现有单击预览保持，结构整理不重启播放，非 Editor SDK 行为一致 |
 | C3 Physics 条目与节点（已实现） | 完成类型化原生物理结构、节点身份、输入输出、执行顺序、运行槽位映射和 physics3 转换 | 待配置通道可保存；节点与输出引用联合修改正确；压缩运行槽位不误定位；测试预览及现有字段编辑不回退 |
 | C4 Binding 网格与变形父级（已完成） | 完成轴/采样点身份、零轴、网格与共享 BlendShape 转换、参数范围联合修改，以及第 8.1 节改父级支持矩阵；所需场景操作一并贯通 | 成功与拒绝案例均覆盖；基础形态无双重来源，容量预检有效，转换误差与保证可验收；不得以全拒绝代替要求支持的操作 |
-| C5 全领域扩展与覆盖核对（实施中） | 按下表完成 Parameter/Part 组织、场景对象、Pose、行为集合、绘制组织、资源附件及专用内容操作；补齐跨领域依赖传播 | 第 4、5 节每项均有实现、测试和必要适配；SDK 规划规则无 Editor 副本，未完成项不能归入“类型不支持” |
+| C5 全领域扩展与覆盖核对（已完成） | 按下表完成 Parameter/Part 组织、场景对象、Pose、行为集合、绘制组织、资源附件及专用内容操作；补齐跨领域依赖传播 | 第 4、5 节每项均有实现、测试和必要适配；SDK 规划规则无 Editor 副本，未完成项不能归入“类型不支持” |
 | C6 核心验收与交付 | 汇总第 10、11 节检查，核对所有入口和 Undo/Redo 的变更记录，固定公共契约、支持矩阵、预算默认值及诊断说明 | 全领域目标完成、现有 Editor 可运行、性能回归通过，随后进入 UI 统一实施 |
 
 先以 ExpressionEntry 验证待配置和子条目语义，再以 Motion、Physics、Binding 验证共享引用、语义顺序与复杂转换；Part/Parameter 不能作为唯一协议验证样本。C4 等步骤需要的前置对象能力应作为该切片的一部分提前贯通，不等待 C5 才修复依赖。必要的 Editor 适配贯穿每步，不再设一个末期集中修复编译和行为的阶段。
@@ -536,8 +538,8 @@ SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附�
 | Mesh 顶点/UV/三角形、Warp 控制点、GlueVertexPair、Offscreen Keyform 及映射 | C5 第四批已落地：拓扑联合转换、形态内容编辑、稳定 PairId、Keyform 及 Part 槽位映射操作；见实施记录 |
 | Pose 根资源、Group、Entry、Link | C5 首批已落地，见实施记录 |
 | ModelParameterGroup、ModelHitArea、CdiCombinedSet 和其他可编辑引用集合 | C5 第五批已落地：根／成员稳定身份、待配置目标、生命周期和集合操作、原生运行映射及 masks／constraint_ids 批量选择；见实施记录 |
-| Texture/ImageAsset、Attachment、sound/UserData 引用及异步内容加载 | C2 贯通 Attachment/sound，C5 全部资源与依赖链 |
-| Document、Layout、ExportSettings、SourceCanvas、未解析内容修复、编辑器状态边界、不透明扩展和来源信息 | 各切片遵守，C5 全面核对 |
+| Texture/ImageAsset、Attachment、sound/UserData 引用及异步内容加载 | C5 第六批已落地：空内容、生命周期与集合操作、依赖替换、可取消加载、不可变内容交接及快照保留；见覆盖矩阵 |
+| Document、Layout、ExportSettings、SourceCanvas、未解析内容修复、编辑器状态边界、不透明扩展和来源信息 | C5 第七批核对完成：类型化文档字段与修复入口、精确发布、只读来源边界及跨领域回归；见覆盖矩阵 |
 
 每项按适用能力记录创建、属性/内容编辑、移动/重排、复制、删除、修复、持久化和格式验收位置；业务上不支持的操作记录明确原因。第 8.1 节允许拒绝无法保证的转换，不等于取消对应对象的其他能力。全量 UI 统一仍以 C6 完成为前提。
 
@@ -558,7 +560,7 @@ SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附�
 
 ### 9.4 实施进度
 
-C1（Expression / ExpressionEntry）、C2（Motion 库、注册及 Attachment 引用）、C3（Physics 条目与节点）与 C4（Binding 网格与变形父级）已完成；C4 的统一报告、协作取消、改父级支持矩阵及有限预算已通过受影响 UI、Python 和真实模型 Release 验收。C5 已启动，已交付 Pose 根资源、Group、Entry、Link，Parameter／ParameterGroup／Part 的组织与集合操作，以及 Mesh／Warp／Rotation／Offscreen／Glue／DrawOrderGroup 的生命周期和集合操作，以及 Mesh 顶点／UV／三角形、Warp 控制点、Glue 配对和 Offscreen Keyform／映射专用内容操作；第五批已交付 ModelParameterGroup／ModelHitArea／CdiCombinedSet 与成员引用集合，以及 masks／constraint_ids 批量选择操作；其他 C5 领域继续实施，C6 尚未开始。落地接口、实现边界、回归结果与验收命令见[核心架构改造实施记录](unified-object-authoring-core-implementation.md)。
+C1–C5 已完成。C5 的完整操作、修复路径、来源边界和领域限制见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)；落地接口与验证结果见[核心架构改造实施记录](unified-object-authoring-core-implementation.md)。C6 核心总验收与之后的 UI 统一尚未开始。
 
 ## 10 核心验收
 
@@ -609,11 +611,11 @@ SDK ChangeSet 携带可组合变化类别：标签和列表展示变化只刷新
 
 数据身份调整可能增加持久化体积，优先将稳定 ID 放在可独立管理的条目上；渲染和计算数据保持紧凑布局。性能验收沿用当前属性编辑链和 Timeline 基准，对新增结构操作补针对性测量，不以完整对象序列化充当通用实现。
 
-## 12 影响模型的待讨论选择
+## 12 已采用的模型策略
 
-以下产品选择继续作为设计建议。本文新增的六项技术契约是本轮实施方案的约束；表中默认产品策略若调整，必须同步更新相应契约和验收，不能由实施者各自解释。纯输入交互选择归 UI 方案。具体 Rust API 命名和数据布局可演进，不影响已写明的语义保证。
+C1–C5 按下表策略落地。未来产品策略若调整，必须同步更新相应契约和验收。纯输入交互选择归 UI 方案；C6 固定公共契约，继续保持已写明的语义保证。
 
-| 选择 | 本方案默认建议 | 改用其他方案的影响 |
+| 选择 | 已采用策略 | 改用其他方案的影响 |
 | --- | --- | --- |
 | Motion 文件夹嵌套 | 一级 MotionGroup | 嵌套需新增组织层或定义嵌套组的导出映射 |
 | 新增纯整理文件夹 | 暂不为 Expression、Texture、PhysicsGroup 新增 | 若需要，添加独立原生组织元数据，不能复用业务组语义 |
@@ -630,6 +632,6 @@ SDK ChangeSet 携带可组合变化类别：标签和列表展示变化只刷新
 - [动画选择与预览](../../crates/editor-core/src/animation/playback.rs)、[Motion 创建](../../crates/editor-core/src/timeline_document.rs)。
 - [层级与排序回归](../../crates/editor-core/tests/cases/sorting.rs)。
 - 相邻 kasane-2d 的 `modules/kasane-core/src/types.rs`、`document.rs`、`document/motions.rs`、`document/pose.rs`、`document/display_info.rs`、`document/model3.rs`、`document/expressions.rs`、`document/physics.rs`、`physics.rs` 和 `draw_order.rs`。
-- 本轮契约核对还依据相邻 kasane-2d 的 `modules/kasane-sdk/src/session.rs`（句柄、incarnation、Undo/Redo）、`edit.rs`（候选、逐步校验和发布）、`modules/kasane-core/src/document/parameters.rs` 与 `bindings.rs`（参数和网格依赖校验）、`evaluation/meshes.rs`（纹理求值条件）、`modules/kasane-render/src/validation.rs`（遮罩引用完整性）。新增契约要求这些路径一起适配，不表示现有代码已满足新保证。
+- 本轮契约核对还依据相邻 kasane-2d 的 `modules/kasane-sdk/src/session.rs`（句柄、incarnation、Undo/Redo）、`edit.rs`（候选、逐步校验和发布）、`modules/kasane-core/src/document/parameters.rs` 与 `bindings.rs`（参数和网格依赖校验）、`evaluation/meshes.rs`（纹理求值条件）、`modules/kasane-render/src/validation.rs`（遮罩引用完整性）。这些路径已随对应切片适配，当前支持边界与验收见覆盖矩阵和实施记录。
 
-上述是原设计依据；C1–C4 已完成的结构、入口、支持边界与验收见[实施记录](unified-object-authoring-core-implementation.md)，C5 的 Pose、参数／Part 组织、场景生命周期、专用内容及行为引用集合切片已落地，其余 C5 领域与 C6 仍待实施。
+上述是原设计依据；C1–C4 已完成的结构、入口、支持边界与验收见[实施记录](unified-object-authoring-core-implementation.md)，C5 的全部领域及覆盖核对已完成，C6 核心总验收仍待实施。

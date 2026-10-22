@@ -112,3 +112,6 @@ impl ObjectIndex {
 }
 
 mod references;
+
+#[path = "objects/resources.rs"]
+mod resources;

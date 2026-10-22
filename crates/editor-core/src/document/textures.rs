@@ -39,6 +39,7 @@ impl DocumentTextures {
         session
             .asset_ids()
             .iter()
+            .filter(|id| session.asset(id).is_some_and(|a| a.content.is_some()))
             .map(|id| {
                 let data = session.read_texture(id)?;
                 Ok(SceneTexture {
@@ -65,8 +66,9 @@ impl DocumentTextures {
         let textures = session
             .asset_ids()
             .iter()
+            .filter(|id| assets.get(*id).is_some_and(|a| a.content.is_some()))
             .map(|id| {
-                if assets.get(id) == self.assets.get(id)
+                if assets.get(id).map(|a| &a.content) == self.assets.get(id).map(|a| &a.content)
                     && let Some(&slot) = self.slots.get(id)
                 {
                     return Ok(self.textures[slot].clone());

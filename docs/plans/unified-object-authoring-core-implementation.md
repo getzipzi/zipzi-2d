@@ -2,8 +2,7 @@
 
 对应方案：[对象创作核心架构改造方案](unified-object-authoring-core.md)。本文件记录已交付的接口、实现边界与验收结果；完整目标范围和后续阶段仍由方案维护。
 
-截至 2026 年 10 月 22 日，**C1–C4 已完成，C5 已交付 Pose、参数／Part 组织、场景生命周期、专用内容和行为引用集合五批**；其他 C5 领域与 C6 仍待实施。以下按交付顺序保留
-历史阶段状态；C4 的支持矩阵与最终验收以对应的 C4 完成及 review 修正章节为准。
+截至 2026 年 10 月 22 日，**C1–C5 已完成，C6 核心总验收尚未开始**。C5 资源与完整覆盖核对在本轮一并收尾，范围见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)。以下按交付顺序保留历史状态；C4 的支持矩阵与最终验收以对应完成及 review 修正章节为准。
 
 ## C1 / Stage 1：Expression / ExpressionEntry
 
@@ -1099,3 +1098,118 @@ Release 或 C6 综合性能验收。本批代码保留在两个工作区，尚�
 本节完成覆盖表中的行为／引用集合一行。C5 仍需继续完成 Texture／ImageAsset 等资源和
 异步加载操作，以及 Document／Layout／ExportSettings／SourceCanvas、未解析内容、
 不透明扩展和跨领域依赖的全面覆盖核对；C6 尚未开始。
+
+
+## C5 第六、七批：资源操作与完整覆盖收尾
+
+2026 年 10 月 22 日：先提交第五批引用集合（SDK `a0355ad`、Editor `f3d3191`），
+再完成剩余资源及全领域核对。**C5 结束，覆盖表 7 项全部落地**。完整对象、修复路径、
+领域限制与验证依据见 [C5 覆盖矩阵](unified-object-authoring-c5-coverage.md)。此前各批的
+“尚未提交”和“剩余 C5”是历史状态。
+
+### 第六批：ImageAsset、Attachment 与异步内容
+
+- core `ImageAsset` 改为可选 `ImageContent`；只有有内容时才存在尺寸、来源和哈希。
+  `unresolved_source` 保存导入缺失／损坏的原始路径或外部纹理槽位，区别于 New 的空内容。
+  MOC3 导入移除旧的 1×1 伪造纹理；可编辑、保存和修复原生缺项。成功替换保持资源 ID，
+  清除未解析来源。core schema 为 **11**、目录项目格式为 **20**，拒绝旧格式，不迁移。
+- core `ResourceEdit`／`ResourcePlan` 与 SDK `plan_resource_edit`／
+  `execute_resource_plan`／`EditSession::edit_resource` 完成无内容创建、名称补丁、
+  内容替换／清空、复制、排序和删除。默认名称避重，选择按原生顺序规范化。
+  复制分配新的资源身份，共享不可变内容；替换一方保持另一方。普通删除报告使用者，
+  显式替换／解除纹理引用才联合修改受影响 Mesh，检查对象和 Part 的锁。
+  裸 asset replacement 校验锁和 no-op；普通 erase 委托同一删除规划。
+- `ResourceNameAddress`、`AttachmentPathAddress` 捕获稳定句柄、期望字段和单调上下文。
+  Undo 不复活旧地址。ImageAsset 新增到原生 EditorState 的合法锁定对象范围。
+- Attachment 沿用 C2 的 UUID 和可空 Arc bytes，补齐重排、带显式替换的删除及路径地址。
+  空路径创建生成唯一默认导出路径，`None` 和零字节文件分开。删除和重绑定同时更新
+  sound／UserData，保持共享目标与其他独立资源；整图验证发生在隔离候选中。
+- 图像／附件请求 token 绑定 session、generation、incarnation 和单调内容 epoch。
+  新请求取消旧请求；路径／名称编辑保留内容请求，内容修改、Undo、删除重建和文档
+  替换使旧请求失效。错误类型请求先检查句柄，不能取消合法请求。取消在原子发布前重检。
+- `prepare_image_load` 无会话锁读取、验证、解码 PNG，得到不可变
+  `PreparedImageContent`；`replace_prepared_image_content` 成功后交接 Arc，提交不重读
+  原文件。失败不注册内容、不改变历史。准备采用 64 MiB 编码、16,384 宽高、256 MiB
+  RGBA 上限；这些是资源输入边界，不表示进程 RSS 上限。已有普通描述符入口继续可用。
+- AuthoringSnapshot／ObservationInput 同时捕获内存图像引用；原会话释放、图像替换或
+  原文件删除后，旧快照仍有对应像素。资源保存落成真实项目文件。观察包 schema 升至
+  **6**，补齐空图像描述符、嵌套尺寸、容量和哈希的损坏输入检查。
+- 场景投影在纹理无内容时保留几何，禁用其绘制并沿 masks／Offscreen 依赖传播，
+  禁用的 Offscreen 内容不回落为无掩码绘制。Glue、HitArea 继续按几何条件使用 Mesh。
+  严格导出报告不可表达的图像状态，包括未被 Mesh 使用的空资源。
+- Editor 接通资源／文档计划、地址、能力及加载完成入口，附加活动 Document、Timeline
+  和候选手势条件；纹理快照跳过无内容资源并复用未变内容。不同活动文档拒绝异步结果。
+  Python 提供同源 API；图像准备释放 GIL，附件 bytes 可在会话外准备。
+
+### 第七批：文档字段、修复与跨领域核对
+
+- `DocumentAuthoringEdit`／`DocumentPlan`、SDK `DocumentFieldAddress` 提供 Layout 和
+  完整 ExportSettings 的类型化补丁。SourceCanvas 是只读来源；通用补丁返回明确原因，
+  导入边界保留显式来源 setter。修改验证有限值及原有导出设置不变量。
+- 补齐 `RepairMissingAttachment`，显式绑定或移除已知未解析 sound／UserData 引用，
+  校验全部使用者的锁；补齐 CDI Parameter／Part 的绑定与移除。CDI 名称改用目标权威
+  名称时报告损失，保持目标身份及可保留的 group／extensions；冲突原子拒绝。
+  其他领域的修复复用 C1–C5 对应地址／网格入口，不建立任意 JSON 修复通道。
+- `ChangeSet.document_fields`、资源集合和 `resource_content` 补齐文档与资源回执。
+  命令、直接 setter、导入及 Undo/Redo 共用同一记录。Layout、导出／来源信息、附件
+  内容与路径、标签和排序按实际影响发布，独立视觉输入可保留。
+  参数组及资源改名继续复用关系投影；文档属性可局部刷新。
+- 核对组织、变形、绘制、共享资源、拥有子项的复制／删除闭包，以及未配置／未解析状态
+  的投影和严格格式边界。展开、滚动、搜索、选择和预览保留在会话；原生锁与可见性
+  使用现有 EditorState。未知扩展与来源基线继续保留并严格校验。
+- 需要第三方格式完整内容的往返回归改用真实纹理输入；缺失资源另有独立用例证明保存
+  来源、保留几何和拒绝不完整导出，避免恢复旧的伪造内容。
+
+### 验证结果与边界
+
+本轮新增 SDK **13 项**、Editor 集成 **4 项**、Python **3 项**，以及 MOC3 缺失／损坏
+图像、CMO3 空资源严格导出、内存图像观察各 **1 项**定向回归。筛选存在重叠，不累加。
+
+| 验证 | 结果 |
+| --- | --- |
+| SDK resources／references／project IO／CDI／组织／Motion／场景／内容／Binding／effects／句柄／状态 | 184 项通过，1 项按原设置忽略 |
+| core 全部普通测试目标 | 70 项通过 |
+| project／CDI／model3／Motion／Pose／sequence | 66 项通过 |
+| CMO3 export／import | 19 项通过 |
+| MOC3 validation／version compatibility／指定 roundtrip | 24 项通过 |
+| 观察 capture／冻结资源／包校验 | 8 项通过 |
+| MOC3 到 PSD 的资源读取与真实图层导出 | 2 项通过 |
+| Editor resources／references／场景／内容／Properties／锁／panels／组织 | 71 项通过 |
+| 原生 UI hierarchy／Properties／parameter groups／animation panels | 51 项通过 |
+| 当前 Debug Python extension | 71 项 CPU + 4 项 inspection 通过 |
+
+主要复现命令：
+
+```sh
+# 相邻 kasane-2d
+cargo test --locked -p kasane-sdk --test integration -- \
+  resource_authoring:: reference_authoring:: project_io:: cdi_authoring:: organization_authoring:: \
+  motion_library:: scene_lifecycle:: scene_content:: binding_authoring:: effects_authoring:: \
+  editor_state:: handles::
+cargo test --locked -p kasane-core --tests
+cargo test --locked -p kasane-project --test project_tests --test cdi_tests --test model3_tests \
+  --test motion_tests --test pose_tests --test sequence_tests
+cargo test --locked -p kasane-cmo3 --test export --test import
+cargo test --locked -p kasane-moc3 --test import_tests -- \
+  validation:: version_compat:: model_roundtrip::test_import_m1_roundtrip \
+  model_roundtrip::test_zero_triangle_mesh_editing_and_lifecycle
+cargo test --locked -p kasane-sdk-observe --test capture
+cargo test --locked -p kasane-moc3-psd --test export_tests
+cargo check --locked --keep-going -p kasane-core -p kasane-project -p kasane-moc3 --benches \
+  -p kasane-moc3-psd -p kasane-animation -p kasane-render-wgpu -p cubism-matrix-kasane
+cargo check --locked --keep-going -p kasane-core -p kasane-project -p kasane-cmo3 \
+  -p kasane-moc3 -p kasane-sdk -p kasane-python -p kasane-sdk-observe --tests --examples
+./tools/test.sh python
+# kasane-editor
+cargo test --locked -p editor-core --test integration -- \
+  resource_authoring:: reference_authoring:: scene_lifecycle:: scene_content:: properties:: \
+  locks:: panels:: organization_authoring::
+./scripts/test.sh ui -- headless_tests::hierarchy headless_tests::properties \
+  headless_tests::parameter_groups headless_tests::animation_panels
+cargo check --locked -p kasane-editor
+```
+
+受影响 native 库的测试／示例、基准目标、矩阵 runner 和 Editor 默认应用编译通过；两仓库格式与 diff 检查通过。
+保留既有第三方 GPUI/Cocoa／`block` 及现有测试辅助 import／dead code 提示。
+本轮没有运行完整 workspace、截图、真实模型 Release 或总性能门禁；这些属于 C6 核心
+总验收。本轮代码纳入两仓库的 C5 收尾提交。后续阶段为 C6，C5 不再有待实施批次。

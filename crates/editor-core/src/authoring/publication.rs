@@ -34,6 +34,86 @@ impl Document {
             return;
         }
         let changes = &receipt.changes;
+        let resources_only = changes
+            .created
+            .iter()
+            .chain(&changes.deleted)
+            .chain(&changes.modified)
+            .any(|e| e.kind == SdkKind::Asset)
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .all(|e| e.kind == SdkKind::Asset);
+        let document_only = changes
+            .document_fields
+            .iter()
+            .any(|field| *field != kasane_sdk::DocumentField::DisplayInfo)
+            || (!changes.document_fields.is_empty()
+                && changes.created.is_empty()
+                && changes.deleted.is_empty()
+                && changes.modified.is_empty());
+        if document_only || resources_only {
+            let previous = self.animation_input_revision;
+            let labels = resources_only
+                && changes.created.is_empty()
+                && changes.deleted.is_empty()
+                && changes.collections.is_empty()
+                && changes
+                    .categories
+                    .iter()
+                    .all(|c| *c == ChangeCategory::Labels);
+            let document_fields_only = document_only
+                && changes.collections.is_empty()
+                && changes
+                    .categories
+                    .iter()
+                    .all(|c| *c == ChangeCategory::Content)
+                && changes.created.is_empty()
+                && changes.deleted.is_empty()
+                && changes.modified.is_empty()
+                && changes.document_fields.iter().all(|f| {
+                    matches!(
+                        f,
+                        kasane_sdk::DocumentField::Layout
+                            | kasane_sdk::DocumentField::ExportSettings
+                            | kasane_sdk::DocumentField::SourceCanvas
+                            | kasane_sdk::DocumentField::OpaqueMetadata
+                    )
+                });
+            if labels || document_fields_only {
+                let previous_revision = self.projection_revision;
+                self.invalidate_projection(false);
+                let ids = changes
+                    .modified
+                    .iter()
+                    .map(|e| e.id.clone())
+                    .collect::<Vec<_>>();
+                let mut cache = self.object_index.lock().unwrap();
+                if let Some((revision, index)) = cache.as_mut() {
+                    if *revision == previous_revision
+                        && if labels {
+                            Arc::make_mut(index).refresh_resource_labels(self.model(), &ids)
+                        } else {
+                            Arc::make_mut(index).refresh_document_metadata(self.model())
+                        }
+                    {
+                        *revision = self.projection_revision;
+                    }
+                }
+                self.session.drain_events();
+            } else {
+                self.after_history(changes.categories.contains(&ChangeCategory::Topology));
+            }
+            if !changes
+                .categories
+                .contains(&ChangeCategory::EvaluationInputs)
+            {
+                self.animation_input_revision = previous;
+            }
+            return;
+        }
         let scene_kinds = |kind| {
             matches!(
                 kind,
