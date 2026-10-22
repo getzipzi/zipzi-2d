@@ -37,10 +37,10 @@ pub use document::{
     AlphaMeshOptions, AuthoringSessionReason, Document, ExpressionAuthoringCapabilities,
     ExpressionEntryEditToken, Layer, MeshGenerationOptions, MeshGenerationPreview,
     MeshGenerationSource, MeshGridOptions, NewParameter, ObjectState, ObjectStateIndex,
-    OperationResult, ParameterCreateError, ParameterDraft, ParameterExportDiagnostic,
-    ParameterGroupDraft, ParameterGroupOption, ParameterGroupValue, ParameterKey,
-    ParameterManagementError, ParameterValidationError, ParameterValue, ParameterVisual,
-    PhysicsAuthoringCapabilities, PoseAuthoringCapabilities,
+    OperationResult, OrganizationAuthoringCapabilities, ParameterCreateError, ParameterDraft,
+    ParameterExportDiagnostic, ParameterGroupDraft, ParameterGroupOption, ParameterGroupValue,
+    ParameterKey, ParameterManagementError, ParameterValidationError, ParameterValue,
+    ParameterVisual, PhysicsAuthoringCapabilities, PoseAuthoringCapabilities,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};

@@ -44,3 +44,7 @@ pub struct PhysicsAuthoringCapabilities {
 #[path = "authoring/pose.rs"]
 mod pose;
 pub use pose::PoseAuthoringCapabilities;
+
+#[path = "authoring/organization.rs"]
+mod organization;
+pub use organization::OrganizationAuthoringCapabilities;

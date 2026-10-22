@@ -34,6 +34,111 @@ impl Document {
             return;
         }
         let changes = &receipt.changes;
+        let organization_only = !changes.full_invalidation
+            && (changes
+                .collections
+                .iter()
+                .any(|c| matches!(c, kasane_sdk::CollectionRef::Organization { .. }))
+                || !changes.organization_references.is_empty()
+                || changes
+                    .created
+                    .iter()
+                    .chain(&changes.deleted)
+                    .chain(&changes.modified)
+                    .any(|e| {
+                        matches!(
+                            e.kind,
+                            SdkKind::Parameter | SdkKind::CdiParameterGroup | SdkKind::Part
+                        )
+                    }))
+            && changes
+                .created
+                .iter()
+                .chain(&changes.deleted)
+                .chain(&changes.modified)
+                .all(|e| {
+                    matches!(
+                        e.kind,
+                        SdkKind::Parameter
+                            | SdkKind::CdiParameterGroup
+                            | SdkKind::Part
+                            | SdkKind::Mesh
+                            | SdkKind::Transform
+                            | SdkKind::Offscreen
+                    )
+                });
+        if organization_only {
+            let previous = self.animation_input_revision;
+            let payload_only = changes.created.is_empty()
+                && changes.deleted.is_empty()
+                && changes.collections.is_empty()
+                && changes.organization_references.is_empty()
+                && !changes.categories.contains(&ChangeCategory::EditorState);
+            if payload_only
+                && changes.modified.iter().all(|e| {
+                    matches!(
+                        e.kind,
+                        SdkKind::Parameter | SdkKind::CdiParameterGroup | SdkKind::Part
+                    )
+                })
+            {
+                let previous_revision = self.projection_revision;
+                self.invalidate_projection(false);
+                let mut cache = self.object_index.lock().unwrap();
+                if let Some((revision, index)) = cache.as_mut() {
+                    if *revision == previous_revision
+                        && changes.modified.iter().all(|e| {
+                            Arc::make_mut(index).refresh_organization_properties(
+                                self.model(),
+                                e.kind,
+                                &e.id,
+                            )
+                        })
+                        && Arc::make_mut(index).refresh_organization_document(self.model())
+                    {
+                        *revision = self.projection_revision;
+                    }
+                }
+                drop(cache);
+                let part_names: Vec<_> = changes
+                    .modified
+                    .iter()
+                    .filter(|e| e.kind == SdkKind::Part)
+                    .filter_map(|e| {
+                        self.model()
+                            .get_part(&e.id)
+                            .map(|p| (e.id.clone(), p.name.clone()))
+                    })
+                    .collect();
+                if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
+                    for (id, name) in part_names {
+                        Arc::make_mut(topology)
+                            .rename(&ObjectRef::new(ObjectKind::Part, &id), &name);
+                    }
+                }
+                self.session.drain_events();
+            } else {
+                let scene_changed = changes.created.iter().chain(&changes.deleted).any(|e| {
+                    matches!(
+                        e.kind,
+                        SdkKind::Part | SdkKind::Mesh | SdkKind::Transform | SdkKind::Offscreen
+                    )
+                }) || changes.organization_references.iter().any(|r| {
+                    matches!(
+                        r.entity.kind,
+                        SdkKind::Part | SdkKind::Mesh | SdkKind::Transform | SdkKind::Offscreen
+                    )
+                });
+                self.after_history(scene_changed);
+            }
+            if !changes
+                .categories
+                .contains(&ChangeCategory::EvaluationInputs)
+            {
+                self.animation_input_revision = previous;
+            }
+            return;
+        }
         let pose_only = !changes.full_invalidation
             && changes
                 .created

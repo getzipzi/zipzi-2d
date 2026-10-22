@@ -676,7 +676,7 @@ C5 剩余覆盖核对：
 | 范围 | 本轮状态及后续工作 |
 | --- | --- |
 | Pose 根资源／Group／Entry／Link | 本节首批交付；后续 C6 继续检查公共契约和性能 |
-| Parameter／ParameterGroup／Part | 既有创建、字段、排序能力保留；统一规划、复制／删除闭包和完整嵌套组织待核对补齐 |
+| Parameter／ParameterGroup／Part | 第二批组织与集合操作已交付，见下一节；其余场景生命周期与通用 UI 在后续切片覆盖 |
 | Mesh／Warp／Rotation／Offscreen／Glue／DrawOrderGroup | C4 前置能力保留；完整生命周期、无纹理 Mesh、未配置 Glue 与绘制组织待补齐 |
 | 顶点／UV／三角形／Warp 控制点／GlueVertexPair／Offscreen 映射 | C4 转换覆盖保留；其余专用增删、依赖重映射与稳定 Pair 身份待补齐 |
 | ModelParameterGroup／ModelHitArea／CdiCombinedSet／其他引用列表 | 稳定身份、待配置成员、集合操作、运行过滤及格式诊断待补齐 |
@@ -711,3 +711,94 @@ Motion／CDI 筛选 **61 项通过**；animation **26 项通过**；Editor 核�
 
 未运行完整 workspace、截图／真实模型 Release 或 C6 的综合性能验收。代码保留在
 `kasane-editor` 与相邻 `kasane-2d` 工作区，未提交。
+
+
+## C5 第二批：Parameter、ParameterGroup 与 Part 组织集合
+
+2026 年 10 月 22 日：先提交上一批 Pose（SDK `df89e91`、Editor `5d917c0`），
+随后完成本节。本节交付组织与集合操作；其余 C5 领域及 C6 验收继续保留在待办中。
+原生格式维持 **16**，没有新增平行的分组存储。
+
+- **单一原生规则**：core `OrganizationEdit` / `OrganizationPlan` 和 SDK
+  `plan_organization_edit` / `execute_organization_plan`、
+  `EditSession::edit_organization` 共用创建 Parameter／空 Group／Part、Group 字段补丁、
+  多选移动／重排、复制、删除内容及解散。集合为 `Parameters { group_id }`、
+  `ParameterGroups { parent_id }` 和 `PartMembers { part_id }`，空拥有者表示根集合。
+  放置锚点是稳定 sibling ID；多选按源顺序执行，排除已选祖先覆盖的后代，禁止循环。
+  Group 可任意合法嵌套；未解析 CDI 行保留原位置、扩展内容和 runtime ID，
+  Parameter 组归属继续由 DisplayInfo 唯一表示。旧 membership setter 保留导入表作用域，
+  不因更改归属而改写其他参数的手动顺序。
+- **复制与依赖闭包**：Parameter／Group 复制为拥有内容生成新 UUID 和不冲突 runtime ID，
+  外部 Motion、Expression、Physics 和 Binding 用户继续引用原 Parameter。
+  带未解析 CDI 参数行的组复制返回当前不可用
+  `UNRESOLVED_PARAMETER_COPY_CONFLICT`，要求先修复引用；不会为导入行虚构运行参数。
+  移动、解散仍保留这些行。Part 复制沿组织子树，包括 Mesh、Transform、Offscreen 和
+  拥有的普通／Scene／Blend Binding；内部 Part、变形父级、遮罩、Axis、Sample 与
+  keyform 坐标重映射，外部 Parameter、纹理、共享 Blend table／constraint 保持共享。
+  Offscreen 保留 keyform 索引。绘制成员只能属于一个组，源组内的外部成员不转移到副本，
+  通过 `OrganizationEffects.external_drawing_members` 报告。独立场景对象复制仍属于
+  后续场景生命周期切片，能力返回当前不可用 `USE_SCENE_AUTHORING`。
+- **删除与解散**：内容删除先计算组织拥有闭包和 Binding 子对象，再检查外部引用；
+  外部 Glue、变形后代、行为资源及绘制组中的外部成员不随组织删除，返回 `OBJECT_REFERENCED` 和
+  referrers。组织内成员的 CDI 行、编辑器状态及 Binding 子对象状态同时清理。
+  Group 解散提升直接参数（含未解析行）及子组，保留成员 ID 和同级位置。
+  Part 解散提升直接组织成员，只在可证明绘制序列保持时展开绘制组；支持相同静态 rank
+  以及静态排序后展开结果一致的情况。Part 禁用、存在有效 Part Binding／Blend 驱动、
+  或为 Offscreen owner 时返回 `PART_DISSOLVE_STATE_UNREPRESENTABLE`；
+  绘制展开无法证明时返回 `PART_DISSOLVE_DRAW_ORDER_UNPROVEN`。
+  无运行贡献的待配置 Binding 可随 Part 删除。失败不发布部分变化。
+- **组织与绘制／变形分离**：Part 移动保留独立绘制组与所有变形父级。
+  组织带来的继承可见性和合成归属变化通过 effects 显式报告。
+  同级 palette 重排不实体化绘制组、不改变求值；原地移动使用集合相对顺序判 no-op，
+  不生成历史或清空 redo。旧全资源 replace 仍保留完整字段替换语义；交互组织移动经过
+  上述 typed intent。Deformer 锁只保护其本身及显式改父级受影响对象，组织 Part 锁
+  保护成员，与既有 Editor 锁语义一致；不沿变形父级把全部后代变为锁定。
+- **能力、生命周期与发布**：SDK 提供集合／实体能力和 `OrganizationAddress`，
+  地址包含实体／拥有者句柄与单调拥有者 epoch；移动往返及 Undo 不恢复旧归属地址，
+  删除／Undo 或同候选删除再创建不恢复旧句柄。计划绑定 SDK version 和 native snapshot。
+  源子树、目标容器及拥有的 Binding／Axis／Sample 锁均生效；旧 DisplayInfo、palette
+  replacement、Part／Mesh／Transform／Offscreen 改归属入口也检查相关锁。
+  `ChangeSet` 增加精确 Organization collection 和方向明确的 ownership reference，
+  Undo 反转引用；参数／组名、同级排序与归属元数据不推进 SDK 求值版本。
+- **缓存与 Editor**：native 组织索引缓存集合、拥有者、源顺序和子树关系，
+  label-only 编辑与 Undo 复用关系缓存；结构／归属／排序变化使其失效。
+  hover Move 规划只保留父级、顺序及元数据增量，不复制 Mesh 几何和 keyform 网格；
+  复杂复制／删除的最终结构检查使用隔离候选。
+  Editor 既有参数管理、Group 表单、拖放排序与 Properties 改归属接到同一 SDK 规则，
+  移除重复组移动／解散算法。Document／Editor 提供统一 plan／execute／capabilities
+  适配和建议选择／定位结果，不自动改变活动 Motion／Expression 或播放时钟。
+  纯标签更新只刷新目标 Properties 和 Document 元数据，复用无关关系；
+  复制／删除场景内容及改归属正确使 Canvas 祖先、几何与拾取缓存失效。
+- **Python**：`Edit.organization_authoring`、`Session.plan_organization_authoring` /
+  `execute_organization_plan` 使用同一 Rust 命令，计划暴露 affected／copied IDs 和 effects。
+  命令示例及解散／未解析复制边界已补到相邻 SDK 的 Python API 文档。
+
+本轮新增 SDK **18 项**、Editor 集成 **5 项**、core 缓存 **1 项**、Python **2 项**回归。
+验证命令与结果如下（各筛选覆盖可能重叠，不合计）：
+
+```sh
+# 相邻 kasane-2d
+cargo test --locked -p kasane-core --lib organization::index
+cargo test --locked -p kasane-sdk --test integration -- \
+  organization_authoring:: cdi_authoring:: hierarchy_order:: scene_authoring:: \
+  editor_state:: binding_authoring:: mesh_editing:: effects_authoring::
+./tools/test.sh python
+# kasane-editor
+cargo test --locked -p editor-core --test integration -- \
+  organization_authoring:: sorting:: parameter_management:: parameter_creation:: properties:: locks::
+./scripts/test.sh ui -- headless_tests::parameter_groups headless_tests::parameter_management \
+  headless_tests::parameter_creation headless_tests::parameters headless_tests::hierarchy \
+  headless_tests::sorting headless_tests::ui_performance
+```
+
+SDK 筛选 **96 项通过**，core 组织缓存 **1 项通过**，Editor 集成筛选 **68 项通过**；
+当前源码重建的 Python Debug extension **62 项 CPU + 4 项 inspection 通过**。
+原生 UI 受影响筛选 **59 项通过**。该回归发现并修复新建参数的全局列表插入位置，
+保持既有创建后定位／Undo 行为；另有集成回归覆盖根级 Part 排序与未归组场景对象共存，
+确保 After 锚点保留在对应 palette；修正后原生排序补查 **13 项通过**。
+
+最终 `cargo check --locked -p kasane-editor`、两仓库 `cargo fmt --all --check` 与
+`git diff --check` 通过。仍有既有 vendor GPUI/Cocoa 警告及 `block` 未来兼容提示。
+
+本轮未运行完整 workspace、真实模型 Release 或截图验收；本节不提供新的性能测量数字。
+本轮代码暂留两仓库工作区，尚未提交。

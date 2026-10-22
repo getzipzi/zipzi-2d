@@ -1,8 +1,8 @@
 //! Persistent palette moves, validated against the complete document projection.
-use crate::{Document, ObjectKind, ObjectRef, TreeNode};
+use crate::{Document, ObjectRef, TreeNode};
 use anyhow::{Result, anyhow, ensure};
-use kasane_core::document::CdiParameterEntry;
-use std::collections::{HashMap, HashSet};
+use kasane_sdk::{OrganizationCollection as C, OrganizationEdit as E};
+use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReorderPosition {
@@ -62,144 +62,56 @@ fn relocate<T: PartialEq>(
 }
 
 impl Document {
-    /// Change organization and palette position atomically; deformation is independent.
     pub fn move_organization(
         &mut self,
         source: &ObjectRef,
         destination: OrganizationDestination,
     ) -> Result<()> {
-        let Some(plan) = self.prepare_organization_move(source, destination)? else {
+        let Some(prepared) = self.prepare_organization_move(source, destination)? else {
             return Ok(());
         };
         self.finish_edit()?;
-        self.session.edit(
-            if plan.parent_changed {
-                "Move Part assignment"
-            } else {
-                "Reorder hierarchy"
-            },
-            None,
-            |edit| plan.apply(edit, source),
-        )?;
-        self.sorted();
+        let plan = self.session.plan_organization_edit(prepared.intent)?;
+        self.execute_organization_authoring(&plan)?;
         Ok(())
     }
-
     pub(crate) fn prepare_organization_move(
         &self,
         source: &ObjectRef,
         destination: OrganizationDestination,
     ) -> Result<Option<OrganizationMove>> {
-        fn index(
-            nodes: &[TreeNode],
-            parent: &str,
-            entries: &mut HashMap<ObjectRef, (String, bool)>,
-        ) {
-            for node in nodes {
-                if let Some(reference) = node.reference() {
-                    entries.insert(reference, (parent.to_owned(), node.diagnostic.is_none()));
-                    index(&node.children, &node.id, entries);
-                } else {
-                    index(&node.children, "", entries);
-                }
-            }
-        }
         self.ensure_tree_editable(source, false)?;
-        let destination_object = match destination {
-            OrganizationDestination::Sibling { ref target, .. } => Some(target.clone()),
-            OrganizationDestination::Part(Some(ref id)) => {
-                Some(ObjectRef::new(ObjectKind::Part, id))
-            }
-            _ => None,
-        };
-        if let Some(target) = &destination_object {
-            self.ensure_editable(std::slice::from_ref(target))?;
-        }
-        let tree = self.mesh_tree();
-        let mut entries = HashMap::new();
-        index(&tree, "", &mut entries);
-        let (old_parent, valid) = entries
-            .get(source)
-            .ok_or_else(|| anyhow!("Object no longer exists"))?;
-        ensure!(*valid, "Repair missing references before moving");
-        let parent = match &destination {
-            OrganizationDestination::Sibling { target, .. } => {
-                let (parent, valid) = entries
-                    .get(target)
-                    .ok_or_else(|| anyhow!("Target no longer exists"))?;
-                ensure!(*valid, "Repair missing references before moving");
-                ensure!(
-                    !parent.is_empty()
-                        || (source.kind == ObjectKind::Part) == (target.kind == ObjectKind::Part),
-                    "Root Parts and unassigned objects occupy separate lists"
-                );
-                parent.clone()
-            }
-            OrganizationDestination::Part(parent) => parent.clone().unwrap_or_default(),
-        };
-        if !parent.is_empty() {
-            let mut current = parent.as_str();
-            let mut visited = HashSet::new();
-            while !current.is_empty() {
-                ensure!(
-                    current != source.id && visited.insert(current),
-                    "Cannot move a Part into its own subtree"
-                );
-                let (next, valid) = entries
-                    .get(&ObjectRef::new(ObjectKind::Part, current))
-                    .ok_or_else(|| anyhow!("Target Part no longer exists"))?;
-                ensure!(*valid, "Repair missing references before moving");
-                current = next;
-            }
-        }
-        let mut original = Vec::new();
-        collect_order(&tree, &mut original);
-        let siblings: HashSet<_> = entries
-            .iter()
-            .filter(|(reference, (owner, _))| {
-                owner == &parent
-                    && (!parent.is_empty()
-                        || (reference.kind == ObjectKind::Part)
-                            == (source.kind == ObjectKind::Part))
-            })
-            .map(|(reference, _)| &reference.id)
-            .collect();
-        let is_sibling = |id: &String| siblings.contains(id);
-        let mut ids = original.clone();
-        match &destination {
+        let (parent, before) = match destination {
+            OrganizationDestination::Part(parent) => (parent, None),
             OrganizationDestination::Sibling { target, position } => {
-                relocate(&mut ids, &source.id, &target.id, *position)?
+                if source == &target {
+                    return Ok(None);
+                }
+                ensure!(
+                    self.object_index().get(&target).is_some(),
+                    "Target no longer exists"
+                );
+                self.ensure_editable(std::slice::from_ref(&target))?;
+                let parent = self
+                    .model()
+                    .organization_owner(&target.id)
+                    .map(str::to_owned);
+                let collection = C::PartMembers {
+                    part_id: parent.clone(),
+                };
+                let before =
+                    placement_after(self.model(), &collection, &source.id, &target.id, position)?;
+                (parent, before)
             }
-            OrganizationDestination::Part(_) => {
-                ids.retain(|id| id != &source.id);
-                let at = ids
-                    .iter()
-                    .rposition(&is_sibling)
-                    .map_or(ids.len(), |i| i + 1);
-                ids.insert(at, source.id.clone());
-            }
-        }
-        if old_parent == &parent
-            && original
-                .iter()
-                .filter(|id| is_sibling(id))
-                .eq(ids.iter().filter(|id| is_sibling(id)))
-        {
-            return Ok(None);
-        }
-        let mut order = self.model().hierarchy_order().clone();
-        order.organization = ids;
-        let parent_changed = old_parent != &parent;
-        let drawing_groups = (parent_changed && self.model().draw_order_groups().is_none())
-            .then(|| kasane_core::draw_order::resolved_groups(self.model()));
-        Ok(Some(OrganizationMove {
-            parent,
-            parent_changed,
-            order,
-            drawing_groups,
-        }))
+        };
+        let intent = E::Move {
+            ids: vec![source.id.clone()],
+            destination: C::PartMembers { part_id: parent },
+            before,
+        };
+        let plan = self.session.plan_organization_edit(intent.clone())?;
+        Ok((!plan.is_noop()).then_some(OrganizationMove { intent }))
     }
-
     pub fn reorder_tree(
         &mut self,
         deformer: bool,
@@ -207,6 +119,15 @@ impl Document {
         target: &ObjectRef,
         position: ReorderPosition,
     ) -> Result<()> {
+        if !deformer {
+            return self.move_organization(
+                source,
+                OrganizationDestination::Sibling {
+                    target: target.clone(),
+                    position,
+                },
+            );
+        }
         self.ensure_tree_editable(source, deformer)?;
         let mut tree = if deformer {
             self.deformer_tree()
@@ -273,247 +194,109 @@ impl Document {
         Ok(())
     }
 
-    pub(super) fn parameter_move_info(
-        &self,
-        source: &str,
-        destination: ParameterDestination,
-    ) -> Result<kasane_core::document::DisplayInfo> {
-        let parameters = self.parameters();
-        let parameter = parameters
-            .iter()
-            .find(|parameter| parameter.id == source)
-            .ok_or_else(|| anyhow!("Parameter no longer exists"))?;
-        let mut ids: Vec<_> = parameters
-            .iter()
-            .map(|parameter| parameter.id.clone())
-            .collect();
-        let group_id = match destination {
-            ParameterDestination::Parameter { id, position } => {
-                let target = parameters
-                    .iter()
-                    .find(|parameter| parameter.id == id)
-                    .ok_or_else(|| anyhow!("Target parameter no longer exists"))?;
-                relocate(&mut ids, &source.to_owned(), &id, position)?;
-                target.group_id.clone()
-            }
-            ParameterDestination::Group(group) => {
-                ensure!(
-                    group.as_ref().is_none_or(|id| self
-                        .parameter_groups()
-                        .iter()
-                        .any(|group| &group.id == id)),
-                    "Group no longer exists"
-                );
-                ids.retain(|id| id != source);
-                let last = ids.iter().rposition(|id| {
-                    parameters
-                        .iter()
-                        .any(|parameter| &parameter.id == id && parameter.group_id == group)
-                });
-                ids.insert(last.map_or(ids.len(), |i| i + 1), source.to_owned());
-                group
-            }
-        };
-        if parameter.group_id == group_id {
-            let original_members: Vec<_> = parameters
-                .iter()
-                .filter(|p| p.group_id == group_id)
-                .map(|p| &p.id)
-                .collect();
-            let next_members: Vec<_> = ids
-                .iter()
-                .filter(|id| {
-                    parameters
-                        .iter()
-                        .any(|p| &p.id == *id && p.group_id == group_id)
-                })
-                .collect();
-            if original_members == next_members {
-                return Ok(self.model().display_info().clone());
-            }
-        }
-        let mut info = self.model().display_info().clone();
-        let mut entries = info.parameters.take().unwrap_or_default();
-        let mut resolved: HashMap<_, _> = entries
-            .iter()
-            .filter_map(|entry| match entry {
-                CdiParameterEntry::Resolved { parameter_id, .. } => {
-                    Some((parameter_id.clone(), entry.clone()))
-                }
-                _ => None,
-            })
-            .collect();
-        let mut ordered = ids.into_iter().map(|id| {
-            let mut entry = resolved
-                .remove(&id)
-                .unwrap_or_else(|| CdiParameterEntry::Resolved {
-                    parameter_id: id.clone(),
-                    group_id: None,
-                    extensions: Default::default(),
-                });
-            if let CdiParameterEntry::Resolved {
-                group_id: current, ..
-            } = &mut entry
-            {
-                if id == source {
-                    *current = group_id.clone();
-                }
-            }
-            entry
-        });
-        // Opaque/unresolved entries retain their relative positions and complete data.
-        for entry in &mut entries {
-            if matches!(entry, CdiParameterEntry::Resolved { .. }) {
-                *entry = ordered.next().unwrap();
-            }
-        }
-        entries.extend(ordered);
-        info.parameters = Some(entries);
-        Ok(info)
-    }
-
     pub fn move_parameter(
         &mut self,
         source: &str,
         destination: ParameterDestination,
     ) -> Result<()> {
-        let info = self.parameter_move_info(source, destination)?;
-        if &info == self.model().display_info() {
-            return Ok(());
-        }
+        let (group, before) = match destination {
+            ParameterDestination::Group(group) => (group, None),
+            ParameterDestination::Parameter { id, position } => {
+                if source == id {
+                    return Ok(());
+                }
+                ensure!(
+                    self.model().get_parameter(&id).is_some(),
+                    "Target parameter no longer exists"
+                );
+                let group = self.model().parameter_group_for(&id).map(str::to_owned);
+                let collection = C::Parameters {
+                    group_id: group.clone(),
+                };
+                let before = placement_after(self.model(), &collection, source, &id, position)?;
+                (group, before)
+            }
+        };
         self.finish_edit()?;
-        self.session.edit("Move parameter", None, |edit| {
-            edit.replace_display_info(info)
+        let plan = self.session.plan_organization_edit(E::Move {
+            ids: vec![source.into()],
+            destination: C::Parameters { group_id: group },
+            before,
         })?;
-        self.sorted();
+        self.execute_organization_authoring(&plan)?;
         Ok(())
     }
-
     pub fn reorder_parameter_group(
         &mut self,
         source: &str,
         target: &str,
         position: ReorderPosition,
     ) -> Result<()> {
-        let mut info = self.model().display_info().clone();
-        let groups = info
-            .parameter_groups
-            .as_mut()
-            .ok_or_else(|| anyhow!("Group no longer exists"))?;
-        let from = groups
-            .iter()
-            .find(|group| group.id == source)
-            .ok_or_else(|| anyhow!("Group no longer exists"))?;
-        let to = groups
-            .iter()
-            .find(|group| group.id == target)
-            .ok_or_else(|| anyhow!("Target group no longer exists"))?;
-        ensure!(
-            to.parent_id.is_none() || from.parent_id == to.parent_id,
-            "Groups can only be reordered among siblings or moved to the top level"
-        );
-        let source_parent = from.parent_id.clone();
-        let destination_parent = to.parent_id.clone();
-        let moving_to_root = source_parent != destination_parent;
-        let original: Vec<_> = groups.iter().map(|group| group.id.clone()).collect();
-        let mut ids = original.clone();
-        relocate(&mut ids, &source.to_owned(), &target.to_owned(), position)?;
-        let siblings: HashSet<_> = groups
-            .iter()
-            .filter(|group| group.parent_id == source_parent)
-            .map(|group| &group.id)
-            .collect();
-        if !moving_to_root
-            && original
-                .iter()
-                .filter(|id| siblings.contains(id))
-                .eq(ids.iter().filter(|id| siblings.contains(id)))
-        {
+        if source == target {
             return Ok(());
         }
-        let ranks: HashMap<_, _> = ids
-            .iter()
-            .enumerate()
-            .map(|(i, id)| (id.as_str(), i))
-            .collect();
-        groups.sort_by_key(|group| ranks[group.id.as_str()]);
-        if moving_to_root {
-            groups
-                .iter_mut()
-                .find(|group| group.id == source)
-                .unwrap()
-                .parent_id = None;
-        }
+        let group = self
+            .model()
+            .get_parameter_group(target)
+            .ok_or_else(|| anyhow!("Target group no longer exists"))?;
+        let collection = C::ParameterGroups {
+            parent_id: group.parent_id.clone(),
+        };
+        let before = placement_after(self.model(), &collection, source, target, position)?;
         self.finish_edit()?;
-        self.session
-            .edit("Reorder parameter groups", None, |edit| {
-                edit.replace_display_info(info)
-            })?;
-        self.sorted();
+        let plan = self.session.plan_organization_edit(E::Move {
+            ids: vec![source.into()],
+            destination: collection,
+            before,
+        })?;
+        self.execute_organization_authoring(&plan)?;
         Ok(())
     }
-
     fn sorted(&mut self) {
         self.session.drain_events();
         self.pristine_blank = false;
         self.invalidate_projection(false);
     }
 }
-
-pub(crate) fn ordered_parameter_ids(model: &kasane_core::Document) -> Vec<String> {
-    let mut seen = HashSet::new();
-    model
-        .display_info()
-        .parameters
-        .iter()
-        .flatten()
-        .filter_map(|entry| match entry {
-            CdiParameterEntry::Resolved { parameter_id, .. } => Some(parameter_id),
-            _ => None,
+fn placement_after(
+    d: &kasane_core::Document,
+    c: &C,
+    source: &str,
+    target: &str,
+    position: ReorderPosition,
+) -> Result<Option<String>> {
+    if position == ReorderPosition::Before {
+        return Ok(Some(target.into()));
+    }
+    let members = d
+        .organization_collection(c)
+        .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
+    let members: Vec<_> = members
+        .into_iter()
+        .filter(|id| {
+            id != source
+                && (!matches!(c, C::PartMembers { part_id: None })
+                    || d.get_part(id).is_some() == d.get_part(target).is_some())
         })
-        .chain(model.parameter_order())
-        .filter(|id| model.get_parameter(id).is_some() && seen.insert((*id).clone()))
-        .cloned()
-        .collect()
+        .collect();
+    let index = members
+        .iter()
+        .position(|id| id == target)
+        .ok_or_else(|| anyhow!("Target no longer exists"))?;
+    Ok(members.get(index + 1).cloned())
 }
-
-/// Prepared once against the editor's lock and hierarchy rules, then applied
-/// inside either a tree move or an inspector's atomic property transaction.
+pub(crate) fn ordered_parameter_ids(model: &kasane_core::Document) -> Vec<String> {
+    model.ordered_parameter_ids()
+}
 pub(crate) struct OrganizationMove {
-    parent: String,
-    parent_changed: bool,
-    order: kasane_core::document::HierarchyOrder,
-    drawing_groups: Option<Vec<kasane_core::draw_order::DrawOrderGroup>>,
+    intent: E,
 }
 impl OrganizationMove {
     pub(crate) fn apply(
         self,
         edit: &mut kasane_sdk::EditSession<'_>,
-        source: &ObjectRef,
+        _source: &ObjectRef,
     ) -> std::result::Result<(), kasane_sdk::SdkError> {
-        if let Some(groups) = self.drawing_groups {
-            edit.replace_draw_order_groups(groups)?;
-        }
-        if self.parent_changed {
-            match source.kind {
-                ObjectKind::Part => edit.set_organization_parent(&source.id, &self.parent)?,
-                ObjectKind::Mesh => edit.set_mesh_part(&source.id, &self.parent)?,
-                ObjectKind::Deformer => edit.set_transform_part(
-                    &source.id,
-                    (!self.parent.is_empty()).then(|| self.parent.clone().into()),
-                )?,
-                ObjectKind::Offscreen => {
-                    let mut offscreen = edit
-                        .candidate_document()
-                        .get_offscreen(&source.id)
-                        .unwrap()
-                        .clone();
-                    offscreen.part_id = self.parent;
-                    edit.replace_offscreen(offscreen)?;
-                }
-                _ => unreachable!("Only organization objects enter the tree"),
-            }
-        }
-        edit.replace_hierarchy_order(self.order)
+        edit.edit_organization(self.intent)
     }
 }

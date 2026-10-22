@@ -216,15 +216,14 @@ impl Document {
         self.validate_new_parameter(&draft)?;
         self.finish_edit()?;
         let id = uuid::Uuid::new_v4().to_string();
-        self.session.edit("New parameter", None, |edit| {
-            edit.create_parameter(draft.parameter(&id))?;
-            edit.set_parameter_group(&id, draft.group_id.as_deref())
-        })?;
-        self.session.drain_events();
-        self.pristine_blank = false;
-        self.invalidate_projection(false);
-        let index = self.object_index();
-        self.context.reconcile(&index);
+        let plan =
+            self.session
+                .plan_organization_edit(kasane_sdk::OrganizationEdit::CreateParameter {
+                    parameter: draft.parameter(&id),
+                    group_id: draft.group_id.clone(),
+                    before: None,
+                })?;
+        self.execute_organization_authoring(&plan)?;
         self.focus_parameter(&id)?;
         Ok(id)
     }
@@ -317,10 +316,13 @@ impl Document {
             .into());
         }
         if old.group_id != draft.group_id {
-            edit.replace_display_info(self.parameter_move_info(
-                id,
-                crate::ParameterDestination::Group(draft.group_id.clone()),
-            )?)?;
+            edit.edit_organization(kasane_sdk::OrganizationEdit::Move {
+                ids: vec![id.into()],
+                destination: kasane_sdk::OrganizationCollection::Parameters {
+                    group_id: draft.group_id.clone(),
+                },
+                before: None,
+            })?;
         }
         // The checked candidate is the one that will be published. Evaluate before
         // publication when the new range clamps a session preview input.
@@ -359,24 +361,10 @@ impl Document {
     /// Display membership is owned by the parameter. All other references block deletion.
     pub fn parameter_delete_references(&self, id: &str) -> Result<Vec<String>> {
         self.parameter_draft(id)?;
-        let owned: HashSet<_> = self
-            .model()
-            .display_info()
-            .parameters
-            .iter()
-            .flatten()
-            .enumerate()
-            .filter_map(|(i, e)| {
-                matches!(e, CdiParameterEntry::Resolved { parameter_id, .. } if parameter_id == id)
-                    .then(|| format!("display_info.Parameters[{i}]"))
-            })
-            .collect();
         Ok(self
             .model()
-            .references_to(id)
-            .into_iter()
-            .filter(|r| !owned.contains(r))
-            .collect())
+            .organization_delete_users(&[id.into()], kasane_sdk::OrganizationDeletePolicy::Contents)
+            .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?)
     }
 
     pub fn delete_parameter(&mut self, id: &str, expected: u64) -> Result<()> {
@@ -384,15 +372,14 @@ impl Document {
         self.ensure_editable(&[ObjectRef::new(ObjectKind::Parameter, id)])?;
         let refs = self.parameter_delete_references(id)?;
         ensure!(refs.is_empty(), ParameterManagementError::Referenced(refs));
-        let mut info = self.model().display_info().clone();
-        if let Some(entries) = &mut info.parameters {
-            entries.retain(|e| !matches!(e, CdiParameterEntry::Resolved { parameter_id, .. } if parameter_id == id));
-        }
-        self.session.edit("Delete parameter", None, |edit| {
-            edit.replace_display_info(info)?;
-            edit.erase_object(id)
-        })?;
-        self.parameter_management_changed()
+        let plan = self
+            .session
+            .plan_organization_edit(kasane_sdk::OrganizationEdit::Delete {
+                ids: vec![id.into()],
+                policy: kasane_sdk::OrganizationDeletePolicy::Contents,
+            })?;
+        self.execute_organization_authoring(&plan)?;
+        Ok(())
     }
 
     pub(super) fn parameter_management_changed(&mut self) -> Result<()> {

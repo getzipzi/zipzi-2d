@@ -1,6 +1,5 @@
 //! Read-only export preflight for parameter namespace edits.
 use crate::{Document, EditorCommand};
-use kasane_core::document::{CdiParameterEntry, CdiParameterGroup};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParameterExportDiagnostic {
@@ -16,84 +15,62 @@ impl Document {
         command: &EditorCommand,
     ) -> Vec<ParameterExportDiagnostic> {
         let mut candidate = self.model().fork_candidate();
-        let status = match command {
+        let intent = match command {
             EditorCommand::CreateParameter(draft)
-            | EditorCommand::CreateParameterChecked { draft, .. }
-            | EditorCommand::UpdateParameter { draft, .. } => {
-                let id = match command {
-                    EditorCommand::UpdateParameter { id, .. } => id.clone(),
-                    _ => uuid::Uuid::new_v4().to_string(),
-                };
-                let p = draft.parameter(&id);
-                if matches!(command, EditorCommand::UpdateParameter { .. }) {
-                    candidate.replace_parameter(p).status
-                } else {
-                    candidate.create_parameter(p).status
-                }
+            | EditorCommand::CreateParameterChecked { draft, .. } => {
+                Some(kasane_sdk::OrganizationEdit::CreateParameter {
+                    parameter: draft.parameter(&uuid::Uuid::new_v4().to_string()),
+                    group_id: draft.group_id.clone(),
+                    before: None,
+                })
             }
             EditorCommand::DeleteParameter { id, .. } => {
-                let mut info = candidate.display_info().clone();
-                if let Some(entries) = &mut info.parameters {
-                    entries.retain(|e| !matches!(e, CdiParameterEntry::Resolved { parameter_id, .. } if parameter_id == id));
-                }
-                if !candidate.replace_display_info(info).status.is_ok() {
-                    return Vec::new();
-                }
-                candidate.erase_object(id).status
+                Some(kasane_sdk::OrganizationEdit::Delete {
+                    ids: vec![id.clone()],
+                    policy: kasane_sdk::OrganizationDeletePolicy::Contents,
+                })
             }
-            EditorCommand::CreateParameterGroup { draft, .. }
-            | EditorCommand::UpdateParameterGroup { draft, .. } => {
-                let mut info = candidate.display_info().clone();
-                let groups = info.parameter_groups.get_or_insert_with(Vec::new);
-                if let EditorCommand::UpdateParameterGroup { id, .. } = command {
-                    let Some(g) = groups.iter_mut().find(|g| &g.id == id) else {
-                        return Vec::new();
-                    };
-                    g.name = draft.name.trim().into();
-                    g.runtime_id = draft.runtime_id.trim().into();
-                    g.parent_id = draft.parent_id.clone();
-                } else {
-                    groups.push(CdiParameterGroup {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        runtime_id: draft.runtime_id.trim().into(),
-                        name: draft.name.trim().into(),
-                        parent_id: draft.parent_id.clone(),
-                        extensions: Default::default(),
-                    });
-                }
-                candidate.replace_display_info(info).status
+            EditorCommand::CreateParameterGroup { draft, .. } => {
+                self.group_intent(None, draft).ok()
+            }
+            EditorCommand::UpdateParameterGroup { id, draft, .. } => {
+                self.group_intent(Some(id), draft).ok()
             }
             EditorCommand::DeleteParameterGroup { id, .. } => {
-                let mut info = candidate.display_info().clone();
-                let Some(groups) = &mut info.parameter_groups else {
-                    return Vec::new();
-                };
-                let Some(parent) = groups
-                    .iter()
-                    .find(|g| &g.id == id)
-                    .map(|g| g.parent_id.clone())
-                else {
-                    return Vec::new();
-                };
-                groups.retain(|g| &g.id != id);
-                for group in groups {
-                    if group.parent_id.as_ref() == Some(id) {
-                        group.parent_id = parent.clone();
-                    }
-                }
-                for entry in info.parameters.iter_mut().flatten() {
-                    match entry {
-                        CdiParameterEntry::Resolved { group_id, .. }
-                        | CdiParameterEntry::Unresolved { group_id, .. } => {
-                            if group_id.as_ref() == Some(id) {
-                                *group_id = parent.clone();
-                            }
-                        }
-                    }
-                }
-                candidate.replace_display_info(info).status
+                Some(kasane_sdk::OrganizationEdit::Delete {
+                    ids: vec![id.clone()],
+                    policy: kasane_sdk::OrganizationDeletePolicy::Dissolve,
+                })
             }
-            _ => return Vec::new(),
+            EditorCommand::UpdateParameter { id, draft, .. } => {
+                if !candidate
+                    .replace_parameter(draft.parameter(id))
+                    .status
+                    .is_ok()
+                {
+                    return Vec::new();
+                }
+                (candidate.parameter_group_for(id) != draft.group_id.as_deref()).then(|| {
+                    kasane_sdk::OrganizationEdit::Move {
+                        ids: vec![id.clone()],
+                        destination: kasane_sdk::OrganizationCollection::Parameters {
+                            group_id: draft.group_id.clone(),
+                        },
+                        before: None,
+                    }
+                })
+            }
+            _ => None,
+        };
+        let status = if let Some(intent) = intent {
+            match candidate.plan_organization_edit(intent) {
+                Ok(plan) => candidate.apply_organization_plan(&plan).status,
+                Err(status) => status,
+            }
+        } else if matches!(command, EditorCommand::UpdateParameter { .. }) {
+            kasane_core::Status::ok()
+        } else {
+            return Vec::new();
         };
         if !status.is_ok() {
             return Vec::new();
