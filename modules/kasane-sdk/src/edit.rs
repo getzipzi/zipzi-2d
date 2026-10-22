@@ -123,6 +123,39 @@ impl EditSession<'_> {
             Ok(())
         }
     }
+    /// A rejected plan poisons the candidate just like a failed domain edit.
+    pub(crate) fn ensure_plan_version(
+        &mut self,
+        version: Version,
+        operation: &'static str,
+        replan_message: &str,
+    ) -> Result<(), SdkError> {
+        self.ensure_active(operation)?;
+        if self.base_version() != version {
+            return Err(self.abort_with(SdkError::new("STALE_PLAN", replan_message, operation)));
+        }
+        Ok(())
+    }
+
+    /// Record native changes and retire removed identities in the same step.
+    /// Identity-preserving patches avoid enumerating the whole candidate.
+    pub(crate) fn apply_authoring_change(
+        &mut self,
+        operation: &'static str,
+        preserves_identities: bool,
+        apply: impl FnOnce(&mut Document) -> EditResult,
+    ) -> Result<(), SdkError> {
+        self.ensure_active(operation)?;
+        let before =
+            (!preserves_identities).then(|| crate::session::keys_in(self.candidate_document()));
+        let result = apply(self.document());
+        self.record(result, operation, "")?;
+        if let Some(before) = before {
+            self.track_removed_objects(before);
+        }
+        Ok(())
+    }
+
     pub(crate) fn abort_with(&mut self, error: SdkError) -> SdkError {
         self.aborted = true;
         error

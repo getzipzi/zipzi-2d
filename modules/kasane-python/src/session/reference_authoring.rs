@@ -83,12 +83,9 @@ impl NativeSession {
         py: Python<'_>,
         p: &NativeReferencePlan,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "execute_reference_plan")?;
-        let mut s = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "execute_reference_plan")?;
-        s.execute_reference_plan(&p.inner)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "execute_reference_plan", |session| {
+            session.execute_reference_plan(&p.inner)
+        })
     }
     fn reference_collection_json(
         &self,

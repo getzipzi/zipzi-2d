@@ -236,26 +236,19 @@ impl AuthoringSession {
         a: &ReferenceFieldAddress,
         fields: ReferenceFields,
     ) -> Result<ReferenceEditPlan, SdkError> {
-        self.resolve_handle(&a.entity)?;
-        if let Some(target) = &a.target {
-            self.resolve_handle(target)?;
-        }
-        if let Some(owner) = &a.owner {
-            self.resolve_handle(owner)?;
-        }
-        if *self.reference_epochs.get(a.id()).unwrap_or(&0) != a.epoch
-            || self
-                .document()
-                .reference_identity(a.id())
-                .and_then(|i| i.owner.as_deref())
-                != a.owner.as_ref().map(ObjectHandle::id)
-        {
-            return Err(SdkError::new(
-                "STALE_FIELD_ADDRESS",
-                a.id(),
-                "plan_reference_field_patch",
-            ));
-        }
+        self.validate_field_address(
+            std::iter::once(&a.entity).chain(&a.target).chain(&a.owner),
+            || {
+                *self.reference_epochs.get(a.id()).unwrap_or(&0) != a.epoch
+                    || self
+                        .document()
+                        .reference_identity(a.id())
+                        .and_then(|i| i.owner.as_deref())
+                        != a.owner.as_ref().map(ObjectHandle::id)
+            },
+            a.id(),
+            "plan_reference_field_patch",
+        )?;
         self.plan_reference_edit(ReferenceEdit::Patch {
             id: a.id().into(),
             expected: a.expected.clone(),
@@ -312,23 +305,19 @@ impl AuthoringSession {
         a: &ReferenceSelectionAddress,
         targets: Vec<String>,
     ) -> Result<ReferenceEditPlan, SdkError> {
-        self.resolve_handle(&a.entity)?;
-        for target in &a.targets {
-            self.resolve_handle(target)?;
-        }
-        if *self
-            .selection_epochs
-            .get(&(a.owner_id().into(), a.field))
-            .unwrap_or(&0)
-            != a.epoch
-            || self.selection_context(a.owner_id()) != a.context
-        {
-            return Err(SdkError::new(
-                "STALE_FIELD_ADDRESS",
-                a.owner_id(),
-                "plan_reference_selection_patch",
-            ));
-        }
+        self.validate_field_address(
+            std::iter::once(&a.entity).chain(&a.targets),
+            || {
+                *self
+                    .selection_epochs
+                    .get(&(a.owner_id().into(), a.field))
+                    .unwrap_or(&0)
+                    != a.epoch
+                    || self.selection_context(a.owner_id()) != a.context
+            },
+            a.owner_id(),
+            "plan_reference_selection_patch",
+        )?;
         self.plan_reference_edit(ReferenceEdit::ReplaceSelection {
             owner: a.owner_id().into(),
             field: a.field,
@@ -339,18 +328,10 @@ impl AuthoringSession {
 }
 impl EditSession<'_> {
     pub fn apply_reference_plan(&mut self, p: &ReferenceEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_reference_plan")?;
-        if self.base_version() != p.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan references",
-                "apply_reference_plan",
-            )));
-        }
-        let before = crate::session::keys_in(self.candidate_document());
-        let r = self.document().apply_reference_plan(&p.domain);
-        self.record(r, "apply_reference_plan", "")?;
-        self.track_removed_objects(before);
+        self.ensure_plan_version(p.version, "apply_reference_plan", "Replan references")?;
+        self.apply_authoring_change("apply_reference_plan", false, |document| {
+            document.apply_reference_plan(&p.domain)
+        })?;
         Ok(())
     }
     pub fn edit_references(&mut self, intent: ReferenceEdit) -> Result<(), SdkError> {
@@ -359,10 +340,9 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_reference_edit(intent)
             .map_err(|s| self.abort_with(err(s, "edit_references")))?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let r = self.document().apply_reference_plan(&p);
-        self.record(r, "edit_references", "")?;
-        self.track_removed_objects(before);
+        self.apply_authoring_change("edit_references", false, |document| {
+            document.apply_reference_plan(&p)
+        })?;
         Ok(())
     }
 }

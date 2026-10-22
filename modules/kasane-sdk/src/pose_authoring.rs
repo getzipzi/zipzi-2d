@@ -253,20 +253,17 @@ impl AuthoringSession {
         address: &PoseFieldAddress,
         fields: PoseFields,
     ) -> Result<PoseEditPlan, SdkError> {
-        self.resolve_handle(&address.entity)?;
-        if let Some(owner) = &address.owner {
-            self.resolve_handle(owner)?;
-        }
-        if self.pose_contexts.get(address.id()).map_or(0, |c| c.1) != address.epoch
-            || self.document().pose_owner(address.id()) != address.owner.as_ref().map(|o| o.id())
-            || self.document().pose_fields(address.id()).as_ref() != Some(&address.expected)
-        {
-            return Err(SdkError::new(
-                "STALE_FIELD_ADDRESS",
-                "Capture a new Pose address",
-                "plan_pose_field_patch",
-            ));
-        }
+        self.validate_field_address(
+            std::iter::once(&address.entity).chain(&address.owner),
+            || {
+                self.pose_contexts.get(address.id()).map_or(0, |c| c.1) != address.epoch
+                    || self.document().pose_owner(address.id())
+                        != address.owner.as_ref().map(|o| o.id())
+                    || self.document().pose_fields(address.id()).as_ref() != Some(&address.expected)
+            },
+            "Capture a new Pose address",
+            "plan_pose_field_patch",
+        )?;
         self.plan_pose_edit(PoseEdit::Patch {
             id: address.id().into(),
             expected: address.expected.clone(),
@@ -309,21 +306,12 @@ fn pose_kind(d: &kasane_core::Document, id: &str) -> ObjectKind {
 }
 impl EditSession<'_> {
     pub fn apply_pose_plan(&mut self, plan: &PoseEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_pose_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan Pose",
-                "apply_pose_plan",
-            )));
-        }
-        let before = (!plan.domain.preserves_identities())
-            .then(|| crate::session::keys_in(self.candidate_document()));
-        let result = self.document().apply_pose_plan(&plan.domain);
-        self.record(result, "apply_pose_plan", "")?;
-        if let Some(before) = before {
-            self.track_removed_objects(before);
-        }
+        self.ensure_plan_version(plan.version, "apply_pose_plan", "Replan Pose")?;
+        self.apply_authoring_change(
+            "apply_pose_plan",
+            plan.domain.preserves_identities(),
+            |document| document.apply_pose_plan(&plan.domain),
+        )?;
         Ok(())
     }
     pub fn edit_pose(&mut self, intent: PoseEdit) -> Result<(), SdkError> {
@@ -332,13 +320,9 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_pose_edit(intent)
             .map_err(|s| self.abort_with(SdkError::from_status(s, "edit_pose", vec![])))?;
-        let before = (!plan.preserves_identities())
-            .then(|| crate::session::keys_in(self.candidate_document()));
-        let result = self.document().apply_pose_plan(&plan);
-        self.record(result, "edit_pose", "")?;
-        if let Some(before) = before {
-            self.track_removed_objects(before);
-        }
+        self.apply_authoring_change("edit_pose", plan.preserves_identities(), |document| {
+            document.apply_pose_plan(&plan)
+        })?;
         Ok(())
     }
 }

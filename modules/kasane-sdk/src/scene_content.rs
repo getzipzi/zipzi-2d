@@ -273,23 +273,19 @@ impl EditSession<'_> {
         &mut self,
         plan: &SceneContentEditPlan,
     ) -> Result<(), SdkError> {
-        self.ensure_active("apply_scene_content_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan scene content",
-                "apply_scene_content_plan",
-            )));
-        }
+        self.ensure_plan_version(
+            plan.version,
+            "apply_scene_content_plan",
+            "Replan scene content",
+        )?;
         plan.control
             .check()
             .map_err(|s| self.abort_with(error(s, "apply_scene_content_plan")))?;
         crate::binding_authoring::check_cost(plan.cost(), self.authoring_limits)
             .map_err(|e| self.abort_with(e))?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_scene_content_plan(&plan.domain);
-        self.record(result, "apply_scene_content_plan", "")?;
-        self.track_removed_objects(before);
+        self.apply_authoring_change("apply_scene_content_plan", false, |document| {
+            document.apply_scene_content_plan(&plan.domain)
+        })?;
         self.binding_controls.push(plan.control.clone());
         self.binding_cost = Some(plan.cost());
         Ok(())
@@ -304,10 +300,9 @@ impl EditSession<'_> {
                 &ConversionControl::default(),
             )
             .map_err(|s| self.abort_with(error(s, "edit_scene_content")))?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_scene_content_plan(&domain);
-        self.record(result, "edit_scene_content", "")?;
-        self.track_removed_objects(before);
+        self.apply_authoring_change("edit_scene_content", false, |document| {
+            document.apply_scene_content_plan(&domain)
+        })?;
         self.binding_cost = Some(domain.cost());
         Ok(())
     }

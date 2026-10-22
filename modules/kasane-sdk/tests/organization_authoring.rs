@@ -648,6 +648,12 @@ fn part_delete_closure_excludes_deformer_descendants_from_another_organization()
 #[test]
 fn part_dissolve_preserves_compatible_drawing_and_rejects_effectful_parts() {
     let (mut s, p, _, c, _, m, _, _) = scene();
+    assert!(matches!(
+        s.organization_capabilities(&s.handle(ObjectKind::Part, &p).unwrap())
+            .unwrap()
+            .dissolve,
+        CapabilityState::Available
+    ));
     let before = s.preview_frame().unwrap();
     let h = s.handle(ObjectKind::Part, &c).unwrap();
     run(
@@ -670,6 +676,14 @@ fn part_dissolve_preserves_compatible_drawing_and_rejects_effectful_parts() {
     changed.enabled = false;
     s.edit("Disable", None, |e| e.replace_part(changed))
         .unwrap();
+    assert!(matches!(
+        s.organization_capabilities(&s.handle(ObjectKind::Part, &p).unwrap())
+            .unwrap()
+            .dissolve,
+        CapabilityState::Unavailable {
+            code: "PART_DISSOLVE_STATE_UNREPRESENTABLE"
+        }
+    ));
     let v = s.version();
     assert_eq!(
         s.plan_organization_edit(E::Delete {

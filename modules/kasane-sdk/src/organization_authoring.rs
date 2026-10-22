@@ -207,16 +207,8 @@ impl AuthoringSession {
                 subtree.clone()
             },
             dissolve: if h.kind() == ObjectKind::Part
-                && d.get_part(h.id()).is_some_and(|p| {
-                    !p.enabled
-                        || d.binding_for_scene(h.id())
-                            .is_some_and(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
-                        || d.offscreen_for_part(h.id()).is_some()
-                        || d.blend_binding_order().iter().any(|id| {
-                            let b = d.get_blend_binding(id).unwrap();
-                            b.target_id == h.id() && d.blend_binding_active(b)
-                        })
-                }) {
+                && !d.part_dissolve_state_representable(h.id())
+            {
                 unavailable("PART_DISSOLVE_STATE_UNREPRESENTABLE")
             } else if container {
                 subtree
@@ -248,24 +240,19 @@ impl AuthoringSession {
         address: &OrganizationAddress,
         intent: OrganizationEdit,
     ) -> Result<OrganizationEditPlan, SdkError> {
-        self.resolve_handle(&address.entity)?;
-        if let Some(owner) = &address.owner {
-            self.resolve_handle(owner)?;
-        }
-        if self
-            .organization_contexts
-            .get(address.id())
-            .map_or(0, |v| v.1)
-            != address.epoch
-            || self.document().organization_owner(address.id())
-                != address.owner.as_ref().map(ObjectHandle::id)
-        {
-            return Err(SdkError::new(
-                "STALE_FIELD_ADDRESS",
-                "Capture a new organization address",
-                "plan_organization_edit_at",
-            ));
-        }
+        self.validate_field_address(
+            std::iter::once(&address.entity).chain(&address.owner),
+            || {
+                self.organization_contexts
+                    .get(address.id())
+                    .map_or(0, |v| v.1)
+                    != address.epoch
+                    || self.document().organization_owner(address.id())
+                        != address.owner.as_ref().map(ObjectHandle::id)
+            },
+            "Capture a new organization address",
+            "plan_organization_edit_at",
+        )?;
         let targets = match &intent {
             OrganizationEdit::SetParameterGroup { parameter_id, .. } => {
                 parameter_id == address.id()
@@ -288,21 +275,16 @@ impl AuthoringSession {
 }
 impl EditSession<'_> {
     pub fn apply_organization_plan(&mut self, plan: &OrganizationEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_organization_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan organization",
-                "apply_organization_plan",
-            )));
-        }
-        let before = (!plan.domain.preserves_identities())
-            .then(|| crate::session::keys_in(self.candidate_document()));
-        let result = self.document().apply_organization_plan(&plan.domain);
-        self.record(result, "apply_organization_plan", "")?;
-        if let Some(before) = before {
-            self.track_removed_objects(before);
-        }
+        self.ensure_plan_version(
+            plan.version,
+            "apply_organization_plan",
+            "Replan organization",
+        )?;
+        self.apply_authoring_change(
+            "apply_organization_plan",
+            plan.domain.preserves_identities(),
+            |document| document.apply_organization_plan(&plan.domain),
+        )?;
         Ok(())
     }
     pub fn edit_organization(&mut self, intent: OrganizationEdit) -> Result<(), SdkError> {
@@ -324,13 +306,11 @@ impl EditSession<'_> {
                 }
                 self.abort_with(error)
             })?;
-        let before = (!plan.preserves_identities())
-            .then(|| crate::session::keys_in(self.candidate_document()));
-        let result = self.document().apply_organization_plan(&plan);
-        self.record(result, "edit_organization", "")?;
-        if let Some(before) = before {
-            self.track_removed_objects(before);
-        }
+        self.apply_authoring_change(
+            "edit_organization",
+            plan.preserves_identities(),
+            |document| document.apply_organization_plan(&plan),
+        )?;
         Ok(())
     }
 }

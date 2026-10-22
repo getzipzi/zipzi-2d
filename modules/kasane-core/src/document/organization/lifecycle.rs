@@ -701,20 +701,26 @@ impl Document {
         plan.affected.extend(moved);
         self.validate_compound_organization(plan)
     }
+    /// Whether removing this Part can preserve its own enabled/binding state.
+    /// Drawing order and references are checked separately by the dissolve plan.
+    pub fn part_dissolve_state_representable(&self, id: &str) -> bool {
+        self.get_part(id).is_some_and(|p| {
+            p.enabled
+                && !self
+                    .binding_for_scene(id)
+                    .is_some_and(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+                && self.offscreen_for_part(id).is_none()
+                && self
+                    .iter_active_blend_bindings_for_target(id)
+                    .next()
+                    .is_none()
+        })
+    }
     fn plan_part_dissolve(&self, plan: &mut OrganizationPlan, id: &str) -> Result<(), Status> {
-        let p = self.get_part(id).unwrap();
-        if !p.enabled
-            || self
-                .binding_for_scene(id)
-                .is_some_and(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
-            || self.offscreen_for_part(id).is_some()
-            || self
-                .iter_active_blend_bindings_for_target(id)
-                .next()
-                .is_some()
-        {
+        if !self.part_dissolve_state_representable(id) {
             return Err(Status::error("PART_DISSOLVE_STATE_UNREPRESENTABLE", id));
         }
+        let p = self.get_part(id).unwrap();
         let mut groups = plan
             .delta
             .drawing

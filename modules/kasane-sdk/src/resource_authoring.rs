@@ -155,14 +155,12 @@ impl AuthoringSession {
         address: &ResourceNameAddress,
         name: String,
     ) -> Result<ResourceEditPlan, SdkError> {
-        self.resolve_handle(&address.handle)?;
-        if self.resource_names.get(address.id()).map_or(0, |v| v.1) != address.epoch {
-            return Err(SdkError::new(
-                "STALE_FIELD_ADDRESS",
-                address.id(),
-                "plan_resource_name_patch",
-            ));
-        }
+        self.validate_field_address(
+            [&address.handle],
+            || self.resource_names.get(address.id()).map_or(0, |v| v.1) != address.epoch,
+            address.id(),
+            "plan_resource_name_patch",
+        )?;
         self.plan_resource_edit(ResourceEdit::PatchName {
             id: address.id().into(),
             expected: address.expected.clone(),
@@ -232,18 +230,10 @@ impl AuthoringSession {
 }
 impl EditSession<'_> {
     pub fn apply_resource_plan(&mut self, plan: &ResourceEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_resource_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan resources",
-                "apply_resource_plan",
-            )));
-        }
-        let before = crate::session::keys_in(self.candidate_document());
-        let r = self.document().apply_resource_plan(&plan.domain);
-        self.record(r, "apply_resource_plan", "")?;
-        self.track_removed_objects(before);
+        self.ensure_plan_version(plan.version, "apply_resource_plan", "Replan resources")?;
+        self.apply_authoring_change("apply_resource_plan", false, |document| {
+            document.apply_resource_plan(&plan.domain)
+        })?;
         Ok(())
     }
     pub fn edit_resource(&mut self, intent: ResourceEdit) -> Result<(), SdkError> {
@@ -252,10 +242,9 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_resource_edit(intent)
             .map_err(|s| self.abort_with(SdkError::from_status(s, "edit_resource", vec![])))?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let r = self.document().apply_resource_plan(&p);
-        self.record(r, "edit_resource", "")?;
-        self.track_removed_objects(before);
+        self.apply_authoring_change("edit_resource", false, |document| {
+            document.apply_resource_plan(&p)
+        })?;
         Ok(())
     }
 }
@@ -280,14 +269,12 @@ impl AuthoringSession {
         a: &AttachmentPathAddress,
         path: String,
     ) -> Result<crate::AttachmentEditPlan, SdkError> {
-        self.resolve_handle(&a.handle)?;
-        if self.resource_names.get(a.handle.id()).map_or(0, |v| v.1) != a.epoch {
-            return Err(SdkError::new(
-                "STALE_FIELD_ADDRESS",
-                a.handle.id(),
-                "plan_attachment_path_patch",
-            ));
-        }
+        self.validate_field_address(
+            [&a.handle],
+            || self.resource_names.get(a.handle.id()).map_or(0, |v| v.1) != a.epoch,
+            a.handle.id(),
+            "plan_attachment_path_patch",
+        )?;
         let expected = self
             .document()
             .get_attachment(a.handle.id())

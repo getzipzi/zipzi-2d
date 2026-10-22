@@ -88,14 +88,11 @@ impl AuthoringSession {
 }
 impl EditSession<'_> {
     pub fn apply_document_plan(&mut self, p: &DocumentEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_document_plan")?;
-        if self.base_version() != p.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan document properties",
-                "apply_document_plan",
-            )));
-        }
+        self.ensure_plan_version(
+            p.version,
+            "apply_document_plan",
+            "Replan document properties",
+        )?;
         let result = self.document().apply_document_plan(&p.domain);
         self.record(result, "apply_document_plan", "")
     }

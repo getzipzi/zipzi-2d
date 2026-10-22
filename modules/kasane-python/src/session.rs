@@ -22,6 +22,21 @@ pub(crate) struct NativeSession {
 }
 
 impl NativeSession {
+    /// Keep both checks: an edit may start while this call waits for the lock.
+    fn execute_authoring(
+        &self,
+        py: Python<'_>,
+        operation: &str,
+        execute: impl FnOnce(&mut AuthoringSession) -> Result<kasane_sdk::EditReceipt, SdkError>,
+    ) -> PyResult<(u64, u64, u64)> {
+        self.ensure_idle(py, operation)?;
+        let mut session = self.inner.lock().map_err(|_| poisoned())?;
+        self.ensure_idle(py, operation)?;
+        execute(&mut session)
+            .map(|receipt| version_tuple(receipt.after))
+            .map_err(|error| sdk_failure(py, error))
+    }
+
     fn ensure_idle(&self, py: Python<'_>, operation: &str) -> PyResult<()> {
         if self.active_edit.load(Ordering::Acquire) {
             Err(edit_failure(

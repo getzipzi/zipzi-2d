@@ -308,32 +308,29 @@ impl AuthoringSession {
         value: SceneFieldValue,
         clear_glue_pairs: bool,
     ) -> Result<SceneEditPlan, SdkError> {
-        self.resolve_handle(&address.entity)?;
-        if let Some(owner) = &address.owner {
-            self.resolve_handle(owner)?;
-        }
         let id = address.id();
-        if self.document().organization_owner(id) != address.owner.as_ref().map(ObjectHandle::id)
-            || self.organization_contexts.get(id).map_or(0, |v| v.1) != address.owner_epoch
-            || self
-                .scene_field_epochs
-                .get(&(id.into(), SceneField::Context))
-                .copied()
-                .unwrap_or(0)
-                != address.context_epoch
-            || self
-                .scene_field_epochs
-                .get(&(id.into(), address.expected.field()))
-                .copied()
-                .unwrap_or(0)
-                != address.field_epoch
-        {
-            return Err(SdkError::new(
-                "STALE_FIELD_ADDRESS",
-                "Capture a new scene field address",
-                "plan_scene_field_patch",
-            ));
-        }
+        self.validate_field_address(
+            std::iter::once(&address.entity).chain(&address.owner),
+            || {
+                self.document().organization_owner(id)
+                    != address.owner.as_ref().map(ObjectHandle::id)
+                    || self.organization_contexts.get(id).map_or(0, |v| v.1) != address.owner_epoch
+                    || self
+                        .scene_field_epochs
+                        .get(&(id.into(), SceneField::Context))
+                        .copied()
+                        .unwrap_or(0)
+                        != address.context_epoch
+                    || self
+                        .scene_field_epochs
+                        .get(&(id.into(), address.expected.field()))
+                        .copied()
+                        .unwrap_or(0)
+                        != address.field_epoch
+            },
+            "Capture a new scene field address",
+            "plan_scene_field_patch",
+        )?;
         self.plan_scene_edit(SceneEdit::Patch {
             id: id.into(),
             expected: address.expected.clone(),
@@ -379,20 +376,18 @@ impl AuthoringSession {
         address: &DrawingGroupAddress,
         range: [i32; 2],
     ) -> Result<SceneEditPlan, SdkError> {
-        self.resolve_handle(&address.entity)?;
-        if self
-            .scene_field_epochs
-            .get(&(address.id().into(), SceneField::Context))
-            .copied()
-            .unwrap_or(0)
-            != address.epoch
-        {
-            return Err(SdkError::new(
-                "STALE_FIELD_ADDRESS",
-                "Drawing group membership or range changed",
-                "plan_drawing_range_patch",
-            ));
-        }
+        self.validate_field_address(
+            [&address.entity],
+            || {
+                self.scene_field_epochs
+                    .get(&(address.id().into(), SceneField::Context))
+                    .copied()
+                    .unwrap_or(0)
+                    != address.epoch
+            },
+            "Drawing group membership or range changed",
+            "plan_drawing_range_patch",
+        )?;
         self.plan_scene_edit(SceneEdit::SetDrawingRange {
             owner: if address.id() == self.document().id() {
                 String::new()
@@ -406,14 +401,7 @@ impl AuthoringSession {
 }
 impl EditSession<'_> {
     pub fn apply_scene_plan(&mut self, plan: &SceneEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_scene_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan scene edit",
-                "apply_scene_plan",
-            )));
-        }
+        self.ensure_plan_version(plan.version, "apply_scene_plan", "Replan scene edit")?;
         plan.control
             .check()
             .map_err(|s| self.abort_with(error(s, "apply_scene_plan")))?;
@@ -424,10 +412,9 @@ impl EditSession<'_> {
         if let Some(cost) = plan.domain.cost() {
             self.binding_cost = Some(cost);
         }
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_scene_plan(&plan.domain);
-        self.record(result, "apply_scene_plan", "")?;
-        self.track_removed_objects(before);
+        self.apply_authoring_change("apply_scene_plan", false, |document| {
+            document.apply_scene_plan(&plan.domain)
+        })?;
         self.binding_controls.push(plan.control.clone());
         Ok(())
     }
@@ -448,10 +435,9 @@ impl EditSession<'_> {
         if let Some(cost) = domain.cost() {
             self.binding_cost = Some(cost);
         }
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_scene_plan(&domain);
-        self.record(result, "edit_scene", "")?;
-        self.track_removed_objects(before);
+        self.apply_authoring_change("edit_scene", false, |document| {
+            document.apply_scene_plan(&domain)
+        })?;
         self.binding_controls.push(control);
         Ok(())
     }

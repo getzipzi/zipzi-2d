@@ -81,12 +81,9 @@ impl NativeSession {
         py: Python<'_>,
         plan: &NativeSceneContentPlan,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "execute_scene_content_plan")?;
-        let mut s = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "execute_scene_content_plan")?;
-        s.execute_scene_content_plan(&plan.inner)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "execute_scene_content_plan", |session| {
+            session.execute_scene_content_plan(&plan.inner)
+        })
     }
     fn scene_content_address_json(
         &self,

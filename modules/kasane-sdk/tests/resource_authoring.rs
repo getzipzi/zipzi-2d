@@ -72,6 +72,60 @@ fn create(s: &mut AuthoringSession, n: u32) {
         },
     );
 }
+
+#[test]
+fn resource_field_addresses_distinguish_changed_fields_from_recreated_objects() {
+    let mut s = session();
+    create(&mut s, 10);
+    let address = s.resource_name_address(&id(10)).unwrap();
+    let plan = s
+        .plan_resource_name_patch(&address, "Renamed".into())
+        .unwrap();
+    s.execute_resource_plan(&plan).unwrap();
+    assert_eq!(
+        s.plan_resource_name_patch(&address, "Old address".into())
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "STALE_FIELD_ADDRESS"
+    );
+    s.undo().unwrap();
+    // Restoring the old value must not restore the old field address.
+    assert_eq!(
+        s.plan_resource_name_patch(&address, "After undo".into())
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "STALE_FIELD_ADDRESS"
+    );
+    s.edit("Replace identity", None, |edit| {
+        edit.edit_resource(R::Delete {
+            id: id(10),
+            replacement: None,
+        })?;
+        edit.edit_resource(R::Create {
+            id: id(10),
+            name: String::new(),
+            before: None,
+        })
+    })
+    .unwrap();
+    // Identity validation takes precedence over stale field context.
+    assert_eq!(
+        s.plan_resource_name_patch(&address, "Reused UUID".into())
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "STALE_HANDLE"
+    );
+    let fresh = s.resource_name_address(&id(10)).unwrap();
+    let plan = s
+        .plan_resource_name_patch(&fresh, "Fresh address".into())
+        .unwrap();
+    s.execute_resource_plan(&plan).unwrap();
+    assert_eq!(s.asset(&id(10)).unwrap().name, "Fresh address");
+}
+
 fn content() -> ImageContent {
     kasane_sdk::prepare_png_asset(
         &id(10),
@@ -718,4 +772,39 @@ fn committing_an_unchanged_staged_load_consumes_the_request_without_history() {
             .as_ref(),
         "CANCELLED"
     );
+}
+
+#[test]
+fn stale_resource_plan_aborts_all_prior_candidate_changes() {
+    let mut s = session();
+    let plan = s
+        .plan_resource_edit(R::Create {
+            id: id(10),
+            name: "Planned".into(),
+            before: None,
+        })
+        .unwrap();
+    create(&mut s, 20);
+    let version = s.version();
+    let history = s.history_lengths();
+    let mut edit = s.begin_edit("Mixed candidate", None).unwrap();
+    edit.edit_resource(R::Create {
+        id: id(30),
+        name: "Candidate only".into(),
+        before: None,
+    })
+    .unwrap();
+    let error = edit.apply_resource_plan(&plan).unwrap_err();
+    assert_eq!(error.code.as_ref(), "STALE_PLAN");
+    assert_eq!(error.operation, "apply_resource_plan");
+    assert_eq!(
+        edit.apply_resource_plan(&plan).unwrap_err().code.as_ref(),
+        "EDIT_ABORTED"
+    );
+    assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_lengths(), history);
+    assert!(s.asset(&id(10)).is_none());
+    assert!(s.asset(&id(30)).is_none());
+    assert!(s.asset(&id(20)).is_some());
 }

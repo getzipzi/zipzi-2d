@@ -130,13 +130,9 @@ impl NativeSession {
         py: Python<'_>,
         plan: &NativeResourcePlan,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "execute_resource_plan")?;
-        let mut session = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "execute_resource_plan")?;
-        session
-            .execute_resource_plan(&plan.inner)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "execute_resource_plan", |session| {
+            session.execute_resource_plan(&plan.inner)
+        })
     }
     fn plan_document_authoring_json(
         &self,
@@ -156,13 +152,9 @@ impl NativeSession {
         py: Python<'_>,
         plan: &NativeDocumentPlan,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "execute_document_plan")?;
-        let mut session = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "execute_document_plan")?;
-        session
-            .execute_document_plan(&plan.inner)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "execute_document_plan", |session| {
+            session.execute_document_plan(&plan.inner)
+        })
     }
     fn plan_attachment_authoring_json(
         &self,
@@ -182,13 +174,9 @@ impl NativeSession {
         py: Python<'_>,
         plan: &NativeAttachmentPlan,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "execute_attachment_plan")?;
-        let mut session = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "execute_attachment_plan")?;
-        session
-            .execute_attachment_plan(&plan.inner)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "execute_attachment_plan", |session| {
+            session.execute_attachment_plan(&plan.inner)
+        })
     }
     fn image_load_token(&self, py: Python<'_>, id: &str) -> PyResult<NativeImageLoadToken> {
         self.ensure_idle(py, "image_load_token")?;
@@ -223,12 +211,9 @@ impl NativeSession {
         text: &str,
     ) -> PyResult<(u64, u64, u64)> {
         let content = parse_resource(text)?;
-        self.ensure_idle(py, "replace_image_content")?;
-        let mut s = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "replace_image_content")?;
-        s.replace_image_content(&token.inner, content)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "replace_image_content", |session| {
+            session.replace_image_content(&token.inner, content)
+        })
     }
     fn replace_attachment_content(
         &self,
@@ -236,12 +221,9 @@ impl NativeSession {
         token: &NativeAttachmentLoadToken,
         bytes: Option<Vec<u8>>,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "replace_attachment_content")?;
-        let mut s = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "replace_attachment_content")?;
-        s.replace_attachment_content(&token.inner, bytes.map(Arc::new))
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "replace_attachment_content", |session| {
+            session.replace_attachment_content(&token.inner, bytes.map(Arc::new))
+        })
     }
     fn prepare_image_content_json(
         &self,
@@ -433,12 +415,8 @@ impl NativeSession {
         token: &NativeImageLoadToken,
         image: &NativePreparedImageContent,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "replace_prepared_image_content")?;
-        let mut session = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "replace_prepared_image_content")?;
-        session
-            .replace_prepared_image_content(&token.inner, &image.inner)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "replace_prepared_image_content", |session| {
+            session.replace_prepared_image_content(&token.inner, &image.inner)
+        })
     }
 }

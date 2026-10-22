@@ -97,13 +97,9 @@ impl NativeSession {
         py: Python<'_>,
         plan: &NativeScenePlan,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "execute_scene_plan")?;
-        let mut session = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "execute_scene_plan")?;
-        session
-            .execute_scene_plan(&plan.inner)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "execute_scene_plan", |session| {
+            session.execute_scene_plan(&plan.inner)
+        })
     }
     fn scene_projection_json(&self) -> PyResult<String> {
         let session = self.inner.lock().map_err(|_| poisoned())?;

@@ -459,6 +459,24 @@ impl AuthoringSession {
             kind,
         })
     }
+    /// Resolve captured identities before inspecting domain-specific epochs or values.
+    /// A reused UUID must report a stale handle even if its final fields match.
+    pub(crate) fn validate_field_address<'a>(
+        &self,
+        handles: impl IntoIterator<Item = &'a ObjectHandle>,
+        is_stale: impl FnOnce() -> bool,
+        message: &str,
+        operation: &'static str,
+    ) -> Result<(), SdkError> {
+        for handle in handles {
+            self.resolve_handle(handle)?;
+        }
+        if is_stale() {
+            return Err(SdkError::new("STALE_FIELD_ADDRESS", message, operation));
+        }
+        Ok(())
+    }
+
     pub fn resolve_handle(&self, handle: &ObjectHandle) -> Result<(), SdkError> {
         let key = ObjectKey {
             kind: handle.kind,

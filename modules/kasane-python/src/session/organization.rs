@@ -47,11 +47,8 @@ impl NativeSession {
         py: Python<'_>,
         plan: &NativeOrganizationPlan,
     ) -> PyResult<(u64, u64, u64)> {
-        self.ensure_idle(py, "execute_organization_plan")?;
-        let mut s = self.inner.lock().map_err(|_| poisoned())?;
-        self.ensure_idle(py, "execute_organization_plan")?;
-        s.execute_organization_plan(&plan.inner)
-            .map(|r| version_tuple(r.after))
-            .map_err(|e| sdk_failure(py, e))
+        self.execute_authoring(py, "execute_organization_plan", |session| {
+            session.execute_organization_plan(&plan.inner)
+        })
     }
 }

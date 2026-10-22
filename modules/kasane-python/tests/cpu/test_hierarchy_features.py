@@ -826,3 +826,24 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
             reopened = kasane.open_project(saved.manifest)
             self.assertEqual(reopened.asset(ASSET).width, 2)
             self.assertEqual(reopened.validate_structure(), [])
+
+    def test_resource_plan_cannot_publish_during_an_active_edit(self):
+        model = session()
+        plan = model.plan_resource_authoring({
+            "operation": "create", "id": ASSET, "name": "Planned",
+        })
+        before = model.version
+        history = model.history_lengths()
+        edit = model.edit("Pending candidate")
+        try:
+            with self.assertRaises(kasane.SdkFailure) as failure:
+                model.execute_resource_plan(plan)
+            self.assertEqual(failure.exception.code, "EDIT_ACTIVE")
+            self.assertEqual(failure.exception.operation, "execute_resource_plan")
+            self.assertEqual(model.version, before)
+            self.assertEqual(model.history_lengths(), history)
+        finally:
+            edit.cancel()
+        model.execute_resource_plan(plan)
+        self.assertEqual(model.asset(ASSET).name, "Planned")
+        self.assertEqual(model.history_lengths(), (history[0] + 1, 0))
