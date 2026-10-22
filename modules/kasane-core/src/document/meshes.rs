@@ -47,6 +47,9 @@ impl Document {
     }
 
     pub fn create_mesh(&mut self, mut mesh: Mesh) -> EditResult {
+        if let Err(status) = self.authoring_unlocked(&mesh.part_id) {
+            return self.failed(status);
+        }
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -68,7 +71,14 @@ impl Document {
         if self.contains_id(&mesh.id) {
             return self.failed(Status::error("DUPLICATE_ID", "Object ID already exists."));
         }
-        if !self.content.assets.contains_key(&mesh.texture_asset_id) {
+        if !mesh.texture_asset_id.validate().is_ok() {
+            return self.failed(mesh.texture_asset_id.validate());
+        }
+        if mesh
+            .texture_asset_id
+            .resolved_id()
+            .is_some_and(|id| !self.content.assets.contains_key(id))
+        {
             return self.failed(Status::error(
                 "MISSING_ASSET",
                 "Texture asset does not exist.",
@@ -214,7 +224,14 @@ impl Document {
                 }
             }
         }
-        if !self.content.assets.contains_key(&mesh.texture_asset_id) {
+        if !mesh.texture_asset_id.validate().is_ok() {
+            return self.failed(mesh.texture_asset_id.validate());
+        }
+        if mesh
+            .texture_asset_id
+            .resolved_id()
+            .is_some_and(|id| !self.content.assets.contains_key(id))
+        {
             return self.failed(Status::error(
                 "MISSING_ASSET",
                 "Texture asset does not exist.",

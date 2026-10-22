@@ -35,7 +35,7 @@ pub fn create_base_document() -> Document {
             id: MESH_A.to_string(),
             runtime_id: "MeshA".to_string(),
             name: "MeshA".to_string(),
-            texture_asset_id: ASSET.to_string(),
+            texture_asset_id: (ASSET.to_string()).into(),
             vertex_ids: vec![1, 2, 3],
             base_positions: vec![
                 Vec2::new(0.0, 0.0),
@@ -58,7 +58,7 @@ pub fn create_base_document() -> Document {
             id: MESH_B.to_string(),
             runtime_id: "MeshB".to_string(),
             name: "MeshB".to_string(),
-            texture_asset_id: ASSET.to_string(),
+            texture_asset_id: (ASSET.to_string()).into(),
             vertex_ids: vec![10, 20, 30],
             base_positions: vec![
                 Vec2::new(0.0, 0.0),

@@ -32,6 +32,7 @@ pub struct MeshPlan {
     pub mask: Option<MaskId>,
     pub reads_destination: bool,
     mask_sources: Vec<String>,
+    renderable: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -47,6 +48,7 @@ pub struct TargetPlan {
     /// Raw mask inputs retain separate bounds, including hidden source meshes.
     pub bounds: Bounds2,
     mask_sources: Vec<String>,
+    renderable: bool,
 }
 
 impl TargetPlan {
@@ -169,7 +171,7 @@ impl ScenePlan {
         if !status.is_ok() {
             return Err(status);
         }
-        for mesh in &frame.drawables {
+        for mesh in frame.drawables.iter().filter(|d| d.renderable) {
             let texture = textures
                 .texture_info(&mesh.texture_asset_id)
                 .ok_or_else(|| Status::error("MISSING_TEXTURE", &mesh.texture_asset_id))?;
@@ -179,17 +181,17 @@ impl ScenePlan {
         }
         let same_structure = self.meshes.len() == frame.drawables.len()
             && self.targets.len() == frame.offscreens.len() + 1
-            && self
-                .meshes
-                .iter()
-                .zip(&frame.drawables)
-                .all(|(a, b)| a.id == b.id && a.mask_sources == b.masks)
+            && self.meshes.iter().zip(&frame.drawables).all(|(a, b)| {
+                a.id == b.id && a.mask_sources == b.masks && a.renderable == b.renderable
+            })
             && self
                 .targets
                 .iter()
                 .skip(1)
                 .zip(&frame.offscreens)
-                .all(|(a, b)| a.id == b.id && a.mask_sources == b.masks);
+                .all(|(a, b)| {
+                    a.id == b.id && a.mask_sources == b.masks && a.renderable == b.renderable
+                });
         if !same_structure {
             self.rebuild_structure(frame);
         }
@@ -208,7 +210,8 @@ impl ScenePlan {
         }
         if frame.render_plan.is_empty() {
             self.ordered.clear();
-            self.ordered.extend(0..frame.drawables.len());
+            self.ordered
+                .extend((0..frame.drawables.len()).filter(|&i| frame.drawables[i].renderable));
             self.ordered
                 .sort_unstable_by_key(|&i| (frame.drawables[i].render_order, i));
             for &i in &self.ordered {
@@ -230,16 +233,20 @@ impl ScenePlan {
                     }
                     RenderCommand::DrawMesh { mesh_id } => {
                         let id = self.mesh_ids[mesh_id];
+                        if !frame.drawables[id.0].renderable {
+                            continue;
+                        }
                         let target = *self.stack.last().unwrap();
                         self.meshes[id.0].target = target;
                         self.targets[target.0].items.push(TargetItem::Draw(id));
                         let mesh = &frame.drawables[id.0];
-                        if mesh.visible
+                        if mesh.renderable
+                            && mesh.visible
                             && mesh.opacity > 0.0
                             && !mesh.indices.is_empty()
                             && self.stack.iter().skip(1).all(|id| {
                                 let group = &frame.offscreens[id.0 - 1];
-                                group.enabled && group.opacity > 0.0
+                                group.renderable && group.enabled && group.opacity > 0.0
                             })
                         {
                             for id in &self.stack {
@@ -303,7 +310,7 @@ impl ScenePlan {
                 let bounds = match item {
                     TargetItem::Draw(mesh_id) => {
                         let d = &frame.drawables[mesh_id.0];
-                        if d.visible && d.opacity > 0.0 && !d.indices.is_empty() {
+                        if d.renderable && d.visible && d.opacity > 0.0 && !d.indices.is_empty() {
                             self.bounds[mesh_id.0]
                         } else {
                             None
@@ -357,9 +364,10 @@ impl ScenePlan {
             self.meshes.push(MeshPlan {
                 id: mesh.id.clone(),
                 target: TargetId::MAIN,
-                mask: intern(&mesh.masks),
+                mask: mesh.renderable.then(|| intern(&mesh.masks)).flatten(),
                 reads_destination: false,
                 mask_sources: mesh.masks.clone(),
+                renderable: mesh.renderable,
             });
         }
         self.targets.push(TargetPlan {
@@ -371,6 +379,7 @@ impl ScenePlan {
             items: Vec::new(),
             bounds: Bounds2::default(),
             mask_sources: Vec::new(),
+            renderable: true,
         });
         for (i, group) in frame.offscreens.iter().enumerate() {
             self.target_ids.insert(group.id.clone(), TargetId(i + 1));
@@ -378,11 +387,12 @@ impl ScenePlan {
                 id: group.id.clone(),
                 parent: TargetId::MAIN,
                 active: false,
-                mask: intern(&group.masks),
+                mask: group.renderable.then(|| intern(&group.masks)).flatten(),
                 reads_destination: false,
                 items: Vec::new(),
                 bounds: Bounds2::default(),
                 mask_sources: group.masks.clone(),
+                renderable: group.renderable,
             });
         }
     }

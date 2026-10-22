@@ -106,7 +106,7 @@ impl Exporter<'_> {
             let TextureBinding {
                 texture,
                 atlas_guid,
-            } = &textures[&m.texture_asset_id];
+            } = &textures[m.texture_asset_id.as_str()];
             let input = self.graph.reserve("CTextureInputExtension");
             let asset = self.doc.get_asset(&m.texture_asset_id).unwrap();
             let region = self.graph.add(

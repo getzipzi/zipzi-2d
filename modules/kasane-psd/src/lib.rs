@@ -572,7 +572,7 @@ impl Builder {
             id: mesh_id.clone(),
             runtime_id,
             name: name.into(),
-            texture_asset_id: asset_id,
+            texture_asset_id: asset_id.into(),
             part_id: parent_id.into(),
             vertex_ids: vec![1, 2, 3, 4],
             base_positions: vec![

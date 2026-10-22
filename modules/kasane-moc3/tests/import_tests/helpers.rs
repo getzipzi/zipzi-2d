@@ -247,7 +247,7 @@ pub(crate) fn create_m1_fixture_doc() -> Document {
         id: id(5),
         name: "QuadMesh".to_string(),
         runtime_id: "ArtMeshQuad".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         vertex_ids: vec![1, 2, 3, 4],
         base_positions: vec![
             Vec2::new(220.0, 140.0),

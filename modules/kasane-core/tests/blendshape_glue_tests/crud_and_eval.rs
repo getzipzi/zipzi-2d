@@ -139,8 +139,8 @@ fn test_glue_crud_and_references() {
         id: GLUE_ID.to_string(),
         runtime_id: "Glue0".to_string(),
         name: "Glue 0".to_string(),
-        mesh_a_id: MESH_A.to_string(),
-        mesh_b_id: MESH_B.to_string(),
+        mesh_a_id: (MESH_A.to_string()).into(),
+        mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![
             GlueVertexPair {
                 vertex_a: 1,
@@ -332,8 +332,8 @@ fn test_glue_evaluation() {
         id: GLUE_ID.to_string(),
         runtime_id: "Glue0".to_string(),
         name: "Glue 0".to_string(),
-        mesh_a_id: MESH_A.to_string(),
-        mesh_b_id: MESH_B.to_string(),
+        mesh_a_id: (MESH_A.to_string()).into(),
+        mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
             vertex_a: 1,  // at (0, 0)
             vertex_b: 10, // at (10, 20)

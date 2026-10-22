@@ -613,7 +613,9 @@ pub(crate) fn encode_with_animation(
     let original = doc;
     let doc = projection.as_ref().unwrap_or(doc);
     let mut report = inspect_with_animation(original, animation)?;
-    if options.loss_policy == LossPolicy::Reject && report.has_loss() {
+    if !original.scene_export_omissions().is_empty()
+        || (options.loss_policy == LossPolicy::Reject && report.has_loss())
+    {
         return Err(Cmo3Error::Unsupported(report));
     }
     // The common model3 Name extension is a label we can represent natively.

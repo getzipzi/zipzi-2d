@@ -460,7 +460,7 @@ fn scene() -> (
         for (id, owner, parent) in [(&m, &p, t.as_str()), (&n, &c, "")] {
             e.create_mesh(Mesh {
                 id: id.clone(),
-                texture_asset_id: asset.clone(),
+                texture_asset_id: (asset.clone()).into(),
                 part_id: owner.clone(),
                 deformer_id: parent.into(),
                 draw_order: Some(0.),

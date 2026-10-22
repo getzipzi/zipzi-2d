@@ -202,3 +202,50 @@ fn group_bounds_follow_nesting_order_and_exclude_hidden_mask_sources() {
     assert_eq!(scene.targets()[2].bounds, scene.targets()[1].bounds);
     assert_eq!(scene.masks()[0].bounds.position, Vec2::new(1000., 0.));
 }
+
+#[test]
+fn unavailable_geometry_slots_need_no_texture_and_never_fall_back_to_color_draws() {
+    let mut pending = mesh("pending");
+    pending.texture_asset_id.clear();
+    pending.renderable = false;
+    let mut user = mesh("masked");
+    user.masks = vec![pending.id.clone()];
+    user.renderable = false;
+    let mut frame = DrawableFrame {
+        drawables: vec![pending, user],
+        ..Default::default()
+    };
+    let mut scene = ScenePlan::default();
+    scene
+        .update(&frame, &HashMap::<String, TextureInfo>::new())
+        .unwrap();
+    assert_eq!(scene.meshes().len(), 2);
+    assert!(scene.targets()[0].items.is_empty());
+    assert!(scene.masks().is_empty());
+    // A later valid projection changes availability without changing source slots.
+    frame.drawables[0].texture_asset_id = "atlas".into();
+    frame.drawables[0].renderable = true;
+    frame.drawables[1].renderable = true;
+    scene.update(&frame, &textures()).unwrap();
+    assert_eq!(scene.mesh_id("masked"), Some(MeshId(1)));
+    assert_eq!(scene.targets()[0].items.len(), 2);
+    assert_eq!(scene.masks().len(), 1);
+}
+
+#[test]
+fn disabled_composite_content_stays_out_of_the_main_target_when_the_plan_is_empty() {
+    let mut frame = frame();
+    for mesh in &mut frame.drawables {
+        mesh.renderable = false;
+        mesh.texture_asset_id.clear();
+    }
+    frame.offscreens[0].renderable = false;
+    frame.render_plan.clear();
+    let mut scene = ScenePlan::default();
+    scene
+        .update(&frame, &HashMap::<String, TextureInfo>::new())
+        .unwrap();
+    assert!(scene.targets()[0].items.is_empty());
+    assert_eq!(scene.active_target_count(), 0);
+    assert!(scene.masks().is_empty());
+}

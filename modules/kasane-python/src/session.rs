@@ -71,3 +71,8 @@ pub(crate) use binding::{NativeBindingFieldAddress, NativeBindingPlan, NativeCon
 
 mod organization;
 pub(crate) use organization::NativeOrganizationPlan;
+
+mod scene_authoring;
+pub(crate) use scene_authoring::{
+    NativeDrawingGroupAddress, NativeSceneFieldAddress, NativeScenePlan,
+};

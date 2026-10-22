@@ -11,7 +11,7 @@ pub(crate) fn mesh_from_record(
     Ok(kasane_core::Mesh {
         id,
         name,
-        texture_asset_id,
+        texture_asset_id: texture_asset_id.into(),
         vertex_ids,
         base_positions: positions
             .into_iter()
@@ -38,7 +38,7 @@ pub(crate) fn mesh_record_tuple(mesh: kasane_core::Mesh, version: Version) -> Me
         (
             mesh.id,
             mesh.name,
-            mesh.texture_asset_id,
+            mesh.texture_asset_id.as_str().to_owned(),
             (
                 mesh.vertex_ids,
                 mesh.base_positions

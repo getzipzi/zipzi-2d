@@ -99,6 +99,16 @@ fn validate_frame_with(
             return Status::error("MISSING_MASK", &drawable.id);
         }
     }
+    for drawable in frame.drawables.iter().filter(|d| d.renderable) {
+        if drawable.masks.iter().any(|id| {
+            frame
+                .drawables
+                .iter()
+                .any(|source| source.id == *id && !source.renderable)
+        }) {
+            return Status::error("UNAVAILABLE_MASK", &drawable.id);
+        }
+    }
     let mut offscreen_ids = HashSet::new();
     for offscreen in &frame.offscreens {
         if offscreen.id.is_empty()
@@ -118,6 +128,16 @@ fn validate_frame_with(
                 .any(|v| !v.is_finite())
         {
             return Status::error("NON_FINITE", format!("{}.appearance", offscreen.id));
+        }
+        if offscreen.renderable
+            && offscreen.masks.iter().any(|id| {
+                frame
+                    .drawables
+                    .iter()
+                    .any(|source| source.id == *id && !source.renderable)
+            })
+        {
+            return Status::error("UNAVAILABLE_MASK", &offscreen.id);
         }
         if !valid_blend_mode(offscreen.blend_mode) {
             return Status::error(
@@ -155,7 +175,10 @@ fn validate_frame_with(
         for command in &frame.render_plan {
             match command {
                 RenderCommand::BeginOffscreen { offscreen_id } => {
-                    if !offscreen_ids.contains(offscreen_id.as_str())
+                    if !frame
+                        .offscreens
+                        .iter()
+                        .any(|o| o.id == *offscreen_id && o.renderable)
                         || !begun.insert(offscreen_id.as_str())
                     {
                         return Status::error("INVALID_RENDER_PLAN", offscreen_id);
@@ -174,7 +197,12 @@ fn validate_frame_with(
                     stack.push(offscreen_id);
                 }
                 RenderCommand::DrawMesh { mesh_id } => {
-                    if !ids.contains(mesh_id.as_str()) || !drawn.insert(mesh_id.as_str()) {
+                    if !frame
+                        .drawables
+                        .iter()
+                        .any(|d| d.id == *mesh_id && d.renderable)
+                        || !drawn.insert(mesh_id.as_str())
+                    {
                         return Status::error("INVALID_RENDER_PLAN", mesh_id);
                     }
                 }
@@ -185,10 +213,13 @@ fn validate_frame_with(
                 }
             }
         }
-        if !stack.is_empty() || begun.len() != offscreen_ids.len() || drawn.len() != ids.len() {
+        if !stack.is_empty()
+            || begun.len() != frame.offscreens.iter().filter(|o| o.renderable).count()
+            || drawn.len() != frame.drawables.iter().filter(|d| d.renderable).count()
+        {
             return Status::error(
                 "INVALID_RENDER_PLAN",
-                "Render plan must contain every drawable and balanced offscreen exactly once.",
+                "Render plan must contain every available drawable and balanced offscreen exactly once.",
             );
         }
     }

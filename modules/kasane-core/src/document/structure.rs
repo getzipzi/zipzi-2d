@@ -268,8 +268,15 @@ impl Document {
         issues
     }
 
-    fn validate_mesh_snapshot(&self, mesh: &Mesh) -> Status {
-        if !self.content.assets.contains_key(&mesh.texture_asset_id) {
+    pub(in crate::document) fn validate_mesh_snapshot(&self, mesh: &Mesh) -> Status {
+        if !mesh.texture_asset_id.validate().is_ok() {
+            return mesh.texture_asset_id.validate();
+        }
+        if mesh
+            .texture_asset_id
+            .resolved_id()
+            .is_some_and(|id| !self.content.assets.contains_key(id))
+        {
             return Status::error("MISSING_ASSET", "Texture asset does not exist.");
         }
         let status = self.validate_mesh_properties(mesh);

@@ -179,7 +179,7 @@ fn test_structural_editing() {
         id: id(101),
         name: "NewMesh".to_string(),
         runtime_id: "ArtMeshNew".to_string(),
-        texture_asset_id: doc.asset_order()[0].clone(),
+        texture_asset_id: (doc.asset_order()[0].clone()).into(),
         vertex_ids: vec![1, 2, 3],
         base_positions: vec![
             Vec2::new(100.0, 100.0),
@@ -606,7 +606,10 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
     let mut zero_mesh_glues = 0;
     for g_id in glues {
         let g = doc.get_glue(g_id).unwrap();
-        if zero_mesh_ids.contains(&g.mesh_a_id) || zero_mesh_ids.contains(&g.mesh_b_id) {
+        if zero_mesh_ids
+            .iter()
+            .any(|id| g.mesh_a_id == *id || g.mesh_b_id == *id)
+        {
             zero_mesh_glues += 1;
             assert!(
                 !g.pairs.is_empty(),
@@ -914,7 +917,7 @@ fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
                 .create_mesh(Mesh {
                     id: id(820 + depth),
                     runtime_id: format!("Mesh{depth}"),
-                    texture_asset_id: id(801),
+                    texture_asset_id: (id(801)).into(),
                     deformer_id: transform_id.clone(),
                     vertex_ids: vec![1, 2, 3],
                     base_positions: positions,

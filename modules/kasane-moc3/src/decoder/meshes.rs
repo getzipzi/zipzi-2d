@@ -288,7 +288,7 @@ impl<'a> Moc3DecoderContext<'a> {
                         } else {
                             runtime_id.clone()
                         },
-                        texture_asset_id,
+                        texture_asset_id: texture_asset_id.into(),
                         vertex_ids,
                         base_positions: base.positions.clone(),
                         uvs,

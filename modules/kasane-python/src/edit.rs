@@ -88,6 +88,7 @@ enum Command {
     SetMotionTiming(String, f32, f32, bool, Option<f32>, Option<f32>),
     SetPose(kasane_core::document::PoseAsset),
     EditPose(kasane_core::document::PoseEdit),
+    EditScene(kasane_core::document::SceneEdit),
     EditOrganization(kasane_core::document::OrganizationEdit),
     SetPhysics(kasane_core::document::PhysicsAsset),
     EditPhysics(kasane_core::document::PhysicsEdit),
@@ -210,3 +211,5 @@ impl Drop for NativeEdit {
 }
 
 mod organization;
+
+mod scene;

@@ -62,6 +62,9 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<session::NativeMotionPlan>()?;
     module.add_class::<session::NativePosePlan>()?;
     module.add_class::<session::NativeOrganizationPlan>()?;
+    module.add_class::<session::NativeScenePlan>()?;
+    module.add_class::<session::NativeSceneFieldAddress>()?;
+    module.add_class::<session::NativeDrawingGroupAddress>()?;
     module.add_class::<NativeEdit>()?;
     module.add_class::<NativeExpressionPreview>()?;
     module.add_class::<NativeMotionPreview>()?;

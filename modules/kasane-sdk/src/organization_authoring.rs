@@ -193,11 +193,6 @@ impl AuthoringSession {
             reorder: subtree.clone(),
             duplicate: if unresolved_group_copy {
                 unavailable("UNRESOLVED_PARAMETER_COPY_CONFLICT")
-            } else if matches!(
-                h.kind(),
-                ObjectKind::Mesh | ObjectKind::Transform | ObjectKind::Offscreen
-            ) {
-                unavailable("USE_SCENE_AUTHORING")
             } else {
                 subtree.clone()
             },

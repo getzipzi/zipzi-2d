@@ -11,6 +11,8 @@ pub mod physics;
 pub mod preview;
 mod shared_vec;
 pub use shared_vec::SharedVec;
+mod scene_reference;
+pub use scene_reference::SceneReference;
 pub mod types;
 
 pub use document::Document;

@@ -56,6 +56,7 @@ pub(super) struct GlueVertexSlots {
 /// Immutable evaluation inputs, owned by the document and invalidated by structural edits.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedEvaluation {
+    pub(super) scene: Arc<crate::document::SceneProjection>,
     pub(super) parts: Vec<String>,
     pub(super) part_slots: HashMap<String, usize>,
     pub(super) part_parents: Vec<Option<usize>>,
@@ -280,6 +281,7 @@ impl PreparedEvaluation {
             blend_binding_selections.insert(id.clone(), slot);
         }
         Ok(Self {
+            scene: doc.scene_projection(),
             glue_vertices: doc
                 .glue_order()
                 .iter()

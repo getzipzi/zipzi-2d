@@ -111,7 +111,7 @@ impl WgpuMaskPool {
         self.target_keys.clear();
 
         for drawable in &frame.drawables {
-            if drawable.masks.is_empty() {
+            if !drawable.renderable || drawable.masks.is_empty() {
                 continue;
             }
             let consumer = prepared

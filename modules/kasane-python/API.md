@@ -751,7 +751,7 @@ zero-byte file. Imported path conveniences bind loaded files to stable IDs.
 contains persistent axis IDs, samples with `{id, value}` (and constraint
 `weight`), keyform sample ID combinations, and shared table `base_sample_id`.
 Numeric `keys`, parallel weights and base indices in the tuple snapshots are
-compiled views. Native projects use directory-project version 16.
+compiled views. Native projects use directory-project version 17.
 
 `Session.plan_binding_authoring(intent)` and `Edit.binding_authoring(intent)`
 accept the Rust `BindingAuthoringEdit` enum representation. `Grid` supports
@@ -811,3 +811,73 @@ snapshots also support driven Rotation parents. A varying ancestor driver,
 nonlinear Warp inverse, singular map or unproved transform-subtree preservation
 returns a specific error. Legal Rotation/Warp subtree moves retain
 `KeepLocalData` support.
+
+### Scene lifecycle and collections (C5)
+
+`Session.plan_scene_authoring(intent)`, `execute_scene_plan(plan)` and
+`Edit.scene_authoring(intent)` use the same native lifecycle rules. Native
+projects now use directory-project version **17** (core schema **8**).
+
+```python
+from uuid import uuid4
+
+mesh_id = str(uuid4())
+plan = model.plan_scene_authoring({
+    "operation": "create", "id": mesh_id, "name": "Mesh",
+    "object": {"kind": "mesh", "texture": {"kind": "unspecified"}},
+})
+model.execute_scene_plan(plan)
+address = model.scene_field_address(mesh_id, "label")
+model.execute_scene_plan(model.plan_scene_field_patch(
+    address, {"field": "label", "value": "Face"}))
+```
+
+Creation kinds are `mesh`, `warp` (optional `[min_x, min_y, max_x, max_y]` bounds),
+`rotation`, `offscreen` (requires a unique Part owner) and `glue`. Mesh texture
+and Glue endpoint references are `{"kind": "unspecified"}`,
+`{"kind": "resolved", "object_id": id}` or
+`{"kind": "unresolved", "runtime_id": imported_id}`. Resolved targets must
+exist. Empty Mesh geometry and missing texture/endpoints remain native data;
+`scene_projection()` reports disabled uses, reasons, chains and source slots.
+Geometry remains available without a texture. Mask and composite failures
+propagate without exposing an unmasked fallback. MOC3/CMO3 reject incomplete
+scene content with explicit diagnostics.
+
+`scene_collection(collection)` returns handles. Collections use `kind`:
+`organization` with `part_id`, `deformation` with `parent_id`, `glues`,
+`drawing` with `owner` (empty string for root), and `drawing_groups`.
+Organization ownership, deformation hierarchy and drawing membership are
+independent. `move` reorders/moves `ids` with a collection `destination` and
+optional stable `before` ID. Deformation moves only reorder siblings; `reparent`
+wraps the C4 reparent edit and its preservation guarantees. Glue management
+reordering preserves runtime Glue execution order. Group listing order is
+derived; move a group's Part member through its parent drawing collection.
+
+`duplicate` takes `ids`, `scope` (`selected` or `deformation_subtree`), optional
+PartMembers `destination` (`{"kind": "part_members", "part_id": id}`), and
+`before`. Omit destination to retain original Part ownership. Copies allocate
+new object/binding/axis/sample identities, remap internal scene references and
+share external assets, Parameters and Blend tables. `delete` takes the same
+selection/scope and refuses external users. Plans expose `version`, `is_noop`,
+`affected_ids`, `copied_ids`, `effects_json`, optional `conversion_report_json`
+and optional `cost` (sample combinations, payload, temporary, history bytes).
+Plans bind their source session/version and publish atomically.
+
+`transfer_offscreen` takes `id`, `part_id`, and explicit `part_keyform_indices`.
+`ensure_drawing_group` takes `owner`, `parent`, and optional `before`;
+`duplicate_drawing_group` takes `source` and a distinct empty `target` Part;
+`dissolve_drawing_group` takes `owner`, expands its members and retains its Part.
+The source owner's properties/compositor are context, not duplicated into the
+target. The root cannot be dissolved; an Offscreen owner group must retain its
+role. Drawing role handles use `draw_order_group` and the Part ID, or Document
+ID for root. Removed roles receive new handles after Undo.
+
+`scene_capabilities(handle)` and `scene_collection_capabilities(collection)`
+explain unavailable operations. `scene_field_address(object_id, field)` captures
+expected values and topology/ownership epochs. Use
+`plan_scene_field_patch(address, value, clear_glue_pairs=False)`; changing Glue
+endpoints validates pairs unless explicitly clearing them. Warp topology
+changes with active keyform grids require C4 conversion. Context is read-only.
+`drawing_group_address(owner="")` and `plan_drawing_range_patch(address, (min, max))`
+protect range edits. Undo does not revive expired addresses. Dedicated vertex,
+UV, Warp-control and Glue-pair authoring remain separate future content work.

@@ -36,7 +36,7 @@ fn sample() -> Mesh {
     Mesh {
         id: MESH.to_string(),
         name: "quad".to_string(),
-        texture_asset_id: ASSET.to_string(),
+        texture_asset_id: (ASSET.to_string()).into(),
         vertex_ids: vec![40, 10, 90, 20],
         base_positions: vec![
             Vec2::new(-10.0, 10.0),

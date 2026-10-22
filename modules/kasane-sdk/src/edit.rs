@@ -174,8 +174,11 @@ impl EditSession<'_> {
     ) -> Result<(), SdkError> {
         self.ensure_active("replace_draw_order_groups")?;
         let id = self.document().id().to_owned();
+        let before = keys_in(self.candidate_document());
         let result = self.document().replace_draw_order_groups(groups);
-        self.record(result, "replace_draw_order_groups", &id)
+        self.record(result, "replace_draw_order_groups", &id)?;
+        self.track_removed_objects(before);
+        Ok(())
     }
     pub(crate) fn track_removed_objects(
         &mut self,
@@ -422,7 +425,7 @@ impl EditSession<'_> {
                 vec![id.into()],
             )));
         };
-        mesh.texture_asset_id = properties.texture_asset_id;
+        mesh.texture_asset_id = properties.texture_asset_id.into();
         mesh.appearance = properties.appearance;
         mesh.draw_order = properties.draw_order;
         mesh.blend_mode = properties.blend_mode;

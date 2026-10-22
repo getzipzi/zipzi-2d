@@ -13,11 +13,14 @@ pub struct HierarchyOrder {
     pub organization: Vec<String>,
     #[serde(default)]
     pub deformation: Vec<String>,
+    /// Management order only. Glue evaluation retains its native execution order.
+    #[serde(default)]
+    pub glues: Vec<String>,
 }
 
 impl HierarchyOrder {
     pub fn is_empty(&self) -> bool {
-        self.organization.is_empty() && self.deformation.is_empty()
+        self.organization.is_empty() && self.deformation.is_empty() && self.glues.is_empty()
     }
 }
 
@@ -43,6 +46,28 @@ impl Document {
         }
         if self.content.hierarchy_order == order {
             return self.failed(Status::ok());
+        }
+        if self.content.hierarchy_order.glues != order.glues {
+            let complete = |explicit: &[String]| {
+                let mut seen = HashSet::new();
+                explicit
+                    .iter()
+                    .chain(self.glue_order())
+                    .filter(|id| seen.insert(id.as_str()))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            };
+            let previous = complete(&self.content.hierarchy_order.glues);
+            let proposed = complete(&order.glues);
+            for (rank, id) in previous.iter().enumerate() {
+                if proposed.get(rank) != Some(id) {
+                    if let Err(status) =
+                        self.scene_lifecycle_unlocked(&[id.clone()], SceneCopyScope::Selected)
+                    {
+                        return self.failed(status);
+                    }
+                }
+            }
         }
         if !self.editor_state().is_empty()
             && self.content.hierarchy_order.organization != order.organization
@@ -91,6 +116,19 @@ impl Document {
 
     pub(super) fn hierarchy_order_issues(&self, order: &HierarchyOrder) -> Vec<StructureIssue> {
         let mut issues = Vec::new();
+        let mut seen_glues = HashSet::new();
+        for id in &order.glues {
+            if self.get_glue(id).is_none() || !seen_glues.insert(id) {
+                issues.push(StructureIssue {
+                    object_id: id.clone(),
+                    status: Status::error(
+                        "INVALID_HIERARCHY_ORDER",
+                        "Missing or repeated Glue management entry",
+                    ),
+                });
+            }
+        }
+
         for (ids, organization) in [(&order.organization, true), (&order.deformation, false)] {
             let mut seen = HashSet::new();
             for id in ids {

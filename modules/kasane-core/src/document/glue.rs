@@ -24,25 +24,34 @@ impl Document {
         if !valid_uuid(&glue.id) {
             return Status::error("INVALID_ID", &glue.id);
         }
-        if glue.mesh_a_id.is_empty() || glue.mesh_b_id.is_empty() {
-            return Status::error("INVALID_GLUE", "Mesh IDs cannot be empty");
+        for reference in [&glue.mesh_a_id, &glue.mesh_b_id] {
+            let status = reference.validate();
+            if !status.is_ok() {
+                return status;
+            }
+            if reference
+                .resolved_id()
+                .is_some_and(|id| !self.content.meshes.contains_key(id))
+            {
+                return Status::error("MISSING_MESH", reference.as_str());
+            }
         }
-        if !self.content.meshes.contains_key(&glue.mesh_a_id) {
-            return Status::error("MISSING_MESH", &glue.mesh_a_id);
-        }
-        if !self.content.meshes.contains_key(&glue.mesh_b_id) {
-            return Status::error("MISSING_MESH", &glue.mesh_b_id);
-        }
-        let slots_a = &self.vertex_slots[&glue.mesh_a_id];
-        let slots_b = &self.vertex_slots[&glue.mesh_b_id];
+        let slots_a = glue
+            .mesh_a_id
+            .resolved_id()
+            .and_then(|id| self.vertex_slots.get(id));
+        let slots_b = glue
+            .mesh_b_id
+            .resolved_id()
+            .and_then(|id| self.vertex_slots.get(id));
         for pair in &glue.pairs {
-            if !slots_a.contains_key(&pair.vertex_a) {
+            if slots_a.is_some_and(|slots| !slots.contains_key(&pair.vertex_a)) {
                 return Status::error(
                     "MISSING_VERTEX",
                     format!("{}: vertex {} not in mesh_a", glue.id, pair.vertex_a),
                 );
             }
-            if !slots_b.contains_key(&pair.vertex_b) {
+            if slots_b.is_some_and(|slots| !slots.contains_key(&pair.vertex_b)) {
                 return Status::error(
                     "MISSING_VERTEX",
                     format!("{}: vertex {} not in mesh_b", glue.id, pair.vertex_b),
@@ -158,20 +167,24 @@ impl Document {
                 ));
             }
         }
+        if glue.runtime_id.is_empty() {
+            glue.runtime_id = glue.id.clone();
+        }
         let s = self.validate_glue(&glue);
         if !s.is_ok() {
             return self.failed(s);
         }
         let id = glue.id.clone();
-        let mesh_a = glue.mesh_a_id.clone();
-        let mesh_b = glue.mesh_b_id.clone();
+        let mesh_a = glue.mesh_a_id.as_str().to_owned();
+        let mesh_b = glue.mesh_b_id.as_str().to_owned();
         self.content.glues.insert(id.clone(), glue);
         self.content.glue_order.push(id.clone());
         let mut affected = vec![mesh_a.clone()];
         if mesh_a != mesh_b {
             affected.push(mesh_b.clone());
         }
-        self.changed(ChangeKind::Structure, affected, vec![id, mesh_a, mesh_b])
+        affected.retain(|id| !id.is_empty());
+        self.changed(ChangeKind::Structure, affected, vec![id])
     }
 
     pub fn replace_glue(&mut self, mut glue: Glue) -> EditResult {
@@ -198,7 +211,10 @@ impl Document {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &glue.id));
         }
         let prev = match self.content.glues.get(&glue.id) {
-            Some(g) => (g.mesh_a_id.clone(), g.mesh_b_id.clone()),
+            Some(g) => (
+                g.mesh_a_id.as_str().to_owned(),
+                g.mesh_b_id.as_str().to_owned(),
+            ),
             None => return self.failed(Status::error("MISSING_GLUE", &glue.id)),
         };
         for (other_id, other) in &self.content.glues {
@@ -209,17 +225,21 @@ impl Document {
                 ));
             }
         }
+        if glue.runtime_id.is_empty() {
+            glue.runtime_id = glue.id.clone();
+        }
         let s = self.validate_glue(&glue);
         if !s.is_ok() {
             return self.failed(s);
         }
         let id = glue.id.clone();
-        let mesh_a = glue.mesh_a_id.clone();
-        let mesh_b = glue.mesh_b_id.clone();
+        let mesh_a = glue.mesh_a_id.as_str().to_owned();
+        let mesh_b = glue.mesh_b_id.as_str().to_owned();
         self.content.glues.insert(id.clone(), glue);
         let mut affected = vec![mesh_a.clone(), mesh_b.clone(), prev.0, prev.1];
         affected.sort();
         affected.dedup();
-        self.changed(ChangeKind::Structure, affected, vec![id, mesh_a, mesh_b])
+        affected.retain(|id| !id.is_empty());
+        self.changed(ChangeKind::Structure, affected, vec![id])
     }
 }

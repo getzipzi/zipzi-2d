@@ -63,7 +63,7 @@ impl MetalRenderer {
                 "Metal output texture extent, format, or usage differs from target.",
             ));
         }
-        for drawable in &frame.drawables {
+        for drawable in frame.drawables.iter().filter(|d| d.renderable) {
             let texture = textures
                 .get(&drawable.texture_asset_id)
                 .ok_or_else(|| Status::error("MISSING_TEXTURE", &drawable.texture_asset_id))?;

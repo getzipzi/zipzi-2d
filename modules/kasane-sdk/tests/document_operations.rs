@@ -348,7 +348,7 @@ fn model_space_and_source_reference_are_separate_project_fields() {
     let before = sdk.read_snapshot();
     let json = kasane_project::encode_project(before.document()).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&json).unwrap();
-    assert_eq!(wire["format_version"], 16);
+    assert_eq!(wire["format_version"], 17);
     assert!(wire["document"].get("canvas").is_none());
     assert!(wire["document"].get("model_space").is_none());
     assert_eq!(wire["document"]["export_settings"]["pixels_per_unit"], 20.);

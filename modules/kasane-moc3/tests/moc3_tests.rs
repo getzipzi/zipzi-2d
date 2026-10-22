@@ -80,7 +80,7 @@ fn fixture() -> Document {
         id: id(4),
         name: "Asymmetric quad".to_string(),
         runtime_id: "ArtMeshA".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         vertex_ids: vec![91, 8, 77, 12],
         base_positions: vec![
             Vec2::new(101.0, 43.0),
@@ -103,7 +103,7 @@ fn fixture() -> Document {
         id: id(5),
         name: "Triangle".to_string(),
         runtime_id: "ArtMeshB".to_string(),
-        texture_asset_id: id(3),
+        texture_asset_id: (id(3)).into(),
         vertex_ids: vec![70, 13, 99],
         base_positions: vec![
             Vec2::new(350.0, 117.0),

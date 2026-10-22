@@ -169,6 +169,7 @@ pub(super) fn evaluate(
                 .map(|p| p.id.clone());
 
             state.frame.offscreens.push(OffscreenFrame {
+                renderable: prepared.scene.composite_slots.contains_key(os_id),
                 id: os.id.clone(),
                 runtime_id: os.runtime_id.clone(),
                 owner_part_id: os.part_id.clone(),
@@ -194,6 +195,7 @@ pub(super) fn evaluate(
             .drawables
             .iter()
             .enumerate()
+            .filter(|(_, d)| d.renderable)
             .map(|(i, d)| (d.render_order, i)),
     );
     state.plan_items.extend(
@@ -202,6 +204,7 @@ pub(super) fn evaluate(
             .offscreens
             .iter()
             .enumerate()
+            .filter(|(_, o)| o.renderable)
             .map(|(i, o)| (o.render_order, mesh_count + i)),
     );
     state.plan_items.sort_unstable();

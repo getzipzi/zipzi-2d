@@ -6,8 +6,8 @@ pub(crate) fn glue_from_tuple(data: GlueDataTuple, runtime_id: String) -> Glue {
         id,
         runtime_id,
         name,
-        mesh_a_id,
-        mesh_b_id,
+        mesh_a_id: mesh_a_id.into(),
+        mesh_b_id: mesh_b_id.into(),
         pairs: pairs
             .into_iter()
             .map(|(vertex_a, vertex_b, weight_a, weight_b)| GlueVertexPair {
@@ -44,8 +44,8 @@ pub(crate) fn glue_tuple(value: Glue, version: Version) -> GlueTuple {
         value.id,
         value.runtime_id,
         value.name,
-        value.mesh_a_id,
-        value.mesh_b_id,
+        value.mesh_a_id.as_str().to_owned(),
+        value.mesh_b_id.as_str().to_owned(),
         value
             .pairs
             .into_iter()

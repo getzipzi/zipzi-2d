@@ -646,6 +646,7 @@ pub(super) fn estimated_content_bytes(content: &DocumentContent) -> usize {
         + content.editor_state.objects.extra_bytes()
         + content.hierarchy_order.organization.extra_bytes()
         + content.hierarchy_order.deformation.extra_bytes()
+        + content.hierarchy_order.glues.extra_bytes()
         + content.expressions.extra_bytes()
         + content.expression_order.extra_bytes()
         + content.motions.extra_bytes()

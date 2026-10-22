@@ -106,7 +106,7 @@ impl Document {
     }
 }
 impl Delta {
-    pub(super) fn runtime_changed(&self, d: &Document) -> bool {
+    pub(in crate::document) fn runtime_changed(&self, d: &Document) -> bool {
         !self.parameters.is_empty()
             || !self.parts.is_empty()
             || !self.parents.is_empty()
@@ -116,12 +116,13 @@ impl Delta {
             || !self.bindings.is_empty()
             || !self.scene_bindings.is_empty()
             || !self.blends.is_empty()
+            || !self.glues.is_empty()
             || self
                 .removed
                 .iter()
                 .any(|id| d.get_parameter_group(id).is_none())
     }
-    pub(super) fn changed(&self, d: &Document) -> bool {
+    pub(in crate::document) fn changed(&self, d: &Document) -> bool {
         self.runtime_changed(d)
             || self
                 .groups
@@ -136,7 +137,7 @@ impl Delta {
                 .as_ref()
                 .is_some_and(|v| Some(v.as_slice()) != d.draw_order_groups())
     }
-    pub(super) fn install(&self, d: &mut Document) {
+    pub(in crate::document) fn install(&self, d: &mut Document) {
         if self.runtime_changed(d)
             || self
                 .groups
@@ -182,6 +183,7 @@ impl Delta {
         remove!(bindings, binding_order);
         remove!(scene_bindings, scene_binding_order);
         remove!(blend_bindings, blend_binding_order);
+        remove!(glues, glue_order);
         for id in &self.removed {
             d.content.editor_state.objects.remove(id);
             d.vertex_slots.remove(id);
@@ -206,6 +208,7 @@ impl Delta {
         put!(bindings, bindings, binding_order);
         put!(scene_bindings, scene_bindings, scene_binding_order);
         put!(blends, blend_bindings, blend_binding_order);
+        put!(glues, glues, glue_order);
         for m in &self.meshes {
             d.mesh_runtime_ids
                 .insert(m.runtime_id.clone(), m.id.clone());
@@ -240,7 +243,10 @@ impl Delta {
         }
         // Compound validation reads the installed binding identities before the
         // normal changed()/publish path invalidates the remaining caches.
-        if !self.bindings.is_empty() || !self.scene_bindings.is_empty() || !self.removed.is_empty()
+        if !self.glues.is_empty()
+            || !self.bindings.is_empty()
+            || !self.scene_bindings.is_empty()
+            || !self.removed.is_empty()
         {
             d.binding_lookup.take();
         }

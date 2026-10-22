@@ -40,7 +40,8 @@ impl MetalRenderer {
             Ok(())
         };
         for (index, drawable) in frame.drawables.iter().enumerate() {
-            if !drawable.masks.is_empty()
+            if drawable.renderable
+                && !drawable.masks.is_empty()
                 && drawable.visible
                 && drawable.opacity > 0.
                 && !drawable.indices.is_empty()
@@ -292,7 +293,8 @@ impl FrameEncoder<'_, '_> {
         };
         for (i, drawable) in self.frame.drawables.iter().enumerate() {
             let mesh = &self.renderer.scene.meshes()[i];
-            if drawable.visible
+            if drawable.renderable
+                && drawable.visible
                 && drawable.opacity > 0.
                 && !drawable.indices.is_empty()
                 && self.renderer.scene.targets()[mesh.target.0].active
@@ -396,7 +398,8 @@ impl FrameEncoder<'_, '_> {
 
     pub(super) fn encode_masks(&mut self) -> Result<(), Status> {
         for (index, drawable) in self.frame.drawables.iter().enumerate() {
-            if !drawable.masks.is_empty()
+            if drawable.renderable
+                && !drawable.masks.is_empty()
                 && drawable.visible
                 && drawable.opacity > 0.
                 && !drawable.indices.is_empty()

@@ -124,7 +124,7 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
         id: id(4),
         name: "Quad".to_string(),
         runtime_id: "ArtMeshA".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         part_id: sid(1),
         deformer_id: sid(2),
         vertex_ids: vec![1, 2, 3, 4],

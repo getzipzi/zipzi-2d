@@ -15,6 +15,9 @@ pub struct Drawable {
     pub raw_blend_mode: Option<u32>,
     pub texture_asset_id: String,
     pub texture_slot: i32,
+    /// Geometry remains editable when this resource cannot contribute color.
+    #[serde(default = "renderable_default")]
+    pub renderable: bool,
     pub positions: Vec<Vec2>,
     pub uvs: Arc<[Vec2]>,
     pub indices: Arc<[u32]>,
@@ -40,6 +43,7 @@ impl Default for Drawable {
             raw_blend_mode: None,
             texture_asset_id: String::new(),
             texture_slot: 0,
+            renderable: true,
             positions: Vec::new(),
             uvs: Arc::from([]),
             indices: Arc::from([]),
@@ -73,8 +77,10 @@ pub enum RenderCommand {
     EndOffscreen { offscreen_id: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct OffscreenFrame {
+    #[serde(default = "renderable_default")]
+    pub renderable: bool,
     pub id: String,
     pub runtime_id: String,
     pub owner_part_id: String,
@@ -159,4 +165,28 @@ pub fn parent_origin(
         return Err(status);
     }
     Ok(p)
+}
+
+fn renderable_default() -> bool {
+    true
+}
+
+impl Default for OffscreenFrame {
+    fn default() -> Self {
+        Self {
+            renderable: true,
+            id: String::new(),
+            runtime_id: String::new(),
+            owner_part_id: String::new(),
+            parent_offscreen_id: None,
+            render_order: 0,
+            opacity: 0.,
+            enabled: false,
+            blend_mode: 0,
+            flags: 0,
+            masks: vec![],
+            multiply_color: [0.; 4],
+            screen_color: [0.; 4],
+        }
+    }
 }

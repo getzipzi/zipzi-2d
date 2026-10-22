@@ -185,8 +185,8 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
             id: glue_id.clone(),
             runtime_id: "Glue0".to_string(),
             name: "Glue 0".to_string(),
-            mesh_a_id: mesh_id.clone(),
-            mesh_b_id: mesh2_id.clone(),
+            mesh_a_id: (mesh_id.clone()).into(),
+            mesh_b_id: (mesh2_id.clone()).into(),
             pairs: vec![GlueVertexPair {
                 vertex_a: mesh.vertex_ids[0],
                 vertex_b: doc.get_mesh(&mesh2_id).unwrap().vertex_ids[0],
@@ -218,7 +218,7 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
 
     let encoded = encode_project(&doc).expect("encode_project failed");
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 16);
+    assert_eq!(wire["format_version"], 17);
     for field in [
         "blend_key_tables",
         "blend_constraints",
@@ -352,7 +352,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     assert!(doc.create_offscreen(offscreen.clone()).status.is_ok());
     let encoded = encode_project(&doc).unwrap();
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 16);
+    assert_eq!(wire["format_version"], 17);
     assert!(wire["document"]["offscreens"][0].get("enabled").is_none());
     assert!(
         decode_project(&encoded)
@@ -366,7 +366,7 @@ fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
     assert!(doc.replace_offscreen(offscreen.clone()).status.is_ok());
     let encoded = encode_project(&doc).unwrap();
     let mut wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 16);
+    assert_eq!(wire["format_version"], 17);
     assert_eq!(wire["document"]["offscreens"][0]["enabled"], false);
     assert_eq!(
         decode_project(&encoded).unwrap().get_offscreen(&id(10)),
@@ -392,7 +392,7 @@ fn test_project_v4_preserves_repeat_parameter() {
 
     let encoded = encode_project(&doc).expect("encode_project failed");
     let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 16);
+    assert_eq!(wire["format_version"], 17);
     assert_eq!(wire["document"]["parameters"][0]["repeat"], true);
 
     let decoded = decode_project(&encoded).expect("decode_project failed");
@@ -414,7 +414,7 @@ fn test_project_v4_blendshape_glue_roundtrip() {
         id: id(20),
         runtime_id: "Mesh2".to_string(),
         name: "Mesh 2".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         vertex_ids: vec![10, 20, 30],
         base_positions: vec![
             Vec2::new(10.0, 10.0),
@@ -435,8 +435,8 @@ fn test_project_v4_blendshape_glue_roundtrip() {
         id: id(21),
         runtime_id: "Glue0".to_string(),
         name: "Glue 0".to_string(),
-        mesh_a_id: id(4),
-        mesh_b_id: id(20),
+        mesh_a_id: (id(4)).into(),
+        mesh_b_id: (id(20)).into(),
         pairs: vec![GlueVertexPair {
             vertex_a: 1,
             vertex_b: 10,

@@ -43,6 +43,7 @@ pub struct AuthoringSession {
     // Owner-dependent field addresses must not revive after a move and undo.
     pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) attachment_content_epochs: HashMap<String, u64>,
+    pub(crate) scene_field_epochs: HashMap<(String, kasane_core::document::SceneField), u64>,
     pub(crate) organization_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) pose_contexts: HashMap<String, (String, u64)>,
     pub(crate) physics_contexts: HashMap<String, (String, u64)>,
@@ -174,6 +175,12 @@ impl AuthoringSession {
                 vec![document_id.into()],
             ));
         }
+        let incarnations: HashMap<_, _> = keys_in(&document)
+            .into_iter()
+            .enumerate()
+            .map(|(slot, key)| (key, slot as u64 + 1))
+            .collect();
+        let next_incarnation = incarnations.len() as u64 + 1;
         Ok(Self {
             project: DocumentSession::from_authoring_document_with_filesystem(document, filesystem),
             preview: PreviewState::default(),
@@ -185,14 +192,15 @@ impl AuthoringSession {
             history_limits,
             authoring_limits: Default::default(),
             binding_contexts: HashMap::new(),
-            incarnations: HashMap::new(),
+            incarnations,
             physics_contexts: HashMap::new(),
             pose_contexts: HashMap::new(),
+            scene_field_epochs: HashMap::new(),
             organization_contexts: HashMap::new(),
             expression_entry_contexts: HashMap::new(),
             motion_contexts: HashMap::new(),
             attachment_content_epochs: HashMap::new(),
-            next_incarnation: 1,
+            next_incarnation,
         })
     }
 
@@ -722,6 +730,7 @@ impl AuthoringSession {
             self.physics_contexts.clear();
             self.pose_contexts.clear();
             self.organization_contexts.clear();
+            self.scene_field_epochs.clear();
             if let Some(pose) = document.pose() {
                 for id in pose.entity_ids() {
                     if let Some(owner) = document.pose_owner(id) {
@@ -897,6 +906,10 @@ impl AuthoringSession {
                 self.organization_contexts.remove(&entity.id);
             }
         }
+        for field in &changes.scene_fields {
+            self.scene_field_epochs
+                .insert((field.entity.id.clone(), field.field), document.revision());
+        }
         for entity in &changes.resource_content {
             let epoch = self
                 .attachment_content_epochs
@@ -989,6 +1002,13 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
         ObjectKind::BlendBinding => doc.get_blend_binding(id).is_some(),
         ObjectKind::Glue => doc.get_glue(id).is_some(),
         ObjectKind::Offscreen => doc.get_offscreen(id).is_some(),
+        ObjectKind::DrawOrderGroup => doc.drawing_group_owners().iter().any(|owner| {
+            if owner.is_empty() {
+                doc.id() == id
+            } else {
+                owner == id
+            }
+        }),
         ObjectKind::CdiParameterGroup => doc
             .display_info()
             .parameter_groups
@@ -1043,6 +1063,18 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
         })
     })
     .collect();
+    keys.extend(
+        doc.drawing_group_owners()
+            .into_iter()
+            .map(|owner| ObjectKey {
+                kind: ObjectKind::DrawOrderGroup,
+                id: if owner.is_empty() {
+                    doc.id().into()
+                } else {
+                    owner
+                },
+            }),
+    );
     if let Some(groups) = &doc.display_info().parameter_groups {
         keys.extend(groups.iter().map(|group| ObjectKey {
             kind: ObjectKind::CdiParameterGroup,

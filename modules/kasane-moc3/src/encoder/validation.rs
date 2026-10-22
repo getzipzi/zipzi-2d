@@ -17,6 +17,18 @@ pub(super) fn validate_preflight(
             "Commit or cancel edits before export",
         ));
     }
+    if let Some(issue) = doc.validate_structure().first() {
+        return Err(issue.status.clone());
+    }
+    if let Some(omission) = doc.scene_export_omissions().first() {
+        return Err(Status::error(
+            "SCENE_NEEDS_CONFIGURATION",
+            format!(
+                "{}: {:?}; {:?}",
+                omission.id, omission.reason, omission.chain
+            ),
+        ));
+    }
     if let Some(omission) = doc.binding_export_omissions().first() {
         return Err(Status::error(
             if omission.code == "ZERO_AXIS_BINDING" {
@@ -165,7 +177,7 @@ mod authoring_tests {
         assert!(d
             .create_mesh(Mesh {
                 id: id(3),
-                texture_asset_id: id(2),
+                texture_asset_id: (id(2)).into(),
                 ..Default::default()
             })
             .status

@@ -431,7 +431,7 @@ pub struct SceneSample<'a> {
 pub struct Mesh {
     pub id: String,
     pub name: String,
-    pub texture_asset_id: String,
+    pub texture_asset_id: crate::SceneReference,
     pub vertex_ids: Vec<VertexId>,
     pub base_positions: Vec<Vec2>,
     pub uvs: Vec<Vec2>,
@@ -455,7 +455,7 @@ impl Default for Mesh {
         Self {
             id: String::new(),
             name: String::new(),
-            texture_asset_id: String::new(),
+            texture_asset_id: crate::SceneReference::Unspecified,
             vertex_ids: Vec::new(),
             base_positions: Vec::new(),
             uvs: Vec::new(),
@@ -665,12 +665,27 @@ pub struct Glue {
     pub id: String,
     pub runtime_id: String,
     pub name: String,
-    pub mesh_a_id: String,
-    pub mesh_b_id: String,
+    pub mesh_a_id: crate::SceneReference,
+    pub mesh_b_id: crate::SceneReference,
     pub pairs: Vec<GlueVertexPair>,
     pub intensity: f32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub binding: Option<GlueBinding>,
+}
+
+impl Default for Glue {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            runtime_id: String::new(),
+            name: String::new(),
+            mesh_a_id: Default::default(),
+            mesh_b_id: Default::default(),
+            pairs: vec![],
+            intensity: 1.,
+            binding: None,
+        }
+    }
 }
 
 /// Ordinary parameter grid for Glue intensity, owned and edited atomically with its Glue.

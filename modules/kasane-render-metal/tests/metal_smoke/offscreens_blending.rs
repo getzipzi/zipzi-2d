@@ -719,3 +719,27 @@ fn edits_do_not_overwrite_buffers_referenced_by_submitted_frames() {
     assert_eq!(center(&read_rgba8(&outputs[0]).unwrap()), [255, 0, 0, 255]);
     assert_eq!(center(&read_rgba8(&outputs[1]).unwrap()), [0; 4]);
 }
+
+#[test]
+fn unavailable_masked_geometry_needs_no_texture_and_does_not_escape_a_disabled_composite() {
+    let mut missing = quad("missing", "not-loaded");
+    missing.renderable = false;
+    let mut dependent = quad("dependent", "also-not-loaded");
+    dependent.masks = vec!["missing".into()];
+    dependent.renderable = false;
+    let frame = DrawableFrame {
+        drawables: vec![missing, dependent],
+        offscreens: vec![OffscreenFrame {
+            id: "pending-composite".into(),
+            masks: vec!["missing".into()],
+            renderable: false,
+            enabled: true,
+            opacity: 1.,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let (pixels, stats) = fixture(&frame);
+    assert_eq!(center(&pixels), [0, 0, 0, 0]);
+    assert_eq!(stats.active_surfaces, 0);
+}

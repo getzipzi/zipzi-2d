@@ -302,6 +302,7 @@ impl Document {
             self.lookup.take();
             self.binding_lookup.take();
             self.prepared.take();
+            self.scene_projection.take();
         }
     }
 
@@ -313,6 +314,7 @@ impl Document {
             self.lookup.take();
             self.binding_lookup.take();
             self.prepared.take();
+            self.scene_projection.take();
         }
     }
 }

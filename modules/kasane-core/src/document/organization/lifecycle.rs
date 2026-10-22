@@ -122,10 +122,20 @@ impl Document {
                 plan.delta.groups = Some(info);
             }
             OrganizationCollection::PartMembers { part_id } => {
+                if roots.iter().all(|id| self.get_part(id).is_none()) {
+                    let scene = self.plan_scene_edit(SceneEdit::Duplicate {
+                        ids: roots,
+                        scope: SceneCopyScope::Selected,
+                        destination: Some(dest.clone()),
+                        before: before.clone(),
+                    })?;
+                    *plan = scene.domain;
+                    return Ok(());
+                }
                 if roots.iter().any(|id| self.get_part(id).is_none()) {
                     return Err(Status::error(
-                        "PART_COPY_REQUIRES_PART_ROOT",
-                        "Copy Part subtrees through this collection",
+                        "MIXED_OWNERSHIP_SCOPE",
+                        "Copy Part subtrees and independent scene objects separately",
                     ));
                 }
                 for id in &closure {
@@ -135,7 +145,7 @@ impl Document {
                     plan,
                     &closure,
                     &roots,
-                    part_id.as_deref().unwrap_or(""),
+                    Some(part_id.as_deref().unwrap_or("")),
                     before,
                 )?;
             }
@@ -176,12 +186,12 @@ impl Document {
         }
         Ok(())
     }
-    fn copy_scene(
+    pub(in crate::document) fn copy_scene(
         &self,
         plan: &mut OrganizationPlan,
         closure: &[String],
         roots: &[String],
-        parent: &str,
+        parent: Option<&str>,
         before: &Option<String>,
     ) -> Result<(), Status> {
         let selected: HashSet<_> = closure.iter().map(String::as_str).collect();
@@ -237,7 +247,9 @@ impl Document {
                 p.id = map[id].clone();
                 p.runtime_id = unique(&p.runtime_id, &mut part_runtime);
                 p.parent_id = if roots.contains(id) {
-                    parent.into()
+                    parent
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| mapped(map, &p.parent_id))
                 } else {
                     mapped(map, &p.parent_id)
                 };
@@ -246,7 +258,13 @@ impl Document {
                 let mut m = m.clone();
                 m.id = map[id].clone();
                 m.runtime_id = unique(&m.runtime_id, &mut mesh_runtime);
-                m.part_id = mapped(map, &m.part_id);
+                m.part_id = if roots.contains(id) {
+                    parent
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| mapped(map, &m.part_id))
+                } else {
+                    mapped(map, &m.part_id)
+                };
                 m.deformer_id = mapped(map, &m.deformer_id);
                 for mask in &mut m.masks {
                     *mask = mapped(map, mask);
@@ -256,7 +274,13 @@ impl Document {
                 let mut t = t.clone();
                 t.id = map[id].clone();
                 t.runtime_id = unique(&t.runtime_id, &mut transform_runtime);
-                t.part_id = t.part_id.as_ref().map(|id| mapped(map, id.as_str()).into());
+                t.part_id = if roots.contains(id) && parent.is_some() {
+                    parent
+                        .filter(|p| !p.is_empty())
+                        .map(|p| p.to_owned().into())
+                } else {
+                    t.part_id.as_ref().map(|id| mapped(map, id.as_str()).into())
+                };
                 t.parent_id = t
                     .parent_id
                     .as_ref()
@@ -266,7 +290,13 @@ impl Document {
                 let mut o = o.clone();
                 o.id = map[id].clone();
                 o.runtime_id = unique(&o.runtime_id, &mut offscreen_runtime);
-                o.part_id = mapped(map, &o.part_id);
+                o.part_id = if roots.contains(id) {
+                    parent
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| mapped(map, &o.part_id))
+                } else {
+                    mapped(map, &o.part_id)
+                };
                 for mask in &mut o.masks {
                     *mask = mapped(map, mask);
                 }
@@ -388,7 +418,16 @@ impl Document {
         }
         plan.delta.drawing = Some(drawing);
         let mut order = self.scene_organization_order();
-        let at = self.scene_insertion(&order, parent, before)?;
+        let at = if let Some(parent) = parent {
+            self.scene_insertion(&order, parent, before)?
+        } else if let Some(anchor) = before {
+            order
+                .iter()
+                .position(|id| id == anchor)
+                .ok_or_else(|| Status::error("INVALID_PLACEMENT", anchor))?
+        } else {
+            order.len()
+        };
         let new_roots: Vec<_> = roots.iter().map(|id| map[id].clone()).collect();
         order.splice(at..at, new_roots);
         order.extend(
@@ -427,7 +466,7 @@ impl Document {
         plan.effects.deformation_preserved = false;
         Ok(())
     }
-    pub(super) fn validate_compound_organization(
+    pub(in crate::document) fn validate_compound_organization(
         &self,
         plan: &OrganizationPlan,
     ) -> Result<(), Status> {
@@ -820,13 +859,13 @@ impl Document {
         Some(items.into_iter().map(|(_, _, id)| id).collect())
     }
 }
-fn new_id() -> String {
+pub(in crate::document) fn new_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
-fn mapped(map: &BTreeMap<String, String>, id: &str) -> String {
+pub(in crate::document) fn mapped(map: &BTreeMap<String, String>, id: &str) -> String {
     map.get(id).cloned().unwrap_or_else(|| id.into())
 }
-fn unique(base: &str, used: &mut HashSet<String>) -> String {
+pub(in crate::document) fn unique(base: &str, used: &mut HashSet<String>) -> String {
     let root = if base.is_empty() { "Copy" } else { base };
     for n in 1_u64.. {
         let v = if n == 1 {
@@ -840,7 +879,7 @@ fn unique(base: &str, used: &mut HashSet<String>) -> String {
     }
     unreachable!()
 }
-fn copy_axes(axes: &mut [BindingAxis], map: &mut BTreeMap<String, String>) {
+pub(in crate::document) fn copy_axes(axes: &mut [BindingAxis], map: &mut BTreeMap<String, String>) {
     for a in axes {
         let id = new_id();
         map.insert(a.id.clone(), id.clone());

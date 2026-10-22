@@ -156,8 +156,8 @@ impl<'a> Moc3DecoderContext<'a> {
                 id: id.clone(),
                 runtime_id: runtime_id.clone(),
                 name: runtime_id.clone(),
-                mesh_a_id,
-                mesh_b_id,
+                mesh_a_id: mesh_a_id.into(),
+                mesh_b_id: mesh_b_id.into(),
                 pairs,
                 intensity,
                 binding: if axes.is_empty() {

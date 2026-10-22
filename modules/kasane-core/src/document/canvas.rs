@@ -59,6 +59,21 @@ impl Document {
             Ok(groups) => groups,
             Err(status) => return self.failed(status),
         };
+        if self.content.draw_order_groups.as_ref() == Some(&groups) {
+            return self.failed(Status::ok());
+        }
+        let previous = crate::draw_order::resolved_groups(self);
+        for group in previous.iter().chain(&groups) {
+            let a = previous.iter().find(|g| g.owner == group.owner);
+            let b = groups.iter().find(|g| g.owner == group.owner);
+            if a != b {
+                for id in std::iter::once(&group.owner).chain(group.items.iter()) {
+                    if let Err(status) = self.authoring_unlocked(id) {
+                        return self.failed(status);
+                    }
+                }
+            }
+        }
         self.content.draw_order_groups = Some(groups);
         self.changed(
             ChangeKind::Structure,

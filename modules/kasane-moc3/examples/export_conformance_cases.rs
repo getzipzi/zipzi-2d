@@ -110,7 +110,7 @@ fn build_1d_case() -> (Document, Vec<Vec<f32>>) {
             id: m_id.clone(),
             runtime_id: "ArtMesh1".to_string(),
             name: "Mesh 1".to_string(),
-            texture_asset_id: id(2),
+            texture_asset_id: (id(2)).into(),
             vertex_ids: vec![1, 2, 3, 4],
             base_positions: vec![
                 Vec2::new(-30.0, 30.0),
@@ -219,7 +219,7 @@ fn build_2d_case() -> (Document, Vec<Vec<f32>>) {
             id: m_id.clone(),
             runtime_id: "ArtMesh2D".to_string(),
             name: "Mesh 2D".to_string(),
-            texture_asset_id: id(3),
+            texture_asset_id: (id(3)).into(),
             vertex_ids: vec![10, 20, 30],
             base_positions: vec![
                 Vec2::new(0.0, 40.0),
@@ -307,7 +307,7 @@ fn build_masks_and_blends_case() -> (Document, Vec<Vec<f32>>) {
             id: mask_mesh_id.clone(),
             runtime_id: "MaskMesh".to_string(),
             name: "Mask Mesh".to_string(),
-            texture_asset_id: id(2),
+            texture_asset_id: (id(2)).into(),
             vertex_ids: vec![1, 2, 3],
             base_positions: vec![
                 Vec2::new(-50.0, 50.0),
@@ -333,7 +333,7 @@ fn build_masks_and_blends_case() -> (Document, Vec<Vec<f32>>) {
             id: clipped_mesh_id,
             runtime_id: "ClippedAdd".to_string(),
             name: "Clipped Additive Mesh".to_string(),
-            texture_asset_id: id(3),
+            texture_asset_id: (id(3)).into(),
             vertex_ids: vec![11, 12, 13],
             base_positions: vec![
                 Vec2::new(-40.0, 40.0),
@@ -362,7 +362,7 @@ fn build_masks_and_blends_case() -> (Document, Vec<Vec<f32>>) {
             id: inv_clipped_id,
             runtime_id: "InvertedMul".to_string(),
             name: "Inverted Multiply Mesh".to_string(),
-            texture_asset_id: id(2),
+            texture_asset_id: (id(2)).into(),
             vertex_ids: vec![21, 22, 23],
             base_positions: vec![
                 Vec2::new(-30.0, 30.0),
@@ -471,7 +471,7 @@ fn build_nested_deformers_case() -> (Document, Vec<Vec<f32>>) {
             id: m_id,
             runtime_id: "Mesh_Deformed".to_string(),
             name: "Deformed Mesh".to_string(),
-            texture_asset_id: id(2),
+            texture_asset_id: (id(2)).into(),
             part_id,
             deformer_id: warp_id,
             vertex_ids: vec![1, 2, 3, 4],

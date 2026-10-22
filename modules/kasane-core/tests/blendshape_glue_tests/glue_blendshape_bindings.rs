@@ -12,8 +12,8 @@ fn test_glue_blendshape_binding_crud_and_erase_references() {
         id: GLUE_ID.to_string(),
         runtime_id: "Glue0".to_string(),
         name: "Glue 0".to_string(),
-        mesh_a_id: MESH_A.to_string(),
-        mesh_b_id: MESH_B.to_string(),
+        mesh_a_id: (MESH_A.to_string()).into(),
+        mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
             vertex_a: 1,
             vertex_b: 10,
@@ -94,8 +94,8 @@ fn test_glue_blendshape_and_ordinary_coexistence() {
         id: GLUE_ID.to_string(),
         runtime_id: "Glue0".to_string(),
         name: "Glue 0".to_string(),
-        mesh_a_id: MESH_A.to_string(),
-        mesh_b_id: MESH_B.to_string(),
+        mesh_a_id: (MESH_A.to_string()).into(),
+        mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
             vertex_a: 1,
             vertex_b: 10,
@@ -191,8 +191,8 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
         id: GLUE_ID.to_string(),
         runtime_id: "Glue0".to_string(),
         name: "Glue 0".to_string(),
-        mesh_a_id: MESH_A.to_string(),
-        mesh_b_id: MESH_B.to_string(),
+        mesh_a_id: (MESH_A.to_string()).into(),
+        mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
             vertex_a: 1,
             vertex_b: 10,
@@ -313,8 +313,8 @@ fn test_glue_blendshape_negative_and_excess_delta_clamping() {
         id: GLUE_ID.to_string(),
         runtime_id: "Glue0".to_string(),
         name: "Glue 0".to_string(),
-        mesh_a_id: MESH_A.to_string(),
-        mesh_b_id: MESH_B.to_string(),
+        mesh_a_id: (MESH_A.to_string()).into(),
+        mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
             vertex_a: 1,
             vertex_b: 10,

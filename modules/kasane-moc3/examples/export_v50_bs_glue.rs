@@ -76,7 +76,7 @@ fn main() {
         id: id(5),
         runtime_id: "MeshA".to_string(),
         name: "MeshA".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         vertex_ids: vec![1, 2, 3, 4],
         base_positions: vec![
             Vec2::new(0.0, 0.0),
@@ -99,7 +99,7 @@ fn main() {
         id: id(6),
         runtime_id: "MeshB".to_string(),
         name: "MeshB".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         vertex_ids: vec![10, 20, 30, 40],
         base_positions: vec![
             Vec2::new(10.0, 20.0),
@@ -122,8 +122,8 @@ fn main() {
         id: id(7),
         runtime_id: "Glue0".to_string(),
         name: "Glue 0".to_string(),
-        mesh_a_id: id(5),
-        mesh_b_id: id(6),
+        mesh_a_id: (id(5)).into(),
+        mesh_b_id: (id(6)).into(),
         pairs: vec![GlueVertexPair {
             vertex_a: 1,
             vertex_b: 10,

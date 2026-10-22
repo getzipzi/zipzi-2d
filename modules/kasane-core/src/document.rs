@@ -17,6 +17,8 @@ mod offscreen;
 mod organization;
 mod parameters;
 pub use organization::*;
+mod scene;
+pub use scene::*;
 mod parts;
 mod physics;
 mod pose;
@@ -95,6 +97,7 @@ pub struct Document {
     binding_lookup: OnceLock<Arc<binding_authoring::identity::BindingLookup>>,
     expression_entries: OnceLock<HashMap<String, (String, usize)>>,
     motion_lookup: OnceLock<Arc<motions::MotionLookup>>,
+    scene_projection: OnceLock<Arc<SceneProjection>>,
     organization_index: OnceLock<Arc<organization::OrganizationIndex>>,
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
 }
@@ -155,7 +158,7 @@ struct DocumentContent {
 }
 
 impl Document {
-    pub const SCHEMA_VERSION: u32 = 7;
+    pub const SCHEMA_VERSION: u32 = 8;
 
     pub fn new() -> Self {
         Self::default()
@@ -452,6 +455,7 @@ impl Document {
         }
         if kind == ChangeKind::Structure {
             self.organization_index.take();
+            self.scene_projection.take();
         }
         self.snapshot_identity = Arc::new(());
         // Batch construction mutates content without advancing revision too.

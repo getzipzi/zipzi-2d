@@ -43,5 +43,7 @@ mod pose_authoring;
 mod project_io;
 #[path = "scene_authoring.rs"]
 mod scene_authoring;
+#[path = "scene_lifecycle.rs"]
+mod scene_lifecycle;
 #[path = "vertical_slice.rs"]
 mod vertical_slice;

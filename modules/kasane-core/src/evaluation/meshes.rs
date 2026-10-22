@@ -14,13 +14,16 @@ pub(super) fn evaluate(
     let asset_slots = &prepared.assets;
     for (mesh_index, id) in doc.mesh_order().iter().enumerate() {
         let mesh = doc.get_mesh(id).unwrap();
+        state.frame.drawables[mesh_index].renderable =
+            prepared.scene.drawing_slots.contains_key(id);
         let (part_slot, parent_slot) = prepared.mesh_parents[mesh_index];
         let d = &mut state.frame.drawables[mesh_index];
         d.id.clone_from(id);
         d.runtime_id.clone_from(&mesh.runtime_id);
         d.part_id.clone_from(&mesh.part_id);
         d.raw_blend_mode = mesh.raw_blend_mode;
-        d.texture_asset_id.clone_from(&mesh.texture_asset_id);
+        d.texture_asset_id.clear();
+        d.texture_asset_id.push_str(mesh.texture_asset_id.as_str());
         d.blend_mode = mesh.blend_mode;
         d.double_sided = mesh.double_sided;
         d.inverted_mask = mesh.inverted_mask;
@@ -36,7 +39,7 @@ pub(super) fn evaluate(
         let slot = asset_slots.get(mesh.texture_asset_id.as_str()).copied();
         match slot {
             Some(s) => d.texture_slot = s as i32,
-            None => return Status::error("MISSING_ASSET", id),
+            None => d.texture_slot = -1,
         }
 
         d.visible = mesh.enabled

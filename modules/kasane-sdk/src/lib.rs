@@ -78,3 +78,7 @@ mod organization_authoring;
 pub use organization_authoring::*;
 
 pub use changes::OrganizationReferenceChange;
+
+mod scene_authoring;
+pub use changes::{SceneFieldChange, SceneReferenceChange};
+pub use scene_authoring::*;

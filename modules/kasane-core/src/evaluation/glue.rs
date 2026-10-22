@@ -16,6 +16,9 @@ pub(super) fn evaluate(
         let mesh_slots = &prepared.meshes;
 
         for (glue_slot, gid) in glue_order.iter().enumerate() {
+            if !prepared.scene.glue_slots.contains_key(gid) {
+                continue;
+            }
             if let Some(glue) = doc.get_glue(gid) {
                 let mut intensity = if let Some(binding) = glue
                     .binding

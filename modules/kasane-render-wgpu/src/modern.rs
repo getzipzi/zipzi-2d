@@ -402,7 +402,7 @@ impl WgpuRenderer {
         let viewport = self
             .viewport
             .ok_or_else(|| Status::error("MISSING_VIEW", "Update the view before encoding."))?;
-        for drawable in &frame.drawables {
+        for drawable in frame.drawables.iter().filter(|d| d.renderable) {
             let texture = textures
                 .get(&drawable.texture_asset_id)
                 .ok_or_else(|| Status::error("MISSING_TEXTURE", &drawable.texture_asset_id))?;
@@ -719,7 +719,7 @@ fn lower_scene<'a>(
     target: WgpuTargetConfig,
     device: &wgpu::Device,
 ) -> Result<PreparedFrame<'a>, Status> {
-    for drawable in &frame.drawables {
+    for drawable in frame.drawables.iter().filter(|d| d.renderable) {
         let vertex_bytes =
             (drawable.positions.len() as u64).saturating_mul(std::mem::size_of::<Vertex>() as u64);
         let index_bytes =

@@ -401,8 +401,8 @@ impl Document {
             meshes = self.content.mesh_order.clone();
         }
         if let Some(g) = self.get_glue(id) {
-            meshes.push(g.mesh_a_id.clone());
-            meshes.push(g.mesh_b_id.clone());
+            meshes.extend(g.mesh_a_id.resolved_id().map(str::to_owned));
+            meshes.extend(g.mesh_b_id.resolved_id().map(str::to_owned));
         }
         if self.get_scene_binding(id).is_some()
             || self.get_transform(id).is_some()
@@ -425,6 +425,7 @@ impl Document {
             .hierarchy_order
             .deformation
             .retain(|item| item != id);
+        self.content.hierarchy_order.glues.retain(|item| item != id);
         self.content.transforms.remove(id);
         self.content.parts.remove(id);
         self.content.scene_bindings.remove(id);

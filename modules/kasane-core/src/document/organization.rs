@@ -3,7 +3,7 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 mod index;
-mod lifecycle;
+pub(in crate::document) mod lifecycle;
 pub(in crate::document) use index::{same_metadata_shape, OrganizationIndex};
 mod scene;
 
@@ -70,13 +70,13 @@ pub struct OrganizationEffects {
 }
 #[derive(Debug, Clone)]
 pub struct OrganizationPlan {
-    baseline: Arc<()>,
-    revision: u64,
-    pub(super) delta: Delta,
-    affected: Vec<String>,
-    copied: BTreeMap<String, String>,
-    effects: OrganizationEffects,
-    no_op: bool,
+    pub(in crate::document) baseline: Arc<()>,
+    pub(in crate::document) revision: u64,
+    pub(in crate::document) delta: Delta,
+    pub(in crate::document) affected: Vec<String>,
+    pub(in crate::document) copied: BTreeMap<String, String>,
+    pub(in crate::document) effects: OrganizationEffects,
+    pub(in crate::document) no_op: bool,
 }
 impl OrganizationPlan {
     pub fn is_noop(&self) -> bool {
@@ -96,20 +96,21 @@ impl OrganizationPlan {
     }
 }
 #[derive(Debug, Clone, Default)]
-pub(super) struct Delta {
-    parameters: Vec<Parameter>,
-    groups: Option<DisplayInfo>,
-    parts: Vec<Part>,
-    parents: Vec<(String, String)>,
-    meshes: Vec<Mesh>,
-    transforms: Vec<Transform>,
-    offscreens: Vec<Offscreen>,
-    bindings: Vec<MeshBinding>,
-    scene_bindings: Vec<SceneBinding>,
-    blends: Vec<BlendShapeBinding>,
-    hierarchy: Option<HierarchyOrder>,
-    drawing: Option<Vec<DrawOrderGroup>>,
-    removed: Vec<String>,
+pub(in crate::document) struct Delta {
+    pub(in crate::document) parameters: Vec<Parameter>,
+    pub(in crate::document) groups: Option<DisplayInfo>,
+    pub(in crate::document) parts: Vec<Part>,
+    pub(in crate::document) parents: Vec<(String, String)>,
+    pub(in crate::document) meshes: Vec<Mesh>,
+    pub(in crate::document) transforms: Vec<Transform>,
+    pub(in crate::document) offscreens: Vec<Offscreen>,
+    pub(in crate::document) bindings: Vec<MeshBinding>,
+    pub(in crate::document) scene_bindings: Vec<SceneBinding>,
+    pub(in crate::document) blends: Vec<BlendShapeBinding>,
+    pub(in crate::document) glues: Vec<Glue>,
+    pub(in crate::document) hierarchy: Option<HierarchyOrder>,
+    pub(in crate::document) drawing: Option<Vec<DrawOrderGroup>>,
+    pub(in crate::document) removed: Vec<String>,
 }
 impl Document {
     pub(super) fn validate_organization_metadata_unlocked(

@@ -51,7 +51,7 @@ fn create_base_doc() -> Document {
         id: id(4),
         runtime_id: "MeshA".to_string(),
         name: "Mesh A".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         part_id: id(3),
         vertex_ids: vec![1, 2, 3],
         base_positions: vec![
@@ -354,7 +354,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         id: id(101),
         runtime_id: "Mesh101".to_string(),
         name: "Mesh 101".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         part_id: id(10),
         vertex_ids: vec![1, 2, 3],
         base_positions: vec![
@@ -394,7 +394,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         id: id(201),
         runtime_id: "Mesh201".to_string(),
         name: "Mesh 201".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         part_id: id(20),
         vertex_ids: vec![1, 2, 3],
         base_positions: vec![
@@ -434,7 +434,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         id: id(301),
         runtime_id: "Mesh301".to_string(),
         name: "Mesh 301".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         part_id: id(30),
         vertex_ids: vec![1, 2, 3],
         base_positions: vec![

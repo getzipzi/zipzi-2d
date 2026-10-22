@@ -136,6 +136,7 @@ pub enum ObjectKind {
     BlendBinding,
     Glue,
     Offscreen,
+    DrawOrderGroup,
     CdiParameterGroup,
     CdiCombinedSet,
     Expression,
@@ -199,7 +200,7 @@ pub struct MeshProperties {
 impl From<&Mesh> for MeshProperties {
     fn from(mesh: &Mesh) -> Self {
         Self {
-            texture_asset_id: mesh.texture_asset_id.clone(),
+            texture_asset_id: mesh.texture_asset_id.as_str().to_owned(),
             appearance: mesh.appearance,
             draw_order: mesh.draw_order,
             blend_mode: mesh.blend_mode,

@@ -515,7 +515,7 @@ fn identity_collisions_and_missing_resolved_targets_cannot_be_saved() {
     assert_eq!(s.version(), v);
     let mut wire: serde_json::Value =
         serde_json::from_str(&kasane_project::encode_project(s.document()).unwrap()).unwrap();
-    assert_eq!(wire["format_version"], 16);
+    assert_eq!(wire["format_version"], 17);
     wire["format_version"] = 15.into();
     assert_eq!(
         kasane_project::decode_project(&wire.to_string())

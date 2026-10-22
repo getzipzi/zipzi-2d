@@ -6,7 +6,7 @@ import json
 from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
-from ._native import NativeSession, NativePosePlan, NativeOrganizationPlan, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
+from ._native import NativeSession, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
@@ -232,6 +232,39 @@ class Session:
     def export_motion3(self, motion_id: str) -> str:
         """Encode a clip with current runtime IDs, retaining unresolved imported runtime IDs."""
         return self._native.export_motion3(motion_id)
+
+    def plan_scene_authoring(self, intent: Mapping[str, object]) -> NativeScenePlan:
+        """Plan scene lifecycle and explicit organization/deformation/drawing edits."""
+        return self._native.plan_scene_authoring_json(json.dumps(intent))
+
+    def execute_scene_plan(self, plan: NativeScenePlan):
+        """Execute the accepted scene plan against its captured session version."""
+        return self._native.execute_scene_plan(plan)
+
+    def scene_projection(self) -> dict[str, object]:
+        """Geometry and drawing availability, source mappings and dependency reasons."""
+        return json.loads(self._native.scene_projection_json())
+
+    def scene_collection(self, collection: Mapping[str, object]) -> list[ObjectHandle]:
+        return self._native.scene_collection_json(json.dumps(collection))
+
+    def scene_capabilities(self, handle: ObjectHandle) -> dict[str, object]:
+        return json.loads(self._native.scene_capabilities_json(handle))
+
+    def scene_collection_capabilities(self, collection: Mapping[str, object]) -> dict[str, object]:
+        return json.loads(self._native.scene_collection_capabilities_json(json.dumps(collection)))
+
+    def scene_field_address(self, object_id: str, field: str) -> NativeSceneFieldAddress:
+        return self._native.scene_field_address_json(object_id, json.dumps(field))
+
+    def plan_scene_field_patch(self, address: NativeSceneFieldAddress, value: Mapping[str, object], *, clear_glue_pairs: bool = False) -> NativeScenePlan:
+        return self._native.plan_scene_field_patch_json(address, json.dumps(value), clear_glue_pairs)
+
+    def drawing_group_address(self, owner: str = "") -> NativeDrawingGroupAddress:
+        return self._native.drawing_group_address(owner)
+
+    def plan_drawing_range_patch(self, address: NativeDrawingGroupAddress, value: tuple[int, int]) -> NativeScenePlan:
+        return self._native.plan_drawing_range_patch(address, value)
 
     def plan_organization_authoring(self, intent: Mapping[str, object]) -> NativeOrganizationPlan:
         """Plan organization, owned copy closure and dependency-safe deletion."""

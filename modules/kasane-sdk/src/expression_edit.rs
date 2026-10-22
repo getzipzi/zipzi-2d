@@ -21,7 +21,7 @@ impl ExpressionEditPlan {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub enum CapabilityState {
     Available,
     Unsupported { code: &'static str },

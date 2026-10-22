@@ -8,6 +8,8 @@ use std::collections::{BTreeSet, HashSet};
 mod binding;
 mod motion;
 mod organization;
+mod scene;
+pub use scene::{SceneFieldChange, SceneReferenceChange};
 mod physics;
 mod pose;
 pub use binding::BindingReferenceChange;
@@ -36,6 +38,10 @@ pub struct EntityRef {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CollectionRef {
+    Scene {
+        document_id: String,
+        collection: kasane_core::document::SceneCollection,
+    },
     Organization {
         document_id: String,
         collection: kasane_core::document::OrganizationCollection,
@@ -85,6 +91,8 @@ pub struct ChangeSet {
     pub collections: Vec<CollectionRef>,
     pub references: Vec<ReferenceChange>,
     pub motion_references: Vec<MotionReferenceChange>,
+    pub scene_fields: Vec<SceneFieldChange>,
+    pub scene_references: Vec<SceneReferenceChange>,
     pub organization_references: Vec<OrganizationReferenceChange>,
     pub pose_references: Vec<PoseReferenceChange>,
     pub physics_references: Vec<PhysicsReferenceChange>,
@@ -101,6 +109,9 @@ impl ChangeSet {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.motion_references {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+        }
+        for edge in &mut inverse.scene_references {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.organization_references {
@@ -133,6 +144,24 @@ impl ChangeSet {
                 .collections
                 .iter()
                 .map(|c| match c {
+                    CollectionRef::Scene {
+                        document_id,
+                        collection,
+                    } => {
+                        document_id.capacity()
+                            + match collection {
+                                kasane_core::document::SceneCollection::Organization {
+                                    part_id,
+                                } => part_id.as_ref().map_or(0, String::capacity),
+                                kasane_core::document::SceneCollection::Deformation {
+                                    parent_id,
+                                } => parent_id.as_ref().map_or(0, String::capacity),
+                                kasane_core::document::SceneCollection::Drawing { owner } => {
+                                    owner.capacity()
+                                }
+                                _ => 0,
+                            }
+                    }
                     CollectionRef::DeformationChildren {
                         document_id,
                         parent_id,
@@ -253,6 +282,31 @@ impl ChangeSet {
                         + r.entity.document_id.capacity()
                         + r.before.as_ref().map_or(0, String::capacity)
                         + r.after.as_ref().map_or(0, String::capacity)
+                })
+                .sum::<usize>()
+            + self
+                .scene_fields
+                .iter()
+                .map(|r| {
+                    std::mem::size_of::<SceneFieldChange>()
+                        + r.entity.id.capacity()
+                        + r.entity.document_id.capacity()
+                })
+                .sum::<usize>()
+            + self
+                .scene_references
+                .iter()
+                .map(|r| {
+                    std::mem::size_of::<SceneReferenceChange>()
+                        + r.entity.id.capacity()
+                        + r.entity.document_id.capacity()
+                        + (r.before.capacity() + r.after.capacity())
+                            * std::mem::size_of::<kasane_core::SceneReference>()
+                        + r.before
+                            .iter()
+                            .chain(&r.after)
+                            .map(kasane_core::SceneReference::capacity)
+                            .sum::<usize>()
                 })
                 .sum::<usize>()
             + self.categories.len() * (std::mem::size_of::<ChangeCategory>() + 64)
@@ -400,6 +454,7 @@ pub(crate) fn summarize(
     physics::summarize_physics(before, after, &mut out);
     pose::summarize_pose(before, after, &mut out);
     organization::summarize_organization(before, after, &mut out);
+    scene::summarize_scene(before, after, object_ids, &mut out);
     binding::summarize_bindings(before, after, object_ids, &mut out);
     binding::summarize_binding_children(before, after, object_ids, &mut out);
     // Persistent authoring flags affect capabilities even when domain content
@@ -433,7 +488,11 @@ pub(crate) fn summarize(
             key.id == *id
                 && !matches!(
                     key.kind,
-                    ObjectKind::Expression
+                    ObjectKind::Parameter
+                        | ObjectKind::Part
+                        | ObjectKind::CdiParameterGroup
+                        | ObjectKind::DrawOrderGroup
+                        | ObjectKind::Expression
                         | ObjectKind::ExpressionEntry
                         | ObjectKind::Pose
                         | ObjectKind::PoseGroup

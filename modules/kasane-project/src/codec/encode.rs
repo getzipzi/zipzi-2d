@@ -301,7 +301,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
 
     let project = ProjectWire {
         format: "kasane-directory-project".to_string(),
-        format_version: 16,
+        format_version: 17,
         document: DocumentWire {
             id: document.id().to_string(),
             export_settings: document.export_settings(),

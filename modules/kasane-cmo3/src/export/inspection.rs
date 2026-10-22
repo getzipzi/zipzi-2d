@@ -36,6 +36,13 @@ pub(crate) fn inspect_with_animation(
             message: message.into(),
         })
     };
+    for omitted in doc.scene_export_omissions() {
+        loss(
+            &omitted.id,
+            "SCENE_NEEDS_CONFIGURATION",
+            &format!("{:?}; {:?}", omitted.reason, omitted.chain),
+        );
+    }
     let mut targets = BTreeSet::new();
     for omitted in doc.binding_export_omissions() {
         loss(

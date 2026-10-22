@@ -166,16 +166,6 @@ impl Document {
         if !s.is_ok() {
             return self.failed(s);
         }
-        if self.get_offscreen(&offscreen.id).is_some_and(|old| {
-            old.part_id != offscreen.part_id
-                && (self.binding_for_scene(&old.part_id).is_some()
-                    || self.binding_for_scene(&offscreen.part_id).is_some())
-        }) {
-            return self.failed(Status::error(
-                "OFFSCREEN_REBIND_REQUIRES_CONVERSION",
-                &offscreen.id,
-            ));
-        }
         let id = offscreen.id.clone();
         let part_id = offscreen.part_id.clone();
         self.content.offscreens.insert(id.clone(), offscreen);
@@ -206,6 +196,16 @@ impl Document {
         let s = self.validate_offscreen(&offscreen);
         if !s.is_ok() {
             return self.failed(s);
+        }
+        if self.get_offscreen(&offscreen.id).is_some_and(|old| {
+            old.part_id != offscreen.part_id
+                && (self.binding_for_scene(&old.part_id).is_some()
+                    || self.binding_for_scene(&offscreen.part_id).is_some())
+        }) {
+            return self.failed(Status::error(
+                "OFFSCREEN_REBIND_REQUIRES_CONVERSION",
+                &offscreen.id,
+            ));
         }
         let id = offscreen.id.clone();
         let part_id = offscreen.part_id.clone();

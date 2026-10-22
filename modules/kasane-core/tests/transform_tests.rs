@@ -114,7 +114,7 @@ fn hierarchical_transforms_and_warp(flag: u8) {
         id: id(6),
         runtime_id: "TestMesh".to_string(),
         name: "Test Mesh".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: id(2).into(),
         part_id: id(3),
         deformer_id: id(5),
         vertex_ids: vec![0, 1, 2, 3],

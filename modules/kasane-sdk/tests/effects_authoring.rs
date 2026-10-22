@@ -182,8 +182,8 @@ fn effect_families_share_one_publish_and_failed_replacement_preserves_it() {
             id: id(10),
             runtime_id: id(10),
             name: "seam".into(),
-            mesh_a_id: id(3),
-            mesh_b_id: id(4),
+            mesh_a_id: (id(3)).into(),
+            mesh_b_id: (id(4)).into(),
             pairs: vec![GlueVertexPair {
                 vertex_a: 0,
                 vertex_b: 0,

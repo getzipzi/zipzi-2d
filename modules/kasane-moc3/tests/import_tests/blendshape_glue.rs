@@ -112,8 +112,8 @@ fn animated_glue_roundtrips_and_matches_core() {
             id: id(410),
             runtime_id: "ReviewGlue".into(),
             name: "ReviewGlue".into(),
-            mesh_a_id: mesh_id.clone(),
-            mesh_b_id: mesh_id,
+            mesh_a_id: (mesh_id.clone()).into(),
+            mesh_b_id: (mesh_id).into(),
             pairs: vec![GlueVertexPair {
                 vertex_a: vertices[0],
                 vertex_b: vertices[1],

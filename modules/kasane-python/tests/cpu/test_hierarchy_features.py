@@ -598,3 +598,63 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         with self.assertRaises(kasane.SdkFailure):
             model.resolve_handle(copied)
         self.assertEqual(model.validate_structure(), [])
+
+    def test_scene_pending_references_projection_and_copy_lifecycle(self):
+        model = session()
+        mesh, warp, glue = (str(uuid4()) for _ in range(3))
+        for object_id, obj in [(mesh, {"kind": "mesh"}), (warp, {"kind": "warp"}),
+                               (glue, {"kind": "glue", "a": {"kind": "resolved", "object_id": mesh}})]:
+            with model.edit("scene object") as edit:
+                edit.scene_authoring({"operation": "create", "id": object_id, "name": "", "object": obj})
+        projection = model.scene_projection()
+        self.assertEqual(projection["geometry"], [mesh])
+        self.assertEqual(projection["drawing"], [])
+        self.assertEqual(projection["glues"], [])
+        self.assertTrue(any(item["id"] == glue for item in projection["disabled"]))
+        address = model.scene_field_address(mesh, "label")
+        self.assertEqual(json.loads(address.expected_json)["field"], "label")
+        plan = model.plan_scene_field_patch(address, {"field": "label", "value": "Named"})
+        self.assertEqual(plan.version, model.version)
+        model.execute_scene_plan(plan)
+        self.assertEqual(model.mesh(mesh).name, "Named")
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_scene_field_patch(address, {"field": "label", "value": "Other"})
+        copy_plan = model.plan_scene_authoring({"operation": "duplicate", "ids": [mesh, glue], "destination": None})
+        copies = dict(copy_plan.copied_ids)
+        model.execute_scene_plan(copy_plan)
+        endpoints = json.loads(model.scene_field_address(copies[glue], "glue_endpoints").expected_json)["value"]
+        self.assertEqual(endpoints["a"]["object_id"], copies[mesh])
+        self.assertEqual(endpoints["b"]["kind"], "unspecified")
+        with TemporaryDirectory() as root:
+            saved = model.save(Path(root) / "pending_scene")
+            reopened = kasane.open_project(saved.manifest)
+            self.assertEqual(reopened.scene_projection(), model.scene_projection())
+
+    def test_drawing_group_role_history_and_glue_management_order(self):
+        model = session()
+        with model.edit("owner") as edit:
+            edit.create_part(PART, "Part")
+        roles = model.scene_collection({"kind": "drawing_groups"})
+        self.assertTrue(any(role.id == PART and role.kind == "draw_order_group" for role in roles))
+        role = model.handle("draw_order_group", PART)
+        address = model.drawing_group_address(PART)
+        model.execute_scene_plan(model.plan_drawing_range_patch(address, (-5, 5)))
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_drawing_range_patch(address, (-2, 2))
+        model.execute_scene_plan(model.plan_scene_authoring({"operation": "dissolve_drawing_group", "owner": PART}))
+        self.assertIsNotNone(model.part(PART))
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.resolve_handle(role)
+        glues = [str(uuid4()), str(uuid4())]
+        for glue in glues:
+            with model.edit("glue") as edit:
+                edit.scene_authoring({"operation": "create", "id": glue, "name": "", "object": {"kind": "glue"}})
+        before = model.evaluation_revision
+        model.execute_scene_plan(model.plan_scene_authoring({"operation": "move", "ids": [glues[1]], "destination": {"kind": "glues"}, "before": glues[0]}))
+        self.assertEqual([handle.id for handle in model.scene_collection({"kind": "glues"})], list(reversed(glues)))
+        self.assertEqual(model.glue_ids(), glues)
+        self.assertEqual(model.evaluation_revision, before)
+        self.assertEqual(model.validate_structure(), [])
