@@ -25,7 +25,9 @@ For repeated local edits, use the focused entrypoint:
 ```sh
 ./tools/test.sh fast                         # SDK unit + ordinary CPU integration
 ./tools/test.sh fast physics_editing::       # Filter one SDK domain
-./tools/test.sh regression                   # All Rust libraries/integration, no examples/docs
+./tools/test.sh mesh                         # Daily alpha mesh regressions + boundary limits
+./tools/test.sh regression                   # Rust libraries/integration, excluding stress remainder
+./tools/test.sh stress                       # Complete alpha mesh suite + fixed-seed stress matrix
 ./tools/test.sh python                       # Current Debug extension + CPU/inspection tests
 ./tools/test.sh python --observe             # Current Debug extension + CPU/inspection/GPU
 ./tools/test.sh python -- -k history          # Filter Python tests
@@ -33,17 +35,22 @@ For repeated local edits, use the focused entrypoint:
 ./tools/test.sh full                         # Format + complete Rust suite + CPU wheel gate
 ```
 
-SDK ordinary integration cases share `--test integration`; `--test alpha_mesh`
-remains a separate pressure/geometry suite and runs in `regression` and `full`.
+SDK ordinary integration cases share `--test integration`. Alpha mesh daily
+regression keeps four representative cases from each original random matrix;
+`stress` adds the remaining cases, preserving all 24 fragmented and 64 small
+masks with the same seeds and assertions. `mesh` and `regression` skip only the
+`alpha_mesh_stress::` tests. The 65536-vertex boundary case stays in daily checks.
+Plain `cargo test --workspace --locked` and `full` include the complete matrix;
+stress tests are not ignored or feature-gated.
 For a narrow Rust invocation use, for example,
 `cargo test --locked -p kasane-sdk --test integration physics_editing::`.
 
 The Python development gate keeps its environment in `target/python-tests/`
 and reuses the workspace `target/` Cargo artifacts. Each invocation refreshes
 the extension, checks its GPU capability, and starts fresh test processes.
-This covers the current Rust and
-Python sources without rebuilding a Release wheel on each edit. CPU/observe
-development runs share one editable environment because Maturin installs their
+This covers the current Rust and Python sources without rebuilding a Release
+wheel on each edit. CPU/observe development runs share one editable environment
+because Maturin installs their
 native extension at the same source location. Packaged-wheel tests use separate
 environments and import only the installed wheel. Complete wheel acceptance
 remains a separate gate; its failures are propagated.

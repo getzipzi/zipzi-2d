@@ -4,21 +4,36 @@ cd "$(dirname "$0")/.."
 
 usage() {
     cat <<'EOF'
-Usage: ./tools/test.sh [fast|regression|python|wheel|full] [arguments...]
+Usage: ./tools/test.sh [fast|mesh|regression|stress|python|wheel|full] [arguments...]
 
   fast        SDK unit and ordinary CPU integration tests; optional Cargo filter
-  regression  workspace libraries and integration tests, including alpha mesh
+  mesh        alpha mesh daily cases, including vertex-budget boundaries
+  regression  workspace libraries/integration, excluding the random stress remainder
+  stress      complete alpha mesh suite, including the entire fixed-seed matrix
   python      build/install current Debug extension, then Python SDK tests
   wheel       build/install a Release wheel and run SDK acceptance
   full        formatting, complete Rust suite and CPU wheel acceptance (default)
 
 Examples:
   ./tools/test.sh fast physics_editing::
+  ./tools/test.sh mesh
+  ./tools/test.sh stress
   ./tools/test.sh python
   ./tools/test.sh python --observe
   ./tools/test.sh python -- -k history
   ./tools/test.sh wheel --observe
 EOF
+}
+
+daily_rust_tests() {
+    # Append the selector to an existing libtest argument list, or introduce
+    # one. Cargo filters and flags such as --no-run keep their usual meaning.
+    for argument in "$@"; do
+        if [ "$argument" = "--" ]; then
+            exec cargo test --locked "$@" --skip alpha_mesh_stress::
+        fi
+    done
+    exec cargo test --locked "$@" -- --skip alpha_mesh_stress::
 }
 
 mode=${1:-full}
@@ -28,7 +43,13 @@ case "$mode" in
         exec cargo test --locked -p kasane-sdk --lib --test integration "$@"
         ;;
     regression)
-        exec cargo test --locked --workspace --lib --tests "$@"
+        daily_rust_tests --workspace --lib --tests "$@"
+        ;;
+    mesh)
+        daily_rust_tests -p kasane-sdk --test alpha_mesh "$@"
+        ;;
+    stress)
+        exec cargo test --locked -p kasane-sdk --test alpha_mesh "$@"
         ;;
     python)
         exec uv run --locked python tools/test_python.py "$@"

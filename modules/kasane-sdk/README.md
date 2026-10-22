@@ -37,12 +37,17 @@ migration adapters.
 From the workspace root, `./tools/test.sh fast` runs SDK unit and ordinary CPU
 integration tests; add a module filter such as `physics_editing::` for local
 iteration. Ordinary suites share `tests/integration.rs`; register new CPU test
-modules there. The `alpha_mesh` target remains separate and runs in
-`./tools/test.sh regression` and `./tools/test.sh full`.
+modules there. `./tools/test.sh mesh` runs daily alpha mesh cases and boundary
+limits. `regression` includes these daily cases alongside the other workspace
+tests; `stress` runs the complete alpha mesh suite and both original random
+matrices (24 fragmented masks and 64 small masks). Daily and stress samples
+partition each matrix, so full runs check each original mask once.
+`./tools/test.sh full` and plain Cargo workspace tests keep the complete coverage.
 
 ```sh
 cargo test --locked -p kasane-sdk --test integration physics_editing::
-cargo test --locked -p kasane-sdk --test alpha_mesh
+./tools/test.sh mesh
+./tools/test.sh stress
 ```
 
 ## Alpha mesh generation

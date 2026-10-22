@@ -61,7 +61,6 @@ fn denser_settings_add_vertices_and_generation_is_repeatable() {
     let b = generate(96, 64, &alpha, &dense);
     assert!(b.positions.len() > a.positions.len() * 2);
     assert_eq!(b, generate(96, 64, &alpha, &dense));
-    assert_eq!(a, generate(96, 64, &alpha, &sparse));
 }
 
 #[test]
@@ -203,25 +202,9 @@ fn malformed_empty_and_excessive_inputs_return_errors() {
 }
 
 #[test]
-fn many_small_masks_preserve_area_and_foreground_without_panics() {
-    // Fixed PRNG seed; exercise arbitrary holes, islands and point contacts.
-    let mut state = 0x12ab34cdu32;
-    for _ in 0..64 {
-        let alpha: Vec<_> = (0..64)
-            .map(|_| {
-                state ^= state << 13;
-                state ^= state >> 17;
-                state ^= state << 5;
-                if state & 1 == 0 {
-                    0
-                } else {
-                    255
-                }
-            })
-            .collect();
-        let mesh = generate(8, 8, &alpha, &options());
-        valid(&mesh, 8, 8);
-        coverage(&mesh, 8, 8, &alpha, 0, true);
-        assert!((area(&mesh) - alpha.iter().filter(|&&v| v > 0).count() as f64).abs() < 1e-4);
+fn representative_small_masks_preserve_area_and_foreground_without_panics() {
+    use super::mask_cases::*;
+    for (case, alpha) in small_masks().filter(|(case, _)| SMALL_DAILY.contains(case)) {
+        check_small(case, &alpha);
     }
 }

@@ -444,8 +444,7 @@ fn smooth_circle_samples_follow_spacing_without_losing_padding() {
         );
     }
     let repeated = generate(256, 256, &alpha, &options);
-    assert_eq!(mesh.positions, repeated.positions);
-    assert_eq!(mesh.triangles, repeated.triangles);
+    assert_eq!(mesh, repeated);
     let dense = generate(
         256,
         256,

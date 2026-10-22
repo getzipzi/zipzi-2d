@@ -58,30 +58,10 @@ fn minimum_margin_survives_simplification_at_sharp_corners() {
 }
 
 #[test]
-fn padded_fragmented_masks_do_not_create_degenerate_meshes() {
-    let mut state = 0x532ea90du32;
-    for _ in 0..24 {
-        let alpha: Vec<_> = (0..24 * 24)
-            .map(|_| {
-                state ^= state << 13;
-                state ^= state >> 17;
-                state ^= state << 5;
-                if state.is_multiple_of(5) {
-                    255
-                } else {
-                    0
-                }
-            })
-            .collect();
-        let opts = AlphaMeshOptions {
-            outside_margin: 1.5,
-            minimum_margin: 0.5,
-            inside_margin: 0.5,
-            ..options()
-        };
-        let mesh = generate(24, 24, &alpha, &opts);
-        valid(&mesh, 24, 24);
-        coverage(&mesh, 24, 24, &alpha, 0, false);
+fn representative_padded_fragmented_masks_do_not_create_degenerate_meshes() {
+    use super::mask_cases::*;
+    for (case, alpha) in fragmented_masks().filter(|(case, _)| FRAGMENTED_DAILY.contains(case)) {
+        check_fragmented(case, &alpha);
     }
 }
 
