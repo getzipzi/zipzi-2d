@@ -6,9 +6,11 @@ use kasane_core::{ChangeKind, Document};
 use serde::Serialize;
 use std::collections::{BTreeSet, HashSet};
 mod binding;
+mod content;
 mod motion;
 mod organization;
 mod scene;
+pub use content::{SceneContentChange, SceneContentReferenceChange, SceneContentReferenceValue};
 pub use scene::{SceneFieldChange, SceneReferenceChange};
 mod physics;
 mod pose;
@@ -38,6 +40,11 @@ pub struct EntityRef {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CollectionRef {
+    SceneContent {
+        document_id: String,
+        owner_id: String,
+        domain: kasane_core::document::SceneContentDomain,
+    },
     Scene {
         document_id: String,
         collection: kasane_core::document::SceneCollection,
@@ -91,6 +98,8 @@ pub struct ChangeSet {
     pub collections: Vec<CollectionRef>,
     pub references: Vec<ReferenceChange>,
     pub motion_references: Vec<MotionReferenceChange>,
+    pub content_references: Vec<SceneContentReferenceChange>,
+    pub content_changes: Vec<SceneContentChange>,
     pub scene_fields: Vec<SceneFieldChange>,
     pub scene_references: Vec<SceneReferenceChange>,
     pub organization_references: Vec<OrganizationReferenceChange>,
@@ -109,6 +118,9 @@ impl ChangeSet {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.motion_references {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+        }
+        for edge in &mut inverse.content_references {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.scene_references {
@@ -130,6 +142,19 @@ impl ChangeSet {
     }
     pub(crate) fn estimated_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
+            + self.content_references.capacity()
+                * std::mem::size_of::<SceneContentReferenceChange>()
+            + self
+                .content_references
+                .iter()
+                .map(SceneContentReferenceChange::extra_bytes)
+                .sum::<usize>()
+            + self.content_changes.capacity() * std::mem::size_of::<SceneContentChange>()
+            + self
+                .content_changes
+                .iter()
+                .map(|c| c.entity.id.capacity() + c.entity.document_id.capacity())
+                .sum::<usize>()
             + (self.created.capacity() + self.deleted.capacity() + self.modified.capacity())
                 * std::mem::size_of::<EntityRef>()
             + self
@@ -144,6 +169,11 @@ impl ChangeSet {
                 .collections
                 .iter()
                 .map(|c| match c {
+                    CollectionRef::SceneContent {
+                        document_id,
+                        owner_id,
+                        ..
+                    } => document_id.capacity() + owner_id.capacity(),
                     CollectionRef::Scene {
                         document_id,
                         collection,
@@ -457,6 +487,7 @@ pub(crate) fn summarize(
     scene::summarize_scene(before, after, object_ids, &mut out);
     binding::summarize_bindings(before, after, object_ids, &mut out);
     binding::summarize_binding_children(before, after, object_ids, &mut out);
+    content::summarize_content(before, after, object_ids, &mut out);
     // Persistent authoring flags affect capabilities even when domain content
     // is unchanged. Derive them from both states so undo uses the same summary.
     if before.editor_state() != after.editor_state() {
@@ -508,6 +539,8 @@ pub(crate) fn summarize(
             out.modified.push(entity(key.kind, id));
         }
     }
+    out.modified
+        .retain(|e| !out.created.contains(e) && !out.deleted.contains(e));
     // Deterministic order is useful to event consumers and persisted diagnostics.
     for entities in [&mut out.created, &mut out.deleted, &mut out.modified] {
         entities.sort_by(|a, b| a.id.cmp(&b.id));

@@ -267,6 +267,9 @@ impl Document {
                 g.mesh_a_id = a.clone();
                 g.mesh_b_id = b.clone();
                 if clear_pairs {
+                    for pair in &g.pairs {
+                        self.content.editor_state.objects.remove(&pair.id);
+                    }
                     g.pairs.clear();
                 }
             }

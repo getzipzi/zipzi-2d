@@ -268,6 +268,7 @@ impl Document {
                     .get(&id)
                     .is_some_and(|&i| existing.entries[i].owner != owner)
                     || self.contains_base_identity(&id)
+                    || self.get_glue_pair(&id).is_some()
                     || self.get_motion_track(&id).is_some()
                     || self.get_motion_key(&id).is_some()
                     || self.get_motion_event(&id).is_some())

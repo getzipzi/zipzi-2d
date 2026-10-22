@@ -341,26 +341,38 @@ impl EditSession<'_> {
         points: Vec<Vec2>,
     ) -> Result<(), SdkError> {
         self.ensure_active("update_warp_points")?;
-        let Some(mut transform) = self.document().get_transform(transform_id).cloned() else {
-            return Err(self.abort_with(SdkError::from_status(
-                Status::error("MISSING_TRANSFORM", "Transform does not exist"),
-                "update_warp_points",
-                vec![transform_id.into()],
-            )));
+        let warp = self
+            .candidate_document()
+            .get_transform(transform_id)
+            .and_then(|t| t.warp())
+            .ok_or_else(|| SdkError::new("NOT_WARP", transform_id, "update_warp_points"));
+        let warp = match warp {
+            Ok(w) => w,
+            Err(e) => return Err(self.abort_with(e)),
         };
-        let Some(warp) = transform.warp_mut() else {
-            return Err(self.abort_with(SdkError::from_status(
-                Status::error("INVALID_TRANSFORM_TYPE", "Transform is not a warp"),
+        if points.len() != warp.points.len() {
+            return Err(self.abort_with(SdkError::new(
+                "INVALID_LENGTH",
+                "Use a Warp resize plan to change topology",
                 "update_warp_points",
-                vec![transform_id.into()],
             )));
-        };
-        if warp.points != points {
-            warp.bezier = None;
         }
-        warp.points = points;
-        let result = self.document().replace_transform(transform);
-        self.record(result, "update_warp_points", transform_id)
+        let columns = warp.columns;
+        let clear_bezier = warp.points != points;
+        self.edit_scene_content(crate::SceneContentEdit::WarpPoints {
+            transform_id: transform_id.into(),
+            target: crate::ShapeTarget::Base,
+            updates: points
+                .into_iter()
+                .enumerate()
+                .map(|(i, point)| crate::WarpPointPatch {
+                    row: i as u32 / (columns + 1),
+                    column: i as u32 % (columns + 1),
+                    point,
+                })
+                .collect(),
+            clear_bezier,
+        })
     }
     pub fn create_mesh(&mut self, mesh: Mesh) -> Result<(), SdkError> {
         self.ensure_active("create_mesh")?;

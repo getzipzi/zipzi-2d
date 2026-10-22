@@ -198,12 +198,14 @@ impl Document {
             for g in self.content.glues.values() {
                 if g.mesh_a_id == mesh.id {
                     for pair in &g.pairs {
-                        if !new_vids.contains(&pair.vertex_a) {
+                        if pair.vertex_a.is_some_and(|v| !new_vids.contains(&v)) {
                             return self.failed(Status::error(
                                 "GLUE_CONFLICT",
                                 format!(
                                     "{}: vertex {} used in glue {} is missing from updated mesh",
-                                    mesh.id, pair.vertex_a, g.id
+                                    mesh.id,
+                                    pair.vertex_a.unwrap(),
+                                    g.id
                                 ),
                             ));
                         }
@@ -211,12 +213,14 @@ impl Document {
                 }
                 if g.mesh_b_id == mesh.id {
                     for pair in &g.pairs {
-                        if !new_vids.contains(&pair.vertex_b) {
+                        if pair.vertex_b.is_some_and(|v| !new_vids.contains(&v)) {
                             return self.failed(Status::error(
                                 "GLUE_CONFLICT",
                                 format!(
                                     "{}: vertex {} used in glue {} is missing from updated mesh",
-                                    mesh.id, pair.vertex_b, g.id
+                                    mesh.id,
+                                    pair.vertex_b.unwrap(),
+                                    g.id
                                 ),
                             ));
                         }
@@ -435,6 +439,7 @@ impl Document {
             .binding_order
             .retain(|id| candidate.content.bindings.contains_key(id));
         candidate.lookup.take();
+        candidate.pair_lookup.take();
         let result = candidate.replace_mesh(mesh);
         if !result.status.is_ok() {
             return self.failed(result.status);
@@ -456,6 +461,7 @@ impl Document {
             }
             candidate.content.blend_bindings.insert(b.id.clone(), b);
             candidate.lookup.take();
+            candidate.pair_lookup.take();
         }
         for g in glues {
             // Reuse replacement validation, including runtime-ID uniqueness.
@@ -463,6 +469,7 @@ impl Document {
                 .content
                 .glues
                 .insert(g.id.clone(), self.content.glues[&g.id].clone());
+            candidate.pair_lookup.take();
             let result = candidate.replace_glue(g);
             if !result.status.is_ok() {
                 return self.failed(result.status);

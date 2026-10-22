@@ -231,7 +231,7 @@ pub(crate) type OffscreenTuple = (
     Vec<OffscreenFormTuple>,
     VersionTuple,
 );
-pub(crate) type GluePairTuple = (u32, u32, f32, f32);
+pub(crate) type GluePairTuple = (Option<u32>, Option<u32>, f32, f32);
 pub(crate) type GlueBindingTuple = (Vec<(String, Vec<f32>)>, Vec<f32>);
 pub(crate) type GlueDataTuple = (
     String,

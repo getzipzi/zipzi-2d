@@ -135,6 +135,7 @@ pub enum ObjectKind {
     BlendConstraint,
     BlendBinding,
     Glue,
+    GlueVertexPair,
     Offscreen,
     DrawOrderGroup,
     CdiParameterGroup,

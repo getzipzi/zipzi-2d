@@ -178,6 +178,16 @@ impl Document {
             if self.editor_state().get(id).locked {
                 return Err(Status::error("OBJECT_LOCKED", id));
             }
+            if let Some(owner) = self.glue_pair_owner(id) {
+                pending.push(owner);
+            }
+            if let Some(glue) = self.get_glue(id) {
+                for pair in &glue.pairs {
+                    if self.editor_state().get(&pair.id).locked {
+                        return Err(Status::error("OBJECT_LOCKED", &pair.id));
+                    }
+                }
+            }
             // Whole-owner replacements and shared conversions must honor locks
             // on their owned axes and samples as well as the resource itself.
             let axes = self

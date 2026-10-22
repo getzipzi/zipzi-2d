@@ -751,7 +751,7 @@ zero-byte file. Imported path conveniences bind loaded files to stable IDs.
 contains persistent axis IDs, samples with `{id, value}` (and constraint
 `weight`), keyform sample ID combinations, and shared table `base_sample_id`.
 Numeric `keys`, parallel weights and base indices in the tuple snapshots are
-compiled views. Native projects use directory-project version 17.
+compiled views. Native projects use directory-project version 18.
 
 `Session.plan_binding_authoring(intent)` and `Edit.binding_authoring(intent)`
 accept the Rust `BindingAuthoringEdit` enum representation. `Grid` supports
@@ -816,7 +816,7 @@ returns a specific error. Legal Rotation/Warp subtree moves retain
 
 `Session.plan_scene_authoring(intent)`, `execute_scene_plan(plan)` and
 `Edit.scene_authoring(intent)` use the same native lifecycle rules. Native
-projects now use directory-project version **17** (core schema **8**).
+projects now use directory-project version **18** (core schema **9**).
 
 ```python
 from uuid import uuid4
@@ -880,4 +880,93 @@ endpoints validates pairs unless explicitly clearing them. Warp topology
 changes with active keyform grids require C4 conversion. Context is read-only.
 `drawing_group_address(owner="")` and `plan_drawing_range_patch(address, (min, max))`
 protect range edits. Undo does not revive expired addresses. Dedicated vertex,
-UV, Warp-control and Glue-pair authoring remain separate future content work.
+UV, Warp-control and Glue-pair authoring is described below.
+
+### Dedicated scene content (C5)
+
+`Session.plan_scene_content(intent, control=None)`, `execute_scene_content_plan(plan)`
+and `Edit.scene_content(intent)` operate on geometry and owned scene content.
+Use `scene_content_address(owner_id, target)` and
+`plan_scene_content_patch(address, value)` for delayed field edits. Addresses
+capture expected values and a monotonic content epoch; topology/content changes
+and Undo expire them. Labels preserve content addresses. Plans expose `version`,
+`is_noop`, `affected_ids`, `report_json`, and `cost`. They publish atomically and
+accept the shared `binding_conversion_control()` cancellation signal. Native
+projects now use directory-project version **18**, core schema **9**.
+
+```python
+vertex_id = model.geometry(mesh_id).vertex_ids[0]
+address = model.scene_content_address(mesh_id, {
+    "kind": "vertex_uv", "vertex_id": vertex_id,
+})
+model.execute_scene_content_plan(model.plan_scene_content_patch(
+    address, {"kind": "point", "value": {"x": 0.25, "y": 0.75}}))
+```
+
+Mesh commands are `mesh_vertices` (`updates` of `vertex_id`, optional `position`
+and `uv`), `insert_mesh_vertices`, `delete_mesh_vertices`, `reorder_mesh_vertices`,
+`insert_triangle`, `patch_triangle`, `delete_triangles`, and `replace_triangles`.
+All take `mesh_id`; triangle endpoints are VertexIds, while `slot`/`slots` and
+insertion `before` are topology coordinates. The vertex reorder `order` must be
+an exact permutation. Newly inserted `vertices` contain `vertex_id`, `position`,
+`uv`, and `seed`: `{"kind":"base"}` or
+`{"kind":"interpolate","weights":[{"vertex_id": old_id,"weight": 1.0}]}`.
+Weights are finite/nonnegative and sum to one. Base positions/UVs use the explicit
+new values; ordinary forms use the seed and Blend forms interpolate deltas (or
+zero for a base seed). All shape arrays follow insertion, deletion and reorder.
+Deletion `policy` is `reject_references` or explicit `remove_dependent_content`,
+which removes touching triangles/Glue pairs and reports their identities.
+
+Position targets default to `{"kind":"base"}`. An ordinary target is
+`{"kind":"ordinary","binding_id": id,"samples": [sample_ids...]}`;
+a Blend target is `{"kind":"blend","binding_id": id,"sample_id": id}`.
+Blend positions are offsets. UV edits are only allowed on the base Mesh.
+Content address targets include `vertex_position` with `vertex_id` and `shape`,
+`vertex_uv`, and `triangle` with `slot`. Values are tagged `point` or `triangle`
+with `value` containing a point object or three VertexIds.
+
+Warp commands take `transform_id`: `warp_points` uses `target`, `updates` of
+`row`, `column`, `point`, and explicit `clear_bezier` when replacing a controller;
+`warp_bezier` takes `target` and optional `controller`; `resize_warp` takes `rows`,
+`columns`, `quad`. Resize samples every base/ordinary/Blend lattice at the new
+nodes and reports possible interpolation changes between nodes. Bezier edits
+apply controller deltas over the authored lattice to retain imported residuals.
+Address targets `warp_point` and `warp_bezier_control` carry `shape`; the latter
+uses `node` and `component` (0 anchor, 1 left, 2 right, 3 up, 4 down). Moving an
+anchor translates its handles. A Blend form has lattice deltas, no controller.
+
+Glue pairs have canonical `{id, vertex_a, vertex_b, weight_a, weight_b}` data;
+`id` is a UUID and either vertex can be `None`. Use `glue_pairs(glue_id)` for
+canonical data and `glue_pair_handles(glue_id)` for `glue_vertex_pair` handles.
+Commands are `insert_glue_pair` (`pair`, `before` PairId), `patch_glue_pair`,
+`move_glue_pairs`, `duplicate_glue_pairs`, `delete_glue_pairs` (`ids`), and
+`transfer_glue_pairs` (`destination`, `pairs`, `before`). Transfer retains IDs
+but requires explicit endpoint values valid in the destination Glue. Copies
+allocate new IDs, reported in `generated_pair_ids`. Pending pairs remain saved,
+are diagnosed/skipped at runtime, and cause strict foreign export diagnostics.
+`scene_projection()` includes ready `pairs` and `pair_slots` pointing to the
+owning Glue and original uncompressed source slot. A `glue_pair` address uses
+`pair_id`; its value is tagged `glue_pair` with the complete canonical pair.
+
+Offscreen commands take `offscreen_id`: `insert_offscreen_keyform` (`value`,
+`before`), `patch_offscreen_keyform` (`slot`, `value`),
+`duplicate_offscreen_keyforms` (`slots`, `before`), `reorder_offscreen_keyforms`
+(`order` permutation), `delete_offscreen_keyforms` (`slots`, `policy`), and
+`set_offscreen_mapping` (`updates` of `slot`, `keyform`). Insertion/reorder/copy
+remap existing Part indices to retain sampling. Referenced deletion requires
+`{"kind":"neutral"}` or `{"kind":"remap","replacements":{"old_index": retained_old_index}}`;
+`{"kind":"reject_references"}` refuses it. A replacement can be `None` for
+neutral. Negative mapping sentinels retain their values. Mapping slots are
+`{"kind":"static"}` for an unbound Part or
+`{"kind":"samples","samples":[sample_ids...]}`. Content addresses use
+`offscreen_keyform` with a numeric topology slot or `offscreen_mapping` with a
+Part slot; values are tagged `offscreen_keyform` or `mapping`. Use C4 binding
+conversion for Part grid changes and `transfer_offscreen` for owner transfer.
+
+`scene_content_capabilities(handle)` reports content availability and locks.
+Reports include removed vertices/triangle slots/PairIds, vertex reconstruction
+sources, keyform remaps, resampled shapes and losses. SDK ChangeSets expose
+`content_changes` and direction-aware `content_references`. Deleted Pair handles
+must be reacquired after Undo. Legacy Glue four-tuples accept optional vertices;
+replacement retains IDs only for unique matching endpoint pairs. Use canonical
+content commands whenever identities must be explicit.

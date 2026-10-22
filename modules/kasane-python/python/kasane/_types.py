@@ -422,8 +422,8 @@ class OffscreenSnapshot(NamedTuple):
 class GlueVertexPair(NamedTuple):
     """Paired vertex IDs and their individual glue weights."""
 
-    vertex_a: int
-    vertex_b: int
+    vertex_a: int | None
+    vertex_b: int | None
     weight_a: float
     weight_b: float
 

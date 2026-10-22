@@ -43,6 +43,7 @@ pub struct AuthoringSession {
     // Owner-dependent field addresses must not revive after a move and undo.
     pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) attachment_content_epochs: HashMap<String, u64>,
+    pub(crate) content_epochs: HashMap<(String, kasane_core::document::SceneContentDomain), u64>,
     pub(crate) scene_field_epochs: HashMap<(String, kasane_core::document::SceneField), u64>,
     pub(crate) organization_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) pose_contexts: HashMap<String, (String, u64)>,
@@ -195,6 +196,7 @@ impl AuthoringSession {
             incarnations,
             physics_contexts: HashMap::new(),
             pose_contexts: HashMap::new(),
+            content_epochs: HashMap::new(),
             scene_field_epochs: HashMap::new(),
             organization_contexts: HashMap::new(),
             expression_entry_contexts: HashMap::new(),
@@ -731,6 +733,7 @@ impl AuthoringSession {
             self.pose_contexts.clear();
             self.organization_contexts.clear();
             self.scene_field_epochs.clear();
+            self.content_epochs.clear();
             if let Some(pose) = document.pose() {
                 for id in pose.entity_ids() {
                     if let Some(owner) = document.pose_owner(id) {
@@ -906,6 +909,12 @@ impl AuthoringSession {
                 self.organization_contexts.remove(&entity.id);
             }
         }
+        for change in &changes.content_changes {
+            self.content_epochs.insert(
+                (change.entity.id.clone(), change.domain.clone()),
+                document.revision(),
+            );
+        }
         for field in &changes.scene_fields {
             self.scene_field_epochs
                 .insert((field.entity.id.clone(), field.field), document.revision());
@@ -1001,6 +1010,7 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
         ObjectKind::BlendConstraint => doc.get_blend_constraint(id).is_some(),
         ObjectKind::BlendBinding => doc.get_blend_binding(id).is_some(),
         ObjectKind::Glue => doc.get_glue(id).is_some(),
+        ObjectKind::GlueVertexPair => doc.get_glue_pair(id).is_some(),
         ObjectKind::Offscreen => doc.get_offscreen(id).is_some(),
         ObjectKind::DrawOrderGroup => doc.drawing_group_owners().iter().any(|owner| {
             if owner.is_empty() {
@@ -1063,6 +1073,17 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
         })
     })
     .collect();
+    keys.extend(
+        doc.glue_order()
+            .iter()
+            .filter_map(|id| doc.get_glue(id))
+            .flat_map(|g| {
+                g.pairs.iter().map(|p| ObjectKey {
+                    kind: ObjectKind::GlueVertexPair,
+                    id: p.id.clone(),
+                })
+            }),
+    );
     keys.extend(
         doc.drawing_group_owners()
             .into_iter()

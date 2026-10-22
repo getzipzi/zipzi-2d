@@ -6,7 +6,7 @@ import json
 from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
-from ._native import NativeSession, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
+from ._native import NativeSession, NativeSceneContentPlan, NativeSceneContentAddress, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
@@ -232,6 +232,27 @@ class Session:
     def export_motion3(self, motion_id: str) -> str:
         """Encode a clip with current runtime IDs, retaining unresolved imported runtime IDs."""
         return self._native.export_motion3(motion_id)
+
+    def plan_scene_content(self, intent: Mapping[str, object], *, control: NativeConversionControl | None = None) -> NativeSceneContentPlan:
+        return self._native.plan_scene_content_json(json.dumps(intent), control)
+
+    def execute_scene_content_plan(self, plan: NativeSceneContentPlan):
+        return self._native.execute_scene_content_plan(plan)
+
+    def scene_content_address(self, owner_id: str, target: Mapping[str, object]) -> NativeSceneContentAddress:
+        return self._native.scene_content_address_json(owner_id, json.dumps(target))
+
+    def plan_scene_content_patch(self, address: NativeSceneContentAddress, value: Mapping[str, object]) -> NativeSceneContentPlan:
+        return self._native.plan_scene_content_patch_json(address, json.dumps(value))
+
+    def scene_content_capabilities(self, handle: ObjectHandle) -> dict[str, object]:
+        return json.loads(self._native.scene_content_capabilities_json(handle))
+
+    def glue_pair_handles(self, owner_id: str) -> list[ObjectHandle]:
+        return self._native.glue_pair_handles(owner_id)
+
+    def glue_pairs(self, owner_id: str) -> list[dict[str, object]]:
+        return json.loads(self._native.glue_pairs_json(owner_id))
 
     def plan_scene_authoring(self, intent: Mapping[str, object]) -> NativeScenePlan:
         """Plan scene lifecycle and explicit organization/deformation/drawing edits."""

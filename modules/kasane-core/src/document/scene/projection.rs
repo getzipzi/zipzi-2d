@@ -8,6 +8,7 @@ pub enum SceneUse {
     Geometry,
     Drawing,
     Glue,
+    GluePair,
     Composite,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,12 +31,20 @@ pub struct SceneProjection {
     pub geometry: Vec<String>,
     pub drawing: Vec<String>,
     pub glues: Vec<String>,
+    pub pairs: Vec<String>,
+    /// Stable PairId -> original, uncompressed evaluation coordinates.
+    pub pair_slots: HashMap<String, ScenePairSlot>,
     pub composites: Vec<String>,
     pub geometry_slots: HashMap<String, usize>,
     pub drawing_slots: HashMap<String, usize>,
     pub glue_slots: HashMap<String, usize>,
     pub composite_slots: HashMap<String, usize>,
     pub disabled: Vec<DisabledSceneItem>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScenePairSlot {
+    pub glue_id: String,
+    pub source_slot: usize,
 }
 impl Document {
     pub fn scene_projection(&self) -> Arc<SceneProjection> {
@@ -151,6 +160,16 @@ impl Document {
             .collect();
         for id in self.glue_order() {
             let g = self.get_glue(id).unwrap();
+            for pair in &g.pairs {
+                if pair.vertex_a.is_none() || pair.vertex_b.is_none() {
+                    out.disabled.push(DisabledSceneItem {
+                        id: pair.id.clone(),
+                        usage: SceneUse::GluePair,
+                        reason: SceneDisabledReason::UnspecifiedReference,
+                        chain: vec![g.id.clone(), pair.id.clone()],
+                    });
+                }
+            }
             let reason = [&g.mesh_a_id, &g.mesh_b_id]
                 .iter()
                 .find_map(|target| match target {
@@ -182,6 +201,18 @@ impl Document {
                 });
             } else {
                 out.glues.push(id.clone());
+                for (source_slot, pair) in g.pairs.iter().enumerate() {
+                    if pair.vertex_a.is_some() && pair.vertex_b.is_some() {
+                        out.pairs.push(pair.id.clone());
+                        out.pair_slots.insert(
+                            pair.id.clone(),
+                            ScenePairSlot {
+                                glue_id: id.clone(),
+                                source_slot,
+                            },
+                        );
+                    }
+                }
             }
         }
         fn slots(ids: &[String]) -> HashMap<String, usize> {

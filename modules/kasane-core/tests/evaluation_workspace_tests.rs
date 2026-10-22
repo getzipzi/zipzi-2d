@@ -51,7 +51,7 @@ fn document(count: usize) -> Document {
         assert!(doc
             .create_mesh(Mesh {
                 id: id(n + 3),
-                texture_asset_id: id(2),
+                texture_asset_id: (id(2)).into(),
                 vertex_ids: vec![1, 2, 3],
                 base_positions: vec![Vec2::new(0., 0.), Vec2::new(10., 0.), Vec2::new(0., 10.)],
                 uvs: vec![Vec2::new(0., 0.); 3],

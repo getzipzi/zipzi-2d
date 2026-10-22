@@ -66,6 +66,9 @@ pub(super) fn evaluate(
                 };
 
                 for (pair, slots) in glue.pairs.iter().zip(&prepared.glue_vertices[glue_slot]) {
+                    if !prepared.scene.pair_slots.contains_key(&pair.id) {
+                        continue;
+                    }
                     let Some(slots) = slots else { continue };
                     let (idx_a, idx_b) = (slots.a, slots.b);
 

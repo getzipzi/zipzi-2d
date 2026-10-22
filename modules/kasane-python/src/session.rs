@@ -76,3 +76,6 @@ mod scene_authoring;
 pub(crate) use scene_authoring::{
     NativeDrawingGroupAddress, NativeSceneFieldAddress, NativeScenePlan,
 };
+
+mod scene_content;
+pub(crate) use scene_content::{NativeSceneContentAddress, NativeSceneContentPlan};

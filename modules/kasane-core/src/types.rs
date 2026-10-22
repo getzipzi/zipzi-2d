@@ -652,12 +652,24 @@ pub struct BlendShapeBinding {
     pub keyforms: DeltaKeyforms,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GlueVertexPair {
-    pub vertex_a: VertexId,
-    pub vertex_b: VertexId,
+    pub id: String,
+    pub vertex_a: Option<VertexId>,
+    pub vertex_b: Option<VertexId>,
     pub weight_a: f32,
     pub weight_b: f32,
+}
+impl Default for GlueVertexPair {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            vertex_a: None,
+            vertex_b: None,
+            weight_a: 0.5,
+            weight_b: 0.5,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

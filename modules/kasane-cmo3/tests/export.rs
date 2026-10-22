@@ -414,10 +414,11 @@ fn offscreen_material_and_keyed_glue_remain_editable() {
             mesh_a_id: MESH.into(),
             mesh_b_id: other.into(),
             pairs: vec![GlueVertexPair {
-                vertex_a: 100,
-                vertex_b: 7,
+                vertex_a: Some(100),
+                vertex_b: Some(7),
                 weight_a: 0.25,
-                weight_b: 0.75
+                weight_b: 0.75,
+                ..Default::default()
             }],
             intensity: 1.,
             binding: Some(GlueBinding {

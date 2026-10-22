@@ -11,10 +11,11 @@ pub(crate) fn glue_from_tuple(data: GlueDataTuple, runtime_id: String) -> Glue {
         pairs: pairs
             .into_iter()
             .map(|(vertex_a, vertex_b, weight_a, weight_b)| GlueVertexPair {
-                vertex_a,
-                vertex_b,
+                vertex_a: vertex_a,
+                vertex_b: vertex_b,
                 weight_a,
                 weight_b,
+                ..Default::default()
             })
             .collect(),
         intensity,

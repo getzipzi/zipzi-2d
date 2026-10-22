@@ -107,7 +107,7 @@ pub fn decode_project(text: &str) -> Result<Document, Status> {
     let header: serde_json::Value =
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
     if header.get("format").and_then(|v| v.as_str()) == Some("kasane-directory-project")
-        && header.get("format_version").and_then(|v| v.as_u64()) != Some(17)
+        && header.get("format_version").and_then(|v| v.as_u64()) != Some(18)
     {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
@@ -151,7 +151,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
     }
 
-    if root.format_version != 17 {
+    if root.format_version != 18 {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             format!(
@@ -504,6 +504,7 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
             .pairs
             .into_iter()
             .map(|p| GlueVertexPair {
+                id: p.id,
                 vertex_a: p.vertex_a,
                 vertex_b: p.vertex_b,
                 weight_a: p.weight_a,

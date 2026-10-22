@@ -117,7 +117,6 @@ no_extra!(
     i32,
     u32,
     Vec2,
-    GlueVertexPair,
     OffscreenKeyform,
     MotionPoint
 );
@@ -587,6 +586,11 @@ impl ExtraBytes for BlendShapeBinding {
 impl ExtraBytes for GlueBinding {
     fn extra_bytes(&self) -> usize {
         self.axes.extra_bytes() + self.keyforms.extra_bytes()
+    }
+}
+impl ExtraBytes for GlueVertexPair {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity()
     }
 }
 impl ExtraBytes for Glue {

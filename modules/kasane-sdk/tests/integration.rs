@@ -47,3 +47,6 @@ mod scene_authoring;
 mod scene_lifecycle;
 #[path = "vertical_slice.rs"]
 mod vertical_slice;
+
+#[path = "scene_content.rs"]
+mod scene_content;

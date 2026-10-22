@@ -258,6 +258,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
             .pairs
             .iter()
             .map(|p| GlueVertexPairWire {
+                id: p.id.clone(),
                 vertex_a: p.vertex_a,
                 vertex_b: p.vertex_b,
                 weight_a: p.weight_a,
@@ -301,7 +302,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
 
     let project = ProjectWire {
         format: "kasane-directory-project".to_string(),
-        format_version: 17,
+        format_version: 18,
         document: DocumentWire {
             id: document.id().to_string(),
             export_settings: document.export_settings(),

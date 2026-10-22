@@ -658,3 +658,50 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
         self.assertEqual(model.glue_ids(), glues)
         self.assertEqual(model.evaluation_revision, before)
         self.assertEqual(model.validate_structure(), [])
+
+    def test_scene_content_vertex_uv_and_topology_address_lifecycle(self):
+        model = session()
+        with model.edit("mesh") as edit:
+            edit.add_png_asset(ASSET, "texture", TEXTURE)
+            edit.create_rectangle(MESH, "face", ASSET, (0, 0), (10, 10))
+        vertex = model.geometry(MESH).vertex_ids[0]
+        address = model.scene_content_address(MESH, {"kind": "vertex_uv", "vertex_id": vertex})
+        plan = model.plan_scene_content_patch(address, {"kind": "point", "value": {"x": 0.3, "y": 0.7}})
+        self.assertFalse(plan.is_noop)
+        model.execute_scene_content_plan(plan)
+        self.assertEqual(model.geometry(MESH).uvs[0], (0.30000001192092896, 0.699999988079071))
+        with model.edit("remove triangles") as edit:
+            edit.scene_content({"operation": "delete_triangles", "mesh_id": MESH, "slots": [0]})
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_scene_content_patch(address, json.loads(address.expected_json))
+        control = model.binding_conversion_control()
+        control.cancel()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_scene_content({"operation": "delete_triangles", "mesh_id": MESH, "slots": [0]}, control=control)
+
+    def test_glue_pair_pending_ids_copy_delete_save_and_reopen(self):
+        model = session()
+        glue, pair = str(uuid4()), str(uuid4())
+        with model.edit("pending pair") as edit:
+            edit.scene_authoring({"operation": "create", "id": glue, "name": "Glue", "object": {"kind": "glue"}})
+            edit.scene_content({"operation": "insert_glue_pair", "glue_id": glue, "pair": {
+                "id": pair, "vertex_a": None, "vertex_b": None, "weight_a": 0.5, "weight_b": 0.5}, "before": None})
+        handle = model.glue_pair_handles(glue)[0]
+        self.assertEqual(handle.id, pair)
+        self.assertEqual(handle.kind, "glue_vertex_pair")
+        self.assertIsNone(model.glue_pairs(glue)[0]["vertex_a"])
+        self.assertTrue(any(d["id"] == pair for d in model.scene_projection()["disabled"]))
+        plan = model.plan_scene_content({"operation": "duplicate_glue_pairs", "glue_id": glue, "ids": [pair], "before": None})
+        copied = json.loads(plan.report_json)["generated_pair_ids"][pair]
+        model.execute_scene_content_plan(plan)
+        self.assertNotEqual(pair, copied)
+        model.execute_scene_content_plan(model.plan_scene_content({"operation": "delete_glue_pairs", "glue_id": glue, "ids": [pair]}))
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.resolve_handle(handle)
+        with TemporaryDirectory() as root:
+            saved = model.save(Path(root) / "content")
+            reopened = kasane.open_project(saved.manifest)
+            self.assertEqual(reopened.glue_pairs(glue), model.glue_pairs(glue))
+            self.assertEqual(reopened.validate_structure(), [])

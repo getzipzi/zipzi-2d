@@ -90,6 +90,21 @@ pub(super) fn apply_command(
         }
         Command::CreateGlue(value) => edit.create_glue(value)?,
         Command::ReplaceGlue(mut value) => {
+            // Legacy tuples have no PairId. Retain identities by unique endpoint
+            // correspondence; ambiguous/reconfigured pairs receive fresh IDs.
+            if let Some(old) = edit.candidate_document().get_glue(&value.id) {
+                let mut used = std::collections::HashSet::new();
+                for pair in &mut value.pairs {
+                    let matches = old
+                        .pairs
+                        .iter()
+                        .filter(|p| p.vertex_a == pair.vertex_a && p.vertex_b == pair.vertex_b)
+                        .collect::<Vec<_>>();
+                    if matches.len() == 1 && used.insert(matches[0].id.clone()) {
+                        pair.id = matches[0].id.clone();
+                    }
+                }
+            }
             if let Some(previous) = edit.candidate_document().get_glue(&value.id) {
                 value.runtime_id = previous.runtime_id.clone();
             }
@@ -140,6 +155,7 @@ pub(super) fn apply_command(
         }
         Command::SetPose(pose) => edit.set_pose(pose)?,
         Command::EditPose(intent) => edit.edit_pose(intent)?,
+        Command::SceneContent(intent) => edit.edit_scene_content(intent)?,
         Command::EditScene(intent) => edit.edit_scene(intent)?,
         Command::EditOrganization(intent) => edit.edit_organization(intent)?,
         Command::BindingAuthoring(intent) => edit.binding_authoring(intent)?,

@@ -143,16 +143,18 @@ fn test_glue_crud_and_references() {
         mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![
             GlueVertexPair {
-                vertex_a: 1,
-                vertex_b: 10,
+                vertex_a: Some(1),
+                vertex_b: Some(10),
                 weight_a: 0.5,
                 weight_b: 0.5,
+                ..Default::default()
             },
             GlueVertexPair {
-                vertex_a: 2,
-                vertex_b: 20,
+                vertex_a: Some(2),
+                vertex_b: Some(20),
                 weight_a: 0.5,
                 weight_b: 0.5,
+                ..Default::default()
             },
         ],
         intensity: 1.0,
@@ -335,10 +337,11 @@ fn test_glue_evaluation() {
         mesh_a_id: (MESH_A.to_string()).into(),
         mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
-            vertex_a: 1,  // at (0, 0)
-            vertex_b: 10, // at (10, 20)
+            vertex_a: Some(1),  // at (0, 0)
+            vertex_b: Some(10), // at (10, 20)
             weight_a: 0.5,
             weight_b: 0.5,
+            ..Default::default()
         }],
         intensity: 1.0,
         binding: None,

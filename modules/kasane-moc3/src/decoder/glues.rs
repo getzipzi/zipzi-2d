@@ -145,10 +145,11 @@ impl<'a> Moc3DecoderContext<'a> {
                 }
 
                 pairs.push(GlueVertexPair {
-                    vertex_a: mesh_a.vertex_ids[pos_a],
-                    vertex_b: mesh_b.vertex_ids[pos_b],
+                    vertex_a: Some(mesh_a.vertex_ids[pos_a]),
+                    vertex_b: Some(mesh_b.vertex_ids[pos_b]),
                     weight_a: wt_a,
                     weight_b: wt_b,
+                    ..Default::default()
                 });
             }
 

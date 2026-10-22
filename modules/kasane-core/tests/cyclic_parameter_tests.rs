@@ -37,7 +37,7 @@ fn create_cyclic_fixture() -> (Document, String, String) {
     let m = Mesh {
         id: mesh_id.clone(),
         name: "mesh".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         vertex_ids: vec![1, 2, 3],
         base_positions: vec![
             Vec2::new(0.0, 0.0),

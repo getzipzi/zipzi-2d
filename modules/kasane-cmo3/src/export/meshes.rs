@@ -237,12 +237,12 @@ impl Exporter<'_> {
                         mesh_a
                             .vertex_ids
                             .iter()
-                            .position(|v| *v == p.vertex_a)
+                            .position(|v| Some(*v) == p.vertex_a)
                             .unwrap(),
                         mesh_b
                             .vertex_ids
                             .iter()
-                            .position(|v| *v == p.vertex_b)
+                            .position(|v| Some(*v) == p.vertex_b)
                             .unwrap(),
                     ]
                 })

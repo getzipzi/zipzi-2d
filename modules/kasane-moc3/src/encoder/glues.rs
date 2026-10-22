@@ -50,8 +50,16 @@ impl<'a> Moc3EncoderContext<'a> {
                 self.l.scalar("glue_key_src.intensity", g.intensity)?;
             }
             for pair in &g.pairs {
-                let pos_a = find_vertex_pos(mesh_a, pair.vertex_a)?;
-                let pos_b = find_vertex_pos(mesh_b, pair.vertex_b)?;
+                let pos_a = find_vertex_pos(
+                    mesh_a,
+                    pair.vertex_a
+                        .ok_or_else(|| Status::error("SCENE_NEEDS_CONFIGURATION", &pair.id))?,
+                )?;
+                let pos_b = find_vertex_pos(
+                    mesh_b,
+                    pair.vertex_b
+                        .ok_or_else(|| Status::error("SCENE_NEEDS_CONFIGURATION", &pair.id))?,
+                )?;
                 self.l.scalar("glue_info_src.weight", pair.weight_a)?;
                 self.l.short("glue_info_src.pos_idx", pos_a)?;
                 self.l.scalar("glue_info_src.weight", pair.weight_b)?;

@@ -291,8 +291,8 @@ impl PreparedEvaluation {
                         .iter()
                         .map(|pair| {
                             Some(GlueVertexSlots {
-                                a: doc.vertex_slot(&glue.mesh_a_id, pair.vertex_a)?,
-                                b: doc.vertex_slot(&glue.mesh_b_id, pair.vertex_b)?,
+                                a: doc.vertex_slot(&glue.mesh_a_id, pair.vertex_a?)?,
+                                b: doc.vertex_slot(&glue.mesh_b_id, pair.vertex_b?)?,
                             })
                         })
                         .collect()

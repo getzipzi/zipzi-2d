@@ -19,6 +19,8 @@ mod parameters;
 pub use organization::*;
 mod scene;
 pub use scene::*;
+mod scene_content;
+pub use scene_content::*;
 mod parts;
 mod physics;
 mod pose;
@@ -95,6 +97,7 @@ pub struct Document {
     modified_cache: OnceLock<bool>,
     lookup: OnceLock<DocumentLookup>,
     binding_lookup: OnceLock<Arc<binding_authoring::identity::BindingLookup>>,
+    pair_lookup: OnceLock<Arc<HashMap<String, (String, usize)>>>,
     expression_entries: OnceLock<HashMap<String, (String, usize)>>,
     motion_lookup: OnceLock<Arc<motions::MotionLookup>>,
     scene_projection: OnceLock<Arc<SceneProjection>>,
@@ -158,7 +161,7 @@ struct DocumentContent {
 }
 
 impl Document {
-    pub const SCHEMA_VERSION: u32 = 8;
+    pub const SCHEMA_VERSION: u32 = 9;
 
     pub fn new() -> Self {
         Self::default()
@@ -333,6 +336,7 @@ impl Document {
         self.batch_build_active = false;
         self.lookup.take();
         self.binding_lookup.take();
+        self.pair_lookup.take();
         self.expression_entries.take();
         self.motion_lookup.take();
         self.prepared.take();
@@ -349,6 +353,7 @@ impl Document {
     pub fn contains_id(&self, id: &str) -> bool {
         self.binding_identity(id).is_some()
             || self.contains_base_identity(id)
+            || self.get_glue_pair(id).is_some()
             || self.get_motion_track(id).is_some()
             || self.get_motion_key(id).is_some()
             || self.get_motion_event(id).is_some()
@@ -440,6 +445,7 @@ impl Document {
         }
         if kind == ChangeKind::Structure && !self.content.editor_state.is_empty() {
             self.binding_lookup.take();
+            self.pair_lookup.take();
             // Owned sample deletion also deletes its authoring-only flags.
             let removed: Vec<_> = self
                 .content
@@ -467,6 +473,7 @@ impl Document {
             if kind == ChangeKind::Structure {
                 self.lookup.take();
                 self.binding_lookup.take();
+                self.pair_lookup.take();
                 self.prepared.take();
             }
             return EditResult {
@@ -487,6 +494,7 @@ impl Document {
         if kind == ChangeKind::Structure {
             self.lookup.take();
             self.binding_lookup.take();
+            self.pair_lookup.take();
             self.prepared.take();
         }
         self.revision += 1;

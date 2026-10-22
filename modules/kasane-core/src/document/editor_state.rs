@@ -80,6 +80,7 @@ impl Document {
             .keys()
             .filter_map(|id| {
                 let valid = self.binding_identity(id).is_some()
+                    || self.get_glue_pair(id).is_some()
                     || self.content.meshes.contains_key(id)
                     || self.content.transforms.contains_key(id)
                     || self.content.parts.contains_key(id)

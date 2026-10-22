@@ -4,6 +4,9 @@ use crate::types::{ChangeKind, EditResult, Status};
 impl Document {
     pub fn references_to(&self, id: &str) -> Vec<String> {
         let mut refs = Vec::new();
+        if let Some(owner) = self.glue_pair_owner(id) {
+            refs.push(owner.into());
+        }
         if let Some(child) = self.binding_identity(id) {
             refs.push(child.owner.clone());
             if self.get_blend_key_table(&child.owner).is_some() {
@@ -224,6 +227,15 @@ impl Document {
                 "Commit or cancel first",
             ));
         }
+        if let Some(owner) = self.glue_pair_owner(id).map(str::to_owned) {
+            return match self.plan_scene_content(SceneContentEdit::DeleteGluePairs {
+                glue_id: owner,
+                ids: vec![id.into()],
+            }) {
+                Ok(plan) => self.apply_scene_content_plan(&plan),
+                Err(status) => self.failed(status),
+            };
+        }
         if let Some(child) = self.binding_identity(id) {
             let edit = if child.kind == super::BindingIdentityKind::Axis {
                 super::BindingGridEdit::Edit {
@@ -388,6 +400,10 @@ impl Document {
             e.referrers = refs;
             return e;
         }
+        let owned_glue_pairs = self
+            .get_glue(id)
+            .map(|g| g.pairs.iter().map(|p| p.id.clone()).collect::<Vec<_>>())
+            .unwrap_or_default();
         self.organization_index.take();
         let mut meshes = Vec::new();
         if let Some(b) = self.get_binding(id) {
@@ -417,6 +433,9 @@ impl Document {
             }
         }
         self.content.editor_state.objects.remove(id);
+        for child in owned_glue_pairs {
+            self.content.editor_state.objects.remove(&child);
+        }
         self.content
             .hierarchy_order
             .organization

@@ -116,6 +116,7 @@ impl Writes {
         put!(offscreens, offscreen_order, offscreens);
         d.lookup.take();
         d.binding_lookup.take();
+        d.pair_lookup.take();
     }
 }
 impl Document {

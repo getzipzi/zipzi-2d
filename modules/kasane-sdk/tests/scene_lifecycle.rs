@@ -219,7 +219,7 @@ fn pending_scene_objects_are_native_and_roundtrip_without_invented_targets() {
     assert!(s.scene_projection().glues.is_empty());
     let encoded = kasane_project::encode_project(s.document()).unwrap();
     let value: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(value["format_version"], 17);
+    assert_eq!(value["format_version"], 18);
     let reopened = kasane_project::decode_project(&encoded).unwrap();
     assert_eq!(
         reopened.get_mesh(&mesh).unwrap().texture_asset_id,
@@ -248,10 +248,11 @@ fn untextured_geometry_is_evaluable_and_glue_uses_geometry_availability() {
     s.edit("Pair", None, |e| {
         let mut glue = e.candidate_document().get_glue(&g).unwrap().clone();
         glue.pairs.push(GlueVertexPair {
-            vertex_a: 0,
-            vertex_b: 0,
+            vertex_a: Some(0),
+            vertex_b: Some(0),
             weight_a: 0.5,
             weight_b: 0.5,
+            ..Default::default()
         });
         e.replace_glue(glue)
     })
@@ -369,10 +370,11 @@ fn glue_management_reorder_preserves_execution_and_redo() {
             let mut glue = e.candidate_document().get_glue(id).unwrap().clone();
             glue.intensity = 0.5;
             glue.pairs = vec![GlueVertexPair {
-                vertex_a: 0,
-                vertex_b: 0,
+                vertex_a: Some(0),
+                vertex_b: Some(0),
                 weight_a: wa,
                 weight_b: wb,
+                ..Default::default()
             }];
             e.replace_glue(glue)?;
         }
@@ -995,10 +997,11 @@ fn endpoint_changes_validate_existing_pairs_or_explicitly_clear_them() {
     s.edit("Pair", None, |e| {
         let mut glue = e.candidate_document().get_glue(&g).unwrap().clone();
         glue.pairs = vec![GlueVertexPair {
-            vertex_a: 0,
-            vertex_b: 0,
+            vertex_a: Some(0),
+            vertex_b: Some(0),
             weight_a: 1.,
             weight_b: 1.,
+            ..Default::default()
         }];
         e.replace_glue(glue)
     })

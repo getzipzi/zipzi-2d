@@ -3,6 +3,32 @@ use crate::types::{ChangeKind, EditResult, Glue, ParameterKind, Status};
 use std::collections::HashSet;
 
 impl Document {
+    fn pair_lookup(&self) -> &std::collections::HashMap<String, (String, usize)> {
+        self.pair_lookup.get_or_init(|| {
+            std::sync::Arc::new(
+                self.content
+                    .glues
+                    .values()
+                    .flat_map(|g| {
+                        g.pairs
+                            .iter()
+                            .enumerate()
+                            .map(|(slot, p)| (p.id.clone(), (g.id.clone(), slot)))
+                    })
+                    .collect(),
+            )
+        })
+    }
+    pub fn get_glue_pair(&self, id: &str) -> Option<&crate::GlueVertexPair> {
+        let (owner, slot) = self.pair_lookup().get(id)?;
+        self.get_glue(owner)?
+            .pairs
+            .get(*slot)
+            .filter(|p| p.id == id)
+    }
+    pub fn glue_pair_owner(&self, id: &str) -> Option<&str> {
+        self.pair_lookup().get(id).map(|v| v.0.as_str())
+    }
     pub fn glue_order(&self) -> &[String] {
         &self.content.glue_order
     }
@@ -44,17 +70,45 @@ impl Document {
             .mesh_b_id
             .resolved_id()
             .and_then(|id| self.vertex_slots.get(id));
+        let mut ids = HashSet::new();
         for pair in &glue.pairs {
-            if slots_a.is_some_and(|slots| !slots.contains_key(&pair.vertex_a)) {
+            if !valid_uuid(&pair.id)
+                || pair.id == glue.id
+                || glue.binding.as_ref().is_some_and(|b| {
+                    b.axes
+                        .iter()
+                        .any(|a| a.id == pair.id || a.samples.iter().any(|s| s.id == pair.id))
+                })
+                || !ids.insert(pair.id.as_str())
+                || (self.contains_id(&pair.id)
+                    && self.glue_pair_owner(&pair.id) != Some(glue.id.as_str()))
+            {
+                return Status::error("DUPLICATE_PAIR_ID", &pair.id);
+            }
+            if pair
+                .vertex_a
+                .is_some_and(|v| slots_a.is_some_and(|slots| !slots.contains_key(&v)))
+            {
                 return Status::error(
                     "MISSING_VERTEX",
-                    format!("{}: vertex {} not in mesh_a", glue.id, pair.vertex_a),
+                    format!(
+                        "{}: vertex {} not in mesh_a",
+                        glue.id,
+                        pair.vertex_a.unwrap()
+                    ),
                 );
             }
-            if slots_b.is_some_and(|slots| !slots.contains_key(&pair.vertex_b)) {
+            if pair
+                .vertex_b
+                .is_some_and(|v| slots_b.is_some_and(|slots| !slots.contains_key(&v)))
+            {
                 return Status::error(
                     "MISSING_VERTEX",
-                    format!("{}: vertex {} not in mesh_b", glue.id, pair.vertex_b),
+                    format!(
+                        "{}: vertex {} not in mesh_b",
+                        glue.id,
+                        pair.vertex_b.unwrap()
+                    ),
                 );
             }
             if !pair.weight_a.is_finite()
@@ -188,6 +242,20 @@ impl Document {
     }
 
     pub fn replace_glue(&mut self, mut glue: Glue) -> EditResult {
+        if let Some(old) = self.get_glue(&glue.id) {
+            for pair in &old.pairs {
+                if glue.pairs.iter().find(|p| p.id == pair.id) != Some(pair)
+                    || old.pairs.iter().position(|p| p.id == pair.id)
+                        != glue.pairs.iter().position(|p| p.id == pair.id)
+                    || old.mesh_a_id != glue.mesh_a_id
+                    || old.mesh_b_id != glue.mesh_b_id
+                {
+                    if let Err(status) = self.authoring_unlocked(&pair.id) {
+                        return self.failed(status);
+                    }
+                }
+            }
+        }
         if let Some(b) = &mut glue.binding {
             if let Err(s) = self.normalize_owner_axes(&glue.id, &mut b.axes) {
                 return self.failed(s);
@@ -235,6 +303,17 @@ impl Document {
         let id = glue.id.clone();
         let mesh_a = glue.mesh_a_id.as_str().to_owned();
         let mesh_b = glue.mesh_b_id.as_str().to_owned();
+        let keep: HashSet<_> = glue.pairs.iter().map(|p| p.id.as_str()).collect();
+        let retired: Vec<_> = self
+            .get_glue(&id)
+            .into_iter()
+            .flat_map(|g| &g.pairs)
+            .filter(|p| !keep.contains(p.id.as_str()))
+            .map(|p| p.id.clone())
+            .collect();
+        for pair in retired {
+            self.content.editor_state.objects.remove(&pair);
+        }
         self.content.glues.insert(id.clone(), glue);
         let mut affected = vec![mesh_a.clone(), mesh_b.clone(), prev.0, prev.1];
         affected.sort();

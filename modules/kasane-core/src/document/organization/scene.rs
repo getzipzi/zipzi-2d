@@ -249,6 +249,7 @@ impl Delta {
             || !self.removed.is_empty()
         {
             d.binding_lookup.take();
+            d.pair_lookup.take();
         }
     }
 }

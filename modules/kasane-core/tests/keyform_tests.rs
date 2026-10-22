@@ -34,7 +34,7 @@ fn test_keyform_data_editing_and_evaluation() {
     let m = Mesh {
         id: id(3),
         name: "mesh".to_string(),
-        texture_asset_id: id(2),
+        texture_asset_id: (id(2)).into(),
         vertex_ids: vec![9, 1, 7],
         base_positions: vec![
             Vec2::new(10.0, 10.0),

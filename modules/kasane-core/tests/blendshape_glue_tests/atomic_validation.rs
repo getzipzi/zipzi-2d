@@ -144,10 +144,11 @@ fn topology_edit_updates_all_dependencies_atomically() {
         mesh_a_id: MESH_A.into(),
         mesh_b_id: MESH_B.into(),
         pairs: vec![GlueVertexPair {
-            vertex_a: 1,
-            vertex_b: 10,
+            vertex_a: Some(1),
+            vertex_b: Some(10),
             weight_a: 0.5,
             weight_b: 0.5,
+            ..Default::default()
         }],
         intensity: 1.0,
         binding: None,
@@ -176,7 +177,7 @@ fn topology_edit_updates_all_dependencies_atomically() {
     assert_eq!(doc.get_mesh(MESH_A), Some(&original));
     assert_eq!(doc.revision(), revision);
     let mut updated = glue.clone();
-    updated.pairs[0].vertex_a = 10;
+    updated.pairs[0].vertex_a = Some(10);
     assert!(doc
         .replace_mesh_topology(
             mesh.clone(),

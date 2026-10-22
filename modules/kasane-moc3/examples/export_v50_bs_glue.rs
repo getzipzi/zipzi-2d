@@ -125,10 +125,11 @@ fn main() {
         mesh_a_id: (id(5)).into(),
         mesh_b_id: (id(6)).into(),
         pairs: vec![GlueVertexPair {
-            vertex_a: 1,
-            vertex_b: 10,
+            vertex_a: Some(1),
+            vertex_b: Some(10),
             weight_a: 0.5,
             weight_b: 0.5,
+            ..Default::default()
         }],
         intensity: 0.2, // base intensity 0.2
         binding: None,

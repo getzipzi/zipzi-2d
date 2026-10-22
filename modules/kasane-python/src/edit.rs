@@ -89,6 +89,7 @@ enum Command {
     SetPose(kasane_core::document::PoseAsset),
     EditPose(kasane_core::document::PoseEdit),
     EditScene(kasane_core::document::SceneEdit),
+    SceneContent(kasane_core::document::SceneContentEdit),
     EditOrganization(kasane_core::document::OrganizationEdit),
     SetPhysics(kasane_core::document::PhysicsAsset),
     EditPhysics(kasane_core::document::PhysicsEdit),

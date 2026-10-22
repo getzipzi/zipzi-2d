@@ -119,7 +119,7 @@ fn late_geometry_failure_preserves_request_and_published_snapshot() {
     assert!(doc
         .create_mesh(Mesh {
             id: id(4),
-            texture_asset_id: id(3),
+            texture_asset_id: (id(3)).into(),
             vertex_ids: vec![1, 2, 3],
             base_positions: vec![Vec2::new(0., 0.), Vec2::new(10., 0.), Vec2::new(0., 10.)],
             uvs: vec![Vec2::new(0., 0.); 3],

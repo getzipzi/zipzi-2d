@@ -311,8 +311,9 @@ pub(super) struct BlendShapeBindingWire {
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct GlueVertexPairWire {
-    pub(super) vertex_a: u32,
-    pub(super) vertex_b: u32,
+    pub(super) id: String,
+    pub(super) vertex_a: Option<u32>,
+    pub(super) vertex_b: Option<u32>,
     pub(super) weight_a: f32,
     pub(super) weight_b: f32,
 }

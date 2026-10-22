@@ -492,10 +492,11 @@ pub(super) fn read(
                     .ok_or_else(|| invalid("Missing Glue vertex identity"))
             };
             pairs.push(GlueVertexPair {
-                vertex_a: vertex(&a, uv[0])?,
-                vertex_b: vertex(&b, uv[1])?,
+                vertex_a: Some(vertex(&a, uv[0])?),
+                vertex_b: Some(vertex(&b, uv[1])?),
                 weight_a: w[0],
                 weight_b: w[1],
+                ..Default::default()
             });
         }
         let (axes, forms) = grid(g, n)?;

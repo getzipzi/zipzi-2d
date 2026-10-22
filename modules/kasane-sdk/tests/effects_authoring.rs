@@ -185,10 +185,11 @@ fn effect_families_share_one_publish_and_failed_replacement_preserves_it() {
             mesh_a_id: (id(3)).into(),
             mesh_b_id: (id(4)).into(),
             pairs: vec![GlueVertexPair {
-                vertex_a: 0,
-                vertex_b: 0,
+                vertex_a: Some(0),
+                vertex_b: Some(0),
                 weight_a: 1.0,
                 weight_b: 1.0,
+                ..Default::default()
             }],
             intensity: 0.0,
             binding: None,

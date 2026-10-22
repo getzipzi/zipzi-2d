@@ -102,6 +102,17 @@ impl Document {
                 });
             }
         }
+        for pair in self.content.glues.values().flat_map(|g| &g.pairs) {
+            if !valid_uuid(&pair.id) || !all_ids.insert(pair.id.clone()) {
+                issues.push(StructureIssue {
+                    object_id: pair.id.clone(),
+                    status: Status::error(
+                        "DUPLICATE_PAIR_ID",
+                        "Missing or duplicated Glue pair identity",
+                    ),
+                });
+            }
+        }
         for child in self.binding_identities() {
             if !valid_uuid(&child.id) || !all_ids.insert(child.id.clone()) {
                 issues.push(StructureIssue {

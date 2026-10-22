@@ -2,7 +2,7 @@ use super::*;
 /// Independent cancellation remains callable while a planning worker owns the session lock.
 #[pyclass]
 pub(crate) struct NativeConversionControl {
-    inner: kasane_sdk::ConversionControl,
+    pub(super) inner: kasane_sdk::ConversionControl,
 }
 #[pymethods]
 impl NativeConversionControl {

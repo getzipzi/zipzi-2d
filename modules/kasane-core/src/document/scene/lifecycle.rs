@@ -346,6 +346,12 @@ impl Document {
             let mut copy = source.clone();
             copy.id = plan.domain.copied[id].clone();
             copy.runtime_id = unique(&source.runtime_id, &mut runtimes);
+            for pair in &mut copy.pairs {
+                self.authoring_unlocked(&pair.id)?;
+                let next = new_id();
+                plan.domain.copied.insert(pair.id.clone(), next.clone());
+                pair.id = next;
+            }
             copy.mesh_a_id.remap(&plan.domain.copied);
             copy.mesh_b_id.remap(&plan.domain.copied);
             if let Some(binding) = &mut copy.binding {
@@ -408,6 +414,12 @@ impl Document {
         Ok(users)
     }
     pub(super) fn include_owned_scene_bindings(&self, closure: &mut Vec<String>) {
+        let pairs: Vec<_> = closure
+            .iter()
+            .filter_map(|id| self.get_glue(id))
+            .flat_map(|g| g.pairs.iter().map(|p| p.id.clone()))
+            .collect();
+        closure.extend(pairs);
         let selected: HashSet<_> = closure.iter().cloned().collect();
         closure.extend(
             self.binding_order()

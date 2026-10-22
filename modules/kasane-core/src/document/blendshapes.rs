@@ -295,7 +295,7 @@ impl Document {
         self.iter_blend_bindings_for_target(id)
             .filter(|b| self.blend_binding_active(b))
     }
-    pub(crate) fn iter_blend_bindings_for_target(
+    pub fn iter_blend_bindings_for_target(
         &self,
         target_id: &str,
     ) -> impl Iterator<Item = &BlendShapeBinding> {

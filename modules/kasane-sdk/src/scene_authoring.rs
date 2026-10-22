@@ -6,7 +6,7 @@ use crate::{
 use kasane_core::document::{ConversionControl, ConversionReport, OrganizationEffects, ScenePlan};
 pub use kasane_core::document::{
     DisabledSceneItem, SceneCollection, SceneCopyScope, SceneCreate, SceneDisabledReason,
-    SceneEdit, SceneField, SceneFieldValue, SceneProjection, SceneUse,
+    SceneEdit, SceneField, SceneFieldValue, ScenePairSlot, SceneProjection, SceneUse,
 };
 pub use kasane_core::SceneReference;
 use std::collections::BTreeMap;

@@ -22,10 +22,11 @@ fn test_glue_blendshape_asymmetric_weights() {
         mesh_a_id: (MESH_A.to_string()).into(),
         mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
-            vertex_a: 1,
-            vertex_b: 10,
+            vertex_a: Some(1),
+            vertex_b: Some(10),
             weight_a: 0.7,
             weight_b: 0.3,
+            ..Default::default()
         }],
         intensity: 0.0,
         binding: None,
@@ -115,10 +116,11 @@ fn test_glue_blendshape_ordered_multiple_glues() {
         mesh_a_id: (MESH_A.to_string()).into(),
         mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
-            vertex_a: 1,
-            vertex_b: 10,
+            vertex_a: Some(1),
+            vertex_b: Some(10),
             weight_a: 0.5,
             weight_b: 0.5,
+            ..Default::default()
         }],
         intensity: 0.0,
         binding: None,
@@ -134,10 +136,11 @@ fn test_glue_blendshape_ordered_multiple_glues() {
         mesh_a_id: (MESH_B.to_string()).into(),
         mesh_b_id: (mesh_c_id.to_string()).into(),
         pairs: vec![GlueVertexPair {
-            vertex_a: 10,
-            vertex_b: 100,
+            vertex_a: Some(10),
+            vertex_b: Some(100),
             weight_a: 0.5,
             weight_b: 0.5,
+            ..Default::default()
         }],
         intensity: 0.0,
         binding: None,
@@ -242,10 +245,11 @@ fn test_glue_blendshape_faceless_endpoints() {
         mesh_a_id: (faceless_id.to_string()).into(),
         mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
-            vertex_a: 101,
-            vertex_b: 10,
+            vertex_a: Some(101),
+            vertex_b: Some(10),
             weight_a: 0.5,
             weight_b: 0.5,
+            ..Default::default()
         }],
         intensity: 0.0,
         binding: None,
@@ -317,10 +321,11 @@ fn test_glue_blendshape_seam_a_b_a() {
         mesh_a_id: (MESH_A.to_string()).into(),
         mesh_b_id: (MESH_B.to_string()).into(),
         pairs: vec![GlueVertexPair {
-            vertex_a: 1,
-            vertex_b: 10,
+            vertex_a: Some(1),
+            vertex_b: Some(10),
             weight_a: 0.5,
             weight_b: 0.5,
+            ..Default::default()
         }],
         intensity: 0.2,
         binding: None,
@@ -416,10 +421,11 @@ fn hidden_geometry_capture_preserves_visible_glue_result() {
             binding: None,
             intensity: 1.0,
             pairs: vec![GlueVertexPair {
-                vertex_a: 1,
-                vertex_b: 10,
+                vertex_a: Some(1),
+                vertex_b: Some(10),
                 weight_a: 0.5,
-                weight_b: 0.5
+                weight_b: 0.5,
+                ..Default::default()
             }],
         })
         .status

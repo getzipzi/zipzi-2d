@@ -115,10 +115,11 @@ fn animated_glue_roundtrips_and_matches_core() {
             mesh_a_id: (mesh_id.clone()).into(),
             mesh_b_id: (mesh_id).into(),
             pairs: vec![GlueVertexPair {
-                vertex_a: vertices[0],
-                vertex_b: vertices[1],
+                vertex_a: Some(vertices[0]),
+                vertex_b: Some(vertices[1]),
                 weight_a: 0.2,
-                weight_b: 0.8
+                weight_b: 0.8,
+                ..Default::default()
             }],
             intensity: 1.0,
             binding: None,
