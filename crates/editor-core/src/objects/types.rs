@@ -21,6 +21,7 @@ pub enum ObjectKind {
     BlendKeyTable,
     BlendConstraint,
     Glue,
+    GlueVertexPair,
     MotionGroup,
     MotionRegistration,
     MotionKey,

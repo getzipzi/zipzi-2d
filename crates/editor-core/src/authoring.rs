@@ -52,3 +52,7 @@ pub use organization::OrganizationAuthoringCapabilities;
 #[path = "authoring/scene.rs"]
 mod scene;
 pub use scene::SceneAuthoringCapabilities;
+
+#[path = "authoring/content.rs"]
+mod content;
+pub use content::SceneContentAuthoringCapabilities;

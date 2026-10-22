@@ -105,7 +105,7 @@ fn bound_generation_migrates_keyforms_blends_and_glue_atomically() -> anyhow::Re
     };
     assert!(forms.iter().all(|f| f.positions.len() == 25));
     assert_eq!(forms[1].positions[12], Vec2::new(2., 3.));
-    assert_eq!(session.glue(&id(910)).unwrap().pairs[0].vertex_a, 0);
+    assert_eq!(session.glue(&id(910)).unwrap().pairs[0].vertex_a, Some(0));
     Ok(())
 }
 

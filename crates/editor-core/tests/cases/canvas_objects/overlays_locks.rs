@@ -263,16 +263,18 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
                 intensity,
                 pairs: vec![
                     GlueVertexPair {
-                        vertex_a: 0,
-                        vertex_b: 0,
+                        vertex_a: Some(0),
+                        vertex_b: Some(0),
                         weight_a: 0.5,
                         weight_b: 0.5,
+                        ..Default::default()
                     },
                     GlueVertexPair {
-                        vertex_a: 1,
-                        vertex_b: 2,
+                        vertex_a: Some(1),
+                        vertex_b: Some(2),
                         weight_a: 0.5,
                         weight_b: 0.5,
+                        ..Default::default()
                     },
                 ],
                 binding: None,

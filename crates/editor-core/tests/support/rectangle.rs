@@ -124,10 +124,11 @@ fn rectangle_with_texture(
                 mesh_a_id: (mesh.id.clone()).into(),
                 mesh_b_id: (id(909)).into(),
                 pairs: vec![GlueVertexPair {
-                    vertex_a: 0,
-                    vertex_b: 0,
+                    vertex_a: Some(0),
+                    vertex_b: Some(0),
                     weight_a: 0.5,
                     weight_b: 0.5,
+                    ..Default::default()
                 }],
                 intensity: 0.5,
                 binding: None,

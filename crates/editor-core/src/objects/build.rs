@@ -326,6 +326,20 @@ impl ObjectIndex {
                     json!({"name":x.name,"intensity":x.intensity,"pairs":x.pairs,"runtime_id":x.runtime_id}),
                     None,
                 );
+                for (index, pair) in x.pairs.iter().enumerate() {
+                    let child = ObjectRef::new(K::GlueVertexPair, &pair.id);
+                    s.add(
+                        child.clone(),
+                        format!("Pair {}", index + 1),
+                        json!(pair),
+                        None,
+                    );
+                    s.edge(&r, R::Contains, child.clone(), "vertex pair");
+                    if pair.vertex_a.is_none() || pair.vertex_b.is_none() {
+                        s.objects.last_mut().unwrap().diagnostic =
+                            Some("Choose both endpoint vertices".into());
+                    }
+                }
                 s.ref_edge(&r, R::GlueA, K::Mesh, &x.mesh_a_id);
                 s.ref_edge(&r, R::GlueB, K::Mesh, &x.mesh_b_id);
                 if let Some(b) = &x.binding {

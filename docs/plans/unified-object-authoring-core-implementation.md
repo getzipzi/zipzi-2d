@@ -901,3 +901,100 @@ cargo check --locked -p kasane-editor
 两仓库的 `cargo fmt --all --check` 与 `git diff --check` 通过。保留既有第三方
 GPUI/Cocoa 警告和 `block` 未来兼容提示。没有运行完整 workspace、真实模型 Release、
 截图或 C6 综合性能验收；本批代码保留在两个工作区，尚未提交。
+
+
+## C5 第四批：场景专用内容操作
+
+2026 年 10 月 22 日：先提交上一批场景生命周期（SDK `d6032f5`、Editor `d88647a`），
+再完成本节。core schema 为 **9**，目录项目格式为 **18**；Glue 配对增加 UUID 并允许
+顶点未指定，旧格式拒绝加载，不做迁移。第三批中“内容操作待完成”的说明是当时状态。
+
+- **唯一规则入口**：core `SceneContentEdit` / `SceneContentPlan`、SDK
+  `plan_scene_content` / `execute_scene_content_plan`、`EditSession::edit_scene_content`
+  共用专用操作。计划绑定 native snapshot 和 SDK version，发布前重检预算及取消。
+  报告列出顶点来源、删除顶点／三角形槽位／PairId、复制身份、Keyform 索引重映射及损失。
+  错误、取消、过期计划和 no-op 不发布半个结果、不消耗历史；批内失败整体回滚。
+- **Mesh**：按 VertexId 修改基础位置／UV，或者明确选择普通 keyform（规范 sample ID
+  集合）及 Blend 形态（binding ID + sample ID）的位置。Blend 位置是 delta。
+  UV 属于 Mesh 基础内容；不能把 UV 写到动画形态。新增顶点指定位置、UV，以及使用
+  基础值或现有顶点权重插值的种子；普通关键形态和 Blend delta 同步生成新槽位。
+  重排顶点同步排列基础位置、UV 和所有形态，三角形继续引用稳定 VertexId。
+  删除顶点默认拒绝被三角形／Glue 配对引用的内容；显式 RemoveDependentContent 才
+  移除相关三角形和配对，并更新全部形态数组。三角形支持插入、修改、删除和整体替换，
+  保持有限值、有效端点及每个三角形三个不同顶点的校验。
+- **Warp**：按网格行列修改基础／普通／Blend 点。调整网格尺寸同步重采样所有基础及
+  关键形态／delta，报告明确只保证新节点处的采样，节点间插值可改变，不宣称域保持。
+  Bezier 控制器与 lattice 分开；提供 anchor／handle 的受保护内容地址，anchor 移动
+  同步平移自身 handles。控制器变更通过原生 `apply_delta` 保留导入 lattice 残差。
+  有控制器时直接改 lattice 要显式清除控制器；Blend 不持有 Bezier 控制器。
+  既有画布 `update_warp_points` 适配到同一内容入口，不再另算修改规则。
+- **Glue 配对**：PairId 全局唯一，有独立 SDK 句柄、编辑器状态和拥有者查询；复制 Glue
+  或配对时分配新 ID。配对支持创建、配置、同拥有者排序、复制、删除，以及携显式新端点
+  数据转移到另一 Glue。转移保留 PairId／句柄，拥有者地址失效。顶点用可选 VertexId，
+  未指定配对保留原生数据并从执行贡献排除，不映射成顶点 0。投影公开 PairId 到原始
+  配对槽位的映射；求值不拿压缩下标写回原生数组。MOC3／CMO3 严格报告未配置配对。
+  配对索引有共享缓存，结构、候选安装及 checkpoint 恢复正确使其失效。
+- **Offscreen**：Keyform 支持新增、修改、复制、排列和删除；结构操作统一重映射 Part
+  索引，保留原隐式静态 keyform 0 和负值 neutral sentinel 的意义。删除被引用形态
+  默认拒绝；明确选择 Neutral 或为每个被删形态指定保留形态后才执行。
+  单个映射使用未绑定 Part 的 Static 槽或规范 sample ID 集合定位，不用 UI 行号。
+  Part 网格转换、轴排序及 Offscreen 跨 Part 转移继续走 C4／第三批的原子联合规则。
+- **地址和发布**：`SceneContentAddress` 捕获实体句柄、内容目标、期望值和单调上下文
+  epoch。拓扑／内容变化及 Undo 不复活旧地址；标签更改可以保留内容地址。
+  `ChangeSet.content_changes` 与 `content_references` 表达受影响内容和方向明确的配对／
+  映射引用，Undo 交换引用前后值。所属对象、拥有 Binding／Axis／Sample、配对和 Part
+  的锁生效；旧裸 Glue replacement、显式清空与删除也不能绕过锁或遗留 editor flags。
+  删除再 Undo 后须重新取得 Pair 句柄。
+- **适配**：Editor Document／Editor 提供内容能力、地址、规划和执行入口，并附加活动
+  Document／Timeline／候选手势限制；不自动更换活动动画或播放时钟。内容回执刷新画布
+  几何／UV／拾取，保留已有快照；ObjectIndex 投影独立 Glue 配对子项和缺项诊断。
+  Python 暴露同一 planning／execution／patch／capabilities、Pair 查询和句柄，计划支持
+  无 GIL 规划和共享取消。旧四元组 Glue 适配按唯一端点对应保留身份；需要精确身份的
+  创建、重排和转移使用 typed content 命令。
+
+内容规划以受影响资源增量保存结果，最终结构检查使用隔离候选。内存预算保守计入原生
+内容、候选／历史及新增顶点、网格、配对、Keyform 的负载；本批没有新的性能测量承诺。
+本节完成本行专用内容操作；其余 C5 行为／资源引用集合和 C6 仍待实施。
+
+本批新增 SDK **12 项**、Editor 集成 **3 项**、Python **2 项**回归。
+验证结果如下（筛选有重叠，不累加）：
+
+| 验证 | 结果 |
+| --- | --- |
+| SDK content／scene lifecycle／Mesh／effects／Binding／组织／handles／editor state／history budget | 123 项通过 |
+| Editor content／canvas objects／mesh generation／scene lifecycle／Properties／锁 | 96 项通过 |
+| 原生 UI canvas／hierarchy／Properties／animation panels | 76 项通过，1 项按原设置忽略 |
+| core BlendShape Glue／Offscreen／Transform／checkpoint size 目标 | 27 项通过 |
+| project／sequence／CDI／Motion／Pose codec 目标 | 62 项通过 |
+| MOC3 Glue 与零三角形 Mesh 定向回归 | 8 项通过 |
+| CMO3 export 目标 | 9 项通过 |
+| 当前 Debug Python extension | 66 项 CPU + 4 项 inspection 通过 |
+
+主要复现命令：
+
+```sh
+# 相邻 kasane-2d
+cargo test --locked -p kasane-sdk --test integration -- \
+  scene_content:: scene_lifecycle:: mesh_editing:: effects_authoring:: binding_authoring:: \
+  organization_authoring:: handles:: editor_state:: history_budget::
+cargo test --locked -p kasane-core --test blendshape_glue_tests --test offscreen_tests \
+  --test transform_tests --test checkpoint_size_tests
+cargo test --locked -p kasane-project --test project_tests --test sequence_tests \
+  --test cdi_tests --test motion_tests --test pose_tests
+cargo test --locked -p kasane-moc3 --test import_tests -- blendshape_glue:: zero_triangle_mesh
+cargo test --locked -p kasane-cmo3 --test export
+cargo check --locked --keep-going -p kasane-core -p kasane-moc3 -p kasane-cmo3 \
+  -p kasane-project -p kasane-python --tests --examples
+./tools/test.sh python
+# kasane-editor
+cargo test --locked -p editor-core --test integration -- \
+  scene_content:: canvas_objects:: mesh_generation:: scene_lifecycle:: properties:: locks::
+./scripts/test.sh ui -- headless_tests::canvas headless_tests::hierarchy \
+  headless_tests::properties headless_tests::animation_panels
+cargo check --locked -p kasane-editor
+```
+
+额外检查包含受影响 native 库的测试与示例编译，没有运行完整 workspace suite。
+两仓库 `cargo fmt --all --check`、`git diff --check` 通过；保留既有 GPUI/Cocoa、
+`block` 未来兼容及项目测试未使用 import 提示。未运行截图、真实模型 Release 或 C6
+综合性能验收。本批代码保留在两个工作区，尚未提交。

@@ -62,3 +62,6 @@ mod organization_authoring;
 mod pose_authoring;
 #[path = "cases/scene_lifecycle.rs"]
 mod scene_lifecycle;
+
+#[path = "cases/scene_content.rs"]
+mod scene_content;

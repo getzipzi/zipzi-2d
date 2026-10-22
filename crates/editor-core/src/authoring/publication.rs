@@ -42,6 +42,7 @@ impl Document {
                     | SdkKind::Transform
                     | SdkKind::Offscreen
                     | SdkKind::Glue
+                    | SdkKind::GlueVertexPair
                     | SdkKind::DrawOrderGroup
                     | SdkKind::MeshBinding
                     | SdkKind::SceneBinding

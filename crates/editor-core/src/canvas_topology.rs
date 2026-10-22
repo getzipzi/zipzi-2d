@@ -206,7 +206,7 @@ impl CanvasTopology {
             let pairs = g
                 .pairs
                 .iter()
-                .filter_map(|p| Some((*a.slots.get(&p.vertex_a)?, *b.slots.get(&p.vertex_b)?)))
+                .filter_map(|p| Some((*a.slots.get(&p.vertex_a?)?, *b.slots.get(&p.vertex_b?)?)))
                 .collect();
             glues.push(GlueTopology {
                 object: ObjectRef::new(K::Glue, id),
