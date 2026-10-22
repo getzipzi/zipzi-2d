@@ -114,13 +114,13 @@ cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
 验收入口：
 
 ```sh
-cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk --test motion_library
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk --test integration motion_library::
 cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
   -p kasane-core -p kasane-sdk -p kasane-animation -p kasane-project -p kasane-cmo3
 cargo test --locked -p editor-core --test integration
 ./scripts/test.sh
 cargo test --manifest-path ../kasane-2d/Cargo.toml --locked --release \
-  -p kasane-sdk --test motion_library library_planning_shares_curves_in_a_large_library -- --ignored --nocapture
+  -p kasane-sdk --test integration motion_library::library_planning_shares_curves_in_a_large_library -- --ignored --nocapture
 ```
 
 本轮验证：Editor 工作区 729 项 Rust 测试通过、5 项默认忽略；原生动画验收通过三个本地模型，Metal 截图通过。相邻五个领域包 413 项通过、2 项默认忽略，其中 Motion 库专项 15 项通过、1 项性能测量默认忽略；Editor 新增两项播放连续性/删除选择回归，已包含在 333 项 editor-core 集成测试中。Python wheel 在仓库外隔离环境安装后通过 54 项 CPU 测试，脚本测试隔离重跑通过 44 项。格式与 diff 检查通过；专项与全量数字有重叠，不相加。
@@ -209,13 +209,13 @@ Motion 库专项 22 项通过、1 项性能测量默认忽略，Editor Motion au
 
 ```sh
 cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
-  -p kasane-sdk --test physics_authoring --test physics_editing
+  -p kasane-sdk --test integration physics_
 cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
   -p kasane-core -p kasane-sdk -p kasane-animation -p kasane-project -p kasane-cmo3
 env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace \
   --features kasane-editor/test-support
 cargo test --manifest-path ../kasane-2d/Cargo.toml --locked --release \
-  -p kasane-sdk --test physics_editing physics_field_patch_benchmark -- --ignored --nocapture
+  -p kasane-sdk --test integration physics_editing::physics_field_patch_benchmark -- --ignored --nocapture
 ```
 
 最终验证：相邻五个领域包 **434 项通过、2 项默认忽略**；Editor 工作区 **734 项通过、
@@ -278,7 +278,7 @@ C3 交付时，C4–C6 与完整 UI 统一仍待实施；C4 的后续进展见�
 
 ```sh
 cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
-  --test physics_authoring --test physics_editing
+  --test integration physics_
 cargo test --locked -p editor-core --lib --test integration physics
 cargo test --locked -p kasane-editor --lib physics
 ```

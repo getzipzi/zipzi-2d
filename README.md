@@ -36,6 +36,27 @@ tests live in the library target.
 ./scripts/test.sh
 ```
 
+For repeated local edits, select a smaller gate. No argument continues to run
+the complete suite above; the test assertions and licensed-asset acceptance
+remain part of the full gate.
+
+```sh
+./scripts/test.sh fast                       # Core unit + synthetic integration
+./scripts/test.sh fast timeline::            # Filter one core domain
+./scripts/test.sh ui headless_tests::physics  # Filter UI behavior
+./scripts/test.sh regression                 # All libraries + synthetic integration
+./scripts/test.sh acceptance                 # Real models, Metal, native screenshots
+./scripts/test.sh tools                      # Python tooling, including dev lifecycle
+./scripts/test.sh full                       # Format + tooling + every Rust target/doc
+```
+
+`fast` and `regression` omit example compilation and doctests. The core
+`acceptance` test target owns licensed transfers and imported-animation checks;
+`integration` keeps synthetic behavior checks. Native UI gates consistently use
+`test-support`. UI and regression gates select the same workspace packages to
+keep dependency feature unification consistent with full runs. All Rust gates
+unset `KASANE_DEV_SESSION_DIR`.
+
 Licensed model acceptance discovers optional assets under `models/local/` and
 reports a skip when none are available. Explicit model paths must exist. Set
 `KASANE_ANIMATION_REQUIRE_ASSET=1` or `KASANE_TIMELINE_REQUIRE_ASSET=1` to require
@@ -45,7 +66,7 @@ The opt-in [Mao format round-trip audit](docs/plans/mao-transfer-roundtrip-tests
 repeats Kasane, Cubism and runtime transfers and reports document/behavior loss:
 
 ```sh
-env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration transfer_roundtrip::mao_repeated -- --ignored --nocapture
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test acceptance transfer_roundtrip::mao_repeated -- --ignored --nocapture
 ```
 
 Run UI tests or capture screenshots:

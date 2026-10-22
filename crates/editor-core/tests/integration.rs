@@ -34,8 +34,6 @@ mod parameter_creation;
 mod parameter_management;
 #[path = "cases/properties.rs"]
 mod properties;
-#[path = "cases/psd_import.rs"]
-mod psd_import;
 #[path = "cases/sorting.rs"]
 mod sorting;
 #[path = "cases/timeline/mod.rs"]
@@ -52,11 +50,6 @@ mod viewport_targets;
 mod visibility;
 #[path = "cases/workspaces.rs"]
 mod workspaces;
-
-#[path = "cases/transfer.rs"]
-mod transfer;
-#[path = "cases/transfer_roundtrip/mod.rs"]
-mod transfer_roundtrip;
 
 #[path = "cases/expression_authoring.rs"]
 mod expression_authoring;
