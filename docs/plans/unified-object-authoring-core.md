@@ -1,8 +1,8 @@
 # 对象创作核心架构改造方案
 
-日期：2026 年 10 月 21 日。状态：C1（Stage 1，Expression / ExpressionEntry）、C2（Motion 库、注册及 Attachment 引用）与 C3（Physics 条目与节点）已实现，验收结果见[实施记录](unified-object-authoring-core-implementation.md)；C4 已实现稳定轴/采样身份、Mesh/Scene/Glue 网格、共享 BlendShape 转换、参数范围联合修改与首批静态仿射 Mesh 改父级，完整验收尚未完成；C5–C6 尚未实施。
+日期：2026 年 10 月 21 日，进度更新于 10 月 22 日。状态：C1（Stage 1，Expression / ExpressionEntry）、C2（Motion 库、注册及 Attachment 引用）、C3（Physics 条目与节点）与 C4（Binding 网格与变形父级）已完成。C4 包含稳定轴/采样身份、Mesh/Scene/Glue 网格、共享 BlendShape 转换、参数范围联合修改、第 8.1.2 节改父级支持矩阵、统一转换报告与协作取消；UI、Python 和真实模型 Release 验收通过，结果见[实施记录](unified-object-authoring-core-implementation.md)。C5–C6 尚未实施。
 
-本次修订补齐运行投影、绑定网格转换、改父级保证、联合事务、句柄生命周期和跨层权威六项契约，并改为按领域纵向交付。第 4 节完整目标范围保持不变；除已交付的 C1–C3 和实施记录中明确列出的 C4 已交付能力外，本文其余内容仍规定拟实施的契约，不表示相关能力已经存在。
+本次修订补齐运行投影、绑定网格转换、改父级保证、联合事务、句柄生命周期和跨层权威六项契约，并改为按领域纵向交付。第 4 节完整目标范围保持不变；除已交付的 C1–C4 外，本文其余内容仍规定拟实施的契约，不表示相关能力已经存在。
 
 先完成原生创作模型、SDK 与 editor-core 的统一对象能力，使创建、属性修改、集合移动、复制、删除和引用修复具有稳定身份、明确的领域规则和单一事务历史。随后按 [Editor UI 交互统一方案](unified-object-authoring-ui.md)接入新的界面操作。
 
@@ -343,6 +343,10 @@ MotionLibrary
 
 规划时使用检查溢出的乘法计算新网格大小、各形态载荷、共享表全部使用者及临时转换空间，包含历史快照保留成本。SDK 提供统一且有限的 AuthoringLimits（最大采样组合数、转换临时字节数和历史预算）；具体默认值由 C4 的实际模型基准确定并记录，不能默认为无限制，也不能由面板各设一套限制。
 
+C4 已固定默认值为 **65,536 采样组合、64 MiB 转换临时估算、256 MiB 历史估算**。
+Mao、Shirousagi 的 Release 转换、取消与堆分配峰值检查通过，测量边界和结果见
+[Binding 转换容量记录](../benchmarks/2026-10-22-binding-authoring.md)。估算覆盖转换报告、候选与历史成本，不等同于进程 RSS 上限。
+
 预算校验必须发生在分配完整笛卡尔积之前。超过限制、取消、转换不可表达或基线失效均不发布模型、历史和运行投影；释放候选内容。支持的组合必须有成功案例，不能以全部拒绝来满足转换契约。
 
 ### 5.5 保留结构或仅调整引用接口
@@ -511,7 +515,7 @@ SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附�
 | C1 ExpressionEntry 端到端切片（已实现） | 建立最小身份、句柄、规划、字段地址与 ChangeSet 协议；完成条目创建、待配置、配置、移动、复制、删除、修复和预览投影 | 从空条目到有效执行，重排后仍编辑同一条目；跨拥有者移动、保存重开、格式诊断及 Undo/Redo 可独立验收；协议仍可演进 |
 | C2 Motion 库与注册（已实现） | 完成 Clip/注册分离、空组、根条目、覆盖、轨道展示顺序及轨道/关键帧/事件操作；随 sound 需求贯通 Attachment 身份与引用链路 | 重复注册、最后注册迁移、复制与删除闭包正确；现有单击预览保持，结构整理不重启播放，非 Editor SDK 行为一致 |
 | C3 Physics 条目与节点（已实现） | 完成类型化原生物理结构、节点身份、输入输出、执行顺序、运行槽位映射和 physics3 转换 | 待配置通道可保存；节点与输出引用联合修改正确；压缩运行槽位不误定位；测试预览及现有字段编辑不回退 |
-| C4 Binding 网格与变形父级（实施中） | 完成轴/采样点身份、零轴、网格与共享 BlendShape 转换、参数范围联合修改，以及第 8.1 节改父级支持矩阵；所需场景操作一并贯通 | 成功与拒绝案例均覆盖；基础形态无双重来源，容量预检有效，转换误差与保证可验收；不得以全拒绝代替要求支持的操作 |
+| C4 Binding 网格与变形父级（已完成） | 完成轴/采样点身份、零轴、网格与共享 BlendShape 转换、参数范围联合修改，以及第 8.1 节改父级支持矩阵；所需场景操作一并贯通 | 成功与拒绝案例均覆盖；基础形态无双重来源，容量预检有效，转换误差与保证可验收；不得以全拒绝代替要求支持的操作 |
 | C5 全领域扩展与覆盖核对 | 按下表完成 Parameter/Part 组织、场景对象、Pose、行为集合、绘制组织、资源附件及专用内容操作；补齐跨领域依赖传播 | 第 4、5 节每项均有实现、测试和必要适配；SDK 规划规则无 Editor 副本，未完成项不能归入“类型不支持” |
 | C6 核心验收与交付 | 汇总第 10、11 节检查，核对所有入口和 Undo/Redo 的变更记录，固定公共契约、支持矩阵、预算默认值及诊断说明 | 全领域目标完成、现有 Editor 可运行、性能回归通过，随后进入 UI 统一实施 |
 
@@ -553,7 +557,7 @@ SDK 删除计划返回受影响对象和可执行策略；editor-core 据此附�
 
 ### 9.4 实施进度
 
-C1（Expression / ExpressionEntry）、C2（Motion 库、注册及 Attachment 引用）与 C3（Physics 条目与节点）已实现；C4 已实现稳定轴/采样身份、Mesh/Scene/Glue 网格、共享 BlendShape 转换、参数范围联合修改与首批静态仿射 Mesh 改父级，完整验收尚未完成；C5–C6 尚未实施。落地接口、实现边界、回归结果与验收命令见[核心架构改造实施记录](unified-object-authoring-core-implementation.md)。
+C1（Expression / ExpressionEntry）、C2（Motion 库、注册及 Attachment 引用）、C3（Physics 条目与节点）与 C4（Binding 网格与变形父级）已完成；C4 的统一报告、协作取消、改父级支持矩阵及有限预算已通过受影响 UI、Python 和真实模型 Release 验收。C5–C6 尚未实施。落地接口、实现边界、回归结果与验收命令见[核心架构改造实施记录](unified-object-authoring-core-implementation.md)。
 
 ## 10 核心验收
 
@@ -627,4 +631,4 @@ SDK ChangeSet 携带可组合变化类别：标签和列表展示变化只刷新
 - 相邻 kasane-2d 的 `modules/kasane-core/src/types.rs`、`document.rs`、`document/motions.rs`、`document/pose.rs`、`document/display_info.rs`、`document/model3.rs`、`document/expressions.rs`、`document/physics.rs`、`physics.rs` 和 `draw_order.rs`。
 - 本轮契约核对还依据相邻 kasane-2d 的 `modules/kasane-sdk/src/session.rs`（句柄、incarnation、Undo/Redo）、`edit.rs`（候选、逐步校验和发布）、`modules/kasane-core/src/document/parameters.rs` 与 `bindings.rs`（参数和网格依赖校验）、`evaluation/meshes.rs`（纹理求值条件）、`modules/kasane-render/src/validation.rs`（遮罩引用完整性）。新增契约要求这些路径一起适配，不表示现有代码已满足新保证。
 
-上述是原设计依据；C1–C3 已实施的结构、入口与验收见[实施记录](unified-object-authoring-core-implementation.md)，C4 的剩余能力与后续切片仍待实施。
+上述是原设计依据；C1–C4 已完成的结构、入口、支持边界与验收见[实施记录](unified-object-authoring-core-implementation.md)，C5–C6 仍待实施。

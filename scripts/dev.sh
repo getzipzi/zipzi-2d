@@ -23,8 +23,8 @@ fi
 
 # Keep dev builds separate from tests, even when CARGO_TARGET_DIR is inherited.
 dev_target_dir="$PWD/target/dev"
-# Enable incremental builds for this dev session.
-export CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-1}"
+# Follow Cargo's incremental settings, including per-package cache overrides.
+# CARGO_INCREMENTAL can still be set explicitly by the caller.
 
 app="$PWD/target/$name Dev.app"
 executable="$app/Contents/MacOS/$package"

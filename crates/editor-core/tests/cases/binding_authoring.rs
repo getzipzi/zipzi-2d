@@ -163,3 +163,30 @@ fn editor_binding_authoring_uses_modeling_context_and_rechecks_execution() -> an
     );
     Ok(())
 }
+
+#[test]
+fn cancelled_binding_plan_keeps_editor_projection_history_and_redo() -> anyhow::Result<()> {
+    let (mut d, _) = support::sample_document_with_binding(true)?;
+    let binding = d.object_index().bindings[0].reference.id.clone();
+    let axis = d.object_index().bindings[0].axes[0].clone();
+    let history = d.history_lengths();
+    let source = d.object_index();
+    let control = kasane_sdk::ConversionControl::default();
+    let plan = d.plan_binding_authoring_with_control(
+        E::Grid(kasane_sdk::BindingGridEdit::Edit {
+            owner: binding.clone(),
+            operation: kasane_sdk::GridOperation::InsertSample {
+                axis_id: axis.id,
+                id: uuid::Uuid::new_v4().to_string(),
+                value: 0.5,
+            },
+        }),
+        &control,
+    )?;
+    assert!(!plan.report().generated.is_empty());
+    control.cancel();
+    assert!(d.execute_binding_authoring(&plan).is_err());
+    assert_eq!(d.history_lengths(), history);
+    assert!(std::sync::Arc::ptr_eq(&d.object_index(), &source));
+    Ok(())
+}

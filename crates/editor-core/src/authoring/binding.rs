@@ -17,6 +17,29 @@ impl Document {
         );
         Ok(self.session.plan_binding_field_patch(address, patch)?)
     }
+    pub fn reparent_support(
+        &self,
+        edit: &kasane_sdk::ReparentEdit,
+    ) -> Result<kasane_sdk::ReparentSupport> {
+        ensure!(
+            self.pending.is_none(),
+            "Finish the active editor gesture first"
+        );
+        Ok(self.session.reparent_support(edit)?)
+    }
+    pub fn plan_binding_authoring_with_control(
+        &self,
+        intent: BindingAuthoringEdit,
+        control: &kasane_sdk::ConversionControl,
+    ) -> Result<BindingEditPlan> {
+        ensure!(
+            self.pending.is_none(),
+            "Finish the active editor gesture first"
+        );
+        Ok(self
+            .session
+            .plan_binding_authoring_with_control(intent, control)?)
+    }
     pub fn plan_binding_authoring(&self, intent: BindingAuthoringEdit) -> Result<BindingEditPlan> {
         ensure!(
             self.pending.is_none(),
@@ -79,6 +102,25 @@ impl crate::Editor {
     ) -> Result<BindingEditPlan> {
         self.ensure_binding_authoring_target(document)?;
         self.document().unwrap().plan_binding_authoring(intent)
+    }
+    pub fn reparent_support(
+        &self,
+        document: crate::DocumentId,
+        edit: &kasane_sdk::ReparentEdit,
+    ) -> Result<kasane_sdk::ReparentSupport> {
+        self.ensure_binding_authoring_target(document)?;
+        self.document().unwrap().reparent_support(edit)
+    }
+    pub fn plan_binding_authoring_with_control(
+        &self,
+        document: crate::DocumentId,
+        intent: BindingAuthoringEdit,
+        control: &kasane_sdk::ConversionControl,
+    ) -> Result<BindingEditPlan> {
+        self.ensure_binding_authoring_target(document)?;
+        self.document()
+            .unwrap()
+            .plan_binding_authoring_with_control(intent, control)
     }
     pub fn execute_binding_authoring(
         &mut self,

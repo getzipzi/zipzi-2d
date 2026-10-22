@@ -109,6 +109,9 @@ KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-ben
 
 ## References
 
+- [Binding conversion budgets](docs/benchmarks/2026-10-22-binding-authoring.md):
+  C4 preflight estimates, cooperative cancellation, and a real-model Release
+  latency and live allocation probe with verified default budgets.
 - [Property editing chain benchmark](docs/references/property-chain-benchmark.md):
   measurement boundaries, paired probes, snapshot ownership controls and reproduction.
   [Mao baseline and bottlenecks](docs/benchmarks/2026-10-21-property-chain.md)

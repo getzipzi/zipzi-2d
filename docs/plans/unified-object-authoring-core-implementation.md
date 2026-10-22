@@ -2,6 +2,9 @@
 
 对应方案：[对象创作核心架构改造方案](unified-object-authoring-core.md)。本文件记录已交付的接口、实现边界与验收结果；完整目标范围和后续阶段仍由方案维护。
 
+截至 2026 年 10 月 22 日，**C1–C4 已完成**，C5–C6 待实施。以下按交付顺序保留
+历史阶段状态；C4 的最终支持矩阵与验收结论以本文最后一节为准。
+
 ## C1 / Stage 1：Expression / ExpressionEntry
 
 2026 年 10 月 21 日：Expression / ExpressionEntry 切片已落地于相邻
@@ -487,3 +490,140 @@ cargo check --locked -p kasane-editor
 两仓库格式／diff 检查通过。编译仍报告 vendor GPUI/Cocoa 的既有警告及 `block`
 未来兼容性提示。本轮未运行全 workspace、原生截图、Python wheel 或真实模型
 Release 基准；不将本次 review 视为完整 C4/C6 验收。
+
+## C4：改父级保证、统一转换报告与协作取消（已完成）
+
+2026 年 10 月 22 日续：本节完成 C4 剩余接口和回归。最终代码的原生 UI、Python
+重建与两个真实模型 Release 测量均已通过，**C4 标记完成**。改父级支持边界见下表；
+它遵守方案 8.1.2 允许的明确拒绝，未把任意非线性逆变换或任意变形器子树的自动保持
+列为已支持。C5 的全对象生命周期和 C6 的全领域验收仍待实施。
+
+- **显式状态和模型单位容差**：`ReparentEdit.context` 捕获原生参数值、编辑时间与
+  有限参数域；每个相关驱动必须落在显式区间或给出固定值。快照使用原生参数求值、
+  位于 Glue 之前；Motion/Physics 先由调用方解析成冻结参数，不读取提交时的预览。
+  Rotation 普通网格选择、重复参数归一化、Blend 约束与运行时 clamp 采用相同规则。
+  位置容差为 `absolute + relative × S`，默认 `1e-5`、`1e-6`，
+  `S = max(1, 原受影响几何 AABB 对角线)`。尺度从几何本身求得，不依赖纹理渲染。
+  计划记录实际样本误差、保守插值／仿射误差界、参考尺度和完整捕获上下文；不放宽容差。
+- **Mesh BlendShape 转换**：静态或已冻结 Rotation 坐标系之间，基础位置与普通
+  Keyform 按仿射映射转换，所有 Mesh Delta 的位置只应用线性部分，避免重复加平移。
+  未参与执行的基准 Delta 和待配置绑定也保留原 ID 与完整其他载荷。多个使用者共用
+  KeyTable 的引用保持；颜色、透明度和离散属性不混入位置变换。
+- **轻量能力和完整影响**：core/SDK 的 `reparent_support` 与执行共用关系、锁定和
+  驱动检查。`RequiresConversionPlan` 明确表示仍须数值／容量验证，查询不构造几何、
+  笛卡尔积或运行帧；动态奇异采样留给重型计划判断。移动 Transform 时，影响集合
+  包含完整后代及其普通／Blend 绑定，实际父级写入仍只修改规范化后的选中根。
+  Opacity、multiply、screen、enabled、域内可见性、Glue 和有状态输入逐项报告未保证范围。
+- **统一报告**：每个 core 转换计划与 SDK `BindingEditPlan.report()` 都提供同一
+  `ConversionReport`：保留身份、写入／重验地址、生成、删除、位置重映射、源／结果域、
+  网格形态重建来源与权重、损失以及类型化网格／参数范围／改父级保证。
+  `preserved` 指身份保留，不表示字段数值未变；`rewritten` 描述写入／重验集合。
+  普通 Keyform 使用规范化采样 ID 组合，Offscreen 使用绑定计划基线的专用拓扑槽位。
+  空 Binding／共享表也有资源 Object 地址；兼容换表明确报告旧／新 SampleId 的形态移交。
+  报告包含共享表全部使用者、重基准补偿及 Offscreen 映射；不复制形态载荷来生成地址。
+  参数范围保留数值时也列出所有依赖及锁定检查，不只列实际重写关键值的使用者。
+- **取消和原子提交**：`ConversionControl` 克隆共享永久取消信号、工作检查点和可选
+  进度回调。网格、共享 Delta 转换、降维补偿、地址报告及改父级按有界工作单元检查。
+  core 计划、SDK 计划与借用／独立候选共享此有效期；
+  `EditSession::binding_authoring_with_control` 可基于已包含前序写入的候选规划，
+  将取消信号保持到最终发布；预先取消时 SDK 不创建候选，
+  提交在发布前最后检查。失败、取消和 no-op 均不发布事件、不清 redo；取消不能被 Undo
+  撤销。回调进度是工作检查点，不作为完成百分比。
+- **预算和性能**：完整笛卡尔积及 Delta 分配前，预算同时覆盖旧／新地址报告、
+  共享使用者、插值选择与候选／历史成本。预算公式修正为
+  `temporary = 6 × retained + 2 × payload`，保留
+  `history = 2 × retained + payload`。默认边界固定为 65,536 组合、64 MiB 临时估算、
+  256 MiB 历史估算，SDK 会话统一配置。真实模型 Release 探针比较计划估算与实际堆分配
+  增量，并验证部分转换取消后的版本和历史；结果见[容量与性能记录](../benchmarks/2026-10-22-binding-authoring.md)。
+- **Editor / Python**：Editor 提供可取消规划和轻量改父级查询，继续合成 Modeling
+  与候选占用条件；取消的计划不重建现有对象投影。Python 增加独立取消 token、
+  `reparent_support` 和 `report_json`，规划释放 GIL，其他线程取消不争用 session 锁。
+  保存和外部格式继续复用之前的 C4 映射；本轮仅改操作契约，原生 wire schema 不变。
+
+| 改父级关系 | KeepLocalData | PreserveEditState | PreserveParameterDomain |
+| --- | --- | --- | --- |
+| 无绑定／普通 MeshBinding 的 Mesh，根与静态可逆 Rotation 链之间 | 支持 | 支持，显式快照 | 支持，显式参数域与仿射误差界 |
+| 同上，另有 Mesh BlendShape | 支持 | 支持，基础形态和全部位置增量联合转换 | 支持，固定坐标转换及增量线性等价 |
+| 新旧 Rotation 祖先有驱动，全部祖先驱动在本次保证中固定 | 支持 | 支持，使用捕获状态 | 支持其他声明维度；固定驱动值写入保证 |
+| 祖先驱动在保证域中变化，未证明同一个仿射转换 | 支持 | 可捕获一个状态 | `PARAMETER_DOMAIN_UNPROVEN` |
+| Rotation / Warp 子树，包括普通／Blend 绑定及其后代 | 支持，统一验证循环和全部锁定 | `SUBTREE_CONVERSION_UNPROVEN` | `SUBTREE_CONVERSION_UNPROVEN` |
+| Warp 祖先无已证明的唯一非线性逆变换 | 支持 | `NONLINEAR_PARENT_UNPROVEN` | 同左 |
+| 奇异父级、不可满足的误差界、缺失／非法快照输入 | 结构合法时支持局部保留 | 具体原因拒绝，整体不变 | 具体原因拒绝，整体不变 |
+
+最后两行的拒绝不改变所请求策略，不自动退回 KeepLocalData。所有几何保证都止于
+Glue 之前；域抽样仅为回归，证明依据为固定仿射坐标变换与多线性／增量运算等价，
+并加上记录在计划中的浮点误差预算。用户不能将这些结果呈现成“全部外观不变”。
+
+本节验收使用受影响测试筛选，未执行整个 workspace、Metal 截图、Release Python wheel
+或 C6 的属性链／Timeline 配对测量。新增 SDK 11 项、Editor 1 项、Python 2 项回归。
+
+```sh
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk \
+  --test integration -- binding_authoring:: scene_authoring:: effects_authoring:: \
+  mesh_editing:: handles:: history_budget::
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-core \
+  --lib --test keyform_tests --test typed_scene_tests --test blendshape_glue_tests --test offscreen_tests
+cargo test --locked -p editor-core --test integration -- binding_authoring properties canvas_objects panels
+./scripts/test.sh ui -- headless_tests::mesh_properties headless_tests::parameters \
+  headless_tests::hierarchy headless_tests::ui_performance
+# 在相邻 kasane-2d 执行，构建当前 Debug extension，运行 CPU 与 inspection：
+./tools/test.sh python
+cargo check --locked -p kasane-editor
+```
+
+最终验证：SDK 筛选 **74 项通过**，包括事务内受控规划、16 轴中的单采样
+维度不虚增插值误差界、空资源身份报告、共享表跨采样身份移交及分配前报告预算拒绝。
+原生 UI 筛选 **44 项通过**；当前源码重建的 Python Debug extension 通过
+**59 项 CPU + 4 项 inspection**。此前已通过的 core 相关 **38 项**、Editor 核心相关
+**88 项**和 Editor 编译检查亦已通过。各轮专项覆盖重叠，
+不累计数字。
+
+Release 探针重新构建并对 Mao、Shirousagi 各测三个普通绑定，每个八轮规划／提交／Undo。
+两模型在默认预算内完成，实测规划和提交峰值均低于计划临时估算；部分规划取消后版本和
+历史保持。Mao 提交峰值约 **8.53 MB**，临时估算 **16.00–16.02 MB**；Shirousagi
+提交峰值约 **0.66 MB**，临时估算 **1.48–1.50 MB**。完整载荷、组合数、历史成本及
+耗时见[最终容量与性能记录](../benchmarks/2026-10-22-binding-authoring.md)。
+
+此前被 SIGTERM 中断的重建不计为通过，本轮使用最终源码完成以上验收。验收启动时，
+本地 `sccache` 旧服务接收请求却不启动编译器，独立 Rust 探针 15 秒超时；重启服务后，
+编译、缓存写入和命中均恢复。随后 SDK、Python 和 UI 均按原 `sccache` 配置通过，
+未禁用项目缓存、清空缓存或修改测试断言。两仓库最终格式与 diff 检查通过。
+编译日志仍有既有 GPUI/Cocoa 警告与 `block` 未来兼容提示；未修改第三方代码。
+
+
+## C4：剩余实现 review 修正
+
+2026 年 10 月 22 日：复核上一节新增的改父级保证、统一报告、预算与取消实现，
+修正以下问题；改动保留在两个工作区，未提交。
+
+- **父级采样预算**：结构／驱动预检不再提前求值带驱动的 Rotation。新旧祖先普通
+  网格的采样组合与选择数组成本纳入计划预算，先完成容量和报告预算检查，再求值父级。
+  即使移动的是无绑定 Mesh，父级采样也不能绕过组合数限制；执行旧计划时仍重验
+  当前会话预算。场景遍历增加取消检查点。
+- **参数范围影响与锁**：保留采样值时，也报告普通绑定的 Mesh／Transform／Part
+  目标。Part 普通网格关联的 Offscreen 纳入影响、地址报告和锁定检查，防止范围修改
+  绕过锁改变其采样行为。合并重复锁检查与目标收集逻辑。
+- **共享转换参数域**：BlendBinding 的 Keyform 地址附带所属表的驱动、采样值与
+  基准信息，换表报告可查询该绑定的源／结果参数域；参数范围转换和重基准化复用
+  同一地址元数据。
+- **报告构建**：按 BTreeMap 的拥有者有序区间清理旧地址，避免每加入一个共享
+  使用者都扫描此前全部地址。保留原有身份、重映射和取消语义。
+- **Python 类型接口**：同步取消 token、可取消规划、轻量改父级查询和 `report_json`
+  的原生 stub，补充 facade 的 token 与计划返回类型。
+
+新增一个 SDK 回归，验证无绑定 Mesh 的驱动父级预算和旧计划执行检查；扩充现有
+参数范围测试以覆盖两种策略的完整影响与 Offscreen 锁，以及换表参数域报告。
+验证结果：SDK 首轮相关筛选 **75 项通过**，后续报告修正后 Binding 专项 **57 项通过**
+（与前者重叠）；core **38 项**、Editor 核心 **88 项**、当前源码重建的 Python Debug
+扩展 **59 项 CPU + 4 项 inspection** 均通过。
+
+Python 首次 `./tools/test.sh python -- -k binding` 的 CPU 筛选通过 8 项，但 inspection
+筛选没有匹配测试，脚本因此返回非零；随后直接用该脚本刚重建的
+`target/python-tests/develop-venv/bin/python -m unittest discover` 分别运行 `test_cpu.py`
+和 `test_inspection.py`，得到上述完整通过结果。
+
+本轮未重跑整个 workspace、原生截图或真实模型 Release 基准；上一节的性能数字
+仍是此前测量结果，不作为本轮修正后的重新测量。
+
+最终 `cargo check --locked -p kasane-editor`、两仓库格式与 diff 检查通过；
+Python facade／stub 语法检查通过。编译仍有既有第三方警告及 `block` 未来兼容提示。
