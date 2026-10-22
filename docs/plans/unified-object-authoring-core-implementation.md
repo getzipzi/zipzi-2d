@@ -2,8 +2,8 @@
 
 对应方案：[对象创作核心架构改造方案](unified-object-authoring-core.md)。本文件记录已交付的接口、实现边界与验收结果；完整目标范围和后续阶段仍由方案维护。
 
-截至 2026 年 10 月 22 日，**C1–C4 已完成**，C5–C6 待实施。以下按交付顺序保留
-历史阶段状态；C4 的最终支持矩阵与验收结论以本文最后一节为准。
+截至 2026 年 10 月 22 日，**C1–C4 已完成，C5 已启动并交付 Pose 首批**；其他 C5 领域与 C6 仍待实施。以下按交付顺序保留
+历史阶段状态；C4 的支持矩阵与最终验收以对应的 C4 完成及 review 修正章节为准。
 
 ## C1 / Stage 1：Expression / ExpressionEntry
 
@@ -627,3 +627,87 @@ Python 首次 `./tools/test.sh python -- -k binding` 的 CPU 筛选通过 8 项�
 
 最终 `cargo check --locked -p kasane-editor`、两仓库格式与 diff 检查通过；
 Python facade／stub 语法检查通过。编译仍有既有第三方警告及 `block` 未来兼容提示。
+
+
+## C5 首批：Pose 根资源、Group、Entry 与 Link
+
+2026 年 10 月 22 日：开始 C5，先交付 Pose 纵向切片。**本节不代表 C5 全领域完成**；
+参数与组织、场景生命周期、专用拓扑内容、行为引用集合及资源依赖继续按下表推进。
+
+- **原生身份与待配置**：`PoseGroup { id, name, entries }`、`PoseEntry.id`、
+  `PoseLink { id, target }` 均持久化；Part 引用区分 `Unspecified`、`Resolved` 和
+  导入 `Unresolved`。空组、未配置成员与 Link 可保存。UUID、跨类型全局身份冲突、
+  无效 fade、组内重复主 Part、成员内重复 Link 和已解析的悬空 Part 引用仍拒绝。
+  根资源使用 Arc，组、成员和 Link 数组使用 SharedVec；普通字段写入按不可变查找
+  得到目标槽位后仅分离其所在分支，不因遍历先分离无关成员数组。
+- **领域操作**：core `PoseEdit` / `PosePlan` 提供创建单例、创建组／成员／Link、
+  类型化字段补丁、集合移动／重排、复制、删除与指定接收组的解散。
+  创建首组可同时创建根资源，一条历史恢复全部；多选按原生集合顺序执行并排除已选祖先
+  包含的后代。复制为全部拥有内容生成新 ID，Part 引用保持共享。
+  跨组移动和解散验证最终重复约束，失败不发布中间结果。单例不复制或移入集合；
+  组不嵌套；没有根成员容器，解散必须给出接收组。
+- **SDK 生命周期**：`plan_pose_edit` / `execute_pose_plan` 和
+  `EditSession::edit_pose` 使用同一规则；集合查询与集合／实体能力查询区分不支持和
+  当前不可用。`PoseFieldAddress` 捕获实体、拥有者句柄、字段基线与拥有者 epoch。
+  重排后仍定位同一条目；跨拥有者往返及 Undo 不复活旧地址；删除／Undo 或同候选
+  删除再恢复不复活旧句柄。整资源替换、pose3 导入和普通 `erase_object` 同样检查
+  锁定及身份退休，不能绕过领域入口。失败、取消候选和 no-op 沿用 SDK 历史规则。
+- **运行投影与导出**：`pose_projection` 同源过滤未配置／未解析主 Part 的整项及
+  不可用 Link，保留空组、原生顺序、稳定来源 ID、紧凑槽位及反向来源。
+  主成员失效导致的有效 Link 省略有 `OwnerUnavailable` 原因链。
+  MotionPreview 与 MotionEditingPreview 共用此投影，重置时构建并在 seek checkpoint
+  间共享；逐帧不重新过滤或复制。过滤前的第一项不可用时，第一项有效成员仍正确初始化
+  为可见状态。严格 pose3 导出拒绝待配置；`plan_available_pose_export` /
+  `export_pose_plan` 列出直接和间接省略项，并在版本变化后要求重新接受。
+  不透明内容保持既有 namespace／content hash 保护，不允许在部分导出时静默过滤。
+- **发布与 Editor**：`ChangeSet` 增加 Pose 集合与方向明确的 `pose_references`。
+  摘要借用源记录，报告直接替换／导入／规划／历史的实际变化，不反复按 ID 扫描层级。
+  组名变化只刷新对应 Properties 载荷，复用关系记录和无关数组，不推进 SDK 求值版本或
+  Editor 动画输入版本；Undo/Redo 同样处理。Editor 投影与原生 Pose Inspector 改用
+  稳定 Group／Entry／Link 身份，未配置项有诊断；Document／Editor 适配仅调用 SDK，
+  不自动激活 Motion 或 Expression。新菜单与表单交互继续属于后续 UI 阶段。
+- **保存和 Python**：原生目录格式升至 **16**，明确拒绝 15 等旧实验版本，不提供迁移。
+  pose3 只写外部 Part runtime ID，导入为内部拥有内容生成新 UUID，不泄露内部身份。
+  Python `Edit.pose_authoring`、`Session.plan_pose_authoring` / `execute_pose_plan`
+  经过相同 Rust 类型化命令；旧 `create_pose` 便捷方法生成新的原生记录结构。
+
+C5 剩余覆盖核对：
+
+| 范围 | 本轮状态及后续工作 |
+| --- | --- |
+| Pose 根资源／Group／Entry／Link | 本节首批交付；后续 C6 继续检查公共契约和性能 |
+| Parameter／ParameterGroup／Part | 既有创建、字段、排序能力保留；统一规划、复制／删除闭包和完整嵌套组织待核对补齐 |
+| Mesh／Warp／Rotation／Offscreen／Glue／DrawOrderGroup | C4 前置能力保留；完整生命周期、无纹理 Mesh、未配置 Glue 与绘制组织待补齐 |
+| 顶点／UV／三角形／Warp 控制点／GlueVertexPair／Offscreen 映射 | C4 转换覆盖保留；其余专用增删、依赖重映射与稳定 Pair 身份待补齐 |
+| ModelParameterGroup／ModelHitArea／CdiCombinedSet／其他引用列表 | 稳定身份、待配置成员、集合操作、运行过滤及格式诊断待补齐 |
+| Texture／ImageAsset／Attachment／sound／UserData | C2 Attachment／sound 保留；空图像内容、异步句柄及跨遮罩／Offscreen 的依赖传播待补齐 |
+| Document／Layout／ExportSettings／SourceCanvas／修复／不透明内容与编辑器状态边界 | 本切片遵守既有边界；全入口覆盖核对仍待完成 |
+
+这些待办属于 C5 未完成范围，不能以“类型不支持”缩减目标。C6 的全领域验收、真实模型
+性能复测及 UI 统一尚未开始。本轮新增 SDK **11 项**、Editor 核心 **3 项**、Python
+**1 项**回归；以下命令采用受影响测试筛选：
+
+```sh
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-sdk --test integration -- \
+  pose_authoring:: handles:: editor_state:: document_operations:: history_budget::
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-project \
+  --test pose_tests --test project_tests --test motion_tests --test cdi_tests
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked -p kasane-animation \
+  --test motion_preview --test motion_editing_preview
+cargo test --locked -p editor-core --test integration -- pose_authoring:: panels:: animation::
+./scripts/test.sh ui -- headless_tests::animation_panels
+# 在相邻 kasane-2d 执行，重建当前 Debug extension：
+./tools/test.sh python
+```
+
+最终验证：SDK 筛选 **29 项通过**（含 11 项新增 Pose 回归）；project 的 Pose／原生格式／
+Motion／CDI 筛选 **61 项通过**；animation **26 项通过**；Editor 核心 **57 项通过**；
+最终稳定行 ID 版本的原生动画面板 **10 项通过**；当前源码重建的 Python Debug extension
+通过 **60 项 CPU + 4 项 inspection**。各组覆盖可能重叠，不合计数字。
+
+默认 `cargo check --locked -p kasane-editor`、两仓库 `cargo fmt --all --check` 与
+`git diff --check` 通过。编译仍报告既有 vendor GPUI/Cocoa 警告及 `block`
+未来兼容提示；未修改第三方代码。
+
+未运行完整 workspace、截图／真实模型 Release 或 C6 的综合性能验收。代码保留在
+`kasane-editor` 与相邻 `kasane-2d` 工作区，未提交。

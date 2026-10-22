@@ -374,11 +374,15 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
         .id
         .clone();
     let kasane_core::document::PosePartRef::Resolved { part_id } =
-        &document.pose_definition().unwrap().groups[0][0].part
+        &document.pose_definition().unwrap().groups[0].entries[0].part
     else {
         panic!("fixture must bind pose")
     };
     let part_id = part_id.clone();
+    let pose_entry_id = document.pose_definition().unwrap().groups[0].entries[0]
+        .id
+        .clone();
+    let pose_row = format!("animation-pose-part-{pose_entry_id}");
     let harness = setup_with_document(cx, document, assets);
     let original = harness
         .view
@@ -451,7 +455,7 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
         window.render_frame(cx);
         assert_eq!(window.find("animation-pose-fade").label(), Some("0.500 s"));
         assert_eq!(
-            window.find("animation-pose-part-0-0-0").label(),
+            window.find(pose_row.clone()).label(),
             Some(format!("{opacity:.4}").as_str()),
             "must retain presented frame while next frame is pending"
         );
@@ -465,7 +469,7 @@ fn physics_and_pose_inspect_presented_values_and_clear_on_document_switch(cx: &m
         });
         window.render_frame(cx);
         assert!(window.try_find("animation-pose-empty").is_some());
-        assert!(window.try_find("animation-pose-part-0-0-0").is_none());
+        assert!(window.try_find(pose_row.clone()).is_none());
         harness.view.update(cx, |view, cx| {
             view.dock
                 .as_ref()

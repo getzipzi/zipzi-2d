@@ -45,10 +45,15 @@ pub(crate) fn pose(
         cx,
     ));
     for (group, entries) in pose.groups.iter().enumerate() {
-        content = content.child(heading(t!("workspace.pose_group", index = group + 1), cx));
-        for (entry, part) in entries.iter().enumerate() {
-            for (link, reference) in std::iter::once(&part.part)
-                .chain(part.links.iter().flatten())
+        let name = if entries.name.is_empty() {
+            t!("workspace.pose_group", index = group + 1).into_owned()
+        } else {
+            entries.name.clone()
+        };
+        content = content.child(heading(name, cx));
+        for part in &entries.entries {
+            for (link, (id, reference)) in std::iter::once((&part.id, &part.part))
+                .chain(part.links.iter().flatten().map(|l| (&l.id, &l.target)))
                 .enumerate()
             {
                 let label = part_name(document, reference);
@@ -56,7 +61,7 @@ pub(crate) fn pose(
                     PosePartRef::Resolved { part_id } => {
                         snapshot.and_then(|snapshot| snapshot.part_opacities.get(part_id))
                     }
-                    PosePartRef::Unresolved { .. } => None,
+                    PosePartRef::Unspecified | PosePartRef::Unresolved { .. } => None,
                 }
                 .map_or_else(|| "—".to_string(), |value| format!("{value:.4}"));
                 let label = if link == 0 {
@@ -65,7 +70,7 @@ pub(crate) fn pose(
                     t!("workspace.pose_link", part = label).into_owned()
                 };
                 content = content.child(field(
-                    SharedString::from(format!("animation-pose-part-{group}-{entry}-{link}")),
+                    SharedString::from(format!("animation-pose-part-{id}")),
                     label,
                     value,
                     cx,

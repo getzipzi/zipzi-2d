@@ -63,6 +63,7 @@ fn scene_type_name(document: &Document, object: &ObjectRef) -> SharedString {
 
 pub(crate) fn part_name(document: &Document, part: &PosePartRef) -> String {
     match part {
+        PosePartRef::Unspecified => "—".into(),
         PosePartRef::Resolved { part_id } => document
             .object_index()
             .get(&ObjectRef::new(ObjectKind::Part, part_id))

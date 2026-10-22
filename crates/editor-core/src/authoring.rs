@@ -40,3 +40,7 @@ pub struct PhysicsAuthoringCapabilities {
     pub domain: kasane_sdk::PhysicsCapabilities,
     pub session_reason: Option<AuthoringSessionReason>,
 }
+
+#[path = "authoring/pose.rs"]
+mod pose;
+pub use pose::PoseAuthoringCapabilities;

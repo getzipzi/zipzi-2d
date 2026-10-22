@@ -1,6 +1,6 @@
 //! Immutable resource feedback, separate from transient playback and authoring projections.
 use crate::{Document, ExpressionResource, MotionResource};
-use kasane_core::document::{ExpressionTarget, MotionTrackTarget, PosePartRef};
+use kasane_core::document::{ExpressionTarget, MotionTrackTarget};
 use kasane_sdk::MotionSnapshot;
 use std::{
     collections::{BTreeSet, HashMap},
@@ -58,6 +58,9 @@ pub enum AnimationDiagnostic {
     },
     UnconfiguredPhysicsChannel {
         channel_id: String,
+    },
+    UnconfiguredPoseItem {
+        item_id: String,
     },
     UnresolvedPose {
         target: String,
@@ -218,24 +221,21 @@ impl AnimationCatalog {
                 }
             }
         }
-        if let Some(pose) = model.pose() {
-            for (group, entries) in pose.groups.iter().enumerate() {
-                for (index, entry) in entries.iter().enumerate() {
-                    for part in std::iter::once(&entry.part).chain(entry.links.iter().flatten()) {
-                        if let PosePartRef::Unresolved { runtime_id } = part {
-                            let issue = AnimationDiagnostic::UnresolvedPose {
-                                target: runtime_id.clone(),
-                            };
-                            if part == &entry.part {
-                                coverage.insert(
-                                    format!("pose group {group} entry {index} has unresolved Part"),
-                                    issue.clone(),
-                                );
-                            }
-                            issues.insert(issue);
-                        }
+        if let Ok(Some(projection)) = model.pose_projection() {
+            for disabled in projection.disabled {
+                let issue = match disabled.reason {
+                    kasane_core::document::PoseDisabledReason::Unresolved { runtime_id } => {
+                        AnimationDiagnostic::UnresolvedPose { target: runtime_id }
                     }
-                }
+                    _ => AnimationDiagnostic::UnconfiguredPoseItem {
+                        item_id: disabled.id.clone(),
+                    },
+                };
+                coverage.insert(
+                    format!("pose item {} is unavailable", disabled.id),
+                    issue.clone(),
+                );
+                issues.insert(issue);
             }
         }
         Self {

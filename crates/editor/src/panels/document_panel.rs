@@ -22,7 +22,7 @@ fn includes(panel: PanelKind, kind: ObjectKind) -> bool {
         ),
         PanelKind::Glue => kind == K::Glue,
         PanelKind::Physics => matches!(kind, K::Physics | K::PhysicsGroup),
-        PanelKind::Pose => matches!(kind, K::Pose | K::PoseGroup | K::PoseEntry),
+        PanelKind::Pose => matches!(kind, K::Pose | K::PoseGroup | K::PoseEntry | K::PoseLink),
         PanelKind::Resources => matches!(kind, K::Texture | K::Attachment),
         _ => false,
     }

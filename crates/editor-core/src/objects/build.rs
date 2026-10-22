@@ -593,19 +593,32 @@ impl ObjectIndex {
                 json!({"fade_in":x.fade_in,"file_type":x.file_type,"extensions":x.extensions}),
                 None,
             );
-            for (i, g) in x.groups.iter().enumerate() {
-                let gr = ObjectRef::new(K::PoseGroup, format!("{}/{i}", x.id));
-                s.add(gr.clone(), format!("Group {}", i + 1), Value::Null, None);
+            for g in &x.groups {
+                let gr = ObjectRef::new(K::PoseGroup, &g.id);
+                s.add(gr.clone(), &g.name, json!({"name":g.name}), None);
                 s.edge(&r, R::Contains, gr.clone(), "");
-                for (j, e) in g.iter().enumerate() {
-                    let er = ObjectRef::new(K::PoseEntry, format!("{}/{i}/{j}", x.id));
+                for (j, e) in g.entries.iter().enumerate() {
+                    let er = ObjectRef::new(K::PoseEntry, &e.id);
                     s.add(er.clone(), format!("Member {}", j + 1), json!(e), None);
                     s.edge(&gr, R::Contains, er.clone(), "");
-                    let target = s.pose_ref(&e.part);
-                    s.edge(&er, R::PoseMember, target, "saved visibility switch");
+                    if e.part != PosePartRef::Unspecified {
+                        let target = s.pose_ref(&e.part);
+                        s.edge(&er, R::PoseMember, target, "saved visibility switch");
+                    } else {
+                        s.objects.last_mut().unwrap().diagnostic =
+                            Some("Choose a main Part".into());
+                    }
                     for link in e.links.iter().flatten() {
-                        let target = s.pose_ref(link);
-                        s.edge(&er, R::PoseLink, target, "");
+                        let lr = ObjectRef::new(K::PoseLink, &link.id);
+                        s.add(lr.clone(), "Link", json!(link), None);
+                        s.edge(&er, R::Contains, lr.clone(), "");
+                        if link.target != PosePartRef::Unspecified {
+                            let target = s.pose_ref(&link.target);
+                            s.edge(&lr, R::PoseLink, target, "");
+                        } else {
+                            s.objects.last_mut().unwrap().diagnostic =
+                                Some("Choose a linked Part".into());
+                        }
                     }
                 }
             }
@@ -683,6 +696,7 @@ impl ObjectIndex {
     }
     fn pose_ref(&mut self, p: &PosePartRef) -> ObjectRef {
         match p {
+            PosePartRef::Unspecified => unreachable!("unconfigured references have no edge"),
             PosePartRef::Resolved { part_id } => ObjectRef::new(ObjectKind::Part, part_id),
             PosePartRef::Unresolved { runtime_id } => self.unresolved("pose Part", runtime_id),
         }

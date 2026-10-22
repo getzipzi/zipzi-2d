@@ -36,6 +36,7 @@ pub enum ObjectKind {
     Pose,
     PoseGroup,
     PoseEntry,
+    PoseLink,
     Texture,
     Attachment,
     Unresolved,

@@ -5,6 +5,7 @@ mod context;
 mod expressions;
 mod influences;
 mod motions;
+mod pose;
 mod properties;
 mod table;
 mod types;
