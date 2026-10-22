@@ -219,7 +219,7 @@ fn pending_scene_objects_are_native_and_roundtrip_without_invented_targets() {
     assert!(s.scene_projection().glues.is_empty());
     let encoded = kasane_project::encode_project(s.document()).unwrap();
     let value: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(value["format_version"], 18);
+    assert_eq!(value["format_version"], 19);
     let reopened = kasane_project::decode_project(&encoded).unwrap();
     assert_eq!(
         reopened.get_mesh(&mesh).unwrap().texture_asset_id,

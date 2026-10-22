@@ -94,6 +94,7 @@ fn attachment_planning_preserves_resolved_scene_metadata() {
     .unwrap();
     let settings = Model3Settings {
         hit_areas: Some(vec![ModelHitArea {
+            id: kasane_core::document::ModelHitArea::default().id,
             name: "Head".into(),
             mesh: ModelTargetRef::Resolved { object_id: id(51) },
             extensions: Default::default(),

@@ -32,11 +32,16 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()
             let parameters = g
                 .list(entry, "value")?
                 .iter()
-                .map(|n| kasane_core::document::ModelTargetRef::Resolved {
-                    object_id: n.attribute("uuid").unwrap_or("").to_string(),
+                .map(|n| {
+                    kasane_core::document::ReferenceEntry::new(
+                        kasane_core::document::ModelTargetRef::Resolved {
+                            object_id: n.attribute("uuid").unwrap_or("").to_string(),
+                        },
+                    )
                 })
                 .collect();
             groups.push(kasane_core::document::ModelParameterGroup {
+                id: uuid::Uuid::new_v4().to_string(),
                 name: name.into(),
                 parameters,
                 extensions: Default::default(),

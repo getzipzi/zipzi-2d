@@ -180,6 +180,21 @@ impl Document {
                 });
             }
         }
+        for child in self
+            .reference_identities()
+            .iter()
+            .filter(|i| i.kind != ReferenceKind::CdiCombinedSet)
+        {
+            if !valid_uuid(&child.id) || !all_ids.insert(child.id.clone()) {
+                issues.push(StructureIssue {
+                    object_id: child.id.clone(),
+                    status: Status::error(
+                        "INVALID_REFERENCE_IDENTITY",
+                        "Missing or duplicated metadata identity",
+                    ),
+                });
+            }
+        }
         issues.extend(self.validate_display_info());
         issues.extend(self.hierarchy_order_issues(&self.content.hierarchy_order));
         issues.extend(self.editor_state_issues(&self.content.editor_state));

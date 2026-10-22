@@ -5,9 +5,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ModelTargetRef {
+    Unspecified,
     Resolved { object_id: String },
     Unresolved { runtime_id: String },
 }
@@ -23,8 +24,9 @@ impl ModelTargetRef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ModelParameterGroup {
+    pub id: String,
     pub name: String,
-    pub parameters: Vec<ModelTargetRef>,
+    pub parameters: Vec<super::ReferenceEntry<ModelTargetRef>>,
     #[serde(default)]
     pub extensions: BTreeMap<String, Value>,
 }
@@ -32,6 +34,7 @@ pub struct ModelParameterGroup {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ModelHitArea {
+    pub id: String,
     pub name: String,
     pub mesh: ModelTargetRef,
     #[serde(default)]
@@ -55,7 +58,7 @@ impl Model3Settings {
         self.groups
             .iter()
             .flatten()
-            .flat_map(|group| &group.parameters)
+            .flat_map(|group| group.parameters.iter().map(|p| &p.target))
             .chain(self.hit_areas.iter().flatten().map(|area| &area.mesh))
             .any(|target| target.object_id() == Some(id))
     }
@@ -88,6 +91,11 @@ impl Document {
         if !self.initialized() {
             return self.failed(Status::error("NOT_INITIALIZED", "Initialize first"));
         }
+        if let Err(status) =
+            self.validate_reference_replacement_unlocked(&settings, self.display_info())
+        {
+            return self.failed(status);
+        }
         let status = self.validate_model3_settings(&settings);
         if !status.is_ok() {
             return self.failed(status);
@@ -95,12 +103,22 @@ impl Document {
         if self.content.model3_settings == settings {
             return self.failed(Status::ok());
         }
+        let previous = self
+            .reference_identities()
+            .iter()
+            .map(|i| i.id.clone())
+            .collect();
         self.content.model3_settings = settings;
+        self.clean_retired_reference_flags(previous);
         self.changed(ChangeKind::Metadata, Vec::new(), Vec::new())
     }
 
     pub(super) fn validate_model3_settings(&self, settings: &Model3Settings) -> Status {
+        if let Err(s) = self.validate_reference_storage(settings, self.display_info()) {
+            return s;
+        }
         let valid_target = |target: &ModelTargetRef, parameter: bool| match target {
+            ModelTargetRef::Unspecified => true,
             ModelTargetRef::Resolved { object_id } => {
                 if parameter {
                     self.get_parameter(object_id).is_some()
@@ -113,12 +131,26 @@ impl Document {
             }
         };
         for group in settings.groups.iter().flatten() {
+            let mut seen = std::collections::HashSet::new();
+            for p in &group.parameters {
+                let key = match &p.target {
+                    ModelTargetRef::Unspecified => continue,
+                    ModelTargetRef::Resolved { object_id } => self
+                        .get_parameter(object_id)
+                        .map(|p| p.runtime_id.as_str())
+                        .unwrap_or(object_id),
+                    ModelTargetRef::Unresolved { runtime_id } => runtime_id,
+                };
+                if !seen.insert(key) {
+                    return Status::error("DUPLICATE_REFERENCE_TARGET", &p.id);
+                }
+            }
             if group.name.is_empty()
                 || group.name.contains('\0')
                 || group
                     .parameters
                     .iter()
-                    .any(|target| !valid_target(target, true))
+                    .any(|target| !valid_target(&target.target, true))
             {
                 return Status::error("INVALID_MODEL3_GROUPS", &group.name);
             }
@@ -167,6 +199,26 @@ impl Document {
                 object_id: self.content.id.clone(),
                 status,
             }]
+        }
+    }
+}
+impl Default for ModelParameterGroup {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "Parameter Group".into(),
+            parameters: vec![],
+            extensions: Default::default(),
+        }
+    }
+}
+impl Default for ModelHitArea {
+    fn default() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "Hit Area".into(),
+            mesh: ModelTargetRef::Unspecified,
+            extensions: Default::default(),
         }
     }
 }

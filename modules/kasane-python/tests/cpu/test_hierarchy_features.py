@@ -705,3 +705,56 @@ class CpuHierarchyFeaturesTests(unittest.TestCase):
             reopened = kasane.open_project(saved.manifest)
             self.assertEqual(reopened.glue_pairs(glue), model.glue_pairs(glue))
             self.assertEqual(reopened.validate_structure(), [])
+
+    def test_reference_collections_pending_identity_move_copy_and_persistence(self):
+        model = session()
+        group, row, hit, combined, combined_row = (str(uuid4()) for _ in range(5))
+        with model.edit("reference objects") as edit:
+            edit.reference_authoring({"operation": "create_model_parameter_group", "id": group, "name": "EyeBlink"})
+            edit.reference_authoring({"operation": "create_member", "id": row, "collection": {"kind": "model_parameter_members", "group_id": group}})
+            edit.reference_authoring({"operation": "create_model_hit_area", "id": hit, "name": "Head"})
+            edit.reference_authoring({"operation": "create_cdi_combined_set", "id": combined})
+            edit.reference_authoring({"operation": "create_member", "id": combined_row, "collection": {"kind": "cdi_combined_members", "set_id": combined}})
+        self.assertEqual(len(model.reference_projection()["disabled"]), 5)
+        handle = model.handle("model_parameter_member", row)
+        address = model.reference_field_address(row)
+        plan = model.plan_reference_authoring({"operation": "duplicate", "ids": [group], "destination": {"kind": "model_parameter_groups"}})
+        copied = dict(plan.copied_ids)
+        model.execute_reference_plan(plan)
+        model.execute_reference_plan(model.plan_reference_authoring({"operation": "move", "ids": [row], "destination": {"kind": "model_parameter_members", "group_id": copied[group]}}))
+        model.resolve_handle(handle)
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_reference_field_patch(address, json.loads(address.expected_json))
+        with TemporaryDirectory() as root:
+            saved = model.save(Path(root) / "references")
+            reopened = kasane.open_project(saved.manifest)
+            self.assertEqual(reopened.model3_settings(), model.model3_settings())
+            self.assertEqual(reopened.display_info(), model.display_info())
+            self.assertEqual(reopened.reference_projection(), model.reference_projection())
+            self.assertEqual(reopened.validate_structure(), [])
+
+    def test_reference_field_configuration_and_batch_selection_reject_stale_addresses(self):
+        model = session()
+        other, group, row = (str(uuid4()) for _ in range(3))
+        with model.edit("targets") as edit:
+            edit.add_png_asset(ASSET, "texture", TEXTURE)
+            edit.create_rectangle(MESH, "Face", ASSET, (0, 0), (10, 10))
+            edit.create_rectangle(other, "Mask", ASSET, (0, 0), (5, 5))
+            edit.create_parameter(PARAMETER, "Blink", 0, 1, 0, runtime_id="ParamBlink")
+            edit.reference_authoring({"operation": "create_model_parameter_group", "id": group, "name": "EyeBlink"})
+            edit.reference_authoring({"operation": "create_member", "id": row, "collection": {"kind": "model_parameter_members", "group_id": group}})
+        address = model.reference_field_address(row)
+        model.execute_reference_plan(model.plan_reference_field_patch(address, {"kind": "model_parameter_member", "target": {"kind": "resolved", "object_id": PARAMETER}}))
+        projected = model.reference_projection()["groups"][0]
+        self.assertEqual(projected["parameters"], [PARAMETER])
+        self.assertEqual(projected["member_slots"], {row: 0})
+        selection = model.reference_selection_address(MESH, "mesh_masks")
+        model.execute_reference_plan(model.plan_reference_selection_patch(selection, [other]))
+        self.assertEqual(model.mesh_properties(MESH).masks, [other])
+        model.undo()
+        with self.assertRaises(kasane.SdkFailure):
+            model.plan_reference_selection_patch(selection, [other])
+        model.execute_reference_plan(model.plan_reference_authoring({"operation": "delete", "ids": [group]}))
+        self.assertIsNotNone(model.parameter(PARAMETER))
+        self.assertEqual(model.validate_structure(), [])

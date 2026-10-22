@@ -96,6 +96,7 @@ impl CdiPartEntry {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum CdiParameterRef {
+    Unspecified,
     Resolved { parameter_id: String },
     Unresolved { runtime_id: String },
 }
@@ -104,7 +105,7 @@ pub enum CdiParameterRef {
 #[serde(deny_unknown_fields)]
 pub struct CdiCombinedSet {
     pub id: String,
-    pub members: Vec<CdiParameterRef>,
+    pub members: Vec<super::ReferenceEntry<CdiParameterRef>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -182,6 +183,18 @@ impl Document {
         if let Err(status) = self.validate_organization_metadata_unlocked(&display_info) {
             return self.failed(status);
         }
+        if let Err(status) =
+            self.validate_reference_replacement_unlocked(self.model3_settings(), &display_info)
+        {
+            return self.failed(status);
+        }
+        let previous_references = self
+            .reference_identities()
+            .iter()
+            .map(|i| i.id.clone())
+            .collect();
+        self.reference_index.take();
+        self.reference_projection.take();
         let previous = std::mem::replace(&mut self.content.display_info, display_info);
         let old_editor_state = self.content.editor_state.clone();
         for id in previous.parameter_groups.iter().flatten().map(|g| &g.id) {
@@ -196,8 +209,11 @@ impl Document {
                 self.content.editor_state.objects.remove(id);
             }
         }
+        self.clean_retired_reference_flags(previous_references);
         if let Some(issue) = self.validate_structure().into_iter().next() {
             self.content.display_info = previous;
+            self.reference_index.take();
+            self.reference_projection.take();
             self.content.editor_state = old_editor_state;
             return self.failed(issue.status);
         }
@@ -477,17 +493,10 @@ impl Document {
                         format!("$.CombinedParameters[{i}].id is invalid or repeated"),
                     );
                 }
-                if set.members.is_empty() {
-                    issue(
-                        &mut issues,
-                        &set.id,
-                        "EMPTY_CDI_SET",
-                        format!("$.CombinedParameters[{i}] is empty"),
-                    );
-                }
                 let mut members = std::collections::HashSet::new();
                 for (j, member) in set.members.iter().enumerate() {
-                    let runtime_id = match member {
+                    let runtime_id = match &member.target {
+                        CdiParameterRef::Unspecified => continue,
                         CdiParameterRef::Resolved { parameter_id } => {
                             match parameter(parameter_id) {
                                 Some(parameter) => parameter.runtime_id.as_str(),

@@ -49,10 +49,12 @@ fn generated_cdi_group_edit_keeps_other_parameters_and_future_parameters() {
                 members: vec![
                     CdiParameterRef::Resolved {
                         parameter_id: FIRST.into(),
-                    },
+                    }
+                    .into(),
                     CdiParameterRef::Resolved {
                         parameter_id: SECOND.into(),
-                    },
+                    }
+                    .into(),
                 ],
             })
         })

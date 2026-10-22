@@ -215,7 +215,7 @@ pub(crate) fn inspect_with_animation(
                 || group
                     .parameters
                     .iter()
-                    .any(|target| target.object_id().is_none())
+                    .any(|target| target.target.object_id().is_none())
         })
     }) || model3.layout.as_ref().is_some_and(|v| !v.is_empty())
         || model3.hit_areas.as_ref().is_some_and(|v| !v.is_empty())

@@ -25,7 +25,11 @@ mod parts;
 mod physics;
 mod pose;
 mod property;
+mod reference_authoring;
 mod references;
+pub use reference_authoring::*;
+mod reference_entry;
+pub use reference_entry::ReferenceEntry;
 mod structure;
 mod transactions;
 mod transforms;
@@ -97,6 +101,8 @@ pub struct Document {
     modified_cache: OnceLock<bool>,
     lookup: OnceLock<DocumentLookup>,
     binding_lookup: OnceLock<Arc<binding_authoring::identity::BindingLookup>>,
+    reference_projection: OnceLock<Arc<ReferenceProjection>>,
+    reference_index: OnceLock<Arc<reference_authoring::ReferenceIndex>>,
     pair_lookup: OnceLock<Arc<HashMap<String, (String, usize)>>>,
     expression_entries: OnceLock<HashMap<String, (String, usize)>>,
     motion_lookup: OnceLock<Arc<motions::MotionLookup>>,
@@ -161,7 +167,7 @@ struct DocumentContent {
 }
 
 impl Document {
-    pub const SCHEMA_VERSION: u32 = 9;
+    pub const SCHEMA_VERSION: u32 = 10;
 
     pub fn new() -> Self {
         Self::default()
@@ -351,6 +357,9 @@ impl Document {
     }
 
     pub fn contains_id(&self, id: &str) -> bool {
+        if self.reference_identity(id).is_some() {
+            return true;
+        }
         self.binding_identity(id).is_some()
             || self.contains_base_identity(id)
             || self.get_glue_pair(id).is_some()
@@ -434,6 +443,8 @@ impl Document {
         mesh_ids: Vec<String>,
         mut object_ids: Vec<String>,
     ) -> EditResult {
+        self.reference_index.take();
+        self.reference_projection.take();
         if object_ids.iter().any(|id| {
             self.content.motions.contains_key(id)
                 || self

@@ -141,7 +141,7 @@ class CpuMotionAnimationTests(unittest.TestCase):
         user_data = b'{"Version":3,"UserData":[]}'
         with model.edit("model3") as edit:
             edit.set_model3_settings(
-                groups=[{"name":"EyeBlink","parameters":[{"kind":"resolved","object_id":PARAMETER}]}],
+                groups=[{"id":str(uuid4()),"name":"EyeBlink","parameters":[{"id":str(uuid4()),"target":{"kind":"resolved","object_id":PARAMETER}}]}],
                 layout={"CenterX":0}, user_data="data.userdata3.json")
             edit.set_package_attachments({"data.userdata3.json": user_data})
         self.assertEqual(model.model3_settings()["user_data"]["kind"], "resolved")
@@ -159,15 +159,15 @@ class CpuMotionAnimationTests(unittest.TestCase):
         with model.edit("parameter and metadata") as edit:
             edit.create_parameter(PARAMETER, "X", -1, 1, 0, runtime_id="ParamX")
             edit.set_model3_settings(groups=[{
-                "name": "EyeBlink",
-                "parameters": [{"kind": "resolved", "object_id": PARAMETER}],
+                "id": str(uuid4()), "name": "EyeBlink",
+                "parameters": [{"id":str(uuid4()), "target":{"kind": "resolved", "object_id": PARAMETER}}],
             }])
         before = model.model3_settings()
         with self.assertRaises(kasane.SdkFailure) as failure:
             with model.edit("invalid reference") as edit:
                 edit.set_model3_settings(groups=[{
-                    "name": "EyeBlink",
-                    "parameters": [{"kind": "resolved", "object_id": CDI_OTHER}],
+                    "id": str(uuid4()), "name": "EyeBlink",
+                    "parameters": [{"id":str(uuid4()), "target":{"kind": "resolved", "object_id": CDI_OTHER}}],
                 }])
         self.assertEqual(failure.exception.code, "INVALID_MODEL3_GROUPS")
         self.assertEqual(model.model3_settings(), before)

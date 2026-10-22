@@ -88,3 +88,8 @@ pub use scene_authoring::*;
 
 mod scene_content;
 pub use scene_content::*;
+
+mod reference_authoring;
+pub use reference_authoring::*;
+
+pub use changes::{ReferenceFieldChange, ReferenceSelectionChange};

@@ -79,7 +79,8 @@ impl Document {
             .objects
             .keys()
             .filter_map(|id| {
-                let valid = self.binding_identity(id).is_some()
+                let valid = self.reference_identity(id).is_some()
+                    || self.binding_identity(id).is_some()
                     || self.get_glue_pair(id).is_some()
                     || self.content.meshes.contains_key(id)
                     || self.content.transforms.contains_key(id)

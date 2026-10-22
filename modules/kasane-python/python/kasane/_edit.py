@@ -308,6 +308,9 @@ class Edit:
         INVALID_MOTION_FPS or INVALID_MOTION_FADE. SDK failure aborts this edit."""
         self._call(lambda: self._native.set_motion_timing(motion_id, duration, fps, looping, fade_in, fade_out))
 
+    def reference_authoring(self, intent: Mapping[str, object]) -> None:
+        self._native.reference_authoring_json(json.dumps(intent))
+
     def scene_content(self, intent: Mapping[str, object]) -> None:
         self._native.scene_content_json(json.dumps(intent))
 

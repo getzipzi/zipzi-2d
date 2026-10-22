@@ -7,6 +7,8 @@ use serde::Serialize;
 use std::collections::{BTreeSet, HashSet};
 mod binding;
 mod content;
+mod references;
+pub use references::{ReferenceFieldChange, ReferenceSelectionChange};
 mod motion;
 mod organization;
 mod scene;
@@ -40,6 +42,10 @@ pub struct EntityRef {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CollectionRef {
+    References {
+        document_id: String,
+        collection: kasane_core::document::ReferenceCollection,
+    },
     SceneContent {
         document_id: String,
         owner_id: String,
@@ -98,6 +104,8 @@ pub struct ChangeSet {
     pub collections: Vec<CollectionRef>,
     pub references: Vec<ReferenceChange>,
     pub motion_references: Vec<MotionReferenceChange>,
+    pub reference_fields: Vec<ReferenceFieldChange>,
+    pub reference_selections: Vec<ReferenceSelectionChange>,
     pub content_references: Vec<SceneContentReferenceChange>,
     pub content_changes: Vec<SceneContentChange>,
     pub scene_fields: Vec<SceneFieldChange>,
@@ -118,6 +126,13 @@ impl ChangeSet {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.motion_references {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+        }
+        for edge in &mut inverse.reference_fields {
+            std::mem::swap(&mut edge.before, &mut edge.after);
+            std::mem::swap(&mut edge.before_owner, &mut edge.after_owner);
+        }
+        for edge in &mut inverse.reference_selections {
             std::mem::swap(&mut edge.before, &mut edge.after);
         }
         for edge in &mut inverse.content_references {
@@ -142,6 +157,27 @@ impl ChangeSet {
     }
     pub(crate) fn estimated_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
+            + self.reference_fields.capacity() * std::mem::size_of::<ReferenceFieldChange>()
+            + self
+                .reference_fields
+                .iter()
+                .map(ReferenceFieldChange::extra_bytes)
+                .sum::<usize>()
+            + self.reference_selections.capacity() * std::mem::size_of::<ReferenceSelectionChange>()
+            + self
+                .reference_selections
+                .iter()
+                .map(|c| {
+                    c.entity.id.capacity()
+                        + c.entity.document_id.capacity()
+                        + (c.before.capacity() + c.after.capacity()) * std::mem::size_of::<String>()
+                        + c.before
+                            .iter()
+                            .chain(&c.after)
+                            .map(String::capacity)
+                            .sum::<usize>()
+                })
+                .sum::<usize>()
             + self.content_references.capacity()
                 * std::mem::size_of::<SceneContentReferenceChange>()
             + self
@@ -169,6 +205,20 @@ impl ChangeSet {
                 .collections
                 .iter()
                 .map(|c| match c {
+                    CollectionRef::References {
+                        document_id,
+                        collection,
+                    } => {
+                        document_id.capacity() + match collection {
+                            kasane_core::document::ReferenceCollection::ModelParameterMembers {
+                                group_id,
+                            } => group_id.capacity(),
+                            kasane_core::document::ReferenceCollection::CdiCombinedMembers {
+                                set_id,
+                            } => set_id.capacity(),
+                            _ => 0,
+                        }
+                    }
                     CollectionRef::SceneContent {
                         document_id,
                         owner_id,
@@ -487,6 +537,7 @@ pub(crate) fn summarize(
     scene::summarize_scene(before, after, object_ids, &mut out);
     binding::summarize_bindings(before, after, object_ids, &mut out);
     binding::summarize_binding_children(before, after, object_ids, &mut out);
+    references::summarize_references(before, after, &mut out);
     content::summarize_content(before, after, object_ids, &mut out);
     // Persistent authoring flags affect capabilities even when domain content
     // is unchanged. Derive them from both states so undo uses the same summary.
@@ -521,6 +572,11 @@ pub(crate) fn summarize(
                     key.kind,
                     ObjectKind::Parameter
                         | ObjectKind::Part
+                        | ObjectKind::ModelParameterGroup
+                        | ObjectKind::ModelParameterMember
+                        | ObjectKind::ModelHitArea
+                        | ObjectKind::CdiCombinedSet
+                        | ObjectKind::CdiCombinedMember
                         | ObjectKind::CdiParameterGroup
                         | ObjectKind::DrawOrderGroup
                         | ObjectKind::Expression

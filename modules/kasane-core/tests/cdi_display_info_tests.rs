@@ -67,7 +67,8 @@ fn info() -> DisplayInfo {
             id: SET.into(),
             members: vec![CdiParameterRef::Resolved {
                 parameter_id: PARAM.into(),
-            }],
+            }
+            .into()],
         }]),
         ..Default::default()
     }

@@ -301,10 +301,12 @@ fn exported_model_import_preserves_parameter_bound_geometry_and_texture_pixels()
         .is_ok());
     let mut settings = document.model3_settings().clone();
     settings.groups = Some(vec![kasane_core::document::ModelParameterGroup {
+        id: kasane_core::document::ModelParameterGroup::default().id,
         name: "EyeBlink".into(),
         parameters: vec![kasane_core::document::ModelTargetRef::Resolved {
             object_id: PARAM.into(),
-        }],
+        }
+        .into()],
         extensions: Default::default(),
     }]);
     assert!(document
@@ -320,7 +322,21 @@ fn exported_model_import_preserves_parameter_bound_geometry_and_texture_pixels()
     let imported = import_model(&artifact.bytes).unwrap();
     assert_eq!(imported.document.mesh_order().len(), 1);
     assert_eq!(imported.document.parameter_order().len(), 1);
-    assert_eq!(imported.document.model3_settings().groups, settings.groups);
+    // CMO3 effect dictionaries carry names and parameter GUIDs, without native
+    // authoring identities for the group and reference rows.
+    let restored = imported.document.model3_settings().groups.as_ref().unwrap();
+    let original = settings.groups.as_ref().unwrap();
+    assert_eq!(restored.len(), original.len());
+    for (a, b) in restored.iter().zip(original) {
+        assert_eq!(a.name, b.name);
+        assert_eq!(a.extensions, b.extensions);
+        assert_eq!(
+            a.parameters.iter().map(|p| &p.target).collect::<Vec<_>>(),
+            b.parameters.iter().map(|p| &p.target).collect::<Vec<_>>()
+        );
+        assert_ne!(a.id, b.id);
+    }
+    assert!(imported.document.validate_structure().is_empty());
     assert_eq!(
         imported.document.get_part(&part_id).unwrap().name,
         "手臂 Arm"

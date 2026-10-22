@@ -6,7 +6,7 @@ import json
 from typing import Sequence, Mapping
 from uuid import UUID
 from weakref import WeakSet
-from ._native import NativeSession, NativeSceneContentPlan, NativeSceneContentAddress, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
+from ._native import NativeSession, NativeReferencePlan, NativeReferenceFieldAddress, NativeReferenceSelectionAddress, NativeSceneContentPlan, NativeSceneContentAddress, NativePosePlan, NativeOrganizationPlan, NativeScenePlan, NativeSceneFieldAddress, NativeDrawingGroupAddress, NativeBindingPlan, NativeConversionControl, ObjectHandle, SdkFailure
 from ._edit import Edit
 from ._animation import ExpressionPreview, MotionPreview, PhysicsPreview
 from ._mesh_edit import remesh_rectangle_grid as _remesh_rectangle_grid
@@ -232,6 +232,36 @@ class Session:
     def export_motion3(self, motion_id: str) -> str:
         """Encode a clip with current runtime IDs, retaining unresolved imported runtime IDs."""
         return self._native.export_motion3(motion_id)
+
+    def plan_reference_authoring(self, intent: Mapping[str, object]) -> NativeReferencePlan:
+        return self._native.plan_reference_authoring_json(json.dumps(intent))
+
+    def execute_reference_plan(self, plan: NativeReferencePlan):
+        return self._native.execute_reference_plan(plan)
+
+    def reference_collection(self, collection: Mapping[str, object]) -> list[ObjectHandle]:
+        return self._native.reference_collection_json(json.dumps(collection))
+
+    def reference_capabilities(self, handle: ObjectHandle) -> dict[str, object]:
+        return json.loads(self._native.reference_capabilities_json(handle))
+
+    def reference_collection_capabilities(self, collection: Mapping[str, object]) -> dict[str, object]:
+        return json.loads(self._native.reference_collection_capabilities_json(json.dumps(collection)))
+
+    def reference_projection(self) -> dict[str, object]:
+        return json.loads(self._native.reference_projection_json())
+
+    def reference_field_address(self, object_id: str) -> NativeReferenceFieldAddress:
+        return self._native.reference_field_address(object_id)
+
+    def plan_reference_field_patch(self, address: NativeReferenceFieldAddress, fields: Mapping[str, object]) -> NativeReferencePlan:
+        return self._native.plan_reference_field_patch_json(address, json.dumps(fields))
+
+    def reference_selection_address(self, owner_id: str, field: str) -> NativeReferenceSelectionAddress:
+        return self._native.reference_selection_address_json(owner_id, json.dumps(field))
+
+    def plan_reference_selection_patch(self, address: NativeReferenceSelectionAddress, targets: Sequence[str]) -> NativeReferencePlan:
+        return self._native.plan_reference_selection_patch(address, list(targets))
 
     def plan_scene_content(self, intent: Mapping[str, object], *, control: NativeConversionControl | None = None) -> NativeSceneContentPlan:
         return self._native.plan_scene_content_json(json.dumps(intent), control)

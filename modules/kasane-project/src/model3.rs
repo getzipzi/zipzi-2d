@@ -88,8 +88,13 @@ fn import_with_namespace(
                         return Err(Status::error("INVALID_MODEL3_GROUPS", group.target));
                     }
                     Ok(ModelParameterGroup {
+                        id: uuid::Uuid::new_v4().to_string(),
                         name: group.name,
-                        parameters: group.ids.into_iter().map(|id| resolve(id, true)).collect(),
+                        parameters: group
+                            .ids
+                            .into_iter()
+                            .map(|id| kasane_core::document::ReferenceEntry::new(resolve(id, true)))
+                            .collect(),
                         extensions: group.extensions,
                     })
                 })
@@ -104,6 +109,7 @@ fn import_with_namespace(
             Ok(areas
                 .into_iter()
                 .map(|area| ModelHitArea {
+                    id: uuid::Uuid::new_v4().to_string(),
                     name: area.name,
                     mesh: resolve(area.id, false),
                     extensions: area.extensions,
@@ -245,7 +251,14 @@ pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status
                 let ids = group
                     .parameters
                     .iter()
-                    .map(|target| runtime_id(target, true))
+                    .map(|target| {
+                        runtime_id(&target.target, true).map_err(|s| {
+                            Status::error(
+                                s.code,
+                                format!("group {} member {}: {}", group.id, target.id, s.message),
+                            )
+                        })
+                    })
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(serde_json::json!({"Target": "Parameter", "Name": group.name, "Ids": ids}))
             })
@@ -263,7 +276,7 @@ pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status
         let wire = areas
             .iter()
             .map(|area| {
-                Ok(serde_json::json!({"Name": area.name, "Id": runtime_id(&area.mesh, false)?}))
+                Ok(serde_json::json!({"Name": area.name, "Id": runtime_id(&area.mesh, false).map_err(|s|Status::error(s.code,format!("hit area {}: {}",area.id,s.message)))?}))
             })
             .collect::<Result<Vec<Value>, Status>>()?;
         output.insert("HitAreas".into(), Value::Array(wire));

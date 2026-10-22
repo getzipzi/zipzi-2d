@@ -178,6 +178,9 @@ impl Document {
             if self.editor_state().get(id).locked {
                 return Err(Status::error("OBJECT_LOCKED", id));
             }
+            if let Some(owner) = self.reference_identity(id).and_then(|i| i.owner.as_deref()) {
+                pending.push(owner);
+            }
             if let Some(owner) = self.glue_pair_owner(id) {
                 pending.push(owner);
             }

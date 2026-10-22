@@ -403,7 +403,7 @@ impl<'a> Exporter<'a> {
                             "value",
                             N::list(
                                 "carray_list",
-                                group.parameters.iter().map(|target| match target {
+                                group.parameters.iter().map(|target| match &target.target {
                                     ModelTargetRef::Resolved { object_id } => {
                                         guid("CParameterGuid", object_id)
                                     }

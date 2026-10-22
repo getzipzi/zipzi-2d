@@ -509,11 +509,14 @@ use `u32`, and registration errors use `AnimationError` variants.
 
 
 `Session.model3_settings()` exposes Groups, Layout, HitAreas, UserData, and
-unknown model3 fields. Groups use `{"name": "EyeBlink", "parameters":
-[{"kind": "resolved", "object_id": parameter_uuid}]}`; HitAreas use
-`{"name": "Head", "mesh": {"kind": "resolved", "object_id": mesh_uuid}}`.
-Imported unresolved references use `{"kind": "unresolved", "runtime_id": "..."}`
-and block strict export. Layout is a mapping of names to finite numbers.
+unknown model3 fields. Groups use `{"id": group_uuid, "name": "EyeBlink",
+"parameters": [{"id": member_uuid, "target": {"kind": "resolved",
+"object_id": parameter_uuid}}]}`; HitAreas use `{"id": area_uuid, "name":
+"Head", "mesh": {"kind": "resolved", "object_id": mesh_uuid}}`.
+Every root and member ID is a globally unique UUID. A pending target uses
+`{"kind": "unspecified"}`. Imported unresolved references use
+`{"kind": "unresolved", "runtime_id": "..."}`. Both pending and unresolved
+targets survive native saves and block strict foreign export. Layout is a mapping of names to finite numbers.
 Known references follow runtime-ID renames and protect referenced objects from
 deletion. `Edit.set_model3_settings()` changes supported fields;
 `replace_model3_settings()` takes a detached mapping. Managed Sound and
@@ -692,11 +695,11 @@ runs one script and writes a JSON report containing captured stdout/stderr,
 exception details, and live session versions. The runner does not save a
 project automatically.
 
-Projects now write format v6 and read v1–v6. The v5 migration binds raw model3
-Groups/HitAreas to stable UUIDs using their saved namespace. Older readers must
-reject v6. Python callers that passed capitalized wire-style Groups/HitAreas to
-`set_model3_settings()` must use the typed records shown above; model3 package
-import/export still uses the standard Live2D wire format.
+Native projects write and read directory-project version **19** (core schema
+**10**); older project versions are rejected without migration. Callers of
+`set_model3_settings()` must supply the native UUIDs and typed records shown
+above. Model3 package import/export uses the standard Live2D wire format and
+converts references using runtime IDs.
 
 Saved observation scene bundles use schema 3, and run reports use schema 2.
 Earlier canvas-based scene bundles must be captured again.
@@ -751,7 +754,7 @@ zero-byte file. Imported path conveniences bind loaded files to stable IDs.
 contains persistent axis IDs, samples with `{id, value}` (and constraint
 `weight`), keyform sample ID combinations, and shared table `base_sample_id`.
 Numeric `keys`, parallel weights and base indices in the tuple snapshots are
-compiled views. Native projects use directory-project version 18.
+compiled views. Native projects use directory-project version 19.
 
 `Session.plan_binding_authoring(intent)` and `Edit.binding_authoring(intent)`
 accept the Rust `BindingAuthoringEdit` enum representation. `Grid` supports
@@ -816,7 +819,7 @@ returns a specific error. Legal Rotation/Warp subtree moves retain
 
 `Session.plan_scene_authoring(intent)`, `execute_scene_plan(plan)` and
 `Edit.scene_authoring(intent)` use the same native lifecycle rules. Native
-projects now use directory-project version **18** (core schema **9**).
+projects now use directory-project version **19** (core schema **10**).
 
 ```python
 from uuid import uuid4
@@ -892,7 +895,7 @@ capture expected values and a monotonic content epoch; topology/content changes
 and Undo expire them. Labels preserve content addresses. Plans expose `version`,
 `is_noop`, `affected_ids`, `report_json`, and `cost`. They publish atomically and
 accept the shared `binding_conversion_control()` cancellation signal. Native
-projects now use directory-project version **18**, core schema **9**.
+projects now use directory-project version **19**, core schema **10**.
 
 ```python
 vertex_id = model.geometry(mesh_id).vertex_ids[0]
@@ -970,3 +973,102 @@ sources, keyform remaps, resampled shapes and losses. SDK ChangeSets expose
 must be reacquired after Undo. Legacy Glue four-tuples accept optional vertices;
 replacement retains IDs only for unique matching endpoint pairs. Use canonical
 content commands whenever identities must be explicit.
+
+
+### Editable behavior and reference collections (C5)
+
+`Session.plan_reference_authoring(intent)`, `execute_reference_plan(plan)` and
+`Edit.reference_authoring(intent)` share the native `ReferenceEdit` operations.
+Plans capture the native snapshot and SDK version; a stale plan must be rebuilt.
+A failure aborts the whole edit. No-ops do not consume a history step.
+`NativeReferencePlan` exposes `version`, `is_noop`, `affected_ids`, `copied_ids`
+and `effects_json` (metadata, behavior groups, HitAreas, combined sets, drawing,
+and deformation effects).
+
+Collections use `{"kind": ...}` with `model_parameter_groups`, `model_hit_areas`,
+`cdi_combined_sets`, `model_parameter_members` (also `group_id`) or
+`cdi_combined_members` (also `set_id`). `reference_collection(collection)` returns
+stable handles in native order. Handle kinds are `model_parameter_group`,
+`model_parameter_member`, `model_hit_area`, `cdi_combined_set` and
+`cdi_combined_member`. Use `reference_capabilities(handle)` and
+`reference_collection_capabilities(collection)` for native lock/operation
+availability; pending objects remain inspectable.
+
+```python
+from uuid import uuid4
+
+group_id, member_id = str(uuid4()), str(uuid4())
+with model.edit("Create behavior group") as edit:
+    edit.reference_authoring({
+        "operation": "create_model_parameter_group", "id": group_id,
+        "name": "EyeBlink", "before": None,
+    })
+    edit.reference_authoring({
+        "operation": "create_member", "id": member_id,
+        "collection": {"kind": "model_parameter_members", "group_id": group_id},
+        "before": None,
+    })
+
+address = model.reference_field_address(member_id)
+model.execute_reference_plan(model.plan_reference_field_patch(address, {
+    "kind": "model_parameter_member",
+    "target": {"kind": "resolved", "object_id": parameter_id},
+}))
+```
+
+Creation operations are `create_model_parameter_group` (`id`, `name`, `before`),
+`create_model_hit_area` (same fields), `create_cdi_combined_set` (`id`, `before`)
+and `create_member` (`id`, `collection`, `before`). Groups and sets may be empty;
+new members and HitAreas have an unspecified target. A CombinedSet has no name
+field. HitAreas use `model_hit_area` fields with `name` and `mesh`; group fields
+use `model_parameter_group` with `name`. Combined members use
+`{"kind":"cdi_combined_member","target":{"kind":"resolved","parameter_id":...}}`.
+Both member families accept `unspecified` and `unresolved` runtime IDs. Within
+one owner, duplicate configured runtime targets are rejected, including a
+resolved/unresolved pair referring to the same runtime ID.
+
+`patch` takes `id`, `expected` and `fields`; delayed callers should use
+`reference_field_address(id)` and `plan_reference_field_patch(address, fields)`.
+Addresses retain entity, owner and resolved-target handle lifetimes plus a
+monotonic field epoch. Reorder preserves them; changing fields or owner and
+then Undo does not revive old addresses. Deleting a target and recreating its
+UUID also expires the captured target lifetime. A label change on a parent
+does not expire a member address.
+
+`move` and `duplicate` take `ids`, `destination` and an optional `before` identity.
+Selection is normalized to native order and selected ancestors cover their
+members. Only matching collection kinds can receive a move. Moves preserve
+IDs; duplication gives each owned root/member a fresh UUID, reported by
+`copied_ids`, while retaining shared Parameter/Mesh targets. Duplicating a
+configured member into its existing owner is rejected as a duplicate target.
+`delete` takes `ids` and removes the owned closure; shared targets remain.
+`dissolve` takes `id`, explicit receiving owner `destination` and `before`;
+it transfers group/set members with their IDs and deletes the old owner.
+Duplicate targets reject the entire dissolve. HitAreas cannot dissolve.
+
+`reference_projection()` exposes behavior `groups`, `combined_sets` and usable
+`hit_areas`, with root slots, compact `member_slots`, reverse member IDs and
+HitArea original source slots. Pending/unresolved rows and HitAreas without
+vertices have `disabled` diagnostics. Compact runtime slots are never native
+row addresses. Textureless meshes with vertices can be HitArea targets.
+Metadata edits retain the frame evaluation revision; projection labels and
+source relationships still refresh.
+
+Mesh masks, Offscreen masks and Blend binding constraints are batch selections
+rather than member objects. Use `reference_selection_address(owner_id, field)`
+with `mesh_masks`, `offscreen_masks` or `blend_constraints`, then
+`plan_reference_selection_patch(address, target_ids)` and execute the plan.
+The direct `replace_selection` operation takes `owner`, `field`, `expected`
+and `targets`. Native validation checks duplicate/missing targets, dependency
+cycles and owner/Part/binding locks. SDK ChangeSets carry directional
+`reference_fields`, `reference_selections` and reference collection changes;
+Undo exchanges their before/after values.
+
+Native projects preserve all reference UUIDs. Third-party model3/CDI/CMO3
+formats have no slots for these authoring identities; import allocates new
+ones and strict export diagnoses incomplete targets by native identity or
+external path. Reimporting CDI into an existing document matches complete
+ordered set contents, retains each matched set/member identity, and handles
+external set reorder without assigning identities by array index. Legacy
+`Edit.set_combined_parameters()` retains member IDs by matching targets;
+canonical native replacements must explicitly carry IDs.

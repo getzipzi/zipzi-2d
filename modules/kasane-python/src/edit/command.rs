@@ -127,7 +127,16 @@ pub(super) fn apply_command(
         Command::CreateCdiGroup(group) => edit.create_parameter_group(group)?,
         Command::ReplaceCdiGroup(group) => edit.replace_parameter_group(group)?,
         Command::SetParameterGroup(id, group) => edit.set_parameter_group(&id, group.as_deref())?,
-        Command::SetCombinedParameters(set) => edit.set_combined_parameters(set)?,
+        Command::SetCombinedParameters(mut set) => {
+            if let Some(old) = edit.candidate_document().get_combined_set(&set.id) {
+                for member in &mut set.members {
+                    if let Some(previous) = old.members.iter().find(|p| p.target == member.target) {
+                        member.id = previous.id.clone();
+                    }
+                }
+            }
+            edit.set_combined_parameters(set)?
+        }
         Command::EditMotion(intent) => edit.edit_motion(intent)?,
         Command::EditAttachment(intent) => edit.edit_attachment(intent)?,
         Command::EditExpression(intent) => edit.edit_expression(intent)?,
@@ -156,6 +165,7 @@ pub(super) fn apply_command(
         Command::SetPose(pose) => edit.set_pose(pose)?,
         Command::EditPose(intent) => edit.edit_pose(intent)?,
         Command::SceneContent(intent) => edit.edit_scene_content(intent)?,
+        Command::References(intent) => edit.edit_references(intent)?,
         Command::EditScene(intent) => edit.edit_scene(intent)?,
         Command::EditOrganization(intent) => edit.edit_organization(intent)?,
         Command::BindingAuthoring(intent) => edit.binding_authoring(intent)?,

@@ -97,7 +97,11 @@ impl NativeEdit {
                 id,
                 members: parameter_ids
                     .into_iter()
-                    .map(|parameter_id| CdiParameterRef::Resolved { parameter_id })
+                    .map(|parameter_id| {
+                        kasane_core::document::ReferenceEntry::new(CdiParameterRef::Resolved {
+                            parameter_id,
+                        })
+                    })
                     .collect(),
             }))
             .map_err(|error| sdk_failure(py, error))

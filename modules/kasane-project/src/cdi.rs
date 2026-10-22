@@ -359,12 +359,31 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
     if let Some(sets) = wire.combined_parameters {
         let mut combined = Vec::with_capacity(sets.len());
         for (i, set) in sets.into_iter().enumerate() {
-            let id = old_sets
-                .and_then(|old| old.get(i))
-                .filter(|set| used_ids.insert(set.id.clone()))
-                .map(|set| set.id.clone())
+            let runtime_key =
+                |m: &kasane_core::document::ReferenceEntry<CdiParameterRef>| match &m.target {
+                    CdiParameterRef::Resolved { parameter_id } => document
+                        .get_parameter(parameter_id)
+                        .map(|p| p.runtime_id.clone()),
+                    CdiParameterRef::Unresolved { runtime_id } => Some(runtime_id.clone()),
+                    CdiParameterRef::Unspecified => None,
+                };
+            let source = old_sets.into_iter().flatten().find(|old| {
+                !used_ids.contains(&old.id)
+                    && old
+                        .members
+                        .iter()
+                        .map(runtime_key)
+                        .collect::<Option<Vec<_>>>()
+                        .as_ref()
+                        == Some(&set)
+            });
+            let id = source
+                .map(|old| {
+                    used_ids.insert(old.id.clone());
+                    old.id.clone()
+                })
                 .unwrap_or_else(|| stable_uuid(document, "cdi_set", i, "", &mut used_ids));
-            let members = set
+            let members: Vec<CdiParameterRef> = set
                 .into_iter()
                 .enumerate()
                 .map(|(j, runtime_id)| {
@@ -380,6 +399,18 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
                         });
                         CdiParameterRef::Unresolved { runtime_id }
                     }
+                })
+                .collect();
+            let members = members
+                .into_iter()
+                .map(|target| {
+                    let mut entry = kasane_core::document::ReferenceEntry::new(target);
+                    if let Some(old) =
+                        source.and_then(|set| set.members.iter().find(|p| p.target == entry.target))
+                    {
+                        entry.id = old.id.clone();
+                    }
+                    entry
                 })
                 .collect();
             combined.push(CdiCombinedSet { id, members });
@@ -446,7 +477,7 @@ fn namespace_ids(document: &Document, info: &DisplayInfo) -> CdiNamespaceIds {
     if let Some(sets) = &info.combined_parameters {
         for set in sets {
             for member in &set.members {
-                if let CdiParameterRef::Unresolved { runtime_id } = member {
+                if let CdiParameterRef::Unresolved { runtime_id } = &member.target {
                     ids.parameters
                         .insert(format!("unresolved:{runtime_id}"), runtime_id.clone());
                 }
@@ -646,7 +677,12 @@ pub fn export_cdi3(document: &Document) -> Result<String, CdiProjectError> {
                     set.members
                         .iter()
                         .enumerate()
-                        .map(|(j, member)| match member {
+                        .map(|(j, member)| match &member.target {
+                            CdiParameterRef::Unspecified => Err(error(
+                                "UNCONFIGURED_CDI_MEMBER",
+                                format!("$.CombinedParameters[{i}][{j}]"),
+                                "Choose a Parameter",
+                            )),
                             CdiParameterRef::Resolved { parameter_id } => document
                                 .get_parameter(parameter_id)
                                 .map(|parameter| parameter.runtime_id.clone())

@@ -232,6 +232,7 @@ impl ExtraBytes for CdiPartEntry {
 impl ExtraBytes for CdiParameterRef {
     fn extra_bytes(&self) -> usize {
         match self {
+            Self::Unspecified => 0,
             Self::Resolved { parameter_id } => parameter_id.capacity(),
             Self::Unresolved { runtime_id } => runtime_id.capacity(),
         }
@@ -434,19 +435,31 @@ impl ExtraBytes for super::super::PhysicsNode {
 impl ExtraBytes for ModelTargetRef {
     fn extra_bytes(&self) -> usize {
         match self {
+            Self::Unspecified => 0,
             Self::Resolved { object_id } => object_id.capacity(),
             Self::Unresolved { runtime_id } => runtime_id.capacity(),
         }
     }
 }
+impl<T: ExtraBytes> ExtraBytes for super::super::ReferenceEntry<T> {
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity() + self.target.extra_bytes()
+    }
+}
 impl ExtraBytes for ModelParameterGroup {
     fn extra_bytes(&self) -> usize {
-        self.name.capacity() + self.parameters.extra_bytes() + self.extensions.extra_bytes()
+        self.id.capacity()
+            + self.name.capacity()
+            + self.parameters.extra_bytes()
+            + self.extensions.extra_bytes()
     }
 }
 impl ExtraBytes for ModelHitArea {
     fn extra_bytes(&self) -> usize {
-        self.name.capacity() + self.mesh.extra_bytes() + self.extensions.extra_bytes()
+        self.id.capacity()
+            + self.name.capacity()
+            + self.mesh.extra_bytes()
+            + self.extensions.extra_bytes()
     }
 }
 impl ExtraBytes for Model3Settings {

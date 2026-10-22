@@ -146,6 +146,7 @@ fn model3_groups_layout_and_hit_areas_survive_project_and_package() {
         .clone();
     let mut settings = session.document().model3_settings().clone();
     settings.hit_areas = Some(vec![kasane_core::document::ModelHitArea {
+        id: kasane_core::document::ModelHitArea::default().id,
         name: "".into(),
         mesh: kasane_core::document::ModelTargetRef::Resolved {
             object_id: session.document().mesh_order()[0].clone(),

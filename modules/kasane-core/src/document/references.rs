@@ -4,6 +4,9 @@ use crate::types::{ChangeKind, EditResult, Status};
 impl Document {
     pub fn references_to(&self, id: &str) -> Vec<String> {
         let mut refs = Vec::new();
+        if let Some(owner) = self.reference_identity(id).and_then(|i| i.owner.as_ref()) {
+            refs.push(owner.clone());
+        }
         if let Some(owner) = self.glue_pair_owner(id) {
             refs.push(owner.into());
         }
@@ -129,8 +132,11 @@ impl Document {
         }
         if let Some(sets) = &self.content.display_info.combined_parameters {
             for set in sets {
-                if set.members.iter().any(|member| matches!(member, CdiParameterRef::Resolved { parameter_id } if parameter_id == id)) {
-                    refs.push(set.id.clone());
+                for member in &set.members {
+                    if matches!(&member.target,CdiParameterRef::Resolved{parameter_id} if parameter_id==id)
+                    {
+                        refs.push(member.id.clone());
+                    }
                 }
             }
         }
@@ -209,8 +215,17 @@ impl Document {
                 }
             }
         }
-        if self.content.model3_settings.references_to(id) {
-            refs.push("model3 settings".into());
+        for group in self.model3_settings().groups.iter().flatten() {
+            for member in &group.parameters {
+                if member.target.object_id() == Some(id) {
+                    refs.push(member.id.clone());
+                }
+            }
+        }
+        for area in self.model3_settings().hit_areas.iter().flatten() {
+            if area.mesh.object_id() == Some(id) {
+                refs.push(area.id.clone());
+            }
         }
         refs.sort();
         refs.dedup();
@@ -226,6 +241,14 @@ impl Document {
                 "TRANSACTION_ACTIVE",
                 "Commit or cancel first",
             ));
+        }
+        if self.reference_identity(id).is_some() {
+            return match self.plan_reference_edit(ReferenceEdit::Delete {
+                ids: vec![id.into()],
+            }) {
+                Ok(p) => self.apply_reference_plan(&p),
+                Err(s) => self.failed(s),
+            };
         }
         if let Some(owner) = self.glue_pair_owner(id).map(str::to_owned) {
             return match self.plan_scene_content(SceneContentEdit::DeleteGluePairs {

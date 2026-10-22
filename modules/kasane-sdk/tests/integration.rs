@@ -50,3 +50,6 @@ mod vertical_slice;
 
 #[path = "scene_content.rs"]
 mod scene_content;
+
+#[path = "reference_authoring.rs"]
+mod reference_authoring;

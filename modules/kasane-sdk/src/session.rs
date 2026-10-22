@@ -43,6 +43,9 @@ pub struct AuthoringSession {
     // Owner-dependent field addresses must not revive after a move and undo.
     pub(crate) motion_contexts: HashMap<String, (Option<String>, u64)>,
     pub(crate) attachment_content_epochs: HashMap<String, u64>,
+    pub(crate) reference_epochs: HashMap<String, u64>,
+    pub(crate) selection_epochs:
+        HashMap<(String, kasane_core::document::ReferenceSelectionField), u64>,
     pub(crate) content_epochs: HashMap<(String, kasane_core::document::SceneContentDomain), u64>,
     pub(crate) scene_field_epochs: HashMap<(String, kasane_core::document::SceneField), u64>,
     pub(crate) organization_contexts: HashMap<String, (Option<String>, u64)>,
@@ -196,6 +199,8 @@ impl AuthoringSession {
             incarnations,
             physics_contexts: HashMap::new(),
             pose_contexts: HashMap::new(),
+            reference_epochs: HashMap::new(),
+            selection_epochs: HashMap::new(),
             content_epochs: HashMap::new(),
             scene_field_epochs: HashMap::new(),
             organization_contexts: HashMap::new(),
@@ -734,6 +739,8 @@ impl AuthoringSession {
             self.organization_contexts.clear();
             self.scene_field_epochs.clear();
             self.content_epochs.clear();
+            self.reference_epochs.clear();
+            self.selection_epochs.clear();
             if let Some(pose) = document.pose() {
                 for id in pose.entity_ids() {
                     if let Some(owner) = document.pose_owner(id) {
@@ -909,6 +916,16 @@ impl AuthoringSession {
                 self.organization_contexts.remove(&entity.id);
             }
         }
+        for change in &changes.reference_fields {
+            self.reference_epochs
+                .insert(change.entity.id.clone(), document.revision());
+        }
+        for change in &changes.reference_selections {
+            self.selection_epochs.insert(
+                (change.entity.id.clone(), change.field),
+                document.revision(),
+            );
+        }
         for change in &changes.content_changes {
             self.content_epochs.insert(
                 (change.entity.id.clone(), change.domain.clone()),
@@ -1024,6 +1041,10 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
             .parameter_groups
             .as_ref()
             .is_some_and(|groups| groups.iter().any(|group| group.id == id)),
+        ObjectKind::ModelParameterGroup
+        | ObjectKind::ModelParameterMember
+        | ObjectKind::ModelHitArea
+        | ObjectKind::CdiCombinedMember => crate::reference_authoring::kind(doc, id) == Some(kind),
         ObjectKind::CdiCombinedSet => doc
             .display_info()
             .combined_parameters
@@ -1084,6 +1105,10 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
                 })
             }),
     );
+    keys.extend(doc.reference_identities().iter().map(|i| ObjectKey {
+        kind: crate::reference_authoring::kind(doc, &i.id).unwrap(),
+        id: i.id.clone(),
+    }));
     keys.extend(
         doc.drawing_group_owners()
             .into_iter()

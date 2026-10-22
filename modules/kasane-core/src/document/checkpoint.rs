@@ -190,7 +190,12 @@ impl Document {
             }
             && original.physics == content.physics
             && original.missing_attachments == content.missing_attachments
-            && original.model3_settings == content.model3_settings
+            && original.model3_settings.layout == content.model3_settings.layout
+            && original.model3_settings.user_data == content.model3_settings.user_data
+            && original.model3_settings.extensions == content.model3_settings.extensions
+            && original.model3_settings.source_runtime_ids
+                == content.model3_settings.source_runtime_ids
+            && original.model3_settings.source_content == content.model3_settings.source_content
             && original.package_attachments == content.package_attachments
             && original.meshes.len() == content.meshes.len()
             && original.meshes.iter().all(|(id, old)| {
@@ -277,6 +282,8 @@ impl Document {
         {
             self.organization_index.take();
         }
+        self.reference_index.take();
+        self.reference_projection.take();
         std::mem::swap(&mut self.content, &mut checkpoint.0);
         self.mesh_runtime_ids = self
             .content
@@ -308,6 +315,8 @@ impl Document {
     }
 
     fn advance_checkpoint_revision(&mut self, evaluation_changed: bool) {
+        self.reference_index.take();
+        self.reference_projection.take();
         self.snapshot_identity = Arc::new(());
         self.revision += 1;
         if evaluation_changed {

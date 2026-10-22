@@ -125,6 +125,10 @@ impl Delta {
     pub(in crate::document) fn changed(&self, d: &Document) -> bool {
         self.runtime_changed(d)
             || self
+                .model3
+                .as_ref()
+                .is_some_and(|v| v != d.model3_settings())
+            || self
                 .groups
                 .as_ref()
                 .is_some_and(|info| info != d.display_info())
@@ -138,6 +142,11 @@ impl Delta {
                 .is_some_and(|v| Some(v.as_slice()) != d.draw_order_groups())
     }
     pub(in crate::document) fn install(&self, d: &mut Document) {
+        d.reference_index.take();
+        d.reference_projection.take();
+        if let Some(settings) = &self.model3 {
+            d.content.model3_settings = settings.clone();
+        }
         if self.runtime_changed(d)
             || self
                 .groups

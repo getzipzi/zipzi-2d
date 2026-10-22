@@ -97,6 +97,7 @@ impl OrganizationPlan {
 }
 #[derive(Debug, Clone, Default)]
 pub(in crate::document) struct Delta {
+    pub(in crate::document) model3: Option<Model3Settings>,
     pub(in crate::document) parameters: Vec<Parameter>,
     pub(in crate::document) groups: Option<DisplayInfo>,
     pub(in crate::document) parts: Vec<Part>,

@@ -19,6 +19,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 enum Command {
+    References(kasane_core::document::ReferenceEdit),
     BindingAuthoring(kasane_sdk::BindingAuthoringEdit),
     AddPng(kasane_core::ImageAsset),
     CreateRectangle(Box<kasane_core::Mesh>),
@@ -214,3 +215,5 @@ impl Drop for NativeEdit {
 mod organization;
 
 mod scene;
+
+mod references;

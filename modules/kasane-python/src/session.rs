@@ -79,3 +79,8 @@ pub(crate) use scene_authoring::{
 
 mod scene_content;
 pub(crate) use scene_content::{NativeSceneContentAddress, NativeSceneContentPlan};
+
+mod reference_authoring;
+pub(crate) use reference_authoring::{
+    NativeReferenceFieldAddress, NativeReferencePlan, NativeReferenceSelectionAddress,
+};
