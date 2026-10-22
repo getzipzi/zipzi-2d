@@ -397,9 +397,10 @@ impl Document {
         if p.is_noop() {
             return self.failed(Status::ok());
         }
-        p.domain.delta.install(self);
         if let Some((id, fields)) = &p.patch {
             self.install_reference_fields(id, fields);
+        } else {
+            p.domain.delta.install(self);
         }
         self.changed(
             if p.runtime {

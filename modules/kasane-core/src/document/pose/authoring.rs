@@ -625,22 +625,7 @@ impl Document {
             if let Err(s) = self.validate_pose_replacement(plan.replacement.as_ref()) {
                 return self.failed(s);
             }
-            for id in self
-                .pose()
-                .into_iter()
-                .flat_map(|p| p.entity_ids())
-                .filter(|id| {
-                    !plan
-                        .replacement
-                        .as_ref()
-                        .is_some_and(|p| p.entity_ids().any(|other| other == *id))
-                })
-                .map(str::to_owned)
-                .collect::<Vec<_>>()
-            {
-                self.content.editor_state.objects.remove(&id);
-            }
-            self.content.pose = plan.replacement.clone().map(Arc::new);
+            self.install_pose(plan.replacement.clone());
         }
         self.changed(ChangeKind::Metadata, vec![], plan.affected.clone())
     }

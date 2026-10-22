@@ -36,8 +36,9 @@ impl SceneContentEditPlan {
 #[derive(Debug, Clone)]
 pub struct SceneContentAddress {
     owner: ObjectHandle,
-    child: Option<ObjectHandle>,
+    dependencies: Vec<ObjectHandle>,
     epoch: u64,
+    context: u64,
     target: SceneContentTarget,
     expected: SceneContentValue,
 }
@@ -146,22 +147,79 @@ impl AuthoringSession {
             .document()
             .scene_content_value(owner_id, &target)
             .map_err(|s| error(s, "scene_content_address"))?;
-        let child = match &target {
-            SceneContentTarget::GluePair { pair_id } => {
-                Some(self.handle(ObjectKind::GlueVertexPair, pair_id)?)
-            }
+        let mut dependencies = Vec::new();
+        let mut capture = |kind, id: &str| -> Result<(), SdkError> {
+            dependencies.push(self.handle(kind, id)?);
+            Ok(())
+        };
+        let shape = match &target {
+            SceneContentTarget::VertexPosition { shape, .. }
+            | SceneContentTarget::WarpPoint { shape, .. }
+            | SceneContentTarget::WarpBezierControl { shape, .. } => Some(shape),
             _ => None,
         };
+        match shape {
+            Some(ShapeTarget::Ordinary {
+                binding_id,
+                samples,
+            }) => {
+                capture(
+                    if kind == ObjectKind::Mesh {
+                        ObjectKind::MeshBinding
+                    } else {
+                        ObjectKind::SceneBinding
+                    },
+                    binding_id,
+                )?;
+                for sample in samples {
+                    capture(ObjectKind::BindingSample, sample)?;
+                }
+            }
+            Some(ShapeTarget::Blend {
+                binding_id,
+                sample_id,
+            }) => {
+                capture(ObjectKind::BlendBinding, binding_id)?;
+                capture(ObjectKind::BindingSample, sample_id)?;
+            }
+            _ => {}
+        }
+        match &target {
+            SceneContentTarget::GluePair { pair_id } => {
+                capture(ObjectKind::GlueVertexPair, pair_id)?;
+            }
+            SceneContentTarget::OffscreenMapping {
+                slot: PartKeyformSlot::Samples { samples },
+            } => {
+                let offscreen = self.document().get_offscreen(owner_id).unwrap();
+                let binding = self
+                    .document()
+                    .binding_for_scene(&offscreen.part_id)
+                    .unwrap();
+                capture(ObjectKind::SceneBinding, &binding.id)?;
+                for sample in samples {
+                    capture(ObjectKind::BindingSample, sample)?;
+                }
+            }
+            _ => {}
+        }
         Ok(SceneContentAddress {
+            context: self.content_context(owner_id),
             epoch: *self
                 .content_epochs
                 .get(&(owner_id.into(), target.domain()))
                 .unwrap_or(&0),
             owner,
-            child,
+            dependencies,
             target,
             expected,
         })
+    }
+    fn content_context(&self, owner: &str) -> u64 {
+        self.scene_field_epochs
+            .get(&(owner.into(), kasane_core::document::SceneField::Context))
+            .copied()
+            .unwrap_or(0)
     }
     pub fn plan_scene_content_patch(
         &self,
@@ -169,14 +227,17 @@ impl AuthoringSession {
         value: SceneContentValue,
     ) -> Result<SceneContentEditPlan, SdkError> {
         self.resolve_handle(&address.owner)?;
-        if let Some(child) = &address.child {
-            self.resolve_handle(child)?;
+        // Final values can be identical after delete/recreate in one edit.
+        // Referenced shape identities must still belong to their captured lifetime.
+        for dependency in &address.dependencies {
+            self.resolve_handle(dependency)?;
         }
         if *self
             .content_epochs
             .get(&(address.owner_id().into(), address.target.domain()))
             .unwrap_or(&0)
             != address.epoch
+            || self.content_context(address.owner_id()) != address.context
             || self
                 .document()
                 .scene_content_value(address.owner_id(), &address.target)

@@ -20,6 +20,44 @@ fn run(s: &mut AuthoringSession, e: E) -> kasane_sdk::EditReceipt {
 fn session() -> AuthoringSession {
     AuthoringSession::new(&id(), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
 }
+
+#[test]
+fn dissolve_keeps_parent_position_with_non_preorder_group_storage() {
+    let mut s = session();
+    let parent = group(&mut s, None);
+    let sibling = group(&mut s, None);
+    let first = group(&mut s, Some(&parent));
+    let second = group(&mut s, Some(&parent));
+    let mut info = s.document().display_info().clone();
+    let groups = info.parameter_groups.as_mut().unwrap();
+    let order = [&first, &second, &parent, &sibling];
+    groups.sort_by_key(|g| order.iter().position(|id| **id == g.id).unwrap());
+    s.edit("Imported group storage", None, |e| {
+        e.replace_display_info(info)
+    })
+    .unwrap();
+    run(
+        &mut s,
+        E::Delete {
+            ids: vec![parent.clone()],
+            policy: D::Dissolve,
+        },
+    );
+    assert_eq!(
+        contents(&s, C::ParameterGroups { parent_id: None }),
+        vec![first.clone(), second.clone(), sibling.clone()]
+    );
+    s.undo().unwrap();
+    assert_eq!(
+        contents(&s, C::ParameterGroups { parent_id: None }),
+        vec![parent, sibling.clone()]
+    );
+    s.redo().unwrap();
+    assert_eq!(
+        contents(&s, C::ParameterGroups { parent_id: None }),
+        vec![first, second, sibling]
+    );
+}
 fn group(s: &mut AuthoringSession, parent: Option<&str>) -> String {
     let g = id();
     run(

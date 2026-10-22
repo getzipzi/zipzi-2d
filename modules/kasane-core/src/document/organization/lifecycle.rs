@@ -194,6 +194,11 @@ impl Document {
         parent: Option<&str>,
         before: &Option<String>,
     ) -> Result<(), Status> {
+        // Copy callers discover their closures through different relations.
+        // Validate every included object here, including attached Offscreens.
+        for id in closure {
+            self.authoring_unlocked(id)?;
+        }
         let selected: HashSet<_> = closure.iter().map(String::as_str).collect();
         // Owned bindings are independent of the organizational/deformation tree.
         for id in
@@ -265,7 +270,11 @@ impl Document {
                 } else {
                     mapped(map, &m.part_id)
                 };
-                m.deformer_id = mapped(map, &m.deformer_id);
+                // An empty drawing owner can map to a Part when copying the
+                // root group. It is not an identity for a deformation parent.
+                if !m.deformer_id.is_empty() {
+                    m.deformer_id = mapped(map, &m.deformer_id);
+                }
                 for mask in &mut m.masks {
                     *mask = mapped(map, mask);
                 }
@@ -557,7 +566,6 @@ impl Document {
             for id in &roots {
                 if let Some(group) = self.get_parameter_group(id) {
                     let groups = info.parameter_groups.as_mut().unwrap();
-                    let at = groups.iter().position(|g| g.id == *id).unwrap();
                     let mut children = vec![];
                     groups.retain(|g| {
                         if g.parent_id.as_deref() == Some(id) {
@@ -569,7 +577,9 @@ impl Document {
                             true
                         }
                     });
-                    let at = at.min(groups.len());
+                    // Flat imported storage need not put parents before children.
+                    // Locate the parent after extracting its children.
+                    let at = groups.iter().position(|g| g.id == *id).unwrap();
                     groups.splice(at..at, children);
                     for e in info.parameters.iter_mut().flatten() {
                         if e.group_id() == Some(id) {

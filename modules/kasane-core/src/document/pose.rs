@@ -112,18 +112,23 @@ impl Document {
             return self.failed(Status::ok());
         }
         let id = pose.id.clone();
+        self.install_pose(Some(pose));
+        self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
+    }
+
+    fn install_pose(&mut self, pose: Option<PoseAsset>) {
+        let retained: HashSet<_> = pose.iter().flat_map(|p| p.entity_ids()).collect();
         let removed: Vec<_> = self
             .pose()
             .into_iter()
             .flat_map(|p| p.entity_ids())
-            .filter(|id| !pose.entity_ids().any(|other| other == *id))
+            .filter(|id| !retained.contains(id))
             .map(str::to_owned)
             .collect();
         for id in removed {
             self.content.editor_state.objects.remove(&id);
         }
-        self.content.pose = Some(std::sync::Arc::new(pose));
-        self.changed(ChangeKind::Metadata, Vec::new(), vec![id])
+        self.content.pose = pose.map(std::sync::Arc::new);
     }
 
     pub(super) fn validate_pose(&self, pose: &PoseAsset) -> Status {

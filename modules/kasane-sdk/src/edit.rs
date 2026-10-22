@@ -345,8 +345,15 @@ impl EditSession<'_> {
         let warp = self
             .candidate_document()
             .get_transform(transform_id)
-            .and_then(|t| t.warp())
-            .ok_or_else(|| SdkError::new("NOT_WARP", transform_id, "update_warp_points"));
+            .ok_or_else(|| Status::error("MISSING_TRANSFORM", "Transform does not exist"))
+            .and_then(|t| {
+                t.warp().ok_or_else(|| {
+                    Status::error("INVALID_TRANSFORM_TYPE", "Transform is not a warp")
+                })
+            })
+            .map_err(|status| {
+                SdkError::from_status(status, "update_warp_points", vec![transform_id.into()])
+            });
         let warp = match warp {
             Ok(w) => w,
             Err(e) => return Err(self.abort_with(e)),
@@ -776,6 +783,11 @@ impl EditSession<'_> {
             .project
             .publish_authoring_candidate(candidate, self.kind, identity_changed)
             .map_err(|s| SdkError::from_status(s, "commit", self.object_ids.clone()))?;
+        // A successfully accepted load consumes its request even for a no-op.
+        // Rejected/dropped candidates leave requests available for retry.
+        for control in &self.resource_load_controls {
+            control.store(true, std::sync::atomic::Ordering::Release);
+        }
         if changed {
             session
                 .preview

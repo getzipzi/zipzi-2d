@@ -162,12 +162,6 @@ fn edit_shape(
             clear_bezier,
             ..
         } => {
-            if bezier.is_some() && !*clear_bezier {
-                return Err(Status::error(
-                    "BEZIER_CONTROLLER_PRESENT",
-                    "Use the controller or explicitly clear it",
-                ));
-            }
             distinct(
                 &updates
                     .iter()
@@ -181,7 +175,14 @@ fn edit_shape(
                 if !p.point.x.is_finite() || !p.point.y.is_finite() {
                     return Err(Status::error("INVALID_POSITION", "Non-finite Warp point"));
                 }
-                points[(p.row * (columns + 1) + p.column) as usize] = p.point;
+                let slot = (p.row * (columns + 1) + p.column) as usize;
+                if bezier.is_some() && !*clear_bezier && points[slot] != p.point {
+                    return Err(Status::error(
+                        "BEZIER_CONTROLLER_PRESENT",
+                        "Use the controller or explicitly clear it",
+                    ));
+                }
+                points[slot] = p.point;
             }
             if *clear_bezier {
                 *bezier = None;

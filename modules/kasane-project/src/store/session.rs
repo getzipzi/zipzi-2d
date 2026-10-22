@@ -442,11 +442,16 @@ impl DocumentSession {
             .document
             .get_asset(asset_id)
             .ok_or_else(|| Status::error("NOT_FOUND", asset_id))?;
+        self.read_texture_asset(asset)
+    }
+
+    /// Resolve a candidate descriptor without publishing it to the document.
+    pub fn read_texture_asset(&self, asset: &ImageAsset) -> Result<TextureData, Status> {
         if let Some(memory) = self.store.memory_asset(asset) {
             memory.validate_metadata(asset)?;
             return Ok(memory.texture.clone());
         }
-        self.read_asset(asset_id).map(Into::into)
+        super::assets::read_project_asset(&self.root(), asset).map(Into::into)
     }
 
     pub fn read_asset_if_changed(

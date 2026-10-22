@@ -158,7 +158,7 @@ impl Document {
         target: &SceneContentTarget,
         value: SceneContentValue,
     ) -> Result<SceneContentEdit, Status> {
-        self.scene_content_value(owner, target)?;
+        let unchanged = self.scene_content_value(owner, target)? == value;
         use SceneContentEdit as E;
         use SceneContentTarget as T;
         use SceneContentValue as V;
@@ -204,6 +204,15 @@ impl Document {
                 },
                 V::Point(point),
             ) => {
+                // The inspector can expose controls derived from the lattice.
+                // Re-entering their current value must not create a controller.
+                if unchanged {
+                    return Ok(E::WarpBezier {
+                        transform_id: owner.into(),
+                        target: shape.clone(),
+                        controller: self.warp_content_shape(owner, shape)?.1.cloned(),
+                    });
+                }
                 let mut controller = self.content_bezier(owner, shape)?;
                 let n = &mut controller.nodes[*node];
                 if *component == 0 {

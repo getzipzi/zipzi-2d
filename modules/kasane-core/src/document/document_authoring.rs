@@ -287,6 +287,9 @@ impl Document {
 }
 impl DocumentPlan {
     fn install(&self, d: &mut Document) {
+        if !super::organization::same_metadata_shape(d.display_info(), &self.display) {
+            d.organization_index.take();
+        }
         d.content.source_canvas = self.setup.source_canvas;
         d.content.export_settings = self.setup.export;
         d.content.model3_settings = self.settings.clone();

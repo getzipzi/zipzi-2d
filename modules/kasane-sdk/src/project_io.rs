@@ -182,6 +182,17 @@ impl AuthoringSession {
             .read_texture(asset_id)
             .map_err(|status| SdkError::from_status(status, "read_texture", vec![asset_id.into()]))
     }
+
+    /// Resolve candidate texture content using the session's immutable memory
+    /// assets or project root, without modifying the document or history.
+    pub fn read_texture_asset(
+        &self,
+        asset: &kasane_core::ImageAsset,
+    ) -> Result<kasane_project::TextureData, SdkError> {
+        self.project.read_texture_asset(asset).map_err(|status| {
+            SdkError::from_status(status, "read_texture_asset", vec![asset.id.clone()])
+        })
+    }
     /// Stage immutable pixels for a later create_asset/replace_asset transaction.
     /// This does not change the document, its revision, history, or any files.
     pub fn prepare_rgba_asset(

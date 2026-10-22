@@ -186,6 +186,18 @@ impl AuthoringSession {
         token: &ImageLoadToken,
         content: Option<ImageContent>,
     ) -> Result<EditReceipt, SdkError> {
+        let edit = self.begin_image_content_edit(token, content)?;
+        edit.commit_to(self)
+    }
+
+    /// Stage a token-checked load so hosts can resolve candidate textures before
+    /// publication. Dropping the edit leaves the document and request intact;
+    /// commit rechecks the version and cancellation flag.
+    pub fn begin_image_content_edit(
+        &self,
+        token: &ImageLoadToken,
+        content: Option<ImageContent>,
+    ) -> Result<EditSession<'static>, SdkError> {
         self.resolve_handle(&token.handle)?;
         if token.cancelled.load(Ordering::Acquire) {
             return Err(SdkError::new(
@@ -212,13 +224,10 @@ impl AuthoringSession {
             expected: self.document().get_asset(id).unwrap().content.clone(),
             content,
         })?;
-        let flag = token.cancelled.clone();
-        let (_, receipt) = self.edit("Load image content", Some(p.version), |edit| {
-            edit.resource_load_controls.push(flag);
-            edit.apply_resource_plan(&p)
-        })?;
-        token.cancel();
-        Ok(receipt)
+        let mut edit = self.begin_owned_edit("Load image content", Some(p.version))?;
+        edit.resource_load_controls.push(token.cancelled.clone());
+        edit.apply_resource_plan(&p)?;
+        Ok(edit)
     }
 }
 impl EditSession<'_> {

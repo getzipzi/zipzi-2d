@@ -173,7 +173,10 @@ pub(super) fn summarize_content(
     {
         let a = before.get_glue(id);
         let b = after.get_glue(id);
-        if a.map(|g| &g.pairs) == b.map(|g| &g.pairs) {
+        let pairs_changed = a.map(|g| &g.pairs) != b.map(|g| &g.pairs);
+        let endpoints_changed =
+            a.map(|g| (&g.mesh_a_id, &g.mesh_b_id)) != b.map(|g| (&g.mesh_a_id, &g.mesh_b_id));
+        if !pairs_changed && !endpoints_changed {
             continue;
         }
         let collection = CollectionRef::SceneContent {
@@ -181,7 +184,7 @@ pub(super) fn summarize_content(
             owner_id: id.clone(),
             domain: D::GluePairs,
         };
-        if !out.collections.contains(&collection) {
+        if pairs_changed && !out.collections.contains(&collection) {
             out.collections.push(collection);
         }
         for pair_id in a
@@ -213,6 +216,7 @@ pub(super) fn summarize_content(
         for p in b.into_iter().flat_map(|g| &g.pairs) {
             if before.get_glue_pair(&p.id) != Some(p)
                 || before.glue_pair_owner(&p.id) != after.glue_pair_owner(&p.id)
+                || endpoints_changed
             {
                 out.modified.push(EntityRef {
                     document_id: after.id().into(),

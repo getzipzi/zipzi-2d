@@ -160,45 +160,47 @@ impl Delta {
             d.organization_index.take();
         }
         let removed: HashSet<_> = self.removed.iter().map(String::as_str).collect();
-        // Axis and sample flags belong to the binding, even though their IDs are
-        // separate handles. Retain no editor-state references to removed owners.
-        let removed_children: Vec<_> = d
-            .content
-            .editor_state
-            .objects
-            .keys()
-            .filter(|id| {
-                d.binding_identity(id)
-                    .is_some_and(|child| removed.contains(child.owner.as_str()))
-            })
-            .cloned()
-            .collect();
-        for id in removed_children {
-            d.content.editor_state.objects.remove(&id);
+        if !removed.is_empty() {
+            // Axis and sample flags belong to the binding, even though their IDs are
+            // separate handles. Retain no editor-state references to removed owners.
+            let removed_children: Vec<_> = d
+                .content
+                .editor_state
+                .objects
+                .keys()
+                .filter(|id| {
+                    d.binding_identity(id)
+                        .is_some_and(|child| removed.contains(child.owner.as_str()))
+                })
+                .cloned()
+                .collect();
+            for id in removed_children {
+                d.content.editor_state.objects.remove(&id);
+            }
+            macro_rules! remove {
+                ($map:ident,$order:ident) => {{
+                    d.content
+                        .$map
+                        .retain(|id, _| !removed.contains(id.as_str()));
+                    d.content.$order.retain(|id| !removed.contains(id.as_str()));
+                }};
+            }
+            remove!(parameters, parameter_order);
+            remove!(parts, part_order);
+            remove!(meshes, mesh_order);
+            remove!(transforms, transform_order);
+            remove!(offscreens, offscreen_order);
+            remove!(bindings, binding_order);
+            remove!(scene_bindings, scene_binding_order);
+            remove!(blend_bindings, blend_binding_order);
+            remove!(glues, glue_order);
+            for id in &self.removed {
+                d.content.editor_state.objects.remove(id);
+                d.vertex_slots.remove(id);
+            }
+            d.mesh_runtime_ids
+                .retain(|_, id| !removed.contains(id.as_str()));
         }
-        macro_rules! remove {
-            ($map:ident,$order:ident) => {{
-                d.content
-                    .$map
-                    .retain(|id, _| !removed.contains(id.as_str()));
-                d.content.$order.retain(|id| !removed.contains(id.as_str()));
-            }};
-        }
-        remove!(parameters, parameter_order);
-        remove!(parts, part_order);
-        remove!(meshes, mesh_order);
-        remove!(transforms, transform_order);
-        remove!(offscreens, offscreen_order);
-        remove!(bindings, binding_order);
-        remove!(scene_bindings, scene_binding_order);
-        remove!(blend_bindings, blend_binding_order);
-        remove!(glues, glue_order);
-        for id in &self.removed {
-            d.content.editor_state.objects.remove(id);
-            d.vertex_slots.remove(id);
-        }
-        d.mesh_runtime_ids
-            .retain(|_, id| !removed.contains(id.as_str()));
         macro_rules! put {
             ($field:ident,$map:ident,$order:ident) => {
                 for value in &self.$field {

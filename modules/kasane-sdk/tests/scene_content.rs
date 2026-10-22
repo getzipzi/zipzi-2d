@@ -9,6 +9,243 @@ fn id(n: u32) -> String {
 fn session() -> AuthoringSession {
     AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
 }
+
+#[test]
+fn warp_content_addresses_expire_after_organization_context_roundtrip() {
+    let mut s = session();
+    let create = s
+        .plan_scene_edit(SceneEdit::Create {
+            id: id(2),
+            name: "Warp".into(),
+            object: SceneCreate::Warp { bounds: None },
+            part_id: None,
+            parent_id: None,
+            before: None,
+        })
+        .unwrap();
+    s.execute_scene_plan(&create).unwrap();
+    s.edit("Part", None, |e| {
+        e.create_part(Part {
+            id: id(3),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    let address = s
+        .scene_content_address(
+            &id(2),
+            T::WarpPoint {
+                row: 0,
+                column: 0,
+                shape: ShapeTarget::Base,
+            },
+        )
+        .unwrap();
+    let plan = s
+        .plan_organization_edit(OrganizationEdit::Move {
+            ids: vec![id(2)],
+            destination: OrganizationCollection::PartMembers {
+                part_id: Some(id(3)),
+            },
+            before: None,
+        })
+        .unwrap();
+    s.execute_organization_plan(&plan).unwrap();
+    assert!(s
+        .plan_scene_content_patch(&address, address.expected().clone())
+        .is_err());
+    s.undo().unwrap();
+    assert!(s
+        .plan_scene_content_patch(&address, address.expected().clone())
+        .is_err());
+}
+
+#[test]
+fn unchanged_synthetic_bezier_control_does_not_materialize_controller() {
+    let mut s = session();
+    let create = s
+        .plan_scene_edit(SceneEdit::Create {
+            id: id(2),
+            name: "Warp".into(),
+            object: SceneCreate::Warp { bounds: None },
+            part_id: None,
+            parent_id: None,
+            before: None,
+        })
+        .unwrap();
+    s.execute_scene_plan(&create).unwrap();
+    mesh(&mut s, 3);
+    s.undo().unwrap();
+    let history = s.history_state();
+    let version = s.version();
+    let address = s
+        .scene_content_address(
+            &id(2),
+            T::WarpBezierControl {
+                node: 0,
+                component: 0,
+                shape: ShapeTarget::Base,
+            },
+        )
+        .unwrap();
+    let plan = s
+        .plan_scene_content_patch(&address, address.expected().clone())
+        .unwrap();
+    assert!(plan.is_noop());
+    assert!(!s.execute_scene_content_plan(&plan).unwrap().changed);
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    assert!(s
+        .document()
+        .get_transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap()
+        .bezier
+        .is_none());
+    let plan = s
+        .plan_scene_content_patch(&address, V::Point(Vec2::new(2., 3.)))
+        .unwrap();
+    assert!(!plan.is_noop());
+    s.execute_scene_content_plan(&plan).unwrap();
+    assert!(s
+        .document()
+        .get_transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap()
+        .bezier
+        .is_some());
+}
+
+#[test]
+fn unchanged_implicit_offscreen_mapping_preserves_redo() {
+    let mut s = session();
+    offscreen(&mut s, false);
+    mesh(&mut s, 30);
+    s.undo().unwrap();
+    let history = s.history_state();
+    let version = s.version();
+    let address = s
+        .scene_content_address(
+            &id(23),
+            T::OffscreenMapping {
+                slot: PartKeyformSlot::Static,
+            },
+        )
+        .unwrap();
+    let plan = s
+        .plan_scene_content_patch(&address, address.expected().clone())
+        .unwrap();
+    assert!(plan.is_noop());
+    assert!(!s.execute_scene_content_plan(&plan).unwrap().changed);
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    assert!(s
+        .document()
+        .get_offscreen(&id(23))
+        .unwrap()
+        .part_keyform_indices
+        .is_empty());
+    s.redo().unwrap();
+    assert!(s.document().get_mesh(&id(30)).is_some());
+}
+
+#[test]
+fn glue_endpoint_changes_publish_pair_references_in_both_history_directions() {
+    let mut s = session();
+    for n in [2, 3, 4] {
+        mesh(&mut s, n);
+    }
+    glue(&mut s, 5, 2, 3, vec![pair(6, Some(1), Some(2))]);
+    let expected = s
+        .document()
+        .scene_field(&id(5), SceneField::GlueEndpoints)
+        .unwrap();
+    let plan = s
+        .plan_scene_edit(SceneEdit::Patch {
+            id: id(5),
+            expected,
+            value: SceneFieldValue::GlueEndpoints {
+                a: id(4).into(),
+                b: id(3).into(),
+            },
+            clear_glue_pairs: false,
+        })
+        .unwrap();
+    let check = |receipt: &kasane_sdk::EditReceipt, before: u32, after: u32| {
+        let change = receipt
+            .changes
+            .content_references
+            .iter()
+            .find(|c| c.entity.id == id(6))
+            .expect("pair target change");
+        let kasane_sdk::SceneContentReferenceValue::Pair { mesh_a, .. } = &change.before else {
+            panic!("before pair")
+        };
+        assert_eq!(mesh_a.resolved_id(), Some(id(before).as_str()));
+        let kasane_sdk::SceneContentReferenceValue::Pair { mesh_a, .. } = &change.after else {
+            panic!("after pair")
+        };
+        assert_eq!(mesh_a.resolved_id(), Some(id(after).as_str()));
+        assert!(receipt.changes.modified.iter().any(|e| e.id == id(6)));
+    };
+    check(&s.execute_scene_plan(&plan).unwrap(), 2, 4);
+    check(&s.undo().unwrap(), 4, 2);
+    check(&s.redo().unwrap(), 2, 4);
+}
+
+#[test]
+fn shape_address_rejects_recreated_binding_with_identical_content() {
+    let mut s = session();
+    mesh(&mut s, 2);
+    let positions = s
+        .document()
+        .get_mesh(&id(2))
+        .unwrap()
+        .base_positions
+        .clone();
+    s.edit("Binding", None, |e| {
+        e.create_parameter(Parameter {
+            id: id(3),
+            ..Default::default()
+        })?;
+        e.create_binding(MeshBinding {
+            id: id(4),
+            mesh_id: id(2),
+            axes: vec![BindingAxis::new(id(3), vec![0.])],
+            keyforms: vec![MeshKeyform {
+                keys: vec![0.],
+                positions,
+                ..Default::default()
+            }],
+        })
+    })
+    .unwrap();
+    let binding = s.document().get_binding(&id(4)).unwrap().clone();
+    let address = s
+        .scene_content_address(
+            &id(2),
+            T::VertexPosition {
+                vertex_id: 1,
+                shape: ShapeTarget::Ordinary {
+                    binding_id: id(4),
+                    samples: binding.keyforms[0].samples.clone(),
+                },
+            },
+        )
+        .unwrap();
+    let handle = s.handle(ObjectKind::MeshBinding, &id(4)).unwrap();
+    s.edit("Recreate binding", None, |e| {
+        e.erase_object(&id(4))?;
+        e.create_binding(binding)
+    })
+    .unwrap();
+    assert!(s.resolve_handle(&handle).is_err());
+    assert!(s
+        .plan_scene_content_patch(&address, V::Point(Vec2::new(8., 9.)))
+        .is_err());
+}
 fn run(s: &mut AuthoringSession, e: E) -> kasane_sdk::EditReceipt {
     let p = s.plan_scene_content(e).unwrap();
     s.execute_scene_content_plan(&p).unwrap()
@@ -107,6 +344,54 @@ fn offscreen(s: &mut AuthoringSession, bound: bool) {
         })
     })
     .unwrap();
+}
+
+#[test]
+fn unchanged_warp_points_preserve_bezier_controller_and_redo() {
+    let mut s = session();
+    let points = vec![
+        Vec2::new(0., 0.),
+        Vec2::new(1., 0.),
+        Vec2::new(0., 1.),
+        Vec2::new(1., 1.),
+    ];
+    let controller = WarpBezier::from_lattice(1, 1, false, &points);
+    s.edit("Warp", None, |e| {
+        e.create_transform(Transform {
+            id: id(2),
+            data: TransformData::Warp(WarpTransform {
+                rows: 1,
+                columns: 1,
+                quad: false,
+                points: points.clone(),
+                bezier: Some(controller.clone()),
+            }),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    mesh(&mut s, 3);
+    s.undo().unwrap();
+    let history = s.history_state();
+    let version = s.version();
+    let (_, receipt) = s
+        .edit("Unchanged points", None, |e| {
+            e.update_warp_points(&id(2), points)
+        })
+        .unwrap();
+    assert!(!receipt.changed);
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    assert_eq!(
+        s.document()
+            .get_transform(&id(2))
+            .unwrap()
+            .warp()
+            .unwrap()
+            .bezier
+            .as_ref(),
+        Some(&controller)
+    );
 }
 #[test]
 fn mesh_topology_seeds_every_shape_and_keeps_vertex_identity() {

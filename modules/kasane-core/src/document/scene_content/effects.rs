@@ -247,6 +247,7 @@ impl Document {
                     .collect();
             }
             E::SetOffscreenMapping { updates, .. } => {
+                let original_mapping = mapping.clone();
                 let mut seen = HashSet::new();
                 for u in updates {
                     let slot = self.part_keyform_slot(&os.part_id, &u.slot)?;
@@ -257,6 +258,11 @@ impl Document {
                         return Err(Status::error("INVALID_KEYFORM_SLOT", &id));
                     }
                     mapping[slot] = u.keyform;
+                }
+                // Preserve an implicit mapping when the requested effective
+                // values did not change, including an empty update batch.
+                if mapping == original_mapping {
+                    return Ok(());
                 }
                 os.part_keyform_indices = mapping;
                 plan.domain.affected.push(id);

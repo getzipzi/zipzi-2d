@@ -10,6 +10,54 @@ fn id(n: u32) -> String {
 fn session() -> AuthoringSession {
     AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
 }
+
+#[test]
+fn cdi_repair_refreshes_organization_inside_the_same_candidate() {
+    let mut s = session();
+    s.edit("Imported CDI", None, |e| {
+        e.create_parameter(Parameter {
+            id: id(60),
+            ..Default::default()
+        })?;
+        let mut info = e.candidate_document().display_info().clone();
+        info.parameter_groups = Some(vec![CdiParameterGroup {
+            id: id(61),
+            runtime_id: "Group".into(),
+            name: "Group".into(),
+            parent_id: None,
+            extensions: Default::default(),
+        }]);
+        info.parameters = Some(vec![CdiParameterEntry::Unresolved {
+            runtime_id: "Lost".into(),
+            name: "Imported".into(),
+            group_id: Some(id(61)),
+            extensions: Default::default(),
+        }]);
+        e.replace_display_info(info)
+    })
+    .unwrap();
+    s.edit("Repair then query", None, |e| {
+        assert_eq!(e.candidate_document().organization_owner(&id(60)), None);
+        e.edit_document(D::RepairCdiParameter {
+            runtime_id: "Lost".into(),
+            parameter_id: Some(id(60)),
+        })?;
+        assert_eq!(
+            e.candidate_document().organization_owner(&id(60)),
+            Some(id(61).as_str())
+        );
+        assert_eq!(
+            e.candidate_document()
+                .organization_collection(&OrganizationCollection::Parameters {
+                    group_id: Some(id(61))
+                })
+                .unwrap(),
+            vec![id(60)]
+        );
+        Ok(())
+    })
+    .unwrap();
+}
 fn run(s: &mut AuthoringSession, e: R) -> kasane_sdk::EditReceipt {
     let p = s.plan_resource_edit(e).unwrap();
     s.execute_resource_plan(&p).unwrap()
@@ -610,5 +658,64 @@ fn prepared_image_loads_own_pixels_without_file_io_during_publication() {
             .rgba
             .as_slice(),
         pixels.rgba.as_ref()
+    );
+}
+
+#[test]
+fn staged_image_load_checks_cancellation_and_version_again_at_commit() {
+    let mut s = session();
+    create(&mut s, 10);
+    let original = s.version();
+    let history = s.history_state();
+    let token = s.image_load_token(&id(10)).unwrap();
+    let edit = s.begin_image_content_edit(&token, Some(content())).unwrap();
+    let candidate = edit.candidate_document().get_asset(&id(10)).unwrap();
+    assert_eq!(s.read_texture_asset(candidate).unwrap().width, 2);
+    assert!(s.asset(&id(10)).unwrap().content.is_none());
+    token.cancel();
+    assert_eq!(
+        edit.commit_to(&mut s).unwrap_err().code.as_ref(),
+        "CANCELLED"
+    );
+    assert_eq!(s.version(), original);
+    assert_eq!(s.history_state(), history);
+
+    let token = s.image_load_token(&id(10)).unwrap();
+    let edit = s.begin_image_content_edit(&token, Some(content())).unwrap();
+    let expected = s.asset(&id(10)).unwrap().name;
+    run(
+        &mut s,
+        R::PatchName {
+            id: id(10),
+            expected,
+            name: "Renamed".into(),
+        },
+    );
+    assert_eq!(
+        edit.commit_to(&mut s).unwrap_err().code.as_ref(),
+        "STALE_VERSION"
+    );
+    // A rejected candidate does not consume the valid load request.
+    s.replace_image_content(&token, Some(content())).unwrap();
+}
+
+#[test]
+fn committing_an_unchanged_staged_load_consumes_the_request_without_history() {
+    let mut s = session();
+    create(&mut s, 10);
+    let version = s.version();
+    let history = s.history_state();
+    let token = s.image_load_token(&id(10)).unwrap();
+    let edit = s.begin_image_content_edit(&token, None).unwrap();
+    assert!(!edit.commit_to(&mut s).unwrap().changed);
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    assert_eq!(
+        s.begin_image_content_edit(&token, None)
+            .err()
+            .unwrap()
+            .code
+            .as_ref(),
+        "CANCELLED"
     );
 }

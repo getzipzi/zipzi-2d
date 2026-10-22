@@ -14,6 +14,40 @@ fn id() -> String {
 fn session() -> AuthoringSession {
     AuthoringSession::new(&id(), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
 }
+
+#[test]
+fn ensure_drawing_role_respects_the_previous_drawing_parent_lock() {
+    let mut s = session();
+    let parent = part(&mut s, None);
+    let child = part(&mut s, None);
+    run(
+        &mut s,
+        E::EnsureDrawingGroup {
+            owner: parent.clone(),
+            parent: String::new(),
+            before: None,
+        },
+    );
+    run(
+        &mut s,
+        E::EnsureDrawingGroup {
+            owner: child.clone(),
+            parent: parent.clone(),
+            before: None,
+        },
+    );
+    lock(&mut s, &parent, true);
+    let history = s.history_state();
+    let version = s.version();
+    let result = s.plan_scene_edit(E::EnsureDrawingGroup {
+        owner: child,
+        parent: String::new(),
+        before: None,
+    });
+    assert_eq!(result.unwrap_err().code.as_ref(), "OBJECT_LOCKED");
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+}
 fn run(s: &mut AuthoringSession, e: E) -> kasane_sdk::EditReceipt {
     let p = s.plan_scene_edit(e).unwrap();
     s.execute_scene_plan(&p).unwrap()
@@ -940,6 +974,60 @@ fn drawing_group_copy_creates_fresh_content_for_a_distinct_empty_part_role() {
         "DRAWING_COPY_TARGET_NOT_EMPTY"
     );
     assert_eq!(s.version(), version);
+}
+
+#[test]
+fn drawing_copy_rejects_locked_owned_offscreen() {
+    let mut s = session();
+    let source = part(&mut s, None);
+    let target = part(&mut s, None);
+    let child = part(&mut s, Some(&source));
+    triangle(&mut s, None, Some(&child), None, 0.);
+    let os = create(&mut s, New::Offscreen, Some(&child), None);
+    lock(&mut s, &os, true);
+    let version = s.version();
+    let history = s.history_state();
+    assert_eq!(
+        s.plan_scene_edit(E::DuplicateDrawingGroup { source, target })
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "OBJECT_LOCKED"
+    );
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+}
+
+#[test]
+fn drawing_root_copy_preserves_absent_deformation_parent() {
+    let mut s = session();
+    let target = part(&mut s, None);
+    let mesh = triangle(&mut s, None, None, None, 0.);
+    s.edit("Explicit root", None, |e| {
+        e.replace_draw_order_groups(vec![kasane_core::draw_order::DrawOrderGroup {
+            owner: String::new(),
+            items: vec![mesh.clone()],
+            min_order: 0,
+            max_order: 0,
+        }])
+    })
+    .unwrap();
+    let p = s
+        .plan_scene_edit(E::DuplicateDrawingGroup {
+            source: String::new(),
+            target: target.clone(),
+        })
+        .unwrap();
+    let copy = p.copied_ids()[&mesh].clone();
+    s.execute_scene_plan(&p).unwrap();
+    let copied = s.document().get_mesh(&copy).unwrap();
+    assert_eq!(copied.part_id, target);
+    assert!(copied.deformer_id.is_empty());
+    assert!(s.document().validate_structure().is_empty());
+    s.undo().unwrap();
+    assert!(s.document().get_mesh(&copy).is_none());
+    s.redo().unwrap();
+    assert!(s.document().get_mesh(&copy).unwrap().deformer_id.is_empty());
 }
 #[test]
 fn drawing_range_addresses_track_membership_and_preserve_noop_redo() {

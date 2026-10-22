@@ -120,20 +120,20 @@ impl Document {
                 "The root drawing role is always present",
             ));
         }
+        let mut groups = crate::draw_order::resolved_groups(self);
+        if groups.iter().any(|g| g.owner == owner) {
+            // Existing roles move through the same path as explicit moves,
+            // including source-owner locks, anchors and no-op detection.
+            return self.plan_drawing_move(plan, &[owner.into()], parent, before);
+        }
         self.drawing_group_unlocked(owner)?;
         self.drawing_unlocked(parent)?;
-        let mut groups = crate::draw_order::resolved_groups(self);
-        if !groups.iter().any(|g| g.owner == owner) {
-            groups.push(DrawOrderGroup {
-                owner: owner.into(),
-                items: vec![],
-                min_order: 0,
-                max_order: 0,
-            });
-        }
-        for group in &mut groups {
-            group.items.retain(|id| id != owner);
-        }
+        groups.push(DrawOrderGroup {
+            owner: owner.into(),
+            items: vec![],
+            min_order: 0,
+            max_order: 0,
+        });
         let group = groups
             .iter_mut()
             .find(|g| g.owner == parent)
