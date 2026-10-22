@@ -1213,3 +1213,80 @@ cargo check --locked -p kasane-editor
 保留既有第三方 GPUI/Cocoa／`block` 及现有测试辅助 import／dead code 提示。
 本轮没有运行完整 workspace、截图、真实模型 Release 或总性能门禁；这些属于 C6 核心
 总验收。本轮代码纳入两仓库的 C5 收尾提交。后续阶段为 C6，C5 不再有待实施批次。
+
+### C5 提交后 review（2026-10-22）
+
+审查范围：kasane-2d `df89e91..135cae1`、kasane-editor `5d917c0..bbcabd5`
+各六次提交（含两端）。本轮修复以下问题，不将结果视为 C6 总验收：
+
+- Editor 通用资源操作和图像加载曾在提交后才读取纹理；文件不存在时返回错误，
+  但模型和历史已改变，投影仍可能保留旧状态。现在通过已有 owned edit 先生成候选，
+  准备纹理快照成功后再提交。SDK 新增 `begin_image_content_edit` 复用 token 校验，
+  `read_texture_asset` 使用同一内存／项目资源解析器读取候选描述符；提交阶段重验版本
+  和取消标志。成功的 no-op 加载也消费请求，失败或丢弃的候选允许重试。
+- 复制绘制组时补入的 Offscreen 漏检锁。将复制闭包的逐对象锁校验收敛到共享
+  `copy_scene`，覆盖组织树与绘制组的不同闭包来源。
+- 复制根绘制组到没有绘制角色的 Part 时，空字符串的绘制根映射错误地作用于
+  Mesh 的空变形父级，导致 `MISSING_TRANSFORM`。空变形父级现在保持为空。
+- `update_warp_points` 适配丢失原有 `MISSING_TRANSFORM`／`INVALID_TRANSFORM_TYPE`
+  区分，已有 scene_authoring 回归失败；恢复原错误分类及对象信息。
+- 已有 Bezier 控制器时，重复提交相同 Warp 点被当作非法控制点修改拒绝。
+  专用内容规划允许值未变的更新，保留控制器和 redo；真实修改仍要求明确清除控制器。
+- 变形树“移到自身之后”先删除了源锚点，导致报错。自身排序现在在计算位置前
+  返回 no-op，保持历史及 redo。
+
+新增八项回归覆盖上述触发条件，以及候选加载取消／过期、no-op 请求消费、
+源文件删除后的内存纹理复制和 Undo/Redo。定向验证结果如下，筛选有重叠，不累加：
+
+| 验证 | 结果 |
+| --- | --- |
+| SDK integration `authoring` | 145 通过 |
+| SDK integration `scene_` | 44 通过 |
+| SDK integration `motion_library:: project_io::` | 41 通过，1 项既有 Release 测量忽略 |
+| project lib `memory_psd_tests::` | 1 通过 |
+| Editor integration `authoring scene_ sorting:: properties::` | 82 通过 |
+| `cargo check --locked -p kasane-editor` | 通过，保留既有 vendor 警告 |
+
+本轮未运行完整 workspace、原生截图或真实模型性能测试；这些验证仍保留在 C6。
+
+### C5 按对象批次 review（2026-10-22）
+
+在上一轮修复上继续审查两仓六对提交，按领域入口、候选内联合修改、句柄／字段地址、
+锁、ChangeSet、Undo/Redo、Editor 投影和原生保存路径核对。以下记录本轮实际审查和
+修复；不将定向回归等同于所有状态组合穷举，也不替代 C6 原生 UI／真实模型性能验收。
+
+| 批次 | 核对重点 | 本轮结果 |
+| --- | --- | --- |
+| Pose | 根／组／Entry／Link 的规划、锁、跨拥有者地址、复制身份、执行投影和 pose3 转换 | 未发现新的行为缺陷；将两套替换路径收敛到 `install_pose`，以保留 ID 集合替代逐项扫描，清理退役标记由平方复杂度改为线性 |
+| Parameter／ParameterGroup／Part | 原生顺序、移动、复制闭包、删除使用者、解散和 CDI 元数据 | 修复导入的扁平组数组不是父前子后排列时，解散后子组被提升到错误同级位置的问题；抽取子组后重新定位父组 |
+| 场景生命周期／绘制角色 | 组织、变形、绘制独立关系，生命周期规划、锁和 Editor 发布 | 修复 `EnsureDrawingGroup` 移动既有角色时绕过原绘制父级锁；既有角色统一调用绘制移动规划，复用来源锁、锚点与 no-op 规则 |
+| Mesh／Warp／Glue／Offscreen 内容 | 顶点与形态联合转换、内容地址、拓扑、引用变化、no-op 和历史 | 修复以下五项内容问题，并覆盖实际提交与历史方向 |
+| 行为／引用集合 | 引用根／成员、共享目标、重复目标、批量 masks／constraints、字段发布 | 未发现新的行为缺陷；字段补丁直接应用到目标，跳过空的联合结构安装；共享 Delta 无删除时不遍历全模型对象表执行 retain |
+| 资源／文档修复 | 加载请求、不可变内容、提交边界、缺失引用修复、Editor 纹理和项目保存 | 保留上一轮资源原子性修复；修复 CDI 参数绑定后，同一候选内组织索引仍返回旧归属的问题，按元数据结构变化失效缓存 |
+
+内容批次的五项修复：
+
+- Offscreen 隐式映射重复提交相同有效值时保留隐式表示，空更新也不产生历史、不清空 Redo。
+- Glue 仅改变 Mesh 端点而保留 Pair 数据时，仍发布每个 Pair 的前后引用和 modified 实体；Undo/Redo 方向相反。
+- 形态内容地址捕获 Binding 和 Sample 的操作句柄；同一事务删除后以相同 UUID 和相同内容重建 Binding，旧地址也不能复用。Offscreen 样本映射采用相同依赖身份检查。
+- Warp 内容地址加入拥有者 Context epoch；组织／变形上下文变化以及 Undo 返回原上下文，都使旧地址过期。
+- 对从 lattice 推导出的 Bezier 控制点重复提交原值，不再隐式创建控制器；真实编辑仍会创建控制器。
+
+本轮新增八项回归，均先在修复前复现失败，再通过对应修复。上轮八项回归和六项修复
+继续保留。没有改动外部格式版本，也没有新增 Editor 层领域规则。
+
+定向验证结果（与上一节和本轮中间筛选存在重叠，不累加）：
+
+| 验证 | 结果 |
+| --- | --- |
+| SDK integration `authoring scene_` | 189 通过 |
+| Editor integration `authoring scene_ sorting:: properties::` | 82 通过 |
+| core `keyform_tests`、`transform_tests`、`offscreen_tests`、`blendshape_glue_tests`、`cdi_display_info_tests` | 合计 30 通过 |
+| core 组织索引缓存单测 | 1 通过 |
+| project `pose_tests`、`cdi_tests`、`model3_tests` | 分别 3、9、4 通过 |
+| Python 当前源码 Debug 扩展，按 `pose/organization/scene/reference/resource/attachment/document` 筛选 | CPU 14 通过；加入 `saved_mapping` 筛选后 inspection 1 通过，统一脚本成功 |
+| 两仓 `cargo fmt --all -- --check`、`git diff --check` | 通过 |
+
+Python 首次筛选在 CPU 14 项通过后，因 inspection 无匹配用例返回退出码 5；补充该套
+检查的实际用例筛选后重跑通过。未运行完整 workspace、原生截图、真实模型性能或
+完整 CMO3/MOC3 授权模型往返；这些结果不包含在本轮通过声明中。

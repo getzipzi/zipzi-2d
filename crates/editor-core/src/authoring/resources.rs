@@ -78,9 +78,11 @@ impl Document {
     }
     pub fn execute_resource_authoring(&mut self, p: &ResourceEditPlan) -> Result<OperationResult> {
         self.ensure_resource_idle()?;
-        let receipt = self.session.execute_resource_plan(p)?;
-        self.refresh_textures()?;
-        Ok(self.resource_operation_result(receipt))
+        let mut edit = self
+            .session
+            .begin_owned_edit("Edit resource", Some(p.version()))?;
+        edit.apply_resource_plan(p)?;
+        self.commit_resource_edit(edit)
     }
     pub fn resource_name_address(&self, id: &str) -> Result<kasane_sdk::ResourceNameAddress> {
         Ok(self.session.resource_name_address(id)?)
@@ -103,9 +105,8 @@ impl Document {
         c: Option<kasane_core::ImageContent>,
     ) -> Result<OperationResult> {
         self.ensure_resource_idle()?;
-        let receipt = self.session.replace_image_content(t, c)?;
-        self.refresh_textures()?;
-        Ok(self.resource_operation_result(receipt))
+        let edit = self.session.begin_image_content_edit(t, c)?;
+        self.commit_resource_edit(edit)
     }
     pub fn replace_prepared_image_content(
         &mut self,
@@ -178,6 +179,20 @@ impl Document {
             suggested_selection: selection.clone(),
             locations: selection,
         }
+    }
+
+    fn commit_resource_edit(
+        &mut self,
+        edit: kasane_sdk::EditSession<'static>,
+    ) -> Result<OperationResult> {
+        let textures = self
+            .textures
+            .prepare_refresh(&self.session, edit.candidate_document())?;
+        let receipt = edit.commit_to(&mut self.session)?;
+        if let Some(textures) = textures {
+            self.textures = textures;
+        }
+        Ok(self.resource_operation_result(receipt))
     }
 }
 impl crate::Editor {

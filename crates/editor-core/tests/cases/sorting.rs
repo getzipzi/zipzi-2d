@@ -18,6 +18,23 @@ fn members(document: &Document, group: Option<u128>) -> Vec<String> {
 }
 
 #[test]
+fn deformation_self_reorder_is_a_noop_and_preserves_redo() -> anyhow::Result<()> {
+    let (mut document, _assets) = support::sample_document_with_two_layers()?;
+    let original = document.deformer_tree();
+    let first = original[0].children[0].reference().unwrap();
+    let second = original[0].children[1].reference().unwrap();
+    document.reorder_tree(true, &second, &first, ReorderPosition::Before)?;
+    document.undo()?;
+    let history = document.history_lengths();
+    for position in [ReorderPosition::Before, ReorderPosition::After] {
+        document.reorder_tree(true, &first, &first, position)?;
+        assert_eq!(document.deformer_tree(), original);
+        assert_eq!(document.history_lengths(), history);
+    }
+    Ok(())
+}
+
+#[test]
 fn hierarchy_order_is_independent_of_other_tree_and_rendering_and_survives_history_and_save()
 -> anyhow::Result<()> {
     let (mut document, _assets) = support::sample_document_with_two_layers()?;

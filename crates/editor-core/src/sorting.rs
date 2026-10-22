@@ -97,6 +97,9 @@ impl Document {
         }
         self.ensure_tree_editable(source, true)?;
         self.ensure_tree_editable(target, true)?;
+        if source == target {
+            return Ok(());
+        }
         let parent = self
             .model()
             .scene_deformer_parent(&target.id)

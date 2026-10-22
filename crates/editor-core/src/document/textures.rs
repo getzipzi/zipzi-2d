@@ -55,16 +55,29 @@ impl DocumentTextures {
     }
 
     pub(super) fn refresh(&mut self, session: &AuthoringSession) -> Result<()> {
-        let assets: HashMap<_, _> = session
-            .asset_ids()
+        if let Some(next) = self.prepare_refresh(session, session.document())? {
+            *self = next;
+        }
+        Ok(())
+    }
+
+    /// Stage the complete texture snapshot before committing candidate content.
+    /// A failed read must not leave a committed model paired with old pixels.
+    pub(in crate::document) fn prepare_refresh(
+        &self,
+        session: &AuthoringSession,
+        model: &kasane_core::Document,
+    ) -> Result<Option<Self>> {
+        let assets: HashMap<_, _> = model
+            .asset_order()
             .iter()
-            .filter_map(|id| session.asset(id).map(|a| (id.clone(), a)))
+            .filter_map(|id| model.get_asset(id).map(|a| (id.clone(), a.clone())))
             .collect();
         if assets == self.assets {
-            return Ok(());
+            return Ok(None);
         }
-        let textures = session
-            .asset_ids()
+        let textures = model
+            .asset_order()
             .iter()
             .filter(|id| assets.get(*id).is_some_and(|a| a.content.is_some()))
             .map(|id| {
@@ -73,7 +86,7 @@ impl DocumentTextures {
                 {
                     return Ok(self.textures[slot].clone());
                 }
-                let data = session.read_texture(id)?;
+                let data = session.read_texture_asset(&assets[id])?;
                 Ok(SceneTexture {
                     asset_id: id.clone(),
                     cache_key: data.cache_key,
@@ -83,13 +96,15 @@ impl DocumentTextures {
                 })
             })
             .collect::<Result<Vec<_>>>()?;
-        self.slots = textures
+        let slots = textures
             .iter()
             .enumerate()
             .map(|(i, t)| (t.asset_id.clone(), i))
             .collect();
-        self.textures = textures.into();
-        self.assets = assets;
-        Ok(())
+        Ok(Some(Self {
+            slots,
+            textures: textures.into(),
+            assets,
+        }))
     }
 }

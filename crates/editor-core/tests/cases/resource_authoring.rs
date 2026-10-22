@@ -3,6 +3,93 @@ use kasane_sdk::{DocumentField as F, DocumentValue as V, ResourceEdit as R};
 fn id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
+
+#[test]
+fn unreadable_image_content_does_not_publish_or_clear_redo() -> anyhow::Result<()> {
+    let (mut d, _assets) = super::support::sample_document_with_two_layers()?;
+    let asset = d.resource_collection()?[0].id.clone();
+    let address = d.resource_name_address(&asset)?;
+    let p = d.plan_resource_name_patch(&address, "Temporary".into())?;
+    d.execute_resource_authoring(&p)?;
+    d.undo()?;
+    let index = d.object_index();
+    let history = d.history_lengths();
+    let frame = d.snapshot()?;
+    let current: kasane_core::ImageAsset = serde_json::from_value(
+        index
+            .get(&ObjectRef::new(ObjectKind::Texture, &asset))
+            .unwrap()
+            .properties
+            .clone(),
+    )?;
+    let temp = tempfile::tempdir()?;
+    let missing = kasane_core::ImageContent {
+        source: temp.path().join("missing.png").to_str().unwrap().into(),
+        sha256: "0".repeat(64),
+        width: 1,
+        height: 1,
+    };
+    let p = d.plan_resource_authoring(R::SetContent {
+        id: asset.clone(),
+        expected: current.content.clone(),
+        content: Some(missing.clone()),
+    })?;
+    assert!(d.execute_resource_authoring(&p).is_err());
+    let token = d.image_load_token(&asset)?;
+    assert!(d.replace_image_content(&token, Some(missing)).is_err());
+    assert_eq!(d.history_lengths(), history);
+    assert_eq!(
+        d.object_index()
+            .get(&ObjectRef::new(ObjectKind::Texture, &asset))
+            .unwrap()
+            .properties,
+        serde_json::to_value(current)?
+    );
+    assert_eq!(
+        d.snapshot()?.runtime_frame.source_revision,
+        frame.runtime_frame.source_revision
+    );
+    assert!(std::sync::Arc::ptr_eq(&index, &d.object_index()));
+    Ok(())
+}
+
+#[test]
+fn prepared_images_can_be_copied_without_the_source_file() -> anyhow::Result<()> {
+    let mut d = Document::new_blank()?;
+    let asset = id();
+    let copy = id();
+    let p = d.plan_resource_authoring(R::Create {
+        id: asset.clone(),
+        name: String::new(),
+        before: None,
+    })?;
+    d.execute_resource_authoring(&p)?;
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("image.png");
+    std::fs::write(&path, include_bytes!("../fixtures/accent.png"))?;
+    let image = kasane_sdk::prepare_image_load(&path)?;
+    std::fs::remove_file(path)?;
+    let token = d.image_load_token(&asset)?;
+    d.replace_prepared_image_content(&token, &image)?;
+    let p = d.plan_resource_authoring(R::Duplicate {
+        source: asset.clone(),
+        id: copy.clone(),
+        name: String::new(),
+        before: None,
+    })?;
+    d.execute_resource_authoring(&p)?;
+    let snapshot = d.snapshot()?;
+    assert_eq!(snapshot.textures.len(), 2);
+    assert!(std::sync::Arc::ptr_eq(
+        &snapshot.textures[0].rgba,
+        &snapshot.textures[1].rgba
+    ));
+    d.undo()?;
+    assert_eq!(d.snapshot()?.textures.len(), 1);
+    d.redo()?;
+    assert_eq!(d.snapshot()?.textures.len(), 2);
+    Ok(())
+}
 #[test]
 fn pending_texture_is_inspectable_and_saveable_without_loading_fake_pixels() -> anyhow::Result<()> {
     let mut d = Document::new_blank()?;
