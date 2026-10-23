@@ -20,6 +20,7 @@ mod panel_toolbar;
 mod parameter_creation;
 mod parameter_groups;
 mod parameter_management;
+mod parameter_navigation;
 mod parameters;
 mod physics;
 mod project_import;

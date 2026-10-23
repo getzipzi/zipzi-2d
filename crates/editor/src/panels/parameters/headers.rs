@@ -14,9 +14,20 @@ impl ParametersPanel {
         let key = id.as_deref().unwrap_or("ungrouped").to_owned();
         let expanded = !self.collapsed_groups.contains(&id);
         let group = id.clone();
-        let owner = self.owner.clone();
-        let focus = self.focus.clone();
         let document_id = self.document_id;
+        let cursor = id.as_ref().map_or(ParameterCursor::Ungrouped, |id| {
+            ParameterCursor::Object(editor_core::ObjectRef::new(
+                editor_core::ObjectKind::ParameterGroup,
+                id,
+            ))
+        });
+        let object = match &cursor {
+            ParameterCursor::Object(r) => Some(r),
+            _ => None,
+        };
+        let selected = object.is_some() && self.navigation.inspected.as_ref() == object;
+        let focused = self.navigation_focused && self.navigation.cursor.as_ref() == Some(&cursor);
+        let inspect_cursor = cursor.clone();
         let panel = cx.weak_entity();
         let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
             if let SortItem::Group(group) = item {
@@ -70,29 +81,71 @@ impl ParametersPanel {
             .role(gpui::Role::Group)
             .aria_label(name.clone())
             .aria_expanded(expanded)
+            .aria_selected(selected)
             .map(|element| group_header::row_style(element, depth, cx))
+            .when(selected, |row| row.bg(cx.theme().primary.opacity(0.15)))
+            .border_1()
+            .border_color(if focused {
+                cx.theme().primary
+            } else {
+                cx.theme().border
+            })
             .child(
-                group_header::toggle(
-                    SharedString::from(format!("parameter-group-toggle-{key}")),
-                    SharedString::from(format!("parameter-group-count-{key}")),
-                    name,
-                    count,
-                    expanded,
-                    depth,
-                    cx,
-                )
-                .disabled(disabled)
-                .on_click(cx.listener(move |this, _, window, cx| {
-                    if !this.slider_interaction_allowed(window, cx) {
-                        return;
-                    }
-                    this.finish_slider_drag(cx);
-                    if !this.collapsed_groups.remove(&group) {
-                        this.collapsed_groups.insert(group.clone());
-                    }
-                    this.refresh_visible_rows(cx);
-                    cx.notify();
-                })),
+                Button::new(SharedString::from(format!("parameter-group-toggle-{key}")))
+                    .icon(if expanded {
+                        IconName::ChevronDown
+                    } else {
+                        IconName::ChevronRight
+                    })
+                    .ghost()
+                    .small()
+                    .ml(crate::ui::compact::rem(depth.min(6) as f32 * 12.))
+                    .disabled(disabled)
+                    .accessibility_label(t!(
+                        if expanded {
+                            "parameter.collapse_group"
+                        } else {
+                            "parameter.expand_group"
+                        },
+                        name = name.clone()
+                    ))
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.toggle_group(group.clone(), window, cx);
+                    })),
+            )
+            .child(
+                Button::new(SharedString::from(format!("parameter-group-name-{key}")))
+                    .icon(IconName::Folder)
+                    .ghost()
+                    .small()
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
+                    .justify_start()
+                    .disabled(disabled)
+                    .accessibility_label(name.clone())
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .text_ellipsis()
+                            .text_xs()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .child(name),
+                    )
+                    .child(
+                        div()
+                            .id(SharedString::from(format!("parameter-group-count-{key}")))
+                            .test_support()
+                            .aria_value(count.to_string())
+                            .text_xs()
+                            .child(count.to_string()),
+                    )
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        if let Some(document) = document_id {
+                            this.activate_row(document, cursor.clone(), window, cx);
+                        }
+                    })),
             )
             .when_some(id, |header, id| {
                 header.child(
@@ -103,38 +156,11 @@ impl ParametersPanel {
                         .disabled(disabled)
                         .accessibility_label(t!("editor.parameter_group_inspect"))
                         .tooltip(t!("editor.parameter_group_inspect"))
-                        .on_click(move |_, window, cx| {
-                            if window.has_active_dialog(cx) {
-                                return;
+                        .on_click(cx.listener(move |this, _, window, cx| {
+                            if let Some(document) = document_id {
+                                this.activate_row(document, inspect_cursor.clone(), window, cx);
                             }
-                            let (Some(owner), Some(document_id)) = (owner.upgrade(), document_id)
-                            else {
-                                return;
-                            };
-                            owner.update(cx, |owner, cx| {
-                                if owner.modal
-                                    || owner.editor.is_busy()
-                                    || owner.editor.active_id() != Some(document_id)
-                                {
-                                    return;
-                                }
-                                if !owner.prepare_property_inputs(document_id, window, cx) {
-                                    return;
-                                }
-                                let result = owner.editor.execute_for(
-                                    document_id,
-                                    EditorCommand::Navigate(editor_core::ObjectRef::new(
-                                        editor_core::ObjectKind::ParameterGroup,
-                                        &id,
-                                    )),
-                                );
-                                let success = result.is_ok();
-                                owner.complete_edit(result, cx);
-                                if success {
-                                    window.focus(&focus, cx);
-                                }
-                            });
-                        }),
+                        })),
                 )
             })
             .map(|element| management::row_menu(element, menu_panel, document_id, menu_actions))

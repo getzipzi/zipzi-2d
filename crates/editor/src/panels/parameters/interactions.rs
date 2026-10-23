@@ -211,29 +211,14 @@ impl ParametersPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if window.has_active_dialog(cx) {
-            return;
-        }
-        if let Some(owner) = self.owner.upgrade() {
-            owner.update(cx, |owner, cx| {
-                if owner.modal
-                    || owner.editor.is_busy()
-                    || owner.editor.active_id() != Some(document_id)
-                {
-                    return;
-                }
-                if !owner.prepare_property_inputs(document_id, window, cx) {
-                    return;
-                }
-                let result = owner
-                    .editor
-                    .execute_for(document_id, EditorCommand::FocusParameter(parameter.into()));
-                let success = result.is_ok();
-                owner.complete_edit(result, cx);
-                if success {
-                    window.focus(&self.focus, cx);
-                }
-            });
-        }
+        self.activate_row(
+            document_id,
+            ParameterCursor::Object(editor_core::ObjectRef::new(
+                editor_core::ObjectKind::Parameter,
+                parameter,
+            )),
+            window,
+            cx,
+        );
     }
 }

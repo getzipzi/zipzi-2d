@@ -14,6 +14,8 @@ pub(super) struct ParameterRowView {
     pub(super) disabled: bool,
     pub(super) summary: String,
     pub(super) related: bool,
+    pub(super) selected: bool,
+    pub(super) cursor: bool,
     pub(super) depth: usize,
     pub(super) _observe: Subscription,
     pub(super) sorting: Entity<SortState>,
@@ -40,6 +42,7 @@ impl Render for ParameterRowView {
         };
         let parameter_id = parameter.id.clone();
         let focus_parameter_id = parameter_id.clone();
+        let focus_panel = self.panel.clone();
         let tooltip = format!(
             "{} {}\n{} – {}",
             parameter.name, self.summary, parameter.minimum, parameter.maximum
@@ -47,6 +50,7 @@ impl Render for ParameterRowView {
         div()
             .id(SharedString::from(format!("parameter-row-{parameter_id}")))
             .test_support()
+            .aria_selected(self.selected)
             .map(|element| {
                 sorting::drop_target(
                     element,
@@ -91,6 +95,17 @@ impl Render for ParameterRowView {
                 }),
             )
             .map(|element| row::style(element, cx))
+            .bg(if self.selected {
+                theme.primary.opacity(0.15)
+            } else {
+                gpui::transparent_black()
+            })
+            .border_1()
+            .border_color(if self.cursor {
+                theme.primary
+            } else {
+                gpui::transparent_black()
+            })
             .child(
                 row::name(self.depth)
                     .id(SharedString::from(format!("parameter-name-{parameter_id}")))
@@ -106,13 +121,13 @@ impl Render for ParameterRowView {
                     })
                     .test_support()
                     .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        let _ = this.panel.update(cx, |panel, cx| {
+                    .on_click(move |_, window, cx| {
+                        let _ = focus_panel.update(cx, |panel, cx| {
                             if let Some(id) = document_id {
                                 panel.focus_parameter(id, &focus_parameter_id, window, cx);
                             }
                         });
-                    }))
+                    })
                     .text_color(if self.related {
                         theme.primary
                     } else {

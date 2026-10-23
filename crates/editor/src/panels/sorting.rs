@@ -632,12 +632,7 @@ impl EditorView {
         {
             (
                 PaletteProjection::Parameters,
-                doc.context().inspected.clone().filter(|object| {
-                    matches!(
-                        object.kind,
-                        ObjectKind::Parameter | ObjectKind::ParameterGroup
-                    )
-                }),
+                dock.parameters.read(cx).movement_object(),
             )
         } else {
             return;

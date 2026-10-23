@@ -2,6 +2,7 @@ mod headers;
 mod interactions;
 mod locate;
 mod management;
+mod selection;
 mod summary;
 mod sync;
 mod view;
@@ -11,6 +12,7 @@ pub(super) mod grouping;
 pub(super) mod row;
 pub(super) mod track;
 use grouping::{ListRow, ParameterLayout};
+use selection::{ParameterCursor, ParameterNavigation};
 use track::parameter_track;
 
 use super::group_header;
@@ -78,6 +80,9 @@ pub struct ParametersPanel {
     collapsed_groups: HashSet<Option<String>>,
     layout: ParameterLayout,
     visible_rows: Vec<ListRow>,
+    navigation: ParameterNavigation,
+    navigation_focused: bool,
+    _focus_events: Vec<Subscription>,
     rows: Vec<ParameterRow>,
     scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
@@ -95,6 +100,18 @@ impl ParametersPanel {
             let sorting = SortState::new(owner.clone(), focus.clone(), window, cx);
             let sorting_observe = cx.observe(&sorting, |_, _, cx| cx.notify());
             Self {
+                _focus_events: vec![
+                    cx.on_focus(&focus, window, |this: &mut Self, _, cx| {
+                        this.navigation_focused = true;
+                        this.refresh_navigation_styles(cx);
+                        cx.notify();
+                    }),
+                    cx.on_blur(&focus, window, |this: &mut Self, _, cx| {
+                        this.navigation_focused = false;
+                        this.refresh_navigation_styles(cx);
+                        cx.notify();
+                    }),
+                ],
                 focus,
                 _observe: cx.observe_in(
                     &owner.upgrade().unwrap(),
@@ -117,6 +134,8 @@ impl ParametersPanel {
                 collapsed_groups: HashSet::new(),
                 layout: ParameterLayout::default(),
                 visible_rows: Vec::new(),
+                navigation: ParameterNavigation::default(),
+                navigation_focused: false,
                 rows: Vec::new(),
                 scroll: UniformListScrollHandle::new(),
                 subscriptions: Vec::new(),
@@ -198,6 +217,7 @@ impl ParametersPanel {
 
     fn refresh_visible_rows(&mut self, cx: &mut Context<Self>) {
         self.visible_rows = self.layout.visible(&self.collapsed_groups);
+        self.reconcile_navigation(cx);
         for row in &self.visible_rows {
             if let ListRow::Parameter { index, depth } = row {
                 let view = &self.rows[*index].view;
@@ -292,6 +312,7 @@ impl Render for ParametersPanel {
             .text_sm()
             .key_context("KasanePalette")
             .track_focus(&self.focus)
+            .on_key_down(cx.listener(Self::parameter_key_down))
             .child(
                 canvas(|_, _, _| (), {
                     let panel = panel.downgrade();

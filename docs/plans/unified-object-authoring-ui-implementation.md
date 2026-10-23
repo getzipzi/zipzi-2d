@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建、共享移动、树选择、多选移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建、共享移动、树选择、Parameter 文件夹导航、多选移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
 
 ## 首轮实现：创建与输入边界
 
@@ -16,7 +16,7 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级 | 变形树创建、变形父级保持形态移动、Parameter 文件夹选择导航与其余创建命令入口仍待实施 |
+| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入 | 变形树创建、变形父级保持形态移动与其余创建命令入口仍待实施 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
@@ -220,3 +220,38 @@ git diff --check
 受影响 UI/路由/筛选/工作量回归 **166 项通过**，包含新增 6 项多选上下移 UI 回归；core 受影响门禁 **51 项通过**，包含新增 8 项分段移动、祖先归并、多拥有者、混合参数/文件夹、变形同级、边界与锁、过期计划及 Undo/Redo/保存回读回归。格式与空白检查通过。本轮未运行完整套件、原生截图或 Release 性能基准。
 
 U2 仍未完成：变形树创建的位置契约、保持形态改父级、Parameter 文件夹选择导航与其余创建命令入口继续待实施；U3–U6 状态不变。
+
+
+## 第七轮实现：Parameter 文件夹选择与键盘导航
+
+第六轮多选上下移已提交为 `24601bc`。本轮继续使用当前 checkout，没有创建 worktree 或修改相邻 `kasane-2d`。
+
+- Parameter 文件夹名称单击检查文件夹，箭头独立展开/折叠；原检查按钮复用同一激活路径。参数仍使用既有 `FocusParameter`，文件夹使用 `Navigate`，保留场景选择、参数预览值和参数焦点。空文件夹也可以检查，折叠不清除隐藏对象的检查身份。
+- 新增仅用于展示的稳定对象光标。上下键及 Home/End 只移动焦点并滚动，Enter 才激活；左右键展开/折叠、进入首个可见子行或返回父行。空文件夹不会跳入下一个根组；“未分组”有独立展示身份，可以折叠和导航，但不会提交对象检查或移动。
+- Palette 的上下移与“移到…”快捷键使用当前可见焦点行，避免浏览到文件夹后仍操作旧的检查对象。重排后仍保持该稳定光标及原检查目标；删除或隐藏光标行后校正，Undo 不复活已失效光标。文档或工作区 token 改变后重建导航上下文。
+- 单行检查与焦点分别显示背景、边框和选择元数据；只在状态变化时通知受影响的缓存参数行，保留原滑块与数值控件实体。普通预览值更新不重新协调整份导航样式。文件夹箭头补齐中英文可访问名称。
+- 激活先通过共享输入边界结算旧 Properties 文本；模态、忙状态、拖拽、输入法字符输入和文本控件焦点不会触发列表导航。本轮延续 Parameter 的单行检查策略，没有新增 Parameter 的 Shift/Cmd 多选或批量属性编辑。
+
+第七轮定向门禁：
+
+```sh
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+  headless_tests::parameter_navigation \
+  headless_tests::palette_steps headless_tests::palette_move_to \
+  panels::sorting::destination::tests \
+  headless_tests::tree_selection headless_tests::palette_commands \
+  headless_tests::hierarchy headless_tests::sorting headless_tests::scene_creation \
+  headless_tests::parameters headless_tests::parameter_groups \
+  headless_tests::parameter_management headless_tests::parameter_creation \
+  headless_tests::authoring headless_tests::properties headless_tests::panel_toolbar \
+  headless_tests::command_targets headless_tests::input_routing \
+  headless_tests::ui_performance keybindings::tests input_routing::policy \
+  panels::hierarchy_tree::filter
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+受影响 UI/输入路由/移动/创建/虚拟化工作量门禁 **174 项通过**，包含新增 8 项文件夹导航回归：独立折叠与检查、可见层级导航、按焦点移动及未分组 no-op、旧文本结算与文本按键隔离、空组和文档/工作区切换、模态阻止、删除/Undo 光标校正，以及 80 行虚拟列表 Home/End 定位。格式与空白检查通过。本轮没有 core 产品改动，未重复运行 core 门禁；未运行完整套件、原生截图或 Release 性能基准。
+
+U2 仍待变形树创建的位置契约、保持形态改父级和其余创建命令入口；U3–U6 状态不变。

@@ -93,6 +93,7 @@ impl ParametersPanel {
         if visuals_changed {
             self.refresh_binding_hints(&owner, cx);
         }
+        self.sync_navigation(cx);
     }
 
     fn rebuild_rows(
@@ -159,6 +160,8 @@ impl ParametersPanel {
                     disabled: false,
                     summary: String::new(),
                     related: false,
+                    selected: false,
+                    cursor: false,
                     depth: 0,
                     _observe: cx.observe(&slider, |_, _, cx| cx.notify()),
                     sorting: self.sorting.clone(),

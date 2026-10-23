@@ -240,6 +240,8 @@ restore = "Restore Panel"
 panel_actions = "Panel Actions"
 
 [parameter]
+collapse_group = "Collapse %{name}"
+expand_group = "Expand %{name}"
 new = "New Parameter"
 create = "Create"
 default_name = "New Parameter"

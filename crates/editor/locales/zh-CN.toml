@@ -239,6 +239,8 @@ restore = "还原面板"
 panel_actions = "面板操作"
 
 [parameter]
+collapse_group = "折叠 %{name}"
+expand_group = "展开 %{name}"
 new = "新增参数"
 create = "创建"
 default_name = "新参数"
