@@ -21,7 +21,7 @@ WORKLOAD_PATH = MATRIX_ROOT / "config" / "mao-40.json"
 BUILD_ROOT = REPO_ROOT / "target/cubism-matrix/build"
 SDK_ROOT = REPO_ROOT / "third_party/CubismSdkForNative-5-r.5"
 PURISM_ROOT = Path(
-    os.environ.get("PURISM_CORE_ROOT", REPO_ROOT / "modules/purism-core")
+    os.environ.get("PURISM_CORE_ROOT", REPO_ROOT / "third_party/purism-core")
 ).expanduser().resolve()
 PURISM_BUILD_ROOT = REPO_ROOT / "target/cubism-matrix/core/purism-v6"
 MAO_SOURCE = REPO_ROOT / "models/local/mao"

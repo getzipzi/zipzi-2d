@@ -1,3 +1,3 @@
-[submodule "modules/purism-core"]
-	path = modules/purism-core
+[submodule "third_party/purism-core"]
+	path = third_party/purism-core
 	url = https://github.com/pakholeung37/PurismCore

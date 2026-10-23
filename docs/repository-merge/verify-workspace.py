@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""P2 structural acceptance; requires Python 3.11+ and Cargo's dependency cache."""
+"""Workspace structural acceptance; requires Python 3.11+ and Cargo's dependency cache."""
 import json
 from pathlib import Path
 import subprocess
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
-EDITOR = ROOT / 'apps/editor'
+EDITOR = ROOT / 'crates/kasane-editor'
 
 def metadata(cwd, *options):
     return json.loads(subprocess.check_output(
@@ -14,10 +14,15 @@ def metadata(cwd, *options):
 
 root = metadata(ROOT)
 app = metadata(EDITOR)
+# Cargo reports the selected package only when invoked inside a member.
+assert app['resolve']['root'] in app['workspace_members']
+app['resolve']['root'] = root['resolve']['root']
+app['workspace_default_members'] = root['workspace_default_members']
 assert root == app, 'Root and Editor resolve different workspaces'
+
 assert Path(root['workspace_root']) == ROOT
 assert Path(root['target_directory']) == ROOT / 'target'
-assert not (EDITOR / 'Cargo.toml').exists()
+assert (EDITOR / 'Cargo.toml').exists()
 assert not (EDITOR / 'Cargo.lock').exists()
 packages = {p['id']: p for p in root['packages']}
 members = {packages[i]['name']: packages[i] for i in root['workspace_members']}
@@ -27,6 +32,7 @@ assert len(members) == 18
 assert {packages[i]['name'] for i in root['workspace_default_members']} == {'kasane-core', 'kasane-project', 'kasane-sdk'}
 editor_names = {'kasane-editor', 'editor-core', 'editor-render'}
 for name, p in members.items():
+    assert Path(p['manifest_path']) == ROOT / 'crates' / name / 'Cargo.toml'
     assert p['edition'] == ('2024' if name in editor_names else '2021')
     assert p['license'] == ('GPL-3.0-only' if name in editor_names else 'MIT')
     assert p['rust_version'] == '1.95'
@@ -39,7 +45,7 @@ for name, path in {
 }.items():
     matching = [p for p in packages.values() if p['name'] == name]
     assert len(matching) == 1
-    assert Path(matching[0]['manifest_path']) == EDITOR / 'vendor' / path / 'Cargo.toml'
+    assert Path(matching[0]['manifest_path']) == ROOT / 'vendor' / path / 'Cargo.toml'
     assert matching[0]['id'] not in root['workspace_members']
 for name in ['gpui-kit', 'gpui-fps']:
     matching = [p for p in packages.values() if p['name'] == name]

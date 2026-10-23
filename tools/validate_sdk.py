@@ -21,8 +21,8 @@ from uuid import uuid4
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CPU_TEST = ROOT / "modules/kasane-python/tests/test_cpu.py"
-GPU_TEST = ROOT / "modules/kasane-python/tests/test_observe.py"
+CPU_TEST = ROOT / "crates/kasane-python/tests/test_cpu.py"
+GPU_TEST = ROOT / "crates/kasane-python/tests/test_observe.py"
 RECIPE = ROOT / "examples/sdk/python_observe_recipe.py"
 TWO_ASSET_RECIPE = ROOT / "examples/sdk/python_two_asset_recipe.py"
 IMPORT_EDIT_RECIPE = ROOT / "examples/sdk/python_import_edit_recipe.py"
@@ -32,8 +32,8 @@ REFERENCE_CAPTURE = ROOT / "examples/sdk/python_reference_capture.py"
 IMAGE_COMPARATOR = ROOT / "tools/compare_sdk_image.py"
 IMAGE_REFERENCE = ROOT / "tests/fixtures/render_reference/external_v50_default.png"
 IMAGE_REFERENCE_METADATA = IMAGE_REFERENCE.with_suffix(".json")
-TEXTURE = ROOT / "modules/kasane-python/tests/fixtures/asymmetric-2x2.png"
-SECOND_TEXTURE = ROOT / "modules/kasane-python/tests/fixtures/texture_00.png"
+TEXTURE = ROOT / "crates/kasane-python/tests/fixtures/asymmetric-2x2.png"
+SECOND_TEXTURE = ROOT / "crates/kasane-python/tests/fixtures/texture_00.png"
 EXTERNAL_MODEL3 = ROOT / "tests/fixtures/external_v50/model.model3.json"
 EXTERNAL_MOC3 = ROOT / "tests/fixtures/external_v50/model.moc3"
 

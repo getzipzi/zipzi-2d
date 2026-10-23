@@ -44,7 +44,7 @@ models/local/mao/
 
 The [model inventory](../../models/README.md) lists their uses and the optional SDK samples.
 
-PurismCore is pinned at `modules/purism-core` as a Git submodule. Initialize
+PurismCore is pinned at `third_party/purism-core` as a Git submodule. Initialize
 submodules after cloning, or set `PURISM_CORE_ROOT` to use another checkout.
 The matrix configures its Purism build with CTest enabled; run it with:
 

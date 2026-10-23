@@ -12,8 +12,8 @@ P0 baseline capture, P1 history import, P2 workspace integration and P3 path/too
 adaptation are complete.
 **Revised scope:** the user now requests a fully flattened repository. P3F
 (flatten all owned crates, consolidate assets/tools/docs/vendor, then adapt paths)
-is next, followed by P4–P6. P0–P3 results describe the intermediate layout, not
-acceptance of the future flattened layout. Cargo resolves one
+is complete; P4–P6 remain. P0–P3 results describe the intermediate layout, not
+acceptance of the flattened layout; see the new P3F evidence. Cargo resolves one
 workspace and lockfile; Editor entrypoints and fixtures use this checkout. SDK CI
 and broad test entrypoints still need package-scope adaptation. In particular, existing SDK
 `--workspace` commands now include Editor; use explicit package selections until
@@ -100,12 +100,18 @@ python3.14 docs/repository-merge/verify-workspace.py
 
 See [P3 implementation and validation](p3-paths.md).
 
-## Next: P3F, then P4 and repository acceptance
+## P3F: flat layout and integrated resources
 
-1. Implement the revised flat layout and repeat affected path/resource checks (P3F).
-2. Separate SDK and Editor package selection before running broad gates (P4).
-3. Finish licensing/navigation/assets and isolation acceptance (P5–P6).
+See [P3F validation](p3f-flattening.md), the [complete file map](p3f-file-map.json)
+and `verify-flattening.py`. All 18 owned crates now live under root `crates/`;
+Editor assets, tools, documentation and vendor patches use root directories.
 
-Native runtime tests, asset acceptance, Python wheel, GitHub license recognition
-and cross-platform CI remain unverified. Recheck original HEADs before the next
-stage and reconcile any new commits.
+## Next: P4, then repository acceptance
+
+1. Separate SDK and Editor package selection and CI gates (P4).
+2. Validate packaged licenses/assets, consolidate authorized local models (P5).
+3. Complete regression, fresh-clone/worktree isolation and final cutover (P6).
+
+Complete app packaging, licensed-model acceptance, Python wheel, GitHub license
+recognition and cross-platform CI remain unverified. Recheck original HEADs
+before the next stage and reconcile any new commits.

@@ -16,7 +16,7 @@ class TestEntrypointTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         (self.root / 'tools').mkdir()
-        shutil.copy(Path(__file__).resolve().parents[1] / 'tools/test.sh', self.root / 'tools/test.sh')
+        shutil.copy(Path(__file__).resolve().parents[1] / 'tools/test-sdk.sh', self.root / 'tools/test-sdk.sh')
         binary = self.root / 'bin'
         binary.mkdir()
         for name in ['cargo', 'uv']:
@@ -31,7 +31,7 @@ if sys.argv[1:2]==['test']:sys.exit(int(os.environ.get('CARGO_TEST_EXIT','0')))
 
     def run_gate(self, *arguments, **environment):
         (self.root / 'calls.jsonl').unlink(missing_ok=True)
-        result = subprocess.run(['sh', 'tools/test.sh', *arguments], cwd=self.root,
+        result = subprocess.run(['sh', 'tools/test-sdk.sh', *arguments], cwd=self.root,
                                 env={**self.env, **environment}, capture_output=True, text=True)
         calls = [json.loads(line) for line in (self.root / 'calls.jsonl').read_text().splitlines()]
         return result, calls

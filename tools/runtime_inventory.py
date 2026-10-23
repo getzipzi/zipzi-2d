@@ -129,7 +129,7 @@ def rust_methods(source: str) -> list[dict]:
 
 def rust_contract(row: dict, path: Path) -> dict:
     owner, name = row["owner"], row["name"]
-    module = path.relative_to(ROOT / "modules/kasane-sdk/src").parts[0].removesuffix(".rs")
+    module = path.relative_to(ROOT / "crates/kasane-sdk/src").parts[0].removesuffix(".rs")
     if module not in DOMAINS:
         raise ValueError(f"classify new SDK module: {module}")
     domain, stage, acceptance = DOMAINS[module]
@@ -209,8 +209,8 @@ def collect(root: Path = ROOT) -> dict:
     if root != ROOT:
         raise ValueError("inventory must describe this paired checkout")
     rows = []
-    legacy = json.loads((ROOT / "modules/kasane-python/python-coverage.json").read_text())
-    sdk_paths = sorted((ROOT / "modules/kasane-sdk/src").rglob("*.rs"))
+    legacy = json.loads((ROOT / "crates/kasane-python/python-coverage.json").read_text())
+    sdk_paths = sorted((ROOT / "crates/kasane-sdk/src").rglob("*.rs"))
     public_owners = {name for path in sdk_paths for name in re.findall(
         r"\bpub\s+(?:struct|enum)\s+(\w+)", mask_rust(path.read_text()))}
     for path in sdk_paths:
@@ -227,12 +227,12 @@ def collect(root: Path = ROOT) -> dict:
             rows.append(entry)
 
     # Re-exports are part of the public SDK, although their impl lives elsewhere.
-    sdk_lib = (ROOT / "modules/kasane-sdk/src/lib.rs").read_text()
+    sdk_lib = (ROOT / "crates/kasane-sdk/src/lib.rs").read_text()
     animation_exports = set()
     for names in re.findall(r"pub use kasane_animation::\{([^}]+)\};", sdk_lib, re.S):
         animation_exports.update(re.findall(r"\b\w+\b", names))
     animation_exports.update(re.findall(r"pub use kasane_animation::(\w+);", sdk_lib))
-    for path in sorted((ROOT / "modules/kasane-animation/src").rglob("*.rs")):
+    for path in sorted((ROOT / "crates/kasane-animation/src").rglob("*.rs")):
         for method in rust_methods(path.read_text()):
             if method["owner"] not in animation_exports and method["name"] not in animation_exports:
                 continue
@@ -244,7 +244,7 @@ def collect(root: Path = ROOT) -> dict:
                 bulk="ordered schedule and sample arrays", scheduling="captured source; bounded replay worker",
                 acceptance=["A11", "A14", "A17"], implementation="not-connected"))
 
-    package = ROOT / "modules/kasane-python/python/kasane"
+    package = ROOT / "crates/kasane-python/python/kasane"
     native_imports = []
     for path in sorted(package.glob("*.py")):
         tree = ast.parse(path.read_text())
@@ -311,7 +311,7 @@ def collect(root: Path = ROOT) -> dict:
 def value_types() -> list[dict]:
     """Index public input/result fields; opaque objects are references, not DTOs."""
     result = []
-    sdk_lib = (ROOT / "modules/kasane-sdk/src/lib.rs").read_text()
+    sdk_lib = (ROOT / "crates/kasane-sdk/src/lib.rs").read_text()
     for crate in ["kasane-sdk", "kasane-animation", "kasane-project"]:
         exported = set()
         if crate != "kasane-sdk":
@@ -319,7 +319,7 @@ def value_types() -> list[dict]:
             for names in re.findall(r"pub use " + rust_name + r"::\{([^}]+)\};", sdk_lib, re.S):
                 exported.update(re.findall(r"\b\w+\b", names))
             exported.update(re.findall(r"pub use " + rust_name + r"::(\w+);", sdk_lib))
-        for path in sorted((ROOT / "modules" / crate / "src").rglob("*.rs")):
+        for path in sorted((ROOT / "crates" / crate / "src").rglob("*.rs")):
             source = path.read_text()
             masked = mask_rust(source)
             for match in re.finditer(r"\bpub\s+(enum|struct)\s+(\w+)\b[^{};]*\{", masked):
@@ -343,7 +343,7 @@ def value_types() -> list[dict]:
 def domain_intents() -> list[dict]:
     """Include the actual shared SDK/core intent variants, not private PyO3 Command."""
     result = []
-    for directory in [ROOT / "modules/kasane-sdk/src", ROOT / "modules/kasane-core/src/document"]:
+    for directory in [ROOT / "crates/kasane-sdk/src", ROOT / "crates/kasane-core/src/document"]:
         for path in sorted(directory.rglob("*.rs")):
             source = path.read_text()
             masked = mask_rust(source)

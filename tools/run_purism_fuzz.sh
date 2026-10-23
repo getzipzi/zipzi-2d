@@ -26,9 +26,9 @@ COMPILER_TAG=$("$COMPILER" --version | sed -n '1s/.* version \([0-9][0-9]*\).*/l
 BUILD="$ROOT/target/fuzz/build-$MODE-${COMPILER_TAG:-clang}"
 CORPUS="$ROOT/target/fuzz/corpus-$MODE"
 mkdir -p "$CORPUS"
-cmake -S "$ROOT/modules/purism-core" -B "$BUILD" \
+cmake -S "$ROOT/third_party/purism-core" -B "$BUILD" \
   -DCMAKE_C_COMPILER="$COMPILER" -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=OFF \
   -DPURISM_CORE_BUILD_FUZZER=ON -DPURISM_CORE_FUZZ_DEBUG_MALLOC="$MALLOC"
 cmake --build "$BUILD" --target purism_fuzzer --parallel
-"$BUILD/purism_fuzzer" "$CORPUS" "$ROOT/modules/purism-core/fuzz/corpus" \
+"$BUILD/purism_fuzzer" "$CORPUS" "$ROOT/third_party/purism-core/fuzz/corpus" \
   "-runs=$RUNS" "-artifact_prefix=$BUILD/"

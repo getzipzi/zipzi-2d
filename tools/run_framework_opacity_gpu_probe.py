@@ -100,7 +100,7 @@ def main() -> int:
         report["part_difference_bounds"] = part_diff
         for source in (MOC, TEXTURE, PROBE, offscreen_moc,
                        ROOT / "tools/probes/framework_gpu_probe.cpp",
-                       ROOT / "modules/kasane-moc3/examples/create_animation_offscreen_fixture.rs"):
+                       ROOT / "crates/kasane-moc3/examples/create_animation_offscreen_fixture.rs"):
             report["inputs"][str(source.relative_to(ROOT))] = digest(source)
         report["status"] = "passed"
     except Exception as failure:

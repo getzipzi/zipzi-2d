@@ -5,7 +5,7 @@
 | 入口 | 用途 |
 | --- | --- |
 | `validate_sdk.py` | 在仓库外临时环境安装 wheel，运行 CPU/GPU、创作、导入编辑、导出、双 Core 与图像参考门禁，并保存报告与哈希。 |
-| `sdk_experiments.py` | 冻结 SDK 实验条件，生成三个渐进受试任务，记录外部 agent 进程，独立判分和重放，保存审阅与汇总。见 [实验协议](../docs/SDK-EXPERIMENTS.md)。 |
+| `sdk_experiments.py` | 冻结 SDK 实验条件，生成三个渐进受试任务，记录外部 agent 进程，独立判分和重放，保存审阅与汇总。见 [实验协议](../docs/archive/SDK-EXPERIMENTS.md)。 |
 | `compare_sdk_image.py` | 读取 RGBA8 PNG，比较整图和 focus crop，保存差分图。 |
 | `compare_wgpu_blends.py` | 将 720 个 WGPU 混合样本与固定的官方 Framework GPU 参考图比较。 |
 | `validate_official_core.py`、`probes/` | 对 Rust MOC3 导出运行官方与 Purism Core 数值对照。 |
@@ -14,7 +14,7 @@
 
 ```sh
 uv run --locked python -m unittest discover -s tests -p test_acceptance_validators.py -v
-uv build --wheel --python 3.14 --out-dir target/python-wheels modules/kasane-python
+uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
 uv run --locked python tools/validate_sdk.py --wheel /absolute/path/to/kasane.whl
 uv run --locked python tools/compare_wgpu_blends.py
 ```

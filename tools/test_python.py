@@ -83,7 +83,7 @@ def run_tests(args, test_arguments, directory):
     # Debug/Release and feature variants separate inside the workspace target.
     env["CARGO_TARGET_DIR"] = str(ROOT / "target")
     uv = ["uv", "run", "--locked", "--project", ROOT]
-    manifest = ROOT / "modules/kasane-python/Cargo.toml"
+    manifest = ROOT / "crates/kasane-python/Cargo.toml"
     features = ["--features", "observe"] if args.observe else []
 
     if args.wheel:
@@ -106,7 +106,7 @@ def run_tests(args, test_arguments, directory):
     expected = repr(args.observe)
     check = f"import kasane; actual = kasane.capabilities()['gpu_observation']; assert actual == {expected}, (actual, {expected})"
     execute([*uv, "python", "-c", check], cwd=outside, env=env)
-    tests = ROOT / "modules/kasane-python/tests"
+    tests = ROOT / "crates/kasane-python/tests"
     patterns = ["test_cpu.py", "test_inspection.py"]
     if args.observe:
         patterns.append("test_observe.py")

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(KASANE_CUBISM_ROOT "" CACHE PATH "Local Cubism Native SDK root")
 
 # Build PurismCore submodule reference
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../modules/purism-core ${CMAKE_CURRENT_BINARY_DIR}/purism)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/purism-core ${CMAKE_CURRENT_BINARY_DIR}/purism)
 
 # 1. Purism Probe
 add_executable(kasane_document_purism_probe project_runtime_probe.cpp)

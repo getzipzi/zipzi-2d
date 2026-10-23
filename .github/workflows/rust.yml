@@ -36,7 +36,7 @@ jobs:
       - name: Regression tests
         run: cargo test --workspace --locked
       - name: Build Python wheel
-        run: uv build --wheel --python 3.14 --out-dir target/python-wheels modules/kasane-python
+        run: uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
       - name: SDK experiment harness controls
         if: runner.os != 'Windows'
         run: |

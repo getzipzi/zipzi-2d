@@ -1,8 +1,8 @@
 # Runtime implementation preparation (R0)
 
 This directory records implementation evidence for the paired
-[Editor Runtime design](../../apps/editor/docs/plans/sdk-runtime-design.md) and
-[implementation plan](../../apps/editor/docs/plans/sdk-runtime-implementation-plan.md).
+[Editor Runtime design](../plans/sdk-runtime-design.md) and
+[implementation plan](../plans/sdk-runtime-implementation-plan.md).
 It does **not** introduce a Runtime, transport or ConnectedBackend. The current
 public Python package still imports `_native` and targets CPython 3.14.
 
@@ -23,7 +23,7 @@ stub types. Signatures retain input and result types, with source locations for
 review. Public input/result declarations are recorded separately as local value
 types or backend references; their Rust definitions are not wire layouts.
 Private implementation types such as `Occupied` are excluded. The old
-`modules/kasane-python/python-coverage.json` has 123 entries and its checker reads
+`crates/kasane-python/python-coverage.json` has 123 entries and its checker reads
 only selected source files. Its evidence is retained separately; it cannot
 establish complete connected coverage.
 
@@ -155,7 +155,7 @@ The license-free fixture contains 128 12×12 mesh grids (21,632 vertices), an
 explicitly sampled parameter binding, a one-second parameter motion and a
 1024×1024 in-memory RGBA asset. IDs/pixels are deterministic and the driven
 geometry change is asserted. Its source is
-`modules/kasane-sdk/examples/support/runtime_fixture.rs`; later Runtime tests can
+`crates/kasane-sdk/examples/support/runtime_fixture.rs`; later Runtime tests can
 reuse it without loading licensed models. The optional model uses its original
 SDK import API and is saved only into the fresh output directory.
 

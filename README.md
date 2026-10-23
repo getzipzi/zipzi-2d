@@ -1,17 +1,18 @@
 # Zipzi 2D
 
 This checkout is integrating the Kasane SDK and Editor. SDK code is
-MIT licensed; `apps/editor` is GPL-3.0-only, with third-party notices retained.
+MIT licensed; Editor code and assets retain GPL-3.0-only. See [licensing](LICENSING.md).
 The Cargo workspace and Editor script paths are unified; CI is still being migrated.
 Use explicit Cargo package selections until the broad test gates are adapted.
 See the [migration status](docs/repository-merge/README.md) and the
-[revised flattening plan](docs/plans/repository-merge-plan.md). The planned root
-`crates/`, shared assets/tools/docs and vendor layout is not implemented yet.
+[revised flattening plan](docs/plans/repository-merge-plan.md). All 18 owned crates are flat under `crates/`; Editor assets, tools, docs and
+third-party patches are integrated into root directories.
+See the [Editor guide](docs/development/editor.md) and [documentation index](docs/README.md).
 
 Kasane 2D provides a Rust authoring SDK, Python bindings, and a WGPU renderer
 
-Start with the [Python SDK README](modules/kasane-python/README.md) and
-[Python API reference](modules/kasane-python/API.md). See
+Start with the [Python SDK README](crates/kasane-python/README.md) and
+[Python API reference](crates/kasane-python/API.md). See
 [architecture](docs/ARCHITECTURE.md). The [model inventory](models/README.md) records
 local models used by tests and benchmarks.
 
@@ -26,28 +27,28 @@ The unified workspace requires Rust 1.95 or newer (Editor GPUI uses
 
 Python tools use uv (0.10.7 or newer) and CPython 3.14. The root
 `pyproject.toml` and `uv.lock` manage development tools; the SDK wheel remains
-an independently built package under `modules/kasane-python`.
+an independently built package under `crates/kasane-python`.
 
 ```sh
 uv sync --locked
-cargo test --workspace --locked
-uv build --wheel --python 3.14 --out-dir target/python-wheels modules/kasane-python
+cargo test --locked -p kasane-sdk
+uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
 uv run --locked python tools/validate_sdk.py --wheel /absolute/path/to/kasane.whl
 ```
 
 For repeated local edits, use the focused entrypoint:
 
 ```sh
-./tools/test.sh fast                         # SDK unit + ordinary CPU integration
-./tools/test.sh fast physics_editing::       # Filter one SDK domain
-./tools/test.sh mesh                         # Daily alpha mesh regressions + boundary limits
-./tools/test.sh regression                   # Rust libraries/integration, excluding stress remainder
-./tools/test.sh stress                       # Complete alpha mesh suite + fixed-seed stress matrix
-./tools/test.sh python                       # Current Debug extension + CPU/inspection tests
-./tools/test.sh python --observe             # Current Debug extension + CPU/inspection/GPU
-./tools/test.sh python -- -k history          # Filter Python tests
-./tools/test.sh wheel                        # Real Release wheel + isolated acceptance
-./tools/test.sh full                         # Format + complete Rust suite + CPU wheel gate
+./tools/test-sdk.sh fast                         # SDK unit + ordinary CPU integration
+./tools/test-sdk.sh fast physics_editing::       # Filter one SDK domain
+./tools/test-sdk.sh mesh                         # Daily alpha mesh regressions + boundary limits
+./tools/test-sdk.sh regression                   # Rust libraries/integration, excluding stress remainder
+./tools/test-sdk.sh stress                       # Complete alpha mesh suite + fixed-seed stress matrix
+./tools/test-sdk.sh python                       # Current Debug extension + CPU/inspection tests
+./tools/test-sdk.sh python --observe             # Current Debug extension + CPU/inspection/GPU
+./tools/test-sdk.sh python -- -k history          # Filter Python tests
+./tools/test-sdk.sh wheel                        # Real Release wheel + isolated acceptance
+./tools/test-sdk.sh full                         # Format + complete Rust suite + CPU wheel gate
 ```
 
 SDK ordinary integration cases share `--test integration`. Alpha mesh daily
@@ -55,7 +56,7 @@ regression keeps four representative cases from each original random matrix;
 `stress` adds the remaining cases, preserving all 24 fragmented and 64 small
 masks with the same seeds and assertions. `mesh` and `regression` skip only the
 `alpha_mesh_stress::` tests. The 65536-vertex boundary case stays in daily checks.
-Plain `cargo test --workspace --locked` and `full` include the complete matrix;
+Plain `cargo test --locked -p kasane-sdk` and `full` include the complete matrix;
 stress tests are not ignored or feature-gated.
 For a narrow Rust invocation use, for example,
 `cargo test --locked -p kasane-sdk --test integration physics_editing::`.
@@ -83,12 +84,10 @@ An observe-enabled wheel can also run GPU and pinned image-reference checks;
 
 ## License and third-party rights
 
-Original code and modifications in this repository are available under the
-[MIT License](LICENSE), except where a file, directory, dependency, or
-submodule carries a different notice. Existing third-party copyright and
-license notices remain in force. In particular, Live2D-derived benchmark sources
-are governed by their respective licenses; the repository MIT License does not
-relicense them. See [third-party notices](THIRD_PARTY_NOTICES.md) for their scopes.
+SDK components use [MIT](LICENSE-MIT); Editor components use
+[GPL-3.0-only](LICENSE-GPL-3.0). Directory consolidation does not change
+licensing. [LICENSING](LICENSING.md) identifies scopes and shared-file origins;
+[third-party notices](THIRD_PARTY_NOTICES.md) retain dependency and benchmark exceptions.
 
 Live2D, Cubism, the Live2D Cubism SDK, Cubism Core, Cubism Native Framework,
 and associated sample data are owned by or licensed through Live2D Inc. and/or

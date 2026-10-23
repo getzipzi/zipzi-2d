@@ -54,6 +54,6 @@ Cubism XML 对象图和模型语义映射，不依赖 project、编辑器、JVM 
 整数帧/毫秒量化、冲突、未支持的动画目标都会显式报告。项目层提供成对目录发布，
 暂存完整文件后提交，提交失败恢复旧目录；拒绝覆盖含非导出文件的目录。
 未来 CLI 以 `Document` 和资源接口组合 Kasane/MOC3/PSD 导入与 CMO3/CAN3 导出，
-格式能力与限制见 [crate 文档](../modules/kasane-cmo3/README.md)。
+格式能力与限制见 [crate 文档](../crates/kasane-cmo3/README.md)。
 
 模型与视口坐标、格式边界及导出设置见 [坐标契约](coordinates.md)。

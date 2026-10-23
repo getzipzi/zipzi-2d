@@ -6,12 +6,10 @@
       "intelliSenseMode": "macos-clang-arm64",
       "cppStandard": "c++20",
       "compileCommands": [
-        "${workspaceFolder}/target/cmake/core-make/compile_commands.json",
-        "${workspaceFolder}/modules/kasane-gd/compile_commands.json"
+        "${workspaceFolder}/target/cmake/core-make/compile_commands.json"
       ],
       "includePath": [
-        "${workspaceFolder}/modules/kasane-core/include",
-        "${workspaceFolder}/modules/purism-core/include"
+        "${workspaceFolder}/third_party/purism-core/include"
       ]
     },
     {
@@ -20,12 +18,10 @@
       "intelliSenseMode": "linux-gcc-x64",
       "cppStandard": "c++20",
       "compileCommands": [
-        "${workspaceFolder}/target/cmake/core-debug/compile_commands.json",
-        "${workspaceFolder}/modules/kasane-gd/compile_commands.json"
+        "${workspaceFolder}/target/cmake/core-debug/compile_commands.json"
       ],
       "includePath": [
-        "${workspaceFolder}/modules/kasane-core/include",
-        "${workspaceFolder}/modules/purism-core/include"
+        "${workspaceFolder}/third_party/purism-core/include"
       ]
     },
     {
@@ -33,12 +29,10 @@
       "intelliSenseMode": "windows-msvc-x64",
       "cppStandard": "c++20",
       "compileCommands": [
-        "${workspaceFolder}/target/cmake/core-debug/compile_commands.json",
-        "${workspaceFolder}/modules/kasane-gd/compile_commands.json"
+        "${workspaceFolder}/target/cmake/core-debug/compile_commands.json"
       ],
       "includePath": [
-        "${workspaceFolder}/modules/kasane-core/include",
-        "${workspaceFolder}/modules/purism-core/include"
+        "${workspaceFolder}/third_party/purism-core/include"
       ]
     }
   ],

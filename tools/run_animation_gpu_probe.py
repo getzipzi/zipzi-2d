@@ -127,7 +127,7 @@ def main() -> int:
                 report["inputs"][str(applied_kasane.relative_to(ROOT))] = digest(applied_kasane)
                 report["inputs"][str(applied_official.relative_to(ROOT))] = digest(applied_official)
         for path in (MOTION, POSE, TEXTURE, GPU, SOURCE / "model.moc3",
-                     ROOT / "modules/kasane-sdk-observe/examples/animation_gpu_frame.rs",
+                     ROOT / "crates/kasane-sdk-observe/examples/animation_gpu_frame.rs",
                      ROOT / "tools/probes/framework_gpu_probe.cpp"):
             report["inputs"][str(path.relative_to(ROOT))] = digest(path)
         report["model_opacity_application"] = "passed"

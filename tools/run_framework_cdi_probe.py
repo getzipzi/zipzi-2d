@@ -185,8 +185,8 @@ def main() -> int:
             "probe_sha256": sha256(ROOT / "tools/probes/framework_cdi_cpu_probe.cpp"),
             "shim_sha256": sha256(ROOT / "tools/probes/framework_cpu_renderer_cleanup.cpp"),
             "runner_sha256": sha256(Path(__file__)),
-            "crate_sha256": sha256(ROOT / "modules/kasane-live2d/src/cdi3.rs"),
-            "fixture_source_sha256": sha256(ROOT / "modules/kasane-live2d/examples/cdi_fixture.rs"),
+            "crate_sha256": sha256(ROOT / "crates/kasane-live2d/src/cdi3.rs"),
+            "fixture_source_sha256": sha256(ROOT / "crates/kasane-live2d/examples/cdi_fixture.rs"),
         }
         configure = run(["cmake", "-S", "tools/probes", "-B", str(build),
                          f"-DKASANE_CUBISM_ROOT={SDK}", "-DCMAKE_BUILD_TYPE=Release"],

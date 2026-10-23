@@ -143,7 +143,7 @@ def initialize(args):
         shutil.copy2(SUPPORT / name, frozen / name)
     shutil.copy2(Path(__file__), frozen / "sdk_experiments.py")
     for name in ("README.md", "API.md"):
-        shutil.copy2(ROOT / "modules/kasane-python" / name, frozen / name)
+        shutil.copy2(ROOT / "crates/kasane-python" / name, frozen / name)
     for name in ("delivery-transfer.md", "resource-recovery.md", "visual-locate.md", "visual-parent.md", "compose-expression.md", "handoff-revision.md", "shirousagi-repair.md", "shirousagi-blink.md", "shirousagi-art-revision.md"):
         shutil.copy2(ROOT / "docs/experiments/tasks" / name, frozen / name)
     if args.handoff_project is not None:
@@ -160,7 +160,7 @@ def initialize(args):
             raise ValueError("--shirousagi-root must contain model3, MOC3, PSD and texture")
         hashes(source)
         shutil.copytree(source, frozen / "shirousagi", ignore=shutil.ignore_patterns(".DS_Store"))
-    shutil.copy2(ROOT / "modules/kasane-python/tests/fixtures/asymmetric-2x2.png", frozen / "texture.png")
+    shutil.copy2(ROOT / "crates/kasane-python/tests/fixtures/asymmetric-2x2.png", frozen / "texture.png")
     uv = shutil.which(args.uv)
     if not uv:
         raise ValueError("uv not found; install uv before initializing an experiment")
