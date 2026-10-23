@@ -334,6 +334,118 @@ fn expression_member_fields_follow_ids_and_number_gestures_commit_once(cx: &mut 
 }
 
 #[gpui_kit::test]
+fn clip_and_expression_number_drags_cancel_commit_and_roundtrip_history(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use editor_core::{EditorCommand, property};
+    use gpui_kit::{point, px};
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let motion = R::new(K::Motion, &document.motion_resources()[0].selection.clip_id);
+    let expression = R::new(K::Expression, &document.expression_resources()[0].id);
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.resize(gpui_kit::size(px(1200.), px(1500.)));
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    for (object, key) in [
+        (motion, property::motion::DURATION.key),
+        (expression, property::expression::FADE_IN.key),
+    ] {
+        cx.update_window(h.window, |_, window, cx| {
+            h.view.update(cx, |v, cx| {
+                v.inspect_authoring_object(
+                    v.editor.active_id().unwrap(),
+                    object.clone(),
+                    false,
+                    window,
+                    cx,
+                )
+                .unwrap();
+                v.redraw(cx);
+            });
+            window.render_frame(cx);
+        })
+        .unwrap();
+        let (original, history) = h.view.read_with(cx, |v, _| {
+            let doc = v.editor.document().unwrap();
+            (
+                doc.property_values(&object).unwrap()[&key].clone(),
+                doc.history_lengths(),
+            )
+        });
+        let field = format!("property-input-{}", key.name());
+        for cancel in [true, false] {
+            show(&h, &field, cx);
+            let origin = cx
+                .update_window(h.window, |_, window, cx| {
+                    let origin = window
+                        .within(field.clone())
+                        .find("slide-number-input")
+                        .bounds()
+                        .center();
+                    press(window, origin, cx);
+                    origin
+                })
+                .unwrap();
+            let destination = origin + point(px(30.), px(0.));
+            cx.update_window(h.window, |_, window, cx| {
+                slide(window, destination, false, cx);
+            })
+            .unwrap();
+            cx.run_until_parked();
+            h.view.read_with(cx, |v, _| {
+                assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+                let doc = v.editor.document().unwrap();
+                assert!(doc.has_pending_edit());
+                assert_eq!(doc.property_values(&object).unwrap()[&key], original);
+                assert_eq!(doc.history_lengths(), history);
+            });
+            cx.update_window(h.window, |_, window, cx| {
+                if cancel {
+                    window.press("escape", cx);
+                }
+                release(window, destination, cx);
+                window.render_frame(cx);
+            })
+            .unwrap();
+            h.view.update(cx, |v, cx| {
+                assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
+                let doc = v.editor.document().unwrap();
+                assert!(!doc.has_pending_edit());
+                let value = doc.property_values(&object).unwrap()[&key].clone();
+                if cancel {
+                    assert_eq!(value, original);
+                    assert_eq!(doc.history_lengths(), history);
+                } else {
+                    assert_ne!(value, original);
+                    assert_eq!(doc.history_lengths(), (history.0 + 1, 0));
+                    v.editor.execute(EditorCommand::Undo).unwrap();
+                    assert_eq!(
+                        v.editor
+                            .document()
+                            .unwrap()
+                            .property_values(&object)
+                            .unwrap()[&key],
+                        original
+                    );
+                    v.editor.execute(EditorCommand::Redo).unwrap();
+                    assert_eq!(
+                        v.editor
+                            .document()
+                            .unwrap()
+                            .property_values(&object)
+                            .unwrap()[&key],
+                        value
+                    );
+                    v.redraw(cx);
+                }
+            });
+        }
+    }
+}
+
+#[gpui_kit::test]
 fn motion_drag_and_palette_shortcut_keep_registration_and_transport(cx: &mut TestAppContext) {
     use gpui_kit::{point, px};
     let (document, assets) = document_fixture::animation_document().unwrap();

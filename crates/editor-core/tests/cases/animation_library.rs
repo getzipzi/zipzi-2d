@@ -125,3 +125,151 @@ fn expression_members_use_stable_identity_and_noop_preserves_redo() -> anyhow::R
     );
     Ok(())
 }
+
+#[test]
+fn resource_scoped_clip_and_expression_previews_commit_cancel_and_reject_stale_versions()
+-> anyhow::Result<()> {
+    use editor_core::{EditorCommand, PropertyScope, WorkspaceKind, property};
+    let (doc, _assets) = crate::support::animation_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    let doc = editor.document().unwrap();
+    let motion = R::new(K::Motion, &doc.motion_resources()[0].selection.clip_id);
+    let expression = R::new(K::Expression, &doc.expression_resources()[0].id);
+    for (object, key, value) in [
+        (&motion, property::motion::DURATION.key, V::Float(3.)),
+        (&motion, property::motion::FPS.key, V::Float(45.)),
+        (
+            &motion,
+            property::motion::FADE_IN.key,
+            V::OptionalFloat(Some(0.7)),
+        ),
+        (
+            &expression,
+            property::expression::FADE_OUT.key,
+            V::OptionalFloat(Some(0.7)),
+        ),
+    ] {
+        let doc = editor.document().unwrap();
+        let original = doc.property_values(object)?;
+        let history = doc.history_lengths();
+        let mut changes = patch(doc, object, key, value.clone())?;
+        // Resource inspectors capture a document version even for Clip/Expression fields.
+        changes.scope = PropertyScope::Resource {
+            revision: doc.model_generation(),
+        };
+        let context = editor.editing_context_token().unwrap();
+        let token = editor.begin_property_edit(context, object.clone(), &changes)?;
+        assert!(editor.property_edit_owned(&token));
+        editor.update_property_edit(&token, &changes)?;
+        assert!(editor.property_edit_owned(&token));
+        assert_eq!(
+            editor.document().unwrap().property_values(object)?,
+            original
+        );
+        assert_eq!(editor.document().unwrap().history_lengths(), history);
+        editor.cancel_property_edit(&token);
+        assert!(!editor.document().unwrap().has_pending_edit());
+        assert_eq!(
+            editor.document().unwrap().property_values(object)?,
+            original
+        );
+        assert_eq!(editor.document().unwrap().history_lengths(), history);
+
+        let token = editor.begin_property_edit(context, object.clone(), &changes)?;
+        editor.update_property_edit(&token, &changes)?;
+        editor.finish_property_edit(&token)?;
+        assert!(!editor.property_edit_owned(&token));
+        assert_eq!(
+            editor.document().unwrap().property_values(object)?[&key],
+            value
+        );
+        assert_eq!(
+            editor.document().unwrap().history_lengths(),
+            (history.0 + 1, 0)
+        );
+        editor.execute(EditorCommand::Undo)?;
+        assert_eq!(
+            editor.document().unwrap().property_values(object)?,
+            original
+        );
+        assert!(
+            editor
+                .begin_property_edit(context, object.clone(), &changes)
+                .is_err()
+        );
+        assert_eq!(editor.document().unwrap().history_lengths(), (history.0, 1));
+        editor.execute(EditorCommand::Redo)?;
+        assert_eq!(
+            editor.document().unwrap().property_values(object)?[&key],
+            value
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn expression_library_order_preserves_playback_but_member_order_invalidates_it()
+-> anyhow::Result<()> {
+    use editor_core::{EditorCommand, WorkspaceKind};
+    let (mut doc, _assets) = crate::support::animation_document()?;
+    let expression = R::new(K::Expression, &doc.expression_resources()[0].id);
+    create(&mut doc, K::Expression, "Extra", None)?;
+    let member = create(&mut doc, K::ExpressionEntry, "", Some(&expression))?;
+    let mut editor = crate::support::editor_from_document(doc);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    let document = editor.active_id().unwrap();
+    let motion = editor.document().unwrap().motion_resources()[0]
+        .selection
+        .clone();
+    editor.select_motion(document, motion.clone())?;
+    editor.select_expression(document, expression.id.clone())?;
+    editor.toggle_animation()?;
+    editor.advance_animation_clock(0.4);
+    let generation = editor.animation().unwrap().preview_generation;
+    let triggers = editor.animation().unwrap().expressions.clone();
+    let history = editor.document().unwrap().history_lengths();
+    let assert_playback = |editor: &editor_core::Editor| {
+        let animation = editor.animation().unwrap();
+        assert!(animation.playing);
+        assert_eq!(animation.time, 0.4);
+        assert_eq!(animation.motion.as_ref(), Some(&motion));
+        assert_eq!(animation.expression.as_ref(), Some(&expression.id));
+        assert_eq!(animation.expressions, triggers);
+        assert_eq!(animation.preview_generation, generation);
+    };
+    let plan = editor
+        .document()
+        .unwrap()
+        .plan_animation_resource_step(&expression, true)?;
+    let result = editor.execute_animation_library(document, &plan)?;
+    assert!(result.receipt.changed);
+    assert_ne!(
+        editor.document().unwrap().expression_resources()[0].id,
+        expression.id
+    );
+    assert_playback(&editor);
+    assert_eq!(
+        editor.document().unwrap().history_lengths(),
+        (history.0 + 1, 0)
+    );
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(
+        editor.document().unwrap().expression_resources()[0].id,
+        expression.id
+    );
+    assert_playback(&editor);
+    editor.execute(EditorCommand::Redo)?;
+    assert_playback(&editor);
+
+    // Member order affects expression evaluation and must still retire the running preview.
+    let plan = editor
+        .document()
+        .unwrap()
+        .plan_animation_resource_step(&member, false)?;
+    let result = editor.execute_animation_library(document, &plan)?;
+    assert!(result.receipt.changed);
+    assert!(!editor.animation().unwrap().playing);
+    assert!(editor.animation().unwrap().preview_generation > generation);
+    Ok(())
+}

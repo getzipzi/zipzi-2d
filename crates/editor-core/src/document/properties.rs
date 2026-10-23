@@ -660,8 +660,19 @@ impl Document {
     pub(crate) fn property_edit_matches(&self, serial: u64, object: &ObjectRef) -> bool {
         self.property_edit_serial() == Some(serial)
             && self.pending.as_ref().is_some_and(|pending| {
-                matches!(&pending.original,
-                PendingOriginal::Properties(target, _, scope) if target == object && (*scope == PropertyScope::Object || *scope == self.property_scope(object)))
+                let PendingOriginal::Properties(target, _, scope) = &pending.original else {
+                    return false;
+                };
+                target == object
+                    && match scope {
+                        PropertyScope::Object => true,
+                        // A resource inspector also versions its Clip/Expression fields,
+                        // whose default standalone scope is Object.
+                        PropertyScope::Resource { revision } => {
+                            *revision == self.model_generation()
+                        }
+                        _ => *scope == self.property_scope(object),
+                    }
             })
     }
 
