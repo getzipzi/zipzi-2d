@@ -16,6 +16,25 @@ fn blank(cx: &mut TestAppContext) -> Harness {
         tempfile::tempdir().unwrap(),
     )
 }
+
+#[gpui_kit::test]
+fn scene_creation_retains_invalid_input_feedback(cx: &mut TestAppContext) {
+    let h = blank(cx);
+    invoke(&h, C::CreateMesh, CommandSource::Direct, cx);
+    let mesh = inspected(&h, cx);
+    fill(&h, "property-input-name", "   ", cx);
+    invoke(&h, C::CreateMesh, CommandSource::Direct, cx);
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(doc.layers().len(), 2);
+        assert_eq!(doc.history_lengths(), (2, 0));
+        assert_eq!(doc.object_index().name(&mesh), "Mesh");
+        assert!(
+            view.edit_error.is_some(),
+            "invalid text must be explained after creating"
+        );
+    });
+}
 fn inspected(h: &Harness, cx: &TestAppContext) -> ObjectRef {
     h.view.read_with(cx, |view, _| {
         view.editor

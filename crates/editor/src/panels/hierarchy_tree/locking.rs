@@ -23,8 +23,17 @@ pub(super) fn execute(
             if owner.modal || owner.editor.is_busy() || owner.editor.active_id() != Some(document) {
                 return;
             }
+            owner.clear_edit_error(cx);
+            if !owner.prepare_property_inputs(document, window, cx) {
+                return;
+            }
             let result = owner.editor.execute_for(document, command);
-            owner.complete_edit(result, cx);
+            // In particular, commit text before applying a lock that would make
+            // its queued blur read-only. Keep any input-recovery explanation.
+            match result {
+                Ok(()) => owner.redraw(cx),
+                Err(error) => owner.set_edit_error(error.to_string(), cx),
+            }
         });
     }
 }
@@ -176,6 +185,7 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
         } else {
             vec![object.clone()]
         };
+        let creation_selection = objects.clone();
         let objects: Vec<_> = objects.into_iter().filter(|r| locks.contains(r)).collect();
         for (locked, label) in [
             (true, t!("editor.lock_selected")),
@@ -224,7 +234,7 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
                 menu.separator(),
                 panel.clone(),
                 Some(document),
-                Some(vec![object.clone()]),
+                Some(creation_selection),
                 window,
                 cx,
             );

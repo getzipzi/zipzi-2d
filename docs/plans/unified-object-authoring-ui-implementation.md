@@ -416,3 +416,36 @@ U1 的共享适配功能在本轮收口。U3 的 Motion/Expression 新管理入�
 新增 7 项 core 协调用例、5 项 UI 协调用例和 4 项 SDK 集合/范围/锁定保存回读用例；旧的引用删除回归改为验证原生禁用状态和原因。既有测试跨轮有重叠，不累计相加。
 
 未运行昂贵完整套件、Python 绑定构建、原生截图、实际窗口验收或 Release 性能测量。
+
+## U1–U2 Review：输入边界、上下文和能力查询
+
+审查范围为 `1e2ac82^..7a42eb2`，包含起始提交。2026 年 10 月 23 日在当前 checkout 修正以下问题：
+
+- **锁定前丢失文本草稿**：树锁定按钮此前先写锁，迟到的名称 blur 再因只读而失败。锁定、可见性及其来源定位入口现在先通过共享输入边界；合法改名和锁定各占一条历史，非法文本恢复后的原因保留。
+- **参数删除重复结算导致过期拒绝**：管理入口先提交草稿，再用提交前的上下文执行删除，误报 `Object operation context changed`。删除现在只由共享执行器结算输入，并在结算后读取参数版本；Undo 删除恢复已提交的新名称。
+- **树行创建忽略多选**：右键点击多选中的成员时，创建只使用点击行，导致与工具栏/命令的插入位置不同。现在捕获整个相关多选集合，按完整文档顺序插入；菜单打开后的选择变化不会替换捕获的上下文。
+- **Motion 定位时只展开部分组内容**：定位折叠组内后部注册时，前面的行已被跳过、组头也已按折叠状态生成。现在先解析唯一定位目标并展开所属组，再生成行和游标；不激活预览。
+- **创建成功覆盖输入错误**：场景创建不再清除本次输入结算产生的恢复原因。场景菜单和命令共用一个创建执行入口，统一在输入结算后构造和发布计划，删除两套预先规划及重复结算路径。
+- **属性事件重复查询整组能力**：`authoring_capabilities` 包含删除依赖等查询，过去每个控件或预览事件都重新执行。现在按 SDK 会话版本和类型化对象身份缓存原生能力；候选编辑状态在每次读取时叠加，锁定、发布和 Undo/Redo 均随版本失效。工作量回归验证连续 12 次透明度预览复用原生查询，取消候选立即恢复会话可用性。
+
+新增 5 项 UI 回归和 1 项 core 工作量/失效回归。验证采用定向过滤集合：
+
+```sh
+./scripts/test.sh regression -- \
+  document::authoring::capabilities \
+  headless_tests::authoring headless_tests::scene_creation \
+  headless_tests::deformation_creation headless_tests::tree_selection \
+  headless_tests::hierarchy headless_tests::sorting headless_tests::palette \
+  headless_tests::parameter headless_tests::properties headless_tests::physics \
+  headless_tests::animation_panels headless_tests::workspaces \
+  headless_tests::ui_performance properties::form::tests panels::sorting:: \
+  authoring_coordination:: palette_moves:: palette_steps:: palette_reparent:: \
+  organization_authoring:: scene_creation:: deformation_creation::
+
+# 创建入口合并后重新验证受影响路径
+./scripts/test.sh ui -- headless_tests::scene_creation headless_tests::deformation_creation
+cargo fmt --all -- --check
+git diff --check
+```
+
+范围回归 **UI 201 项、core 集成 46 项、core 单元 1 项通过**；创建入口合并后，受影响的 **24 项 UI 测试重跑通过**。格式和 diff 检查通过。未执行昂贵全套、原生截图或 Release 性能基准；缓存优化的验证是查询工作量和行为回归，不代表已完成实际窗口性能验收。U3–U6 阶段状态保持不变。

@@ -42,6 +42,75 @@ fn id(n: u128) -> String {
 }
 
 #[gpui_kit::test]
+fn row_creation_captures_the_existing_multi_selection(cx: &mut TestAppContext) {
+    let mut document = Document::new_blank().unwrap();
+    let mut meshes = Vec::new();
+    for name in ["First", "Middle", "Last", "Tail"] {
+        let plan = document
+            .plan_scene_object_creation(editor_core::SceneObjectType::Mesh, name.into(), &[])
+            .unwrap();
+        meshes.push(
+            document
+                .execute_scene_object_creation(&plan)
+                .unwrap()
+                .suggested_selection[0]
+                .clone(),
+        );
+    }
+    document
+        .select_objects(vec![meshes[2].clone(), meshes[0].clone()])
+        .unwrap();
+    let h = setup_with_document(cx, document, tempfile::tempdir().unwrap());
+    cx.update_window(h.window, |_, window, cx| {
+        window.click_with_options(
+            format!("mesh-item-Mesh:{}", meshes[0].id),
+            ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+        window.render_frame(cx);
+        assert_eq!(
+            h.view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .context()
+                .selections,
+            [meshes[2].clone(), meshes[0].clone()]
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        // Changing selection while the menu is open must not change its sources.
+        h.view.update(cx, |view, _| {
+            view.editor
+                .execute(EditorCommand::SelectObject(meshes[1].clone()))
+                .unwrap();
+        });
+    })
+    .unwrap();
+    choose(&h, "New Mesh", cx);
+    let created = inspected(&h, cx);
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        let children = &doc.mesh_tree()[0].children;
+        assert_eq!(
+            children.iter().map(|n| n.id.as_str()).collect::<Vec<_>>(),
+            [
+                &meshes[0].id,
+                &meshes[1].id,
+                &meshes[2].id,
+                &created.id,
+                &meshes[3].id
+            ]
+        );
+        assert_eq!(doc.history_lengths(), (5, 0));
+    });
+}
+
+#[gpui_kit::test]
 fn toolbar_creation_focuses_name_and_rename_has_separate_history(cx: &mut TestAppContext) {
     let h = setup_with_document(
         cx,

@@ -186,8 +186,8 @@ impl Document {
         }
     }
     pub(super) fn palette_reparent_preflight(&self, request: &PaletteMove) -> Result<bool> {
-        // This does not choose EditState on the user's behalf. The review dialog
-        // defaults to the full domain and requires an explicit scope change.
+        // Match the review's default edit-state guarantee. Full-domain proof
+        // remains an explicit choice in the review, never a hover conversion.
         let edit = reparent_edit(
             self.model(),
             request,

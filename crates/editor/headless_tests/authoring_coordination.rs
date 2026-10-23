@@ -5,6 +5,45 @@ use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 fn id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
+
+#[gpui_kit::test]
+fn locating_a_later_registration_expands_the_whole_group_before_rendering(cx: &mut TestAppContext) {
+    let (d, assets) = document_fixture::animation_document().unwrap();
+    let entry = ObjectRef::new(
+        K::MotionRegistration,
+        d.animation_catalog().motions[1]
+            .selection
+            .entry
+            .as_ref()
+            .unwrap(),
+    );
+    let h = setup_with_document(cx, d, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.click(("animation-motion-group", 0usize), cx);
+        assert!(window.try_find(("animation-motion", 0usize)).is_none());
+        let panel = h
+            .view
+            .read(cx)
+            .dock
+            .as_ref()
+            .unwrap()
+            .animation_motions
+            .clone();
+        let document = h.view.read(cx).editor.active_id().unwrap();
+        panel.update(cx, |panel, cx| panel.locate_object(document, &entry, cx));
+        window.render_frame(cx);
+        assert!(window.find(("animation-motion", 0usize)).visible());
+        assert!(window.find(("animation-motion", 1usize)).visible());
+        assert_eq!(
+            window
+                .find(("animation-motion-group-header", 0usize))
+                .expanded(),
+            Some(true)
+        );
+    })
+    .unwrap();
+}
 #[gpui_kit::test]
 fn locked_folder_toolbar_command_and_row_share_domain_reason_but_inspection_stays_available(
     cx: &mut TestAppContext,

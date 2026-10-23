@@ -130,6 +130,7 @@ pub use reparenting::{PalettePreservation, PaletteReparentCapture, PaletteRepare
 
 #[path = "authoring/capabilities.rs"]
 mod capabilities;
+pub(super) use capabilities::AuthoringCapabilityCache;
 pub use capabilities::{
     AuthoringAction, AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
     ObjectAuthoringCapabilities,

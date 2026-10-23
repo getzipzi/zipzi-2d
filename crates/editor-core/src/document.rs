@@ -147,6 +147,7 @@ pub struct Document {
     preview_revision: u64,
     object_state_index: std::sync::Mutex<Option<(u64, Arc<ObjectStateIndex>)>>,
     object_index: std::sync::Mutex<Option<(u64, Arc<crate::ObjectIndex>)>>,
+    authoring_capability_cache: std::sync::Mutex<authoring::AuthoringCapabilityCache>,
     #[cfg(test)]
     object_index_builds: std::sync::atomic::AtomicUsize,
     pub(crate) animation_catalog: std::sync::Mutex<Option<(u64, Arc<crate::AnimationCatalog>)>>,
@@ -280,6 +281,7 @@ impl Document {
             preview_revision: 0,
             object_state_index: std::sync::Mutex::new(None),
             object_index: std::sync::Mutex::new(Some((1, projection))),
+            authoring_capability_cache: Default::default(),
             #[cfg(test)]
             object_index_builds: std::sync::atomic::AtomicUsize::new(1),
             animation_catalog: std::sync::Mutex::new(None),

@@ -256,6 +256,21 @@ impl AnimationPanel {
         let mut selected_cursor = None;
         let mut row_index = 0;
         if motion_panel {
+            // Resolve and expand before emitting any rows: locating a later
+            // registration must not omit its preceding siblings for one frame.
+            // Clip-only locations choose one registration, preserving its cursor.
+            let located_motion = location.as_ref().and_then(|object| {
+                catalog.motions.iter().position(|resource| {
+                    object.id == resource.selection.clip_id
+                        || resource.selection.entry.as_ref() == Some(&object.id)
+                })
+            });
+            if let Some(index) = located_motion {
+                self.resources
+                    .view
+                    .collapsed
+                    .remove(&catalog.motions[index].group);
+            }
             let mut previous: Option<Option<String>> = None;
             for (index, resource) in catalog.motions.iter().enumerate() {
                 let group = resource.group.clone();
@@ -264,13 +279,7 @@ impl AnimationPanel {
                     Some(name) if name.is_empty() => t!("workspace.unnamed_group").into_owned(),
                     Some(name) => name.clone(),
                 };
-                let located = location.as_ref().is_some_and(|object| {
-                    object.id == resource.selection.clip_id
-                        || resource.selection.entry.as_ref() == Some(&object.id)
-                });
-                if located {
-                    self.resources.view.collapsed.remove(&group);
-                }
+                let located = located_motion == Some(index);
                 let expanded = !self.resources.view.collapsed.contains(&group);
                 if previous.as_ref() != Some(&group) {
                     let count = catalog

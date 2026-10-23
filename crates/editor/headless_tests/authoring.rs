@@ -5,6 +5,69 @@ use editor_core::{
 use gpui_kit::{AppContext as _, TestAppContext, point, px, test::TestWindowExt};
 
 #[gpui_kit::test]
+fn locking_a_tree_object_settles_its_text_before_making_it_readonly(cx: &mut TestAppContext) {
+    let h = setup(cx);
+    let object = h.view.read_with(cx, |view, _| {
+        view.editor.active_inspection().unwrap().object().unwrap()
+    });
+    fill(&h, "property-input-name", "Renamed before locking", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.hover(format!("mesh-item-Mesh:{}", object.id), cx);
+        window.click(format!("mesh-lock-{}", object.id), cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert!(doc.object_state_index().is_locked(&object));
+        assert_eq!(doc.object_index().name(&object), "Renamed before locking");
+        assert_eq!(doc.history_lengths(), (2, 0));
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+    });
+}
+
+#[gpui_kit::test]
+fn deleting_a_parameter_settles_text_once_and_undo_restores_the_committed_name(
+    cx: &mut TestAppContext,
+) {
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
+    let parameter =
+        editor_core::ObjectRef::new(ObjectKind::Parameter, &document.parameters()[0].id);
+    document.navigate(parameter.clone()).unwrap();
+    let h = setup_with_document(cx, document, assets);
+    fill(&h, "property-input-name", "Committed before delete", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        let panel = h.view.read(cx).dock.as_ref().unwrap().parameters.clone();
+        panel.update(cx, |panel, cx| {
+            panel.open_management(
+                crate::panels::parameters::ParameterAction::Delete(parameter.id.clone()),
+                window,
+                cx,
+            );
+        });
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.update(cx, |view, _| {
+        assert!(
+            view.editor.document().unwrap().parameters().is_empty(),
+            "{:?}",
+            view.edit_error
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        assert_eq!(
+            view.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .name(&parameter),
+            "Committed before delete"
+        );
+    });
+}
+
+#[gpui_kit::test]
 fn creation_focuses_name_and_keeps_rename_and_creation_in_separate_history(
     cx: &mut TestAppContext,
 ) {

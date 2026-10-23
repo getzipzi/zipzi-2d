@@ -191,16 +191,15 @@ impl ParametersPanel {
                 return Ok(true);
             }
             state.clear_edit_error(cx);
-            if !state.prepare_property_inputs(document, window, cx) {
-                return Ok(false);
-            }
-            let expected_version = state.editor.document().unwrap().parameter_model_revision();
             let parameter = matches!(
                 action,
                 ParameterAction::Edit(_) | ParameterAction::Delete(_)
             );
             match action {
                 ParameterAction::Edit(id) | ParameterAction::EditGroup(id) => {
+                    if !state.prepare_property_inputs(document, window, cx) {
+                        return Ok(false);
+                    }
                     let kind = if parameter {
                         editor_core::ObjectKind::Parameter
                     } else {
@@ -233,10 +232,13 @@ impl ParametersPanel {
                         .authoring_neighbors(&object);
                     let result =
                         state.execute_authoring(context, window, cx, |editor, document| {
-                            let plan = editor
-                                .document()
-                                .unwrap()
-                                .plan_parameter_object_deletion(&object, expected_version)?;
+                            // The shared boundary may commit a valid draft.
+                            // Capture the deletion version only after it settles.
+                            let doc = editor.document().unwrap();
+                            let plan = doc.plan_parameter_object_deletion(
+                                &object,
+                                doc.parameter_model_revision(),
+                            )?;
                             editor.execute_organization_authoring(document, &plan)
                         })?;
                     location = state.present_authoring_result(

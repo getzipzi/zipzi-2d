@@ -1,8 +1,6 @@
 use super::*;
 use crate::authoring::AuthoringContext;
-use crate::authoring::scene_creation::{
-    COMMANDS, DEFORMATION_COMMANDS, creation_error, default_name,
-};
+use crate::authoring::scene_creation::{COMMANDS, DEFORMATION_COMMANDS, creation_error};
 use editor_core::ObjectRef;
 use gpui_kit::component::menu::{ContextMenuExt, DropdownMenu, PopupMenu, PopupMenuItem};
 
@@ -104,21 +102,14 @@ pub(super) fn creation_menu<const DEFORMER: bool>(
                             state.set_edit_error(t!("authoring.move_stale").into_owned(), cx);
                             return;
                         }
-                        match state
-                            .editor
-                            .document()
-                            .unwrap()
-                            .plan_scene_object_creation_in(
-                                command.scene_creation_projection().unwrap(),
-                                kind,
-                                default_name(kind),
-                                &selection,
-                            ) {
-                            Ok(plan) => {
-                                state.apply_scene_creation(context, &plan, kind, window, cx)
-                            }
-                            Err(error) => state.set_edit_error(creation_error(&error), cx),
-                        }
+                        state.create_scene_object(
+                            context,
+                            command.scene_creation_projection().unwrap(),
+                            kind,
+                            &selection,
+                            window,
+                            cx,
+                        );
                     });
                 }),
         );

@@ -4,6 +4,14 @@ use super::*;
 use anyhow::{Result, ensure};
 use kasane_sdk::{CapabilityState as C, ObjectKind as K};
 
+#[derive(Default)]
+pub(in crate::document) struct AuthoringCapabilityCache {
+    version: Option<kasane_sdk::Version>,
+    objects: std::collections::HashMap<ObjectRef, ObjectAuthoringCapabilities>,
+    #[cfg(test)]
+    builds: usize,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AuthoringAction {
     Inspect,
@@ -135,6 +143,36 @@ impl Document {
         &self,
         object: &ObjectRef,
     ) -> Result<ObjectAuthoringCapabilities> {
+        // SDK capabilities describe committed state. Preview-only updates keep
+        // that state; candidate availability is overlaid on every read below.
+        // Full capability queries include dependency checks for deletion, so do
+        // not repeat them for each property control, hover or input event.
+        let mut cache = self.authoring_capability_cache.lock().unwrap();
+        let version = self.session.version();
+        if cache.version != Some(version) {
+            cache.version = Some(version);
+            cache.objects.clear();
+        }
+        if !cache.objects.contains_key(object) {
+            let capabilities = self.query_authoring_capabilities(object)?;
+            cache.objects.insert(object.clone(), capabilities);
+            #[cfg(test)]
+            {
+                cache.builds += 1;
+            }
+        }
+        let mut result = cache.objects[object].clone();
+        result.session_reason = self
+            .pending
+            .as_ref()
+            .map(|_| AuthoringSessionReason::CandidateActive);
+        Ok(result)
+    }
+
+    fn query_authoring_capabilities(
+        &self,
+        object: &ObjectRef,
+    ) -> Result<ObjectAuthoringCapabilities> {
         use AuthoringAction as A;
         ensure!(
             self.object_index().get(object).is_some(),
@@ -142,10 +180,7 @@ impl Document {
         );
         let mut result = ObjectAuthoringCapabilities {
             states: vec![],
-            session_reason: self
-                .pending
-                .as_ref()
-                .map(|_| AuthoringSessionReason::CandidateActive),
+            session_reason: None,
         };
         macro_rules! states { ($cap:expr; $($action:ident => $field:ident),+ $(,)?) => {{
             let cap = $cap?; $(result.states.push((A::$action,cap.$field.clone()));)+
@@ -347,5 +382,76 @@ impl crate::Editor {
                 code: "USE_SPECIALIZED_COMMAND",
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn capability_queries_reuse_committed_state_but_refresh_locks_history_and_candidates()
+    -> Result<()> {
+        let mut doc = Document::new_blank()?;
+        let creation = doc.plan_scene_object_creation(SceneObjectType::Mesh, "Mesh".into(), &[])?;
+        let mesh = doc
+            .execute_scene_object_creation(&creation)?
+            .suggested_selection[0]
+            .clone();
+        doc.select_object(mesh.clone())?;
+        assert_eq!(
+            doc.authoring_capabilities(&mesh)?
+                .state(AuthoringAction::Patch),
+            C::Available
+        );
+        let builds = doc.authoring_capability_cache.lock().unwrap().builds;
+        for n in 1..=12 {
+            doc.preview_opacity(n as f32 / 16.)?;
+            let capabilities = doc.authoring_capabilities(&mesh)?;
+            assert_eq!(capabilities.state(AuthoringAction::Patch), C::Available);
+            assert_eq!(
+                capabilities.session_reason,
+                Some(AuthoringSessionReason::CandidateActive)
+            );
+        }
+        doc.cancel_edit();
+        assert_eq!(doc.authoring_capabilities(&mesh)?.session_reason, None);
+        assert_eq!(
+            doc.authoring_capability_cache.lock().unwrap().builds,
+            builds
+        );
+
+        doc.set_objects_locked(std::slice::from_ref(&mesh), true)?;
+        assert_eq!(
+            doc.authoring_capabilities(&mesh)?
+                .state(AuthoringAction::Patch),
+            C::Unavailable {
+                code: "OBJECT_LOCKED"
+            }
+        );
+        assert_eq!(
+            doc.authoring_capability_cache.lock().unwrap().builds,
+            builds + 1
+        );
+        doc.undo()?;
+        assert_eq!(
+            doc.authoring_capabilities(&mesh)?
+                .state(AuthoringAction::Patch),
+            C::Available
+        );
+        doc.undo()?;
+        assert!(doc.authoring_capabilities(&mesh).is_err());
+        doc.redo()?;
+        assert_eq!(
+            doc.authoring_capabilities(&mesh)?
+                .state(AuthoringAction::Patch),
+            C::Available
+        );
+        assert!(
+            doc.authoring_capabilities(&ObjectRef::new(ObjectKind::Parameter, &mesh.id))
+                .is_err()
+        );
+        assert_eq!(doc.history_lengths(), (1, 1));
+        Ok(())
     }
 }

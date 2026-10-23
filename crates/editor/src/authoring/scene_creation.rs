@@ -1,7 +1,7 @@
 //! Explicit scene projection creation shared by row menus, toolbars, native
 //! menus and configured shortcuts. The core owns defaults and placement.
 use super::*;
-use editor_core::{Command, CommandId, SceneObjectCreationPlan, SceneObjectType};
+use editor_core::{Command, CommandId, PaletteProjection, SceneObjectType};
 
 pub(crate) const COMMANDS: [CommandId; 5] = [
     CommandId::CreatePart,
@@ -55,40 +55,38 @@ impl EditorView {
         // Capture the same scene selection as the toolbar before input
         // settlement can notify another control. The command names its projection.
         let selection = self.editor.document().unwrap().context().selections.clone();
-        if !self.prepare_property_inputs(document, window, cx) {
-            return;
-        }
         let Some(context) = AuthoringContext::capture(&self.editor) else {
             return;
         };
-        match self
-            .editor
-            .document()
-            .unwrap()
-            .plan_scene_object_creation_in(
-                command.id.scene_creation_projection().unwrap(),
-                kind,
-                default_name(kind),
-                &selection,
-            ) {
-            Ok(plan) => self.apply_scene_creation(context, &plan, kind, window, cx),
-            Err(error) => self.set_edit_error(creation_error(&error), cx),
-        }
+        self.create_scene_object(
+            context,
+            command.id.scene_creation_projection().unwrap(),
+            kind,
+            &selection,
+            window,
+            cx,
+        );
     }
 
-    pub(crate) fn apply_scene_creation(
+    pub(crate) fn create_scene_object(
         &mut self,
         context: AuthoringContext,
-        plan: &SceneObjectCreationPlan,
+        projection: PaletteProjection,
         kind: SceneObjectType,
+        selection: &[ObjectRef],
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let document = context.editing.document;
-        let projection = plan.projection();
         let result = self
             .execute_authoring(context, window, cx, |editor, document| {
-                editor.execute_scene_object_creation(document, plan)
+                let plan = editor.document().unwrap().plan_scene_object_creation_in(
+                    projection,
+                    kind,
+                    default_name(kind),
+                    selection,
+                )?;
+                editor.execute_scene_object_creation(document, &plan)
             })
             .and_then(|result| {
                 self.present_authoring_result(
@@ -104,7 +102,8 @@ impl EditorView {
             });
         match result {
             Ok(_) => {
-                self.clear_edit_error(cx);
+                // Input settlement may have restored invalid text and reported
+                // why. A successful creation must keep that feedback visible.
                 self.redraw(cx);
             }
             Err(error) => self.set_edit_error(creation_error(&error), cx),
