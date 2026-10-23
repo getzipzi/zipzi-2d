@@ -10,14 +10,17 @@ No new GitHub repository, push, remote rename, or archive was performed.
 
 P0 baseline capture, P1 history import, P2 workspace integration and P3 path/tool
 adaptation are complete.
-**This remains a migration checkpoint:** P4–P6 are pending. Cargo resolves one
+**Revised scope:** the user now requests a fully flattened repository. P3F
+(flatten all owned crates, consolidate assets/tools/docs/vendor, then adapt paths)
+is next, followed by P4–P6. P0–P3 results describe the intermediate layout, not
+acceptance of the future flattened layout. Cargo resolves one
 workspace and lockfile; Editor entrypoints and fixtures use this checkout. SDK CI
 and broad test entrypoints still need package-scope adaptation. In particular, existing SDK
 `--workspace` commands now include Editor; use explicit package selections until
 P4. Native runtime, full app packaging and licensed-model acceptance remain
 part of the later end-to-end gates.
 
-The governing [implementation plan](../../apps/editor/docs/plans/repository-merge-plan.md)
+The governing [implementation plan](../plans/repository-merge-plan.md)
 retains the design and acceptance matrix. Its original snapshot is historical;
 this record and baseline.json identify the actual imported sources. The user’s
 new-checkout request replaces the plan’s suggestion to work inside kasane-2d.
@@ -97,10 +100,11 @@ python3.14 docs/repository-merge/verify-workspace.py
 
 See [P3 implementation and validation](p3-paths.md).
 
-## Next: P4, then repository acceptance
+## Next: P3F, then P4 and repository acceptance
 
-1. Separate SDK and Editor package selection before running broad gates (P4).
-2. Finish licensing/navigation/assets and isolation acceptance (P5–P6).
+1. Implement the revised flat layout and repeat affected path/resource checks (P3F).
+2. Separate SDK and Editor package selection before running broad gates (P4).
+3. Finish licensing/navigation/assets and isolation acceptance (P5–P6).
 
 Native runtime tests, asset acceptance, Python wheel, GitHub license recognition
 and cross-platform CI remain unverified. Recheck original HEADs before the next

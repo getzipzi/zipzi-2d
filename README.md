@@ -4,7 +4,9 @@ This checkout is integrating the Kasane SDK and Editor. SDK code is
 MIT licensed; `apps/editor` is GPL-3.0-only, with third-party notices retained.
 The Cargo workspace and Editor script paths are unified; CI is still being migrated.
 Use explicit Cargo package selections until the broad test gates are adapted.
-See the [migration status](docs/repository-merge/README.md).
+See the [migration status](docs/repository-merge/README.md) and the
+[revised flattening plan](docs/plans/repository-merge-plan.md). The planned root
+`crates/`, shared assets/tools/docs and vendor layout is not implemented yet.
 
 Kasane 2D provides a Rust authoring SDK, Python bindings, and a WGPU renderer
 
@@ -71,7 +73,7 @@ remains a separate gate; its failures are propagated.
 Run Python tools with `uv run --locked ...`. Add development dependencies with
 `uv add --group dev <package>` and commit both `pyproject.toml` and `uv.lock`.
 Agent experiments share one uv-managed environment per experiment and allow
-participants to install dependencies; see the [experiment guide](docs/SDK-EXPERIMENTS.md).
+participants to install dependencies; see the [experiment guide](docs/archive/SDK-EXPERIMENTS.md).
 
 The wheel validator installs the wheel into a temporary environment outside
 the source tree and tests project creation, import, editing, save, and export.
