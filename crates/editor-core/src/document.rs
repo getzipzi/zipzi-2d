@@ -164,7 +164,7 @@ pub use authoring::{
     OperationResult, OrganizationAuthoringCapabilities, PaletteMove, PaletteMovePlan,
     PalettePosition, PaletteProjection, PhysicsAuthoringCapabilities, PoseAuthoringCapabilities,
     ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
-    SceneContentAuthoringCapabilities,
+    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType,
 };
 mod edits;
 mod physics;

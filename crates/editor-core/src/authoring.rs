@@ -4,6 +4,9 @@ use super::*;
 use crate::{ObjectKind, ObjectRef};
 #[path = "authoring/creation.rs"]
 mod creation;
+#[path = "authoring/scene_creation.rs"]
+mod scene_creation;
+pub use scene_creation::{SceneObjectCreationPlan, SceneObjectType};
 #[path = "authoring/moving.rs"]
 mod moving;
 pub use moving::{PaletteMove, PaletteMovePlan, PalettePosition, PaletteProjection};

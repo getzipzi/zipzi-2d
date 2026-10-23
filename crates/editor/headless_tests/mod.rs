@@ -22,6 +22,7 @@ mod physics;
 mod project_import;
 mod properties;
 mod recent_files;
+mod scene_creation;
 mod slide_number_input;
 mod sorting;
 mod themes;

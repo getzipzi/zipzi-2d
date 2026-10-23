@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter 创建与共享移动切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建与共享移动切片**，尚未完成 U1–U6 全部验收。
 
 ## 首轮实现：创建与输入边界
 
@@ -16,7 +16,7 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter 创建；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序、拒绝原因与单对象右键上下移已接入；变形树同父级排序使用相同规划入口 | 层级树创建、完整多选选择语义、变形父级保持形态移动、可配置移动快捷键、移到指定容器菜单与新建项过滤显露仍待实施 |
+| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序、拒绝原因与单对象右键上下移已接入；变形树同父级排序使用相同规划入口 | 变形树创建、完整多选选择语义、变形父级保持形态移动、可配置移动快捷键与移到指定容器菜单仍待实施 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
@@ -82,3 +82,34 @@ env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integrat
 ```
 
 受影响 UI 回归 **149 项通过**，包含新增的 8 项移动 UI 回归；其中悬停规划工作次数测试验证连续输入和重绘不重复构建计划。新增 core 移动专项 5 项通过。core 受影响过滤门禁共 **21 项通过**，包含新增移动专项 5 项；格式与空白检查通过。本轮未运行完整套件、原生截图和 Release 性能基准。
+
+
+## 第三轮实现：组织树创建与筛选显露
+
+前两轮代码已提交为 `65dd84a`。依照用户“commit 后继续”的要求，本轮在当前 checkout 接续 U2；依赖仍为 `kasane-2d b86b13b`，没有修改相邻仓库。
+
+- 新增 core `SceneObjectType` / `SceneObjectCreationPlan`：统一 Part、空 Mesh、Warp、Rotation、Offscreen 的创建规划。UI 只提供本地化名称与捕获的上下文；core 分配 UUID、按拥有者避重默认名称、确定完整集合插入锚点，SDK 生成数据默认值、验证归属/锁并发布单条历史。
+- 单个 Part 内追加；普通行同级之后创建；同拥有者多选在完整顺序的最后选中项之后创建；跨拥有者选择回到根集合。根部 Part 与未归属对象按各自显示分支确定顺序。组织树中的变形器行只表示组织归属，创建不会意外改变实际变形父级。
+- 组织树工具栏提供新建菜单，行菜单捕获点击行，空结果/根行提供根集合菜单。菜单打开前结算输入，一次规划后捕获版本；切换文档/工作区或修改文档后拒绝旧菜单。锁定与 Offscreen 缺少 Part 归属保留禁用原因和中英文说明。
+- 创建成功后复用共享结果检查，选中对象、展开祖先、滚动、显示 Properties 并聚焦名称。后续改名与创建分别撤销。
+- 搜索或类型排除时，临时显露新对象及其祖先，标记“新建”；不扩散到兄弟或后代，也不改写筛选条件。已有清除筛选按钮仍可用；修改筛选、选择其他对象或切换文档会清理临时显露。
+
+变形树创建尚未接入。当前 SDK 的 `SceneEdit::Create.before` 定位组织集合，变形顺序仅追加，不能原子表达在完整变形同级顺序的指定位置插入；需补充类型化创建位置契约后再接 UI，详见[核心方案第 6.1 节](unified-object-authoring-core.md#61-ui-u2-发现的后续创建位置契约)。本轮没有用第二条移动历史补齐位置。
+
+第三轮定向门禁：
+
+```sh
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+  headless_tests::scene_creation headless_tests::hierarchy headless_tests::sorting \
+  headless_tests::authoring headless_tests::properties headless_tests::panel_toolbar \
+  headless_tests::command_targets headless_tests::ui_performance \
+  panels::hierarchy_tree::filter
+
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+  scene_creation:: scene_lifecycle:: palette_moves:: organization_authoring:: sorting::
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+受影响 UI/筛选/工作量回归 **92 项通过**（包含新增的 6 项创建 UI 回归和 1 项筛选显露单测）；core 创建、场景生命周期、移动和组织回归 **31 项通过**（包含新增的 5 项创建回归）。格式与空白检查通过。没有运行完整套件、原生截图或 Release 性能基准。U2 仍未全量验收；主菜单/快捷键创建、变形树创建和阶段状态表中的剩余内容继续待接入。

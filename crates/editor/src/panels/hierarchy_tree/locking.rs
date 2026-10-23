@@ -143,12 +143,12 @@ pub(super) fn button(
         )
 }
 
-pub(super) fn menu<E: ContextMenuExt + IntoElement + 'static>(
+pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'static>(
     element: E,
     owner: WeakEntity<EditorView>,
     document: DocumentId,
     object: ObjectRef,
-    deformer: bool,
+    panel: WeakEntity<super::HierarchyTreePanel<DEFORMER>>,
 ) -> impl IntoElement {
     element.context_menu(move |mut menu, window, cx| {
         menu = crate::ui::compact::menu(menu);
@@ -219,11 +219,21 @@ pub(super) fn menu<E: ContextMenuExt + IntoElement + 'static>(
                 );
             }));
         }
+        if !DEFORMER {
+            menu = super::management::creation_menu(
+                menu.separator(),
+                panel.clone(),
+                Some(document),
+                Some(vec![object.clone()]),
+                window,
+                cx,
+            );
+        }
         super::sorting::move_menu(
             menu.separator(),
             owner.clone(),
             document,
-            if deformer {
+            if DEFORMER {
                 editor_core::PaletteProjection::Deformation
             } else {
                 editor_core::PaletteProjection::Organization

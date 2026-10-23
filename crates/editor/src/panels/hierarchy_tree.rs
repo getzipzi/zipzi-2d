@@ -1,5 +1,6 @@
 mod filter;
 mod locking;
+mod management;
 mod visibility;
 
 use super::sorting::{self, SortItem, SortState};
@@ -131,6 +132,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
 
     fn filter_changed(&mut self, cx: &mut Context<Self>) {
         self.filtered_collapsed.clear();
+        self.view.filter.revealed = None;
         self.rows_dirty = true;
         self.scroll = UniformListScrollHandle::new();
         cx.notify();
@@ -169,6 +171,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
             self.view = target
                 .and_then(|id| self.document_views.get(&id).cloned())
                 .unwrap_or_default();
+            self.view.filter.revealed = None;
             self.document_id = target;
             self.revision = None;
             self.last_selection = None;
@@ -204,6 +207,9 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         let target = self.document_id;
         let panel = cx.weak_entity();
         PanelToolbar::new(SharedString::from(format!("{prefix}-panel-toolbar")))
+            .when(!DEFORMER, |toolbar| {
+                toolbar.control(management::button(self, cx))
+            })
             .control(
                 PanelToolbarPopover::new(
                     SharedString::from(format!("{prefix}-tree-filter-popover")),
@@ -379,6 +385,9 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
         }
         let selection_changed = self.last_selection != selected || document_changed;
         if selection_changed {
+            if self.view.filter.revealed.as_ref() != selected.as_ref() {
+                self.view.filter.revealed = None;
+            }
             fn reveal(
                 nodes: &[TreeNode],
                 target: &editor_core::ObjectRef,
@@ -463,6 +472,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 } else {
                     t!("editor.no_meshes")
                 })
+                .map(|element| management::root_menu(element, cx.weak_entity(), target))
                 .into_any_element()
         } else {
             sorting::scroll_area(
@@ -497,6 +507,10 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                         None
                                     };
                                     let reference = node.reference();
+                                    let created_revealed = filtered
+                                        && reference.as_ref().is_some_and(|object| {
+                                            this.view.filter.revealed.as_ref() == Some(object)
+                                        });
                                     let visibility_object = reference.clone();
                                     let lock_object = reference.clone();
                                     let lock_owner = this.owner.clone();
@@ -732,6 +746,16 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                     this.child(format!(" ⚠ {d}"))
                                                 }),
                                         )
+                                        .when(created_revealed, |element| {
+                                            element.child(
+                                                div()
+                                                    .id("tree-created-item")
+                                                    .test_support()
+                                                    .text_xs()
+                                                    .text_color(theme.muted_foreground)
+                                                    .child(t!("authoring.new_item")),
+                                            )
+                                        })
                                         .when_some(visibility_object, |element, object| {
                                             element.when_some(target, |element, target| {
                                                 element.child(visibility::button(
@@ -768,7 +792,13 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                 lock_owner.clone(),
                                                 target,
                                                 object,
-                                                DEFORMER,
+                                                cx.weak_entity(),
+                                            )
+                                            .into_any_element(),
+                                            _ if !DEFORMER => management::root_menu(
+                                                element,
+                                                cx.weak_entity(),
+                                                target,
                                             )
                                             .into_any_element(),
                                             _ => element.into_any_element(),
@@ -788,22 +818,26 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             .into_any_element()
         })
         .when(!DEFORMER && target.is_some(), |element| {
-            element.child(sorting::drop_target(
-                div()
-                    .id("mesh-tree-root-drop")
-                    .test_support()
-                    .h(crate::ui::compact::rem(crate::ui::compact::ROW))
-                    .flex_shrink_0()
-                    .px_3()
-                    .flex()
-                    .items_center()
-                    .text_xs()
-                    .text_color(theme.muted_foreground)
-                    .child(t!("editor.tree_drop_root")),
-                &self.sorting,
-                SortItem::TreeRoot,
-                None,
-                cx,
+            element.child(management::root_menu(
+                sorting::drop_target(
+                    div()
+                        .id("mesh-tree-root-drop")
+                        .test_support()
+                        .h(crate::ui::compact::rem(crate::ui::compact::ROW))
+                        .flex_shrink_0()
+                        .px_3()
+                        .flex()
+                        .items_center()
+                        .text_xs()
+                        .text_color(theme.muted_foreground)
+                        .child(t!("editor.tree_drop_root")),
+                    &self.sorting,
+                    SortItem::TreeRoot,
+                    None,
+                    cx,
+                ),
+                cx.weak_entity(),
+                target,
             ))
         })
         .into_any_element()

@@ -5,6 +5,7 @@ use std::{collections::HashSet, ops::Range};
 pub(super) struct TreeFilter {
     pub query: String,
     pub excluded: Vec<TreeNodeKind>,
+    pub revealed: Option<editor_core::ObjectRef>,
 }
 
 impl TreeFilter {
@@ -92,7 +93,11 @@ pub(super) fn visible_rows(
             || query.is_empty()
             || lowercase(&node.name).contains(query)
             || lowercase(&node.id).contains(query);
-        let matches = in_scope && filter.includes(node.kind);
+        let matches = (in_scope && filter.includes(node.kind))
+            || filter
+                .revealed
+                .as_ref()
+                .is_some_and(|object| node.reference().as_ref() == Some(object));
         let start = rows.len();
         rows.push(row(node, depth, !matches));
         let mut has_children = false;
@@ -192,6 +197,7 @@ mod tests {
         let filter = TreeFilter {
             query: "头部".into(),
             excluded: vec![Part, WarpDeformer, RotationDeformer, Offscreen],
+            ..Default::default()
         };
         let rows = visible_rows(&fixture(), &HashSet::new(), &filter);
         assert_eq!(ids(&rows), ["root", "head", "eye-left"]);
@@ -257,6 +263,33 @@ mod tests {
                 &TreeFilter::default()
             )),
             ["root"]
+        );
+    }
+
+    #[test]
+    fn temporary_reveal_keeps_only_the_created_item_and_its_ancestor_path() {
+        let filter = TreeFilter {
+            query: "missing".into(),
+            excluded: vec![Mesh],
+            revealed: Some(editor_core::ObjectRef::new(
+                editor_core::ObjectKind::Mesh,
+                "eye-left",
+            )),
+        };
+        let rows = visible_rows(&fixture(), &HashSet::new(), &filter);
+        assert_eq!(ids(&rows), ["root", "head", "eye-left"]);
+        assert!(rows[0].context_only && rows[1].context_only);
+        assert!(!rows[2].context_only);
+        let filter = TreeFilter {
+            revealed: Some(editor_core::ObjectRef::new(
+                editor_core::ObjectKind::Part,
+                "head",
+            )),
+            ..filter
+        };
+        assert_eq!(
+            ids(&visible_rows(&fixture(), &HashSet::new(), &filter)),
+            ["root", "head"]
         );
     }
 

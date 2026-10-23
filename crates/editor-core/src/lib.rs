@@ -43,7 +43,7 @@ pub use document::{
     ParameterKey, ParameterManagementError, ParameterValidationError, ParameterValue,
     ParameterVisual, PhysicsAuthoringCapabilities, PoseAuthoringCapabilities,
     ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
-    SceneContentAuthoringCapabilities,
+    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};
