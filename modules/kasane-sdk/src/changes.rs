@@ -4,7 +4,7 @@ use crate::types::{ObjectKey, ObjectKind};
 use kasane_core::document::ExpressionTarget;
 use kasane_core::{ChangeKind, Document};
 use serde::Serialize;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 mod binding;
 mod content;
 mod document;
@@ -124,40 +124,171 @@ pub struct ChangeSet {
     pub categories: BTreeSet<ChangeCategory>,
     pub full_invalidation: bool,
 }
+impl CollectionRef {
+    fn extra_bytes(&self) -> usize {
+        match self {
+            CollectionRef::Resources { document_id } => document_id.capacity(),
+            CollectionRef::References {
+                document_id,
+                collection,
+            } => {
+                document_id.capacity()
+                    + match collection {
+                        kasane_core::document::ReferenceCollection::ModelParameterMembers {
+                            group_id,
+                        } => group_id.capacity(),
+                        kasane_core::document::ReferenceCollection::CdiCombinedMembers {
+                            set_id,
+                        } => set_id.capacity(),
+                        _ => 0,
+                    }
+            }
+            CollectionRef::SceneContent {
+                document_id,
+                owner_id,
+                ..
+            } => document_id.capacity() + owner_id.capacity(),
+            CollectionRef::Scene {
+                document_id,
+                collection,
+            } => {
+                document_id.capacity()
+                    + match collection {
+                        kasane_core::document::SceneCollection::Organization { part_id } => {
+                            part_id.as_ref().map_or(0, String::capacity)
+                        }
+                        kasane_core::document::SceneCollection::Deformation { parent_id } => {
+                            parent_id.as_ref().map_or(0, String::capacity)
+                        }
+                        kasane_core::document::SceneCollection::Drawing { owner } => {
+                            owner.capacity()
+                        }
+                        _ => 0,
+                    }
+            }
+            CollectionRef::DeformationChildren {
+                document_id,
+                parent_id,
+            } => document_id.capacity() + parent_id.capacity(),
+            CollectionRef::BindingGrid {
+                document_id,
+                binding_id,
+            } => document_id.capacity() + binding_id.capacity(),
+            CollectionRef::Organization {
+                document_id,
+                collection,
+            } => {
+                document_id.capacity()
+                    + match collection {
+                        kasane_core::document::OrganizationCollection::Parameters { group_id } => {
+                            group_id.as_ref().map_or(0, String::capacity)
+                        }
+                        kasane_core::document::OrganizationCollection::ParameterGroups {
+                            parent_id,
+                        } => parent_id.as_ref().map_or(0, String::capacity),
+                        kasane_core::document::OrganizationCollection::PartMembers { part_id } => {
+                            part_id.as_ref().map_or(0, String::capacity)
+                        }
+                    }
+            }
+            CollectionRef::Pose {
+                document_id,
+                owner,
+                role,
+            }
+            | CollectionRef::Physics {
+                document_id,
+                owner,
+                role,
+            }
+            | CollectionRef::Motion {
+                document_id,
+                owner,
+                role,
+            } => {
+                document_id.capacity()
+                    + owner.as_ref().map_or(0, String::capacity)
+                    + role.capacity()
+            }
+            CollectionRef::Expressions { document_id } => document_id.capacity(),
+            CollectionRef::ExpressionEntries {
+                document_id,
+                expression_id,
+            } => document_id.capacity() + expression_id.capacity(),
+        }
+    }
+}
+
+impl EntityRef {
+    fn new(document_id: &str, kind: ObjectKind, id: &str) -> Self {
+        Self {
+            document_id: document_id.into(),
+            kind,
+            id: id.into(),
+        }
+    }
+
+    fn extra_bytes(&self) -> usize {
+        self.id.capacity() + self.document_id.capacity()
+    }
+}
+
+// Include spare vector slots as well as allocations owned by occupied elements.
+fn vec_bytes<T>(items: &Vec<T>, extra: impl Fn(&T) -> usize) -> usize {
+    items.capacity() * std::mem::size_of::<T>() + items.iter().map(extra).sum::<usize>()
+}
+
+// Preserve sorted traversal and leave field comparison and classification to each domain.
+fn paired_records<'a, K: Ord, V>(
+    before: &'a BTreeMap<K, V>,
+    after: &'a BTreeMap<K, V>,
+) -> impl Iterator<Item = (&'a K, Option<&'a V>, Option<&'a V>)> {
+    before
+        .keys()
+        .chain(after.keys())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(|key| (key, before.get(key), after.get(key)))
+}
+
 impl ChangeSet {
+    /// Publication order is preserved; callers choose whether to deduplicate IDs.
+    pub(crate) fn affected_entities(&self) -> impl Iterator<Item = &EntityRef> {
+        self.created
+            .iter()
+            .chain(&self.deleted)
+            .chain(&self.modified)
+    }
+
+    fn retain_existing_modified(&mut self) {
+        self.modified
+            .retain(|e| !self.created.contains(e) && !self.deleted.contains(e));
+    }
+
     pub(crate) fn inverted(&self) -> Self {
         let mut inverse = self.clone();
         std::mem::swap(&mut inverse.created, &mut inverse.deleted);
-        for edge in &mut inverse.references {
-            std::mem::swap(&mut edge.before, &mut edge.after);
+        macro_rules! invert_edges {
+            ($($field:ident),+ $(,)?) => {$(
+                for edge in &mut inverse.$field {
+                    std::mem::swap(&mut edge.before, &mut edge.after);
+                }
+            )+};
         }
-        for edge in &mut inverse.motion_references {
-            std::mem::swap(&mut edge.before, &mut edge.after);
-        }
+        invert_edges!(
+            references,
+            motion_references,
+            reference_fields,
+            reference_selections,
+            content_references,
+            scene_references,
+            organization_references,
+            pose_references,
+            physics_references,
+            binding_references,
+        );
         for edge in &mut inverse.reference_fields {
-            std::mem::swap(&mut edge.before, &mut edge.after);
             std::mem::swap(&mut edge.before_owner, &mut edge.after_owner);
-        }
-        for edge in &mut inverse.reference_selections {
-            std::mem::swap(&mut edge.before, &mut edge.after);
-        }
-        for edge in &mut inverse.content_references {
-            std::mem::swap(&mut edge.before, &mut edge.after);
-        }
-        for edge in &mut inverse.scene_references {
-            std::mem::swap(&mut edge.before, &mut edge.after);
-        }
-        for edge in &mut inverse.organization_references {
-            std::mem::swap(&mut edge.before, &mut edge.after);
-        }
-        for edge in &mut inverse.pose_references {
-            std::mem::swap(&mut edge.before, &mut edge.after);
-        }
-        for edge in &mut inverse.physics_references {
-            std::mem::swap(&mut edge.before, &mut edge.after);
-        }
-        for edge in &mut inverse.binding_references {
-            std::mem::swap(&mut edge.before, &mut edge.after);
         }
         inverse
     }
@@ -165,175 +296,35 @@ impl ChangeSet {
         std::mem::size_of::<Self>()
             + self.document_fields.capacity()
                 * std::mem::size_of::<kasane_core::document::DocumentField>()
-            + self.reference_fields.capacity() * std::mem::size_of::<ReferenceFieldChange>()
-            + self
-                .reference_fields
-                .iter()
-                .map(ReferenceFieldChange::extra_bytes)
-                .sum::<usize>()
-            + self.reference_selections.capacity() * std::mem::size_of::<ReferenceSelectionChange>()
-            + self
-                .reference_selections
-                .iter()
-                .map(|c| {
-                    c.entity.id.capacity()
-                        + c.entity.document_id.capacity()
-                        + (c.before.capacity() + c.after.capacity()) * std::mem::size_of::<String>()
-                        + c.before
-                            .iter()
-                            .chain(&c.after)
-                            .map(String::capacity)
-                            .sum::<usize>()
-                })
-                .sum::<usize>()
-            + self.content_references.capacity()
-                * std::mem::size_of::<SceneContentReferenceChange>()
-            + self
-                .content_references
-                .iter()
-                .map(SceneContentReferenceChange::extra_bytes)
-                .sum::<usize>()
-            + self.content_changes.capacity() * std::mem::size_of::<SceneContentChange>()
-            + self
-                .content_changes
-                .iter()
-                .map(|c| c.entity.id.capacity() + c.entity.document_id.capacity())
-                .sum::<usize>()
-            + (self.created.capacity() + self.deleted.capacity() + self.modified.capacity())
-                * std::mem::size_of::<EntityRef>()
-            + self
-                .created
-                .iter()
-                .chain(&self.deleted)
-                .chain(&self.modified)
-                .map(|e| e.id.capacity() + e.document_id.capacity())
-                .sum::<usize>()
-            + self.collections.capacity() * std::mem::size_of::<CollectionRef>()
-            + self
-                .collections
-                .iter()
-                .map(|c| match c {
-                    CollectionRef::Resources { document_id } => document_id.capacity(),
-                    CollectionRef::References {
-                        document_id,
-                        collection,
-                    } => {
-                        document_id.capacity() + match collection {
-                            kasane_core::document::ReferenceCollection::ModelParameterMembers {
-                                group_id,
-                            } => group_id.capacity(),
-                            kasane_core::document::ReferenceCollection::CdiCombinedMembers {
-                                set_id,
-                            } => set_id.capacity(),
-                            _ => 0,
-                        }
-                    }
-                    CollectionRef::SceneContent {
-                        document_id,
-                        owner_id,
-                        ..
-                    } => document_id.capacity() + owner_id.capacity(),
-                    CollectionRef::Scene {
-                        document_id,
-                        collection,
-                    } => {
-                        document_id.capacity()
-                            + match collection {
-                                kasane_core::document::SceneCollection::Organization {
-                                    part_id,
-                                } => part_id.as_ref().map_or(0, String::capacity),
-                                kasane_core::document::SceneCollection::Deformation {
-                                    parent_id,
-                                } => parent_id.as_ref().map_or(0, String::capacity),
-                                kasane_core::document::SceneCollection::Drawing { owner } => {
-                                    owner.capacity()
-                                }
-                                _ => 0,
-                            }
-                    }
-                    CollectionRef::DeformationChildren {
-                        document_id,
-                        parent_id,
-                    } => document_id.capacity() + parent_id.capacity(),
-                    CollectionRef::BindingGrid {
-                        document_id,
-                        binding_id,
-                    } => document_id.capacity() + binding_id.capacity(),
-                    CollectionRef::Organization {
-                        document_id,
-                        collection,
-                    } => {
-                        document_id.capacity() + match collection {
-                            kasane_core::document::OrganizationCollection::Parameters {
-                                group_id,
-                            } => group_id.as_ref().map_or(0, String::capacity),
-                            kasane_core::document::OrganizationCollection::ParameterGroups {
-                                parent_id,
-                            } => parent_id.as_ref().map_or(0, String::capacity),
-                            kasane_core::document::OrganizationCollection::PartMembers {
-                                part_id,
-                            } => part_id.as_ref().map_or(0, String::capacity),
-                        }
-                    }
-                    CollectionRef::Pose {
-                        document_id,
-                        owner,
-                        role,
-                    } => {
-                        document_id.capacity()
-                            + owner.as_ref().map_or(0, String::capacity)
-                            + role.capacity()
-                    }
-                    CollectionRef::Physics {
-                        document_id,
-                        owner,
-                        role,
-                    } => {
-                        document_id.capacity()
-                            + owner.as_ref().map_or(0, String::capacity)
-                            + role.capacity()
-                    }
-                    CollectionRef::Motion {
-                        document_id,
-                        owner,
-                        role,
-                    } => {
-                        document_id.capacity()
-                            + owner.as_ref().map_or(0, |s| s.capacity())
-                            + role.capacity()
-                    }
-                    CollectionRef::Expressions { document_id } => document_id.capacity(),
-                    CollectionRef::ExpressionEntries {
-                        document_id,
-                        expression_id,
-                    } => document_id.capacity() + expression_id.capacity(),
-                })
-                .sum::<usize>()
-            + self.references.capacity() * std::mem::size_of::<ReferenceChange>()
-            + self
-                .references
-                .iter()
-                .map(|r| {
-                    r.entry.id.capacity()
-                        + r.entry.document_id.capacity()
-                        + target_bytes(&r.before)
-                        + target_bytes(&r.after)
-                })
-                .sum::<usize>()
+            + vec_bytes(&self.reference_fields, ReferenceFieldChange::extra_bytes)
+            + vec_bytes(&self.reference_selections, |c| {
+                c.entity.extra_bytes()
+                    + vec_bytes(&c.before, String::capacity)
+                    + vec_bytes(&c.after, String::capacity)
+            })
+            + vec_bytes(
+                &self.content_references,
+                SceneContentReferenceChange::extra_bytes,
+            )
+            + vec_bytes(&self.content_changes, |c| c.entity.extra_bytes())
+            + vec_bytes(&self.created, EntityRef::extra_bytes)
+            + vec_bytes(&self.deleted, EntityRef::extra_bytes)
+            + vec_bytes(&self.modified, EntityRef::extra_bytes)
+            + vec_bytes(&self.collections, CollectionRef::extra_bytes)
+            + vec_bytes(&self.references, |r| {
+                r.entry.extra_bytes() + target_bytes(&r.before) + target_bytes(&r.after)
+            })
             + self
                 .resource_content
                 .iter()
-                .map(|e| {
-                    std::mem::size_of::<EntityRef>() + e.id.capacity() + e.document_id.capacity()
-                })
+                .map(|e| std::mem::size_of::<EntityRef>() + e.extra_bytes())
                 .sum::<usize>()
             + self
                 .motion_references
                 .iter()
                 .map(|r| {
                     std::mem::size_of::<MotionReferenceChange>()
-                        + r.entity.id.capacity()
-                        + r.entity.document_id.capacity()
+                        + r.entity.extra_bytes()
                         + r.field.capacity()
                         + motion_target_bytes(&r.before)
                         + motion_target_bytes(&r.after)
@@ -344,8 +335,7 @@ impl ChangeSet {
                 .iter()
                 .map(|r| {
                     std::mem::size_of::<PhysicsReferenceChange>()
-                        + r.entity.id.capacity()
-                        + r.entity.document_id.capacity()
+                        + r.entity.extra_bytes()
                         + r.field.capacity()
                         + physics_target_bytes(&r.before)
                         + physics_target_bytes(&r.after)
@@ -356,8 +346,7 @@ impl ChangeSet {
                 .iter()
                 .map(|r| {
                     std::mem::size_of::<PoseReferenceChange>()
-                        + r.entity.id.capacity()
-                        + r.entity.document_id.capacity()
+                        + r.entity.extra_bytes()
                         + pose::reference_bytes(&r.before)
                         + pose::reference_bytes(&r.after)
                 })
@@ -367,8 +356,7 @@ impl ChangeSet {
                 .iter()
                 .map(|r| {
                     std::mem::size_of::<OrganizationReferenceChange>()
-                        + r.entity.id.capacity()
-                        + r.entity.document_id.capacity()
+                        + r.entity.extra_bytes()
                         + r.before.as_ref().map_or(0, String::capacity)
                         + r.after.as_ref().map_or(0, String::capacity)
                 })
@@ -376,26 +364,16 @@ impl ChangeSet {
             + self
                 .scene_fields
                 .iter()
-                .map(|r| {
-                    std::mem::size_of::<SceneFieldChange>()
-                        + r.entity.id.capacity()
-                        + r.entity.document_id.capacity()
-                })
+                .map(|r| std::mem::size_of::<SceneFieldChange>() + r.entity.extra_bytes())
                 .sum::<usize>()
             + self
                 .scene_references
                 .iter()
                 .map(|r| {
                     std::mem::size_of::<SceneReferenceChange>()
-                        + r.entity.id.capacity()
-                        + r.entity.document_id.capacity()
-                        + (r.before.capacity() + r.after.capacity())
-                            * std::mem::size_of::<kasane_core::SceneReference>()
-                        + r.before
-                            .iter()
-                            .chain(&r.after)
-                            .map(kasane_core::SceneReference::capacity)
-                            .sum::<usize>()
+                        + r.entity.extra_bytes()
+                        + vec_bytes(&r.before, kasane_core::SceneReference::capacity)
+                        + vec_bytes(&r.after, kasane_core::SceneReference::capacity)
                 })
                 .sum::<usize>()
             + self.categories.len() * (std::mem::size_of::<ChangeCategory>() + 64)
@@ -404,8 +382,7 @@ impl ChangeSet {
                 .iter()
                 .map(|r| {
                     std::mem::size_of::<BindingReferenceChange>()
-                        + r.entity.id.capacity()
-                        + r.entity.document_id.capacity()
+                        + r.entity.extra_bytes()
                         + r.field.capacity()
                         + r.before.as_ref().map_or(0, String::capacity)
                         + r.after.as_ref().map_or(0, String::capacity)
@@ -423,11 +400,7 @@ pub(crate) fn summarize(
     kinds: &BTreeSet<ChangeCategory>,
 ) -> ChangeSet {
     let mut out = ChangeSet::default();
-    let entity = |kind, id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind,
-        id: id.into(),
-    };
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     out.created = after_keys
         .difference(before_keys)
         .map(|key| entity(key.kind, &key.id))
@@ -606,8 +579,7 @@ pub(crate) fn summarize(
             out.modified.push(entity(key.kind, id));
         }
     }
-    out.modified
-        .retain(|e| !out.created.contains(e) && !out.deleted.contains(e));
+    out.retain_existing_modified();
     // Deterministic order is useful to event consumers and persisted diagnostics.
     for entities in [&mut out.created, &mut out.deleted, &mut out.modified] {
         entities.sort_by(|a, b| a.id.cmp(&b.id));
@@ -672,5 +644,30 @@ fn physics_target_bytes(value: &Option<PhysicsReferenceValue>) -> usize {
             _ => 0,
         },
         None => 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn summary_estimate_charges_spare_slots_and_occupied_entity_payloads() {
+        let mut summary = ChangeSet::default();
+        let baseline = summary.estimated_bytes();
+        summary.created.reserve_exact(8);
+        summary.reference_fields.reserve_exact(3);
+        let slots = summary.created.capacity() * std::mem::size_of::<EntityRef>()
+            + summary.reference_fields.capacity() * std::mem::size_of::<ReferenceFieldChange>();
+        assert_eq!(summary.estimated_bytes(), baseline + slots);
+
+        let entity = EntityRef {
+            document_id: String::with_capacity(80),
+            kind: ObjectKind::Mesh,
+            id: String::with_capacity(120),
+        };
+        let payload = entity.document_id.capacity() + entity.id.capacity();
+        summary.created.push(entity);
+        assert_eq!(summary.estimated_bytes(), baseline + slots + payload);
     }
 }

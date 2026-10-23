@@ -69,9 +69,9 @@ impl EditSession<'_> {
         &mut self,
         patch: &kasane_core::document::PropertyPatch,
     ) -> Result<(), SdkError> {
-        self.ensure_active("patch_property")?;
-        let result = self.document().patch_property(patch);
-        self.record(result, "patch_property", "")
+        self.apply_authoring_change("patch_property", "", true, |document| {
+            document.patch_property(patch)
+        })
     }
 
     pub(crate) fn document(&mut self) -> &mut Document {
@@ -137,11 +137,12 @@ impl EditSession<'_> {
         Ok(())
     }
 
-    /// Record native changes and retire removed identities in the same step.
+    /// Apply a native edit, preserving its diagnostic ID and retiring removed identities.
     /// Identity-preserving patches avoid enumerating the whole candidate.
     pub(crate) fn apply_authoring_change(
         &mut self,
         operation: &'static str,
+        id: &str,
         preserves_identities: bool,
         apply: impl FnOnce(&mut Document) -> EditResult,
     ) -> Result<(), SdkError> {
@@ -149,7 +150,7 @@ impl EditSession<'_> {
         let before =
             (!preserves_identities).then(|| crate::session::keys_in(self.candidate_document()));
         let result = apply(self.document());
-        self.record(result, operation, "")?;
+        self.record(result, operation, id)?;
         if let Some(before) = before {
             self.track_removed_objects(before);
         }
@@ -164,55 +165,52 @@ impl EditSession<'_> {
         &mut self,
         settings: kasane_core::ExportSettings,
     ) -> Result<(), SdkError> {
-        self.ensure_active("replace_export_settings")?;
         let id = self.document().id().to_owned();
-        let result = self.document().replace_export_settings(settings);
-        self.record(result, "replace_export_settings", &id)
+        self.apply_authoring_change("replace_export_settings", &id, true, |document| {
+            document.replace_export_settings(settings)
+        })
     }
     pub fn replace_source_canvas(&mut self, source_canvas: Option<Canvas>) -> Result<(), SdkError> {
-        self.ensure_active("replace_source_canvas")?;
         let id = self.document().id().to_owned();
-        let result = self.document().replace_source_canvas(source_canvas);
-        self.record(result, "replace_source_canvas", &id)
+        self.apply_authoring_change("replace_source_canvas", &id, true, |document| {
+            document.replace_source_canvas(source_canvas)
+        })
     }
     pub fn replace_model_setup(
         &mut self,
         canvas: impl Into<kasane_core::ModelSetup>,
     ) -> Result<(), SdkError> {
-        self.ensure_active("replace_model_setup")?;
         let id = self.document().id().to_owned();
-        let result = self.document().replace_model_setup(canvas);
-        self.record(result, "replace_model_setup", &id)
+        self.apply_authoring_change("replace_model_setup", &id, true, |document| {
+            document.replace_model_setup(canvas)
+        })
     }
     pub fn replace_editor_state(
         &mut self,
         state: kasane_core::document::EditorState,
     ) -> Result<(), SdkError> {
-        self.ensure_active("replace_editor_state")?;
         let id = self.document().id().to_owned();
-        let result = self.document().replace_editor_state(state);
-        self.record(result, "replace_editor_state", &id)
+        self.apply_authoring_change("replace_editor_state", &id, true, |document| {
+            document.replace_editor_state(state)
+        })
     }
     pub fn replace_hierarchy_order(
         &mut self,
         order: kasane_core::document::HierarchyOrder,
     ) -> Result<(), SdkError> {
-        self.ensure_active("replace_hierarchy_order")?;
         let id = self.document().id().to_owned();
-        let result = self.document().replace_hierarchy_order(order);
-        self.record(result, "replace_hierarchy_order", &id)
+        self.apply_authoring_change("replace_hierarchy_order", &id, true, |document| {
+            document.replace_hierarchy_order(order)
+        })
     }
     pub fn replace_draw_order_groups(
         &mut self,
         groups: Vec<DrawOrderGroup>,
     ) -> Result<(), SdkError> {
-        self.ensure_active("replace_draw_order_groups")?;
         let id = self.document().id().to_owned();
-        let before = keys_in(self.candidate_document());
-        let result = self.document().replace_draw_order_groups(groups);
-        self.record(result, "replace_draw_order_groups", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_draw_order_groups", &id, false, |document| {
+            document.replace_draw_order_groups(groups)
+        })
     }
     pub(crate) fn track_removed_objects(
         &mut self,
@@ -223,48 +221,45 @@ impl EditSession<'_> {
     }
 
     pub fn erase_object(&mut self, id: &str) -> Result<(), SdkError> {
-        self.ensure_active("erase_object")?;
-        let before_keys = crate::session::keys_in(self.candidate_document());
-        let result = self.document().erase_object(id);
-        self.record(result, "erase_object", id)?;
-        self.track_removed_objects(before_keys);
-        Ok(())
+        self.apply_authoring_change("erase_object", id, false, |document| {
+            document.erase_object(id)
+        })
     }
     pub fn create_asset(&mut self, asset: ImageAsset) -> Result<(), SdkError> {
-        self.ensure_active("create_asset")?;
         let id = asset.id.clone();
-        let result = self.document().add_asset(asset);
-        self.record(result, "create_asset", &id)
+        self.apply_authoring_change("create_asset", &id, true, |document| {
+            document.add_asset(asset)
+        })
     }
     pub fn replace_asset(&mut self, asset: ImageAsset) -> Result<(), SdkError> {
-        self.ensure_active("replace_asset")?;
         let id = asset.id.clone();
-        let result = self.document().replace_asset(asset);
-        self.record(result, "replace_asset", &id)
+        self.apply_authoring_change("replace_asset", &id, true, |document| {
+            document.replace_asset(asset)
+        })
     }
     pub fn create_parameter(&mut self, parameter: Parameter) -> Result<(), SdkError> {
-        self.ensure_active("create_parameter")?;
         let id = parameter.id.clone();
-        let result = self.document().create_parameter(parameter);
-        self.record(result, "create_parameter", &id)
+        self.apply_authoring_change("create_parameter", &id, true, |document| {
+            document.create_parameter(parameter)
+        })
     }
     pub fn replace_parameter(&mut self, parameter: Parameter) -> Result<(), SdkError> {
-        self.ensure_active("replace_parameter")?;
         let id = parameter.id.clone();
-        let result = self.document().replace_parameter(parameter);
-        self.record(result, "replace_parameter", &id)
+        self.apply_authoring_change("replace_parameter", &id, true, |document| {
+            document.replace_parameter(parameter)
+        })
     }
     pub fn create_part(&mut self, part: Part) -> Result<(), SdkError> {
-        self.ensure_active("create_part")?;
         let id = part.id.clone();
-        let result = self.document().create_part(part);
-        self.record(result, "create_part", &id)
+        self.apply_authoring_change("create_part", &id, true, |document| {
+            document.create_part(part)
+        })
     }
     pub fn replace_part(&mut self, part: Part) -> Result<(), SdkError> {
-        self.ensure_active("replace_part")?;
         let id = part.id.clone();
-        let result = self.document().replace_part(part);
-        self.record(result, "replace_part", &id)
+        self.apply_authoring_change("replace_part", &id, true, |document| {
+            document.replace_part(part)
+        })
     }
     /// Organization hierarchy is independent of the transform hierarchy.
     pub fn set_organization_parent(
@@ -285,10 +280,10 @@ impl EditSession<'_> {
         self.record(result, "set_organization_parent", part_id)
     }
     pub fn create_transform(&mut self, transform: Transform) -> Result<(), SdkError> {
-        self.ensure_active("create_transform")?;
         let id = transform.id.clone();
-        let result = self.document().create_transform(transform);
-        self.record(result, "create_transform", &id)
+        self.apply_authoring_change("create_transform", &id, true, |document| {
+            document.create_transform(transform)
+        })
     }
     /// Replace a Warp and its ordinary keyforms in one validated operation.
     pub fn replace_warp_authoring(
@@ -296,19 +291,16 @@ impl EditSession<'_> {
         transform: Transform,
         binding: Option<SceneBinding>,
     ) -> Result<(), SdkError> {
-        self.ensure_active("replace_warp_authoring")?;
         let id = transform.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().replace_warp_authoring(transform, binding);
-        self.record(result, "replace_warp_authoring", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_warp_authoring", &id, false, |document| {
+            document.replace_warp_authoring(transform, binding)
+        })
     }
     pub fn replace_transform(&mut self, transform: Transform) -> Result<(), SdkError> {
-        self.ensure_active("replace_transform")?;
         let id = transform.id.clone();
-        let result = self.document().replace_transform(transform);
-        self.record(result, "replace_transform", &id)
+        self.apply_authoring_change("replace_transform", &id, true, |document| {
+            document.replace_transform(transform)
+        })
     }
     /// Changes the transform parent while retaining the stored local coordinates.
     pub fn set_transform_parent(
@@ -416,16 +408,16 @@ impl EditSession<'_> {
         })
     }
     pub fn create_mesh(&mut self, mesh: Mesh) -> Result<(), SdkError> {
-        self.ensure_active("create_mesh")?;
         let id = mesh.id.clone();
-        let result = self.document().create_mesh(mesh);
-        self.record(result, "create_mesh", &id)
+        self.apply_authoring_change("create_mesh", &id, true, |document| {
+            document.create_mesh(mesh)
+        })
     }
     pub fn replace_mesh(&mut self, mesh: Mesh) -> Result<(), SdkError> {
-        self.ensure_active("replace_mesh")?;
         let id = mesh.id.clone();
-        let result = self.document().replace_mesh(mesh);
-        self.record(result, "replace_mesh", &id)
+        self.apply_authoring_change("replace_mesh", &id, true, |document| {
+            document.replace_mesh(mesh)
+        })
     }
     /// Changes the mesh's deform parent while retaining source positions as local coordinates.
     pub fn set_deform_parent(&mut self, mesh_id: &str, transform_id: &str) -> Result<(), SdkError> {
@@ -455,14 +447,14 @@ impl EditSession<'_> {
         self.record(result, "set_mesh_part", mesh_id)
     }
     pub fn rename_mesh(&mut self, id: &str, name: impl Into<String>) -> Result<(), SdkError> {
-        self.ensure_active("rename_mesh")?;
-        let result = self.document().rename_mesh(id, name.into());
-        self.record(result, "rename_mesh", id)
+        self.apply_authoring_change("rename_mesh", id, true, |document| {
+            document.rename_mesh(id, name.into())
+        })
     }
     pub fn set_mesh_opacity(&mut self, id: &str, opacity: f32) -> Result<(), SdkError> {
-        self.ensure_active("set_mesh_opacity")?;
-        let result = self.document().set_mesh_opacity(id, opacity);
-        self.record(result, "set_mesh_opacity", id)
+        self.apply_authoring_change("set_mesh_opacity", id, true, |document| {
+            document.set_mesh_opacity(id, opacity)
+        })
     }
 
     pub fn update_mesh_properties(
@@ -520,145 +512,125 @@ impl EditSession<'_> {
         Ok(())
     }
     pub fn create_binding(&mut self, binding: MeshBinding) -> Result<(), SdkError> {
-        self.ensure_active("create_binding")?;
         let id = binding.id.clone();
-        let result = self.document().create_binding(binding);
-        self.record(result, "create_binding", &id)
+        self.apply_authoring_change("create_binding", &id, true, |document| {
+            document.create_binding(binding)
+        })
     }
     pub fn replace_binding(&mut self, binding: MeshBinding) -> Result<(), SdkError> {
-        self.ensure_active("replace_binding")?;
         let id = binding.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().replace_binding(binding);
-        self.record(result, "replace_binding", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_binding", &id, false, |document| {
+            document.replace_binding(binding)
+        })
     }
     pub fn set_mesh_keyform(
         &mut self,
         binding_id: &str,
         form: MeshKeyform,
     ) -> Result<(), SdkError> {
-        self.ensure_active("set_mesh_keyform")?;
-        let result = self.document().set_mesh_keyform(binding_id, form);
-        self.record(result, "set_mesh_keyform", binding_id)
+        self.apply_authoring_change("set_mesh_keyform", binding_id, true, |document| {
+            document.set_mesh_keyform(binding_id, form)
+        })
     }
     pub fn create_scene_binding(&mut self, binding: SceneBinding) -> Result<(), SdkError> {
-        self.ensure_active("create_scene_binding")?;
         let id = binding.id.clone();
-        let result = self.document().create_scene_binding(binding);
-        self.record(result, "create_scene_binding", &id)
+        self.apply_authoring_change("create_scene_binding", &id, true, |document| {
+            document.create_scene_binding(binding)
+        })
     }
     pub fn replace_scene_binding(&mut self, binding: SceneBinding) -> Result<(), SdkError> {
-        self.ensure_active("replace_scene_binding")?;
         let id = binding.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().replace_scene_binding(binding);
-        self.record(result, "replace_scene_binding", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_scene_binding", &id, false, |document| {
+            document.replace_scene_binding(binding)
+        })
     }
     pub fn set_scene_keyform(
         &mut self,
         binding_id: &str,
         form: SceneKeyform,
     ) -> Result<(), SdkError> {
-        self.ensure_active("set_scene_keyform")?;
-        let result = self.document().set_scene_keyform(binding_id, form);
-        self.record(result, "set_scene_keyform", binding_id)
+        self.apply_authoring_change("set_scene_keyform", binding_id, true, |document| {
+            document.set_scene_keyform(binding_id, form)
+        })
     }
     pub fn create_blend_key_table(&mut self, table: BlendShapeKeyTable) -> Result<(), SdkError> {
-        self.ensure_active("create_blend_key_table")?;
         let id = table.id.clone();
-        let result = self.document().create_blend_key_table(table);
-        self.record(result, "create_blend_key_table", &id)
+        self.apply_authoring_change("create_blend_key_table", &id, true, |document| {
+            document.create_blend_key_table(table)
+        })
     }
     pub fn replace_blend_key_table(&mut self, table: BlendShapeKeyTable) -> Result<(), SdkError> {
-        self.ensure_active("replace_blend_key_table")?;
         let id = table.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().replace_blend_key_table(table);
-        self.record(result, "replace_blend_key_table", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_blend_key_table", &id, false, |document| {
+            document.replace_blend_key_table(table)
+        })
     }
     pub fn create_blend_constraint(
         &mut self,
         constraint: BlendShapeConstraint,
     ) -> Result<(), SdkError> {
-        self.ensure_active("create_blend_constraint")?;
         let id = constraint.id.clone();
-        let result = self.document().create_blend_constraint(constraint);
-        self.record(result, "create_blend_constraint", &id)
+        self.apply_authoring_change("create_blend_constraint", &id, true, |document| {
+            document.create_blend_constraint(constraint)
+        })
     }
     pub fn replace_blend_constraint(
         &mut self,
         constraint: BlendShapeConstraint,
     ) -> Result<(), SdkError> {
-        self.ensure_active("replace_blend_constraint")?;
         let id = constraint.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().replace_blend_constraint(constraint);
-        self.record(result, "replace_blend_constraint", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_blend_constraint", &id, false, |document| {
+            document.replace_blend_constraint(constraint)
+        })
     }
     pub fn create_blend_binding(&mut self, binding: BlendShapeBinding) -> Result<(), SdkError> {
-        self.ensure_active("create_blend_binding")?;
         let id = binding.id.clone();
-        let result = self.document().create_blend_binding(binding);
-        self.record(result, "create_blend_binding", &id)
+        self.apply_authoring_change("create_blend_binding", &id, true, |document| {
+            document.create_blend_binding(binding)
+        })
     }
     pub fn replace_blend_binding(&mut self, binding: BlendShapeBinding) -> Result<(), SdkError> {
-        self.ensure_active("replace_blend_binding")?;
         let id = binding.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().replace_blend_binding(binding);
-        self.record(result, "replace_blend_binding", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_blend_binding", &id, false, |document| {
+            document.replace_blend_binding(binding)
+        })
     }
     pub fn create_glue(&mut self, glue: Glue) -> Result<(), SdkError> {
-        self.ensure_active("create_glue")?;
         let id = glue.id.clone();
-        let result = self.document().create_glue(glue);
-        self.record(result, "create_glue", &id)
+        self.apply_authoring_change("create_glue", &id, true, |document| {
+            document.create_glue(glue)
+        })
     }
     pub fn replace_glue(&mut self, glue: Glue) -> Result<(), SdkError> {
-        self.ensure_active("replace_glue")?;
         let id = glue.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().replace_glue(glue);
-        self.record(result, "replace_glue", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_glue", &id, false, |document| {
+            document.replace_glue(glue)
+        })
     }
     pub fn create_offscreen(&mut self, offscreen: Offscreen) -> Result<(), SdkError> {
-        self.ensure_active("create_offscreen")?;
         let id = offscreen.id.clone();
-        let result = self.document().create_offscreen(offscreen);
-        self.record(result, "create_offscreen", &id)
+        self.apply_authoring_change("create_offscreen", &id, true, |document| {
+            document.create_offscreen(offscreen)
+        })
     }
     pub fn replace_offscreen(&mut self, offscreen: Offscreen) -> Result<(), SdkError> {
-        self.ensure_active("replace_offscreen")?;
         let id = offscreen.id.clone();
-        let result = self.document().replace_offscreen(offscreen);
-        self.record(result, "replace_offscreen", &id)
+        self.apply_authoring_change("replace_offscreen", &id, true, |document| {
+            document.replace_offscreen(offscreen)
+        })
     }
     pub fn replace_part_binding_with_offscreen(
         &mut self,
         binding: SceneBinding,
         offscreen: Offscreen,
     ) -> Result<(), SdkError> {
-        self.ensure_active("replace_part_binding_with_offscreen")?;
         let id = binding.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self
-            .document()
-            .replace_part_binding_with_offscreen(binding, offscreen);
-        self.record(result, "replace_part_binding_with_offscreen", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change(
+            "replace_part_binding_with_offscreen",
+            &id,
+            false,
+            |document| document.replace_part_binding_with_offscreen(binding, offscreen),
+        )
     }
     pub fn update_positions(
         &mut self,
@@ -666,11 +638,9 @@ impl EditSession<'_> {
         vertex_ids: &[VertexId],
         positions: &[Vec2],
     ) -> Result<(), SdkError> {
-        self.ensure_active("update_positions")?;
-        let result = self
-            .document()
-            .set_vertex_positions(mesh_id, vertex_ids, positions);
-        self.record(result, "update_positions", mesh_id)
+        self.apply_authoring_change("update_positions", mesh_id, true, |document| {
+            document.set_vertex_positions(mesh_id, vertex_ids, positions)
+        })
     }
     pub fn commit(mut self) -> Result<EditReceipt, SdkError> {
         let session = self.session.take().expect("attached edit has a session");

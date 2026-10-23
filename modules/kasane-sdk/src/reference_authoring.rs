@@ -329,7 +329,7 @@ impl AuthoringSession {
 impl EditSession<'_> {
     pub fn apply_reference_plan(&mut self, p: &ReferenceEditPlan) -> Result<(), SdkError> {
         self.ensure_plan_version(p.version, "apply_reference_plan", "Replan references")?;
-        self.apply_authoring_change("apply_reference_plan", false, |document| {
+        self.apply_authoring_change("apply_reference_plan", "", false, |document| {
             document.apply_reference_plan(&p.domain)
         })?;
         Ok(())
@@ -340,7 +340,7 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_reference_edit(intent)
             .map_err(|s| self.abort_with(err(s, "edit_references")))?;
-        self.apply_authoring_change("edit_references", false, |document| {
+        self.apply_authoring_change("edit_references", "", false, |document| {
             document.apply_reference_plan(&p)
         })?;
         Ok(())

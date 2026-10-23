@@ -283,7 +283,7 @@ impl EditSession<'_> {
             .map_err(|s| self.abort_with(error(s, "apply_scene_content_plan")))?;
         crate::binding_authoring::check_cost(plan.cost(), self.authoring_limits)
             .map_err(|e| self.abort_with(e))?;
-        self.apply_authoring_change("apply_scene_content_plan", false, |document| {
+        self.apply_authoring_change("apply_scene_content_plan", "", false, |document| {
             document.apply_scene_content_plan(&plan.domain)
         })?;
         self.binding_controls.push(plan.control.clone());
@@ -300,7 +300,7 @@ impl EditSession<'_> {
                 &ConversionControl::default(),
             )
             .map_err(|s| self.abort_with(error(s, "edit_scene_content")))?;
-        self.apply_authoring_change("edit_scene_content", false, |document| {
+        self.apply_authoring_change("edit_scene_content", "", false, |document| {
             document.apply_scene_content_plan(&domain)
         })?;
         self.binding_cost = Some(domain.cost());

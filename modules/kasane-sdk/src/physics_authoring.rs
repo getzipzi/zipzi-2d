@@ -310,22 +310,17 @@ impl AuthoringSession {
 }
 impl EditSession<'_> {
     pub fn apply_physics_plan(&mut self, plan: &PhysicsEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_physics_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "replan against current session",
-                "apply_physics_plan",
-            )));
-        }
-        let before = (!plan.domain.preserves_identities())
-            .then(|| crate::session::keys_in(self.candidate_document()));
-        let result = self.document().apply_physics_plan(&plan.domain);
-        self.record(result, "apply_physics_plan", "")?;
-        if let Some(before) = before {
-            self.track_removed_objects(before);
-        }
-        Ok(())
+        self.ensure_plan_version(
+            plan.version,
+            "apply_physics_plan",
+            "replan against current session",
+        )?;
+        self.apply_authoring_change(
+            "apply_physics_plan",
+            "",
+            plan.domain.preserves_identities(),
+            |document| document.apply_physics_plan(&plan.domain),
+        )
     }
     pub fn edit_physics(&mut self, intent: PhysicsEdit) -> Result<(), SdkError> {
         self.ensure_active("edit_physics")?;
@@ -343,11 +338,9 @@ impl EditSession<'_> {
                 let error = physics_error(self.candidate_document(), s, "edit_physics", &selected);
                 self.abort_with(error)
             })?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_physics_plan(&plan);
-        self.record(result, "edit_physics", "")?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("edit_physics", "", false, |document| {
+            document.apply_physics_plan(&plan)
+        })
     }
 }
 #[derive(Debug, Clone)]

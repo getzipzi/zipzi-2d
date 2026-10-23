@@ -40,11 +40,7 @@ pub(super) fn summarize_content(
         }
     }
     let mut changed = |id: &str, kind, domain, topology| {
-        let entity = EntityRef {
-            document_id: after.id().into(),
-            kind,
-            id: id.into(),
-        };
+        let entity = EntityRef::new(after.id(), kind, id);
         out.content_changes.push(SceneContentChange {
             entity: entity.clone(),
             domain,
@@ -203,11 +199,7 @@ pub(super) fn summarize_content(
                     .any(|r| r.entity.kind == ObjectKind::GlueVertexPair && r.entity.id == pair_id)
             {
                 out.content_references.push(SceneContentReferenceChange {
-                    entity: EntityRef {
-                        document_id: after.id().into(),
-                        kind: ObjectKind::GlueVertexPair,
-                        id: pair_id.into(),
-                    },
+                    entity: EntityRef::new(after.id(), ObjectKind::GlueVertexPair, pair_id),
                     before: before_ref,
                     after: after_ref,
                 });
@@ -218,11 +210,11 @@ pub(super) fn summarize_content(
                 || before.glue_pair_owner(&p.id) != after.glue_pair_owner(&p.id)
                 || endpoints_changed
             {
-                out.modified.push(EntityRef {
-                    document_id: after.id().into(),
-                    kind: ObjectKind::GlueVertexPair,
-                    id: p.id.clone(),
-                });
+                out.modified.push(EntityRef::new(
+                    after.id(),
+                    ObjectKind::GlueVertexPair,
+                    &p.id,
+                ));
             }
         }
     }

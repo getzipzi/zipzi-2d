@@ -1,5 +1,71 @@
 use super::*;
 impl Document {
+    /// Compare native fields without cloning geometry. Context also includes
+    /// topology that invalidates addresses even when its reference targets agree.
+    pub fn visit_scene_field_changes(
+        &self,
+        after: &Document,
+        id: &str,
+        mut changed: impl FnMut(SceneField),
+    ) {
+        use SceneField as F;
+        macro_rules! fields {
+            ($a:ident, $b:ident; $($tag:ident => $value:expr),+ $(,)?) => {$(
+                if $a.map($value) != $b.map($value) {
+                    changed(F::$tag);
+                }
+            )+};
+        }
+        let a = self.get_mesh(id);
+        let b = after.get_mesh(id);
+        fields!(a, b;
+            Label => |v| &v.name,
+            RuntimeId => |v| &v.runtime_id,
+            Enabled => |v| v.enabled,
+            Appearance => |v| v.appearance,
+            Texture => |v| &v.texture_asset_id,
+            Masks => |v| &v.masks,
+            MeshDrawing => |v| (v.draw_order, v.blend_mode, v.raw_blend_mode, v.double_sided, v.inverted_mask),
+            Context => |v| (&v.part_id, &v.deformer_id, &v.vertex_ids, &v.triangles),
+        );
+        let a = self.get_transform(id);
+        let b = after.get_transform(id);
+        fields!(a, b;
+            Label => |v| &v.name,
+            RuntimeId => |v| &v.runtime_id,
+            Enabled => |v| v.enabled,
+            Appearance => |v| v.appearance,
+        );
+        if a.and_then(Transform::warp) != b.and_then(Transform::warp) {
+            changed(F::Warp);
+        }
+        if a.and_then(Transform::rotation) != b.and_then(Transform::rotation) {
+            changed(F::Rotation);
+        }
+        fields!(a, b;
+            Context => |v| (&v.part_id, &v.parent_id, v.warp().map(|w| (w.rows, w.columns, w.quad))),
+        );
+        let a = self.get_offscreen(id);
+        let b = after.get_offscreen(id);
+        fields!(a, b;
+            Label => |v| &v.name,
+            RuntimeId => |v| &v.runtime_id,
+            Enabled => |v| v.enabled,
+            Masks => |v| &v.masks,
+            Offscreen => |v| (v.blend_mode, v.flags, &v.keyforms, &v.part_keyform_indices),
+            Context => |v| &v.part_id,
+        );
+        let a = self.get_glue(id);
+        let b = after.get_glue(id);
+        fields!(a, b;
+            Label => |v| &v.name,
+            RuntimeId => |v| &v.runtime_id,
+            GlueIntensity => |v| v.intensity,
+            GlueEndpoints => |v| (&v.mesh_a_id, &v.mesh_b_id),
+            Context => |v| (&v.pairs, &v.mesh_a_id, &v.mesh_b_id),
+        );
+    }
+
     pub fn scene_field(&self, id: &str, field: SceneField) -> Result<SceneFieldValue, Status> {
         use SceneField as F;
         use SceneFieldValue as V;
@@ -8,30 +74,17 @@ impl Document {
         let o = self.get_offscreen(id);
         let g = self.get_glue(id);
         macro_rules! common {
-            ($name:ident) => {
-                m.map(|v| v.$name.clone())
-                    .or_else(|| t.map(|v| v.$name.clone()))
-                    .or_else(|| o.map(|v| v.$name.clone()))
-                    .or_else(|| g.map(|v| v.$name.clone()))
+            ($field:ident; $($owner:ident),+) => {
+                None $(.or_else(|| $owner.map(|v| &v.$field)))+
             };
         }
         let result = match field {
-            F::Label => common!(name).map(V::Label),
-            F::RuntimeId => common!(runtime_id).map(V::RuntimeId),
-            F::Enabled => m
-                .map(|v| v.enabled)
-                .or_else(|| t.map(|v| v.enabled))
-                .or_else(|| o.map(|v| v.enabled))
-                .map(V::Enabled),
-            F::Appearance => m
-                .map(|v| v.appearance)
-                .or_else(|| t.map(|v| v.appearance))
-                .map(V::Appearance),
+            F::Label => common!(name; m, t, o, g).cloned().map(V::Label),
+            F::RuntimeId => common!(runtime_id; m, t, o, g).cloned().map(V::RuntimeId),
+            F::Enabled => common!(enabled; m, t, o).copied().map(V::Enabled),
+            F::Appearance => common!(appearance; m, t).copied().map(V::Appearance),
             F::Texture => m.map(|v| V::Texture(v.texture_asset_id.clone())),
-            F::Masks => m
-                .map(|v| v.masks.clone())
-                .or_else(|| o.map(|v| v.masks.clone()))
-                .map(V::Masks),
+            F::Masks => common!(masks; m, o).cloned().map(V::Masks),
             F::MeshDrawing => m.map(|v| V::MeshDrawing {
                 draw_order: v.draw_order,
                 blend_mode: v.blend_mode,
@@ -191,54 +244,33 @@ impl Document {
     ) {
         use SceneFieldValue as V;
         macro_rules! common {
-            ($field:ident,$value:expr) => {
-                if let Some(v) = self.content.meshes.get_mut(id) {
-                    v.$field = $value;
-                } else if let Some(v) = self.content.transforms.get_mut(id) {
-                    v.$field = $value;
-                } else if let Some(v) = self.content.offscreens.get_mut(id) {
-                    v.$field = $value;
-                } else if let Some(v) = self.content.glues.get_mut(id) {
-                    v.$field = $value;
-                }
+            ($field:ident, $value:expr; $first:ident $(, $rest:ident)*) => {
+                if let Some(v) = self.content.$first.get_mut(id) { v.$field = $value; }
+                $(else if let Some(v) = self.content.$rest.get_mut(id) { v.$field = $value; })*
             };
         }
         match value {
             V::Label(name) => {
-                common!(name, name.clone());
+                common!(name, name.clone(); meshes, transforms, offscreens, glues);
             }
             V::RuntimeId(runtime) => {
                 if let Some(m) = self.get_mesh(id) {
                     self.mesh_runtime_ids.remove(&m.runtime_id.clone());
                     self.mesh_runtime_ids.insert(runtime.clone(), id.into());
                 }
-                common!(runtime_id, runtime.clone());
+                common!(runtime_id, runtime.clone(); meshes, transforms, offscreens, glues);
             }
             V::Enabled(enabled) => {
-                if let Some(m) = self.content.meshes.get_mut(id) {
-                    m.enabled = *enabled;
-                } else if let Some(t) = self.content.transforms.get_mut(id) {
-                    t.enabled = *enabled;
-                } else {
-                    self.content.offscreens.get_mut(id).unwrap().enabled = *enabled;
-                }
+                common!(enabled, *enabled; meshes, transforms, offscreens);
             }
             V::Appearance(appearance) => {
-                if let Some(m) = self.content.meshes.get_mut(id) {
-                    m.appearance = *appearance;
-                } else {
-                    self.content.transforms.get_mut(id).unwrap().appearance = *appearance;
-                }
+                common!(appearance, *appearance; meshes, transforms);
             }
             V::Texture(target) => {
                 self.content.meshes.get_mut(id).unwrap().texture_asset_id = target.clone()
             }
             V::Masks(masks) => {
-                if let Some(m) = self.content.meshes.get_mut(id) {
-                    m.masks = masks.clone();
-                } else {
-                    self.content.offscreens.get_mut(id).unwrap().masks = masks.clone();
-                }
+                common!(masks, masks.clone(); meshes, offscreens);
             }
             V::MeshDrawing {
                 draw_order,

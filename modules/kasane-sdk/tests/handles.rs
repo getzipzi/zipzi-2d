@@ -83,3 +83,38 @@ fn handle_is_bound_to_its_session_and_kind() {
         "NOT_FOUND"
     );
 }
+
+#[test]
+fn forwarded_edit_failures_keep_diagnostic_ids_and_abort_the_batch() {
+    const MISSING: &str = "00000000-0000-4000-8000-000000000599";
+    for owned_value in [false, true] {
+        let mut sdk = session();
+        sdk.drain_events();
+        let before = sdk.version();
+        let history = sdk.history_lengths();
+        let mut edit = sdk.begin_edit("failed batch", None).unwrap();
+        edit.rename_mesh(MESH_ID, "candidate only").unwrap();
+        let (operation, error) = if owned_value {
+            let mut mesh = edit.candidate_document().get_mesh(MESH_ID).unwrap().clone();
+            mesh.id = MISSING.into();
+            ("replace_mesh", edit.replace_mesh(mesh).unwrap_err())
+        } else {
+            (
+                "rename_mesh",
+                edit.rename_mesh(MISSING, "missing").unwrap_err(),
+            )
+        };
+        assert_eq!(error.code.as_ref(), "MISSING_MESH");
+        assert_eq!(error.operation, operation);
+        assert_eq!(error.object_ids, [MISSING]);
+        assert_eq!(
+            edit.erase_object(MESH_ID).unwrap_err().code.as_ref(),
+            "EDIT_ABORTED"
+        );
+        assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
+        assert_eq!(sdk.version(), before);
+        assert_eq!(sdk.history_lengths(), history);
+        assert_eq!(sdk.mesh(MESH_ID).unwrap().name, "mesh");
+        assert!(sdk.drain_events().is_empty());
+    }
+}

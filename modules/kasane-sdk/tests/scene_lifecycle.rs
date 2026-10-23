@@ -664,6 +664,40 @@ fn field_addresses_do_not_revive_after_edit_undo_or_context_roundtrips() {
         .plan_scene_field_patch(&address, address.expected().clone(), false)
         .is_err());
 }
+
+#[test]
+fn topology_context_expires_addresses_without_reporting_reference_target_changes() {
+    let mut s = session();
+    let mesh = triangle(&mut s, None, None, None, 0.);
+    let address = s.scene_field_address(&mesh, F::Label).unwrap();
+    let context = s.document().scene_field(&mesh, F::Context).unwrap();
+    let mut replacement = s.document().get_mesh(&mesh).unwrap().clone();
+    replacement.triangles[0].rotate_left(1);
+    let (_, receipt) = s
+        .edit("Reindex triangle", None, |e| e.replace_mesh(replacement))
+        .unwrap();
+    assert!(receipt
+        .changes
+        .scene_fields
+        .iter()
+        .any(|c| c.entity.id == mesh && c.field == F::Context));
+    assert!(!receipt
+        .changes
+        .scene_references
+        .iter()
+        .any(|c| c.entity.id == mesh && c.field == F::Context));
+    assert_eq!(
+        s.document().scene_field(&mesh, F::Context).unwrap(),
+        context
+    );
+    assert!(s
+        .plan_scene_field_patch(&address, V::Label("Stale".into()), false)
+        .is_err());
+    s.undo().unwrap();
+    assert!(s
+        .plan_scene_field_patch(&address, V::Label("Still stale".into()), false)
+        .is_err());
+}
 #[test]
 fn deletion_is_atomic_for_external_users_and_retires_owned_handles() {
     let mut s = session();

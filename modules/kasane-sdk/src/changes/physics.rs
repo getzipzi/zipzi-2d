@@ -50,11 +50,7 @@ pub(super) fn summarize_physics(before: &Document, after: &Document, out: &mut C
     if a.zip(b).is_some_and(|(a, b)| std::ptr::eq(a, b)) || a.is_none() && b.is_none() {
         return;
     }
-    let entity = |kind, id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind,
-        id: id.into(),
-    };
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     let collection = |owner: Option<String>, role: &str| CollectionRef::Physics {
         document_id: after.id().into(),
         owner,
@@ -130,10 +126,7 @@ pub(super) fn summarize_physics(before: &Document, after: &Document, out: &mut C
     }
     let left = references(a);
     let right = references(b);
-    for (id, field) in left.keys().chain(right.keys()).collect::<BTreeSet<_>>() {
-        let key = (id.clone(), field.clone());
-        let a = left.get(&key).cloned();
-        let b = right.get(&key).cloned();
+    for ((id, field), a, b) in paired_records(&left, &right) {
         if a != b {
             out.categories.insert(ChangeCategory::References);
             out.physics_references.push(PhysicsReferenceChange {
@@ -148,12 +141,11 @@ pub(super) fn summarize_physics(before: &Document, after: &Document, out: &mut C
                     id,
                 ),
                 field: field.clone(),
-                before: a,
-                after: b,
+                before: a.cloned(),
+                after: b.cloned(),
             });
         }
     }
     // Created/deleted are reported separately, never also as modified.
-    out.modified
-        .retain(|e| !out.created.contains(e) && !out.deleted.contains(e));
+    out.retain_existing_modified();
 }

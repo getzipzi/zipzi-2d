@@ -15,11 +15,7 @@ pub struct MotionReferenceChange {
     pub after: Option<MotionReferenceValue>,
 }
 pub(super) fn summarize_motion(before: &Document, after: &Document, out: &mut ChangeSet) {
-    let entity = |kind, id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind,
-        id: id.into(),
-    };
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     let collection = |owner: Option<String>, role: &str| CollectionRef::Motion {
         document_id: after.id().into(),
         owner,

@@ -93,8 +93,9 @@ impl EditSession<'_> {
             "apply_document_plan",
             "Replan document properties",
         )?;
-        let result = self.document().apply_document_plan(&p.domain);
-        self.record(result, "apply_document_plan", "")
+        self.apply_authoring_change("apply_document_plan", "", true, |document| {
+            document.apply_document_plan(&p.domain)
+        })
     }
     pub fn edit_document(&mut self, intent: DocumentAuthoringEdit) -> Result<(), SdkError> {
         self.ensure_active("edit_document")?;
@@ -102,7 +103,8 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_document_edit(intent)
             .map_err(|s| self.abort_with(SdkError::from_status(s, "edit_document", vec![])))?;
-        let result = self.document().apply_document_plan(&p);
-        self.record(result, "edit_document", "")
+        self.apply_authoring_change("edit_document", "", true, |document| {
+            document.apply_document_plan(&p)
+        })
     }
 }

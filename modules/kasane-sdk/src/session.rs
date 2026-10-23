@@ -1,4 +1,5 @@
 //! Authoring session lifecycle, project IO, reads, history and preview.
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -819,34 +820,22 @@ impl AuthoringSession {
             }
         } else {
             let ids: std::collections::BTreeSet<_> = changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
+                .affected_entities()
                 .filter(|entity| entity.kind == ObjectKind::ExpressionEntry)
                 .map(|entity| &entity.id)
                 .collect();
             for id in ids {
-                if let Some((owner, _)) = document.get_expression_entry(id) {
-                    if self
-                        .expression_entry_contexts
-                        .get(id)
-                        .is_none_or(|context| context.0 != owner.id)
-                    {
-                        self.expression_entry_contexts
-                            .insert(id.clone(), (owner.id.clone(), document.revision()));
-                    }
-                } else {
-                    self.expression_entry_contexts.remove(id);
-                }
+                refresh_context(
+                    &mut self.expression_entry_contexts,
+                    id,
+                    document
+                        .get_expression_entry(id)
+                        .map(|(owner, _)| owner.id.as_str()),
+                    document.revision(),
+                );
             }
         }
-        for entity in changes
-            .created
-            .iter()
-            .chain(&changes.deleted)
-            .chain(&changes.modified)
-        {
+        for entity in changes.affected_entities() {
             let owner =
                 match entity.kind {
                     ObjectKind::MotionRegistration => document
@@ -866,25 +855,14 @@ impl AuthoringSession {
                         .map(|(c, _)| Some(c.id.clone())),
                     _ => continue,
                 };
-            if let Some(owner) = owner {
-                if self
-                    .motion_contexts
-                    .get(&entity.id)
-                    .is_none_or(|c| c.0 != owner)
-                {
-                    self.motion_contexts
-                        .insert(entity.id.clone(), (owner, document.revision()));
-                }
-            } else {
-                self.motion_contexts.remove(&entity.id);
-            }
+            refresh_context(
+                &mut self.motion_contexts,
+                &entity.id,
+                owner.as_ref(),
+                document.revision(),
+            );
         }
-        for entity in changes
-            .created
-            .iter()
-            .chain(&changes.deleted)
-            .chain(&changes.modified)
-        {
+        for entity in changes.affected_entities() {
             if !matches!(
                 entity.kind,
                 ObjectKind::PhysicsGroup
@@ -894,50 +872,28 @@ impl AuthoringSession {
             ) {
                 continue;
             }
-            if let Some(owner) = document.physics_owner(&entity.id) {
-                if self
-                    .physics_contexts
-                    .get(&entity.id)
-                    .is_none_or(|v| v.0 != owner)
-                {
-                    self.physics_contexts
-                        .insert(entity.id.clone(), (owner.into(), document.revision()));
-                }
-            } else {
-                self.physics_contexts.remove(&entity.id);
-            }
+            refresh_context(
+                &mut self.physics_contexts,
+                &entity.id,
+                document.physics_owner(&entity.id),
+                document.revision(),
+            );
         }
-        for entity in changes
-            .created
-            .iter()
-            .chain(&changes.deleted)
-            .chain(&changes.modified)
-        {
+        for entity in changes.affected_entities() {
             if !matches!(
                 entity.kind,
                 ObjectKind::PoseGroup | ObjectKind::PoseEntry | ObjectKind::PoseLink
             ) {
                 continue;
             }
-            if let Some(owner) = document.pose_owner(&entity.id) {
-                if self
-                    .pose_contexts
-                    .get(&entity.id)
-                    .is_none_or(|v| v.0 != owner)
-                {
-                    self.pose_contexts
-                        .insert(entity.id.clone(), (owner.into(), document.revision()));
-                }
-            } else {
-                self.pose_contexts.remove(&entity.id);
-            }
+            refresh_context(
+                &mut self.pose_contexts,
+                &entity.id,
+                document.pose_owner(&entity.id),
+                document.revision(),
+            );
         }
-        for entity in changes
-            .created
-            .iter()
-            .chain(&changes.deleted)
-            .chain(&changes.modified)
-        {
+        for entity in changes.affected_entities() {
             if !matches!(
                 entity.kind,
                 ObjectKind::Parameter
@@ -949,19 +905,15 @@ impl AuthoringSession {
             ) {
                 continue;
             }
-            if crate::organization_authoring::kind(document, &entity.id).is_some() {
-                let owner = document.organization_owner(&entity.id).map(str::to_owned);
-                if self
-                    .organization_contexts
-                    .get(&entity.id)
-                    .is_none_or(|v| v.0 != owner)
-                {
-                    self.organization_contexts
-                        .insert(entity.id.clone(), (owner, document.revision()));
-                }
-            } else {
-                self.organization_contexts.remove(&entity.id);
-            }
+            let owner = crate::organization_authoring::kind(document, &entity.id)
+                .is_some()
+                .then(|| document.organization_owner(&entity.id).map(str::to_owned));
+            refresh_context(
+                &mut self.organization_contexts,
+                &entity.id,
+                owner.as_ref(),
+                document.revision(),
+            );
         }
         for field in &changes.document_fields {
             self.document_epochs.insert(*field, document.revision());
@@ -995,14 +947,12 @@ impl AuthoringSession {
                 _ => None,
             };
             if let Some(name) = name {
-                if self
-                    .resource_names
-                    .get(&entity.id)
-                    .is_none_or(|v| v.0 != name)
-                {
-                    self.resource_names
-                        .insert(entity.id.clone(), (name.into(), document.revision()));
-                }
+                refresh_context(
+                    &mut self.resource_names,
+                    &entity.id,
+                    Some(name),
+                    document.revision(),
+                );
             }
         }
         for entity in &changes.deleted {
@@ -1037,18 +987,12 @@ impl AuthoringSession {
             owners.extend(document.binding_identities().into_iter().map(|i| i.owner));
         }
         for owner in owners {
-            if let Some(signature) = document.binding_context_signature(&owner) {
-                if self
-                    .binding_contexts
-                    .get(&owner)
-                    .is_none_or(|c| c.0 != signature)
-                {
-                    self.binding_contexts
-                        .insert(owner, (signature, document.revision()));
-                }
-            } else {
-                self.binding_contexts.remove(&owner);
-            }
+            refresh_context(
+                &mut self.binding_contexts,
+                &owner,
+                document.binding_context_signature(&owner).as_deref(),
+                document.revision(),
+            );
         }
         self.events.push(receipt);
     }
@@ -1085,27 +1029,74 @@ impl AuthoringSession {
     }
 }
 
-pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bool {
-    match kind {
+// Unchanged owners/signatures keep their epoch. Borrowed values only allocate
+// when the context changes; removing and restoring a context never revives it.
+fn refresh_context<T: ?Sized + ToOwned + PartialEq>(
+    contexts: &mut HashMap<String, (T::Owned, u64)>,
+    id: &str,
+    current: Option<&T>,
+    revision: u64,
+) {
+    match current {
+        Some(value) => {
+            if contexts.get(id).is_none_or(|old| old.0.borrow() != value) {
+                contexts.insert(id.into(), (value.to_owned(), revision));
+            }
+        }
+        None => {
+            contexts.remove(id);
+        }
+    }
+}
+
+// Ordered top-level records share their lookup/order mapping. Owned rows and
+// composite drawing roles keep their domain-specific resolution below.
+macro_rules! ordered_objects {
+    ($doc:ident, $kind:ident, $id:ident;
+     ordered { $($variant:ident => $get:ident, $order:ident;)+ }
+     other { $($pattern:pat => $exists:expr,)+ }
+    ) => {
+        pub(crate) fn object_exists_in($doc: &Document, $kind: ObjectKind, $id: &str) -> bool {
+            match $kind {
+                $(ObjectKind::$variant => $doc.$get($id).is_some(),)+
+                $($pattern => $exists,)+
+            }
+        }
+        fn ordered_keys($doc: &Document) -> impl Iterator<Item = ObjectKey> + '_ {
+            [$( (ObjectKind::$variant, $doc.$order()), )+]
+                .into_iter().flat_map(|(kind, ids)| {
+                    ids.iter().map(move |id| ObjectKey { kind, id: id.clone() })
+                })
+        }
+    };
+}
+
+ordered_objects! {
+    doc, kind, id;
+    ordered {
+        Asset => get_asset, asset_order;
+        Mesh => get_mesh, mesh_order;
+        Parameter => get_parameter, parameter_order;
+        MeshBinding => get_binding, binding_order;
+        Part => get_part, part_order;
+        Transform => get_transform, transform_order;
+        SceneBinding => get_scene_binding, scene_binding_order;
+        BlendKeyTable => get_blend_key_table, blend_key_table_order;
+        BlendConstraint => get_blend_constraint, blend_constraint_order;
+        BlendBinding => get_blend_binding, blend_binding_order;
+        Glue => get_glue, glue_order;
+        Offscreen => get_offscreen, offscreen_order;
+        Expression => get_expression, expression_order;
+        Motion => get_motion, motion_order;
+    }
+    other {
         ObjectKind::BindingAxis => doc
             .binding_identity(id)
             .is_some_and(|i| i.kind == kasane_core::document::BindingIdentityKind::Axis),
         ObjectKind::BindingSample => doc
             .binding_identity(id)
             .is_some_and(|i| i.kind == kasane_core::document::BindingIdentityKind::Sample),
-        ObjectKind::Asset => doc.get_asset(id).is_some(),
-        ObjectKind::Mesh => doc.get_mesh(id).is_some(),
-        ObjectKind::Parameter => doc.get_parameter(id).is_some(),
-        ObjectKind::MeshBinding => doc.get_binding(id).is_some(),
-        ObjectKind::Part => doc.get_part(id).is_some(),
-        ObjectKind::Transform => doc.get_transform(id).is_some(),
-        ObjectKind::SceneBinding => doc.get_scene_binding(id).is_some(),
-        ObjectKind::BlendKeyTable => doc.get_blend_key_table(id).is_some(),
-        ObjectKind::BlendConstraint => doc.get_blend_constraint(id).is_some(),
-        ObjectKind::BlendBinding => doc.get_blend_binding(id).is_some(),
-        ObjectKind::Glue => doc.get_glue(id).is_some(),
         ObjectKind::GlueVertexPair => doc.get_glue_pair(id).is_some(),
-        ObjectKind::Offscreen => doc.get_offscreen(id).is_some(),
         ObjectKind::DrawOrderGroup => doc.drawing_group_owners().iter().any(|owner| {
             if owner.is_empty() {
                 doc.id() == id
@@ -1127,9 +1118,7 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
             .combined_parameters
             .as_ref()
             .is_some_and(|sets| sets.iter().any(|set| set.id == id)),
-        ObjectKind::Expression => doc.get_expression(id).is_some(),
         ObjectKind::ExpressionEntry => doc.get_expression_entry(id).is_some(),
-        ObjectKind::Motion => doc.get_motion(id).is_some(),
         ObjectKind::MotionGroup => doc.get_motion_group(id).is_some(),
         ObjectKind::MotionRegistration => doc.get_motion_registration(id).is_some(),
         ObjectKind::MotionTrack => doc.get_motion_track(id).is_some(),
@@ -1149,28 +1138,7 @@ pub(crate) fn object_exists_in(doc: &Document, kind: ObjectKind, id: &str) -> bo
 }
 
 pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
-    let mut keys: HashSet<_> = [
-        (ObjectKind::Asset, doc.asset_order()),
-        (ObjectKind::Mesh, doc.mesh_order()),
-        (ObjectKind::Parameter, doc.parameter_order()),
-        (ObjectKind::MeshBinding, doc.binding_order()),
-        (ObjectKind::Part, doc.part_order()),
-        (ObjectKind::Transform, doc.transform_order()),
-        (ObjectKind::SceneBinding, doc.scene_binding_order()),
-        (ObjectKind::BlendKeyTable, doc.blend_key_table_order()),
-        (ObjectKind::BlendConstraint, doc.blend_constraint_order()),
-        (ObjectKind::BlendBinding, doc.blend_binding_order()),
-        (ObjectKind::Glue, doc.glue_order()),
-        (ObjectKind::Offscreen, doc.offscreen_order()),
-    ]
-    .into_iter()
-    .flat_map(|(kind, ids)| {
-        ids.iter().map(move |id| ObjectKey {
-            kind,
-            id: id.clone(),
-        })
-    })
-    .collect();
+    let mut keys: HashSet<_> = ordered_keys(doc).collect();
     keys.extend(
         doc.glue_order()
             .iter()
@@ -1210,10 +1178,6 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
             id: set.id.clone(),
         }));
     }
-    keys.extend(doc.expression_order().iter().map(|id| ObjectKey {
-        kind: ObjectKind::Expression,
-        id: id.clone(),
-    }));
     keys.extend(
         doc.expression_order()
             .iter()
@@ -1223,10 +1187,6 @@ pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
                 id: entry.id.clone(),
             }),
     );
-    keys.extend(doc.motion_order().iter().map(|id| ObjectKey {
-        kind: ObjectKind::Motion,
-        id: id.clone(),
-    }));
     keys.extend(doc.motion_groups().iter().map(|g| ObjectKey {
         kind: ObjectKind::MotionGroup,
         id: g.id.clone(),

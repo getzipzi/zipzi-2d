@@ -208,19 +208,14 @@ impl AuthoringSession {
 }
 impl EditSession<'_> {
     pub fn apply_motion_plan(&mut self, plan: &MotionEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_motion_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan against current session",
-                "apply_motion_plan",
-            )));
-        }
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_motion_edit(&plan.domain);
-        self.record(result, "apply_motion_plan", "")?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.ensure_plan_version(
+            plan.version,
+            "apply_motion_plan",
+            "Replan against current session",
+        )?;
+        self.apply_authoring_change("apply_motion_plan", "", false, |document| {
+            document.apply_motion_edit(&plan.domain)
+        })
     }
     pub fn edit_motion(&mut self, intent: MotionEdit) -> Result<(), SdkError> {
         self.ensure_active("edit_motion")?;
@@ -228,11 +223,9 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_motion_edit(intent)
             .map_err(|s| self.abort_with(SdkError::from_status(s, "edit_motion", vec![])))?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_motion_edit(&plan);
-        self.record(result, "edit_motion", "")?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("edit_motion", "", false, |document| {
+            document.apply_motion_edit(&plan)
+        })
     }
 }
 
@@ -271,19 +264,14 @@ impl AuthoringSession {
 }
 impl EditSession<'_> {
     pub fn apply_attachment_plan(&mut self, plan: &AttachmentEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_attachment_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan against current session",
-                "apply_attachment_plan",
-            )));
-        }
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_attachment_edit(&plan.domain);
-        self.record(result, "apply_attachment_plan", "")?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.ensure_plan_version(
+            plan.version,
+            "apply_attachment_plan",
+            "Replan against current session",
+        )?;
+        self.apply_authoring_change("apply_attachment_plan", "", false, |document| {
+            document.apply_attachment_edit(&plan.domain)
+        })
     }
     pub fn edit_attachment(
         &mut self,
@@ -294,11 +282,9 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_attachment_edit(intent)
             .map_err(|s| self.abort_with(SdkError::from_status(s, "edit_attachment", vec![])))?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().apply_attachment_edit(&plan);
-        self.record(result, "edit_attachment", "")?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("edit_attachment", "", false, |document| {
+            document.apply_attachment_edit(&plan)
+        })
     }
 }
 

@@ -37,16 +37,11 @@ fn collections(d: &Document) -> BTreeMap<(u8, Option<String>), Vec<String>> {
     out
 }
 pub(super) fn summarize_organization(before: &Document, after: &Document, out: &mut ChangeSet) {
-    let entity = |kind, id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind,
-        id: id.into(),
-    };
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     let a = collections(before);
     let b = collections(after);
-    for key in a.keys().chain(b.keys()).collect::<BTreeSet<_>>() {
-        if a.get(key).map(Vec::as_slice).unwrap_or_default()
-            != b.get(key).map(Vec::as_slice).unwrap_or_default()
+    for (key, old, new) in paired_records(&a, &b) {
+        if old.map(Vec::as_slice).unwrap_or_default() != new.map(Vec::as_slice).unwrap_or_default()
         {
             let collection = match key.0 {
                 0 => OrganizationCollection::ParameterGroups {
@@ -188,6 +183,5 @@ pub(super) fn summarize_organization(before: &Document, after: &Document, out: &
     if before.display_info().parameters != after.display_info().parameters {
         out.categories.insert(ChangeCategory::Content);
     }
-    out.modified
-        .retain(|e| !out.created.contains(e) && !out.deleted.contains(e));
+    out.retain_existing_modified();
 }

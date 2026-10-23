@@ -25,11 +25,7 @@ pub(super) fn summarize_references(before: &Document, after: &Document, out: &mu
         .chain(after.reference_identities())
         .map(|i| i.id.as_str())
         .collect::<BTreeSet<_>>();
-    let entity = |kind, id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind,
-        id: id.into(),
-    };
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     for id in ids {
         let k = kind(after, id).or_else(|| kind(before, id)).unwrap();
         let a = before.reference_fields(id).ok();

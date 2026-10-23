@@ -66,6 +66,14 @@ pub enum SceneField {
     Offscreen,
     Context,
 }
+impl SceneField {
+    pub fn is_reference(self) -> bool {
+        matches!(
+            self,
+            Self::Texture | Self::Masks | Self::GlueEndpoints | Self::Context
+        )
+    }
+}
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(
     tag = "field",
@@ -106,6 +114,21 @@ pub enum SceneFieldValue {
     },
 }
 impl SceneFieldValue {
+    /// Native reference payload used by publication summaries. Context exposes
+    /// organization/deformation targets; topology changes are reported separately.
+    pub fn into_references(self) -> Option<Vec<SceneReference>> {
+        match self {
+            Self::Texture(target) => Some(vec![target]),
+            Self::Masks(targets) => Some(targets.into_iter().map(Into::into).collect()),
+            Self::GlueEndpoints { a, b } => Some(vec![a, b]),
+            Self::Context { part_id, parent_id } => Some(vec![
+                part_id.unwrap_or_default().into(),
+                parent_id.unwrap_or_default().into(),
+            ]),
+            _ => None,
+        }
+    }
+
     pub fn field(&self) -> SceneField {
         match self {
             Self::Label(_) => SceneField::Label,

@@ -12,10 +12,10 @@ fn project_error(error: ExpressionProjectError, operation: &'static str) -> SdkE
 
 impl EditSession<'_> {
     pub fn create_expression(&mut self, expression: ExpressionAsset) -> Result<(), SdkError> {
-        self.ensure_active("create_expression")?;
         let id = expression.id.clone();
-        let result = self.document().create_expression(expression);
-        self.record(result, "create_expression", &id)
+        self.apply_authoring_change("create_expression", &id, true, |document| {
+            document.create_expression(expression)
+        })
     }
 
     pub fn replace_expression(&mut self, expression: ExpressionAsset) -> Result<(), SdkError> {

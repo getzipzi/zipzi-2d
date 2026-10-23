@@ -231,7 +231,7 @@ impl AuthoringSession {
 impl EditSession<'_> {
     pub fn apply_resource_plan(&mut self, plan: &ResourceEditPlan) -> Result<(), SdkError> {
         self.ensure_plan_version(plan.version, "apply_resource_plan", "Replan resources")?;
-        self.apply_authoring_change("apply_resource_plan", false, |document| {
+        self.apply_authoring_change("apply_resource_plan", "", false, |document| {
             document.apply_resource_plan(&plan.domain)
         })?;
         Ok(())
@@ -242,7 +242,7 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_resource_edit(intent)
             .map_err(|s| self.abort_with(SdkError::from_status(s, "edit_resource", vec![])))?;
-        self.apply_authoring_change("edit_resource", false, |document| {
+        self.apply_authoring_change("edit_resource", "", false, |document| {
             document.apply_resource_plan(&p)
         })?;
         Ok(())

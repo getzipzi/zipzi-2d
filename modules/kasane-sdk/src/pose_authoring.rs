@@ -309,6 +309,7 @@ impl EditSession<'_> {
         self.ensure_plan_version(plan.version, "apply_pose_plan", "Replan Pose")?;
         self.apply_authoring_change(
             "apply_pose_plan",
+            "",
             plan.domain.preserves_identities(),
             |document| document.apply_pose_plan(&plan.domain),
         )?;
@@ -320,7 +321,7 @@ impl EditSession<'_> {
             .candidate_document()
             .plan_pose_edit(intent)
             .map_err(|s| self.abort_with(SdkError::from_status(s, "edit_pose", vec![])))?;
-        self.apply_authoring_change("edit_pose", plan.preserves_identities(), |document| {
+        self.apply_authoring_change("edit_pose", "", plan.preserves_identities(), |document| {
             document.apply_pose_plan(&plan)
         })?;
         Ok(())

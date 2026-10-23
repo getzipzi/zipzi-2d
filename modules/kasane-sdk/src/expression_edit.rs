@@ -238,14 +238,11 @@ impl EditSession<'_> {
     }
 
     pub fn apply_expression_plan(&mut self, plan: &ExpressionEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_expression_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan against the current session",
-                "apply_expression_plan",
-            )));
-        }
+        self.ensure_plan_version(
+            plan.version,
+            "apply_expression_plan",
+            "Replan against the current session",
+        )?;
         let result = self.document().apply_expression_edit(&plan.domain);
         self.record(result, "apply_expression_plan", "")?;
         self.track_expression_deletions(plan.domain.affected_entries());

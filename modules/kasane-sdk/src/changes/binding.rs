@@ -13,11 +13,7 @@ pub(super) fn summarize_bindings(
     ids: &[String],
     out: &mut ChangeSet,
 ) {
-    let entity = |kind, id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind,
-        id: id.into(),
-    };
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     let mut edge = |kind, id: &str, field: &str, old: Option<&str>, new: Option<&str>| {
         if old != new {
             out.binding_references.push(BindingReferenceChange {
@@ -184,22 +180,14 @@ pub(super) fn summarize_binding_children(
     let new = values(after, ids);
     for (id, (kind, value)) in &new {
         if old.get(id).is_some_and(|v| v.1 != *value) {
-            out.modified.push(EntityRef {
-                document_id: after.id().into(),
-                kind: *kind,
-                id: id.clone(),
-            });
+            out.modified.push(EntityRef::new(after.id(), *kind, id));
         }
     }
     let mut references = |kind, id: &str, field: &str, a: Option<&str>, b: Option<&str>| {
         if a != b {
             out.categories.insert(ChangeCategory::References);
             out.binding_references.push(BindingReferenceChange {
-                entity: EntityRef {
-                    document_id: after.id().into(),
-                    kind,
-                    id: id.into(),
-                },
+                entity: EntityRef::new(after.id(), kind, id),
                 field: field.into(),
                 before: a.map(str::to_owned),
                 after: b.map(str::to_owned),
@@ -269,11 +257,7 @@ pub(super) fn summarize_binding_children(
         if a != b {
             out.categories.insert(ChangeCategory::References);
             out.binding_references.push(BindingReferenceChange {
-                entity: EntityRef {
-                    document_id: after.id().into(),
-                    kind: ObjectKind::BlendKeyTable,
-                    id: id.clone(),
-                },
+                entity: EntityRef::new(after.id(), ObjectKind::BlendKeyTable, id),
                 field: "base_sample_id".into(),
                 before: a.cloned(),
                 after: b.cloned(),

@@ -412,7 +412,7 @@ impl EditSession<'_> {
         if let Some(cost) = plan.domain.cost() {
             self.binding_cost = Some(cost);
         }
-        self.apply_authoring_change("apply_scene_plan", false, |document| {
+        self.apply_authoring_change("apply_scene_plan", "", false, |document| {
             document.apply_scene_plan(&plan.domain)
         })?;
         self.binding_controls.push(plan.control.clone());
@@ -435,7 +435,7 @@ impl EditSession<'_> {
         if let Some(cost) = domain.cost() {
             self.binding_cost = Some(cost);
         }
-        self.apply_authoring_change("edit_scene", false, |document| {
+        self.apply_authoring_change("edit_scene", "", false, |document| {
             document.apply_scene_plan(&domain)
         })?;
         self.binding_controls.push(control);

@@ -282,6 +282,7 @@ impl EditSession<'_> {
         )?;
         self.apply_authoring_change(
             "apply_organization_plan",
+            "",
             plan.domain.preserves_identities(),
             |document| document.apply_organization_plan(&plan.domain),
         )?;
@@ -308,6 +309,7 @@ impl EditSession<'_> {
             })?;
         self.apply_authoring_change(
             "edit_organization",
+            "",
             plan.preserves_identities(),
             |document| document.apply_organization_plan(&plan),
         )?;

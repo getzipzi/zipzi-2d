@@ -14,13 +14,10 @@ fn project_error(error: CdiProjectError, operation: &'static str) -> SdkError {
 
 impl EditSession<'_> {
     pub fn replace_display_info(&mut self, info: DisplayInfo) -> Result<(), SdkError> {
-        self.ensure_active("replace_display_info")?;
         let id = self.document().id().to_owned();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().replace_display_info(info);
-        self.record(result, "replace_display_info", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("replace_display_info", &id, false, |document| {
+            document.replace_display_info(info)
+        })
     }
 
     pub fn set_parameter_display_name(
@@ -28,17 +25,18 @@ impl EditSession<'_> {
         parameter_id: &str,
         name: String,
     ) -> Result<(), SdkError> {
-        self.ensure_active("set_parameter_display_name")?;
-        let result = self
-            .document()
-            .set_parameter_display_name(parameter_id, name);
-        self.record(result, "set_parameter_display_name", parameter_id)
+        self.apply_authoring_change(
+            "set_parameter_display_name",
+            parameter_id,
+            true,
+            |document| document.set_parameter_display_name(parameter_id, name),
+        )
     }
 
     pub fn set_part_display_name(&mut self, part_id: &str, name: String) -> Result<(), SdkError> {
-        self.ensure_active("set_part_display_name")?;
-        let result = self.document().set_part_display_name(part_id, name);
-        self.record(result, "set_part_display_name", part_id)
+        self.apply_authoring_change("set_part_display_name", part_id, true, |document| {
+            document.set_part_display_name(part_id, name)
+        })
     }
 
     pub fn create_parameter_group(&mut self, group: CdiParameterGroup) -> Result<(), SdkError> {

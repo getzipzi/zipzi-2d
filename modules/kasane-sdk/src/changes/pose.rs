@@ -89,16 +89,10 @@ pub(super) fn summarize_pose(before: &Document, after: &Document, out: &mut Chan
     if a.zip(b).is_some_and(|(a, b)| std::ptr::eq(a, b)) || a == b {
         return;
     }
-    let entity = |kind, id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind,
-        id: id.into(),
-    };
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     let left = records(a);
     let right = records(b);
-    for id in left.keys().chain(right.keys()).collect::<BTreeSet<_>>() {
-        let old = left.get(id);
-        let new = right.get(id);
+    for (id, old, new) in paired_records(&left, &right) {
         let current = new.or(old).unwrap();
         let old_children = old.map(|r| r.children.as_slice()).unwrap_or_default();
         let new_children = new.map(|r| r.children.as_slice()).unwrap_or_default();
@@ -178,8 +172,7 @@ pub(super) fn summarize_pose(before: &Document, after: &Document, out: &mut Chan
     if let Some(p) = b {
         out.modified.push(entity(ObjectKind::Pose, &p.id));
     }
-    out.modified
-        .retain(|e| !out.created.contains(e) && !out.deleted.contains(e));
+    out.retain_existing_modified();
 }
 pub(super) fn reference_bytes(target: &Option<PosePartRef>) -> usize {
     match target {

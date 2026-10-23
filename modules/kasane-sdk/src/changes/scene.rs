@@ -21,249 +21,37 @@ pub(super) fn summarize_scene(
     object_ids: &[String],
     out: &mut ChangeSet,
 ) {
-    let entity = |kind, id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind,
-        id: id.into(),
-    };
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     let mut candidates: BTreeSet<String> = object_ids.iter().cloned().collect();
     candidates.extend(out.created.iter().chain(&out.deleted).map(|e| e.id.clone()));
-    let mut field = |kind, id: &str, tag, changed: bool| {
-        if changed {
+    for id in candidates {
+        let kind = crate::scene_authoring::kind(after, &id)
+            .or_else(|| crate::scene_authoring::kind(before, &id));
+        let Some(kind) = kind else { continue };
+        before.visit_scene_field_changes(after, &id, |tag| {
             out.scene_fields.push(SceneFieldChange {
-                entity: entity(kind, id),
+                entity: entity(kind, &id),
                 field: tag,
             });
-            out.modified.push(entity(kind, id));
+            out.modified.push(entity(kind, &id));
             out.categories.insert(if tag == SceneField::Label {
                 ChangeCategory::Labels
-            } else if matches!(
-                tag,
-                SceneField::Texture
-                    | SceneField::Masks
-                    | SceneField::GlueEndpoints
-                    | SceneField::Context
-            ) {
+            } else if tag.is_reference() {
                 ChangeCategory::References
             } else {
                 ChangeCategory::Content
             });
-        }
-    };
-    for id in candidates {
-        let id = id.as_str();
-        let kind = crate::scene_authoring::kind(after, id)
-            .or_else(|| crate::scene_authoring::kind(before, id));
-        let Some(kind) = kind else { continue };
-        use SceneField as F;
-        let a = before.get_mesh(id);
-        let b = after.get_mesh(id);
-        if a.is_some() || b.is_some() {
-            field(kind, id, F::Label, a.map(|v| &v.name) != b.map(|v| &v.name));
-            field(
-                kind,
-                id,
-                F::RuntimeId,
-                a.map(|v| &v.runtime_id) != b.map(|v| &v.runtime_id),
-            );
-            field(
-                kind,
-                id,
-                F::Enabled,
-                a.map(|v| v.enabled) != b.map(|v| v.enabled),
-            );
-            field(
-                kind,
-                id,
-                F::Appearance,
-                a.map(|v| v.appearance) != b.map(|v| v.appearance),
-            );
-            field(
-                kind,
-                id,
-                F::Texture,
-                a.map(|v| &v.texture_asset_id) != b.map(|v| &v.texture_asset_id),
-            );
-            field(
-                kind,
-                id,
-                F::Masks,
-                a.map(|v| &v.masks) != b.map(|v| &v.masks),
-            );
-            field(
-                kind,
-                id,
-                F::MeshDrawing,
-                a.map(|v| {
-                    (
-                        v.draw_order,
-                        v.blend_mode,
-                        v.raw_blend_mode,
-                        v.double_sided,
-                        v.inverted_mask,
-                    )
-                }) != b.map(|v| {
-                    (
-                        v.draw_order,
-                        v.blend_mode,
-                        v.raw_blend_mode,
-                        v.double_sided,
-                        v.inverted_mask,
-                    )
-                }),
-            );
-            field(
-                kind,
-                id,
-                F::Context,
-                a.map(|v| (&v.part_id, &v.deformer_id, &v.vertex_ids, &v.triangles))
-                    != b.map(|v| (&v.part_id, &v.deformer_id, &v.vertex_ids, &v.triangles)),
-            );
-        }
-        let a = before.get_transform(id);
-        let b = after.get_transform(id);
-        if a.is_some() || b.is_some() {
-            field(kind, id, F::Label, a.map(|v| &v.name) != b.map(|v| &v.name));
-            field(
-                kind,
-                id,
-                F::RuntimeId,
-                a.map(|v| &v.runtime_id) != b.map(|v| &v.runtime_id),
-            );
-            field(
-                kind,
-                id,
-                F::Enabled,
-                a.map(|v| v.enabled) != b.map(|v| v.enabled),
-            );
-            field(
-                kind,
-                id,
-                F::Appearance,
-                a.map(|v| v.appearance) != b.map(|v| v.appearance),
-            );
-            field(
-                kind,
-                id,
-                F::Warp,
-                a.and_then(|v| v.warp()) != b.and_then(|v| v.warp()),
-            );
-            field(
-                kind,
-                id,
-                F::Rotation,
-                a.and_then(|v| v.rotation()) != b.and_then(|v| v.rotation()),
-            );
-            field(
-                kind,
-                id,
-                F::Context,
-                a.map(|v| {
-                    (
-                        &v.part_id,
-                        &v.parent_id,
-                        v.warp().map(|w| (w.rows, w.columns, w.quad)),
-                    )
-                }) != b.map(|v| {
-                    (
-                        &v.part_id,
-                        &v.parent_id,
-                        v.warp().map(|w| (w.rows, w.columns, w.quad)),
-                    )
-                }),
-            );
-        }
-        let a = before.get_offscreen(id);
-        let b = after.get_offscreen(id);
-        if a.is_some() || b.is_some() {
-            field(kind, id, F::Label, a.map(|v| &v.name) != b.map(|v| &v.name));
-            field(
-                kind,
-                id,
-                F::RuntimeId,
-                a.map(|v| &v.runtime_id) != b.map(|v| &v.runtime_id),
-            );
-            field(
-                kind,
-                id,
-                F::Enabled,
-                a.map(|v| v.enabled) != b.map(|v| v.enabled),
-            );
-            field(
-                kind,
-                id,
-                F::Masks,
-                a.map(|v| &v.masks) != b.map(|v| &v.masks),
-            );
-            field(
-                kind,
-                id,
-                F::Offscreen,
-                a.map(|v| (v.blend_mode, v.flags, &v.keyforms, &v.part_keyform_indices))
-                    != b.map(|v| (v.blend_mode, v.flags, &v.keyforms, &v.part_keyform_indices)),
-            );
-            field(
-                kind,
-                id,
-                F::Context,
-                a.map(|v| &v.part_id) != b.map(|v| &v.part_id),
-            );
-        }
-        let a = before.get_glue(id);
-        let b = after.get_glue(id);
-        if a.is_some() || b.is_some() {
-            field(kind, id, F::Label, a.map(|v| &v.name) != b.map(|v| &v.name));
-            field(
-                kind,
-                id,
-                F::RuntimeId,
-                a.map(|v| &v.runtime_id) != b.map(|v| &v.runtime_id),
-            );
-            field(
-                kind,
-                id,
-                F::GlueIntensity,
-                a.map(|v| v.intensity) != b.map(|v| v.intensity),
-            );
-            field(
-                kind,
-                id,
-                F::GlueEndpoints,
-                a.map(|v| (&v.mesh_a_id, &v.mesh_b_id)) != b.map(|v| (&v.mesh_a_id, &v.mesh_b_id)),
-            );
-            field(
-                kind,
-                id,
-                F::Context,
-                a.map(|v| (&v.pairs, &v.mesh_a_id, &v.mesh_b_id))
-                    != b.map(|v| (&v.pairs, &v.mesh_a_id, &v.mesh_b_id)),
-            );
-        }
+        });
     }
-    drop(field);
     for change in &out.scene_fields {
-        if !matches!(
-            change.field,
-            SceneField::Texture
-                | SceneField::Masks
-                | SceneField::GlueEndpoints
-                | SceneField::Context
-        ) {
+        if !change.field.is_reference() {
             continue;
         }
-        let values = |d: &Document| -> Vec<SceneReference> {
-            match d.scene_field(&change.entity.id, change.field) {
-                Ok(kasane_core::document::SceneFieldValue::Texture(target)) => vec![target],
-                Ok(kasane_core::document::SceneFieldValue::Masks(targets)) => {
-                    targets.into_iter().map(Into::into).collect()
-                }
-                Ok(kasane_core::document::SceneFieldValue::GlueEndpoints { a, b }) => vec![a, b],
-                Ok(kasane_core::document::SceneFieldValue::Context { part_id, parent_id }) => vec![
-                    part_id.unwrap_or_default().into(),
-                    parent_id.unwrap_or_default().into(),
-                ],
-                _ => vec![],
-            }
+        let values = |d: &Document| {
+            d.scene_field(&change.entity.id, change.field)
+                .ok()
+                .and_then(kasane_core::document::SceneFieldValue::into_references)
+                .unwrap_or_default()
         };
         let a = values(before);
         let b = values(after);
@@ -406,6 +194,5 @@ pub(super) fn summarize_scene(
     {
         out.categories.remove(&ChangeCategory::Topology);
     }
-    out.modified
-        .retain(|e| !out.created.contains(e) && !out.deleted.contains(e));
+    out.retain_existing_modified();
 }

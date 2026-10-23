@@ -1,10 +1,6 @@
 use super::*;
 pub(super) fn summarize_resources(before: &Document, after: &Document, out: &mut ChangeSet) {
-    let entity = |id: &str| EntityRef {
-        document_id: after.id().into(),
-        kind: ObjectKind::Asset,
-        id: id.into(),
-    };
+    let entity = |id: &str| EntityRef::new(after.id(), ObjectKind::Asset, id);
     if before.asset_order() != after.asset_order() {
         out.collections.push(CollectionRef::Resources {
             document_id: after.id().into(),

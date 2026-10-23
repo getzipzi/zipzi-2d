@@ -178,14 +178,11 @@ pub(crate) fn check_cost(cost: ConversionCost, limits: AuthoringLimits) -> Resul
 }
 impl EditSession<'_> {
     pub fn apply_binding_plan(&mut self, plan: &BindingEditPlan) -> Result<(), SdkError> {
-        self.ensure_active("apply_binding_plan")?;
-        if self.base_version() != plan.version {
-            return Err(self.abort_with(SdkError::new(
-                "STALE_PLAN",
-                "Replan against the current session",
-                "apply_binding_plan",
-            )));
-        }
+        self.ensure_plan_version(
+            plan.version,
+            "apply_binding_plan",
+            "Replan against the current session",
+        )?;
         plan.control
             .check()
             .map_err(|s| self.abort_with(error(s, "apply_binding_plan")))?;
@@ -199,16 +196,18 @@ impl EditSession<'_> {
             .as_ref()
             .map_or(self.authoring_limits, |s| s.authoring_limits);
         check_cost(conversion.cost(), limits).map_err(|e| self.abort_with(e))?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = match conversion {
-            BindingConversion::Grid(p) => self.document().apply_binding_grid_plan(p),
-            BindingConversion::Blend(p) => self.document().apply_blend_authoring_plan(p),
-            BindingConversion::MeshGrid(p) => self.document().apply_mesh_grid_plan(p),
-            BindingConversion::ParameterRange(p) => self.document().apply_parameter_range_plan(p),
-            BindingConversion::Reparent(p) => self.document().apply_reparent_plan(p),
-        };
-        self.record(result, "apply_binding_plan", "")?;
-        self.track_removed_objects(before);
+        self.apply_authoring_change(
+            "apply_binding_plan",
+            "",
+            false,
+            |document| match conversion {
+                BindingConversion::Grid(p) => document.apply_binding_grid_plan(p),
+                BindingConversion::Blend(p) => document.apply_blend_authoring_plan(p),
+                BindingConversion::MeshGrid(p) => document.apply_mesh_grid_plan(p),
+                BindingConversion::ParameterRange(p) => document.apply_parameter_range_plan(p),
+                BindingConversion::Reparent(p) => document.apply_reparent_plan(p),
+            },
+        )?;
         let cost = conversion.cost();
         self.binding_cost = Some(self.binding_cost.map_or(cost, |old| ConversionCost {
             sample_combinations: old.sample_combinations.max(cost.sample_combinations),

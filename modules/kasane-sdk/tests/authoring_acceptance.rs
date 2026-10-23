@@ -10,6 +10,81 @@ fn session() -> AuthoringSession {
     AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
 }
 
+#[test]
+fn stale_domain_plans_abort_candidate_writes_without_publication() {
+    fn reject(
+        sdk: &mut AuthoringSession,
+        operation: &str,
+        apply: impl FnOnce(&mut EditSession<'_>) -> Result<(), kasane_sdk::SdkError>,
+    ) {
+        let version = sdk.version();
+        let history = sdk.history_lengths();
+        let mut edit = sdk.begin_edit("stale plan", None).unwrap();
+        edit.create_part(Part {
+            id: id(999),
+            ..Default::default()
+        })
+        .unwrap();
+        let error = apply(&mut edit).unwrap_err();
+        assert_eq!(error.code.as_ref(), "STALE_PLAN");
+        assert_eq!(error.operation, operation);
+        assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
+        assert_eq!(sdk.version(), version);
+        assert_eq!(sdk.history_lengths(), history);
+        assert!(sdk.document().get_part(&id(999)).is_none());
+        assert!(sdk.drain_events().is_empty());
+    }
+
+    let mut sdk = session();
+    let motion = sdk
+        .plan_motion_edit(MotionEdit::CreateGroup {
+            id: id(10),
+            name: "Planned".into(),
+        })
+        .unwrap();
+    let attachment = sdk
+        .plan_attachment_edit(AttachmentEdit::Create {
+            id: id(11),
+            path: "files/planned.wav".into(),
+        })
+        .unwrap();
+    let physics = sdk
+        .plan_physics_edit(PhysicsEdit::CreateGroup {
+            asset_id: id(12),
+            id: id(13),
+            name: "Planned".into(),
+            before: None,
+        })
+        .unwrap();
+    let expression = sdk
+        .plan_expression_edit(ExpressionEdit::Create {
+            id: id(14),
+            name: "Planned".into(),
+        })
+        .unwrap();
+    sdk.edit("Advance version", None, |e| {
+        e.create_part(Part {
+            id: id(20),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    sdk.drain_events();
+
+    reject(&mut sdk, "apply_motion_plan", |e| {
+        e.apply_motion_plan(&motion)
+    });
+    reject(&mut sdk, "apply_attachment_plan", |e| {
+        e.apply_attachment_plan(&attachment)
+    });
+    reject(&mut sdk, "apply_physics_plan", |e| {
+        e.apply_physics_plan(&physics)
+    });
+    reject(&mut sdk, "apply_expression_plan", |e| {
+        e.apply_expression_plan(&expression)
+    });
+}
+
 fn create_all(edit: &mut EditSession<'_>) -> Result<(), kasane_sdk::SdkError> {
     edit.edit_resource(ResourceEdit::Create {
         id: id(10),
@@ -181,6 +256,12 @@ fn all_domains_publish_once_persist_pending_state_and_reverse_one_history_entry(
     assert_eq!(sdk.history_lengths(), (1, 0));
     assert_eq!(sdk.drain_events(), vec![receipt.clone()]);
     assert!(!receipt.changes.full_invalidation);
+    // Enumeration used for receipts and direct lookup must agree for owned rows
+    // as well as ordered roots, including generated Physics nodes and samples.
+    for entity in &receipt.changes.created {
+        let handle = sdk.handle(entity.kind, &entity.id).unwrap();
+        sdk.resolve_handle(&handle).unwrap();
+    }
     let handles: Vec<_> = [
         (ObjectKind::Asset, 10),
         (ObjectKind::Attachment, 11),

@@ -27,20 +27,17 @@ impl EditSession<'_> {
     }
 
     pub fn set_physics(&mut self, asset: PhysicsAsset) -> Result<(), SdkError> {
-        self.ensure_active("set_physics")?;
         let id = asset.id.clone();
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().set_physics(asset);
-        self.record(result, "set_physics", &id)?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("set_physics", &id, false, |document| {
+            document.set_physics(asset)
+        })
     }
 
     /// Apply a typed field patch while sharing untouched rigs with history/snapshots.
     pub fn patch_physics(&mut self, patch: &PhysicsPatch) -> Result<(), SdkError> {
-        self.ensure_active("patch_physics")?;
-        let result = self.document().patch_physics(patch);
-        self.record(result, "patch_physics", &patch.asset_id)
+        self.apply_authoring_change("patch_physics", &patch.asset_id, true, |document| {
+            document.patch_physics(patch)
+        })
     }
 
     pub fn import_physics3(

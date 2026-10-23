@@ -46,6 +46,48 @@ fn axes() -> Vec<BindingAxis> {
 }
 
 #[test]
+fn scene_field_changes_distinguish_warp_content_from_address_context() {
+    use kasane_core::document::{SceneField as F, SceneFieldValue as V};
+    let before = document();
+    let mut after = before.clone();
+    let mut warp = after.get_transform(&id(3)).unwrap().clone();
+    let TransformData::Warp(grid) = &mut warp.data else {
+        unreachable!()
+    };
+    grid.points[0].x = -1.;
+    assert!(after.replace_transform(warp).status.is_ok());
+    let mut changes = Vec::new();
+    before.visit_scene_field_changes(&after, &id(3), |field| changes.push(field));
+    assert_eq!(changes, [F::Warp]);
+
+    let mut warp = after.get_transform(&id(3)).unwrap().clone();
+    let TransformData::Warp(grid) = &mut warp.data else {
+        unreachable!()
+    };
+    grid.columns = 2;
+    grid.points = vec![Vec2::default(); 6];
+    assert!(after.replace_transform(warp).status.is_ok());
+    changes.clear();
+    before.visit_scene_field_changes(&after, &id(3), |field| changes.push(field));
+    assert_eq!(changes, [F::Warp, F::Context]);
+    assert_eq!(
+        before.scene_field(&id(3), F::Context),
+        after.scene_field(&id(3), F::Context)
+    );
+    assert_eq!(
+        V::Context {
+            part_id: None,
+            parent_id: None
+        }
+        .into_references(),
+        Some(vec![
+            SceneReference::Unspecified,
+            SceneReference::Unspecified
+        ]),
+    );
+}
+
+#[test]
 fn wrong_track_and_single_form_types_fail_without_mutation() {
     let mut doc = document();
     let before = doc.clone();

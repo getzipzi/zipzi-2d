@@ -347,10 +347,10 @@ impl EditSession<'_> {
     }
     /// Create a validated persistent clip with a new UUID in the current transaction.
     pub fn create_motion(&mut self, clip: MotionClip) -> Result<(), SdkError> {
-        self.ensure_active("create_motion")?;
         let id = clip.id.clone();
-        let result = self.document().create_motion(clip);
-        self.record(result, "create_motion", &id)
+        self.apply_authoring_change("create_motion", &id, true, |document| {
+            document.create_motion(clip)
+        })
     }
 
     /// Replace an existing clip by UUID and validate its complete contents.
@@ -408,12 +408,9 @@ impl EditSession<'_> {
         groups: Vec<MotionGroup>,
         roots: Vec<kasane_core::document::MotionRegistration>,
     ) -> Result<(), SdkError> {
-        self.ensure_active("set_motion_library")?;
-        let before = crate::session::keys_in(self.candidate_document());
-        let result = self.document().set_motion_library(groups, roots);
-        self.record(result, "set_motion_library", "model3.Motions")?;
-        self.track_removed_objects(before);
-        Ok(())
+        self.apply_authoring_change("set_motion_library", "model3.Motions", false, |document| {
+            document.set_motion_library(groups, roots)
+        })
     }
 
     /// Import or replace a motion3 asset by UUID and name in the current transaction.
