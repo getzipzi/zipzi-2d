@@ -681,6 +681,42 @@ impl Document {
             self.changed(kind, mesh_ids, plan.domain.affected.clone())
         }
     }
+    pub(in crate::document) fn reparent_placement(
+        &self,
+        sources: &[String],
+        edit: &super::ReparentEdit,
+    ) -> Result<Option<crate::document::HierarchyOrder>, Status> {
+        let Some(placement) = &edit.placement else {
+            return Ok(None);
+        };
+        let mut members = self.scene_collection(&SceneCollection::Deformation {
+            parent_id: (!edit.parent_id.is_empty()).then(|| edit.parent_id.clone()),
+        })?;
+        if placement
+            .before
+            .as_ref()
+            .is_some_and(|id| !members.contains(id))
+        {
+            return Err(Status::error(
+                "INVALID_PLACEMENT",
+                "Anchor is not in the destination",
+            ));
+        }
+        for id in sources {
+            if !members.contains(id) {
+                members.push(id.clone());
+            }
+        }
+        let next = relocate_members(&members, sources, &placement.before)?;
+        let mut order = self.hierarchy_order().clone();
+        order.deformation = replace_collection_order(
+            &order.deformation,
+            &members,
+            &next,
+            &self.scene_deformation_order(),
+        );
+        Ok((order.deformation != self.scene_deformation_order()).then_some(order))
+    }
     fn scene_deformation_order(&self) -> Vec<String> {
         let mut seen = HashSet::new();
         self.hierarchy_order()

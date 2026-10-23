@@ -44,6 +44,7 @@ fn grid_roundtrip(s: &AuthoringSession) {
     let text = kasane_project::encode_project(&document).unwrap();
     let restored = kasane_project::decode_project(&text).unwrap();
     assert!(restored.validate_structure().is_empty());
+    assert_eq!(restored.hierarchy_order(), s.document().hierarchy_order());
     assert_eq!(
         restored.get_binding(BINDING_ID),
         s.document().get_binding(BINDING_ID)
@@ -73,6 +74,7 @@ fn rotation(s: &mut AuthoringSession, scale: f32) {
 
 fn parent_edit(strategy: ReparentStrategy, parent: &str) -> E {
     E::Reparent(ReparentEdit {
+        placement: None,
         sources: vec![MESH_ID.into()],
         parent_id: parent.into(),
         strategy,

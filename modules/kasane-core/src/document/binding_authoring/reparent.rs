@@ -15,6 +15,9 @@ pub struct ReparentEdit {
     /// Empty means the model root. Part organization is an independent relation.
     pub parent_id: String,
     pub strategy: ReparentStrategy,
+    /// Optional placement in the resulting deformation collection.
+    #[serde(default)]
+    pub placement: Option<ReparentPlacement>,
     /// Absolute position error in model units, before Glue postprocessing.
     pub tolerance: f64,
     /// Relative error times the original affected geometry's model-space scale.
@@ -23,6 +26,11 @@ pub struct ReparentEdit {
     /// Required for preservation. These are frozen native parameter inputs;
     /// Motion/Physics must first be resolved to parameters by the caller.
     pub context: Option<ReparentContext>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReparentPlacement {
+    /// None appends; Some names an unselected member of the destination.
+    pub before: Option<String>,
 }
 fn default_relative_tolerance() -> f64 {
     1e-6
@@ -41,6 +49,7 @@ impl ReparentEdit {
             sources,
             parent_id,
             strategy: ReparentStrategy::KeepLocalData,
+            placement: None,
             tolerance: 1e-5,
             relative_tolerance: 1e-6,
             context: None,
@@ -71,6 +80,7 @@ pub struct ReparentPlan {
     control: ConversionControl,
     report: ConversionReport,
     snapshot: Arc<()>,
+    hierarchy: Option<crate::document::HierarchyOrder>,
     meshes: Vec<Mesh>,
     bindings: Vec<MeshBinding>,
     transforms: Vec<Transform>,
@@ -358,10 +368,11 @@ impl Document {
     /// document, or runtime frame is constructed. A successful preservation query
     /// still needs a conversion plan to check capacity and the numeric error bound.
     pub fn reparent_support(&self, edit: &ReparentEdit) -> Result<ReparentSupport, Status> {
-        let (changing, _) = self.prepare_reparent(edit, &ConversionControl::default())?;
-        Ok(if changing.is_empty() {
+        let (sources, changing, _) = self.prepare_reparent(edit, &ConversionControl::default())?;
+        let hierarchy = self.reparent_placement(&sources, edit)?;
+        Ok(if changing.is_empty() && hierarchy.is_none() {
             ReparentSupport::NoChange
-        } else if edit.strategy == ReparentStrategy::KeepLocalData {
+        } else if changing.is_empty() || edit.strategy == ReparentStrategy::KeepLocalData {
             ReparentSupport::Available
         } else {
             ReparentSupport::RequiresConversionPlan
@@ -371,7 +382,7 @@ impl Document {
         &self,
         edit: &ReparentEdit,
         control: &ConversionControl,
-    ) -> Result<(Vec<String>, Option<ReparentContext>), Status> {
+    ) -> Result<(Vec<String>, Vec<String>, Option<ReparentContext>), Status> {
         if edit.strategy != ReparentStrategy::KeepLocalData
             && (!edit.tolerance.is_finite()
                 || edit.tolerance <= 0.0
@@ -486,7 +497,7 @@ impl Document {
             }
             self.reparent_rotation_map(&edit.parent_id, context, domain, false)?;
         }
-        Ok((changing, context))
+        Ok((sources, changing, context))
     }
     pub fn plan_reparent(
         &self,
@@ -502,7 +513,8 @@ impl Document {
         control: &ConversionControl,
     ) -> Result<ReparentPlan, Status> {
         control.checkpoint()?;
-        let (changing, context) = self.prepare_reparent(&edit, control)?;
+        let (sources, changing, context) = self.prepare_reparent(&edit, control)?;
+        let hierarchy = self.reparent_placement(&sources, &edit)?;
         let point_count = changing
             .iter()
             .filter_map(|id| self.get_mesh(id))
@@ -531,6 +543,24 @@ impl Document {
             .ok_or_else(|| {
                 Status::error("AUTHORING_CAPACITY_OVERFLOW", "Mesh conversion payload")
             })?;
+        if let Some(order) = &hierarchy {
+            payload = order
+                .organization
+                .iter()
+                .chain(&order.deformation)
+                .chain(&order.glues)
+                .try_fold(payload, |bytes, id| {
+                    bytes
+                        .checked_add(std::mem::size_of::<String>())
+                        .and_then(|n| n.checked_add(id.len()))
+                        .ok_or_else(|| {
+                            Status::error(
+                                "AUTHORING_CAPACITY_OVERFLOW",
+                                "Reparent hierarchy payload",
+                            )
+                        })
+                })?;
+        }
         let mut combinations = if edit.strategy == ReparentStrategy::KeepLocalData {
             1
         } else {
@@ -575,6 +605,9 @@ impl Document {
         let cost =
             limits.check_conversion(combinations, payload, self.estimated_content_bytes())?;
         let mut affected = changing.clone();
+        if hierarchy.is_some() {
+            affected.extend(sources.iter().cloned());
+        }
         // A transform move changes the coordinate context of its entire subtree,
         // including bindings that KeepLocalData leaves byte-for-byte intact.
         for id in self.transform_order().iter().chain(self.mesh_order()) {
@@ -846,6 +879,7 @@ impl Document {
             control: control.clone(),
             report,
             snapshot: self.snapshot_identity.clone(),
+            hierarchy,
             meshes,
             bindings,
             transforms,
@@ -870,6 +904,9 @@ impl Document {
         }
         if plan.affected.is_empty() {
             return self.failed(Status::ok());
+        }
+        if let Some(order) = &plan.hierarchy {
+            self.content.hierarchy_order = order.clone();
         }
         for m in &plan.meshes {
             self.content.meshes.insert(m.id.clone(), m.clone());

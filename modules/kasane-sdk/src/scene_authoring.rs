@@ -450,3 +450,24 @@ impl EditSession<'_> {
         Ok(())
     }
 }
+
+impl crate::AuthoringSnapshot {
+    /// Bounded conversion on an immutable snapshot, suitable for a background worker.
+    /// Publication still validates the captured session version and conversion control.
+    pub fn plan_scene_edit_with_control(
+        &self,
+        intent: SceneEdit,
+        limits: kasane_core::document::AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<SceneEditPlan, SdkError> {
+        let domain = self
+            .document()
+            .plan_scene_edit_with_control(intent, limits, control)
+            .map_err(|s| error(s, "plan_scene_edit"))?;
+        Ok(SceneEditPlan {
+            version: self.version(),
+            domain,
+            control: control.clone(),
+        })
+    }
+}

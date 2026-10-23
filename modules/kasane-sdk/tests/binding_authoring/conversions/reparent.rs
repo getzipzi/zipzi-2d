@@ -152,6 +152,7 @@ fn parent_cycle_descendant_lock_nonlinear_and_nested_rotation_are_covered() {
     }
     let before = s.version();
     let cycle = E::Reparent(ReparentEdit {
+        placement: None,
         sources: vec![R.into()],
         parent_id: T.into(),
         strategy: ReparentStrategy::KeepLocalData,
@@ -176,6 +177,7 @@ fn parent_cycle_descendant_lock_nonlinear_and_nested_rotation_are_covered() {
         .unwrap();
     assert_eq!(
         s.plan_binding_authoring(E::Reparent(ReparentEdit {
+            placement: None,
             sources: vec![T.into()],
             parent_id: "".into(),
             strategy: ReparentStrategy::KeepLocalData,
@@ -284,6 +286,7 @@ fn keep_local_multi_selection_moves_only_roots_and_undoes_together() {
     let receipt = apply(
         &mut s,
         E::Reparent(ReparentEdit {
+            placement: None,
             sources: vec![MESH_ID.into(), R.into()],
             parent_id: T.into(),
             strategy: ReparentStrategy::KeepLocalData,
@@ -765,6 +768,7 @@ fn reparent_budget_includes_driven_ancestor_sampling() {
     let mut s = fixture();
     driven_rotation(&mut s);
     let edit = ReparentEdit {
+        placement: None,
         strategy: ReparentStrategy::PreserveEditState,
         tolerance: 0.001,
         context: Some(kasane_sdk::ReparentContext {
@@ -799,4 +803,149 @@ fn reparent_budget_includes_driven_ancestor_sampling() {
     );
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
+}
+
+#[test]
+fn snapshot_scene_reparent_combines_conversion_and_exact_order_in_one_history_entry() {
+    use kasane_sdk::{ConversionControl, ReparentPlacement, SceneCollection as C, SceneEdit};
+    let mut s = bound();
+    rotation(&mut s, 1.75);
+    let mut sibling = s.document().get_mesh(MESH_ID).unwrap().clone();
+    sibling.id = T.into();
+    sibling.runtime_id = "sibling".into();
+    sibling.deformer_id = R.into();
+    s.edit("Sibling", None, |e| e.create_mesh(sibling)).unwrap();
+    let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveParameterDomain, R) else {
+        panic!()
+    };
+    edit.placement = Some(ReparentPlacement { before: None });
+    let original = (0..=8)
+        .map(|i| frame(&s, i as f32 / 8., 0.).drawables[0].positions.clone())
+        .collect::<Vec<_>>();
+    let snapshot = s.read_snapshot();
+    let history = s.history_state();
+    let plan = snapshot
+        .plan_scene_edit_with_control(
+            SceneEdit::Reparent { edit: edit.clone() },
+            s.authoring_limits(),
+            &ConversionControl::default(),
+        )
+        .unwrap();
+    assert!(plan
+        .conversion_report()
+        .unwrap()
+        .reparent_guarantee
+        .is_some());
+    let order_before = s.document().hierarchy_order().clone();
+    let intent = SceneEdit::Reparent { edit: edit.clone() };
+    let encoded = serde_json::to_string(&intent).unwrap();
+    assert_eq!(serde_json::from_str::<SceneEdit>(&encoded).unwrap(), intent);
+    assert!(s
+        .edit("Failed batch", Some(plan.version()), |e| {
+            e.apply_scene_plan(&plan)?;
+            e.create_parameter(parameter(false))
+        })
+        .is_err());
+    assert_eq!(s.history_state(), history);
+    assert_eq!(s.document().hierarchy_order(), &order_before);
+    assert!(s
+        .document()
+        .get_mesh(MESH_ID)
+        .unwrap()
+        .deformer_id
+        .is_empty());
+    s.execute_scene_plan(&plan).unwrap();
+    let order = || C::Deformation {
+        parent_id: Some(R.into()),
+    };
+    assert_eq!(
+        s.scene_collection(&order())
+            .unwrap()
+            .iter()
+            .map(|h| h.id())
+            .collect::<Vec<_>>(),
+        [T, MESH_ID]
+    );
+    for (i, positions) in original.iter().enumerate() {
+        let after = frame(&s, i as f32 / 8., 0.);
+        for (a, b) in after
+            .drawables
+            .iter()
+            .find(|d| d.id == MESH_ID)
+            .unwrap()
+            .positions
+            .iter()
+            .zip(positions)
+        {
+            assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
+        }
+    }
+    s.undo().unwrap();
+    assert!(s
+        .document()
+        .get_mesh(MESH_ID)
+        .unwrap()
+        .deformer_id
+        .is_empty());
+    assert_eq!(
+        s.scene_collection(&order())
+            .unwrap()
+            .iter()
+            .map(|h| h.id())
+            .collect::<Vec<_>>(),
+        [T]
+    );
+    // An immutable old snapshot can still compute, but it cannot publish after Undo.
+    let old = snapshot
+        .plan_scene_edit_with_control(
+            SceneEdit::Reparent { edit },
+            s.authoring_limits(),
+            &ConversionControl::default(),
+        )
+        .unwrap();
+    let undone = s.history_state();
+    assert!(s.execute_scene_plan(&old).is_err());
+    assert_eq!(s.history_state(), undone);
+    s.redo().unwrap();
+    assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, R);
+    assert!(s.history_state() != history);
+    grid_roundtrip(&s);
+}
+
+#[test]
+fn reparent_placement_rejects_foreign_anchor_and_cancelled_worker_without_discarding_redo() {
+    use kasane_sdk::{ConversionControl, ReparentPlacement, SceneEdit};
+    let mut s = bound();
+    rotation(&mut s, 1.75);
+    let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveParameterDomain, R) else {
+        panic!()
+    };
+    edit.placement = Some(ReparentPlacement { before: None });
+    let plan = s
+        .plan_scene_edit(SceneEdit::Reparent { edit: edit.clone() })
+        .unwrap();
+    s.execute_scene_plan(&plan).unwrap();
+    s.undo().unwrap();
+    let history = s.history_state();
+    let version = s.version();
+    let control = ConversionControl::default();
+    let plan = s
+        .read_snapshot()
+        .plan_scene_edit_with_control(
+            SceneEdit::Reparent { edit: edit.clone() },
+            s.authoring_limits(),
+            &control,
+        )
+        .unwrap();
+    control.cancel();
+    assert!(s.execute_scene_plan(&plan).is_err());
+    edit.placement.as_mut().unwrap().before = Some(MESH_ID.into());
+    assert_eq!(
+        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        "INVALID_PLACEMENT"
+    );
+    assert!(s.plan_scene_edit(SceneEdit::Reparent { edit }).is_err());
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state(), history);
+    s.redo().unwrap();
 }

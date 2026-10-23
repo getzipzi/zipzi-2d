@@ -5,8 +5,8 @@ pub use kasane_core::document::{
     BindingIdentityKind, BlendAuthoringEdit, BlendAuthoringPlan, BlendTableOperation,
     ConversionControl, ConversionCost, ConversionReport, GridGuarantee, GridOperation,
     MeshGridEdit, MeshGridPlan, ParameterRangeEdit, ParameterRangePlan, ParameterRangePolicy,
-    ReparentContext, ReparentEdit, ReparentGuarantee, ReparentPlan, ReparentStrategy,
-    ReparentSupport,
+    ReparentContext, ReparentEdit, ReparentGuarantee, ReparentPlacement, ReparentPlan,
+    ReparentStrategy, ReparentSupport,
 };
 use kasane_core::Status;
 use serde::{Deserialize, Serialize};

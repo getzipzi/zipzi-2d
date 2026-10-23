@@ -386,6 +386,7 @@ fn affine_reparent_transforms_shared_mesh_deltas_without_translation_or_identity
         .collect();
     let plan = s
         .plan_binding_authoring(E::Reparent(ReparentEdit {
+            placement: None,
             sources: vec![MESH_ID.into()],
             parent_id: root.clone(),
             strategy: ReparentStrategy::PreserveParameterDomain,
