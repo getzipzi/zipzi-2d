@@ -174,7 +174,9 @@ impl AuthoringSession {
         &self,
         c: &SceneCollection,
     ) -> Result<SceneCollectionCapabilities, SdkError> {
-        self.scene_collection(c)?;
+        self.document()
+            .validate_scene_collection(c)
+            .map_err(|s| error(s, "scene_collection"))?;
         let owner = match c {
             SceneCollection::Organization { part_id } => part_id.as_deref(),
             SceneCollection::Deformation { parent_id } => parent_id.as_deref(),

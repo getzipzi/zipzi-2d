@@ -158,8 +158,14 @@ pub enum SceneEdit {
         part_id: Option<String>,
         #[serde(default)]
         parent_id: Option<String>,
+        /// Stable anchor in the organization collection (`part_id`), or the
+        /// connection collection for Glue. None appends to that collection.
         #[serde(default)]
         before: Option<String>,
+        /// Independent stable anchor in the deformation collection (`parent_id`).
+        /// Only Mesh/Warp/Rotation support this position; None appends.
+        #[serde(default)]
+        deformation_before: Option<String>,
     },
     Patch {
         id: String,
@@ -276,6 +282,22 @@ impl Document {
             cost: None,
         }
     }
+    /// Validate a collection without materializing deformation members. Other
+    /// collection kinds retain their native collection validation path.
+    pub fn validate_scene_collection(&self, c: &SceneCollection) -> Result<(), Status> {
+        if let SceneCollection::Deformation { parent_id } = c {
+            if let Some(id) = parent_id
+                .as_ref()
+                .filter(|id| self.get_transform(id).is_none())
+            {
+                return Err(Status::error("MISSING_TRANSFORM", id));
+            }
+            Ok(())
+        } else {
+            self.scene_collection(c).map(|_| ())
+        }
+    }
+
     pub fn scene_collection(&self, c: &SceneCollection) -> Result<Vec<String>, Status> {
         Ok(match c {
             SceneCollection::Organization { part_id } => {
@@ -284,15 +306,7 @@ impl Document {
                 })
             }
             SceneCollection::Deformation { parent_id } => {
-                if parent_id
-                    .as_ref()
-                    .is_some_and(|id| self.get_transform(id).is_none())
-                {
-                    return Err(Status::error(
-                        "MISSING_TRANSFORM",
-                        parent_id.as_ref().unwrap(),
-                    ));
-                }
+                self.validate_scene_collection(c)?;
                 let parent = parent_id.as_deref().unwrap_or("");
                 let mut seen = HashSet::new();
                 self.hierarchy_order()
@@ -380,7 +394,17 @@ impl Document {
                 part_id,
                 parent_id,
                 before,
-            } => self.plan_scene_create(&mut plan, id, name, object, part_id, parent_id, before)?,
+                deformation_before,
+            } => self.plan_scene_create(
+                &mut plan,
+                id,
+                name,
+                object,
+                part_id,
+                parent_id,
+                before,
+                deformation_before,
+            )?,
             SceneEdit::Patch {
                 id,
                 expected,

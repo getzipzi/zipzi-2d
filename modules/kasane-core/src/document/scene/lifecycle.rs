@@ -9,6 +9,7 @@ impl Document {
         part_id: Option<String>,
         parent_id: Option<String>,
         before: Option<String>,
+        deformation_before: Option<String>,
     ) -> Result<(), Status> {
         if !valid_uuid(&id) {
             return Err(Status::error("INVALID_ID", &id));
@@ -48,6 +49,20 @@ impl Document {
                 "OFFSCREEN_IS_COMPOSITE",
                 "Offscreen has a Part owner, no deformation parent",
             ));
+        }
+        if let Some(anchor) = &deformation_before {
+            if !matches!(
+                object,
+                SceneCreate::Mesh { .. } | SceneCreate::Warp { .. } | SceneCreate::Rotation
+            ) {
+                return Err(Status::error("NO_DEFORMATION_COLLECTION", &id));
+            }
+            let members = self.scene_collection(&SceneCollection::Deformation {
+                parent_id: parent_id.clone(),
+            })?;
+            if !members.contains(anchor) {
+                return Err(Status::error("INVALID_DEFORMATION_PLACEMENT", anchor));
+            }
         }
         let mut hierarchy = self.hierarchy_order().clone();
         match object {
@@ -201,7 +216,17 @@ impl Document {
             hierarchy.organization = order;
             if !plan.domain.delta.meshes.is_empty() || !plan.domain.delta.transforms.is_empty() {
                 hierarchy.deformation = self.scene_deformation_order();
-                hierarchy.deformation.push(id.clone());
+                let at = deformation_before.as_ref().map_or(
+                    Ok(hierarchy.deformation.len()),
+                    |anchor| {
+                        hierarchy
+                            .deformation
+                            .iter()
+                            .position(|v| v == anchor)
+                            .ok_or_else(|| Status::error("INVALID_DEFORMATION_PLACEMENT", anchor))
+                    },
+                )?;
+                hierarchy.deformation.insert(at, id.clone());
             }
         }
         plan.domain.delta.hierarchy = Some(hierarchy);

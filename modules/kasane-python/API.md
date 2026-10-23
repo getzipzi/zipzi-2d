@@ -846,6 +846,15 @@ Geometry remains available without a texture. Mask and composite failures
 propagate without exposing an unmasked fallback. MOC3/CMO3 reject incomplete
 scene content with explicit diagnostics.
 
+Creation positions are independent: `part_id` specifies organization ownership,
+and `parent_id` specifies the actual deformation parent. Optional `before` is a
+stable anchor in that organization collection (or the Glue collection for Glue).
+Optional `deformation_before` is a stable anchor in that deformation collection,
+supported by Mesh, Warp and Rotation. Omitted anchors append independently.
+Both owners and anchors are validated before either order is published; a wrong
+collection, missing anchor or locked destination rejects the whole creation.
+Creation with both positions is one history entry, including Undo/Redo.
+
 `scene_collection(collection)` returns handles. Collections use `kind`:
 `organization` with `part_id`, `deformation` with `parent_id`, `glues`,
 `drawing` with `owner` (empty string for root), and `drawing_groups`.

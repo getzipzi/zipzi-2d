@@ -133,6 +133,7 @@ fn create_all(edit: &mut EditSession<'_>) -> Result<(), kasane_sdk::SdkError> {
         part_id: None,
         parent_id: None,
         before: None,
+        deformation_before: None,
     })?;
     edit.edit_expression(ExpressionEdit::Create {
         id: id(40),

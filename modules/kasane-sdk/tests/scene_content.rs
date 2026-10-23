@@ -21,6 +21,7 @@ fn warp_content_addresses_expire_after_organization_context_roundtrip() {
             part_id: None,
             parent_id: None,
             before: None,
+            deformation_before: None,
         })
         .unwrap();
     s.execute_scene_plan(&create).unwrap();
@@ -71,6 +72,7 @@ fn unchanged_synthetic_bezier_control_does_not_materialize_controller() {
             part_id: None,
             parent_id: None,
             before: None,
+            deformation_before: None,
         })
         .unwrap();
     s.execute_scene_plan(&create).unwrap();
@@ -938,6 +940,7 @@ fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() 
             part_id: None,
             parent_id: None,
             before: None,
+            deformation_before: None,
         })
         .unwrap();
     s.execute_scene_plan(&p).unwrap();
@@ -1175,6 +1178,7 @@ fn bezier_controller_topology_can_change_without_resetting_the_runtime_lattice()
             part_id: None,
             parent_id: None,
             before: None,
+            deformation_before: None,
         })
         .unwrap();
     s.execute_scene_plan(&p).unwrap();

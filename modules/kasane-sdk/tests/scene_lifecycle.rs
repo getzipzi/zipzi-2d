@@ -136,6 +136,7 @@ fn create(
             part_id: part.map(str::to_owned),
             parent_id: parent.map(str::to_owned),
             before: None,
+            deformation_before: None,
         },
     );
     id
@@ -552,7 +553,7 @@ fn deformation_palette_order_is_separate_from_reparent_and_organization() {
             destination: C::Deformation {
                 parent_id: Some(b.clone())
             },
-            before: None
+            before: None,
         })
         .unwrap_err()
         .code
@@ -808,7 +809,8 @@ fn lock_destinations_reject_create_copy_and_stale_or_cancelled_plans() {
             },
             part_id: Some(owner.clone()),
             parent_id: None,
-            before: None
+            before: None,
+            deformation_before: None,
         })
         .unwrap_err()
         .code
@@ -822,7 +824,7 @@ fn lock_destinations_reject_create_copy_and_stale_or_cancelled_plans() {
             destination: Some(OrganizationCollection::PartMembers {
                 part_id: Some(owner)
             }),
-            before: None
+            before: None,
         })
         .unwrap_err()
         .code
@@ -976,7 +978,7 @@ fn drawing_moves_are_explicit_and_independent_of_organization_and_deformation() 
         .plan_scene_edit(E::Move {
             ids: vec![b.clone()],
             destination: C::Drawing { owner: b },
-            before: None
+            before: None,
         })
         .is_err());
     assert_eq!(s.version(), version);
@@ -1273,6 +1275,7 @@ fn failed_scene_batches_and_reduced_copy_budgets_are_atomic() {
                 part_id: None,
                 parent_id: None,
                 before: None,
+                deformation_before: None,
             })?;
             e.edit_scene(E::Reparent {
                 edit: ReparentEdit::keep_local(vec![new.clone()], new),
