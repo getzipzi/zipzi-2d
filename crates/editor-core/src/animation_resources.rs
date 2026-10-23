@@ -261,6 +261,27 @@ impl AnimationCatalog {
 impl Document {
     /// Borrow resource definitions for read-only inspection without exposing the
     /// authoring model or copying motion curves on each preview frame.
+    pub fn motion_groups(&self) -> &[kasane_core::document::MotionGroup] {
+        self.model().motion_groups()
+    }
+    pub fn motion_registration(
+        &self,
+        id: &str,
+    ) -> Option<(
+        kasane_core::document::MotionContainer,
+        &kasane_core::document::MotionRegistration,
+    )> {
+        self.model().get_motion_registration(id)
+    }
+    pub fn expression_entry(
+        &self,
+        id: &str,
+    ) -> Option<(
+        &kasane_core::document::ExpressionAsset,
+        &kasane_core::document::ExpressionEntry,
+    )> {
+        self.model().get_expression_entry(id)
+    }
     pub fn motion_definition(&self, id: &str) -> Option<&kasane_core::document::MotionClip> {
         self.model().get_motion(id)
     }

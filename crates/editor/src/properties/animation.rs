@@ -8,6 +8,7 @@ use std::collections::HashMap;
 pub(super) const PROVIDER: PropertyProvider = PropertyProvider {
     fields,
     editable_in: |_| true,
+    choices,
     show_readonly: |field| !field.starts_with("events[") && !field.starts_with("entries["),
     ..PropertyProvider::DEFAULT
 };
@@ -28,9 +29,52 @@ fn fields(kind: ObjectKind) -> FormDefinition {
             (expression::FADE_IN, "properties.fade_in", OptionalNumber),
             (expression::FADE_OUT, "properties.fade_out", OptionalNumber),
         ],
+        ObjectKind::MotionGroup => &[(
+            editor_core::property::animation_entry::GROUP_NAME,
+            "properties.name",
+            Text,
+        )],
+        ObjectKind::MotionRegistration => &[
+            (
+                editor_core::property::animation_entry::REG_FADE_IN,
+                "authoring.registration_fade_in",
+                OptionalNumber,
+            ),
+            (
+                editor_core::property::animation_entry::REG_FADE_OUT,
+                "authoring.registration_fade_out",
+                OptionalNumber,
+            ),
+            (
+                editor_core::property::animation_entry::SOUND,
+                "workspace.sound",
+                Select,
+            ),
+        ],
+        ObjectKind::ExpressionEntry => &[
+            (
+                editor_core::property::animation_entry::TARGET,
+                "authoring.expression_parameter",
+                Select,
+            ),
+            (
+                editor_core::property::animation_entry::VALUE,
+                "authoring.expression_value",
+                Number,
+            ),
+            (
+                editor_core::property::animation_entry::BLEND,
+                "authoring.expression_blend",
+                Select,
+            ),
+        ],
         _ => unreachable!("animation object provider"),
     };
-    FormDefinition::new(fields)
+    let mut definition = FormDefinition::new(fields);
+    for field in &mut definition.fields {
+        field.searchable = matches!(field.binding.key.name(), "target" | "registration_sound");
+    }
+    definition
 }
 pub(super) fn details_source(
     editor: &Editor,
@@ -39,10 +83,7 @@ pub(super) fn details_source(
     editor.animation()?;
     let target = target?;
     let inspected = &target.object;
-    if matches!(
-        inspected.kind,
-        ObjectKind::PhysicsGroup | ObjectKind::Physics
-    ) {
+    if !matches!(inspected.kind, ObjectKind::Motion | ObjectKind::Expression) {
         return None;
     }
     Some(DetailSource {
@@ -87,6 +128,42 @@ fn rows(
                     |group| format!("{group} [{}]", resource.entry_index + 1),
                 ),
             ));
+            rows.push(DetailRow::text(t!(
+                "authoring.clip_shared",
+                count = catalog
+                    .motions
+                    .iter()
+                    .filter(|r| r.selection.clip_id == resource.selection.clip_id)
+                    .count()
+            )));
+            if let Some((_, entry)) = resource
+                .selection
+                .entry
+                .as_deref()
+                .and_then(|id| document.motion_registration(id))
+            {
+                for (label, value, effective) in [
+                    ("properties.fade_in", entry.fade_in, resource.fade_in),
+                    ("properties.fade_out", entry.fade_out, resource.fade_out),
+                ] {
+                    rows.push(DetailRow::property(
+                        if label == "properties.fade_in" {
+                            "animation-registration-fade-in"
+                        } else {
+                            "animation-registration-fade-out"
+                        },
+                        t!(label),
+                        t!(
+                            if value.is_some() {
+                                "authoring.overridden_fade"
+                            } else {
+                                "authoring.inherited_fade"
+                            },
+                            value = format!("{effective:.3}")
+                        ),
+                    ));
+                }
+            }
             if !resource.playable() {
                 rows.push(DetailRow::text(t!("workspace.invalid_duration")));
             }
@@ -189,4 +266,188 @@ pub(crate) fn expression_info(resource: &editor_core::ExpressionResource) -> Str
             fade_out = format!("{:.3}", resource.fade_out)
         )
     )
+}
+
+pub(super) fn definition(target: &PropertyTarget, editor: &Editor) -> FormDefinition {
+    let mut definition = fields(target.object.kind);
+    if target.object.kind == ObjectKind::Motion {
+        for field in &mut definition.fields {
+            field.section = Some("authoring.clip_content");
+        }
+        if let Some(entry) = target.motion.as_ref().and_then(|m| m.entry.as_deref()) {
+            for mut field in fields(ObjectKind::MotionRegistration).fields {
+                field.binding.key = field.binding.key.for_entity(entry);
+                field.section = Some("authoring.current_registration");
+                definition.fields.push(field);
+            }
+        }
+    } else if target.object.kind == ObjectKind::Expression {
+        if let Some(expression) = editor
+            .document()
+            .and_then(|d| d.expression_definition(&target.object.id))
+        {
+            for entry in &expression.entries {
+                for mut field in fields(ObjectKind::ExpressionEntry).fields {
+                    field.binding.key = field.binding.key.for_entity(&entry.id);
+                    field.section = Some("authoring.expression_member");
+                    definition.fields.push(field);
+                }
+            }
+        }
+    }
+    definition
+}
+pub(super) fn values(target: &PropertyTarget, editor: &Editor) -> anyhow::Result<PropertyValues> {
+    let document = editor.document().unwrap();
+    let mut values = document.property_values(&target.object)?;
+    let children: Vec<_> = if target.object.kind == ObjectKind::Motion {
+        target
+            .motion
+            .as_ref()
+            .and_then(|m| m.entry.as_ref())
+            .map(|id| ObjectRef::new(ObjectKind::MotionRegistration, id))
+            .into_iter()
+            .collect()
+    } else if target.object.kind == ObjectKind::Expression {
+        document
+            .expression_definition(&target.object.id)
+            .into_iter()
+            .flat_map(|e| e.entries.iter())
+            .map(|e| ObjectRef::new(ObjectKind::ExpressionEntry, &e.id))
+            .collect()
+    } else {
+        vec![]
+    };
+    for child in children {
+        values.extend(
+            document
+                .property_values(&child)?
+                .into_iter()
+                .map(|(key, value)| (key.for_entity(&child.id), value)),
+        );
+    }
+    Ok(values)
+}
+/// Repeated fields carry child identity in the key. Remap only the captured
+/// child's descriptors, preserving the captured revision and baseline.
+pub(super) fn field_target(
+    target: &PropertyTarget,
+    patch: &editor_core::PropertyPatch,
+) -> (ObjectRef, editor_core::PropertyPatch) {
+    let key = patch
+        .changes
+        .keys()
+        .next()
+        .or_else(|| patch.expected.keys().next());
+    let Some((key, id)) = key
+        .filter(|key| {
+            matches!(
+                key.object_kind(),
+                ObjectKind::MotionRegistration | ObjectKind::ExpressionEntry
+            )
+        })
+        .and_then(|key| key.entity_id().map(|id| (*key, id)))
+    else {
+        let mut patch = patch.clone();
+        if matches!(target.scope, editor_core::PropertyScope::Resource { .. }) {
+            patch.scope = target.scope.clone();
+        }
+        return (target.object.clone(), patch);
+    };
+    let remap = |values: &PropertyValues| {
+        values
+            .iter()
+            .filter(|(k, _)| {
+                k.object_kind() == key.object_kind() && k.entity_id().as_deref() == Some(&id)
+            })
+            .map(|(k, v)| (PropertyKey::new(k.object_kind(), k.name()), v.clone()))
+            .collect()
+    };
+    (
+        ObjectRef::new(key.object_kind(), &id),
+        editor_core::PropertyPatch {
+            scope: target.scope.clone(),
+            expected: remap(&patch.expected),
+            changes: remap(&patch.changes),
+        },
+    )
+}
+fn choices(document: &Document, _: &ObjectRef, key: PropertyKey) -> Option<Vec<Choice>> {
+    use editor_core::property::animation_entry as schema;
+    let choice = |value: &str, label: SharedString| Choice {
+        value: value.into(),
+        label,
+    };
+    match key.name() {
+        name if name == schema::TARGET.key.name() => {
+            let mut choices = vec![choice("", t!("workspace.none").into())];
+            choices.extend(
+                document
+                    .animation_catalog()
+                    .parameters
+                    .iter()
+                    .map(|p| choice(&p.id, format!("{} · {}", p.name, p.runtime_id).into())),
+            );
+            Some(choices)
+        }
+        name if name == schema::BLEND.key.name() => Some(vec![
+            choice("", t!("authoring.inherit_add").into()),
+            choice("add", t!("workspace.blend_add").into()),
+            choice("multiply", t!("workspace.blend_multiply").into()),
+            choice("overwrite", t!("workspace.blend_overwrite").into()),
+        ]),
+        name if name == schema::SOUND.key.name() => {
+            let mut choices = vec![choice("", t!("workspace.none").into())];
+            choices.extend(
+                document
+                    .object_index()
+                    .objects
+                    .iter()
+                    .filter(|info| info.reference.kind == ObjectKind::Attachment)
+                    .map(|info| choice(&info.reference.id, info.name.clone().into())),
+            );
+            Some(choices)
+        }
+        _ => None,
+    }
+}
+
+/// Effective inheritance is visible beside the override, even with Details folded.
+pub(crate) fn registration_status(
+    document: &Document,
+    target: &PropertyTarget,
+    key: PropertyKey,
+) -> Option<DetailRow> {
+    use editor_core::property::animation_entry as schema;
+    if key.object_kind() != ObjectKind::MotionRegistration
+        || ![
+            schema::REG_FADE_IN.key.name(),
+            schema::REG_FADE_OUT.key.name(),
+        ]
+        .contains(&key.name())
+    {
+        return None;
+    }
+    let id = key.entity_id().unwrap_or_else(|| target.object.id.clone());
+    let (_, entry) = document.motion_registration(&id)?;
+    let clip = document.motion_definition(&entry.clip_id)?;
+    let (value, inherited) = if key.name() == schema::REG_FADE_IN.key.name() {
+        (entry.fade_in, clip.fade_in)
+    } else {
+        (entry.fade_out, clip.fade_out)
+    };
+    Some(DetailRow::Text {
+        id: Some(gpui_kit::ElementId::Name(
+            format!("registration-status-{}-{id}", key.name()).into(),
+        )),
+        value: t!(
+            if value.is_some() {
+                "authoring.overridden_fade"
+            } else {
+                "authoring.inherited_fade"
+            },
+            value = format!("{:.3}", value.or(inherited).unwrap_or(1.))
+        )
+        .into(),
+    })
 }

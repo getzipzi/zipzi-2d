@@ -13,6 +13,7 @@ pub struct MotionResource {
     pub selection: MotionSelection,
     pub name: String,
     pub group: Option<String>,
+    pub group_id: Option<String>,
     pub entry_index: usize,
     pub duration: f32,
     pub looping: bool,
@@ -98,11 +99,17 @@ impl Document {
     pub fn motion_resources(&self) -> Vec<MotionResource> {
         let model = self.model();
         let mut result = Vec::new();
-        for (group, entries) in model
+        for (group_id, group, entries) in model
             .motion_groups()
             .iter()
-            .map(|g| (Some(g.name.clone()), g.entries.as_slice()))
-            .chain(std::iter::once((None, model.motion_roots())))
+            .map(|g| {
+                (
+                    Some(g.id.clone()),
+                    Some(g.name.clone()),
+                    g.entries.as_slice(),
+                )
+            })
+            .chain(std::iter::once((None, None, model.motion_roots())))
         {
             for (index, entry) in entries.iter().enumerate() {
                 if let Some(clip) = model.get_motion(&entry.clip_id) {
@@ -112,6 +119,7 @@ impl Document {
                             entry: Some(entry.id.clone()),
                         },
                         group: group.clone(),
+                        group_id: group_id.clone(),
                         entry_index: index,
                         name: clip.name.clone(),
                         duration: clip.duration,

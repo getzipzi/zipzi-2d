@@ -31,10 +31,12 @@ struct MoveDestinationPicker {
     document: DocumentId,
     context: AuthoringContext,
     projection: PaletteProjection,
+    resource: bool,
+    playback: Option<crate::authoring::PlaybackDialogGuard>,
     sources: Vec<ObjectRef>,
     choices: Vec<Choice>,
     destination: Entity<SelectState<SearchableVec<Choice>>>,
-    validation: Result<PaletteMovePlan, String>,
+    validation: Result<SortPlan, String>,
     dialog: FormDialogState,
     _event: Subscription,
     _owner_observe: Subscription,
@@ -56,13 +58,27 @@ impl MoveDestinationPicker {
         let entity = owner
             .upgrade()
             .ok_or_else(|| anyhow::anyhow!(t!("authoring.move_stale")))?;
+        let resource = sources.first().is_some_and(|o| {
+            matches!(
+                o.kind,
+                ObjectKind::Motion
+                    | ObjectKind::MotionGroup
+                    | ObjectKind::MotionRegistration
+                    | ObjectKind::Expression
+                    | ObjectKind::ExpressionEntry
+            )
+        });
         let context = entity.update(cx, |state, cx| {
             anyhow::ensure!(
                 !state.modal
                     && AuthoringContext::capture(&state.editor) == Some(expected)
                     && state.editor.active_id() == Some(document)
                     && state.editor.editing_context()
-                        == Some(editor_core::EditingContext::Modeling),
+                        == Some(if resource {
+                            editor_core::EditingContext::Animation
+                        } else {
+                            editor_core::EditingContext::Modeling
+                        }),
                 t!("authoring.move_stale")
             );
             anyhow::ensure!(
@@ -71,18 +87,20 @@ impl MoveDestinationPicker {
             );
             // Modal editing has its own token, captured after the shared input
             // boundary; the dialog must not accept an earlier menu incarnation.
-            state
-                .editor
-                .end_editing(document, editor_core::EditingLifecycle::BlockingUi)?;
+            if !resource {
+                state
+                    .editor
+                    .end_editing(document, editor_core::EditingLifecycle::BlockingUi)?;
+            }
             state.redraw(cx);
             Ok::<_, anyhow::Error>(AuthoringContext::capture(&state.editor).unwrap())
         })?;
-        let destinations = entity
-            .read(cx)
-            .editor
-            .document()
-            .unwrap()
-            .palette_move_destinations(projection)?;
+        let doc = entity.read(cx).editor.document().unwrap();
+        let destinations = if resource {
+            doc.animation_resource_destinations(&sources[0])?
+        } else {
+            doc.palette_move_destinations(projection)?
+        };
         let mut counts = std::collections::HashMap::new();
         for destination in &destinations {
             *counts.entry(destination.path.as_str()).or_insert(0) += 1;
@@ -110,6 +128,10 @@ impl MoveDestinationPicker {
                 }
             })
             .collect();
+        let playback = resource.then(|| crate::authoring::PlaybackDialogGuard::new(context));
+        if let Some(guard) = &playback {
+            entity.update(cx, |state, _| state.playback_dialog = Some(guard.clone()));
+        }
         let view = cx.new(|cx| {
             let destination = cx.new(|cx| {
                 SelectState::new(SearchableVec::new(choices.clone()), None, window, cx)
@@ -132,6 +154,8 @@ impl MoveDestinationPicker {
                 document,
                 context,
                 projection,
+                resource,
+                playback,
                 sources,
                 choices,
                 destination,
@@ -175,7 +199,7 @@ impl MoveDestinationPicker {
         })
     }
 
-    fn plan(&mut self, cx: &App) -> anyhow::Result<PaletteMovePlan> {
+    fn plan(&mut self, cx: &App) -> anyhow::Result<SortPlan> {
         let entity = self
             .owner
             .upgrade()
@@ -190,7 +214,17 @@ impl MoveDestinationPicker {
         {
             self.plans_built += 1;
         }
-        state.editor.document().unwrap().plan_palette_move(request)
+        let doc = state.editor.document().unwrap();
+        if self.resource {
+            doc.plan_animation_resource_move(
+                &self.sources[0],
+                request.target.as_ref(),
+                DropPosition::Inside,
+            )
+            .map(SortPlan::Resource)
+        } else {
+            doc.plan_palette_move(request).map(SortPlan::Palette)
+        }
     }
 
     fn sync_validation(&mut self) {
@@ -201,12 +235,25 @@ impl MoveDestinationPicker {
     }
 }
 
+impl Drop for MoveDestinationPicker {
+    fn drop(&mut self) {
+        if let Some(guard) = &self.playback {
+            guard.close();
+        }
+    }
+}
+
 impl FormDialogView for MoveDestinationPicker {
     fn dialog(&self) -> &FormDialogState {
         &self.dialog
     }
     fn dialog_mut(&mut self) -> &mut FormDialogState {
         &mut self.dialog
+    }
+    fn closing(&mut self) {
+        if let Some(guard) = &self.playback {
+            guard.close();
+        }
     }
     fn error_message(error: &anyhow::Error) -> String {
         move_error(error)
@@ -221,18 +268,38 @@ impl FormDialogView for MoveDestinationPicker {
                 AuthoringContext::capture(&state.editor) == Some(self.context),
                 t!("authoring.move_stale")
             );
-            let result = state.editor.execute_palette_move(self.document, &plan)?;
-            if let Some(object) = self.sources.last().cloned() {
-                state.present_authoring_result(
-                    self.document,
-                    &result,
-                    crate::authoring::AuthoringPresentation::Moved {
-                        object,
-                        projection: self.projection,
-                    },
-                    window,
-                    cx,
-                )?;
+            match plan {
+                SortPlan::Palette(plan) => {
+                    let result = state.editor.execute_palette_move(self.document, &plan)?;
+                    if let Some(object) = self.sources.last().cloned() {
+                        state.present_authoring_result(
+                            self.document,
+                            &result,
+                            crate::authoring::AuthoringPresentation::Moved {
+                                object,
+                                projection: self.projection,
+                            },
+                            window,
+                            cx,
+                        )?;
+                    }
+                }
+                SortPlan::Resource(plan) => {
+                    let result = state
+                        .editor
+                        .execute_animation_library(self.document, &plan)?;
+                    if result.receipt.changed {
+                        state.defer_authoring_location(
+                            self.document,
+                            self.sources[0].clone(),
+                            None,
+                            false,
+                            false,
+                            window,
+                            cx,
+                        );
+                    }
+                }
             }
             state.clear_edit_error(cx);
             state.redraw(cx);

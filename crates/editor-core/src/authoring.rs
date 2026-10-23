@@ -15,8 +15,16 @@ pub use moving::{
     PaletteMove, PaletteMoveDestination, PaletteMovePlan, PalettePosition, PaletteProjection,
 };
 pub use stepping::PaletteMovePlanningError;
+#[path = "authoring/animation_library.rs"]
+mod animation_library;
 #[path = "authoring/expression.rs"]
 mod expression;
+pub use animation_library::AnimationLibraryPlan;
+#[path = "authoring/animation_management.rs"]
+mod animation_management;
+pub use animation_management::{
+    AnimationDeletionPlan, AnimationRemoval, MotionCopyKind, MotionCopyPlan,
+};
 #[path = "authoring/publication.rs"]
 mod publication;
 

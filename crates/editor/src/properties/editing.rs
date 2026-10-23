@@ -84,6 +84,17 @@ impl PropertyTarget {
         if self.object.kind == ObjectKind::PhysicsGroup {
             return physics::definition(editor, &self.object);
         }
+        if matches!(
+            self.object.kind,
+            ObjectKind::Motion
+                | ObjectKind::MotionGroup
+                | ObjectKind::MotionRegistration
+                | ObjectKind::Expression
+                | ObjectKind::ExpressionEntry
+        ) && self.timeline.is_none()
+        {
+            return animation::definition(self, editor);
+        }
         self.timeline.as_ref().map_or_else(
             || definition(self.object.kind),
             |target| target.definition(editor),
@@ -96,6 +107,13 @@ impl PropertyTarget {
         );
         match &self.timeline {
             Some(target) => target.values(editor),
+            None if matches!(
+                self.object.kind,
+                ObjectKind::Motion | ObjectKind::Expression
+            ) =>
+            {
+                animation::values(self, editor)
+            }
             None => editor
                 .document()
                 .ok_or_else(|| anyhow::anyhow!("Document closed"))?
@@ -114,7 +132,8 @@ impl PropertyTarget {
             let context = editor
                 .editing_context_token()
                 .ok_or_else(|| anyhow::anyhow!("Editing context changed"))?;
-            editor.commit_properties(context, self.object.clone(), patch)
+            let (object, patch) = animation::field_target(self, &patch);
+            editor.commit_properties(context, object, patch)
         }
     }
     pub(crate) fn editable(&self, editor: &Editor) -> bool {
@@ -150,8 +169,9 @@ pub(crate) fn begin_edit(
             token,
         })
     } else {
+        let (object, patch) = animation::field_target(target, patch);
         editor
-            .begin_property_edit(context, target.object.clone(), patch)
+            .begin_property_edit(context, object, &patch)
             .map(PreviewToken::Object)
     }
 }
@@ -162,7 +182,38 @@ pub(crate) fn update_edit(
 ) -> anyhow::Result<()> {
     anyhow::ensure!(token.owned(editor), "Property edit ended");
     match token {
-        PreviewToken::Object(token) => editor.update_property_edit(token, patch),
+        PreviewToken::Object(token) => {
+            let remap = |values: &PropertyValues| {
+                values
+                    .iter()
+                    .map(|(key, value)| {
+                        (
+                            PropertyKey::new(key.object_kind(), key.name()),
+                            value.clone(),
+                        )
+                    })
+                    .collect()
+            };
+            let patch = if patch
+                .changes
+                .keys()
+                .chain(patch.expected.keys())
+                .any(|key| {
+                    matches!(
+                        key.object_kind(),
+                        ObjectKind::MotionRegistration | ObjectKind::ExpressionEntry
+                    ) && key.entity_id().is_some()
+                }) {
+                editor_core::PropertyPatch {
+                    scope: patch.scope.clone(),
+                    expected: remap(&patch.expected),
+                    changes: remap(&patch.changes),
+                }
+            } else {
+                patch.clone()
+            };
+            editor.update_property_edit(token, &patch)
+        }
         PreviewToken::Timeline { target, token, .. } => {
             let command = target
                 .timeline

@@ -16,16 +16,31 @@ pub(super) enum SortItem {
     Tree { deformer: bool, object: ObjectRef },
     TreeRoot { deformer: bool },
     Parameter(String),
+    Resource(ObjectRef),
+    ResourceRoot { motion: bool },
     Group(Option<String>),
 }
 impl SortItem {
     fn reference(&self) -> Option<ObjectRef> {
         match self {
-            Self::Tree { object, .. } => Some(object.clone()),
+            Self::Tree { object, .. } | Self::Resource(object) => Some(object.clone()),
             Self::Parameter(id) => Some(ObjectRef::new(ObjectKind::Parameter, id)),
             Self::Group(Some(id)) => Some(ObjectRef::new(ObjectKind::ParameterGroup, id)),
             _ => None,
         }
+    }
+    fn resource_family(&self) -> Option<bool> {
+        match self {
+            Self::Resource(o) => Some(matches!(
+                o.kind,
+                ObjectKind::MotionGroup | ObjectKind::MotionRegistration
+            )),
+            Self::ResourceRoot { motion } => Some(*motion),
+            _ => None,
+        }
+    }
+    fn resource(&self) -> bool {
+        matches!(self, Self::Resource(_) | Self::ResourceRoot { .. })
     }
     fn projection(&self) -> PaletteProjection {
         match self {
@@ -39,15 +54,19 @@ impl SortItem {
 }
 
 fn drop_position(
-    _source: &SortItem,
+    source: &SortItem,
     target: &SortItem,
     pointer: Point<Pixels>,
     bounds: Bounds<Pixels>,
 ) -> DropPosition {
-    if matches!(target, SortItem::TreeRoot { .. } | SortItem::Group(None)) {
+    if matches!(
+        target,
+        SortItem::TreeRoot { .. } | SortItem::Group(None) | SortItem::ResourceRoot { .. }
+    ) {
         return DropPosition::Inside;
     }
-    let container = matches!(target, SortItem::Group(Some(_)))
+    let container = matches!(target, SortItem::Resource(o) if o.kind == ObjectKind::MotionGroup && matches!(source, SortItem::Resource(s) if s.kind == ObjectKind::MotionRegistration))
+        || matches!(target, SortItem::Group(Some(_)))
         || matches!(target, SortItem::Tree { deformer: false, object } if object.kind == ObjectKind::Part)
         || matches!(target, SortItem::Tree { deformer: true, object } if object.kind == ObjectKind::Deformer);
     if container
@@ -68,6 +87,21 @@ struct PaletteDrag {
     source: SortItem,
 }
 
+enum SortPlan {
+    Palette(PaletteMovePlan),
+    Resource(editor_core::AnimationLibraryPlan),
+}
+impl SortPlan {
+    fn is_noop(&self) -> bool {
+        match self {
+            Self::Palette(p) => p.is_noop(),
+            Self::Resource(p) => p.is_noop(),
+        }
+    }
+    fn requires_preservation(&self) -> bool {
+        matches!(self, Self::Palette(p) if p.requires_preservation())
+    }
+}
 struct DragPreview {
     label: SharedString,
     reason: Option<String>,
@@ -102,12 +136,13 @@ pub(super) struct SortState {
     context: Option<AuthoringContext>,
     sources: Vec<ObjectRef>,
     // Keep one hovered plan, not a plan-sized document snapshot per visited row.
-    cached: Option<(SortItem, DropPosition, Result<PaletteMovePlan, String>)>,
+    cached: Option<(SortItem, DropPosition, Result<SortPlan, String>)>,
     preview: Option<WeakEntity<DragPreview>>,
     hover: Option<(SortItem, DropPosition)>,
     hover_serial: u64,
     scroll: Option<(UniformListScrollHandle, i32, usize)>,
     scroll_task: Option<Task<()>>,
+    plain_scroll: Option<(ScrollHandle, i32)>,
     _activation: Subscription,
     #[cfg(test)]
     pub(super) plans_built: usize,
@@ -131,6 +166,7 @@ impl SortState {
             hover_serial: 0,
             scroll: None,
             scroll_task: None,
+            plain_scroll: None,
             #[cfg(test)]
             plans_built: 0,
             _activation: cx.observe_window_activation(window, |this: &mut Self, window, cx| {
@@ -206,7 +242,9 @@ impl SortState {
         if !self.current(drag, window, cx) {
             return false;
         }
-        if drag.source.projection() != target.projection() {
+        if drag.source.projection() != target.projection()
+            || drag.source.resource_family() != target.resource_family()
+        {
             self.cached = Some((
                 target.clone(),
                 position,
@@ -224,18 +262,24 @@ impl SortState {
                 self.plans_built += 1;
             }
             let owner = self.owner.upgrade().unwrap();
-            let result = owner
-                .read(cx)
-                .editor
-                .document()
-                .unwrap()
-                .plan_palette_move(PaletteMove {
+            let doc = owner.read(cx).editor.document().unwrap();
+            let result = if drag.source.resource() {
+                doc.plan_animation_resource_move(
+                    &self.sources[0],
+                    target.reference().as_ref(),
+                    position,
+                )
+                .map(SortPlan::Resource)
+            } else {
+                doc.plan_palette_move(PaletteMove {
                     projection: drag.source.projection(),
                     sources: self.sources.clone(),
                     target: target.reference(),
                     position,
                 })
-                .map_err(|error| move_error(&error));
+                .map(SortPlan::Palette)
+            }
+            .map_err(|error| move_error(&error));
             self.cached = Some((target.clone(), position, result));
         }
         self.cached
@@ -262,6 +306,7 @@ impl SortState {
         self.preview = None;
         self.scroll = None;
         self.scroll_task = None;
+        self.plain_scroll = None;
         if changed {
             cx.notify();
         }
@@ -303,6 +348,25 @@ impl SortState {
         let Some(context) = self.context else {
             return;
         };
+        if drag.source.resource() {
+            let source = self.sources[0].clone();
+            self.clear(cx);
+            if let Some(owner) = self.owner.upgrade() {
+                owner.update(cx, |state, cx| {
+                    state.run_animation_action(
+                        context,
+                        crate::authoring::animation::AnimationAction::Move(
+                            source,
+                            target.reference(),
+                            position,
+                        ),
+                        window,
+                        cx,
+                    )
+                });
+            }
+            return;
+        }
         let request = PaletteMove {
             projection: drag.source.projection(),
             sources: self.sources.clone(),
@@ -611,6 +675,62 @@ pub(super) fn scroll_area(
     })
 }
 
+/// Ordinary resource lists use the same drag owner and timer as virtual lists.
+pub(super) fn scroll_div<E: StatefulInteractiveElement>(
+    list: E,
+    state: &Entity<SortState>,
+    scroll: &ScrollHandle,
+) -> E {
+    let state = state.clone();
+    let scroll = scroll.clone();
+    list.on_drag_move(move |event: &DragMoveEvent<PaletteDrag>, window, cx| {
+        state.update(cx, |state, cx| {
+            let pointer = event.event.position;
+            let edge = crate::ui::compact::scaled(crate::ui::compact::ROW, cx);
+            let direction = if !event.bounds.contains(&pointer) {
+                0
+            } else if pointer.y < event.bounds.top() + edge {
+                -1
+            } else if pointer.y > event.bounds.bottom() - edge {
+                1
+            } else {
+                0
+            };
+            state.plain_scroll = (direction != 0).then(|| (scroll.clone(), direction));
+            if direction != 0 && state.scroll_task.is_none() {
+                state.scroll_task = Some(cx.spawn_in(window, async move |this, cx| {
+                    loop {
+                        cx.background_executor()
+                            .timer(Duration::from_millis(40))
+                            .await;
+                        let running = this
+                            .update_in(cx, |state, window, cx| {
+                                if !cx.has_active_drag() || state.active.is_none() {
+                                    state.scroll_task = None;
+                                    return false;
+                                }
+                                let Some((scroll, direction)) = &state.plain_scroll else {
+                                    state.scroll_task = None;
+                                    return false;
+                                };
+                                let mut offset = scroll.offset();
+                                offset.y -= crate::ui::compact::scaled(crate::ui::compact::ROW, cx)
+                                    * *direction as f32;
+                                scroll.set_offset(offset);
+                                window.refresh();
+                                true
+                            })
+                            .unwrap_or(false);
+                        if !running {
+                            break;
+                        }
+                    }
+                }));
+            }
+        });
+    })
+}
+
 pub(super) fn panel_actions(element: Stateful<Div>, state: &Entity<SortState>) -> Stateful<Div> {
     let keyboard = state.clone();
     let state = state.clone();
@@ -629,6 +749,25 @@ pub(super) fn panel_actions(element: Stateful<Div>, state: &Entity<SortState>) -
                 cx.stop_propagation();
             }
         })
+}
+
+pub(crate) fn open_resource_destination(
+    owner: WeakEntity<EditorView>,
+    document: DocumentId,
+    context: AuthoringContext,
+    source: ObjectRef,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    destination::open(
+        owner,
+        document,
+        context,
+        PaletteProjection::Parameters,
+        vec![source],
+        window,
+        cx,
+    );
 }
 
 impl EditorView {
@@ -652,6 +791,47 @@ impl EditorView {
         else {
             return;
         };
+        let mut resource_focus = None;
+        for (kind, panel) in [
+            (
+                editor_core::PanelKind::AnimationMotions,
+                &dock.animation_motions,
+            ),
+            (
+                editor_core::PanelKind::AnimationExpressions,
+                &dock.animation_expressions,
+            ),
+        ] {
+            if dock.displayed(kind, cx) && panel.read(cx).focus_handle(cx).is_focused(window) {
+                let object = panel.read(cx).movement_object();
+                resource_focus = Some(object);
+                break;
+            }
+        }
+        if let Some(object) = resource_focus {
+            if let (Some(object), Some(context)) = (object, AuthoringContext::capture(&self.editor))
+            {
+                if command.id == editor_core::CommandId::PaletteMoveTo {
+                    self.run_animation_action(
+                        context,
+                        crate::authoring::animation::AnimationAction::MoveTo(object),
+                        window,
+                        cx,
+                    );
+                } else {
+                    self.run_animation_action(
+                        context,
+                        crate::authoring::animation::AnimationAction::Step(
+                            object,
+                            command.id == editor_core::CommandId::PaletteMoveDown,
+                        ),
+                        window,
+                        cx,
+                    );
+                }
+            }
+            return;
+        }
         let doc = self.editor.document().unwrap();
         let (projection, object) = if dock.displayed(editor_core::PanelKind::MeshTree, cx)
             && dock.mesh_tree.read(cx).focus_handle(cx).is_focused(window)

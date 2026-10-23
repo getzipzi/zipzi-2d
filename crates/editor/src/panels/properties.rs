@@ -1,3 +1,4 @@
+mod animation;
 mod controls;
 mod observe;
 pub(crate) mod physics;
@@ -218,7 +219,17 @@ impl PropertiesPanel {
                     .is_some_and(|doc| doc.object_index().get(&target.object).is_some())
             {
                 let mut target = target.clone();
-                target.scope = editor.document()?.property_scope(&target.object);
+                target.scope = if target.timeline.is_none()
+                    && matches!(
+                        target.object.kind,
+                        editor_core::ObjectKind::Motion | editor_core::ObjectKind::Expression
+                    ) {
+                    editor_core::PropertyScope::Resource {
+                        revision: editor.document()?.model_generation(),
+                    }
+                } else {
+                    editor.document()?.property_scope(&target.object)
+                };
                 return Some(target);
             }
         }
@@ -310,6 +321,9 @@ impl PropertiesPanel {
     pub(crate) fn last_row_id(&self) -> Option<ElementId> {
         match self.rows.last()? {
             Row::Navigation => Some("property-navigation".into()),
+            Row::AnimationActions(object) => {
+                Some(SharedString::from(format!("expression-action-new-{}", object.id)).into())
+            }
             Row::Value { field, .. } => {
                 Some(SharedString::from(format!("object-property-{field}")).into())
             }
@@ -390,6 +404,7 @@ impl PropertiesPanel {
         }
         let content = match row {
             Row::Navigation => self.render_navigation(cx),
+            Row::AnimationActions(object) => self.animation_actions(object, cx),
             Row::Field(id) => self.render_field(*id, window, cx),
             Row::Detail(row) => details::render(row, cx),
             Row::Group {

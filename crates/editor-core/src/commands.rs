@@ -79,6 +79,14 @@ pub enum CommandId {
     PaletteMoveDown,
     #[serde(rename = "scene.create-part")]
     CreatePart,
+    #[serde(rename = "motion.create")]
+    CreateMotion,
+    #[serde(rename = "motion-group.create")]
+    CreateMotionGroup,
+    #[serde(rename = "expression.create")]
+    CreateExpression,
+    #[serde(rename = "expression-entry.create")]
+    CreateExpressionEntry,
     #[serde(rename = "scene.create-mesh")]
     CreateMesh,
     #[serde(rename = "scene.create-warp")]
@@ -329,6 +337,28 @@ specs![
     ),
     (PaletteMoveTo, "authoring.move_to", Palette, false, []),
     (CreatePart, "authoring.new_part", Document, false, []),
+    (CreateMotion, "timeline.new_motion", Document, false, []),
+    (
+        CreateMotionGroup,
+        "authoring.new_motion_group",
+        Document,
+        false,
+        []
+    ),
+    (
+        CreateExpression,
+        "authoring.new_expression",
+        Document,
+        false,
+        []
+    ),
+    (
+        CreateExpressionEntry,
+        "authoring.new_expression_entry",
+        Document,
+        false,
+        []
+    ),
     (CreateMesh, "authoring.new_mesh", Document, false, []),
     (CreateWarp, "authoring.new_warp", Document, false, []),
     (
@@ -808,7 +838,16 @@ impl Editor {
                         .is_some_and(|d| d.mesh_generation_target().is_ok())
             }
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {
-                modeling && target && !self.is_busy() && !self.exiting()
+                target && !self.is_busy() && !self.exiting()
+            }
+            CreateMotion | CreateMotionGroup | CreateExpression | CreateExpressionEntry => {
+                !modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && self
+                        .authoring_command_capability(command.id)
+                        .is_ok_and(|c| c == kasane_sdk::CapabilityState::Available)
             }
             CreateParameter | CreateParameterGroup => {
                 modeling

@@ -1,6 +1,7 @@
 //! Editor UI integration tests using GPUI's headless window.
 
 mod animation;
+mod animation_authoring;
 mod animation_panels;
 mod authoring;
 mod authoring_coordination;
@@ -110,3 +111,4 @@ pub(crate) fn setup_with_document(
         _assets: assets,
     }
 }
+mod animation_management;

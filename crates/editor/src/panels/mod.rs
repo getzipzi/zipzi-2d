@@ -5,6 +5,7 @@ pub mod mesh_tree;
 pub mod parameters;
 pub mod properties;
 mod sorting;
+pub(crate) use sorting::open_resource_destination;
 pub mod timeline;
 pub(crate) mod toolbar;
 

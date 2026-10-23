@@ -291,7 +291,7 @@ impl Editor {
                         | EditorCommand::CancelEdit
                 )
                 || matches!(&command, EditorCommand::SetObjectProperties { object, .. }
-                    if matches!(object.kind, crate::ObjectKind::Motion | crate::ObjectKind::Expression | crate::ObjectKind::PhysicsGroup)),
+                    if matches!(object.kind, crate::ObjectKind::Motion | crate::ObjectKind::MotionGroup | crate::ObjectKind::MotionRegistration | crate::ObjectKind::Expression | crate::ObjectKind::ExpressionEntry | crate::ObjectKind::PhysicsGroup)),
             "Modeling commands are unavailable in Animation"
         );
         if matches!(

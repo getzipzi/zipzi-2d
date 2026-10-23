@@ -185,9 +185,14 @@ impl Document {
             let previous_revision = self.projection_revision;
             let property = pending.property_index_target();
             if changed
-                && property
-                    .as_ref()
-                    .is_some_and(|p| p.kind == crate::ObjectKind::PhysicsGroup)
+                && property.as_ref().is_some_and(|p| {
+                    matches!(
+                        p.kind,
+                        crate::ObjectKind::PhysicsGroup
+                            | crate::ObjectKind::ExpressionEntry
+                            | crate::ObjectKind::MotionRegistration
+                    )
+                })
             {
                 let receipt = match pending.edit.commit_to(&mut self.session) {
                     Ok(receipt) => receipt,

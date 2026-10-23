@@ -4,6 +4,7 @@
 use crate::*;
 use editor_core::{DocumentId, EditingContextToken, ObjectKind, ObjectRef, OperationResult};
 use gpui_kit::component::WindowExt;
+pub(crate) mod animation;
 mod availability;
 mod presentation;
 pub(crate) use availability::{authoring_error, error_code};
@@ -23,6 +24,28 @@ impl AuthoringContext {
             editing: editor.editing_context_token()?,
             revision: editor.document()?.model_generation(),
         })
+    }
+}
+
+/// A presentation-only resource destination dialog keeps the ongoing run alive.
+/// The view retires its guard on close/drop; document/workspace changes expire it.
+#[derive(Clone)]
+pub(crate) struct PlaybackDialogGuard {
+    context: AuthoringContext,
+    active: std::rc::Rc<std::cell::Cell<bool>>,
+}
+impl PlaybackDialogGuard {
+    pub(crate) fn new(context: AuthoringContext) -> Self {
+        Self {
+            context,
+            active: std::rc::Rc::new(std::cell::Cell::new(true)),
+        }
+    }
+    pub(crate) fn valid(&self, editor: &Editor) -> bool {
+        self.active.get() && editor.editing_context_token() == Some(self.context.editing)
+    }
+    pub(crate) fn close(&self) {
+        self.active.set(false);
     }
 }
 
@@ -129,6 +152,10 @@ impl EditorView {
 
 pub(crate) fn creation_commands() -> impl Iterator<Item = editor_core::CommandId> {
     scene_creation::all_commands().chain([
+        editor_core::CommandId::CreateMotion,
+        editor_core::CommandId::CreateMotionGroup,
+        editor_core::CommandId::CreateExpression,
+        editor_core::CommandId::CreateExpressionEntry,
         editor_core::CommandId::CreateParameter,
         editor_core::CommandId::CreateParameterGroup,
     ])

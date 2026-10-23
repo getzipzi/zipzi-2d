@@ -88,3 +88,9 @@ mod palette_reparent;
 
 #[path = "cases/authoring_coordination.rs"]
 mod authoring_coordination;
+
+#[path = "cases/animation_library.rs"]
+mod animation_library;
+
+#[path = "cases/animation_management.rs"]
+mod animation_management;
