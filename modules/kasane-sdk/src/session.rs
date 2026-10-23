@@ -29,6 +29,9 @@ use kasane_project::{DocumentSession, FileSystem, NativeFileSystem};
 static NEXT_SESSION_ID: AtomicU64 = AtomicU64::new(1);
 
 pub struct AuthoringSession {
+    // Version includes session/generation, so imports and checkpoint exchanges
+    // cannot reuse another publication's key set even when revisions coincide.
+    pub(crate) object_key_cache: std::sync::Mutex<Option<(Version, Arc<HashSet<ObjectKey>>)>>,
     pub(crate) project: DocumentSession,
     pub(crate) preview: PreviewState,
     pub(crate) session_id: u64,
@@ -206,6 +209,7 @@ impl AuthoringSession {
             .collect();
         let next_incarnation = incarnations.len() as u64 + 1;
         Ok(Self {
+            object_key_cache: Default::default(),
             project: DocumentSession::from_authoring_document_with_filesystem(document, filesystem),
             preview: PreviewState::default(),
             session_id: NEXT_SESSION_ID.fetch_add(1, Ordering::Relaxed),
@@ -761,8 +765,13 @@ impl AuthoringSession {
         self.set_preview_values(PreviewValues::new())
     }
 
-    pub(crate) fn object_keys(&self) -> HashSet<ObjectKey> {
-        keys_in(self.document())
+    pub(crate) fn object_keys(&self) -> Arc<HashSet<ObjectKey>> {
+        let version = self.version();
+        let mut cache = self.object_key_cache.lock().unwrap();
+        if cache.as_ref().is_none_or(|(v, _)| *v != version) {
+            *cache = Some((version, Arc::new(keys_in(self.document()))));
+        }
+        cache.as_ref().unwrap().1.clone()
     }
 
     fn object_exists(&self, kind: ObjectKind, id: &str) -> bool {
@@ -1012,6 +1021,9 @@ impl AuthoringSession {
         after: &HashSet<ObjectKey>,
         identity_keys: &HashSet<ObjectKey>,
     ) {
+        if std::ptr::eq(before, after) && identity_keys.is_empty() {
+            return;
+        }
         let mut changed: HashSet<_> = before.symmetric_difference(after).cloned().collect();
         changed.extend(
             identity_keys
@@ -1138,6 +1150,8 @@ ordered_objects! {
 }
 
 pub(crate) fn keys_in(doc: &Document) -> HashSet<ObjectKey> {
+    #[cfg(feature = "bench-instrumentation")]
+    let _span = kasane_core::benchmark::span("sdk.keys_in");
     let mut keys: HashSet<_> = ordered_keys(doc).collect();
     keys.extend(
         doc.glue_order()

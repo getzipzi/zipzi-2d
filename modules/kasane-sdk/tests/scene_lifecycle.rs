@@ -16,6 +16,67 @@ fn session() -> AuthoringSession {
 }
 
 #[test]
+fn scene_label_patches_avoid_global_identity_scans_through_both_entrypoints() {
+    let mut s = session();
+    let mesh = triangle(&mut s, None, None, None, 0.);
+    let handle = s.handle(ObjectKind::Mesh, &mesh).unwrap();
+    for planned in [false, true] {
+        let intent = E::Patch {
+            id: mesh.clone(),
+            expected: s.document().scene_field(&mesh, F::Label).unwrap(),
+            value: V::Label(format!("Label {planned}")),
+            clear_glue_pairs: false,
+        };
+        assert!(s
+            .document()
+            .plan_scene_edit(intent.clone())
+            .unwrap()
+            .preserves_identities());
+        let plan = s.plan_scene_edit(intent.clone()).unwrap();
+        #[cfg(feature = "bench-instrumentation")]
+        let capture = kasane_core::benchmark::Capture::start();
+        let (_, receipt) = s
+            .edit("Label", None, |e| {
+                if planned {
+                    e.apply_scene_plan(&plan)
+                } else {
+                    e.edit_scene(intent)
+                }
+            })
+            .unwrap();
+        #[cfg(feature = "bench-instrumentation")]
+        {
+            let stages = capture.finish();
+            assert!(
+                !stages.contains_key("sdk.keys_in"),
+                "Label enumerated all identities: {stages:?}"
+            );
+        }
+        assert!(receipt.changed);
+        assert!(receipt.changes.created.is_empty());
+        assert!(receipt.changes.deleted.is_empty());
+        s.resolve_handle(&handle).unwrap();
+    }
+    let deletion = E::Delete {
+        ids: vec![mesh.clone()],
+        scope: Default::default(),
+    };
+    assert!(!s
+        .document()
+        .plan_scene_edit(deletion)
+        .unwrap()
+        .preserves_identities());
+    let parent = create(&mut s, New::Rotation, None, None);
+    assert!(!s
+        .document()
+        .plan_scene_edit(E::Reparent {
+            edit: ReparentEdit::keep_local(vec![mesh], parent)
+        })
+        .unwrap()
+        .preserves_identities());
+}
+
+#[test]
 fn ensure_drawing_role_respects_the_previous_drawing_parent_lock() {
     let mut s = session();
     let parent = part(&mut s, None);
@@ -1131,6 +1192,42 @@ fn endpoint_changes_validate_existing_pairs_or_explicitly_clear_them() {
         e.replace_glue(glue)
     })
     .unwrap();
+    // Clearing and restoring identical pair content inside one batch must still
+    // retire the original handle. Exercise direct and preplanned application.
+    for planned in [false, true] {
+        let original = s.document().get_glue(&g).unwrap().clone();
+        let pair = s
+            .handle(ObjectKind::GlueVertexPair, &original.pairs[0].id)
+            .unwrap();
+        let expected = s.document().scene_field(&g, F::GlueEndpoints).unwrap();
+        let intent = E::Patch {
+            id: g.clone(),
+            expected: expected.clone(),
+            value: expected,
+            clear_glue_pairs: true,
+        };
+        assert!(!s
+            .document()
+            .plan_scene_edit(intent.clone())
+            .unwrap()
+            .preserves_identities());
+        let plan = s.plan_scene_edit(intent.clone()).unwrap();
+        let (_, receipt) = s
+            .edit("Clear and restore pairs", None, |e| {
+                if planned {
+                    e.apply_scene_plan(&plan)?;
+                } else {
+                    e.edit_scene(intent)?;
+                }
+                e.replace_glue(original)
+            })
+            .unwrap();
+        assert!(receipt.changed);
+        assert!(s.resolve_handle(&pair).is_err());
+        s.undo().unwrap();
+        s.redo().unwrap();
+        assert!(s.resolve_handle(&pair).is_err());
+    }
     let address = s.scene_field_address(&g, F::GlueEndpoints).unwrap();
     let value = V::GlueEndpoints {
         a: a.into(),

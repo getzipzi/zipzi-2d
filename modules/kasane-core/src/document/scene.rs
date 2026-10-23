@@ -219,9 +219,15 @@ pub struct ScenePlan {
     patches: Vec<(String, SceneFieldValue, bool)>,
     reparent: Option<ReparentPlan>,
     metadata_only: bool,
+    preserves_identities: bool,
     cost: Option<ConversionCost>,
 }
 impl ScenePlan {
+    /// A Core-proven identity guarantee for the validated plan. Unknown or
+    /// structural/conversion effects conservatively require identity tracking.
+    pub fn preserves_identities(&self) -> bool {
+        self.preserves_identities
+    }
     pub fn is_noop(&self) -> bool {
         self.domain.no_op
             && self.patches.is_empty()
@@ -266,6 +272,7 @@ impl Document {
             patches: vec![],
             reparent: None,
             metadata_only: false,
+            preserves_identities: false,
             cost: None,
         }
     }
@@ -573,6 +580,26 @@ impl Document {
         plan.domain.affected.sort();
         plan.domain.affected.dedup();
         plan.domain.no_op = !plan.domain.delta.changed(self);
+        // Field installation changes values/references, never owned IDs except
+        // explicitly clearing Glue pairs. Nonempty domain deltas and reparent
+        // conversions keep the conservative path, including role lifecycles.
+        plan.preserves_identities = plan.domain.no_op
+            && plan.reparent.is_none()
+            && plan.patches.iter().all(|(_, value, clear)| match value {
+                SceneFieldValue::GlueEndpoints { .. } => !clear,
+                SceneFieldValue::Label(_)
+                | SceneFieldValue::RuntimeId(_)
+                | SceneFieldValue::Enabled(_)
+                | SceneFieldValue::Appearance(_)
+                | SceneFieldValue::Texture(_)
+                | SceneFieldValue::Masks(_)
+                | SceneFieldValue::MeshDrawing { .. }
+                | SceneFieldValue::Warp(_)
+                | SceneFieldValue::Rotation(_)
+                | SceneFieldValue::GlueIntensity(_)
+                | SceneFieldValue::Offscreen { .. } => true,
+                SceneFieldValue::Context { .. } => false,
+            });
         control.check()?;
         Ok(plan)
     }

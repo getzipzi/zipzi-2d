@@ -4,6 +4,16 @@ use crate::draw_order::validate_groups;
 use crate::geometry::validate_render_mesh;
 use std::collections::{HashMap, HashSet};
 
+/// A proof is valid only for this exact snapshot. Cloning a document deliberately
+/// drops it: internal planners may edit a clone's raw content before validation.
+#[derive(Debug, Default)]
+pub(super) struct ValidationCache(std::sync::Mutex<Option<Arc<()>>>);
+impl Clone for ValidationCache {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructureIssue {
     pub object_id: String,
@@ -14,6 +24,42 @@ impl Document {
     /// Validate all persistent collections and references without reading resources
     /// or changing this document. Restored checkpoints use the same checks.
     pub fn validate_structure(&self) -> Vec<StructureIssue> {
+        self.validate_structure_impl(None, false)
+    }
+
+    /// Reuse only checks whose persistent data AND cross-domain dependencies
+    /// agree with a fully validated baseline. Invalid baselines remain repairable.
+    pub fn validate_structure_since(&self, baseline: &Document) -> Vec<StructureIssue> {
+        let valid = baseline.structure_is_validated() || baseline.validate_structure().is_empty();
+        let identities = valid && self.same_authoring_identities(baseline);
+        self.validate_structure_impl(
+            (identities && self.same_binding_validation_dependencies(baseline)).then_some(baseline),
+            identities
+                && self.same_domain(baseline, super::DocumentDomain::Motions)
+                && self.same_domain(baseline, super::DocumentDomain::Parameters),
+        )
+    }
+
+    pub(super) fn structure_is_validated(&self) -> bool {
+        self.validated_structure
+            .0
+            .lock()
+            .unwrap()
+            .as_ref()
+            .is_some_and(|id| Arc::ptr_eq(id, &self.snapshot_identity))
+    }
+    pub(super) fn remember_valid_structure(&self) {
+        *self.validated_structure.0.lock().unwrap() = Some(self.snapshot_identity.clone());
+    }
+    pub(super) fn forget_valid_structure(&self) {
+        *self.validated_structure.0.lock().unwrap() = None;
+    }
+
+    fn validate_structure_impl(
+        &self,
+        binding_baseline: Option<&Document>,
+        reuse_motions: bool,
+    ) -> Vec<StructureIssue> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.validate_structure");
         let mut issues = Vec::new();
@@ -113,10 +159,10 @@ impl Document {
                 });
             }
         }
-        for child in self.binding_identities() {
+        for child in self.binding_identities_iter() {
             if !valid_uuid(&child.id) || !all_ids.insert(child.id.clone()) {
                 issues.push(StructureIssue {
-                    object_id: child.id,
+                    object_id: child.id.clone(),
                     status: Status::error(
                         "INVALID_BINDING_IDENTITY",
                         "Missing or duplicated axis/sample identity",
@@ -200,7 +246,9 @@ impl Document {
         issues.extend(self.editor_state_issues(&self.content.editor_state));
         issues.extend(self.validate_expressions());
         issues.extend(self.validate_model3());
-        issues.extend(self.validate_motions());
+        if !reuse_motions {
+            issues.extend(self.validate_motions());
+        }
         issues.extend(self.validate_pose_asset());
         issues.extend(self.validate_physics_asset());
 
@@ -243,18 +291,33 @@ impl Document {
             add_issue(id, self.validate_parameter(parameter));
         }
         for (id, binding) in &self.content.bindings {
+            if binding_baseline.is_some_and(|b| b.get_binding(id) == Some(binding)) {
+                continue;
+            }
             add_issue(id, self.canonicalize_binding(&mut binding.clone()));
         }
         for (id, binding) in &self.content.scene_bindings {
+            if binding_baseline.is_some_and(|b| b.get_scene_binding(id) == Some(binding)) {
+                continue;
+            }
             add_issue(id, self.canonicalize_scene_binding(&mut binding.clone()));
         }
         for (id, table) in &self.content.blend_key_tables {
+            if binding_baseline.is_some_and(|b| b.get_blend_key_table(id) == Some(table)) {
+                continue;
+            }
             add_issue(id, self.validate_blend_key_table(table));
         }
         for (id, constraint) in &self.content.blend_constraints {
+            if binding_baseline.is_some_and(|b| b.get_blend_constraint(id) == Some(constraint)) {
+                continue;
+            }
             add_issue(id, self.validate_blend_constraint(constraint));
         }
         for (id, binding) in &self.content.blend_bindings {
+            if binding_baseline.is_some_and(|b| b.get_blend_binding(id) == Some(binding)) {
+                continue;
+            }
             add_issue(id, self.validate_blend_binding(binding));
         }
         for (id, glue) in &self.content.glues {
@@ -303,6 +366,11 @@ impl Document {
                 &b.status.message,
             ))
         });
+        if issues.is_empty() {
+            self.remember_valid_structure();
+        } else {
+            self.forget_valid_structure();
+        }
         issues
     }
 
@@ -367,6 +435,125 @@ mod tests {
 
     const DOC: &str = "00000000-0000-4000-8000-000000000701";
     const PART: &str = "00000000-0000-4000-8000-000000000702";
+
+    #[test]
+    fn validation_proofs_do_not_follow_mutated_clones_or_checkpoint_branches() {
+        let mut source = Document::new();
+        assert!(source
+            .initialize(DOC, Canvas::new(100., 100., Vec2::default(), 10.))
+            .is_ok());
+        assert!(source
+            .create_part(Part {
+                id: PART.into(),
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        assert!(source.validate_structure().is_empty());
+        assert!(source.structure_is_validated());
+        let mut branch = source.clone();
+        assert!(!branch.structure_is_validated());
+        branch.content.parts.get_mut(PART).unwrap().parent_id = PART.into();
+        assert_eq!(
+            branch.validate_structure_since(&source),
+            branch.validate_structure()
+        );
+        assert!(!branch.structure_is_validated());
+        let mut checkpoint = branch.checkpoint();
+        source.exchange_checkpoint(&mut checkpoint).unwrap();
+        assert!(!source.structure_is_validated());
+        source.exchange_checkpoint(&mut checkpoint).unwrap();
+        assert!(source.structure_is_validated());
+        assert!(!source.fork_candidate().structure_is_validated());
+        source.exchange_checkpoint(&mut checkpoint).unwrap();
+        assert!(!source.structure_is_validated());
+        let repaired = Document::new();
+        assert_eq!(
+            repaired.validate_structure_since(&source),
+            repaired.validate_structure()
+        );
+    }
+
+    #[test]
+    fn incremental_validation_checks_dependency_and_owned_identity_changes() {
+        use crate::{Appearance, BindingAxis, Mesh, MeshBinding, MeshKeyform, Parameter};
+        let mut source = Document::new();
+        assert!(source
+            .initialize(DOC, Canvas::new(100., 100., Vec2::default(), 10.))
+            .is_ok());
+        let parameter = "00000000-0000-4000-8000-000000000703";
+        let mesh = "00000000-0000-4000-8000-000000000704";
+        let binding = "00000000-0000-4000-8000-000000000705";
+        assert!(source
+            .create_parameter(Parameter {
+                id: parameter.into(),
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        assert!(source
+            .create_mesh(Mesh {
+                id: mesh.into(),
+                runtime_id: "Mesh".into(),
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        assert!(source
+            .create_binding(MeshBinding {
+                id: binding.into(),
+                mesh_id: mesh.into(),
+                axes: vec![BindingAxis {
+                    parameter_id: parameter.into(),
+                    keys: vec![0., 1.],
+                    ..Default::default()
+                }],
+                keyforms: vec![
+                    MeshKeyform {
+                        keys: vec![0.],
+                        positions: vec![],
+                        appearance: Appearance::default(),
+                        draw_order: None,
+                        samples: vec![]
+                    },
+                    MeshKeyform {
+                        keys: vec![1.],
+                        positions: vec![],
+                        appearance: Appearance::default(),
+                        draw_order: None,
+                        samples: vec![]
+                    },
+                ]
+            })
+            .status
+            .is_ok());
+        assert!(source.validate_structure().is_empty());
+        let mut branch = source.fork_candidate();
+        branch.content.bindings.get_mut(binding).unwrap().keyforms[0].positions =
+            vec![Vec2::default()];
+        assert!(branch.same_authoring_identities(&source));
+        assert!(branch.same_binding_validation_dependencies(&source));
+        let full = branch.validate_structure();
+        assert!(!full.is_empty());
+        assert_eq!(branch.validate_structure_since(&source), full);
+        let mut branch = source.fork_candidate();
+        branch
+            .content
+            .parameters
+            .get_mut(parameter)
+            .unwrap()
+            .maximum = 0.5;
+        let full = branch.validate_structure();
+        assert!(!full.is_empty());
+        assert_eq!(branch.validate_structure_since(&source), full);
+        let mut branch = source.fork_candidate();
+        branch.content.bindings.get_mut(binding).unwrap().axes[0].samples[0].id = mesh.into();
+        let full = branch.validate_structure();
+        assert!(!full.is_empty());
+        assert_eq!(branch.validate_structure_since(&source), full);
+    }
 
     #[test]
     fn restored_checkpoint_is_checked_without_mutating_the_document() {

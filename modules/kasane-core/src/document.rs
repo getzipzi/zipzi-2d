@@ -25,6 +25,8 @@ mod parts;
 mod physics;
 mod pose;
 mod property;
+mod publication;
+pub use publication::DocumentDomain;
 mod reference_authoring;
 mod references;
 pub use reference_authoring::*;
@@ -86,6 +88,7 @@ pub struct Document {
     // Clones share an unchanged snapshot; every content mutation creates a new
     // identity, even when branch-local revision counters happen to coincide.
     snapshot_identity: Arc<()>,
+    validated_structure: structure::ValidationCache,
     revision: u64,
     evaluation_revision: u64,
     batch_build_active: bool,

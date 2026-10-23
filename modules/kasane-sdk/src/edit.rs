@@ -13,7 +13,7 @@ use kasane_core::{
 
 pub struct EditSession<'a> {
     pub(crate) session: Option<&'a mut AuthoringSession>,
-    pub(crate) base_keys: HashSet<ObjectKey>,
+    pub(crate) base_keys: std::sync::Arc<HashSet<ObjectKey>>,
     pub(crate) candidate: Option<Document>,
     pub(crate) label: String,
     pub(crate) before: Version,
@@ -519,7 +519,11 @@ impl EditSession<'_> {
     }
     pub fn replace_binding(&mut self, binding: MeshBinding) -> Result<(), SdkError> {
         let id = binding.id.clone();
-        self.apply_authoring_change("replace_binding", &id, false, |document| {
+        let preserves = self
+            .candidate_document()
+            .get_binding(&id)
+            .is_some_and(|old| same_axis_ids(&old.axes, &binding.axes));
+        self.apply_authoring_change("replace_binding", &id, preserves, |document| {
             document.replace_binding(binding)
         })
     }
@@ -540,7 +544,11 @@ impl EditSession<'_> {
     }
     pub fn replace_scene_binding(&mut self, binding: SceneBinding) -> Result<(), SdkError> {
         let id = binding.id.clone();
-        self.apply_authoring_change("replace_scene_binding", &id, false, |document| {
+        let preserves = self
+            .candidate_document()
+            .get_scene_binding(&id)
+            .is_some_and(|old| same_axis_ids(&old.axes, &binding.axes));
+        self.apply_authoring_change("replace_scene_binding", &id, preserves, |document| {
             document.replace_scene_binding(binding)
         })
     }
@@ -561,7 +569,16 @@ impl EditSession<'_> {
     }
     pub fn replace_blend_key_table(&mut self, table: BlendShapeKeyTable) -> Result<(), SdkError> {
         let id = table.id.clone();
-        self.apply_authoring_change("replace_blend_key_table", &id, false, |document| {
+        let preserves = self
+            .candidate_document()
+            .get_blend_key_table(&id)
+            .is_some_and(|old| {
+                old.samples
+                    .iter()
+                    .map(|s| &s.id)
+                    .eq(table.samples.iter().map(|s| &s.id))
+            });
+        self.apply_authoring_change("replace_blend_key_table", &id, preserves, |document| {
             document.replace_blend_key_table(table)
         })
     }
@@ -579,7 +596,16 @@ impl EditSession<'_> {
         constraint: BlendShapeConstraint,
     ) -> Result<(), SdkError> {
         let id = constraint.id.clone();
-        self.apply_authoring_change("replace_blend_constraint", &id, false, |document| {
+        let preserves = self
+            .candidate_document()
+            .get_blend_constraint(&id)
+            .is_some_and(|old| {
+                old.samples
+                    .iter()
+                    .map(|s| &s.id)
+                    .eq(constraint.samples.iter().map(|s| &s.id))
+            });
+        self.apply_authoring_change("replace_blend_constraint", &id, preserves, |document| {
             document.replace_blend_constraint(constraint)
         })
     }
@@ -591,7 +617,7 @@ impl EditSession<'_> {
     }
     pub fn replace_blend_binding(&mut self, binding: BlendShapeBinding) -> Result<(), SdkError> {
         let id = binding.id.clone();
-        self.apply_authoring_change("replace_blend_binding", &id, false, |document| {
+        self.apply_authoring_change("replace_blend_binding", &id, true, |document| {
             document.replace_blend_binding(binding)
         })
     }
@@ -603,7 +629,18 @@ impl EditSession<'_> {
     }
     pub fn replace_glue(&mut self, glue: Glue) -> Result<(), SdkError> {
         let id = glue.id.clone();
-        self.apply_authoring_change("replace_glue", &id, false, |document| {
+        let preserves = self.candidate_document().get_glue(&id).is_some_and(|old| {
+            old.pairs
+                .iter()
+                .map(|p| &p.id)
+                .eq(glue.pairs.iter().map(|p| &p.id))
+                && match (&old.binding, &glue.binding) {
+                    (Some(a), Some(b)) => same_axis_ids(&a.axes, &b.axes),
+                    (None, None) => true,
+                    _ => false,
+                }
+        });
+        self.apply_authoring_change("replace_glue", &id, preserves, |document| {
             document.replace_glue(glue)
         })
     }
@@ -676,7 +713,11 @@ impl EditSession<'_> {
                 .map_err(|s| SdkError::from_status(s, "commit", vec![]))?;
         }
         let candidate = self.candidate.take().expect("edit candidate exists");
-        if let Some(issue) = candidate.validate_structure().into_iter().next() {
+        if let Some(issue) = candidate
+            .validate_structure_since(session.document())
+            .into_iter()
+            .next()
+        {
             return Err(SdkError::from_status(
                 issue.status,
                 "commit",
@@ -692,7 +733,13 @@ impl EditSession<'_> {
         let identity_changed = !identity_keys.is_empty();
         let changed = identity_changed || !session.project.document().same_content(&candidate);
         let before_keys = changed.then(|| session.object_keys());
-        let after_keys = changed.then(|| keys_in(&candidate));
+        let after_keys = changed.then(|| {
+            if candidate.same_authoring_identities(session.document()) {
+                self.base_keys.clone()
+            } else {
+                std::sync::Arc::new(keys_in(&candidate))
+            }
+        });
         let mut changes = if let (Some(keys), Some(after_keys)) = (&before_keys, &after_keys) {
             crate::changes::summarize(
                 session.document(),
@@ -798,6 +845,8 @@ impl EditSession<'_> {
         }
         if let (Some(keys), Some(after_keys)) = (&before_keys, &after_keys) {
             session.refresh_incarnations_from_keys(keys, after_keys, &identity_keys);
+            *session.object_key_cache.lock().unwrap() =
+                Some((session.version(), after_keys.clone()));
         }
         if let Some(checkpoint) = previous {
             for _ in 0..evict_count {
@@ -832,6 +881,19 @@ impl EditSession<'_> {
         }
         Ok(receipt)
     }
+}
+
+// Compare the incoming owned identities before normalization. Empty/replaced IDs
+// cannot equal the existing canonical IDs, so they retain the removal scan.
+fn same_axis_ids(a: &[kasane_core::BindingAxis], b: &[kasane_core::BindingAxis]) -> bool {
+    a.len() == b.len()
+        && a.iter().zip(b).all(|(a, b)| {
+            a.id == b.id
+                && a.samples
+                    .iter()
+                    .map(|s| &s.id)
+                    .eq(b.samples.iter().map(|s| &s.id))
+        })
 }
 
 fn merge_kind(a: ChangeKind, b: ChangeKind) -> ChangeKind {

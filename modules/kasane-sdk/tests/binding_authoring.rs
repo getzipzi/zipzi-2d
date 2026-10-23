@@ -35,6 +35,113 @@ fn fixture() -> AuthoringSession {
     sdk
 }
 
+#[test]
+fn metadata_publication_reuses_bindings_motions_and_identity_keys() {
+    let mut sdk = fixture();
+    let binding = binding(&sdk);
+    let mut peer = sdk.mesh(MESH_ID).unwrap();
+    peer.id = "00000000-0000-4000-8000-000000000421".into();
+    peer.runtime_id = "Peer".into();
+    let mut peer_binding = binding.clone();
+    peer_binding.id = "00000000-0000-4000-8000-000000000422".into();
+    peer_binding.mesh_id = peer.id.clone();
+    let clip: kasane_core::document::MotionClip = serde_json::from_value(serde_json::json!({
+        "id":"00000000-0000-4000-8000-000000000420", "name":"Motion", "duration":1., "fps":30.,
+        "looping":false, "restricted_beziers":true, "fade_in":null, "fade_out":null,
+        "track_order":[], "tracks":[], "events":[], "extensions":{}, "meta_extensions":{},
+        "opaque_source_ids":null
+    }))
+    .unwrap();
+    sdk.edit("dependencies", None, |edit| {
+        edit.create_mesh(peer)?;
+        edit.create_parameter(parameter(false))?;
+        edit.create_binding(binding)?;
+        edit.create_binding(peer_binding)?;
+        edit.create_motion(clip)
+    })
+    .unwrap();
+    let snapshot = sdk.read_snapshot();
+    let handle = sdk.handle(kasane_sdk::ObjectKind::Mesh, MESH_ID).unwrap();
+    for opacity in [0.3, 0.6, 0.9] {
+        let previous = sdk.mesh(MESH_ID).unwrap().appearance.opacity;
+        #[cfg(feature = "bench-instrumentation")]
+        let capture = kasane_core::benchmark::Capture::start();
+        let mut mesh = sdk.mesh(MESH_ID).unwrap();
+        mesh.name = format!("Mesh {opacity}");
+        mesh.appearance.opacity = opacity;
+        let (_, receipt) = sdk
+            .edit("presentation", None, |edit| edit.replace_mesh(mesh))
+            .unwrap();
+        #[cfg(feature = "bench-instrumentation")]
+        {
+            let stages = capture.finish();
+            for stage in [
+                "sdk.keys_in",
+                "core.validate_motion",
+                "core.canonicalize_binding",
+                "core.canonicalize_scene_binding",
+            ] {
+                assert!(!stages.contains_key(stage), "repeated {stage}: {stages:?}");
+            }
+        }
+        assert!(receipt.changed);
+        assert!(receipt.changes.created.is_empty());
+        assert!(receipt.changes.deleted.is_empty());
+        assert_eq!(sdk.mesh(MESH_ID).unwrap().appearance.opacity, opacity);
+        sdk.resolve_handle(&handle).unwrap();
+        assert_eq!(
+            snapshot
+                .document()
+                .get_mesh(MESH_ID)
+                .unwrap()
+                .appearance
+                .opacity,
+            1.
+        );
+        assert!(sdk.document().validate_structure().is_empty());
+        sdk.undo().unwrap();
+        assert_eq!(sdk.mesh(MESH_ID).unwrap().appearance.opacity, previous);
+        sdk.redo().unwrap();
+        assert_eq!(sdk.mesh(MESH_ID).unwrap().appearance.opacity, opacity);
+        sdk.resolve_handle(&handle).unwrap();
+    }
+    // Keyform payload changes preserve owned axis/sample IDs too. Validate the
+    // changed binding during replacement/publication, without revisiting peers.
+    let mut binding = sdk.document().get_binding(BINDING_ID).unwrap().clone();
+    binding.keyforms[0].appearance.opacity = 0.25;
+    #[cfg(feature = "bench-instrumentation")]
+    let capture = kasane_core::benchmark::Capture::start();
+    let (_, receipt) = sdk
+        .edit("keyform", None, |e| e.replace_binding(binding))
+        .unwrap();
+    #[cfg(feature = "bench-instrumentation")]
+    {
+        let stages = capture.finish();
+        for stage in [
+            "sdk.keys_in",
+            "core.validate_motion",
+            "core.canonicalize_scene_binding",
+        ] {
+            assert!(!stages.contains_key(stage), "repeated {stage}: {stages:?}");
+        }
+        assert_eq!(stages["core.canonicalize_binding"].calls, 2);
+    }
+    assert!(receipt.changed);
+    assert!(receipt.changes.created.is_empty());
+    assert!(receipt.changes.deleted.is_empty());
+    assert!(!receipt.changes.content_changes.is_empty());
+    assert!(sdk.document().validate_structure().is_empty());
+    sdk.undo().unwrap();
+    sdk.redo().unwrap();
+    assert_eq!(
+        sdk.document().get_binding(BINDING_ID).unwrap().keyforms[0]
+            .appearance
+            .opacity,
+        0.25
+    );
+    sdk.resolve_handle(&handle).unwrap();
+}
+
 fn parameter(repeat: bool) -> Parameter {
     Parameter {
         id: PARAMETER_ID.into(),

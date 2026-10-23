@@ -6,8 +6,10 @@ mod size;
 
 /// Persistent document content, without revisions, saved state, or derived caches.
 /// A checkpoint may be exchanged with a document to implement full-content undo.
+// The proof travels with this immutable content through undo/redo. Any direct
+// checkpoint mutation must discard it before the checkpoint can be restored.
 #[derive(Debug, Clone)]
-pub struct DocumentCheckpoint(DocumentContent);
+pub struct DocumentCheckpoint(DocumentContent, bool);
 
 impl DocumentCheckpoint {
     /// Estimated heap and inline bytes owned by persistent content. This is a
@@ -44,6 +46,7 @@ impl DocumentCheckpoint {
         };
         content.source = source;
         content.sha256 = sha256;
+        self.1 = false;
         true
     }
 }
@@ -57,7 +60,7 @@ impl Document {
     pub fn checkpoint(&self) -> DocumentCheckpoint {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.checkpoint_clone");
-        DocumentCheckpoint(self.content.clone())
+        DocumentCheckpoint(self.content.clone(), self.structure_is_validated())
     }
 
     /// Build an isolated edit candidate. Its saved baseline and evaluation caches
@@ -104,10 +107,13 @@ impl Document {
             false
         };
         let mut candidate = candidate;
-        let mut content = DocumentCheckpoint(DocumentContent::default());
+        let mut content = DocumentCheckpoint(DocumentContent::default(), false);
         candidate.swap_checkpoint(&mut content, true);
-        self.swap_checkpoint(&mut content, !metadata_only);
+        let validated = self.swap_checkpoint(&mut content, !metadata_only);
         self.advance_checkpoint_revision(!metadata_only);
+        if validated {
+            self.remember_valid_structure();
+        }
         Ok(true)
     }
 
@@ -273,13 +279,16 @@ impl Document {
             ));
         }
         let metadata_only = self.same_content_except_visual_metadata(&checkpoint.0);
-        self.swap_checkpoint(checkpoint, !metadata_only);
+        let validated = self.swap_checkpoint(checkpoint, !metadata_only);
         self.advance_checkpoint_revision(!metadata_only);
+        if validated {
+            self.remember_valid_structure();
+        }
         Ok(())
     }
 
     /// Swap all persistent content while retaining the saved baseline.
-    fn swap_checkpoint(&mut self, checkpoint: &mut DocumentCheckpoint, invalidate: bool) {
+    fn swap_checkpoint(&mut self, checkpoint: &mut DocumentCheckpoint, invalidate: bool) -> bool {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.checkpoint_swap_indexes");
         self.modified_cache.take();
@@ -297,6 +306,9 @@ impl Document {
         }
         self.reference_index.take();
         self.reference_projection.take();
+        let validated = checkpoint.1;
+        checkpoint.1 = self.structure_is_validated();
+        self.forget_valid_structure();
         std::mem::swap(&mut self.content, &mut checkpoint.0);
         self.mesh_runtime_ids = self
             .content
@@ -325,6 +337,7 @@ impl Document {
             self.prepared.take();
             self.scene_projection.take();
         }
+        validated
     }
 
     fn advance_checkpoint_revision(&mut self, evaluation_changed: bool) {

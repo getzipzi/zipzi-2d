@@ -399,23 +399,50 @@ pub(crate) fn summarize(
     object_ids: &[String],
     kinds: &BTreeSet<ChangeCategory>,
 ) -> ChangeSet {
+    summarize_impl(
+        before,
+        after,
+        before_keys,
+        after_keys,
+        object_ids,
+        kinds,
+        true,
+    )
+}
+
+fn summarize_impl(
+    before: &Document,
+    after: &Document,
+    before_keys: &HashSet<ObjectKey>,
+    after_keys: &HashSet<ObjectKey>,
+    object_ids: &[String],
+    kinds: &BTreeSet<ChangeCategory>,
+    prune_domains: bool,
+) -> ChangeSet {
+    #[cfg(feature = "bench-instrumentation")]
+    let _span = kasane_core::benchmark::span("sdk.summarize");
+    use kasane_core::document::DocumentDomain as D;
+    let unchanged = |domain| prune_domains && before.same_domain(after, domain);
     let mut out = ChangeSet::default();
     let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
-    out.created = after_keys
-        .difference(before_keys)
-        .map(|key| entity(key.kind, &key.id))
-        .collect();
-    out.deleted = before_keys
-        .difference(after_keys)
-        .map(|key| entity(key.kind, &key.id))
-        .collect();
+    if !std::ptr::eq(before_keys, after_keys) {
+        out.created = after_keys
+            .difference(before_keys)
+            .map(|key| entity(key.kind, &key.id))
+            .collect();
+        out.deleted = before_keys
+            .difference(after_keys)
+            .map(|key| entity(key.kind, &key.id))
+            .collect();
+    }
     // C1 only scans expression storage when an expression or owned entry was touched.
-    let expression_edit = object_ids.iter().any(|id| {
-        before.get_expression(id).is_some()
-            || after.get_expression(id).is_some()
-            || before.get_expression_entry(id).is_some()
-            || after.get_expression_entry(id).is_some()
-    });
+    let expression_edit = !unchanged(D::Expressions)
+        && object_ids.iter().any(|id| {
+            before.get_expression(id).is_some()
+                || after.get_expression(id).is_some()
+                || before.get_expression_entry(id).is_some()
+                || after.get_expression_entry(id).is_some()
+        });
     out.categories.extend(kinds.iter().copied());
     if expression_edit {
         if before.expression_order() != after.expression_order() {
@@ -512,17 +539,38 @@ pub(crate) fn summarize(
             }
         }
     }
-    motion::summarize_motion(before, after, &mut out);
+    if !unchanged(D::Motions) {
+        motion::summarize_motion(before, after, &mut out);
+    }
     physics::summarize_physics(before, after, &mut out);
     pose::summarize_pose(before, after, &mut out);
-    organization::summarize_organization(before, after, &mut out);
-    scene::summarize_scene(before, after, object_ids, &mut out);
-    binding::summarize_bindings(before, after, object_ids, &mut out);
-    binding::summarize_binding_children(before, after, object_ids, &mut out);
-    references::summarize_references(before, after, &mut out);
-    content::summarize_content(before, after, object_ids, &mut out);
-    resources::summarize_resources(before, after, &mut out);
-    document::summarize_document(before, after, &mut out);
+    if !unchanged(D::Organization) {
+        organization::summarize_organization(before, after, &mut out);
+    }
+    let scene_changed = !unchanged(D::Scene);
+    let bindings_changed = !unchanged(D::Bindings);
+    // Scene summarization also normalizes the declared Topology category for
+    // touched scene objects, including erase/recreate with identical content.
+    if scene_changed || kinds.contains(&ChangeCategory::Topology) {
+        scene::summarize_scene(before, after, object_ids, &mut out);
+    }
+    if scene_changed || bindings_changed {
+        binding::summarize_bindings(before, after, object_ids, &mut out);
+        binding::summarize_binding_children(before, after, object_ids, &mut out);
+    }
+    let references_changed = !unchanged(D::References);
+    if references_changed {
+        references::summarize_references(before, after, &mut out);
+    }
+    if scene_changed || bindings_changed {
+        content::summarize_content(before, after, object_ids, &mut out);
+    }
+    if !unchanged(D::Assets) {
+        resources::summarize_resources(before, after, &mut out);
+    }
+    if references_changed || !unchanged(D::Document) {
+        document::summarize_document(before, after, &mut out);
+    }
     // Persistent authoring flags affect capabilities even when domain content
     // is unchanged. Derive them from both states so undo uses the same summary.
     if before.editor_state() != after.editor_state() {
@@ -669,5 +717,146 @@ mod tests {
         let payload = entity.document_id.capacity() + entity.id.capacity();
         summary.created.push(entity);
         assert_eq!(summary.estimated_bytes(), baseline + slots + payload);
+    }
+    #[test]
+    fn pruned_summaries_match_full_summaries_across_domains_and_history() {
+        use crate::{AuthoringSession, EditSession, SdkError};
+        use kasane_core::{Mesh, ModelSetup, Parameter, Part};
+        fn id(n: u32) -> String {
+            format!("00000000-0000-4000-8000-{n:012x}")
+        }
+        fn check(
+            sdk: &mut AuthoringSession,
+            edit: impl FnOnce(&mut EditSession<'_>) -> Result<(), SdkError>,
+        ) {
+            let before = sdk.document().clone();
+            let before_keys = crate::session::keys_in(&before);
+            let (_, receipt) = sdk.edit("comparison", None, edit).unwrap();
+            assert!(receipt.changed);
+            let after = sdk.document();
+            let after_keys = crate::session::keys_in(after);
+            let full = summarize_impl(
+                &before,
+                after,
+                &before_keys,
+                &after_keys,
+                &receipt.object_ids,
+                &categories(receipt.kind),
+                false,
+            );
+            assert_eq!(
+                serde_json::to_value(&receipt.changes).unwrap(),
+                serde_json::to_value(&full).unwrap()
+            );
+            let persisted = serde_json::to_value(&receipt.changes).unwrap();
+            let undo = sdk.undo().unwrap();
+            assert_eq!(
+                serde_json::to_value(&undo.changes).unwrap(),
+                serde_json::to_value(full.inverted()).unwrap()
+            );
+            let redo = sdk.redo().unwrap();
+            assert_eq!(serde_json::to_value(&redo.changes).unwrap(), persisted);
+        }
+        let mut sdk = AuthoringSession::new(&id(1), ModelSetup::default()).unwrap();
+        check(&mut sdk, |e| {
+            e.create_mesh(Mesh {
+                id: id(2),
+                name: "Mesh".into(),
+                runtime_id: "Mesh".into(),
+                ..Default::default()
+            })
+        });
+        check(&mut sdk, |e| e.rename_mesh(&id(2), "Renamed"));
+        check(&mut sdk, |e| e.set_mesh_opacity(&id(2), 0.4));
+        check(&mut sdk, |e| {
+            e.create_mesh(Mesh {
+                id: id(6),
+                runtime_id: "Mask".into(),
+                ..Default::default()
+            })
+        });
+        let mut masked = sdk.mesh(&id(2)).unwrap();
+        masked.masks = vec![id(6)];
+        check(&mut sdk, |e| e.replace_mesh(masked));
+        let d = sdk.document();
+        let keys = crate::session::keys_in(d);
+        let ids = vec![id(2)];
+        let kinds = categories(ChangeKind::Structure);
+        assert_eq!(
+            serde_json::to_value(summarize(d, d, &keys, &keys, &ids, &kinds)).unwrap(),
+            serde_json::to_value(summarize_impl(d, d, &keys, &keys, &ids, &kinds, false)).unwrap()
+        );
+        check(&mut sdk, |e| {
+            e.create_part(Part {
+                id: id(3),
+                ..Default::default()
+            })
+        });
+        check(&mut sdk, |e| {
+            e.edit_scene(kasane_core::document::SceneEdit::Move {
+                ids: vec![id(2)],
+                destination: kasane_core::document::SceneCollection::Organization {
+                    part_id: Some(id(3)),
+                },
+                before: None,
+            })
+        });
+        check(&mut sdk, |e| {
+            e.create_parameter(Parameter {
+                id: id(4),
+                name: "Parameter".into(),
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            })
+        });
+        let mut p = sdk.parameter(&id(4)).unwrap();
+        p.default_value = 0.4;
+        check(&mut sdk, |e| e.replace_parameter(p));
+        check(&mut sdk, |e| {
+            e.create_binding(kasane_core::MeshBinding {
+                id: id(7),
+                mesh_id: id(2),
+                axes: vec![kasane_core::BindingAxis {
+                    parameter_id: id(4),
+                    keys: vec![0., 1.],
+                    ..Default::default()
+                }],
+                keyforms: vec![0., 1.]
+                    .into_iter()
+                    .map(|key| kasane_core::MeshKeyform {
+                        keys: vec![key],
+                        ..Default::default()
+                    })
+                    .collect(),
+            })
+        });
+        let mut binding = sdk.document().get_binding(&id(7)).unwrap().clone();
+        binding.keyforms[0].appearance.opacity = 0.25;
+        check(&mut sdk, |e| e.replace_binding(binding));
+        let clip: kasane_core::document::MotionClip=serde_json::from_value(serde_json::json!({
+            "id":id(5),"name":"Motion","duration":1.,"fps":30.,"looping":false,"restricted_beziers":true,
+            "fade_in":null,"fade_out":null,"track_order":[],"tracks":[],"events":[],
+            "extensions":{},"meta_extensions":{},"opaque_source_ids":null
+        })).unwrap();
+        check(&mut sdk, |e| e.create_motion(clip));
+        check(&mut sdk, |e| {
+            e.patch_property(&kasane_core::document::PropertyPatch::Motion {
+                id: id(5),
+                duration: 1.,
+                fps: 30.,
+                fade_in: Some(0.3),
+                fade_out: None,
+            })
+        });
+        let mut state = sdk.document().editor_state().clone();
+        state.objects.insert(
+            id(2),
+            kasane_core::document::ObjectEditorState {
+                locked: true,
+                hidden_in_editor: false,
+            },
+        );
+        check(&mut sdk, |e| e.replace_editor_state(state));
     }
 }

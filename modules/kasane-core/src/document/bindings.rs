@@ -23,6 +23,8 @@ impl Document {
     }
 
     pub(super) fn canonicalize_binding(&self, b: &mut MeshBinding) -> Status {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = crate::benchmark::span("core.canonicalize_binding");
         if let Err(s) = self.normalize_owner_axes(&b.id, &mut b.axes) {
             return s;
         }
@@ -305,6 +307,8 @@ impl Document {
     }
 
     pub(super) fn canonicalize_scene_binding(&self, b: &mut SceneBinding) -> Status {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = crate::benchmark::span("core.canonicalize_scene_binding");
         if let Err(s) = self.normalize_owner_axes(&b.id, &mut b.axes) {
             return s;
         }
