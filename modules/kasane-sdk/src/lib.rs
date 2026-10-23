@@ -99,3 +99,6 @@ pub use resource_authoring::*;
 
 mod document_authoring;
 pub use document_authoring::*;
+
+mod authoring_collections;
+pub use authoring_collections::*;

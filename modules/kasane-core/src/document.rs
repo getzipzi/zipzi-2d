@@ -17,6 +17,7 @@ mod offscreen;
 mod organization;
 mod parameters;
 pub use organization::*;
+pub use parameters::{validate_parameter_range, ParameterRangeError};
 mod scene;
 pub use scene::*;
 mod scene_content;

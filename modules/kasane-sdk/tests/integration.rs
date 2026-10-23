@@ -61,3 +61,6 @@ mod reference_authoring;
 
 #[path = "resource_authoring.rs"]
 mod resource_authoring;
+
+#[path = "authoring_collections.rs"]
+mod authoring_collections;

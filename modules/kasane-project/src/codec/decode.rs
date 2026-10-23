@@ -641,13 +641,6 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         }
     }
 
-    if let Present::Present(state) = &doc.editor_state {
-        let result = candidate.replace_editor_state(state.clone());
-        if !result.status.is_ok() {
-            return Err(result.status);
-        }
-    }
-
     let result = candidate.replace_hierarchy_order(doc.hierarchy_order.clone());
     if !result.status.is_ok() {
         return Err(result.status);
@@ -702,6 +695,15 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
     let result = candidate.set_model3_settings(settings);
     if !result.status.is_ok() {
         return Err(result.status);
+    }
+
+    // State can reference CDI folders, animation children, Physics and Pose.
+    // Restore all typed identities before validating persisted authoring flags.
+    if let Present::Present(state) = &doc.editor_state {
+        let result = candidate.replace_editor_state(state.clone());
+        if !result.status.is_ok() {
+            return Err(result.status);
+        }
     }
 
     let status = candidate.finish_batch_build();
