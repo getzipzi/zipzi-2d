@@ -120,9 +120,7 @@ fn palette_move_remapping_replaces_default_and_never_reorders_from_text_focus(
 }
 
 #[gpui_kit::test]
-fn multi_selection_and_locked_members_cannot_be_partially_moved_by_shortcut(
-    cx: &mut TestAppContext,
-) {
+fn all_selected_shortcut_is_noop_and_locked_members_cannot_move(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_two_layers().unwrap();
     let meshes: Vec<_> = document
         .layers()
@@ -147,11 +145,7 @@ fn multi_selection_and_locked_members_cannot_be_partially_moved_by_shortcut(
         let doc = view.editor.document().unwrap();
         assert_eq!(doc.context().selections.len(), 2);
         assert_eq!(doc.history_lengths(), (0, 0));
-        assert!(
-            view.edit_error
-                .as_ref()
-                .is_some_and(|error| error.contains("dragging"))
-        );
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
     });
     cx.update_window(h.window, |_, window, cx| {
         window.click(format!("mesh-item-Mesh:{}", meshes[1].id), cx);

@@ -645,12 +645,13 @@ impl EditorView {
         let Some(object) = object else {
             return;
         };
+        let locate = object.clone();
+        let sources = if doc.context().selections.contains(&object) {
+            doc.context().selections.clone()
+        } else {
+            vec![object]
+        };
         if command.id == editor_core::CommandId::PaletteMoveTo {
-            let sources = if doc.context().selections.contains(&object) {
-                doc.context().selections.clone()
-            } else {
-                vec![object]
-            };
             if !self.prepare_property_inputs(document, window, cx) {
                 return;
             }
@@ -663,10 +664,6 @@ impl EditorView {
             });
             return;
         }
-        if doc.context().selections.contains(&object) && doc.context().selections.len() > 1 {
-            self.set_edit_error(crate::t!("authoring.move_multiple").into_owned(), cx);
-            return;
-        }
         if !self.prepare_property_inputs(document, window, cx) {
             return;
         }
@@ -674,20 +671,42 @@ impl EditorView {
             return;
         };
         let result = self.execute_authoring(context, window, cx, |editor, document| {
-            let plan = editor.document().unwrap().plan_palette_step(
+            let plan = editor.document().unwrap().plan_palette_steps(
                 projection,
-                object,
+                &sources,
                 command.id == editor_core::CommandId::PaletteMoveDown,
             )?;
             editor.execute_palette_move(document, &plan)
         });
         match result {
-            Ok(_) => {
+            Ok(result) => {
                 self.clear_edit_error(cx);
                 self.redraw(cx);
+                if result.receipt.changed {
+                    self.locate_palette_step(document, projection, locate, window, cx);
+                }
             }
             Err(error) => self.set_edit_error(move_error(&error), cx),
         }
+    }
+
+    fn locate_palette_step(
+        &self,
+        document: DocumentId,
+        projection: PaletteProjection,
+        object: ObjectRef,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let owner = cx.weak_entity();
+        let context = AuthoringContext::capture(&self.editor);
+        window.defer(cx, move |window, cx| {
+            if let Some(owner) = owner.upgrade() {
+                if AuthoringContext::capture(&owner.read(cx).editor) == context {
+                    destination::locate_result(&owner, document, projection, object, window, cx);
+                }
+            }
+        });
     }
 }
 
@@ -709,9 +728,18 @@ pub(super) fn move_menu(
         return menu;
     }
     let context = AuthoringContext::capture(&state.editor);
-    let multiple = state.editor.document().is_some_and(|document| {
-        document.context().selections.contains(&object) && document.context().selections.len() > 1
-    });
+    let locate = object.clone();
+    let sources = state
+        .editor
+        .document()
+        .map(|doc| {
+            if doc.context().selections.contains(&object) {
+                doc.context().selections.clone()
+            } else {
+                vec![object]
+            }
+        })
+        .unwrap_or_default();
     for (down, label) in [
         (false, crate::t!("authoring.move_up")),
         (true, crate::t!("authoring.move_down")),
@@ -720,17 +748,14 @@ pub(super) fn move_menu(
             .editor
             .document()
             .ok_or_else(|| anyhow::anyhow!("Document closed"))
-            .and_then(|document| document.plan_palette_step(projection, object.clone(), down));
-        let enabled = !multiple && plan.as_ref().is_ok_and(|plan| !plan.is_noop());
-        let reason = if multiple {
-            Some(crate::t!("authoring.move_multiple").into_owned())
-        } else {
-            plan.as_ref().err().map(|error| move_error(error))
-        };
+            .and_then(|document| document.plan_palette_steps(projection, &sources, down));
+        let enabled = plan.as_ref().is_ok_and(|plan| !plan.is_noop());
+        let reason = plan.as_ref().err().map(|error| move_error(error));
         let label: SharedString = reason
             .map_or_else(|| label.to_string(), |reason| format!("{label} · {reason}"))
             .into();
-        let object = object.clone();
+        let sources = sources.clone();
+        let locate = locate.clone();
         let owner = owner.clone();
         menu = menu.item(
             PopupMenuItem::new(label)
@@ -747,15 +772,26 @@ pub(super) fn move_menu(
                     owner.update(cx, |owner, cx| {
                         let result =
                             owner.execute_authoring(context, window, cx, |editor, document| {
-                                let plan = editor.document().unwrap().plan_palette_step(
-                                    projection,
-                                    object.clone(),
-                                    down,
-                                )?;
+                                let plan = editor
+                                    .document()
+                                    .unwrap()
+                                    .plan_palette_steps(projection, &sources, down)?;
                                 editor.execute_palette_move(document, &plan)
                             });
                         match result {
-                            Ok(_) => owner.redraw(cx),
+                            Ok(result) => {
+                                owner.clear_edit_error(cx);
+                                owner.redraw(cx);
+                                if result.receipt.changed {
+                                    owner.locate_palette_step(
+                                        document,
+                                        projection,
+                                        locate.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            }
                             Err(error) => owner.set_edit_error(move_error(&error), cx),
                         }
                     });
@@ -763,17 +799,6 @@ pub(super) fn move_menu(
         );
     }
     if projection != PaletteProjection::Deformation {
-        let sources = state
-            .editor
-            .document()
-            .map(|doc| {
-                if doc.context().selections.contains(&object) {
-                    doc.context().selections.clone()
-                } else {
-                    vec![object.clone()]
-                }
-            })
-            .unwrap_or_default();
         menu = menu.item(
             PopupMenuItem::new(crate::t!("authoring.move_to"))
                 .action(Box::new(crate::actions::RunCommand::new(
@@ -797,8 +822,19 @@ pub(super) fn move_menu(
 }
 
 fn move_error(error: &anyhow::Error) -> String {
-    if let Some(error) = error.downcast_ref::<kasane_sdk::SdkError>() {
-        match error.code.as_ref() {
+    let code = error
+        .downcast_ref::<kasane_sdk::SdkError>()
+        .map(|error| error.code.as_ref())
+        .or_else(|| {
+            error
+                .downcast_ref::<editor_core::PaletteMovePlanningError>()
+                .map(|error| error.code())
+        });
+    if let Some(code) = code {
+        match code {
+            "PALETTE_DEFORMATION_SIBLINGS" => {
+                return crate::t!("authoring.step_deformation_siblings").into_owned();
+            }
             "OBJECT_LOCKED" => return crate::t!("authoring.locked").into_owned(),
             "OFFSCREEN_REQUIRES_PART" => {
                 return crate::t!("authoring.move_requires_part").into_owned();

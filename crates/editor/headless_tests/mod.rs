@@ -15,6 +15,7 @@ mod mesh_generation_preview;
 mod mesh_properties;
 mod palette_commands;
 mod palette_move_to;
+mod palette_steps;
 mod panel_toolbar;
 mod parameter_creation;
 mod parameter_groups;

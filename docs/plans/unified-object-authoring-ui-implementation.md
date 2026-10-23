@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建、共享移动、树选择、移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建、共享移动、树选择、多选移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
 
 ## 首轮实现：创建与输入边界
 
@@ -16,7 +16,7 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序、拒绝原因与单对象右键上下移已接入；变形树同父级排序使用相同规划入口；树 Shift/Cmd 选择、焦点导航及可配置单对象上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器，树多选整体移动 | 变形树创建、变形父级保持形态移动、多选上下移、Parameter 文件夹选择导航与其余创建命令入口仍待实施 |
+| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级 | 变形树创建、变形父级保持形态移动、Parameter 文件夹选择导航与其余创建命令入口仍待实施 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
@@ -183,3 +183,40 @@ git diff --check
 ```
 
 受影响 UI/路由/筛选/工作量回归 **160 项通过**，其中新增 10 项“移到…” UI 回归和 1 项规划工作量测试。工作量验证搜索及 8 次连续通知重绘不规划，目标选择后 1 次，提交前重规划累计 2 次。core 移动、组织、命令和快捷键回归 **43 项通过**，含新增 3 项目标元数据/空容器/重名身份回归。格式与空白检查通过。本轮未运行完整套件、原生截图和 Release 性能基准。
+
+
+## 第六轮实现：多选上下移动
+
+第五轮指定容器移动已提交为 `25bf0f9`。本轮继续在当前 checkout 实施；依赖仍为 `kasane-2d b86b13b`，没有修改相邻仓库。
+
+- 新增 core `plan_palette_steps`，单对象 `plan_palette_step` 也委托此入口。按完整原生集合识别连续选区，每段跨过一个未选邻居，保留段内顺序和选区间隔；边界选区不动。向上从前往后、向下从后往前规划，并按稳定对象锚点解析候选顺序，不使用过滤后的行号。
+- 组织树与 Parameters 可同时处理多个拥有者集合；根 Part/未归属对象、根变形器/根 Mesh 和文件夹/参数按各自显示集合处理。原生组织子树查询归并被选祖先内的后代，锁检查覆盖全部源子树，包含已经到达边界的源。锁定成员使整个操作失败，避免只移动其他选区。
+- 规划只克隆一次原生 COW 文档，在候选上逐段执行原生 Organization/Scene 计划；执行通过 SDK 单个 `edit` 组合所有意图，使用捕获版本，原子提交一份 receipt 和一条历史。没有增加独立撤销栈。全选或边界 no-op 保留 redo；过期计划即使经过 Undo 恢复相同内容也拒绝执行。
+- 右键上下移与可配置快捷键冻结同一源集合：点击/焦点在选择内使用全体，否则只使用该行。菜单回调不重新读取选择，提交前复核上下文并重规划。移动保留检查与多选；成功后复用带上下文保护的展开、滚动与过滤显露定位。
+- 变形树只支持同一实际父级内的多选上下移；跨父级选择显示中英文原因。此入口不改变实际变形父级，也不使用 KeepLocalData 替代保持形态转换。原生规划错误以类型化错误码提供给 UI，继续复用锁定等本地化反馈。
+
+第六轮定向门禁：
+
+```sh
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+  headless_tests::palette_steps headless_tests::palette_move_to \
+  panels::sorting::destination::tests \
+  headless_tests::tree_selection headless_tests::palette_commands \
+  headless_tests::hierarchy headless_tests::sorting headless_tests::scene_creation \
+  headless_tests::parameters headless_tests::parameter_groups \
+  headless_tests::parameter_management headless_tests::parameter_creation \
+  headless_tests::authoring headless_tests::properties headless_tests::panel_toolbar \
+  headless_tests::command_targets headless_tests::input_routing \
+  headless_tests::ui_performance keybindings::tests input_routing::policy \
+  panels::hierarchy_tree::filter
+
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+  palette_steps:: palette_moves:: organization_authoring:: sorting:: keyboard:: commands::
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+受影响 UI/路由/筛选/工作量回归 **166 项通过**，包含新增 6 项多选上下移 UI 回归；core 受影响门禁 **51 项通过**，包含新增 8 项分段移动、祖先归并、多拥有者、混合参数/文件夹、变形同级、边界与锁、过期计划及 Undo/Redo/保存回读回归。格式与空白检查通过。本轮未运行完整套件、原生截图或 Release 性能基准。
+
+U2 仍未完成：变形树创建的位置契约、保持形态改父级、Parameter 文件夹选择导航与其余创建命令入口继续待实施；U3–U6 状态不变。

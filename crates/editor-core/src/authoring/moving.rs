@@ -38,17 +38,19 @@ pub struct PaletteMove {
 }
 
 #[derive(Clone, Debug)]
-pub struct PaletteMovePlan(MovePlan);
+pub struct PaletteMovePlan(pub(super) MovePlan);
 #[derive(Clone, Debug)]
-enum MovePlan {
+pub(super) enum MovePlan {
     Organization(kasane_sdk::OrganizationEditPlan),
     Scene(kasane_sdk::SceneEditPlan),
+    Steps(super::stepping::PaletteStepsPlan),
 }
 impl PaletteMovePlan {
     pub fn is_noop(&self) -> bool {
         match &self.0 {
             MovePlan::Organization(plan) => plan.is_noop(),
             MovePlan::Scene(plan) => plan.is_noop(),
+            MovePlan::Steps(plan) => plan.is_noop(),
         }
     }
 }
@@ -250,6 +252,7 @@ impl Document {
         match &plan.0 {
             MovePlan::Organization(plan) => self.execute_organization_authoring(plan),
             MovePlan::Scene(plan) => self.execute_scene_authoring(plan),
+            MovePlan::Steps(plan) => self.execute_palette_steps(plan),
         }
     }
 
@@ -261,85 +264,7 @@ impl Document {
         object: ObjectRef,
         down: bool,
     ) -> Result<PaletteMovePlan> {
-        let members = match projection {
-            PaletteProjection::Deformation => {
-                let parent = self
-                    .model()
-                    .scene_deformer_parent(&object.id)
-                    .ok_or_else(|| anyhow!("Object has no deformation collection"))?;
-                self.model()
-                    .scene_collection(&SceneCollection::Deformation {
-                        parent_id: (!parent.is_empty()).then(|| parent.to_owned()),
-                    })
-                    .map_err(|status| anyhow!("{}: {}", status.code, status.message))?
-                    .into_iter()
-                    .filter(|id| {
-                        !parent.is_empty()
-                            || self.model().get_transform(id).is_some()
-                                == (object.kind == ObjectKind::Deformer)
-                    })
-                    .collect()
-            }
-            _ => {
-                let owner = self
-                    .model()
-                    .organization_owner(&object.id)
-                    .map(str::to_owned);
-                let collection = match projection {
-                    PaletteProjection::Organization => Collection::PartMembers {
-                        part_id: owner.clone(),
-                    },
-                    _ if object.kind == ObjectKind::Parameter => Collection::Parameters {
-                        group_id: owner.clone(),
-                    },
-                    _ => Collection::ParameterGroups {
-                        parent_id: owner.clone(),
-                    },
-                };
-                self.session
-                    .organization_collection(collection)?
-                    .into_iter()
-                    .filter(|handle| {
-                        projection != PaletteProjection::Organization
-                            || owner.is_some()
-                            || (handle.kind() == kasane_sdk::ObjectKind::Part)
-                                == (object.kind == ObjectKind::Part)
-                    })
-                    .map(|handle| handle.id().to_owned())
-                    .collect::<Vec<_>>()
-            }
-        };
-        let index = members
-            .iter()
-            .position(|id| id == &object.id)
-            .ok_or_else(|| anyhow!("Object no longer exists"))?;
-        let next = if down {
-            index.checked_add(1).filter(|index| *index < members.len())
-        } else {
-            index.checked_sub(1)
-        };
-        let target = next.map_or_else(
-            || object.clone(),
-            |index| ObjectRef::new(object.kind, &members[index]),
-        );
-        // Organization rows may mix types. Resolve the actual anchor kind.
-        let target = self
-            .object_index()
-            .objects
-            .iter()
-            .find(|info| info.reference.id == target.id)
-            .map(|info| info.reference.clone())
-            .ok_or_else(|| anyhow!("Target no longer exists"))?;
-        self.plan_palette_move(PaletteMove {
-            projection,
-            sources: vec![object],
-            target: Some(target),
-            position: if down {
-                PalettePosition::After
-            } else {
-                PalettePosition::Before
-            },
-        })
+        self.plan_palette_steps(projection, std::slice::from_ref(&object), down)
     }
 }
 

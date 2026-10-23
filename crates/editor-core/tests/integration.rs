@@ -77,3 +77,6 @@ mod palette_moves;
 
 #[path = "cases/scene_creation.rs"]
 mod scene_creation;
+
+#[path = "cases/palette_steps.rs"]
+mod palette_steps;

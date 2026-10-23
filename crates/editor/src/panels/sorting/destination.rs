@@ -327,7 +327,7 @@ pub(super) fn open(
     }
 }
 
-fn locate_result(
+pub(super) fn locate_result(
     owner: &Entity<EditorView>,
     document: DocumentId,
     projection: PaletteProjection,
@@ -354,7 +354,12 @@ fn locate_result(
                 panel.locate_moved_object(document, &object, window, cx)
             });
         }
-        PaletteProjection::Deformation => {}
+        PaletteProjection::Deformation => {
+            let panel = dock.deformer_tree.clone();
+            panel.update(cx, |panel, cx| {
+                panel.locate_moved_object(document, object, cx)
+            });
+        }
     }
 }
 

@@ -756,3 +756,5 @@ moved_item = "Moved"
 move_requires_part = "Choose a Part as the destination."
 move_offscreen_owner = "This Part already has an Offscreen."
 move_requires_conversion = "This move requires a composition conversion."
+
+step_deformation_siblings = "Choose objects with the same deformation parent for step moves."

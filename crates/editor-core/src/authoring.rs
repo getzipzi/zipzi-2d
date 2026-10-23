@@ -9,9 +9,12 @@ mod scene_creation;
 pub use scene_creation::{SceneObjectCreationPlan, SceneObjectType};
 #[path = "authoring/moving.rs"]
 mod moving;
+#[path = "authoring/stepping.rs"]
+mod stepping;
 pub use moving::{
     PaletteMove, PaletteMoveDestination, PaletteMovePlan, PalettePosition, PaletteProjection,
 };
+pub use stepping::PaletteMovePlanningError;
 #[path = "authoring/expression.rs"]
 mod expression;
 #[path = "authoring/publication.rs"]

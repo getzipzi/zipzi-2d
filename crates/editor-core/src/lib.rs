@@ -38,12 +38,13 @@ pub use document::{
     ExpressionEntryEditToken, Layer, MeshGenerationOptions, MeshGenerationPreview,
     MeshGenerationSource, MeshGridOptions, NewParameter, ObjectState, ObjectStateIndex,
     OperationResult, OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination,
-    PaletteMovePlan, PalettePosition, PaletteProjection, ParameterCreateError, ParameterDraft,
-    ParameterExportDiagnostic, ParameterGroupDraft, ParameterGroupOption, ParameterGroupValue,
-    ParameterKey, ParameterManagementError, ParameterValidationError, ParameterValue,
-    ParameterVisual, PhysicsAuthoringCapabilities, PoseAuthoringCapabilities,
-    ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
-    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType,
+    PaletteMovePlan, PaletteMovePlanningError, PalettePosition, PaletteProjection,
+    ParameterCreateError, ParameterDraft, ParameterExportDiagnostic, ParameterGroupDraft,
+    ParameterGroupOption, ParameterGroupValue, ParameterKey, ParameterManagementError,
+    ParameterValidationError, ParameterValue, ParameterVisual, PhysicsAuthoringCapabilities,
+    PoseAuthoringCapabilities, ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities,
+    SceneAuthoringCapabilities, SceneContentAuthoringCapabilities, SceneObjectCreationPlan,
+    SceneObjectType,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};

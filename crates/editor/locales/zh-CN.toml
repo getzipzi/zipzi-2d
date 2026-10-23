@@ -755,3 +755,5 @@ moved_item = "已移动"
 move_requires_part = "请选择部件作为目标容器。"
 move_offscreen_owner = "此部件已拥有离屏合成。"
 move_requires_conversion = "此移动需要转换合成归属。"
+
+step_deformation_siblings = "上下移动请选择具有相同变形父级的对象。"
