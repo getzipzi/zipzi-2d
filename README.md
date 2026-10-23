@@ -106,35 +106,6 @@ python3 scripts/property-chain-benchmark.py models/local/mao/runtime/mao_pro.mod
 KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=canvas ./scripts/window-benchmark.sh MODEL target/animation-canvas-drag 2400 240
 KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-benchmark.sh MODEL target/animation-number-drag 2400 240
 ```
-
-## References
-
-- [Core object authoring handoff](docs/plans/unified-object-authoring-c6-acceptance.md):
-  C1–C6 public contracts, 30 acceptance scenarios, native/SDK verification and
-  [Release performance boundaries](docs/benchmarks/2026-10-22-core-authoring-c6.md).
-
-- [Binding conversion budgets](docs/benchmarks/2026-10-22-binding-authoring.md):
-  C4 preflight estimates, cooperative cancellation, and a real-model Release
-  latency and live allocation probe with verified default budgets.
-- [Property editing chain benchmark](docs/references/property-chain-benchmark.md):
-  measurement boundaries, paired probes, snapshot ownership controls and reproduction.
-  [Mao baseline and bottlenecks](docs/benchmarks/2026-10-21-property-chain.md)
-  record the initial measurements before refactoring.
-  [Refactor comparison](docs/benchmarks/2026-10-21-property-chain-refactor.md)
-  records the same workloads run against saved before/after binaries, including
-  the follow-up changes to property policies, index snapshots and Motion storage.
-- [Physics field patches](docs/benchmarks/2026-10-20-physics-patches.md): shared SDK storage,
-  generic property editing, and release write-cost measurements.
-- [UI performance](docs/references/ui-performance.md): optional guidance on redraws,
-  virtualization, rendering costs, and choosing regression checks. Agents and
-  contributors can decide whether to consult it based on the task.
-- [Mesh properties benchmark](docs/references/mesh-properties-benchmark.md): native
-  control checklist, CPU/GPU measurements, and result interpretation.
-  [Mao results](docs/benchmarks/2026-10-19-mesh-properties.md) include the measured
-  CPU budget overruns and trace coverage audit.
-  [CPU fixes and small-sample verification](docs/benchmarks/2026-10-19-mesh-properties-cpu-fix.md)
-  record the subsequent tooltip and synchronous commit improvements.
-
 ## Build
 
 ```sh
