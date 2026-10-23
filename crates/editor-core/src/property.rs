@@ -227,7 +227,8 @@ impl PropertySpec {
         self.key == other.key
             || (self.key.object == other.key.object
                 && self.group.is_some()
-                && self.group == other.group)
+                && self.group == other.group
+                && self.key.entity == other.key.entity)
     }
     /// Read persisted data without imposing editing-only range restrictions.
     pub fn read(&self, payload: &Value) -> Result<PropertyValue> {
@@ -372,6 +373,7 @@ impl PropertySpec {
     }
 }
 
+pub mod animation_entry;
 pub mod deformer;
 pub mod document;
 pub mod expression;
@@ -398,6 +400,9 @@ pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
         ObjectKind::Texture => texture::FIELDS,
         ObjectKind::Glue => glue::FIELDS,
         ObjectKind::Motion => motion::FIELDS,
+        ObjectKind::MotionGroup => animation_entry::GROUP_FIELDS,
+        ObjectKind::MotionRegistration => animation_entry::REGISTRATION_FIELDS,
+        ObjectKind::ExpressionEntry => animation_entry::ENTRY_FIELDS,
         ObjectKind::Expression => expression::FIELDS,
         ObjectKind::PhysicsGroup => physics::FIELDS,
         _ => &[],
@@ -425,6 +430,10 @@ pub enum PropertyScope {
         samples: Vec<String>,
     },
     InterpolatedMesh,
+    /// Conservative address for repeated resource fields; revisions never rewind.
+    Resource {
+        revision: u64,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -533,6 +542,9 @@ pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) 
         K::Texture => get!(get_asset),
         K::Motion => get!(get_motion),
         K::Expression => get!(get_expression),
+        K::MotionGroup | K::MotionRegistration | K::ExpressionEntry => {
+            animation_entry::payload(model, object)?
+        }
         _ => bail!("This object has no editable properties"),
     })
 }
@@ -605,7 +617,11 @@ impl crate::Editor {
             self.editing_context() == Some(crate::EditingContext::Modeling)
                 || matches!(
                     object.kind,
-                    ObjectKind::Motion | ObjectKind::Expression | ObjectKind::PhysicsGroup
+                    ObjectKind::Motion
+                        | ObjectKind::MotionRegistration
+                        | ObjectKind::Expression
+                        | ObjectKind::ExpressionEntry
+                        | ObjectKind::PhysicsGroup
                 ),
             "Preview is unavailable for this object in Animation"
         );

@@ -430,7 +430,7 @@ impl PropertiesPanel {
                 .get(&target)
                 .ok_or_else(|| anyhow::anyhow!("Form ended"))?;
             let mut patch = form.patch(target.object.kind, id)?;
-            if keyframed {
+            if keyframed || matches!(target.scope, editor_core::PropertyScope::Resource { .. }) {
                 patch.scope = target.scope.clone();
             }
             patch.changes.insert(id, form.fields[&id].baseline.clone());
@@ -493,7 +493,9 @@ impl PropertiesPanel {
                 let previous = form.fields[&id].clone();
                 form.set_value(&spec, value);
                 let result = form.patch(target.object.kind, id).and_then(|mut patch| {
-                    if spec.keyframed {
+                    if spec.keyframed
+                        || matches!(target.scope, editor_core::PropertyScope::Resource { .. })
+                    {
                         patch.scope = target.scope.clone();
                     }
                     // A scrub back to the baseline must replace the previous candidate too.
@@ -656,6 +658,19 @@ impl PropertiesPanel {
                     && self.form.fields.contains_key(&field.binding.key)
             })
             .map(|field| field.binding.key);
+        if field.is_none() {
+            let first_select = self
+                .definition
+                .fields()
+                .find(|field| field.editor == FieldEditor::Select)
+                .map(|field| field.binding.key);
+            if let Some(key) = first_select {
+                self.render_select(key, false, window, cx);
+                if let Some(control) = self.selects.get(&key) {
+                    window.focus(&control.state.read(cx).focus_handle(cx), cx);
+                }
+            }
+        }
         if let Some(field) = field {
             self.ensure_control(field, window, cx);
             let input = self.controls[&field].input.clone();

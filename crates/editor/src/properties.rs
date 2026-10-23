@@ -1,6 +1,6 @@
 //! Object-specific inspector definitions and providers. The panel and form engine
 //! consume this interface without knowing parameter, scene or animation rules.
-mod animation;
+pub(crate) mod animation;
 mod details;
 mod document;
 mod editing;
@@ -62,6 +62,7 @@ pub(crate) struct FieldSpec {
     bounds: Option<fn(&PropertyValues, PropertyKey) -> (f64, f64)>,
     pub live_text: bool,
     pub drag_distance: Option<f64>,
+    pub section: Option<&'static str>,
 }
 impl FieldSpec {
     fn new(binding: PropertySpec, label: &'static str, editor: FieldEditor) -> Self {
@@ -86,6 +87,7 @@ impl FieldSpec {
             bounds: None,
             live_text: false,
             drag_distance: None,
+            section: None,
             scale: 1.,
         }
     }
@@ -175,7 +177,11 @@ pub(crate) fn provider(kind: ObjectKind) -> &'static PropertyProvider {
     match kind {
         ObjectKind::Parameter => &parameter::PARAMETER,
         ObjectKind::ParameterGroup => &parameter::GROUP,
-        ObjectKind::Motion | ObjectKind::Expression => &animation::PROVIDER,
+        ObjectKind::Motion
+        | ObjectKind::MotionGroup
+        | ObjectKind::MotionRegistration
+        | ObjectKind::Expression
+        | ObjectKind::ExpressionEntry => &animation::PROVIDER,
         ObjectKind::PhysicsGroup => &physics::PROVIDER,
         ObjectKind::Document => &document::PROVIDER,
         _ => &scene::PROVIDER,
@@ -189,7 +195,7 @@ pub(crate) fn definition(kind: ObjectKind) -> FormDefinition {
 pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
     let inspection = editor.active_inspection()?;
     let timeline = timeline::target(editor, &inspection);
-    let object = inspection.object().or_else(|| {
+    let mut object = inspection.object().or_else(|| {
         if inspection.context != EditingContext::Modeling {
             return None;
         }
@@ -200,32 +206,53 @@ pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
             .first()
             .map(|info| info.reference.clone())
     })?;
-    let motion = (inspection.context == EditingContext::Animation
-        && object.kind == ObjectKind::Motion
-        && timeline.is_none())
-    .then(|| {
-        editor
-            .animation()?
-            .motion
-            .as_ref()
-            .filter(|motion| motion.clip_id == object.id)
-            .cloned()
-            .or_else(|| {
-                editor
-                    .document()?
-                    .animation_catalog()
-                    .motions
-                    .iter()
-                    .find(|resource| resource.selection.clip_id == object.id)
-                    .map(|resource| resource.selection.clone())
-            })
-    })
-    .flatten();
+    let explicit_motion = if object.kind == ObjectKind::MotionRegistration {
+        let (_, entry) = editor.document()?.motion_registration(&object.id)?;
+        let motion = editor_core::MotionSelection {
+            clip_id: entry.clip_id.clone(),
+            entry: Some(entry.id.clone()),
+        };
+        object = ObjectRef::new(ObjectKind::Motion, &entry.clip_id);
+        Some(motion)
+    } else {
+        None
+    };
+    let motion = explicit_motion.or_else(|| {
+        (inspection.context == EditingContext::Animation
+            && object.kind == ObjectKind::Motion
+            && timeline.is_none())
+        .then(|| {
+            editor
+                .animation()?
+                .motion
+                .as_ref()
+                .filter(|motion| motion.clip_id == object.id)
+                .cloned()
+                .or_else(|| {
+                    editor
+                        .document()?
+                        .animation_catalog()
+                        .motions
+                        .iter()
+                        .find(|resource| resource.selection.clip_id == object.id)
+                        .map(|resource| resource.selection.clone())
+                })
+        })
+        .flatten()
+    });
     Some(PropertyTarget {
         motion,
         document: inspection.document,
         context: inspection.context,
-        scope: editor.document()?.property_scope(&object),
+        scope: if timeline.is_none()
+            && matches!(object.kind, ObjectKind::Motion | ObjectKind::Expression)
+        {
+            editor_core::PropertyScope::Resource {
+                revision: editor.document()?.model_generation(),
+            }
+        } else {
+            editor.document()?.property_scope(&object)
+        },
         object,
         timeline,
     })

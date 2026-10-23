@@ -161,14 +161,16 @@ pub struct Document {
 #[path = "authoring.rs"]
 mod authoring;
 pub use authoring::{
-    AuthoringAction, AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
+    AnimationDeletionPlan, AnimationLibraryPlan, AnimationRemoval, AuthoringAction,
+    AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
     AuthoringSessionReason, ExpressionAuthoringCapabilities, ExpressionEntryEditToken,
-    ObjectAuthoringCapabilities, OperationResult, OrganizationAuthoringCapabilities, PaletteMove,
-    PaletteMoveDestination, PaletteMovePlan, PaletteMovePlanningError, PalettePosition,
-    PalettePreservation, PaletteProjection, PaletteReparentCapture, PaletteReparentPlan,
-    PhysicsAuthoringCapabilities, PhysicsChannelAction, PoseAuthoringCapabilities,
-    ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
-    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType,
+    MotionCopyKind, MotionCopyPlan, ObjectAuthoringCapabilities, OperationResult,
+    OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination, PaletteMovePlan,
+    PaletteMovePlanningError, PalettePosition, PalettePreservation, PaletteProjection,
+    PaletteReparentCapture, PaletteReparentPlan, PhysicsAuthoringCapabilities,
+    PhysicsChannelAction, PoseAuthoringCapabilities, ReferenceAuthoringCapabilities,
+    ResourceAuthoringCapabilities, SceneAuthoringCapabilities, SceneContentAuthoringCapabilities,
+    SceneObjectCreationPlan, SceneObjectType,
 };
 mod edits;
 mod physics;

@@ -23,6 +23,7 @@ pub(super) enum Row {
     },
     Field(PropertyKey),
     Navigation,
+    AnimationActions(ObjectRef),
     Detail(properties::DetailRow),
 }
 impl Row {
@@ -92,13 +93,45 @@ impl PropertiesPanel {
         let index = doc.object_index();
         let inspected = self.target.as_ref().unwrap().object.clone();
         let mut rows = Vec::new();
-        rows.extend(
-            self.definition
-                .fields
-                .iter()
-                .filter(|spec| self.form.fields.contains_key(&spec.binding.key))
-                .map(|spec| Row::Field(spec.binding.key)),
-        );
+        if target.timeline.is_none()
+            && matches!(
+                target.object.kind,
+                editor_core::ObjectKind::Expression | editor_core::ObjectKind::ExpressionEntry
+            )
+        {
+            rows.push(Row::AnimationActions(target.object.clone()));
+        }
+        let mut section = None;
+        let mut entity = None;
+        for spec in &self.definition.fields {
+            if !self.form.fields.contains_key(&spec.binding.key) {
+                continue;
+            }
+            let next_entity = spec.binding.key.entity_id();
+            if spec.section != section || next_entity != entity {
+                if let Some(label) = spec.section {
+                    rows.push(Row::Detail(properties::DetailRow::Heading(
+                        t!(label).into(),
+                    )));
+                }
+                if spec.binding.key.object_kind() == editor_core::ObjectKind::ExpressionEntry {
+                    if let Some(id) = &next_entity {
+                        rows.push(Row::AnimationActions(ObjectRef::new(
+                            editor_core::ObjectKind::ExpressionEntry,
+                            id,
+                        )));
+                    }
+                }
+                section = spec.section;
+                entity = next_entity;
+            }
+            rows.push(Row::Field(spec.binding.key));
+            if let Some(status) =
+                properties::animation::registration_status(doc, target, spec.binding.key)
+            {
+                rows.push(Row::Detail(status));
+            }
+        }
         if !target.has_object_details() {
             rows.extend(
                 properties::selection_details(target, editor)

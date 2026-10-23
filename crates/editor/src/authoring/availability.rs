@@ -7,6 +7,8 @@ pub(crate) fn reason_message(code: &str) -> Option<String> {
         "OBJECT_REFERENCED" => "authoring.referenced",
         "AUTHORING_CANDIDATE_ACTIVE" => "authoring.candidate_active",
         "MISSING_OBJECT" => "authoring.missing_object",
+        "MISSING_EXPRESSION" => "authoring.expression_context",
+        "ANIMATION_ORDER_ONLY" => "authoring.animation_order_only",
         "NO_CHANGE" => "authoring.no_change",
         "PHYSICS_CHAIN_TOO_SHORT" => "authoring.physics_chain_too_short",
         "PHYSICS_NODE_IN_USE" => "authoring.physics_node_in_use",

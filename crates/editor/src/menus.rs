@@ -141,10 +141,12 @@ impl EditorView {
                 .collect(),
             creation_reasons: crate::authoring::creation_commands()
                 .map(|id| {
-                    if self.editor.is_busy()
-                        || self.editor.editing_context()
-                            != Some(editor_core::EditingContext::Modeling)
-                    {
+                    let expected = if crate::authoring::animation::creation_kind(id).is_some() {
+                        editor_core::EditingContext::Animation
+                    } else {
+                        editor_core::EditingContext::Modeling
+                    };
+                    if self.editor.is_busy() || self.editor.editing_context() != Some(expected) {
                         return None;
                     }
                     match self.editor.authoring_command_capability(id) {
@@ -299,6 +301,11 @@ impl EditorView {
                                     MenuItem::separator(),
                                     item(CommandId::CreateParameter),
                                     item(CommandId::CreateParameterGroup),
+                                    MenuItem::separator(),
+                                    item(CommandId::CreateMotion),
+                                    item(CommandId::CreateMotionGroup),
+                                    item(CommandId::CreateExpression),
+                                    item(CommandId::CreateExpressionEntry),
                                 ]),
                         ),
                     ),

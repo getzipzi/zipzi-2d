@@ -537,6 +537,7 @@ impl Document {
             && entities().all(|entity| {
                 matches!(entity.kind, SdkKind::Expression | SdkKind::ExpressionEntry)
             });
+        let previous_input = self.animation_input_revision;
         if expression_only
             && changes.created.is_empty()
             && changes.deleted.is_empty()
@@ -568,6 +569,15 @@ impl Document {
             // Other slices retain their existing invalidation policy. Expression
             // structural edits rebuild relations, but never canvas topology.
             self.after_history(!expression_only && fallback_topology);
+        }
+        // Library order and labels change presentation, while entry order/content
+        // carries EvaluationInputs and must still invalidate the running preview.
+        if expression_only
+            && !changes
+                .categories
+                .contains(&ChangeCategory::EvaluationInputs)
+        {
+            self.animation_input_revision = previous_input;
         }
     }
 }

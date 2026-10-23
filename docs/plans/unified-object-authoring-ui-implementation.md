@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入**；跨阶段原生截图、实际窗口与 Release 性能验收仍待 U6，不代表 U1–U6 全部完成。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入；U3 Motion/Expression 创建、注册属性、成员、列表排序、Motion 复制/引用与删除影响审阅已接入**；跨阶段原生截图、实际窗口与 Release 性能验收仍待 U6，不代表 U1–U6 全部完成。
 
 ## 首轮实现：创建与输入边界
 
@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | U1 | 共享适配功能已收口：对象/集合能力映射、统一回执转换、检查/结果定位、输入边界与现有入口的重复业务判断清理完成 | U3–U5 新增入口继续复用；跨阶段原生/性能完整验收随 U6 |
 | U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入；变形树 Mesh/Warp/Rotation 创建、双投影位置与显露已接入；保持形态审阅、可搜索变形目标、原子落点与后台取消已接入 | 原生截图和完整阶段验收待 U6 收口 |
-| U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
+| U3 | 接入 Motion/Expression 创建、空 MotionGroup、Clip/当前注册分区、继承/覆盖、Expression 成员、列表排序与可搜索移组；补齐 Motion 内容/组复制、添加已有引用、注册/组/资源删除与影响审阅；保留原激活路径 | 中英文原生截图、实际窗口与 Release 性能验收随 U6 |
 | U4 | Physics 列表接入共享边界、能力与检查结果；默认内容和排序意图已移入 core，子项动作捕获稳定 ID | 组/子项默认策略、Pose 与完整稳定子条目控件仍需统一 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
 | U6 | 未开始 | 清理剩余旧路径、完整中英文/原生截图验收和性能对照 |
@@ -449,3 +449,77 @@ git diff --check
 ```
 
 范围回归 **UI 201 项、core 集成 46 项、core 单元 1 项通过**；创建入口合并后，受影响的 **24 项 UI 测试重跑通过**。格式和 diff 检查通过。未执行昂贵全套、原生截图或 Release 性能基准；缓存优化的验证是查询工作量和行为回归，不代表已完成实际窗口性能验收。U3–U6 阶段状态保持不变。
+
+
+## U3 首轮：Motion、Expression 与稳定成员编辑
+
+2026 年 10 月 23 日，在当前 checkout 开始 U3。依赖 `kasane-2d 26afe00`；本轮没有修改相邻仓库。
+
+- core 新增 `AnimationLibraryPlan`，统一 Motion、空 MotionGroup、空 Expression 和未配置 ExpressionEntry 的身份、名称与稳定插入位置。创建与初始排序通过原生类型化操作组合在一个 SDK 事务内，创建和后续改名分别撤销。旧 Timeline New Motion 也复用核心默认创建路径。
+- 工具栏、行菜单、主菜单和可配置创建命令调用同一适配器；右键捕获点击对象。Motion 创建后激活当前注册并重置时间，不自动播放；Expression 创建使用空参数表并沿用原选择路径。成员创建明确捕获拥有者，显示 Properties 并聚焦参数选择。
+- Motion 组从真实组集合渲染，空组可见，折叠按组 ID 保存；箭头只折叠，名称单击检查。列表焦点跟随稳定身份；上下键只浏览，Enter 激活，左右键处理折叠。定位 Clip 先解析唯一注册，避免共享 Clip 的多个注册同时展开、抢占焦点。
+- Properties 区分“动作内容”和“当前注册”。名称、时长、FPS、循环与 Clip fade 修改共享内容；注册 fade 和 sound 修改当前注册，空覆盖保留 `None`。字段旁显示继承/覆盖及有效值，共享 Clip 显示注册数量。右键检查其他注册不会更换正在播放的注册，检查锁保留当前注册身份。
+- Expression 成员的参数、value 和 blend 使用普通 PropertyForm；未配置、未解析目标和默认 Add 与显式 Add 保持区别。创建、移除、上下移和跨 Expression 移动使用原生操作；数值使用原生局部候选更新，整次手势一条历史。重复字段携带稳定成员 UUID，并捕获不回退的文档 revision；过期事件不按新数组位置重试。
+- MotionGroup、注册和 Expression 列表接入共享拖放状态、落点反馈、600ms 悬停展开、边缘滚动与取消；一次只缓存当前落点规划，释放时重规划。菜单、Alt+Up/Down 和拖放共用 core 移动语义。注册/成员“移到…”复用可搜索选择器，搜索和绘制不逐个规划。
+- 位置操作只检查和定位结果，不调用 Motion/Expression 激活。目的地选择器声明保持普通播放的策略，仍阻断其他输入；关闭、释放、文档或工作区变化后策略失效。其他阻塞弹窗保持既有暂停行为。组改名、重排、移组继续保留注册、覆盖、时间与播放代次。
+- 补齐新能力的原生查询与中英文文案。字段适配只重定向 MotionRegistration/ExpressionEntry，Physics 的稳定通道字段保留原拥有者；Timeline 的临时选择属性也保留原有作用域与撤销后的身份语义。
+
+本轮是 U3 的首轮交互接入；Motion 内容复制/添加已有引用、组和资源删除影响审阅仍需继续。未执行原生截图、实际窗口和 Release 性能测量，这些不由 headless 行为通过替代。
+
+本轮最终定向门禁：
+
+```sh
+./scripts/test.sh regression -- \
+  headless_tests::animation_authoring headless_tests::animation_panels \
+  headless_tests::animation:: headless_tests::authoring headless_tests::properties \
+  headless_tests::physics headless_tests::sorting headless_tests::palette \
+  headless_tests::workspaces headless_tests::command_targets \
+  headless_tests::input_routing headless_tests::ui_performance \
+  panels::sorting::destination properties::form::tests \
+  properties::timeline_tests properties::physics_tests \
+  keybindings::tests menus::tests animation_library:: \
+  animation::motion_authoring:: expression_authoring:: \
+  commands:: keyboard:: timeline:: workspace::
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+**UI / 表单 / 输入回归 199 项、core 集成回归 78 项通过**，包括新增 8 项 U3 UI 回归和 3 项 core 回归。新增用例验证空组可见、折叠组内创建与激活、Expression 空内容和成员焦点、注册覆盖清除、成员稳定字段与单条手势历史、实际拖放与快捷键、右键捕获与可搜索移组、播放策略不泄漏到后续阻塞弹窗、过期上下文及地址拒绝、单条创建历史和 no-op 保留 redo。此前单独测试与最终过滤集合重叠，不累计相加。
+
+最终格式与空白检查通过；没有运行昂贵完整套件。
+
+## U3 续轮：Motion 复制、已有引用与删除影响审阅
+
+2026 年 10 月 23 日继续实施，仍使用 `kasane-2d 26afe00`，未修改相邻仓库。
+
+- 行菜单区分“复制动作内容”“添加已有动作引用”和“复制动作组”。内容复制由原生 `DuplicateClip` 重建 Clip、轨道、关键帧和事件身份，外部资源共享；组复制重建组与注册身份，保留共享 Clip、注册覆盖和引用集合。核心负责唯一名称与稳定相邻插入，复制和定位检查结果不激活预览。
+- Motion 工具栏和行菜单共用可搜索引用选择器，捕获目标组或相邻注册；同名 Clip 以 ID 区分，空组可以接收引用。确认添加单个注册，初始 fade/sound 使用继承值，不复制 Clip。选择时生成原生计划，搜索与绘制不规划；取消不产生历史，过期上下文拒绝执行。
+- 移除当前注册、删除组及注册、解散组、删除动作内容及全部注册、删除 Expression 使用类型化 `AnimationDeletionPlan`。通过未提交的原生候选比较实际移除、迁到未分组、保留内容和外部资源，并列出删除集外的阻断引用；UI 不推断级联规则。
+- 空组等无额外影响的删除直接执行；非空拥有者、共享内容和最后注册保护显示影响审阅。注册按组、原序号、Clip 名与稳定 ID 展示，曲线内部条目汇总数量；行列表虚拟化，冻结显示数据共享存储，不随播放刷新重算。确认执行审阅过的同一原生计划，单条撤销历史；取消按钮默认聚焦，Enter/Esc 可取消。
+- 原生“最后一个注册”语义保持：删除组可把最后注册迁到未分组，并保留 ID 与覆盖；移除最后根注册为 no-op，审阅说明原因并禁用确认。“删除动作内容及全部注册”是独立动作，明确列出全部注册、内部曲线和保留的外部资源。
+- 两个弹窗复用可退休的播放策略；审阅/选择期间保持普通播放，其他输入仍受阻断。提交前校验文档 revision 和工作区上下文；Undo、切换文档或工作区往返后禁用确认。删除后仅检查幸存对象或邻居，不自动激活另一个 Motion/Expression。
+- 复制计划仅新增身份和调整资源库顺序，发布时保留已有播放输入代次，避免复制出的轨道或原生回执标记的相邻注册导致暂停；普通 Undo/Redo、删除和现有内容编辑继续使用已有的播放协调策略，不自动激活复制结果。补齐中英文入口、解释和影响分类文案。
+
+本轮最终定向门禁：
+
+```sh
+./scripts/test.sh regression -- \
+  headless_tests::animation_management headless_tests::animation_authoring \
+  headless_tests::animation_panels headless_tests::animation:: \
+  headless_tests::authoring headless_tests::properties headless_tests::physics \
+  headless_tests::sorting headless_tests::palette headless_tests::workspaces \
+  headless_tests::command_targets headless_tests::input_routing \
+  headless_tests::ui_performance panels::sorting::destination \
+  properties::form::tests properties::timeline_tests properties::physics_tests \
+  keybindings::tests menus::tests animation_management:: animation_library:: \
+  animation:: expression_authoring:: commands:: keyboard:: timeline:: workspace:: \
+  authoring::publication::
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+**UI / 表单 / 输入回归 210 项、core 集成回归 125 项、core 单元回归 3 项通过**，包括新增 9 项 UI 和 8 项 core 管理回归。覆盖真实右键复制和引用选择、空组接收引用、共享组复制、审阅默认取消、最后注册保护、实际迁移与覆盖保留、共享 Clip 的所有注册和内部曲线影响、Expression 清理、空组直接删除、过期审阅/选择拒绝且不消耗 redo、深复制身份与单条历史、复制保持当前播放及已有曲线编辑仍使播放失效。此前单独运行的重叠测试不累计相加。
+
+最终格式与空白检查通过；未运行昂贵完整套件。原生截图、实际窗口与 Release 性能验收继续留待 U6，不以 headless 行为验证替代。

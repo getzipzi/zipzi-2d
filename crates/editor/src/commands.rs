@@ -207,6 +207,12 @@ impl EditorView {
                     | CommandId::PaletteMoveTo => {
                         self.handle_palette_command(command, window, cx);
                     }
+                    CommandId::CreateMotion
+                    | CommandId::CreateMotionGroup
+                    | CommandId::CreateExpression
+                    | CommandId::CreateExpressionEntry => {
+                        self.handle_animation_creation(command, window, cx)
+                    }
                     CommandId::CreateParameter
                     | CommandId::EditParameter
                     | CommandId::DeleteParameter

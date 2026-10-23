@@ -34,10 +34,11 @@ mod workspace_kind;
 pub use workspace_kind::WorkspaceKind;
 
 pub use document::{
-    AlphaMeshOptions, AuthoringAction, AuthoringCollection, AuthoringCollectionCapabilities,
-    AuthoringPlanningError, AuthoringSessionReason, Document, ExpressionAuthoringCapabilities,
-    ExpressionEntryEditToken, Layer, MeshGenerationOptions, MeshGenerationPreview,
-    MeshGenerationSource, MeshGridOptions, NewParameter, ObjectAuthoringCapabilities, ObjectState,
+    AlphaMeshOptions, AnimationDeletionPlan, AnimationLibraryPlan, AnimationRemoval,
+    AuthoringAction, AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
+    AuthoringSessionReason, Document, ExpressionAuthoringCapabilities, ExpressionEntryEditToken,
+    Layer, MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource, MeshGridOptions,
+    MotionCopyKind, MotionCopyPlan, NewParameter, ObjectAuthoringCapabilities, ObjectState,
     ObjectStateIndex, OperationResult, OrganizationAuthoringCapabilities, PaletteMove,
     PaletteMoveDestination, PaletteMovePlan, PaletteMovePlanningError, PalettePosition,
     PalettePreservation, PaletteProjection, PaletteReparentCapture, PaletteReparentPlan,

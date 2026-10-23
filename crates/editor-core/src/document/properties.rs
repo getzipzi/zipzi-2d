@@ -6,6 +6,8 @@ use anyhow::bail;
 enum PropertyPayload {
     Object(serde_json::Value),
     Physics(kasane_core::document::PhysicsPatch),
+    Motion(kasane_core::document::MotionEdit),
+    Expression(kasane_core::document::ExpressionEdit),
 }
 impl PropertyPayload {
     fn json(self) -> Result<serde_json::Value> {
@@ -37,6 +39,14 @@ impl Document {
     }
 
     pub fn property_scope(&self, object: &ObjectRef) -> PropertyScope {
+        if matches!(
+            object.kind,
+            ObjectKind::MotionRegistration | ObjectKind::MotionGroup | ObjectKind::ExpressionEntry
+        ) {
+            return PropertyScope::Resource {
+                revision: self.model_generation(),
+            };
+        }
         if object.kind != ObjectKind::Mesh {
             return PropertyScope::Object;
         }
@@ -156,6 +166,21 @@ impl Document {
 
     fn validate_property_baseline(&self, object: &ObjectRef, patch: &PropertyPatch) -> Result<()> {
         self.ensure_editable(std::slice::from_ref(object))?;
+        if let PropertyScope::Resource { revision } = patch.scope {
+            ensure!(
+                revision == self.model_generation(),
+                "Resource field address expired"
+            );
+        }
+        if matches!(
+            object.kind,
+            ObjectKind::MotionRegistration | ObjectKind::MotionGroup | ObjectKind::ExpressionEntry
+        ) {
+            ensure!(
+                patch.scope == self.property_scope(object),
+                "Resource field address expired"
+            );
+        }
         let specs = crate::property_specs(object.kind);
         let current = self.property_values(object)?;
         for (id, value) in &patch.expected {
@@ -232,7 +257,23 @@ impl Document {
                 .expect("validated property key");
             spec.write(&mut payload, value)?;
         }
-        Ok(PropertyPayload::Object(payload))
+        match object.kind {
+            ObjectKind::MotionGroup | ObjectKind::MotionRegistration => {
+                crate::property::animation_entry::motion_patch(
+                    self.session.document(),
+                    object,
+                    payload,
+                )
+                .map(PropertyPayload::Motion)
+            }
+            ObjectKind::ExpressionEntry => crate::property::animation_entry::expression_patch(
+                self.session.document(),
+                object,
+                payload,
+            )
+            .map(PropertyPayload::Expression),
+            _ => Ok(PropertyPayload::Object(payload)),
+        }
     }
 
     fn apply_properties(
@@ -247,7 +288,11 @@ impl Document {
         if let PropertyPayload::Physics(patch) = payload {
             return Ok(edit.patch_physics(&patch)?);
         }
-        let payload = payload.json()?;
+        let payload = match payload {
+            PropertyPayload::Motion(intent) => return Ok(edit.edit_motion(intent)?),
+            PropertyPayload::Expression(intent) => return Ok(edit.edit_expression(intent)?),
+            payload => payload.json()?,
+        };
         if patch.uses_scalar_patch(object.kind) {
             return Ok(edit.patch_property(&self.scalar_patch(object, patch, &payload)?)?);
         }
@@ -516,7 +561,12 @@ impl Document {
         let receipt = edit.commit_to(&mut self.session)?;
         if matches!(
             object.kind,
-            ObjectKind::Expression | ObjectKind::Motion | ObjectKind::PhysicsGroup
+            ObjectKind::Expression
+                | ObjectKind::ExpressionEntry
+                | ObjectKind::Motion
+                | ObjectKind::MotionGroup
+                | ObjectKind::MotionRegistration
+                | ObjectKind::PhysicsGroup
         ) || (!receipt.changes.scene_fields.is_empty()
             && receipt
                 .changes
@@ -610,8 +660,19 @@ impl Document {
     pub(crate) fn property_edit_matches(&self, serial: u64, object: &ObjectRef) -> bool {
         self.property_edit_serial() == Some(serial)
             && self.pending.as_ref().is_some_and(|pending| {
-                matches!(&pending.original,
-                PendingOriginal::Properties(target, _, scope) if target == object && (*scope == PropertyScope::Object || *scope == self.property_scope(object)))
+                let PendingOriginal::Properties(target, _, scope) = &pending.original else {
+                    return false;
+                };
+                target == object
+                    && match scope {
+                        PropertyScope::Object => true,
+                        // A resource inspector also versions its Clip/Expression fields,
+                        // whose default standalone scope is Object.
+                        PropertyScope::Resource { revision } => {
+                            *revision == self.model_generation()
+                        }
+                        _ => *scope == self.property_scope(object),
+                    }
             })
     }
 
@@ -688,6 +749,29 @@ impl Document {
             "This property does not support preview"
         );
         let payload = self.checked_payload(object, patch)?;
+        if let PropertyPayload::Expression(kasane_core::document::ExpressionEdit::PatchEntry {
+            id,
+            fields,
+            ..
+        }) = payload
+        {
+            let owner = self
+                .session
+                .document()
+                .get_expression_entry(&id)
+                .unwrap()
+                .0
+                .id
+                .clone();
+            let pending = self.pending.as_mut().unwrap();
+            pending.edit.preview_expression_entry(&id, fields)?;
+            pending.changed.take();
+            let previous = self.projection_revision;
+            self.invalidate_expression_projection();
+            self.refresh_expression_index(previous, &[owner]);
+            return Ok(());
+        }
+
         if let PropertyPayload::Physics(patch) = payload {
             // Local SDK patches are atomic. Validate before touching the owned edit
             // so invalid text preserves the last good candidate and its token.

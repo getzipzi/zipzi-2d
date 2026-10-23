@@ -1,8 +1,16 @@
 //! Resource browsing shares the toolbar and compact rows used by Modeling panels.
 use super::*;
-use crate::panels::group_header;
+use crate::authoring::{
+    AuthoringContext,
+    animation::{self as authoring, AnimationAction},
+};
 use crate::panels::toolbar::PanelToolbar;
+use crate::panels::{
+    group_header,
+    sorting::{self, SortItem},
+};
 use editor_core::{CommandId, DocumentId, MotionSelection};
+use editor_core::{ObjectKind, ObjectRef};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Icon;
 use std::collections::{HashMap, HashSet};
@@ -11,7 +19,9 @@ use std::collections::{HashMap, HashSet};
 pub(super) struct ViewState {
     collapsed: HashSet<Option<String>>,
     cursor: Option<usize>,
+    focused: Option<ObjectRef>,
     pub(super) scroll: ScrollHandle,
+    objects: Vec<ObjectRef>,
 }
 
 #[derive(Default)]
@@ -23,8 +33,22 @@ pub(super) struct ResourceList {
 
 #[derive(Clone)]
 enum Choice {
+    Inspect(ObjectRef),
     Motion(MotionSelection),
     Expression(String),
+}
+
+impl Choice {
+    fn object(&self) -> ObjectRef {
+        match self {
+            Self::Inspect(object) => object.clone(),
+            Self::Motion(motion) => ObjectRef::new(
+                ObjectKind::MotionRegistration,
+                motion.entry.as_ref().unwrap(),
+            ),
+            Self::Expression(id) => ObjectRef::new(ObjectKind::Expression, id),
+        }
+    }
 }
 
 impl AnimationPanel {
@@ -40,6 +64,7 @@ impl AnimationPanel {
             return;
         }
         let focus = self.focus.clone();
+        let focused = choice.object();
         let _ = self.owner.update(cx, |owner, cx| {
             if owner.modal || owner.editor.is_busy() || owner.editor.active_id() != Some(document) {
                 return;
@@ -66,6 +91,9 @@ impl AnimationPanel {
                 return;
             }
             let result = match choice {
+                Choice::Inspect(object) => {
+                    owner.inspect_authoring_object(document, object, false, window, cx)
+                }
                 Choice::Motion(selection) => owner.editor.select_motion(document, selection),
                 Choice::Expression(id) => owner.editor.select_expression(document, id),
             };
@@ -76,6 +104,7 @@ impl AnimationPanel {
                 owner.run_command(CommandId::PlayPause, window, cx);
             }
         });
+        self.resources.view.focused = Some(focused);
         cx.notify();
     }
 
@@ -103,50 +132,84 @@ impl AnimationPanel {
             "animation-expression"
         };
         let mut toolbar = PanelToolbar::new(SharedString::from(format!("{prefix}-toolbar")));
+        let context = AuthoringContext::capture(&state.editor);
+        let selection = authoring::selection(&state.editor, motion_panel);
+        for kind in if motion_panel {
+            vec![ObjectKind::Motion, ObjectKind::MotionGroup]
+        } else {
+            vec![ObjectKind::Expression]
+        } {
+            let Some(availability) =
+                AnimationAction::Create(kind, selection.clone()).availability(&state.editor)
+            else {
+                continue;
+            };
+            let unavailable = disabled || !availability.enabled;
+            let hint = availability
+                .reason
+                .unwrap_or_else(|| authoring::create_label(kind));
+            let owner = self.owner.clone();
+            let selection = selection.clone();
+            toolbar = toolbar.action(move |_| {
+                Button::new(match kind {
+                    ObjectKind::Motion => "animation-new-motion",
+                    ObjectKind::MotionGroup => "animation-new-motion-group",
+                    _ => "animation-new-expression",
+                })
+                .icon(if kind == ObjectKind::MotionGroup {
+                    IconName::FolderPlus
+                } else {
+                    IconName::Plus
+                })
+                .ghost()
+                .accessibility_label(authoring::create_label(kind))
+                .tooltip(hint.clone())
+                .disabled(unavailable)
+                .on_click(move |_, window, cx| {
+                    if let Some(context) = context {
+                        let _ = owner.update(cx, |owner, cx| {
+                            owner.run_animation_action(
+                                context,
+                                AnimationAction::Create(kind, selection.clone()),
+                                window,
+                                cx,
+                            )
+                        });
+                    }
+                })
+            });
+        }
         if motion_panel {
             let owner = self.owner.clone();
+            let at = selection.clone();
+            let availability =
+                AnimationAction::AddMotionReference(at.clone()).availability(&state.editor);
+            let unavailable = disabled || availability.as_ref().is_none_or(|a| !a.enabled);
+            let hint = availability
+                .and_then(|a| a.reason)
+                .unwrap_or_else(|| t!("authoring.add_motion_reference").into());
             toolbar = toolbar.action(move |_| {
-                Button::new("animation-new-motion")
-                    .icon(IconName::Plus)
+                Button::new("animation-add-motion-reference")
+                    .icon(IconName::Link)
                     .ghost()
-                    .accessibility_label(t!("timeline.new_motion").into_owned())
-                    .tooltip(t!("timeline.new_motion"))
-                    .disabled(disabled)
+                    .accessibility_label(t!("authoring.add_motion_reference"))
+                    .tooltip(hint.clone())
+                    .disabled(unavailable)
                     .on_click(move |_, window, cx| {
-                        if window.has_active_dialog(cx) {
-                            return;
+                        if let Some(context) = context {
+                            let _ = owner.update(cx, |v, cx| {
+                                v.run_animation_action(
+                                    context,
+                                    AnimationAction::AddMotionReference(at.clone()),
+                                    window,
+                                    cx,
+                                )
+                            });
                         }
-                        let _ = owner.update(cx, |owner, cx| {
-                            if owner.modal
-                                || owner.editor.is_busy()
-                                || owner.editor.active_id() != Some(id)
-                            {
-                                return;
-                            }
-                            if !owner.prepare_property_inputs(id, window, cx) {
-                                return;
-                            }
-                            let result =
-                                owner
-                                    .editor
-                                    .create_timeline_motion_result(id)
-                                    .and_then(|result| {
-                                        owner
-                                            .present_created_object(
-                                                id,
-                                                &result,
-                                                editor_core::ObjectKind::Motion,
-                                                window,
-                                                cx,
-                                            )
-                                            .map(|_| ())
-                                    });
-                            owner.animation_anchor = None;
-                            owner.complete_edit(result, cx);
-                        });
                     })
             });
-        } else {
+        }
+        if !motion_panel {
             let owner = self.owner.clone();
             let unavailable = disabled
                 || !state
@@ -191,6 +254,13 @@ impl AnimationPanel {
             self.resources.document = document;
         }
         let dialog = window.has_active_dialog(cx);
+        let enabled = {
+            let state = owner.read(cx);
+            !state.modal && !state.editor.is_busy() && !dialog
+        };
+        self.sorting.update(cx, |sorting, cx| {
+            sorting.reconcile(document, enabled, window, cx)
+        });
         let state = owner.read(cx);
         let open_documents = state.editor.documents();
         self.resources
@@ -217,6 +287,7 @@ impl AnimationPanel {
                 while !matches!(
                     object.kind,
                     editor_core::ObjectKind::Motion
+                        | editor_core::ObjectKind::MotionGroup
                         | editor_core::ObjectKind::MotionRegistration
                         | editor_core::ObjectKind::Expression
                 ) && seen.insert(object.clone())
@@ -234,6 +305,25 @@ impl AnimationPanel {
             });
         let catalog = document.animation_catalog();
         let animation = state.editor.animation().unwrap();
+        let location = location.map(|object| {
+            if object.kind == ObjectKind::Motion {
+                let selected = animation.motion.as_ref().filter(|m| m.clip_id == object.id);
+                let resource = selected
+                    .and_then(|selection| {
+                        catalog.motions.iter().find(|r| &r.selection == selection)
+                    })
+                    .or_else(|| {
+                        catalog
+                            .motions
+                            .iter()
+                            .find(|r| r.selection.clip_id == object.id)
+                    });
+                if let Some(id) = resource.and_then(|r| r.selection.entry.as_ref()) {
+                    return ObjectRef::new(ObjectKind::MotionRegistration, id);
+                }
+            }
+            object
+        });
         let preview_mode = animation.preview_mode;
         let disabled = state.modal || state.editor.is_busy() || dialog;
         let motion_panel = matches!(self.kind, PanelKind::AnimationMotions);
@@ -252,6 +342,7 @@ impl AnimationPanel {
             .overflow_y_scroll()
             .track_scroll(&self.resources.view.scroll)
             .when(!motion_panel, |list| list.p_1());
+        list = sorting::scroll_div(list, &self.sorting, &self.resources.view.scroll);
         let mut choices = Vec::new();
         let mut selected_cursor = None;
         let mut row_index = 0;
@@ -271,155 +362,282 @@ impl AnimationPanel {
                     .collapsed
                     .remove(&catalog.motions[index].group);
             }
-            let mut previous: Option<Option<String>> = None;
+            let groups: Vec<_> = document
+                .motion_groups()
+                .iter()
+                .map(|g| (Some(g.id.clone()), g.name.clone()))
+                .chain(std::iter::once((
+                    None,
+                    t!("workspace.ungrouped").into_owned(),
+                )))
+                .collect();
+            let mut grouped = HashMap::<Option<String>, Vec<_>>::new();
             for (index, resource) in catalog.motions.iter().enumerate() {
-                let group = resource.group.clone();
-                let group_name = match &group {
-                    None => t!("workspace.ungrouped").into_owned(),
-                    Some(name) if name.is_empty() => t!("workspace.unnamed_group").into_owned(),
-                    Some(name) => name.clone(),
-                };
-                let located = located_motion == Some(index);
-                let expanded = !self.resources.view.collapsed.contains(&group);
-                if previous.as_ref() != Some(&group) {
-                    let count = catalog
-                        .motions
-                        .iter()
-                        .filter(|r| r.group.as_ref() == group.as_ref())
-                        .count();
-                    let key = group.clone();
-                    list = list.child(
-                        div()
-                            .id(("animation-motion-group-header", index))
-                            .test_support()
-                            .role(gpui::Role::Group)
-                            .aria_label(group_name.clone())
-                            .aria_expanded(expanded)
-                            .map(|element| group_header::row_style(element, 0, cx))
-                            .child(
-                                group_header::toggle(
-                                    ("animation-motion-group", index),
-                                    ("animation-motion-group-count", index),
-                                    group_name,
-                                    count,
-                                    expanded,
-                                    0,
-                                    cx,
-                                )
-                                .disabled(disabled)
-                                .on_click(cx.listener(
-                                    move |panel, _, window, cx| {
-                                        if window.has_active_dialog(cx)
-                                            || panel.owner.upgrade().is_none_or(|owner| {
-                                                let owner = owner.read(cx);
-                                                owner.modal
-                                                    || owner.editor.is_busy()
-                                                    || owner.editor.active_id() != Some(id)
-                                            })
-                                        {
-                                            return;
-                                        }
-                                        if !panel.resources.view.collapsed.remove(&key) {
-                                            panel.resources.view.collapsed.insert(key.clone());
-                                        }
-                                        panel.resources.view.cursor = None;
-                                        cx.notify();
-                                    },
-                                )),
-                            ),
-                    );
-                    row_index += 1;
-                    previous = Some(group);
-                }
-                if !expanded {
+                grouped
+                    .entry(resource.group_id.clone())
+                    .or_default()
+                    .push((index, resource));
+            }
+            for (group_index, (group, group_name)) in groups.into_iter().enumerate() {
+                let members = grouped.remove(&group).unwrap_or_default();
+                if group.is_none() && members.is_empty() && document.motion_groups().is_empty() {
                     continue;
                 }
-                let selected = animation.motion.as_ref() == Some(&resource.selection);
-                if selected {
-                    selected_cursor = Some(choices.len());
-                }
-                let cursor = choices.len();
+                let located = location.as_ref().is_some_and(|object| {
+                    group
+                        .as_ref()
+                        .is_some_and(|g| object.kind == ObjectKind::MotionGroup && object.id == *g)
+                        || members.iter().any(|(_, r)| {
+                            object.id == r.selection.clip_id
+                                || r.selection.entry.as_ref() == Some(&object.id)
+                        })
+                });
                 if located {
-                    self.resources.view.cursor = Some(cursor);
-                    self.resources.view.scroll.scroll_to_top_of_item(row_index);
+                    self.resources.view.collapsed.remove(&group);
                 }
-                choices.push((row_index, Choice::Motion(resource.selection.clone())));
-                row_index += 1;
-                let selection = resource.selection.clone();
-                let playable = resource.playable();
-                let mut hint = format!("{} · {}", resource.name, motion_info(resource).join(" · "));
-                if playable {
-                    hint.push_str(&format!(" · {}", t!("workspace.double_click_to_play")));
+                let expanded = !self.resources.view.collapsed.contains(&group);
+                let key = group.clone();
+                let object = group
+                    .as_ref()
+                    .map(|id| ObjectRef::new(ObjectKind::MotionGroup, id));
+                let cursor = choices.len();
+                if let Some(object) = &object {
+                    if state
+                        .editor
+                        .active_inspection()
+                        .and_then(|i| i.object())
+                        .as_ref()
+                        == Some(object)
+                    {
+                        selected_cursor = Some(cursor);
+                    }
+                    if location.as_ref() == Some(object) {
+                        self.resources.view.focused = Some(object.clone());
+                        self.resources.view.scroll.scroll_to_top_of_item(row_index);
+                    }
+                    choices.push((row_index, Choice::Inspect(object.clone())));
                 }
-                let mut row = self
-                    .resource_row(
-                        ("animation-motion", index),
-                        selected,
-                        cursor,
-                        disabled,
-                        window,
-                        cx,
-                    )
+                let item = object
+                    .clone()
+                    .map(SortItem::Resource)
+                    .unwrap_or(SortItem::ResourceRoot { motion: true });
+                let panel = cx.weak_entity();
+                let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
+                    if let SortItem::Resource(object) = item {
+                        let _ = panel.update(cx, |p, cx| {
+                            if p.resources.view.collapsed.remove(&Some(object.id.clone())) {
+                                cx.notify();
+                            }
+                        });
+                    }
+                });
+                let mut header = div()
+                    .id(("animation-motion-group-header", group_index))
                     .test_support()
-                    .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
-                    .when_some(resource.selection.entry.as_ref(), |row, _| {
-                        let entry = resource.entry_index;
-                        row.child(
-                            div()
-                                .text_color(theme.muted_foreground)
-                                .child(format!("{}", entry + 1)),
+                    .role(gpui::Role::Group)
+                    .aria_label(group_name.clone())
+                    .aria_expanded(expanded)
+                    .aria_selected(object.as_ref().is_some_and(|object| {
+                        state
+                            .editor
+                            .active_inspection()
+                            .and_then(|i| i.object())
+                            .as_ref()
+                            == Some(object)
+                    }))
+                    .map(|e| group_header::row_style(e, 0, cx))
+                    .map(|e| sorting::drop_target(e, &self.sorting, item.clone(), Some(expand), cx))
+                    .map(|e| {
+                        sorting::drag_source(
+                            e,
+                            &self.sorting,
+                            id,
+                            item,
+                            group_name.clone(),
+                            !disabled && object.is_some(),
                         )
                     })
                     .child(
-                        div()
+                        Button::new(("animation-motion-group", group_index))
+                            .icon(if expanded {
+                                IconName::ChevronDown
+                            } else {
+                                IconName::ChevronRight
+                            })
+                            .ghost()
+                            .xsmall()
+                            .disabled(disabled)
+                            .accessibility_label(group_name.clone())
+                            .on_click(cx.listener(move |panel, _, _, cx| {
+                                if !panel.resources.view.collapsed.remove(&key) {
+                                    panel.resources.view.collapsed.insert(key.clone());
+                                }
+                                cx.notify();
+                            })),
+                    );
+                let label = group_name.clone();
+                let object_for_click = object.clone();
+                header = header
+                    .child(
+                        Button::new(("animation-motion-group-name", group_index))
+                            .ghost()
+                            .xsmall()
                             .flex_1()
                             .min_w_0()
-                            .overflow_hidden()
-                            .text_ellipsis()
-                            .child(resource.name.clone()),
-                    );
-                row = row.child(
-                    div()
-                        .flex_shrink_0()
-                        .font_features(FontFeatures(std::sync::Arc::new(vec![("tnum".into(), 1)])))
-                        .text_color(theme.muted_foreground)
-                        .child(if resource.playable() {
-                            format!("{:.2} s", resource.duration)
-                        } else {
-                            "—".into()
-                        }),
-                );
-                if !resource.playable() || resource.sound.is_some() {
-                    let warning = if !resource.playable() {
-                        t!("workspace.invalid_duration")
-                    } else {
-                        t!("workspace.sound_unsupported")
-                    };
-                    row = row.child(
+                            .justify_start()
+                            .disabled(disabled || object.is_none())
+                            .label(label)
+                            .on_click(cx.listener(move |panel, _, window, cx| {
+                                if let Some(object) = &object_for_click {
+                                    panel.resources.view.cursor = Some(cursor);
+                                    panel.choose(
+                                        id,
+                                        Choice::Inspect(object.clone()),
+                                        false,
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            })),
+                    )
+                    .child(
                         div()
-                            .id(("animation-motion-warning", index))
-                            .tooltip(move |window, cx| {
-                                Tooltip::new(warning.clone().into_owned()).build(window, cx)
-                            })
-                            .child(
-                                Icon::new(IconName::TriangleAlert)
-                                    .xsmall()
-                                    .text_color(theme.yellow),
-                            ),
+                            .id(("animation-motion-group-count", group_index))
+                            .test_support()
+                            .aria_value(members.len().to_string())
+                            .child(members.len().to_string()),
                     );
+                if let Some(object) = object {
+                    list = list.child(authoring::row_menu(header, self.owner.clone(), id, object));
+                } else {
+                    list = list.child(header);
                 }
-                list = list.child(row.on_click(cx.listener(
-                    move |panel, event: &gpui::ClickEvent, window, cx| {
-                        panel.resources.view.cursor = Some(cursor);
-                        panel.choose(
-                            id,
-                            Choice::Motion(selection.clone()),
-                            playable && event.click_count() == 2,
+                row_index += 1;
+                if !expanded {
+                    continue;
+                }
+                for (index, resource) in members {
+                    let located = location.as_ref().is_some_and(|object| {
+                        object.id == resource.selection.clip_id
+                            || resource.selection.entry.as_ref() == Some(&object.id)
+                    });
+                    let selected = animation.motion.as_ref() == Some(&resource.selection);
+                    if selected {
+                        selected_cursor = Some(choices.len());
+                    }
+                    let cursor = choices.len();
+                    if located {
+                        self.resources.view.cursor = Some(cursor);
+                        self.resources.view.focused =
+                            Some(Choice::Motion(resource.selection.clone()).object());
+                        self.resources.view.scroll.scroll_to_top_of_item(row_index);
+                    }
+                    choices.push((row_index, Choice::Motion(resource.selection.clone())));
+                    row_index += 1;
+                    let selection = resource.selection.clone();
+                    let playable = resource.playable();
+                    let mut hint =
+                        format!("{} · {}", resource.name, motion_info(resource).join(" · "));
+                    if playable {
+                        hint.push_str(&format!(" · {}", t!("workspace.double_click_to_play")));
+                    }
+                    let mut row = self
+                        .resource_row(
+                            ("animation-motion", index),
+                            selected,
+                            cursor,
+                            disabled,
                             window,
                             cx,
+                        )
+                        .test_support()
+                        .tooltip(move |window, cx| Tooltip::new(hint.clone()).build(window, cx))
+                        .when_some(resource.selection.entry.as_ref(), |row, _| {
+                            let entry = resource.entry_index;
+                            row.child(
+                                div()
+                                    .text_color(theme.muted_foreground)
+                                    .child(format!("{}", entry + 1)),
+                            )
+                        })
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .overflow_hidden()
+                                .text_ellipsis()
+                                .child(resource.name.clone()),
                         );
-                    },
-                )));
+                    row = row.child(
+                        div()
+                            .flex_shrink_0()
+                            .font_features(FontFeatures(std::sync::Arc::new(vec![(
+                                "tnum".into(),
+                                1,
+                            )])))
+                            .text_color(theme.muted_foreground)
+                            .child(if resource.playable() {
+                                format!("{:.2} s", resource.duration)
+                            } else {
+                                "—".into()
+                            }),
+                    );
+                    if !resource.playable() || resource.sound.is_some() {
+                        let warning = if !resource.playable() {
+                            t!("workspace.invalid_duration")
+                        } else {
+                            t!("workspace.sound_unsupported")
+                        };
+                        row = row.child(
+                            div()
+                                .id(("animation-motion-warning", index))
+                                .tooltip(move |window, cx| {
+                                    Tooltip::new(warning.clone().into_owned()).build(window, cx)
+                                })
+                                .child(
+                                    Icon::new(IconName::TriangleAlert)
+                                        .xsmall()
+                                        .text_color(theme.yellow),
+                                ),
+                        );
+                    }
+                    let object = ObjectRef::new(
+                        ObjectKind::MotionRegistration,
+                        resource.selection.entry.as_ref().unwrap(),
+                    );
+                    let row = sorting::drop_target(
+                        row,
+                        &self.sorting,
+                        SortItem::Resource(object.clone()),
+                        None,
+                        cx,
+                    );
+                    let row = sorting::drag_source(
+                        row,
+                        &self.sorting,
+                        id,
+                        SortItem::Resource(object.clone()),
+                        resource.name.clone(),
+                        !disabled,
+                    );
+                    list = list.child(authoring::row_menu(
+                        row.on_click(cx.listener(
+                            move |panel, event: &gpui::ClickEvent, window, cx| {
+                                panel.resources.view.cursor = Some(cursor);
+                                panel.choose(
+                                    id,
+                                    Choice::Motion(selection.clone()),
+                                    playable && event.click_count() == 2,
+                                    window,
+                                    cx,
+                                );
+                            },
+                        )),
+                        self.owner.clone(),
+                        id,
+                        object,
+                    ));
+                }
             }
         } else {
             for (index, resource) in catalog.expressions.iter().enumerate() {
@@ -434,6 +652,8 @@ impl AnimationPanel {
                     .is_some_and(|object| object.id == resource.id)
                 {
                     self.resources.view.cursor = Some(cursor);
+                    self.resources.view.focused =
+                        Some(ObjectRef::new(ObjectKind::Expression, &resource.id));
                     self.resources.view.scroll.scroll_to_top_of_item(row_index);
                 }
 
@@ -452,8 +672,8 @@ impl AnimationPanel {
                         resource.unresolved_targets.join(", ")
                     )
                 };
-                list = list.child(
-                    self.resource_row(
+                let row = self
+                    .resource_row(
                         ("animation-expression", index),
                         selected,
                         cursor,
@@ -507,9 +727,34 @@ impl AnimationPanel {
                             window,
                             cx,
                         );
-                    })),
+                    }));
+                let object = ObjectRef::new(ObjectKind::Expression, &resource.id);
+                let row = sorting::drop_target(
+                    row,
+                    &self.sorting,
+                    SortItem::Resource(object.clone()),
+                    None,
+                    cx,
                 );
+                let row = sorting::drag_source(
+                    row,
+                    &self.sorting,
+                    id,
+                    SortItem::Resource(object.clone()),
+                    resource.name.clone(),
+                    !disabled,
+                );
+                list = list.child(authoring::row_menu(row, self.owner.clone(), id, object));
             }
+        }
+        self.resources.view.objects = choices.iter().map(|(_, choice)| choice.object()).collect();
+        if let Some(focused) = &self.resources.view.focused {
+            self.resources.view.cursor = self
+                .resources
+                .view
+                .objects
+                .iter()
+                .position(|object| object == focused);
         }
         if (motion_panel && catalog.motions.is_empty())
             || (!motion_panel && catalog.expressions.is_empty())
@@ -523,9 +768,10 @@ impl AnimationPanel {
         }
         div()
             .id(self.kind.name())
+            .map(|e| sorting::panel_actions(e, &self.sorting))
             .test_support()
             .track_focus(&self.focus)
-            .key_context("KasaneDocument")
+            .key_context("KasaneDocument KasanePalette")
             .size_full()
             .min_h_0()
             .flex()
@@ -558,6 +804,21 @@ impl AnimationPanel {
                 let next = match event.keystroke.key.as_str() {
                     "down" => Some(current.map_or(0, |i| (i + 1).min(choices.len() - 1))),
                     "up" => Some(current.map_or(choices.len() - 1, |i| i.saturating_sub(1))),
+                    "left" | "right" => {
+                        if let Some(i) = current {
+                            if let Choice::Inspect(object) = &choices[i].1 {
+                                let key = Some(object.id.clone());
+                                if event.keystroke.key == "left" {
+                                    panel.resources.view.collapsed.insert(key);
+                                } else {
+                                    panel.resources.view.collapsed.remove(&key);
+                                }
+                                cx.notify();
+                                cx.stop_propagation();
+                            }
+                        }
+                        return;
+                    }
                     "enter" => {
                         if let Some(i) = current {
                             panel.choose(id, choices[i].1.clone(), false, window, cx);
@@ -569,12 +830,21 @@ impl AnimationPanel {
                 };
                 if let Some(next) = next {
                     panel.resources.view.cursor = Some(next);
+                    panel.resources.view.focused = Some(choices[next].1.object());
                     panel.resources.view.scroll.scroll_to_item(choices[next].0);
                     cx.stop_propagation();
                     cx.notify();
                 }
             }))
             .into_any_element()
+    }
+
+    pub(crate) fn movement_object(&self) -> Option<ObjectRef> {
+        self.resources
+            .view
+            .cursor
+            .and_then(|i| self.resources.view.objects.get(i))
+            .cloned()
     }
 
     pub(super) fn resource_row(

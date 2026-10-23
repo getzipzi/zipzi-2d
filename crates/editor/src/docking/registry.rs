@@ -29,14 +29,15 @@ impl DockWorkspace {
             crate::panels::DeformerTreePanel::new(owner.clone(), thumbnails, window, cx);
         let parameters = crate::panels::ParametersPanel::new(owner.clone(), window, cx);
         use crate::panels::animation_panel::AnimationPanel;
-        let animation_motions = AnimationPanel::new(owner.clone(), PanelKind::AnimationMotions, cx);
+        let animation_motions =
+            AnimationPanel::new(owner.clone(), PanelKind::AnimationMotions, window, cx);
         let animation_expressions =
-            AnimationPanel::new(owner.clone(), PanelKind::AnimationExpressions, cx);
+            AnimationPanel::new(owner.clone(), PanelKind::AnimationExpressions, window, cx);
 
         let animation_inspectors: HashMap<_, _> =
             [PanelKind::AnimationPhysics, PanelKind::AnimationPose]
                 .into_iter()
-                .map(|kind| (kind, AnimationPanel::new(owner.clone(), kind, cx)))
+                .map(|kind| (kind, AnimationPanel::new(owner.clone(), kind, window, cx)))
                 .collect();
         let mut panels: PanelViews = animation_inspectors
             .iter()

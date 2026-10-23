@@ -47,8 +47,17 @@ impl EditorView {
     ) -> bool {
         // A dialog may already have ended editing before capturing its context
         // token. Releasing leftover UI must not invalidate that new token.
-        let end =
-            reason != editor_core::EditingLifecycle::BlockingUi || self.editor.editing_active();
+        let preserve_playback = !self.modal
+            && self
+                .playback_dialog
+                .as_ref()
+                .is_some_and(|guard| guard.valid(&self.editor));
+        let active = if preserve_playback {
+            self.editor.editing_input_active()
+        } else {
+            self.editor.editing_active()
+        };
+        let end = reason != editor_core::EditingLifecycle::BlockingUi || active;
         if reason == editor_core::EditingLifecycle::WindowDeactivated {
             self.input_router.deactivate();
         }

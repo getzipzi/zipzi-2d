@@ -217,6 +217,14 @@ impl PropertyForms {
                 key.document != target.document || key.has_object_details() || key == target
             });
         }
+        if matches!(target.scope, editor_core::PropertyScope::Resource { .. }) {
+            self.entries.retain(|key, _| {
+                key.document != target.document
+                    || key.context != target.context
+                    || key.object != target.object
+                    || key == target
+            });
+        }
         let form = self.entries.entry(target.clone()).or_default();
         form.sync_definition(definition, values);
         form

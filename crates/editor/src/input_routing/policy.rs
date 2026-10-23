@@ -98,6 +98,8 @@ pub(super) fn decide(
                 editor_core::PanelKind::MeshTree
                     | editor_core::PanelKind::Deformers
                     | editor_core::PanelKind::Parameters
+                    | editor_core::PanelKind::AnimationMotions
+                    | editor_core::PanelKind::AnimationExpressions
             ))
         )
         && bindings.iter().any(|binding| {

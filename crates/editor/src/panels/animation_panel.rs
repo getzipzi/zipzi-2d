@@ -20,6 +20,7 @@ pub struct AnimationPanel {
     focus: FocusHandle,
     _observe: Subscription,
     resources: resources::ResourceList,
+    sorting: Entity<crate::panels::sorting::SortState>,
     location: Option<(editor_core::DocumentId, editor_core::ObjectRef)>,
 }
 impl AnimationPanel {
@@ -32,14 +33,25 @@ impl AnimationPanel {
         self.location = Some((document, object.clone()));
         cx.notify();
     }
-    pub fn new(owner: WeakEntity<EditorView>, kind: PanelKind, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self {
-            resources: resources::ResourceList::default(),
-            location: None,
-            _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
-            owner,
-            kind,
-            focus: cx.focus_handle(),
+    pub fn new(
+        owner: WeakEntity<EditorView>,
+        kind: PanelKind,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Entity<Self> {
+        cx.new(|cx| {
+            let focus = cx.focus_handle();
+            let sorting =
+                crate::panels::sorting::SortState::new(owner.clone(), focus.clone(), window, cx);
+            Self {
+                sorting,
+                resources: resources::ResourceList::default(),
+                location: None,
+                _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
+                owner,
+                kind,
+                focus,
+            }
         })
     }
 }

@@ -234,6 +234,10 @@ impl Document {
             | ObjectKind::MotionEvent => {
                 states!(self.session.motion_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object,
                     Reorder=>reorder, Duplicate=>duplicate, Delete=>delete, Repair=>repair, Preview=>preview, EditContent=>edit_content);
+                // Both native group removals check the group and its registrations.
+                if object.kind == ObjectKind::MotionGroup {
+                    result.states.push((A::Dissolve, result.state(A::Delete)));
+                }
             }
             ObjectKind::Expression | ObjectKind::ExpressionEntry => {
                 states!(self.session.expression_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_entry, Move=>move_entry, Reorder=>patch,
@@ -344,6 +348,25 @@ impl crate::Editor {
             return Ok(C::Available);
         }
         match id {
+            I::CreateMotion
+            | I::CreateMotionGroup
+            | I::CreateExpression
+            | I::CreateExpressionEntry => {
+                let kind = match id {
+                    I::CreateMotion => ObjectKind::Motion,
+                    I::CreateMotionGroup => ObjectKind::MotionGroup,
+                    I::CreateExpression => ObjectKind::Expression,
+                    _ => ObjectKind::ExpressionEntry,
+                };
+                doc.animation_resource_creation_capability(
+                    kind,
+                    self.animation_creation_selection(matches!(
+                        kind,
+                        ObjectKind::Motion | ObjectKind::MotionGroup
+                    ))
+                    .as_ref(),
+                )
+            }
             I::CreateParameter | I::CreateParameterGroup => doc
                 .parameter_object_creation_capability(
                     if id == I::CreateParameter {

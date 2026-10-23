@@ -19,13 +19,17 @@ impl Editor {
     /// Whether ending editing would stop live playback, a pointer operation or
     /// an uncommitted candidate. Local UI may outlive these domain operations.
     pub fn editing_active(&self) -> bool {
+        self.editing_input_active() || self.animation().is_some_and(|animation| animation.playing)
+    }
+    /// Active input ownership, independent of ordinary transport playback.
+    pub fn editing_input_active(&self) -> bool {
         self.viewport_interaction_active()
             || self.document().is_some_and(|doc| doc.has_pending_edit())
             || self.gesture_active()
             || self.timeline_edit().is_some()
             || self
                 .animation()
-                .is_some_and(|animation| animation.playing || animation.is_scrubbing())
+                .is_some_and(|animation| animation.is_scrubbing())
     }
 
     pub(crate) fn advance_editing_context(&mut self) {
