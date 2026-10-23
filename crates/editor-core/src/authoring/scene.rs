@@ -10,17 +10,7 @@ pub struct SceneAuthoringCapabilities {
     pub domain: SceneCapabilities,
     pub session_reason: Option<AuthoringSessionReason>,
 }
-fn editor_kind(kind: kasane_sdk::ObjectKind) -> Option<ObjectKind> {
-    Some(match kind {
-        kasane_sdk::ObjectKind::Mesh => ObjectKind::Mesh,
-        kasane_sdk::ObjectKind::Transform => ObjectKind::Deformer,
-        kasane_sdk::ObjectKind::Offscreen => ObjectKind::Offscreen,
-        kasane_sdk::ObjectKind::Glue => ObjectKind::Glue,
-        kasane_sdk::ObjectKind::Part => ObjectKind::Part,
-        kasane_sdk::ObjectKind::DrawOrderGroup => ObjectKind::DrawOrderGroup,
-        _ => return None,
-    })
-}
+
 impl Document {
     pub fn scene_authoring_capabilities(
         &self,
@@ -76,32 +66,12 @@ impl Document {
     pub fn execute_scene_authoring(&mut self, plan: &SceneEditPlan) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_scene_plan(plan)?;
-        let suggested_selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|e| editor_kind(e.kind).map(|kind| ObjectRef::new(kind, &e.id)))
-            .collect();
-        let locations = receipt
-            .changes
-            .organization_references
-            .iter()
-            .filter_map(|r| {
-                r.after
-                    .as_ref()
-                    .map(|id| ObjectRef::new(ObjectKind::Part, id))
-            })
-            .collect();
         if receipt.changed {
             self.pristine_blank = false;
             self.consume_authoring_receipt(&receipt, true);
             self.context.reconcile(&self.object_index());
         }
-        Ok(OperationResult {
-            receipt,
-            suggested_selection,
-            locations,
-        })
+        Ok(self.authoring_result(receipt))
     }
 }
 impl crate::Editor {

@@ -4,7 +4,6 @@ use editor_core::property::{parameter as domain, parameter_group};
 
 pub(super) const PARAMETER: PropertyProvider = PropertyProvider {
     fields: parameter_fields,
-    validate_change,
     ..PropertyProvider::DEFAULT
 };
 pub(super) const GROUP: PropertyProvider = PropertyProvider {
@@ -72,61 +71,5 @@ fn groups(document: &Document) -> Vec<Choice> {
 }
 
 fn range(values: &PropertyValues, id: PropertyKey) -> (f64, f64) {
-    let value = |key| {
-        values
-            .get(&key)
-            .and_then(PropertyValue::number)
-            .unwrap_or(0.) as f32
-    };
-    let (min, max, default) = (
-        value(domain::MINIMUM.key),
-        value(domain::MAXIMUM.key),
-        value(domain::DEFAULT_VALUE.key),
-    );
-    if id == domain::MINIMUM.key {
-        (-(f32::MAX as f64), f64::from(default.min(max.next_down())))
-    } else if id == domain::MAXIMUM.key {
-        (f64::from(default.max(min.next_up())), f32::MAX as f64)
-    } else {
-        assert_eq!(id, domain::DEFAULT_VALUE.key);
-        (f64::from(min), f64::from(max))
-    }
-}
-
-fn validate_change(
-    values: &PropertyValues,
-    id: PropertyKey,
-    candidate: &PropertyValue,
-) -> anyhow::Result<()> {
-    if ![
-        domain::MINIMUM.key,
-        domain::MAXIMUM.key,
-        domain::DEFAULT_VALUE.key,
-    ]
-    .contains(&id)
-    {
-        return Ok(());
-    }
-    let number = |key| {
-        if key == id {
-            candidate.number()
-        } else {
-            values.get(&key).and_then(PropertyValue::number)
-        }
-        .unwrap()
-    };
-    let (min, max, default) = (
-        number(domain::MINIMUM.key),
-        number(domain::MAXIMUM.key),
-        number(domain::DEFAULT_VALUE.key),
-    );
-    anyhow::ensure!(
-        min < max,
-        "Minimum ({min}) must be less than maximum ({max})"
-    );
-    anyhow::ensure!(
-        (min..=max).contains(&default),
-        "Default ({default}) must be within [{min}, {max}]"
-    );
-    Ok(())
+    domain::number_bounds(values, id)
 }

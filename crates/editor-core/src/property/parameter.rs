@@ -78,3 +78,50 @@ pub const FIELDS: &[PropertySpec] = &[
     KIND,
     GROUP_ID,
 ];
+
+pub fn number_bounds(values: &super::PropertyValues, id: super::PropertyKey) -> (f64, f64) {
+    let value = |key| {
+        values
+            .get(&key)
+            .and_then(super::PropertyValue::number)
+            .unwrap_or(0.) as f32
+    };
+    let (min, max, default) = (
+        value(MINIMUM.key),
+        value(MAXIMUM.key),
+        value(DEFAULT_VALUE.key),
+    );
+    if id == MINIMUM.key {
+        (-(f32::MAX as f64), f64::from(default.min(max.next_down())))
+    } else if id == MAXIMUM.key {
+        (f64::from(default.max(min.next_up())), f32::MAX as f64)
+    } else {
+        assert_eq!(id, DEFAULT_VALUE.key);
+        (f64::from(min), f64::from(max))
+    }
+}
+
+/// Validate only this field against committed dependencies, never sibling drafts.
+/// The native validator is also used by actual parameter publication.
+pub fn validate_change(
+    values: &super::PropertyValues,
+    id: super::PropertyKey,
+    candidate: &super::PropertyValue,
+) -> anyhow::Result<()> {
+    if ![MINIMUM.key, MAXIMUM.key, DEFAULT_VALUE.key].contains(&id) {
+        return Ok(());
+    }
+    let number = |key| {
+        if key == id {
+            candidate.number()
+        } else {
+            values.get(&key).and_then(super::PropertyValue::number)
+        }
+        .ok_or_else(|| anyhow::anyhow!("Missing parameter range dependency"))
+    };
+    Ok(kasane_core::document::validate_parameter_range(
+        number(MINIMUM.key)? as f32,
+        number(MAXIMUM.key)? as f32,
+        number(DEFAULT_VALUE.key)? as f32,
+    )?)
+}

@@ -120,8 +120,10 @@ impl PropertyTarget {
     pub(crate) fn editable(&self, editor: &Editor) -> bool {
         (provider(self.object.kind).editable_in)(self.context)
             && editor.document().is_some_and(|doc| {
-                doc.ensure_editable(std::slice::from_ref(&self.object))
-                    .is_ok()
+                doc.authoring_capabilities(&self.object).is_ok_and(|c| {
+                    c.state(editor_core::AuthoringAction::Patch)
+                        == kasane_sdk::CapabilityState::Available
+                })
             })
             && (self.timeline.is_none()
                 || editor.animation().is_some_and(|a| !a.playing)

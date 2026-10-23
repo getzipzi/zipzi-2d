@@ -39,6 +39,8 @@ pub struct DocumentPanel {
     dragging: Option<(DocumentId, ObjectRef)>,
     bounds_binding: Option<(DocumentId, ObjectRef)>,
     row_sequence: usize,
+    location: Option<(DocumentId, ObjectRef)>,
+    scroll: ScrollHandle,
 }
 impl DocumentPanel {
     pub fn new(
@@ -62,10 +64,21 @@ impl DocumentPanel {
             dragging: None,
             bounds_binding: None,
             row_sequence: 0,
+            location: None,
+            scroll: ScrollHandle::new(),
         })
     }
     pub fn cancel_drag(&mut self) {
         self.dragging = None;
+    }
+    pub(crate) fn locate_object(
+        &mut self,
+        document: DocumentId,
+        object: ObjectRef,
+        cx: &mut Context<Self>,
+    ) {
+        self.location = Some((document, object));
+        cx.notify();
     }
     fn run(&self, document: DocumentId, command: EditorCommand, window: &mut Window, cx: &mut App) {
         if window.has_active_dialog(cx) {
@@ -79,8 +92,31 @@ impl DocumentPanel {
                 {
                     return;
                 }
-                let opens_binding = matches!(&command, EditorCommand::OpenBinding(_))
-                    || matches!(&command,EditorCommand::Navigate(r) if r.kind.is_binding());
+                if matches!(
+                    &command,
+                    EditorCommand::Navigate(_) | EditorCommand::OpenBinding(_)
+                ) && !owner.prepare_property_inputs(document, window, cx)
+                {
+                    return;
+                }
+                if let EditorCommand::Navigate(object) = &command {
+                    let result =
+                        owner.inspect_authoring_object(document, object.clone(), false, window, cx);
+                    if result.is_ok() {
+                        owner.defer_authoring_location(
+                            document,
+                            object.clone(),
+                            None,
+                            false,
+                            true,
+                            window,
+                            cx,
+                        );
+                    }
+                    owner.complete_edit(result, cx);
+                    return;
+                }
+                let opens_binding = matches!(&command, EditorCommand::OpenBinding(_));
                 let result = owner.editor.execute_for(document, command);
                 if opens_binding && result.is_ok() {
                     owner.reveal_keyforms(window, cx);
@@ -101,6 +137,12 @@ impl DocumentPanel {
         let r = r.clone();
         self.row_sequence += 1;
         let sequence = self.row_sequence;
+        if self.location.as_ref() == Some(&(document, r.clone())) {
+            self.scroll.scroll_to_top_of_item(
+                sequence - 1 + usize::from(self.kind == PanelKind::DrawOrder),
+            );
+            self.location = None;
+        }
         let theme = cx.theme();
         let info = index.get(&r);
         let name = index.name(&r).to_owned();
@@ -204,9 +246,9 @@ impl DocumentPanel {
                     .collect::<Vec<_>>()
                     .join(" × "),
             );
-        if !b.writable() {
+        if !b.supports_parameter_pad() {
             return body
-                .child(t!("editor.legacy_binding_read_only"))
+                .child(t!("editor.binding_pad_unavailable"))
                 .into_any_element();
         }
         if b.axes.is_empty() || b.axes.len() > 2 {
@@ -456,11 +498,33 @@ impl Render for DocumentPanel {
             return self.relations(doc, document, cx);
         }
         let index = doc.object_index();
+        if let Some((id, object)) = &mut self.location {
+            if *id != document {
+                self.location = None;
+            } else {
+                let mut seen = std::collections::HashSet::new();
+                while !includes(self.kind, object.kind) && seen.insert(object.clone()) {
+                    let Some(parent) = index
+                        .incoming(object)
+                        .find(|r| r.kind == RelationKind::Contains)
+                        .map(|r| r.source.clone())
+                    else {
+                        break;
+                    };
+                    *object = parent;
+                }
+            }
+        }
         let context = doc.context().clone();
         let parameters = doc.parameters();
         let disabled = state.modal || state.editor.is_busy();
         let mut body = div()
             .id(SharedString::from(format!("{}-body", self.kind.name())))
+            .test_support()
+            .h_full()
+            .min_h_0()
+            .overflow_y_scroll()
+            .track_scroll(&self.scroll)
             .flex()
             .flex_col()
             .w_full();
@@ -606,7 +670,7 @@ impl Render for DocumentPanel {
                     context.inspected.as_ref() == Some(&r),
                     cx,
                 );
-                body = body.child(div().pl(px(depth as f32 * 12.)).child(row));
+                body = body.child(div().flex_shrink_0().pl(px(depth as f32 * 12.)).child(row));
             }
             if references.is_empty() {
                 body = body.child(div().p_3().child(t!("editor.no_items")));

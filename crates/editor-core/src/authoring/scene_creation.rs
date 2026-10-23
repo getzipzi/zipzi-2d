@@ -67,12 +67,14 @@ impl Document {
                         kind,
                         SceneObjectType::Mesh | SceneObjectType::Warp | SceneObjectType::Rotation
                     ),
-                    "NO_DEFORMATION_COLLECTION"
+                    AuthoringPlanningError::new("NO_DEFORMATION_COLLECTION")
                 );
                 let (part, parent, _) = self.deformation_creation_container(selection)?;
                 (part, parent)
             }
-            PaletteProjection::Parameters => anyhow::bail!("NO_SCENE_COLLECTION"),
+            PaletteProjection::Parameters => {
+                anyhow::bail!(AuthoringPlanningError::new("NO_SCENE_COLLECTION"))
+            }
         };
         let state = self
             .session
@@ -83,7 +85,7 @@ impl Document {
         if let kasane_sdk::CapabilityState::Unavailable { code }
         | kasane_sdk::CapabilityState::Unsupported { code } = state
         {
-            anyhow::bail!("{code}");
+            anyhow::bail!(AuthoringPlanningError::new(code));
         }
         if projection == PaletteProjection::Deformation {
             let state = self
@@ -93,11 +95,13 @@ impl Document {
             if let kasane_sdk::CapabilityState::Unavailable { code }
             | kasane_sdk::CapabilityState::Unsupported { code } = state
             {
-                anyhow::bail!("{code}");
+                anyhow::bail!(AuthoringPlanningError::new(code));
             }
         }
         if kind == SceneObjectType::Offscreen {
-            let part_id = part_id.ok_or_else(|| anyhow::anyhow!("OFFSCREEN_REQUIRES_PART"))?;
+            let part_id = part_id.ok_or_else(|| {
+                anyhow::anyhow!(AuthoringPlanningError::new("OFFSCREEN_REQUIRES_PART"))
+            })?;
             // The document UUID cannot be another scene object's identity.
             // Validation uses native defaults, as the final SceneCreate does.
             let status = self.model().validate_offscreen(&kasane_core::Offscreen {
@@ -105,7 +109,9 @@ impl Document {
                 part_id,
                 ..Default::default()
             });
-            anyhow::ensure!(status.is_ok(), "{}: {}", status.code, status.message);
+            if !status.is_ok() {
+                return Err(AuthoringPlanningError::from_status(status).into());
+            }
         }
         Ok(())
     }
@@ -140,7 +146,7 @@ impl Document {
                         kind,
                         SceneObjectType::Mesh | SceneObjectType::Warp | SceneObjectType::Rotation
                     ),
-                    "NO_DEFORMATION_COLLECTION"
+                    AuthoringPlanningError::new("NO_DEFORMATION_COLLECTION")
                 );
                 let (part, parent, after) = self.deformation_creation_container(selection)?;
                 let before = if after {
@@ -169,7 +175,9 @@ impl Document {
                 };
                 (part, parent, None, before)
             }
-            PaletteProjection::Parameters => anyhow::bail!("NO_SCENE_COLLECTION"),
+            PaletteProjection::Parameters => {
+                anyhow::bail!(AuthoringPlanningError::new("NO_SCENE_COLLECTION"))
+            }
         };
         let name = self.scene_creation_name(name, part_id.as_deref())?;
         let id = Uuid::new_v4().to_string();
@@ -218,7 +226,7 @@ impl Document {
         for object in selection {
             anyhow::ensure!(
                 matches!(object.kind, ObjectKind::Mesh | ObjectKind::Deformer),
-                "EXPECTED_DEFORMATION_MEMBERS"
+                AuthoringPlanningError::new("EXPECTED_DEFORMATION_MEMBERS")
             );
             self.organization_authoring_capabilities(object)?;
             let owner = self
@@ -231,7 +239,9 @@ impl Document {
             let parent = self
                 .model()
                 .scene_deformer_parent(&object.id)
-                .ok_or_else(|| anyhow::anyhow!("EXPECTED_DEFORMATION_MEMBERS"))?;
+                .ok_or_else(|| {
+                    anyhow::anyhow!(AuthoringPlanningError::new("EXPECTED_DEFORMATION_MEMBERS"))
+                })?;
             parents.push((!parent.is_empty()).then(|| parent.to_owned()));
             owners.push(owner);
         }

@@ -140,7 +140,18 @@ fn creating_inside_a_collapsed_nested_group_reveals_the_parameter_and_updates_co
                 .unwrap()
                 .parameters
                 .clone();
-            panel.update(cx, |panel, cx| panel.locate_created_parameter(window, cx));
+            let created = harness
+                .view
+                .read(cx)
+                .editor
+                .active_inspection()
+                .unwrap()
+                .object()
+                .unwrap();
+            let document = harness.view.read(cx).editor.active_id().unwrap();
+            panel.update(cx, |panel, cx| {
+                panel.locate_moved_object(document, &created, window, cx)
+            });
             window.render_frame(cx);
             let created = harness
                 .view

@@ -163,39 +163,10 @@ impl Document {
         &mut self,
         receipt: kasane_sdk::EditReceipt,
     ) -> Result<OperationResult> {
-        let suggested_selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|entity| match entity.kind {
-                kasane_sdk::ObjectKind::Expression => {
-                    Some(ObjectRef::new(ObjectKind::Expression, &entity.id))
-                }
-                kasane_sdk::ObjectKind::ExpressionEntry => {
-                    Some(ObjectRef::new(ObjectKind::ExpressionEntry, &entity.id))
-                }
-                _ => None,
-            })
-            .collect();
-        let locations = receipt
-            .changes
-            .collections
-            .iter()
-            .filter_map(|collection| match collection {
-                kasane_sdk::CollectionRef::ExpressionEntries { expression_id, .. } => {
-                    Some(ObjectRef::new(ObjectKind::Expression, expression_id))
-                }
-                _ => None,
-            })
-            .collect();
         if receipt.changed {
             self.pristine_blank = false;
             self.consume_authoring_receipt(&receipt, false);
         }
-        Ok(OperationResult {
-            receipt,
-            suggested_selection,
-            locations,
-        })
+        Ok(self.authoring_result(receipt))
     }
 }

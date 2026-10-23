@@ -268,8 +268,10 @@ impl PropertiesPanel {
                             .is_some_and(|(_, token)| token.owned(&state.editor)))
                     && self.target.as_ref().is_some_and(|target| {
                         state.editor.document().is_some_and(|doc| {
-                            doc.ensure_editable(std::slice::from_ref(&target.object))
-                                .is_ok()
+                            doc.authoring_capabilities(&target.object).is_ok_and(|c| {
+                                c.state(editor_core::AuthoringAction::Patch)
+                                    == kasane_sdk::CapabilityState::Available
+                            })
                         })
                     })
             })

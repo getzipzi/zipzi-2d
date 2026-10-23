@@ -139,7 +139,7 @@ impl EditorView {
                     )
                 })
                 .collect(),
-            creation_reasons: crate::authoring::scene_creation::all_commands()
+            creation_reasons: crate::authoring::creation_commands()
                 .map(|id| {
                     if self.editor.is_busy()
                         || self.editor.editing_context()
@@ -147,14 +147,16 @@ impl EditorView {
                     {
                         return None;
                     }
-                    let doc = self.editor.document()?;
-                    doc.validate_scene_object_creation_in(
-                        id.scene_creation_projection().unwrap(),
-                        id.scene_creation_type().unwrap(),
-                        &doc.context().selections,
-                    )
-                    .err()
-                    .map(|error| crate::authoring::scene_creation::creation_error(&error))
+                    match self.editor.authoring_command_capability(id) {
+                        Ok(kasane_sdk::CapabilityState::Available) => None,
+                        Ok(
+                            kasane_sdk::CapabilityState::Unavailable { code }
+                            | kasane_sdk::CapabilityState::Unsupported { code },
+                        ) => Some(crate::authoring::availability_reason(code)),
+                        Err(error) => {
+                            Some(crate::authoring::scene_creation::creation_error(&error))
+                        }
+                    }
                 })
                 .collect(),
             targets: COMMANDS
@@ -197,7 +199,7 @@ impl EditorView {
             let state = property_state(id, self.editor.command_state(command));
             let mut label = t!(id.spec().label).into_owned();
             if !state.enabled {
-                if let Some(reason) = crate::authoring::scene_creation::all_commands()
+                if let Some(reason) = crate::authoring::creation_commands()
                     .position(|command| command == id)
                     .and_then(|i| self.menu_state.creation_reasons[i].as_ref())
                 {

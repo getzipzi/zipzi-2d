@@ -90,7 +90,11 @@ impl Document {
 }
 
 impl crate::Editor {
-    fn ensure_authoring_target(&self, id: crate::DocumentId, context: &str) -> anyhow::Result<()> {
+    pub(crate) fn ensure_authoring_target(
+        &self,
+        id: crate::DocumentId,
+        context: &str,
+    ) -> anyhow::Result<()> {
         anyhow::ensure!(
             self.active_id() == Some(id) && !self.is_busy() && !self.exiting(),
             "{context} context changed"
@@ -123,3 +127,15 @@ impl crate::DocumentSession {
 #[path = "authoring/reparenting.rs"]
 mod reparenting;
 pub use reparenting::{PalettePreservation, PaletteReparentCapture, PaletteReparentPlan};
+
+#[path = "authoring/capabilities.rs"]
+mod capabilities;
+pub use capabilities::{
+    AuthoringAction, AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
+    ObjectAuthoringCapabilities,
+};
+
+#[path = "authoring/results.rs"]
+mod results;
+
+pub use physics::PhysicsChannelAction;

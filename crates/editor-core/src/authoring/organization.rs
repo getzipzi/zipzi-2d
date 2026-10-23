@@ -9,18 +9,37 @@ pub struct OrganizationAuthoringCapabilities {
     pub domain: OrganizationCapabilities,
     pub session_reason: Option<AuthoringSessionReason>,
 }
-fn editor_kind(k: kasane_sdk::ObjectKind) -> Option<ObjectKind> {
-    Some(match k {
-        kasane_sdk::ObjectKind::Parameter => ObjectKind::Parameter,
-        kasane_sdk::ObjectKind::CdiParameterGroup => ObjectKind::ParameterGroup,
-        kasane_sdk::ObjectKind::Part => ObjectKind::Part,
-        kasane_sdk::ObjectKind::Mesh => ObjectKind::Mesh,
-        kasane_sdk::ObjectKind::Transform => ObjectKind::Deformer,
-        kasane_sdk::ObjectKind::Offscreen => ObjectKind::Offscreen,
-        _ => return None,
-    })
-}
+
 impl Document {
+    pub fn plan_parameter_object_deletion(
+        &self,
+        object: &ObjectRef,
+        expected: u64,
+    ) -> Result<OrganizationEditPlan> {
+        self.check_parameter_version(expected)?;
+        let policy = match object.kind {
+            ObjectKind::Parameter => kasane_sdk::OrganizationDeletePolicy::Contents,
+            ObjectKind::ParameterGroup => kasane_sdk::OrganizationDeletePolicy::Dissolve,
+            _ => anyhow::bail!("Expected a parameter or folder"),
+        };
+        self.session
+            .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
+        self.plan_organization_authoring(OrganizationEdit::Delete {
+            ids: vec![object.id.clone()],
+            policy,
+        })
+        .map_err(|error| {
+            if let Some(native) = error.downcast_ref::<kasane_sdk::SdkError>() {
+                if native.code.as_ref() == "OBJECT_REFERENCED" {
+                    return crate::ParameterManagementError::Referenced(
+                        native.referrers.iter().cloned().collect(),
+                    )
+                    .into();
+                }
+            }
+            error
+        })
+    }
     pub fn organization_authoring_capabilities(
         &self,
         object: &ObjectRef,
@@ -60,33 +79,6 @@ impl Document {
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_organization_plan(plan)?;
-        let suggested_selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|e| editor_kind(e.kind).map(|k| ObjectRef::new(k, &e.id)))
-            .collect();
-        let locations = receipt
-            .changes
-            .organization_references
-            .iter()
-            .filter_map(|r| {
-                r.after.as_ref().map(|id| {
-                    ObjectRef::new(
-                        if matches!(
-                            r.entity.kind,
-                            kasane_sdk::ObjectKind::Parameter
-                                | kasane_sdk::ObjectKind::CdiParameterGroup
-                        ) {
-                            ObjectKind::ParameterGroup
-                        } else {
-                            ObjectKind::Part
-                        },
-                        id,
-                    )
-                })
-            })
-            .collect();
         if receipt.changed {
             self.pristine_blank = false;
             let scene_changed = receipt
@@ -116,11 +108,7 @@ impl Document {
             self.reconcile_parameter_preview()?;
             self.context.reconcile(&self.object_index());
         }
-        Ok(OperationResult {
-            receipt,
-            suggested_selection,
-            locations,
-        })
+        Ok(self.authoring_result(receipt))
     }
 }
 impl crate::Editor {

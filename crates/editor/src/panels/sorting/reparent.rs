@@ -376,28 +376,23 @@ impl FormDialogView for ReparentReview {
         );
         let owner = self.owner.upgrade().unwrap();
         owner.update(cx, |state, cx| {
-            state.editor.execute_palette_reparent(self.document, plan)?;
+            let result = state.editor.execute_palette_reparent(self.document, plan)?;
+            if let Some(object) = self.sources.last().cloned() {
+                state.present_authoring_result(
+                    self.document,
+                    &result,
+                    crate::authoring::AuthoringPresentation::Moved {
+                        object,
+                        projection: PaletteProjection::Deformation,
+                    },
+                    window,
+                    cx,
+                )?;
+            }
             state.clear_edit_error(cx);
             state.redraw(cx);
             Ok::<_, anyhow::Error>(())
         })?;
-        let expected = AuthoringContext::capture(&owner.read(cx).editor);
-        let object = self.sources.last().cloned();
-        let document = self.document;
-        window.defer(cx, move |window, cx| {
-            if AuthoringContext::capture(&owner.read(cx).editor) == expected {
-                if let Some(object) = object {
-                    destination::locate_result(
-                        &owner,
-                        document,
-                        PaletteProjection::Deformation,
-                        object,
-                        window,
-                        cx,
-                    );
-                }
-            }
-        });
         Ok(())
     }
 }

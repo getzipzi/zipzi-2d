@@ -8,16 +8,16 @@ use gpui_kit::component::Icon;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
-struct ViewState {
+pub(super) struct ViewState {
     collapsed: HashSet<Option<String>>,
     cursor: Option<usize>,
-    scroll: ScrollHandle,
+    pub(super) scroll: ScrollHandle,
 }
 
 #[derive(Default)]
 pub(super) struct ResourceList {
     document: Option<DocumentId>,
-    view: ViewState,
+    pub(super) view: ViewState,
     documents: HashMap<DocumentId, ViewState>,
 }
 
@@ -126,7 +126,21 @@ impl AnimationPanel {
                             if !owner.prepare_property_inputs(id, window, cx) {
                                 return;
                             }
-                            let result = owner.editor.create_timeline_motion(id).map(|_| ());
+                            let result =
+                                owner
+                                    .editor
+                                    .create_timeline_motion_result(id)
+                                    .and_then(|result| {
+                                        owner
+                                            .present_created_object(
+                                                id,
+                                                &result,
+                                                editor_core::ObjectKind::Motion,
+                                                window,
+                                                cx,
+                                            )
+                                            .map(|_| ())
+                                    });
                             owner.animation_anchor = None;
                             owner.complete_edit(result, cx);
                         });
@@ -193,6 +207,31 @@ impl AnimationPanel {
         let Some(document) = state.editor.document() else {
             return div().into_any_element();
         };
+        let location = self
+            .location
+            .take()
+            .filter(|(doc, _)| *doc == id)
+            .map(|(_, mut object)| {
+                let index = document.object_index();
+                let mut seen = HashSet::new();
+                while !matches!(
+                    object.kind,
+                    editor_core::ObjectKind::Motion
+                        | editor_core::ObjectKind::MotionRegistration
+                        | editor_core::ObjectKind::Expression
+                ) && seen.insert(object.clone())
+                {
+                    let Some(parent) = index
+                        .incoming(&object)
+                        .find(|r| r.kind == editor_core::RelationKind::Contains)
+                        .map(|r| r.source.clone())
+                    else {
+                        break;
+                    };
+                    object = parent;
+                }
+                object
+            });
         let catalog = document.animation_catalog();
         let animation = state.editor.animation().unwrap();
         let preview_mode = animation.preview_mode;
@@ -225,6 +264,13 @@ impl AnimationPanel {
                     Some(name) if name.is_empty() => t!("workspace.unnamed_group").into_owned(),
                     Some(name) => name.clone(),
                 };
+                let located = location.as_ref().is_some_and(|object| {
+                    object.id == resource.selection.clip_id
+                        || resource.selection.entry.as_ref() == Some(&object.id)
+                });
+                if located {
+                    self.resources.view.collapsed.remove(&group);
+                }
                 let expanded = !self.resources.view.collapsed.contains(&group);
                 if previous.as_ref() != Some(&group) {
                     let count = catalog
@@ -284,6 +330,10 @@ impl AnimationPanel {
                     selected_cursor = Some(choices.len());
                 }
                 let cursor = choices.len();
+                if located {
+                    self.resources.view.cursor = Some(cursor);
+                    self.resources.view.scroll.scroll_to_top_of_item(row_index);
+                }
                 choices.push((row_index, Choice::Motion(resource.selection.clone())));
                 row_index += 1;
                 let selection = resource.selection.clone();
@@ -370,6 +420,14 @@ impl AnimationPanel {
                     .is_some_and(|frame| frame.active_expressions.contains(&resource.id));
                 let valid = resource.unresolved_targets.is_empty();
                 let cursor = choices.len();
+                if location
+                    .as_ref()
+                    .is_some_and(|object| object.id == resource.id)
+                {
+                    self.resources.view.cursor = Some(cursor);
+                    self.resources.view.scroll.scroll_to_top_of_item(row_index);
+                }
+
                 if selected {
                     selected_cursor = Some(cursor);
                 }

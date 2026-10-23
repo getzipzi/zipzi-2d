@@ -181,7 +181,9 @@ fn group_properties_validate_identity_and_delete_keeps_contents(cx: &mut TestApp
 }
 
 #[gpui_kit::test]
-fn referenced_parameter_delete_reports_error_without_mutating_document(cx: &mut TestAppContext) {
+fn referenced_parameter_delete_is_disabled_with_native_reason_without_mutating_document(
+    cx: &mut TestAppContext,
+) {
     let (mut doc, assets) = document_fixture::sample_document_with_binding(true).unwrap();
     let parameter = ObjectRef::new(ObjectKind::Parameter, &doc.parameters()[0].id);
     doc.navigate(parameter).unwrap();
@@ -191,7 +193,20 @@ fn referenced_parameter_delete_reports_error_without_mutating_document(cx: &mut 
     h.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.document().unwrap().parameters().len(), 1);
         assert_eq!(view.editor.document().unwrap().history_lengths(), before);
-        assert!(view.edit_error.is_some());
+        assert!(
+            !view
+                .editor
+                .command_available(view.editor.command(CommandId::DeleteParameter))
+        );
+        assert_eq!(
+            view.editor
+                .authoring_command_capability(CommandId::DeleteParameter)
+                .unwrap(),
+            kasane_sdk::CapabilityState::Unavailable {
+                code: "OBJECT_REFERENCED"
+            }
+        );
+        assert!(view.edit_error.is_none());
     });
     cx.update_window(h.window, |_, window, cx| {
         assert!(!window.has_active_dialog(cx))

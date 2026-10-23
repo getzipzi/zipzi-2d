@@ -221,24 +221,23 @@ impl FormDialogView for MoveDestinationPicker {
                 AuthoringContext::capture(&state.editor) == Some(self.context),
                 t!("authoring.move_stale")
             );
-            state.editor.execute_palette_move(self.document, &plan)?;
+            let result = state.editor.execute_palette_move(self.document, &plan)?;
+            if let Some(object) = self.sources.last().cloned() {
+                state.present_authoring_result(
+                    self.document,
+                    &result,
+                    crate::authoring::AuthoringPresentation::Moved {
+                        object,
+                        projection: self.projection,
+                    },
+                    window,
+                    cx,
+                )?;
+            }
             state.clear_edit_error(cx);
             state.redraw(cx);
             Ok::<_, anyhow::Error>(())
         })?;
-        let owner = self.owner.clone();
-        let expected = AuthoringContext::capture(&entity.read(cx).editor);
-        let document = self.document;
-        let projection = self.projection;
-        let object = self.sources.last().cloned();
-        window.defer(cx, move |window, cx| {
-            if let (Some(owner), Some(object)) = (owner.upgrade(), object) {
-                if AuthoringContext::capture(&owner.read(cx).editor) != expected {
-                    return;
-                }
-                locate_result(&owner, document, projection, object, window, cx);
-            }
-        });
         Ok(())
     }
 }
@@ -327,42 +326,6 @@ pub(super) fn open(
     ) {
         if let Some(owner) = owner.upgrade() {
             owner.update(cx, |state, cx| state.set_edit_error(move_error(&error), cx));
-        }
-    }
-}
-
-pub(super) fn locate_result(
-    owner: &Entity<EditorView>,
-    document: DocumentId,
-    projection: PaletteProjection,
-    object: ObjectRef,
-    window: &mut Window,
-    cx: &mut App,
-) {
-    if owner.read(cx).editor.active_id() != Some(document) {
-        return;
-    }
-    let Some(dock) = &owner.read(cx).dock else {
-        return;
-    };
-    match projection {
-        PaletteProjection::Organization => {
-            let panel = dock.mesh_tree.clone();
-            panel.update(cx, |panel, cx| {
-                panel.locate_moved_object(document, object, cx)
-            });
-        }
-        PaletteProjection::Parameters => {
-            let panel = dock.parameters.clone();
-            panel.update(cx, |panel, cx| {
-                panel.locate_moved_object(document, &object, window, cx)
-            });
-        }
-        PaletteProjection::Deformation => {
-            let panel = dock.deformer_tree.clone();
-            panel.update(cx, |panel, cx| {
-                panel.locate_moved_object(document, object, cx)
-            });
         }
     }
 }

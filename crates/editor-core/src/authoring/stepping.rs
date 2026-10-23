@@ -327,10 +327,6 @@ impl Document {
             self.reconcile_parameter_preview()?;
             self.context.reconcile(&self.object_index());
         }
-        Ok(OperationResult {
-            receipt,
-            suggested_selection: Vec::new(),
-            locations: Vec::new(),
-        })
+        Ok(self.authoring_result(receipt))
     }
 }

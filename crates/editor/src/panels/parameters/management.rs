@@ -39,6 +39,45 @@ impl ParameterAction {
             other => other,
         }
     }
+    pub(super) fn availability(
+        &self,
+        editor: &editor_core::Editor,
+    ) -> Option<crate::authoring::ActionAvailability> {
+        use editor_core::{AuthoringAction as A, ObjectKind, ObjectRef};
+        let document = editor.document()?;
+        match self.clone().capture(editor) {
+            Self::CreateAt { kind, selection } => {
+                match document.parameter_object_creation_capability(kind, &selection) {
+                    Ok(state) => crate::authoring::ActionAvailability::from_core(&state),
+                    Err(error) => Some(crate::authoring::ActionAvailability {
+                        enabled: false,
+                        reason: Some(crate::authoring::authoring_error(&error).into()),
+                    }),
+                }
+            }
+            Self::Edit(id) | Self::Delete(id) => crate::authoring::ActionAvailability::for_object(
+                document,
+                &ObjectRef::new(ObjectKind::Parameter, id),
+                if matches!(self, Self::Delete(_)) {
+                    A::Delete
+                } else {
+                    A::Inspect
+                },
+            ),
+            Self::EditGroup(id) | Self::DeleteGroup(id) => {
+                crate::authoring::ActionAvailability::for_object(
+                    document,
+                    &ObjectRef::new(ObjectKind::ParameterGroup, id),
+                    if matches!(self, Self::DeleteGroup(_)) {
+                        A::Dissolve
+                    } else {
+                        A::Inspect
+                    },
+                )
+            }
+            _ => unreachable!("creation captured"),
+        }
+    }
     pub(crate) fn label(&self) -> SharedString {
         t!(match self {
             Self::Create(_)
@@ -118,11 +157,9 @@ impl ParametersPanel {
         };
         let state = owner.read(cx);
         if state.modal
-            || !state.editor.command_available(
-                state
-                    .editor
-                    .command(editor_core::CommandId::CreateParameter),
-            )
+            || state.editor.is_busy()
+            || state.editor.exiting()
+            || state.editor.editing_context() != Some(editor_core::EditingContext::Modeling)
         {
             return;
         }
@@ -133,6 +170,7 @@ impl ParametersPanel {
             return;
         };
         let action = action.capture(&state.editor);
+        let mut location = None;
         let result = owner.update(cx, |state, cx| {
             if let ParameterAction::CreateAt { kind, selection } = action {
                 let name = t!(if kind == editor_core::ObjectKind::Parameter {
@@ -148,60 +186,84 @@ impl ParametersPanel {
                         .plan_parameter_object_creation(kind, name, &selection)?;
                     editor.execute_organization_authoring(document, &plan)
                 })?;
-                state.present_created_object(document, &result, kind, window, cx)?;
+                location = state.present_created_object(document, &result, kind, window, cx)?;
                 state.redraw(cx);
-                return Ok(());
+                return Ok(true);
             }
             state.clear_edit_error(cx);
             if !state.prepare_property_inputs(document, window, cx) {
-                return Ok(());
+                return Ok(false);
             }
             let expected_version = state.editor.document().unwrap().parameter_model_revision();
-            let command = match action {
-                ParameterAction::Edit(id) => EditorCommand::Navigate(editor_core::ObjectRef::new(
-                    editor_core::ObjectKind::Parameter,
-                    id,
-                )),
-                ParameterAction::EditGroup(id) => EditorCommand::Navigate(
-                    editor_core::ObjectRef::new(editor_core::ObjectKind::ParameterGroup, id),
-                ),
-                ParameterAction::Delete(id) => EditorCommand::DeleteParameter {
-                    id,
-                    expected_version,
-                },
-                ParameterAction::DeleteGroup(id) => EditorCommand::DeleteParameterGroup {
-                    id,
-                    expected_version,
-                },
-                _ => unreachable!("creation context already captured"),
-            };
-            state.editor.execute_for(document, command)?;
+            let parameter = matches!(
+                action,
+                ParameterAction::Edit(_) | ParameterAction::Delete(_)
+            );
+            match action {
+                ParameterAction::Edit(id) | ParameterAction::EditGroup(id) => {
+                    let kind = if parameter {
+                        editor_core::ObjectKind::Parameter
+                    } else {
+                        editor_core::ObjectKind::ParameterGroup
+                    };
+                    let object = editor_core::ObjectRef::new(kind, id);
+                    state.inspect_authoring_object(document, object.clone(), true, window, cx)?;
+                    state.defer_authoring_location(
+                        document,
+                        object.clone(),
+                        None,
+                        false,
+                        true,
+                        window,
+                        cx,
+                    );
+                    location = Some(object);
+                }
+                ParameterAction::Delete(id) | ParameterAction::DeleteGroup(id) => {
+                    let kind = if parameter {
+                        editor_core::ObjectKind::Parameter
+                    } else {
+                        editor_core::ObjectKind::ParameterGroup
+                    };
+                    let object = editor_core::ObjectRef::new(kind, id);
+                    let candidates = state
+                        .editor
+                        .document()
+                        .unwrap()
+                        .authoring_neighbors(&object);
+                    let result =
+                        state.execute_authoring(context, window, cx, |editor, document| {
+                            let plan = editor
+                                .document()
+                                .unwrap()
+                                .plan_parameter_object_deletion(&object, expected_version)?;
+                            editor.execute_organization_authoring(document, &plan)
+                        })?;
+                    location = state.present_authoring_result(
+                        document,
+                        &result,
+                        crate::authoring::AuthoringPresentation::AfterDelete { candidates },
+                        window,
+                        cx,
+                    )?;
+                }
+                _ => unreachable!("creation captured"),
+            }
             state.redraw(cx);
-            Ok::<_, anyhow::Error>(())
+            Ok::<_, anyhow::Error>(true)
         });
+        // The originating panel is already borrowed. Apply the same explicit
+        // result identity here so the very next frame can reveal its new row.
+        if result.is_ok() {
+            if let Some(object) = location {
+                self.locate_moved_object(document, &object, window, cx);
+            }
+        }
         if let Err(error) = result {
             owner.update(cx, |state, cx| {
                 state.set_edit_error(management_error(&error), cx)
             });
-            return;
         }
-        let group = owner
-            .read(cx)
-            .editor
-            .document()
-            .and_then(|doc| doc.context().inspected.as_ref())
-            .filter(|object| object.kind == editor_core::ObjectKind::ParameterGroup)
-            .map(|object| object.id.clone());
-        if let Some(id) = group {
-            self.locate_parameter_group(&id, window, cx);
-        } else {
-            self.locate_created_parameter(window, cx);
-        }
-        owner.update(cx, |state, cx| {
-            if let Some(dock) = &state.dock {
-                dock.show(editor_core::PanelKind::Properties, None, window, cx);
-            }
-        });
     }
 
     pub(crate) fn locate_parameter_group(
@@ -263,20 +325,29 @@ pub(super) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
         }
         let context = AuthoringContext::capture(&owner.read(cx).editor);
         for action in &actions {
+            let Some(availability) = action.availability(&owner.read(cx).editor) else {
+                continue;
+            };
+            let label = availability.reason.as_ref().map_or_else(
+                || action.label(),
+                |reason| format!("{} · {reason}", action.label()).into(),
+            );
             let panel = panel.clone();
             let action = action.clone();
             menu = menu.item(
-                PopupMenuItem::new(action.label()).on_click(move |_, window, cx| {
-                    let _ = panel.update(cx, |p, cx| {
-                        if p.document_id == document
-                            && p.owner.upgrade().is_some_and(|owner| {
-                                AuthoringContext::capture(&owner.read(cx).editor) == context
-                            })
-                        {
-                            p.open_management(action.clone(), window, cx);
-                        }
-                    });
-                }),
+                PopupMenuItem::new(label)
+                    .disabled(!availability.enabled)
+                    .on_click(move |_, window, cx| {
+                        let _ = panel.update(cx, |p, cx| {
+                            if p.document_id == document
+                                && p.owner.upgrade().is_some_and(|owner| {
+                                    AuthoringContext::capture(&owner.read(cx).editor) == context
+                                })
+                            {
+                                p.open_management(action.clone(), window, cx);
+                            }
+                        });
+                    }),
             );
         }
         if let Some(object) = actions.iter().find_map(|action| match action {
@@ -308,7 +379,7 @@ pub(super) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
 pub(super) fn management_error(error: &anyhow::Error) -> String {
     use editor_core::ParameterManagementError as E;
     let Some(error) = error.downcast_ref::<E>() else {
-        return error.to_string();
+        return crate::authoring::authoring_error(error);
     };
     match error {
         E::Stale => t!("parameter.stale").into_owned(),

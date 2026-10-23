@@ -27,7 +27,12 @@ impl DocumentPanel {
             .text_color(cx.theme().foreground)
             .text_size(compact::rem(compact::BODY))
             .track_focus(&self.focus);
-        let Some(inspected) = doc.context().inspected.as_ref() else {
+        let inspected = self
+            .owner
+            .upgrade()
+            .and_then(|owner| owner.read(cx).editor.active_inspection())
+            .and_then(|inspection| inspection.object());
+        let Some(inspected) = inspected.as_ref() else {
             return root
                 .child(
                     div()
@@ -37,6 +42,16 @@ impl DocumentPanel {
                 )
                 .into_any_element();
         };
+        if self.location.as_ref() == Some(&(document, inspected.clone())) {
+            self.scroll.scroll_to_item(0);
+            self.location = None;
+        } else if self
+            .location
+            .as_ref()
+            .is_some_and(|(id, _)| *id != document)
+        {
+            self.location = None;
+        }
         let index = doc.object_index();
         let mut rows = div()
             .id("Relations-body")
@@ -44,7 +59,8 @@ impl DocumentPanel {
             .flex_1()
             .min_h_0()
             .w_full()
-            .overflow_y_scroll();
+            .overflow_y_scroll()
+            .track_scroll(&self.scroll);
         for incoming in [false, true] {
             let relations: Vec<_> = if incoming {
                 index.incoming(inspected).collect()

@@ -87,22 +87,12 @@ impl Document {
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_reference_plan(p)?;
-        let suggested_selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|e| editor_kind(e.kind).map(|k| ObjectRef::new(k, &e.id)))
-            .collect();
         if receipt.changed {
             self.pristine_blank = false;
             self.consume_authoring_receipt(&receipt, false);
             self.context.reconcile(&self.object_index());
         }
-        Ok(OperationResult {
-            receipt,
-            suggested_selection,
-            locations: vec![],
-        })
+        Ok(self.authoring_result(receipt))
     }
 }
 impl crate::Editor {

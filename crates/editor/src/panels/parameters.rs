@@ -190,6 +190,22 @@ impl ParametersPanel {
 
     fn toolbar(&self, create_disabled: bool, cx: &mut Context<Self>) -> PanelToolbar {
         let new_label = t!("parameter.new").into_owned();
+        let available = |action: ParameterAction| {
+            self.owner
+                .upgrade()
+                .and_then(|o| action.availability(&o.read(cx).editor))
+        };
+        let new_cap = available(ParameterAction::Create(None));
+        let group_cap = available(ParameterAction::CreateGroup);
+        let new_disabled = create_disabled || new_cap.as_ref().is_none_or(|c| !c.enabled);
+        let group_disabled = create_disabled || group_cap.as_ref().is_none_or(|c| !c.enabled);
+        let new_tip = new_cap
+            .and_then(|c| c.reason)
+            .unwrap_or_else(|| t!("parameter.new").into());
+        let group_tip = group_cap
+            .and_then(|c| c.reason)
+            .unwrap_or_else(|| t!("parameter.new_group").into());
+
         let on_create = cx.listener(|this, _, window, cx| {
             this.open_management(ParameterAction::Create(None), window, cx)
         });
@@ -201,16 +217,16 @@ impl ParametersPanel {
                 Button::new("new-parameter")
                     .icon(IconName::Plus)
                     .accessibility_label(new_label.clone())
-                    .tooltip(new_label)
-                    .disabled(create_disabled)
+                    .tooltip(new_tip)
+                    .disabled(new_disabled)
                     .on_click(on_create)
             })
             .action(move |_| {
                 Button::new("new-parameter-group-action")
                     .icon(IconName::Folder)
                     .accessibility_label(t!("parameter.new_group"))
-                    .tooltip(t!("parameter.new_group"))
-                    .disabled(create_disabled)
+                    .tooltip(group_tip)
+                    .disabled(group_disabled)
                     .on_click(on_group)
             })
     }

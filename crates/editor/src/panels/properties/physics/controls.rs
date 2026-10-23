@@ -390,122 +390,117 @@ impl PropertiesPanel {
         disabled: bool,
         cx: &Context<Self>,
     ) -> AnyElement {
-        let (len, index) = self
-            .physics_asset(cx)
-            .and_then(|asset| {
-                asset
-                    .data
-                    .settings
-                    .iter()
-                    .find(|r| r.id == self.physics.group)
-                    .map(|r| {
-                        if output {
-                            (r.outputs.len(), self.physics.output)
-                        } else {
-                            (r.inputs.len(), self.physics.input)
-                        }
-                    })
-            })
-            .unwrap_or_default();
+        use editor_core::{ObjectKind, ObjectRef, PhysicsChannelAction as A};
+        let index = if output {
+            self.physics.output
+        } else {
+            self.physics.input
+        };
+        let owner = self.owner.upgrade();
+        let doc = owner.as_ref().and_then(|o| o.read(cx).editor.document());
+        let rig = doc
+            .and_then(|d| d.physics_definition())
+            .and_then(|a| a.data.settings.iter().find(|g| g.id == self.physics.group));
+        let selected = rig.and_then(|g| {
+            if output {
+                g.outputs
+                    .get(index)
+                    .map(|v| ObjectRef::new(ObjectKind::PhysicsOutput, &v.id))
+            } else {
+                g.inputs
+                    .get(index)
+                    .map(|v| ObjectRef::new(ObjectKind::PhysicsInput, &v.id))
+            }
+        });
+        let len = rig.map_or(0, |g| {
+            if output {
+                g.outputs.len()
+            } else {
+                g.inputs.len()
+            }
+        });
+        let context = owner
+            .as_ref()
+            .and_then(|o| crate::authoring::AuthoringContext::capture(&o.read(cx).editor));
         let epoch = self.physics.epoch;
         let mut row = div().flex().items_center().gap(compact::rem(2.));
-        for (action, icon, label, off) in [
-            (0, IconName::Plus, "physics.add_channel", false),
-            (1, IconName::Trash, "physics.delete_channel", len == 0),
-            (2, IconName::ArrowUp, "physics.up", index == 0 || len == 0),
-            (3, IconName::ArrowDown, "physics.down", index + 1 >= len),
+        for (action, icon, label) in [
+            (0, IconName::Plus, "physics.add_channel"),
+            (1, IconName::Trash, "physics.delete_channel"),
+            (2, IconName::ArrowUp, "physics.up"),
+            (3, IconName::ArrowDown, "physics.down"),
         ] {
-            let id = SharedString::from(format!("physics-channel-{output}-{action}"));
+            let operation = match action {
+                0 => Some(if output {
+                    A::CreateOutput
+                } else {
+                    A::CreateInput
+                }),
+                1 => selected.clone().map(A::Delete),
+                _ => selected.clone().map(|object| A::Step {
+                    object,
+                    down: action == 3,
+                }),
+            };
+            let availability = doc
+                .and_then(|d| {
+                    operation
+                        .as_ref()
+                        .and_then(|a| d.physics_channel_capability(&self.physics.group, a).ok())
+                })
+                .and_then(|c| crate::authoring::ActionAvailability::from_core(&c));
+            let off = availability.as_ref().is_none_or(|c| !c.enabled);
+            let tooltip = availability
+                .and_then(|c| c.reason)
+                .unwrap_or_else(|| t!(label).into());
             row = row.child(
-                compact::header_button(
-                    Button::new(id)
-                        .ghost()
-                        .icon(icon)
-                        .tooltip(t!(label).into_owned())
-                        .accessibility_label(t!(label).into_owned()),
-                )
+                compact::header_button(Button::new(SharedString::from(format!(
+                    "physics-channel-{output}-{action}"
+                ))))
+                .ghost()
+                .icon(icon)
+                .tooltip(tooltip)
+                .accessibility_label(t!(label))
                 .disabled(disabled || off)
                 .on_click(cx.listener(move |this, _, window, cx| {
                     if !this.physics_allowed(epoch, window, cx) {
                         return;
                     }
-                    let Some(asset) = this.physics_asset(cx) else {
+                    let Some(operation) = &operation else {
                         return;
                     };
-                    let Some(g) = asset
-                        .data
-                        .settings
-                        .iter()
-                        .find(|g| g.id == this.physics.group)
-                    else {
-                        return;
-                    };
-                    let ids: Vec<_> = if output {
-                        g.outputs.iter().map(|v| v.id.clone()).collect()
-                    } else {
-                        g.inputs.iter().map(|v| v.id.clone()).collect()
-                    };
-                    let group_id = g.id.clone();
-                    let intent = if action == 0 {
-                        let id = uuid::Uuid::new_v4().to_string();
-                        if output {
-                            PhysicsEdit::CreateOutput {
-                                group_id,
-                                id,
-                                node_id: g.vertices.get(1).unwrap_or(&g.vertices[0]).id.clone(),
-                                before: None,
-                            }
-                        } else {
-                            PhysicsEdit::CreateInput {
-                                group_id,
-                                id,
-                                before: None,
-                            }
-                        }
-                    } else {
-                        let Some(id) = ids.get(index).cloned() else {
+                    let result = this.owner.upgrade().and_then(|o| {
+                        let editor = &o.read(cx).editor;
+                        (crate::authoring::AuthoringContext::capture(editor) == context).then(
+                            || {
+                                editor
+                                    .document()
+                                    .unwrap()
+                                    .physics_channel_edit(&this.physics.group, operation)
+                            },
+                        )
+                    });
+                    let intent = match result {
+                        Some(Ok(Some(intent))) => intent,
+                        Some(Err(error)) => {
+                            this.physics.error = Some(crate::authoring::authoring_error(&error));
+                            cx.notify();
                             return;
-                        };
-                        if action == 1 {
-                            PhysicsEdit::Delete {
-                                ids: vec![id],
-                                node_replacements: Default::default(),
-                            }
-                        } else {
-                            let before = if action == 2 {
-                                ids.get(index - 1).cloned()
-                            } else {
-                                ids.get(index + 2).cloned()
-                            };
-                            if output {
-                                PhysicsEdit::MoveOutputs {
-                                    ids: vec![id],
-                                    group_id,
-                                    before,
-                                    node_replacements: Default::default(),
-                                }
-                            } else {
-                                PhysicsEdit::MoveInputs {
-                                    ids: vec![id],
-                                    group_id,
-                                    before,
-                                }
-                            }
                         }
+                        _ => return,
                     };
                     if !this.physics_apply(intent, cx) {
                         return;
                     }
                     let next = match action {
                         0 => len,
-                        2 => index.saturating_sub(1),
-                        3 => index + 1,
-                        _ => index.saturating_sub(1),
+                        1 | 2 => index.saturating_sub(1),
+                        _ => index + 1,
                     };
                     if output {
-                        this.physics.output = next
+                        this.physics.output = next;
                     } else {
-                        this.physics.input = next
+                        this.physics.input = next;
                     }
                     cx.notify();
                 })),
@@ -533,6 +528,28 @@ impl PropertiesPanel {
         let epoch = self.physics.epoch;
         let node = self.physics.node;
         let len = rig.vertices.len();
+        let object = rig
+            .vertices
+            .get(node)
+            .map(|n| editor_core::ObjectRef::new(editor_core::ObjectKind::PhysicsNode, &n.id));
+        let availability = self.owner.upgrade().and_then(|o| {
+            object.as_ref().and_then(|object| {
+                crate::authoring::ActionAvailability::for_object(
+                    o.read(cx).editor.document()?,
+                    object,
+                    editor_core::AuthoringAction::Delete,
+                )
+            })
+        });
+        let supported = availability.is_some();
+        let unavailable = availability.as_ref().is_none_or(|c| !c.enabled);
+        let reason = availability
+            .and_then(|c| c.reason)
+            .unwrap_or_else(|| t!("physics.delete_segment").into());
+        let context = self
+            .owner
+            .upgrade()
+            .and_then(|o| crate::authoring::AuthoringContext::capture(&o.read(cx).editor));
         div()
             .flex()
             .gap(compact::rem(2.))
@@ -557,18 +574,18 @@ impl PropertiesPanel {
                                 .iter()
                                 .find(|g| g.id == this.physics.group)
                             {
-                                let mut node = g.vertices.last().unwrap().clone();
-                                node.id = uuid::Uuid::new_v4().to_string();
-                                node.radius = node.radius.max(1.);
-                                node.position.y += node.radius;
-                                if this.physics_apply(
-                                    PhysicsEdit::InsertNode {
-                                        group_id: g.id.clone(),
-                                        node,
-                                        before: None,
-                                    },
-                                    cx,
-                                ) {
+                                let intent = this.owner.upgrade().and_then(|o| {
+                                    let editor = &o.read(cx).editor;
+                                    if crate::authoring::AuthoringContext::capture(editor)
+                                        != context
+                                    {
+                                        return None;
+                                    }
+                                    editor.document()?.physics_append_node(&g.id).ok()
+                                });
+                                if let Some(intent) = intent
+                                    && this.physics_apply(intent, cx)
+                                {
                                     this.physics.node = len;
                                 }
                             }
@@ -577,39 +594,37 @@ impl PropertiesPanel {
                     }
                 })),
             )
-            .child(
-                self.physics_button(
-                    "physics-delete-node",
-                    IconName::Trash,
-                    t!("physics.delete_segment").into_owned(),
-                    disabled || node == 0 || len <= 2,
-                )
-                .on_click(cx.listener(move |this, _, window, cx| {
-                    if this.physics_allowed(epoch, window, cx) {
-                        if let Some(asset) = this.physics_asset(cx) {
-                            if let Some(g) = asset
-                                .data
-                                .settings
-                                .iter()
-                                .find(|g| g.id == this.physics.group)
-                            {
-                                if let Some(v) = g.vertices.get(node) {
-                                    if this.physics_apply(
-                                        PhysicsEdit::Delete {
-                                            ids: vec![v.id.clone()],
-                                            node_replacements: Default::default(),
-                                        },
-                                        cx,
-                                    ) {
-                                        this.physics.node = node.saturating_sub(1).max(1);
-                                    }
+            .when(supported, |row| {
+                row.child(
+                    self.physics_button(
+                        "physics-delete-node",
+                        IconName::Trash,
+                        t!("physics.delete_segment").into_owned(),
+                        disabled || unavailable,
+                    )
+                    .tooltip(reason)
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        if this.physics_allowed(epoch, window, cx) {
+                            let current = this.owner.upgrade().is_some_and(|o| {
+                                crate::authoring::AuthoringContext::capture(&o.read(cx).editor)
+                                    == context
+                            });
+                            if current && let Some(object) = &object {
+                                if this.physics_apply(
+                                    PhysicsEdit::Delete {
+                                        ids: vec![object.id.clone()],
+                                        node_replacements: Default::default(),
+                                    },
+                                    cx,
+                                ) {
+                                    this.physics.node = node.saturating_sub(1).max(1);
                                 }
                             }
+                            cx.notify();
                         }
-                        cx.notify();
-                    }
-                })),
-            )
+                    })),
+                )
+            })
             .into_any_element()
     }
 }

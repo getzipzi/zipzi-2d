@@ -2,6 +2,36 @@ use super::*;
 use anyhow::Result;
 use kasane_core::document::PhysicsEdit;
 impl Document {
+    pub fn physics_group_creation(&self, name: String) -> PhysicsEdit {
+        PhysicsEdit::CreateGroup {
+            asset_id: self
+                .model()
+                .physics()
+                .map_or_else(|| Uuid::new_v4().to_string(), |a| a.id.clone()),
+            id: Uuid::new_v4().to_string(),
+            name,
+            before: None,
+        }
+    }
+    pub fn physics_group_step(&self, id: &str, down: bool) -> Result<Option<PhysicsEdit>> {
+        let groups = self
+            .session
+            .physics_collection(kasane_sdk::PhysicsCollection::Groups)?;
+        let i = groups
+            .iter()
+            .position(|g| g.id() == id)
+            .ok_or_else(|| anyhow::anyhow!("Physics group no longer exists"))?;
+        if (!down && i == 0) || (down && i + 1 >= groups.len()) {
+            return Ok(None);
+        }
+        let before = groups
+            .get(if down { i + 2 } else { i - 1 })
+            .map(|g| g.id().to_owned());
+        Ok(Some(PhysicsEdit::ReorderGroups {
+            ids: vec![id.into()],
+            before,
+        }))
+    }
     pub fn plan_physics_authoring(
         &self,
         intent: PhysicsEdit,
@@ -36,33 +66,11 @@ impl Document {
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_physics_plan(plan)?;
-        let selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|e| {
-                Some(ObjectRef::new(
-                    match e.kind {
-                        kasane_sdk::ObjectKind::Physics => ObjectKind::Physics,
-                        kasane_sdk::ObjectKind::PhysicsGroup => ObjectKind::PhysicsGroup,
-                        kasane_sdk::ObjectKind::PhysicsInput => ObjectKind::PhysicsInput,
-                        kasane_sdk::ObjectKind::PhysicsOutput => ObjectKind::PhysicsOutput,
-                        kasane_sdk::ObjectKind::PhysicsNode => ObjectKind::PhysicsNode,
-                        _ => return None,
-                    },
-                    &e.id,
-                ))
-            })
-            .collect::<Vec<_>>();
         if receipt.changed {
             self.pristine_blank = false;
         }
         self.consume_authoring_receipt(&receipt, false);
-        Ok(OperationResult {
-            receipt,
-            suggested_selection: selection.clone(),
-            locations: selection,
-        })
+        Ok(self.authoring_result(receipt))
     }
 }
 impl crate::Editor {
@@ -83,5 +91,144 @@ impl crate::Editor {
         self.active_session_mut()
             .unwrap()
             .execute_authoring(|document| document.execute_physics_authoring(plan))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum PhysicsChannelAction {
+    CreateInput,
+    CreateOutput,
+    Delete(ObjectRef),
+    Step { object: ObjectRef, down: bool },
+}
+impl Document {
+    pub fn physics_channel_capability(
+        &self,
+        group: &str,
+        action: &PhysicsChannelAction,
+    ) -> Result<kasane_sdk::CapabilityState> {
+        use kasane_sdk::CapabilityState as C;
+        let (object, kind) = match action {
+            PhysicsChannelAction::CreateInput | PhysicsChannelAction::CreateOutput => (
+                ObjectRef::new(ObjectKind::PhysicsGroup, group),
+                AuthoringAction::CreateChild,
+            ),
+            PhysicsChannelAction::Delete(object) | PhysicsChannelAction::Step { object, .. } => {
+                anyhow::ensure!(
+                    matches!(
+                        object.kind,
+                        ObjectKind::PhysicsInput | ObjectKind::PhysicsOutput
+                    ),
+                    AuthoringPlanningError::new("WRONG_OBJECT_KIND")
+                );
+                (
+                    object.clone(),
+                    if matches!(action, PhysicsChannelAction::Delete(_)) {
+                        AuthoringAction::Delete
+                    } else {
+                        AuthoringAction::Reorder
+                    },
+                )
+            }
+        };
+        let state = self.authoring_capabilities(&object)?.state(kind);
+        if state != C::Available {
+            return Ok(state);
+        }
+        if matches!(action, PhysicsChannelAction::Step { .. })
+            && self.physics_channel_edit(group, action)?.is_none()
+        {
+            return Ok(C::Unavailable { code: "NO_CHANGE" });
+        }
+        Ok(state)
+    }
+    pub fn physics_channel_edit(
+        &self,
+        group: &str,
+        action: &PhysicsChannelAction,
+    ) -> Result<Option<PhysicsEdit>> {
+        let rig = self
+            .model()
+            .get_physics_group(group)
+            .ok_or_else(|| anyhow::anyhow!("Physics group no longer exists"))?;
+        Ok(Some(match action {
+            PhysicsChannelAction::CreateInput => PhysicsEdit::CreateInput {
+                group_id: group.into(),
+                id: Uuid::new_v4().to_string(),
+                before: None,
+            },
+            PhysicsChannelAction::CreateOutput => PhysicsEdit::CreateOutput {
+                group_id: group.into(),
+                id: Uuid::new_v4().to_string(),
+                node_id: rig.vertices.get(1).unwrap_or(&rig.vertices[0]).id.clone(),
+                before: None,
+            },
+            PhysicsChannelAction::Delete(object) => {
+                anyhow::ensure!(
+                    matches!(
+                        object.kind,
+                        ObjectKind::PhysicsInput | ObjectKind::PhysicsOutput
+                    ),
+                    AuthoringPlanningError::new("WRONG_OBJECT_KIND")
+                );
+                self.session
+                    .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
+                PhysicsEdit::Delete {
+                    ids: vec![object.id.clone()],
+                    node_replacements: Default::default(),
+                }
+            }
+            PhysicsChannelAction::Step { object, down } => {
+                let collection = match object.kind {
+                    ObjectKind::PhysicsInput => kasane_sdk::PhysicsCollection::Inputs {
+                        group_id: group.into(),
+                    },
+                    ObjectKind::PhysicsOutput => kasane_sdk::PhysicsCollection::Outputs {
+                        group_id: group.into(),
+                    },
+                    _ => anyhow::bail!("Expected a Physics input or output"),
+                };
+                let ids = self.session.physics_collection(collection)?;
+                let at = ids
+                    .iter()
+                    .position(|h| h.id() == object.id)
+                    .ok_or_else(|| anyhow::anyhow!("Physics channel changed"))?;
+                if (!down && at == 0) || (*down && at + 1 >= ids.len()) {
+                    return Ok(None);
+                }
+                let before = ids
+                    .get(if *down { at + 2 } else { at - 1 })
+                    .map(|h| h.id().to_owned());
+                if object.kind == ObjectKind::PhysicsInput {
+                    PhysicsEdit::MoveInputs {
+                        ids: vec![object.id.clone()],
+                        group_id: group.into(),
+                        before,
+                    }
+                } else {
+                    PhysicsEdit::MoveOutputs {
+                        ids: vec![object.id.clone()],
+                        group_id: group.into(),
+                        before,
+                        node_replacements: Default::default(),
+                    }
+                }
+            }
+        }))
+    }
+    pub fn physics_append_node(&self, group: &str) -> Result<PhysicsEdit> {
+        let rig = self
+            .model()
+            .get_physics_group(group)
+            .ok_or_else(|| anyhow::anyhow!("Physics group no longer exists"))?;
+        let mut node = rig.vertices.last().unwrap().clone();
+        node.id = Uuid::new_v4().to_string();
+        node.radius = node.radius.max(1.);
+        node.position.y += node.radius;
+        Ok(PhysicsEdit::InsertNode {
+            group_id: group.into(),
+            node,
+            before: None,
+        })
     }
 }

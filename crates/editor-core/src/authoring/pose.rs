@@ -35,49 +35,11 @@ impl Document {
     pub fn execute_pose_authoring(&mut self, plan: &PoseEditPlan) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_pose_plan(plan)?;
-        let map = |kind| match kind {
-            kasane_sdk::ObjectKind::Pose => Some(ObjectKind::Pose),
-            kasane_sdk::ObjectKind::PoseGroup => Some(ObjectKind::PoseGroup),
-            kasane_sdk::ObjectKind::PoseEntry => Some(ObjectKind::PoseEntry),
-            kasane_sdk::ObjectKind::PoseLink => Some(ObjectKind::PoseLink),
-            _ => None,
-        };
-        let suggested_selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|e| map(e.kind).map(|k| ObjectRef::new(k, &e.id)))
-            .collect();
-        let locations = receipt
-            .changes
-            .collections
-            .iter()
-            .filter_map(|c| match c {
-                kasane_sdk::CollectionRef::Pose {
-                    owner: Some(id), ..
-                } => self.model().pose_fields(id).map(|f| {
-                    ObjectRef::new(
-                        match f {
-                            PoseFields::Asset { .. } => ObjectKind::Pose,
-                            PoseFields::Group { .. } => ObjectKind::PoseGroup,
-                            PoseFields::Entry { .. } => ObjectKind::PoseEntry,
-                            PoseFields::Link { .. } => ObjectKind::PoseLink,
-                        },
-                        id,
-                    )
-                }),
-                _ => None,
-            })
-            .collect();
         if receipt.changed {
             self.pristine_blank = false;
             self.consume_authoring_receipt(&receipt, false);
         }
-        Ok(OperationResult {
-            receipt,
-            suggested_selection,
-            locations,
-        })
+        Ok(self.authoring_result(receipt))
     }
     pub fn pose_field_address(&self, id: &str) -> Result<PoseFieldAddress> {
         Ok(self.session.pose_field_address(id)?)

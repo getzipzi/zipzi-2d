@@ -151,27 +151,11 @@ impl Document {
         Ok(self.session.plan_document_field_patch(a, v)?)
     }
     fn resource_operation_result(&mut self, receipt: kasane_sdk::EditReceipt) -> OperationResult {
-        let selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|e| match e.kind {
-                kasane_sdk::ObjectKind::Asset => Some(ObjectRef::new(ObjectKind::Texture, &e.id)),
-                kasane_sdk::ObjectKind::Attachment => {
-                    Some(ObjectRef::new(ObjectKind::Attachment, &e.id))
-                }
-                _ => None,
-            })
-            .collect::<Vec<_>>();
         if receipt.changed {
             self.pristine_blank = false;
             self.consume_authoring_receipt(&receipt, false);
         }
-        OperationResult {
-            receipt,
-            suggested_selection: selection.clone(),
-            locations: selection,
-        }
+        self.authoring_result(receipt)
     }
 
     fn commit_resource_edit(

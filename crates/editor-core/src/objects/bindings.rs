@@ -12,7 +12,7 @@ pub struct BindingInfo {
     pub blend: bool,
 }
 impl BindingInfo {
-    pub fn writable(&self) -> bool {
+    pub fn supports_parameter_pad(&self) -> bool {
         self.blend
             || self
                 .axes

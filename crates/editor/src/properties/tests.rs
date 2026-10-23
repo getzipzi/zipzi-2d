@@ -85,7 +85,7 @@ fn parameter_range_provider_uses_committed_dependencies_and_preserves_valid_endp
     assert_eq!(bounds(schema::parameter::MINIMUM.key).1, 0.);
     assert_eq!(bounds(schema::parameter::MAXIMUM.key).0, 0.);
     assert_eq!(bounds(schema::parameter::DEFAULT_VALUE.key), (-1., 1.));
-    let validate = provider(ObjectKind::Parameter).validate_change;
+    let validate = editor_core::property::parameter::validate_change;
     assert!(
         validate(
             &values,

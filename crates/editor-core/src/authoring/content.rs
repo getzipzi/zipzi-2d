@@ -63,18 +63,7 @@ impl Document {
             self.consume_authoring_receipt(&receipt, true);
             self.context.reconcile(&self.object_index());
         }
-        let suggested_selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter(|e| e.kind == kasane_sdk::ObjectKind::GlueVertexPair)
-            .map(|e| ObjectRef::new(ObjectKind::GlueVertexPair, &e.id))
-            .collect();
-        Ok(OperationResult {
-            receipt,
-            suggested_selection,
-            locations: vec![],
-        })
+        Ok(self.authoring_result(receipt))
     }
 }
 impl crate::Editor {

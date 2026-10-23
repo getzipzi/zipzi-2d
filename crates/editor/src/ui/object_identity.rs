@@ -13,7 +13,14 @@ pub(crate) fn render(
     let index = doc.object_index();
     let name = index.name(object).to_owned();
     let kind = (properties::provider(object.kind).type_name)(doc, object);
-    let locked = doc.ensure_editable(std::slice::from_ref(object)).is_err();
+    let locked = doc.authoring_capabilities(object).is_ok_and(|c| {
+        matches!(
+            c.state(editor_core::AuthoringAction::Patch),
+            kasane_sdk::CapabilityState::Unavailable {
+                code: "OBJECT_LOCKED"
+            }
+        )
+    });
     render_title(prefix, name, kind, locked, cx)
 }
 

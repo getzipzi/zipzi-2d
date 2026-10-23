@@ -21,7 +21,7 @@ impl Document {
         }
         Ok(())
     }
-    pub(crate) fn create_timeline_clip(&mut self) -> Result<String> {
+    pub(crate) fn create_timeline_clip(&mut self) -> Result<crate::OperationResult> {
         self.finish_edit()?;
         let names: std::collections::HashSet<_> = self
             .model()
@@ -34,7 +34,7 @@ impl Document {
             .find(|name| !names.contains(name.as_str()))
             .unwrap();
         let id = uuid::Uuid::new_v4().to_string();
-        self.session.edit("New motion", None, |edit| {
+        let (_, receipt) = self.session.edit("New motion", None, |edit| {
             edit.create_motion(MotionClip {
                 track_order: Vec::new(),
                 id: id.clone(),
@@ -56,6 +56,6 @@ impl Document {
         self.session.drain_events();
         self.pristine_blank = false;
         self.invalidate_projection(false);
-        Ok(id)
+        Ok(self.authoring_result(receipt))
     }
 }

@@ -628,21 +628,43 @@ impl Editor {
         Ok(())
     }
     pub fn create_timeline_motion(&mut self, document: DocumentId) -> Result<String> {
+        let result = self.create_timeline_motion_result(document)?;
+        Ok(result
+            .suggested_selection
+            .iter()
+            .find(|r| r.kind == crate::ObjectKind::Motion)
+            .unwrap()
+            .id
+            .clone())
+    }
+    /// Preserve the existing New Motion activation while returning the same
+    /// receipt and view hints as every other authoring entry point.
+    pub fn create_timeline_motion_result(
+        &mut self,
+        document: DocumentId,
+    ) -> Result<crate::OperationResult> {
         self.ensure_animation_target(document)?;
         self.cancel_timeline_edit();
-        let id = self
+        let result = self
             .active_session_mut()
             .unwrap()
             .document
             .create_timeline_clip()?;
+        let id = result
+            .suggested_selection
+            .iter()
+            .find(|r| r.kind == crate::ObjectKind::Motion)
+            .unwrap()
+            .id
+            .clone();
         self.select_motion(
             document,
             MotionSelection {
-                clip_id: id.clone(),
+                clip_id: id,
                 entry: None,
             },
         )?;
-        Ok(id)
+        Ok(result)
     }
     pub fn begin_timeline_edit(
         &mut self,

@@ -32,18 +32,10 @@ pub(crate) fn default_name(kind: SceneObjectType) -> String {
 }
 
 pub(crate) fn creation_error(error: &anyhow::Error) -> String {
-    let message = error.to_string();
-    if message.contains("OBJECT_LOCKED") {
-        t!("authoring.locked").into_owned()
-    } else if message.contains("OFFSCREEN_REQUIRES_PART") {
-        t!("authoring.offscreen_requires_part").into_owned()
-    } else if message.contains("EXPECTED_DEFORMATION_MEMBERS") {
-        t!("authoring.deformation_context").into_owned()
-    } else if message.contains("DUPLICATE_OWNER") {
-        t!("authoring.move_offscreen_owner").into_owned()
-    } else {
-        message
+    if super::error_code(error) == Some("OFFSCREEN_REQUIRES_PART") {
+        return t!("authoring.offscreen_requires_part").into_owned();
     }
+    super::authoring_error(error)
 }
 
 impl EditorView {
@@ -94,54 +86,26 @@ impl EditorView {
     ) {
         let document = context.editing.document;
         let projection = plan.projection();
-        let panel_kind = if projection == editor_core::PaletteProjection::Deformation {
-            editor_core::PanelKind::Deformers
-        } else {
-            editor_core::PanelKind::MeshTree
-        };
         let result = self
             .execute_authoring(context, window, cx, |editor, document| {
                 editor.execute_scene_object_creation(document, plan)
             })
             .and_then(|result| {
-                if let Some(dock) = &self.dock {
-                    if !dock.displayed(panel_kind, cx) {
-                        dock.show(panel_kind, None, window, cx);
-                    }
-                }
-                // Properties is shown last so its name field stays available
-                // even when both panels share a user-configured tab group.
-                self.present_created_object(document, &result, kind.object_kind(), window, cx)
+                self.present_authoring_result(
+                    document,
+                    &result,
+                    AuthoringPresentation::Created {
+                        kind: kind.object_kind(),
+                        projection: Some(projection),
+                    },
+                    window,
+                    cx,
+                )
             });
         match result {
-            Ok(object) => {
+            Ok(_) => {
                 self.clear_edit_error(cx);
                 self.redraw(cx);
-                if let (Some(object), Some(dock)) = (object, &self.dock) {
-                    let mesh = dock.mesh_tree.downgrade();
-                    let deformer = dock.deformer_tree.downgrade();
-                    let owner = cx.weak_entity();
-                    let after = AuthoringContext::capture(&self.editor);
-                    window.defer(cx, move |window, cx| {
-                        if owner.upgrade().is_some_and(|owner| {
-                            let state = owner.read(cx);
-                            AuthoringContext::capture(&state.editor) == after
-                                && state.editor.document().is_some_and(|doc| {
-                                    doc.context().inspected.as_ref() == Some(&object)
-                                })
-                        }) {
-                            if projection == editor_core::PaletteProjection::Deformation {
-                                _ = deformer.update(cx, |panel, cx| {
-                                    panel.locate_created_object(document, object, window, cx)
-                                });
-                            } else {
-                                _ = mesh.update(cx, |panel, cx| {
-                                    panel.locate_created_object(document, object, window, cx)
-                                });
-                            }
-                        }
-                    });
-                }
             }
             Err(error) => self.set_edit_error(creation_error(&error), cx),
         }

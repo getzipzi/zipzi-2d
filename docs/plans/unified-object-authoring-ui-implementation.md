@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入**；跨阶段原生截图、实际窗口与 Release 性能验收仍待 U6，不代表 U1–U6 全部完成。
 
 ## 首轮实现：创建与输入边界
 
@@ -15,10 +15,10 @@
 
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
-| U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
+| U1 | 共享适配功能已收口：对象/集合能力映射、统一回执转换、检查/结果定位、输入边界与现有入口的重复业务判断清理完成 | U3–U5 新增入口继续复用；跨阶段原生/性能完整验收随 U6 |
 | U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入；变形树 Mesh/Warp/Rotation 创建、双投影位置与显露已接入；保持形态审阅、可搜索变形目标、原子落点与后台取消已接入 | 原生截图和完整阶段验收待 U6 收口 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
-| U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
+| U4 | Physics 列表接入共享边界、能力与检查结果；默认内容和排序意图已移入 core，子项动作捕获稳定 ID | 组/子项默认策略、Pose 与完整稳定子条目控件仍需统一 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
 | U6 | 未开始 | 清理剩余旧路径、完整中英文/原生截图验收和性能对照 |
 
@@ -390,3 +390,29 @@ git diff --check
 受影响 Editor UI **199 项通过**，包含新增 8 项保持形态交互回归：审阅保证与单条提交、原选择/检查/筛选保留和结果显露、默认编辑态与显式域证明/拒绝、搜索及重绘工作量、预览过期、待计算取消、根拖放、跨父级 After 锚点、右键入口、容差校验与 no-op/redo。core 定向门禁 **74 项通过**，包含新增 5 项保持形态回归。SDK 定向门禁 **92 项通过**，包含新增 2 项只读快照版本、转换及顺序原子发布、非法锚点、取消、JSON、失败事务、参数域采样、保存回读与 Undo/Redo 回归；其余保持形态专项已有用例一并执行。测试集合与前轮重叠，不累计相加。
 
 两个仓库格式与空白检查通过。未运行昂贵完整套件、Python 绑定构建、原生截图或 Release 性能测量。
+
+
+## 第十一轮实现：U1 能力、结果和业务边界收口
+
+上一轮已分别提交为 Editor `31970d0`、SDK `c1d4a47`。本轮继续在当前 checkout 工作，没有新建 worktree；本轮 SDK 配套改动已提交为 `26afe00`，Editor 改动随本次提交交付。
+
+- 新增统一 `AuthoringAction` / `ObjectAuthoringCapabilities`，覆盖全部 Editor 对象类型，集中维护 SDK ↔ Editor 类型及 GlueBinding 等投影别名。只复制原生能力状态；候选手势作为独立 session reason，检查仍可用。SDK 补充通用集合能力查询，覆盖 Organization、Scene、References、Pose、Physics、Motion 注册/组/Clip、Expression/Entry、Texture 与 Attachment。查询不创建 ID、候选或变形转换计划。
+- Parameter 工具栏、行菜单、主菜单和命令可用性共用原生状态；Edit 保留检查能力，删除引用中的 Parameter 直接禁用并保留原生原因。Physics 组/通道/节点动作改用原生能力，不再在面板复制根节点、最短链、输出引用、锁和排序边界规则。不支持的节点动作省略；暂不可用显示共享原因。Properties 的编辑许可与身份锁标识也直接查询 SDK。
+- 所有领域执行回执经一个转换器生成 `OperationResult`，统一 created/modified 实体及集合拥有者的类型、选择建议和定位提示。创建、删除回退、拖拽、上下移、移到指定位置、保持形态改父级和既有 New Motion 接入同一结果协调。New Motion 保留已有的激活行为；统一结果处理本身不额外激活 Motion/Expression。
+- 统一检查接口支持 Animation 中的全部现有类型和子条目，保持 Modeling 选择、播放资源、播放状态、时间与历史。共享定位器覆盖两棵树、Parameter、Motion/Expression、Physics 和现有文档面板；子项通过 Contains 回到可见拥有者。当前工作区没有对应集合视图时显示 Properties，后续 U3–U5 再增加专用列表，不把 U1 结果协调等同于这些新入口已经完成。
+- 定位和字段焦点延迟回调复核文档、工作区、模型代次与检查目标；共享标签页先显示 Properties，集合重新打开后应用待定位对象。普通滚动列表采用首次布局也有效的按项置顶定位；Parameter 保留原虚拟列表的下一帧显露适配。Relations 使用当前工作区的检查对象。
+- 参数范围判断移到原生 `validate_parameter_range`，草稿、属性字段和最终发布复用同一规则；UI provider 移除领域校验回调。Parameter 删除旧命令转到统一原生规划器；Physics 创建默认内容、追加节点与稳定排序锚点移到 core，面板只处理控件和光标。Keyform 的二维控件限制改为明确的预览垫提示，避免误报核心绑定只读。
+- 回归发现并修复项目加载顺序：持久化锁定状态必须在 CDI、Motion、Expression、Physics、Pose 等全部身份恢复后校验，避免锁定文件夹或业务子项保存后无法打开。新增跨 CDI/Physics/Pose 的保存回读测试。
+
+U1 的共享适配功能在本轮收口。U3 的 Motion/Expression 新管理入口、U4 的完整 Physics/Pose 子条目交互、U5 的各领域入口仍按阶段推进；U6 的原生截图、中英文实际窗口与 Release 性能验收尚未执行。
+
+第十一轮定向门禁：
+
+- Editor：沿用第十轮创建、移动、保持形态、导航、输入边界和虚拟化过滤集合，加入 `authoring_coordination`、Physics、Animation 面板、工作区、Timeline、紧凑布局和受影响领域适配测试。**UI 285 项、core 集成 112 项、core 单元 4 项通过**。
+- SDK：对象/集合能力、绑定、Motion、Expression、Physics、Pose、组织/场景/内容、引用、资源、身份与锁、保持形态和共享回执等定向过滤集合，**278 项通过**；既有 Release 大库规划测量 1 项按默认忽略。
+- Project：`cargo test --locked -p kasane-project --test project_tests -- resources_codec version_migration`，**18 项通过**。
+- 两个仓库分别执行 `cargo fmt --all -- --check` 与 `git diff --check`。
+
+新增 7 项 core 协调用例、5 项 UI 协调用例和 4 项 SDK 集合/范围/锁定保存回读用例；旧的引用删除回归改为验证原生禁用状态和原因。既有测试跨轮有重叠，不累计相加。
+
+未运行昂贵完整套件、Python 绑定构建、原生截图、实际窗口验收或 Release 性能测量。

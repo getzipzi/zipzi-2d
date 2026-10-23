@@ -52,42 +52,70 @@ impl Document {
         self.plan_organization_authoring(intent)
     }
 
-    fn parameter_creation_location(
+    pub fn parameter_object_creation_capability(
         &self,
         kind: ObjectKind,
         selection: &[ObjectRef],
-    ) -> anyhow::Result<(Option<String>, Option<String>)> {
+    ) -> anyhow::Result<kasane_sdk::CapabilityState> {
+        anyhow::ensure!(
+            matches!(kind, ObjectKind::Parameter | ObjectKind::ParameterGroup),
+            "Expected a parameter or folder"
+        );
+        let owner = self.parameter_creation_owner(selection)?;
+        let collection = if kind == ObjectKind::Parameter {
+            Collection::Parameters { group_id: owner }
+        } else {
+            Collection::ParameterGroups { parent_id: owner }
+        };
+        Ok(self
+            .session
+            .organization_collection_capabilities(&collection)?
+            .create)
+    }
+    fn parameter_creation_owner(&self, selection: &[ObjectRef]) -> anyhow::Result<Option<String>> {
         let mut owners = Vec::new();
         for object in selection {
             let owner = match object.kind {
                 ObjectKind::Parameter => {
-                    anyhow::ensure!(
-                        self.model().get_parameter(&object.id).is_some(),
-                        "Parameter no longer exists"
-                    );
+                    self.session
+                        .handle(kasane_sdk::ObjectKind::Parameter, &object.id)?;
                     self.model()
                         .parameter_group_for(&object.id)
                         .map(str::to_owned)
                 }
                 ObjectKind::ParameterGroup => {
-                    let group = self
-                        .model()
-                        .get_parameter_group(&object.id)
-                        .ok_or_else(|| anyhow::anyhow!("Parameter folder no longer exists"))?;
+                    self.session
+                        .handle(kasane_sdk::ObjectKind::CdiParameterGroup, &object.id)?;
+                    let group = self.model().get_parameter_group(&object.id).unwrap();
                     if selection.len() == 1 {
-                        return Ok((Some(group.id.clone()), None));
+                        return Ok(Some(group.id.clone()));
                     }
                     group.parent_id.clone()
                 }
-                _ => return Ok((None, None)),
+                _ => return Ok(None),
             };
             owners.push(owner);
         }
-        let Some(owner) = owners.first().cloned() else {
-            return Ok((None, None));
-        };
-        if owners.iter().any(|candidate| *candidate != owner) {
-            return Ok((None, None));
+        Ok(owners
+            .first()
+            .filter(|owner| owners.iter().all(|other| other == *owner))
+            .cloned()
+            .flatten())
+    }
+    fn parameter_creation_location(
+        &self,
+        kind: ObjectKind,
+        selection: &[ObjectRef],
+    ) -> anyhow::Result<(Option<String>, Option<String>)> {
+        let owner = self.parameter_creation_owner(selection)?;
+        if selection.len() == 1 && selection[0].kind == ObjectKind::ParameterGroup {
+            return Ok((owner, None));
+        }
+        if selection.iter().any(|s| {
+            !matches!(s.kind, ObjectKind::Parameter | ObjectKind::ParameterGroup)
+                || self.model().organization_owner(&s.id) != owner.as_deref()
+        }) {
+            return Ok((owner, None));
         }
         let collection = if kind == ObjectKind::Parameter {
             Collection::Parameters {
@@ -102,8 +130,8 @@ impl Document {
         let before = order
             .iter()
             .rposition(|id| selection.iter().any(|object| object.id == id.id()))
-            .and_then(|index| order.get(index + 1))
-            .map(|handle| handle.id().to_owned());
+            .and_then(|at| order.get(at + 1))
+            .map(|h| h.id().to_owned());
         Ok((owner, before))
     }
 }

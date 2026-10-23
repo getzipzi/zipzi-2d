@@ -118,19 +118,12 @@ impl Editor {
     ) -> anyhow::Result<()> {
         self.ensure_animation_target(document)?;
         anyhow::ensure!(
-            matches!(
-                object.kind,
-                ObjectKind::Motion
-                    | ObjectKind::Expression
-                    | ObjectKind::Physics
-                    | ObjectKind::PhysicsGroup
-            ) && self
-                .document()
+            self.document()
                 .unwrap()
                 .object_index()
                 .get(&object)
                 .is_some(),
-            "Resource no longer exists"
+            "Object no longer exists"
         );
         self.cancel_timeline_edit();
         self.active_session_mut()
@@ -139,6 +132,21 @@ impl Editor {
             .playback
             .inspected = Some(object);
         Ok(())
+    }
+    /// Generic inspection never invokes a resource's activation or playback action.
+    pub fn inspect_authoring_object(
+        &mut self,
+        document: DocumentId,
+        object: ObjectRef,
+    ) -> anyhow::Result<()> {
+        self.ensure_authoring_target(document, "Inspection")?;
+        match self.editing_context() {
+            Some(EditingContext::Modeling) => {
+                self.execute_for(document, crate::EditorCommand::Navigate(object))
+            }
+            Some(EditingContext::Animation) => self.inspect_animation_resource(document, object),
+            None => anyhow::bail!("Editing context changed"),
+        }
     }
     pub fn active_inspection(&self) -> Option<Inspection> {
         self.inspection(self.editing_context()?)

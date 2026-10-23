@@ -31,33 +31,11 @@ impl Document {
         Ok(self.motion_operation_result(receipt))
     }
     fn motion_operation_result(&mut self, receipt: kasane_sdk::EditReceipt) -> OperationResult {
-        let selection = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|e| {
-                let kind = match e.kind {
-                    kasane_sdk::ObjectKind::Motion => ObjectKind::Motion,
-                    kasane_sdk::ObjectKind::MotionGroup => ObjectKind::MotionGroup,
-                    kasane_sdk::ObjectKind::MotionRegistration => ObjectKind::MotionRegistration,
-                    kasane_sdk::ObjectKind::MotionTrack => ObjectKind::MotionTrack,
-                    kasane_sdk::ObjectKind::MotionKey => ObjectKind::MotionKey,
-                    kasane_sdk::ObjectKind::MotionEvent => ObjectKind::MotionEvent,
-                    kasane_sdk::ObjectKind::Attachment => ObjectKind::Attachment,
-                    _ => return None,
-                };
-                Some(ObjectRef::new(kind, &e.id))
-            })
-            .collect::<Vec<_>>();
         if receipt.changed {
             self.pristine_blank = false;
         }
         self.consume_authoring_receipt(&receipt, false);
-        OperationResult {
-            receipt,
-            suggested_selection: selection.clone(),
-            locations: selection,
-        }
+        self.authoring_result(receipt)
     }
 }
 

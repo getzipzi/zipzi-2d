@@ -85,3 +85,6 @@ mod palette_steps;
 
 #[path = "cases/palette_reparent.rs"]
 mod palette_reparent;
+
+#[path = "cases/authoring_coordination.rs"]
+mod authoring_coordination;

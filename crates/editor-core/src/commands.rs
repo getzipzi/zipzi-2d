@@ -807,8 +807,18 @@ impl Editor {
                         .document()
                         .is_some_and(|d| d.mesh_generation_target().is_ok())
             }
-            PaletteMoveUp | PaletteMoveDown | PaletteMoveTo | CreateParameter
-            | CreateParameterGroup => modeling && target && !self.is_busy() && !self.exiting(),
+            PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {
+                modeling && target && !self.is_busy() && !self.exiting()
+            }
+            CreateParameter | CreateParameterGroup => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && self
+                        .authoring_command_capability(command.id)
+                        .is_ok_and(|s| s == kasane_sdk::CapabilityState::Available)
+            }
             CreatePart
             | CreateMesh
             | CreateWarp
@@ -821,32 +831,18 @@ impl Editor {
                     && target
                     && !self.is_busy()
                     && !self.exiting()
-                    && self.document().is_some_and(|doc| {
-                        doc.validate_scene_object_creation_in(
-                            command.id.scene_creation_projection().unwrap(),
-                            command.id.scene_creation_type().unwrap(),
-                            &doc.context().selections,
-                        )
-                        .is_ok()
-                    })
+                    && self
+                        .authoring_command_capability(command.id)
+                        .is_ok_and(|s| s == kasane_sdk::CapabilityState::Available)
             }
             EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {
                 modeling
                     && target
                     && !self.is_busy()
                     && !self.exiting()
-                    && self.document().is_some_and(|doc| {
-                        doc.context().inspected.as_ref().is_some_and(|object| {
-                            object.kind
-                                == if matches!(command.id, EditParameter | DeleteParameter) {
-                                    crate::ObjectKind::Parameter
-                                } else {
-                                    crate::ObjectKind::ParameterGroup
-                                }
-                                && doc.object_index().get(object).is_some()
-                                && doc.ensure_editable(std::slice::from_ref(object)).is_ok()
-                        })
-                    })
+                    && self
+                        .authoring_command_capability(command.id)
+                        .is_ok_and(|s| s == kasane_sdk::CapabilityState::Available)
             }
             Undo => target && self.can_undo(),
             Redo => target && self.can_redo(),

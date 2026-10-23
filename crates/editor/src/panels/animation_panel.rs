@@ -20,11 +20,22 @@ pub struct AnimationPanel {
     focus: FocusHandle,
     _observe: Subscription,
     resources: resources::ResourceList,
+    location: Option<(editor_core::DocumentId, editor_core::ObjectRef)>,
 }
 impl AnimationPanel {
+    pub(crate) fn locate_object(
+        &mut self,
+        document: editor_core::DocumentId,
+        object: &editor_core::ObjectRef,
+        cx: &mut Context<Self>,
+    ) {
+        self.location = Some((document, object.clone()));
+        cx.notify();
+    }
     pub fn new(owner: WeakEntity<EditorView>, kind: PanelKind, cx: &mut App) -> Entity<Self> {
         cx.new(|cx| Self {
             resources: resources::ResourceList::default(),
+            location: None,
             _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
             owner,
             kind,

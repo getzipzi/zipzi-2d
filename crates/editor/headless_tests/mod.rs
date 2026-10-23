@@ -3,6 +3,7 @@
 mod animation;
 mod animation_panels;
 mod authoring;
+mod authoring_coordination;
 mod canvas;
 mod command_targets;
 mod compact_popups;

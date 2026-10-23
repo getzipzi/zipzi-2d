@@ -174,6 +174,20 @@ impl Document {
         except: Option<&str>,
     ) -> Result<(), ParameterCreateError> {
         use ParameterCreateError as E;
+        let range = kasane_core::document::validate_parameter_range(
+            draft.minimum,
+            draft.maximum,
+            draft.default_value,
+        )
+        .err()
+        .map(|e| match e {
+            kasane_core::document::ParameterRangeError::MinimumInvalid => E::MinimumInvalid,
+            kasane_core::document::ParameterRangeError::MaximumInvalid => E::MaximumInvalid,
+            kasane_core::document::ParameterRangeError::DefaultInvalid => E::DefaultInvalid,
+            kasane_core::document::ParameterRangeError::RangeInvalid => E::RangeInvalid,
+            kasane_core::document::ParameterRangeError::RangeOverflow => E::RangeOverflow,
+            kasane_core::document::ParameterRangeError::DefaultOutOfRange => E::DefaultOutOfRange,
+        });
         let error = if draft.name.trim().is_empty() {
             Some(E::NameRequired)
         } else if draft.runtime_id.trim().is_empty() {
@@ -183,18 +197,8 @@ impl Document {
             .contains(draft.runtime_id.trim())
         {
             Some(E::DuplicateId)
-        } else if !draft.minimum.is_finite() {
-            Some(E::MinimumInvalid)
-        } else if !draft.maximum.is_finite() {
-            Some(E::MaximumInvalid)
-        } else if !draft.default_value.is_finite() {
-            Some(E::DefaultInvalid)
-        } else if draft.minimum >= draft.maximum {
-            Some(E::RangeInvalid)
-        } else if !(draft.maximum - draft.minimum).is_finite() {
-            Some(E::RangeOverflow)
-        } else if !(draft.minimum..=draft.maximum).contains(&draft.default_value) {
-            Some(E::DefaultOutOfRange)
+        } else if range.is_some() {
+            range
         } else if !(0..=9).contains(&draft.decimal_places) {
             Some(E::PrecisionInvalid)
         } else if draft.group_id.as_ref().is_some_and(|id| {
@@ -368,16 +372,8 @@ impl Document {
     }
 
     pub fn delete_parameter(&mut self, id: &str, expected: u64) -> Result<()> {
-        self.check_parameter_version(expected)?;
-        self.ensure_editable(&[ObjectRef::new(ObjectKind::Parameter, id)])?;
-        let refs = self.parameter_delete_references(id)?;
-        ensure!(refs.is_empty(), ParameterManagementError::Referenced(refs));
         let plan = self
-            .session
-            .plan_organization_edit(kasane_sdk::OrganizationEdit::Delete {
-                ids: vec![id.into()],
-                policy: kasane_sdk::OrganizationDeletePolicy::Contents,
-            })?;
+            .plan_parameter_object_deletion(&ObjectRef::new(ObjectKind::Parameter, id), expected)?;
         self.execute_organization_authoring(&plan)?;
         Ok(())
     }

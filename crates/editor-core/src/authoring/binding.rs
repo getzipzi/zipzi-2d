@@ -1,7 +1,7 @@
 //! Editor session checks compose with the SDK's conversion rules and history.
 use super::*;
 use anyhow::{Result, ensure};
-use kasane_sdk::{BindingAuthoringEdit, BindingEditPlan, ObjectKind as SdkKind};
+use kasane_sdk::{BindingAuthoringEdit, BindingEditPlan};
 impl Document {
     pub fn binding_field_address(&self, id: &str) -> Result<kasane_sdk::BindingFieldAddress> {
         Ok(self.session.binding_field_address(id)?)
@@ -38,35 +38,11 @@ impl Document {
     pub fn execute_binding_authoring(&mut self, plan: &BindingEditPlan) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = self.session.execute_binding_plan(plan)?;
-        let selection: Vec<_> = receipt
-            .changes
-            .created
-            .iter()
-            .filter_map(|entity| {
-                Some(ObjectRef::new(
-                    match entity.kind {
-                        SdkKind::MeshBinding => ObjectKind::MeshBinding,
-                        SdkKind::SceneBinding => ObjectKind::SceneBinding,
-                        SdkKind::BindingAxis => ObjectKind::BindingAxis,
-                        SdkKind::BindingSample => ObjectKind::BindingSample,
-                        SdkKind::BlendKeyTable => ObjectKind::BlendKeyTable,
-                        SdkKind::BlendConstraint => ObjectKind::BlendConstraint,
-                        SdkKind::BlendBinding => ObjectKind::BlendBinding,
-                        _ => return None,
-                    },
-                    &entity.id,
-                ))
-            })
-            .collect();
         if receipt.changed {
             self.pristine_blank = false;
         }
         self.consume_authoring_receipt(&receipt, true);
-        Ok(OperationResult {
-            receipt,
-            suggested_selection: selection.clone(),
-            locations: selection,
-        })
+        Ok(self.authoring_result(receipt))
     }
 }
 impl crate::Editor {

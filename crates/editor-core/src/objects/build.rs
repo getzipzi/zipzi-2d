@@ -80,7 +80,7 @@ impl ObjectIndex {
         r
     }
     fn add_binding(&mut self, info: BindingInfo) {
-        self.add(info.reference.clone(), format!("{} · {}", info.target.id, info.layout()), json!({"axes": info.axes, "keyforms": info.points.len(), "read_only": !info.writable()}), None);
+        self.add(info.reference.clone(), format!("{} · {}", info.target.id, info.layout()), json!({"axes": info.axes, "keyforms": info.points.len(), "parameter_pad_available": info.supports_parameter_pad()}), None);
         for axis in info.axes.iter().filter(|a| !a.parameter_id.is_empty()) {
             self.edge(
                 &ObjectRef::new(ObjectKind::Parameter, &axis.parameter_id),

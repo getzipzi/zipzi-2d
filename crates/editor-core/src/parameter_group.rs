@@ -1,10 +1,7 @@
 use crate::{Document, ObjectKind, ObjectRef, ParameterManagementError as E};
 use anyhow::{Result, ensure};
 use kasane_core::document::CdiParameterGroup;
-use kasane_sdk::{
-    OrganizationCollection as Collection, OrganizationDeletePolicy as Delete,
-    OrganizationEdit as Edit,
-};
+use kasane_sdk::{OrganizationCollection as Collection, OrganizationEdit as Edit};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParameterGroupDraft {
     pub name: String,
@@ -164,11 +161,10 @@ impl Document {
         Ok(count)
     }
     pub fn delete_parameter_group(&mut self, id: &str, expected: u64) -> Result<()> {
-        self.check_parameter_version(expected)?;
-        let plan = self.session.plan_organization_edit(Edit::Delete {
-            ids: vec![id.into()],
-            policy: Delete::Dissolve,
-        })?;
+        let plan = self.plan_parameter_object_deletion(
+            &ObjectRef::new(ObjectKind::ParameterGroup, id),
+            expected,
+        )?;
         self.execute_organization_authoring(&plan)?;
         Ok(())
     }

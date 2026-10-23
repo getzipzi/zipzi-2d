@@ -38,14 +38,7 @@ impl AnimationPanel {
                 return;
             }
             window.focus(&focus, cx);
-            let result = owner.editor.inspect_animation_resource(document, object);
-            if result.is_ok() {
-                owner
-                    .dock
-                    .as_ref()
-                    .unwrap()
-                    .show(PanelKind::Properties, None, window, cx);
-            }
+            let result = owner.inspect_authoring_object(document, object, false, window, cx);
             owner.complete_edit(result, cx);
         });
     }
@@ -70,14 +63,12 @@ impl AnimationPanel {
             let asset = doc.physics_definition();
             let position = asset.and_then(|a| selected(&owner.editor, a));
             let group = position.and_then(|i| asset.map(|a| a.data.settings[i].id.clone()));
+            let candidates = group
+                .as_ref()
+                .map(|id| doc.authoring_neighbors(&reference(id)))
+                .unwrap_or_default();
             let intent = match action {
-                0 => PhysicsEdit::CreateGroup {
-                    asset_id: asset
-                        .map_or_else(|| uuid::Uuid::new_v4().to_string(), |a| a.id.clone()),
-                    id: uuid::Uuid::new_v4().to_string(),
-                    name: t!("physics.new_group").into_owned(),
-                    before: None,
-                },
+                0 => doc.physics_group_creation(t!("physics.new_group").into_owned()),
                 1 => {
                     let Some(id) = group.clone() else {
                         return;
@@ -98,79 +89,41 @@ impl AnimationPanel {
                     }
                 }
                 3 | 4 => {
-                    let (Some(id), Some(i), Some(a)) = (group.clone(), position, asset) else {
-                        return;
-                    };
-                    let before = if action == 3 {
-                        a.data.settings.get(i.saturating_sub(1))
-                    } else {
-                        a.data.settings.get(i + 2)
-                    }
-                    .map(|g| g.id.clone());
-                    if before.as_ref() == Some(&id) {
-                        return;
-                    }
-                    PhysicsEdit::ReorderGroups {
-                        ids: vec![id],
-                        before,
+                    let Some(id) = &group else { return };
+                    match doc.physics_group_step(id, action == 4) {
+                        Ok(Some(intent)) => intent,
+                        Ok(None) => return,
+                        Err(error) => {
+                            owner.set_edit_error(crate::authoring::authoring_error(&error), cx);
+                            return;
+                        }
                     }
                 }
                 _ => return,
             };
-            let mut object = group.map(|id| ObjectRef::new(ObjectKind::PhysicsGroup, id));
-            let result: anyhow::Result<()> = (|| {
+            let result = (|| {
                 let result = owner.execute_authoring(context, window, cx, |editor, document| {
                     let plan = editor.plan_physics_authoring(document, intent)?;
                     editor.execute_physics_authoring(document, &plan)
                 })?;
-                if let Some(created) = result
-                    .suggested_selection
-                    .iter()
-                    .find(|r| r.kind == ObjectKind::PhysicsGroup)
-                {
-                    object = Some(created.clone());
-                }
-                if object.as_ref().is_some_and(|r| {
-                    !owner
-                        .editor
-                        .document()
-                        .unwrap()
-                        .object_index()
-                        .get(r)
-                        .is_some()
-                }) {
-                    object = owner
-                        .editor
-                        .document()
-                        .unwrap()
-                        .physics_definition()
-                        .and_then(|a| {
-                            let next = position
-                                .unwrap_or(0)
-                                .min(a.data.settings.len().saturating_sub(1));
-                            a.data
-                                .settings
-                                .get(next)
-                                .map(|g| ObjectRef::new(ObjectKind::PhysicsGroup, &g.id))
-                        });
-                }
-                Ok(())
+                let presentation = match action {
+                    0 | 1 => crate::authoring::AuthoringPresentation::Created {
+                        kind: ObjectKind::PhysicsGroup,
+                        projection: None,
+                    },
+                    2 => crate::authoring::AuthoringPresentation::AfterDelete { candidates },
+                    _ => crate::authoring::AuthoringPresentation::Moved {
+                        object: reference(group.as_deref().unwrap()),
+                        projection: editor_core::PaletteProjection::Organization,
+                    },
+                };
+                owner.present_authoring_result(document, &result, presentation, window, cx)?;
+                Ok::<_, anyhow::Error>(())
             })();
-            if result.is_ok()
-                && let Some(object) = object
-            {
-                let _ = owner.inspect_authoring_object(
-                    document,
-                    object,
-                    matches!(action, 0 | 1),
-                    window,
-                    cx,
-                );
-            }
             owner.animation_anchor = None;
             match result {
                 Ok(()) => owner.redraw(cx),
-                Err(error) => owner.set_edit_error(error.to_string(), cx),
+                Err(error) => owner.set_edit_error(crate::authoring::authoring_error(&error), cx),
             }
         });
     }
@@ -199,10 +152,10 @@ impl AnimationPanel {
                     .editor
                     .document()
                     .unwrap()
-                    .physics_authoring_capabilities(&reference(&group.id))
+                    .authoring_capabilities(&reference(&group.id))
                     .ok()
             });
-        let count = asset.map_or(0, |a| a.data.settings.len());
+
         let disabled = state.modal || state.editor.is_busy() || dialog;
         let mut toolbar = PanelToolbar::new("physics-list-toolbar");
         for (action, id, icon, label, off) in [
@@ -232,30 +185,62 @@ impl AnimationPanel {
                 "physics-up-group",
                 IconName::ArrowUp,
                 "physics.up",
-                index.is_none_or(|i| i == 0),
+                index.is_none_or(|i| {
+                    state
+                        .editor
+                        .document()
+                        .unwrap()
+                        .physics_group_step(&asset.unwrap().data.settings[i].id, false)
+                        .ok()
+                        .flatten()
+                        .is_none()
+                }),
             ),
             (
                 4,
                 "physics-down-group",
                 IconName::ArrowDown,
                 "physics.down",
-                index.is_none_or(|i| i + 1 >= count),
+                index.is_none_or(|i| {
+                    state
+                        .editor
+                        .document()
+                        .unwrap()
+                        .physics_group_step(&asset.unwrap().data.settings[i].id, true)
+                        .ok()
+                        .flatten()
+                        .is_none()
+                }),
             ),
         ] {
-            let availability = capabilities.as_ref().map(|capabilities| {
-                let capability = match action {
-                    1 => &capabilities.domain.duplicate,
-                    2 => &capabilities.domain.delete,
-                    3 | 4 => &capabilities.domain.reorder,
-                    _ => {
-                        return Some(crate::authoring::ActionAvailability {
-                            enabled: true,
-                            reason: None,
-                        });
-                    }
-                };
-                crate::authoring::ActionAvailability::from_core(capability)
-            });
+            let availability = if action == 0 {
+                Some(
+                    state
+                        .editor
+                        .document()
+                        .unwrap()
+                        .authoring_collection_capabilities(
+                            &editor_core::AuthoringCollection::Physics(
+                                kasane_sdk::PhysicsCollection::Groups,
+                            ),
+                        )
+                        .ok()
+                        .and_then(|c| {
+                            crate::authoring::ActionAvailability::from_core(&c.domain.create)
+                        }),
+                )
+            } else {
+                capabilities.as_ref().map(|c| {
+                    crate::authoring::ActionAvailability::from_authoring(
+                        c,
+                        match action {
+                            1 => editor_core::AuthoringAction::Duplicate,
+                            2 => editor_core::AuthoringAction::Delete,
+                            _ => editor_core::AuthoringAction::Reorder,
+                        },
+                    )
+                })
+            };
             if matches!(availability, Some(None)) {
                 continue;
             }
@@ -292,6 +277,7 @@ impl AnimationPanel {
             .size_full()
             .min_w_0()
             .overflow_y_scroll()
+            .track_scroll(&self.resources.view.scroll)
             .track_focus(&self.focus)
             .key_context("KasaneDocument")
             .text_size(compact::rem(compact::BODY));
@@ -328,7 +314,20 @@ impl AnimationPanel {
             .iter()
             .map(|rig| reference(&rig.id))
             .collect();
+        let location = self
+            .location
+            .take()
+            .filter(|(id, _)| *id == document)
+            .map(|(_, r)| r);
         for (i, rig) in asset.data.settings.iter().enumerate() {
+            if location.as_ref().is_some_and(|r| {
+                r.id == rig.id
+                    || rig.inputs.iter().any(|i| i.id == r.id)
+                    || rig.outputs.iter().any(|i| i.id == r.id)
+                    || rig.vertices.iter().any(|i| i.id == r.id)
+            }) {
+                self.resources.view.scroll.scroll_to_top_of_item(i);
+            }
             let object = reference(&rig.id);
             root = root.child(
                 self.resource_row(

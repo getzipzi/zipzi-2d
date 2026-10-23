@@ -155,7 +155,6 @@ pub(crate) struct PropertyProvider {
     pub type_name: fn(&Document, &ObjectRef) -> SharedString,
     pub editable_in: fn(EditingContext) -> bool,
     pub show_readonly: fn(&str) -> bool,
-    pub validate_change: fn(&PropertyValues, PropertyKey, &PropertyValue) -> anyhow::Result<()>,
 }
 impl PropertyProvider {
     const DEFAULT: Self = Self {
@@ -164,7 +163,6 @@ impl PropertyProvider {
         type_name,
         editable_in: |context| context == EditingContext::Modeling,
         show_readonly: |_| true,
-        validate_change: |_, _, _| Ok(()),
     };
 }
 

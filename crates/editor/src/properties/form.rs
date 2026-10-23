@@ -169,7 +169,9 @@ impl PropertyForm {
         } else {
             [(id, value.clone())].into()
         };
-        (crate::properties::provider(kind).validate_change)(&self.current, id, value)?;
+        if kind == ObjectKind::Parameter {
+            editor_core::property::parameter::validate_change(&self.current, id, value)?;
+        }
 
         Ok(PropertyPatch {
             scope: Default::default(),

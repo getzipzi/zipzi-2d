@@ -333,14 +333,33 @@ impl SortState {
         }
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |owner, cx| {
+                let reveal = request.sources.last().cloned();
+                let projection = request.projection;
                 let result = owner.execute_authoring(context, window, cx, |editor, document| {
                     // Replan on release, then let the SDK revalidate the version.
                     let plan = editor.document().unwrap().plan_palette_move(request)?;
                     editor.execute_palette_move(document, &plan)
                 });
                 match result {
-                    Ok(_) => owner.redraw(cx),
-                    Err(error) => owner.set_edit_error(error.to_string(), cx),
+                    Ok(result) => {
+                        if let Some(object) = reveal {
+                            let followup = owner.present_authoring_result(
+                                drag.document,
+                                &result,
+                                crate::authoring::AuthoringPresentation::Moved {
+                                    object,
+                                    projection,
+                                },
+                                window,
+                                cx,
+                            );
+                            owner.complete_edit(followup.map(|_| ()), cx);
+                        }
+                        owner.redraw(cx);
+                    }
+                    Err(error) => {
+                        owner.set_edit_error(crate::authoring::authoring_error(&error), cx)
+                    }
                 }
             });
         }
@@ -718,15 +737,7 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let owner = cx.weak_entity();
-        let context = AuthoringContext::capture(&self.editor);
-        window.defer(cx, move |window, cx| {
-            if let Some(owner) = owner.upgrade() {
-                if AuthoringContext::capture(&owner.read(cx).editor) == context {
-                    destination::locate_result(&owner, document, projection, object, window, cx);
-                }
-            }
-        });
+        self.defer_authoring_location(document, object, Some(projection), false, false, window, cx);
     }
 }
 
@@ -842,46 +853,5 @@ pub(super) fn move_menu(
 }
 
 fn move_error(error: &anyhow::Error) -> String {
-    let code = error
-        .downcast_ref::<kasane_sdk::SdkError>()
-        .map(|error| error.code.as_ref())
-        .or_else(|| {
-            error
-                .downcast_ref::<editor_core::PaletteMovePlanningError>()
-                .map(|error| error.code())
-        });
-    if let Some(code) = code {
-        match code {
-            "PALETTE_DEFORMATION_SIBLINGS" => {
-                return crate::t!("authoring.step_deformation_siblings").into_owned();
-            }
-            "SUBTREE_CONVERSION_UNPROVEN" => {
-                return crate::t!("reparent.subtree_unproven").into_owned();
-            }
-            "NONLINEAR_PARENT_UNPROVEN" => {
-                return crate::t!("reparent.nonlinear_unproven").into_owned();
-            }
-            "PARAMETER_DOMAIN_UNPROVEN" => {
-                return crate::t!("reparent.domain_unproven").into_owned();
-            }
-            "SINGULAR_PARENT" => return crate::t!("reparent.singular").into_owned(),
-            "STALE_PLAN" | "STALE_VERSION" => {
-                return crate::t!("authoring.move_stale").into_owned();
-            }
-            "AUTHORING_CANCELLED" => return crate::t!("reparent.cancelled").into_owned(),
-            "OBJECT_LOCKED" => return crate::t!("authoring.locked").into_owned(),
-            "OFFSCREEN_REQUIRES_PART" => {
-                return crate::t!("authoring.move_requires_part").into_owned();
-            }
-            "DUPLICATE_OWNER" => return crate::t!("authoring.move_offscreen_owner").into_owned(),
-            "OFFSCREEN_REBIND_REQUIRES_CONVERSION" => {
-                return crate::t!("authoring.move_requires_conversion").into_owned();
-            }
-            "CDI_GROUP_CYCLE" | "PART_CYCLE" | "RELATION_CYCLE" => {
-                return crate::t!("authoring.move_cycle").into_owned();
-            }
-            _ => {}
-        }
-    }
-    error.to_string()
+    crate::authoring::authoring_error(error)
 }

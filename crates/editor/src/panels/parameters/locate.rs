@@ -1,22 +1,6 @@
 use super::*;
 
 impl ParametersPanel {
-    pub(crate) fn locate_created_parameter(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.sync_with_editor(window, cx);
-        let focus = self.owner.upgrade().and_then(|owner| {
-            owner
-                .read(cx)
-                .editor
-                .document()?
-                .context()
-                .parameter_focus
-                .clone()
-        });
-        if let Some(focus) = focus {
-            self.locate_parameter(&focus.id, cx);
-        }
-    }
-
     pub(crate) fn locate_moved_object(
         &mut self,
         document: DocumentId,
@@ -24,6 +8,7 @@ impl ParametersPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.sync_with_editor(window, cx);
         if self.document_id != Some(document) {
             return;
         }
