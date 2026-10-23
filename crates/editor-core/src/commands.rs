@@ -71,6 +71,8 @@ pub enum CommandId {
     Redo,
     #[serde(rename = "edit.deselect")]
     Deselect,
+    #[serde(rename = "palette.move-to")]
+    PaletteMoveTo,
     #[serde(rename = "palette.move-up")]
     PaletteMoveUp,
     #[serde(rename = "palette.move-down")]
@@ -309,6 +311,7 @@ specs![
         true,
         ["alt-down"]
     ),
+    (PaletteMoveTo, "authoring.move_to", Palette, false, []),
     (CreateParameter, "parameter.new", Document, false, []),
     (EditParameter, "parameter.edit", Document, false, []),
     (DeleteParameter, "parameter.delete", Document, false, []),
@@ -724,9 +727,8 @@ impl Editor {
                         .document()
                         .is_some_and(|d| d.mesh_generation_target().is_ok())
             }
-            PaletteMoveUp | PaletteMoveDown | CreateParameter | CreateParameterGroup => {
-                modeling && target && !self.is_busy() && !self.exiting()
-            }
+            PaletteMoveUp | PaletteMoveDown | PaletteMoveTo | CreateParameter
+            | CreateParameterGroup => modeling && target && !self.is_busy() && !self.exiting(),
             EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {
                 modeling
                     && target

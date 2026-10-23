@@ -1,11 +1,19 @@
 use editor_core::{TreeNode, TreeNodeKind};
 use std::{collections::HashSet, ops::Range};
 
+#[derive(Clone, Copy, Default)]
+pub(super) enum RevealKind {
+    #[default]
+    Created,
+    Moved,
+}
+
 #[derive(Clone, Default)]
 pub(super) struct TreeFilter {
     pub query: String,
     pub excluded: Vec<TreeNodeKind>,
     pub revealed: Option<editor_core::ObjectRef>,
+    pub reveal_kind: RevealKind,
 }
 
 impl TreeFilter {
@@ -275,6 +283,7 @@ mod tests {
                 editor_core::ObjectKind::Mesh,
                 "eye-left",
             )),
+            ..Default::default()
         };
         let rows = visible_rows(&fixture(), &HashSet::new(), &filter);
         assert_eq!(ids(&rows), ["root", "head", "eye-left"]);

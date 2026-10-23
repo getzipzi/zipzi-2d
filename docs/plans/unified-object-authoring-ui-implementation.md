@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建、共享移动、树选择与移动快捷键切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建、共享移动、树选择、移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
 
 ## 首轮实现：创建与输入边界
 
@@ -16,7 +16,7 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序、拒绝原因与单对象右键上下移已接入；变形树同父级排序使用相同规划入口；树 Shift/Cmd 选择、焦点导航及可配置单对象上下移已接入 | 变形树创建、变形父级保持形态移动、多选上下移、移到指定容器菜单、Parameter 文件夹选择导航与其余创建命令入口仍待实施 |
+| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序、拒绝原因与单对象右键上下移已接入；变形树同父级排序使用相同规划入口；树 Shift/Cmd 选择、焦点导航及可配置单对象上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器，树多选整体移动 | 变形树创建、变形父级保持形态移动、多选上下移、Parameter 文件夹选择导航与其余创建命令入口仍待实施 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
@@ -146,3 +146,40 @@ git diff --check
 ```
 
 受影响 UI/路由/工作量回归 **140 项通过**，含新增 5 项树选择 UI、3 项移动命令 UI 和 1 项路由优先级单测；既有 keymap 单测补充作用域隔离断言。core 命令/键盘/移动回归 **33 项通过**，含新增的改键和作用域冲突回归。格式和空白检查通过。本轮未运行完整套件、原生截图或 Release 性能基准；U2–U6 仍按阶段状态表继续。
+
+
+## 第五轮实现：指定容器移动
+
+第四轮树选择和移动快捷键已提交为 `412c7ee`。继续使用当前 checkout，依赖 `kasane-2d b86b13b`；本轮没有修改相邻仓库。
+
+- core 新增轻量 `PaletteMoveDestination` 与 `palette_move_destinations`。根集合、Part 和 ParameterGroup 按原生容器顺序提供稳定身份与完整祖先路径；空容器也可选择，同名路径保留不同身份。使用迭代遍历，不复制整棵场景树及非容器对象，也不为每个容器生成移动计划。
+- 组织树和 Parameter/文件夹行菜单增加“移到…”；点在现有树多选内时冻结整个集合，点在集合外时只捕获点击对象。目标选择器可搜索完整路径；同名路径附加内部 ID 以区分。根集合是明确选项，成功移动追加到目标的完整顺序末尾。
+- 新增 `palette.move-to` 命令，使用既有 Palette 作用域和改键系统，无默认快捷键；列表焦点与行上下文沿用第四轮策略。菜单与快捷键共用同一目标选择器，实际操作调用 `plan_palette_move` / `execute_palette_move`。SDK 决定祖先归并、来源顺序、锁、循环、Offscreen 归属和整体原子性。
+- 搜索和重绘不规划。选定目标后只保存一个当前计划以显示校验结果，确认时重新规划、复核文档/编辑 token 与 revision，再执行一条历史。打开前结算输入并结束阻塞编辑，然后捕获对话框上下文；修改文档后及时禁用提交。取消、无目标和 no-op 不消费历史或 redo。
+- 不合法目标保留可读原因，禁用移动；补齐 Part 的原生 `RELATION_CYCLE` 映射，以及 Offscreen 必须归属 Part、拥有者已存在合成与需要转换的中英文反馈。对话框复用 `FormDialog` 的单次提交生命周期，选中目标的 Enter 只确认下拉选项，不同时提交移动。
+- 成功后不伪造单击、不改变检查或原多选集合。组织树展开结果路径并滚动，Parameter 定位器可按显式对象定位而不改写参数焦点。筛选下临时显露移动对象及祖先并标记“已移动”，保留查询/类型条件，沿用清除筛选入口；延迟定位也复核执行后的上下文。
+
+变形树不展示“移到…”菜单；变形父级改变仍需保持形态转换计划。多选上下移、Parameter 文件夹选择导航、其余创建命令入口，以及 U3–U6 仍未完成，不把本轮交付表述为 U2 全量验收。
+
+第五轮定向门禁：
+
+```sh
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+  headless_tests::palette_move_to panels::sorting::destination::tests \
+  headless_tests::tree_selection headless_tests::palette_commands \
+  headless_tests::hierarchy headless_tests::sorting headless_tests::scene_creation \
+  headless_tests::parameters headless_tests::parameter_groups \
+  headless_tests::parameter_management headless_tests::parameter_creation \
+  headless_tests::authoring headless_tests::properties headless_tests::panel_toolbar \
+  headless_tests::command_targets headless_tests::input_routing \
+  headless_tests::ui_performance keybindings::tests input_routing::policy \
+  panels::hierarchy_tree::filter
+
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+  palette_moves:: organization_authoring:: sorting:: keyboard:: commands::
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+受影响 UI/路由/筛选/工作量回归 **160 项通过**，其中新增 10 项“移到…” UI 回归和 1 项规划工作量测试。工作量验证搜索及 8 次连续通知重绘不规划，目标选择后 1 次，提交前重规划累计 2 次。core 移动、组织、命令和快捷键回归 **43 项通过**，含新增 3 项目标元数据/空容器/重名身份回归。格式与空白检查通过。本轮未运行完整套件、原生截图和 Release 性能基准。

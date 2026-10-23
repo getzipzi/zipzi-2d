@@ -9,7 +9,9 @@ mod scene_creation;
 pub use scene_creation::{SceneObjectCreationPlan, SceneObjectType};
 #[path = "authoring/moving.rs"]
 mod moving;
-pub use moving::{PaletteMove, PaletteMovePlan, PalettePosition, PaletteProjection};
+pub use moving::{
+    PaletteMove, PaletteMoveDestination, PaletteMovePlan, PalettePosition, PaletteProjection,
+};
 #[path = "authoring/expression.rs"]
 mod expression;
 #[path = "authoring/publication.rs"]

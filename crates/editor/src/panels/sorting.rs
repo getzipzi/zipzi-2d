@@ -1,6 +1,7 @@
 //! Shared palette gestures. Core plans own collection rules and placement;
 //! this view owns hit testing, feedback, hover expansion and scrolling.
 use crate::{EditorView, authoring::AuthoringContext};
+mod destination;
 use editor_core::{
     DocumentId, ObjectKind, ObjectRef, PaletteMove, PaletteMovePlan,
     PalettePosition as DropPosition, PaletteProjection,
@@ -644,6 +645,24 @@ impl EditorView {
         let Some(object) = object else {
             return;
         };
+        if command.id == editor_core::CommandId::PaletteMoveTo {
+            let sources = if doc.context().selections.contains(&object) {
+                doc.context().selections.clone()
+            } else {
+                vec![object]
+            };
+            if !self.prepare_property_inputs(document, window, cx) {
+                return;
+            }
+            let Some(context) = AuthoringContext::capture(&self.editor) else {
+                return;
+            };
+            let owner = cx.weak_entity();
+            window.defer(cx, move |window, cx| {
+                destination::open(owner, document, context, projection, sources, window, cx)
+            });
+            return;
+        }
         if doc.context().selections.contains(&object) && doc.context().selections.len() > 1 {
             self.set_edit_error(crate::t!("authoring.move_multiple").into_owned(), cx);
             return;
@@ -743,6 +762,37 @@ pub(super) fn move_menu(
                 }),
         );
     }
+    if projection != PaletteProjection::Deformation {
+        let sources = state
+            .editor
+            .document()
+            .map(|doc| {
+                if doc.context().selections.contains(&object) {
+                    doc.context().selections.clone()
+                } else {
+                    vec![object.clone()]
+                }
+            })
+            .unwrap_or_default();
+        menu = menu.item(
+            PopupMenuItem::new(crate::t!("authoring.move_to"))
+                .action(Box::new(crate::actions::RunCommand::new(
+                    editor_core::CommandId::PaletteMoveTo,
+                )))
+                .disabled(context.is_none())
+                .on_click(move |_, window, cx| {
+                    if let Some(context) = context {
+                        let owner = owner.clone();
+                        let sources = sources.clone();
+                        window.defer(cx, move |window, cx| {
+                            destination::open(
+                                owner, document, context, projection, sources, window, cx,
+                            )
+                        });
+                    }
+                }),
+        );
+    }
     menu
 }
 
@@ -750,7 +800,14 @@ fn move_error(error: &anyhow::Error) -> String {
     if let Some(error) = error.downcast_ref::<kasane_sdk::SdkError>() {
         match error.code.as_ref() {
             "OBJECT_LOCKED" => return crate::t!("authoring.locked").into_owned(),
-            "CDI_GROUP_CYCLE" | "PART_CYCLE" => {
+            "OFFSCREEN_REQUIRES_PART" => {
+                return crate::t!("authoring.move_requires_part").into_owned();
+            }
+            "DUPLICATE_OWNER" => return crate::t!("authoring.move_offscreen_owner").into_owned(),
+            "OFFSCREEN_REBIND_REQUIRES_CONVERSION" => {
+                return crate::t!("authoring.move_requires_conversion").into_owned();
+            }
+            "CDI_GROUP_CYCLE" | "PART_CYCLE" | "RELATION_CYCLE" => {
                 return crate::t!("authoring.move_cycle").into_owned();
             }
             _ => {}

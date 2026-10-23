@@ -14,6 +14,7 @@ mod mesh_generation;
 mod mesh_generation_preview;
 mod mesh_properties;
 mod palette_commands;
+mod palette_move_to;
 mod panel_toolbar;
 mod parameter_creation;
 mod parameter_groups;
@@ -46,9 +47,9 @@ use gpui_kit::{
 
 pub(crate) use crate::test_fixture as document_fixture;
 
-struct Harness {
-    window: AnyWindowHandle,
-    view: Entity<EditorView>,
+pub(crate) struct Harness {
+    pub(crate) window: AnyWindowHandle,
+    pub(crate) view: Entity<EditorView>,
     _config_dir: tempfile::TempDir,
     _assets: tempfile::TempDir,
 }
@@ -58,7 +59,7 @@ fn setup(cx: &mut TestAppContext) -> Harness {
     setup_with_document(cx, document, assets)
 }
 
-fn setup_with_document(
+pub(crate) fn setup_with_document(
     cx: &mut TestAppContext,
     document: Document,
     assets: tempfile::TempDir,

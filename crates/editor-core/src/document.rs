@@ -161,10 +161,11 @@ pub struct Document {
 mod authoring;
 pub use authoring::{
     AuthoringSessionReason, ExpressionAuthoringCapabilities, ExpressionEntryEditToken,
-    OperationResult, OrganizationAuthoringCapabilities, PaletteMove, PaletteMovePlan,
-    PalettePosition, PaletteProjection, PhysicsAuthoringCapabilities, PoseAuthoringCapabilities,
-    ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
-    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType,
+    OperationResult, OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination,
+    PaletteMovePlan, PalettePosition, PaletteProjection, PhysicsAuthoringCapabilities,
+    PoseAuthoringCapabilities, ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities,
+    SceneAuthoringCapabilities, SceneContentAuthoringCapabilities, SceneObjectCreationPlan,
+    SceneObjectType,
 };
 mod edits;
 mod physics;

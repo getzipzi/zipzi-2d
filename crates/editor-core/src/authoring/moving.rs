@@ -13,6 +13,14 @@ pub enum PaletteProjection {
     Deformation,
 }
 
+/// Lightweight destination metadata; a host plans only the chosen destination.
+/// `None` denotes the projection root and has an empty, host-localized path.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PaletteMoveDestination {
+    pub object: Option<ObjectRef>,
+    pub path: String,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PalettePosition {
     Before,
@@ -46,6 +54,57 @@ impl PaletteMovePlan {
 }
 
 impl Document {
+    pub fn palette_move_destinations(
+        &self,
+        projection: PaletteProjection,
+    ) -> Result<Vec<PaletteMoveDestination>> {
+        ensure!(
+            projection != PaletteProjection::Deformation,
+            "Deformation parent changes require a preservation plan"
+        );
+        let index = self.object_index();
+        let kind = if projection == PaletteProjection::Organization {
+            ObjectKind::Part
+        } else {
+            ObjectKind::ParameterGroup
+        };
+        let mut result = Vec::new();
+        let mut pending: Vec<(Option<ObjectRef>, String)> = vec![(None, String::new())];
+        let mut seen = std::collections::HashSet::new();
+        while let Some((object, path)) = pending.pop() {
+            let owner = object.as_ref().map(|object| object.id.clone());
+            let collection = if projection == PaletteProjection::Organization {
+                Collection::PartMembers { part_id: owner }
+            } else {
+                Collection::ParameterGroups { parent_id: owner }
+            };
+            result.push(PaletteMoveDestination {
+                object,
+                path: path.clone(),
+            });
+            let mut children = Vec::new();
+            for handle in self.session.organization_collection(collection)? {
+                if (kind == ObjectKind::Part && handle.kind() != kasane_sdk::ObjectKind::Part)
+                    || !seen.insert(handle.id().to_owned())
+                {
+                    continue;
+                }
+                let object = ObjectRef::new(kind, handle.id());
+                let name = index.name(&object);
+                let child_path = if path.is_empty() {
+                    name.to_owned()
+                } else {
+                    format!("{path} / {name}")
+                };
+                children.push((Some(object), child_path));
+            }
+            // Preorder in native sibling order, without recursion or cloning
+            // the scene tree and its non-container objects.
+            pending.extend(children.into_iter().rev());
+        }
+        Ok(result)
+    }
+
     pub fn plan_palette_move(&self, request: PaletteMove) -> Result<PaletteMovePlan> {
         self.ensure_authoring_idle()?;
         let first = request

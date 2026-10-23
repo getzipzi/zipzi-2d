@@ -163,3 +163,95 @@ fn steps_and_explicit_destinations_produce_the_same_native_order() -> anyhow::Re
     assert_eq!(a.parameters(), b.parameters());
     Ok(())
 }
+
+#[test]
+fn destination_metadata_uses_typed_containers_in_native_preorder_without_history_changes()
+-> anyhow::Result<()> {
+    let (mut d, _assets) = support::sample_document_with_parts()?;
+    let before = d.history_lengths();
+    let choices = d.palette_move_destinations(V::Organization)?;
+    assert_eq!(
+        choices
+            .iter()
+            .map(|choice| choice.path.as_str())
+            .collect::<Vec<_>>(),
+        ["", "Face", "Face / Eyes", "Body"]
+    );
+    assert!(choices[0].object.is_none());
+    assert!(
+        choices[1..]
+            .iter()
+            .all(|choice| choice.object.as_ref().unwrap().kind == K::Part)
+    );
+    assert_eq!(d.history_lengths(), before);
+    assert!(d.palette_move_destinations(V::Deformation).is_err());
+    let plan = d.plan_palette_move(PaletteMove {
+        projection: V::Organization,
+        sources: vec![object(K::Part, 103)],
+        target: choices[3].object.clone(),
+        position: P::Inside,
+    })?;
+    d.execute_palette_move(&plan)?;
+    assert_eq!(
+        d.palette_move_destinations(V::Organization)?
+            .iter()
+            .map(|choice| choice.path.as_str())
+            .collect::<Vec<_>>(),
+        ["", "Face", "Body", "Body / Eyes"]
+    );
+    d.undo()?;
+    let history = d.history_lengths();
+    assert_eq!(d.palette_move_destinations(V::Organization)?, choices);
+    assert_eq!(d.history_lengths(), history);
+    Ok(())
+}
+
+#[test]
+fn parameter_destinations_include_empty_folders_and_cycle_rejection_stays_in_planner()
+-> anyhow::Result<()> {
+    let (d, _assets) = support::sample_document_with_parameter_groups()?;
+    let choices = d.palette_move_destinations(V::Parameters)?;
+    assert_eq!(choices.len(), d.parameter_groups().len() + 1);
+    assert!(
+        choices[1..]
+            .iter()
+            .all(|choice| choice.object.as_ref().unwrap().kind == K::ParameterGroup)
+    );
+    let folder = object(K::ParameterGroup, 101);
+    assert!(
+        d.plan_palette_move(PaletteMove {
+            projection: V::Parameters,
+            sources: vec![folder.clone()],
+            target: Some(object(K::ParameterGroup, 102)),
+            position: P::Inside,
+        })
+        .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn equally_named_container_paths_retain_distinct_typed_identities() -> anyhow::Result<()> {
+    let mut d = Document::new_blank()?;
+    let mut objects = Vec::new();
+    for _ in 0..2 {
+        let id = uuid::Uuid::new_v4().to_string();
+        let plan = d.plan_organization_authoring(kasane_sdk::OrganizationEdit::CreatePart {
+            part: kasane_core::Part {
+                id: id.clone(),
+                name: "Same".into(),
+                ..Default::default()
+            },
+            before: None,
+        })?;
+        d.execute_organization_authoring(&plan)?;
+        objects.push(ObjectRef::new(K::Part, id));
+    }
+    let choices = d.palette_move_destinations(V::Organization)?;
+    assert_eq!(choices.len(), 3);
+    assert_eq!(choices[1].path, "Same");
+    assert_eq!(choices[2].path, "Same");
+    assert_eq!(choices[1].object.as_ref(), Some(&objects[0]));
+    assert_eq!(choices[2].object.as_ref(), Some(&objects[1]));
+    Ok(())
+}

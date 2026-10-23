@@ -136,6 +136,7 @@ pub(super) fn creation_menu<const DEFORMER: bool>(
                             // Retain the search/type conditions and temporarily show
                             // this item and its ancestors through the same tree.
                             panel.view.filter.revealed = Some(object);
+                            panel.view.filter.reveal_kind = super::filter::RevealKind::Created;
                             panel.last_selection = None;
                             panel.selection.cursor = None;
                             panel.rows_dirty = true;

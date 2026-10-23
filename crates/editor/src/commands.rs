@@ -202,7 +202,9 @@ impl EditorView {
                         });
                         cx.notify();
                     }
-                    CommandId::PaletteMoveUp | CommandId::PaletteMoveDown => {
+                    CommandId::PaletteMoveUp
+                    | CommandId::PaletteMoveDown
+                    | CommandId::PaletteMoveTo => {
                         self.handle_palette_command(command, window, cx);
                     }
                     CommandId::CreateParameter

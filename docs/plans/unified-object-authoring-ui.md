@@ -1,6 +1,6 @@
 # Editor UI 对象交互统一方案
 
-日期：2026 年 10 月 21 日。状态：2026 年 10 月 23 日开始实施；当前交付 U1 共享基础与 U2 Parameter/组织树创建、共享移动、树选择与移动快捷键切片，见[实施记录](unified-object-authoring-ui-implementation.md)。
+日期：2026 年 10 月 21 日。状态：2026 年 10 月 23 日开始实施；当前交付 U1 共享基础与 U2 Parameter/组织树创建、共享移动、树选择、移动快捷键与“移到…”切片，见[实施记录](unified-object-authoring-ui-implementation.md)。
 
 在 [对象创作核心架构改造方案](unified-object-authoring-core.md)完成并交付后，统一 Editor 的对象创建、Properties 编辑、文件夹、预览、排序和引用管理交互。核心负责身份、数据、规则与事务；本方案负责操作入口、控件事件、焦点、反馈和视图协调。
 

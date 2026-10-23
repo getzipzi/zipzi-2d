@@ -44,6 +44,7 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
     document_id: Option<DocumentId>,
     revision: Option<u64>,
     last_selection: Option<editor_core::ObjectRef>,
+    locate_target: Option<editor_core::ObjectRef>,
     selection: selection::TreeSelection,
     selection_context: Option<editor_core::EditingContextToken>,
     nodes: Vec<TreeNode>,
@@ -104,6 +105,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
                 document_id: None,
                 revision: None,
                 last_selection: None,
+                locate_target: None,
                 selection: selection::TreeSelection::default(),
                 selection_context: None,
                 nodes: Vec::new(),
@@ -112,6 +114,24 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
                 scroll: UniformListScrollHandle::new(),
             }
         })
+    }
+
+    pub(crate) fn locate_moved_object(
+        &mut self,
+        document: DocumentId,
+        object: editor_core::ObjectRef,
+        cx: &mut Context<Self>,
+    ) {
+        if self.document_id != Some(document) {
+            return;
+        }
+        if self.view.filter.is_active() {
+            self.view.filter.revealed = Some(object.clone());
+            self.view.filter.reveal_kind = filter::RevealKind::Moved;
+        }
+        self.locate_target = Some(object);
+        self.rows_dirty = true;
+        cx.notify();
     }
 
     fn prefix() -> &'static str {
@@ -188,6 +208,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
             self.document_id = target;
             self.revision = None;
             self.last_selection = None;
+            self.locate_target = None;
             self.rows_dirty = true;
             self.nodes.clear();
             self.rows = Rc::new(Vec::new());
@@ -399,9 +420,10 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             }
             self.rows_dirty = true;
         }
+        let locate = self.locate_target.take();
         let selection_changed = self.last_selection != selected || document_changed;
-        if selection_changed {
-            if self.view.filter.revealed.as_ref() != selected.as_ref() {
+        if selection_changed || locate.is_some() {
+            if locate.is_none() && self.view.filter.revealed.as_ref() != selected.as_ref() {
                 self.view.filter.revealed = None;
             }
             fn reveal(
@@ -420,7 +442,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 }
                 false
             }
-            if let Some(r) = &selected {
+            if let Some(r) = locate.as_ref().or(selected.as_ref()) {
                 let collapsed = if self.view.filter.is_active() {
                     &mut self.filtered_collapsed
                 } else {
@@ -454,10 +476,13 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             }
             self.rows_dirty = false;
         }
-        if selection_changed {
-            if let Some(i) = self.rows.iter().position(|r| {
-                r.node.reference().as_ref() == selected.as_ref() && selected.is_some()
-            }) {
+        if selection_changed || locate.is_some() {
+            let target = locate.as_ref().or(selected.as_ref());
+            if let Some(i) = self
+                .rows
+                .iter()
+                .position(|r| r.node.reference().as_ref() == target && target.is_some())
+            {
                 self.scroll.scroll_to_item(i, ScrollStrategy::Center);
             }
         }
@@ -764,11 +789,25 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                         .when(created_revealed, |element| {
                                             element.child(
                                                 div()
-                                                    .id("tree-created-item")
+                                                    .id(match this.view.filter.reveal_kind {
+                                                        filter::RevealKind::Created => {
+                                                            "tree-created-item"
+                                                        }
+                                                        filter::RevealKind::Moved => {
+                                                            "tree-moved-item"
+                                                        }
+                                                    })
                                                     .test_support()
                                                     .text_xs()
                                                     .text_color(theme.muted_foreground)
-                                                    .child(t!("authoring.new_item")),
+                                                    .child(t!(
+                                                        match this.view.filter.reveal_kind {
+                                                            filter::RevealKind::Created =>
+                                                                "authoring.new_item",
+                                                            filter::RevealKind::Moved =>
+                                                                "authoring.moved_item",
+                                                        }
+                                                    )),
                                             )
                                         })
                                         .when_some(visibility_object, |element, object| {
