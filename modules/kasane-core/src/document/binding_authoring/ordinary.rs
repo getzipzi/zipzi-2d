@@ -13,6 +13,8 @@ pub enum BindingGridTarget {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum BindingGridEdit {
+    /// Explicitly discard owned shapes and return to the unchanged base target.
+    Delete { owner: String },
     Create {
         id: String,
         target: BindingGridTarget,
@@ -24,6 +26,10 @@ pub enum BindingGridEdit {
 }
 #[derive(Debug, Clone)]
 pub(super) enum GridFragment {
+    Delete {
+        id: String,
+        scene: bool,
+    },
     Mesh {
         binding: MeshBinding,
         base: Option<Mesh>,
@@ -63,6 +69,7 @@ impl BindingGridPlan {
     }
     pub fn axes(&self) -> &[BindingAxis] {
         match &self.fragment {
+            GridFragment::Delete { .. } => &[],
             GridFragment::Mesh { binding, .. } => &binding.axes,
             GridFragment::Scene { binding, .. } => &binding.axes,
             GridFragment::Glue(g) => &g.binding.as_ref().unwrap().axes,
@@ -91,7 +98,50 @@ impl Document {
         control: &ConversionControl,
     ) -> Result<BindingGridPlan, Status> {
         control.checkpoint()?;
+        if let BindingGridEdit::Delete { owner } = &edit {
+            let (target, scene) = if let Some(b) = self.get_binding(owner) {
+                (b.mesh_id.clone(), false)
+            } else if let Some(b) = self.get_scene_binding(owner) {
+                (b.target_id().to_owned(), true)
+            } else {
+                return Err(Status::error("MISSING_BINDING", owner));
+            };
+            self.authoring_unlocked(owner)?;
+            self.authoring_unlocked(&target)?;
+            if scene && self.offscreen_for_part(&target).is_some() {
+                return Err(Status::error(
+                    "OFFSCREEN_MAPPING_REQUIRES_CONVERSION",
+                    owner,
+                ));
+            }
+            let affected = vec![owner.clone(), target];
+            let cost = self.conversion_report_cost(
+                &affected,
+                limits.check_conversion(0, 0, self.estimated_content_bytes())?,
+                limits,
+            )?;
+            let before = self.conversion_inventory(&affected, control);
+            let mut after = self.conversion_inventory(&affected, control);
+            after.clear(owner);
+            let report = ConversionReport::between(before, after, &affected,
+                "Return to the unchanged base target".into(),
+                vec!["Discard all owned binding axes, samples and keyforms; shared parameters and the base target are retained".into()]);
+            control.check()?;
+            return Ok(BindingGridPlan {
+                control: control.clone(),
+                report,
+                snapshot: self.snapshot_identity.clone(),
+                fragment: GridFragment::Delete {
+                    id: owner.clone(),
+                    scene,
+                },
+                cost,
+                guarantee: GridGuarantee::BaseShape,
+                affected,
+            });
+        }
         let (id, target, op, create) = match edit {
+            BindingGridEdit::Delete { .. } => unreachable!(),
             BindingGridEdit::Create { id, target } => (id, target, None, true),
             BindingGridEdit::Edit { owner, operation } => {
                 let target = if let Some(b) = self.get_binding(&owner) {
@@ -552,6 +602,7 @@ impl Document {
         let before = self.conversion_inventory(&affected, control);
         let mut after = self.conversion_inventory(&affected, control);
         match &fragment {
+            GridFragment::Delete { .. } => unreachable!(),
             GridFragment::Mesh { binding, .. } => after.mesh(binding),
             GridFragment::Scene {
                 binding, offscreen, ..
@@ -630,6 +681,16 @@ impl Document {
             return self.failed(Status::error("STALE_PLAN", "Replan the grid"));
         }
         let changed = match &plan.fragment {
+            GridFragment::Delete { id, scene } => {
+                if *scene {
+                    self.content.scene_bindings.remove(id);
+                    self.content.scene_binding_order.retain(|x| x != id);
+                } else {
+                    self.content.bindings.remove(id);
+                    self.content.binding_order.retain(|x| x != id);
+                }
+                true
+            }
             GridFragment::Mesh {
                 binding,
                 base,

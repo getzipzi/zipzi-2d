@@ -716,6 +716,31 @@ fn prepared_image_loads_own_pixels_without_file_io_during_publication() {
 }
 
 #[test]
+fn direct_prepared_import_is_one_atomic_resource_and_content_publication() {
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png");
+    let prepared = kasane_sdk::prepare_image_load(&path).unwrap();
+    let mut s = session();
+    let before = s.version();
+    let receipt = s
+        .import_prepared_image(id(10), "Imported".into(), &prepared)
+        .unwrap();
+    assert!(receipt.changed);
+    assert_eq!(s.version().revision, before.revision + 1);
+    let pixels = s.read_texture(&id(10)).unwrap();
+    assert_eq!(pixels.width, 2);
+    let version = s.version();
+    assert!(s
+        .import_prepared_image(id(10), "Duplicate".into(), &prepared)
+        .is_err());
+    assert_eq!(s.version(), version);
+    s.undo().unwrap();
+    assert!(s.asset(&id(10)).is_none());
+    s.redo().unwrap();
+    assert_eq!(s.read_texture(&id(10)).unwrap().rgba, pixels.rgba);
+}
+
+#[test]
 fn staged_image_load_checks_cancellation_and_version_again_at_commit() {
     let mut s = session();
     create(&mut s, 10);

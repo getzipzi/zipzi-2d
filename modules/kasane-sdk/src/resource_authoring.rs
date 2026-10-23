@@ -326,6 +326,30 @@ pub fn prepare_image_load(path: &std::path::Path) -> Result<PreparedImageContent
         .map_err(|s| SdkError::from_status(s, "prepare_image_load", vec![]))
 }
 impl AuthoringSession {
+    /// Publish a decoded image and its resource in one history entry. The
+    /// retained payload keeps save/redo independent of the original file.
+    pub fn import_prepared_image(
+        &mut self,
+        id: String,
+        name: String,
+        image: &PreparedImageContent,
+    ) -> Result<EditReceipt, SdkError> {
+        let mut edit = self.begin_owned_edit("Import texture", None)?;
+        edit.edit_resource(ResourceEdit::Create {
+            id: id.clone(),
+            name,
+            before: None,
+        })?;
+        edit.edit_resource(ResourceEdit::SetContent {
+            id,
+            expected: None,
+            content: Some(image.content().clone()),
+        })?;
+        let receipt = edit.commit_to(self)?;
+        self.project.retain_prepared_image(image);
+        Ok(receipt)
+    }
+
     pub fn replace_prepared_image_content(
         &mut self,
         token: &ImageLoadToken,

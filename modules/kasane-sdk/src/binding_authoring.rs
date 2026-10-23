@@ -103,6 +103,22 @@ fn plan(
             .map(BindingConversion::Reparent),
     }
 }
+impl crate::AuthoringSnapshot {
+    /// Plan a conversion off the UI thread against this immutable version.
+    pub fn plan_binding_authoring_with_control(
+        &self,
+        edit: BindingAuthoringEdit,
+        limits: AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<BindingEditPlan, SdkError> {
+        Ok(BindingEditPlan {
+            control: control.clone(),
+            version: self.version(),
+            conversion: plan(self.document(), edit, limits, control)
+                .map_err(|s| error(s, "plan_binding_authoring"))?,
+        })
+    }
+}
 impl AuthoringSession {
     pub fn reparent_support(&self, edit: &ReparentEdit) -> Result<ReparentSupport, SdkError> {
         self.document()
@@ -507,6 +523,13 @@ impl AuthoringSession {
             },
             delete: if editable != C::Available {
                 editable.clone()
+            } else if handle.kind() == K::SceneBinding
+                && d.get_scene_binding(owner)
+                    .is_some_and(|b| d.offscreen_for_part(b.target_id()).is_some())
+            {
+                C::Unavailable {
+                    code: "OFFSCREEN_MAPPING_REQUIRES_CONVERSION",
+                }
             } else if identity.as_ref().is_some_and(|i| {
                 i.kind == BindingIdentityKind::Axis
                     && axes.is_some_and(|axes| {

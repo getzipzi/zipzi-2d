@@ -288,3 +288,54 @@ mod conversions;
 
 #[path = "binding_authoring/stable_domains/mod.rs"]
 mod stable_domains;
+
+#[test]
+fn ordinary_binding_snapshot_delete_is_atomic_cancellable_and_preserves_base() {
+    use kasane_sdk::{BindingAuthoringEdit as E, BindingGridEdit as G, ConversionControl};
+    let mut sdk = fixture();
+    let binding = binding(&sdk);
+    sdk.edit("driven", None, |e| {
+        e.create_parameter(parameter(false))?;
+        e.create_binding(binding)
+    })
+    .unwrap();
+    let axis = sdk.binding(BINDING_ID).unwrap().axes[0].id.clone();
+    let mesh = sdk.mesh(MESH_ID).unwrap();
+    let snapshot = sdk.read_snapshot();
+    let control = ConversionControl::default();
+    let plan = snapshot
+        .plan_binding_authoring_with_control(
+            E::Grid(G::Delete {
+                owner: BINDING_ID.into(),
+            }),
+            sdk.authoring_limits(),
+            &control,
+        )
+        .unwrap();
+    assert!(plan.report().deleted.iter().any(
+        |a| matches!(&a.element, kasane_core::document::ConversionElement::Axis(id) if id == &axis)
+    ));
+    control.cancel();
+    assert!(sdk.execute_binding_plan(&plan).is_err());
+    assert!(sdk.binding(BINDING_ID).is_some());
+    let plan = snapshot
+        .plan_binding_authoring_with_control(
+            E::Grid(G::Delete {
+                owner: BINDING_ID.into(),
+            }),
+            sdk.authoring_limits(),
+            &ConversionControl::default(),
+        )
+        .unwrap();
+    let receipt = sdk.execute_binding_plan(&plan).unwrap();
+    assert!(receipt.changes.deleted.iter().any(|e| e.id == BINDING_ID));
+    assert!(sdk.binding(BINDING_ID).is_none());
+    assert_eq!(sdk.mesh(MESH_ID).unwrap(), mesh);
+    assert!(sdk.document().get_parameter(PARAMETER_ID).is_some());
+    assert!(snapshot.document().get_binding(BINDING_ID).is_some());
+    sdk.undo().unwrap();
+    assert!(sdk.binding(BINDING_ID).is_some());
+    assert!(sdk.execute_binding_plan(&plan).is_err());
+    sdk.redo().unwrap();
+    assert!(sdk.binding(BINDING_ID).is_none());
+}
