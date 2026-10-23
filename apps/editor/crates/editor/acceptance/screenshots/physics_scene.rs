@@ -12,7 +12,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
                 Harness::with_size(1160., 1080.)?
             };
             let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../models/local/mao/runtime/mao_pro.model3.json");
+                .join("../../../../models/local/mao/runtime/mao_pro.model3.json");
             let document = if path.is_file() {
                 editor_core::Document::import_model3(&path)?.0
             } else {

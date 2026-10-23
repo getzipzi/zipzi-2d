@@ -467,7 +467,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 "coincident B half remains filled"
             );
             let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
-                "../../target/overlay-style-{}.png",
+                "../../../../target/overlay-style-{}.png",
                 if dark { "dark" } else { "light" }
             ));
             image.save(path)?;

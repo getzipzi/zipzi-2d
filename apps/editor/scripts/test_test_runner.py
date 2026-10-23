@@ -14,9 +14,11 @@ class TestRunnerTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
-        (self.root / "scripts").mkdir()
-        shutil.copy(Path(__file__).with_name("test.sh"), self.root / "scripts/test.sh")
+        self.root = Path(self.temporary.name).resolve()
+        self.app = self.root / "apps/editor"
+        (self.app / "scripts").mkdir(parents=True)
+        for name in ["test.sh", "workspace.sh"]:
+            shutil.copy(Path(__file__).with_name(name), self.app / "scripts" / name)
         self.bin = self.root / "bin"
         self.bin.mkdir()
         for name in ["cargo", "python3"]:
@@ -31,7 +33,7 @@ sys.exit(int(os.environ.get('TEST_EXIT','0')))
         self.env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}", "KASANE_DEV_SESSION_DIR": "live-development-session"}
 
     def run_entrypoint(self, *args, **environment):
-        result = subprocess.run(["sh", "scripts/test.sh", *args], cwd=self.root, env={**self.env, **environment}, capture_output=True, text=True)
+        result = subprocess.run(["sh", "apps/editor/scripts/test.sh", *args], cwd=self.root, env={**self.env, **environment}, capture_output=True, text=True)
         log = self.root / "calls.jsonl"
         calls = [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
         return result, calls
@@ -74,6 +76,15 @@ sys.exit(int(os.environ.get('TEST_EXIT','0')))
         self.assertIn("kasane-editor/test-support", args)
         self.assertEqual(args[-1], "headless_tests::ui_performance")
         self.assertIsNone(calls[0]["session"])
+
+    def test_absolute_entrypoint_resolves_tool_discovery_from_another_directory(self):
+        for cwd in [self.app, self.root.parent]:
+            result = subprocess.run(['sh',str(self.app/'scripts/test.sh'),'tools','-v'],cwd=cwd,
+                env=self.env,capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            call = json.loads((self.root/'calls.jsonl').read_text().splitlines()[-1])
+            self.assertEqual(call['args'][call['args'].index('-s')+1],str(self.app/'scripts'))
+            self.assertEqual(call['args'][-1],'-v')
 
     def test_unknown_mode_fails_without_starting_work(self):
         result, calls = self.run_entrypoint("fasst")

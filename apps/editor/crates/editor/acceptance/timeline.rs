@@ -20,7 +20,7 @@ pub(super) fn run() -> anyhow::Result<()> {
         std::env::var_os("KASANE_DEV_SESSION_DIR").is_none(),
         "unset KASANE_DEV_SESSION_DIR"
     );
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..");
     let sources = super::assets::available(
         std::env::var_os("KASANE_TIMELINE_MODEL").map(|path| vec![PathBuf::from(path)]),
         &[root.join("models/local/mao/runtime/mao_pro.model3.json")],

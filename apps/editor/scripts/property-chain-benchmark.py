@@ -6,7 +6,6 @@ import argparse
 from collections import defaultdict
 from datetime import datetime, timezone
 import gzip
-import hashlib
 import json
 import math
 import os
@@ -18,17 +17,11 @@ import subprocess
 import tarfile
 import time
 
-ROOT = Path(__file__).resolve().parents[1]
-SDK = ROOT.parent / "kasane-2d"
+from workspace_tools import ROOT, digest, source_manifest, repository
 
 
 def command(args, cwd=ROOT):
     return subprocess.check_output(args, cwd=cwd, text=True).strip()
-
-
-def digest(path):
-    with path.open("rb") as source:
-        return hashlib.file_digest(source, "sha256").hexdigest()
 
 
 def probe_executable(messages):
@@ -168,18 +161,6 @@ def summarize(records):
     return {"metadata": metadata, "measurements": result}
 
 
-def source_manifest():
-    files = {}
-    for root, directories in [(ROOT, ["crates", "scripts"]), (SDK, ["modules"])]:
-        for directory in directories:
-            for path in (root / directory).rglob("*"):
-                if path.suffix in (".rs", ".toml", ".py") and "target" not in path.parts:
-                    files[str(path.relative_to(ROOT.parent))] = digest(path)
-        for name in ["Cargo.toml", "Cargo.lock"]:
-            files[str((root / name).relative_to(ROOT.parent))] = digest(root / name)
-    return files
-
-
 def build_activity():
     lines = command(["ps", "-axo", "pid,comm"]).splitlines()
     return [line.strip() for line in lines if Path(line.split(maxsplit=1)[-1]).name in {"cargo", "rustc", "rustdoc"}]
@@ -257,24 +238,24 @@ def main():
     # Include full sources as well as diffs, including new untracked probe files.
     with tarfile.open(output / "sources.tar.gz", "w:gz") as archive:
         for relative in sorted(before_sources):
-            archive.add(ROOT.parent / relative, arcname=relative, recursive=False)
+            archive.add(ROOT / relative, arcname=relative, recursive=False)
     provenance = {
-        "schema_version": 1, "started_utc": datetime.now(timezone.utc).isoformat(),
+        "schema_version": 2, "started_utc": datetime.now(timezone.utc).isoformat(),
         "arguments": {**vars(options), "model": str(model), "output": str(output)},
-        "platform": platform.platform(), "machine": platform.machine(),
+        "platform": platform.platform(), "machine": platform.machine(), "invocation_cwd": str(Path.cwd()),
         "rustc": command(["rustc", "-Vv"]), "sources": before_sources,
         "build_environment": {key: value for key, value in os.environ.items() if key in {"RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CARGO_BUILD_TARGET", "CARGO_TARGET_DIR"} or key.startswith("CARGO_PROFILE_RELEASE_")},
-        "repositories": {}, "model_files": {},
+        "repository": repository(), "lock_sha256": digest(ROOT / "Cargo.lock"), "model_files": {},
     }
     if platform.system() == "Darwin":
         provenance["hardware"] = command(["sysctl", "hw.model", "hw.memsize", "machdep.cpu.brand_string"])
-    for name, root in [("editor", ROOT), ("sdk", SDK)]:
-        provenance["repositories"][name] = {"head": command(["git", "rev-parse", "HEAD"], root), "status": command(["git", "status", "--short"], root)}
-        (output / f"{name}.diff").write_text(command(["git", "diff", "--binary", "HEAD"], root))
+    (output / "repository.diff").write_text(command(["git", "diff", "--binary", "HEAD"]))
     # Fingerprint the model subtree, including moc3, attachments and textures.
     provenance["model_files"] = model_manifest(model)
     env = os.environ.copy()
     env.pop("KASANE_DEV_SESSION_DIR", None)
+    if env.get("CARGO_TARGET_DIR"):
+        env["CARGO_TARGET_DIR"] = str(Path(env["CARGO_TARGET_DIR"]).resolve())
     binaries = {}
     for mode in ["plain", "instrumented"]:
         args = ["cargo", "build", "--locked", "--release", "--message-format=json-render-diagnostics", "-p", "editor-core", "--example", "property_chain_benchmark"]

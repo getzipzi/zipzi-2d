@@ -284,7 +284,7 @@ fn editor_hidden_mask_source_still_clips_native_metal_output() -> anyhow::Result
 fn imported_heijiao_renders_with_clipping_groups() -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
         let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../models/local/heijao/heijiao.psd");
+            .join("../../../../models/local/heijao/heijiao.psd");
         let (mut document, _) = Document::import_psd(&source)?;
         let mut imported = document.snapshot()?;
         let mut gpui = MetalRenderer::new_headless(Default::default());
@@ -327,7 +327,7 @@ fn imported_heijiao_renders_with_clipping_groups() -> anyhow::Result<()> {
         );
         assert!(masked.pixels().any(|pixel| pixel.0 != [255; 4]));
         let directory =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/psd-import");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../target/psd-import");
         std::fs::create_dir_all(&directory)?;
         masked.save(directory.join("heijiao.png"))?;
         Ok(())
@@ -664,7 +664,7 @@ fn animation_model_opacity_matches_observer_with_overlap_mask_and_offscreen() ->
 #[test]
 fn local_mao_opacity_and_added_offscreen_match_observer_pixels() -> anyhow::Result<()> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+        .join("../../../../models/local/mao/runtime/mao_pro.model3.json");
     if !path.exists() {
         eprintln!("SKIP licensed Mao model: {}", path.display());
         return Ok(());

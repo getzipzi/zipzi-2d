@@ -2,7 +2,7 @@
 
 This checkout is integrating the Kasane SDK and Editor. SDK code is
 MIT licensed; `apps/editor` is GPL-3.0-only, with third-party notices retained.
-The Cargo workspace is unified; script paths and CI are still being migrated.
+The Cargo workspace and Editor script paths are unified; CI is still being migrated.
 Use explicit Cargo package selections until the broad test gates are adapted.
 See the [migration status](docs/repository-merge/README.md).
 

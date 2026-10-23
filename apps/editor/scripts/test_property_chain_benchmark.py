@@ -3,6 +3,9 @@ import importlib.util
 import json
 from pathlib import Path
 import unittest
+from unittest import mock
+import tempfile
+import subprocess
 
 SPEC = importlib.util.spec_from_file_location("property_chain_benchmark", Path(__file__).with_name("property-chain-benchmark.py"))
 BENCH = importlib.util.module_from_spec(SPEC)
@@ -41,6 +44,33 @@ class PropertyChainReportTests(unittest.TestCase):
             BENCH.probe_executable(json.dumps(messages[-1]))
         with self.assertRaises(RuntimeError):
             BENCH.probe_executable("\n".join(map(json.dumps, [artifact, {**artifact, "executable": "/tmp/stale"}])))
+
+    def test_source_archive_and_provenance_use_the_workspace_root(self):
+        self.assertEqual(BENCH.ROOT, Path(__file__).resolve().parents[3])
+        sources = BENCH.source_manifest()
+        self.assertIn('Cargo.lock', sources)
+        self.assertIn('apps/editor/scripts/property-chain-benchmark.py', sources)
+        self.assertIn('modules/kasane-sdk/Cargo.toml', sources)
+        self.assertNotIn('apps/editor/Cargo.lock', sources)
+        self.assertFalse(any('models/local/' in path or path.startswith('../') for path in sources))
+        with mock.patch.object(BENCH, 'source_manifest', return_value={'Cargo.lock':'hash'}), \
+             mock.patch.object(BENCH, 'repository', return_value={'head':'single-head','status':'dirty'}), \
+             mock.patch.object(BENCH, 'command', return_value='fixture'), \
+             mock.patch.object(BENCH.platform, 'system', return_value='Fixture'), \
+             tempfile.TemporaryDirectory() as tmp:
+            model = Path(tmp)/'model.json'
+            model.write_text('{}')
+            output = Path(tmp)/'output'
+            with mock.patch('sys.argv', ['benchmark',str(model),str(output)]), \
+                 mock.patch.object(BENCH.subprocess, 'run', side_effect=subprocess.CalledProcessError(7,'cargo')):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    BENCH.main()
+            import tarfile
+            with tarfile.open(output/'sources.tar.gz') as archive:
+                self.assertEqual(archive.getnames(), ['Cargo.lock'])
+            self.assertTrue((output/'repository.diff').exists())
+            self.assertFalse((output/'editor.diff').exists())
+            self.assertFalse((output/'sdk.diff').exists())
 
     def test_refuses_partial_or_duplicate_runs(self):
         with self.assertRaises(ValueError):

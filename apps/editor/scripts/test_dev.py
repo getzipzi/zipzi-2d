@@ -43,11 +43,15 @@ int main(void) {
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="kasane-dev-test-")
-        self.root = Path(self.temp.name) / "editor"
-        (self.root / "scripts").mkdir(parents=True)
-        (self.root.parent / "kasane-2d/modules").mkdir(parents=True)
-        shutil.copy(SCRIPT, self.root / "scripts/dev.sh")
-        (self.root / "LICENSE").write_text("Dev lifecycle fixture license\n")
+        self.root = Path(self.temp.name).resolve() / "editor"
+        self.app = self.root / "apps/editor"
+        (self.app / "scripts").mkdir(parents=True)
+        (self.root / "modules").mkdir()
+        (self.root / "Cargo.toml").touch()
+        (self.root / "Cargo.lock").touch()
+        for name in ["dev.sh", "workspace.sh", "workspace_tools.py"]:
+            shutil.copy(SCRIPT.with_name(name), self.app / "scripts" / name)
+        (self.app / "LICENSE").write_text("Dev lifecycle fixture license\n")
         self.bin = self.root / "tools"
         self.bin.mkdir()
         shutil.copy(self._stub_binary, self.bin / "stub-editor")
@@ -60,8 +64,11 @@ with open('cargo-invocations.jsonl','a') as f:
 pathlib.Path('build-started').touch()
 while pathlib.Path('hold-build').exists(): time.sleep(0.02)
 if os.environ.get('BUILD_FAIL'): raise SystemExit(int(os.environ['BUILD_FAIL']))
-(target/'debug').mkdir(parents=True,exist_ok=True)
-shutil.copy('tools/stub-editor',target/'debug/kasane-editor')
+folder=target/os.environ['CARGO_BUILD_TARGET'] if os.environ.get('CARGO_BUILD_TARGET') else target
+(folder/'debug').mkdir(parents=True,exist_ok=True)
+binary=folder/'debug/kasane-editor'
+shutil.copy('tools/stub-editor',binary)
+print(json.dumps({'reason':'compiler-artifact','target':{'name':'kasane-editor','kind':['bin']},'executable':str(binary.resolve())}))
 """)
         self.tool("open", """
 import os,pathlib,subprocess,sys
@@ -79,17 +86,19 @@ p=subprocess.Popen([str(exe),'600'],env=env,stdin=subprocess.DEVNULL,stdout=subp
 with open('test-pids','a') as f: f.write(str(p.pid)+'\\n')
 """)
         self.tool("watchexec", """
-import pathlib,subprocess,time
+import pathlib,subprocess,time,sys,json
+pathlib.Path('watch-args.json').write_text(json.dumps(sys.argv[1:]))
 while True:
     trigger=pathlib.Path('trigger-reload')
     if trigger.exists():
         trigger.unlink()
-        subprocess.run(['sh','scripts/dev.sh','editor','reload'],check=False)
+        subprocess.run(['sh','apps/editor/scripts/dev.sh','editor','reload'],check=False)
     time.sleep(0.05)
 """)
         self.env = {
             **os.environ,
             "PATH": f"{self.bin}:{os.environ['PATH']}",
+            "CARGO_BUILD_TARGET": "",
             "KASANE_DEV_ATTEMPTS": "50",
             "KASANE_DEV_SLEEP_INTERVAL": "0.04",
             "KASANE_DEV_WATCH_INTERVAL": "0.05",
@@ -103,7 +112,7 @@ while True:
         path.chmod(0o755)
 
     def start(self, mode="reload", **env):
-        p = subprocess.Popen(["sh", "scripts/dev.sh", "editor", mode],cwd=self.root,
+        p = subprocess.Popen(["sh", "apps/editor/scripts/dev.sh", "editor", mode],cwd=self.root,
                              env={**self.env, **env},stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
         self.children.append(p)
         return p
@@ -189,6 +198,42 @@ while True:
         os.kill(int(self.pid_file.read_text()), 15)
         code, output = self.result(watcher)
         self.assertEqual(code, 0, output)
+
+    def test_target_triple_and_workspace_watch_paths(self):
+        self.run_reload(CARGO_BUILD_TARGET='aarch64-apple-darwin')
+        self.assertEqual((self.root/'target/Kasane Editor Dev.app/Contents/MacOS/kasane-editor').read_bytes(), self._stub_binary.read_bytes())
+        watcher = self.start('watch')
+        self.wait_for(lambda:(self.root/'watch-args.json').exists())
+        args = json.loads((self.root/'watch-args.json').read_text())
+        for path in [self.app, self.root/'modules', self.root/'Cargo.toml', self.root/'Cargo.lock']:
+            self.assertIn(str(path), args)
+        self.assertIn(str(self.app/'scripts/dev.sh'), args)
+
+    def test_absolute_entrypoint_from_app_and_other_cwd_and_checkout_isolation(self):
+        for cwd in [self.app, self.root.parent]:
+            child = subprocess.Popen(['sh',str(self.app/'scripts/dev.sh'),'editor','reload'],cwd=cwd,
+                env=self.env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+            self.children.append(child)
+            code, output = self.result(child)
+            self.assertEqual(code,0,output)
+        first = int(self.pid_file.read_text())
+        other = self.root.parent/'second checkout'
+        shutil.copytree(self.app, other/'apps/editor')
+        (other/'modules').mkdir()
+        shutil.copytree(self.bin, other/'tools')
+        for _ in range(2):
+            child = subprocess.Popen(['sh',str(other/'apps/editor/scripts/dev.sh'),'editor','reload'],cwd=self.root.parent,
+                env=self.env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+            self.children.append(child)
+            code, output = self.result(child)
+            # Include any processes started by the second checkout in teardown.
+            recorded = other/'test-pids'
+            if recorded.exists():
+                with (self.root/'test-pids').open('a') as log:
+                    log.write(recorded.read_text())
+            self.assertEqual(code,0,output)
+            self.assertTrue(self.alive(first))
+            self.assertNotEqual(first,int((other/'target/dev-kasane-editor.pid').read_text()))
 
     def test_concurrent_reload_is_rejected(self):
         (self.root/'hold-build').touch()

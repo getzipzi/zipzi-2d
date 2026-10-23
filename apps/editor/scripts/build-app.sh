@@ -1,12 +1,12 @@
 #!/bin/sh
 set -eu
-cd "$(dirname "$0")/.."
+. "$(dirname "$0")/workspace.sh"
 case "${1:-editor}" in
   editor)
     package="kasane-editor"
     name="Kasane Editor"
     bundle_id="dev.kasane.editor"
-    icon_asset="assets/kasane-editor-icon-vector.icns"
+    icon_asset="$editor_root/assets/kasane-editor-icon-vector.icns"
     ;;
   *)
     printf 'usage: %s [editor] [release|debug]\n' "$0" >&2
@@ -22,12 +22,14 @@ case "$profile" in
     exit 2
     ;;
 esac
-cargo build --locked --profile "$cargo_profile" -p "$package"
-binary="target/$profile/$package"
+artifact_log=$(mktemp)
+trap 'rm -f "$artifact_log"' 0
+cargo build --locked --message-format=json-render-diagnostics --profile "$cargo_profile" -p "$package" > "$artifact_log"
+binary=$(python3 "$editor_root/scripts/workspace_tools.py" executable "$artifact_log")
 app="$PWD/target/$name.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$binary" "$app/Contents/MacOS/$package"
-cp LICENSE "$app/Contents/Resources/LICENSE"
+cp "$editor_root/LICENSE" "$app/Contents/Resources/LICENSE"
 if [ -f "$icon_asset" ]; then
   cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
 fi

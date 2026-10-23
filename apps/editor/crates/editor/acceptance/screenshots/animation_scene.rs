@@ -405,7 +405,7 @@ pub(crate) fn animation_panel_review_screenshots(
     directory: &std::path::Path,
 ) -> anyhow::Result<()> {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+        .join("../../../../models/local/mao/runtime/mao_pro.model3.json");
     if !path.is_file() {
         return Ok(());
     }

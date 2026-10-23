@@ -312,7 +312,7 @@ fn markdown_report(report: &Value) -> String {
 #[ignore = "Licensed Mao multi-format audit; run explicitly with --ignored --nocapture"]
 fn mao_repeated_format_transfers_report_document_loss() -> Result<()> {
     let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/mao")
+        .join("../../../../models/local/mao")
         .canonicalize()?;
     let original_files = fixture_hashes(&source)?;
     let engineering = super::transfer::portable_mao_fixture()?;
@@ -327,7 +327,7 @@ fn mao_repeated_format_transfers_report_document_loss() -> Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join(format!("../../target/mao-roundtrip-{stamp}"))
+                .join(format!("../../../../target/mao-roundtrip-{stamp}"))
         });
     ensure!(
         !output.exists(),

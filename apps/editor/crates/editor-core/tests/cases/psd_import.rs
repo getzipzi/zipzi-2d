@@ -5,7 +5,7 @@ use editor_core::Document;
 #[ignore = "requires models/local/heijiao/2024.6.24.psd"]
 fn heijiao_imports_with_clipping_and_survives_save_reopen() -> anyhow::Result<()> {
     let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/heijiao/2024.6.24.psd");
+        .join("../../../../models/local/heijiao/2024.6.24.psd");
     let (mut document, notices) = Document::import_psd(&source)?;
     assert!(notices.is_empty(), "{notices:?}");
     assert!(document.path().is_none());

@@ -25,7 +25,8 @@ pub(super) fn run() -> anyhow::Result<()> {
     let directory = std::env::var_os("KASANE_SCREENSHOT_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
     if std::env::var("KASANE_SCREENSHOT_SCENE").as_deref() == Ok("physics") {

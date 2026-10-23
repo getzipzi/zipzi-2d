@@ -409,7 +409,7 @@ mod tests {
             use kasane_render_metal::read_rgba8;
 
             let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../models/local/mao_pro.kasane/project.kasane.json")
+                .join("../../../../models/local/mao_pro.kasane/project.kasane.json")
                 .canonicalize()?;
             let mut document = Document::open(&path)?;
             let scene = document.snapshot()?;

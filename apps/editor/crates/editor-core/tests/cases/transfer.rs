@@ -3,14 +3,14 @@ use kasane_core::{Canvas, ExportSettings, Vec2};
 use std::path::PathBuf;
 fn local(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/mao")
+        .join("../../../../models/local/mao")
         .join(name)
 }
 
 #[test]
 fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> anyhow::Result<()> {
     let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/v3a9_315702_nxss/v3a9_315702_nxss.can3");
+        .join("../../../../models/local/v3a9_315702_nxss/v3a9_315702_nxss.can3");
     if !source.is_file() {
         eprintln!("SKIP: local v3a9 project unavailable");
         return Ok(());
@@ -334,7 +334,7 @@ fn local_v3a9_native_saved_can3_retains_original_expression_operations() -> anyh
         return Ok(());
     };
     let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/v3a9_315702_nxss.kasane");
+        .join("../../../../models/local/v3a9_315702_nxss.kasane");
     let original = Document::open(&source)?;
     let (returned, _) = Document::import_cubism(&PathBuf::from(saved))?;
     let expressions = original.expression_resources();

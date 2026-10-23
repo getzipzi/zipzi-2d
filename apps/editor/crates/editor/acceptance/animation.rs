@@ -460,7 +460,7 @@ pub(super) fn run(paths: Vec<PathBuf>) -> anyhow::Result<()> {
         std::env::var_os("KASANE_DEV_SESSION_DIR").is_none(),
         "unset KASANE_DEV_SESSION_DIR"
     );
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../..");
     let output = std::env::var_os("KASANE_ANIMATION_OUTPUT")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("target/animation-acceptance"));

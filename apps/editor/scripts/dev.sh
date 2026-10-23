@@ -1,14 +1,14 @@
 #!/bin/sh
 set -eu
 
-cd "$(dirname "$0")/.."
+. "$(dirname "$0")/workspace.sh"
 
 case "${1:-editor}" in
   editor)
     package=kasane-editor
     name='Kasane Editor'
     bundle_id=dev.kasane.editor.watch
-    icon_asset=assets/kasane-editor-icon-vector.icns
+    icon_asset="$editor_root/assets/kasane-editor-icon-vector.icns"
     ;;
   *)
     printf 'usage: %s [editor] [watch|run]\n' "$0" >&2
@@ -16,8 +16,8 @@ case "${1:-editor}" in
     ;;
 esac
 
-if [ ! -d ../kasane-2d/modules ]; then
-  printf 'missing sibling checkout: ../kasane-2d/modules\n' >&2
+if [ ! -d "$repo_root/modules" ]; then
+  printf 'missing workspace modules directory\n' >&2
   exit 1
 fi
 
@@ -102,9 +102,10 @@ case "${2:-watch}" in
     if is_dev_process "$initial_pid"; then
       watched_pid=$initial_pid
     fi
-    watchexec --on-busy-update=queue --exts rs,toml \
-      --watch . --watch ../kasane-2d/modules \
-      -- ./scripts/dev.sh "${1:-editor}" reload &
+    watchexec --on-busy-update=queue --exts rs,toml,lock,metal,svg,icns \
+      --watch "$editor_root" --watch "$repo_root/modules" \
+      --watch "$repo_root/Cargo.toml" --watch "$repo_root/Cargo.lock" \
+      -- "$editor_root/scripts/dev.sh" "${1:-editor}" reload &
     watcher_pid=$!
     stop_watcher() {
       kill -TERM "$watcher_pid" 2>/dev/null || :
@@ -168,11 +169,13 @@ case "${2:-watch}" in
     mkdir -p target
     log="target/dev-build-$package.log"
     # GPUI FPS is temporarily disabled; omit the optional debug-tools feature.
-    if ! cargo build --locked --target-dir "$dev_target_dir" -p "$package" >"$log" 2>&1; then
+    if ! cargo build --locked --message-format=json-render-diagnostics --target-dir "$dev_target_dir" -p "$package" >"$log.json" 2>"$log"; then
       printf 'Build failed; full output: %s\n' "$log" >&2
       tail -n 80 "$log" >&2
       exit 1
     fi
+
+    binary=$(python3 "$editor_root/scripts/workspace_tools.py" executable "$log.json")
 
     old_pid=
     if [ -s "$pid_file" ]; then
@@ -225,9 +228,9 @@ case "${2:-watch}" in
 
     run_log="$PWD/target/dev-run-$package.log"
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-    cp "$dev_target_dir/debug/$package" "$executable.new.$$"
+    cp "$binary" "$executable.new.$$"
     mv "$executable.new.$$" "$executable"
-    cp LICENSE "$app/Contents/Resources/LICENSE"
+    cp "$editor_root/LICENSE" "$app/Contents/Resources/LICENSE"
     if [ -f "$icon_asset" ]; then
       cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
     fi

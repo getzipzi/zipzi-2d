@@ -6,7 +6,7 @@ use gpui_kit::{AppContext as _, TestAppContext};
 fn psd_picker_opens_an_unsaved_document_and_save_asks_for_a_path(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../kasane-2d/modules/kasane-psd/tests/fixtures/layered.psd");
+        .join("../../../../modules/kasane-psd/tests/fixtures/layered.psd");
     cx.update_window(harness.window, |_, window, cx| {
         harness
             .view

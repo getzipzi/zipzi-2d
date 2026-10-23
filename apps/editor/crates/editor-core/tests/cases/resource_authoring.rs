@@ -150,7 +150,7 @@ fn cached_editor_preview_adopts_replaced_pixels_for_all_users_and_retains_name_o
         &named.runtime_frame
     ));
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../kasane-2d/modules/kasane-sdk/tests/fixtures/asymmetric-2x2.png");
+        .join("../../../../modules/kasane-sdk/tests/fixtures/asymmetric-2x2.png");
     let image = kasane_sdk::prepare_image_load(&path)?;
     let token = editor.image_load_token(document, &asset)?;
     editor.replace_prepared_image_content(document, &token, &image)?;

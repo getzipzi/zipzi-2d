@@ -1,13 +1,14 @@
 # Runtime implementation preparation (R0)
 
 This directory records implementation evidence for the paired
-`kasane-editor/docs/plans/sdk-runtime-design.md` and implementation plan.
+[Editor Runtime design](../../apps/editor/docs/plans/sdk-runtime-design.md) and
+[implementation plan](../../apps/editor/docs/plans/sdk-runtime-implementation-plan.md).
 It does **not** introduce a Runtime, transport or ConnectedBackend. The current
 public Python package still imports `_native` and targets CPython 3.14.
 
 ## Source inventory
 
-Regenerate and validate from the SDK repository root:
+Regenerate and validate from the repository root:
 
 ```sh
 uv run --locked python tools/runtime_inventory.py

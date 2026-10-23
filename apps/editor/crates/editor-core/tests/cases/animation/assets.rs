@@ -4,7 +4,7 @@ use editor_core::*;
 #[test]
 fn local_model3_live_expression_switch_reuses_physics_history() -> anyhow::Result<()> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+        .join("../../../../models/local/mao/runtime/mao_pro.model3.json");
     if !path.exists() {
         eprintln!("Skipping live expression timing: local Mao model is unavailable");
         return Ok(());
@@ -65,7 +65,7 @@ fn local_model3_live_expression_switch_reuses_physics_history() -> anyhow::Resul
 #[test]
 fn local_model3_motion_uses_imported_physics_and_default_runtime_baseline() -> anyhow::Result<()> {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/mao/runtime/mao_pro.model3.json");
+        .join("../../../../models/local/mao/runtime/mao_pro.model3.json");
     if !path.exists() {
         return Ok(());
     }

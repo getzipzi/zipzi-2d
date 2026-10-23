@@ -6,7 +6,7 @@ A native macOS editor for Kasane 2D models, built with Rust, GPUI Kit, and Metal
 
 - macOS with a Metal-capable GPU.
 - Rust 1.95 or newer and Xcode Command Line Tools (`xcode-select --install`).
-- A compatible `kasane-2d` checkout at `../kasane-2d`. See [dependencies](DEPENDENCIES.md).
+- SDK sources are in the same workspace at `../../modules`. See [dependencies](DEPENDENCIES.md).
 
 ## Develop
 
@@ -23,7 +23,13 @@ brew install watchexec
 ./scripts/dev.sh
 ```
 
-`dev.sh` uses `target/dev/` for Cargo builds (both watch and run modes)
+`dev.sh` uses the repository root `target/dev/` for Cargo builds (both watch and run modes).
+PID files, locks, logs and app bundles also stay under the root `target/`, separately
+for each checkout. The watcher observes Editor sources, SDK modules and the root
+Cargo manifest/lockfile. Scripts can be invoked by absolute path from any directory.
+Explicit relative model/output arguments and `CARGO_TARGET_DIR` are relative to the
+caller; defaults use the repository root. `CARGO_BUILD_TARGET` is supported through
+Cargo artifact messages. Dev builds intentionally override `CARGO_TARGET_DIR`.
 
 ## Test
 
@@ -57,7 +63,7 @@ remain part of the full gate.
 keep dependency feature unification consistent with full runs. All Rust gates
 unset `KASANE_DEV_SESSION_DIR`.
 
-Licensed model acceptance discovers optional assets under `models/local/` and
+Licensed model acceptance discovers optional assets under the repository root `models/local/` and
 reports a skip when none are available. Explicit model paths must exist. Set
 `KASANE_ANIMATION_REQUIRE_ASSET=1` or `KASANE_TIMELINE_REQUIRE_ASSET=1` to require
 local assets, including in benchmark runs.
@@ -95,16 +101,16 @@ env -u KASANE_DEV_SESSION_DIR KASANE_SCREENSHOT_SCENE=physics cargo test --locke
 # Imported motion edge cases, editing and canvas navigation acceptance (local Mao asset):
 env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --features test-support --test timeline_acceptance
 # Release input/draw, candidate latency, playback, rapid-seek, canvas-pan and dock-resize measurements:
-./scripts/timeline-benchmark.sh target/timeline-benchmark-run 600
+./scripts/timeline-benchmark.sh ../../target/timeline-benchmark-run 600
 # Timeline channel-number scrubbing, CPU/GPU stages and authoring comparison:
-./scripts/timeline-number-benchmark.sh target/timeline-number-benchmark-run 96
+./scripts/timeline-number-benchmark.sh ../../target/timeline-number-benchmark-run 96
 # Mesh properties and complete RGB/HSV color picker in a native window:
-./scripts/properties-benchmark.sh target/properties-benchmark-run 300 120
+./scripts/properties-benchmark.sh ../../target/properties-benchmark-run 300 120
 # Paired Release editing-chain totals, nested stage attribution and work counts:
-python3 scripts/property-chain-benchmark.py models/local/mao/runtime/mao_pro.model3.json target/property-chain-run --reader-policy unique
+python3 scripts/property-chain-benchmark.py ../../models/local/mao/runtime/mao_pro.model3.json ../../target/property-chain-run --reader-policy unique
 # Continuous Animation workspace drags in a native window (no per-input frame wait):
-KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=canvas ./scripts/window-benchmark.sh MODEL target/animation-canvas-drag 2400 240
-KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-benchmark.sh MODEL target/animation-number-drag 2400 240
+KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=canvas ./scripts/window-benchmark.sh MODEL ../../target/animation-canvas-drag 2400 240
+KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-benchmark.sh MODEL ../../target/animation-number-drag 2400 240
 ```
 ## Build
 
@@ -112,7 +118,8 @@ KASANE_BENCH_ANIMATION=1 KASANE_BENCH_ANIMATION_DRAG=number ./scripts/window-ben
 ./scripts/build-app.sh
 ```
 
-App bundles are saved to `target/`.
+App bundles are saved to the repository root `target/`. Binary locations come
+from Cargo artifacts; bundles contain the Editor GPL license and app assets.
 
 ## License
 

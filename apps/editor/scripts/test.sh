@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-cd "$(dirname "$0")/.."
+. "$(dirname "$0")/workspace.sh"
 
 usage() {
     cat <<'EOF'
@@ -38,11 +38,11 @@ case "$mode" in
             --test animation_acceptance --test timeline_acceptance "$@"
         ;;
     tools)
-        exec python3 -m unittest discover -s scripts -p 'test_*.py' "$@"
+        exec python3 -m unittest discover -s "$editor_root/scripts" -p 'test_*.py' "$@"
         ;;
     full)
         cargo fmt --all -- --check
-        python3 -m unittest discover -s scripts -p 'test_*.py'
+        python3 -m unittest discover -s "$editor_root/scripts" -p 'test_*.py'
         exec env -u KASANE_DEV_SESSION_DIR cargo test --locked --workspace --features kasane-editor/test-support "$@"
         ;;
     -h|--help|help)

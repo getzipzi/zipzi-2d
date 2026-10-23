@@ -8,12 +8,14 @@ independent clone (no shared object alternates or hardlinks), on
 `codex/merge-editor-monorepo`. `upstream` uses the existing kasane-2d GitHub URL.
 No new GitHub repository, push, remote rename, or archive was performed.
 
-P0 baseline capture, P1 history import and P2 workspace integration are complete.
-**This remains a migration checkpoint:** P3–P6 are pending. Cargo now resolves one
-workspace and lockfile, but Editor scripts, model/fixture discovery, SDK CI and
-broad test entrypoints still need adaptation. In particular, existing SDK
+P0 baseline capture, P1 history import, P2 workspace integration and P3 path/tool
+adaptation are complete.
+**This remains a migration checkpoint:** P4–P6 are pending. Cargo resolves one
+workspace and lockfile; Editor entrypoints and fixtures use this checkout. SDK CI
+and broad test entrypoints still need package-scope adaptation. In particular, existing SDK
 `--workspace` commands now include Editor; use explicit package selections until
-P4. Do not treat old imported script commands as validated.
+P4. Native runtime, full app packaging and licensed-model acceptance remain
+part of the later end-to-end gates.
 
 The governing [implementation plan](../../apps/editor/docs/plans/repository-merge-plan.md)
 retains the design and acceptance matrix. Its original snapshot is historical;
@@ -91,11 +93,14 @@ Python 3.11+:
 python3.14 docs/repository-merge/verify-workspace.py
 ```
 
-## Next: P3, then testing and repository acceptance
+## P3: paths and tooling
 
-1. Adapt scripts, model/fixture paths, benchmark provenance and inventory (P3).
-2. Separate SDK and Editor package selection before running broad gates (P4).
-3. Finish licensing/navigation/assets and isolation acceptance (P5–P6).
+See [P3 implementation and validation](p3-paths.md).
+
+## Next: P4, then repository acceptance
+
+1. Separate SDK and Editor package selection before running broad gates (P4).
+2. Finish licensing/navigation/assets and isolation acceptance (P5–P6).
 
 Native runtime tests, asset acceptance, Python wheel, GitHub license recognition
 and cross-platform CI remain unverified. Recheck original HEADs before the next
