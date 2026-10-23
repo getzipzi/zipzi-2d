@@ -75,6 +75,8 @@ mod resource_authoring;
 #[path = "cases/palette_moves.rs"]
 mod palette_moves;
 
+#[path = "cases/deformation_creation.rs"]
+mod deformation_creation;
 #[path = "cases/scene_creation.rs"]
 mod scene_creation;
 

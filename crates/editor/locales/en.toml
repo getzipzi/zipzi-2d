@@ -729,6 +729,11 @@ stabilize = "Settle chain"
 rename_group = "Rename group"
 
 [authoring]
+new_deformation_mesh = "New Mesh in Deformation Tree"
+new_deformation_warp = "New Warp in Deformation Tree"
+new_deformation_rotation = "New Rotation in Deformation Tree"
+deformation_creation = "In Deformation Tree"
+deformation_context = "Choose a mesh or deformer in the deformation tree."
 locked = "Unlock the object and its owner before editing."
 move_up = "Move up"
 move_down = "Move down"

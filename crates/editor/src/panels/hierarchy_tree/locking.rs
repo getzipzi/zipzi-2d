@@ -219,7 +219,7 @@ pub(super) fn menu<const DEFORMER: bool, E: ContextMenuExt + IntoElement + 'stat
                 );
             }));
         }
-        if !DEFORMER {
+        {
             menu = super::management::creation_menu(
                 menu.separator(),
                 panel.clone(),

@@ -728,6 +728,11 @@ stabilize = "稳定摆链"
 rename_group = "重命名物理组"
 
 [authoring]
+new_deformation_mesh = "在变形树中新建网格"
+new_deformation_warp = "在变形树中新建曲面变形器"
+new_deformation_rotation = "在变形树中新建旋转变形器"
+deformation_creation = "在变形树中新建"
+deformation_context = "请选择变形树中的网格或变形器。"
 locked = "请先解锁对象及其所属对象。"
 move_up = "上移"
 move_down = "下移"

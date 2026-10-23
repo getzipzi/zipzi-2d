@@ -261,9 +261,7 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         let target = self.document_id;
         let panel = cx.weak_entity();
         PanelToolbar::new(SharedString::from(format!("{prefix}-panel-toolbar")))
-            .when(!DEFORMER, |toolbar| {
-                toolbar.control(management::button(self, cx))
-            })
+            .control(management::button(self, cx))
             .control(
                 PanelToolbarPopover::new(
                     SharedString::from(format!("{prefix}-tree-filter-popover")),
@@ -869,13 +867,12 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                 cx.weak_entity(),
                                             )
                                             .into_any_element(),
-                                            _ if !DEFORMER => management::root_menu(
+                                            _ => management::root_menu(
                                                 element,
                                                 cx.weak_entity(),
                                                 target,
                                             )
                                             .into_any_element(),
-                                            _ => element.into_any_element(),
                                         })
                                 })
                                 .collect()
@@ -891,11 +888,15 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             .track_scroll(&self.scroll)
             .into_any_element()
         })
-        .when(!DEFORMER && target.is_some(), |element| {
+        .when(target.is_some(), |element| {
             element.child(management::root_menu(
                 sorting::drop_target(
                     div()
-                        .id("mesh-tree-root-drop")
+                        .id(if DEFORMER {
+                            "deformer-tree-root-drop"
+                        } else {
+                            "mesh-tree-root-drop"
+                        })
                         .test_support()
                         .h(crate::ui::compact::rem(crate::ui::compact::ROW))
                         .flex_shrink_0()

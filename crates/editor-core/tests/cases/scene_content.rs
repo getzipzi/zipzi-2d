@@ -79,6 +79,7 @@ fn pair_child_projection_and_history_share_the_native_lifecycle() -> anyhow::Res
         part_id: None,
         parent_id: None,
         before: None,
+        deformation_before: None,
     })?;
     d.execute_scene_authoring(&p)?;
     let pair = kasane_core::GlueVertexPair::default();
@@ -131,6 +132,7 @@ fn warp_resize_and_offscreen_content_use_one_history_step_each() -> anyhow::Resu
         part_id: None,
         parent_id: None,
         before: None,
+        deformation_before: None,
     })?;
     d.execute_scene_authoring(&p)?;
     let p = d.plan_organization_authoring(kasane_sdk::OrganizationEdit::CreatePart {
@@ -148,6 +150,7 @@ fn warp_resize_and_offscreen_content_use_one_history_step_each() -> anyhow::Resu
         part_id: Some(part),
         parent_id: None,
         before: None,
+        deformation_before: None,
     })?;
     d.execute_scene_authoring(&p)?;
     let before = d.history_lengths();

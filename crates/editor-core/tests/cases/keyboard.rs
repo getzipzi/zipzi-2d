@@ -38,6 +38,12 @@ fn scene_creation_bindings_have_stable_ids_and_can_be_configured_without_default
         (CommandId::CreateWarp, "scene.create-warp"),
         (CommandId::CreateRotation, "scene.create-rotation"),
         (CommandId::CreateOffscreen, "scene.create-offscreen"),
+        (CommandId::CreateDeformationMesh, "deformation.create-mesh"),
+        (CommandId::CreateDeformationWarp, "deformation.create-warp"),
+        (
+            CommandId::CreateDeformationRotation,
+            "deformation.create-rotation",
+        ),
     ] {
         assert_eq!(serde_json::from_value::<CommandId>(key.into())?, id);
         assert_eq!(serde_json::to_value(id)?, key);

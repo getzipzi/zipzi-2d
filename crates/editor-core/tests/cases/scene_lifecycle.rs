@@ -21,6 +21,7 @@ fn create(d: &mut Document, object: New) -> anyhow::Result<String> {
             part_id: None,
             parent_id: None,
             before: None,
+            deformation_before: None,
         },
     )?;
     Ok(id)

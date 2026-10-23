@@ -87,6 +87,12 @@ pub enum CommandId {
     CreateRotation,
     #[serde(rename = "scene.create-offscreen")]
     CreateOffscreen,
+    #[serde(rename = "deformation.create-mesh")]
+    CreateDeformationMesh,
+    #[serde(rename = "deformation.create-warp")]
+    CreateDeformationWarp,
+    #[serde(rename = "deformation.create-rotation")]
+    CreateDeformationRotation,
     #[serde(rename = "parameter.create")]
     CreateParameter,
     #[serde(rename = "parameter.edit")]
@@ -339,6 +345,27 @@ specs![
         false,
         []
     ),
+    (
+        CreateDeformationMesh,
+        "authoring.new_deformation_mesh",
+        Document,
+        false,
+        []
+    ),
+    (
+        CreateDeformationWarp,
+        "authoring.new_deformation_warp",
+        Document,
+        false,
+        []
+    ),
+    (
+        CreateDeformationRotation,
+        "authoring.new_deformation_rotation",
+        Document,
+        false,
+        []
+    ),
     (CreateParameter, "parameter.new", Document, false, []),
     (EditParameter, "parameter.edit", Document, false, []),
     (DeleteParameter, "parameter.delete", Document, false, []),
@@ -448,12 +475,27 @@ impl CommandId {
         use crate::SceneObjectType as T;
         Some(match self {
             Self::CreatePart => T::Part,
-            Self::CreateMesh => T::Mesh,
-            Self::CreateWarp => T::Warp,
-            Self::CreateRotation => T::Rotation,
+            Self::CreateMesh | Self::CreateDeformationMesh => T::Mesh,
+            Self::CreateWarp | Self::CreateDeformationWarp => T::Warp,
+            Self::CreateRotation | Self::CreateDeformationRotation => T::Rotation,
             Self::CreateOffscreen => T::Offscreen,
             _ => return None,
         })
+    }
+    pub fn scene_creation_projection(self) -> Option<crate::PaletteProjection> {
+        self.scene_creation_type()?;
+        Some(
+            if matches!(
+                self,
+                Self::CreateDeformationMesh
+                    | Self::CreateDeformationWarp
+                    | Self::CreateDeformationRotation
+            ) {
+                crate::PaletteProjection::Deformation
+            } else {
+                crate::PaletteProjection::Organization
+            },
+        )
     }
     pub fn spec(self) -> &'static CommandSpec {
         COMMANDS.iter().find(|s| s.id == self).unwrap()
@@ -767,13 +809,21 @@ impl Editor {
             }
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo | CreateParameter
             | CreateParameterGroup => modeling && target && !self.is_busy() && !self.exiting(),
-            CreatePart | CreateMesh | CreateWarp | CreateRotation | CreateOffscreen => {
+            CreatePart
+            | CreateMesh
+            | CreateWarp
+            | CreateRotation
+            | CreateOffscreen
+            | CreateDeformationMesh
+            | CreateDeformationWarp
+            | CreateDeformationRotation => {
                 modeling
                     && target
                     && !self.is_busy()
                     && !self.exiting()
                     && self.document().is_some_and(|doc| {
-                        doc.validate_scene_object_creation_context(
+                        doc.validate_scene_object_creation_in(
+                            command.id.scene_creation_projection().unwrap(),
                             command.id.scene_creation_type().unwrap(),
                             &doc.context().selections,
                         )

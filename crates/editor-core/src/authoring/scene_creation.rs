@@ -1,7 +1,10 @@
-//! Organization-tree creation defaults and full-collection insertion anchors.
+//! Scene creation defaults and independent organization/deformation positions.
 //! The SDK validates owners, locks and object data and publishes one transaction.
+use super::moving::PaletteProjection;
 use super::*;
-use kasane_sdk::{OrganizationCollection, OrganizationEdit, SceneCreate, SceneEdit};
+use kasane_sdk::{
+    OrganizationCollection, OrganizationEdit, SceneCollection, SceneCreate, SceneEdit,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SceneObjectType {
@@ -23,7 +26,15 @@ impl SceneObjectType {
 }
 
 #[derive(Clone, Debug)]
-pub struct SceneObjectCreationPlan(CreationPlan);
+pub struct SceneObjectCreationPlan {
+    projection: PaletteProjection,
+    plan: CreationPlan,
+}
+impl SceneObjectCreationPlan {
+    pub fn projection(&self) -> PaletteProjection {
+        self.projection
+    }
+}
 #[derive(Clone, Debug)]
 enum CreationPlan {
     Organization(kasane_sdk::OrganizationEditPlan),
@@ -39,7 +50,30 @@ impl Document {
         kind: SceneObjectType,
         selection: &[ObjectRef],
     ) -> anyhow::Result<()> {
-        let (part_id, _) = self.scene_creation_container(selection)?;
+        self.validate_scene_object_creation_in(PaletteProjection::Organization, kind, selection)
+    }
+
+    pub fn validate_scene_object_creation_in(
+        &self,
+        projection: PaletteProjection,
+        kind: SceneObjectType,
+        selection: &[ObjectRef],
+    ) -> anyhow::Result<()> {
+        let (part_id, parent_id) = match projection {
+            PaletteProjection::Organization => (self.scene_creation_container(selection)?.0, None),
+            PaletteProjection::Deformation => {
+                anyhow::ensure!(
+                    matches!(
+                        kind,
+                        SceneObjectType::Mesh | SceneObjectType::Warp | SceneObjectType::Rotation
+                    ),
+                    "NO_DEFORMATION_COLLECTION"
+                );
+                let (part, parent, _) = self.deformation_creation_container(selection)?;
+                (part, parent)
+            }
+            PaletteProjection::Parameters => anyhow::bail!("NO_SCENE_COLLECTION"),
+        };
         let state = self
             .session
             .organization_collection_capabilities(&OrganizationCollection::PartMembers {
@@ -50,6 +84,17 @@ impl Document {
         | kasane_sdk::CapabilityState::Unsupported { code } = state
         {
             anyhow::bail!("{code}");
+        }
+        if projection == PaletteProjection::Deformation {
+            let state = self
+                .session
+                .scene_collection_capabilities(&SceneCollection::Deformation { parent_id })?
+                .create;
+            if let kasane_sdk::CapabilityState::Unavailable { code }
+            | kasane_sdk::CapabilityState::Unsupported { code } = state
+            {
+                anyhow::bail!("{code}");
+            }
         }
         if kind == SceneObjectType::Offscreen {
             let part_id = part_id.ok_or_else(|| anyhow::anyhow!("OFFSCREEN_REQUIRES_PART"))?;
@@ -73,40 +118,136 @@ impl Document {
         name: String,
         selection: &[ObjectRef],
     ) -> anyhow::Result<SceneObjectCreationPlan> {
+        self.plan_scene_object_creation_in(PaletteProjection::Organization, kind, name, selection)
+    }
+
+    pub fn plan_scene_object_creation_in(
+        &self,
+        projection: PaletteProjection,
+        kind: SceneObjectType,
+        name: String,
+        selection: &[ObjectRef],
+    ) -> anyhow::Result<SceneObjectCreationPlan> {
         self.ensure_authoring_idle()?;
-        let (part_id, before) = self.scene_creation_location(kind, selection)?;
+        let (part_id, parent_id, before, deformation_before) = match projection {
+            PaletteProjection::Organization => {
+                let (part, before) = self.scene_creation_location(kind, selection)?;
+                (part, None, before, None)
+            }
+            PaletteProjection::Deformation => {
+                anyhow::ensure!(
+                    matches!(
+                        kind,
+                        SceneObjectType::Mesh | SceneObjectType::Warp | SceneObjectType::Rotation
+                    ),
+                    "NO_DEFORMATION_COLLECTION"
+                );
+                let (part, parent, after) = self.deformation_creation_container(selection)?;
+                let before = if after {
+                    let members = self
+                        .session
+                        .scene_collection(&SceneCollection::Deformation {
+                            parent_id: parent.clone(),
+                        })?;
+                    let members: Vec<_> = members
+                        .iter()
+                        .filter(|object| {
+                            parent.is_some()
+                                || (object.kind() == kasane_sdk::ObjectKind::Transform)
+                                    == (kind != SceneObjectType::Mesh)
+                        })
+                        .collect();
+                    let selected: std::collections::HashSet<_> =
+                        selection.iter().map(|object| object.id.as_str()).collect();
+                    members
+                        .iter()
+                        .rposition(|object| selected.contains(object.id()))
+                        .and_then(|i| members.get(i + 1))
+                        .map(|object| object.id().to_owned())
+                } else {
+                    None
+                };
+                (part, parent, None, before)
+            }
+            PaletteProjection::Parameters => anyhow::bail!("NO_SCENE_COLLECTION"),
+        };
         let name = self.scene_creation_name(name, part_id.as_deref())?;
         let id = Uuid::new_v4().to_string();
-        Ok(SceneObjectCreationPlan(if kind == SceneObjectType::Part {
-            CreationPlan::Organization(self.plan_organization_authoring(
-                OrganizationEdit::CreatePart {
-                    part: kasane_core::Part {
-                        id,
-                        name,
-                        parent_id: part_id.unwrap_or_default(),
-                        ..Default::default()
+        Ok(SceneObjectCreationPlan {
+            projection,
+            plan: if kind == SceneObjectType::Part {
+                CreationPlan::Organization(self.plan_organization_authoring(
+                    OrganizationEdit::CreatePart {
+                        part: kasane_core::Part {
+                            id,
+                            name,
+                            parent_id: part_id.unwrap_or_default(),
+                            ..Default::default()
+                        },
+                        before,
                     },
+                )?)
+            } else {
+                CreationPlan::Scene(self.plan_scene_authoring(SceneEdit::Create {
+                    id,
+                    name,
+                    object: match kind {
+                        SceneObjectType::Mesh => SceneCreate::Mesh {
+                            texture: Default::default(),
+                        },
+                        SceneObjectType::Warp => SceneCreate::Warp { bounds: None },
+                        SceneObjectType::Rotation => SceneCreate::Rotation,
+                        SceneObjectType::Offscreen => SceneCreate::Offscreen,
+                        SceneObjectType::Part => unreachable!(),
+                    },
+                    part_id,
+                    parent_id,
                     before,
-                },
-            )?)
+                    deformation_before,
+                })?)
+            },
+        })
+    }
+
+    fn deformation_creation_container(
+        &self,
+        selection: &[ObjectRef],
+    ) -> anyhow::Result<(Option<String>, Option<String>, bool)> {
+        let mut parents = Vec::new();
+        let mut owners = Vec::new();
+        for object in selection {
+            anyhow::ensure!(
+                matches!(object.kind, ObjectKind::Mesh | ObjectKind::Deformer),
+                "EXPECTED_DEFORMATION_MEMBERS"
+            );
+            self.organization_authoring_capabilities(object)?;
+            let owner = self
+                .model()
+                .organization_owner(&object.id)
+                .map(str::to_owned);
+            if selection.len() == 1 && object.kind == ObjectKind::Deformer {
+                return Ok((owner, Some(object.id.clone()), false));
+            }
+            let parent = self
+                .model()
+                .scene_deformer_parent(&object.id)
+                .ok_or_else(|| anyhow::anyhow!("EXPECTED_DEFORMATION_MEMBERS"))?;
+            parents.push((!parent.is_empty()).then(|| parent.to_owned()));
+            owners.push(owner);
+        }
+        let Some(parent) = parents.first().cloned() else {
+            return Ok((None, None, false));
+        };
+        if parents.iter().any(|other| *other != parent) {
+            return Ok((None, None, false));
+        }
+        let owner = owners.first().cloned().flatten();
+        let owner = if owners.iter().all(|other| *other == owner) {
+            owner
         } else {
-            CreationPlan::Scene(self.plan_scene_authoring(SceneEdit::Create {
-                id,
-                name,
-                object: match kind {
-                    SceneObjectType::Mesh => SceneCreate::Mesh {
-                        texture: Default::default(),
-                    },
-                    SceneObjectType::Warp => SceneCreate::Warp { bounds: None },
-                    SceneObjectType::Rotation => SceneCreate::Rotation,
-                    SceneObjectType::Offscreen => SceneCreate::Offscreen,
-                    SceneObjectType::Part => unreachable!(),
-                },
-                part_id,
-                parent_id: None,
-                before,
-            })?)
-        }))
+            None
+        };
+        Ok((owner, parent, true))
     }
 
     fn scene_creation_name(&self, name: String, owner: Option<&str>) -> anyhow::Result<String> {
@@ -214,7 +355,7 @@ impl Document {
         &mut self,
         plan: &SceneObjectCreationPlan,
     ) -> anyhow::Result<OperationResult> {
-        match &plan.0 {
+        match &plan.plan {
             CreationPlan::Organization(plan) => self.execute_organization_authoring(plan),
             CreationPlan::Scene(plan) => self.execute_scene_authoring(plan),
         }

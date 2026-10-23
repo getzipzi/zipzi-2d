@@ -284,15 +284,35 @@ fn native_unavailable_reason_refreshes_when_availability_stays_disabled(cx: &mut
     let (_, duplicate, disabled) = native_action(&h, C::CreateOffscreen, cx);
     assert!(disabled);
     assert!(duplicate.contains("already has an Offscreen"));
-    let before = h
-        .view
-        .read_with(cx, |view, _| view.menu_state.commands.clone());
+    let before = h.view.read_with(cx, |view, _| {
+        view.menu_state
+            .commands
+            .iter()
+            .zip(editor_core::COMMANDS)
+            .filter(|(_, spec)| {
+                spec.id.scene_creation_projection()
+                    != Some(editor_core::PaletteProjection::Deformation)
+            })
+            .map(|(state, _)| *state)
+            .collect::<Vec<_>>()
+    });
     select(&h, unowned, cx);
     let (_, missing, disabled) = native_action(&h, C::CreateOffscreen, cx);
     assert!(disabled);
     assert!(missing.contains("Select a Part"));
-    h.view
-        .read_with(cx, |view, _| assert_eq!(view.menu_state.commands, before));
+    h.view.read_with(cx, |view, _| {
+        assert_eq!(
+            view.menu_state
+                .commands
+                .iter()
+                .zip(editor_core::COMMANDS)
+                .filter(|(_, spec)| spec.id.scene_creation_projection()
+                    != Some(editor_core::PaletteProjection::Deformation))
+                .map(|(state, _)| *state)
+                .collect::<Vec<_>>(),
+            before
+        )
+    });
     select(&h, part.clone(), cx);
     cx.update_window(h.window, |_, _, cx| {
         h.view.update(cx, |view, cx| {

@@ -7,6 +7,7 @@ mod canvas;
 mod command_targets;
 mod compact_popups;
 mod compact_ui;
+mod deformation_creation;
 mod docking_tabs;
 mod hierarchy;
 mod input_routing;

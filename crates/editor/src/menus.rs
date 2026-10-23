@@ -139,8 +139,7 @@ impl EditorView {
                     )
                 })
                 .collect(),
-            creation_reasons: crate::authoring::scene_creation::COMMANDS
-                .iter()
+            creation_reasons: crate::authoring::scene_creation::all_commands()
                 .map(|id| {
                     if self.editor.is_busy()
                         || self.editor.editing_context()
@@ -149,7 +148,8 @@ impl EditorView {
                         return None;
                     }
                     let doc = self.editor.document()?;
-                    doc.validate_scene_object_creation_context(
+                    doc.validate_scene_object_creation_in(
+                        id.scene_creation_projection().unwrap(),
                         id.scene_creation_type().unwrap(),
                         &doc.context().selections,
                     )
@@ -197,9 +197,8 @@ impl EditorView {
             let state = property_state(id, self.editor.command_state(command));
             let mut label = t!(id.spec().label).into_owned();
             if !state.enabled {
-                if let Some(reason) = crate::authoring::scene_creation::COMMANDS
-                    .iter()
-                    .position(|command| *command == id)
+                if let Some(reason) = crate::authoring::scene_creation::all_commands()
+                    .position(|command| command == id)
                     .and_then(|i| self.menu_state.creation_reasons[i].as_ref())
                 {
                     label = format!("{label} · {reason}");
@@ -288,6 +287,13 @@ impl EditorView {
                                 .into_iter()
                                 .map(&item)
                                 .chain([
+                                    MenuItem::submenu(
+                                        Menu::new(t!("authoring.deformation_creation")).items(
+                                            crate::authoring::scene_creation::DEFORMATION_COMMANDS
+                                                .into_iter()
+                                                .map(&item),
+                                        ),
+                                    ),
                                     MenuItem::separator(),
                                     item(CommandId::CreateParameter),
                                     item(CommandId::CreateParameterGroup),

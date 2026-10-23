@@ -1,4 +1,4 @@
-//! Organization projection creation shared by row menus, toolbars, native
+//! Explicit scene projection creation shared by row menus, toolbars, native
 //! menus and configured shortcuts. The core owns defaults and placement.
 use super::*;
 use editor_core::{Command, CommandId, SceneObjectCreationPlan, SceneObjectType};
@@ -10,6 +10,15 @@ pub(crate) const COMMANDS: [CommandId; 5] = [
     CommandId::CreateRotation,
     CommandId::CreateOffscreen,
 ];
+
+pub(crate) const DEFORMATION_COMMANDS: [CommandId; 3] = [
+    CommandId::CreateDeformationMesh,
+    CommandId::CreateDeformationWarp,
+    CommandId::CreateDeformationRotation,
+];
+pub(crate) fn all_commands() -> impl Iterator<Item = CommandId> {
+    COMMANDS.into_iter().chain(DEFORMATION_COMMANDS)
+}
 
 pub(crate) fn default_name(kind: SceneObjectType) -> String {
     t!(match kind {
@@ -28,6 +37,8 @@ pub(crate) fn creation_error(error: &anyhow::Error) -> String {
         t!("authoring.locked").into_owned()
     } else if message.contains("OFFSCREEN_REQUIRES_PART") {
         t!("authoring.offscreen_requires_part").into_owned()
+    } else if message.contains("EXPECTED_DEFORMATION_MEMBERS") {
+        t!("authoring.deformation_context").into_owned()
     } else if message.contains("DUPLICATE_OWNER") {
         t!("authoring.move_offscreen_owner").into_owned()
     } else {
@@ -49,8 +60,8 @@ impl EditorView {
         if self.editor.active_id() != Some(document) {
             return;
         }
-        // Capture the same organization selection as the toolbar before input
-        // settlement can notify another control. Deformation placement is separate.
+        // Capture the same scene selection as the toolbar before input
+        // settlement can notify another control. The command names its projection.
         let selection = self.editor.document().unwrap().context().selections.clone();
         if !self.prepare_property_inputs(document, window, cx) {
             return;
@@ -58,11 +69,16 @@ impl EditorView {
         let Some(context) = AuthoringContext::capture(&self.editor) else {
             return;
         };
-        match self.editor.document().unwrap().plan_scene_object_creation(
-            kind,
-            default_name(kind),
-            &selection,
-        ) {
+        match self
+            .editor
+            .document()
+            .unwrap()
+            .plan_scene_object_creation_in(
+                command.id.scene_creation_projection().unwrap(),
+                kind,
+                default_name(kind),
+                &selection,
+            ) {
             Ok(plan) => self.apply_scene_creation(context, &plan, kind, window, cx),
             Err(error) => self.set_edit_error(creation_error(&error), cx),
         }
@@ -77,14 +93,20 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         let document = context.editing.document;
+        let projection = plan.projection();
+        let panel_kind = if projection == editor_core::PaletteProjection::Deformation {
+            editor_core::PanelKind::Deformers
+        } else {
+            editor_core::PanelKind::MeshTree
+        };
         let result = self
             .execute_authoring(context, window, cx, |editor, document| {
                 editor.execute_scene_object_creation(document, plan)
             })
             .and_then(|result| {
                 if let Some(dock) = &self.dock {
-                    if !dock.displayed(editor_core::PanelKind::MeshTree, cx) {
-                        dock.show(editor_core::PanelKind::MeshTree, None, window, cx);
+                    if !dock.displayed(panel_kind, cx) {
+                        dock.show(panel_kind, None, window, cx);
                     }
                 }
                 // Properties is shown last so its name field stays available
@@ -96,7 +118,8 @@ impl EditorView {
                 self.clear_edit_error(cx);
                 self.redraw(cx);
                 if let (Some(object), Some(dock)) = (object, &self.dock) {
-                    let panel = dock.mesh_tree.downgrade();
+                    let mesh = dock.mesh_tree.downgrade();
+                    let deformer = dock.deformer_tree.downgrade();
                     let owner = cx.weak_entity();
                     let after = AuthoringContext::capture(&self.editor);
                     window.defer(cx, move |window, cx| {
@@ -107,9 +130,15 @@ impl EditorView {
                                     doc.context().inspected.as_ref() == Some(&object)
                                 })
                         }) {
-                            _ = panel.update(cx, |panel, cx| {
-                                panel.locate_created_object(document, object, window, cx);
-                            });
+                            if projection == editor_core::PaletteProjection::Deformation {
+                                _ = deformer.update(cx, |panel, cx| {
+                                    panel.locate_created_object(document, object, window, cx)
+                                });
+                            } else {
+                                _ = mesh.update(cx, |panel, cx| {
+                                    panel.locate_created_object(document, object, window, cx)
+                                });
+                            }
                         }
                     });
                 }

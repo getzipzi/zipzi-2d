@@ -1,6 +1,8 @@
 use super::*;
 use crate::authoring::AuthoringContext;
-use crate::authoring::scene_creation::{COMMANDS, creation_error, default_name};
+use crate::authoring::scene_creation::{
+    COMMANDS, DEFORMATION_COMMANDS, creation_error, default_name,
+};
 use editor_core::ObjectRef;
 use gpui_kit::component::menu::{ContextMenuExt, DropdownMenu, PopupMenu, PopupMenuItem};
 
@@ -17,15 +19,19 @@ pub(super) fn button<const DEFORMER: bool>(
             || document.is_none()
             || state.editor.editing_context() != Some(editor_core::EditingContext::Modeling)
     });
-    crate::ui::compact::header_button(Button::new("mesh-tree-create"))
-        .icon(IconName::Plus)
-        .ghost()
-        .disabled(disabled)
-        .accessibility_label(t!("authoring.new_object"))
-        .tooltip(t!("authoring.new_object"))
-        .dropdown_menu(move |menu, window, cx| {
-            creation_menu(menu, weak.clone(), document, None, window, cx)
-        })
+    crate::ui::compact::header_button(Button::new(if DEFORMER {
+        "deformer-tree-create"
+    } else {
+        "mesh-tree-create"
+    }))
+    .icon(IconName::Plus)
+    .ghost()
+    .disabled(disabled)
+    .accessibility_label(t!("authoring.new_object"))
+    .tooltip(t!("authoring.new_object"))
+    .dropdown_menu(move |menu, window, cx| {
+        creation_menu(menu, weak.clone(), document, None, window, cx)
+    })
 }
 
 /// Row context is explicit; toolbar context is captured once when it opens.
@@ -38,7 +44,7 @@ pub(super) fn creation_menu<const DEFORMER: bool>(
     cx: &mut App,
 ) -> PopupMenu {
     menu = crate::ui::compact::menu(menu);
-    if DEFORMER || window.has_active_dialog(cx) {
+    if window.has_active_dialog(cx) {
         return menu;
     }
     let Some(document) = document else {
@@ -64,10 +70,23 @@ pub(super) fn creation_menu<const DEFORMER: bool>(
     };
     let doc = state.editor.document().unwrap();
     let selection = selection.unwrap_or_else(|| doc.context().selections.clone());
-    for command in COMMANDS {
+    for &command in if DEFORMER {
+        &DEFORMATION_COMMANDS[..]
+    } else {
+        &COMMANDS[..]
+    } {
         let kind = command.scene_creation_type().unwrap();
-        let plan = doc.plan_scene_object_creation(kind, default_name(kind), &selection);
-        let label = t!(command.spec().label);
+        let plan = doc.plan_scene_object_creation_in(
+            command.scene_creation_projection().unwrap(),
+            kind,
+            default_name(kind),
+            &selection,
+        );
+        let label_command = COMMANDS
+            .iter()
+            .find(|id| id.scene_creation_type() == Some(kind))
+            .unwrap();
+        let label = t!(label_command.spec().label);
         let label: SharedString = if let Err(error) = &plan {
             format!("{label} · {}", creation_error(error)).into()
         } else {

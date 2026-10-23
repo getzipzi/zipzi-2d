@@ -219,7 +219,10 @@ impl EditorView {
                     | CommandId::CreateMesh
                     | CommandId::CreateWarp
                     | CommandId::CreateRotation
-                    | CommandId::CreateOffscreen => {
+                    | CommandId::CreateOffscreen
+                    | CommandId::CreateDeformationMesh
+                    | CommandId::CreateDeformationWarp
+                    | CommandId::CreateDeformationRotation => {
                         self.handle_scene_creation_command(command, window, cx)
                     }
                     id if editor_core::PanelKind::for_command(id, self.editor.workspace())

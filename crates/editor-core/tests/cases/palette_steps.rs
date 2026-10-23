@@ -186,6 +186,7 @@ fn deformation_siblings_step_without_changing_parents_and_mixed_parents_are_reje
         part_id: None,
         parent_id: Some(a.id.clone()),
         before: None,
+        deformation_before: None,
     })?;
     d.execute_scene_authoring(&plan)?;
     let history = d.history_lengths();

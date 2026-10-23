@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建及命令入口、共享移动、树选择、Parameter 文件夹导航、多选移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树与变形树创建及命令入口、共享移动、树选择、Parameter 文件夹导航、多选移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
 
 ## 首轮实现：创建与输入边界
 
@@ -16,7 +16,7 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入 | 变形树创建与变形父级保持形态移动仍待实施 |
+| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入；变形树 Mesh/Warp/Rotation 创建、双投影位置与显露已接入 | 变形父级保持形态移动仍待实施 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
@@ -294,3 +294,50 @@ git diff --check
 受影响 UI/命令/移动/创建/输入路由/虚拟化门禁 **184 项通过**，包含新增 9 项创建命令 UI 回归：原生菜单真实动作、各命令来源、实际改键与文本/重复按键隔离、输入结算及过滤显露、禁用原因缓存更新、过期目标与工作区/模态拒绝、隐藏面板恢复、共用标签组名称聚焦、新建后的范围锚点。core 定向门禁 **63 项通过**，包含新增 2 项命令可用性/原生归属、历史与 redo 保留、稳定命令 ID、改键及冲突检查回归，并扩展已有忙状态断言。格式与空白检查通过。本轮未运行完整套件、原生截图或 Release 性能基准。
 
 U2 仍未全量验收：变形树创建需要核心方案第 6.1 节的双投影插入位置契约；改变实际变形父级需要保持形态转换交互。U1 的全入口收口与 U3–U6 状态不变。
+
+
+## 第九轮实现：变形树创建与双投影位置
+
+第八轮创建主菜单和快捷键已提交为 `6db8b70`，没有包含其他任务已暂存的 SDK 设计文档。本轮在当前 checkout 继续；`kasane-2d` 以 `b86b13b` 为基础补充原生契约，Editor 与 SDK 本轮改动均尚未提交，没有创建 worktree。
+
+- 补齐[核心方案第 6.1 节](unified-object-authoring-core.md#61-ui-u2-发现的后续创建位置契约)：原生 `SceneEdit::Create` 增加独立可选的 `deformation_before`，组织集合仍由 `part_id` / `before` 确定，实际变形集合由 `parent_id` / `deformation_before` 确定。创建 planner 校验两个拥有者、锁和稳定锚点，在同一创建 delta 内发布两份顺序；不使用创建后再移动的第二条历史。Offscreen 和 Glue 拒绝变形锚点。SDK 的版本校验、事务回滚、双集合变化摘要与 Undo/Redo 沿用原生路径。
+- core 新增按明确投影创建的入口，计划携带投影供结果定位；原组织创建入口委托此入口。变形树只支持 Mesh、Warp、Rotation。单个变形器内追加，单个 Mesh 同父级之后插入，同父级多选按完整顺序的最后成员之后插入；跨实际父级选择回到根集合。根变形器与根 Mesh 保留各自展示集合顺序。
+- 组织归属独立于实际变形父级：单个上下文沿用该对象的组织拥有者，同父级但组织拥有者不同的多选在组织根集合追加，同时保留共同实际父级。变形投影创建不顺带重排组织成员；名称继续按组织拥有者避重，数据默认值与最终校验由 core/SDK 提供。
+- 变形树增加创建工具栏、行右键和根集合菜单，复用共享创建执行、Properties 名称聚焦、过滤下临时“新建”显露、展开和滚动。行菜单捕获点击行，不改用菜单打开后的全局选择；锁定目标禁用并显示原因，过期菜单整体拒绝。Part/Offscreen 不展示误导性的变形树创建项。
+- 新增 `deformation.create-mesh`、`deformation.create-warp`、`deformation.create-rotation` 三个明确投影的文档命令，无默认键位，可通过现有改键系统配置；主菜单“编辑 → 创建 → 在变形树中新建”提供同一动作。命令目录使用可区分组织/变形创建的中英文名称，面板内菜单保留简短名称。已有 `scene.create-*` 继续明确表示组织投影，不从当前焦点暗中切换领域语义。
+- 创建可用性继续使用轻量原生查询；补充原生集合验证入口，使变形集合能力查询只校验父级及锁，不枚举完整同级集合或构建逐项 SDK handle。实际计划解析完整顺序，过滤和折叠不影响稳定锚点。补充 Python API 文档；JSON 命令入口可直接传入新锚点，无需新增面板资产拼装逻辑。
+
+第九轮定向门禁：
+
+```sh
+# kasane-editor
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+  headless_tests::deformation_creation headless_tests::scene_creation_commands \
+  headless_tests::parameter_navigation headless_tests::palette_steps \
+  headless_tests::palette_move_to panels::sorting::destination::tests \
+  headless_tests::tree_selection headless_tests::palette_commands \
+  headless_tests::hierarchy headless_tests::sorting headless_tests::scene_creation \
+  headless_tests::parameters headless_tests::parameter_groups \
+  headless_tests::parameter_management headless_tests::parameter_creation \
+  headless_tests::authoring headless_tests::properties headless_tests::panel_toolbar \
+  headless_tests::command_targets headless_tests::input_routing \
+  headless_tests::ui_performance keybindings::tests input_routing::policy \
+  panels::hierarchy_tree::filter menus::tests
+
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+  deformation_creation:: scene_creation:: scene_lifecycle:: organization_authoring:: \
+  palette_steps:: palette_moves:: sorting:: keyboard:: commands::
+
+# ../kasane-2d
+cargo test --locked -p kasane-sdk --test integration -- \
+  scene_creation_placement:: scene_lifecycle:: scene_content:: scene_authoring:: \
+  organization_authoring:: hierarchy_order:: authoring_acceptance::
+
+# 两个仓库分别执行
+cargo fmt --all -- --check
+git diff --check
+```
+
+受影响 UI/命令/创建/移动/路由/虚拟化门禁 **191 项通过**，包含新增 7 项变形创建 UI 回归；core 定向门禁 **69 项通过**，包含新增 6 项投影位置、默认归属、多选、根集合、不可用/过期与命令能力回归；SDK 受影响门禁 **78 项通过**，包含新增 6 项双锚点、双集合发布、三种数据默认值、错误集合/缺失/自身锚点、两个拥有者的锁、事务回滚、JSON、过期计划、单条 Undo/Redo 与保存回读回归。既有快捷键回归扩展稳定 ID 与冲突断言。测试集合与前轮有重叠，不累计相加。
+
+两个仓库格式与空白检查通过。本轮未运行完整套件、Python 绑定构建/门禁、原生截图或 Release 性能基准。U2 尚未全量验收，剩余重点是改变实际变形父级时的保持形态转换交互；U1 全入口收口与 U3–U6 状态不变。
