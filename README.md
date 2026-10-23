@@ -1,8 +1,10 @@
 # Zipzi 2D
 
-This checkout is beginning the Kasane SDK/Editor repository merge. SDK code is
+This checkout is integrating the Kasane SDK and Editor. SDK code is
 MIT licensed; `apps/editor` is GPL-3.0-only, with third-party notices retained.
-See the [migration status](docs/repository-merge/README.md) before building Editor.
+The Cargo workspace is unified; script paths and CI are still being migrated.
+Use explicit Cargo package selections until the broad test gates are adapted.
+See the [migration status](docs/repository-merge/README.md).
 
 Kasane 2D provides a Rust authoring SDK, Python bindings, and a WGPU renderer
 
@@ -16,6 +18,9 @@ inventory, ownership audit and reproducible CPU fixture/baseline tools for the
 paired Editor integration. Runtime and ConnectedBackend are not implemented yet.
 
 ## Build and test
+
+The unified workspace requires Rust 1.95 or newer (Editor GPUI uses
+`std::hint::cold_path`, stabilized in 1.95).
 
 Python tools use uv (0.10.7 or newer) and CPython 3.14. The root
 `pyproject.toml` and `uv.lock` manage development tools; the SDK wheel remains

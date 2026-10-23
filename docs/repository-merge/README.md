@@ -8,11 +8,12 @@ independent clone (no shared object alternates or hardlinks), on
 `codex/merge-editor-monorepo`. `upstream` uses the existing kasane-2d GitHub URL.
 No new GitHub repository, push, remote rename, or archive was performed.
 
-P0 baseline capture and P1 history import are complete. **This is a migration
-checkpoint, not a usable merged workspace.** P2–P6 remain pending. In particular,
-Editor still has its original nested workspace and sibling dependency paths;
-do not treat its imported build/test commands as validated yet. Neither full
-regression nor source compatibility of this baseline pair has been established.
+P0 baseline capture, P1 history import and P2 workspace integration are complete.
+**This remains a migration checkpoint:** P3–P6 are pending. Cargo now resolves one
+workspace and lockfile, but Editor scripts, model/fixture discovery, SDK CI and
+broad test entrypoints still need adaptation. In particular, existing SDK
+`--workspace` commands now include Editor; use explicit package selections until
+P4. Do not treat old imported script commands as validated.
 
 The governing [implementation plan](../../apps/editor/docs/plans/repository-merge-plan.md)
 retains the design and acceptance matrix. Its original snapshot is historical;
@@ -80,16 +81,22 @@ git show b4e4abc737f88bdb895dfec960444dd3183369b7:crates/editor/Cargo.toml
 Use paths relative to the original Editor root at that revision. Do not rely
 on `git log --follow` automatically crossing the subtree merge.
 
-## Next: P2, then dependent path and CI changes
+## P2: unified Cargo workspace
 
-1. Merge the 18 members into the root workspace; preserve SDK edition/MIT and
-   explicitly retain Editor edition 2024/GPL-3.0-only, patches and profiles.
-2. Resolve the unified lockfile with minimal version changes, inspect metadata
-   from both roots, then remove the nested Editor workspace/lockfile.
-3. Adapt scripts, model/fixture paths, benchmark provenance and inventory (P3).
-4. Separate SDK and Editor package selection before running broad gates (P4).
-5. Finish licensing/navigation/assets and isolation acceptance (P5–P6).
+See [P2 validation and decisions](p2-workspace.md) and the
+[dependency audit](p2-dependency-audit.json). Re-run structural acceptance with
+Python 3.11+:
 
-No migrated builds, native tests, asset acceptance, Python wheel, GitHub license
-recognition, or cross-platform CI results are claimed at this checkpoint.
-Before proceeding, recheck both original HEADs and reconcile any new commits.
+```sh
+python3.14 docs/repository-merge/verify-workspace.py
+```
+
+## Next: P3, then testing and repository acceptance
+
+1. Adapt scripts, model/fixture paths, benchmark provenance and inventory (P3).
+2. Separate SDK and Editor package selection before running broad gates (P4).
+3. Finish licensing/navigation/assets and isolation acceptance (P5–P6).
+
+Native runtime tests, asset acceptance, Python wheel, GitHub license recognition
+and cross-platform CI remain unverified. Recheck original HEADs before the next
+stage and reconcile any new commits.

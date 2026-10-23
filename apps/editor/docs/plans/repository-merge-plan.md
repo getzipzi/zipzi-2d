@@ -1,6 +1,6 @@
 # Kasane 仓库合并计划
 
-状态：待实施。本次只编写计划，没有移动代码、修改远端或执行合仓。
+状态：实施中，P0–P2 已在新仓库 zipzi-2d 落地，P3–P6 待实施。当前结果以[实施记录](../../../../docs/repository-merge/README.md)为准；下文的现状快照与“本文没有运行”说明保留为原计划编写时的记录。
 
 编写日期：2026-10-23。目标是将 `kasane-editor` 并入 `kasane-2d`，形成一个 Git 仓库和一个主 Cargo workspace，同时保留 SDK、Python wheel 与 Editor 的独立职责、验证入口和发布产物。
 

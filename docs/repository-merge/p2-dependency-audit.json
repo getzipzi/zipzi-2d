@@ -1,0 +1,1016 @@
+{
+  "sdk": {
+    "original_packages": 218,
+    "retained_identities": 218,
+    "removed": [],
+    "added_count": 659,
+    "checksum_changes": 0,
+    "metadata_feature_changes": [
+      {
+        "package": [
+          "arrayvec",
+          "0.7.8"
+        ],
+        "added": [
+          "default",
+          "std"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "bytemuck",
+          "1.25.2"
+        ],
+        "added": [
+          "aarch64_simd",
+          "wasm_simd"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "byteorder",
+          "1.5.0"
+        ],
+        "added": [
+          "default",
+          "std"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "cc",
+          "1.4.7"
+        ],
+        "added": [
+          "parallel"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "core-foundation",
+          "0.10.1"
+        ],
+        "added": [
+          "default"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "core-foundation-sys",
+          "0.8.7"
+        ],
+        "added": [
+          "default"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "dispatch2",
+          "0.3.1"
+        ],
+        "added": [
+          "block2",
+          "std"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "futures-core",
+          "0.3.34"
+        ],
+        "added": [
+          "default"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "futures-util",
+          "0.3.34"
+        ],
+        "added": [
+          "async-await",
+          "async-await-macro",
+          "channel",
+          "default",
+          "futures-channel",
+          "futures-io",
+          "futures-macro",
+          "futures-sink",
+          "io",
+          "memchr",
+          "sink"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "getrandom",
+          "0.4.3"
+        ],
+        "added": [
+          "std",
+          "sys_rng",
+          "wasm_js"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "half",
+          "2.7.1"
+        ],
+        "added": [
+          "alloc",
+          "default",
+          "std"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "indexmap",
+          "2.14.2"
+        ],
+        "added": [
+          "serde"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "kasane-cmo3",
+          "0.1.0"
+        ],
+        "added": [
+          "test-support"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "lock_api",
+          "0.4.14"
+        ],
+        "added": [
+          "nightly"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "log",
+          "0.4.34"
+        ],
+        "added": [
+          "alloc",
+          "serde",
+          "serde_core",
+          "std"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "num-traits",
+          "0.2.19"
+        ],
+        "added": [
+          "i128"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "objc",
+          "0.2.7"
+        ],
+        "added": [
+          "exception",
+          "objc_exception"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "objc2-core-foundation",
+          "0.3.2"
+        ],
+        "added": [
+          "CFBase",
+          "CFNumber",
+          "CFString"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "objc2-foundation",
+          "0.3.2"
+        ],
+        "added": [
+          "FoundationErrors",
+          "FoundationLegacySwiftCompatibility",
+          "NSAffineTransform",
+          "NSAppleEventDescriptor",
+          "NSAppleEventManager",
+          "NSAppleScript",
+          "NSArchiver",
+          "NSAttributedString",
+          "NSAutoreleasePool",
+          "NSBackgroundActivityScheduler",
+          "NSByteCountFormatter",
+          "NSByteOrder",
+          "NSCache",
+          "NSCalendar",
+          "NSCalendarDate",
+          "NSCharacterSet",
+          "NSClassDescription",
+          "NSCoder",
+          "NSComparisonPredicate",
+          "NSCompoundPredicate",
+          "NSConnection",
+          "NSDate",
+          "NSDateComponentsFormatter",
+          "NSDateFormatter",
+          "NSDateInterval",
+          "NSDateIntervalFormatter",
+          "NSDebug",
+          "NSDecimal",
+          "NSDecimalNumber",
+          "NSDistantObject",
+          "NSDistributedLock",
+          "NSDistributedNotificationCenter",
+          "NSEnergyFormatter",
+          "NSException",
+          "NSExpression",
+          "NSExtensionContext",
+          "NSExtensionItem",
+          "NSExtensionRequestHandling",
+          "NSFileCoordinator",
+          "NSFileHandle",
+          "NSFileManager",
+          "NSFilePresenter",
+          "NSFileVersion",
+          "NSFileWrapper",
+          "NSFormatter",
+          "NSGarbageCollector",
+          "NSHFSFileTypes",
+          "NSHTTPCookie",
+          "NSHTTPCookieStorage",
+          "NSHashTable",
+          "NSHost",
+          "NSISO8601DateFormatter",
+          "NSIndexPath",
+          "NSIndexSet",
+          "NSInflectionRule",
+          "NSInvocation",
+          "NSItemProvider",
+          "NSJSONSerialization",
+          "NSKeyValueCoding",
+          "NSKeyValueSharedObservers",
+          "NSKeyedArchiver",
+          "NSLengthFormatter",
+          "NSLinguisticTagger",
+          "NSListFormatter",
+          "NSLocale",
+          "NSLocalizedNumberFormatRule",
+          "NSLock",
+          "NSMapTable",
+          "NSMassFormatter",
+          "NSMeasurement",
+          "NSMeasurementFormatter",
+          "NSMetadata",
+          "NSMetadataAttributes",
+          "NSMethodSignature",
+          "NSMorphology",
+          "NSNetServices",
+          "NSNotification",
+          "NSNotificationQueue",
+          "NSNumberFormatter",
+          "NSObjectScripting",
+          "NSOperation",
+          "NSOrderedCollectionChange",
+          "NSOrderedCollectionDifference",
+          "NSOrderedSet",
+          "NSOrthography",
+          "NSPathUtilities",
+          "NSPersonNameComponents",
+          "NSPersonNameComponentsFormatter",
+          "NSPointerArray",
+          "NSPointerFunctions",
+          "NSPort",
+          "NSPortCoder",
+          "NSPortMessage",
+          "NSPortNameServer",
+          "NSPredicate",
+          "NSProgress",
+          "NSPropertyList",
+          "NSProtocolChecker",
+          "NSProxy",
+          "NSRegularExpression",
+          "NSRelativeDateTimeFormatter",
+          "NSRunLoop",
+          "NSScanner",
+          "NSScriptClassDescription",
+          "NSScriptCoercionHandler",
+          "NSScriptCommand",
+          "NSScriptCommandDescription",
+          "NSScriptExecutionContext",
+          "NSScriptKeyValueCoding",
+          "NSScriptObjectSpecifiers",
+          "NSScriptStandardSuiteCommands",
+          "NSScriptSuiteRegistry",
+          "NSScriptWhoseTests",
+          "NSSet",
+          "NSSortDescriptor",
+          "NSSpellServer",
+          "NSStream",
+          "NSTask",
+          "NSTermOfAddress",
+          "NSTextCheckingResult",
+          "NSTimeZone",
+          "NSTimer",
+          "NSURLAuthenticationChallenge",
+          "NSURLCache",
+          "NSURLConnection",
+          "NSURLCredential",
+          "NSURLCredentialStorage",
+          "NSURLDownload",
+          "NSURLError",
+          "NSURLHandle",
+          "NSURLProtectionSpace",
+          "NSURLProtocol",
+          "NSURLRequest",
+          "NSURLResponse",
+          "NSURLSession",
+          "NSUUID",
+          "NSUbiquitousKeyValueStore",
+          "NSUndoManager",
+          "NSUnit",
+          "NSUserActivity",
+          "NSUserDefaults",
+          "NSUserNotification",
+          "NSUserScriptTask",
+          "NSValueTransformer",
+          "NSXMLDTD",
+          "NSXMLDTDNode",
+          "NSXMLDocument",
+          "NSXMLElement",
+          "NSXMLNode",
+          "NSXMLNodeOptions",
+          "NSXMLParser",
+          "NSXPCConnection",
+          "NSZone",
+          "block2",
+          "default",
+          "libc"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "objc2-quartz-core",
+          "0.3.2"
+        ],
+        "added": [
+          "CADisplayLink",
+          "CAMediaTiming",
+          "CAMediaTimingFunction",
+          "CAOpenGLLayer"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "parking_lot",
+          "0.12.5"
+        ],
+        "added": [
+          "nightly"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "parking_lot_core",
+          "0.9.12"
+        ],
+        "added": [
+          "nightly"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "proc-macro2",
+          "1.0.107"
+        ],
+        "added": [
+          "span-locations"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "profiling",
+          "1.0.18"
+        ],
+        "added": [
+          "default",
+          "procmacros",
+          "profiling-procmacros"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "rand",
+          "0.10.3"
+        ],
+        "added": [
+          "default",
+          "std",
+          "std_rng",
+          "sys_rng",
+          "thread_rng"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "serde_core",
+          "1.0.229"
+        ],
+        "added": [
+          "default"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "serde_json",
+          "1.0.151"
+        ],
+        "added": [
+          "alloc",
+          "indexmap",
+          "preserve_order",
+          "raw_value"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "slab",
+          "0.4.12"
+        ],
+        "added": [
+          "default"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "smallvec",
+          "1.16.1"
+        ],
+        "added": [
+          "const_generics",
+          "const_new",
+          "write"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "syn",
+          "2.0.119"
+        ],
+        "added": [
+          "fold",
+          "visit"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "syn",
+          "3.0.6"
+        ],
+        "added": [
+          "fold"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "uuid",
+          "1.26.1"
+        ],
+        "added": [
+          "js",
+          "serde",
+          "sha1",
+          "v5"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "wasm-bindgen-futures",
+          "0.4.78"
+        ],
+        "added": [
+          "default"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "web-sys",
+          "0.3.105"
+        ],
+        "added": [
+          "AbortController",
+          "AbortSignal",
+          "Blob",
+          "BlobPropertyBag",
+          "Clipboard",
+          "ClipboardEvent",
+          "ClipboardItem",
+          "CompositionEvent",
+          "CssStyleDeclaration",
+          "DataTransfer",
+          "DataTransferItem",
+          "DataTransferItemList",
+          "DedicatedWorkerGlobalScope",
+          "DomRect",
+          "DomRectReadOnly",
+          "DragEvent",
+          "File",
+          "FocusOptions",
+          "FormData",
+          "Headers",
+          "HtmlTextAreaElement",
+          "IdleDeadline",
+          "IdleRequestOptions",
+          "InputEvent",
+          "KeyboardEvent",
+          "Location",
+          "MediaQueryList",
+          "MessageEvent",
+          "MouseEvent",
+          "OffscreenCanvasRenderingContext2d",
+          "Performance",
+          "PerformanceTiming",
+          "PointerEvent",
+          "QueuingStrategy",
+          "ReadableByteStreamController",
+          "ReadableStream",
+          "ReadableStreamByobReader",
+          "ReadableStreamByobRequest",
+          "ReadableStreamDefaultController",
+          "ReadableStreamDefaultReader",
+          "ReadableStreamGetReaderOptions",
+          "ReadableStreamReadResult",
+          "ReadableStreamReaderMode",
+          "ReadableStreamType",
+          "ReadableWritablePair",
+          "Request",
+          "RequestCredentials",
+          "RequestInit",
+          "RequestMode",
+          "RequestRedirect",
+          "ResizeObserver",
+          "ResizeObserverBoxOptions",
+          "ResizeObserverEntry",
+          "ResizeObserverOptions",
+          "ResizeObserverSize",
+          "Response",
+          "Screen",
+          "ServiceWorkerGlobalScope",
+          "Storage",
+          "StreamPipeOptions",
+          "TextMetrics",
+          "TransformStream",
+          "TransformStreamDefaultController",
+          "Transformer",
+          "UiEvent",
+          "UnderlyingSink",
+          "UnderlyingSource",
+          "Url",
+          "VisualViewport",
+          "WheelEvent",
+          "Worker",
+          "WorkerOptions",
+          "WorkerType",
+          "WritableStream",
+          "WritableStreamDefaultController",
+          "WritableStreamDefaultWriter",
+          "console"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "wgpu",
+          "29.0.4"
+        ],
+        "added": [
+          "webgl",
+          "wgpu-core"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "wgpu-core",
+          "29.0.4"
+        ],
+        "added": [
+          "webgl",
+          "wgpu-core-deps-wasm"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "windows",
+          "0.62.2"
+        ],
+        "added": [
+          "Data",
+          "Data_Xml",
+          "Data_Xml_Dom",
+          "Foundation",
+          "Foundation_Numerics",
+          "Globalization",
+          "Globalization_DateTimeFormatting",
+          "Storage",
+          "Storage_Search",
+          "Storage_Streams",
+          "System",
+          "System_Threading",
+          "UI",
+          "UI_Notifications",
+          "UI_ViewManagement",
+          "Wdk",
+          "Wdk_System",
+          "Wdk_System_SystemServices",
+          "Win32_Globalization",
+          "Win32_Graphics_Direct3D11",
+          "Win32_Graphics_DirectManipulation",
+          "Win32_Graphics_DirectWrite",
+          "Win32_Graphics_Dwm",
+          "Win32_Graphics_Hlsl",
+          "Win32_Graphics_Imaging",
+          "Win32_Media",
+          "Win32_Networking",
+          "Win32_Networking_WinSock",
+          "Win32_Security_Credentials",
+          "Win32_Security_Cryptography",
+          "Win32_Storage",
+          "Win32_Storage_FileSystem",
+          "Win32_Storage_Packaging",
+          "Win32_Storage_Packaging_Appx",
+          "Win32_System_Com",
+          "Win32_System_Com_StructuredStorage",
+          "Win32_System_Console",
+          "Win32_System_DataExchange",
+          "Win32_System_IO",
+          "Win32_System_JobObjects",
+          "Win32_System_Memory",
+          "Win32_System_Ole",
+          "Win32_System_Pipes",
+          "Win32_System_Power",
+          "Win32_System_RemoteDesktop",
+          "Win32_System_RestartManager",
+          "Win32_System_StationsAndDesktops",
+          "Win32_System_SystemInformation",
+          "Win32_System_SystemServices",
+          "Win32_System_Variant",
+          "Win32_System_WinRT",
+          "Win32_System_WindowsProgramming",
+          "Win32_UI_Accessibility",
+          "Win32_UI_Controls",
+          "Win32_UI_HiDpi",
+          "Win32_UI_Input",
+          "Win32_UI_Input_Ime",
+          "Win32_UI_Input_KeyboardAndMouse",
+          "Win32_UI_Input_Pointer",
+          "Win32_UI_Shell",
+          "Win32_UI_Shell_Common",
+          "Win32_UI_Shell_PropertiesSystem"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "windows-core",
+          "0.62.2"
+        ],
+        "added": [
+          "default"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "windows-numerics",
+          "0.3.1"
+        ],
+        "added": [
+          "default"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "windows-sys",
+          "0.61.2"
+        ],
+        "added": [
+          "Wdk",
+          "Wdk_Foundation",
+          "Wdk_Storage",
+          "Wdk_Storage_FileSystem",
+          "Wdk_System",
+          "Wdk_System_IO",
+          "Win32_Globalization",
+          "Win32_NetworkManagement",
+          "Win32_NetworkManagement_IpHelper",
+          "Win32_Networking",
+          "Win32_Networking_WinSock",
+          "Win32_Security",
+          "Win32_Security_Authentication",
+          "Win32_Security_Authentication_Identity",
+          "Win32_Security_Authorization",
+          "Win32_Security_Credentials",
+          "Win32_Security_Cryptography",
+          "Win32_System_Com",
+          "Win32_System_Diagnostics",
+          "Win32_System_Diagnostics_Debug",
+          "Win32_System_IO",
+          "Win32_System_LibraryLoader",
+          "Win32_System_Memory",
+          "Win32_System_Pipes",
+          "Win32_System_SystemServices",
+          "Win32_System_Threading",
+          "Win32_System_WindowsProgramming",
+          "Win32_UI",
+          "Win32_UI_Shell"
+        ],
+        "removed": []
+      }
+    ]
+  },
+  "editor": {
+    "original_packages": 865,
+    "retained_identities": 851,
+    "removed": [
+      [
+        "cc",
+        "1.5.1",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "find-msvc-tools",
+        "0.1.14",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "js-sys",
+        "0.3.106",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "smallvec",
+        "1.16.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "thiserror",
+        "2.0.21",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "thiserror-impl",
+        "2.0.21",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen",
+        "0.2.129",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen-futures",
+        "0.4.79",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen-macro",
+        "0.2.129",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen-macro-support",
+        "0.2.129",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen-shared",
+        "0.2.129",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "web-sys",
+        "0.3.106",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "zerocopy",
+        "0.8.59",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "zerocopy-derive",
+        "0.8.59",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ]
+    ],
+    "added_count": 26,
+    "checksum_changes": 0,
+    "added": [
+      [
+        "cc",
+        "1.4.7",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "ciborium",
+        "0.2.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "ciborium-io",
+        "0.2.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "ciborium-ll",
+        "0.2.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "cubism-matrix-kasane",
+        "0.1.0",
+        ""
+      ],
+      [
+        "find-msvc-tools",
+        "0.1.13",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "js-sys",
+        "0.3.105",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "kasane-moc3-psd",
+        "0.1.0",
+        ""
+      ],
+      [
+        "kasane-python",
+        "0.1.0",
+        ""
+      ],
+      [
+        "pyo3",
+        "0.29.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "pyo3-build-config",
+        "0.29.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "pyo3-ffi",
+        "0.29.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "pyo3-macros",
+        "0.29.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "pyo3-macros-backend",
+        "0.29.2",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "smallvec",
+        "1.16.1",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "target-lexicon",
+        "0.13.5",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "thiserror",
+        "2.0.20",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "thiserror-impl",
+        "2.0.20",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen",
+        "0.2.128",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen-futures",
+        "0.4.78",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen-macro",
+        "0.2.128",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen-macro-support",
+        "0.2.128",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "wasm-bindgen-shared",
+        "0.2.128",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "web-sys",
+        "0.3.105",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "zerocopy",
+        "0.8.57",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ],
+      [
+        "zerocopy-derive",
+        "0.8.57",
+        "registry+https://github.com/rust-lang/crates.io-index"
+      ]
+    ],
+    "metadata_feature_changes": [
+      {
+        "package": [
+          "windows",
+          "0.57.0"
+        ],
+        "added": [
+          "Win32_Graphics",
+          "Win32_Graphics_Direct3D12",
+          "Win32_Graphics_Dxgi",
+          "Win32_Graphics_Dxgi_Common"
+        ],
+        "removed": []
+      },
+      {
+        "package": [
+          "windows-sys",
+          "0.48.0"
+        ],
+        "added": [
+          "Win32_Storage",
+          "Win32_Storage_FileSystem",
+          "Win32_System_Console",
+          "Win32_System_SystemInformation"
+        ],
+        "removed": []
+      }
+    ]
+  },
+  "unified_packages": 877,
+  "packages_outside_either_baseline": 0,
+  "note": "Metadata features reflect whole-workspace resolution, not per-target compiler features. Shared compatible versions prefer SDK baseline; registry checksums and Git sources retained."
+}

@@ -1,8 +1,9 @@
 [package]
 name = "editor-core"
 version.workspace = true
-edition.workspace = true
-license.workspace = true
+edition = "2024"
+rust-version.workspace = true
+license = "GPL-3.0-only"
 
 [features]
 bench-instrumentation = ["kasane-core/bench-instrumentation", "kasane-sdk/bench-instrumentation"]
@@ -18,4 +19,4 @@ uuid.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-kasane-cmo3 = { path = "../../../kasane-2d/modules/kasane-cmo3", features = ["test-support"] }
+kasane-cmo3 = { path = "../../../../modules/kasane-cmo3", features = ["test-support"] }

@@ -5,7 +5,7 @@ A native macOS editor for Kasane 2D models, built with Rust, GPUI Kit, and Metal
 ## Setup
 
 - macOS with a Metal-capable GPU.
-- Rust stable and Xcode Command Line Tools (`xcode-select --install`).
+- Rust 1.95 or newer and Xcode Command Line Tools (`xcode-select --install`).
 - A compatible `kasane-2d` checkout at `../kasane-2d`. See [dependencies](DEPENDENCIES.md).
 
 ## Develop
