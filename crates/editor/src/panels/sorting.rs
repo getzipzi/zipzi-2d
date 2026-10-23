@@ -586,6 +586,92 @@ pub(super) fn panel_actions(element: Stateful<Div>, state: &Entity<SortState>) -
         })
 }
 
+impl EditorView {
+    /// Palette commands are resolved from exact list focus, independently of
+    /// the hovered viewport. Inputs and popup controls retain their own keys.
+    pub(crate) fn handle_palette_command(
+        &mut self,
+        command: editor_core::Command,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.has_focused_input(window, cx) || cx.has_active_drag() {
+            return;
+        }
+        let Some(dock) = &self.dock else {
+            return;
+        };
+        let Some(document) = command
+            .document()
+            .filter(|id| Some(*id) == self.editor.active_id())
+        else {
+            return;
+        };
+        let doc = self.editor.document().unwrap();
+        let (projection, object) = if dock.displayed(editor_core::PanelKind::MeshTree, cx)
+            && dock.mesh_tree.read(cx).focus_handle(cx).is_focused(window)
+        {
+            (
+                PaletteProjection::Organization,
+                dock.mesh_tree.read(cx).movement_object(),
+            )
+        } else if dock.displayed(editor_core::PanelKind::Deformers, cx)
+            && dock
+                .deformer_tree
+                .read(cx)
+                .focus_handle(cx)
+                .is_focused(window)
+        {
+            (
+                PaletteProjection::Deformation,
+                dock.deformer_tree.read(cx).movement_object(),
+            )
+        } else if dock.displayed(editor_core::PanelKind::Parameters, cx)
+            && dock.parameters.read(cx).focus_handle(cx).is_focused(window)
+        {
+            (
+                PaletteProjection::Parameters,
+                doc.context().inspected.clone().filter(|object| {
+                    matches!(
+                        object.kind,
+                        ObjectKind::Parameter | ObjectKind::ParameterGroup
+                    )
+                }),
+            )
+        } else {
+            return;
+        };
+        let Some(object) = object else {
+            return;
+        };
+        if doc.context().selections.contains(&object) && doc.context().selections.len() > 1 {
+            self.set_edit_error(crate::t!("authoring.move_multiple").into_owned(), cx);
+            return;
+        }
+        if !self.prepare_property_inputs(document, window, cx) {
+            return;
+        }
+        let Some(context) = AuthoringContext::capture(&self.editor) else {
+            return;
+        };
+        let result = self.execute_authoring(context, window, cx, |editor, document| {
+            let plan = editor.document().unwrap().plan_palette_step(
+                projection,
+                object,
+                command.id == editor_core::CommandId::PaletteMoveDown,
+            )?;
+            editor.execute_palette_move(document, &plan)
+        });
+        match result {
+            Ok(_) => {
+                self.clear_edit_error(cx);
+                self.redraw(cx);
+            }
+            Err(error) => self.set_edit_error(move_error(&error), cx),
+        }
+    }
+}
+
 /// The same core placement adapter serves explicit menu steps and pointer moves.
 pub(super) fn move_menu(
     mut menu: gpui_kit::component::menu::PopupMenu,
@@ -627,28 +713,35 @@ pub(super) fn move_menu(
             .into();
         let object = object.clone();
         let owner = owner.clone();
-        menu = menu.item(PopupMenuItem::new(label).disabled(!enabled).on_click(
-            move |_, window, cx| {
-                let (Some(context), Some(owner)) = (context, owner.upgrade()) else {
-                    return;
-                };
-                owner.update(cx, |owner, cx| {
-                    let result =
-                        owner.execute_authoring(context, window, cx, |editor, document| {
-                            let plan = editor.document().unwrap().plan_palette_step(
-                                projection,
-                                object.clone(),
-                                down,
-                            )?;
-                            editor.execute_palette_move(document, &plan)
-                        });
-                    match result {
-                        Ok(_) => owner.redraw(cx),
-                        Err(error) => owner.set_edit_error(move_error(&error), cx),
-                    }
-                });
-            },
-        ));
+        menu = menu.item(
+            PopupMenuItem::new(label)
+                .action(Box::new(crate::actions::RunCommand::new(if down {
+                    editor_core::CommandId::PaletteMoveDown
+                } else {
+                    editor_core::CommandId::PaletteMoveUp
+                })))
+                .disabled(!enabled)
+                .on_click(move |_, window, cx| {
+                    let (Some(context), Some(owner)) = (context, owner.upgrade()) else {
+                        return;
+                    };
+                    owner.update(cx, |owner, cx| {
+                        let result =
+                            owner.execute_authoring(context, window, cx, |editor, document| {
+                                let plan = editor.document().unwrap().plan_palette_step(
+                                    projection,
+                                    object.clone(),
+                                    down,
+                                )?;
+                                editor.execute_palette_move(document, &plan)
+                            });
+                        match result {
+                            Ok(_) => owner.redraw(cx),
+                            Err(error) => owner.set_edit_error(move_error(&error), cx),
+                        }
+                    });
+                }),
+        );
     }
     menu
 }

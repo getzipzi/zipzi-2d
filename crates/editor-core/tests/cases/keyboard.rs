@@ -30,6 +30,28 @@ fn binding(
 }
 
 #[test]
+fn palette_bindings_are_configurable_and_conflict_with_document_commands() -> anyhow::Result<()> {
+    let defaults = resolve(ShortcutPlatform::Macos, vec![])?;
+    assert_eq!(keys(&defaults, CommandId::PaletteMoveUp), ["alt-up"]);
+    let configured = resolve(
+        ShortcutPlatform::Macos,
+        vec![binding(CommandId::PaletteMoveUp, None, &["alt-k"])],
+    )?;
+    assert_eq!(keys(&configured, CommandId::PaletteMoveUp), ["alt-k"]);
+    assert!(
+        resolve(
+            ShortcutPlatform::Macos,
+            vec![binding(CommandId::PaletteMoveUp, None, &["secondary-z"])]
+        )
+        .is_err()
+    );
+    assert!(CommandScope::Palette.overlaps(CommandScope::Document));
+    assert!(!CommandScope::Palette.overlaps(CommandScope::Timeline));
+    assert!(!CommandScope::Palette.overlaps(CommandScope::Property));
+    Ok(())
+}
+
+#[test]
 fn platform_defaults_expand_before_the_host_mapper_and_preserve_real_control() -> anyhow::Result<()>
 {
     for platform in [

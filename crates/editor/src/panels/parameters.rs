@@ -290,6 +290,7 @@ impl Render for ParametersPanel {
             .bg(theme.background)
             .text_color(theme.foreground)
             .text_sm()
+            .key_context("KasanePalette")
             .track_focus(&self.focus)
             .child(
                 canvas(|_, _, _| (), {

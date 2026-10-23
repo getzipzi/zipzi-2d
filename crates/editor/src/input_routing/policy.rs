@@ -88,6 +88,24 @@ pub(super) fn decide(
     }
     let target = facts.target();
     let text = keyboard == KeyboardOwner::Text;
+    // Palette bindings are dispatched by GPUI at list focus. Reserve a matching
+    // local key before the hovered viewport can take its disjoint binding.
+    if !text
+        && facts.capture.is_none()
+        && matches!(
+            facts.focused.map(|target| target.local),
+            Some(LocalTarget::Panel(
+                editor_core::PanelKind::MeshTree
+                    | editor_core::PanelKind::Deformers
+                    | editor_core::PanelKind::Parameters
+            ))
+        )
+        && bindings.iter().any(|binding| {
+            binding.command.spec().scope == CommandScope::Palette && matches(binding)
+        })
+    {
+        return KeyDecision::Ignore;
+    }
     let idle_escape = (facts.escape && facts.unmodified && !text)
         .then(|| target.and_then(|target| target.idle_escape))
         .flatten();
@@ -112,7 +130,7 @@ pub(super) fn decide(
                                 Some(LocalTarget::Timeline(_))
                             )
                     }
-                    CommandScope::Property => false,
+                    CommandScope::Property | CommandScope::Palette => false,
                 };
                 applicable && matches(binding)
             })

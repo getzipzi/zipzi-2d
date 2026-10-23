@@ -1,6 +1,7 @@
 mod filter;
 mod locking;
 mod management;
+mod selection;
 mod visibility;
 
 use super::sorting::{self, SortItem, SortState};
@@ -43,6 +44,8 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
     document_id: Option<DocumentId>,
     revision: Option<u64>,
     last_selection: Option<editor_core::ObjectRef>,
+    selection: selection::TreeSelection,
+    selection_context: Option<editor_core::EditingContextToken>,
     nodes: Vec<TreeNode>,
     rows: Rc<Vec<VisibleRow>>,
     rows_dirty: bool,
@@ -101,6 +104,8 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
                 document_id: None,
                 revision: None,
                 last_selection: None,
+                selection: selection::TreeSelection::default(),
+                selection_context: None,
                 nodes: Vec::new(),
                 rows: Rc::new(Vec::new()),
                 rows_dirty: true,
@@ -163,6 +168,14 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
             .owner
             .upgrade()
             .and_then(|owner| owner.read(cx).editor.active_id());
+        let context = self
+            .owner
+            .upgrade()
+            .and_then(|owner| owner.read(cx).editor.editing_context_token());
+        if self.selection_context != context {
+            self.selection_context = context;
+            self.selection = selection::TreeSelection::default();
+        }
         let document_changed = self.document_id != target;
         if document_changed {
             if let Some(previous) = self.document_id {
@@ -381,6 +394,9 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             } else {
                 owner.read(cx).editor.mesh_tree()
             };
+            if let Some(doc) = owner.read(cx).editor.document() {
+                self.selection.reconcile(&doc.object_index());
+            }
             self.rows_dirty = true;
         }
         let selection_changed = self.last_selection != selected || document_changed;
@@ -412,6 +428,13 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 };
                 reveal(&self.nodes, r, collapsed);
             }
+            if self.selection.cursor.is_none() {
+                self.selection.cursor = self
+                    .rows
+                    .iter()
+                    .find(|row| row.node.reference().as_ref() == selected.as_ref())
+                    .map(|row| node_key(&row.node));
+            }
             self.last_selection = selected.clone();
             self.rows_dirty = true;
         }
@@ -421,6 +444,14 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                 self.collapsed(),
                 &self.view.filter,
             ));
+            if self
+                .selection
+                .cursor
+                .as_ref()
+                .is_some_and(|key| !self.rows.iter().any(|row| node_key(&row.node) == *key))
+            {
+                self.selection.cursor = None;
+            }
             self.rows_dirty = false;
         }
         if selection_changed {
@@ -457,7 +488,9 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
         .bg(theme.background)
         .text_color(theme.foreground)
         .text_sm()
+        .key_context("KasanePalette")
         .track_focus(&self.focus)
+        .on_key_down(cx.listener(Self::tree_key_down))
         .child(if rows.is_empty() {
             div()
                 .id(SharedString::from(format!("{}-tree-empty", Self::prefix())))
@@ -545,7 +578,8 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     let key = node_key(&node);
                                     let is_collapsed = this.collapsed().contains(&key);
                                     let id = node.id.clone();
-                                    let owner = this.owner.clone();
+                                    let cursor = this.focus.is_focused(window)
+                                        && this.selection.cursor.as_ref() == Some(&key);
                                     let icon = match node.kind {
                                         TreeNodeKind::Group | TreeNodeKind::Part => {
                                             IconName::Folder
@@ -612,45 +646,26 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                 cx,
                                             )
                                         })
-                                        .on_click(cx.listener(
-                                            move |_, event: &ClickEvent, window, cx| {
-                                                if disabled {
-                                                    return;
+                                        .border_1()
+                                        .border_color(if cursor {
+                                            theme.primary
+                                        } else {
+                                            gpui::transparent_black()
+                                        })
+                                        .on_click(cx.listener({
+                                            let key = key.clone();
+                                            move |this, event: &ClickEvent, window, cx| {
+                                                if let Some(target) = target {
+                                                    this.select_row(
+                                                        target,
+                                                        &key,
+                                                        event.modifiers(),
+                                                        window,
+                                                        cx,
+                                                    );
                                                 }
-                                                let (Some(owner), Some(target), Some(reference)) =
-                                                    (owner.upgrade(), target, reference.clone())
-                                                else {
-                                                    return;
-                                                };
-                                                owner.update(cx, |owner, cx| {
-                                                    if owner.modal
-                                                        || window.has_active_dialog(cx)
-                                                        || owner.editor.is_busy()
-                                                        || owner.editor.active_id() != Some(target)
-                                                    {
-                                                        return;
-                                                    }
-                                                    let command = if event.modifiers().shift {
-                                                        let mut objects = owner
-                                                            .editor
-                                                            .document()
-                                                            .map(|d| d.context().selections.clone())
-                                                            .unwrap_or_default();
-                                                        if objects.contains(&reference) {
-                                                            objects.retain(|r| r != &reference);
-                                                        } else {
-                                                            objects.push(reference);
-                                                        }
-                                                        EditorCommand::SelectObjects(objects)
-                                                    } else {
-                                                        EditorCommand::SelectObject(reference)
-                                                    };
-                                                    let result =
-                                                        owner.editor.execute_for(target, command);
-                                                    owner.complete_edit(result, cx);
-                                                });
-                                            },
-                                        ))
+                                            }
+                                        }))
                                         .child(
                                             div()
                                                 .id(SharedString::from(format!(

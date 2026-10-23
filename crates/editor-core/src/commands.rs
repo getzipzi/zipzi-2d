@@ -71,6 +71,10 @@ pub enum CommandId {
     Redo,
     #[serde(rename = "edit.deselect")]
     Deselect,
+    #[serde(rename = "palette.move-up")]
+    PaletteMoveUp,
+    #[serde(rename = "palette.move-down")]
+    PaletteMoveDown,
     #[serde(rename = "parameter.create")]
     CreateParameter,
     #[serde(rename = "parameter.edit")]
@@ -153,6 +157,7 @@ pub enum CommandScope {
     Viewport,
     Timeline,
     Property,
+    Palette,
 }
 impl CommandScope {
     pub fn overlaps(self, other: Self) -> bool {
@@ -162,8 +167,8 @@ impl CommandScope {
                 (self, other),
                 (Window, _)
                     | (_, Window)
-                    | (Document, Viewport | Timeline)
-                    | (Viewport | Timeline, Document)
+                    | (Document, Viewport | Timeline | Palette)
+                    | (Viewport | Timeline | Palette, Document)
             )
     }
 }
@@ -290,6 +295,20 @@ specs![
     (Undo, "menu.undo", Document, false, ["secondary-z"]),
     (Redo, "menu.redo", Document, false, ["secondary-shift-z"]),
     (Deselect, "menu.deselect", Document, false, ["secondary-d"]),
+    (
+        PaletteMoveUp,
+        "authoring.move_up",
+        Palette,
+        true,
+        ["alt-up"]
+    ),
+    (
+        PaletteMoveDown,
+        "authoring.move_down",
+        Palette,
+        true,
+        ["alt-down"]
+    ),
     (CreateParameter, "parameter.new", Document, false, []),
     (EditParameter, "parameter.edit", Document, false, []),
     (DeleteParameter, "parameter.delete", Document, false, []),
@@ -473,7 +492,10 @@ impl Editor {
             {
                 CommandTarget::Window
             }
-            CommandScope::Window | CommandScope::Document | CommandScope::Property => self
+            CommandScope::Window
+            | CommandScope::Document
+            | CommandScope::Property
+            | CommandScope::Palette => self
                 .active_id()
                 .map(CommandTarget::Document)
                 .unwrap_or(CommandTarget::Unavailable),
@@ -567,11 +589,13 @@ impl Editor {
             }
             (scope, CommandTarget::Document(document)) => {
                 self.active_id() == Some(document)
-                    && (matches!(scope, CommandScope::Document | CommandScope::Property)
-                        || matches!(
-                            command.id,
-                            CommandId::Save | CommandId::SaveAs | CommandId::Close
-                        ))
+                    && (matches!(
+                        scope,
+                        CommandScope::Document | CommandScope::Property | CommandScope::Palette
+                    ) || matches!(
+                        command.id,
+                        CommandId::Save | CommandId::SaveAs | CommandId::Close
+                    ))
             }
             _ => false,
         }
@@ -700,7 +724,7 @@ impl Editor {
                         .document()
                         .is_some_and(|d| d.mesh_generation_target().is_ok())
             }
-            CreateParameter | CreateParameterGroup => {
+            PaletteMoveUp | PaletteMoveDown | CreateParameter | CreateParameterGroup => {
                 modeling && target && !self.is_busy() && !self.exiting()
             }
             EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {

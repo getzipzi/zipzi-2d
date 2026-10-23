@@ -15,6 +15,7 @@ impl ParametersPanel {
         let expanded = !self.collapsed_groups.contains(&id);
         let group = id.clone();
         let owner = self.owner.clone();
+        let focus = self.focus.clone();
         let document_id = self.document_id;
         let panel = cx.weak_entity();
         let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
@@ -117,6 +118,9 @@ impl ParametersPanel {
                                 {
                                     return;
                                 }
+                                if !owner.prepare_property_inputs(document_id, window, cx) {
+                                    return;
+                                }
                                 let result = owner.editor.execute_for(
                                     document_id,
                                     EditorCommand::Navigate(editor_core::ObjectRef::new(
@@ -124,7 +128,11 @@ impl ParametersPanel {
                                         &id,
                                     )),
                                 );
+                                let success = result.is_ok();
                                 owner.complete_edit(result, cx);
+                                if success {
+                                    window.focus(&focus, cx);
+                                }
                             });
                         }),
                 )

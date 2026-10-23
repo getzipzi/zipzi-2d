@@ -137,6 +137,7 @@ pub(super) fn creation_menu<const DEFORMER: bool>(
                             // this item and its ancestors through the same tree.
                             panel.view.filter.revealed = Some(object);
                             panel.last_selection = None;
+                            panel.selection.cursor = None;
                             panel.rows_dirty = true;
                             cx.notify();
                         }

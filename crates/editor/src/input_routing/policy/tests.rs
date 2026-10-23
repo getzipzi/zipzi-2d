@@ -87,6 +87,23 @@ fn capture_precedes_hover_then_focus_and_never_reuses_an_absent_target() {
 }
 
 #[test]
+fn focused_palette_binding_precedes_disjoint_hovered_viewport_binding() {
+    let mut facts = facts();
+    facts.hovered = Some(targets()[0]);
+    facts.focused = Some(InputTarget::new(LocalTarget::Panel(PanelKind::MeshTree)));
+    let bindings = bindings(&[CommandId::ZoomIn, CommandId::PaletteMoveUp]);
+    assert_eq!(decide(&facts, &bindings, |_| true), KeyDecision::Ignore);
+    facts.focused = None;
+    assert_eq!(
+        decide(&facts, &bindings, |_| true),
+        KeyDecision::Invoke {
+            id: CommandId::ZoomIn,
+            target: facts.hovered.map(|target| target.local)
+        }
+    );
+}
+
+#[test]
 fn scopes_are_filtered_before_matching_and_text_only_keeps_window_commands() {
     let bindings = bindings(&[
         CommandId::CommitProperty,

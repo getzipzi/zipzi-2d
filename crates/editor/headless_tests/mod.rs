@@ -13,6 +13,7 @@ mod input_routing;
 mod mesh_generation;
 mod mesh_generation_preview;
 mod mesh_properties;
+mod palette_commands;
 mod panel_toolbar;
 mod parameter_creation;
 mod parameter_groups;
@@ -32,6 +33,7 @@ mod timeline_regressions;
 mod titlebar;
 mod tooltips;
 mod transfer;
+mod tree_selection;
 mod ui_performance;
 mod workspaces;
 

@@ -222,10 +222,17 @@ impl ParametersPanel {
                 {
                     return;
                 }
+                if !owner.prepare_property_inputs(document_id, window, cx) {
+                    return;
+                }
                 let result = owner
                     .editor
                     .execute_for(document_id, EditorCommand::FocusParameter(parameter.into()));
+                let success = result.is_ok();
                 owner.complete_edit(result, cx);
+                if success {
+                    window.focus(&self.focus, cx);
+                }
             });
         }
     }

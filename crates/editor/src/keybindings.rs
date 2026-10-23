@@ -11,13 +11,14 @@ impl Global for KitBindings {}
 fn scope(scope: CommandScope) -> &'static str {
     match scope {
         CommandScope::Property => "(KasaneEditor > Input) && !KasaneModal && !(List > Input)",
+        CommandScope::Palette => "(KasaneEditor > KasanePalette) && !Input && !KasaneModal",
         _ => "KasaneShortcutDisplay",
     }
 }
 fn install(cx: &mut App) {
     // Keep action bindings for native accelerators/help. Window routing resolves
     // business keys once from hover/capture and receives the real repeat flag.
-    // Only property Enter/Escape participate in GPUI's focused control keymap.
+    // Properties and palette commands use GPUI's focused control keymap.
     let bindings = cx
         .global::<settings::Settings>()
         .bindings
@@ -171,6 +172,14 @@ mod tests {
         assert_eq!(find("left", "KasaneEditor > KasaneViewport"), 0);
         assert_eq!(find("left", "KasaneEditor KasaneModal > KasaneTimeline"), 0);
         assert_eq!(find("cmd-s", "KasaneEditor KasaneModal"), 0);
+        assert_eq!(find("alt-up", "KasaneEditor > KasanePalette"), 1);
+        assert_eq!(find("alt-down", "KasaneEditor > KasanePalette"), 1);
+        assert_eq!(find("alt-up", "KasaneEditor > KasanePalette > Input"), 0);
+        assert_eq!(find("alt-up", "KasaneEditor > KasaneTimeline"), 0);
+        assert_eq!(
+            find("alt-up", "KasaneEditor KasaneModal > KasanePalette"),
+            0
+        );
         assert_eq!(find("escape", "KasaneEditor > Input"), 1);
         assert_eq!(find("enter", "KasaneEditor > Input"), 2);
         let contexts = [

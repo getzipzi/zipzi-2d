@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建与共享移动切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建、共享移动、树选择与移动快捷键切片**，尚未完成 U1–U6 全部验收。
 
 ## 首轮实现：创建与输入边界
 
@@ -16,7 +16,7 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序、拒绝原因与单对象右键上下移已接入；变形树同父级排序使用相同规划入口 | 变形树创建、完整多选选择语义、变形父级保持形态移动、可配置移动快捷键与移到指定容器菜单仍待实施 |
+| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序、拒绝原因与单对象右键上下移已接入；变形树同父级排序使用相同规划入口；树 Shift/Cmd 选择、焦点导航及可配置单对象上下移已接入 | 变形树创建、变形父级保持形态移动、多选上下移、移到指定容器菜单、Parameter 文件夹选择导航与其余创建命令入口仍待实施 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
@@ -113,3 +113,36 @@ git diff --check
 ```
 
 受影响 UI/筛选/工作量回归 **92 项通过**（包含新增的 6 项创建 UI 回归和 1 项筛选显露单测）；core 创建、场景生命周期、移动和组织回归 **31 项通过**（包含新增的 5 项创建回归）。格式与空白检查通过。没有运行完整套件、原生截图或 Release 性能基准。U2 仍未全量验收；主菜单/快捷键创建、变形树创建和阶段状态表中的剩余内容继续待接入。
+
+
+## 第四轮实现：树选择与可配置移动快捷键
+
+第三轮组织树创建已提交为 `5359c2d`。本轮继续在当前 checkout 工作，没有创建 worktree 或修改相邻 `kasane-2d`。
+
+- 新增层级树 `selection.rs`，以稳定对象引用保存 Shift 锚点，以稳定行键保存键盘焦点。Cmd 切换成员；Shift 以当前可见行作范围；Cmd+Shift 合并范围。反向范围仍以点击项作为 primary，重复 Shift 保留原锚点。过滤和折叠不会自动清除模型中的既有选择；范围不纳入隐藏行，也不把行号当对象身份。
+- 普通上下键移动行焦点、滚动到焦点，Enter 才更新选择；Shift+上下扩展选择，左右键折叠/展开或进入子级/返回父级，Home/End 定位首尾。箭头和 Enter 不截获搜索框输入；父级折叠保留隐藏成员的选择。文档或工作区 token 改变后重置光标和锚点，删除对象后校正锚点。
+- 新增稳定命令 `palette.move-up` / `palette.move-down` 和 Palette 快捷键作用域，默认 Alt+Up/Down，可通过现有 `keybindings.json` 改键。组织树、变形树同父级和 Parameter/文件夹的单对象移动调用现有 `plan_palette_step` / `execute_palette_move`，不新增领域排序规则。右键上下移显示同一命令的快捷键。
+- Palette 命令按当前可见面板的精确列表焦点解析目标，树中使用焦点行，Parameter 使用检查目标；移动不伪造选择或激活。文本、搜索框、弹出控件、隐藏面板和活动拖拽不会触发这一入口。匹配的 Palette 快捷键优先于悬停画布的同键映射，其他窗口/文档/画布路由保持现有规则；冲突检查把 Palette 与 Document 视为重叠作用域。
+- Parameter 名称和文件夹检查按钮在选择前结算 Properties 输入，并将键盘焦点放回列表。树选择也使用统一输入边界，防止旧字段在选择改变后补交。
+- 单对象键盘移动与原菜单一致：多选集合中任一项聚焦时拒绝单项移动并说明使用拖拽；锁定、边界 no-op、输入结算及错误仍由共享适配和 core/SDK 处理。多选上下移和“移到…”菜单尚未实现，不声称已经覆盖全部移动入口。
+
+第四轮定向验证：
+
+```sh
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+  headless_tests::tree_selection headless_tests::palette_commands \
+  headless_tests::hierarchy headless_tests::sorting headless_tests::scene_creation \
+  headless_tests::parameters headless_tests::parameter_groups \
+  headless_tests::parameter_management headless_tests::authoring \
+  headless_tests::properties headless_tests::panel_toolbar headless_tests::command_targets \
+  headless_tests::input_routing headless_tests::ui_performance \
+  keybindings::tests input_routing::policy
+
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+  commands:: keyboard:: sorting:: palette_moves::
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+受影响 UI/路由/工作量回归 **140 项通过**，含新增 5 项树选择 UI、3 项移动命令 UI 和 1 项路由优先级单测；既有 keymap 单测补充作用域隔离断言。core 命令/键盘/移动回归 **33 项通过**，含新增的改键和作用域冲突回归。格式和空白检查通过。本轮未运行完整套件、原生截图或 Release 性能基准；U2–U6 仍按阶段状态表继续。
