@@ -731,24 +731,35 @@ impl EditSession<'_> {
             .cloned()
             .collect();
         let identity_changed = !identity_keys.is_empty();
+        let mesh_publication = crate::changes::MeshPublication::new(
+            session.document(),
+            &candidate,
+            &self.object_ids,
+            &self.erased_keys,
+        );
         let changed = identity_changed || !session.project.document().same_content(&candidate);
         let before_keys = changed.then(|| session.object_keys());
         let after_keys = changed.then(|| {
-            if candidate.same_authoring_identities(session.document()) {
+            if mesh_publication.is_some() || candidate.same_authoring_identities(session.document())
+            {
                 self.base_keys.clone()
             } else {
                 std::sync::Arc::new(keys_in(&candidate))
             }
         });
         let mut changes = if let (Some(keys), Some(after_keys)) = (&before_keys, &after_keys) {
-            crate::changes::summarize(
-                session.document(),
-                &candidate,
-                keys,
-                after_keys,
-                &self.object_ids,
-                &self.categories,
-            )
+            if let Some(publication) = &mesh_publication {
+                publication.summarize(&self.categories)
+            } else {
+                crate::changes::summarize(
+                    session.document(),
+                    &candidate,
+                    keys,
+                    after_keys,
+                    &self.object_ids,
+                    &self.categories,
+                )
+            }
         } else {
             crate::ChangeSet::default()
         };

@@ -29,18 +29,7 @@ pub(super) fn summarize_scene(
             .or_else(|| crate::scene_authoring::kind(before, &id));
         let Some(kind) = kind else { continue };
         before.visit_scene_field_changes(after, &id, |tag| {
-            out.scene_fields.push(SceneFieldChange {
-                entity: entity(kind, &id),
-                field: tag,
-            });
-            out.modified.push(entity(kind, &id));
-            out.categories.insert(if tag == SceneField::Label {
-                ChangeCategory::Labels
-            } else if tag.is_reference() {
-                ChangeCategory::References
-            } else {
-                ChangeCategory::Content
-            });
+            record_field_change(out, entity(kind, &id), tag);
         });
     }
     for change in &out.scene_fields {
@@ -195,4 +184,19 @@ pub(super) fn summarize_scene(
         out.categories.remove(&ChangeCategory::Topology);
     }
     out.retain_existing_modified();
+}
+
+pub(super) fn record_field_change(out: &mut ChangeSet, entity: EntityRef, field: SceneField) {
+    out.scene_fields.push(SceneFieldChange {
+        entity: entity.clone(),
+        field,
+    });
+    out.modified.push(entity);
+    out.categories.insert(if field == SceneField::Label {
+        ChangeCategory::Labels
+    } else if field.is_reference() {
+        ChangeCategory::References
+    } else {
+        ChangeCategory::Content
+    });
 }

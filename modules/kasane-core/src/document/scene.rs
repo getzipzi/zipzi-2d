@@ -621,23 +621,41 @@ impl Document {
         if plan.is_noop() {
             return self.failed(Status::ok());
         }
-        plan.domain.delta.install(self);
+        // An identity-preserving plan may still write relationships or order.
+        // Retain coverage only for the audited Mesh fields with no domain delta.
+        let tracked = (plan.domain.delta.is_empty()
+            && plan.patches.iter().all(|(id, value, clear)| {
+                !clear
+                    && self.get_mesh(id).is_some()
+                    && matches!(
+                        value,
+                        SceneFieldValue::Label(_)
+                            | SceneFieldValue::Appearance(_)
+                            | SceneFieldValue::Enabled(_)
+                    )
+            }))
+        .then(|| self.track_mesh_write(plan.patches.iter().map(|(id, _, _)| id.clone()).collect()));
+        if tracked.is_none() {
+            plan.domain.delta.install(self);
+        }
         for (id, value, clear) in &plan.patches {
             self.install_scene_field(id, value, *clear);
         }
-        self.changed(
-            if plan.metadata_only {
-                ChangeKind::Metadata
-            } else {
-                ChangeKind::Structure
-            },
-            if plan.metadata_only {
-                vec![]
-            } else {
-                self.mesh_order().to_vec()
-            },
-            plan.domain.affected.clone(),
-        )
+        let kind = if plan.metadata_only {
+            ChangeKind::Metadata
+        } else {
+            ChangeKind::Structure
+        };
+        let mesh_ids = if plan.metadata_only {
+            vec![]
+        } else {
+            self.mesh_order().to_vec()
+        };
+        if let Some(write) = tracked {
+            self.changed_tracked(write, kind, mesh_ids, plan.domain.affected.clone())
+        } else {
+            self.changed(kind, mesh_ids, plan.domain.affected.clone())
+        }
     }
     fn scene_deformation_order(&self) -> Vec<String> {
         let mut seen = HashSet::new();

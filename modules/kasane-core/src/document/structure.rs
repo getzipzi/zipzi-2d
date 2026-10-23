@@ -4,6 +4,9 @@ use crate::draw_order::validate_groups;
 use crate::geometry::validate_render_mesh;
 use std::collections::{HashMap, HashSet};
 
+#[cfg(test)]
+mod local_tests;
+
 /// A proof is valid only for this exact snapshot. Cloning a document deliberately
 /// drops it: internal planners may edit a clone's raw content before validation.
 #[derive(Debug, Default)]
@@ -24,12 +27,46 @@ impl Document {
     /// Validate all persistent collections and references without reading resources
     /// or changing this document. Restored checkpoints use the same checks.
     pub fn validate_structure(&self) -> Vec<StructureIssue> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.validate_structure");
         self.validate_structure_impl(None, false)
     }
 
     /// Reuse only checks whose persistent data AND cross-domain dependencies
     /// agree with a fully validated baseline. Invalid baselines remain repairable.
     pub fn validate_structure_since(&self, baseline: &Document) -> Vec<StructureIssue> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _benchmark_span = crate::benchmark::span("core.validate_structure");
+        // Coverage is not a validity proof. Only an already validated exact
+        // baseline and an entirely covered Mesh-only transaction qualify.
+        if baseline.structure_is_validated() {
+            if let Some(records) = self.tracked_mesh_validation_records_since(baseline) {
+                #[cfg(feature = "bench-instrumentation")]
+                let _local_span = crate::benchmark::span("core.validate_structure.local");
+                let mut issues = Vec::new();
+                for record in records {
+                    let super::TrackedRecord::Mesh(id) = record else {
+                        unreachable!("Mesh validation allowlist checked above");
+                    };
+                    #[cfg(feature = "bench-instrumentation")]
+                    crate::benchmark::count("core.validate_structure.local.mesh_checks", 1);
+                    let mesh = self
+                        .get_mesh(id)
+                        .expect("coverage checked record existence");
+                    // Name and Enabled have no structure constraints. Appearance
+                    // has no cross-domain consumers in structural validation;
+                    // all geometry, relationships and identities are unchanged.
+                    let status = validate_appearance(&mesh.appearance, id);
+                    if !status.is_ok() {
+                        issues.push(StructureIssue {
+                            object_id: id.clone(),
+                            status,
+                        });
+                    }
+                }
+                return self.finish_structure_validation(issues);
+            }
+        }
         let valid = baseline.structure_is_validated() || baseline.validate_structure().is_empty();
         let identities = valid && self.same_authoring_identities(baseline);
         self.validate_structure_impl(
@@ -61,7 +98,7 @@ impl Document {
         reuse_motions: bool,
     ) -> Vec<StructureIssue> {
         #[cfg(feature = "bench-instrumentation")]
-        let _benchmark_span = crate::benchmark::span("core.validate_structure");
+        let _benchmark_span = crate::benchmark::span("core.validate_structure.full");
         let mut issues = Vec::new();
         let mut initialized = Document::new();
         let status = initialized.initialize(self.content.id.clone(), self.model_setup());
@@ -284,6 +321,8 @@ impl Document {
             add_issue(id, self.validate_transform(transform));
         }
         for (id, mesh) in &self.content.meshes {
+            #[cfg(feature = "bench-instrumentation")]
+            crate::benchmark::count("core.validate_structure.full.mesh_checks", 1);
             let status = self.validate_mesh_snapshot(mesh);
             add_issue(id, status);
         }
@@ -359,6 +398,10 @@ impl Document {
                 });
             }
         }
+        self.finish_structure_validation(issues)
+    }
+
+    fn finish_structure_validation(&self, mut issues: Vec<StructureIssue>) -> Vec<StructureIssue> {
         issues.sort_by(|a, b| {
             (&a.object_id, &a.status.code, &a.status.message).cmp(&(
                 &b.object_id,

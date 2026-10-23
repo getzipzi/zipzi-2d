@@ -236,12 +236,24 @@ impl Document {
         if previous_mesh != mesh {
             affected.push(previous_mesh.clone());
         }
+        let tracked =
+            super::tracking::binding_payload_is_tracked(self.get_binding(&id).unwrap(), &b)
+                .then(|| self.track_binding_payload_write(&id));
         self.content.bindings.insert(id.clone(), b);
-        self.changed(
-            ChangeKind::Structure,
-            affected,
-            vec![id, mesh, previous_mesh],
-        )
+        if let Some(write) = tracked {
+            self.changed_tracked(
+                write,
+                ChangeKind::Structure,
+                affected,
+                vec![id, mesh, previous_mesh],
+            )
+        } else {
+            self.changed(
+                ChangeKind::Structure,
+                affected,
+                vec![id, mesh, previous_mesh],
+            )
+        }
     }
 
     pub fn set_mesh_keyform(&mut self, id: &str, mut form: MeshKeyform) -> EditResult {
@@ -279,16 +291,20 @@ impl Document {
             return self.failed(s);
         }
         let mesh = b.mesh_id.clone();
+        let tracked =
+            super::tracking::binding_payload_is_tracked(self.get_binding(id).unwrap(), &b)
+                .then(|| self.track_binding_payload_write(id));
         self.content.bindings.insert(id.to_string(), b);
-        self.changed(
-            if changes_order {
-                ChangeKind::Structure
-            } else {
-                ChangeKind::Positions
-            },
-            vec![mesh.clone()],
-            vec![id.to_string(), mesh],
-        )
+        let kind = if changes_order {
+            ChangeKind::Structure
+        } else {
+            ChangeKind::Positions
+        };
+        if let Some(write) = tracked {
+            self.changed_tracked(write, kind, vec![mesh.clone()], vec![id.to_string(), mesh])
+        } else {
+            self.changed(kind, vec![mesh.clone()], vec![id.to_string(), mesh])
+        }
     }
 
     pub fn scene_binding_order(&self) -> &[String] {

@@ -106,6 +106,41 @@ impl Document {
     }
 }
 impl Delta {
+    pub(in crate::document) fn is_empty(&self) -> bool {
+        let Self {
+            model3,
+            parameters,
+            groups,
+            parts,
+            parents,
+            meshes,
+            transforms,
+            offscreens,
+            bindings,
+            scene_bindings,
+            blends,
+            glues,
+            hierarchy,
+            drawing,
+            removed,
+        } = self;
+        model3.is_none()
+            && parameters.is_empty()
+            && groups.is_none()
+            && parts.is_empty()
+            && parents.is_empty()
+            && meshes.is_empty()
+            && transforms.is_empty()
+            && offscreens.is_empty()
+            && bindings.is_empty()
+            && scene_bindings.is_empty()
+            && blends.is_empty()
+            && glues.is_empty()
+            && hierarchy.is_none()
+            && drawing.is_none()
+            && removed.is_empty()
+    }
+
     pub(in crate::document) fn runtime_changed(&self, d: &Document) -> bool {
         !self.parameters.is_empty()
             || !self.parts.is_empty()
@@ -142,6 +177,7 @@ impl Delta {
                 .is_some_and(|v| Some(v.as_slice()) != d.draw_order_groups())
     }
     pub(in crate::document) fn install(&self, d: &mut Document) {
+        d.tracking = Default::default();
         d.reference_index.take();
         d.reference_projection.take();
         if let Some(settings) = &self.model3 {

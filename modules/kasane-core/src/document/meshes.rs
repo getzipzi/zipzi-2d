@@ -288,6 +288,8 @@ impl Document {
         }
         let key = mesh.id.clone();
         let previous_runtime_id = previous.runtime_id.clone();
+        let tracked = tracking::mesh_update_is_tracked(previous, &mesh)
+            .then(|| self.track_mesh_write(vec![key.clone()]));
         if previous_runtime_id != mesh.runtime_id {
             self.mesh_runtime_ids.remove(&previous_runtime_id);
             self.mesh_runtime_ids
@@ -295,7 +297,11 @@ impl Document {
         }
         self.content.meshes.insert(key.clone(), mesh);
         self.vertex_slots.insert(key.clone(), slots);
-        self.changed(ChangeKind::Structure, vec![key], Vec::new())
+        if let Some(write) = tracked {
+            self.changed_tracked(write, ChangeKind::Structure, vec![key], Vec::new())
+        } else {
+            self.changed(ChangeKind::Structure, vec![key], Vec::new())
+        }
     }
 
     /// Replace bound topology and its complete keyform set as one validated edit.
@@ -541,6 +547,7 @@ impl Document {
                 "Opacity must be between 0 and 1",
             ));
         }
+        let write = self.track_mesh_write(vec![id.to_owned()]);
         let Some(mesh) = self.content.meshes.get_mut(id) else {
             return self.failed(Status::error("MISSING_MESH", id));
         };
@@ -548,7 +555,12 @@ impl Document {
             return self.failed(Status::ok());
         }
         mesh.appearance.opacity = opacity;
-        self.changed(ChangeKind::Appearance, vec![id.to_owned()], Vec::new())
+        self.changed_tracked(
+            write,
+            ChangeKind::Appearance,
+            vec![id.to_owned()],
+            Vec::new(),
+        )
     }
 
     pub fn rename_mesh(&mut self, id: &str, name: String) -> EditResult {
@@ -561,6 +573,7 @@ impl Document {
                 "Commit or cancel the active transaction first.",
             ));
         }
+        let write = self.track_mesh_write(vec![id.to_owned()]);
         let mesh = match self.content.meshes.get_mut(id) {
             Some(m) => m,
             None => return self.failed(Status::error("MISSING_MESH", "Mesh does not exist.")),
@@ -578,6 +591,11 @@ impl Document {
             };
         }
         mesh.name = name;
-        self.changed(ChangeKind::Metadata, vec![id.to_string()], Vec::new())
+        self.changed_tracked(
+            write,
+            ChangeKind::Metadata,
+            vec![id.to_string()],
+            Vec::new(),
+        )
     }
 }

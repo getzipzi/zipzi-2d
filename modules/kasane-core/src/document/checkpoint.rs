@@ -291,6 +291,7 @@ impl Document {
     fn swap_checkpoint(&mut self, checkpoint: &mut DocumentCheckpoint, invalidate: bool) -> bool {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.checkpoint_swap_indexes");
+        self.tracking = Default::default();
         self.modified_cache.take();
         self.expression_entries.take();
         self.motion_lookup.take();

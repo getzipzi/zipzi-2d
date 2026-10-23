@@ -11,7 +11,9 @@ mod document;
 mod references;
 mod resources;
 pub use references::{ReferenceFieldChange, ReferenceSelectionChange};
+mod mesh;
 mod motion;
+pub(crate) use mesh::MeshPublication;
 mod organization;
 mod scene;
 pub use content::{SceneContentChange, SceneContentReferenceChange, SceneContentReferenceValue};
@@ -421,6 +423,8 @@ fn summarize_impl(
 ) -> ChangeSet {
     #[cfg(feature = "bench-instrumentation")]
     let _span = kasane_core::benchmark::span("sdk.summarize");
+    #[cfg(feature = "bench-instrumentation")]
+    let _full_span = kasane_core::benchmark::span("sdk.summarize.fallback");
     use kasane_core::document::DocumentDomain as D;
     let unchanged = |domain| prune_domains && before.same_domain(after, domain);
     let mut out = ChangeSet::default();
@@ -627,13 +631,22 @@ fn summarize_impl(
             out.modified.push(entity(key.kind, id));
         }
     }
+    finish_summary(&mut out);
+    out
+}
+
+fn finish_summary(out: &mut ChangeSet) {
     out.retain_existing_modified();
     // Deterministic order is useful to event consumers and persisted diagnostics.
     for entities in [&mut out.created, &mut out.deleted, &mut out.modified] {
-        entities.sort_by(|a, b| a.id.cmp(&b.id));
+        // A Part and its DrawOrderGroup intentionally share an ID. Break ties
+        // by kind so independent key-set enumeration has identical output.
+        entities.sort_by(|a, b| {
+            a.id.cmp(&b.id)
+                .then_with(|| (a.kind as usize).cmp(&(b.kind as usize)))
+        });
         entities.dedup();
     }
-    out
 }
 pub(crate) fn categories(kind: ChangeKind) -> BTreeSet<ChangeCategory> {
     use ChangeCategory::*;
@@ -696,8 +709,52 @@ fn physics_target_bytes(value: &Option<PhysicsReferenceValue>) -> usize {
 }
 
 #[cfg(test)]
+mod binding_payload_tests;
+#[cfg(test)]
+mod mesh_tests;
+#[cfg(test)]
+mod tracking_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn same_id_entity_kinds_have_deterministic_summary_order() {
+        let before = Document::new();
+        let after = Document::new();
+        let before_keys = HashSet::new();
+        let mut expected = None;
+        for reverse in [false, true] {
+            let mut keys = [
+                ObjectKey {
+                    kind: ObjectKind::Part,
+                    id: "shared".into(),
+                },
+                ObjectKey {
+                    kind: ObjectKind::DrawOrderGroup,
+                    id: "shared".into(),
+                },
+            ];
+            if reverse {
+                keys.reverse();
+            }
+            let summary = summarize_impl(
+                &before,
+                &after,
+                &before_keys,
+                &keys.into_iter().collect(),
+                &[],
+                &BTreeSet::new(),
+                false,
+            );
+            let json = serde_json::to_value(summary).unwrap();
+            if let Some(expected) = &expected {
+                assert_eq!(&json, expected);
+            }
+            expected = Some(json);
+        }
+    }
 
     #[test]
     fn summary_estimate_charges_spare_slots_and_occupied_entity_payloads() {
@@ -731,19 +788,21 @@ mod tests {
         ) {
             let before = sdk.document().clone();
             let before_keys = crate::session::keys_in(&before);
-            let (_, receipt) = sdk.edit("comparison", None, edit).unwrap();
-            assert!(receipt.changed);
-            let after = sdk.document();
+            let mut transaction = sdk.begin_owned_edit("comparison", None).unwrap();
+            edit(&mut transaction).unwrap();
+            let after = transaction.candidate_document();
             let after_keys = crate::session::keys_in(after);
             let full = summarize_impl(
                 &before,
                 after,
                 &before_keys,
                 &after_keys,
-                &receipt.object_ids,
-                &categories(receipt.kind),
+                &transaction.object_ids,
+                &transaction.categories,
                 false,
             );
+            let receipt = transaction.commit_to(sdk).unwrap();
+            assert!(receipt.changed);
             assert_eq!(
                 serde_json::to_value(&receipt.changes).unwrap(),
                 serde_json::to_value(&full).unwrap()

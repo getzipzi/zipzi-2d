@@ -111,6 +111,11 @@ impl Document {
     /// is unchanged. Changes inside an owned collection may fall back to a full
     /// enumeration even if their particular IDs happen to agree.
     pub fn same_authoring_identities(&self, other: &Self) -> bool {
+        if self.tracked_authoring_identities_since(other) {
+            return true;
+        }
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = crate::benchmark::span("core.authoring_identity_scan");
         let a = &self.content;
         let b = &other.content;
         a.id == b.id

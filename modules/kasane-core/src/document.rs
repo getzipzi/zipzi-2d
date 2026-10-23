@@ -33,6 +33,8 @@ pub use reference_authoring::*;
 mod reference_entry;
 pub use reference_entry::ReferenceEntry;
 mod structure;
+mod tracking;
+pub use tracking::TrackedRecord;
 mod transactions;
 mod transforms;
 mod validation;
@@ -89,6 +91,7 @@ pub struct Document {
     // identity, even when branch-local revision counters happen to coincide.
     snapshot_identity: Arc<()>,
     validated_structure: structure::ValidationCache,
+    tracking: tracking::TrackingState,
     revision: u64,
     evaluation_revision: u64,
     batch_build_active: bool,
@@ -195,6 +198,7 @@ impl Document {
             );
         }
         self.snapshot_identity = Arc::new(());
+        self.tracking = Default::default();
         self.content.id = id_str;
         self.content.export_settings = setup.export;
         self.content.source_canvas = setup.source_canvas;
@@ -343,6 +347,7 @@ impl Document {
             return Status::error("NOT_INITIALIZED", "Initialize the document first");
         }
         self.batch_build_active = false;
+        self.tracking = Default::default();
         self.lookup.take();
         self.binding_lookup.take();
         self.pair_lookup.take();
@@ -446,6 +451,7 @@ impl Document {
         mesh_ids: Vec<String>,
         mut object_ids: Vec<String>,
     ) -> EditResult {
+        self.tracking = Default::default();
         self.reference_index.take();
         self.reference_projection.take();
         if matches!(kind, ChangeKind::Structure | ChangeKind::Resources) {

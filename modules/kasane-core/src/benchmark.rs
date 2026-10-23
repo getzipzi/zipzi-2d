@@ -83,6 +83,18 @@ pub fn span(name: &'static str) -> Option<Span> {
     })
 }
 
+/// Record units of work without reading the clock or changing the span stack.
+/// Counter names must be distinct from timing span names. `calls` holds units;
+/// inclusive_ns and self_ns stay zero for counter-only entries.
+pub fn count(name: &'static str, units: usize) {
+    RECORDER.with(|cell| {
+        let mut recorder = cell.borrow_mut();
+        if recorder.recording && units != 0 {
+            recorder.stages.entry(name).or_default().calls += units as u64;
+        }
+    });
+}
+
 impl Drop for Span {
     fn drop(&mut self) {
         let elapsed = self.start.elapsed().as_nanos() as u64;
@@ -124,6 +136,25 @@ mod tests {
             values["outer"].self_ns + values["inner"].inclusive_ns
         );
         assert!(span("disabled").is_none());
+        assert!(Capture::start().finish().is_empty());
+    }
+
+    #[test]
+    fn work_counters_accumulate_reset_and_do_not_use_the_timing_stack() {
+        count("records", 99);
+        let capture = Capture::start();
+        {
+            let _span = span("work");
+            count("records", 2);
+            count("records", 3);
+            count("zero", 0);
+        }
+        let values = capture.finish();
+        assert_eq!(values["records"].calls, 5);
+        assert_eq!(values["records"].inclusive_ns, 0);
+        assert_eq!(values["records"].self_ns, 0);
+        assert!(!values.contains_key("zero"));
+        assert_eq!(values["work"].inclusive_ns, values["work"].self_ns);
         assert!(Capture::start().finish().is_empty());
     }
 }

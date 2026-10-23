@@ -176,6 +176,12 @@ impl Document {
                 }
                 let order_changed;
                 let mut objects = vec![id.clone()];
+                let tracked = if let Some((binding, _)) = keyform {
+                    Some(self.track_binding_payload_write(binding))
+                } else {
+                    (self.get_mesh(id).unwrap().draw_order == *draw_order)
+                        .then(|| self.track_mesh_write(vec![id.clone()]))
+                };
                 if let Some((binding, samples)) = keyform {
                     let form = self
                         .content
@@ -199,15 +205,16 @@ impl Document {
                     mesh.appearance = *appearance;
                     mesh.draw_order = *draw_order;
                 }
-                self.changed(
-                    if order_changed {
-                        ChangeKind::Structure
-                    } else {
-                        ChangeKind::Appearance
-                    },
-                    vec![id.clone()],
-                    objects,
-                )
+                let kind = if order_changed {
+                    ChangeKind::Structure
+                } else {
+                    ChangeKind::Appearance
+                };
+                if let Some(write) = tracked {
+                    self.changed_tracked(write, kind, vec![id.clone()], objects)
+                } else {
+                    self.changed(kind, vec![id.clone()], objects)
+                }
             }
             PropertyPatch::Parameter {
                 id,
@@ -287,6 +294,22 @@ impl Document {
             Err(s) => return self.failed(s),
         };
         let snapshot_identity = self.snapshot_identity.clone();
+        let tracking = self.tracking.for_rollback();
+        // Structure changes can also prune stale imported authoring flags in
+        // changed(). Keep that persistent state inside the same rollback as the
+        // scalar and coverage. Appearance-only drags never clone this map.
+        let may_prune_flags = match patch {
+            PropertyPatch::Mesh { draw_order, .. } => {
+                matches!(&original, PropertyPatch::Mesh { draw_order: old, .. } if old != draw_order)
+            }
+            PropertyPatch::Parameter { .. }
+            | PropertyPatch::Part { .. }
+            | PropertyPatch::Glue { .. } => true,
+            PropertyPatch::Motion { .. }
+            | PropertyPatch::Expression { .. }
+            | PropertyPatch::Export { .. } => false,
+        };
+        let editor_state = may_prune_flags.then(|| self.content.editor_state.clone());
         let revision = self.revision;
         let evaluation_revision = self.evaluation_revision;
         let modified = self.modified_cache.get().copied();
@@ -300,7 +323,11 @@ impl Document {
                 restored.status.is_ok(),
                 "Previously valid scalar property must be restorable"
             );
+            if let Some(editor_state) = editor_state {
+                self.content.editor_state = editor_state;
+            }
             self.snapshot_identity = snapshot_identity;
+            self.tracking = tracking;
             self.revision = revision;
             self.evaluation_revision = evaluation_revision;
             self.modified_cache.take();

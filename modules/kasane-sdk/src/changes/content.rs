@@ -40,18 +40,7 @@ pub(super) fn summarize_content(
         }
     }
     let mut changed = |id: &str, kind, domain, topology| {
-        let entity = EntityRef::new(after.id(), kind, id);
-        out.content_changes.push(SceneContentChange {
-            entity: entity.clone(),
-            domain,
-            topology,
-        });
-        out.modified.push(entity);
-        out.categories.insert(ChangeCategory::Content);
-        if topology {
-            out.categories.insert(ChangeCategory::Topology);
-        }
-        out.categories.insert(ChangeCategory::EvaluationInputs);
+        record_content_change(out, after.id(), id, kind, domain, topology);
     };
     for id in candidates {
         let id = id.as_str();
@@ -218,6 +207,28 @@ pub(super) fn summarize_content(
             }
         }
     }
+}
+
+pub(super) fn record_content_change(
+    out: &mut ChangeSet,
+    document_id: &str,
+    id: &str,
+    kind: ObjectKind,
+    domain: D,
+    topology: bool,
+) {
+    let entity = EntityRef::new(document_id, kind, id);
+    out.content_changes.push(SceneContentChange {
+        entity: entity.clone(),
+        domain,
+        topology,
+    });
+    out.modified.push(entity);
+    out.categories.insert(ChangeCategory::Content);
+    if topology {
+        out.categories.insert(ChangeCategory::Topology);
+    }
+    out.categories.insert(ChangeCategory::EvaluationInputs);
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

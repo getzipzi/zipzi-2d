@@ -622,7 +622,7 @@ impl AuthoringSession {
             error.actual_version = Some(Box::new(version));
             return Err(error);
         }
-        let candidate = self.project.document().fork_candidate();
+        let candidate = self.project.document().fork_tracked_candidate();
         if candidate.estimated_content_bytes() > self.history_limits.max_bytes {
             return Err(SdkError::new(
                 "HISTORY_LIMIT_EXCEEDED",

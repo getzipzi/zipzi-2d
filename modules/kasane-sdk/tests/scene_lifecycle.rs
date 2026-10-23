@@ -47,10 +47,17 @@ fn scene_label_patches_avoid_global_identity_scans_through_both_entrypoints() {
         #[cfg(feature = "bench-instrumentation")]
         {
             let stages = capture.finish();
+            assert_eq!(stages["sdk.publication.local"].calls, 1);
             assert!(
                 !stages.contains_key("sdk.keys_in"),
                 "Label enumerated all identities: {stages:?}"
             );
+            for stage in ["core.authoring_identity_scan", "sdk.summarize.fallback"] {
+                assert!(
+                    !stages.contains_key(stage),
+                    "Label repeated {stage}: {stages:?}"
+                );
+            }
         }
         assert!(receipt.changed);
         assert!(receipt.changes.created.is_empty());
