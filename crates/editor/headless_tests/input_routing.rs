@@ -36,6 +36,134 @@ fn captured_viewport_respects_the_configured_cancel_binding(cx: &mut TestAppCont
 }
 
 #[gpui_kit::test]
+fn properties_resolves_its_own_target_as_the_editor_context_changes(cx: &mut TestAppContext) {
+    use crate::input_routing::LocalTarget;
+    use editor_core::{CommandTarget, PanelKind};
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.hover("properties-panel", cx);
+        assert_eq!(
+            h.view.read(cx).hovered_target(window, cx),
+            Some(LocalTarget::Panel(PanelKind::Properties))
+        );
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        window.render_frame(cx);
+        super::timeline::tool(window, "timeline-add-event", cx);
+        window.render_frame(cx);
+        let (focus, binding) = {
+            let view = h.view.read(cx);
+            let properties = view.dock.as_ref().unwrap().properties.read(cx);
+            (
+                view.focus.clone(),
+                view.editor
+                    .timeline_binding(properties.timeline_id)
+                    .unwrap(),
+            )
+        };
+        window.focus(&focus, cx);
+        window.hover("property-input-event_value", cx);
+        assert_eq!(
+            h.view.read(cx).hovered_target(window, cx),
+            Some(LocalTarget::Timeline(binding))
+        );
+        let saved = h
+            .view
+            .read(cx)
+            .viewport_command(CommandId::TimelineNextFrame, CommandSource::NativeMenu);
+        assert!(
+            matches!(saved.target, CommandTarget::Timeline(target) if target.panel == Some(binding))
+        );
+        let time = h.view.read(cx).editor.animation().unwrap().edit_time;
+        window.press("right", cx);
+        assert!(
+            (h.view.read(cx).editor.animation().unwrap().edit_time - time - 1. / 60.).abs() < 1e-6
+        );
+        window.click("workspace-modeling", cx);
+        window.render_frame(cx);
+        window.hover("properties-panel", cx);
+        assert_eq!(
+            h.view.read(cx).hovered_target(window, cx),
+            Some(LocalTarget::Panel(PanelKind::Properties))
+        );
+        assert!(!h.view.read(cx).editor.command_available(saved));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn timeline_hint_publication_rejects_stale_captures_and_stays_local_to_its_window(
+    cx: &mut TestAppContext,
+) {
+    use crate::panels::timeline::TimelineCaptureKind;
+    use crate::workspace::status_bar::StatusBar;
+    use editor_core::EditingLifecycle;
+    use gpui_kit::{MouseButton, MouseDownEvent};
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let first = setup_with_document(cx, document, assets);
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let second = setup_with_document(cx, document, assets);
+    cx.update_window(first.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        window.render_frame(cx);
+        super::timeline::toggle_pan_tool(&first, window, cx);
+        let view = first.view.read(cx);
+        assert_eq!(
+            view.status_bar.read(cx).hint_context(),
+            Some(crate::panels::timeline::PAN_HINTS)
+        );
+    })
+    .unwrap();
+    second.view.read_with(cx, |view, cx| {
+        assert_eq!(view.status_bar.read(cx).hint_context(), Some(&[][..]));
+    });
+    cx.update_window(first.window, |_, window, cx| {
+        super::timeline::toggle_pan_tool(&first, window, cx);
+        window.dispatch_event(
+            MouseDownEvent {
+                position: window.find("timeline-ruler").bounds().center(),
+                button: MouseButton::Left,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        let hints = first
+            .view
+            .read(cx)
+            .dock
+            .as_ref()
+            .unwrap()
+            .timeline_hints
+            .clone();
+        assert_eq!(
+            hints.captured(&first.view.read(cx).editor),
+            Some(TimelineCaptureKind::Seek.hints())
+        );
+        // Invalidate core ownership before the Timeline's observer reconciles its UI.
+        first.view.update(cx, |view, cx| {
+            let document = view.editor.active_id().unwrap();
+            view.editor
+                .end_editing(document, EditingLifecycle::WindowDeactivated)
+                .unwrap();
+            assert!(hints.captured(&view.editor).is_none());
+            StatusBar::sync(&view.status_bar, view, cx);
+        });
+        assert_eq!(
+            first.view.read(cx).status_bar.read(cx).hint_context(),
+            Some(&[][..])
+        );
+        window.render_frame(cx);
+        assert!(hints.captured(&first.view.read(cx).editor).is_none());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn popover_keeps_keyboard_priority_when_pointer_returns_to_viewport(cx: &mut TestAppContext) {
     let h = setup(cx);
     cx.update_window(h.window, |_, window, cx| {
@@ -477,7 +605,7 @@ fn closing_blocking_ui_keeps_the_current_pointer_location(cx: &mut TestAppContex
 
 #[gpui_kit::test]
 fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut TestAppContext) {
-    use crate::workspace::status_bar::{HintContext, TimelineCaptureKind};
+    use crate::panels::timeline::TimelineCaptureKind;
     use editor_core::ToolId;
     use gpui_kit::{MouseButton, MouseDownEvent, component::kbd::Kbd};
 
@@ -488,11 +616,11 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         let status_bar = h.view.read(cx).status_bar.clone();
 
         // 1. Quiet by default in Select tool, even when hovering across panels and viewport.
-        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+        assert_eq!(status_bar.read(cx).hint_context(), Some(&[][..]));
         assert!(status_bar.read(cx).hints().is_empty());
         window.hover("canvas-body", cx);
         window.render_frame(cx);
-        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+        assert_eq!(status_bar.read(cx).hint_context(), Some(&[][..]));
         assert!(status_bar.read(cx).hints().is_empty());
 
         // 2. Non-default Modeling tools (Glue / Hand) display concise tool hints.
@@ -500,7 +628,7 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         window.render_frame(cx);
         assert_eq!(
             status_bar.read(cx).hint_context(),
-            Some(HintContext::ModelingTool(ToolId::Glue))
+            Some(ToolId::Glue.idle_hints())
         );
         assert_eq!(status_bar.read(cx).hints().len(), 2);
 
@@ -522,7 +650,7 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         window.render_frame(cx);
         assert_eq!(
             status_bar.read(cx).hint_context(),
-            Some(HintContext::ViewportCapture { panning: true })
+            Some(editor_core::navigation_hints())
         );
         let expected_cancel_key = Kbd::format(&Keystroke::parse("alt-x").unwrap());
         assert!(
@@ -539,7 +667,7 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         window.render_frame(cx);
         assert_eq!(
             status_bar.read(cx).hint_context(),
-            Some(HintContext::ModelingTool(ToolId::Glue))
+            Some(ToolId::Glue.idle_hints())
         );
 
         // 4. Animation workspace stays quiet until Timeline pan mode or an active capture starts.
@@ -547,18 +675,18 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         window.render_frame(cx);
         window.click(("animation-motion", 0usize), cx);
         window.render_frame(cx);
-        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+        assert_eq!(status_bar.read(cx).hint_context(), Some(&[][..]));
         assert!(status_bar.read(cx).hints().is_empty());
 
         super::timeline::toggle_pan_tool(&h, window, cx);
         window.render_frame(cx);
         assert_eq!(
             status_bar.read(cx).hint_context(),
-            Some(HintContext::TimelinePanTool)
+            Some(crate::panels::timeline::PAN_HINTS)
         );
         super::timeline::toggle_pan_tool(&h, window, cx);
         window.render_frame(cx);
-        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+        assert_eq!(status_bar.read(cx).hint_context(), Some(&[][..]));
 
         let ruler_center = window.find("timeline-ruler").bounds().center();
         window.dispatch_event(
@@ -573,12 +701,12 @@ fn status_bar_hints_stay_quiet_until_modal_tools_or_active_captures(cx: &mut Tes
         window.render_frame(cx);
         assert_eq!(
             status_bar.read(cx).hint_context(),
-            Some(HintContext::TimelineCapture(TimelineCaptureKind::Seek))
+            Some(TimelineCaptureKind::Seek.hints())
         );
 
         window.press("escape", cx);
         window.render_frame(cx);
-        assert_eq!(status_bar.read(cx).hint_context(), Some(HintContext::Quiet));
+        assert_eq!(status_bar.read(cx).hint_context(), Some(&[][..]));
 
         // 5. Status messages and edit errors route through StatusBar with semantic error flag.
         h.view.update(cx, |view, cx| {

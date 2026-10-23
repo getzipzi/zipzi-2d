@@ -1,30 +1,11 @@
 use crate::{EditorView, settings::Settings, t, ui::compact};
-use editor_core::{CommandId, EditingContext, ToolId};
+use editor_core::{CommandId, EditingContext, HintAction, InteractionHint};
 use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable, kbd::Kbd};
 use gpui_kit::{prelude::*, *};
 
 const STATUS_LINE_HEIGHT: f32 = compact::CAPTION * 1.5;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum TimelineCaptureKind {
-    Pan,
-    Seek,
-    Marquee,
-    Keys,
-    Handle,
-    Event,
-    Number,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum HintContext {
-    Quiet,
-    ViewportCapture { panning: bool },
-    LassoCapture,
-    TimelineCapture(TimelineCaptureKind),
-    ModelingTool(ToolId),
-    TimelinePanTool,
-}
+pub(crate) type HintContext = &'static [InteractionHint];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct StatusBarState {
@@ -162,41 +143,23 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
 }
 
 pub(crate) fn resolve_hint_context(view: &EditorView, _cx: &App) -> HintContext {
-    // 1. Active pointer/edit capture takes highest priority.
-    if let Some((token, panning)) = view.input_router.viewport_capture.get() {
-        if view.editor.viewport_interaction_valid(token) {
-            return if !panning && view.editor.lasso_active_for(token.binding) {
-                HintContext::LassoCapture
-            } else {
-                HintContext::ViewportCapture { panning }
-            };
-        }
+    if let Some(token) = view.editor.current_viewport_interaction() {
+        return view.editor.viewport_interaction_hints(token);
     }
-    if let Some((operation, kind)) = view.input_router.timeline_capture.get() {
-        if operation.valid(&view.editor) {
-            return HintContext::TimelineCapture(kind);
-        }
+    let timeline = view.dock.as_ref().map(|dock| &dock.timeline_hints);
+    if let Some(hints) = timeline.and_then(|timeline| timeline.captured(&view.editor)) {
+        return hints;
     }
-
-    // 2. Non-default modal tools or modes; stay quiet during ordinary idle work.
     if view.editor.active_id().is_some() {
         match view.editor.editing_context() {
-            Some(EditingContext::Modeling) => match view.editor.active_tool() {
-                ToolId::Lasso => return HintContext::ModelingTool(ToolId::Lasso),
-                ToolId::Glue => return HintContext::ModelingTool(ToolId::Glue),
-                ToolId::Hand => return HintContext::ModelingTool(ToolId::Hand),
-                ToolId::Select => {}
-            },
+            Some(EditingContext::Modeling) => return view.editor.active_tool().idle_hints(),
             Some(EditingContext::Animation) => {
-                if view.input_router.timeline_pan_tool.get() {
-                    return HintContext::TimelinePanTool;
-                }
+                return timeline.map_or(&[], |timeline| timeline.idle());
             }
-            None => {}
+            _ => {}
         }
     }
-
-    HintContext::Quiet
+    &[]
 }
 
 #[allow(dead_code)]
@@ -222,84 +185,40 @@ fn build_hints(state: &StatusBarState) -> Vec<ShortcutHint> {
     let bindings = &state.bindings_digest;
     let mut hints = Vec::new();
 
-    match state.hint_context {
-        HintContext::Quiet => {}
-        HintContext::ViewportCapture { panning } => {
-            hints.push(ShortcutHint {
-                key: t!("status.hint_drag").into_owned(),
-                label: if panning {
-                    t!("status.hint_pan").into_owned()
-                } else {
-                    t!("status.hint_transform").into_owned()
-                },
-            });
-            push_cmd_hint(&mut hints, bindings, CommandId::CancelGesture);
-        }
-        HintContext::TimelineCapture(kind) => {
-            let drag_label = match kind {
-                TimelineCaptureKind::Pan => t!("status.hint_pan"),
-                TimelineCaptureKind::Seek => t!("status.hint_scrub_time"),
-                TimelineCaptureKind::Marquee => t!("status.hint_box_select"),
-                TimelineCaptureKind::Keys => t!("status.hint_move_keys"),
-                TimelineCaptureKind::Handle => t!("status.hint_adjust_curve"),
-                TimelineCaptureKind::Event => t!("status.hint_move_event"),
-                TimelineCaptureKind::Number => t!("timeline.value"),
-            };
-            hints.push(ShortcutHint {
-                key: t!("status.hint_drag").into_owned(),
-                label: drag_label.into_owned(),
-            });
-            if kind != TimelineCaptureKind::Pan {
+    for hint in state.hint_context {
+        let (key, action) = match *hint {
+            InteractionHint::Drag(action) => (t!("status.hint_drag").into_owned(), action),
+            InteractionHint::Primary(action) => (t!("status.hint_lmb").into_owned(), action),
+            InteractionHint::Shift(action) => ("Shift".into(), action),
+            InteractionHint::Alt(action) => ("Option".into(), action),
+            InteractionHint::Command(command) => {
+                push_cmd_hint(&mut hints, bindings, command);
+                continue;
+            }
+            InteractionHint::Escape(command) => {
                 hints.push(ShortcutHint {
                     key: Kbd::format(&Keystroke::parse("escape").expect("valid keystroke")),
-                    label: t!(CommandId::CancelGesture.spec().label).into_owned(),
+                    label: t!(command.spec().label).into_owned(),
                 });
+                continue;
             }
-        }
-        HintContext::ModelingTool(ToolId::Lasso) | HintContext::LassoCapture => {
-            hints.push(ShortcutHint {
-                key: t!("status.hint_drag").into_owned(),
-                label: t!("status.hint_lasso_select").into_owned(),
-            });
-            hints.push(ShortcutHint {
-                key: "Shift".into(),
-                label: t!("status.hint_add_selection").into_owned(),
-            });
-            hints.push(ShortcutHint {
-                key: "Option".into(),
-                label: t!("status.hint_remove_selection").into_owned(),
-            });
-            push_cmd_hint(
-                &mut hints,
-                bindings,
-                if state.hint_context == HintContext::LassoCapture {
-                    CommandId::CancelGesture
-                } else {
-                    CommandId::SelectTool
-                },
-            );
-        }
-        HintContext::ModelingTool(ToolId::Glue) => {
-            hints.push(ShortcutHint {
-                key: t!("status.hint_lmb").into_owned(),
-                label: t!("status.hint_glue_bind").into_owned(),
-            });
-            push_cmd_hint(&mut hints, bindings, CommandId::SelectTool);
-        }
-        HintContext::ModelingTool(ToolId::Hand) => {
-            hints.push(ShortcutHint {
-                key: t!("status.hint_lmb").into_owned(),
-                label: t!("status.hint_pan").into_owned(),
-            });
-            push_cmd_hint(&mut hints, bindings, CommandId::SelectTool);
-        }
-        HintContext::ModelingTool(ToolId::Select) => {}
-        HintContext::TimelinePanTool => {
-            hints.push(ShortcutHint {
-                key: t!("status.hint_lmb").into_owned(),
-                label: t!("status.hint_pan").into_owned(),
-            });
-        }
+        };
+        let label = t!(match action {
+            HintAction::Pan => "status.hint_pan",
+            HintAction::Transform => "status.hint_transform",
+            HintAction::LassoSelect => "status.hint_lasso_select",
+            HintAction::AddSelection => "status.hint_add_selection",
+            HintAction::RemoveSelection => "status.hint_remove_selection",
+            HintAction::GlueBind => "status.hint_glue_bind",
+            HintAction::ScrubTime => "status.hint_scrub_time",
+            HintAction::BoxSelect => "status.hint_box_select",
+            HintAction::MoveKeys => "status.hint_move_keys",
+            HintAction::AdjustCurve => "status.hint_adjust_curve",
+            HintAction::MoveEvent => "status.hint_move_event",
+            HintAction::Value => "timeline.value",
+        })
+        .into_owned();
+        hints.push(ShortcutHint { key, label });
     }
 
     hints

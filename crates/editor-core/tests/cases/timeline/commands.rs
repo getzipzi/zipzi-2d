@@ -171,10 +171,7 @@ fn navigation_capture_and_stale_panel_callbacks_preserve_the_new_timeline_candid
     let current = editor.begin_timeline_edit(document, "Current edit")?;
     let current = editor.update_timeline_edit(document, current, write(2, Some(id(8)), 0.4))?;
     let candidate = editor.timeline_edit().unwrap().candidate.clone();
-    let token = editor.begin_viewport_interaction(
-        editor.viewport_binding(viewport).unwrap(),
-        ViewportInteractionKind::Navigation,
-    )?;
+    let token = editor.begin_viewport_navigation(editor.viewport_binding(viewport).unwrap())?;
     assert!(editor.cancel_viewport_interaction(token));
     assert!(!editor.cancel_timeline_edit_for(document, old));
     assert_eq!(editor.timeline_edit().unwrap().identity, current);

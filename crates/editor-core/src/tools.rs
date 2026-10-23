@@ -1,15 +1,22 @@
 //! Canvas interaction state machine. Object selection, component selection and
 //! write targets are independent; a click never opens a model transaction.
-mod drag;
+mod controls;
+mod gesture;
+mod glue;
+mod hand;
+mod hints;
 mod input;
+mod lasso;
 mod overlay;
-mod selection;
+mod region;
+mod select;
+pub use hints::{HintAction, InteractionHint};
 
-use crate::control_edit::{ControlChange, ControlEdit};
 use crate::{
     CanvasScene, ComponentRef, Document, HitTarget, ObjectKind, ObjectRef, ViewportPoint,
     ViewportTransform,
 };
+use gesture::Gesture;
 use std::sync::Arc;
 
 pub use overlay::{
@@ -42,22 +49,6 @@ pub struct CanvasFrame {
     pub transform: ViewportTransform,
     pub geometry: Arc<CanvasScene>,
 }
-struct Press {
-    version: FrameVersion,
-    point: ViewportPoint,
-    transform: ViewportTransform,
-    scene: Arc<CanvasScene>,
-    target: Option<HitTarget>,
-    component_surface: bool,
-    shift: bool,
-    lasso: Option<selection::LassoGesture>,
-    warp_fine: bool,
-    selection: Vec<ObjectRef>,
-    current: ViewportPoint,
-    dragged: bool,
-    edit: Option<Vec<ControlEdit>>,
-    last: Option<ControlChange>,
-}
 #[derive(Default)]
 pub struct ToolController {
     pub active: ToolId,
@@ -67,34 +58,30 @@ pub struct ToolController {
     components: Vec<ComponentRef>,
     hovered: Option<HitTarget>,
     hovered_binding: Option<crate::ViewportBinding>,
-    press: Option<Press>,
+    gesture: Option<Gesture>,
 }
 impl ToolController {
     pub(crate) fn interaction_viewport(&self) -> Option<crate::ViewportId> {
-        self.press
+        self.gesture
             .as_ref()
-            .map(|press| press.version.binding.viewport)
+            .map(|press| press.press().version.binding.viewport)
     }
-    pub(crate) fn lasso_active(&self) -> bool {
-        self.press
+    pub(crate) fn interaction_hints(&self) -> &'static [InteractionHint] {
+        self.gesture
             .as_ref()
-            .is_some_and(|press| press.lasso.is_some())
+            .map_or(controls::HINTS, Gesture::hints)
     }
     pub fn dragging(&self) -> bool {
-        self.press.is_some()
+        self.gesture.is_some()
     }
     /// Completed poses from this control edit can lag subsequent pointer moves.
     /// The press fixes the authoring target; new gestures still require a current frame.
     pub(crate) fn accepts_drag_frame(&self, version: FrameVersion) -> bool {
-        self.press.as_ref().is_some_and(|press| {
-            press.edit.is_some()
-                && version.binding.document == press.version.binding.document
-                && version.scene > press.version.scene
-                && (version.binding.viewport != press.version.binding.viewport
-                    || (version.viewport == press.version.viewport
-                        && version.request > press.version.request))
-        })
+        self.gesture
+            .as_ref()
+            .is_some_and(|gesture| gesture.accepts_frame(version))
     }
+
     pub fn clear(&mut self) {
         self.components.clear();
         self.hovered = None;
@@ -119,18 +106,14 @@ impl ToolController {
         self.hovered_binding = None;
     }
     pub fn cancel(&mut self, document: &mut Document) -> bool {
-        let changed = self.press.take().is_some_and(|p| p.edit.is_some());
-        if changed {
-            document.cancel_edit();
-        }
+        let changed = self.gesture.take().is_some_and(|g| g.cancel(document));
         self.hovered = None;
         self.hovered_binding = None;
         changed
     }
     pub fn set_tool(&mut self, tool: ToolId, document: &mut Document) -> bool {
         let changed = self.cancel(document);
-        let preserve_components = matches!(self.active, ToolId::Select | ToolId::Lasso)
-            && matches!(tool, ToolId::Select | ToolId::Lasso);
+        let preserve_components = self.active.preserves_components(tool);
         self.active = tool;
         if !preserve_components {
             self.clear();
@@ -154,4 +137,9 @@ pub enum CanvasInput {
     },
     Cancel,
     Leave,
+}
+
+/// Guidance for an active viewport navigation capture.
+pub fn navigation_hints() -> &'static [InteractionHint] {
+    hand::CAPTURE_HINTS
 }

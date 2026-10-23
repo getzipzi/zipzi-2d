@@ -62,7 +62,12 @@ fn draw(
     assert!(!view.editor.document().unwrap().has_pending_edit());
     assert_eq!(
         crate::workspace::status_bar::resolve_hint_context(view, cx),
-        crate::workspace::status_bar::HintContext::LassoCapture
+        &[
+            editor_core::InteractionHint::Drag(editor_core::HintAction::LassoSelect),
+            editor_core::InteractionHint::Shift(editor_core::HintAction::AddSelection),
+            editor_core::InteractionHint::Alt(editor_core::HintAction::RemoveSelection),
+            editor_core::InteractionHint::Command(editor_core::CommandId::CancelGesture),
+        ][..]
     );
     if finish {
         // No final Move: native Up must supply the last polygon vertex.
@@ -151,7 +156,7 @@ fn toolbar_lasso_native_modifiers_and_select_shortcut_preserve_components(cx: &m
 fn lasso_hover_then_vertex_drag_uses_select_editing_and_preserves_the_tool(
     cx: &mut TestAppContext,
 ) {
-    use crate::workspace::status_bar::{HintContext, resolve_hint_context};
+    use crate::workspace::status_bar::resolve_hint_context;
     for cancel in [false, true] {
         let harness = setup(cx);
         present_canvas(&harness, cx);
@@ -226,7 +231,10 @@ fn lasso_hover_then_vertex_drag_uses_select_editing_and_preserves_the_tool(
             assert!(!view.editor.document().unwrap().has_pending_edit());
             assert_eq!(
                 resolve_hint_context(view, cx),
-                HintContext::ViewportCapture { panning: false }
+                &[
+                    editor_core::InteractionHint::Drag(editor_core::HintAction::Transform),
+                    editor_core::InteractionHint::Command(editor_core::CommandId::CancelGesture)
+                ][..]
             );
             window.dispatch_event(
                 MouseMoveEvent {

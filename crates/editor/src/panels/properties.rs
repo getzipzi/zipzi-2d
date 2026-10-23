@@ -62,6 +62,23 @@ pub struct PropertiesPanel {
 }
 
 impl PropertiesPanel {
+    pub(crate) fn input_region(
+        panel: &Entity<Self>,
+        cx: &App,
+    ) -> crate::input_routing::InputRegion {
+        use crate::input_routing::{InputRegion, InputTarget, LocalTarget};
+        let panel = panel.read(cx);
+        let timeline = panel.timeline_id;
+        InputRegion::new(panel.focus.clone(), move |editor, _| {
+            Some(InputTarget::new(
+                editor
+                    .timeline_binding(timeline)
+                    .map(LocalTarget::Timeline)
+                    .unwrap_or(LocalTarget::Panel(editor_core::PanelKind::Properties)),
+            ))
+        })
+    }
+
     pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
             cx.on_release(|this: &mut Self, cx| {

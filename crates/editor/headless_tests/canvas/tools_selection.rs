@@ -52,23 +52,27 @@ fn losing_the_presented_frame_rolls_back_a_live_edit_and_notifies_observers(
     let original = harness.view.update(cx, |view, _| {
         let original = view.editor.document().unwrap().selected_vertex_positions();
         let start = view.editor.overlay().vertices[1].position;
-        view.editor
-            .canvas_input(editor_core::CanvasInput::Down {
-                point: start,
-                shift: false,
-                alt: false,
-            })
+        let binding = view.editor.primary_viewport_binding().unwrap();
+        let token = view
+            .editor
+            .begin_canvas_gesture(binding, start, false, false)
+            .unwrap()
+            .capture
             .unwrap();
         assert!(
             view.editor
-                .canvas_input(editor_core::CanvasInput::Move {
-                    point: editor_core::ViewportPoint {
-                        x: start.x - 24.,
-                        y: start.y + 12.,
-                    },
-                    left_down: true,
-                })
+                .update_canvas_gesture(
+                    token,
+                    editor_core::CanvasInput::Move {
+                        point: editor_core::ViewportPoint {
+                            x: start.x - 24.,
+                            y: start.y + 12.,
+                        },
+                        left_down: true,
+                    }
+                )
                 .unwrap()
+                .model_changed
         );
         assert!(view.editor.gesture_active());
         assert_ne!(

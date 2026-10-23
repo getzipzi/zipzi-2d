@@ -1,5 +1,5 @@
 //! Runtime viewport registration and binding identity, independent of GPUI.
-use crate::{CanvasInput, DocumentId, Editor, WorkspaceKind};
+use crate::{DocumentId, Editor, ViewportInteractionKind, WorkspaceKind};
 use anyhow::{Result, ensure};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -74,18 +74,6 @@ impl ViewportRegistry {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ViewportInteractionKind {
-    Navigation,
-    Modeling,
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ViewportInteractionToken {
-    pub binding: ViewportBinding,
-    pub kind: ViewportInteractionKind,
-    serial: u64,
-}
-
 impl Editor {
     /// Register an instance independently of the primary presentation bridge.
     pub fn register_viewport(&mut self, viewport: ViewportId, kind: ViewportKind) -> Result<()> {
@@ -149,12 +137,6 @@ impl Editor {
             self.cancel_viewport_interaction(token);
         }
         self.invalidate_viewport_state(viewport);
-        let editing = self
-            .active_session()
-            .is_some_and(|session| session.modeling.tools.interaction_viewport() == Some(viewport));
-        if editing {
-            self.cancel_gesture();
-        }
         if let Some(presentation) = self.viewport_presentation_mut(viewport) {
             presentation.requested_modeling = None;
             presentation.requested_animation = None;
@@ -170,12 +152,6 @@ impl Editor {
         {
             self.cancel_viewport_interaction(token);
         }
-        if self
-            .active_session()
-            .is_some_and(|session| session.modeling.tools.interaction_viewport() == Some(viewport))
-        {
-            self.cancel_gesture();
-        }
         if let Some(entry) = self.viewports.registrations.remove(&viewport) {
             if self.viewports.primary.get(&entry.kind) == Some(&viewport) {
                 self.viewports.primary.remove(&entry.kind);
@@ -190,13 +166,6 @@ impl Editor {
             {
                 self.cancel_viewport_interaction(token);
             }
-        }
-        if !visible
-            && self.active_session().is_some_and(|session| {
-                session.modeling.tools.interaction_viewport() == Some(viewport)
-            })
-        {
-            self.cancel_gesture();
         }
         if let Some(entry) = self.viewports.registrations.get_mut(&viewport) {
             entry.enabled = visible;
@@ -274,86 +243,5 @@ impl Editor {
             // Context transitions cancel the domain operation before rebinding.
             self.viewport_interaction = None;
         }
-    }
-    pub fn begin_viewport_interaction(
-        &mut self,
-        binding: ViewportBinding,
-        kind: ViewportInteractionKind,
-    ) -> Result<ViewportInteractionToken> {
-        ensure!(
-            self.viewport_binding_valid(binding),
-            "Viewport binding changed"
-        );
-        ensure!(
-            kind == ViewportInteractionKind::Navigation
-                || (binding.kind == ViewportKind::Modeling
-                    && self.editing_context() == Some(crate::EditingContext::Modeling)),
-            "Modeling interaction requires a Modeling editing context"
-        );
-        if let Some(previous) = self.viewport_interaction {
-            self.cancel_viewport_interaction(previous);
-        }
-        // Direct domain input also records a viewport owner in ToolController.
-        // It must obey the same single-writer transition as token-based UI input.
-        if self.gesture_active() {
-            self.cancel_gesture();
-        }
-        self.next_viewport_interaction += 1;
-        let token = ViewportInteractionToken {
-            binding,
-            kind,
-            serial: self.next_viewport_interaction,
-        };
-        self.viewport_interaction = Some(token);
-        Ok(token)
-    }
-    pub fn viewport_interaction_valid(&self, token: ViewportInteractionToken) -> bool {
-        self.viewport_interaction == Some(token) && self.viewport_binding_valid(token.binding)
-    }
-    pub fn finish_viewport_interaction(&mut self, token: ViewportInteractionToken) -> bool {
-        if self.viewport_interaction != Some(token) {
-            return false;
-        }
-        self.viewport_interaction = None;
-        true
-    }
-    pub fn cancel_viewport_interaction(&mut self, token: ViewportInteractionToken) -> bool {
-        if !self.finish_viewport_interaction(token) {
-            return false;
-        }
-        if token.kind == ViewportInteractionKind::Modeling
-            && self.active_id() == Some(token.binding.document)
-        {
-            self.cancel_gesture();
-        }
-        true
-    }
-    pub fn canvas_interaction_input(
-        &mut self,
-        token: ViewportInteractionToken,
-        input: CanvasInput,
-    ) -> Result<bool> {
-        ensure!(
-            self.viewport_interaction_valid(token)
-                && token.kind == ViewportInteractionKind::Modeling,
-            "Interaction owner changed"
-        );
-        self.canvas_input_for(token.binding, input)
-    }
-    pub fn canvas_input_for(
-        &mut self,
-        binding: ViewportBinding,
-        input: CanvasInput,
-    ) -> Result<bool> {
-        ensure!(
-            self.viewport_binding_valid(binding),
-            "Viewport binding changed"
-        );
-        ensure!(
-            binding.kind == ViewportKind::Modeling
-                && self.editing_context() == Some(crate::EditingContext::Modeling),
-            "Viewport does not support Modeling input"
-        );
-        self.modeling_input(binding, input)
     }
 }

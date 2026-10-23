@@ -1,39 +1,54 @@
-//! Drag preparation and candidate updates against the captured press frame.
-use super::ToolController;
+//! Control-point and gizmo gestures: candidate ownership, transforms and feedback.
+use super::{OverlaySnapshot, gesture::Press, hints::*};
+use crate::ComponentRef;
 use crate::control_edit::{ControlChange, ControlEdit};
-use crate::{Document, HitTarget, ViewportPoint};
+use crate::{Document, FrameVersion, HitTarget};
 use anyhow::{Result, ensure};
 
-impl ToolController {
-    pub(super) fn update(&mut self, document: &mut Document, point: ViewportPoint) -> Result<bool> {
+pub(super) struct ControlGesture {
+    pub press: Press,
+    pub target: HitTarget,
+    edit: Option<ActiveEdit>,
+}
+struct ActiveEdit {
+    edits: Vec<ControlEdit>,
+    last: Option<ControlChange>,
+}
+impl ControlGesture {
+    pub fn new(press: Press, target: HitTarget) -> Self {
+        Self {
+            press,
+            target,
+            edit: None,
+        }
+    }
+    pub fn editing(&self) -> bool {
+        self.edit.is_some()
+    }
+    pub fn accepts_frame(&self, version: FrameVersion) -> bool {
+        let origin = self.press.version;
+        self.editing()
+            && version.binding.document == origin.binding.document
+            && version.scene > origin.scene
+            && (version.binding.viewport != origin.binding.viewport
+                || (version.viewport == origin.viewport && version.request > origin.request))
+    }
+    pub fn update(&mut self, document: &mut Document, components: &[ComponentRef]) -> Result<bool> {
+        let point = self.press.current;
         ensure!(
             point.x.is_finite() && point.y.is_finite(),
             "Invalid pointer position"
         );
-        let Some(press) = self.press.as_mut() else {
-            return Ok(false);
-        };
-        press.current = point;
-        press.dragged |= crate::picking::distance2(press.point, point) >= 9.;
-        if let Some(lasso) = &mut press.lasso {
-            lasso.sample(point);
+        let press = &self.press;
+        let target = &self.target;
+        if self.edit.is_none() && crate::picking::distance2(press.point, point) < 9. {
             return Ok(false);
         }
-        let Some(target) = press
-            .target
-            .as_ref()
-            .filter(|h| !matches!(h, HitTarget::Object(_)))
-        else {
-            return Ok(false);
-        };
-        if press.edit.is_none() && crate::picking::distance2(press.point, point) < 9. {
-            return Ok(false);
-        }
-        if press.edit.is_none() {
+        if self.edit.is_none() {
             document.ensure_editable(&document.context().selections)?;
             let mut targets = vec![target.object().clone()];
             if matches!(target, HitTarget::Component(_)) {
-                for c in &self.components {
+                for c in components {
                     if press.scene.in_isolation_scope(&c.object) && !targets.contains(&c.object) {
                         targets.push(c.object.clone());
                     }
@@ -52,9 +67,10 @@ impl ToolController {
                 .map(|r| ControlEdit::prepare(document, &press.scene, r))
                 .collect::<Result<Vec<_>>>()?;
             document.begin_control_edit(&edits)?;
-            press.edit = Some(edits);
+            self.edit = Some(ActiveEdit { edits, last: None });
         }
-        let edits = press.edit.as_ref().unwrap();
+        let edit = self.edit.as_mut().unwrap();
+        let edits = &edit.edits;
         let start = press.transform.to_model(press.point);
         let end = press.transform.to_model(point);
         let delta = crate::ModelVector {
@@ -129,11 +145,49 @@ impl ToolController {
             }
             _ => ControlChange::Translate(delta),
         };
-        if press.last == Some(change) {
+        if edit.last == Some(change) {
             return Ok(false);
         }
-        document.preview_control_edit(edits, &self.components, change)?;
-        press.last = Some(change);
+        document.preview_control_edit(edits, components, change)?;
+        edit.last = Some(change);
         Ok(true)
     }
+    pub fn finish(&mut self, document: &mut Document) -> Result<()> {
+        if self.editing() {
+            document.finish_edit()?;
+        }
+        self.edit = None;
+        Ok(())
+    }
+    pub fn cancel(&self, document: &mut Document) -> bool {
+        if !self.editing() {
+            return false;
+        }
+        document.cancel_edit();
+        true
+    }
+    pub fn overlay(&self, out: &mut OverlaySnapshot) {
+        out.interaction_label =
+            self.edit
+                .as_ref()
+                .and_then(|edit| edit.last)
+                .map(|change| match change {
+                    ControlChange::Translate(d) | ControlChange::MoveAll(d) => {
+                        format!("ΔX {:.2}  ΔY {:.2}", d.x, d.y)
+                    }
+                    ControlChange::Transform { scale, radians, .. } if radians == 0. => {
+                        format!("X {:.1}%  Y {:.1}%", scale[0] * 100., scale[1] * 100.)
+                    }
+                    ControlChange::Transform { radians, .. } => {
+                        format!("{:.1}°", radians.to_degrees())
+                    }
+                    ControlChange::Rotation { angle, scale, .. } => {
+                        format!("Δ {:.1}°  × {:.3}", angle, scale)
+                    }
+                });
+    }
 }
+pub(super) const HINTS: &[InteractionHint] = &[
+    InteractionHint::Drag(HintAction::Transform),
+    InteractionHint::Command(crate::CommandId::CancelGesture),
+];

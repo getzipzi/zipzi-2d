@@ -7,6 +7,7 @@ use std::{rc::Rc, sync::Arc};
 
 pub(super) mod add_panel;
 pub(crate) mod header;
+mod input;
 mod layout;
 mod persistence;
 mod registry;
@@ -31,6 +32,7 @@ pub struct DockWorkspace {
     pub area: Entity<DockArea>,
     viewports: viewports::ViewportPanels,
     pub timeline: Entity<crate::panels::timeline::Timeline>,
+    pub(crate) timeline_hints: crate::panels::timeline::TimelineHints,
     pub timeline_id: editor_core::TimelineId,
     pub animation_motions: Entity<crate::panels::animation_panel::AnimationPanel>,
     pub animation_expressions: Entity<crate::panels::animation_panel::AnimationPanel>,

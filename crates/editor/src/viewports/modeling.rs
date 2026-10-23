@@ -154,7 +154,6 @@ impl ViewportSurface {
                     .take()
                     .is_some_and(|token| owner.editor.cancel_viewport_interaction(token))
                     || owner.editor.cancel_gesture_for(binding);
-                self.sync_capture_hint();
                 if editing {
                     owner.redraw(cx);
                 } else {
@@ -165,39 +164,34 @@ impl ViewportSurface {
                 return;
             }
             let moving = matches!(input, CanvasInput::Move { .. } | CanvasInput::Leave);
-            if matches!(input, CanvasInput::Down { .. }) {
-                match owner.editor.begin_viewport_interaction(
-                    binding,
-                    editor_core::ViewportInteractionKind::Modeling,
-                ) {
-                    Ok(token) => {
-                        self.interaction = Some(token);
-                        self.sync_capture_hint();
-                    }
-                    Err(_) => return,
-                }
-            }
-            let result = if let Some(token) = self.interaction {
-                owner.editor.canvas_interaction_input(token, input)
-            } else {
-                owner.editor.canvas_input_for(binding, input)
+            let result = match input {
+                CanvasInput::Down { point, shift, alt } => owner
+                    .editor
+                    .begin_canvas_gesture(binding, point, shift, alt),
+                input if self.interaction.is_some() => owner
+                    .editor
+                    .update_canvas_gesture(self.interaction.unwrap(), input),
+                CanvasInput::Move { point, .. } => owner
+                    .editor
+                    .hover_canvas(binding, Some(point))
+                    .map(|_| Default::default()),
+                CanvasInput::Leave => owner
+                    .editor
+                    .hover_canvas(binding, None)
+                    .map(|_| Default::default()),
+                _ => return,
             };
-            if matches!(input, CanvasInput::Up { .. }) || result.is_err() {
-                if let Some(token) = self.interaction.take() {
-                    if result.is_err() {
-                        owner.editor.cancel_viewport_interaction(token);
-                    } else {
-                        owner.editor.finish_viewport_interaction(token);
-                    }
-                }
-                self.sync_capture_hint();
-            }
             match result {
-                Ok(changed) => {
+                Ok(update) => {
+                    let previous = self.interaction;
+                    self.interaction = update.capture;
+                    if previous != self.interaction {
+                        crate::workspace::status_bar::StatusBar::sync(&owner.status_bar, owner, cx);
+                    }
                     if matches!(input, CanvasInput::Down { .. }) {
                         owner.clear_edit_error(cx);
                     }
-                    if changed {
+                    if update.model_changed {
                         if moving {
                             owner.redraw_canvas(cx);
                         } else {
@@ -211,6 +205,9 @@ impl ViewportSurface {
                     }
                 }
                 Err(e) => {
+                    self.interaction = self
+                        .interaction
+                        .filter(|token| owner.editor.viewport_interaction_valid(*token));
                     owner.set_edit_error(e.to_string(), cx);
                     owner.redraw(cx);
                 }

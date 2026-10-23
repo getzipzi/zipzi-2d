@@ -1,6 +1,6 @@
 //! Overlay data and construction from the displayed scene and current gesture.
 use super::{CanvasFrame, ToolController};
-use crate::control_edit::{ControlChange, ControlEdit};
+use crate::control_edit::ControlEdit;
 use crate::{
     CanvasScene, ComponentRef, ControlKind, Document, HitTarget, ModelPoint, ObjectKind, ObjectRef,
     ViewportPoint,
@@ -95,10 +95,10 @@ impl ToolController {
         let origin_pt = ModelPoint::default();
         out.origin_crosshair = Some(t.to_viewport(origin_pt));
         let active_target = self
-            .press
+            .gesture
             .as_ref()
-            .filter(|press| press.version.binding == frame.version.binding)
-            .and_then(|p| p.target.as_ref())
+            .filter(|press| press.press().version.binding == frame.version.binding)
+            .and_then(|p| p.target())
             .or(hovered_target.as_ref());
         out.active_component = active_target.and_then(|hit| match hit {
             HitTarget::Component(component) => Some(component.clone()),
@@ -301,9 +301,9 @@ impl ToolController {
                             selected: self.components.contains(&c)
                                 || (control.kind == ControlKind::Rotation
                                     && i == 1
-                                    && self.press.as_ref().is_some_and(|p| {
-                                        p.target
-                                            == Some(HitTarget::RotationHandle(
+                                    && self.gesture.as_ref().is_some_and(|p| {
+                                        p.target()
+                                            == Some(&HitTarget::RotationHandle(
                                                 control.object.clone(),
                                             ))
                                     })),
@@ -341,9 +341,9 @@ impl ToolController {
                                 .map(|(kind, position)| OverlayHandle {
                                     position,
                                     round: matches!(kind, crate::DeformerHandle::Rotate),
-                                    selected: self.press.as_ref().is_some_and(|p| {
-                                        p.target
-                                            == Some(HitTarget::DeformerHandle(
+                                    selected: self.gesture.as_ref().is_some_and(|p| {
+                                        p.target()
+                                            == Some(&HitTarget::DeformerHandle(
                                                 control.object.clone(),
                                                 kind,
                                             ))
@@ -371,38 +371,11 @@ impl ToolController {
             }
         }
         if let Some(p) = self
-            .press
+            .gesture
             .as_ref()
-            .filter(|press| press.version.binding == frame.version.binding)
+            .filter(|press| press.press().version.binding == frame.version.binding)
         {
-            if p.dragged
-                && let Some(lasso) = &p.lasso
-            {
-                out.lasso.clone_from(&lasso.points);
-                if out.lasso.last() != Some(&p.current) {
-                    out.lasso.push(p.current);
-                }
-            }
-            if p.lasso.is_none()
-                && p.dragged
-                && (p.target.is_none() || matches!(p.target, Some(HitTarget::Object(_))))
-            {
-                out.marquee = Some((p.point, p.current));
-            }
-            out.interaction_label = p.last.map(|change| match change {
-                ControlChange::Translate(d) | ControlChange::MoveAll(d) => {
-                    format!("ΔX {:.2}  ΔY {:.2}", d.x, d.y)
-                }
-                ControlChange::Transform { scale, radians, .. } if radians == 0. => {
-                    format!("X {:.1}%  Y {:.1}%", scale[0] * 100., scale[1] * 100.)
-                }
-                ControlChange::Transform { radians, .. } => {
-                    format!("{:.1}°", radians.to_degrees())
-                }
-                ControlChange::Rotation { angle, scale, .. } => {
-                    format!("Δ {:.1}°  × {:.3}", angle, scale)
-                }
-            });
+            p.overlay(&mut out);
         }
         if let Err(error) = document.ensure_editable(selection) {
             out.vertices.clear();

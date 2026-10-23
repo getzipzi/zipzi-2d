@@ -8,6 +8,45 @@ mod rectangle;
 #[allow(unused_imports)]
 pub use rectangle::{alpha_document, rectangle_document};
 
+/// Drive synchronous pointer scripts through the same explicit gesture API as the UI.
+#[allow(dead_code)]
+pub fn pointer_input(editor: &mut Editor, input: editor_core::CanvasInput) -> anyhow::Result<bool> {
+    if editor.editing_context() != Some(editor_core::EditingContext::Modeling) {
+        return Ok(false);
+    }
+    let binding = editor
+        .primary_viewport_binding()
+        .ok_or_else(|| anyhow::anyhow!("No available Modeling viewport"))?;
+    pointer_input_for(editor, binding, input)
+}
+
+#[allow(dead_code)]
+pub fn pointer_input_for(
+    editor: &mut Editor,
+    binding: editor_core::ViewportBinding,
+    input: editor_core::CanvasInput,
+) -> anyhow::Result<bool> {
+    use editor_core::CanvasInput;
+    if let CanvasInput::Down { point, shift, alt } = input {
+        return editor
+            .begin_canvas_gesture(binding, point, shift, alt)
+            .map(|update| update.model_changed);
+    }
+    if let Some(token) = editor.current_viewport_interaction().filter(|token| {
+        token.binding == binding && token.kind == editor_core::ViewportInteractionKind::Modeling
+    }) {
+        return editor
+            .update_canvas_gesture(token, input)
+            .map(|update| update.model_changed);
+    }
+    match input {
+        CanvasInput::Move { point, .. } => editor.hover_canvas(binding, Some(point))?,
+        CanvasInput::Leave => editor.hover_canvas(binding, None)?,
+        _ => {}
+    }
+    Ok(false)
+}
+
 #[allow(dead_code)]
 pub fn object(kind: ObjectKind, n: u128) -> ObjectRef {
     ObjectRef::new(kind, Uuid::from_u128(n).to_string())

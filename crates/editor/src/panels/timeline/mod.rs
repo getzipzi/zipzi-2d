@@ -2,7 +2,11 @@
 mod axis;
 mod controls;
 mod drawing;
+mod hints;
 mod input;
+#[cfg(test)]
+pub(crate) use hints::PAN_HINTS;
+pub(crate) use hints::{TimelineCaptureKind, TimelineHints};
 mod lifecycle;
 mod playback_speed;
 mod values;
@@ -40,17 +44,7 @@ const COMPACT_LEFT: f32 = 160.;
 pub struct Timeline {
     pub(crate) id: editor_core::TimelineId,
     pub(crate) input_region: crate::input_routing::InputRegion,
-    timeline_capture: std::cell::OnceCell<
-        Rc<
-            Cell<
-                Option<(
-                    TimelineOperation,
-                    crate::workspace::status_bar::TimelineCaptureKind,
-                )>,
-            >,
-        >,
-    >,
-    timeline_pan_tool: std::cell::OnceCell<Rc<Cell<bool>>>,
+    pub(crate) hints: TimelineHints,
     ui_scale: f32,
     #[cfg(any(test, feature = "test-support"))]
     renders: u64,
@@ -83,13 +77,7 @@ pub struct Timeline {
 }
 
 impl Timeline {
-    fn current_capture(
-        &self,
-    ) -> Option<(
-        TimelineOperation,
-        crate::workspace::status_bar::TimelineCaptureKind,
-    )> {
-        use crate::workspace::status_bar::TimelineCaptureKind;
+    fn current_capture(&self) -> Option<(TimelineOperation, TimelineCaptureKind)> {
         self.operation().and_then(|op| {
             if let Some(gesture) = &self.gesture {
                 let kind = match gesture {
@@ -109,28 +97,13 @@ impl Timeline {
         })
     }
 
-    pub(super) fn sync_capture_hint(&self) {
-        if let Some(cell) = self.timeline_capture.get() {
-            cell.set(self.current_capture());
-        }
-        if let Some(cell) = self.timeline_pan_tool.get() {
-            cell.set(self.pan_tool);
-        }
+    pub(super) fn publish_hints(&self) {
+        self.hints.publish(self.current_capture(), self.pan_tool);
     }
 
     pub(super) fn sync_status_bar(&self, cx: &mut App) {
+        self.publish_hints();
         if let Some(owner) = self.owner.upgrade() {
-            {
-                let router = &owner.read(cx).input_router;
-                let capture = self
-                    .timeline_capture
-                    .get_or_init(|| router.timeline_capture.clone());
-                capture.set(self.current_capture());
-                let pan_tool = self
-                    .timeline_pan_tool
-                    .get_or_init(|| router.timeline_pan_tool.clone());
-                pan_tool.set(self.pan_tool);
-            }
             crate::workspace::status_bar::StatusBar::sync_owner(&owner, cx);
         }
     }
@@ -143,12 +116,7 @@ impl Timeline {
         cx.new(|cx: &mut Context<Self>| {
             let upgraded = owner.upgrade().unwrap();
             cx.on_release(|this: &mut Self, cx| {
-                if let Some(cell) = this.timeline_capture.get() {
-                    cell.set(None);
-                }
-                if let Some(cell) = this.timeline_pan_tool.get() {
-                    cell.set(false);
-                }
+                this.hints.clear();
                 let panel = this.id;
                 let owner = this.owner.clone();
                 cx.defer(move |cx| {
@@ -164,8 +132,15 @@ impl Timeline {
                 cx.new(|cx| InputState::new(window, cx).placeholder(t!("timeline.search")));
             let focus = cx.focus_handle();
             let timeline = cx.weak_entity();
-            let input_region = crate::input_routing::InputRegion::new(focus.clone()).with_capture(
-                move |editor, cx| {
+            let id = editor_core::TimelineId::new();
+            let input_region =
+                crate::input_routing::InputRegion::new(focus.clone(), move |editor, _| {
+                    use crate::input_routing::{InputTarget, LocalTarget};
+                    editor
+                        .timeline_binding(id)
+                        .map(|binding| InputTarget::new(LocalTarget::Timeline(binding)))
+                })
+                .with_capture(move |editor, cx| {
                     let entity = timeline.upgrade()?;
                     let operation = entity.read(cx).operation()?;
                     let timeline = timeline.clone();
@@ -189,13 +164,11 @@ impl Timeline {
                                 .flatten()
                         },
                     ))
-                },
-            );
+                });
             Self {
-                id: editor_core::TimelineId::new(),
+                id,
                 input_region,
-                timeline_capture: std::cell::OnceCell::new(),
-                timeline_pan_tool: std::cell::OnceCell::new(),
+                hints: TimelineHints::default(),
                 #[cfg(any(test, feature = "test-support"))]
                 renders: 0,
                 ui_scale: compact::scale(cx),

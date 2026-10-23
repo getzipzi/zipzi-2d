@@ -1,6 +1,6 @@
 use super::setup;
 use crate::actions::RunCommand;
-use editor_core::{CommandId, CommandSource, ViewportInteractionKind};
+use editor_core::{CommandId, CommandSource};
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, InputEvent as _, TestAppContext};
 
@@ -73,11 +73,17 @@ fn an_old_canvas_blur_cannot_release_a_replacement_capture(cx: &mut TestAppConte
             );
             let replacement = harness.view.update(cx, |view, _| {
                 assert!(view.editor.viewport_interaction_active());
+                let frame = view.editor.preview().unwrap().canvas.unwrap();
+                assert!(view.editor.present_frame(frame));
                 view.editor
-                    .begin_viewport_interaction(
+                    .begin_canvas_gesture(
                         view.editor.primary_viewport_binding().unwrap(),
-                        ViewportInteractionKind::Modeling,
+                        view.editor.overlay().vertices[0].position,
+                        false,
+                        false,
                     )
+                    .unwrap()
+                    .capture
                     .unwrap()
             });
             let focus = harness.view.read(cx).focus.clone();
@@ -89,7 +95,7 @@ fn an_old_canvas_blur_cannot_release_a_replacement_capture(cx: &mut TestAppConte
         assert!(view.editor.viewport_interaction_valid(replacement))
     });
     harness.view.update(cx, |view, _| {
-        assert!(view.editor.finish_viewport_interaction(replacement));
+        assert!(view.editor.cancel_viewport_interaction(replacement));
     });
 }
 

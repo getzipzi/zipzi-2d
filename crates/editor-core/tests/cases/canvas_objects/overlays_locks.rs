@@ -80,19 +80,25 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
         0
     );
     let point = editor.overlay().vertices[12].position;
-    editor.canvas_input(CanvasInput::Down {
-        point,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Move {
-        point: ViewportPoint {
-            x: point.x + 10.,
-            y: point.y,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
         },
-        left_down: true,
-    })?;
-    editor.canvas_input(CanvasInput::Up { point })?;
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: ViewportPoint {
+                x: point.x + 10.,
+                y: point.y,
+            },
+            left_down: true,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point })?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     assert_eq!(
         editor
@@ -123,30 +129,42 @@ fn bezier_keyform_edit_preserves_other_shapes_and_cancels_refinement() -> anyhow
             x: handle.x + 24.,
             y: handle.y - 20.,
         };
-        editor.canvas_input(CanvasInput::Down {
-            point: handle,
-            shift: false,
-            alt: false,
-        })?;
-        editor.canvas_input(CanvasInput::Move {
-            point: end,
-            left_down: true,
-        })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: handle,
+                shift: false,
+                alt: false,
+            },
+        )?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: end,
+                left_down: true,
+            },
+        )?;
         assert_eq!(control_points(&mut editor, &object)?.len(), 25);
-        editor.canvas_input(CanvasInput::Cancel)?;
+        crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
         assert_eq!(control_points(&mut editor, &object)?, original);
         assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
         // Dragging back restores both grid topology and absent controller metadata.
-        editor.canvas_input(CanvasInput::Down {
-            point: handle,
-            shift: false,
-            alt: false,
-        })?;
-        editor.canvas_input(CanvasInput::Move {
-            point: end,
-            left_down: true,
-        })?;
-        editor.canvas_input(CanvasInput::Up { point: handle })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: handle,
+                shift: false,
+                alt: false,
+            },
+        )?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: end,
+                left_down: true,
+            },
+        )?;
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point: handle })?;
         assert_eq!(control_points(&mut editor, &object)?, original);
         assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
         drag(&mut editor, handle, end, false)?;
@@ -326,10 +344,13 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
             ),
             Some(HitTarget::Object(object))
         );
-        editor.canvas_input(CanvasInput::Move {
-            point,
-            left_down: false,
-        })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point,
+                left_down: false,
+            },
+        )?;
         assert!(editor.overlay().glues[0].hovered);
         click(&mut editor, point, false)?;
         assert!(editor.overlay().vertices.is_empty());
@@ -351,19 +372,25 @@ fn mesh_drag_reuses_binding_index_without_mutating_retained_snapshots() -> anyho
     let index = editor.document().unwrap().object_index();
     let point = editor.overlay().vertices[0].position;
     let before = shown(&mut editor)?.geometry.meshes[0].vertices.clone();
-    editor.canvas_input(CanvasInput::Down {
-        point,
-        shift: false,
-        alt: false,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+        },
+    )?;
     for distance in [10., 20., 30.] {
-        editor.canvas_input(CanvasInput::Move {
-            point: ViewportPoint {
-                x: point.x + distance,
-                y: point.y,
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: ViewportPoint {
+                    x: point.x + distance,
+                    y: point.y,
+                },
+                left_down: true,
             },
-            left_down: true,
-        })?;
+        )?;
         assert!(Arc::ptr_eq(
             &index,
             &editor.document().unwrap().object_index()
@@ -384,21 +411,27 @@ fn deformer_drag_refreshes_live_properties_and_preserves_old_index_snapshots() -
         let original = editor.document().unwrap().object_index();
         let original_properties = original.get(&object).unwrap().properties.clone();
         let start = editor.overlay().vertices[0].position;
-        editor.canvas_input(CanvasInput::Down {
-            point: start,
-            shift: false,
-            alt: false,
-        })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: start,
+                shift: false,
+                alt: false,
+            },
+        )?;
         let mut previous = original.clone();
         for distance in [10., 20.] {
             let retained_properties = previous.get(&object).unwrap().properties.clone();
-            editor.canvas_input(CanvasInput::Move {
-                point: ViewportPoint {
-                    x: start.x + distance,
-                    y: start.y,
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: start.x + distance,
+                        y: start.y,
+                    },
+                    left_down: true,
                 },
-                left_down: true,
-            })?;
+            )?;
             let current = editor.document().unwrap().object_index();
             assert_ne!(
                 current.get(&object).unwrap().properties,

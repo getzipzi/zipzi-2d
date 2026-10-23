@@ -1,4 +1,6 @@
 mod identity;
+mod interaction;
+pub use interaction::*;
 mod isolation;
 pub use isolation::IsolationDisplay;
 mod presentation;

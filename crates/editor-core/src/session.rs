@@ -440,9 +440,11 @@ impl DocumentSession {
         frame: Option<CanvasFrame>,
     ) -> Result<bool> {
         if matches!(event, crate::CanvasInput::Cancel) {
-            let was = self.modeling.tools.dragging();
-            self.cancel_gesture();
-            return Ok(was);
+            let changed = self.modeling.tools.cancel(&mut self.document);
+            if changed {
+                self.invalidate_scene();
+            }
+            return Ok(changed);
         }
         let Some(frame) = frame else {
             ensure!(

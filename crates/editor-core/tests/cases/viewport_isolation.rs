@@ -78,7 +78,8 @@ fn isolation_freezes_scope_and_filters_picking_overlays_and_marquee() -> anyhow:
     assert!(editor.can_toggle_viewport_isolation(binding));
     let start = ViewportPoint { x: 0., y: 0. };
     let end = ViewportPoint { x: 512., y: 512. };
-    editor.canvas_input_for(
+    crate::support::pointer_input_for(
+        &mut editor,
         binding,
         CanvasInput::Down {
             point: start,
@@ -86,7 +87,7 @@ fn isolation_freezes_scope_and_filters_picking_overlays_and_marquee() -> anyhow:
             alt: false,
         },
     )?;
-    editor.canvas_input_for(binding, CanvasInput::Up { point: end })?;
+    crate::support::pointer_input_for(&mut editor, binding, CanvasInput::Up { point: end })?;
     assert_eq!(
         editor.document().unwrap().context().selections,
         vec![objects[0].clone()]
@@ -204,8 +205,17 @@ fn isolation_allows_navigation_but_blocks_modeling_interactions() -> anyhow::Res
     ] {
         let (mut editor, _assets, binding, objects) = setup()?;
         editor.execute(EditorCommand::SelectCanvasObjects(vec![objects[0].clone()]))?;
-        let token = editor.begin_viewport_interaction(binding, kind)?;
         let navigation = kind == ViewportInteractionKind::Navigation;
+        let token = if navigation {
+            editor.begin_viewport_navigation(binding)?
+        } else {
+            let frame = editor.preview_for(binding)?.canvas.unwrap();
+            assert!(editor.present_frame(frame));
+            editor
+                .begin_canvas_gesture(binding, ViewportPoint { x: 5., y: 5. }, false, false)?
+                .capture
+                .unwrap()
+        };
         assert_eq!(editor.can_toggle_viewport_isolation(binding), navigation);
         assert_eq!(
             editor.toggle_viewport_isolation(binding).is_ok(),
@@ -229,7 +239,7 @@ fn isolation_allows_navigation_but_blocks_modeling_interactions() -> anyhow::Res
             assert_eq!(editor.viewport_view(binding), Some(view));
             assert!(editor.viewport_interaction_valid(token));
         }
-        editor.finish_viewport_interaction(token);
+        editor.cancel_viewport_interaction(token);
         assert!(editor.can_toggle_viewport_isolation(binding));
         assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     }

@@ -180,16 +180,11 @@ fn resizing_another_instance_cannot_cancel_the_primary_modeling_candidate() -> a
     let second = ViewportId::new();
     editor.register_viewport(second, ViewportKind::Modeling)?;
     let point = editor.overlay().vertices[0].position;
-    let token = editor.begin_viewport_interaction(first, ViewportInteractionKind::Modeling)?;
-    editor.canvas_interaction_input(
-        token,
-        CanvasInput::Down {
-            point,
-            shift: false,
-            alt: false,
-        },
-    )?;
-    editor.canvas_interaction_input(
+    let token = editor
+        .begin_canvas_gesture(first, point, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(
         token,
         CanvasInput::Move {
             point: ViewportPoint {
@@ -203,8 +198,10 @@ fn resizing_another_instance_cannot_cancel_the_primary_modeling_candidate() -> a
     editor.set_viewport_metrics(second, metrics(300., 400., 1.));
     assert!(editor.gesture_active());
     assert!(editor.viewport_interaction_valid(token));
-    assert!(!editor.canvas_input_for(
-        editor.viewport_binding(second).unwrap(),
+    let second_binding = editor.viewport_binding(second).unwrap();
+    assert!(!crate::support::pointer_input_for(
+        &mut editor,
+        second_binding,
         CanvasInput::Move {
             point,
             left_down: false

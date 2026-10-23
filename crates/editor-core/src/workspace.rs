@@ -325,6 +325,15 @@ impl Editor {
             .session_mut()
             .ok_or_else(|| anyhow!("Document is saving"))?
             .execute(command);
+        // The session may cancel its gesture even when the command later fails.
+        // Reconcile after execution so validation failures retain a live gesture.
+        if let Some(token) = self.viewport_interaction.filter(|token| {
+            token.binding.document == id
+                && token.kind == crate::ViewportInteractionKind::Modeling
+                && !self.gesture_active_for(token.binding)
+        }) {
+            self.cancel_viewport_interaction(token);
+        }
         result
     }
 
@@ -383,15 +392,6 @@ impl Editor {
             .and_then(|id| self.entry(id).ok())
             .and_then(|e| e.session())
             .is_some_and(|s| s.modeling.tools.warp_fine)
-    }
-    pub fn canvas_input(&mut self, input: crate::CanvasInput) -> Result<bool> {
-        if self.editing_context() != Some(crate::EditingContext::Modeling) {
-            return Ok(false);
-        }
-        let binding = self
-            .primary_viewport_binding()
-            .ok_or_else(|| anyhow!("No available Modeling viewport"))?;
-        self.canvas_input_for(binding, input)
     }
     pub fn cancel_gesture(&mut self) {
         if self

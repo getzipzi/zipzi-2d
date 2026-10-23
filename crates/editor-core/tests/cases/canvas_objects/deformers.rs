@@ -8,20 +8,26 @@ fn warp_and_rotation_drags_present_intermediate_geometry_before_the_latest_pose(
     for rotation in [false, true] {
         let (mut editor, _dir, object) = deformer_editor(rotation)?;
         let start = editor.overlay().vertices[0].position;
-        editor.canvas_input(CanvasInput::Down {
-            point: start,
-            shift: false,
-            alt: false,
-        })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: start,
+                shift: false,
+                alt: false,
+            },
+        )?;
         let mut frames = Vec::new();
         for x in [10., 20., 30.] {
-            editor.canvas_input(CanvasInput::Move {
-                point: ViewportPoint {
-                    x: start.x + x,
-                    y: start.y,
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: start.x + x,
+                        y: start.y,
+                    },
+                    left_down: true,
                 },
-                left_down: true,
-            })?;
+            )?;
             frames.push(editor.preview()?.canvas.unwrap());
         }
         assert!(editor.present_frame(frames[0].clone()));
@@ -37,12 +43,15 @@ fn warp_and_rotation_drags_present_intermediate_geometry_before_the_latest_pose(
         assert!((anchor.x - start.x - 10.).abs() < 0.01);
         assert!(editor.present_frame(frames[1].clone()));
         assert!(!editor.present_frame(frames[0].clone()));
-        editor.canvas_input(CanvasInput::Up {
-            point: ViewportPoint {
-                x: start.x + 30.,
-                y: start.y,
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Up {
+                point: ViewportPoint {
+                    x: start.x + 30.,
+                    y: start.y,
+                },
             },
-        })?;
+        )?;
         assert!(editor.present_frame(frames[2].clone()));
         assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
         editor.execute(EditorCommand::Undo)?;
@@ -145,17 +154,23 @@ fn warp_gizmo_scales_all_points_and_cancels_as_one_edit() -> anyhow::Result<()> 
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.execute(EditorCommand::Undo)?;
     shown(&mut editor)?;
-    editor.canvas_input(CanvasInput::Down {
-        point: start,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Move {
-        point: end,
-        left_down: true,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: end,
+            left_down: true,
+        },
+    )?;
     assert!(editor.overlay().interaction_label.is_some());
-    editor.canvas_input(CanvasInput::Cancel)?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
     assert_eq!(control_points(&mut editor, &object)?, before);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
     Ok(())
@@ -282,15 +297,21 @@ fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()>
         x: start.x,
         y: start.y - 40.,
     };
-    editor.canvas_input(CanvasInput::Down {
-        point: start,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Move {
-        point: bent,
-        left_down: true,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: bent,
+            left_down: true,
+        },
+    )?;
     let refined = shown(&mut editor)?;
     assert_eq!(
         refined
@@ -308,10 +329,13 @@ fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()>
 
     // Queue another refined pose, then restore the legacy lattice before it arrives.
     let delayed = editor.preview()?.canvas.unwrap();
-    editor.canvas_input(CanvasInput::Move {
-        point: start,
-        left_down: true,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: start,
+            left_down: true,
+        },
+    )?;
     let restored = editor.preview()?.canvas.unwrap();
     assert_eq!(
         restored
@@ -329,7 +353,7 @@ fn delayed_bezier_frames_keep_their_own_subdivision_grid() -> anyhow::Result<()>
     assert!(editor.overlay().guide_lines == refined_grid);
     assert!(editor.present_frame(restored));
     assert!(editor.overlay().guide_lines == original_grid);
-    editor.canvas_input(CanvasInput::Up { point: start })?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: start })?;
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     Ok(())
 }

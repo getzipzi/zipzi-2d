@@ -185,12 +185,15 @@ fn lock_undo_redo_reuse_frames_and_live_picking_skips_locked_top_surface() -> an
             .execute(EditorCommand::SelectCanvasObjects(vec![top.clone()]))
             .is_err()
     );
-    editor.canvas_input(CanvasInput::Down {
-        point,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Up { point })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point })?;
     assert_eq!(editor.document().unwrap().context().selection, Some(lower));
     editor.execute(EditorCommand::Undo)?;
     assert!(
@@ -226,25 +229,31 @@ fn locking_during_a_drag_cancels_unpublished_geometry_and_late_pointer_events() 
         .unwrap();
     let original = editor.document().unwrap().selected_vertex_positions();
     let point = editor.overlay().vertices[0].position;
-    editor.canvas_input(CanvasInput::Down {
-        point,
-        shift: false,
-        alt: false,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+        },
+    )?;
     let moved = ViewportPoint {
         x: point.x + 30.,
         y: point.y + 20.,
     };
-    editor.canvas_input(CanvasInput::Move {
-        point: moved,
-        left_down: true,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: moved,
+            left_down: true,
+        },
+    )?;
     assert!(editor.document().unwrap().has_pending_edit());
     editor.execute(EditorCommand::SetObjectsLocked {
         objects: vec![selected],
         locked: true,
     })?;
-    editor.canvas_input(CanvasInput::Up { point: moved })?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: moved })?;
     assert!(!editor.gesture_active());
     assert!(!editor.document().unwrap().has_pending_edit());
     assert_eq!(
@@ -267,14 +276,20 @@ fn rectangle_selection_never_adds_locked_objects_or_components() -> anyhow::Resu
         locked: true,
     })?;
     editor.execute(EditorCommand::SelectObjects(objects))?;
-    editor.canvas_input(CanvasInput::Down {
-        point: ViewportPoint { x: 0., y: 0. },
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Up {
-        point: ViewportPoint { x: 512., y: 512. },
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: ViewportPoint { x: 0., y: 0. },
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Up {
+            point: ViewportPoint { x: 512., y: 512. },
+        },
+    )?;
     assert!(editor.document().unwrap().context().selections.is_empty());
     assert!(editor.overlay().vertices.is_empty());
     Ok(())

@@ -2,6 +2,25 @@
 use super::*;
 
 impl ViewportSurface {
+    pub(super) fn input_target(
+        editor: &Editor,
+        viewport: editor_core::ViewportId,
+        kind: editor_core::ViewportKind,
+    ) -> Option<crate::input_routing::InputTarget> {
+        use crate::input_routing::{InputTarget, LocalTarget};
+        let binding = editor
+            .viewport_binding(viewport)
+            .filter(|binding| binding.kind == kind)?;
+        let mut target = InputTarget::new(LocalTarget::Viewport(binding));
+        if kind == editor_core::ViewportKind::Modeling
+            && !editor.gesture_active_for(binding)
+            && editor.viewport_interaction_binding() != Some(binding)
+        {
+            target.idle_escape = editor.active_tool().idle_escape_command();
+        }
+        Some(target)
+    }
+
     pub(super) fn cancel(&mut self, cx: &mut Context<Self>) {
         let token = self.cancel_pointer();
         let _ = self.owner.update(cx, |owner, cx| {
@@ -54,7 +73,7 @@ impl ViewportSurface {
             }
             if event.pressed_button != Some(button) {
                 let _ = self.owner.update(cx, |owner, _| {
-                    owner.editor.finish_viewport_interaction(token)
+                    owner.editor.cancel_viewport_interaction(token)
                 });
                 self.navigation.pan = None;
                 self.sync_status_bar(cx);
@@ -103,7 +122,7 @@ impl ViewportSurface {
         {
             if let Some(pan) = self.navigation.pan.take() {
                 let _ = self.owner.update(cx, |owner, _| {
-                    owner.editor.finish_viewport_interaction(pan.token)
+                    owner.editor.cancel_viewport_interaction(pan.token)
                 });
             }
             self.sync_status_bar(cx);
@@ -141,13 +160,7 @@ impl ViewportSurface {
                 .owner
                 .update(cx, |owner, _| {
                     let binding = self.binding(&owner.editor)?;
-                    owner
-                        .editor
-                        .begin_viewport_interaction(
-                            binding,
-                            editor_core::ViewportInteractionKind::Navigation,
-                        )
-                        .ok()
+                    owner.editor.begin_viewport_navigation(binding).ok()
                 })
                 .ok()
                 .flatten();

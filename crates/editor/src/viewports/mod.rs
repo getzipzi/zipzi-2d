@@ -86,9 +86,6 @@ use gpui_kit::component::{
 
 pub struct ViewportSurface {
     pub(crate) input_region: crate::input_routing::InputRegion,
-    viewport_capture: std::cell::OnceCell<
-        std::rc::Rc<std::cell::Cell<Option<(editor_core::ViewportInteractionToken, bool)>>>,
-    >,
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
     pub(crate) viewport: editor_core::ViewportId,
@@ -150,7 +147,7 @@ impl ViewportSurface {
                     {
                         if let Some(token) = this.cancel_pointer() {
                             owner.update(cx, |owner, _| {
-                                owner.editor.finish_viewport_interaction(token);
+                                owner.editor.cancel_viewport_interaction(token);
                             });
                         }
                     }
@@ -179,8 +176,11 @@ impl ViewportSurface {
                 }),
             ];
             let surface = cx.weak_entity();
-            let input_region = crate::input_routing::InputRegion::new(focus.clone()).with_capture(
-                move |editor, cx| {
+            let input_region =
+                crate::input_routing::InputRegion::new(focus.clone(), move |editor, _| {
+                    ViewportSurface::input_target(editor, viewport, kind)
+                })
+                .with_capture(move |editor, cx| {
                     let entity = surface.upgrade()?;
                     let token = entity.read(cx).pointer_token()?;
                     let surface = surface.clone();
@@ -205,11 +205,9 @@ impl ViewportSurface {
                                 .flatten()
                         },
                     ))
-                },
-            );
+                });
             Self {
                 input_region,
-                viewport_capture: std::cell::OnceCell::new(),
                 owner,
                 viewport,
                 kind,
@@ -263,28 +261,13 @@ impl ViewportSurface {
         self.benchmark_center().map(|_| self.bounds)
     }
     pub fn hand_tool(&self, cx: &App) -> bool {
-        self.owner
-            .upgrade()
-            .is_some_and(|owner| (self.content)(owner.read(cx), self.viewport).hand_tool)
-    }
-    fn current_capture(&self) -> Option<(editor_core::ViewportInteractionToken, bool)> {
-        if let Some(pan) = self.navigation.pan {
-            Some((pan.token, true))
-        } else {
-            self.interaction.map(|token| (token, false))
-        }
-    }
-    pub(super) fn sync_capture_hint(&self) {
-        if let Some(cell) = self.viewport_capture.get() {
-            cell.set(self.current_capture());
-        }
+        self.owner.upgrade().is_some_and(|owner| {
+            self.kind == editor_core::ViewportKind::Animation
+                || owner.read(cx).editor.active_tool() == ToolId::Hand
+        })
     }
     pub(super) fn sync_status_bar(&self, cx: &mut App) {
         if let Some(owner) = self.owner.upgrade() {
-            let cell = self
-                .viewport_capture
-                .get_or_init(|| owner.read(cx).input_router.viewport_capture.clone());
-            cell.set(self.current_capture());
             crate::workspace::status_bar::StatusBar::sync_owner(&owner, cx);
         }
     }
@@ -297,7 +280,6 @@ impl ViewportSurface {
         self.interaction = None;
         self.navigation.wheel_zoom = None;
         self.navigation.pan = None;
-        self.sync_capture_hint();
         token
     }
 }
@@ -313,9 +295,6 @@ impl Render for ViewportSurface {
         };
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
-        // Modeling capture can start before navigation has ever synchronized status.
-        self.viewport_capture
-            .get_or_init(|| state.input_router.viewport_capture.clone());
         let SurfaceContent {
             image,
             mut overlay,

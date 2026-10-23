@@ -231,7 +231,7 @@ impl Timeline {
         self.gesture = None;
         self.edge_scroll = None;
         self.error = None;
-        self.sync_capture_hint();
+        self.publish_hints();
         cx.notify();
         cancellation
     }

@@ -113,7 +113,14 @@ impl DockWorkspace {
             .map(|kind| {
                 (
                     kind,
-                    crate::input_routing::InputRegion::new(panels[&kind].focus_handle(cx)),
+                    if kind == PanelKind::Properties {
+                        crate::panels::PropertiesPanel::input_region(&properties, cx)
+                    } else {
+                        crate::input_routing::InputRegion::panel(
+                            panels[&kind].focus_handle(cx),
+                            kind,
+                        )
+                    },
                 )
             })
             .collect();
@@ -166,6 +173,7 @@ impl DockWorkspace {
             area,
             viewports: viewports::ViewportPanels::new(modeling, animation, cx),
             timeline_id: timeline.read(cx).id,
+            timeline_hints: timeline.read(cx).hints.clone(),
             timeline,
             animation_motions,
             animation_expressions,

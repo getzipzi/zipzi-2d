@@ -7,6 +7,8 @@ fn main() -> anyhow::Result<()> {
     for path in std::env::args().skip(1) {
         let document = Document::open(&Path::new(&path).canonicalize()?)?;
         let mut editor = Editor::from_document(document);
+        editor.register_primary_viewport(ViewportId::new(), ViewportKind::Modeling)?;
+        let binding = editor.primary_viewport_binding().unwrap();
         editor.set_canvas_metrics(ViewportMetrics {
             width: 1200.,
             height: 800.,
@@ -30,10 +32,7 @@ fn main() -> anyhow::Result<()> {
                         y: 50. + y as f32 * 100.,
                     };
                     let start = Instant::now();
-                    editor.canvas_input(CanvasInput::Move {
-                        point: p,
-                        left_down: false,
-                    })?;
+                    editor.hover_canvas(binding, Some(p))?;
                     let overlay = editor.overlay();
                     assert!(
                         overlay
@@ -54,12 +53,11 @@ fn main() -> anyhow::Result<()> {
                         assert!(frame.geometry.index.get(&c.object).is_some());
                         candidate_count += 1;
                     }
-                    editor.canvas_input(CanvasInput::Down {
-                        point: p,
-                        shift: false,
-                        alt: false,
-                    })?;
-                    editor.canvas_input(CanvasInput::Up { point: p })?;
+                    let token = editor
+                        .begin_canvas_gesture(binding, p, false, false)?
+                        .capture
+                        .unwrap();
+                    editor.update_canvas_gesture(token, CanvasInput::Up { point: p })?;
                     assert!(!editor.gesture_active());
                     assert!(!editor.document().unwrap().has_pending_edit());
                     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
@@ -90,25 +88,27 @@ fn main() -> anyhow::Result<()> {
             assert!(matches!(frame.geometry.hit(start, frame.transform,
                 &editor.document().unwrap().context().selections, ToolId::Select, DeformerVisibility::default()),
                 Some(HitTarget::Component(ComponentRef { object, .. })) if object.id == mesh.id));
-            editor.canvas_input(CanvasInput::Down {
-                point: start,
-                shift: false,
-                alt: false,
-            })?;
-            match editor.canvas_input(CanvasInput::Move {
-                point: ViewportPoint {
-                    x: start.x + 8.,
-                    y: start.y + 5.,
+            let token = editor
+                .begin_canvas_gesture(binding, start, false, false)?
+                .capture
+                .unwrap();
+            match editor.update_canvas_gesture(
+                token,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: start.x + 8.,
+                        y: start.y + 5.,
+                    },
+                    left_down: true,
                 },
-                left_down: true,
-            }) {
+            ) {
                 Ok(_) => editable += 1,
                 Err(e) => {
                     rejected += 1;
                     println!("  rejected {}: {e}", mesh.id);
                 }
             }
-            editor.canvas_input(CanvasInput::Cancel)?;
+            editor.cancel_viewport_interaction(token);
             assert_eq!(
                 editor.document().unwrap().selected_vertex_positions(),
                 original
@@ -140,20 +140,25 @@ fn main() -> anyhow::Result<()> {
                 continue;
             };
             let point = handle.position;
-            editor.canvas_input(CanvasInput::Down {
-                point,
-                shift: false,
-                alt: false,
-            })?;
-            let changed = editor.canvas_input(CanvasInput::Move {
-                point: ViewportPoint {
-                    x: point.x + 4.,
-                    y: point.y - 4.,
+            let token = editor
+                .begin_canvas_gesture(binding, point, false, false)?
+                .capture
+                .unwrap();
+            let changed = editor.update_canvas_gesture(
+                token,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: point.x + 4.,
+                        y: point.y - 4.,
+                    },
+                    left_down: true,
                 },
-                left_down: true,
-            })?;
-            assert!(changed, "Bezier tangent must edit its lattice");
-            editor.canvas_input(CanvasInput::Cancel)?;
+            )?;
+            assert!(
+                changed.model_changed,
+                "Bezier tangent must edit its lattice"
+            );
+            editor.cancel_viewport_interaction(token);
             let after = editor.preview()?.canvas.unwrap();
             for (a, b) in before
                 .geometry

@@ -252,17 +252,23 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     });
     shown(&mut editor)?;
     let p = editor.overlay().vertices[0].position;
-    editor.canvas_input(CanvasInput::Down {
-        point: p,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Up {
-        point: ViewportPoint {
-            x: p.x + 19.2,
-            y: p.y,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: p,
+            shift: false,
+            alt: false,
         },
-    })?; // 19.2px = 0.1 parent units
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Up {
+            point: ViewportPoint {
+                x: p.x + 19.2,
+                y: p.y,
+            },
+        },
+    )?; // 19.2px = 0.1 parent units
     let local = editor.document().unwrap().selected_vertex_positions()[0].1;
     assert!((local.x - 0.2).abs() < 1e-4, "{local:?}");
     editor.execute(EditorCommand::Undo)?;
@@ -273,17 +279,23 @@ fn root_warp_and_parent_local_mesh_controls_write_correct_spaces() -> anyhow::Re
     )))?;
     editor.execute(EditorCommand::SetTool(ToolId::Select))?;
     let p = editor.overlay().vertices[0].position;
-    editor.canvas_input(CanvasInput::Down {
-        point: p,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Up {
-        point: ViewportPoint {
-            x: p.x + 10.,
-            y: p.y,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: p,
+            shift: false,
+            alt: false,
         },
-    })?;
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Up {
+            point: ViewportPoint {
+                x: p.x + 10.,
+                y: p.y,
+            },
+        },
+    )?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     let f = shown(&mut editor)?;
     assert!((f.geometry.controls[0].points[0].x - 42.).abs() < 1e-3);
@@ -329,11 +341,14 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
         y: center.y - (start.x - center.x).hypot(start.y - center.y),
     };
     assert!(editor.present_frame(frame));
-    editor.canvas_input(CanvasInput::Down {
-        point: start,
-        shift: false,
-        alt: false,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
     assert!(
         editor
             .overlay()
@@ -342,10 +357,13 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
             .any(|v| v.kind == OverlayVertexKind::RotationTip && v.selected),
         "pressed rotation tip is visually active"
     );
-    editor.canvas_input(CanvasInput::Move {
-        point: end,
-        left_down: true,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: end,
+            left_down: true,
+        },
+    )?;
     assert!(editor.document().unwrap().has_pending_edit());
     editor.dispatch(editor.command(CommandId::CancelGesture))?;
     assert!(!editor.document().unwrap().has_pending_edit());
@@ -355,12 +373,15 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
         editor.overlay().vertices.iter().all(|v| !v.selected),
         "cancel clears the active rotation tip"
     );
-    editor.canvas_input(CanvasInput::Down {
-        point: start,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Up { point: end })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
     let index = editor.document().unwrap().object_index();
     let properties = &index
         .get(&ObjectRef::new(ObjectKind::Deformer, rotation))

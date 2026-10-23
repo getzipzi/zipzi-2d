@@ -9,12 +9,6 @@ impl Editor {
                 session.modeling.tools.interaction_viewport() == Some(binding.viewport)
             })
     }
-    pub fn lasso_active_for(&self, binding: ViewportBinding) -> bool {
-        self.gesture_active_for(binding)
-            && self
-                .active_session()
-                .is_some_and(|session| session.modeling.tools.lasso_active())
-    }
     pub fn cancel_gesture_for(&mut self, binding: ViewportBinding) -> bool {
         if !self.gesture_active_for(binding) {
             return false;
@@ -28,17 +22,6 @@ impl Editor {
         binding: ViewportBinding,
         input: crate::CanvasInput,
     ) -> Result<bool> {
-        let session = self
-            .active_session()
-            .ok_or_else(|| anyhow!("Document is saving"))?;
-        if session
-            .modeling
-            .tools
-            .interaction_viewport()
-            .is_some_and(|id| id != binding.viewport)
-        {
-            return Ok(false);
-        }
         let frame = self
             .viewport_presentation(binding.viewport)
             .and_then(|state| state.modeling.clone());

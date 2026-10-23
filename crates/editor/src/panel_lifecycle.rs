@@ -2,6 +2,43 @@
 use crate::*;
 
 impl EditorView {
+    pub(crate) fn input_regions(
+        &self,
+        window: &Window,
+        cx: &App,
+    ) -> Vec<crate::input_routing::InputRegion> {
+        let mut regions: Vec<_> = self
+            .editor
+            .viewport_ids()
+            .into_iter()
+            .filter(|id| self.viewport_displayed(*id, window, cx))
+            .filter_map(|id| self.viewport_surface(id, cx))
+            .map(|surface| surface.read(cx).input_region.clone())
+            .collect();
+        #[cfg(any(test, feature = "test-support"))]
+        if self.viewport_scene.is_some() {
+            return regions;
+        }
+        if let Some(dock) = &self.dock {
+            regions.extend(dock.visible_input_regions(cx));
+        }
+        regions
+    }
+
+    pub(crate) fn all_input_regions(&self, cx: &App) -> Vec<crate::input_routing::InputRegion> {
+        let mut regions: Vec<_> = self
+            .editor
+            .viewport_ids()
+            .into_iter()
+            .filter_map(|id| self.viewport_surface(id, cx))
+            .map(|surface| surface.read(cx).input_region.clone())
+            .collect();
+        if let Some(dock) = &self.dock {
+            regions.extend(dock.all_input_regions(cx));
+        }
+        regions
+    }
+
     pub(super) fn suspend_input(
         &mut self,
         reason: editor_core::EditingLifecycle,

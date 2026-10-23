@@ -13,15 +13,18 @@ fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
 }
 
 fn down(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyhow::Result<()> {
-    editor.canvas_input(CanvasInput::Down {
-        point: p,
-        shift,
-        alt: false,
-    })?;
+    crate::support::pointer_input(
+        editor,
+        CanvasInput::Down {
+            point: p,
+            shift,
+            alt: false,
+        },
+    )?;
     Ok(())
 }
 fn up(editor: &mut Editor, p: ViewportPoint) -> anyhow::Result<()> {
-    editor.canvas_input(CanvasInput::Up { point: p })?;
+    crate::support::pointer_input(editor, CanvasInput::Up { point: p })?;
     Ok(())
 }
 #[test]
@@ -83,10 +86,13 @@ fn hover_selection_and_viewport_reuse_the_evaluated_scene() -> anyhow::Result<()
     let (mut editor, _dir) = setup()?;
     let before = editor.evaluation_count();
     let first = editor.overlay().vertices[0].position;
-    editor.canvas_input(CanvasInput::Move {
-        point: first,
-        left_down: false,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: first,
+            left_down: false,
+        },
+    )?;
     assert!(editor.preview_if_needed()?.is_none());
     let mesh = editor.document().unwrap().selected_id().unwrap().to_owned();
     editor.execute(EditorCommand::Select(mesh))?;
@@ -133,13 +139,16 @@ fn multi_vertex_drag_is_one_history_step_and_preserves_uv_topology() -> anyhow::
     let start = vertices[0].position;
     down(&mut editor, start, false)?;
     for dx in [4., 12., 20.] {
-        editor.canvas_input(CanvasInput::Move {
-            point: ViewportPoint {
-                x: start.x + dx,
-                y: start.y + 10.,
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: ViewportPoint {
+                    x: start.x + dx,
+                    y: start.y + 10.,
+                },
+                left_down: true,
             },
-            left_down: true,
-        })?;
+        )?;
     }
     let final_point = ViewportPoint {
         x: start.x + 24.,
@@ -184,28 +193,37 @@ fn returning_to_anchor_or_cancelling_keeps_redo_and_original_positions() -> anyh
     present(&mut editor)?;
     let start = editor.overlay().vertices[0].position;
     down(&mut editor, start, false)?;
-    editor.canvas_input(CanvasInput::Move {
-        point: ViewportPoint {
-            x: start.x + 27.25,
-            y: start.y - 8.,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: ViewportPoint {
+                x: start.x + 27.25,
+                y: start.y - 8.,
+            },
+            left_down: true,
         },
-        left_down: true,
-    })?;
+    )?;
     up(&mut editor, start)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
     present(&mut editor)?;
     down(&mut editor, start, false)?;
-    editor.canvas_input(CanvasInput::Move {
-        point: ViewportPoint {
-            x: start.x + 40.,
-            y: start.y,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: ViewportPoint {
+                x: start.x + 40.,
+                y: start.y,
+            },
+            left_down: true,
         },
-        left_down: true,
-    })?;
-    editor.canvas_input(CanvasInput::Move {
-        point: start,
-        left_down: false,
-    })?;
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: start,
+            left_down: false,
+        },
+    )?;
     assert!(!editor.gesture_active());
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
     assert_eq!(
@@ -221,13 +239,16 @@ fn switch_save_close_and_tool_commands_cancel_canvas_candidates() -> anyhow::Res
         let id = editor.active_id().unwrap();
         let p = editor.overlay().vertices[0].position;
         down(&mut editor, p, false)?;
-        editor.canvas_input(CanvasInput::Move {
-            point: ViewportPoint {
-                x: p.x + 20.,
-                y: p.y,
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: ViewportPoint {
+                    x: p.x + 20.,
+                    y: p.y,
+                },
+                left_down: true,
             },
-            left_down: true,
-        })?;
+        )?;
         match finish {
             0 => {
                 editor.new_document()?;
@@ -297,10 +318,13 @@ fn continuous_control_drag_presents_completed_poses_without_changing_its_target(
     down(&mut editor, start, false)?;
     let mut completed = Vec::new();
     for x in [10., 20., 30.] {
-        assert!(editor.canvas_input(CanvasInput::Move {
-            point: at(x),
-            left_down: true,
-        })?);
+        assert!(crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: at(x),
+                left_down: true,
+            }
+        )?);
         completed.push(editor.preview()?.canvas.unwrap());
     }
     assert!(
@@ -320,10 +344,13 @@ fn continuous_control_drag_presents_completed_poses_without_changing_its_target(
     assert_eq!(editor.overlay().vertices[0].position, at(20.));
     assert!(!editor.present_frame(completed[0].clone()));
     // Continue from the original press, even though the displayed pose is behind.
-    assert!(editor.canvas_input(CanvasInput::Move {
-        point: at(40.),
-        left_down: true,
-    })?);
+    assert!(crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: at(40.),
+            left_down: true,
+        }
+    )?);
     let current = editor.preview()?.canvas.unwrap();
     assert!(editor.present_frame(completed[2].clone()));
     assert_eq!(editor.overlay().vertices[0].position, at(30.));
@@ -346,13 +373,16 @@ fn delayed_control_poses_are_rejected_when_the_gesture_ends_or_is_replaced() -> 
         down(&mut editor, start, false)?;
         let mut frames = Vec::new();
         for x in [10., 20.] {
-            editor.canvas_input(CanvasInput::Move {
-                point: ViewportPoint {
-                    x: start.x + x,
-                    y: start.y,
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: start.x + x,
+                        y: start.y,
+                    },
+                    left_down: true,
                 },
-                left_down: true,
-            })?;
+            )?;
             frames.push(editor.preview()?.canvas.unwrap());
         }
         assert!(editor.present_frame(frames[0].clone()));
@@ -388,13 +418,16 @@ fn delayed_control_poses_are_rejected_when_the_gesture_ends_or_is_replaced() -> 
         if finish == 0 {
             // A later control gesture must not reopen the previous pose's lifetime.
             down(&mut editor, start, false)?;
-            editor.canvas_input(CanvasInput::Move {
-                point: ViewportPoint {
-                    x: start.x + 5.,
-                    y: start.y,
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: ViewportPoint {
+                        x: start.x + 5.,
+                        y: start.y,
+                    },
+                    left_down: true,
                 },
-                left_down: true,
-            })?;
+            )?;
             editor.preview()?;
             assert!(!editor.present_frame(frames[1].clone()));
         }
@@ -481,13 +514,16 @@ fn invalid_drag_rolls_back_candidate_without_losing_redo() -> anyhow::Result<()>
         let original = editor.document().unwrap().selected_vertex_positions();
         let start = editor.overlay().vertices[0].position;
         down(&mut editor, start, false)?;
-        editor.canvas_input(CanvasInput::Move {
-            point: ViewportPoint {
-                x: start.x + 20.,
-                y: start.y,
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: ViewportPoint {
+                    x: start.x + 20.,
+                    y: start.y,
+                },
+                left_down: true,
             },
-            left_down: true,
-        })?;
+        )?;
         let point = ViewportPoint { x: f32::NAN, y: 0. };
         let event = if release {
             CanvasInput::Up { point }
@@ -497,7 +533,7 @@ fn invalid_drag_rolls_back_candidate_without_losing_redo() -> anyhow::Result<()>
                 left_down: true,
             }
         };
-        assert!(editor.canvas_input(event).is_err());
+        assert!(crate::support::pointer_input(&mut editor, event).is_err());
         assert!(!editor.gesture_active());
         assert_eq!(
             editor.document().unwrap().selected_vertex_positions(),

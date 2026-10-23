@@ -279,18 +279,24 @@ fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> any
     assert!(editor.present_frame(frame.clone()));
     let original = editor.document().unwrap().selected_vertex_positions();
     let start = editor.overlay().vertices[0].position;
-    editor.canvas_input(CanvasInput::Down {
-        point: start,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Move {
-        point: ViewportPoint {
-            x: start.x + 20.,
-            y: start.y,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
         },
-        left_down: true,
-    })?;
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: ViewportPoint {
+                x: start.x + 20.,
+                y: start.y,
+            },
+            left_down: true,
+        },
+    )?;
     assert!(editor.gesture_active());
     assert!(editor.document().unwrap().has_pending_edit());
     let pending = editor.preview()?.canvas.unwrap();
@@ -305,7 +311,10 @@ fn switching_rolls_back_a_live_gesture_and_rejects_old_frames_and_input() -> any
     assert!(!editor.accepts_preview(pending.version.request));
     assert!(editor.preview_if_needed()?.is_none());
     assert!(editor.overlay().vertices.is_empty());
-    assert!(!editor.canvas_input(CanvasInput::Up { point: start })?);
+    assert!(!crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Up { point: start }
+    )?);
     editor.set_workspace(WorkspaceKind::Modeling)?;
     assert!(!editor.present_frame(pending));
     assert!(!editor.present_frame(frame));

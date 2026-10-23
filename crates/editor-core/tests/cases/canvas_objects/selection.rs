@@ -21,17 +21,23 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
     assert_eq!(editor.overlay().vertices.len(), 4);
     let point = ViewportPoint { x: 256., y: 256. };
     let selection = editor.document().unwrap().context().selections.clone();
-    editor.canvas_input(CanvasInput::Down {
-        point,
-        shift: false,
-        alt: false,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+        },
+    )?;
     assert_eq!(editor.document().unwrap().context().selections, selection);
     assert!(editor.overlay().marquee.is_none());
     // A small release displacement is still a click.
-    editor.canvas_input(CanvasInput::Up {
-        point: ViewportPoint { x: 258., y: 256. },
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Up {
+            point: ViewportPoint { x: 258., y: 256. },
+        },
+    )?;
     assert_eq!(editor.document().unwrap().selected_id(), Some(top.as_str()));
     assert_eq!(
         editor
@@ -63,20 +69,26 @@ fn surface_press_cancellation_preserves_selection_and_components() -> anyhow::Re
         let components = editor.document().unwrap().selected_vertex_positions();
         assert!(!components.is_empty());
         let point = ViewportPoint { x: 256., y: 256. };
-        editor.canvas_input(CanvasInput::Down {
-            point,
-            shift: false,
-            alt: false,
-        })?;
-        if lost_button {
-            editor.canvas_input(CanvasInput::Move {
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
                 point,
-                left_down: false,
-            })?;
+                shift: false,
+                alt: false,
+            },
+        )?;
+        if lost_button {
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point,
+                    left_down: false,
+                },
+            )?;
         } else {
-            editor.canvas_input(CanvasInput::Cancel)?;
+            crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
         }
-        editor.canvas_input(CanvasInput::Up { point })?;
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point })?;
         assert_eq!(editor.document().unwrap().context().selections, selection);
         assert_eq!(
             editor.document().unwrap().selected_vertex_positions(),
@@ -95,21 +107,27 @@ fn object_marquee_can_start_on_an_unselected_surface() -> anyhow::Result<()> {
         editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
         let point = ViewportPoint { x: 256., y: 256. };
         let end = ViewportPoint { x: 505., y: 505. };
-        editor.canvas_input(CanvasInput::Down {
-            point,
-            shift: false,
-            alt: false,
-        })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point,
+                shift: false,
+                alt: false,
+            },
+        )?;
         assert!(editor.document().unwrap().context().selections.is_empty());
         if move_event {
-            editor.canvas_input(CanvasInput::Move {
-                point: end,
-                left_down: true,
-            })?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                },
+            )?;
             assert_eq!(editor.overlay().marquee, Some((point, end)));
             assert!(editor.document().unwrap().context().selections.is_empty());
         }
-        editor.canvas_input(CanvasInput::Up { point: end })?;
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
         // This rectangle contains only part of each mesh, so it selects neither.
         assert!(editor.document().unwrap().context().selections.is_empty());
         assert!(editor.overlay().marquee.is_none());
@@ -127,23 +145,32 @@ fn surface_marquee_uses_original_component_selection_and_shift() -> anyhow::Resu
         click(&mut editor, vertex, false)?;
         let selection = editor.document().unwrap().context().selections.clone();
         let point = ViewportPoint { x: 256., y: 256. };
-        editor.canvas_input(CanvasInput::Down {
-            point,
-            shift,
-            alt: false,
-        })?;
-        editor.canvas_input(CanvasInput::Move {
-            point: ViewportPoint { x: 280., y: 280. },
-            left_down: true,
-        })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point,
+                shift,
+                alt: false,
+            },
+        )?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point: ViewportPoint { x: 280., y: 280. },
+                left_down: true,
+            },
+        )?;
         assert!(editor.overlay().marquee.is_some());
         // Returning to the press position cannot turn the gesture into a click.
-        editor.canvas_input(CanvasInput::Move {
-            point,
-            left_down: true,
-        })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point,
+                left_down: true,
+            },
+        )?;
         assert_eq!(editor.overlay().marquee, Some((point, point)));
-        editor.canvas_input(CanvasInput::Up { point })?;
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point })?;
         assert_eq!(editor.document().unwrap().context().selections, selection);
         assert_eq!(
             editor
@@ -336,17 +363,23 @@ fn shift_selection_and_marquee_share_document_selection_without_history() -> any
     click(&mut editor, ViewportPoint { x: 2., y: 2. }, false)?;
     let a = ViewportPoint { x: 5., y: 5. };
     let b = ViewportPoint { x: 505., y: 505. };
-    editor.canvas_input(CanvasInput::Down {
-        point: a,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Move {
-        point: b,
-        left_down: true,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: a,
+            shift: false,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: b,
+            left_down: true,
+        },
+    )?;
     assert!(editor.overlay().marquee.is_some());
-    editor.canvas_input(CanvasInput::Up { point: b })?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: b })?;
     assert_eq!(editor.document().unwrap().context().selections.len(), 2);
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     assert!(editor.overlay().marquee.is_none());
@@ -358,19 +391,25 @@ fn tool_state_is_per_document_and_vertex_click_opens_no_candidate() -> anyhow::R
     let first = editor.active_id().unwrap();
     editor.dispatch(editor.command(CommandId::GlueTool))?;
     let p = editor.overlay().vertices[0].position;
-    editor.canvas_input(CanvasInput::Down {
-        point: p,
-        shift: false,
-        alt: false,
-    })?;
-    assert!(!editor.document().unwrap().has_pending_edit());
-    editor.canvas_input(CanvasInput::Move {
-        point: ViewportPoint {
-            x: p.x + 1.,
-            y: p.y,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: p,
+            shift: false,
+            alt: false,
         },
-        left_down: true,
-    })?;
+    )?;
+    assert!(!editor.document().unwrap().has_pending_edit());
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: ViewportPoint {
+                x: p.x + 1.,
+                y: p.y,
+            },
+            left_down: true,
+        },
+    )?;
     assert!(!editor.document().unwrap().has_pending_edit());
     editor.new_document()?;
     assert_eq!(editor.active_tool(), ToolId::Select);
@@ -394,17 +433,23 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     let center = frame.transform.to_viewport(ModelPoint { x: 128., y: 128. });
     click(&mut editor, center, false)?;
     let p = editor.overlay().vertices[0].position;
-    editor.canvas_input(CanvasInput::Down {
-        point: p,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Up {
-        point: ViewportPoint {
-            x: p.x + 12.,
-            y: p.y,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: p,
+            shift: false,
+            alt: false,
         },
-    })?;
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Up {
+            point: ViewportPoint {
+                x: p.x + 12.,
+                y: p.y,
+            },
+        },
+    )?;
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     assert_eq!(
         editor.document().unwrap().selected_vertex_positions(),
@@ -426,20 +471,25 @@ fn bound_mesh_is_selectable_and_edits_only_a_stored_keyform() -> anyhow::Result<
     );
     let p = editor.overlay().vertices[0].position;
     click(&mut editor, p, false)?; // read-only controls can still be selected
-    editor.canvas_input(CanvasInput::Down {
-        point: p,
-        shift: false,
-        alt: false,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: p,
+            shift: false,
+            alt: false,
+        },
+    )?;
     assert!(
-        editor
-            .canvas_input(CanvasInput::Up {
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Up {
                 point: ViewportPoint {
                     x: p.x + 20.,
                     y: p.y
                 }
-            })
-            .is_err()
+            }
+        )
+        .is_err()
     );
     assert!(!editor.gesture_active());
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 1));
@@ -491,18 +541,24 @@ fn deselect_command_clears_all_selection_and_cancel_gesture_preserves_selection(
     );
 
     // Start an in-flight vertex drag gesture.
-    editor.canvas_input(CanvasInput::Down {
-        point: vertex_pos,
-        shift: false,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Move {
-        point: ViewportPoint {
-            x: vertex_pos.x + 20.,
-            y: vertex_pos.y + 20.,
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: vertex_pos,
+            shift: false,
+            alt: false,
         },
-        left_down: true,
-    })?;
+    )?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: ViewportPoint {
+                x: vertex_pos.x + 20.,
+                y: vertex_pos.y + 20.,
+            },
+            left_down: true,
+        },
+    )?;
     assert!(editor.gesture_active());
 
     // CancelGesture cancels the in-flight drag gesture but preserves selection.

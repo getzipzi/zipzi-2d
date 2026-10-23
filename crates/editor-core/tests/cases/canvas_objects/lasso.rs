@@ -21,21 +21,30 @@ fn lasso(
     shift: bool,
     alt: bool,
 ) -> anyhow::Result<()> {
-    editor.canvas_input(CanvasInput::Down {
-        point: path[0],
-        shift,
-        alt,
-    })?;
+    crate::support::pointer_input(
+        editor,
+        CanvasInput::Down {
+            point: path[0],
+            shift,
+            alt,
+        },
+    )?;
     for &point in &path[1..path.len() - 1] {
-        assert!(!editor.canvas_input(CanvasInput::Move {
-            point,
-            left_down: true
-        })?);
+        assert!(!crate::support::pointer_input(
+            editor,
+            CanvasInput::Move {
+                point,
+                left_down: true
+            }
+        )?);
         assert!(!editor.document().unwrap().has_pending_edit());
     }
-    assert!(!editor.canvas_input(CanvasInput::Up {
-        point: *path.last().unwrap()
-    })?);
+    assert!(!crate::support::pointer_input(
+        editor,
+        CanvasInput::Up {
+            point: *path.last().unwrap()
+        }
+    )?);
     assert!(!editor.gesture_active());
     assert!(editor.overlay().lasso.is_empty());
     Ok(())
@@ -113,10 +122,13 @@ fn lasso_vertex_hover_and_drag_match_select_and_cancel_restores_geometry() -> an
             let vertex = editor.overlay().vertices[0].clone();
             let positions = editor.document().unwrap().selected_vertex_positions();
             editor.execute(EditorCommand::SetTool(tool))?;
-            editor.canvas_input(CanvasInput::Move {
-                point: vertex.position,
-                left_down: false,
-            })?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: vertex.position,
+                    left_down: false,
+                },
+            )?;
             let overlay = editor.overlay();
             assert!(
                 overlay
@@ -129,19 +141,28 @@ fn lasso_vertex_hover_and_drag_match_select_and_cancel_restores_geometry() -> an
                 Some(vertex.id)
             );
             assert!(!editor.document().unwrap().has_pending_edit());
-            editor.canvas_input(CanvasInput::Down {
-                point: vertex.position,
-                shift: false,
-                alt: false,
-            })?;
-            let binding = editor.primary_viewport_binding().unwrap();
-            assert!(!editor.lasso_active_for(binding));
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point: vertex.position,
+                    shift: false,
+                    alt: false,
+                },
+            )?;
+            assert!(
+                !editor
+                    .viewport_interaction_hints(editor.current_viewport_interaction().unwrap())
+                    .contains(&InteractionHint::Drag(HintAction::LassoSelect))
+            );
             assert!(!editor.document().unwrap().has_pending_edit());
             let end = p(vertex.position.x + 15., vertex.position.y + 8.);
-            assert!(editor.canvas_input(CanvasInput::Move {
-                point: end,
-                left_down: true
-            })?);
+            assert!(crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true
+                }
+            )?);
             let overlay = editor.overlay();
             assert!(overlay.lasso.is_empty());
             assert!(overlay.marquee.is_none());
@@ -160,14 +181,14 @@ fn lasso_vertex_hover_and_drag_match_select_and_cancel_restores_geometry() -> an
                 1
             );
             if cancel {
-                editor.canvas_input(CanvasInput::Cancel)?;
+                crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
                 assert_eq!(
                     editor.document().unwrap().selected_vertex_positions(),
                     positions
                 );
                 assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
             } else {
-                editor.canvas_input(CanvasInput::Up { point: end })?;
+                crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
                 assert_eq!(
                     editor.document().unwrap().selected_vertex_positions(),
                     changed
@@ -188,24 +209,37 @@ fn lasso_gesture_keeps_selecting_when_it_crosses_a_vertex() -> anyhow::Result<()
     let positions = editor.document().unwrap().selected_vertex_positions();
     editor.execute(EditorCommand::SetTool(ToolId::Lasso))?;
     let path = around(vertex.position);
-    editor.canvas_input(CanvasInput::Down {
-        point: path[0],
-        shift: false,
-        alt: false,
-    })?;
-    let binding = editor.primary_viewport_binding().unwrap();
-    assert!(editor.lasso_active_for(binding));
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: path[0],
+            shift: false,
+            alt: false,
+        },
+    )?;
+    assert!(
+        editor
+            .viewport_interaction_hints(editor.current_viewport_interaction().unwrap())
+            .contains(&InteractionHint::Drag(HintAction::LassoSelect))
+    );
     for point in [path[1], vertex.position, path[2]] {
-        assert!(!editor.canvas_input(CanvasInput::Move {
-            point,
-            left_down: true
-        })?);
-        assert!(editor.lasso_active_for(binding));
+        assert!(!crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
+                point,
+                left_down: true
+            }
+        )?);
+        assert!(
+            editor
+                .viewport_interaction_hints(editor.current_viewport_interaction().unwrap())
+                .contains(&InteractionHint::Drag(HintAction::LassoSelect))
+        );
         assert!(editor.overlay().active_component.is_none());
         assert!(!editor.document().unwrap().has_pending_edit());
     }
     // Up completes the polygon without another Move event.
-    editor.canvas_input(CanvasInput::Up { point: path[3] })?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point: path[3] })?;
     assert_eq!(selected(&editor), vec![vertex.id]);
     assert_eq!(
         editor.document().unwrap().selected_vertex_positions(),
@@ -224,16 +258,22 @@ fn lasso_cancel_lost_button_tool_switch_and_resize_preserve_selection() -> anyho
         let original = selected(&editor);
         let objects = editor.document().unwrap().context().selections.clone();
         editor.execute(EditorCommand::SetTool(ToolId::Lasso))?;
-        editor.canvas_input(CanvasInput::Down {
-            point: p(5., 5.),
-            shift: false,
-            alt: false,
-        })?;
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point: p(5., 5.),
+                shift: false,
+                alt: false,
+            },
+        )?;
         for point in [p(500., 5.), p(500., 500.)] {
-            editor.canvas_input(CanvasInput::Move {
-                point,
-                left_down: true,
-            })?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point,
+                    left_down: true,
+                },
+            )?;
         }
         assert!(!editor.overlay().lasso.is_empty());
         match cancellation {
@@ -241,10 +281,13 @@ fn lasso_cancel_lost_button_tool_switch_and_resize_preserve_selection() -> anyho
                 editor.dispatch(editor.command(CommandId::CancelGesture))?;
             }
             1 => {
-                editor.canvas_input(CanvasInput::Move {
-                    point: v,
-                    left_down: false,
-                })?;
+                crate::support::pointer_input(
+                    &mut editor,
+                    CanvasInput::Move {
+                        point: v,
+                        left_down: false,
+                    },
+                )?;
             }
             2 => {
                 editor.execute(EditorCommand::SetTool(ToolId::Select))?;
@@ -255,7 +298,7 @@ fn lasso_cancel_lost_button_tool_switch_and_resize_preserve_selection() -> anyho
                 scale_factor: 2.,
             }),
         }
-        editor.canvas_input(CanvasInput::Up { point: p(5., 500.) })?;
+        crate::support::pointer_input(&mut editor, CanvasInput::Up { point: p(5., 500.) })?;
         assert!(!editor.gesture_active());
         assert_eq!(selected(&editor), original, "cancellation {cancellation}");
         assert_eq!(editor.document().unwrap().context().selections, objects);
@@ -283,18 +326,23 @@ fn lasso_surface_click_collinear_path_and_invalid_input_preserve_selection() -> 
         assert_eq!(selected(&editor), original);
         assert_eq!(editor.document().unwrap().context().selections, objects);
     }
-    editor.canvas_input(CanvasInput::Down {
-        point: v,
-        shift: false,
-        alt: false,
-    })?;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point: v,
+            shift: false,
+            alt: false,
+        },
+    )?;
     assert!(
-        editor
-            .canvas_input(CanvasInput::Move {
+        crate::support::pointer_input(
+            &mut editor,
+            CanvasInput::Move {
                 point: p(f32::NAN, 0.),
                 left_down: true
-            })
-            .is_err()
+            }
+        )
+        .is_err()
     );
     assert!(!editor.gesture_active());
     assert_eq!(selected(&editor), original);
@@ -325,20 +373,26 @@ fn lasso_blank_click_clears_objects_and_components_even_with_modifiers() -> anyh
             assert!(!selected(&editor).is_empty());
             editor.execute(EditorCommand::SetTool(ToolId::Lasso))?;
             let evaluations = editor.evaluation_count();
-            editor.canvas_input(CanvasInput::Down {
-                point: p(-100., -100.),
-                shift,
-                alt,
-            })?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point: p(-100., -100.),
+                    shift,
+                    alt,
+                },
+            )?;
             // Pressing blank space is still cancellable until release.
             assert!(!selected(&editor).is_empty());
             assert_eq!(
                 editor.document().unwrap().context().selections,
                 vec![object.clone()]
             );
-            editor.canvas_input(CanvasInput::Up {
-                point: p(-99.5, -100.),
-            })?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Up {
+                    point: p(-99.5, -100.),
+                },
+            )?;
             let doc = editor.document().unwrap();
             assert!(doc.context().selections.is_empty());
             assert!(doc.context().selection.is_none());
@@ -469,25 +523,38 @@ fn lasso_deformer_handle_drags_match_select() -> anyhow::Result<()> {
                 .unwrap();
             let (kind, start) = gizmo.handles[0];
             editor.execute(EditorCommand::SetTool(tool))?;
-            editor.canvas_input(CanvasInput::Move {
-                point: start,
-                left_down: false,
-            })?;
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: start,
+                    left_down: false,
+                },
+            )?;
             assert_eq!(editor.overlay().active_handle, Some(kind));
             let before = control_points(&mut editor, &object)?;
             let end = p(start.x + 20., start.y + 10.);
-            editor.canvas_input(CanvasInput::Down {
-                point: start,
-                shift: false,
-                alt: false,
-            })?;
-            assert!(!editor.lasso_active_for(frame.version.binding));
-            assert!(editor.canvas_input(CanvasInput::Move {
-                point: end,
-                left_down: true
-            })?);
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    point: start,
+                    shift: false,
+                    alt: false,
+                },
+            )?;
+            assert!(
+                !editor
+                    .viewport_interaction_hints(editor.current_viewport_interaction().unwrap())
+                    .contains(&InteractionHint::Drag(HintAction::LassoSelect))
+            );
+            assert!(crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true
+                }
+            )?);
             assert!(editor.overlay().lasso.is_empty());
-            editor.canvas_input(CanvasInput::Up { point: end })?;
+            crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
             let after = control_points(&mut editor, &object)?;
             assert_ne!(before, after);
             assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
@@ -522,7 +589,8 @@ fn lasso_isolation_and_viewport_ownership_keep_other_geometry_out_of_the_gesture
     let frame = editor.preview_for(other)?.canvas.unwrap();
     assert!(editor.present_frame(frame));
     let start = p(-500., -500.);
-    editor.canvas_input_for(
+    crate::support::pointer_input_for(
+        &mut editor,
         first,
         CanvasInput::Down {
             point: start,
@@ -530,7 +598,8 @@ fn lasso_isolation_and_viewport_ownership_keep_other_geometry_out_of_the_gesture
             alt: false,
         },
     )?;
-    editor.canvas_input_for(
+    crate::support::pointer_input_for(
+        &mut editor,
         first,
         CanvasInput::Move {
             point: p(1000., -500.),
@@ -539,21 +608,24 @@ fn lasso_isolation_and_viewport_ownership_keep_other_geometry_out_of_the_gesture
     )?;
     assert!(!editor.overlay_for_viewport(first).lasso.is_empty());
     assert!(editor.overlay_for_viewport(other).lasso.is_empty());
-    editor.canvas_input_for(
+    crate::support::pointer_input_for(
+        &mut editor,
         other,
         CanvasInput::Up {
             point: p(1000., 1000.),
         },
     )?;
     assert!(editor.gesture_active());
-    editor.canvas_input_for(
+    crate::support::pointer_input_for(
+        &mut editor,
         first,
         CanvasInput::Move {
             point: p(1000., 1000.),
             left_down: true,
         },
     )?;
-    editor.canvas_input_for(
+    crate::support::pointer_input_for(
+        &mut editor,
         first,
         CanvasInput::Up {
             point: p(-500., 1000.),

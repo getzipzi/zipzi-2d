@@ -27,16 +27,11 @@ fn cancel_command_only_releases_its_target_viewport() -> anyhow::Result<()> {
     assert!(editor.present_frame(frame));
     let original = editor.document().unwrap().selected_vertex_positions();
     let point = editor.overlay_for_viewport(a).vertices[0].position;
-    let token = editor.begin_viewport_interaction(a, ViewportInteractionKind::Modeling)?;
-    editor.canvas_interaction_input(
-        token,
-        CanvasInput::Down {
-            point,
-            shift: false,
-            alt: false,
-        },
-    )?;
-    editor.canvas_interaction_input(
+    let token = editor
+        .begin_canvas_gesture(a, point, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(
         token,
         CanvasInput::Move {
             point: ViewportPoint {
@@ -70,7 +65,7 @@ fn cancel_command_only_releases_its_target_viewport() -> anyhow::Result<()> {
     );
 
     // Core dispatch must also release navigation without depending on UI cleanup.
-    let pan = editor.begin_viewport_interaction(a, ViewportInteractionKind::Navigation)?;
+    let pan = editor.begin_viewport_navigation(a)?;
     editor.dispatch(editor.command_for_viewport(
         CommandId::CancelGesture,
         b,
@@ -111,16 +106,11 @@ fn modeling_instances_share_content_but_keep_requests_images_and_hit_geometry_in
     assert!(editor.has_presented_frame(Some(moved.version)));
     let original = editor.document().unwrap().selected_vertex_positions();
     let point = editor.overlay_for_viewport(b).vertices[0].position;
-    let token = editor.begin_viewport_interaction(b, ViewportInteractionKind::Modeling)?;
-    editor.canvas_interaction_input(
-        token,
-        CanvasInput::Down {
-            point,
-            shift: false,
-            alt: false,
-        },
-    )?;
-    editor.canvas_interaction_input(
+    let token = editor
+        .begin_canvas_gesture(b, point, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(
         token,
         CanvasInput::Move {
             point: ViewportPoint {
@@ -134,7 +124,8 @@ fn modeling_instances_share_content_but_keep_requests_images_and_hit_geometry_in
         editor.document().unwrap().selected_vertex_positions(),
         original
     );
-    assert!(!editor.canvas_input_for(
+    assert!(!crate::support::pointer_input_for(
+        &mut editor,
         a,
         CanvasInput::Move {
             point,
@@ -232,7 +223,8 @@ fn hover_and_marquee_overlays_belong_to_their_instance_and_binding() -> anyhow::
         assert!(editor.present_frame(frame));
     }
     let point = editor.overlay_for_viewport(b).vertices[0].position;
-    editor.canvas_input_for(
+    crate::support::pointer_input_for(
+        &mut editor,
         b,
         CanvasInput::Move {
             point,
@@ -253,7 +245,7 @@ fn hover_and_marquee_overlays_belong_to_their_instance_and_binding() -> anyhow::
             .iter()
             .any(|vertex| vertex.hovered)
     );
-    editor.canvas_input_for(a, CanvasInput::Leave)?;
+    crate::support::pointer_input_for(&mut editor, a, CanvasInput::Leave)?;
     assert!(
         editor
             .overlay_for_viewport(b)
@@ -273,16 +265,11 @@ fn hover_and_marquee_overlays_belong_to_their_instance_and_binding() -> anyhow::
             .iter()
             .any(|vertex| vertex.hovered)
     );
-    let token = editor.begin_viewport_interaction(a, ViewportInteractionKind::Modeling)?;
-    editor.canvas_interaction_input(
-        token,
-        CanvasInput::Down {
-            point: ViewportPoint { x: 5., y: 5. },
-            shift: false,
-            alt: false,
-        },
-    )?;
-    editor.canvas_interaction_input(
+    let token = editor
+        .begin_canvas_gesture(a, ViewportPoint { x: 5., y: 5. }, false, false)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(
         token,
         CanvasInput::Move {
             point: ViewportPoint { x: 60., y: 50. },
@@ -307,7 +294,8 @@ fn hiding_or_destroying_a_domain_input_owner_cancels_its_candidate_without_a_ui_
         assert!(editor.present_frame(frame));
         let original = editor.document().unwrap().selected_vertex_positions();
         let point = editor.overlay_for_viewport(a).vertices[0].position;
-        editor.canvas_input_for(
+        crate::support::pointer_input_for(
+            &mut editor,
             a,
             CanvasInput::Down {
                 point,
@@ -315,7 +303,8 @@ fn hiding_or_destroying_a_domain_input_owner_cancels_its_candidate_without_a_ui_
                 alt: false,
             },
         )?;
-        editor.canvas_input_for(
+        crate::support::pointer_input_for(
+            &mut editor,
             a,
             CanvasInput::Move {
                 point: ViewportPoint {

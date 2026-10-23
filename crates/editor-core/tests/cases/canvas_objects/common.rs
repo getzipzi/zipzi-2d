@@ -19,12 +19,15 @@ pub(super) fn setup() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     Ok((editor, dir))
 }
 pub(super) fn click(editor: &mut Editor, p: ViewportPoint, shift: bool) -> anyhow::Result<()> {
-    editor.canvas_input(CanvasInput::Down {
-        point: p,
-        shift,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Up { point: p })?;
+    crate::support::pointer_input(
+        editor,
+        CanvasInput::Down {
+            point: p,
+            shift,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(editor, CanvasInput::Up { point: p })?;
     Ok(())
 }
 pub(super) fn texture(id: &str, alpha: [u8; 2]) -> SceneTexture {
@@ -153,12 +156,15 @@ pub(super) fn drag(
     end: ViewportPoint,
     shift: bool,
 ) -> anyhow::Result<()> {
-    editor.canvas_input(CanvasInput::Down {
-        point: start,
-        shift,
-        alt: false,
-    })?;
-    editor.canvas_input(CanvasInput::Up { point: end })?;
+    crate::support::pointer_input(
+        editor,
+        CanvasInput::Down {
+            point: start,
+            shift,
+            alt: false,
+        },
+    )?;
+    crate::support::pointer_input(editor, CanvasInput::Up { point: end })?;
     Ok(())
 }
 
