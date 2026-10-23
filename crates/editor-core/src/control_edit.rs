@@ -94,10 +94,6 @@ impl ControlEdit {
         let describe_binding =
             |axes: &[kasane_core::BindingAxis], matches: bool| -> Result<String> {
                 ensure!(
-                    axes.iter().filter(|a| !a.parameter_id.is_empty()).count() <= 2,
-                    "This legacy binding is read-only"
-                );
-                ensure!(
                     matches,
                     "Select a stored keyform before editing this object"
                 );
@@ -185,10 +181,6 @@ impl ControlEdit {
         );
         let slot_for =
             |axes: &[kasane_core::BindingAxis], points: Vec<Vec<f32>>| -> Result<usize> {
-                ensure!(
-                    axes.iter().filter(|a| !a.parameter_id.is_empty()).count() <= 2,
-                    "This legacy binding is read-only"
-                );
                 points
                     .iter()
                     .position(|keys| {

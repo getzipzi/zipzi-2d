@@ -1,4 +1,5 @@
 mod animation;
+mod binding;
 mod business;
 mod controls;
 mod observe;
@@ -6,6 +7,7 @@ pub(crate) mod physics;
 mod rich_controls;
 mod rows;
 mod selection;
+mod texture;
 use crate::properties;
 use crate::ui::property_details as details;
 use rows::{Row, RowProjectionKey};
@@ -321,6 +323,19 @@ impl PropertiesPanel {
     #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn last_row_id(&self) -> Option<ElementId> {
         match self.rows.last()? {
+            Row::TextureAction {
+                object, control, ..
+            } => {
+                Some(SharedString::from(format!("texture-{}-{}", control.key(), object.id)).into())
+            }
+            Row::BindingAction {
+                object, control, ..
+            } => {
+                Some(SharedString::from(format!("binding-{}-{}", control.key(), object.id)).into())
+            }
+            Row::BindingNavigate { object, .. } => {
+                Some(SharedString::from(format!("binding-inspect-{}", object.id)).into())
+            }
             Row::Navigation => Some("property-navigation".into()),
             Row::BusinessActions(object) => {
                 Some(SharedString::from(format!("business-action-new-{}", object.id)).into())
@@ -407,6 +422,22 @@ impl PropertiesPanel {
             self.row_builds += 1;
         }
         let content = match row {
+            Row::TextureAction {
+                object,
+                control,
+                label,
+            } => self.texture_action(object, *control, label, cx),
+            Row::BindingAction {
+                object,
+                control,
+                label,
+            } => self.binding_action(object, *control, label, cx),
+            Row::BindingNavigate { object, label } => self.binding_action(
+                object,
+                crate::authoring::binding::Control::Inspect,
+                label,
+                cx,
+            ),
             Row::Navigation => self.render_navigation(cx),
             Row::AnimationActions(object) => self.animation_actions(object, cx),
             Row::BusinessActions(object) => self.business_actions(object, cx),

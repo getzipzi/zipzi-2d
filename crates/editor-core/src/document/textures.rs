@@ -101,9 +101,21 @@ impl DocumentTextures {
             .enumerate()
             .map(|(i, t)| (t.asset_id.clone(), i))
             .collect();
+        let unchanged_pixels = textures.len() == self.textures.len()
+            && textures.iter().zip(self.textures.iter()).all(|(a, b)| {
+                a.asset_id == b.asset_id
+                    && a.cache_key == b.cache_key
+                    && a.width == b.width
+                    && a.height == b.height
+                    && Arc::ptr_eq(&a.rgba, &b.rgba)
+            });
         Ok(Some(Self {
             slots,
-            textures: textures.into(),
+            textures: if unchanged_pixels {
+                self.textures.clone()
+            } else {
+                textures.into()
+            },
             assets,
         }))
     }

@@ -199,6 +199,10 @@ Undo/Redo 按实际恢复方向产生 ChangeSet，不重放创建后的选中或
 
 Mesh 顶点、UV、三角形、Warp 控制点、Bezier 控制柄、GlueVertexPair、Offscreen Keyform 及索引映射也在范围内；通过所属对象的专用内容编辑操作管理，不新增普通文件夹。
 
+2026 年 10 月 23 日 U5-A 接入补充：普通 MeshBinding/SceneBinding 的删除使用类型化 `BindingGridEdit::Delete` 规划，明确丢弃拥有的轴、采样点与 Keyform，保留基础目标和共享 Parameter，并回到未修改的基础状态；不能把删除隐式解释为烘焙当前预览。Part 绑定若还拥有 Offscreen 映射，当前删除计划返回 `OFFSCREEN_MAPPING_REQUIRES_CONVERSION`，要求另行显式转换，不猜测静态映射。
+
+普通绑定网格转换可通过 `AuthoringSnapshot::plan_binding_authoring_with_control` 在后台规划，捕获原生版本并沿用同一转换预算和取消检查；执行仍由原会话发布该计划并重新校验版本、预算与锁。Editor 的草稿或编辑上下文变化应取消旧计划，不在确认时重新规划另一份影响范围。
+
 ### 4.4 资源与特殊数据
 
 | 类型 | 管理方式 |
@@ -211,6 +215,8 @@ Mesh 顶点、UV、三角形、Warp 控制点、Bezier 控制柄、GlueVertexPai
 | Unresolved / MissingReference | 可选中、定位、修复、重新绑定或显式移除；不提供 New Unresolved |
 | 编辑器状态 | 展开、滚动、搜索、选择、预览不混入对象内容历史；锁定与可见性遵循现有明确的编辑器状态存储策略 |
 | 不透明扩展和来源信息 | 保留并按现有格式规则验证，不自动生成任意 JSON 编辑器 |
+
+U5-B 补充 SDK `import_prepared_image`：后台 `prepare_image_load` 完成解码后，以单次原子事务创建 ImageAsset 并写入内容，成功发布才保留内存图片，取消或准备失败不创建资源。已有资源仍用 `ImageLoadToken` 替换内容并保持身份。editor-core 提供 `TextureInfo`（资源描述及实际使用者）、导入适配和原生 `SceneField::Texture` 的 Mesh 属性适配；资源名称使用原生资源 patch，属性地址包含版本。宿主发布后同时核对求值版本和纹理快照，刷新缓存场景；仅资源名称变化复用原有纹理与帧。
 
 ## 5 数据模型改动
 

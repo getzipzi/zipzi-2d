@@ -55,6 +55,7 @@ struct EditorView {
     editor: Editor,
     property_forms: properties::form::PropertyForms,
     playback_dialog: Option<authoring::PlaybackDialogGuard>,
+    texture_loads: std::collections::HashMap<String, authoring::texture::TextureLoad>,
     viewport_slots: [editor_core::ViewportId; 2],
     #[cfg(any(test, feature = "test-support"))]
     viewport_scene: Option<viewports::ViewportScene>,
@@ -98,6 +99,7 @@ impl EditorView {
             editor,
             property_forms: Default::default(),
             playback_dialog: None,
+            texture_loads: Default::default(),
             viewport_slots: std::array::from_fn(|_| editor_core::ViewportId::new()),
             #[cfg(any(test, feature = "test-support"))]
             viewport_scene: None,

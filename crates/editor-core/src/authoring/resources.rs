@@ -10,7 +10,43 @@ pub struct ResourceAuthoringCapabilities {
     pub domain: kasane_sdk::ResourceCapabilities,
     pub session_reason: Option<AuthoringSessionReason>,
 }
+#[derive(Debug, Clone)]
+pub struct TextureInfo {
+    pub asset: kasane_core::ImageAsset,
+    pub users: Vec<ObjectRef>,
+}
 impl Document {
+    pub fn texture_info(&self, id: &str) -> Result<TextureInfo> {
+        let asset = self
+            .session
+            .asset(id)
+            .ok_or_else(|| anyhow::anyhow!("Texture no longer exists"))?;
+        let index = self.object_index();
+        let users = self
+            .session
+            .references_to(id)
+            .into_iter()
+            .filter_map(|id| {
+                index
+                    .objects
+                    .iter()
+                    .find(|o| o.reference.id == id)
+                    .map(|o| o.reference.clone())
+            })
+            .collect();
+        Ok(TextureInfo { asset, users })
+    }
+    pub fn import_prepared_texture(
+        &mut self,
+        id: String,
+        name: String,
+        image: &kasane_sdk::PreparedImageContent,
+    ) -> Result<OperationResult> {
+        self.ensure_authoring_idle()?;
+        let receipt = self.session.import_prepared_image(id, name, image)?;
+        self.refresh_textures()?;
+        Ok(self.resource_operation_result(receipt))
+    }
     pub fn resource_collection(&self) -> Result<Vec<ObjectRef>> {
         Ok(self
             .session
@@ -173,6 +209,18 @@ impl Document {
     }
 }
 impl crate::Editor {
+    pub fn import_prepared_texture(
+        &mut self,
+        document: crate::DocumentId,
+        id: String,
+        name: String,
+        image: &kasane_sdk::PreparedImageContent,
+    ) -> Result<OperationResult> {
+        self.ensure_authoring_target(document, "Resource")?;
+        self.active_session_mut()
+            .unwrap()
+            .execute_authoring(|d| d.import_prepared_texture(id, name, image))
+    }
     pub fn plan_resource_authoring(
         &self,
         id: crate::DocumentId,

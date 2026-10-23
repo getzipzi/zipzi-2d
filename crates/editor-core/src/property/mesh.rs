@@ -43,6 +43,13 @@ pub const OPACITY: PropertySpec = PropertySpec::new(
 
 pub const PART: PropertySpec =
     PropertySpec::new(ObjectKind::Mesh, "part_id", "part_id", PropertyType::Text).allow_empty();
+pub const TEXTURE: PropertySpec = PropertySpec::new(
+    ObjectKind::Mesh,
+    "texture",
+    "texture_choice",
+    PropertyType::Text,
+)
+.allow_empty();
 pub const DEFORMER: PropertySpec = PropertySpec::new(
     ObjectKind::Mesh,
     "deformer_id",
@@ -100,6 +107,7 @@ pub const FIELDS: &[PropertySpec] = &[
     NAME,
     RUNTIME_ID,
     PART,
+    TEXTURE,
     DEFORMER,
     MASKS,
     INVERTED_MASK,
@@ -136,6 +144,11 @@ pub const COLOR_MODES: &[&str] = &[
 pub const ALPHA_MODES: &[&str] = &["over", "atop", "out", "conjoint_over", "disjoint_over"];
 
 pub(crate) fn inspector_fields(mesh: &Mesh, payload: &mut Value) {
+    payload["texture_choice"] = json!(match &mesh.texture_asset_id {
+        kasane_core::SceneReference::Unresolved { runtime_id } =>
+            format!("unresolved:{runtime_id}"),
+        reference => reference.as_str().to_owned(),
+    });
     let packed = mesh.raw_blend_mode.unwrap_or(match mesh.blend_mode {
         BlendMode::Normal => 0,
         BlendMode::Additive => 1,

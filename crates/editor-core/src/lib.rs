@@ -40,6 +40,7 @@ pub use document::{
     ExpressionAuthoringCapabilities, ExpressionEntryEditToken, Layer, MeshGenerationOptions,
     MeshGenerationPreview, MeshGenerationSource, MeshGridOptions, MotionCopyKind, MotionCopyPlan,
     NewParameter, ObjectAuthoringCapabilities, ObjectState, ObjectStateIndex, OperationResult,
+    OrdinaryBindingAction, OrdinaryBindingCapture, OrdinaryBindingPlan,
     OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination, PaletteMovePlan,
     PaletteMovePlanningError, PalettePosition, PalettePreservation, PaletteProjection,
     PaletteReparentCapture, PaletteReparentPlan, ParameterCreateError, ParameterDraft,
@@ -47,7 +48,7 @@ pub use document::{
     ParameterKey, ParameterManagementError, ParameterValidationError, ParameterValue,
     ParameterVisual, PhysicsAuthoringCapabilities, PhysicsChannelAction, PoseAuthoringCapabilities,
     ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
-    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType,
+    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType, TextureInfo,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};

@@ -191,6 +191,13 @@ impl ColorPickerState {
         self.open
     }
 
+    /// The inline HEX field follows text submission rules at object boundaries.
+    /// An open popup retains its separate accept/cancel lifecycle.
+    pub fn inline_text(&self, window: &Window, cx: &App) -> Option<String> {
+        (!self.open && self.inputs[0].read(cx).focus_handle(cx).is_focused(window))
+            .then(|| self.inputs[0].read(cx).value().to_string())
+    }
+
     pub fn owns_focus(&self, window: &Window, cx: &App) -> bool {
         self.focus.contains_focused(window, cx)
             || self

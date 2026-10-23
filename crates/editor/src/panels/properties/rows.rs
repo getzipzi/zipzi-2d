@@ -3,6 +3,20 @@ use super::*;
 
 #[derive(Clone, PartialEq, Eq)]
 pub(super) enum Row {
+    TextureAction {
+        object: ObjectRef,
+        control: crate::authoring::texture::Control,
+        label: SharedString,
+    },
+    BindingAction {
+        object: ObjectRef,
+        control: crate::authoring::binding::Control,
+        label: SharedString,
+    },
+    BindingNavigate {
+        object: ObjectRef,
+        label: SharedString,
+    },
     Group {
         key: String,
         label: String,
@@ -38,6 +52,9 @@ impl Row {
 
 #[derive(PartialEq)]
 pub(super) struct RowProjectionKey {
+    texture_revision: Option<u64>,
+    texture_loading: bool,
+    binding_revision: Option<u64>,
     target: PropertyTarget,
     revision: u64,
     details: Option<properties::DetailKey>,
@@ -62,6 +79,24 @@ impl PropertiesPanel {
         };
         let details_expanded = !self.collapsed.contains("$details");
         let key = RowProjectionKey {
+            texture_revision: (target.object.kind == editor_core::ObjectKind::Texture)
+                .then(|| doc.model_generation()),
+            texture_loading: self
+                .owner
+                .upgrade()
+                .is_some_and(|o| o.read(cx).texture_loading(&target.object.id)),
+            binding_revision: (target.context == editor_core::EditingContext::Modeling
+                && matches!(
+                    target.object.kind,
+                    editor_core::ObjectKind::Mesh
+                        | editor_core::ObjectKind::Deformer
+                        | editor_core::ObjectKind::Part
+                        | editor_core::ObjectKind::MeshBinding
+                        | editor_core::ObjectKind::SceneBinding
+                        | editor_core::ObjectKind::BindingAxis
+                        | editor_core::ObjectKind::BindingSample
+                ))
+            .then(|| doc.model_generation()),
             target: target.clone(),
             revision: if details_expanded || self.definition.navigation.is_some() {
                 doc.properties_revision()
@@ -94,6 +129,14 @@ impl PropertiesPanel {
         let index = doc.object_index();
         let inspected = self.target.as_ref().unwrap().object.clone();
         let mut rows = Vec::new();
+        rows.extend(super::binding::rows(doc, target));
+        rows.extend(super::texture::rows(
+            doc,
+            target,
+            self.owner
+                .upgrade()
+                .is_some_and(|o| o.read(cx).texture_loading(&target.object.id)),
+        ));
         if target.timeline.is_none()
             && matches!(
                 target.object.kind,

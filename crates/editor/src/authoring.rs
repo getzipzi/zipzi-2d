@@ -6,8 +6,10 @@ use editor_core::{DocumentId, EditingContextToken, ObjectKind, ObjectRef, Operat
 use gpui_kit::component::WindowExt;
 pub(crate) mod animation;
 mod availability;
+pub(crate) mod binding;
 pub(crate) mod business;
 mod presentation;
+pub(crate) mod texture;
 pub(crate) use availability::{authoring_error, error_code};
 pub(crate) mod scene_creation;
 pub(crate) use presentation::AuthoringPresentation;

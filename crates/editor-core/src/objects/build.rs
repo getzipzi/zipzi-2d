@@ -296,7 +296,7 @@ impl ObjectIndex {
                 s.add_binding(BindingInfo {
                     reference: ObjectRef::new(K::MeshBinding, id),
                     target: ObjectRef::new(K::Mesh, &x.mesh_id),
-                    axes: x.axes.clone(),
+                    axes: x.axes.clone().into(),
                     points: x.keyforms.iter().map(|f| f.keys.clone()).collect(),
                     blend: false,
                 });
@@ -311,7 +311,7 @@ impl ObjectIndex {
                 s.add_binding(BindingInfo {
                     reference: ObjectRef::new(K::SceneBinding, id),
                     target: ObjectRef::new(kind, x.target_id()),
-                    axes: x.axes.clone(),
+                    axes: x.axes.clone().into(),
                     points: x.track.samples().map(|f| f.keys.to_vec()).collect(),
                     blend: false,
                 });
@@ -346,8 +346,8 @@ impl ObjectIndex {
                     s.add_binding(BindingInfo {
                         reference: ObjectRef::new(K::GlueBinding, id),
                         target: r,
-                        axes: b.axes.clone(),
-                        points: grid_points(&b.axes),
+                        axes: b.axes.clone().into(),
+                        points: grid_points(&b.axes).into(),
                         blend: false,
                     });
                 }
@@ -406,8 +406,8 @@ impl ObjectIndex {
                 s.add_binding(BindingInfo {
                     reference: r.clone(),
                     target: ObjectRef::new(kind, &x.target_id),
-                    axes,
-                    points,
+                    axes: axes.into(),
+                    points: points.into(),
                     blend: true,
                 });
                 s.ref_edge(&r, R::KeyTable, K::BlendKeyTable, &x.key_table_id);

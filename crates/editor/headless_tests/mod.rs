@@ -33,6 +33,7 @@ mod scene_creation;
 mod scene_creation_commands;
 mod slide_number_input;
 mod sorting;
+mod texture;
 mod themes;
 mod timeline;
 mod timeline_navigation;
@@ -113,3 +114,4 @@ pub(crate) fn setup_with_document(
 }
 mod animation_management;
 mod business_authoring;
+mod ordinary_binding;

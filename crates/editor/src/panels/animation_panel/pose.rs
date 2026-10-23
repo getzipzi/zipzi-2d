@@ -85,10 +85,16 @@ impl AnimationPanel {
         };
         let Some(pose) = doc.pose_definition() else {
             return div()
-                .id("animation-pose-empty")
+                .id("AnimationPose")
                 .test_support()
-                .p_2()
-                .child(t!("workspace.no_pose"))
+                .size_full()
+                .child(
+                    div()
+                        .id("animation-pose-empty")
+                        .test_support()
+                        .p_2()
+                        .child(t!("workspace.no_pose")),
+                )
                 .into_any_element();
         };
         let selected = view.editor.active_inspection().and_then(|i| i.object());

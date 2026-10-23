@@ -1,14 +1,14 @@
 //! Stored binding layouts and implicit key grid enumeration.
 use super::ObjectRef;
-use kasane_core::BindingAxis;
+use kasane_core::{BindingAxis, SharedVec};
 
 #[derive(Clone, Debug)]
 pub struct BindingInfo {
     pub reference: ObjectRef,
     pub target: ObjectRef,
-    pub axes: Vec<BindingAxis>,
+    pub axes: SharedVec<BindingAxis>,
     /// Actual stored combinations, never a product of unrelated parameter summaries.
-    pub points: Vec<Vec<f32>>,
+    pub points: SharedVec<Vec<f32>>,
     pub blend: bool,
 }
 impl BindingInfo {

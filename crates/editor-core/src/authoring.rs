@@ -52,6 +52,9 @@ pub enum AuthoringSessionReason {
 
 #[path = "authoring/binding.rs"]
 mod binding;
+#[path = "authoring/ordinary_binding.rs"]
+mod ordinary_binding;
+pub use ordinary_binding::{OrdinaryBindingAction, OrdinaryBindingCapture, OrdinaryBindingPlan};
 #[path = "authoring/business.rs"]
 mod business;
 #[path = "authoring/motion.rs"]
@@ -88,7 +91,7 @@ pub use references::ReferenceAuthoringCapabilities;
 #[path = "authoring/resources.rs"]
 mod resources;
 
-pub use resources::ResourceAuthoringCapabilities;
+pub use resources::{ResourceAuthoringCapabilities, TextureInfo};
 
 impl Document {
     fn ensure_authoring_idle(&self) -> anyhow::Result<()> {
@@ -129,7 +132,18 @@ impl crate::DocumentSession {
         operation: impl FnOnce(&mut Document) -> anyhow::Result<OperationResult>,
     ) -> anyhow::Result<OperationResult> {
         self.ensure_authoring_idle()?;
+        let evaluation = self.document.evaluation_revision();
+        let textures = self.document.textures.snapshot();
         let result = operation(&mut self.document)?;
+        // A successful native publication can replace image pixels without
+        // changing topology. Retire the host scene snapshot as well as the SDK
+        // frame; subsequent viewport requests must carry the new resources.
+        if result.receipt.changed
+            && (self.document.evaluation_revision() != evaluation
+                || !Arc::ptr_eq(&textures, &self.document.textures.snapshot()))
+        {
+            self.invalidate_scene();
+        }
         self.reconcile_animation();
         Ok(result)
     }

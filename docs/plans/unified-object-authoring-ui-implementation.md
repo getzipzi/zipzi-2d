@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入；U3 Motion/Expression 创建、注册属性、成员、列表排序、Motion 复制/引用与删除影响审阅已接入；U4 Physics/Pose 根配置、业务组、稳定子项与结构管理已接入**；跨阶段原生截图、实际窗口与 Release 性能验收仍待 U6，不代表 U1–U6 全部完成。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入；U3 Motion/Expression 创建、注册属性、成员、列表排序、Motion 复制/引用与删除影响审阅已接入；U4 Physics/Pose 根配置、业务组、稳定子项与结构管理已接入；U5-A 普通绑定与 U5-B 纹理资源闭环已接入**；跨阶段原生截图、实际窗口与 Release 性能验收仍待 U6，不代表 U1–U6 全部完成。
 
 ## 首轮实现：创建与输入边界
 
@@ -19,8 +19,17 @@
 | U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入；变形树 Mesh/Warp/Rotation 创建、双投影位置与显露已接入；保持形态审阅、可搜索变形目标、原子落点与后台取消已接入 | 原生截图和完整阶段验收待 U6 收口 |
 | U3 | 接入 Motion/Expression 创建、空 MotionGroup、Clip/当前注册分区、继承/覆盖、Expression 成员、列表排序与可搜索移组；补齐 Motion 内容/组复制、添加已有引用、注册/组/资源删除与影响审阅；保留原激活路径 | 中英文原生截图、实际窗口与 Release 性能验收随 U6 |
 | U4 | 接入 Physics/Pose 根配置、业务组与成员/links 管理，统一原生计划、创建命令、迁移/删除审阅；Physics 子项选择和节点参数复用按稳定 ID 解析，保留专用拓扑与执行顺序语义 | 中英文原生截图、实际窗口与 Release 性能完整验收随 U6 |
-| U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
+| U5 | U5-A 普通绑定和 U5-B Texture/ImageAsset 资源闭环已接入，详见下方交付记录及范围核对 | 高级功能按方案第 8.1 节暂缓，跨阶段原生/性能验收随 U6 |
 | U6 | 未开始 | 清理剩余旧路径、完整中英文/原生截图验收和性能对照 |
+
+### U5 范围调整
+
+2026 年 10 月 23 日按用户确认更新[方案第 8.1 节](unified-object-authoring-ui.md#81-u5-调整后的范围与完成条件)。本次只调整方案，未开始 U5 产品实现。
+
+- 必做顺序：U5-A 普通 MeshBinding/SceneBinding 的参数轴、关键值、Keyform 与画布形态编辑闭环；U5-B Texture/ImageAsset 创建/导入、Mesh 配置、内容替换、缺失修复及依赖删除闭环。
+- 完成条件改为两个实际工作流可完成，保存重开、Undo/Redo、稳定身份、输入失效与资源异步结果正确；补齐相关检查和引用反馈，不再要求所有核心类型都有完整创建、复制、排序、删除 UI。
+- BlendShape、Glue 专用绑定/配对、Offscreen 形态/映射、绘制与行为集合新增管理、CdiCombinedSet 主动创作、完整 Attachment/sound/UserData 流程暂缓。已有入口与数据保留，相关删除/替换仍检查真实依赖；文档字段和已有引用编辑仅按工作流补必要缺口。
+- 收口时记录已接入、保留、尚未接入和核心不支持的区别。暂缓功能不自动转入 U6；U6 验收已交付范围与暂缓边界，不要求补齐这些高级入口。
 
 ## 首轮验证
 
@@ -576,3 +585,93 @@ git diff --check
 cargo fmt --all -- --check
 git diff --check
 ```
+
+
+## U5-A：普通绑定创作闭环
+
+2026 年 10 月 23 日完成本轮功能接入。普通绑定删除、快照规划接口及对应 SDK 回归已随 U5-B 配套修改一并提交到 `kasane-2d e27230a`；此版本或兼容后继是本轮完整功能的依赖基线，见 `DEPENDENCIES.md`。
+
+- core 新增 `OrdinaryBindingAction`、不可变捕获和版本化计划适配。Mesh、Warp、Rotation、Part 从合法目标创建零轴普通绑定，已有绑定直接打开；绑定、轴、采样点、所属目标始终以稳定身份定位。新轴可待配置，也可显式选 Parameter 并用其最小值、默认值和最大值生成初始关键值，最终合法性由原生校验。
+- Properties 接入创建/管理绑定、目标形态定位、轴参数配置、关键值增改删、轴删除及绑定删除。可搜索参数选择保留未配置和缺失目标的区别；绑定根、轴和采样点可相互检查，不依赖其他面板当前选择或长期数组位置。
+- 网格结构修改先审阅后应用。SDK 快照在后台按同一版本、预算和取消控制生成转换计划；审阅显示受影响目标、生成/重写/删除地址、转换保证、损失和容量。改草稿、关闭弹窗、文档/工作区/检查对象/参数预览变化使旧计划失效。确认执行同一计划，默认聚焦取消，不重新规划另一份影响范围。
+- 有效轴删除必须明确保留已存储切片，最后一个有效采样点不能通过普通删除绕过降维策略。SDK 新增 `BindingGridEdit::Delete`：明确丢弃绑定拥有的轴、采样点及形态，保留共享 Parameter 和原基础对象；报告列出真实删除地址。Part 绑定仍关联 Offscreen 映射时明确拒绝并解释需专用映射转换，本轮不猜测替代映射。
+- Keyform 面板忽略待配置轴来绘制现有有效网格，保留一/二维参数 pad。更高维度使用虚拟化的已存储形态列表选择完整坐标，画布取消旧的两轴只读限制；实际写入仍要求精确命中已存储形态。pad 的点击和拖动捕获上下文及版本，结构修改、Undo 或切换后旧事件不得继续按旧点位写入。
+- Mesh 形态继续走既有属性与画布编辑，Warp/Rotation 继续走专用控制点/旋转编辑。Part 提供明确的已存储形态绘制顺序操作；绑定驱动时隐藏会写入静态基础值的普通字段，冻结选中形态并拒绝过期预览。零轴绑定仍可编辑基础对象。
+- `BindingInfo` 的轴和坐标改为共享不可变投影，检查和普通重绘不复制完整网格。Properties 的管理行、已存储形态列表及影响列表沿用缓存或虚拟化；只有显式审阅才构造转换计划。
+- 修复共享输入边界中行内 HEX 文本被当作颜色弹窗取消的问题：合法行内文本在新操作前提交，未接受的弹窗或拖动仍取消。保留输入法、非法值恢复及单条手势历史规则。
+
+最终定向门禁：
+
+```sh
+./scripts/test.sh regression -- \
+  ordinary_binding:: headless_tests::ordinary_binding binding_authoring:: \
+  mesh_properties:: properties:: canvas_objects:: headless_tests::canvas \
+  headless_tests::authoring headless_tests::properties \
+  headless_tests::ui_performance headless_tests::workspaces
+
+./scripts/test.sh ui -- headless_tests::parameters headless_tests::hierarchy \
+  headless_tests::docking_tabs headless_tests::animation_panels \
+  headless_tests::business_authoring
+
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
+  -p kasane-sdk --test integration binding_authoring::
+
+cargo fmt --all -- --check
+git diff --check
+# 相邻仓库的变更文件也完成 rustfmt 和 git diff --check。
+```
+
+**UI/输入/工作量回归 118 项、core 集成回归 94 项、core 单元回归 4 项，以及相邻 SDK 绑定集成回归 61 项通过**；UI 原有 1 项 ignored 保持原状态。新增 8 项 UI、7 项 core 集成及 1 项 SDK 回归，覆盖真实按钮创建、参数搜索、待配置轴配置、关键值增改删与降维审阅、修改草稿后重新审阅、默认取消、过期计划/控件、绑定删除与共享目标保留、Mesh 形态保存重开和 Undo/Redo、Part 形态、三轴画布编辑、共享网格投影及取消、创建前颜色文本/弹窗边界。与此前迭代重复的测试不累计。
+
+格式及两个仓库的空白检查通过。未执行昂贵全套、原生截图或新的 Release 性能测量；这些验收仍按 U6 执行。**当时 U5-B 纹理资源闭环尚未开始（后续交付见下节）**，高级功能仍按第 8.1 节暂缓，不把本轮结果表述为整个 U5 完成。
+
+补充导航核对：参数、层级树、停靠与动画/Pose 面板定向回归 **73 项通过**。首次补查发现 4 项停靠测试无法定位空 Pose 面板；在两个仓库各自 HEAD 的临时源码副本中复现相同失败，确认是既有空状态缺少统一面板根标识。已恢复 `AnimationPose` 根标识并保留 `animation-pose-empty` 提示标识，4 项失败随本轮定向回归通过；此修复不改变 Pose 数据或业务动作。
+
+## U5-B：纹理资源闭环
+
+2026 年 10 月 23 日完成功能接入。SDK `import_prepared_image` 原子导入接口及资源回归已与 U5-A 的相邻仓库修改一起提交到 `kasane-2d e27230a`；编辑器依赖记录已同步，两个仓库分别提交交付。
+
+- Modeling 的 Resources 面板提供“新建纹理”和“导入 PNG”。New 立即创建空资源、检查并聚焦 Properties 名称；Properties 再选择图像，取消选择保留空资源。直接 Import 在后台解码成功后才以一次历史事务创建资源并写入内容，取消、无效图像或过期结果不创建条目。
+- Mesh Properties 增加可搜索的纹理选择，支持未配置、现有空资源与已有图片资源；导入的未解析引用保留原状态，直到用户显式替换。引用修改使用原生 `SceneField::Texture`，不把引用或图像资源拼装成 UI JSON。空资源仍保留 Mesh 的求值顶点和几何编辑能力。
+- Texture Properties 提供名称、空内容/缺失来源/已就绪状态、图片尺寸、存储来源、实际使用者及检查导航。选择/替换内容/修复来源共用加载入口；替换保持资源 ID，并清除原缺失来源。名称编辑使用原生资源 patch，属性地址包含当前资源版本。
+- 删除采用版本绑定的原生计划，弹窗列出全部实际依赖；有使用者时必须显式选择另一资源，将使用者重定向后原子删除。默认焦点是取消；未选替代资源、锁定使用者或过期计划均不得发布。不提供静默清除引用或删除 Mesh 的退路。内容替换与删除时重定向使用者在文案及入口上明确分开。
+- PNG 读取、解码及哈希在后台执行。已有资源使用原生 `ImageLoadToken`，配合宿主请求序号和编辑上下文；取消加载、后续请求、Undo、删除后恢复、文档/工作区切换均不得让旧结果误写。直接导入还校验捕获的文档版本；由于资源尚不存在，它在原子创建前不申请已有资源令牌。加载中提供取消入口，原生文件选择器也可取消。
+- 发布后核对求值版本及纹理快照，清除宿主缓存场景，保证所有消费者和下一次视口请求采用新图片。仅名称变化保留纹理快照及求值帧。准备好的图片由原生层保留，保存、Undo/Redo 和重开不依赖最初选择的外部文件。
+- 格式及容量边界沿用 C5：PNG、编码数据最多 64 MiB、单边最多 16384、解码 RGBA 最多 256 MiB。本轮未扩展格式或附件管理。
+
+定向验证全部通过（两组不重叠）：
+
+```sh
+./scripts/test.sh regression -- resource_authoring:: mesh_properties:: ordinary_binding:: \
+  headless_tests::texture headless_tests::mesh_properties headless_tests::authoring \
+  headless_tests::ui_performance
+
+./scripts/test.sh regression -- scene_content:: scene_lifecycle:: business_authoring:: \
+  scene_creation:: deformation_creation:: headless_tests::scene_creation \
+  headless_tests::deformation_creation headless_tests::business_authoring \
+  headless_tests::animation_authoring
+
+cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
+  -p kasane-sdk --test integration resource_authoring::
+```
+
+结果：**53 项 core 集成、87 项 UI、19 项 SDK 资源测试，共 159 项通过**。新增 4 项 core、7 项 UI、1 项 SDK 回归，覆盖实际按钮与选择器、新建/导入取消及坏图像、单步历史导入、空纹理配置给 Mesh、缺失来源修复、依赖审阅与替换、锁定使用者、旧请求及文档切换、缓存纹理刷新、仅重命名复用帧、保存重开及 Undo/Redo。格式与两个仓库空白检查通过；未执行昂贵全套、原生截图或 Release 性能测量，完整验收仍随 U6。
+
+### U5 收口范围核对
+
+| 领域 | 本轮状态与实际入口 | 尚未接入的高级功能 |
+| --- | --- | --- |
+| 普通 MeshBinding / SceneBinding | 已接入：目标 Properties 创建/管理，Keyforms 轴与存储形态定位，画布编辑 | 更高级绑定种类不纳入普通绑定闭环 |
+| Texture / ImageAsset | 已接入：Resources 创建/导入，Mesh Properties 选择，Texture Properties 替换/修复/删除及使用者导航 | 资源复制、任意重排 |
+| Mesh 几何/UV/三角形、Warp 网格/Bezier | 保留：画布及现有专用内容编辑 | 拓扑元素通用管理列表与完整生命周期按钮 |
+| 遮罩及其他已有引用 | 保留：Mesh Properties 等既有消费端配置和检查，纹理引用补齐 | 全领域统一引用管理器 |
+| Document / Layout / ExportSettings | 保留：既有文档 Properties | 为覆盖率铺开的全量设置创作 |
+| Attachment / sound / UserData | 保留：既有消费入口和对象/拥有者检查 | 完整附件库、声音及 UserData 配置闭环 |
+| DrawOrderGroup / ModelHitArea / ModelParameterGroup | 保留：DrawOrder、Relations、拥有者及 Properties 中既有检查/编辑 | 绘制组完整管理、点击区域和行为集合新增创作 |
+| BlendBinding / BlendKeyTable / BlendConstraint / DeltaKeyform | 保留：BlendShapes 及已有对象检查、诊断 | 完整 BlendShape 创作、共享表转换、约束与增量形态管理 |
+| Glue / GlueBinding / GlueVertexPair | 保留：Glue、Properties 及既有内容编辑 | 绑定、顶点配对和转移的完整专用交互 |
+| Offscreen 形态及映射 | 保留：U2 的树创建/归属管理及既有检查 | 合成形态、索引映射的专用创作和转换 |
+| CdiCombinedSet | 保留：Relations、拥有者及既有诊断/检查 | 主动创建、完整成员管理 |
+| SourceCanvas / 不透明扩展 / 编辑器状态 | 保留：来源检查、格式保留和既有会话状态策略 | 任意 JSON 编辑器或通用 New/Sort |
+
+以上“尚未接入”均为本轮明确暂缓的 UI，不代表核心不支持。U5-A 与 U5-B 的必做功能已接入；U6 继续围绕已交付范围做清理、实际窗口、中英文原生截图和性能验收，不自动扩大为暂缓领域的新功能开发。

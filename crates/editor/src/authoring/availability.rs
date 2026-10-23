@@ -3,8 +3,15 @@ use super::*;
 use editor_core::{AuthoringAction, ObjectAuthoringCapabilities};
 pub(crate) fn reason_message(code: &str) -> Option<String> {
     let key = match code {
+        "INVALID_KEYS" | "DUPLICATE_KEY" => "binding.invalid_keys",
+        "OUTSIDE_GRID_DOMAIN" => "binding.outside_domain",
+        "AXIS_REDUCTION_REQUIRED" => "binding.reduction_required",
+        "BINDING_CONFLICT" => "binding.conflict",
+        "MISSING_BINDING" | "MISSING_AXIS" | "MISSING_SAMPLE" => "binding.missing",
+        "OFFSCREEN_MAPPING_REQUIRES_CONVERSION" => "binding.offscreen_mapping",
         "OBJECT_LOCKED" => "authoring.locked",
         "OBJECT_REFERENCED" => "authoring.referenced",
+        "STALE_CONTENT" | "CANCELLED" | "STALE_HANDLE" => "texture.stale_load",
         "AUTHORING_CANDIDATE_ACTIVE" => "authoring.candidate_active",
         "MISSING_OBJECT" => "authoring.missing_object",
         "MISSING_POSE_OWNER" => "authoring.pose_owner_required",

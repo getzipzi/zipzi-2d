@@ -585,9 +585,15 @@ impl PropertiesPanel {
 
     pub(crate) fn take_preview(
         &mut self,
+        window: &Window,
         cx: &mut Context<Self>,
-    ) -> Option<(PropertyTarget, PropertyKey, properties::PreviewToken)> {
+    ) -> Option<(PropertyTarget, PropertyKey, properties::PreviewToken, bool)> {
         let (id, token) = self.preview.take()?;
+        let text = self.field_spec(id).live_text
+            || self
+                .colors
+                .get(&id)
+                .is_some_and(|color| color.state.read(cx).inline_text(window, cx).is_some());
         if let Some(color) = self.colors.get(&id) {
             color
                 .state
@@ -596,7 +602,7 @@ impl PropertiesPanel {
         if let Some(number) = self.controls.get(&id).and_then(|c| c.number.clone()) {
             number.update(cx, |number, cx| number.reset_drag(cx));
         }
-        self.target.clone().map(|target| (target, id, token))
+        self.target.clone().map(|target| (target, id, token, text))
     }
 
     pub(crate) fn current_target(&self) -> Option<&PropertyTarget> {
@@ -1309,15 +1315,21 @@ impl PropertiesPanel {
         if !self.visible {
             return None;
         }
-        let (&id, control) = self
+        let (id, raw) = self
             .controls
             .iter()
-            .find(|(_, control)| control.input.read(cx).focus_handle(cx).is_focused(window))?;
-        Some((
-            self.target.clone()?,
-            id,
-            control.input.read(cx).value().to_string(),
-        ))
+            .find(|(_, control)| control.input.read(cx).focus_handle(cx).is_focused(window))
+            .map(|(&id, control)| (id, control.input.read(cx).value().to_string()))
+            .or_else(|| {
+                self.colors.iter().find_map(|(&id, color)| {
+                    color
+                        .state
+                        .read(cx)
+                        .inline_text(window, cx)
+                        .map(|raw| (id, raw))
+                })
+            })?;
+        Some((self.target.clone()?, id, raw))
     }
 
     pub(super) fn property_action(

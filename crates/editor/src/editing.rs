@@ -58,19 +58,15 @@ impl EditorView {
                 }
             }
         }
-        if let Some((target, field, token)) = self
+        if let Some((target, field, token, text)) = self
             .dock
             .as_ref()
             .filter(|_| self.editor.active_id() == Some(id))
             .and_then(|dock| {
                 dock.properties
-                    .update(cx, |panel, cx| panel.take_preview(cx))
+                    .update(cx, |panel, cx| panel.take_preview(window, cx))
             })
         {
-            let text = target
-                .definition(&self.editor)
-                .field(field)
-                .is_some_and(|spec| spec.live_text);
             let result = (|| {
                 if boundary == InputBoundary::Discard || !text {
                     token.cancel(&mut self.editor);

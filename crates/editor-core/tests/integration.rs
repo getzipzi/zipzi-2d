@@ -96,3 +96,6 @@ mod animation_library;
 mod animation_management;
 #[path = "cases/business_authoring.rs"]
 mod business_authoring;
+
+#[path = "cases/ordinary_binding.rs"]
+mod ordinary_binding;

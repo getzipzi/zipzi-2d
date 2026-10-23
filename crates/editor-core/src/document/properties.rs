@@ -43,6 +43,7 @@ impl Document {
         if matches!(
             object.kind,
             ObjectKind::MotionRegistration
+                | ObjectKind::Texture
                 | ObjectKind::MotionGroup
                 | ObjectKind::ExpressionEntry
                 | ObjectKind::Physics
@@ -122,7 +123,17 @@ impl Document {
         scope: &PropertyScope,
     ) -> Result<PropertyValues> {
         if object.kind != ObjectKind::Mesh {
-            return crate::property::values_from(model, object);
+            let mut values = crate::property::values_from(model, object)?;
+            // Driven Part draw order is edited through the explicit stored-form
+            // action, never by an inspector field that writes the static base.
+            if object.kind == ObjectKind::Part
+                && model
+                    .binding_for_scene(&object.id)
+                    .is_some_and(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+            {
+                values.remove(&crate::property::part::DRAW_ORDER.key);
+            }
+            return Ok(values);
         }
         let payload = crate::property::mesh::inspector_payload(model, &object.id, scope)?;
         crate::property_specs(object.kind)
@@ -162,7 +173,7 @@ impl Document {
             .map(|s| (s.key, current[&s.key].clone()))
             .collect();
         Ok(PropertyPatch {
-            scope: if spec.keyframed {
+            scope: if spec.keyframed || object.kind == ObjectKind::Texture {
                 self.property_scope(object)
             } else {
                 PropertyScope::Object
@@ -182,7 +193,10 @@ impl Document {
         }
         if matches!(
             object.kind,
-            ObjectKind::MotionRegistration | ObjectKind::MotionGroup | ObjectKind::ExpressionEntry
+            ObjectKind::MotionRegistration
+                | ObjectKind::MotionGroup
+                | ObjectKind::ExpressionEntry
+                | ObjectKind::Texture
         ) {
             ensure!(
                 patch.scope == self.property_scope(object),
@@ -311,6 +325,39 @@ impl Document {
             PropertyPayload::Expression(intent) => return Ok(edit.edit_expression(intent)?),
             payload => payload.json()?,
         };
+        if object.kind == ObjectKind::Texture {
+            let original = edit
+                .candidate_document()
+                .get_asset(&object.id)
+                .ok_or_else(|| anyhow!("Texture no longer exists"))?;
+            return Ok(edit.edit_resource(kasane_sdk::ResourceEdit::PatchName {
+                id: object.id.clone(),
+                expected: original.name.clone(),
+                name: payload["name"].as_str().unwrap().into(),
+            })?);
+        }
+        if object.kind == ObjectKind::Mesh
+            && patch
+                .changes
+                .contains_key(&crate::property::mesh::TEXTURE.key)
+        {
+            ensure!(
+                patch.changes.len() == 1,
+                "Texture changes must be independent"
+            );
+            let expected = edit
+                .candidate_document()
+                .scene_field(&object.id, kasane_sdk::SceneField::Texture)
+                .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
+            return Ok(edit.edit_scene(kasane_sdk::SceneEdit::Patch {
+                id: object.id.clone(),
+                expected,
+                value: kasane_sdk::SceneFieldValue::Texture(
+                    payload["texture_choice"].as_str().unwrap().into(),
+                ),
+                clear_glue_pairs: false,
+            })?);
+        }
         if patch.uses_scalar_patch(object.kind) {
             return Ok(edit.patch_property(&self.scalar_patch(object, patch, &payload)?)?);
         }

@@ -1,4 +1,5 @@
 //! Independent Dock identities backed by the same document projection and context.
+use crate::authoring::AuthoringContext;
 use crate::{EditorView, t, ui::compact};
 use editor_core::{
     DocumentId, EditorCommand, ObjectIndex, ObjectKind, ObjectRef, PanelKind, RelationKind,
@@ -11,7 +12,9 @@ use gpui_kit::component::{
 use gpui_kit::{prelude::*, *};
 use std::sync::Arc;
 
+mod binding;
 mod relations;
+mod texture;
 
 fn includes(panel: PanelKind, kind: ObjectKind) -> bool {
     use ObjectKind as K;
@@ -36,7 +39,7 @@ pub struct DocumentPanel {
     _activation: Subscription,
     indirect: bool,
     bounds: Bounds<Pixels>,
-    dragging: Option<(DocumentId, ObjectRef)>,
+    dragging: Option<(DocumentId, ObjectRef, AuthoringContext)>,
     bounds_binding: Option<(DocumentId, ObjectRef)>,
     row_sequence: usize,
     location: Option<(DocumentId, ObjectRef)>,
@@ -210,13 +213,38 @@ impl DocumentPanel {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let mut body = div().size_full().min_h_0().flex().flex_col().gap_1().p_1();
+        let captured = self
+            .owner
+            .upgrade()
+            .and_then(|v| AuthoringContext::capture(&v.read(cx).editor));
         let Some(binding) = context
             .active_binding
             .as_ref()
             .and_then(|r| index.binding(r))
-            .cloned()
         else {
             body = body.child(t!("editor.choose_binding"));
+            if let Some(target) = context.selection.as_ref().filter(|o| {
+                matches!(
+                    o.kind,
+                    ObjectKind::Mesh | ObjectKind::Deformer | ObjectKind::Part
+                )
+            }) {
+                body = body.child(
+                    self.binding_manage(
+                        target,
+                        if index
+                            .bindings
+                            .iter()
+                            .any(|b| !b.blend && &b.target == target)
+                        {
+                            crate::authoring::binding::Control::Open
+                        } else {
+                            crate::authoring::binding::Control::Create
+                        },
+                        cx,
+                    ),
+                );
+            }
             for b in &index.bindings {
                 if context.selection.as_ref() == Some(&b.target) {
                     body =
@@ -225,7 +253,19 @@ impl DocumentPanel {
             }
             return body.into_any_element();
         };
-        let b = binding.clone();
+        let b = binding;
+        if !b.blend
+            && matches!(
+                b.reference.kind,
+                ObjectKind::MeshBinding | ObjectKind::SceneBinding
+            )
+        {
+            body = body.child(self.binding_manage(
+                &b.reference,
+                crate::authoring::binding::Control::Open,
+                cx,
+            ));
+        }
         body = body
             .child(format!(
                 "{} · {}",
@@ -246,20 +286,27 @@ impl DocumentPanel {
                     .collect::<Vec<_>>()
                     .join(" × "),
             );
-        if !b.supports_parameter_pad() {
+        if !b.supports_parameter_pad()
+            || b.axes.iter().filter(|a| !a.parameter_id.is_empty()).count() > 2
+        {
             return body
                 .child(t!("editor.binding_pad_unavailable"))
+                .child(self.keyform_list(index.clone(), &b.reference, document, disabled, cx))
                 .into_any_element();
         }
-        if b.axes.is_empty() || b.axes.len() > 2 {
+        let binding_axes: Vec<_> = b
+            .axes
+            .iter()
+            .filter(|a| !a.parameter_id.is_empty())
+            .collect();
+        if binding_axes.is_empty() {
             return body.child(t!("editor.no_items")).into_any_element();
         }
-        let axes: Vec<_> = b
-            .axes
+        let axes: Vec<_> = binding_axes
             .iter()
             .filter_map(|a| parameters.iter().find(|p| p.id == a.parameter_id).cloned())
             .collect();
-        if axes.len() != b.axes.len() {
+        if axes.len() != binding_axes.len() {
             return body
                 .child(t!("editor.missing_reference"))
                 .into_any_element();
@@ -285,7 +332,7 @@ impl DocumentPanel {
         };
         let mut grid = Vec::new();
         let theme = cx.theme().clone();
-        for key in &b.axes[0].keys {
+        for key in &binding_axes[0].keys {
             grid.push(
                 div()
                     .absolute()
@@ -298,7 +345,7 @@ impl DocumentPanel {
             );
         }
         if axes.len() == 2 {
-            for key in &b.axes[1].keys {
+            for key in &binding_axes[1].keys {
                 grid.push(
                     div()
                         .absolute()
@@ -338,7 +385,11 @@ impl DocumentPanel {
                         MouseButton::Left,
                         cx.listener(move |this, _, window, cx| {
                             cx.stop_propagation();
-                            if !disabled {
+                            if !disabled
+                                && this.owner.upgrade().is_some_and(|v| {
+                                    AuthoringContext::capture(&v.read(cx).editor) == captured
+                                })
+                            {
                                 this.run(
                                     document,
                                     EditorCommand::PreviewKeyform {
@@ -383,10 +434,17 @@ impl DocumentPanel {
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
-                    if disabled {
+                    if disabled
+                        || this.owner.upgrade().is_none_or(|v| {
+                            AuthoringContext::capture(&v.read(cx).editor) != captured
+                        })
+                    {
                         return;
                     }
-                    this.dragging = Some((document, reference.clone()));
+                    let Some(context) = captured else {
+                        return;
+                    };
+                    this.dragging = Some((document, reference.clone(), context));
                     this.move_preview(event.position, window, cx);
                 }),
             )
@@ -409,7 +467,7 @@ impl DocumentPanel {
         body.into_any_element()
     }
     fn move_preview(&mut self, point: Point<Pixels>, window: &mut Window, cx: &mut Context<Self>) {
-        let Some((document, reference)) = self.dragging.clone() else {
+        let Some((document, reference, captured)) = self.dragging.clone() else {
             return;
         };
         let Some(owner) = self.owner.upgrade() else {
@@ -420,6 +478,7 @@ impl DocumentPanel {
             return;
         };
         if self.bounds_binding.as_ref() != Some(&(document, reference.clone()))
+            || AuthoringContext::capture(&state.editor) != Some(captured)
             || state.editor.active_id() != Some(document)
             || doc.context().active_binding.as_ref() != Some(&reference)
             || self.bounds.size.width <= px(0.)
@@ -434,7 +493,13 @@ impl DocumentPanel {
         };
         let parameters = doc.parameters();
         let mut values = Vec::new();
-        for (i, a) in b.axes.iter().enumerate().take(2) {
+        for (i, a) in b
+            .axes
+            .iter()
+            .filter(|a| !a.parameter_id.is_empty())
+            .enumerate()
+            .take(2)
+        {
             let Some(p) = parameters.iter().find(|p| p.id == a.parameter_id) else {
                 return;
             };
@@ -589,6 +654,9 @@ impl Render for DocumentPanel {
                 }
             }
         } else {
+            if self.kind == PanelKind::Resources {
+                body = body.child(self.texture_toolbar(cx));
+            }
             let references: Vec<_> = index
                 .objects
                 .iter()
