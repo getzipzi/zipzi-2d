@@ -87,8 +87,40 @@ impl EditorView {
                 return;
             }
         }
+        // Redo availability depends on pending candidates. Cancel them before
+        // querying the document command, after native text routing has run.
+        if matches!(id, CommandId::Undo | CommandId::Redo)
+            && command.document().is_some()
+            && command.document() == self.editor.active_id()
+            && !self.editor.is_busy()
+            && !self.editor.exiting()
+        {
+            if !self.settle_property_inputs(
+                command.document().unwrap(),
+                crate::editing::InputBoundary::Discard,
+                window,
+                cx,
+            ) {
+                return;
+            }
+        }
         if !self.editor.command_available(command) {
             return;
+        }
+        if let Some(document) = self.editor.active_id() {
+            let boundary = match id {
+                CommandId::New
+                | CommandId::Previous
+                | CommandId::Next
+                | CommandId::Deselect
+                | CommandId::GenerateMesh => Some(crate::editing::InputBoundary::CommitText),
+                _ => None,
+            };
+            if let Some(boundary) = boundary {
+                if !self.settle_property_inputs(document, boundary, window, cx) {
+                    return;
+                }
+            }
         }
         let previous = self.editor.active_id();
         match self.editor.dispatch(command) {
@@ -135,28 +167,26 @@ impl EditorView {
                     self.redraw(cx);
                 }
             }
-            Ok(CommandEffect::Host(command)) => match command.id {
-                CommandId::ModelingWorkspace => {
-                    self.switch_workspace(editor_core::WorkspaceKind::Modeling, window, cx)
-                }
-                CommandId::AnimationWorkspace => {
-                    self.switch_workspace(editor_core::WorkspaceKind::Animation, window, cx)
-                }
-                CommandId::Open => self.open(window, cx),
-                CommandId::ImportModel3 => self.import(ImportKind::Model3, window, cx),
-                CommandId::ImportPsd => self.import(ImportKind::Psd, window, cx),
-                CommandId::ImportCubism => self.import(ImportKind::Cubism, window, cx),
-                CommandId::ExportRuntime | CommandId::ExportCubism => {
-                    self.open_export(command, window, cx)
-                }
-                CommandId::Save => self.save(false, window, cx),
-                CommandId::SaveAs => self.save(true, window, cx),
-                CommandId::Close => self.close_active(window, cx),
-                CommandId::Quit => self.close(window, cx),
-                CommandId::GenerateMesh => {
-                    if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
-                        self.set_edit_error(error.to_string(), cx);
-                    } else {
+            Ok(CommandEffect::Host(command)) => {
+                match command.id {
+                    CommandId::ModelingWorkspace => {
+                        self.switch_workspace(editor_core::WorkspaceKind::Modeling, window, cx)
+                    }
+                    CommandId::AnimationWorkspace => {
+                        self.switch_workspace(editor_core::WorkspaceKind::Animation, window, cx)
+                    }
+                    CommandId::Open => self.open(window, cx),
+                    CommandId::ImportModel3 => self.import(ImportKind::Model3, window, cx),
+                    CommandId::ImportPsd => self.import(ImportKind::Psd, window, cx),
+                    CommandId::ImportCubism => self.import(ImportKind::Cubism, window, cx),
+                    CommandId::ExportRuntime | CommandId::ExportCubism => {
+                        self.open_export(command, window, cx)
+                    }
+                    CommandId::Save => self.save(false, window, cx),
+                    CommandId::SaveAs => self.save(true, window, cx),
+                    CommandId::Close => self.close_active(window, cx),
+                    CommandId::Quit => self.close(window, cx),
+                    CommandId::GenerateMesh => {
                         let owner = cx.weak_entity();
                         window.defer(cx, move |window, cx| {
                             if owner.upgrade().is_none_or(|owner| !owner.read(cx).editor.command_available(command)) { return; }
@@ -172,37 +202,37 @@ impl EditorView {
                         });
                         cx.notify();
                     }
-                }
-                CommandId::CreateParameter
-                | CommandId::EditParameter
-                | CommandId::DeleteParameter
-                | CommandId::CreateParameterGroup
-                | CommandId::EditParameterGroup
-                | CommandId::DeleteParameterGroup => {
-                    self.handle_parameter_command(command, window, cx);
-                }
-                id if editor_core::PanelKind::for_command(id, self.editor.workspace())
-                    .is_some() =>
-                {
-                    let kind =
-                        editor_core::PanelKind::for_command(id, self.editor.workspace()).unwrap();
-                    if let Some(dock) = &mut self.dock {
-                        dock.toggle(kind, window, cx);
+                    CommandId::CreateParameter
+                    | CommandId::EditParameter
+                    | CommandId::DeleteParameter
+                    | CommandId::CreateParameterGroup
+                    | CommandId::EditParameterGroup
+                    | CommandId::DeleteParameterGroup => {
+                        self.handle_parameter_command(command, window, cx);
                     }
-                    cx.notify();
-                }
-                CommandId::ResetLayout => self.reset_layout(window, cx),
-                CommandId::ResetShortcuts => match keybindings::reset(cx) {
-                    Ok(()) => {
-                        self.menu_state = Default::default();
-                        workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
+                    id if editor_core::PanelKind::for_command(id, self.editor.workspace())
+                        .is_some() =>
+                    {
+                        let kind = editor_core::PanelKind::for_command(id, self.editor.workspace())
+                            .unwrap();
+                        if let Some(dock) = &mut self.dock {
+                            dock.toggle(kind, window, cx);
+                        }
                         cx.notify();
                     }
-                    Err(e) => self.set_edit_error(e.to_string(), cx),
-                },
-                CommandId::ShowShortcuts => keybindings::show(window, cx),
-                _ => {}
-            },
+                    CommandId::ResetLayout => self.reset_layout(window, cx),
+                    CommandId::ResetShortcuts => match keybindings::reset(cx) {
+                        Ok(()) => {
+                            self.menu_state = Default::default();
+                            workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
+                            cx.notify();
+                        }
+                        Err(e) => self.set_edit_error(e.to_string(), cx),
+                    },
+                    CommandId::ShowShortcuts => keybindings::show(window, cx),
+                    _ => {}
+                }
+            }
             Err(e) => {
                 self.set_edit_error(e.to_string(), cx);
             }

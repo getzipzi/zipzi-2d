@@ -265,8 +265,22 @@ impl PropertyForms {
             .iter()
             .any(|(target, form)| target.document == document && form.dirty())
     }
-    /// Save ends input through the same validation/reversion policy as blur.
-    pub fn prepare_save(&mut self, editor: &mut Editor, document: DocumentId) -> Option<String> {
+    pub fn discard_document(&mut self, editor: &Editor, document: DocumentId) {
+        for (target, form) in &mut self.entries {
+            if target.document != document {
+                continue;
+            }
+            if let Ok(values) = target.values(editor) {
+                form.sync_definition(target.definition(editor), values);
+            }
+            for id in form.fields.keys().copied().collect::<Vec<_>>() {
+                form.reload_field(id);
+            }
+        }
+    }
+
+    /// End text input with the same validation/reversion policy as blur.
+    pub fn settle_document(&mut self, editor: &mut Editor, document: DocumentId) -> Option<String> {
         let fields: Vec<_> = self
             .entries
             .iter()

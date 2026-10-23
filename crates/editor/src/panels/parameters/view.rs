@@ -153,6 +153,20 @@ impl Render for ParameterRowView {
                     self.panel.clone(),
                     document_id,
                     vec![
+                        ParameterAction::CreateAt {
+                            kind: editor_core::ObjectKind::Parameter,
+                            selection: vec![editor_core::ObjectRef::new(
+                                editor_core::ObjectKind::Parameter,
+                                &parameter_id,
+                            )],
+                        },
+                        ParameterAction::CreateAt {
+                            kind: editor_core::ObjectKind::ParameterGroup,
+                            selection: vec![editor_core::ObjectRef::new(
+                                editor_core::ObjectKind::Parameter,
+                                &parameter_id,
+                            )],
+                        },
                         ParameterAction::Edit(parameter_id.clone()),
                         ParameterAction::Delete(parameter_id),
                     ],

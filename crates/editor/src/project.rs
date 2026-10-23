@@ -21,7 +21,11 @@ impl EditorView {
         if self.modal {
             return;
         }
-        // Blur the old property input before changing its document target.
+        if let Some(previous) = self.editor.active_id() {
+            if !self.prepare_property_inputs(previous, window, cx) {
+                return;
+            }
+        }
         window.focus(&self.focus, cx);
         match self.editor.activate(id) {
             Ok(()) => self.refresh_document(window, cx),
@@ -77,93 +81,6 @@ impl EditorView {
             self.save_document(id, save_as, false, window, cx);
         }
     }
-    pub(super) fn prepare_property_inputs(
-        &mut self,
-        id: DocumentId,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        if self.editor.active_id() == Some(id)
-            && self.dock.as_ref().is_some_and(|dock| {
-                dock.properties
-                    .update(cx, |panel, cx| panel.composing_input(window, cx))
-            })
-        {
-            self.set_edit_error(t!("properties.finish_composition").into_owned(), cx);
-            self.editor.cancel_exit();
-            return false;
-        }
-        if let Some((target, field, raw)) = self
-            .dock
-            .as_ref()
-            .and_then(|dock| dock.properties.read(cx).focused_input_snapshot(window, cx))
-        {
-            if target.document == id && self.editor.editing_context() == Some(target.context) {
-                if let Some(form) = self.property_forms.entries.get_mut(&target) {
-                    let spec = target
-                        .definition(&self.editor)
-                        .fields
-                        .iter()
-                        .map(|field| field.binding)
-                        .find(|spec| spec.key == field)
-                        .unwrap();
-                    if form
-                        .fields
-                        .get(&field)
-                        .is_some_and(|value| value.raw != raw)
-                    {
-                        form.edit(&spec, raw);
-                    }
-                }
-            }
-        }
-        if let Some((target, field, token)) = self
-            .dock
-            .as_ref()
-            .filter(|_| self.editor.active_id() == Some(id))
-            .and_then(|dock| {
-                dock.properties
-                    .update(cx, |panel, cx| panel.take_preview(cx))
-            })
-        {
-            // Input events can still be queued when Save arrives. Apply the
-            // captured text before settling its candidate, just as Enter does.
-            let result = (|| {
-                let form = self
-                    .property_forms
-                    .entries
-                    .get(&target)
-                    .ok_or_else(|| anyhow::anyhow!("Form ended"))?;
-                let mut patch = form.patch(target.object.kind, field)?;
-                if patch.changes.is_empty() {
-                    token.cancel(&mut self.editor);
-                    return Ok(());
-                }
-                if target
-                    .definition(&self.editor)
-                    .field(field)
-                    .is_some_and(|spec| spec.binding.keyframed)
-                {
-                    patch.scope = target.scope.clone();
-                }
-                properties::update_edit(&mut self.editor, &token, &patch)?;
-                token.finish(&mut self.editor)
-            })();
-            if let Err(error) = result {
-                token.cancel(&mut self.editor);
-                self.set_edit_error(error.to_string(), cx);
-            }
-            if let Some(form) = self.property_forms.entries.get_mut(&target) {
-                if let Some(values) = target.values(&self.editor).ok() {
-                    form.sync_definition(target.definition(&self.editor), values);
-                    form.reload_field(field);
-                }
-            }
-        }
-        self.property_forms.prepare_save(&mut self.editor, id);
-        cx.notify();
-        true
-    }
 
     fn save_document(
         &mut self,
@@ -184,11 +101,6 @@ impl EditorView {
                 self.save_to(id, path, close_after, window, cx);
                 return;
             }
-        }
-        if let Err(error) = self.editor.execute_for(id, EditorCommand::FinishEdit) {
-            self.set_edit_error(error.to_string(), cx);
-            self.editor.cancel_exit();
-            return;
         }
         window.focus(&self.focus, cx);
         let directory = summary
@@ -294,13 +206,12 @@ impl EditorView {
         if self.modal || self.editor.exiting() {
             return;
         }
-        window.focus(&self.focus, cx);
-        if self.editor.active_id().is_some() && !self.editor.is_busy() {
-            if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
-                self.set_edit_error(error.to_string(), cx);
+        if let Some(id) = self.editor.active_id().filter(|_| !self.editor.is_busy()) {
+            if !self.prepare_property_inputs(id, window, cx) {
                 return;
             }
         }
+        window.focus(&self.focus, cx);
         if !path.exists() {
             let error = t!("project.file_not_found", path = path.display()).into_owned();
             self.remove_recent_file(path, cx);
@@ -352,13 +263,12 @@ impl EditorView {
         if self.modal || self.editor.exiting() {
             return;
         }
-        window.focus(&self.focus, cx);
-        if self.editor.active_id().is_some() && !self.editor.is_busy() {
-            if let Err(error) = self.editor.execute(EditorCommand::FinishEdit) {
-                self.set_edit_error(error.to_string(), cx);
+        if let Some(id) = self.editor.active_id().filter(|_| !self.editor.is_busy()) {
+            if !self.prepare_property_inputs(id, window, cx) {
                 return;
             }
         }
+        window.focus(&self.focus, cx);
         let picker = cx.prompt_for_paths(PathPromptOptions {
             files: true,
             directories: kind.is_none(),

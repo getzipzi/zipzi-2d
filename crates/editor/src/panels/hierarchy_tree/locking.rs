@@ -148,6 +148,7 @@ pub(super) fn menu<E: ContextMenuExt + IntoElement + 'static>(
     owner: WeakEntity<EditorView>,
     document: DocumentId,
     object: ObjectRef,
+    deformer: bool,
 ) -> impl IntoElement {
     element.context_menu(move |mut menu, window, cx| {
         menu = crate::ui::compact::menu(menu);
@@ -155,6 +156,11 @@ pub(super) fn menu<E: ContextMenuExt + IntoElement + 'static>(
             return menu;
         };
         if window.has_active_dialog(cx) {
+            return menu;
+        }
+        if !entity.update(cx, |owner, cx| {
+            owner.prepare_property_inputs(document, window, cx)
+        }) {
             return menu;
         }
         let state = entity.read(cx);
@@ -213,6 +219,17 @@ pub(super) fn menu<E: ContextMenuExt + IntoElement + 'static>(
                 );
             }));
         }
-        menu
+        super::sorting::move_menu(
+            menu.separator(),
+            owner.clone(),
+            document,
+            if deformer {
+                editor_core::PaletteProjection::Deformation
+            } else {
+                editor_core::PaletteProjection::Organization
+            },
+            object.clone(),
+            cx,
+        )
     })
 }

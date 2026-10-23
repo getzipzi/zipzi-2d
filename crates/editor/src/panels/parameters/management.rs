@@ -1,4 +1,5 @@
 use super::*;
+use crate::authoring::AuthoringContext;
 use gpui_kit::component::menu::{ContextMenuExt, PopupMenuItem};
 
 #[derive(Clone)]
@@ -7,16 +8,47 @@ pub(crate) enum ParameterAction {
     Edit(String),
     Delete(String),
     CreateGroup,
+    CreateAt {
+        kind: editor_core::ObjectKind,
+        selection: Vec<editor_core::ObjectRef>,
+    },
     EditGroup(String),
     DeleteGroup(String),
 }
 impl ParameterAction {
+    fn capture(self, editor: &editor_core::Editor) -> Self {
+        use editor_core::{ObjectKind, ObjectRef};
+        let inspected = || {
+            editor
+                .inspection(editor_core::EditingContext::Modeling)
+                .and_then(|inspection| inspection.object())
+                .into_iter()
+                .collect()
+        };
+        match self {
+            Self::Create(group) => Self::CreateAt {
+                kind: ObjectKind::Parameter,
+                selection: group.map_or_else(inspected, |id| {
+                    vec![ObjectRef::new(ObjectKind::ParameterGroup, id)]
+                }),
+            },
+            Self::CreateGroup => Self::CreateAt {
+                kind: ObjectKind::ParameterGroup,
+                selection: inspected(),
+            },
+            other => other,
+        }
+    }
     pub(crate) fn label(&self) -> SharedString {
         t!(match self {
-            Self::Create(_) => "parameter.new",
+            Self::Create(_)
+            | Self::CreateAt {
+                kind: editor_core::ObjectKind::Parameter,
+                ..
+            } => "parameter.new",
             Self::Edit(_) => "parameter.edit",
             Self::Delete(_) => "parameter.delete",
-            Self::CreateGroup => "parameter.new_group",
+            Self::CreateGroup | Self::CreateAt { .. } => "parameter.new_group",
             Self::EditGroup(_) => "parameter.edit_group",
             Self::DeleteGroup(_) => "parameter.delete_group",
         })
@@ -51,12 +83,19 @@ impl EditorView {
             action,
             self.dock.as_ref().map(|dock| dock.parameters.clone()),
         ) {
+            let action = action.capture(&self.editor);
+            if let Some(document) = command.document() {
+                if !self.prepare_property_inputs(document, window, cx) {
+                    return;
+                }
+            }
+            let context = AuthoringContext::capture(&self.editor);
             let owner = cx.entity().downgrade();
             window.defer(cx, move |window, cx| {
-                if owner
-                    .upgrade()
-                    .is_some_and(|owner| owner.read(cx).editor.active_id() == command.document())
-                {
+                if owner.upgrade().is_some_and(|owner| {
+                    owner.read(cx).editor.active_id() == command.document()
+                        && AuthoringContext::capture(&owner.read(cx).editor) == context
+                }) {
                     panel.update(cx, |panel, cx| panel.open_management(action, window, cx));
                 }
             });
@@ -90,30 +129,35 @@ impl ParametersPanel {
         let Some(document) = state.editor.active_id() else {
             return;
         };
-        self.finish_slider_drag(cx);
+        let Some(context) = AuthoringContext::capture(&state.editor) else {
+            return;
+        };
+        let action = action.capture(&state.editor);
         let result = owner.update(cx, |state, cx| {
-            state
-                .editor
-                .execute_for(document, EditorCommand::FinishEdit)?;
-            let doc = state.editor.document().unwrap();
-            let expected_version = doc.parameter_model_revision();
+            if let ParameterAction::CreateAt { kind, selection } = action {
+                let name = t!(if kind == editor_core::ObjectKind::Parameter {
+                    "parameter.default_name"
+                } else {
+                    "parameter.default_group_name"
+                })
+                .into_owned();
+                let result = state.execute_authoring(context, window, cx, |editor, document| {
+                    let plan = editor
+                        .document()
+                        .unwrap()
+                        .plan_parameter_object_creation(kind, name, &selection)?;
+                    editor.execute_organization_authoring(document, &plan)
+                })?;
+                state.present_created_object(document, &result, kind, window, cx)?;
+                state.redraw(cx);
+                return Ok(());
+            }
+            state.clear_edit_error(cx);
+            if !state.prepare_property_inputs(document, window, cx) {
+                return Ok(());
+            }
+            let expected_version = state.editor.document().unwrap().parameter_model_revision();
             let command = match action {
-                ParameterAction::Create(group_id) => {
-                    EditorCommand::CreateParameter(editor_core::NewParameter {
-                        name: t!("parameter.default_name").into_owned(),
-                        runtime_id: doc.suggested_parameter_id(),
-                        group_id,
-                        ..Default::default()
-                    })
-                }
-                ParameterAction::CreateGroup => EditorCommand::CreateParameterGroup {
-                    draft: editor_core::ParameterGroupDraft {
-                        name: t!("parameter.default_group_name").into_owned(),
-                        runtime_id: doc.suggested_parameter_group_id(),
-                        parent_id: None,
-                    },
-                    expected_version,
-                },
                 ParameterAction::Edit(id) => EditorCommand::Navigate(editor_core::ObjectRef::new(
                     editor_core::ObjectKind::Parameter,
                     id,
@@ -129,9 +173,9 @@ impl ParametersPanel {
                     id,
                     expected_version,
                 },
+                _ => unreachable!("creation context already captured"),
             };
             state.editor.execute_for(document, command)?;
-            state.clear_edit_error(cx);
             state.redraw(cx);
             Ok::<_, anyhow::Error>(())
         });
@@ -202,18 +246,60 @@ pub(super) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
         if window.has_active_dialog(cx) {
             return menu;
         }
+        let owner = panel
+            .upgrade()
+            .and_then(|panel| panel.read(cx).owner.upgrade());
+        let Some(owner) = owner else {
+            return menu;
+        };
+        let ready = owner.update(cx, |state, cx| {
+            document.is_some_and(|document| {
+                state.editor.active_id() == Some(document)
+                    && state.prepare_property_inputs(document, window, cx)
+            })
+        });
+        if !ready {
+            return menu;
+        }
+        let context = AuthoringContext::capture(&owner.read(cx).editor);
         for action in &actions {
             let panel = panel.clone();
             let action = action.clone();
             menu = menu.item(
                 PopupMenuItem::new(action.label()).on_click(move |_, window, cx| {
                     let _ = panel.update(cx, |p, cx| {
-                        if p.document_id == document {
+                        if p.document_id == document
+                            && p.owner.upgrade().is_some_and(|owner| {
+                                AuthoringContext::capture(&owner.read(cx).editor) == context
+                            })
+                        {
                             p.open_management(action.clone(), window, cx);
                         }
                     });
                 }),
             );
+        }
+        if let Some(object) = actions.iter().find_map(|action| match action {
+            ParameterAction::Edit(id) => Some(editor_core::ObjectRef::new(
+                editor_core::ObjectKind::Parameter,
+                id,
+            )),
+            ParameterAction::EditGroup(id) => Some(editor_core::ObjectRef::new(
+                editor_core::ObjectKind::ParameterGroup,
+                id,
+            )),
+            _ => None,
+        }) {
+            if let Some(document) = document {
+                menu = super::sorting::move_menu(
+                    menu.separator(),
+                    owner.downgrade(),
+                    document,
+                    editor_core::PaletteProjection::Parameters,
+                    object,
+                    cx,
+                );
+            }
         }
         menu
     })

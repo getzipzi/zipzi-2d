@@ -723,3 +723,11 @@ live_chain = "最近模拟步 · 自动适配"
 static_chain = "静止结构 · 自动适配"
 stabilize = "稳定摆链"
 rename_group = "重命名物理组"
+
+[authoring]
+locked = "请先解锁对象及其所属对象。"
+move_up = "上移"
+move_down = "下移"
+move_cycle = "不能将对象移入它的后代。"
+move_multiple = "请通过拖拽移动当前多选集合。"
+move_collection = "请在同一面板集合内移动。"

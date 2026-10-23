@@ -5,11 +5,13 @@ rust_i18n::i18n!("locales", fallback = "en");
 pub mod acceptance;
 mod actions;
 mod animation;
+mod authoring;
 mod benchmark;
 mod canvas_overlay;
 mod commands;
 mod dev_session;
 mod docking;
+mod editing;
 #[cfg(test)]
 #[path = "../headless_tests/mod.rs"]
 mod headless_tests;

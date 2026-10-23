@@ -1,8 +1,8 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础和 U2 的 Parameter 创建切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter 创建与共享移动切片**，尚未完成 U1–U6 全部验收。
 
-## 本轮实现
+## 首轮实现：创建与输入边界
 
 - `editor/src/authoring.rs` 统一对象操作的文档/工作区上下文、输入结算和结果检查。延迟菜单同时捕获 SDK 文档 revision，拒绝已删除再 Undo 恢复的旧目标；完成输入结算后才调用类型化 core planner。能力显示区分 Unsupported（不展示）与 Unavailable（禁用并保留原因），先接入 Physics 复制、删除和排序按钮。
 - `editor/src/editing.rs` 从 Save 提取统一输入边界，接入 Parameter 管理、Physics 列表操作、Motion 创建、资源行激活、文档/工作区切换、Open/Import、New、GenerateMesh 和文档 Undo/Redo。合法文本提交，非法文本恢复并显示原因；数值、颜色、Timeline 与画布的未完成候选取消。候选取消先于 Redo 可用性查询；原生文本的快捷键和菜单路由继续优先。没有用全局暂停替代输入结算，因此纯展示操作不会因边界本身暂停普通播放。
@@ -16,13 +16,13 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter/ParameterGroup 创建、嵌套空组、名称焦点和定位已接入 | 层级树创建、完整多选 UI、拖放/上下移统一、锁定反馈及过滤显露继续实施；现有排序路径尚未替换 |
+| U2 | Parameter 创建；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序、拒绝原因与单对象右键上下移已接入；变形树同父级排序使用相同规划入口 | 层级树创建、完整多选选择语义、变形父级保持形态移动、可配置移动快捷键、移到指定容器菜单与新建项过滤显露仍待实施 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
 | U6 | 未开始 | 清理剩余旧路径、完整中英文/原生截图验收和性能对照 |
 
-## 验证
+## 首轮验证
 
 Editor 与相邻 `kasane-2d` 都在独立 worktree 中。依赖固定为 `kasane-2d` 的已提交版本 `4bb2fee`；本轮没有修改该仓库产品源码，也没有使用原 checkout 的未提交更改。
 
@@ -50,3 +50,35 @@ git diff --check
 验证结果：受影响 UI / 表单 / 输入路由 / 虚拟化工作量共 **112 项通过**；组织创建核心回归 **7 项通过**；格式和空白检查通过。专项回归与此前运行有重叠，不重复累计。
 
 本轮未运行昂贵全套、原生截图或新的 Release 性能测量。
+
+
+## 第二轮实现：共享移动规划与交互
+
+2026 年 10 月 23 日：依照用户要求，直接在已搬回的当前 checkout 继续，不再创建 worktree。本轮依赖 `kasane-2d b86b13b`，没有修改该仓库。
+
+- 新增 `editor-core/src/authoring/moving.rs`：`PaletteMove` 捕获投影、源对象集合、稳定目标和 Before/After/Inside；规划转成现有 Organization/Scene SDK 计划。原生集合提供顺序，SDK 负责祖先归并、锁、循环、整体预校验、no-op、过期计划拒绝和单条历史。`plan_palette_step` 用同一适配生成菜单上下移的计划，按完整集合定位相邻项。
+- `panels/sorting.rs` 移除 UI 的父级表、循环遍历和同父级/组嵌套限制。命中与释放使用同一 core 规划入口，释放时重规划并校验上下文；不再调用原来各自分散的排序 `EditorCommand`。旧公共命令仍保留给其他调用者，未宣称完成全部旧入口清理。
+- 文件夹支持进入另一个文件夹，Before/After 支持合法跨父级移动；Part 组织移动可携带现有树多选集合。SDK 归并已选祖先的后代，并保持来源投影顺序；锁定成员导致整个计划失败。多选拖放不伪造单击，也不更改当前选择。
+- 手动排序视图在搜索/类型过滤下仍可拖放，通过完整集合的稳定对象锚点确定位置，不清除筛选、不用可见行号写模型。保留现有虚拟列表、边缘滚动、Esc、失活和文档切换取消行为。
+- 参数、文件夹和层级树行菜单增加单对象上移/下移。多选状态明确禁用这些单对象菜单项并说明使用拖放，避免只移动多选集合中的点击项；完整多选菜单与可配置快捷键尚未完成。
+- 合法移入显示容器边框，排序显示插入线；无效落点在拖动预览中显示核心原因，锁定和循环原因提供中英文说明。600ms 连续悬停展开，离开后再进入重新计时；合法 Inside 落点在释放后立即展开目标。
+- 一次拖动只缓存当前落点的规划，不为每个经过的行保留文档计划，也不在 begin 克隆整棵树建立父级表。重复悬停输入及重绘复用同一规划，释放后重新校验。
+
+变形树本轮只迁移同父级排序。改变实际变形父级仍需独立的保持形态转换计划，不提供未经转换的 Inside 落点或静默 KeepLocalData 替代。层级树创建、键盘和完整选择行为继续按 U2 推进；U3–U6 状态不变。
+
+第二轮验证：
+
+```sh
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+  headless_tests::sorting headless_tests::hierarchy headless_tests::authoring \
+  headless_tests::parameter_creation headless_tests::parameter_groups \
+  headless_tests::parameter_management headless_tests::parameters \
+  headless_tests::properties headless_tests::physics headless_tests::animation_panels \
+  headless_tests::workspaces headless_tests::command_targets \
+  headless_tests::input_routing headless_tests::ui_performance properties::form::tests
+
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+  palette_moves:: organization_authoring:: sorting::
+```
+
+受影响 UI 回归 **149 项通过**，包含新增的 8 项移动 UI 回归；其中悬停规划工作次数测试验证连续输入和重绘不重复构建计划。新增 core 移动专项 5 项通过。core 受影响过滤门禁共 **21 项通过**，包含新增移动专项 5 项；格式与空白检查通过。本轮未运行完整套件、原生截图和 Release 性能基准。

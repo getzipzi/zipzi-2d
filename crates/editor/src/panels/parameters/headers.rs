@@ -27,7 +27,21 @@ impl ParametersPanel {
                 });
             }
         });
-        let mut menu_actions = vec![ParameterAction::Create(id.clone())];
+        let selection: Vec<_> = id
+            .as_ref()
+            .map(|id| editor_core::ObjectRef::new(editor_core::ObjectKind::ParameterGroup, id))
+            .into_iter()
+            .collect();
+        let mut menu_actions = vec![
+            ParameterAction::CreateAt {
+                kind: editor_core::ObjectKind::Parameter,
+                selection: selection.clone(),
+            },
+            ParameterAction::CreateAt {
+                kind: editor_core::ObjectKind::ParameterGroup,
+                selection,
+            },
+        ];
         if let Some(id) = &id {
             menu_actions.extend([
                 ParameterAction::EditGroup(id.clone()),

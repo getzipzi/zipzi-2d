@@ -71,3 +71,6 @@ mod reference_authoring;
 
 #[path = "cases/resource_authoring.rs"]
 mod resource_authoring;
+
+#[path = "cases/palette_moves.rs"]
+mod palette_moves;

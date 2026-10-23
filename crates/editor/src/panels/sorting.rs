@@ -1,12 +1,13 @@
-//! Shared palette DnD using the GPUI Kit interaction APIs.
-use crate::EditorView;
+//! Shared palette gestures. Core plans own collection rules and placement;
+//! this view owns hit testing, feedback, hover expansion and scrolling.
+use crate::{EditorView, authoring::AuthoringContext};
 use editor_core::{
-    DocumentId, EditorCommand, ObjectKind, ObjectRef, OrganizationDestination,
-    ParameterDestination, ReorderPosition, TreeNode,
+    DocumentId, ObjectKind, ObjectRef, PaletteMove, PaletteMovePlan,
+    PalettePosition as DropPosition, PaletteProjection,
 };
 use gpui_kit::component::{ActiveTheme, WindowExt};
 use gpui_kit::{prelude::*, *};
-use std::{cell::Cell, collections::HashMap, rc::Rc, time::Duration};
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(super) enum SortItem {
@@ -15,39 +16,36 @@ pub(super) enum SortItem {
     Parameter(String),
     Group(Option<String>),
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum DropPosition {
-    Before,
-    After,
-    Inside,
+impl SortItem {
+    fn reference(&self) -> Option<ObjectRef> {
+        match self {
+            Self::Tree { object, .. } => Some(object.clone()),
+            Self::Parameter(id) => Some(ObjectRef::new(ObjectKind::Parameter, id)),
+            Self::Group(Some(id)) => Some(ObjectRef::new(ObjectKind::ParameterGroup, id)),
+            _ => None,
+        }
+    }
+    fn projection(&self) -> PaletteProjection {
+        match self {
+            Self::Tree { deformer: true, .. } => PaletteProjection::Deformation,
+            Self::Tree { .. } | Self::TreeRoot => PaletteProjection::Organization,
+            _ => PaletteProjection::Parameters,
+        }
+    }
 }
 
 fn drop_position(
-    source: &SortItem,
+    _source: &SortItem,
     target: &SortItem,
     pointer: Point<Pixels>,
     bounds: Bounds<Pixels>,
 ) -> DropPosition {
-    if matches!(
-        (source, target),
-        (SortItem::Group(Some(_)), SortItem::Group(None))
-    ) {
-        return DropPosition::Before;
+    if matches!(target, SortItem::TreeRoot | SortItem::Group(None)) {
+        return DropPosition::Inside;
     }
-    if matches!(
-        (source, target),
-        (SortItem::Parameter(_), SortItem::Group(_))
-            | (
-                SortItem::Tree {
-                    deformer: false,
-                    ..
-                },
-                SortItem::TreeRoot
-            )
-    ) {
-        DropPosition::Inside
-    } else if matches!(target, SortItem::Tree { deformer: false, object } if object.kind == ObjectKind::Part)
+    let container = matches!(target, SortItem::Group(Some(_)))
+        || matches!(target, SortItem::Tree { deformer: false, object } if object.kind == ObjectKind::Part);
+    if container
         && pointer.y >= bounds.top() + bounds.size.height * 0.25
         && pointer.y <= bounds.bottom() - bounds.size.height * 0.25
     {
@@ -65,7 +63,10 @@ struct PaletteDrag {
     source: SortItem,
 }
 
-struct DragPreview(SharedString);
+struct DragPreview {
+    label: SharedString,
+    reason: Option<String>,
+}
 impl Render for DragPreview {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
@@ -76,7 +77,16 @@ impl Render for DragPreview {
             .shadow_md()
             .bg(cx.theme().popover)
             .text_color(cx.theme().popover_foreground)
-            .child(self.0.clone())
+            .child(self.label.clone())
+            .when_some(self.reason.clone(), |element, reason| {
+                element.child(
+                    div()
+                        .id("palette-drop-reason")
+                        .test_support()
+                        .text_color(cx.theme().muted_foreground)
+                        .child(reason),
+                )
+            })
     }
 }
 
@@ -84,14 +94,19 @@ pub(super) struct SortState {
     owner: WeakEntity<EditorView>,
     focus: FocusHandle,
     active: Option<PaletteDrag>,
-    parents: HashMap<SortItem, String>,
+    context: Option<AuthoringContext>,
+    sources: Vec<ObjectRef>,
+    // Keep one hovered plan, not a plan-sized document snapshot per visited row.
+    cached: Option<(SortItem, DropPosition, Result<PaletteMovePlan, String>)>,
+    preview: Option<WeakEntity<DragPreview>>,
     hover: Option<(SortItem, DropPosition)>,
-    revision: Option<u64>,
+    hover_serial: u64,
     scroll: Option<(UniformListScrollHandle, i32, usize)>,
     scroll_task: Option<Task<()>>,
     _activation: Subscription,
+    #[cfg(test)]
+    pub(super) plans_built: usize,
 }
-
 impl SortState {
     pub fn new(
         owner: WeakEntity<EditorView>,
@@ -103,11 +118,16 @@ impl SortState {
             owner,
             focus,
             active: None,
-            parents: HashMap::new(),
+            context: None,
+            sources: Vec::new(),
+            cached: None,
+            preview: None,
             hover: None,
-            revision: None,
+            hover_serial: 0,
             scroll: None,
             scroll_task: None,
+            #[cfg(test)]
+            plans_built: 0,
             _activation: cx.observe_window_activation(window, |this: &mut Self, window, cx| {
                 if !window.is_window_active() {
                     this.cancel(window, cx);
@@ -115,175 +135,138 @@ impl SortState {
             }),
         })
     }
-
     fn allowed(&self, document: DocumentId, window: &mut Window, cx: &mut App) -> bool {
-        let dialog = window.has_active_dialog(cx);
-        self.owner.upgrade().is_some_and(|owner| {
-            let owner = owner.read(cx);
-            owner.editor.active_id() == Some(document)
-                && !owner.modal
-                && !owner.editor.is_busy()
-                && !dialog
-        })
+        !window.has_active_dialog(cx)
+            && self.owner.upgrade().is_some_and(|owner| {
+                let owner = owner.read(cx);
+                owner.editor.active_id() == Some(document)
+                    && !owner.modal
+                    && !owner.editor.is_busy()
+                    && !owner.editor.exiting()
+            })
     }
-
-    fn begin(&mut self, drag: PaletteDrag, window: &mut Window, cx: &mut Context<Self>) {
+    fn begin(
+        &mut self,
+        drag: PaletteDrag,
+        preview: WeakEntity<DragPreview>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self.clear(cx);
         if !self.allowed(drag.document, window, cx) {
             return;
         }
-        self.focus.focus(window, cx);
-        let owner = self.owner.upgrade().unwrap();
-        let editor = &owner.read(cx).editor;
-        self.revision = editor.tree_revision();
-        match &drag.source {
-            SortItem::Tree { deformer, .. } => {
-                fn parents(
-                    nodes: &[TreeNode],
-                    parent: &str,
-                    deformer: bool,
-                    result: &mut HashMap<SortItem, String>,
-                ) {
-                    for node in nodes {
-                        if node.diagnostic.is_none() {
-                            if let Some(object) = node.reference() {
-                                result
-                                    .insert(SortItem::Tree { deformer, object }, parent.to_owned());
-                            }
-                        }
-                        parents(&node.children, &node.id, deformer, result);
-                    }
-                }
-                let tree = if *deformer {
-                    editor.deformer_tree()
-                } else {
-                    editor.mesh_tree()
-                };
-                parents(&tree, "", *deformer, &mut self.parents);
-                if !deformer {
-                    self.parents.insert(SortItem::TreeRoot, String::new());
-                }
-            }
-            _ => {
-                if let Some(document) = editor.document() {
-                    self.parents.insert(SortItem::Group(None), String::new());
-                    for group in document.parameter_groups() {
-                        self.parents.insert(
-                            SortItem::Group(Some(group.id)),
-                            group.parent_id.unwrap_or_default(),
-                        );
-                    }
-                    for parameter in document.parameters() {
-                        self.parents.insert(
-                            SortItem::Parameter(parameter.id),
-                            parameter.group_id.unwrap_or_default(),
-                        );
-                    }
-                }
-            }
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        if !owner.update(cx, |owner, cx| {
+            owner.prepare_property_inputs(drag.document, window, cx)
+        }) {
+            return;
         }
+        self.focus.focus(window, cx);
+        let editor = &owner.read(cx).editor;
+        let Some(source) = drag.source.reference() else {
+            return;
+        };
+        self.sources = match &drag.source {
+            SortItem::Tree { .. } => editor
+                .document()
+                .map(|document| &document.context().selections)
+                .filter(|selection| selection.contains(&source))
+                .cloned()
+                .unwrap_or_else(|| vec![source]),
+            _ => vec![source],
+        };
+        self.context = AuthoringContext::capture(editor);
+        self.preview = Some(preview);
         self.active = Some(drag);
         cx.notify();
     }
-
+    fn current(&self, drag: &PaletteDrag, window: &mut Window, cx: &mut App) -> bool {
+        self.active.as_ref() == Some(drag)
+            && self.allowed(drag.document, window, cx)
+            && self.owner.upgrade().is_some_and(|owner| {
+                AuthoringContext::capture(&owner.read(cx).editor) == self.context
+            })
+    }
     fn can_target(
-        &self,
+        &mut self,
         drag: &PaletteDrag,
         target: &SortItem,
         position: DropPosition,
         window: &mut Window,
         cx: &mut App,
     ) -> bool {
-        if self.active.as_ref() != Some(drag)
-            || !self.allowed(drag.document, window, cx)
-            || self
-                .owner
-                .upgrade()
-                .is_none_or(|owner| owner.read(cx).editor.tree_revision() != self.revision)
-            || drag.source == *target
-            || !self.parents.contains_key(&drag.source)
-            || !self.parents.contains_key(target)
-        {
+        if !self.current(drag, window, cx) {
             return false;
         }
-        match (&drag.source, target) {
-            (SortItem::Tree { deformer: true, .. }, SortItem::Tree { deformer: true, .. }) => {
-                self.parents.get(&drag.source) == self.parents.get(target)
+        if drag.source.projection() != target.projection() {
+            self.cached = Some((
+                target.clone(),
+                position,
+                Err(crate::t!("authoring.move_collection").into_owned()),
+            ));
+            return false;
+        }
+        if self
+            .cached
+            .as_ref()
+            .is_none_or(|(item, at, _)| item != target || *at != position)
+        {
+            #[cfg(test)]
+            {
+                self.plans_built += 1;
             }
-            (
-                SortItem::Tree {
-                    deformer: false,
-                    object: source,
-                },
-                SortItem::Tree {
-                    deformer: false,
-                    object: target_object,
-                },
-            ) => {
-                let mut parent = if position == DropPosition::Inside {
-                    if target_object.kind != ObjectKind::Part {
-                        return false;
-                    }
-                    target_object.id.as_str()
-                } else {
-                    let parent = self.parents[target].as_str();
-                    if (parent.is_empty() || parent == "unowned")
-                        && (source.kind == ObjectKind::Part)
-                            != (target_object.kind == ObjectKind::Part)
-                    {
-                        return false;
-                    }
-                    parent
-                };
-                while !parent.is_empty() && parent != "unowned" {
-                    if parent == source.id {
-                        return false;
-                    }
-                    let key = SortItem::Tree {
-                        deformer: false,
-                        object: ObjectRef::new(ObjectKind::Part, parent),
-                    };
-                    let Some(next) = self.parents.get(&key) else {
-                        return false;
-                    };
-                    parent = next;
+            let owner = self.owner.upgrade().unwrap();
+            let result = owner
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .plan_palette_move(PaletteMove {
+                    projection: drag.source.projection(),
+                    sources: self.sources.clone(),
+                    target: target.reference(),
+                    position,
+                })
+                .map_err(|error| move_error(&error));
+            self.cached = Some((target.clone(), position, result));
+        }
+        self.cached
+            .as_ref()
+            .is_some_and(|(_, _, result)| result.as_ref().is_ok_and(|plan| !plan.is_noop()))
+    }
+    fn feedback(&self, reason: Option<String>, cx: &mut App) {
+        if let Some(preview) = &self.preview {
+            let _ = preview.update(cx, |preview, cx| {
+                if preview.reason != reason {
+                    preview.reason = reason;
+                    cx.notify();
                 }
-                true
-            }
-            (
-                SortItem::Tree {
-                    deformer: false, ..
-                },
-                SortItem::TreeRoot,
-            ) => true,
-            (SortItem::Parameter(_), SortItem::Parameter(_) | SortItem::Group(_)) => true,
-            (SortItem::Group(Some(_)), SortItem::Group(Some(_))) => {
-                self.parents.get(target).is_some_and(String::is_empty)
-                    || self.parents.get(&drag.source) == self.parents.get(target)
-            }
-            (SortItem::Group(Some(_)), SortItem::Group(None)) => true,
-            _ => false,
+            });
         }
     }
-
     fn clear(&mut self, cx: &mut Context<Self>) {
         let changed = self.active.take().is_some() || self.hover.is_some();
         self.hover = None;
-        self.parents.clear();
+        self.hover_serial += 1;
+        self.context = None;
+        self.sources.clear();
+        self.cached = None;
+        self.preview = None;
         self.scroll = None;
         self.scroll_task = None;
         if changed {
             cx.notify();
         }
     }
-
     pub fn cancel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.active.is_some() {
             cx.stop_active_drag(window);
             self.clear(cx);
         }
     }
-
     pub fn reconcile(
         &mut self,
         document: Option<DocumentId>,
@@ -294,19 +277,12 @@ impl SortState {
         if let Some(drag) = &self.active {
             if !cx.has_active_drag() {
                 self.clear(cx);
-            } else if !enabled
-                || document != Some(drag.document)
-                || !self.allowed(drag.document, window, cx)
-                || self
-                    .owner
-                    .upgrade()
-                    .is_none_or(|owner| owner.read(cx).editor.tree_revision() != self.revision)
+            } else if !enabled || document != Some(drag.document) || !self.current(drag, window, cx)
             {
                 self.cancel(window, cx);
             }
         }
     }
-
     fn drop(
         &mut self,
         drag: &PaletteDrag,
@@ -316,79 +292,30 @@ impl SortState {
         cx: &mut Context<Self>,
     ) {
         if !self.can_target(drag, target, position, window, cx) {
+            self.clear(cx);
             return;
         }
-        let reorder = if position == DropPosition::Before {
-            ReorderPosition::Before
-        } else {
-            ReorderPosition::After
+        let Some(context) = self.context else {
+            return;
         };
-        let command = match (&drag.source, target) {
-            (
-                SortItem::Tree {
-                    deformer: false,
-                    object,
-                },
-                SortItem::TreeRoot,
-            ) => EditorCommand::MoveOrganization {
-                source: object.clone(),
-                destination: OrganizationDestination::Part(None),
-            },
-            (
-                SortItem::Tree {
-                    deformer: false,
-                    object,
-                },
-                SortItem::Tree { object: target, .. },
-            ) => EditorCommand::MoveOrganization {
-                source: object.clone(),
-                destination: if position == DropPosition::Inside {
-                    OrganizationDestination::Part(Some(target.id.clone()))
-                } else {
-                    OrganizationDestination::Sibling {
-                        target: target.clone(),
-                        position: reorder,
-                    }
-                },
-            },
-            (SortItem::Tree { deformer, object }, SortItem::Tree { object: target, .. }) => {
-                EditorCommand::ReorderTree {
-                    deformer: *deformer,
-                    source: object.clone(),
-                    target: target.clone(),
-                    position: reorder,
-                }
-            }
-            (SortItem::Parameter(id), SortItem::Parameter(target)) => {
-                EditorCommand::MoveParameter {
-                    id: id.clone(),
-                    destination: ParameterDestination::Parameter {
-                        id: target.clone(),
-                        position: reorder,
-                    },
-                }
-            }
-            (SortItem::Parameter(id), SortItem::Group(group)) => EditorCommand::MoveParameter {
-                id: id.clone(),
-                destination: ParameterDestination::Group(group.clone()),
-            },
-            (SortItem::Group(Some(source)), SortItem::Group(None)) => {
-                EditorCommand::MoveParameterGroupToRoot(source.clone())
-            }
-            (SortItem::Group(Some(source)), SortItem::Group(Some(target))) => {
-                EditorCommand::ReorderParameterGroup {
-                    source: source.clone(),
-                    target: target.clone(),
-                    position: reorder,
-                }
-            }
-            _ => return,
+        let request = PaletteMove {
+            projection: drag.source.projection(),
+            sources: self.sources.clone(),
+            target: target.reference(),
+            position,
         };
         self.clear(cx);
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |owner, cx| {
-                let result = owner.editor.execute_for(drag.document, command);
-                owner.complete_edit(result, cx);
+                let result = owner.execute_authoring(context, window, cx, |editor, document| {
+                    // Replan on release, then let the SDK revalidate the version.
+                    let plan = editor.document().unwrap().plan_palette_move(request)?;
+                    editor.execute_palette_move(document, &plan)
+                });
+                match result {
+                    Ok(_) => owner.redraw(cx),
+                    Err(error) => owner.set_edit_error(error.to_string(), cx),
+                }
             });
         }
     }
@@ -407,12 +334,23 @@ pub(super) fn drag_source<E: StatefulInteractiveElement + FluentBuilder + Styled
         element.on_drag(
             PaletteDrag { document, source },
             move |drag, _, window, cx| {
-                state.update(cx, |state, cx| state.begin(drag.clone(), window, cx));
-                // GPUI installs the active drag after this callback returns.
-                window.defer(cx, |window, cx| {
-                    cx.set_active_drag_cursor_style(CursorStyle::ClosedHand, window);
+                let preview = cx.new(|_| DragPreview {
+                    label: label.clone().into(),
+                    reason: None,
                 });
-                cx.new(|_| DragPreview(label.clone().into()))
+                state.update(cx, |state, cx| {
+                    state.begin(drag.clone(), preview.downgrade(), window, cx)
+                });
+                // GPUI installs the active drag after this callback returns.
+                let pending = state.clone();
+                window.defer(cx, move |window, cx| {
+                    if pending.read(cx).active.is_none() {
+                        cx.stop_active_drag(window);
+                    } else {
+                        cx.set_active_drag_cursor_style(CursorStyle::ClosedHand, window);
+                    }
+                });
+                preview
             },
         )
     })
@@ -440,6 +378,7 @@ pub(super) fn drop_target<
     let moving = state.clone();
     let moving_target = target.clone();
     let dropping = state.clone();
+    let expand_on_drop = expand.clone();
     let bounds = Rc::new(Cell::new(Bounds::<Pixels>::default()));
     let measuring = bounds.clone();
     let checking_bounds = bounds.clone();
@@ -459,7 +398,8 @@ pub(super) fn drop_target<
                         window.mouse_position(),
                         checking_bounds.get(),
                     );
-                    state.can_target(drag, &checking_target, position, window, cx)
+                    checking_bounds.get().contains(&window.mouse_position())
+                        && state.can_target(drag, &checking_target, position, window, cx)
                 })
             })
         })
@@ -479,6 +419,21 @@ pub(super) fn drop_target<
                 } else {
                     None
                 };
+                if event.bounds.contains(&event.event.position) {
+                    let reason = state
+                        .cached
+                        .as_ref()
+                        .filter(|(item, at, _)| item == &moving_target && *at == position)
+                        .and_then(|(_, _, result)| result.as_ref().err())
+                        .cloned();
+                    state.feedback(reason, cx);
+                } else if state
+                    .cached
+                    .as_ref()
+                    .is_some_and(|(item, _, _)| item == &moving_target)
+                {
+                    state.feedback(None, cx);
+                }
                 // Other rows receive move events too; only clear this row's own target.
                 if hover.is_none()
                     && state
@@ -490,16 +445,19 @@ pub(super) fn drop_target<
                 }
                 if state.hover != hover {
                     state.hover = hover.clone();
+                    state.hover_serial += 1;
+                    let hover_serial = state.hover_serial;
                     cx.notify();
                     if let (Some((item, DropPosition::Inside)), Some(expand)) =
                         (hover, expand.clone())
                     {
                         cx.spawn_in(window, async move |this, cx| {
                             cx.background_executor()
-                                .timer(Duration::from_millis(500))
+                                .timer(Duration::from_millis(600))
                                 .await;
                             _ = this.update_in(cx, |state, window, cx| {
                                 if cx.has_active_drag()
+                                    && state.hover_serial == hover_serial
                                     && state.hover == Some((item.clone(), DropPosition::Inside))
                                 {
                                     expand(&item, window, cx);
@@ -516,7 +474,13 @@ pub(super) fn drop_target<
             let position =
                 drop_position(&drag.source, &target, window.mouse_position(), bounds.get());
             dropping.update(cx, |state, cx| {
-                state.drop(drag, &target, position, window, cx)
+                let allowed = state.can_target(drag, &target, position, window, cx);
+                state.drop(drag, &target, position, window, cx);
+                if allowed && position == DropPosition::Inside {
+                    if let Some(expand) = &expand_on_drop {
+                        expand(&target, window, cx);
+                    }
+                }
             })
         })
         .when_some(hovered, |element, position| {
@@ -620,4 +584,84 @@ pub(super) fn panel_actions(element: Stateful<Div>, state: &Entity<SortState>) -
                 cx.stop_propagation();
             }
         })
+}
+
+/// The same core placement adapter serves explicit menu steps and pointer moves.
+pub(super) fn move_menu(
+    mut menu: gpui_kit::component::menu::PopupMenu,
+    owner: WeakEntity<EditorView>,
+    document: DocumentId,
+    projection: PaletteProjection,
+    object: ObjectRef,
+    cx: &App,
+) -> gpui_kit::component::menu::PopupMenu {
+    use gpui_kit::component::menu::PopupMenuItem;
+    let Some(entity) = owner.upgrade() else {
+        return menu;
+    };
+    let state = entity.read(cx);
+    if state.editor.active_id() != Some(document) {
+        return menu;
+    }
+    let context = AuthoringContext::capture(&state.editor);
+    let multiple = state.editor.document().is_some_and(|document| {
+        document.context().selections.contains(&object) && document.context().selections.len() > 1
+    });
+    for (down, label) in [
+        (false, crate::t!("authoring.move_up")),
+        (true, crate::t!("authoring.move_down")),
+    ] {
+        let plan = state
+            .editor
+            .document()
+            .ok_or_else(|| anyhow::anyhow!("Document closed"))
+            .and_then(|document| document.plan_palette_step(projection, object.clone(), down));
+        let enabled = !multiple && plan.as_ref().is_ok_and(|plan| !plan.is_noop());
+        let reason = if multiple {
+            Some(crate::t!("authoring.move_multiple").into_owned())
+        } else {
+            plan.as_ref().err().map(|error| move_error(error))
+        };
+        let label: SharedString = reason
+            .map_or_else(|| label.to_string(), |reason| format!("{label} · {reason}"))
+            .into();
+        let object = object.clone();
+        let owner = owner.clone();
+        menu = menu.item(PopupMenuItem::new(label).disabled(!enabled).on_click(
+            move |_, window, cx| {
+                let (Some(context), Some(owner)) = (context, owner.upgrade()) else {
+                    return;
+                };
+                owner.update(cx, |owner, cx| {
+                    let result =
+                        owner.execute_authoring(context, window, cx, |editor, document| {
+                            let plan = editor.document().unwrap().plan_palette_step(
+                                projection,
+                                object.clone(),
+                                down,
+                            )?;
+                            editor.execute_palette_move(document, &plan)
+                        });
+                    match result {
+                        Ok(_) => owner.redraw(cx),
+                        Err(error) => owner.set_edit_error(move_error(&error), cx),
+                    }
+                });
+            },
+        ));
+    }
+    menu
+}
+
+fn move_error(error: &anyhow::Error) -> String {
+    if let Some(error) = error.downcast_ref::<kasane_sdk::SdkError>() {
+        match error.code.as_ref() {
+            "OBJECT_LOCKED" => return crate::t!("authoring.locked").into_owned(),
+            "CDI_GROUP_CYCLE" | "PART_CYCLE" => {
+                return crate::t!("authoring.move_cycle").into_owned();
+            }
+            _ => {}
+        }
+    }
+    error.to_string()
 }

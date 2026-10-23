@@ -595,6 +595,74 @@ impl PropertiesPanel {
         self.target.clone().map(|target| (target, id, token))
     }
 
+    pub(crate) fn current_target(&self) -> Option<&PropertyTarget> {
+        self.target.as_ref()
+    }
+
+    /// Publish settled text back to controls before queued blur/change events.
+    /// No owner access here: the edit coordinator holds the owner entity borrow.
+    pub(crate) fn settled_inputs(
+        &mut self,
+        form: PropertyForm,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        for (id, control) in &mut self.controls {
+            if let Some(field) = form.fields.get(id) {
+                if control.input.read(cx).value().as_ref() != field.raw {
+                    control.input.update(cx, |input, cx| {
+                        input.set_value(field.raw.clone(), window, cx)
+                    });
+                }
+                control.displayed = field.raw.clone();
+                control.settled = field.revision;
+            }
+        }
+        self.form = form;
+        self.snapshot = None;
+        cx.notify();
+    }
+
+    pub(crate) fn focus_authoring_object(
+        &mut self,
+        context: Option<crate::authoring::AuthoringContext>,
+        document: editor_core::DocumentId,
+        object: &editor_core::ObjectRef,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.owner.upgrade().is_some_and(|owner| {
+            let editor = &owner.read(cx).editor;
+            crate::authoring::AuthoringContext::capture(editor) == context
+                && editor.active_id() == Some(document)
+                && editor
+                    .active_inspection()
+                    .and_then(|inspection| inspection.object())
+                    .as_ref()
+                    == Some(object)
+        }) {
+            return;
+        }
+        self.locked_target = None;
+        self.sync_form(window, cx);
+        let field = self
+            .definition
+            .fields()
+            .find(|field| {
+                field.editor == FieldEditor::Text
+                    && !field.binding.readonly
+                    && self.form.fields.contains_key(&field.binding.key)
+            })
+            .map(|field| field.binding.key);
+        if let Some(field) = field {
+            self.ensure_control(field, window, cx);
+            let input = self.controls[&field].input.clone();
+            window.focus(&input.read(cx).focus_handle(cx), cx);
+            input.update(cx, |input, cx| input.select_all(window, cx));
+        }
+        cx.notify();
+    }
+
     pub(crate) fn is_visible(&self) -> bool {
         self.visible
     }

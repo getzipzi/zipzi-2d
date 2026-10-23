@@ -166,7 +166,11 @@ fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
         .get_mut(&target)
         .unwrap()
         .edit(width, "512".into());
-    assert!(forms.prepare_save(&mut editor, target.document).is_none());
+    assert!(
+        forms
+            .settle_document(&mut editor, target.document)
+            .is_none()
+    );
     assert_eq!(
         editor.document().unwrap().export_settings().padding_pixels,
         512.
@@ -177,7 +181,11 @@ fn save_settles_valid_and_invalid_input_with_the_same_history_policy_as_blur() {
         .get_mut(&target)
         .unwrap()
         .edit(width, "-".into());
-    assert!(forms.prepare_save(&mut editor, target.document).is_some());
+    assert!(
+        forms
+            .settle_document(&mut editor, target.document)
+            .is_some()
+    );
     assert_eq!(forms.entries[&target].fields[&width.key].raw, "512");
     assert!(!forms.dirty_document(target.document));
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));

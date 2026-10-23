@@ -164,6 +164,11 @@ impl ParametersPanel {
         self.scroll.clone()
     }
 
+    #[cfg(test)]
+    pub(crate) fn sorting_plans_built(&self, cx: &App) -> usize {
+        self.sorting.read(cx).plans_built
+    }
+
     fn toolbar(&self, create_disabled: bool, cx: &mut Context<Self>) -> PanelToolbar {
         let new_label = t!("parameter.new").into_owned();
         let on_create = cx.listener(|this, _, window, cx| {

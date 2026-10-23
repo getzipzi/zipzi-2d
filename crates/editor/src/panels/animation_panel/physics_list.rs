@@ -29,11 +29,15 @@ impl AnimationPanel {
         if window.has_active_dialog(cx) {
             return;
         }
-        window.focus(&self.focus, cx);
+        let focus = self.focus.clone();
         let _ = self.owner.update(cx, |owner, cx| {
             if owner.modal || owner.editor.is_busy() || owner.editor.active_id() != Some(document) {
                 return;
             }
+            if !owner.prepare_property_inputs(document, window, cx) {
+                return;
+            }
+            window.focus(&focus, cx);
             let result = owner.editor.inspect_animation_resource(document, object);
             if result.is_ok() {
                 owner
@@ -59,8 +63,9 @@ impl AnimationPanel {
             if owner.modal || owner.editor.is_busy() || owner.editor.active_id() != Some(document) {
                 return;
             }
-            // An unfinished value belongs to the previous inspector selection.
-            let _ = owner.editor.execute(editor_core::EditorCommand::CancelEdit);
+            let Some(context) = crate::authoring::AuthoringContext::capture(&owner.editor) else {
+                return;
+            };
             let doc = owner.editor.document().unwrap();
             let asset = doc.physics_definition();
             let position = asset.and_then(|a| selected(&owner.editor, a));
@@ -113,9 +118,11 @@ impl AnimationPanel {
                 _ => return,
             };
             let mut object = group.map(|id| ObjectRef::new(ObjectKind::PhysicsGroup, id));
-            let result = (|| {
-                let plan = owner.editor.plan_physics_authoring(document, intent)?;
-                let result = owner.editor.execute_physics_authoring(document, &plan)?;
+            let result: anyhow::Result<()> = (|| {
+                let result = owner.execute_authoring(context, window, cx, |editor, document| {
+                    let plan = editor.plan_physics_authoring(document, intent)?;
+                    editor.execute_physics_authoring(document, &plan)
+                })?;
                 if let Some(created) = result
                     .suggested_selection
                     .iter()
@@ -152,15 +159,19 @@ impl AnimationPanel {
             if result.is_ok()
                 && let Some(object) = object
             {
-                let _ = owner.editor.inspect_animation_resource(document, object);
-                owner
-                    .dock
-                    .as_ref()
-                    .unwrap()
-                    .show(PanelKind::Properties, None, window, cx);
+                let _ = owner.inspect_authoring_object(
+                    document,
+                    object,
+                    matches!(action, 0 | 1),
+                    window,
+                    cx,
+                );
             }
             owner.animation_anchor = None;
-            owner.complete_edit(result, cx);
+            match result {
+                Ok(()) => owner.redraw(cx),
+                Err(error) => owner.set_edit_error(error.to_string(), cx),
+            }
         });
     }
     pub(super) fn physics_list_toolbar(
@@ -181,6 +192,16 @@ impl AnimationPanel {
             .document()
             .and_then(|doc| doc.physics_definition());
         let index = asset.and_then(|asset| selected(&state.editor, asset));
+        let capabilities = index
+            .and_then(|index| asset.map(|asset| &asset.data.settings[index]))
+            .and_then(|group| {
+                state
+                    .editor
+                    .document()
+                    .unwrap()
+                    .physics_authoring_capabilities(&reference(&group.id))
+                    .ok()
+            });
         let count = asset.map_or(0, |a| a.data.settings.len());
         let disabled = state.modal || state.editor.is_busy() || dialog;
         let mut toolbar = PanelToolbar::new("physics-list-toolbar");
@@ -221,6 +242,30 @@ impl AnimationPanel {
                 index.is_none_or(|i| i + 1 >= count),
             ),
         ] {
+            let availability = capabilities.as_ref().map(|capabilities| {
+                let capability = match action {
+                    1 => &capabilities.domain.duplicate,
+                    2 => &capabilities.domain.delete,
+                    3 | 4 => &capabilities.domain.reorder,
+                    _ => {
+                        return Some(crate::authoring::ActionAvailability {
+                            enabled: true,
+                            reason: None,
+                        });
+                    }
+                };
+                crate::authoring::ActionAvailability::from_core(capability)
+            });
+            if matches!(availability, Some(None)) {
+                continue;
+            }
+            let availability = availability.flatten();
+            let unavailable = availability
+                .as_ref()
+                .is_some_and(|availability| !availability.enabled);
+            let tooltip = availability
+                .and_then(|availability| availability.reason)
+                .unwrap_or_else(|| t!(label).into());
             let listener = cx.listener(move |this, _, window, cx| {
                 this.physics_list_action(document, action, window, cx)
             });
@@ -228,9 +273,9 @@ impl AnimationPanel {
                 Button::new(id)
                     .icon(icon)
                     .ghost()
-                    .tooltip(t!(label))
+                    .tooltip(tooltip.clone())
                     .accessibility_label(t!(label))
-                    .disabled(disabled || off)
+                    .disabled(disabled || off || unavailable)
                     .on_click(listener)
             });
         }

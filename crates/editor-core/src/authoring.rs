@@ -2,6 +2,11 @@
 //! suggestions are transient; they never activate an expression or enter history.
 use super::*;
 use crate::{ObjectKind, ObjectRef};
+#[path = "authoring/creation.rs"]
+mod creation;
+#[path = "authoring/moving.rs"]
+mod moving;
+pub use moving::{PaletteMove, PaletteMovePlan, PalettePosition, PaletteProjection};
 #[path = "authoring/expression.rs"]
 mod expression;
 #[path = "authoring/publication.rs"]

@@ -2,6 +2,7 @@
 
 mod animation;
 mod animation_panels;
+mod authoring;
 mod canvas;
 mod command_targets;
 mod compact_popups;

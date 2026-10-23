@@ -724,3 +724,11 @@ live_chain = "Latest simulated step · auto fit"
 static_chain = "Rest structure · auto fit"
 stabilize = "Settle chain"
 rename_group = "Rename group"
+
+[authoring]
+locked = "Unlock the object and its owner before editing."
+move_up = "Move up"
+move_down = "Move down"
+move_cycle = "An object cannot move inside its own descendant."
+move_multiple = "Use dragging to move the current selection."
+move_collection = "Move within the same panel collection."

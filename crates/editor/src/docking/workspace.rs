@@ -11,9 +11,12 @@ impl EditorView {
         if self.editor.workspace() == workspace {
             return;
         }
-        // Let the existing input blur rules finish before changing context.
+        if let Some(id) = self.editor.active_id() {
+            if !self.prepare_property_inputs(id, window, cx) {
+                return;
+            }
+        }
         window.focus(&self.focus, cx);
-        self.cancel_input_captures(window, cx);
         if let Some(dock) = &self.dock {
             for panel in dock.document_panels.values() {
                 panel.update(cx, |panel, _| panel.cancel_drag());

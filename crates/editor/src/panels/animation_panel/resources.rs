@@ -39,11 +39,15 @@ impl AnimationPanel {
         if window.has_active_dialog(cx) {
             return;
         }
-        window.focus(&self.focus, cx);
+        let focus = self.focus.clone();
         let _ = self.owner.update(cx, |owner, cx| {
             if owner.modal || owner.editor.is_busy() || owner.editor.active_id() != Some(document) {
                 return;
             }
+            if !owner.prepare_property_inputs(document, window, cx) {
+                return;
+            }
+            window.focus(&focus, cx);
             if !play
                 && let Choice::Motion(selection) = &choice
                 && owner
@@ -117,6 +121,9 @@ impl AnimationPanel {
                                 || owner.editor.is_busy()
                                 || owner.editor.active_id() != Some(id)
                             {
+                                return;
+                            }
+                            if !owner.prepare_property_inputs(id, window, cx) {
                                 return;
                             }
                             let result = owner.editor.create_timeline_motion(id).map(|_| ());

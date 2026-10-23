@@ -422,12 +422,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             }
         }
         self.sorting.update(cx, |state, cx| {
-            state.reconcile(
-                target,
-                !disabled && !self.view.filter.is_active(),
-                window,
-                cx,
-            )
+            state.reconcile(target, !disabled, window, cx)
         });
         let rows = self.rows.clone();
         let panel = cx.entity();
@@ -520,7 +515,12 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     let expand_key = node_key(&node);
                                     let expand: sorting::ExpandTarget = Rc::new(move |_, _, cx| {
                                         _ = panel.update(cx, |this, cx| {
-                                            if this.view.collapsed.remove(&expand_key) {
+                                            let collapsed = if this.view.filter.is_active() {
+                                                &mut this.filtered_collapsed
+                                            } else {
+                                                &mut this.view.collapsed
+                                            };
+                                            if collapsed.remove(&expand_key) {
                                                 this.rows_dirty = true;
                                                 cx.notify();
                                             }
@@ -698,7 +698,6 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                         label.clone(),
                                                         !disabled
                                                             && !locked
-                                                            && !filtered
                                                             && node.diagnostic.is_none(),
                                                     )
                                                 })
@@ -769,6 +768,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                 lock_owner.clone(),
                                                 target,
                                                 object,
+                                                DEFORMER,
                                             )
                                             .into_any_element(),
                                             _ => element.into_any_element(),
@@ -787,7 +787,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             .track_scroll(&self.scroll)
             .into_any_element()
         })
-        .when(!DEFORMER && target.is_some() && !filtered, |element| {
+        .when(!DEFORMER && target.is_some(), |element| {
             element.child(sorting::drop_target(
                 div()
                     .id("mesh-tree-root-drop")

@@ -140,7 +140,7 @@ fn sorting_a_long_parameter_list_keeps_scroll_position(cx: &mut TestAppContext) 
 }
 
 #[gpui_kit::test]
-fn filtered_tree_and_document_switch_cannot_commit_a_drag(cx: &mut TestAppContext) {
+fn filtered_tree_uses_stable_targets_and_document_switch_cancels_a_drag(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let (first, second, original, active) = harness.view.read_with(cx, |view, _| {
         let tree = view.editor.mesh_tree();
@@ -162,7 +162,16 @@ fn filtered_tree_and_document_switch_cannot_commit_a_drag(cx: &mut TestAppContex
             point(to.left() + px(80.), to.top() + px(2.)),
             cx,
         );
-        assert_eq!(harness.view.read(cx).editor.mesh_tree(), original);
+        assert_eq!(
+            harness.view.read(cx).editor.mesh_tree()[0].children[0].id,
+            second
+        );
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(editor_core::EditorCommand::Undo)
+                .unwrap();
+            view.redraw(cx);
+        });
         window.click("mesh-tree-clear", cx);
         window.render_frame(cx);
         begin_drag(
@@ -186,7 +195,7 @@ fn filtered_tree_and_document_switch_cannot_commit_a_drag(cx: &mut TestAppContex
     });
     harness.view.read_with(cx, |view, _| {
         assert_eq!(view.editor.mesh_tree(), original);
-        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 1));
     });
 }
 
@@ -677,11 +686,11 @@ fn tree_visibility_controls_do_not_start_sorting(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn legacy_child_groups_can_be_dragged_to_root_without_creating_nesting(cx: &mut TestAppContext) {
+fn groups_can_cross_containers_and_return_to_root_with_undo(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
     let harness = setup_with_document(cx, document, assets);
     cx.simulate_window_resize(harness.window, size(px(1100.), px(1400.)));
-    // A top-level group cannot become a sibling inside an existing nested group.
+    // Before/After on a nested folder uses its actual parent collection.
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
         let from = window.find(format!("parameter-group-{}", id(103))).bounds();
@@ -692,7 +701,16 @@ fn legacy_child_groups_can_be_dragged_to_root_without_creating_nesting(cx: &mut 
             cx,
         );
         harness.view.read_with(cx, |v, _| {
-            assert_eq!(v.editor.document().unwrap().history_lengths().0, 0)
+            let document = v.editor.document().unwrap();
+            assert_eq!(document.history_lengths().0, 1);
+            assert_eq!(
+                document.parameter_group_draft(&id(103)).unwrap().parent_id,
+                Some(id(101))
+            );
+        });
+        harness.view.update(cx, |v, cx| {
+            v.editor.execute(editor_core::EditorCommand::Undo).unwrap();
+            v.redraw(cx);
         });
     })
     .unwrap();
@@ -760,4 +778,357 @@ fn legacy_child_groups_can_be_dragged_to_root_without_creating_nesting(cx: &mut 
             Some(id(101))
         );
     });
+}
+
+#[gpui_kit::test]
+fn dropping_a_folder_inside_a_collapsed_folder_reveals_it_and_undo_keeps_ids(
+    cx: &mut TestAppContext,
+) {
+    let (document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.simulate_window_resize(h.window, size(px(1100.), px(1400.)));
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.click(format!("parameter-group-toggle-{}", id(102)), cx);
+        let from = window.find(format!("parameter-group-{}", id(103))).bounds();
+        let to = window.find(format!("parameter-group-{}", id(102))).bounds();
+        window.drag(
+            point(from.left() + px(90.), from.center().y),
+            point(to.left() + px(90.), to.center().y),
+            cx,
+        );
+        window.render_frame(cx);
+        let doc = h.view.read(cx).editor.document().unwrap();
+        assert_eq!(
+            doc.parameter_group_draft(&id(103)).unwrap().parent_id,
+            Some(id(102))
+        );
+        assert_eq!(doc.history_lengths(), (1, 0));
+        assert!(
+            window
+                .find(format!("parameter-group-{}", id(103)))
+                .visible()
+        );
+        h.view.update(cx, |view, cx| {
+            view.run_command(editor_core::CommandId::Undo, window, cx);
+        });
+        window.render_frame(cx);
+        assert_eq!(
+            h.view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .parameter_group_draft(&id(103))
+                .unwrap()
+                .parent_id,
+            None
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn invalid_cycle_drop_shows_the_core_reason_without_modifying_history(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.simulate_window_resize(h.window, size(px(1100.), px(1400.)));
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        let from = window.find(format!("parameter-group-{}", id(101))).bounds();
+        let to = window.find(format!("parameter-group-{}", id(102))).bounds();
+        begin_drag(
+            window,
+            cx,
+            point(from.left() + px(90.), from.center().y),
+            point(to.left() + px(90.), to.center().y),
+        );
+        window.render_frame(cx);
+        assert!(window.find("palette-drop-reason").visible());
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            (0, 0)
+        );
+        window.press("escape", cx);
+        assert!(!cx.has_active_drag());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn tree_multiselection_moves_as_one_transaction_without_changing_selection(
+    cx: &mut TestAppContext,
+) {
+    use editor_core::{EditorCommand, ObjectKind, ObjectRef};
+    let (document, assets) = document_fixture::sample_document_with_parts().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    let meshes = h.view.read_with(cx, |view, _| {
+        let tree = view.editor.mesh_tree();
+        fn collect(nodes: &[editor_core::TreeNode], out: &mut Vec<ObjectRef>) {
+            for node in nodes {
+                if node.kind == editor_core::TreeNodeKind::Mesh {
+                    out.push(ObjectRef::new(ObjectKind::Mesh, &node.id));
+                }
+                collect(&node.children, out);
+            }
+        }
+        let mut meshes = Vec::new();
+        collect(&tree, &mut meshes);
+        meshes
+    });
+    cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SelectObjects(meshes.clone()))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        let from = window
+            .find(format!("mesh-drag-{}", meshes[0].id))
+            .bounds()
+            .center();
+        let to = window
+            .find(format!("mesh-item-Part:{}", id(102)))
+            .bounds()
+            .center();
+        window.drag(from, to, cx);
+        window.render_frame(cx);
+        let view = h.view.read(cx);
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        assert_eq!(view.editor.document().unwrap().context().selections, meshes);
+        let tree = view.editor.mesh_tree();
+        assert_eq!(
+            tree[1]
+                .children
+                .iter()
+                .filter(|node| node.kind == editor_core::TreeNodeKind::Mesh)
+                .count(),
+            meshes.len()
+        );
+        assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn a_locked_member_rejects_the_whole_tree_drag(cx: &mut TestAppContext) {
+    use editor_core::{EditorCommand, ObjectKind};
+    let (mut document, assets) = document_fixture::sample_document_with_parts().unwrap();
+    let meshes: Vec<_> = document
+        .object_index()
+        .objects
+        .iter()
+        .filter(|info| info.reference.kind == ObjectKind::Mesh)
+        .map(|info| info.reference.clone())
+        .collect();
+    document
+        .set_objects_locked(std::slice::from_ref(&meshes[1]), true)
+        .unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SelectObjects(meshes.clone()))
+                .unwrap();
+            view.redraw(cx);
+        });
+        window.render_frame(cx);
+        let tree = h.view.read(cx).editor.mesh_tree();
+        let from = window
+            .find(format!("mesh-drag-{}", meshes[0].id))
+            .bounds()
+            .center();
+        let to = window
+            .find(format!("mesh-item-Part:{}", id(102)))
+            .bounds()
+            .center();
+        window.drag(from, to, cx);
+        assert_eq!(h.view.read(cx).editor.mesh_tree(), tree);
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            (1, 0)
+        );
+        assert_eq!(
+            h.view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .context()
+                .selections,
+            meshes
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn a_parameter_drag_settles_the_old_name_before_the_move(cx: &mut TestAppContext) {
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(3).unwrap();
+    let first = document.parameters()[0].id.clone();
+    document.focus_parameter(&first).unwrap();
+    let h = setup_with_document(cx, document, assets);
+    super::properties::fill(&h, "property-input-name", "Committed before move", cx);
+    cx.update_window(h.window, |_, window, cx| {
+        let from = window.find(format!("parameter-name-{}", id(3))).bounds();
+        let to = window.find(format!("parameter-name-{}", id(2))).bounds();
+        window.drag(from.center(), point(to.center().x, to.top() + px(2.)), cx);
+        window.render_frame(cx);
+        let doc = h.view.read(cx).editor.document().unwrap();
+        assert_eq!(
+            doc.parameter_draft(&first).unwrap().name,
+            "Committed before move"
+        );
+        assert_eq!(doc.parameters()[1].id, id(3));
+        assert_eq!(doc.history_lengths(), (2, 0));
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn row_menu_step_uses_the_clicked_row_and_matches_drag_order(cx: &mut TestAppContext) {
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(3).unwrap();
+    let inspected = document.parameters()[0].id.clone();
+    document.focus_parameter(&inspected).unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click_with_options(
+            format!("parameter-name-{}", id(3)),
+            gpui_kit::test::ClickOptions::new().with_button(MouseButton::Right),
+            cx,
+        );
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        let up = (0..16usize)
+            .find(|index| {
+                window
+                    .within("popup-menu")
+                    .try_find(*index)
+                    .is_some_and(|item| item.label() == Some("Move up"))
+            })
+            .expect("Move up entry");
+        assert_ne!(window.within("popup-menu").find(up).disabled(), Some(true));
+        window.within("popup-menu").click(up, cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    h.view.read_with(cx, |view, _| {
+        let document = view.editor.document().unwrap();
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        assert_eq!(document.parameters()[1].id, id(3));
+        assert_eq!(document.context().inspected.as_ref().unwrap().id, inspected);
+        assert_eq!(document.history_lengths(), (1, 0));
+    });
+}
+
+#[gpui_kit::test]
+fn hovering_the_same_destination_reuses_one_plan_across_input_and_render(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.simulate_window_resize(h.window, size(px(1100.), px(1400.)));
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        let from = window
+            .find(format!("parameter-name-{}", id(3)))
+            .bounds()
+            .center();
+        let to = window
+            .find(format!("parameter-group-{}", id(104)))
+            .bounds()
+            .center();
+        begin_drag(window, cx, from, to);
+        let panel = h.view.read(cx).dock.as_ref().unwrap().parameters.clone();
+        let plans = panel.read(cx).sorting_plans_built(cx);
+        assert!(plans > 0);
+        for _ in 0..10 {
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: to,
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+        }
+        assert_eq!(panel.read(cx).sorting_plans_built(cx), plans);
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            (0, 0)
+        );
+        window.press("escape", cx);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn leaving_and_reentering_a_folder_restarts_the_hover_expand_delay(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_parameter_groups().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.simulate_window_resize(h.window, size(px(1100.), px(1400.)));
+    let target = cx
+        .update_window(h.window, |_, window, cx| {
+            window.render_frame(cx);
+            window.click(format!("parameter-group-toggle-{}", id(104)), cx);
+            let from = window
+                .find(format!("parameter-name-{}", id(3)))
+                .bounds()
+                .center();
+            let to = window
+                .find(format!("parameter-group-{}", id(104)))
+                .bounds()
+                .center();
+            begin_drag(window, cx, from, to);
+            to
+        })
+        .unwrap();
+    cx.run_until_parked();
+    cx.background_executor
+        .advance_clock(std::time::Duration::from_millis(300));
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        let outside = window.find("canvas-body").bounds().center();
+        super::slide_number_input::slide(window, outside, false, cx);
+        window.render_frame(cx);
+        super::slide_number_input::slide(window, target, false, cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.background_executor
+        .advance_clock(std::time::Duration::from_millis(300));
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window
+                .find(format!("parameter-group-{}", id(104)))
+                .expanded(),
+            Some(false)
+        );
+    })
+    .unwrap();
+    cx.background_executor
+        .advance_clock(std::time::Duration::from_millis(300));
+    cx.run_until_parked();
+    cx.update_window(h.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert_eq!(
+            window
+                .find(format!("parameter-group-{}", id(104)))
+                .expanded(),
+            Some(true)
+        );
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            (0, 0)
+        );
+        window.press("escape", cx);
+    })
+    .unwrap();
 }

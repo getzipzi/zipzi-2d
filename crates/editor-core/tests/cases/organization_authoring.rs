@@ -274,3 +274,83 @@ fn root_part_sort_anchors_stay_in_the_part_palette_with_unassigned_scene_objects
     d.undo()?;
     Ok(())
 }
+
+fn create_object(
+    d: &mut Document,
+    kind: ObjectKind,
+    selection: &[ObjectRef],
+) -> anyhow::Result<ObjectRef> {
+    let before = d.history_lengths().0;
+    let plan = d.plan_parameter_object_creation(kind, "New".into(), selection)?;
+    let result = d.execute_organization_authoring(&plan)?;
+    assert_eq!(d.history_lengths().0, before + 1);
+    // Planning and publication do not impersonate a row click.
+    Ok(result
+        .suggested_selection
+        .into_iter()
+        .find(|object| object.kind == kind)
+        .unwrap())
+}
+
+#[test]
+fn creation_uses_full_collection_order_and_nested_empty_folders() -> anyhow::Result<()> {
+    let mut d = Document::new_blank()?;
+    let folder = create_object(&mut d, ObjectKind::ParameterGroup, &[])?;
+    let child = create_object(
+        &mut d,
+        ObjectKind::ParameterGroup,
+        std::slice::from_ref(&folder),
+    )?;
+    let first = create_object(&mut d, ObjectKind::Parameter, std::slice::from_ref(&child))?;
+    let second = create_object(&mut d, ObjectKind::Parameter, std::slice::from_ref(&first))?;
+    let third = create_object(&mut d, ObjectKind::Parameter, std::slice::from_ref(&second))?;
+    let inserted = create_object(
+        &mut d,
+        ObjectKind::Parameter,
+        &[second.clone(), first.clone()],
+    )?;
+    let ids: Vec<_> = d.parameters().into_iter().map(|p| p.id).collect();
+    assert_eq!(
+        ids,
+        vec![first.id, second.id, inserted.id.clone(), third.id]
+    );
+    assert_eq!(
+        d.parameter_draft(&inserted.id)?.group_id,
+        Some(child.id.clone())
+    );
+    assert_eq!(
+        d.parameter_group_draft(&child.id)?.parent_id,
+        Some(folder.id)
+    );
+    assert!(d.context().inspected.is_none());
+    let runtime = d.parameter_draft(&inserted.id)?.runtime_id;
+    assert_eq!(runtime, "ParamNew4");
+    d.undo()?;
+    assert!(d.object_index().get(&inserted).is_none());
+    d.redo()?;
+    assert!(d.object_index().get(&inserted).is_some());
+    Ok(())
+}
+
+#[test]
+fn cross_container_creation_falls_back_to_root_and_missing_anchor_is_rejected() -> anyhow::Result<()>
+{
+    let mut d = Document::new_blank()?;
+    let folder = create_object(&mut d, ObjectKind::ParameterGroup, &[])?;
+    let first = create_object(&mut d, ObjectKind::Parameter, std::slice::from_ref(&folder))?;
+    let second = create_object(&mut d, ObjectKind::Parameter, &[])?;
+    let root = create_object(&mut d, ObjectKind::Parameter, &[first, second])?;
+    assert_eq!(d.parameter_draft(&root.id)?.group_id, None);
+    let missing = ObjectRef::new(ObjectKind::ParameterGroup, id());
+    let history = d.history_lengths();
+    assert!(
+        d.plan_parameter_object_creation(
+            ObjectKind::Parameter,
+            "New".into(),
+            std::slice::from_ref(&missing)
+        )
+        .is_err()
+    );
+    assert_eq!(d.history_lengths(), history);
+    Ok(())
+}
