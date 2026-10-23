@@ -1,7 +1,5 @@
 use super::support;
-use editor_core::{
-    Document, EditorCommand, ObjectKind, ObjectRef, ParameterDestination, ReorderPosition,
-};
+use editor_core::{Document, ObjectKind, ObjectRef, ParameterDestination, ReorderPosition};
 use uuid::Uuid;
 
 fn id(value: u128) -> String {
@@ -166,20 +164,16 @@ fn invalid_moves_and_noops_preserve_redo_and_document_identity() -> anyhow::Resu
     )?;
     assert_eq!(document.parameters(), before);
     assert_eq!(document.history_lengths(), history);
+    let plan = document.plan_palette_move(editor_core::PaletteMove {
+        projection: editor_core::PaletteProjection::Parameters,
+        sources: vec![ObjectRef::new(ObjectKind::Parameter, id(3))],
+        target: None,
+        position: editor_core::PalettePosition::Inside,
+    })?;
     let mut editor = crate::support::editor_from_document(document);
     let first = editor.active_id().unwrap();
     editor.new_document()?;
-    assert!(
-        editor
-            .execute_for(
-                first,
-                EditorCommand::MoveParameter {
-                    id: id(3),
-                    destination: ParameterDestination::Group(None)
-                }
-            )
-            .is_err()
-    );
+    assert!(editor.execute_palette_move(first, &plan).is_err());
     // Missing or differently typed tree targets cannot become a write destination.
     let (mut document, _assets) = support::sample_document_with_two_layers()?;
     let source = document.mesh_tree()[0].children[0].reference().unwrap();

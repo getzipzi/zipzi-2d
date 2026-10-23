@@ -248,31 +248,6 @@ impl DocumentSession {
                 id,
                 expected_version,
             } => self.document.delete_parameter_group(&id, expected_version),
-            EditorCommand::ReorderTree {
-                deformer,
-                source,
-                target,
-                position,
-            } => self
-                .document
-                .reorder_tree(deformer, &source, &target, position),
-            EditorCommand::MoveOrganization {
-                source,
-                destination,
-            } => self.document.move_organization(&source, destination),
-            EditorCommand::MoveParameter { id, destination } => {
-                self.document.move_parameter(&id, destination)
-            }
-            EditorCommand::MoveParameterGroupToRoot(id) => {
-                self.document.move_parameter_group_to_root(&id)
-            }
-            EditorCommand::ReorderParameterGroup {
-                source,
-                target,
-                position,
-            } => self
-                .document
-                .reorder_parameter_group(&source, &target, position),
             EditorCommand::SetTool(tool) => {
                 self.modeling.tools.set_tool(tool, &mut self.document);
                 return Ok(());

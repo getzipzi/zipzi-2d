@@ -105,6 +105,29 @@ fn new_texture_inspects_immediately_and_cancelled_chooser_keeps_empty_resource(
         assert!(info.asset.content.is_none() && info.asset.unresolved_source.is_none());
         assert!(v.texture_loads.is_empty());
     });
+    run(&h, Some(asset.id.clone()), Control::Delete, cx);
+    click(&h, "texture-delete-submit", cx);
+    h.view.update(cx, |v, _| {
+        assert!(
+            v.editor
+                .document()
+                .unwrap()
+                .texture_info(&asset.id)
+                .is_err()
+        );
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (2, 0));
+        v.editor.execute(EditorCommand::Undo).unwrap();
+        assert!(
+            v.editor
+                .document()
+                .unwrap()
+                .texture_info(&asset.id)
+                .unwrap()
+                .asset
+                .content
+                .is_none()
+        );
+    });
 }
 #[gpui_kit::test]
 fn direct_import_cancel_invalid_png_and_success_have_atomic_history(cx: &mut TestAppContext) {
@@ -252,7 +275,11 @@ fn delete_reviews_real_users_requires_replacement_and_can_cancel(cx: &mut TestAp
         .read_with(cx, |v, _| v.editor.document().unwrap().history_lengths());
     run(&h, Some(source.id.clone()), Control::Delete, cx);
     cx.update_window(h.window, |_, window, _| {
-        assert!(window.try_find("texture-delete-users").is_some())
+        let users = window.find("texture-delete-users").bounds();
+        for i in 0..2usize {
+            let row = window.find(("texture-delete-user", i)).bounds();
+            assert!(row.top() >= users.top() && row.bottom() <= users.bottom());
+        }
     })
     .unwrap();
     click(&h, "texture-delete-submit", cx);
@@ -279,6 +306,80 @@ fn delete_reviews_real_users_requires_replacement_and_can_cancel(cx: &mut TestAp
                 .len(),
             2
         );
+    });
+}
+
+#[gpui_kit::test]
+fn dependency_review_virtualizes_large_lists_and_keeps_the_last_user_reachable(
+    cx: &mut TestAppContext,
+) {
+    use kasane_sdk::{AuthoringSession, prepare_png_asset, rectangle_mesh};
+    const USERS: usize = 256;
+    let assets = tempfile::tempdir().unwrap();
+    let path = assets.path().join("texture.png");
+    std::fs::write(
+        &path,
+        include_bytes!("../../editor-core/tests/fixtures/accent.png"),
+    )
+    .unwrap();
+    let asset_id = uuid::Uuid::new_v4().to_string();
+    let asset = prepare_png_asset(&asset_id, "Shared", &path).unwrap();
+    let mut session = AuthoringSession::new(
+        &uuid::Uuid::new_v4().to_string(),
+        kasane_core::Canvas::default(),
+    )
+    .unwrap();
+    session
+        .edit("Many texture users", None, |edit| {
+            edit.create_asset(asset)?;
+            for i in 0..USERS {
+                edit.create_mesh(rectangle_mesh(
+                    &uuid::Uuid::new_v4().to_string(),
+                    &format!("Mesh {i}"),
+                    &asset_id,
+                    kasane_core::Vec2::new(0., 0.),
+                    kasane_core::Vec2::new(1., 1.),
+                )?)?;
+            }
+            Ok(())
+        })
+        .unwrap();
+    let saved = session
+        .save_project(&assets.path().join("many-users.kasane"), None)
+        .unwrap();
+    let document = editor_core::Document::open(&saved.manifest).unwrap();
+    let h = setup_with_document(cx, document, assets);
+    run(&h, Some(asset_id), Control::Delete, cx);
+    for height in [1000., 720.] {
+        cx.update_window(h.window, |_, window, cx| {
+            window.resize(size(px(1100.), px(height)));
+            window.render_frame(cx);
+            let count = (0..USERS)
+                .filter(|i| window.try_find(("texture-delete-user", *i)).is_some())
+                .count();
+            assert!(count > 0 && count < 20, "laid out {count} of {USERS} users");
+            window.scroll(
+                "texture-delete-users",
+                gpui_kit::ScrollDelta::Pixels(gpui_kit::point(px(0.), px(-100_000.))),
+                cx,
+            );
+            window.render_frame(cx);
+            let users = window.find("texture-delete-users").bounds();
+            let last = window.find(("texture-delete-user", USERS - 1)).bounds();
+            assert!(last.top() >= users.top() && last.bottom() <= users.bottom() + px(1.));
+            let count = (0..USERS)
+                .filter(|i| window.try_find(("texture-delete-user", *i)).is_some())
+                .count();
+            assert!(
+                count > 0 && count < 20,
+                "laid out {count} users after scrolling"
+            );
+        })
+        .unwrap();
+    }
+    click(&h, "texture-delete-cancel", cx);
+    h.view.read_with(cx, |v, _| {
+        assert_eq!(v.editor.document().unwrap().history_lengths(), (0, 0))
     });
 }
 #[gpui_kit::test]

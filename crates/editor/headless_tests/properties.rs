@@ -688,6 +688,15 @@ fn properties_ime_composition_does_not_submit_or_save_partial_text(cx: &mut Test
     cx.update_window(harness.window, |_, window, cx| {
         window.press("enter", cx);
         harness.view.update(cx, |view, cx| {
+            for command in [
+                editor_core::CommandId::CreateMesh,
+                editor_core::CommandId::CreateParameter,
+                editor_core::CommandId::CreateParameterGroup,
+            ] {
+                view.run_command(command, window, cx);
+                assert!(view.edit_error.is_some());
+                assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
+            }
             view.save(false, window, cx);
             assert!(view.edit_error.is_some());
             assert!(!view.modal);

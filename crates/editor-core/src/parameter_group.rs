@@ -1,7 +1,7 @@
 use crate::{Document, ObjectKind, ObjectRef, ParameterManagementError as E};
 use anyhow::{Result, ensure};
 use kasane_core::document::CdiParameterGroup;
-use kasane_sdk::{OrganizationCollection as Collection, OrganizationEdit as Edit};
+use kasane_sdk::OrganizationEdit as Edit;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParameterGroupDraft {
     pub name: String,
@@ -120,16 +120,6 @@ impl Document {
         let plan = self
             .session
             .plan_organization_edit(self.group_intent(Some(id), &draft)?)?;
-        self.execute_organization_authoring(&plan)?;
-        Ok(())
-    }
-    pub fn move_parameter_group_to_root(&mut self, id: &str) -> Result<()> {
-        self.finish_edit()?;
-        let plan = self.session.plan_organization_edit(Edit::Move {
-            ids: vec![id.into()],
-            destination: Collection::ParameterGroups { parent_id: None },
-            before: None,
-        })?;
         self.execute_organization_authoring(&plan)?;
         Ok(())
     }

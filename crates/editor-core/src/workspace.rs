@@ -309,11 +309,6 @@ impl Editor {
                 | EditorCommand::SetObjectsLocked { .. }
                 | EditorCommand::SetObjectProperties { .. }
                 | EditorCommand::SelectCanvasObjects(_)
-                | EditorCommand::ReorderTree { .. }
-                | EditorCommand::MoveOrganization { .. }
-                | EditorCommand::MoveParameter { .. }
-                | EditorCommand::ReorderParameterGroup { .. }
-                | EditorCommand::MoveParameterGroupToRoot(_)
         ) {
             ensure!(
                 self.active == Some(id) && !self.exiting(),

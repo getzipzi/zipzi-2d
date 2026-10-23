@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入；U3 Motion/Expression 创建、注册属性、成员、列表排序、Motion 复制/引用与删除影响审阅已接入；U4 Physics/Pose 根配置、业务组、稳定子项与结构管理已接入；U5-A 普通绑定与 U5-B 纹理资源闭环已接入**；跨阶段原生截图、实际窗口与 Release 性能验收仍待 U6，不代表 U1–U6 全部完成。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入；U3 Motion/Expression 创建、注册属性、成员、列表排序、Motion 复制/引用与删除影响审阅已接入；U4 Physics/Pose 根配置、业务组、稳定子项与结构管理已接入；U5-A 普通绑定与 U5-B 纹理资源闭环已接入**；U6 工程清理、回归与 Release CPU 复核已完成，后续 UI 由用户人工验收，U6 不标记为全部验收完成。
 
 ## 首轮实现：创建与输入边界
 
@@ -20,7 +20,7 @@
 | U3 | 接入 Motion/Expression 创建、空 MotionGroup、Clip/当前注册分区、继承/覆盖、Expression 成员、列表排序与可搜索移组；补齐 Motion 内容/组复制、添加已有引用、注册/组/资源删除与影响审阅；保留原激活路径 | 中英文原生截图、实际窗口与 Release 性能验收随 U6 |
 | U4 | 接入 Physics/Pose 根配置、业务组与成员/links 管理，统一原生计划、创建命令、迁移/删除审阅；Physics 子项选择和节点参数复用按稳定 ID 解析，保留专用拓扑与执行顺序语义 | 中英文原生截图、实际窗口与 Release 性能完整验收随 U6 |
 | U5 | U5-A 普通绑定和 U5-B Texture/ImageAsset 资源闭环已接入，详见下方交付记录及范围核对 | 高级功能按方案第 8.1 节暂缓，跨阶段原生/性能验收随 U6 |
-| U6 | 未开始 | 清理剩余旧路径、完整中英文/原生截图验收和性能对照 |
+| U6 | 工程清理、跨阶段回归、审阅列表修复与 Release CPU 对照已完成；历史截图和原生检查保留为辅助证据 | 用户确认跳过后续自动化 acceptance，UI 待人工验收，不标记为全部完成；见 [U6 验收记录](unified-object-authoring-u6-acceptance.md) |
 
 ### U5 范围调整
 
@@ -675,3 +675,15 @@ cargo test --manifest-path ../kasane-2d/Cargo.toml --locked \
 | SourceCanvas / 不透明扩展 / 编辑器状态 | 保留：来源检查、格式保留和既有会话状态策略 | 任意 JSON 编辑器或通用 New/Sort |
 
 以上“尚未接入”均为本轮明确暂缓的 UI，不代表核心不支持。U5-A 与 U5-B 的必做功能已接入；U6 继续围绕已交付范围做清理、实际窗口、中英文原生截图和性能验收，不自动扩大为暂缓领域的新功能开发。
+
+
+## U6：工程清理与非 UI 复核
+
+2026 年 10 月 23 日：在当前 checkout 继续，SDK 保持 `e27230a`，没有修改相邻仓库。
+
+- 删除 5 个已被共享移动计划替代的旧 `EditorCommand` 分支及未使用的移至根组方法，文档切换回归验证实际使用的 `execute_palette_move`。保留 Properties 联合事务及 core 测试仍需要的底层组织 API。
+- 修复纹理删除使用者列表和绑定审阅报告被 flex 压缩的问题，列表有明确视口、完整内容可滚动；纹理使用者改为共享不可变身份数组与虚拟化行。256 使用者回归覆盖窗口缩小、可见行数与最后一行可达；空纹理删除及 Undo 保留身份。
+- 绑定转换保证改为 typed `GridGuarantee` 的中英文说明。补齐 IME 组合期间 Mesh、Parameter、ParameterGroup 创建命令的输入边界回归。
+- 跨阶段回归 989 项通过、2 项原有忽略；清理与字段/列表定向门禁 95 项通过，随后纹理/绑定 16 项及空纹理/IME 2 项通过，过滤集合重叠不累加。Release CPU 完成 5 对全链对照和 5 对 Opacity 定向复核，后者更新＋预览 p50 为 0.328→0.318 ms；完整数据、波动与证据边界见 [U6 记录](unified-object-authoring-u6-acceptance.md)。
+
+用户确认 **跳过后续自动化 acceptance，由用户人工验收 UI**。新增 acceptance 场景和 README 入口已撤去，已有截图仅作人工参考；排队的 Timeline/实际窗口验收已停止。U6 工程部分完成，UI 最终状态待人工确认，不把阶段标记为全部验收通过。U5 暂缓领域继续保留原范围。

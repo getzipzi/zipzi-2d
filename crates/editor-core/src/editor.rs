@@ -35,26 +35,6 @@ pub enum EditorCommand {
         id: String,
         expected_version: u64,
     },
-    ReorderTree {
-        deformer: bool,
-        source: crate::ObjectRef,
-        target: crate::ObjectRef,
-        position: crate::ReorderPosition,
-    },
-    MoveOrganization {
-        source: crate::ObjectRef,
-        destination: crate::OrganizationDestination,
-    },
-    MoveParameter {
-        id: String,
-        destination: crate::ParameterDestination,
-    },
-    MoveParameterGroupToRoot(String),
-    ReorderParameterGroup {
-        source: String,
-        target: String,
-        position: crate::ReorderPosition,
-    },
     SelectObjects(Vec<crate::ObjectRef>),
     SelectCanvasObjects(Vec<crate::ObjectRef>),
     SetObjectsLocked {

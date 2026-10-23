@@ -285,7 +285,7 @@ struct TextureDelete {
     asset: String,
     dialog: FormDialogState,
     replacement: Entity<SelectState<SearchableVec<Choice>>>,
-    users: Vec<ObjectRef>,
+    users: std::sync::Arc<[ObjectRef]>,
     plan: Option<ResourceEditPlan>,
     reason: Option<String>,
     _subscriptions: Vec<Subscription>,
@@ -389,7 +389,7 @@ impl TextureDelete {
                 asset,
                 dialog: FormDialogState::new(cx),
                 replacement,
-                users: info.users,
+                users: info.users.into(),
                 plan: None,
                 reason: None,
                 _subscriptions: vec![select, observe],
@@ -435,7 +435,7 @@ impl FormDialogView for TextureDelete {
                 .execute_resource_authoring(self.context.editing.document, plan)?;
             v.texture_loads.remove(&self.asset);
             let mut candidates = v.editor.document().unwrap().resource_collection()?;
-            candidates.extend(self.users.clone());
+            candidates.extend(self.users.iter().cloned());
             v.present_authoring_result(
                 self.context.editing.document,
                 &result,
@@ -467,20 +467,46 @@ impl Render for TextureDelete {
             .and_then(|o| o.read(cx).editor.document().map(|d| d.object_index()));
         body = body.child(format!("{}: {}", t!("editor.used_by"), self.users.len()));
         // Bound the review viewport, retaining every actual dependency.
-        let mut users = div()
+        let users = self.users.clone();
+        let height = compact::rem((users.len() as f32 * compact::ROW).min(180.));
+        let users = div()
             .id("texture-delete-users")
             .test_support()
-            .max_h(compact::rem(180.))
-            .overflow_y_scroll()
-            .flex()
-            .flex_col();
-        for user in &self.users {
-            users = users.child(div().child(format!(
-                "{} · {}",
-                index.as_ref().map_or(user.id.as_str(), |i| i.name(user)),
-                user.id
-            )));
-        }
+            .h(height)
+            .flex_shrink_0()
+            .child(
+                uniform_list(
+                    "texture-delete-user-list",
+                    users.len(),
+                    move |range, _, _| {
+                        range
+                            .map(|i| {
+                                let user = &users[i];
+                                let label = format!(
+                                    "{} · {}",
+                                    index
+                                        .as_ref()
+                                        .map_or(user.id.as_str(), |index| index.name(user)),
+                                    user.id
+                                );
+                                let hint = label.clone();
+                                div()
+                                    .id(("texture-delete-user", i))
+                                    .test_support()
+                                    .h(compact::rem(compact::ROW))
+                                    .text_xs()
+                                    .truncate()
+                                    .tooltip(move |window, cx| {
+                                        gpui_kit::component::tooltip::Tooltip::new(hint.clone())
+                                            .build(window, cx)
+                                    })
+                                    .child(label)
+                            })
+                            .collect()
+                    },
+                )
+                .h_full(),
+            );
         body = body.child(users).child(t!("texture.replacement")).child(
             compact::select(Select::new(&self.replacement))
                 .id("texture-replacement")

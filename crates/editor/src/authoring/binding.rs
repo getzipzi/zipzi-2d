@@ -325,7 +325,11 @@ impl BindingDialog {
                         report.deleted.len()
                     ));
                     if let Some(guarantee) = &report.grid_guarantee {
-                        rows.push(format!("{}: {guarantee:?}", t!("binding.guarantee")));
+                        rows.push(format!(
+                            "{}: {}",
+                            t!("binding.guarantee"),
+                            guarantee_label(guarantee)
+                        ));
                     }
                     rows.extend(report.losses.iter().cloned());
                     rows.extend(
@@ -575,10 +579,24 @@ impl Render for BindingDialog {
             body = body.child(
                 uniform_list("binding-review-rows", rows.len(), move |range, _, _| {
                     range
-                        .map(|i| div().text_xs().overflow_hidden().child(rows[i].clone()))
+                        .map(|i| {
+                            let text = rows[i].clone();
+                            div()
+                                .id(("binding-review-row", i))
+                                .test_support()
+                                .h(compact::rem(compact::ROW))
+                                .text_xs()
+                                .truncate()
+                                .tooltip(move |window, cx| {
+                                    gpui_kit::component::tooltip::Tooltip::new(text.clone())
+                                        .build(window, cx)
+                                })
+                                .child(rows[i].clone())
+                        })
                         .collect()
                 })
-                .h(compact::rem(150.)),
+                .h(compact::rem(150.))
+                .flex_shrink_0(),
             );
         }
         if let Some(error) = self.reason.as_ref().or(self.dialog.error.as_ref()) {
@@ -588,5 +606,41 @@ impl Render for BindingDialog {
             body = body.child(t!("authoring.animation_stale"));
         }
         body
+    }
+}
+
+fn guarantee_label(guarantee: &kasane_sdk::GridGuarantee) -> String {
+    use kasane_sdk::GridGuarantee as G;
+    match guarantee {
+        G::BaseShape => t!("binding.guarantee_base").into_owned(),
+        G::PreservedOnDomain => t!("binding.guarantee_domain").into_owned(),
+        G::ParameterPlacementChanged => t!("binding.guarantee_placement").into_owned(),
+        G::InterpolantPreserved {
+            parameter_id,
+            value,
+        } => t!(
+            "binding.guarantee_interpolant",
+            parameter = parameter_id,
+            value = value
+        )
+        .into_owned(),
+        G::DimensionRemoved {
+            parameter_id,
+            value,
+        } => t!(
+            "binding.guarantee_dimension",
+            parameter = parameter_id,
+            value = value
+        )
+        .into_owned(),
+        G::SamplesRemoved {
+            parameter_id,
+            value,
+        } => t!(
+            "binding.guarantee_samples",
+            parameter = parameter_id,
+            value = value
+        )
+        .into_owned(),
     }
 }
