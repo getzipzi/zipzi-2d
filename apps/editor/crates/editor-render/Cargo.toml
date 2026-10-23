@@ -1,0 +1,15 @@
+[package]
+name = "editor-render"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+editor-core.workspace = true
+kasane-core.workspace = true
+kasane-render.workspace = true
+kasane-render-metal.workspace = true
+
+[dev-dependencies]
+objc2.workspace = true

@@ -1,0 +1,73 @@
+--- a/vendor/gpui-fast/src/fast/retained.rs
++++ b/vendor/gpui-fast/src/fast/retained.rs
+@@ -68,6 +68,9 @@
+ }
+ 
+ pub(crate) struct RetainedSubtree {
++    /// Explicit caching does not depend on whether this subtree can be
++    /// rebuilt on its own. Virtual-list items can have no parent layout key.
++    pub(crate) cache_boundary: bool,
+     pub(crate) id: GlobalElementId,
+     pub(crate) prepaint_range: Range<PrepaintStateIndex>,
+     pub(crate) paint_range: Range<PaintIndex>,
+@@ -110,9 +113,7 @@
+ impl RetainedSubtree {
+     /// Whether the subtree is a cached view ([`crate::Entity::cached`]).
+     pub(crate) fn is_cached(&self) -> bool {
+-        self.rebuild
+-            .as_ref()
+-            .is_some_and(|rebuild| rebuild.is_cached())
++        self.cache_boundary
+     }
+ }
+ 
+@@ -774,6 +775,7 @@
+                         .shifted(&prepaint_range.start, &start)
+             };
+             target.push(RetainedSubtree {
++                cache_boundary: record.cache_boundary,
+                 id: record.id.clone(),
+                 prepaint_range,
+                 paint_range: record.paint_range.clone(),
+@@ -875,6 +877,7 @@
+         let retained = &mut self.next_frame.retained;
+         let index = (!retained.by_id.contains_key(id) && !inside_layer).then(|| {
+             let index = retained.push(RetainedSubtree {
++                cache_boundary: false,
+                 id: id.clone(),
+                 prepaint_range: start.clone()..start,
+                 paint_range: PaintIndex::default()..PaintIndex::default(),
+@@ -1713,8 +1716,9 @@
+                         cx,
+                     );
+                     if let Some(index) = record {
+-                        window.next_frame.retained.records[index].render_dependencies =
+-                            Some(render);
++                        let record = &mut window.next_frame.retained.records[index];
++                        record.render_dependencies = Some(render);
++                        record.cache_boundary = true;
+                     }
+                     ViewPrepaint::Built { element, record }
+                 }
+--- a/vendor/gpui-fast/src/fast/splice.rs
++++ b/vendor/gpui-fast/src/fast/splice.rs
+@@ -87,11 +87,6 @@
+     /// The layout key the view's element was requested under.
+     pub(crate) fn parent_layout_key(&self) -> u64 {
+         self.parent_layout_key
+-    }
+-
+-    /// Whether the view is a cached view.
+-    pub(crate) fn is_cached(&self) -> bool {
+-        self.cached_style.is_some()
+     }
+ }
+ 
+@@ -962,6 +957,7 @@
+     anchor: usize,
+ ) -> RetainedSubtree {
+     RetainedSubtree {
++        cache_boundary: record.cache_boundary,
+         id: record.id.clone(),
+         prepaint_range,
+         paint_range: record.paint_range.clone(),

@@ -1,0 +1,291 @@
+//! Object-specific inspector definitions and providers. The panel and form engine
+//! consume this interface without knowing parameter, scene or animation rules.
+pub(crate) mod animation;
+mod business;
+mod details;
+mod document;
+mod editing;
+pub(crate) mod form;
+mod mesh;
+mod parameter;
+pub(crate) mod physics;
+mod scene;
+pub(crate) mod timeline;
+pub(crate) use editing::{PreviewToken, begin_edit, update_edit};
+pub(crate) use timeline::details as selection_details;
+
+use crate::t;
+use editor_core::{
+    Document, DocumentId, EditingContext, Editor, ObjectKind, ObjectRef, PropertyKey, PropertySpec,
+    PropertyType, PropertyValue, PropertyValues,
+};
+use gpui_kit::SharedString;
+
+pub(crate) use animation::expression_info;
+pub(crate) use details::{DetailKey, DetailRow, Details};
+pub(crate) use scene::part_name;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct PropertyTarget {
+    pub document: DocumentId,
+    pub context: EditingContext,
+    pub object: ObjectRef,
+    pub scope: editor_core::PropertyScope,
+    pub timeline: Option<timeline::TimelineTarget>,
+    pub motion: Option<editor_core::MotionSelection>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub(crate) struct Choice {
+    pub label: SharedString,
+    pub value: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FieldEditor {
+    Text,
+    Select,
+    Toggle,
+    Number,
+    OptionalNumber,
+    Color,
+    References,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct FieldSpec {
+    pub binding: PropertySpec,
+    pub label: &'static str,
+    pub editor: FieldEditor,
+    pub searchable: bool,
+    pub choices: Option<fn(&Document) -> Vec<Choice>>,
+    pub scale: f64,
+    bounds: Option<fn(&PropertyValues, PropertyKey) -> (f64, f64)>,
+    pub live_text: bool,
+    pub drag_distance: Option<f64>,
+    pub section: Option<&'static str>,
+}
+impl FieldSpec {
+    fn new(binding: PropertySpec, label: &'static str, editor: FieldEditor) -> Self {
+        assert!(matches!(
+            (editor, binding.value_type),
+            (FieldEditor::Text | FieldEditor::Select, PropertyType::Text)
+                | (FieldEditor::Toggle, PropertyType::Bool)
+                | (
+                    FieldEditor::Number,
+                    PropertyType::Integer | PropertyType::Float
+                )
+                | (FieldEditor::OptionalNumber, PropertyType::OptionalFloat)
+                | (FieldEditor::Color, PropertyType::Color)
+                | (FieldEditor::References, PropertyType::References)
+        ));
+        Self {
+            binding,
+            label,
+            editor,
+            searchable: false,
+            choices: None,
+            bounds: None,
+            live_text: false,
+            drag_distance: None,
+            section: None,
+            scale: 1.,
+        }
+    }
+
+    fn choices(mut self, searchable: bool, choices: fn(&Document) -> Vec<Choice>) -> Self {
+        assert!(matches!(
+            self.editor,
+            FieldEditor::Select | FieldEditor::References
+        ));
+        self.searchable = searchable;
+        self.choices = Some(choices);
+        self
+    }
+
+    fn percent(mut self) -> Self {
+        self.scale = 100.;
+        self
+    }
+
+    fn bounds(mut self, bounds: fn(&PropertyValues, PropertyKey) -> (f64, f64)) -> Self {
+        self.bounds = Some(bounds);
+        self
+    }
+
+    pub fn number_bounds(&self, values: &PropertyValues) -> (f64, f64) {
+        self.bounds
+            .map_or((self.binding.min, self.binding.max), |bounds| {
+                bounds(values, self.binding.key)
+            })
+    }
+}
+
+#[derive(Clone, Default)]
+pub(crate) struct FormDefinition {
+    pub fields: Vec<FieldSpec>,
+    pub navigation: Option<NavigationSpec>,
+}
+
+/// Selection changes supplied by a provider, separate from authored properties.
+#[derive(Clone)]
+pub(crate) struct NavigationSpec {
+    pub label: &'static str,
+    pub choices: Vec<Choice>,
+    pub select: fn(&mut Editor, &PropertyTarget, &str) -> anyhow::Result<()>,
+}
+impl FormDefinition {
+    fn new(fields: &[(PropertySpec, &'static str, FieldEditor)]) -> Self {
+        Self {
+            fields: fields
+                .iter()
+                .map(|&(binding, label, editor)| FieldSpec::new(binding, label, editor))
+                .collect(),
+            navigation: None,
+        }
+    }
+    pub fn fields(&self) -> impl Iterator<Item = &FieldSpec> {
+        self.fields.iter()
+    }
+    pub fn field(&self, id: PropertyKey) -> Option<FieldSpec> {
+        self.fields().find(|spec| spec.binding.key == id).copied()
+    }
+}
+
+pub(crate) struct PropertyProvider {
+    fields: fn(ObjectKind) -> FormDefinition,
+    pub choices: fn(&Document, &ObjectRef, PropertyKey) -> Option<Vec<Choice>>,
+    pub type_name: fn(&Document, &ObjectRef) -> SharedString,
+    pub editable_in: fn(EditingContext) -> bool,
+    pub show_readonly: fn(&str) -> bool,
+}
+impl PropertyProvider {
+    const DEFAULT: Self = Self {
+        fields: |_| FormDefinition::default(),
+        choices: |_, _, _| None,
+        type_name,
+        editable_in: |context| context == EditingContext::Modeling,
+        show_readonly: |_| true,
+    };
+}
+
+fn type_name(_: &Document, object: &ObjectRef) -> SharedString {
+    let key = format!("properties.type_{:?}", object.kind);
+    t!(&key).into()
+}
+
+pub(crate) fn provider(kind: ObjectKind) -> &'static PropertyProvider {
+    match kind {
+        ObjectKind::Parameter => &parameter::PARAMETER,
+        ObjectKind::ParameterGroup => &parameter::GROUP,
+        ObjectKind::Motion
+        | ObjectKind::MotionGroup
+        | ObjectKind::MotionRegistration
+        | ObjectKind::Expression
+        | ObjectKind::ExpressionEntry => &animation::PROVIDER,
+        ObjectKind::PhysicsGroup => &physics::PROVIDER,
+        ObjectKind::Physics
+        | ObjectKind::Pose
+        | ObjectKind::PoseGroup
+        | ObjectKind::PoseEntry
+        | ObjectKind::PoseLink => &business::PROVIDER,
+        ObjectKind::Document => &document::PROVIDER,
+        _ => &scene::PROVIDER,
+    }
+}
+
+pub(crate) fn definition(kind: ObjectKind) -> FormDefinition {
+    (provider(kind).fields)(kind)
+}
+
+pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
+    let inspection = editor.active_inspection()?;
+    let timeline = timeline::target(editor, &inspection);
+    let mut object = inspection.object().or_else(|| {
+        if inspection.context != EditingContext::Modeling {
+            return None;
+        }
+        editor
+            .document()?
+            .object_index()
+            .objects
+            .first()
+            .map(|info| info.reference.clone())
+    })?;
+    if matches!(
+        object.kind,
+        ObjectKind::PhysicsInput | ObjectKind::PhysicsOutput | ObjectKind::PhysicsNode
+    ) {
+        object = editor.document()?.business_owner(&object)?;
+    }
+    let explicit_motion = if object.kind == ObjectKind::MotionRegistration {
+        let (_, entry) = editor.document()?.motion_registration(&object.id)?;
+        let motion = editor_core::MotionSelection {
+            clip_id: entry.clip_id.clone(),
+            entry: Some(entry.id.clone()),
+        };
+        object = ObjectRef::new(ObjectKind::Motion, &entry.clip_id);
+        Some(motion)
+    } else {
+        None
+    };
+    let motion = explicit_motion.or_else(|| {
+        (inspection.context == EditingContext::Animation
+            && object.kind == ObjectKind::Motion
+            && timeline.is_none())
+        .then(|| {
+            editor
+                .animation()?
+                .motion
+                .as_ref()
+                .filter(|motion| motion.clip_id == object.id)
+                .cloned()
+                .or_else(|| {
+                    editor
+                        .document()?
+                        .animation_catalog()
+                        .motions
+                        .iter()
+                        .find(|resource| resource.selection.clip_id == object.id)
+                        .map(|resource| resource.selection.clone())
+                })
+        })
+        .flatten()
+    });
+    Some(PropertyTarget {
+        motion,
+        document: inspection.document,
+        context: inspection.context,
+        scope: if timeline.is_none()
+            && matches!(
+                object.kind,
+                ObjectKind::Motion | ObjectKind::Expression | ObjectKind::PhysicsGroup
+            ) {
+            editor_core::PropertyScope::Resource {
+                revision: editor.document()?.model_generation(),
+            }
+        } else {
+            editor.document()?.property_scope(&object)
+        },
+        object,
+        timeline,
+    })
+}
+
+fn details_source(
+    editor: &Editor,
+    target: Option<&PropertyTarget>,
+) -> Option<details::DetailSource> {
+    match editor.editing_context()? {
+        EditingContext::Animation => animation::details_source(editor, target),
+        EditingContext::Modeling => None,
+    }
+}
+
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+mod timeline_tests;
+
+#[cfg(test)]
+mod physics_tests;

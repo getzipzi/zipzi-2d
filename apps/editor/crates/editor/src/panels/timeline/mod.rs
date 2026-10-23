@@ -1,0 +1,426 @@
+//! Animation editing UI. Geometry and input use the same cached, clipped scene.
+mod axis;
+mod controls;
+mod drawing;
+mod hints;
+mod input;
+#[cfg(test)]
+pub(crate) use hints::PAN_HINTS;
+pub(crate) use hints::{TimelineCaptureKind, TimelineHints};
+mod lifecycle;
+mod playback_speed;
+mod values;
+use lifecycle::Target;
+pub(crate) use lifecycle::TimelineOperation;
+mod navigation;
+mod transport;
+mod view;
+
+use crate::{EditorView, t, ui::compact};
+use editor_core::{
+    AnimationPreviewMode, DocumentId, TimelineCandidateIdentity, TimelineCategory, TimelineChannel,
+    TimelineCommand, TimelineDiagnostic, TimelineDisplayMode, TimelineFilter, TimelineKeyRef,
+    TimelineProjection, TimelineRow, TimelineRowId, TimelineTrack, TimelineViewState,
+    timeline_time,
+};
+use gpui_kit::assets::IconName;
+use gpui_kit::base::ElementExt;
+use gpui_kit::component::{
+    ActiveTheme, Disableable, Selectable, Sizable, WindowExt,
+    button::{Button, ButtonVariants},
+    dock::{BasePanel, Panel, PanelEvent},
+    input::{InputEvent, InputState},
+    menu::{DropdownMenu, PopupMenuItem},
+};
+use gpui_kit::{prelude::*, *};
+use std::{cell::Cell, collections::HashMap, rc::Rc, sync::Arc};
+
+const ROW: f32 = 24.;
+const LEFT: f32 = 248.;
+const RULER: f32 = 24.;
+const COMPACT_WIDTH: f32 = 900.;
+const COMPACT_LEFT: f32 = 160.;
+
+pub struct Timeline {
+    pub(crate) id: editor_core::TimelineId,
+    pub(crate) input_region: crate::input_routing::InputRegion,
+    pub(crate) hints: TimelineHints,
+    ui_scale: f32,
+    #[cfg(any(test, feature = "test-support"))]
+    renders: u64,
+    owner: WeakEntity<EditorView>,
+    focus: FocusHandle,
+    tracks: Entity<drawing::TracksLayer>,
+    search: Entity<InputState>,
+    search_placeholder: String,
+    playback_speed: Option<playback_speed::Control>,
+    context: Option<Target>,
+    graph: Rc<Cell<Bounds<Pixels>>>,
+    ruler: Rc<Cell<Bounds<Pixels>>>,
+    body_height: f32,
+    gesture: Option<input::Gesture>,
+    edge_scroll: Option<Task<()>>,
+    pointer: Point<Pixels>,
+    pan_tool: bool,
+    number_edit: Option<values::NumberEdit>,
+    fields: HashMap<values::Field, values::FieldControl>,
+    scene: Rc<std::cell::RefCell<drawing::SceneCache>>,
+    value_range: (f64, f64),
+    range_key: Option<axis::RangeKey>,
+    seconds: bool,
+    compact: bool,
+    header_compact: bool,
+    header_tiny: bool,
+    error: Option<String>,
+    _search_events: Subscription,
+    _observe: Subscription,
+}
+
+impl Timeline {
+    fn current_capture(&self) -> Option<(TimelineOperation, TimelineCaptureKind)> {
+        self.operation().and_then(|op| {
+            if let Some(gesture) = &self.gesture {
+                let kind = match gesture {
+                    input::Gesture::Pan { .. } => TimelineCaptureKind::Pan,
+                    input::Gesture::Seek(_) => TimelineCaptureKind::Seek,
+                    input::Gesture::Marquee { .. } => TimelineCaptureKind::Marquee,
+                    input::Gesture::Keys { .. } => TimelineCaptureKind::Keys,
+                    input::Gesture::Handle { .. } => TimelineCaptureKind::Handle,
+                    input::Gesture::Event { .. } => TimelineCaptureKind::Event,
+                };
+                return Some((op, kind));
+            }
+            if self.number_edit.is_some() {
+                return Some((op, TimelineCaptureKind::Number));
+            }
+            None
+        })
+    }
+
+    pub(super) fn publish_hints(&self) {
+        self.hints.publish(self.current_capture(), self.pan_tool);
+    }
+
+    pub(super) fn sync_status_bar(&self, cx: &mut App) {
+        self.publish_hints();
+        if let Some(owner) = self.owner.upgrade() {
+            crate::workspace::status_bar::StatusBar::sync_owner(&owner, cx);
+        }
+    }
+
+    fn row_height(&self) -> f32 {
+        ROW * self.ui_scale
+    }
+
+    pub fn new(owner: WeakEntity<EditorView>, window: &mut Window, cx: &mut App) -> Entity<Self> {
+        cx.new(|cx: &mut Context<Self>| {
+            let upgraded = owner.upgrade().unwrap();
+            cx.on_release(|this: &mut Self, cx| {
+                this.hints.clear();
+                let panel = this.id;
+                let owner = this.owner.clone();
+                cx.defer(move |cx| {
+                    let _ = owner.update(cx, |owner, cx| {
+                        owner.editor.unregister_timeline(panel);
+                        owner.redraw(cx);
+                    });
+                });
+            })
+            .detach();
+            let scene = Rc::new(std::cell::RefCell::new(drawing::SceneCache::default()));
+            let search =
+                cx.new(|cx| InputState::new(window, cx).placeholder(t!("timeline.search")));
+            let focus = cx.focus_handle();
+            let timeline = cx.weak_entity();
+            let id = editor_core::TimelineId::new();
+            let input_region =
+                crate::input_routing::InputRegion::new(focus.clone(), move |editor, _| {
+                    use crate::input_routing::{InputTarget, LocalTarget};
+                    editor
+                        .timeline_binding(id)
+                        .map(|binding| InputTarget::new(LocalTarget::Timeline(binding)))
+                })
+                .with_capture(move |editor, cx| {
+                    let entity = timeline.upgrade()?;
+                    let operation = entity.read(cx).operation()?;
+                    let timeline = timeline.clone();
+                    Some(crate::input_routing::CapturedInput::new(
+                        crate::input_routing::LocalTarget::Timeline(operation.binding()),
+                        operation.valid(editor),
+                        crate::input_routing::CaptureCancelKey::Escape,
+                        move |window, cx| {
+                            timeline
+                                .update(cx, |timeline, cx| {
+                                    if timeline.operation() != Some(operation) {
+                                        return None;
+                                    }
+                                    let cancellation = timeline.cancel_local(window, cx);
+                                    Some(Box::new(move |owner: &mut EditorView| {
+                                        cancellation.apply(owner)
+                                    })
+                                        as crate::input_routing::CoreCleanup)
+                                })
+                                .ok()
+                                .flatten()
+                        },
+                    ))
+                });
+            Self {
+                id,
+                input_region,
+                hints: TimelineHints::default(),
+                #[cfg(any(test, feature = "test-support"))]
+                renders: 0,
+                ui_scale: compact::scale(cx),
+                tracks: cx.new(|_| drawing::TracksLayer::new(scene.clone())),
+                _search_events: cx.subscribe_in(
+                    &search,
+                    window,
+                    |this, input, event, window, cx| {
+                        if matches!(event, InputEvent::Change) && this.allowed(window, cx) {
+                            let text = input.read(cx).value().to_string();
+                            this.change_view(move |view| view.search = text, cx);
+                        }
+                    },
+                ),
+                _observe: cx.observe_in(&upgraded, window, |this, _, window, cx| {
+                    this.sync(window, cx);
+                    cx.notify();
+                }),
+                owner,
+                focus,
+                search,
+                search_placeholder: t!("timeline.search").into_owned(),
+                playback_speed: None,
+                context: None,
+                graph: Rc::new(Cell::new(Bounds::default())),
+                ruler: Rc::new(Cell::new(Bounds::default())),
+                body_height: 180.,
+                gesture: None,
+                edge_scroll: None,
+                pointer: Point::default(),
+                pan_tool: false,
+                number_edit: None,
+                fields: HashMap::new(),
+                scene,
+                value_range: (-1., 1.),
+                range_key: None,
+                seconds: false,
+                compact: false,
+                header_compact: false,
+                header_tiny: false,
+                error: None,
+            }
+        })
+    }
+
+    fn change_view(&mut self, change: impl FnOnce(&mut TimelineViewState), cx: &mut Context<Self>) {
+        let Some(target) = self.target(cx) else {
+            return;
+        };
+        let _ = self.owner.update(cx, |owner, cx| {
+            let result = owner.editor.update_timeline_view(target.document, change);
+            owner.complete_edit(result, cx);
+        });
+    }
+    fn execute(&mut self, command: TimelineCommand, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.editable(window, cx) {
+            return;
+        }
+        self.finish_number(cx);
+        let Some(target) = self.target(cx) else {
+            return;
+        };
+        let result = self.owner.update(cx, |owner, cx| {
+            let result = owner.editor.execute_timeline(target.document, command);
+            let error = result.as_ref().err().map(ToString::to_string);
+            owner.complete_edit(result, cx);
+            error
+        });
+        self.error = result.ok().flatten();
+        cx.notify();
+    }
+    fn fit(&mut self, cx: &mut Context<Self>) {
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        let view = owner.read(cx);
+        let Some(projection) = view.editor.timeline_projection() else {
+            return;
+        };
+        let end = projection.display_end.max(
+            view.editor
+                .animation()
+                .and_then(|a| a.result_playback_position())
+                .map_or(0., |p| f64::from(p.period)),
+        );
+        self.range_key = None;
+        self.change_view(|view| view.time_range = (0., end.max(0.001)), cx);
+    }
+    fn select_keys(
+        &mut self,
+        keys: Vec<TimelineKeyRef>,
+        additive: bool,
+        reveal: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(owner) = self.owner.upgrade() else {
+            return;
+        };
+        let Some(projection) = owner.read(cx).editor.timeline_projection() else {
+            return;
+        };
+        if reveal && !additive {
+            let Some(target) = self.target(cx) else {
+                return;
+            };
+            let _ = self.owner.update(cx, |owner, cx| {
+                let result = owner.editor.reveal_timeline_keys(target.document, &keys);
+                owner.complete_edit(result, cx);
+            });
+            return;
+        }
+        self.change_view(
+            move |view| {
+                if !additive {
+                    view.keys.clear();
+                    view.events.clear();
+                    if view.mode != TimelineDisplayMode::Curves || reveal {
+                        view.channels.clear();
+                    }
+                }
+                if reveal {
+                    if let Some(key) = keys.first().and_then(|key| projection.key(key)) {
+                        view.reveal_time(key.time);
+                    }
+                }
+                for key in keys {
+                    view.keys.insert(key.clone());
+                    let mut parents = Vec::<&TimelineRow>::new();
+                    for row in projection.rows.iter() {
+                        while parents
+                            .last()
+                            .is_some_and(|parent| parent.depth >= row.depth)
+                        {
+                            parents.pop();
+                        }
+                        if row.keys.contains(&key) {
+                            view.channels.insert(row.id.clone());
+                            if reveal {
+                                for parent in &parents {
+                                    view.collapsed.remove(&parent.id);
+                                }
+                                view.reveal_row = Some(row.id.clone());
+                            }
+                        }
+                        parents.push(row);
+                    }
+                }
+            },
+            cx,
+        );
+    }
+}
+
+impl EventEmitter<PanelEvent> for Timeline {}
+impl Focusable for Timeline {
+    fn focus_handle(&self, _: &App) -> FocusHandle {
+        self.focus.clone()
+    }
+}
+impl BasePanel for Timeline {
+    fn panel_name(&self) -> &'static str {
+        "AnimationTimeline"
+    }
+
+    fn set_active(&mut self, active: bool, window: &mut Window, cx: &mut Context<Self>) {
+        if !active {
+            self.deactivate(window, cx);
+        }
+    }
+
+    fn on_removed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.deactivate(window, cx);
+    }
+}
+impl Panel for Timeline {
+    fn title(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        t!("timeline.title")
+    }
+
+    fn inner_padding(&self, _: &App) -> bool {
+        false
+    }
+}
+
+#[cfg(any(test, feature = "test-support"))]
+impl Timeline {
+    pub(crate) fn renders(&self) -> u64 {
+        self.renders
+    }
+    pub(crate) fn scene_paints(&self) -> u64 {
+        self.scene.borrow().paints
+    }
+    pub(crate) fn scene_builds(&self) -> u64 {
+        self.scene.borrow().builds
+    }
+
+    #[cfg(test)]
+    pub(crate) fn axis_ticks(&self) -> Vec<(f64, String, f32)> {
+        let cache = self.scene.borrow();
+        let Some(scene) = &cache.scene else {
+            return vec![];
+        };
+        scene
+            .ticks
+            .iter()
+            .map(|tick| {
+                (
+                    tick.value,
+                    tick.label.clone(),
+                    self.graph.get().top().as_f32()
+                        + drawing::value_y(
+                            tick.value,
+                            self.value_range,
+                            self.graph.get().size.height.as_f32(),
+                            self.row_height(),
+                        ),
+                )
+            })
+            .collect()
+    }
+    #[cfg(test)]
+    pub(crate) fn handle_position(&self, key: &TimelineKeyRef) -> Option<Point<Pixels>> {
+        self.scene
+            .borrow()
+            .scene
+            .as_ref()?
+            .markers
+            .iter()
+            .find_map(|marker| match &marker.hit {
+                drawing::Hit::Handle {
+                    end,
+                    handle: kasane_sdk::MotionBezierHandle::Control1,
+                } if end == key => Some(self.graph.get().origin + marker.position),
+                _ => None,
+            })
+    }
+    #[cfg(test)]
+    pub(crate) fn pointer_active(&self) -> bool {
+        self.gesture.is_some()
+    }
+    pub(crate) fn key_position(&self, key: &TimelineKeyRef) -> Option<Point<Pixels>> {
+        self.scene
+            .borrow()
+            .scene
+            .as_ref()?
+            .markers
+            .iter()
+            .find_map(|marker| match &marker.hit {
+                drawing::Hit::Key(reference) if reference == key => {
+                    Some(self.graph.get().origin + marker.position)
+                }
+                _ => None,
+            })
+    }
+}

@@ -1,0 +1,70 @@
+[package]
+name = "kasane-editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+debug-tools = ["dep:gpui-fps"]
+test-support = ["gpui-kit/test-support", "dep:tempfile", "image/png"]
+bench-instrumentation = ["editor-core/bench-instrumentation"]
+
+[dependencies]
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+gpui-kit.workspace = true
+gpui-fps = { workspace = true, optional = true }
+editor-core.workspace = true
+kasane-sdk.workspace = true
+kasane-core.workspace = true
+editor-render.workspace = true
+rust-i18n.workspace = true
+sys-locale.workspace = true
+anyhow.workspace = true
+async-channel.workspace = true
+image = { version = "0.25.10", default-features = false }
+metal.workspace = true
+objc2.workspace = true
+tempfile = { workspace = true, optional = true }
+
+[[bin]]
+name = "kasane-editor"
+path = "src/main.rs"
+test = false
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+kasane-sdk-observe = { path = "../../../kasane-2d/modules/kasane-sdk-observe" }
+gpui-kit = { workspace = true, features = ["test-support"] }
+gpui-apple = { package = "gpui-fast-apple", version = "=0.1.7", features = ["test-support"] }
+kasane-core.workspace = true
+tempfile.workspace = true
+uuid.workspace = true
+toml = "0.8"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+
+[[test]]
+name = "headless_screenshot"
+path = "tests/headless_screenshot.rs"
+harness = false
+required-features = ["test-support"]
+
+[[test]]
+name = "animation_acceptance"
+path = "tests/animation_acceptance.rs"
+harness = false
+required-features = ["test-support"]
+
+[[test]]
+name = "timeline_acceptance"
+path = "tests/timeline_acceptance.rs"
+harness = false
+required-features = ["test-support"]
+
+[[test]]
+name = "native_render"
+path = "tests/native_render.rs"
+required-features = ["test-support"]

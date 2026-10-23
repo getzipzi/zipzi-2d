@@ -1,0 +1,153 @@
+diff --git a/vendor/gpui-kit/crates/component/src/tooltip.rs b/vendor/gpui-kit/crates/component/src/tooltip.rs
+--- a/vendor/gpui-kit/crates/component/src/tooltip.rs
++++ b/vendor/gpui-kit/crates/component/src/tooltip.rs
+@@ -1,14 +1,19 @@
+ use crate::root::WindowState;
+-use std::{cell::Cell, rc::Rc, time::Duration};
++use std::{
++    cell::{Cell, RefCell},
++    rc::Rc,
++    time::Duration,
++};
+ 
+ use gpui::{
+-    Action, AnyElement, AnyView, App, AppContext, Bounds, Context, ElementId, IntoElement,
+-    MouseButton, ParentElement, Pixels, Render, SharedString, StatefulInteractiveElement,
+-    StyleRefinement, Styled, Window, div, prelude::FluentBuilder, px,
++    Action, AnyElement, AnyView, App, AppContext, Bounds, Context, ElementId, GlobalElementId,
++    InteractiveElement, IntoElement, MouseButton, ParentElement, Pixels, Render, SharedString,
++    StatefulInteractiveElement, StyleRefinement, Styled, Window, div, prelude::FluentBuilder, px,
++    rems,
+ };
+ pub use gpui_base::TooltipDefaults;
+ use gpui_base::{
+-    Tooltip as BaseTooltip, TooltipOverlay as BaseTooltipOverlay,
++    TestSupportExt as _, Tooltip as BaseTooltip, TooltipOverlay as BaseTooltipOverlay,
+     TooltipRequest as BaseTooltipRequest, TooltipTransition as BaseTooltipTransition,
+ };
+ 
+@@ -106,7 +111,7 @@
+             }
+         };
+ 
+-        div().child(
++        div().id("tooltip").test_support().child(
+             // Wrap in a child, to ensure the left margin is applied to the tooltip
+             BaseTooltip::new("tooltip-popup")
+                 .h_flex()
+@@ -120,10 +125,12 @@
+                 .shadow_md()
+                 .rounded(cx.theme().radius)
+                 .justify_between()
+-                .py_0p5()
+-                .px_2()
+-                .text_sm()
+-                .gap_3()
++                // Compact editor density, proportional to the window's UI scale.
++                .py(rems(1. / 16.))
++                .px(rems(6. / 16.))
++                .text_size(rems(11. / 16.))
++                .line_height(rems(14. / 16.))
++                .gap(rems(6. / 16.))
+                 .refine_style(&self.style)
+                 .map(|this| {
+                     this.child(div().map(|this| match self.content {
+@@ -134,7 +141,6 @@
+                 .when_some(key_binding, |this, kbd| {
+                     this.child(
+                         div()
+-                            .text_xs()
+                             .flex_shrink_0()
+                             .text_color(cx.theme().muted_foreground)
+                             .child(kbd.appearance(false)),
+@@ -255,16 +261,28 @@
+     ) -> Self {
+         let build_tooltip = Rc::new(build_tooltip);
+         let trigger_bounds_cell: Rc<Cell<Bounds<Pixels>>> = Rc::new(Cell::new(Bounds::default()));
++        let trigger_id_cell: Rc<RefCell<Option<GlobalElementId>>> = Rc::new(RefCell::new(None));
+         let bounds_writer = trigger_bounds_cell.clone();
+-
+-        self.on_prepaint(move |bounds, _, _| {
++        let id_writer = trigger_id_cell.clone();
++
++        self.on_prepaint(move |bounds, window, _| {
+             bounds_writer.set(bounds);
++            // Resolve the scoped identity each frame, so ownership survives rerenders.
++            window.with_global_id("managed-tooltip".into(), |id, _| {
++                *id_writer.borrow_mut() = Some(id.clone());
++            });
+         })
+         .on_hover({
+             let trigger_bounds_cell = trigger_bounds_cell.clone();
+             let build_tooltip = build_tooltip.clone();
+             move |hovered, window, cx| {
+-                if let Some(overlay) = WindowState::tooltip_overlay(window, cx) {
++                let trigger_id = trigger_id_cell.borrow();
++                let Some(trigger_id) = trigger_id.as_ref() else {
++                    return;
++                };
++                if let Some(overlay) =
++                    WindowState::tooltip_overlay_for_trigger(window, cx, trigger_id, *hovered)
++                {
+                     if *hovered {
+                         let bounds = trigger_bounds_cell.get();
+                         overlay.update(cx, |o: &mut BaseTooltipOverlay, cx| {
+diff --git a/vendor/gpui-kit/crates/component/src/root.rs b/vendor/gpui-kit/crates/component/src/root.rs
+--- a/vendor/gpui-kit/crates/component/src/root.rs
++++ b/vendor/gpui-kit/crates/component/src/root.rs
+@@ -10,9 +10,9 @@
+     window_border,
+ };
+ use gpui::{
+-    App, AppContext, Context, DefiniteLength, ElementId, Entity, FocusHandle, InteractiveElement,
+-    IntoElement, ParentElement as _, Render, RenderOnce, Styled, WeakFocusHandle, Window, div,
+-    prelude::FluentBuilder as _,
++    App, AppContext, Context, DefiniteLength, ElementId, Entity, FocusHandle, GlobalElementId,
++    InteractiveElement, IntoElement, ParentElement as _, Render, RenderOnce, Styled,
++    WeakFocusHandle, Window, div, prelude::FluentBuilder as _,
+ };
+ use gpui_base::{TextSelection, TextSelectionScopeId};
+ use std::{any::TypeId, rc::Rc};
+@@ -28,6 +28,7 @@
+     pub(super) focused_input: Option<AnyInputState>,
+     pub notification: Entity<NotificationList>,
+     pub(crate) tooltip_overlay: Entity<gpui_base::TooltipOverlay>,
++    tooltip_trigger: Option<GlobalElementId>,
+     pub(crate) native_menu_overlay: Entity<FallbackMenuOverlay>,
+     touch_selection_overlay: Entity<WindowTouchSelectionOverlay>,
+     sheet_size: Option<DefiniteLength>,
+@@ -78,6 +79,7 @@
+             notification: cx.new(|cx| NotificationList::new(window, cx)),
+             tooltip_overlay: cx
+                 .new(|_| gpui_base::TooltipOverlay::new().render_with(render_tooltip)),
++            tooltip_trigger: None,
+             native_menu_overlay: cx.new(|_| FallbackMenuOverlay::new()),
+             touch_selection_overlay: cx.new(|cx| WindowTouchSelectionOverlay::new(window, cx)),
+             sheet_size: None,
+@@ -425,6 +427,26 @@
+         Some(root.read(cx).tooltip_overlay.clone())
+     }
+ 
++    /// Ignore a previous trigger's leave event after another trigger has taken over.
++    pub(crate) fn tooltip_overlay_for_trigger(
++        window: &Window,
++        cx: &mut App,
++        trigger: &GlobalElementId,
++        hovered: bool,
++    ) -> Option<Entity<gpui_base::TooltipOverlay>> {
++        let root = Self::entity(window, cx)?;
++        root.update(cx, |root, _| {
++            if hovered {
++                root.tooltip_trigger = Some(trigger.clone());
++            } else if root.tooltip_trigger.as_ref() == Some(trigger) {
++                root.tooltip_trigger = None;
++            } else {
++                return None;
++            }
++            Some(root.tooltip_overlay.clone())
++        })
++    }
++
+     /// Get the fallback native-menu overlay entity for this window.
+     pub(crate) fn native_menu_overlay(
+         window: &Window,

@@ -1,0 +1,2824 @@
+{
+  "source": {
+    "editor_head": "61371c0e7b82d00df0ee8b02083783e4e17b3517",
+    "sdk_head": "c7f165161ed7d9b15880532fb2ec9b1aa74e6acb",
+    "patch_sha256": "2f5030faad8484bff96752c6d8e8f293d254ee579767e0667654095f940474cd",
+    "native_binary_sha256": {
+      "before": "4fc3842b82224763fcfb29b9b549cd2d203e1cc5c6451245ec728b879cc9ca12",
+      "after": "30399497b5f38bedde941a3d173407b209ff4f4b01183fe60bc7ae20da77a267"
+    }
+  },
+  "sdk_manifest": {
+    "source_sha256": "ad7077aee58d24945d4dfd77a41f6b3333a4a67d192588cb3ae0b754525896c1",
+    "binaries": {
+      "before-plain": "2eb9766f0770aaed5864a18c7187b41aba079ad5dab6a089b39016a4225d23bd",
+      "before-probes": "a4a71ac9feb32e4d586a45f19ec608c46c9af6cf5e15ed2e7c10db481f103a87",
+      "after-plain": "5c83426380e149034d14ba8bb9aa283588c79faba3754b37c623c6626f8e8a6a",
+      "after-probes": "328e60be4bbef4af6cf9c7cce5abc7832f2b4bda994dc2c9f4256b8bfd806b0b"
+    }
+  },
+  "sdk": {
+    "before": {
+      "runs": [
+        {
+          "round": 1,
+          "median_ms": {
+            "name_commit/begin": 0.948375,
+            "name_commit/replace": 0.064875,
+            "name_commit/commit": 12.6904795,
+            "opacity_commit/begin": 0.9877085,
+            "opacity_commit/replace": 0.06572900000000001,
+            "opacity_commit/commit": 12.431667000000001,
+            "core/validate_structure": 6.8984375,
+            "core/document_size": 0.0224165,
+            "core/fork": 0.399875
+          }
+        },
+        {
+          "round": 2,
+          "median_ms": {
+            "name_commit/begin": 0.925396,
+            "name_commit/replace": 0.0613745,
+            "name_commit/commit": 12.112375,
+            "opacity_commit/begin": 0.9686250000000001,
+            "opacity_commit/replace": 0.06472900000000001,
+            "opacity_commit/commit": 12.126395500000001,
+            "core/validate_structure": 7.066083000000001,
+            "core/document_size": 0.0225625,
+            "core/fork": 0.417146
+          }
+        }
+      ],
+      "median_ms": {
+        "name_commit/begin": 0.9368855,
+        "name_commit/replace": 0.06312475000000001,
+        "name_commit/commit": 12.401427250000001,
+        "opacity_commit/begin": 0.97816675,
+        "opacity_commit/replace": 0.06522900000000001,
+        "opacity_commit/commit": 12.279031250000001,
+        "core/validate_structure": 6.98226025,
+        "core/document_size": 0.0224895,
+        "core/fork": 0.4085105
+      }
+    },
+    "after": {
+      "runs": [
+        {
+          "round": 1,
+          "median_ms": {
+            "name_commit/begin": 0.4882085,
+            "name_commit/replace": 0.0621455,
+            "name_commit/commit": 3.7835,
+            "opacity_commit/begin": 0.45845800000000003,
+            "opacity_commit/replace": 0.0598125,
+            "opacity_commit/commit": 3.550333,
+            "core/validate_structure": 7.0888539999999995,
+            "core/document_size": 0.0247295,
+            "core/fork": 0.441062
+          }
+        },
+        {
+          "round": 2,
+          "median_ms": {
+            "name_commit/begin": 0.412271,
+            "name_commit/replace": 0.057333,
+            "name_commit/commit": 3.3145415,
+            "opacity_commit/begin": 0.473354,
+            "opacity_commit/replace": 0.060708,
+            "opacity_commit/commit": 3.5796875,
+            "core/validate_structure": 6.9576045,
+            "core/document_size": 0.021646,
+            "core/fork": 0.40989549999999997
+          }
+        }
+      ],
+      "median_ms": {
+        "name_commit/begin": 0.45023975,
+        "name_commit/replace": 0.05973925,
+        "name_commit/commit": 3.54902075,
+        "opacity_commit/begin": 0.46590600000000004,
+        "opacity_commit/replace": 0.06026025,
+        "opacity_commit/commit": 3.5650102500000003,
+        "core/validate_structure": 7.02322925,
+        "core/document_size": 0.02318775,
+        "core/fork": 0.42547875
+      }
+    }
+  },
+  "probe_opacity_commit": {
+    "before": [
+      {
+        "round": 1,
+        "stages": {
+          "core.checkpoint_clone": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.41777515
+          },
+          "core.checkpoint_swap_indexes": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.420575
+          },
+          "core.document_size": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.03310205
+          },
+          "core.estimate_content_size": {
+            "calls_per_commit": 3,
+            "mean_inclusive_ms": 0.095354125
+          },
+          "core.publish_candidate": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.678302075
+          },
+          "core.same_content": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.078387425
+          },
+          "core.structure_identities": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.63493445
+          },
+          "core.structure_metadata": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 3.5717615
+          },
+          "core.validate_mesh_bindings": {
+            "calls_per_commit": 185,
+            "mean_inclusive_ms": 1.58176765
+          },
+          "core.validate_motion": {
+            "calls_per_commit": 7,
+            "mean_inclusive_ms": 3.424435525
+          },
+          "core.validate_scene_bindings": {
+            "calls_per_commit": 170,
+            "mean_inclusive_ms": 0.987805775
+          },
+          "core.validate_structure": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 7.538893725
+          },
+          "probe.operation": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 12.123694925
+          },
+          "sdk.commit": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 12.02766045
+          },
+          "sdk.keys_in": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.9288469
+          },
+          "sdk.summarize": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 1.3152406
+          },
+          "sdk.summarize_binding_children": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.0014260499999999999
+          },
+          "sdk.summarize_bindings": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.00115105
+          },
+          "sdk.summarize_content": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.079532425
+          },
+          "sdk.summarize_document": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.00275205
+          },
+          "sdk.summarize_motion": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.028002125
+          },
+          "sdk.summarize_organization": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.5641094249999999
+          },
+          "sdk.summarize_physics": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 6.14e-05
+          },
+          "sdk.summarize_pose": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 3.5275e-05
+          },
+          "sdk.summarize_references": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.0687437
+          },
+          "sdk.summarize_resources": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.000473975
+          },
+          "sdk.summarize_scene": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.0091635
+          }
+        }
+      },
+      {
+        "round": 2,
+        "stages": {
+          "core.checkpoint_clone": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.492744775
+          },
+          "core.checkpoint_swap_indexes": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.452900925
+          },
+          "core.document_size": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.04786465
+          },
+          "core.estimate_content_size": {
+            "calls_per_commit": 3,
+            "mean_inclusive_ms": 0.126128325
+          },
+          "core.publish_candidate": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.732853175
+          },
+          "core.same_content": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.09550845
+          },
+          "core.structure_identities": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.6418250249999999
+          },
+          "core.structure_metadata": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 3.591006325
+          },
+          "core.validate_mesh_bindings": {
+            "calls_per_commit": 185,
+            "mean_inclusive_ms": 1.6148874
+          },
+          "core.validate_motion": {
+            "calls_per_commit": 7,
+            "mean_inclusive_ms": 3.440103375
+          },
+          "core.validate_scene_bindings": {
+            "calls_per_commit": 170,
+            "mean_inclusive_ms": 1.033323425
+          },
+          "core.validate_structure": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 7.65542605
+          },
+          "probe.operation": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 12.596267625
+          },
+          "sdk.commit": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 12.488231325
+          },
+          "sdk.keys_in": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.948757375
+          },
+          "sdk.summarize": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 1.41179055
+          },
+          "sdk.summarize_binding_children": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.0016582
+          },
+          "sdk.summarize_bindings": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.0010834
+          },
+          "sdk.summarize_content": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.090406225
+          },
+          "sdk.summarize_document": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.00323645
+          },
+          "sdk.summarize_motion": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.03205525
+          },
+          "sdk.summarize_organization": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.60536665
+          },
+          "sdk.summarize_physics": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.0001031
+          },
+          "sdk.summarize_pose": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 9.79e-05
+          },
+          "sdk.summarize_references": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.08016455
+          },
+          "sdk.summarize_resources": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.000592725
+          },
+          "sdk.summarize_scene": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.0102885
+          }
+        }
+      }
+    ],
+    "after": [
+      {
+        "round": 1,
+        "stages": {
+          "core.checkpoint_clone": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.3660198
+          },
+          "core.checkpoint_swap_indexes": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.3034709
+          },
+          "core.document_size": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.0224876
+          },
+          "core.estimate_content_size": {
+            "calls_per_commit": 3,
+            "mean_inclusive_ms": 0.078094925
+          },
+          "core.publish_candidate": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.5238906
+          },
+          "core.same_content": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.045208275
+          },
+          "core.validate_structure": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 1.468302025
+          },
+          "probe.operation": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 3.5124646
+          },
+          "sdk.commit": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 3.5120791749999998
+          },
+          "sdk.summarize": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.38188955
+          }
+        }
+      },
+      {
+        "round": 2,
+        "stages": {
+          "core.checkpoint_clone": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.387029175
+          },
+          "core.checkpoint_swap_indexes": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.30607915
+          },
+          "core.document_size": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.024018775
+          },
+          "core.estimate_content_size": {
+            "calls_per_commit": 3,
+            "mean_inclusive_ms": 0.0827948
+          },
+          "core.publish_candidate": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.53881245
+          },
+          "core.same_content": {
+            "calls_per_commit": 2,
+            "mean_inclusive_ms": 0.0637197
+          },
+          "core.validate_structure": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 1.48978025
+          },
+          "probe.operation": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 3.598997875
+          },
+          "sdk.commit": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 3.598769775
+          },
+          "sdk.summarize": {
+            "calls_per_commit": 1,
+            "mean_inclusive_ms": 0.398001025
+          }
+        }
+      }
+    ]
+  },
+  "native": {
+    "before": {
+      "name": {
+        "runs": [
+          {
+            "round": 1,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 7.186387125,
+              "ui_draws": 1410,
+              "window_frames": 192,
+              "presented_window_frames": 192,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.066167,
+                  "p95": 0.109833,
+                  "p99": 0.144625,
+                  "max": 0.144625,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005375,
+                  "p95": 0.008375,
+                  "p99": 0.009709,
+                  "max": 0.009709,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.066625,
+                  "p95": 0.092458,
+                  "p99": 0.121291,
+                  "max": 0.121291,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.119958,
+                  "p95": 0.174792,
+                  "p99": 0.244375,
+                  "max": 0.244375,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.181416,
+                  "p95": 4.316041,
+                  "p99": 5.0045,
+                  "max": 5.0045,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 72.96125,
+                  "p95": 137.815458,
+                  "p99": 149.192708,
+                  "max": 149.192708,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 1410,
+                  "p50": 2.270375,
+                  "p95": 7.275333,
+                  "p99": 9.378042,
+                  "max": 13.281917,
+                  "over_budget": 30
+                },
+                "compose_gpu_ms": {
+                  "count": 192,
+                  "p50": 3.588709,
+                  "p95": 6.886625,
+                  "p99": 8.7525,
+                  "max": 10.5985,
+                  "over_budget": 2
+                },
+                "drawable_wait_ms": {
+                  "count": 192,
+                  "p50": 0.0275,
+                  "p95": 3.6485,
+                  "p99": 4.577208,
+                  "max": 4.904167,
+                  "over_budget": 0
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 59.968042,
+                  "p95": 68.439208,
+                  "p99": 72.70375,
+                  "max": 72.70375
+                },
+                "native_event_handler_ms": {
+                  "count": 1632,
+                  "p50": 1.94575,
+                  "p95": 20.68525,
+                  "p99": 23.828375,
+                  "max": 25.531333
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 58.922874,
+                  "p95": 67.381833,
+                  "p99": 71.601041,
+                  "max": 71.601041
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 22.186041,
+                  "p95": 24.678,
+                  "p99": 25.531333,
+                  "max": 25.531333
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 18.020208,
+                  "p95": 20.0015,
+                  "p99": 20.622292,
+                  "max": 20.622292
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 18.020333,
+                  "p95": 19.996958,
+                  "p99": 20.613834,
+                  "max": 20.613834
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.080167,
+                  "p95": 0.1375,
+                  "p99": 0.166791,
+                  "max": 0.166791
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.080208,
+                  "p95": 0.1375,
+                  "p99": 0.166667,
+                  "max": 0.166667
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 3.259667,
+                  "p95": 5.180209,
+                  "p99": 6.25525,
+                  "max": 6.25525
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 71.458083,
+                  "p95": 78.734625,
+                  "p99": 84.895709,
+                  "max": 84.895709
+                }
+              }
+            },
+            "status": {
+              "version": "before",
+              "workload": "name",
+              "round": 1,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "4fc3842b82224763fcfb29b9b549cd2d203e1cc5c6451245ec728b879cc9ca12",
+              "started": "2026-10-23T02:26:34.462214+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/before/name/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/before/name/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "name"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 13.353417832870036,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          },
+          {
+            "round": 2,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 7.332909125,
+              "ui_draws": 1413,
+              "window_frames": 195,
+              "presented_window_frames": 195,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.062542,
+                  "p95": 0.102375,
+                  "p99": 0.174542,
+                  "max": 0.174542,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005583,
+                  "p95": 0.009625,
+                  "p99": 0.018083,
+                  "max": 0.018083,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.066667,
+                  "p95": 0.100334,
+                  "p99": 0.158958,
+                  "max": 0.158958,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.125708,
+                  "p95": 0.170583,
+                  "p99": 0.292708,
+                  "max": 0.292708,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.177834,
+                  "p95": 3.622916,
+                  "p99": 4.194083,
+                  "max": 4.194083,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 71.233875,
+                  "p95": 140.434834,
+                  "p99": 173.700917,
+                  "max": 173.700917,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 1413,
+                  "p50": 2.421958,
+                  "p95": 7.364417,
+                  "p99": 9.355083,
+                  "max": 12.989333,
+                  "over_budget": 28
+                },
+                "compose_gpu_ms": {
+                  "count": 195,
+                  "p50": 3.19475,
+                  "p95": 6.961375,
+                  "p99": 8.744875,
+                  "max": 10.322834,
+                  "over_budget": 4
+                },
+                "drawable_wait_ms": {
+                  "count": 195,
+                  "p50": 0.027708,
+                  "p95": 4.917791,
+                  "p99": 11.606458,
+                  "max": 16.075417,
+                  "over_budget": 3
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 60.379667,
+                  "p95": 74.019,
+                  "p99": 85.421833,
+                  "max": 85.421833
+                },
+                "native_event_handler_ms": {
+                  "count": 1632,
+                  "p50": 2.002875,
+                  "p95": 20.748375,
+                  "p99": 23.768417,
+                  "max": 29.863834
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 59.189918999999996,
+                  "p95": 72.623293,
+                  "p99": 84.013831,
+                  "max": 84.013831
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 22.520666,
+                  "p95": 26.123042,
+                  "p99": 29.863834,
+                  "max": 29.863834
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 18.227916,
+                  "p95": 21.049875,
+                  "p99": 23.053,
+                  "max": 23.053
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 18.216208,
+                  "p95": 21.03375,
+                  "p99": 22.979792,
+                  "max": 22.979792
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.076791,
+                  "p95": 0.127417,
+                  "p99": 0.212834,
+                  "max": 0.212834
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.076792,
+                  "p95": 0.127458,
+                  "p99": 0.212917,
+                  "max": 0.212917
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 3.693709,
+                  "p95": 5.380583,
+                  "p99": 6.492626,
+                  "max": 6.492626
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 72.798459,
+                  "p95": 85.638167,
+                  "p99": 93.787167,
+                  "max": 93.787167
+                }
+              }
+            },
+            "status": {
+              "version": "before",
+              "workload": "name",
+              "round": 2,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "4fc3842b82224763fcfb29b9b549cd2d203e1cc5c6451245ec728b879cc9ca12",
+              "started": "2026-10-23T02:28:01.169029+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/before/name/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/before/name/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "name"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 11.656788749853149,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          }
+        ],
+        "commit_cpu_p95_ms": 20.515354000000002,
+        "commit_cpu_p50_ms": 18.1182705
+      },
+      "opacity_text": {
+        "runs": [
+          {
+            "round": 1,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 5.888747417,
+              "ui_draws": 648,
+              "window_frames": 198,
+              "presented_window_frames": 198,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.932083,
+                  "p95": 1.14875,
+                  "p99": 1.396209,
+                  "max": 1.396209,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005083,
+                  "p95": 0.007792,
+                  "p99": 0.012291,
+                  "max": 0.012291,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.258291,
+                  "p95": 0.364958,
+                  "p99": 0.435709,
+                  "max": 0.435709,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.110667,
+                  "p95": 0.132459,
+                  "p99": 0.233291,
+                  "max": 0.233291,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.19675,
+                  "p95": 4.052541,
+                  "p99": 4.65475,
+                  "max": 4.65475,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 73.147042,
+                  "p95": 132.540084,
+                  "p99": 144.996083,
+                  "max": 144.996083,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 648,
+                  "p50": 4.848125,
+                  "p95": 8.544584,
+                  "p99": 11.173167,
+                  "max": 12.863333,
+                  "over_budget": 42
+                },
+                "compose_gpu_ms": {
+                  "count": 198,
+                  "p50": 3.039,
+                  "p95": 6.545541,
+                  "p99": 7.349666,
+                  "max": 10.824959,
+                  "over_budget": 1
+                },
+                "drawable_wait_ms": {
+                  "count": 198,
+                  "p50": 0.027875,
+                  "p95": 3.578792,
+                  "p99": 3.987541,
+                  "max": 4.075167,
+                  "over_budget": 0
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 46.21975,
+                  "p95": 55.025084,
+                  "p99": 71.3505,
+                  "max": 71.3505
+                },
+                "native_event_handler_ms": {
+                  "count": 864,
+                  "p50": 2.540584,
+                  "p95": 23.677833,
+                  "p99": 26.380666,
+                  "max": 35.010958
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 45.146333,
+                  "p95": 53.888835,
+                  "p99": 69.814083,
+                  "max": 69.814083
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 23.45575,
+                  "p95": 27.926625,
+                  "p99": 35.010958,
+                  "max": 35.010958
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 18.1525,
+                  "p95": 21.477792,
+                  "p99": 26.273791,
+                  "max": 26.273791
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 18.150625,
+                  "p95": 21.363917,
+                  "p99": 26.208625,
+                  "max": 26.208625
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.948167,
+                  "p95": 1.164167,
+                  "p99": 1.41325,
+                  "max": 1.41325
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.94825,
+                  "p95": 1.164292,
+                  "p99": 1.399167,
+                  "max": 1.399167
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 3.502459,
+                  "p95": 5.07875,
+                  "p99": 6.8855,
+                  "max": 6.8855
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 58.020417,
+                  "p95": 67.068334,
+                  "p99": 82.527,
+                  "max": 82.527
+                }
+              }
+            },
+            "status": {
+              "version": "before",
+              "workload": "opacity_text",
+              "round": 1,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "4fc3842b82224763fcfb29b9b549cd2d203e1cc5c6451245ec728b879cc9ca12",
+              "started": "2026-10-23T02:27:03.630947+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/before/opacity_text/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/before/opacity_text/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "opacity_text"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 10.949930208036676,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          },
+          {
+            "round": 2,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 5.826069208,
+              "ui_draws": 658,
+              "window_frames": 208,
+              "presented_window_frames": 208,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.920292,
+                  "p95": 1.148042,
+                  "p99": 1.196791,
+                  "max": 1.196791,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005333,
+                  "p95": 0.009,
+                  "p99": 0.022625,
+                  "max": 0.022625,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.258375,
+                  "p95": 0.358459,
+                  "p99": 0.490375,
+                  "max": 0.490375,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.110417,
+                  "p95": 0.135875,
+                  "p99": 0.168875,
+                  "max": 0.168875,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.187542,
+                  "p95": 3.765125,
+                  "p99": 4.47,
+                  "max": 4.47,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 68.3385,
+                  "p95": 125.487125,
+                  "p99": 134.149958,
+                  "max": 134.149958,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 658,
+                  "p50": 4.688833,
+                  "p95": 7.982458,
+                  "p99": 10.003333,
+                  "max": 14.692709,
+                  "over_budget": 22
+                },
+                "compose_gpu_ms": {
+                  "count": 208,
+                  "p50": 2.760709,
+                  "p95": 6.592209,
+                  "p99": 8.36025,
+                  "max": 14.091375,
+                  "over_budget": 3
+                },
+                "drawable_wait_ms": {
+                  "count": 208,
+                  "p50": 0.026125,
+                  "p95": 4.532458,
+                  "p99": 11.811041,
+                  "max": 12.034833,
+                  "over_budget": 4
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 45.941166,
+                  "p95": 50.712334,
+                  "p99": 56.8495,
+                  "max": 56.8495
+                },
+                "native_event_handler_ms": {
+                  "count": 864,
+                  "p50": 2.560291,
+                  "p95": 23.48775,
+                  "p99": 24.657625,
+                  "max": 28.811042
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 44.846958,
+                  "p95": 49.474292,
+                  "p99": 55.36304,
+                  "max": 55.36304
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 23.3675,
+                  "p95": 25.1555,
+                  "p99": 28.811042,
+                  "max": 28.811042
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 17.95325,
+                  "p95": 19.440833,
+                  "p99": 23.401042,
+                  "max": 23.401042
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 17.949917,
+                  "p95": 19.431667,
+                  "p99": 23.324,
+                  "max": 23.324
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.934958,
+                  "p95": 1.167833,
+                  "p99": 1.21225,
+                  "max": 1.21225
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.935083,
+                  "p95": 1.167958,
+                  "p99": 1.212333,
+                  "max": 1.212333
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 3.645,
+                  "p95": 5.076917,
+                  "p99": 5.960042,
+                  "max": 5.960042
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 58.076292,
+                  "p95": 64.166083,
+                  "p99": 67.088375,
+                  "max": 67.088375
+                }
+              }
+            },
+            "status": {
+              "version": "before",
+              "workload": "opacity_text",
+              "round": 2,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "4fc3842b82224763fcfb29b9b549cd2d203e1cc5c6451245ec728b879cc9ca12",
+              "started": "2026-10-23T02:28:27.068556+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/before/opacity_text/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/before/opacity_text/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "opacity_text"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 10.836747958092019,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          }
+        ],
+        "commit_cpu_p95_ms": 20.397792000000003,
+        "commit_cpu_p50_ms": 18.050271000000002
+      },
+      "enabled": {
+        "runs": [
+          {
+            "round": 1,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 3.187334417,
+              "ui_draws": 229,
+              "window_frames": 229,
+              "presented_window_frames": 229,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.924291,
+                  "p95": 1.088667,
+                  "p99": 1.272791,
+                  "max": 1.272791,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.004875,
+                  "p95": 0.008417,
+                  "p99": 0.01825,
+                  "max": 0.01825,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.25225,
+                  "p95": 0.358209,
+                  "p99": 0.398709,
+                  "max": 0.398709,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.105125,
+                  "p95": 0.147625,
+                  "p99": 0.200375,
+                  "max": 0.200375,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.301291,
+                  "p95": 3.720334,
+                  "p99": 4.114459,
+                  "max": 4.114459,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 57.301375,
+                  "p95": 65.985042,
+                  "p99": 75.262125,
+                  "max": 75.262125,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 229,
+                  "p50": 2.917333,
+                  "p95": 7.716875,
+                  "p99": 8.13575,
+                  "max": 8.373875,
+                  "over_budget": 1
+                },
+                "compose_gpu_ms": {
+                  "count": 229,
+                  "p50": 1.728125,
+                  "p95": 5.92025,
+                  "p99": 6.8125,
+                  "max": 8.436916,
+                  "over_budget": 2
+                },
+                "drawable_wait_ms": {
+                  "count": 229,
+                  "p50": 0.018709,
+                  "p95": 0.044416,
+                  "p99": 1.86925,
+                  "max": 8.629375,
+                  "over_budget": 1
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 19.979084,
+                  "p95": 20.695208,
+                  "p99": 21.825958,
+                  "max": 21.825958
+                },
+                "native_event_handler_ms": {
+                  "count": 288,
+                  "p50": 0.059667,
+                  "p95": 19.427708,
+                  "p99": 19.756291,
+                  "max": 20.806584
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 19.031084,
+                  "p95": 19.759875,
+                  "p99": 20.912168,
+                  "max": 20.912168
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 18.917292,
+                  "p95": 19.652709,
+                  "p99": 20.806584,
+                  "max": 20.806584
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 17.892916,
+                  "p95": 18.620709,
+                  "p99": 19.661292,
+                  "max": 19.661292
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 17.893291,
+                  "p95": 18.612833,
+                  "p99": 19.659125,
+                  "max": 19.659125
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.938084,
+                  "p95": 1.111458,
+                  "p99": 1.303791,
+                  "max": 1.303791
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.938083,
+                  "p95": 1.111583,
+                  "p99": 1.303875,
+                  "max": 1.303875
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 2.327959,
+                  "p95": 4.747542,
+                  "p99": 12.699833,
+                  "max": 12.699833
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 30.446084,
+                  "p95": 33.271708,
+                  "p99": 42.873083,
+                  "max": 42.873083
+                }
+              }
+            },
+            "status": {
+              "version": "before",
+              "workload": "enabled",
+              "round": 1,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "4fc3842b82224763fcfb29b9b549cd2d203e1cc5c6451245ec728b879cc9ca12",
+              "started": "2026-10-23T02:27:28.790293+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/before/enabled/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/before/enabled/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "enabled"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 8.12838533311151,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          },
+          {
+            "round": 2,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 3.240809208,
+              "ui_draws": 218,
+              "window_frames": 218,
+              "presented_window_frames": 218,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.931166,
+                  "p95": 1.234375,
+                  "p99": 3.175791,
+                  "max": 3.175791,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005125,
+                  "p95": 0.009625,
+                  "p99": 0.014083,
+                  "max": 0.014083,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.253291,
+                  "p95": 0.351,
+                  "p99": 0.587208,
+                  "max": 0.587208,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.101417,
+                  "p95": 0.138166,
+                  "p99": 0.150083,
+                  "max": 0.150083,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.234041,
+                  "p95": 3.854334,
+                  "p99": 4.362,
+                  "max": 4.362,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 54.414542,
+                  "p95": 69.152875,
+                  "p99": 126.885334,
+                  "max": 126.885334,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 218,
+                  "p50": 3.206209,
+                  "p95": 7.968541,
+                  "p99": 9.233458,
+                  "max": 11.393333,
+                  "over_budget": 7
+                },
+                "compose_gpu_ms": {
+                  "count": 218,
+                  "p50": 1.725625,
+                  "p95": 5.665,
+                  "p99": 8.190375,
+                  "max": 9.0415,
+                  "over_budget": 2
+                },
+                "drawable_wait_ms": {
+                  "count": 218,
+                  "p50": 0.021833,
+                  "p95": 1.0605,
+                  "p99": 8.629583,
+                  "max": 10.101792,
+                  "over_budget": 3
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 19.809333,
+                  "p95": 22.985958,
+                  "p99": 55.722708,
+                  "max": 55.722708
+                },
+                "native_event_handler_ms": {
+                  "count": 288,
+                  "p50": 0.060875,
+                  "p95": 19.973917,
+                  "p99": 27.219292,
+                  "max": 54.458542
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 18.847708,
+                  "p95": 21.962,
+                  "p99": 54.591876,
+                  "max": 54.591876
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 18.730667,
+                  "p95": 21.814708,
+                  "p99": 54.458542,
+                  "max": 54.458542
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 17.709542,
+                  "p95": 20.676584,
+                  "p99": 51.186042,
+                  "max": 51.186042
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 17.705792,
+                  "p95": 20.666042,
+                  "p99": 31.4885,
+                  "max": 31.4885
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.945,
+                  "p95": 1.252084,
+                  "p99": 3.192875,
+                  "max": 3.192875
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.945083,
+                  "p95": 1.249333,
+                  "p99": 1.703583,
+                  "max": 1.703583
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 2.35425,
+                  "p95": 4.028083,
+                  "p99": 5.049792,
+                  "max": 5.049792
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 30.38,
+                  "p95": 34.504541,
+                  "p99": 67.728291,
+                  "max": 67.728291
+                }
+              }
+            },
+            "status": {
+              "version": "before",
+              "workload": "enabled",
+              "round": 2,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "4fc3842b82224763fcfb29b9b549cd2d203e1cc5c6451245ec728b879cc9ca12",
+              "started": "2026-10-23T02:28:49.209954+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/before/enabled/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/before/enabled/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "enabled"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 8.210808750009164,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          }
+        ],
+        "commit_cpu_p95_ms": 19.6394375,
+        "commit_cpu_p50_ms": 17.7995415
+      }
+    },
+    "after": {
+      "name": {
+        "runs": [
+          {
+            "round": 1,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 6.400430541,
+              "ui_draws": 1412,
+              "window_frames": 193,
+              "presented_window_frames": 193,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.061375,
+                  "p95": 0.082042,
+                  "p99": 0.1095,
+                  "max": 0.1095,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005208,
+                  "p95": 0.007583,
+                  "p99": 0.01225,
+                  "max": 0.01225,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.067625,
+                  "p95": 0.079167,
+                  "p99": 0.116042,
+                  "max": 0.116042,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.125,
+                  "p95": 0.149958,
+                  "p99": 0.1915,
+                  "max": 0.1915,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.179041,
+                  "p95": 3.647874,
+                  "p99": 4.521875,
+                  "max": 4.521875,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 63.827875,
+                  "p95": 119.798042,
+                  "p99": 126.363125,
+                  "max": 126.363125,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 1412,
+                  "p50": 2.327458,
+                  "p95": 7.395125,
+                  "p99": 8.880542,
+                  "max": 11.763833,
+                  "over_budget": 23
+                },
+                "compose_gpu_ms": {
+                  "count": 193,
+                  "p50": 4.125084,
+                  "p95": 6.792291,
+                  "p99": 8.459916,
+                  "max": 10.34525,
+                  "over_budget": 2
+                },
+                "drawable_wait_ms": {
+                  "count": 193,
+                  "p50": 0.025625,
+                  "p95": 0.039083,
+                  "p99": 3.68825,
+                  "max": 3.810833,
+                  "over_budget": 0
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 52.189958,
+                  "p95": 57.724208,
+                  "p99": 62.707625,
+                  "max": 62.707625
+                },
+                "native_event_handler_ms": {
+                  "count": 1632,
+                  "p50": 2.001167,
+                  "p95": 11.939792,
+                  "p99": 14.586084,
+                  "max": 16.1795
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 51.069294,
+                  "p95": 56.296289,
+                  "p99": 61.641292,
+                  "max": 61.641292
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 13.444417,
+                  "p95": 15.309917,
+                  "p99": 16.1795,
+                  "max": 16.1795
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 9.312208,
+                  "p95": 10.559042,
+                  "p99": 11.425166,
+                  "max": 11.425166
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 9.307667,
+                  "p95": 10.559416,
+                  "p99": 11.414417,
+                  "max": 11.414417
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.076334,
+                  "p95": 0.11375,
+                  "p99": 0.133958,
+                  "max": 0.133958
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.076458,
+                  "p95": 0.113875,
+                  "p99": 0.134083,
+                  "max": 0.134083
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 3.532292,
+                  "p95": 5.247458,
+                  "p99": 7.630959,
+                  "max": 7.630959
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 63.779667,
+                  "p95": 69.396166,
+                  "p99": 77.0085,
+                  "max": 77.0085
+                }
+              }
+            },
+            "status": {
+              "version": "after",
+              "workload": "name",
+              "round": 1,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "30399497b5f38bedde941a3d173407b209ff4f4b01183fe60bc7ae20da77a267",
+              "started": "2026-10-23T02:26:49.936354+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/after/name/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/after/name/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "name"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 11.575768541079015,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          },
+          {
+            "round": 2,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 6.426995041,
+              "ui_draws": 1408,
+              "window_frames": 190,
+              "presented_window_frames": 190,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.060334,
+                  "p95": 0.085084,
+                  "p99": 0.112666,
+                  "max": 0.112666,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005125,
+                  "p95": 0.007125,
+                  "p99": 0.008,
+                  "max": 0.008,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.06725,
+                  "p95": 0.091583,
+                  "p99": 0.137417,
+                  "max": 0.137417,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.1235,
+                  "p95": 0.171917,
+                  "p99": 0.245,
+                  "max": 0.245,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.180584,
+                  "p95": 4.026084,
+                  "p99": 4.311625,
+                  "max": 4.311625,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 61.369958,
+                  "p95": 120.709667,
+                  "p99": 134.959916,
+                  "max": 134.959916,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 1408,
+                  "p50": 2.386792,
+                  "p95": 7.346875,
+                  "p99": 8.831416,
+                  "max": 13.494792,
+                  "over_budget": 27
+                },
+                "compose_gpu_ms": {
+                  "count": 190,
+                  "p50": 4.44925,
+                  "p95": 6.784125,
+                  "p99": 10.533334,
+                  "max": 12.472459,
+                  "over_budget": 2
+                },
+                "drawable_wait_ms": {
+                  "count": 190,
+                  "p50": 0.028208,
+                  "p95": 4.6995,
+                  "p99": 11.861625,
+                  "max": 12.111125,
+                  "over_budget": 2
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 51.730167,
+                  "p95": 65.069,
+                  "p99": 86.416291,
+                  "max": 86.416291
+                },
+                "native_event_handler_ms": {
+                  "count": 1632,
+                  "p50": 2.017792,
+                  "p95": 12.139834,
+                  "p99": 14.372834,
+                  "max": 17.581
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 50.477961,
+                  "p95": 63.706749,
+                  "p99": 85.150167,
+                  "max": 85.150167
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 13.3505,
+                  "p95": 15.735291,
+                  "p99": 17.581,
+                  "max": 17.581
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 9.130625,
+                  "p95": 10.487125,
+                  "p99": 11.5095,
+                  "max": 11.5095
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 9.126667,
+                  "p95": 10.483708,
+                  "p99": 11.501,
+                  "max": 11.501
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.075666,
+                  "p95": 0.111416,
+                  "p99": 0.140167,
+                  "max": 0.140167
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.075708,
+                  "p95": 0.111417,
+                  "p99": 0.140209,
+                  "max": 0.140209
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 3.164751,
+                  "p95": 5.761583,
+                  "p99": 7.695792,
+                  "max": 7.695792
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 63.173083,
+                  "p95": 78.269459,
+                  "p99": 100.757416,
+                  "max": 100.757416
+                }
+              }
+            },
+            "status": {
+              "version": "after",
+              "workload": "name",
+              "round": 2,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "30399497b5f38bedde941a3d173407b209ff4f4b01183fe60bc7ae20da77a267",
+              "started": "2026-10-23T02:27:48.256200+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/after/name/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/after/name/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "name"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 10.826745165977627,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          }
+        ],
+        "commit_cpu_p95_ms": 10.521562,
+        "commit_cpu_p50_ms": 9.217167
+      },
+      "opacity_text": {
+        "runs": [
+          {
+            "round": 1,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 4.956057667,
+              "ui_draws": 650,
+              "window_frames": 200,
+              "presented_window_frames": 200,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.897166,
+                  "p95": 1.125292,
+                  "p99": 1.403084,
+                  "max": 1.403084,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005208,
+                  "p95": 0.0085,
+                  "p99": 0.021834,
+                  "max": 0.021834,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.24925,
+                  "p95": 0.345167,
+                  "p99": 0.398583,
+                  "max": 0.398583,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.109042,
+                  "p95": 0.147458,
+                  "p99": 0.175167,
+                  "max": 0.175167,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.185791,
+                  "p95": 3.803125,
+                  "p99": 4.44,
+                  "max": 4.44,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 63.26525,
+                  "p95": 100.193042,
+                  "p99": 109.553417,
+                  "max": 109.553417,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 650,
+                  "p50": 4.869625,
+                  "p95": 8.504417,
+                  "p99": 11.307375,
+                  "max": 12.665834,
+                  "over_budget": 41
+                },
+                "compose_gpu_ms": {
+                  "count": 200,
+                  "p50": 3.284875,
+                  "p95": 6.624375,
+                  "p99": 7.68775,
+                  "max": 10.083084,
+                  "over_budget": 1
+                },
+                "drawable_wait_ms": {
+                  "count": 200,
+                  "p50": 0.0265,
+                  "p95": 0.047042,
+                  "p99": 0.087708,
+                  "max": 0.103583,
+                  "over_budget": 0
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 37.221916,
+                  "p95": 42.831125,
+                  "p99": 45.216958,
+                  "max": 45.216958
+                },
+                "native_event_handler_ms": {
+                  "count": 864,
+                  "p50": 2.4725,
+                  "p95": 14.058459,
+                  "p99": 15.371875,
+                  "max": 18.5225
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 35.971583,
+                  "p95": 41.544833,
+                  "p99": 44.128584000000004,
+                  "max": 44.128584000000004
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 13.945,
+                  "p95": 15.567125,
+                  "p99": 18.5225,
+                  "max": 18.5225
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 8.595334,
+                  "p95": 10.071333,
+                  "p99": 11.025,
+                  "max": 11.025
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 8.591166,
+                  "p95": 10.065833,
+                  "p99": 11.003542,
+                  "max": 11.003542
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.916583,
+                  "p95": 1.141583,
+                  "p99": 1.420458,
+                  "max": 1.420458
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.91675,
+                  "p95": 1.141666,
+                  "p99": 1.418583,
+                  "max": 1.418583
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 3.706,
+                  "p95": 5.108834,
+                  "p99": 7.012292,
+                  "max": 7.012292
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 49.082333,
+                  "p95": 55.770416,
+                  "p99": 57.268084,
+                  "max": 57.268084
+                }
+              }
+            },
+            "status": {
+              "version": "after",
+              "workload": "opacity_text",
+              "round": 1,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "30399497b5f38bedde941a3d173407b209ff4f4b01183fe60bc7ae20da77a267",
+              "started": "2026-10-23T02:27:16.722210+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/after/opacity_text/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/after/opacity_text/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "opacity_text"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 9.979581749998033,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          },
+          {
+            "round": 2,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 4.995629,
+              "ui_draws": 658,
+              "window_frames": 208,
+              "presented_window_frames": 208,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.902708,
+                  "p95": 1.166083,
+                  "p99": 1.501208,
+                  "max": 1.501208,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.005292,
+                  "p95": 0.008291,
+                  "p99": 0.010334,
+                  "max": 0.010334,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.249417,
+                  "p95": 0.328125,
+                  "p99": 0.391791,
+                  "max": 0.391791,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.108667,
+                  "p95": 0.153875,
+                  "p99": 0.210417,
+                  "max": 0.210417,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.30075,
+                  "p95": 4.101875,
+                  "p99": 4.5595,
+                  "max": 4.5595,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 65.503959,
+                  "p95": 101.847625,
+                  "p99": 115.182959,
+                  "max": 115.182959,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 658,
+                  "p50": 5.018333,
+                  "p95": 8.209708,
+                  "p99": 10.538542,
+                  "max": 13.555208,
+                  "over_budget": 26
+                },
+                "compose_gpu_ms": {
+                  "count": 208,
+                  "p50": 3.791,
+                  "p95": 6.729459,
+                  "p99": 7.609583,
+                  "max": 8.87975,
+                  "over_budget": 2
+                },
+                "drawable_wait_ms": {
+                  "count": 208,
+                  "p50": 0.025834,
+                  "p95": 0.057125,
+                  "p99": 3.789792,
+                  "max": 3.97625,
+                  "over_budget": 0
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 37.113209,
+                  "p95": 43.641125,
+                  "p99": 48.502708,
+                  "max": 48.502708
+                },
+                "native_event_handler_ms": {
+                  "count": 864,
+                  "p50": 2.467917,
+                  "p95": 14.08,
+                  "p99": 15.553791,
+                  "max": 17.55575
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 35.94775,
+                  "p95": 42.561499,
+                  "p99": 47.087417,
+                  "max": 47.087417
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 13.932917,
+                  "p95": 16.097292,
+                  "p99": 17.55575,
+                  "max": 17.55575
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 8.688459,
+                  "p95": 9.866625,
+                  "p99": 10.359209,
+                  "max": 10.359209
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 8.688583,
+                  "p95": 9.843791,
+                  "p99": 10.334,
+                  "max": 10.334
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.91625,
+                  "p95": 1.184916,
+                  "p99": 1.519209,
+                  "max": 1.519209
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.916333,
+                  "p95": 1.185,
+                  "p99": 1.519333,
+                  "max": 1.519333
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 3.775667,
+                  "p95": 5.064458,
+                  "p99": 6.205209,
+                  "max": 6.205209
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 49.480708,
+                  "p95": 56.350167,
+                  "p99": 59.272333,
+                  "max": 59.272333
+                }
+              }
+            },
+            "status": {
+              "version": "after",
+              "workload": "opacity_text",
+              "round": 2,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "30399497b5f38bedde941a3d173407b209ff4f4b01183fe60bc7ae20da77a267",
+              "started": "2026-10-23T02:28:14.911469+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/after/opacity_text/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/after/opacity_text/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "opacity_text"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 10.064735458930954,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          }
+        ],
+        "commit_cpu_p95_ms": 9.954812,
+        "commit_cpu_p50_ms": 8.6398745
+      },
+      "enabled": {
+        "runs": [
+          {
+            "round": 1,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 2.2795555,
+              "ui_draws": 219,
+              "window_frames": 219,
+              "presented_window_frames": 219,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.913667,
+                  "p95": 1.160583,
+                  "p99": 1.212375,
+                  "max": 1.212375,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.004708,
+                  "p95": 0.008625,
+                  "p99": 0.01,
+                  "max": 0.01,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.247708,
+                  "p95": 0.348791,
+                  "p99": 0.398667,
+                  "max": 0.398667,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.101875,
+                  "p95": 0.138917,
+                  "p99": 0.182333,
+                  "max": 0.182333,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.175625,
+                  "p95": 3.8545,
+                  "p99": 4.28525,
+                  "max": 4.28525,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 48.959125,
+                  "p95": 57.483083,
+                  "p99": 71.746291,
+                  "max": 71.746291,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 219,
+                  "p50": 3.151167,
+                  "p95": 8.123334,
+                  "p99": 8.7285,
+                  "max": 9.259875,
+                  "over_budget": 8
+                },
+                "compose_gpu_ms": {
+                  "count": 219,
+                  "p50": 1.996125,
+                  "p95": 5.578666,
+                  "p99": 6.183625,
+                  "max": 7.364375,
+                  "over_budget": 0
+                },
+                "drawable_wait_ms": {
+                  "count": 219,
+                  "p50": 0.02125,
+                  "p95": 2.279,
+                  "p99": 2.4625,
+                  "max": 8.038042,
+                  "over_budget": 0
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 10.219875,
+                  "p95": 11.607375,
+                  "p99": 12.495709,
+                  "max": 12.495709
+                },
+                "native_event_handler_ms": {
+                  "count": 288,
+                  "p50": 0.059833,
+                  "p95": 10.029959,
+                  "p99": 10.5325,
+                  "max": 11.303666
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 9.215834000000001,
+                  "p95": 10.631333999999999,
+                  "p99": 11.482289999999999,
+                  "max": 11.482289999999999
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 9.11475,
+                  "p95": 10.50925,
+                  "p99": 11.303666,
+                  "max": 11.303666
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 8.149167,
+                  "p95": 9.469125,
+                  "p99": 10.198416,
+                  "max": 10.198416
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 8.14675,
+                  "p95": 9.460875,
+                  "p99": 10.192458,
+                  "max": 10.192458
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.928958,
+                  "p95": 1.179583,
+                  "p99": 1.227084,
+                  "max": 1.227084
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.929084,
+                  "p95": 1.179583,
+                  "p99": 1.227125,
+                  "max": 1.227125
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 2.755459,
+                  "p95": 4.254583,
+                  "p99": 4.697458,
+                  "max": 4.697458
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 21.104542,
+                  "p95": 23.663459,
+                  "p99": 24.736666,
+                  "max": 24.736666
+                }
+              }
+            },
+            "status": {
+              "version": "after",
+              "workload": "enabled",
+              "round": 1,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "30399497b5f38bedde941a3d173407b209ff4f4b01183fe60bc7ae20da77a267",
+              "started": "2026-10-23T02:27:39.031044+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/after/enabled/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-1/after/enabled/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "enabled"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 7.143053000094369,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          },
+          {
+            "round": 2,
+            "metrics": {
+              "inputs": 96,
+              "changed_samples": 96,
+              "phase_seconds": 2.2841615,
+              "ui_draws": 217,
+              "window_frames": 217,
+              "presented_window_frames": 217,
+              "preview_outcomes": {
+                "presented": 96
+              },
+              "metrics_ms": {
+                "scene_ms": {
+                  "count": 96,
+                  "p50": 0.938,
+                  "p95": 1.188167,
+                  "p99": 1.542083,
+                  "max": 1.542083,
+                  "over_budget": 0
+                },
+                "textures_ms": {
+                  "count": 96,
+                  "p50": 0.004875,
+                  "p95": 0.011208,
+                  "p99": 0.022334,
+                  "max": 0.022334,
+                  "over_budget": 0
+                },
+                "sync_ms": {
+                  "count": 96,
+                  "p50": 0.257917,
+                  "p95": 0.39175,
+                  "p99": 0.468875,
+                  "max": 0.468875,
+                  "over_budget": 0
+                },
+                "encode_ms": {
+                  "count": 96,
+                  "p50": 0.101625,
+                  "p95": 0.153625,
+                  "p99": 0.203083,
+                  "max": 0.203083,
+                  "over_budget": 0
+                },
+                "preview_gpu_ms": {
+                  "count": 96,
+                  "p50": 0.174791,
+                  "p95": 4.065666,
+                  "p99": 4.598875,
+                  "max": 4.598875,
+                  "over_budget": 0
+                },
+                "input_to_present_ms": {
+                  "count": 96,
+                  "p50": 48.872833,
+                  "p95": 56.294375,
+                  "p99": 69.6485,
+                  "max": 69.6485,
+                  "over_budget": 96
+                },
+                "ui_draw_ms": {
+                  "count": 217,
+                  "p50": 3.248125,
+                  "p95": 8.366791,
+                  "p99": 8.993083,
+                  "max": 9.186958,
+                  "over_budget": 11
+                },
+                "compose_gpu_ms": {
+                  "count": 217,
+                  "p50": 1.758,
+                  "p95": 5.730834,
+                  "p99": 6.459625,
+                  "max": 7.525625,
+                  "over_budget": 0
+                },
+                "drawable_wait_ms": {
+                  "count": 217,
+                  "p50": 0.021459,
+                  "p95": 1.50525,
+                  "p99": 4.693375,
+                  "max": 9.5945,
+                  "over_budget": 1
+                },
+                "offscreen_gpu_ms": {
+                  "count": 0,
+                  "over_budget": 0
+                },
+                "interaction_wall_ms": {
+                  "count": 96,
+                  "p50": 10.068417,
+                  "p95": 11.617375,
+                  "p99": 12.521459,
+                  "max": 12.521459
+                },
+                "native_event_handler_ms": {
+                  "count": 288,
+                  "p50": 0.062,
+                  "p95": 9.675959,
+                  "p99": 10.922708,
+                  "max": 11.3795
+                },
+                "native_event_handlers_per_tick_ms": {
+                  "count": 96,
+                  "p50": 9.122625999999999,
+                  "p95": 10.637208000000001,
+                  "p99": 11.511667000000001,
+                  "max": 11.511667000000001
+                },
+                "slowest_native_event_per_tick_ms": {
+                  "count": 96,
+                  "p50": 8.988875,
+                  "p95": 10.515541,
+                  "p99": 11.3795,
+                  "max": 11.3795
+                },
+                "property_commit_wall_ms": {
+                  "count": 96,
+                  "p50": 7.930667,
+                  "p95": 9.20425,
+                  "p99": 9.797,
+                  "max": 9.797
+                },
+                "property_commit_cpu_ms": {
+                  "count": 96,
+                  "p50": 7.926334,
+                  "p95": 9.204375,
+                  "p99": 9.7885,
+                  "max": 9.7885
+                },
+                "property_redraw_wall_ms": {
+                  "count": 96,
+                  "p50": 0.950833,
+                  "p95": 1.208167,
+                  "p99": 1.560625,
+                  "max": 1.560625
+                },
+                "property_redraw_cpu_ms": {
+                  "count": 96,
+                  "p50": 0.951083,
+                  "p95": 1.20825,
+                  "p99": 1.549084,
+                  "max": 1.549084
+                },
+                "timer_late_ms": {
+                  "count": 96,
+                  "p50": 2.702709,
+                  "p95": 5.030875,
+                  "p99": 12.870084,
+                  "max": 12.870084
+                },
+                "actual_input_interval_ms": {
+                  "count": 95,
+                  "p50": 20.962583,
+                  "p95": 24.96675,
+                  "p99": 30.086625,
+                  "max": 30.086625
+                }
+              }
+            },
+            "status": {
+              "version": "after",
+              "workload": "enabled",
+              "round": 2,
+              "samples": 96,
+              "warmup": 5,
+              "hz": 120,
+              "binary_sha256": "30399497b5f38bedde941a3d173407b209ff4f4b01183fe60bc7ae20da77a267",
+              "started": "2026-10-23T02:28:40.019216+00:00",
+              "environment": {
+                "KASANE_CONFIG_DIR": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/after/enabled/config",
+                "KASANE_FRAME_TRACE": "/Users/liangbohao/web/kasane-editor/target/2d-publication-fix-20261023-final/native/round-2/after/enabled/trace.jsonl",
+                "KASANE_WINDOW_BENCH": "1",
+                "KASANE_BENCH_MODEL": "/Users/liangbohao/web/kasane-editor/models/local/mao/runtime/mao_pro.model3.json",
+                "KASANE_BENCH_SAMPLES": "96",
+                "KASANE_BENCH_WARMUP": "5",
+                "KASANE_BENCH_HZ": "120",
+                "KASANE_BENCH_PROPERTIES": "1",
+                "KASANE_BENCH_PROPERTY_CASE": "enabled"
+              },
+              "app_exit": 0,
+              "report_exit": 0,
+              "seconds": 7.110060499981046,
+              "benchmark_done": true,
+              "trace_end": [
+                {
+                  "type": "end",
+                  "lost_events": 0
+                }
+              ]
+            }
+          }
+        ],
+        "commit_cpu_p95_ms": 9.332625,
+        "commit_cpu_p50_ms": 8.036542
+      }
+    }
+  },
+  "third_party_lock_packages_equal": true,
+  "note": "Plain SDK synchronous wall-clock and native property commit thread CPU are different boundaries. Detailed before summary spans are diagnostic-only; absence of those individual spans in after is not evidence of zero calls.",
+  "original_baseline_comparison": {
+    "baseline_editor": "279f569",
+    "baseline_sdk": "01db56a",
+    "note": "Historical baseline measurements, not a newly interleaved baseline/fixed run. Native baseline has one process of 96 measured inputs per case; fixed has two. SDK uses two processes of 40 samples per case for each version.",
+    "native": {
+      "name": {
+        "baseline_commit_cpu_p95_ms": 9.805375,
+        "fixed_commit_cpu_p95_ms": 10.521562,
+        "delta_percent": 7.304024578356261
+      },
+      "opacity_text": {
+        "baseline_commit_cpu_p95_ms": 9.709125,
+        "fixed_commit_cpu_p95_ms": 9.954812,
+        "delta_percent": 2.5304751973015183
+      },
+      "enabled": {
+        "baseline_commit_cpu_p95_ms": 9.339834,
+        "fixed_commit_cpu_p95_ms": 9.332625,
+        "delta_percent": -0.07718552599542683
+      }
+    },
+    "sdk": {
+      "name_commit": {
+        "baseline_commit_median_ms": 5.137385500000001,
+        "fixed_commit_median_ms": 3.54902075,
+        "delta_percent": -30.91776449324273
+      },
+      "opacity_commit": {
+        "baseline_commit_median_ms": 4.6245315,
+        "fixed_commit_median_ms": 3.5650102500000003,
+        "delta_percent": -22.910888378638994
+      }
+    }
+  }
+}

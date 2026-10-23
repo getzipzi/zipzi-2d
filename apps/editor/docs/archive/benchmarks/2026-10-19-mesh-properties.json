@@ -1,0 +1,5834 @@
+{
+  "date": "2026-10-19",
+  "verdict": "CPU/input responsiveness exceeds frame budget; no blanket performance pass",
+  "environment": {
+    "machine": "Mac16,10",
+    "cpu": "Apple M4",
+    "gpu_cores": 10,
+    "memory_gib": 16,
+    "macos": "27.0.1 (26A434)",
+    "display": "3840x2160; logical 1920x1080 at 120 Hz",
+    "profile": "release, test-support",
+    "base_commit": "a2fbcd63b973751010ef03743f0fb07a28f3dbd0",
+    "worktree_dirty": true
+  },
+  "fixture": {
+    "model": "models/local/mao/runtime/mao_pro.model3.json",
+    "meshes": 260,
+    "mesh": "ArtMesh215",
+    "mesh_id": "dab3e07e-c588-4d0b-a8ff-de896174d04d",
+    "vertices": 158,
+    "initial_opacity": 1.0
+  },
+  "protocol": {
+    "target_input_hz": 120,
+    "warmup_per_case": 30,
+    "main_samples_per_case": 300,
+    "confirmation_samples": 96,
+    "tooltip_confirmation_samples": 1200,
+    "budget_ms": 8.333333333333334,
+    "os_input_delivery_included": false,
+    "input_to_photon_measured": false
+  },
+  "counts": {
+    "covered_cases": 33,
+    "validated_case_inputs": 9984,
+    "all_properties_inputs": 12456,
+    "legacy_ui_reference_inputs": 900
+  },
+  "initial_capture_audit": {
+    "source": "target/properties-mao-run-01/summary.json",
+    "missing_terminal_outcomes": {
+      "opacity_drag": 1,
+      "multiply_hex": 296,
+      "picker_done": 300,
+      "picker_cancel": 300,
+      "multiply_reset": 900
+    },
+    "note": "Older capture omitted result-mailbox replacements. These five cases are replaced by post-instrumentation measurements in validated_cases; original records stay unchanged."
+  },
+  "validated_preview_outcomes": {
+    "presented": 7357,
+    "accepted_not_composed": 2,
+    "delivery_coalesced": 577
+  },
+  "stage_totals": {
+    "ui_draw_ms": {
+      "count": 55909,
+      "over_8_33_ms": 1237,
+      "max_case_p95_ms": 20.327916
+    },
+    "scene_ms": {
+      "count": 7936,
+      "over_8_33_ms": 0,
+      "max_case_p95_ms": 3.693
+    },
+    "preview_gpu_ms": {
+      "count": 7936,
+      "over_8_33_ms": 0,
+      "max_case_p95_ms": 4.708625
+    },
+    "compose_gpu_ms": {
+      "count": 31614,
+      "over_8_33_ms": 90,
+      "max_case_p95_ms": 6.92925
+    }
+  },
+  "validated_cases": {
+    "name": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 22.591450416,
+      "ui_draws": 4411,
+      "window_frames": 541,
+      "presented_window_frames": 541,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 2.927875,
+          "p95": 3.289167,
+          "p99": 3.482833,
+          "max": 5.024083,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.005416,
+          "p95": 0.007958,
+          "p99": 0.011709,
+          "max": 0.020667,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.2015,
+          "p95": 0.271458,
+          "p99": 0.3255,
+          "max": 0.483625,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.111209,
+          "p95": 0.125833,
+          "p99": 0.206584,
+          "max": 0.232542,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.179625,
+          "p95": 3.336,
+          "p99": 4.440959,
+          "max": 4.630041,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 75.018541,
+          "p95": 140.24825,
+          "p99": 147.888708,
+          "max": 198.988209,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 4411,
+          "p50": 2.214542,
+          "p95": 7.002042,
+          "p99": 7.909167,
+          "max": 12.472125,
+          "over_budget": 31
+        },
+        "compose_gpu_ms": {
+          "count": 541,
+          "p50": 3.615541,
+          "p95": 6.842666,
+          "p99": 7.32725,
+          "max": 8.963084,
+          "over_budget": 4
+        },
+        "drawable_wait_ms": {
+          "count": 541,
+          "p50": 0.025708,
+          "p95": 0.0375,
+          "p99": 0.051083,
+          "max": 1.459833,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 62.267917,
+          "p95": 71.030042,
+          "p99": 77.854458,
+          "max": 125.068167
+        },
+        "native_event_handler_ms": {
+          "count": 5100,
+          "p50": 1.851167,
+          "p95": 24.820417,
+          "p99": 27.194625,
+          "max": 56.347625
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 61.11729,
+          "p95": 69.81725,
+          "p99": 76.28874900000001,
+          "max": 123.44704300000001
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 3.061083,
+          "p95": 4.724876,
+          "p99": 5.681834,
+          "max": 8.881292
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 73.909333,
+          "p95": 83.401459,
+          "p99": 92.317042,
+          "max": 136.762792
+        }
+      }
+    },
+    "runtime_id": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 22.428635792,
+      "ui_draws": 4422,
+      "window_frames": 552,
+      "presented_window_frames": 552,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 2.93575,
+          "p95": 3.279083,
+          "p99": 3.342,
+          "max": 4.518833,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.005375,
+          "p95": 0.0065,
+          "p99": 0.008834,
+          "max": 0.01125,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.202,
+          "p95": 0.249875,
+          "p99": 0.319916,
+          "max": 0.417583,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.110584,
+          "p95": 0.12475,
+          "p99": 0.161167,
+          "max": 0.27275,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.177875,
+          "p95": 3.244,
+          "p99": 3.92525,
+          "max": 4.574416,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 73.122292,
+          "p95": 137.558167,
+          "p99": 144.622417,
+          "max": 166.612,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 4422,
+          "p50": 2.162958,
+          "p95": 6.878,
+          "p99": 7.794292,
+          "max": 11.695542,
+          "over_budget": 30
+        },
+        "compose_gpu_ms": {
+          "count": 552,
+          "p50": 3.728959,
+          "p95": 6.838375,
+          "p99": 7.681791,
+          "max": 8.886125,
+          "over_budget": 4
+        },
+        "drawable_wait_ms": {
+          "count": 552,
+          "p50": 0.024791,
+          "p95": 0.035458,
+          "p99": 0.050625,
+          "max": 3.987791,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 62.412833,
+          "p95": 66.34425,
+          "p99": 69.811833,
+          "max": 78.189625
+        },
+        "native_event_handler_ms": {
+          "count": 5100,
+          "p50": 1.854624,
+          "p95": 25.207875,
+          "p99": 27.024083,
+          "max": 39.009917
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 61.273752,
+          "p95": 65.129041,
+          "p99": 68.503081,
+          "max": 76.72333400000001
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 3.045459,
+          "p95": 4.468667,
+          "p99": 4.821209,
+          "max": 8.194792
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 74.061667,
+          "p95": 77.813916,
+          "p99": 80.924666,
+          "max": 94.818084
+        }
+      }
+    },
+    "part": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 92.624746625,
+      "ui_draws": 10632,
+      "window_frames": 8980,
+      "presented_window_frames": 8980,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 3.38975,
+          "p95": 3.693,
+          "p99": 3.843,
+          "max": 6.2305,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.005125,
+          "p95": 0.007167,
+          "p99": 0.011292,
+          "max": 0.0265,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.206458,
+          "p95": 0.262209,
+          "p99": 0.319167,
+          "max": 0.3645,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.120166,
+          "p95": 0.133959,
+          "p99": 0.150333,
+          "max": 0.169041,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.169291,
+          "p95": 3.445084,
+          "p99": 3.794875,
+          "max": 4.269125,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 334.56125,
+          "p95": 348.084833,
+          "p99": 356.127625,
+          "max": 400.186292,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 10632,
+          "p50": 2.324209,
+          "p95": 6.28725,
+          "p99": 9.648917,
+          "max": 17.419833,
+          "over_budget": 313
+        },
+        "compose_gpu_ms": {
+          "count": 8980,
+          "p50": 1.822416,
+          "p95": 6.44175,
+          "p99": 6.883709,
+          "max": 9.35275,
+          "over_budget": 4
+        },
+        "drawable_wait_ms": {
+          "count": 8980,
+          "p50": 0.019291,
+          "p95": 3.621125,
+          "p99": 5.551375,
+          "max": 12.565833,
+          "over_budget": 54
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 294.965875,
+          "p95": 304.289167,
+          "p99": 310.916958,
+          "max": 347.475416
+        },
+        "native_event_handler_ms": {
+          "count": 5850,
+          "p50": 1.930083,
+          "p95": 5.859208,
+          "p99": 6.68875,
+          "max": 11.460584
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 39.109334,
+          "p95": 46.073834,
+          "p99": 54.15079,
+          "max": 83.16338
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 5.043,
+          "p95": 7.851876,
+          "p99": 10.133792,
+          "max": 13.141876
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 307.787041,
+          "p95": 317.657541,
+          "p99": 335.340042,
+          "max": 362.384
+        }
+      }
+    },
+    "masks": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 53.091627042,
+      "ui_draws": 6393,
+      "window_frames": 4737,
+      "presented_window_frames": 4737,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 3.199208,
+          "p95": 3.54375,
+          "p99": 3.74825,
+          "max": 3.778209,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.005208,
+          "p95": 0.007667,
+          "p99": 0.010542,
+          "max": 0.018625,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.233292,
+          "p95": 0.299209,
+          "p99": 0.343292,
+          "max": 0.479,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.135792,
+          "p95": 0.157291,
+          "p99": 0.171625,
+          "max": 0.194834,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.1825,
+          "p95": 2.986875,
+          "p99": 3.669375,
+          "max": 4.19675,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 72.7675,
+          "p95": 374.45925,
+          "p99": 380.98675,
+          "max": 387.31075,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 6393,
+          "p50": 2.244666,
+          "p95": 6.65425,
+          "p99": 9.729875,
+          "max": 14.144083,
+          "over_budget": 151
+        },
+        "compose_gpu_ms": {
+          "count": 4737,
+          "p50": 1.880916,
+          "p95": 6.48975,
+          "p99": 7.05875,
+          "max": 8.97175,
+          "over_budget": 4
+        },
+        "drawable_wait_ms": {
+          "count": 4737,
+          "p50": 0.019834,
+          "p95": 3.757499,
+          "p99": 7.540334,
+          "max": 11.987334,
+          "over_budget": 40
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 27.526458,
+          "p95": 308.415166,
+          "p99": 312.98575,
+          "max": 326.021542
+        },
+        "native_event_handler_ms": {
+          "count": 4200,
+          "p50": 1.889542,
+          "p95": 6.387667,
+          "p99": 23.777709,
+          "max": 26.309792
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 26.475625,
+          "p95": 51.514293,
+          "p99": 56.845333,
+          "max": 67.700623
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.212875,
+          "p95": 7.831417,
+          "p99": 8.574667,
+          "max": 12.870709
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 298.974167,
+          "p95": 322.648459,
+          "p99": 327.388583,
+          "max": 342.751708
+        }
+      }
+    },
+    "opacity_text": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 18.497978041,
+      "ui_draws": 2020,
+      "window_frames": 550,
+      "presented_window_frames": 550,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 2.929875,
+          "p95": 3.289166,
+          "p99": 3.590292,
+          "max": 4.571125,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.005375,
+          "p95": 0.007625,
+          "p99": 0.009625,
+          "max": 0.01275,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.205625,
+          "p95": 0.274875,
+          "p99": 0.319792,
+          "max": 0.378292,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.110084,
+          "p95": 0.126251,
+          "p99": 0.15375,
+          "max": 0.188417,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.181916,
+          "p95": 3.640125,
+          "p99": 4.263584,
+          "max": 4.49625,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 74.830125,
+          "p95": 126.89775,
+          "p99": 136.335958,
+          "max": 206.186708,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 2020,
+          "p50": 4.498167,
+          "p95": 7.565833,
+          "p99": 9.242958,
+          "max": 19.809125,
+          "over_budget": 40
+        },
+        "compose_gpu_ms": {
+          "count": 550,
+          "p50": 3.536084,
+          "p95": 6.92925,
+          "p99": 8.4765,
+          "max": 11.67725,
+          "over_budget": 6
+        },
+        "drawable_wait_ms": {
+          "count": 550,
+          "p50": 0.025042,
+          "p95": 0.037166,
+          "p99": 0.050541,
+          "max": 3.694375,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 48.30225,
+          "p95": 54.670375,
+          "p99": 65.3065,
+          "max": 93.521834
+        },
+        "native_event_handler_ms": {
+          "count": 2700,
+          "p50": 2.475667,
+          "p95": 27.37525,
+          "p99": 28.693083,
+          "max": 59.394708
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 47.137918,
+          "p95": 53.178794,
+          "p99": 63.918999,
+          "max": 91.803875
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 3.362083,
+          "p95": 4.831876,
+          "p99": 9.102334,
+          "max": 15.576084
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 59.732125,
+          "p95": 66.689458,
+          "p99": 91.345625,
+          "max": 117.541375
+        }
+      }
+    },
+    "opacity_drag": {
+      "source": "target/properties-terminal-opacity_drag/summary.json",
+      "inputs": 300,
+      "changed_samples": 268,
+      "phase_seconds": 3.162789458,
+      "ui_draws": 329,
+      "window_frames": 375,
+      "presented_window_frames": 375,
+      "preview_outcomes": {
+        "presented": 265,
+        "accepted_not_composed": 2,
+        "delivery_coalesced": 1
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 268,
+          "p50": 0.152625,
+          "p95": 0.204958,
+          "p99": 0.271958,
+          "max": 0.331917,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 268,
+          "p50": 0.004084,
+          "p95": 0.0075,
+          "p99": 0.010584,
+          "max": 0.015125,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 268,
+          "p50": 0.150208,
+          "p95": 0.2205,
+          "p99": 0.326416,
+          "max": 0.367958,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 268,
+          "p50": 0.096333,
+          "p95": 0.122,
+          "p99": 0.138584,
+          "max": 0.202792,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 268,
+          "p50": 0.610541,
+          "p95": 3.763875,
+          "p99": 4.016625,
+          "max": 4.347875,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 265,
+          "p50": 44.058958,
+          "p95": 46.892208,
+          "p99": 48.960374,
+          "max": 50.615875,
+          "over_budget": 265
+        },
+        "ui_draw_ms": {
+          "count": 329,
+          "p50": 5.680958,
+          "p95": 6.557666,
+          "p99": 7.565625,
+          "max": 8.123791,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 375,
+          "p50": 2.697791,
+          "p95": 5.615041,
+          "p99": 5.91975,
+          "max": 6.235459,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 375,
+          "p50": 0.019875,
+          "p95": 3.182417,
+          "p99": 5.254667,
+          "max": 12.114875,
+          "over_budget": 2
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 2.92525,
+          "p95": 3.354416,
+          "p99": 3.676125,
+          "max": 4.3115
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.021542,
+          "p95": 0.040208,
+          "p99": 0.054667,
+          "max": 0.064709
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.021542,
+          "p95": 0.040208,
+          "p99": 0.054667,
+          "max": 0.064709
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 300,
+          "p50": 0.021542,
+          "p95": 0.040208,
+          "p99": 0.054667,
+          "max": 0.064709
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 3.64196,
+          "p95": 6.003127,
+          "p99": 7.900834,
+          "max": 13.110917
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 9.230542,
+          "p95": 13.536791,
+          "p99": 16.84275,
+          "max": 24.742291
+        }
+      }
+    },
+    "multiply_hex": {
+      "source": "target/properties-terminal-multiply_hex/summary.json",
+      "inputs": 96,
+      "changed_samples": 96,
+      "phase_seconds": 6.896403625,
+      "ui_draws": 1102,
+      "window_frames": 171,
+      "presented_window_frames": 171,
+      "preview_outcomes": {
+        "delivery_coalesced": 96,
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 192,
+          "p50": 0.29425,
+          "p95": 3.099208,
+          "p99": 3.24425,
+          "max": 3.431583,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 192,
+          "p50": 0.004959,
+          "p95": 0.007625,
+          "p99": 0.012375,
+          "max": 0.013084,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 192,
+          "p50": 0.17975,
+          "p95": 0.245125,
+          "p99": 0.326792,
+          "max": 0.367333,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 192,
+          "p50": 0.107709,
+          "p95": 0.125292,
+          "p99": 0.151958,
+          "max": 0.153458,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 192,
+          "p50": 0.1755,
+          "p95": 3.991416,
+          "p99": 4.64225,
+          "max": 4.821791,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 145.0745,
+          "p95": 160.458459,
+          "p99": 162.802125,
+          "max": 162.802125,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 1102,
+          "p50": 2.010375,
+          "p95": 8.420042,
+          "p99": 9.797917,
+          "max": 14.127917,
+          "over_budget": 63
+        },
+        "compose_gpu_ms": {
+          "count": 171,
+          "p50": 1.965834,
+          "p95": 6.605041,
+          "p99": 7.238666,
+          "max": 7.333584,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 171,
+          "p50": 0.029209,
+          "p95": 3.827834,
+          "p99": 4.852459,
+          "max": 4.922709,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 55.29925,
+          "p95": 58.371875,
+          "p99": 60.453292,
+          "max": 60.453292
+        },
+        "native_event_handler_ms": {
+          "count": 1344,
+          "p50": 1.839666,
+          "p95": 7.427791,
+          "p99": 8.216708,
+          "max": 11.609584
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 29.586918,
+          "p95": 31.959876,
+          "p99": 32.826293,
+          "max": 32.826293
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 7.550209,
+          "p95": 9.823375,
+          "p99": 11.609584,
+          "max": 11.609584
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 6.032917,
+          "p95": 7.702167,
+          "p99": 11.773958,
+          "max": 11.773958
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 69.485666,
+          "p95": 73.137125,
+          "p99": 76.574583,
+          "max": 76.574583
+        }
+      }
+    },
+    "color_blend": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 25.5181225,
+      "ui_draws": 2936,
+      "window_frames": 2079,
+      "presented_window_frames": 2079,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 2.923166,
+          "p95": 3.281666,
+          "p99": 3.464125,
+          "max": 3.917125,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.005084,
+          "p95": 0.007375,
+          "p99": 0.013751,
+          "max": 0.033459,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.199,
+          "p95": 0.267709,
+          "p99": 0.326458,
+          "max": 0.547625,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.149666,
+          "p95": 0.175958,
+          "p99": 0.2095,
+          "max": 0.217667,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.23375,
+          "p95": 3.467,
+          "p99": 4.187584,
+          "max": 4.693125,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 111.978792,
+          "p95": 120.266916,
+          "p99": 122.001667,
+          "max": 126.935333,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 2936,
+          "p50": 2.581417,
+          "p95": 7.122625,
+          "p99": 7.740333,
+          "max": 9.555084,
+          "over_budget": 8
+        },
+        "compose_gpu_ms": {
+          "count": 2079,
+          "p50": 1.7235,
+          "p95": 6.548875,
+          "p99": 7.366416,
+          "max": 8.814666,
+          "over_budget": 2
+        },
+        "drawable_wait_ms": {
+          "count": 2079,
+          "p50": 0.361292,
+          "p95": 4.999167,
+          "p99": 9.349084,
+          "max": 13.201125,
+          "over_budget": 30
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 73.024583,
+          "p95": 79.708416,
+          "p99": 81.773833,
+          "max": 87.313875
+        },
+        "native_event_handler_ms": {
+          "count": 2100,
+          "p50": 0.067916,
+          "p95": 6.014417,
+          "p99": 6.527167,
+          "max": 10.194291
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 10.58496,
+          "p95": 12.665166,
+          "p99": 14.707210000000002,
+          "max": 17.997081
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.057625,
+          "p95": 4.55025,
+          "p99": 7.659542,
+          "max": 7.977959
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 83.454792,
+          "p95": 91.506292,
+          "p99": 93.430375,
+          "max": 99.7725
+        }
+      }
+    },
+    "enabled": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 10.951450667,
+      "ui_draws": 646,
+      "window_frames": 646,
+      "presented_window_frames": 646,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 3.023584,
+          "p95": 3.406667,
+          "p99": 3.625458,
+          "max": 3.894542,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.00525,
+          "p95": 0.007959,
+          "p99": 0.010959,
+          "max": 0.015083,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.20725,
+          "p95": 0.299916,
+          "p99": 0.345834,
+          "max": 0.441083,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.1335,
+          "p95": 0.165083,
+          "p99": 0.209834,
+          "max": 0.261417,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.251166,
+          "p95": 3.8435,
+          "p99": 4.157,
+          "max": 4.56125,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 63.539417,
+          "p95": 70.972667,
+          "p99": 73.594,
+          "max": 90.848625,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 646,
+          "p50": 3.168541,
+          "p95": 7.729209,
+          "p99": 8.308209,
+          "max": 8.895833,
+          "over_budget": 5
+        },
+        "compose_gpu_ms": {
+          "count": 646,
+          "p50": 1.80975,
+          "p95": 6.6515,
+          "p99": 8.26125,
+          "max": 11.373459,
+          "over_budget": 6
+        },
+        "drawable_wait_ms": {
+          "count": 646,
+          "p50": 0.021125,
+          "p95": 0.980667,
+          "p99": 2.289959,
+          "max": 10.2455,
+          "over_budget": 3
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 24.505333,
+          "p95": 26.605625,
+          "p99": 27.879791,
+          "max": 29.318292
+        },
+        "native_event_handler_ms": {
+          "count": 900,
+          "p50": 0.065333,
+          "p95": 24.299209,
+          "p99": 25.69325,
+          "max": 27.946625
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 23.441709,
+          "p95": 25.491083,
+          "p99": 26.558083,
+          "max": 28.096042
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.286042,
+          "p95": 4.691,
+          "p99": 5.825375,
+          "max": 13.364084
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 35.207625,
+          "p95": 39.223208,
+          "p99": 41.275208,
+          "max": 46.568667
+        }
+      }
+    },
+    "picker_open_close": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 0,
+      "phase_seconds": 39.906920083,
+      "ui_draws": 1500,
+      "window_frames": 900,
+      "presented_window_frames": 900,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 2.65975,
+          "p95": 2.8965,
+          "p99": 2.985083,
+          "max": 3.112333,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.005042,
+          "p95": 0.006917,
+          "p99": 0.01175,
+          "max": 0.018625,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.071125,
+          "p95": 0.086166,
+          "p99": 0.124667,
+          "max": 0.198334,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.186124,
+          "p95": 0.230333,
+          "p99": 0.266792,
+          "max": 0.326541,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.29825,
+          "p95": 3.706834,
+          "p99": 4.81825,
+          "max": 5.456375,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 129.038917,
+          "p95": 137.412959,
+          "p99": 141.124042,
+          "max": 147.179083,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 1500,
+          "p50": 7.469,
+          "p95": 8.881125,
+          "p99": 9.839,
+          "max": 13.748041,
+          "over_budget": 249
+        },
+        "compose_gpu_ms": {
+          "count": 900,
+          "p50": 1.86875,
+          "p95": 6.846416,
+          "p99": 7.740916,
+          "max": 7.93975,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 900,
+          "p50": 0.028667,
+          "p95": 0.037083,
+          "p99": 0.045459,
+          "max": 0.087666,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 122.435917,
+          "p95": 124.989541,
+          "p99": 125.111584,
+          "max": 126.388667
+        },
+        "native_event_handler_ms": {
+          "count": 1500,
+          "p50": 0.093416,
+          "p95": 7.969583,
+          "p99": 8.336,
+          "max": 9.343625
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 11.754542,
+          "p95": 12.625791999999999,
+          "p99": 13.450001,
+          "max": 15.069458
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 1.647709,
+          "p95": 2.098001,
+          "p99": 2.111542,
+          "max": 2.141751
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 132.101292,
+          "p95": 135.19975,
+          "p99": 135.559292,
+          "max": 136.9345
+        }
+      }
+    },
+    "picker_tabs": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 0,
+      "phase_seconds": 2.75549,
+      "ui_draws": 300,
+      "window_frames": 331,
+      "presented_window_frames": 331,
+      "preview_outcomes": {},
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "ui_draw_ms": {
+          "count": 300,
+          "p50": 5.946167,
+          "p95": 6.865208,
+          "p99": 7.223208,
+          "max": 8.335458,
+          "over_budget": 1
+        },
+        "compose_gpu_ms": {
+          "count": 331,
+          "p50": 4.520375,
+          "p95": 5.882709,
+          "p99": 6.245,
+          "max": 6.283125,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 331,
+          "p50": 0.019041,
+          "p95": 3.620375,
+          "p99": 5.275875,
+          "max": 5.487334,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 0.15875,
+          "p95": 0.249458,
+          "p99": 0.264125,
+          "max": 0.291792
+        },
+        "native_event_handler_ms": {
+          "count": 900,
+          "p50": 0.048667,
+          "p95": 0.079125,
+          "p99": 0.106667,
+          "max": 0.118625
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.12625,
+          "p95": 0.20508300000000002,
+          "p99": 0.216333,
+          "max": 0.23874900000000002
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.872398,
+          "p95": 6.109776,
+          "p99": 6.875539,
+          "max": 7.399419
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 8.30675,
+          "p95": 9.731417,
+          "p99": 10.385125,
+          "max": 11.015083
+        }
+      }
+    },
+    "picker_hex": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 11.00212275,
+      "ui_draws": 2998,
+      "window_frames": 646,
+      "presented_window_frames": 646,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.170958,
+          "p95": 0.230959,
+          "p99": 0.284792,
+          "max": 0.384625,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.0045,
+          "p95": 0.006084,
+          "p99": 0.008791,
+          "max": 0.0135,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.170917,
+          "p95": 0.212542,
+          "p99": 0.26075,
+          "max": 0.266417,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.147458,
+          "p95": 0.1815,
+          "p99": 0.213959,
+          "max": 0.258375,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.263834,
+          "p95": 3.724375,
+          "p99": 4.170125,
+          "max": 5.462334,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 63.53775,
+          "p95": 70.804458,
+          "p99": 79.020083,
+          "max": 86.839625,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 2998,
+          "p50": 2.267917,
+          "p95": 6.85625,
+          "p99": 7.47525,
+          "max": 9.659125,
+          "over_budget": 4
+        },
+        "compose_gpu_ms": {
+          "count": 646,
+          "p50": 1.91425,
+          "p95": 6.36675,
+          "p99": 7.42025,
+          "max": 10.694625,
+          "over_budget": 3
+        },
+        "drawable_wait_ms": {
+          "count": 646,
+          "p50": 0.022,
+          "p95": 3.31175,
+          "p99": 8.266833,
+          "max": 16.590125,
+          "over_budget": 5
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 24.839833,
+          "p95": 27.116041,
+          "p99": 31.178292,
+          "max": 40.28725
+        },
+        "native_event_handler_ms": {
+          "count": 3600,
+          "p50": 2.023709,
+          "p95": 5.432875,
+          "p99": 6.283333,
+          "max": 9.240459
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 21.185917,
+          "p95": 23.327708,
+          "p99": 27.699541,
+          "max": 35.312627
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.053333,
+          "p95": 4.671042,
+          "p99": 6.758959,
+          "max": 7.519334
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 35.470916,
+          "p95": 39.318917,
+          "p99": 47.069417,
+          "max": 54.334583
+        }
+      }
+    },
+    "picker_invalid_hex": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 0,
+      "phase_seconds": 8.626124792,
+      "ui_draws": 2100,
+      "window_frames": 703,
+      "presented_window_frames": 703,
+      "preview_outcomes": {},
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "ui_draw_ms": {
+          "count": 2100,
+          "p50": 2.133958,
+          "p95": 5.859417,
+          "p99": 6.369334,
+          "max": 7.543959,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 703,
+          "p50": 2.04875,
+          "p95": 6.206,
+          "p99": 8.525125,
+          "max": 11.731875,
+          "over_budget": 9
+        },
+        "drawable_wait_ms": {
+          "count": 703,
+          "p50": 0.020875,
+          "p95": 4.021208,
+          "p99": 5.483875,
+          "max": 13.195708,
+          "over_budget": 1
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 16.806541,
+          "p95": 22.632042,
+          "p99": 25.784584,
+          "max": 29.783417
+        },
+        "native_event_handler_ms": {
+          "count": 3000,
+          "p50": 1.961209,
+          "p95": 5.952208,
+          "p99": 6.506834,
+          "max": 7.961792
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 16.695124,
+          "p95": 22.510333,
+          "p99": 25.646958,
+          "max": 29.614249
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 1.513917,
+          "p95": 5.094167,
+          "p99": 5.913584,
+          "max": 7.42075
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 28.297125,
+          "p95": 34.79275,
+          "p99": 38.766667,
+          "max": 40.249667
+        }
+      }
+    },
+    "picker_hue": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 4.142698791,
+      "ui_draws": 442,
+      "window_frames": 476,
+      "presented_window_frames": 476,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.17925,
+          "p95": 0.269,
+          "p99": 0.293,
+          "max": 0.32325,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.004292,
+          "p95": 0.007875,
+          "p99": 0.01025,
+          "max": 0.01675,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.1635,
+          "p95": 0.260083,
+          "p99": 0.295709,
+          "max": 0.335583,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.135542,
+          "p95": 0.201416,
+          "p99": 0.221167,
+          "max": 0.246333,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 1.016834,
+          "p95": 3.708166,
+          "p99": 4.444166,
+          "max": 4.7695,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 45.006875,
+          "p95": 52.41325,
+          "p99": 53.658208,
+          "max": 54.083625,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 442,
+          "p50": 6.979291,
+          "p95": 7.626625,
+          "p99": 7.904,
+          "max": 8.264458,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 476,
+          "p50": 2.958625,
+          "p95": 5.847625,
+          "p99": 6.217334,
+          "max": 6.628584,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 476,
+          "p50": 0.020709,
+          "p95": 3.407458,
+          "p99": 5.137792,
+          "max": 5.627958,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 3.600667,
+          "p95": 3.937375,
+          "p99": 4.136208,
+          "max": 4.202917
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.05125,
+          "p95": 0.081917,
+          "p99": 0.094958,
+          "max": 0.106083
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.05125,
+          "p95": 0.081917,
+          "p99": 0.094958,
+          "max": 0.106083
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.59375,
+          "p95": 7.427334,
+          "p99": 7.995709,
+          "max": 8.254209
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 12.81425,
+          "p95": 16.072583,
+          "p99": 17.012666,
+          "max": 18.908625
+        }
+      }
+    },
+    "picker_sv": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 4.115591292,
+      "ui_draws": 433,
+      "window_frames": 475,
+      "presented_window_frames": 475,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.177708,
+          "p95": 0.248583,
+          "p99": 0.293709,
+          "max": 0.332458,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.004333,
+          "p95": 0.0075,
+          "p99": 0.010542,
+          "max": 0.024875,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.16775,
+          "p95": 0.24525,
+          "p99": 0.276833,
+          "max": 0.306459,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.136375,
+          "p95": 0.182667,
+          "p99": 0.200542,
+          "max": 0.24575,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.651,
+          "p95": 3.646459,
+          "p99": 4.199709,
+          "max": 4.459709,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 36.756416,
+          "p95": 48.347667,
+          "p99": 50.872417,
+          "max": 53.153167,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 433,
+          "p50": 6.732708,
+          "p95": 7.351084,
+          "p99": 7.519209,
+          "max": 8.179916,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 475,
+          "p50": 2.701375,
+          "p95": 5.759625,
+          "p99": 6.61175,
+          "max": 6.770709,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 475,
+          "p50": 0.020875,
+          "p95": 3.619333,
+          "p99": 5.633,
+          "max": 11.874167,
+          "over_budget": 3
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 3.625208,
+          "p95": 3.964375,
+          "p99": 4.081042,
+          "max": 4.881292
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.055333,
+          "p95": 0.077625,
+          "p99": 0.105958,
+          "max": 0.12025
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.055333,
+          "p95": 0.077625,
+          "p99": 0.105958,
+          "max": 0.12025
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.435418,
+          "p95": 7.479584,
+          "p99": 8.595292,
+          "max": 13.285292
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 12.926542,
+          "p95": 16.38075,
+          "p99": 24.316166,
+          "max": 25.298417
+        }
+      }
+    },
+    "picker_rgb_0_text": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 8.168892166,
+      "ui_draws": 1647,
+      "window_frames": 633,
+      "presented_window_frames": 633,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.180416,
+          "p95": 0.261666,
+          "p99": 0.315541,
+          "max": 0.343917,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.004459,
+          "p95": 0.006458,
+          "p99": 0.008625,
+          "max": 0.020083,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.175416,
+          "p95": 0.250958,
+          "p99": 0.281583,
+          "max": 0.370542,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.148166,
+          "p95": 0.193917,
+          "p99": 0.2425,
+          "max": 0.310041,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.375834,
+          "p95": 4.492334,
+          "p99": 5.244875,
+          "max": 6.098334,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 55.634458,
+          "p95": 61.91175,
+          "p99": 65.922334,
+          "max": 79.584417,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 1647,
+          "p50": 2.671208,
+          "p95": 7.470708,
+          "p99": 7.849333,
+          "max": 9.300417,
+          "over_budget": 5
+        },
+        "compose_gpu_ms": {
+          "count": 633,
+          "p50": 1.914,
+          "p95": 6.177291,
+          "p99": 7.375584,
+          "max": 9.238,
+          "over_budget": 4
+        },
+        "drawable_wait_ms": {
+          "count": 633,
+          "p50": 0.020167,
+          "p95": 3.27475,
+          "p99": 5.261916,
+          "max": 5.754791,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 15.494458,
+          "p95": 17.67175,
+          "p99": 19.278583,
+          "max": 21.863667
+        },
+        "native_event_handler_ms": {
+          "count": 2250,
+          "p50": 0.06425,
+          "p95": 5.717291,
+          "p99": 6.224834,
+          "max": 7.616417
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 11.770082,
+          "p95": 13.774792,
+          "p99": 15.283874,
+          "max": 17.238748
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.392375,
+          "p95": 4.320625,
+          "p99": 6.699084,
+          "max": 8.218708
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 26.401792,
+          "p95": 29.791875,
+          "p99": 31.858042,
+          "max": 34.564417
+        }
+      }
+    },
+    "picker_rgb_1_text": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 8.128025792,
+      "ui_draws": 1643,
+      "window_frames": 627,
+      "presented_window_frames": 627,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.176375,
+          "p95": 0.238,
+          "p99": 0.284708,
+          "max": 0.333209,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.004458,
+          "p95": 0.006375,
+          "p99": 0.008292,
+          "max": 0.00975,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.174042,
+          "p95": 0.244333,
+          "p99": 0.291167,
+          "max": 0.304375,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.145458,
+          "p95": 0.19475,
+          "p99": 0.227667,
+          "max": 0.310375,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.37075,
+          "p95": 4.592541,
+          "p99": 5.178209,
+          "max": 5.750375,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 55.348625,
+          "p95": 62.251334,
+          "p99": 84.610125,
+          "max": 107.652542,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 1643,
+          "p50": 2.609334,
+          "p95": 7.439125,
+          "p99": 7.835292,
+          "max": 19.818459,
+          "over_budget": 5
+        },
+        "compose_gpu_ms": {
+          "count": 627,
+          "p50": 1.862375,
+          "p95": 6.265625,
+          "p99": 7.768584,
+          "max": 11.162166,
+          "over_budget": 5
+        },
+        "drawable_wait_ms": {
+          "count": 627,
+          "p50": 0.01975,
+          "p95": 3.275125,
+          "p99": 5.429583,
+          "max": 13.50975,
+          "over_budget": 1
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 15.370167,
+          "p95": 17.621083,
+          "p99": 19.138416,
+          "max": 33.020583
+        },
+        "native_event_handler_ms": {
+          "count": 2250,
+          "p50": 0.065791,
+          "p95": 5.670917,
+          "p99": 6.242125,
+          "max": 20.147166
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 11.631,
+          "p95": 13.842459,
+          "p99": 15.063044,
+          "max": 27.770833
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.301792,
+          "p95": 4.075751,
+          "p99": 7.989125,
+          "max": 9.087667
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 26.06,
+          "p95": 29.459167,
+          "p99": 32.845291,
+          "max": 43.818792
+        }
+      }
+    },
+    "picker_rgb_2_text": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 8.218247542,
+      "ui_draws": 1644,
+      "window_frames": 631,
+      "presented_window_frames": 631,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.175625,
+          "p95": 0.254334,
+          "p99": 0.343833,
+          "max": 0.391542,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.004541,
+          "p95": 0.006542,
+          "p99": 0.010625,
+          "max": 0.014541,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.175959,
+          "p95": 0.249041,
+          "p99": 0.347709,
+          "max": 0.395209,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.147375,
+          "p95": 0.196333,
+          "p99": 0.231625,
+          "max": 0.304958,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.35625,
+          "p95": 4.708625,
+          "p99": 5.170916,
+          "max": 5.750125,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 55.5145,
+          "p95": 62.867125,
+          "p99": 72.087875,
+          "max": 83.234875,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 1644,
+          "p50": 2.652208,
+          "p95": 7.498625,
+          "p99": 8.125416,
+          "max": 9.96825,
+          "over_budget": 10
+        },
+        "compose_gpu_ms": {
+          "count": 631,
+          "p50": 1.85725,
+          "p95": 6.570709,
+          "p99": 8.688084,
+          "max": 11.721166,
+          "over_budget": 8
+        },
+        "drawable_wait_ms": {
+          "count": 631,
+          "p50": 0.020541,
+          "p95": 3.370667,
+          "p99": 5.24275,
+          "max": 13.505667,
+          "over_budget": 1
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 15.422334,
+          "p95": 18.560958,
+          "p99": 21.524916,
+          "max": 31.7885
+        },
+        "native_event_handler_ms": {
+          "count": 2250,
+          "p50": 0.065584,
+          "p95": 5.713875,
+          "p99": 6.536791,
+          "max": 9.490917
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 11.723709000000001,
+          "p95": 14.314749,
+          "p99": 17.20146,
+          "max": 25.778624
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.360126,
+          "p95": 4.698875,
+          "p99": 7.707,
+          "max": 9.847208
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 26.280542,
+          "p95": 30.560625,
+          "p99": 35.90875,
+          "max": 45.251167
+        }
+      }
+    },
+    "picker_hsv_0_text": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 8.117062167,
+      "ui_draws": 1648,
+      "window_frames": 636,
+      "presented_window_frames": 636,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.172667,
+          "p95": 0.231541,
+          "p99": 0.263542,
+          "max": 0.595667,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.004417,
+          "p95": 0.006917,
+          "p99": 0.011209,
+          "max": 0.014875,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.172375,
+          "p95": 0.234792,
+          "p99": 0.278875,
+          "max": 0.307167,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.146291,
+          "p95": 0.189708,
+          "p99": 0.243875,
+          "max": 0.309958,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 0.33675,
+          "p95": 4.509834,
+          "p99": 5.136709,
+          "max": 5.6515,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 55.546667,
+          "p95": 61.851916,
+          "p99": 63.245,
+          "max": 67.344292,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 1648,
+          "p50": 2.613875,
+          "p95": 7.432291,
+          "p99": 7.760875,
+          "max": 8.878458,
+          "over_budget": 4
+        },
+        "compose_gpu_ms": {
+          "count": 636,
+          "p50": 1.852416,
+          "p95": 6.373375,
+          "p99": 8.403125,
+          "max": 10.521959,
+          "over_budget": 7
+        },
+        "drawable_wait_ms": {
+          "count": 636,
+          "p50": 0.019791,
+          "p95": 3.423208,
+          "p99": 5.095541,
+          "max": 11.251125,
+          "over_budget": 3
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 15.33675,
+          "p95": 17.317917,
+          "p99": 17.719667,
+          "max": 19.111084
+        },
+        "native_event_handler_ms": {
+          "count": 2250,
+          "p50": 0.063459,
+          "p95": 5.706209,
+          "p99": 6.22725,
+          "max": 7.136917
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 11.610376,
+          "p95": 13.506499999999999,
+          "p99": 13.996165,
+          "max": 15.237416
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.334876,
+          "p95": 4.548959,
+          "p99": 8.257709,
+          "max": 13.334334
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 26.14775,
+          "p95": 29.454833,
+          "p99": 34.038083,
+          "max": 36.616875
+        }
+      }
+    },
+    "picker_hsv_1_text": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 7.793784458,
+      "ui_draws": 1498,
+      "window_frames": 637,
+      "presented_window_frames": 637,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.178833,
+          "p95": 0.262417,
+          "p99": 0.279458,
+          "max": 0.299875,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.0045,
+          "p95": 0.007667,
+          "p99": 0.01175,
+          "max": 0.021,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.176416,
+          "p95": 0.26475,
+          "p99": 0.274666,
+          "max": 0.395125,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.151292,
+          "p95": 0.228625,
+          "p99": 0.246125,
+          "max": 0.249709,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 2.05475,
+          "p95": 4.168875,
+          "p99": 4.662334,
+          "max": 5.010375,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 56.945708,
+          "p95": 59.326125,
+          "p99": 61.065375,
+          "max": 76.485334,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 1498,
+          "p50": 2.808125,
+          "p95": 7.019458,
+          "p99": 7.319625,
+          "max": 8.05925,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 637,
+          "p50": 2.787375,
+          "p95": 6.2755,
+          "p99": 8.4085,
+          "max": 10.67,
+          "over_budget": 9
+        },
+        "drawable_wait_ms": {
+          "count": 637,
+          "p50": 0.020375,
+          "p95": 3.491541,
+          "p99": 9.182959,
+          "max": 15.903583,
+          "over_budget": 13
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 14.09475,
+          "p95": 15.163708,
+          "p99": 15.968625,
+          "max": 17.269708
+        },
+        "native_event_handler_ms": {
+          "count": 2100,
+          "p50": 0.058125,
+          "p95": 5.755375,
+          "p99": 6.05075,
+          "max": 6.87975
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 10.352917,
+          "p95": 11.322457,
+          "p99": 11.897207,
+          "max": 13.150580999999999
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.211792,
+          "p95": 5.336375,
+          "p99": 11.26625,
+          "max": 13.413292
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 24.706041,
+          "p95": 28.559416,
+          "p99": 33.418542,
+          "max": 36.2165
+        }
+      }
+    },
+    "picker_hsv_2_text": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 300,
+      "phase_seconds": 7.869837834,
+      "ui_draws": 1498,
+      "window_frames": 645,
+      "presented_window_frames": 645,
+      "preview_outcomes": {
+        "presented": 300
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 300,
+          "p50": 0.182375,
+          "p95": 0.250125,
+          "p99": 0.306959,
+          "max": 0.351917,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 300,
+          "p50": 0.004583,
+          "p95": 0.007166,
+          "p99": 0.010917,
+          "max": 0.012834,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 300,
+          "p50": 0.178833,
+          "p95": 0.263541,
+          "p99": 0.279667,
+          "max": 0.345833,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 300,
+          "p50": 0.153833,
+          "p95": 0.222666,
+          "p99": 0.248541,
+          "max": 0.27875,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 300,
+          "p50": 1.9805,
+          "p95": 4.125625,
+          "p99": 4.44875,
+          "max": 5.061375,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 300,
+          "p50": 57.050916,
+          "p95": 59.744375,
+          "p99": 61.772709,
+          "max": 71.511542,
+          "over_budget": 300
+        },
+        "ui_draw_ms": {
+          "count": 1498,
+          "p50": 2.828666,
+          "p95": 7.008833,
+          "p99": 7.361167,
+          "max": 9.148875,
+          "over_budget": 1
+        },
+        "compose_gpu_ms": {
+          "count": 645,
+          "p50": 2.6535,
+          "p95": 6.237084,
+          "p99": 7.813125,
+          "max": 10.368125,
+          "over_budget": 2
+        },
+        "drawable_wait_ms": {
+          "count": 645,
+          "p50": 0.020417,
+          "p95": 3.601042,
+          "p99": 11.014875,
+          "max": 12.345708,
+          "over_budget": 13
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 14.072,
+          "p95": 15.359333,
+          "p99": 17.131625,
+          "max": 20.988208
+        },
+        "native_event_handler_ms": {
+          "count": 2100,
+          "p50": 0.05775,
+          "p95": 5.782,
+          "p99": 6.176459,
+          "max": 7.969209
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 10.332249000000001,
+          "p95": 11.62225,
+          "p99": 13.187,
+          "max": 15.204918
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 2.19175,
+          "p95": 8.670959,
+          "p99": 13.104334,
+          "max": 14.067626
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 24.8265,
+          "p95": 33.225875,
+          "p99": 35.886417,
+          "max": 36.341458
+        }
+      }
+    },
+    "picker_rgb_0_drag": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 268,
+      "phase_seconds": 3.970799833,
+      "ui_draws": 404,
+      "window_frames": 455,
+      "presented_window_frames": 455,
+      "preview_outcomes": {
+        "presented": 268
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 268,
+          "p50": 0.181292,
+          "p95": 0.254541,
+          "p99": 0.300917,
+          "max": 0.326834,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 268,
+          "p50": 0.00425,
+          "p95": 0.007084,
+          "p99": 0.009,
+          "max": 0.011083,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 268,
+          "p50": 0.1645,
+          "p95": 0.253584,
+          "p99": 0.267584,
+          "max": 0.292208,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 268,
+          "p50": 0.136792,
+          "p95": 0.188667,
+          "p99": 0.214041,
+          "max": 0.219584,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 268,
+          "p50": 0.625625,
+          "p95": 3.786,
+          "p99": 4.45975,
+          "max": 4.769,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 268,
+          "p50": 44.849292,
+          "p95": 52.242625,
+          "p99": 53.790625,
+          "max": 54.189208,
+          "over_budget": 268
+        },
+        "ui_draw_ms": {
+          "count": 404,
+          "p50": 6.959041,
+          "p95": 7.538125,
+          "p99": 7.850208,
+          "max": 8.081083,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 455,
+          "p50": 2.599084,
+          "p95": 5.786084,
+          "p99": 6.282375,
+          "max": 7.599666,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 455,
+          "p50": 0.020416,
+          "p95": 3.567375,
+          "p99": 9.424375,
+          "max": 12.201542,
+          "over_budget": 5
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 3.637458,
+          "p95": 4.080083,
+          "p99": 4.226625,
+          "max": 4.611542
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.034334,
+          "p95": 0.064167,
+          "p99": 0.077041,
+          "max": 0.10025
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.034334,
+          "p95": 0.064167,
+          "p99": 0.077041,
+          "max": 0.10025
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.419417,
+          "p95": 7.543917,
+          "p99": 8.865459,
+          "max": 13.518792
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 12.556458,
+          "p95": 15.58,
+          "p99": 16.711166,
+          "max": 25.821292
+        }
+      }
+    },
+    "picker_rgb_1_drag": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 268,
+      "phase_seconds": 3.953317584,
+      "ui_draws": 393,
+      "window_frames": 446,
+      "presented_window_frames": 446,
+      "preview_outcomes": {
+        "presented": 268
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 268,
+          "p50": 0.177792,
+          "p95": 0.237291,
+          "p99": 0.29,
+          "max": 0.310666,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 268,
+          "p50": 0.004374,
+          "p95": 0.006499,
+          "p99": 0.009375,
+          "max": 0.016917,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 268,
+          "p50": 0.165583,
+          "p95": 0.251792,
+          "p99": 0.283584,
+          "max": 0.316375,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 268,
+          "p50": 0.13675,
+          "p95": 0.186125,
+          "p99": 0.246542,
+          "max": 0.261625,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 268,
+          "p50": 1.025041,
+          "p95": 3.84275,
+          "p99": 4.12375,
+          "max": 4.71125,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 268,
+          "p50": 42.435542,
+          "p95": 51.602375,
+          "p99": 53.742958,
+          "max": 55.228209,
+          "over_budget": 268
+        },
+        "ui_draw_ms": {
+          "count": 393,
+          "p50": 7.0325,
+          "p95": 7.651166,
+          "p99": 8.109167,
+          "max": 9.0935,
+          "over_budget": 3
+        },
+        "compose_gpu_ms": {
+          "count": 446,
+          "p50": 2.85225,
+          "p95": 6.074625,
+          "p99": 6.351166,
+          "max": 6.745584,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 446,
+          "p50": 0.021042,
+          "p95": 3.636167,
+          "p99": 5.194209,
+          "max": 5.682042,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 3.663583,
+          "p95": 4.094875,
+          "p99": 4.301583,
+          "max": 4.736792
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.035,
+          "p95": 0.064292,
+          "p99": 0.084458,
+          "max": 0.098084
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.035,
+          "p95": 0.064292,
+          "p99": 0.084458,
+          "max": 0.098084
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.223542,
+          "p95": 7.812126,
+          "p99": 9.103042,
+          "max": 11.047377
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 12.524083,
+          "p95": 16.056,
+          "p99": 17.674625,
+          "max": 19.928291
+        }
+      }
+    },
+    "picker_rgb_2_drag": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 268,
+      "phase_seconds": 4.019061959,
+      "ui_draws": 397,
+      "window_frames": 451,
+      "presented_window_frames": 451,
+      "preview_outcomes": {
+        "presented": 268
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 268,
+          "p50": 0.182917,
+          "p95": 0.2645,
+          "p99": 0.303042,
+          "max": 0.366333,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 268,
+          "p50": 0.004292,
+          "p95": 0.00775,
+          "p99": 0.009125,
+          "max": 0.017417,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 268,
+          "p50": 0.166458,
+          "p95": 0.263209,
+          "p99": 0.290584,
+          "max": 0.322167,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 268,
+          "p50": 0.138708,
+          "p95": 0.198958,
+          "p99": 0.242084,
+          "max": 0.27025,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 268,
+          "p50": 0.95725,
+          "p95": 3.762,
+          "p99": 4.473291,
+          "max": 4.906709,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 268,
+          "p50": 44.989416,
+          "p95": 52.838958,
+          "p99": 55.043458,
+          "max": 55.146083,
+          "over_budget": 268
+        },
+        "ui_draw_ms": {
+          "count": 397,
+          "p50": 6.956542,
+          "p95": 7.726792,
+          "p99": 8.534,
+          "max": 8.776625,
+          "over_budget": 6
+        },
+        "compose_gpu_ms": {
+          "count": 451,
+          "p50": 2.798375,
+          "p95": 5.838666,
+          "p99": 6.339334,
+          "max": 8.373459,
+          "over_budget": 1
+        },
+        "drawable_wait_ms": {
+          "count": 451,
+          "p50": 0.021333,
+          "p95": 4.838042,
+          "p99": 5.620709,
+          "max": 10.776834,
+          "over_budget": 2
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 3.656,
+          "p95": 4.167375,
+          "p99": 4.684458,
+          "max": 4.998
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.035833,
+          "p95": 0.060917,
+          "p99": 0.097958,
+          "max": 0.125625
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.035833,
+          "p95": 0.060917,
+          "p99": 0.097958,
+          "max": 0.125625
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.446751,
+          "p95": 7.781834,
+          "p99": 9.876418,
+          "max": 12.600584
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 12.666209,
+          "p95": 16.518042,
+          "p99": 19.076292,
+          "max": 24.708417
+        }
+      }
+    },
+    "picker_hsv_0_drag": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 268,
+      "phase_seconds": 4.080938125,
+      "ui_draws": 409,
+      "window_frames": 452,
+      "presented_window_frames": 452,
+      "preview_outcomes": {
+        "presented": 268
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 268,
+          "p50": 0.184167,
+          "p95": 0.286416,
+          "p99": 0.347792,
+          "max": 0.42725,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 268,
+          "p50": 0.004416,
+          "p95": 0.008417,
+          "p99": 0.01225,
+          "max": 0.054458,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 268,
+          "p50": 0.171167,
+          "p95": 0.272292,
+          "p99": 0.340792,
+          "max": 0.465291,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 268,
+          "p50": 0.141958,
+          "p95": 0.198291,
+          "p99": 0.228375,
+          "max": 0.336042,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 268,
+          "p50": 0.668959,
+          "p95": 3.648459,
+          "p99": 4.159125,
+          "max": 4.838666,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 268,
+          "p50": 44.661583,
+          "p95": 52.852167,
+          "p99": 55.785375,
+          "max": 58.78325,
+          "over_budget": 268
+        },
+        "ui_draw_ms": {
+          "count": 409,
+          "p50": 6.971749,
+          "p95": 8.126333,
+          "p99": 9.258376,
+          "max": 11.45025,
+          "over_budget": 16
+        },
+        "compose_gpu_ms": {
+          "count": 452,
+          "p50": 2.799791,
+          "p95": 5.945084,
+          "p99": 6.66575,
+          "max": 7.502959,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 452,
+          "p50": 0.021833,
+          "p95": 3.48625,
+          "p99": 5.104542,
+          "max": 12.330209,
+          "over_budget": 3
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 3.689542,
+          "p95": 4.338083,
+          "p99": 5.235333,
+          "max": 5.724917
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.035875,
+          "p95": 0.071125,
+          "p99": 0.093792,
+          "max": 0.127416
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.035875,
+          "p95": 0.071125,
+          "p99": 0.093792,
+          "max": 0.127416
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.343292,
+          "p95": 8.259667,
+          "p99": 9.642751,
+          "max": 13.82775
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 13.051792,
+          "p95": 16.855708,
+          "p99": 17.925917,
+          "max": 26.259041
+        }
+      }
+    },
+    "picker_hsv_1_drag": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 268,
+      "phase_seconds": 4.056626417,
+      "ui_draws": 410,
+      "window_frames": 461,
+      "presented_window_frames": 461,
+      "preview_outcomes": {
+        "presented": 268
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 268,
+          "p50": 0.181541,
+          "p95": 0.27525,
+          "p99": 0.3115,
+          "max": 0.350042,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 268,
+          "p50": 0.004125,
+          "p95": 0.007334,
+          "p99": 0.008917,
+          "max": 0.014125,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 268,
+          "p50": 0.170792,
+          "p95": 0.261667,
+          "p99": 0.298583,
+          "max": 0.734625,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 268,
+          "p50": 0.14575,
+          "p95": 0.205,
+          "p99": 0.239541,
+          "max": 0.286291,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 268,
+          "p50": 0.71525,
+          "p95": 3.699791,
+          "p99": 4.520125,
+          "max": 4.77625,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 268,
+          "p50": 44.923458,
+          "p95": 51.240708,
+          "p99": 53.273542,
+          "max": 54.789625,
+          "over_budget": 268
+        },
+        "ui_draw_ms": {
+          "count": 410,
+          "p50": 6.87325,
+          "p95": 7.753959,
+          "p99": 8.240875,
+          "max": 8.7365,
+          "over_budget": 3
+        },
+        "compose_gpu_ms": {
+          "count": 461,
+          "p50": 2.881334,
+          "p95": 5.838,
+          "p99": 6.290459,
+          "max": 7.12875,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 461,
+          "p50": 0.022042,
+          "p95": 3.452375,
+          "p99": 5.009542,
+          "max": 9.599042,
+          "over_budget": 1
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 3.814542,
+          "p95": 4.2585,
+          "p99": 4.71225,
+          "max": 5.046625
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.037042,
+          "p95": 0.066167,
+          "p99": 0.091208,
+          "max": 0.114292
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.037042,
+          "p95": 0.066167,
+          "p99": 0.091208,
+          "max": 0.114292
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.230333,
+          "p95": 7.857251,
+          "p99": 9.085709,
+          "max": 10.595209
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 12.791708,
+          "p95": 16.722291,
+          "p99": 17.404167,
+          "max": 20.218958
+        }
+      }
+    },
+    "picker_hsv_2_drag": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 268,
+      "phase_seconds": 4.102179333,
+      "ui_draws": 416,
+      "window_frames": 454,
+      "presented_window_frames": 454,
+      "preview_outcomes": {
+        "presented": 268
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 268,
+          "p50": 0.189042,
+          "p95": 0.284292,
+          "p99": 0.374667,
+          "max": 0.422791,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 268,
+          "p50": 0.004542,
+          "p95": 0.007708,
+          "p99": 0.01375,
+          "max": 0.016334,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 268,
+          "p50": 0.174625,
+          "p95": 0.278875,
+          "p99": 0.402625,
+          "max": 1.260166,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 268,
+          "p50": 0.141291,
+          "p95": 0.205792,
+          "p99": 0.246375,
+          "max": 0.477125,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 268,
+          "p50": 0.852584,
+          "p95": 3.810709,
+          "p99": 4.191916,
+          "max": 4.472875,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 268,
+          "p50": 45.026666,
+          "p95": 52.504458,
+          "p99": 61.706167,
+          "max": 75.567958,
+          "over_budget": 268
+        },
+        "ui_draw_ms": {
+          "count": 416,
+          "p50": 6.561,
+          "p95": 7.694041,
+          "p99": 11.067708,
+          "max": 20.430375,
+          "over_budget": 15
+        },
+        "compose_gpu_ms": {
+          "count": 454,
+          "p50": 2.54475,
+          "p95": 5.772166,
+          "p99": 6.075,
+          "max": 7.36825,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 454,
+          "p50": 0.021209,
+          "p95": 1.238292,
+          "p99": 5.3185,
+          "max": 12.170333,
+          "over_budget": 4
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 3.693417,
+          "p95": 4.752542,
+          "p99": 7.124916,
+          "max": 8.1745
+        },
+        "native_event_handler_ms": {
+          "count": 300,
+          "p50": 0.036417,
+          "p95": 0.072333,
+          "p99": 0.100416,
+          "max": 0.154291
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0.036417,
+          "p95": 0.072333,
+          "p99": 0.100416,
+          "max": 0.154291
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 4.352668,
+          "p95": 8.217043,
+          "p99": 13.430667,
+          "max": 13.923458
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 12.455208,
+          "p95": 19.1175,
+          "p99": 25.8605,
+          "max": 29.574208
+        }
+      }
+    },
+    "picker_done": {
+      "source": "target/properties-terminal-picker_done/summary.json",
+      "inputs": 96,
+      "changed_samples": 96,
+      "phase_seconds": 15.47663625,
+      "ui_draws": 1056,
+      "window_frames": 1273,
+      "presented_window_frames": 1273,
+      "preview_outcomes": {
+        "delivery_coalesced": 96,
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 192,
+          "p50": 0.368125,
+          "p95": 3.142541,
+          "p99": 3.209208,
+          "max": 3.221791,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 192,
+          "p50": 0.005042,
+          "p95": 0.007708,
+          "p99": 0.01125,
+          "max": 0.012666,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 192,
+          "p50": 0.180958,
+          "p95": 0.290875,
+          "p99": 0.31275,
+          "max": 0.361084,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 192,
+          "p50": 0.108542,
+          "p95": 0.133959,
+          "p99": 0.17675,
+          "max": 0.184417,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 192,
+          "p50": 0.162084,
+          "p95": 3.572084,
+          "p99": 4.136375,
+          "max": 4.304875,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 88.724084,
+          "p95": 98.792041,
+          "p99": 103.944291,
+          "max": 103.944291,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 1056,
+          "p50": 2.590458,
+          "p95": 8.77075,
+          "p99": 10.228208,
+          "max": 13.294334,
+          "over_budget": 127
+        },
+        "compose_gpu_ms": {
+          "count": 1273,
+          "p50": 2.028959,
+          "p95": 6.450334,
+          "p99": 7.58675,
+          "max": 9.008334,
+          "over_budget": 8
+        },
+        "drawable_wait_ms": {
+          "count": 1273,
+          "p50": 0.032666,
+          "p95": 5.224458,
+          "p99": 11.965041,
+          "max": 13.95525,
+          "over_budget": 17
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 148.209416,
+          "p95": 156.561834,
+          "p99": 158.381,
+          "max": 158.381
+        },
+        "native_event_handler_ms": {
+          "count": 1728,
+          "p50": 0.093625,
+          "p95": 7.002458,
+          "p99": 7.462125,
+          "max": 9.713375
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 27.273795,
+          "p95": 30.630708,
+          "p99": 33.660376,
+          "max": 33.660376
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 7.18425,
+          "p95": 7.750125,
+          "p99": 9.713375,
+          "max": 9.713375
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 1.918792,
+          "p95": 2.099333,
+          "p99": 4.938667,
+          "max": 4.938667
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 158.33675,
+          "p95": 166.924709,
+          "p99": 168.877125,
+          "max": 168.877125
+        }
+      }
+    },
+    "picker_cancel": {
+      "source": "target/properties-terminal-picker_cancel/summary.json",
+      "inputs": 96,
+      "changed_samples": 0,
+      "phase_seconds": 14.594410667,
+      "ui_draws": 1056,
+      "window_frames": 1279,
+      "presented_window_frames": 1279,
+      "preview_outcomes": {
+        "delivery_coalesced": 96,
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 192,
+          "p50": 0.29125,
+          "p95": 2.344959,
+          "p99": 2.508125,
+          "max": 5.596208,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 192,
+          "p50": 0.0045,
+          "p95": 0.006834,
+          "p99": 0.015167,
+          "max": 0.016,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 192,
+          "p50": 0.168375,
+          "p95": 0.2245,
+          "p99": 0.332041,
+          "max": 0.357375,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 192,
+          "p50": 0.103875,
+          "p95": 0.117875,
+          "p99": 0.171375,
+          "max": 0.1935,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 192,
+          "p50": 0.163375,
+          "p95": 3.637334,
+          "p99": 3.734459,
+          "max": 4.09275,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 79.764625,
+          "p95": 90.133125,
+          "p99": 141.493542,
+          "max": 141.493542,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 1056,
+          "p50": 2.616708,
+          "p95": 8.018292,
+          "p99": 9.882083,
+          "max": 17.075541,
+          "over_budget": 40
+        },
+        "compose_gpu_ms": {
+          "count": 1279,
+          "p50": 2.907,
+          "p95": 6.399041,
+          "p99": 7.552166,
+          "max": 10.077709,
+          "over_budget": 4
+        },
+        "drawable_wait_ms": {
+          "count": 1279,
+          "p50": 0.030458,
+          "p95": 5.157375,
+          "p99": 8.729125,
+          "max": 12.8975,
+          "over_budget": 15
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 138.839625,
+          "p95": 146.910999,
+          "p99": 184.413917,
+          "max": 184.413917
+        },
+        "native_event_handler_ms": {
+          "count": 1728,
+          "p50": 0.089042,
+          "p95": 7.0275,
+          "p99": 7.757375,
+          "max": 9.785542
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 27.413459,
+          "p95": 31.190624,
+          "p99": 47.53929,
+          "max": 47.53929
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 7.18075,
+          "p95": 8.455417,
+          "p99": 9.785542,
+          "max": 9.785542
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 1.498083,
+          "p95": 4.911001,
+          "p99": 8.733709,
+          "max": 8.733709
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 148.878333,
+          "p95": 157.075125,
+          "p99": 193.736125,
+          "max": 193.736125
+        }
+      }
+    },
+    "multiply_reset": {
+      "source": "target/properties-terminal-multiply_reset/summary.json",
+      "inputs": 96,
+      "changed_samples": 0,
+      "phase_seconds": 9.455335417,
+      "ui_draws": 1098,
+      "window_frames": 167,
+      "presented_window_frames": 167,
+      "preview_outcomes": {
+        "delivery_coalesced": 288,
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 384,
+          "p50": 0.325125,
+          "p95": 3.088708,
+          "p99": 3.213584,
+          "max": 3.290167,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 384,
+          "p50": 0.004917,
+          "p95": 0.006458,
+          "p99": 0.01025,
+          "max": 0.014084,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 384,
+          "p50": 0.180459,
+          "p95": 0.242375,
+          "p99": 0.311958,
+          "max": 0.449959,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 384,
+          "p50": 0.108292,
+          "p95": 0.121792,
+          "p99": 0.137167,
+          "max": 0.229334,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 384,
+          "p50": 0.17,
+          "p95": 3.468791,
+          "p99": 4.507875,
+          "max": 4.551916,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 194.49775,
+          "p95": 211.604042,
+          "p99": 215.183125,
+          "max": 215.183125,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 1098,
+          "p50": 2.07375,
+          "p95": 8.598417,
+          "p99": 9.380541,
+          "max": 14.138,
+          "over_budget": 82
+        },
+        "compose_gpu_ms": {
+          "count": 167,
+          "p50": 2.804,
+          "p95": 6.783084,
+          "p99": 7.610166,
+          "max": 7.633625,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 167,
+          "p50": 0.026167,
+          "p95": 0.037875,
+          "p99": 0.055209,
+          "max": 3.809333,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 80.788334,
+          "p95": 85.876,
+          "p99": 92.690625,
+          "max": 92.690625
+        },
+        "native_event_handler_ms": {
+          "count": 1632,
+          "p50": 1.730958,
+          "p95": 7.399708,
+          "p99": 8.45825,
+          "max": 14.367625
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 30.183916999999997,
+          "p95": 33.100208,
+          "p99": 39.305585,
+          "max": 39.305585
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 7.659625,
+          "p95": 9.558375,
+          "p99": 14.367625,
+          "max": 14.367625
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 6.7865,
+          "p95": 8.780584,
+          "p99": 10.760375,
+          "max": 10.760375
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 95.782125,
+          "p95": 102.670541,
+          "p99": 109.164875,
+          "max": 109.164875
+        }
+      }
+    },
+    "picker_swatches": {
+      "source": "target/properties-confirm-picker_swatches/summary.json",
+      "inputs": 1200,
+      "changed_samples": 0,
+      "phase_seconds": 10.957494875,
+      "ui_draws": 28,
+      "window_frames": 106,
+      "presented_window_frames": 106,
+      "preview_outcomes": {},
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "ui_draw_ms": {
+          "count": 28,
+          "p50": 13.53325,
+          "p95": 20.327916,
+          "p99": 22.464792,
+          "max": 22.464792,
+          "over_budget": 25
+        },
+        "compose_gpu_ms": {
+          "count": 106,
+          "p50": 1.656709,
+          "p95": 6.221709,
+          "p99": 7.707709,
+          "max": 7.84975,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 106,
+          "p50": 3.454542,
+          "p95": 4.875875,
+          "p99": 5.256583,
+          "max": 12.2225,
+          "over_budget": 1
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 1200,
+          "p50": 0.27925,
+          "p95": 0.436292,
+          "p99": 0.476625,
+          "max": 0.618875
+        },
+        "native_event_handler_ms": {
+          "count": 1200,
+          "p50": 0.167125,
+          "p95": 0.258667,
+          "p99": 0.284709,
+          "max": 0.371
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 1200,
+          "p50": 0.167125,
+          "p95": 0.258667,
+          "p99": 0.284709,
+          "max": 0.371
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 1200,
+          "p50": 0.167125,
+          "p95": 0.258667,
+          "p99": 0.284709,
+          "max": 0.371
+        },
+        "timer_late_ms": {
+          "count": 1200,
+          "p50": 1.539299,
+          "p95": 1.994537,
+          "p99": 13.400228,
+          "max": 21.090978
+        },
+        "actual_input_interval_ms": {
+          "count": 1199,
+          "p50": 8.336541,
+          "p95": 10.16025,
+          "p99": 21.236167,
+          "max": 27.820084
+        }
+      }
+    },
+    "idle": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 0,
+      "phase_seconds": 2.75883525,
+      "ui_draws": 0,
+      "window_frames": 49,
+      "presented_window_frames": 49,
+      "preview_outcomes": {},
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "ui_draw_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 49,
+          "p50": 1.40175,
+          "p95": 6.212416,
+          "p99": 6.657416,
+          "max": 6.657416,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 49,
+          "p50": 3.823209,
+          "p95": 11.680958,
+          "p99": 13.628083,
+          "max": 13.628083,
+          "over_budget": 3
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 0.007042,
+          "p95": 0.013,
+          "p99": 0.015792,
+          "max": 0.025042
+        },
+        "native_event_handler_ms": {
+          "count": 0
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 1.622235,
+          "p95": 1.84392,
+          "p99": 7.371305,
+          "max": 8.225973
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 8.261709,
+          "p95": 9.820458,
+          "p99": 14.268833,
+          "max": 14.903542
+        }
+      }
+    },
+    "picker_idle": {
+      "source": "target/properties-mao-run-01/summary.json",
+      "inputs": 300,
+      "changed_samples": 0,
+      "phase_seconds": 2.753402375,
+      "ui_draws": 0,
+      "window_frames": 50,
+      "presented_window_frames": 50,
+      "preview_outcomes": {},
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "ui_draw_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 50,
+          "p50": 1.369334,
+          "p95": 5.195084,
+          "p99": 5.651375,
+          "max": 5.651375,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 50,
+          "p50": 3.54425,
+          "p95": 4.885042,
+          "p99": 5.689292,
+          "max": 5.689292,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 300,
+          "p50": 0.006125,
+          "p95": 0.01075,
+          "p99": 0.014166,
+          "max": 0.022084
+        },
+        "native_event_handler_ms": {
+          "count": 0
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 300,
+          "p50": 0,
+          "p95": 0,
+          "p99": 0,
+          "max": 0
+        },
+        "timer_late_ms": {
+          "count": 300,
+          "p50": 1.641451,
+          "p95": 5.183437,
+          "p99": 5.829099,
+          "max": 5.908016
+        },
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 8.335625,
+          "p95": 12.311416,
+          "p99": 13.224375,
+          "max": 14.067125
+        }
+      }
+    }
+  },
+  "confirmations": {
+    "enabled": {
+      "source": "target/properties-confirm-enabled/summary.json",
+      "inputs": 96,
+      "changed_samples": 96,
+      "phase_seconds": 3.452402166,
+      "ui_draws": 230,
+      "window_frames": 230,
+      "presented_window_frames": 230,
+      "preview_outcomes": {
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 96,
+          "p50": 2.944084,
+          "p95": 3.147833,
+          "p99": 3.337208,
+          "max": 3.337208,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 96,
+          "p50": 0.005167,
+          "p95": 0.006375,
+          "p99": 0.008792,
+          "max": 0.008792,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 96,
+          "p50": 0.191792,
+          "p95": 0.286083,
+          "p99": 0.302667,
+          "max": 0.302667,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 96,
+          "p50": 0.105375,
+          "p95": 0.128708,
+          "p99": 0.155667,
+          "max": 0.155667,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 96,
+          "p50": 0.226166,
+          "p95": 3.676416,
+          "p99": 4.191625,
+          "max": 4.191625,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 58.631959,
+          "p95": 67.137833,
+          "p99": 68.316791,
+          "max": 68.316791,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 230,
+          "p50": 2.713042,
+          "p95": 7.143042,
+          "p99": 7.282542,
+          "max": 7.438625,
+          "over_budget": 0
+        },
+        "compose_gpu_ms": {
+          "count": 230,
+          "p50": 1.716959,
+          "p95": 6.224709,
+          "p99": 7.303541,
+          "max": 12.399666,
+          "over_budget": 1
+        },
+        "drawable_wait_ms": {
+          "count": 230,
+          "p50": 0.022917,
+          "p95": 6.197125,
+          "p99": 7.923542,
+          "max": 9.428667,
+          "over_budget": 2
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 22.463917,
+          "p95": 23.798,
+          "p99": 24.1365,
+          "max": 24.1365
+        },
+        "native_event_handler_ms": {
+          "count": 288,
+          "p50": 0.056,
+          "p95": 22.040917,
+          "p99": 22.828833,
+          "max": 23.024708
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 21.5065,
+          "p95": 22.794833,
+          "p99": 23.142832000000002,
+          "max": 23.142832000000002
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 21.399625,
+          "p95": 22.681791,
+          "p99": 23.024708,
+          "max": 23.024708
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 2.012542,
+          "p95": 5.129042,
+          "p99": 13.201417,
+          "max": 13.201417
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 32.976708,
+          "p95": 36.450208,
+          "p99": 43.576625,
+          "max": 43.576625
+        }
+      }
+    },
+    "multiply_hex": {
+      "source": "target/properties-confirm-multiply_hex/summary.json",
+      "inputs": 96,
+      "changed_samples": 96,
+      "phase_seconds": 6.983153208,
+      "ui_draws": 1106,
+      "window_frames": 174,
+      "presented_window_frames": 174,
+      "preview_outcomes": {
+        "incomplete": 96,
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 192,
+          "p50": 0.269584,
+          "p95": 3.198875,
+          "p99": 3.476333,
+          "max": 3.587125,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 192,
+          "p50": 0.005084,
+          "p95": 0.008084,
+          "p99": 0.012333,
+          "max": 0.016,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 192,
+          "p50": 0.181125,
+          "p95": 0.249458,
+          "p99": 0.349,
+          "max": 0.369375,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 192,
+          "p50": 0.108583,
+          "p95": 0.135458,
+          "p99": 0.175167,
+          "max": 0.1785,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 192,
+          "p50": 0.17425,
+          "p95": 3.53825,
+          "p99": 4.291625,
+          "max": 4.615125,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 102.779041,
+          "p95": 162.501834,
+          "p99": 175.837459,
+          "max": 175.837459,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 1106,
+          "p50": 2.10475,
+          "p95": 8.383959,
+          "p99": 9.546875,
+          "max": 12.175042,
+          "over_budget": 57
+        },
+        "compose_gpu_ms": {
+          "count": 174,
+          "p50": 2.07,
+          "p95": 6.960709,
+          "p99": 7.721041,
+          "max": 7.736916,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 174,
+          "p50": 0.026625,
+          "p95": 0.040834,
+          "p99": 0.107125,
+          "max": 3.330625,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 55.222084,
+          "p95": 62.877583,
+          "p99": 67.186333,
+          "max": 67.186333
+        },
+        "native_event_handler_ms": {
+          "count": 1344,
+          "p50": 1.857792,
+          "p95": 7.325916,
+          "p99": 8.2435,
+          "max": 11.965375
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 29.493042,
+          "p95": 34.581208000000004,
+          "p99": 40.159957,
+          "max": 40.159957
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 7.467125,
+          "p95": 9.605708,
+          "p99": 11.965375,
+          "max": 11.965375
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 6.090792,
+          "p95": 8.428709,
+          "p99": 11.589583,
+          "max": 11.589583
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 69.568333,
+          "p95": 78.706625,
+          "p99": 84.289458,
+          "max": 84.289458
+        }
+      }
+    },
+    "multiply_reset": {
+      "source": "target/properties-confirm-multiply_reset/summary.json",
+      "inputs": 96,
+      "changed_samples": 0,
+      "phase_seconds": 9.512286333,
+      "ui_draws": 1104,
+      "window_frames": 173,
+      "presented_window_frames": 173,
+      "preview_outcomes": {
+        "incomplete": 288,
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 384,
+          "p50": 0.335375,
+          "p95": 3.1015,
+          "p99": 3.30125,
+          "max": 3.609833,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 384,
+          "p50": 0.004791,
+          "p95": 0.006583,
+          "p99": 0.012458,
+          "max": 0.028375,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 384,
+          "p50": 0.1755,
+          "p95": 0.224708,
+          "p99": 0.296334,
+          "max": 0.397542,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 384,
+          "p50": 0.105375,
+          "p95": 0.120375,
+          "p99": 0.145916,
+          "max": 0.206167,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 384,
+          "p50": 0.168416,
+          "p95": 3.80075,
+          "p99": 4.507791,
+          "max": 4.770041,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 133.865708,
+          "p95": 215.396959,
+          "p99": 222.374458,
+          "max": 222.374458,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 1104,
+          "p50": 2.099292,
+          "p95": 8.491708,
+          "p99": 9.460834,
+          "max": 11.842917,
+          "over_budget": 71
+        },
+        "compose_gpu_ms": {
+          "count": 173,
+          "p50": 1.9965,
+          "p95": 6.689459,
+          "p99": 7.308416,
+          "max": 11.582916,
+          "over_budget": 1
+        },
+        "drawable_wait_ms": {
+          "count": 173,
+          "p50": 0.028458,
+          "p95": 3.696042,
+          "p99": 4.805417,
+          "max": 4.934083,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 81.138333,
+          "p95": 86.630292,
+          "p99": 88.947625,
+          "max": 88.947625
+        },
+        "native_event_handler_ms": {
+          "count": 1632,
+          "p50": 1.746,
+          "p95": 7.299792,
+          "p99": 8.230083,
+          "max": 9.946041
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 30.182625,
+          "p95": 32.545919,
+          "p99": 37.524543,
+          "max": 37.524543
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 7.516042,
+          "p95": 9.636041,
+          "p99": 9.946041,
+          "max": 9.946041
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 6.692167,
+          "p95": 8.415875,
+          "p99": 15.049417,
+          "max": 15.049417
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 96.339792,
+          "p95": 101.925667,
+          "p99": 105.672,
+          "max": 105.672
+        }
+      }
+    },
+    "name": {
+      "source": "target/properties-confirm-name/summary.json",
+      "inputs": 96,
+      "changed_samples": 96,
+      "phase_seconds": 7.101862792,
+      "ui_draws": 1415,
+      "window_frames": 197,
+      "presented_window_frames": 197,
+      "preview_outcomes": {
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 96,
+          "p50": 2.83375,
+          "p95": 3.157917,
+          "p99": 3.230541,
+          "max": 3.230541,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 96,
+          "p50": 0.005541,
+          "p95": 0.006375,
+          "p99": 0.009417,
+          "max": 0.009417,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 96,
+          "p50": 0.196334,
+          "p95": 0.228959,
+          "p99": 0.288625,
+          "max": 0.288625,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 96,
+          "p50": 0.109125,
+          "p95": 0.118334,
+          "p99": 0.15425,
+          "max": 0.15425,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 96,
+          "p50": 0.176916,
+          "p95": 2.743666,
+          "p99": 4.402916,
+          "max": 4.402916,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 70.210541,
+          "p95": 129.687542,
+          "p99": 137.490833,
+          "max": 137.490833,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 1415,
+          "p50": 2.1705,
+          "p95": 6.840666,
+          "p99": 7.41125,
+          "max": 12.275583,
+          "over_budget": 5
+        },
+        "compose_gpu_ms": {
+          "count": 197,
+          "p50": 3.22275,
+          "p95": 6.76825,
+          "p99": 7.183834,
+          "max": 7.218625,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 197,
+          "p50": 0.025625,
+          "p95": 3.134,
+          "p99": 4.749292,
+          "max": 4.753125,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 60.062459,
+          "p95": 64.210042,
+          "p99": 70.564583,
+          "max": 70.564583
+        },
+        "native_event_handler_ms": {
+          "count": 1632,
+          "p50": 1.809791,
+          "p95": 23.845001,
+          "p99": 25.391291,
+          "max": 27.555583
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 58.884332,
+          "p95": 63.025166999999996,
+          "p99": 69.426791,
+          "max": 69.426791
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 24.71275,
+          "p95": 25.975375,
+          "p99": 27.555583,
+          "max": 27.555583
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 2.797917,
+          "p95": 4.297292,
+          "p99": 5.055083,
+          "max": 5.055083
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 71.327167,
+          "p95": 75.694541,
+          "p99": 82.257958,
+          "max": 82.257958
+        }
+      }
+    },
+    "opacity_text": {
+      "source": "target/properties-confirm-opacity_text/summary.json",
+      "inputs": 96,
+      "changed_samples": 96,
+      "phase_seconds": 5.891231042,
+      "ui_draws": 659,
+      "window_frames": 212,
+      "presented_window_frames": 212,
+      "preview_outcomes": {
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 96,
+          "p50": 2.872208,
+          "p95": 3.169083,
+          "p99": 3.316916,
+          "max": 3.316916,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 96,
+          "p50": 0.005417,
+          "p95": 0.007333,
+          "p99": 0.010459,
+          "max": 0.010459,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 96,
+          "p50": 0.191834,
+          "p95": 0.262708,
+          "p99": 0.337333,
+          "max": 0.337333,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 96,
+          "p50": 0.108334,
+          "p95": 0.125833,
+          "p99": 0.214417,
+          "max": 0.214417,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 96,
+          "p50": 0.174791,
+          "p95": 3.728334,
+          "p99": 4.057875,
+          "max": 4.057875,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 73.38475,
+          "p95": 123.682792,
+          "p99": 132.890584,
+          "max": 132.890584,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 659,
+          "p50": 4.355292,
+          "p95": 7.278042,
+          "p99": 10.415041,
+          "max": 12.810334,
+          "over_budget": 16
+        },
+        "compose_gpu_ms": {
+          "count": 212,
+          "p50": 1.829041,
+          "p95": 6.324875,
+          "p99": 6.91175,
+          "max": 7.172,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 212,
+          "p50": 0.025084,
+          "p95": 3.647291,
+          "p99": 3.808167,
+          "max": 5.2485,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 46.742666,
+          "p95": 52.557334,
+          "p99": 56.622208,
+          "max": 56.622208
+        },
+        "native_event_handler_ms": {
+          "count": 864,
+          "p50": 2.437459,
+          "p95": 26.07925,
+          "p99": 27.110875,
+          "max": 30.8535
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 45.670624,
+          "p95": 51.455667,
+          "p99": 55.35854,
+          "max": 55.35854
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 26.028125,
+          "p95": 27.408292,
+          "p99": 30.8535,
+          "max": 30.8535
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 3.134876,
+          "p95": 5.132876,
+          "p99": 7.131042,
+          "max": 7.131042
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 58.291833,
+          "p95": 62.499583,
+          "p99": 71.096709,
+          "max": 71.096709
+        }
+      }
+    },
+    "picker_done": {
+      "source": "target/properties-confirm-picker_done/summary.json",
+      "inputs": 96,
+      "changed_samples": 96,
+      "phase_seconds": 15.469950209,
+      "ui_draws": 1056,
+      "window_frames": 1271,
+      "presented_window_frames": 1271,
+      "preview_outcomes": {
+        "incomplete": 96,
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 192,
+          "p50": 0.196,
+          "p95": 3.134834,
+          "p99": 3.173875,
+          "max": 3.181417,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 192,
+          "p50": 0.005,
+          "p95": 0.008,
+          "p99": 0.009083,
+          "max": 0.009875,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 192,
+          "p50": 0.179833,
+          "p95": 0.28225,
+          "p99": 0.304375,
+          "max": 0.305958,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 192,
+          "p50": 0.106708,
+          "p95": 0.125167,
+          "p99": 0.178542,
+          "max": 0.1915,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 192,
+          "p50": 0.164709,
+          "p95": 3.234875,
+          "p99": 3.730291,
+          "max": 4.05475,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 88.733,
+          "p95": 98.596459,
+          "p99": 105.0335,
+          "max": 105.0335,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 1056,
+          "p50": 2.590041,
+          "p95": 8.79825,
+          "p99": 9.579,
+          "max": 13.546334,
+          "over_budget": 132
+        },
+        "compose_gpu_ms": {
+          "count": 1271,
+          "p50": 2.501,
+          "p95": 6.5725,
+          "p99": 7.423375,
+          "max": 8.583791,
+          "over_budget": 1
+        },
+        "drawable_wait_ms": {
+          "count": 1271,
+          "p50": 3.073333,
+          "p95": 5.003041,
+          "p99": 12.019167,
+          "max": 12.758167,
+          "over_budget": 30
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 148.119083,
+          "p95": 152.517875,
+          "p99": 157.354042,
+          "max": 157.354042
+        },
+        "native_event_handler_ms": {
+          "count": 1728,
+          "p50": 0.0935,
+          "p95": 7.097959,
+          "p99": 7.610083,
+          "max": 9.92475
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 27.551042,
+          "p95": 30.230249,
+          "p99": 30.81054,
+          "max": 30.81054
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 7.22,
+          "p95": 9.2295,
+          "p99": 9.92475,
+          "max": 9.92475
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 2.029584,
+          "p95": 7.915876,
+          "p99": 8.511583,
+          "max": 8.511583
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 158.346791,
+          "p95": 165.025833,
+          "p99": 167.870292,
+          "max": 167.870292
+        }
+      }
+    },
+    "picker_open_close": {
+      "source": "target/properties-confirm-picker_open_close/summary.json",
+      "inputs": 96,
+      "changed_samples": 0,
+      "phase_seconds": 12.720990709,
+      "ui_draws": 480,
+      "window_frames": 288,
+      "presented_window_frames": 288,
+      "preview_outcomes": {
+        "presented": 96
+      },
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 96,
+          "p50": 2.597875,
+          "p95": 2.766625,
+          "p99": 2.938958,
+          "max": 2.938958,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 96,
+          "p50": 0.005166,
+          "p95": 0.006958,
+          "p99": 0.011333,
+          "max": 0.011333,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 96,
+          "p50": 0.068417,
+          "p95": 0.087125,
+          "p99": 0.138709,
+          "max": 0.138709,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 96,
+          "p50": 0.135625,
+          "p95": 0.159958,
+          "p99": 0.225583,
+          "max": 0.225583,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 96,
+          "p50": 0.195041,
+          "p95": 4.122291,
+          "p99": 4.585875,
+          "max": 4.585875,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 96,
+          "p50": 127.409542,
+          "p95": 135.136291,
+          "p99": 137.377916,
+          "max": 137.377916,
+          "over_budget": 96
+        },
+        "ui_draw_ms": {
+          "count": 480,
+          "p50": 7.271333,
+          "p95": 8.764458,
+          "p99": 9.784209,
+          "max": 14.839792,
+          "over_budget": 58
+        },
+        "compose_gpu_ms": {
+          "count": 288,
+          "p50": 1.847375,
+          "p95": 6.171375,
+          "p99": 7.426584,
+          "max": 9.413791,
+          "over_budget": 2
+        },
+        "drawable_wait_ms": {
+          "count": 288,
+          "p50": 0.028166,
+          "p95": 0.037792,
+          "p99": 0.048833,
+          "max": 0.08575,
+          "over_budget": 0
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 96,
+          "p50": 119.192667,
+          "p95": 121.357,
+          "p99": 122.663333,
+          "max": 122.663333
+        },
+        "native_event_handler_ms": {
+          "count": 480,
+          "p50": 0.080167,
+          "p95": 7.748375,
+          "p99": 8.041042,
+          "max": 8.310541
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 96,
+          "p50": 11.530085,
+          "p95": 12.293458999999999,
+          "p99": 12.469083000000001,
+          "max": 12.469083000000001
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 96,
+          "p50": 7.52575,
+          "p95": 8.041042,
+          "p99": 8.310541,
+          "max": 8.310541
+        },
+        "timer_late_ms": {
+          "count": 96,
+          "p50": 2.044875,
+          "p95": 2.133626,
+          "p99": 2.1785,
+          "max": 2.1785
+        },
+        "actual_input_interval_ms": {
+          "count": 95,
+          "p50": 129.646542,
+          "p95": 131.845708,
+          "p99": 132.921792,
+          "max": 132.921792
+        }
+      }
+    },
+    "picker_swatches": {
+      "source": "target/properties-confirm-picker_swatches/summary.json",
+      "inputs": 1200,
+      "changed_samples": 0,
+      "phase_seconds": 10.957494875,
+      "ui_draws": 28,
+      "window_frames": 106,
+      "presented_window_frames": 106,
+      "preview_outcomes": {},
+      "metrics_ms": {
+        "scene_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "textures_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "sync_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "encode_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "preview_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "input_to_present_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "ui_draw_ms": {
+          "count": 28,
+          "p50": 13.53325,
+          "p95": 20.327916,
+          "p99": 22.464792,
+          "max": 22.464792,
+          "over_budget": 25
+        },
+        "compose_gpu_ms": {
+          "count": 106,
+          "p50": 1.656709,
+          "p95": 6.221709,
+          "p99": 7.707709,
+          "max": 7.84975,
+          "over_budget": 0
+        },
+        "drawable_wait_ms": {
+          "count": 106,
+          "p50": 3.454542,
+          "p95": 4.875875,
+          "p99": 5.256583,
+          "max": 12.2225,
+          "over_budget": 1
+        },
+        "offscreen_gpu_ms": {
+          "count": 0,
+          "over_budget": 0
+        },
+        "interaction_wall_ms": {
+          "count": 1200,
+          "p50": 0.27925,
+          "p95": 0.436292,
+          "p99": 0.476625,
+          "max": 0.618875
+        },
+        "native_event_handler_ms": {
+          "count": 1200,
+          "p50": 0.167125,
+          "p95": 0.258667,
+          "p99": 0.284709,
+          "max": 0.371
+        },
+        "native_event_handlers_per_tick_ms": {
+          "count": 1200,
+          "p50": 0.167125,
+          "p95": 0.258667,
+          "p99": 0.284709,
+          "max": 0.371
+        },
+        "slowest_native_event_per_tick_ms": {
+          "count": 1200,
+          "p50": 0.167125,
+          "p95": 0.258667,
+          "p99": 0.284709,
+          "max": 0.371
+        },
+        "timer_late_ms": {
+          "count": 1200,
+          "p50": 1.539299,
+          "p95": 1.994537,
+          "p99": 13.400228,
+          "max": 21.090978
+        },
+        "actual_input_interval_ms": {
+          "count": 1199,
+          "p50": 8.336541,
+          "p95": 10.16025,
+          "p99": 21.236167,
+          "max": 27.820084
+        }
+      }
+    }
+  },
+  "legacy_ui_reference": {
+    "source": "target/properties-mao-ui-reference/summary.json",
+    "modes": {
+      "opacity": {
+        "rows": 300,
+        "inputs": 300,
+        "window_present_fps": 96.78327638314398,
+        "new_preview_present_fps": 89.92421252631006,
+        "window_present_interval_ms": {
+          "count": 321,
+          "p50": 8.333416,
+          "p95": 16.666792,
+          "p99": 16.666833,
+          "max": 16.666876
+        },
+        "outcomes": {
+          "presented": 300
+        },
+        "metrics_ms": {
+          "input_handler_ms": {
+            "count": 300,
+            "p50": 0.362875,
+            "p95": 0.4965,
+            "p99": 0.569584,
+            "max": 0.636583
+          },
+          "edit_dispatch_ms": {
+            "count": 300,
+            "p50": 0.004708,
+            "p95": 0.009375,
+            "p99": 0.013292,
+            "max": 0.0275
+          },
+          "scene_ms": {
+            "count": 300,
+            "p50": 0.346375,
+            "p95": 0.472208,
+            "p99": 0.542333,
+            "max": 0.610125
+          },
+          "mailbox_ms": {
+            "count": 300,
+            "p50": 0.005584,
+            "p95": 0.012292,
+            "p99": 0.019209,
+            "max": 3.874959
+          },
+          "textures_ms": {
+            "count": 300,
+            "p50": 0.003708,
+            "p95": 0.006083,
+            "p99": 0.008375,
+            "max": 0.033167
+          },
+          "sync_ms": {
+            "count": 300,
+            "p50": 0.125334,
+            "p95": 0.174416,
+            "p99": 0.197042,
+            "max": 0.212167
+          },
+          "encode_ms": {
+            "count": 300,
+            "p50": 0.087875,
+            "p95": 0.114416,
+            "p99": 0.122083,
+            "max": 0.161458
+          },
+          "preview_submit_ms": {
+            "count": 300,
+            "p50": 0.228333,
+            "p95": 0.307167,
+            "p99": 0.334958,
+            "max": 0.344542
+          },
+          "preview_queue_ms": {
+            "count": 300,
+            "p50": 0.358749,
+            "p95": 3.515917,
+            "p99": 4.288458,
+            "max": 4.377333
+          },
+          "preview_gpu_ms": {
+            "count": 300,
+            "p50": 1.085666,
+            "p95": 5.232834,
+            "p99": 5.533209,
+            "max": 6.146375
+          },
+          "preview_wait_return_ms": {
+            "count": 300,
+            "p50": 0.29475,
+            "p95": 1.832417,
+            "p99": 3.233084,
+            "max": 6.46525
+          },
+          "delivery_ms": {
+            "count": 300,
+            "p50": 9.966416,
+            "p95": 10.632833,
+            "p99": 11.751834,
+            "max": 12.267792
+          },
+          "ui_wait_ms": {
+            "count": 300,
+            "p50": 0.376875,
+            "p95": 0.615625,
+            "p99": 3.999959,
+            "max": 4.35825
+          },
+          "ui_draw_ms": {
+            "count": 300,
+            "p50": 10.001667,
+            "p95": 10.563625,
+            "p99": 10.928292,
+            "max": 11.6785
+          },
+          "drawable_wait_ms": {
+            "count": 300,
+            "p50": 0.018417,
+            "p95": 0.450583,
+            "p99": 2.469333,
+            "max": 4.122625
+          },
+          "compose_encode_ms": {
+            "count": 300,
+            "p50": 0.068875,
+            "p95": 0.1065,
+            "p99": 0.139041,
+            "max": 0.181375
+          },
+          "compose_queue_ms": {
+            "count": 300,
+            "p50": 0.375667,
+            "p95": 1.059083,
+            "p99": 2.004292,
+            "max": 2.585083
+          },
+          "offscreen_gpu_ms": {
+            "count": 0
+          },
+          "offscreen_queue_ms": {
+            "count": 0
+          },
+          "compose_gpu_ms": {
+            "count": 300,
+            "p50": 2.848416,
+            "p95": 6.278584,
+            "p99": 7.294916,
+            "max": 7.564334
+          },
+          "compose_scheduled_callback_ms": {
+            "count": 300,
+            "p50": 0.089917,
+            "p95": 0.121709,
+            "p99": 0.16675,
+            "max": 0.237875
+          },
+          "submit_to_present_ms": {
+            "count": 300,
+            "p50": 27.252875,
+            "p95": 32.076333,
+            "p99": 36.427584,
+            "max": 36.972542
+          },
+          "gpu_end_to_present_ms": {
+            "count": 300,
+            "p50": 23.750834,
+            "p95": 29.573167,
+            "p99": 30.889292,
+            "max": 31.913542
+          },
+          "input_to_submit_ms": {
+            "count": 300,
+            "p50": 21.160042,
+            "p95": 22.436458,
+            "p99": 23.206125,
+            "max": 24.021208
+          },
+          "input_to_present_ms": {
+            "count": 300,
+            "p50": 48.047041,
+            "p95": 52.52825,
+            "p99": 53.119125,
+            "max": 53.95475
+          },
+          "timer_late_ms": {
+            "count": 300,
+            "p50": 5.893418,
+            "p95": 10.064543,
+            "p99": 11.277501,
+            "max": 11.565792
+          },
+          "delivery_drawable_overlap_ms": {
+            "count": 300,
+            "p50": 0.018084,
+            "p95": 0.031541,
+            "p99": 1.874917,
+            "max": 2.429791
+          },
+          "preview_queue_compose_overlap_ms": {
+            "count": 300,
+            "p50": 0.356208,
+            "p95": 3.515917,
+            "p99": 3.958,
+            "max": 4.000459
+          }
+        },
+        "delivery_drawable_overlap_fraction": 0.006223118536773754,
+        "preview_queue_compose_overlap_fraction": 0.9823188218406311,
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 10.751417,
+          "p95": 13.601917,
+          "p99": 15.342667,
+          "max": 16.423959
+        },
+        "input_to_present_over_budget": 300,
+        "new_preview_present_interval_ms": {
+          "count": 299,
+          "p50": 8.333417,
+          "p95": 16.666833,
+          "p99": 25.000208,
+          "max": 25.000209
+        }
+      },
+      "pan": {
+        "rows": 300,
+        "inputs": 300,
+        "window_present_fps": 119.99927112925934,
+        "new_preview_present_fps": 119.99927358299269,
+        "window_present_interval_ms": {
+          "count": 298,
+          "p50": 8.333375,
+          "p95": 8.333458,
+          "p99": 8.3335,
+          "max": 8.333625
+        },
+        "outcomes": {
+          "presented": 300
+        },
+        "metrics_ms": {
+          "input_handler_ms": {
+            "count": 300,
+            "p50": 0.027709,
+            "p95": 0.057125,
+            "p99": 0.064584,
+            "max": 0.080667
+          },
+          "edit_dispatch_ms": {
+            "count": 300,
+            "p50": 0.018917,
+            "p95": 0.037958,
+            "p99": 0.047916,
+            "max": 0.059583
+          },
+          "scene_ms": {
+            "count": 300,
+            "p50": 0.001625,
+            "p95": 0.00325,
+            "p99": 0.006833,
+            "max": 0.013417
+          },
+          "mailbox_ms": {
+            "count": 300,
+            "p50": 0.005459,
+            "p95": 0.0135,
+            "p99": 0.020375,
+            "max": 0.025542
+          },
+          "textures_ms": {
+            "count": 300,
+            "p50": 0.003708,
+            "p95": 0.0085,
+            "p99": 0.009958,
+            "max": 0.011083
+          },
+          "sync_ms": {
+            "count": 300,
+            "p50": 0.03125,
+            "p95": 0.058042,
+            "p99": 0.070917,
+            "max": 0.120666
+          },
+          "encode_ms": {
+            "count": 300,
+            "p50": 0.1175,
+            "p95": 0.168667,
+            "p99": 0.18175,
+            "max": 0.19675
+          },
+          "preview_submit_ms": {
+            "count": 300,
+            "p50": 0.164042,
+            "p95": 0.243125,
+            "p99": 0.265541,
+            "max": 0.288125
+          },
+          "preview_queue_ms": {
+            "count": 300,
+            "p50": 0.734542,
+            "p95": 1.154374,
+            "p99": 1.311458,
+            "max": 1.373624
+          },
+          "preview_gpu_ms": {
+            "count": 300,
+            "p50": 3.66925,
+            "p95": 4.200916,
+            "p99": 4.503166,
+            "max": 4.59275
+          },
+          "preview_wait_return_ms": {
+            "count": 300,
+            "p50": 0.150251,
+            "p95": 0.351917,
+            "p99": 0.512667,
+            "max": 0.677208
+          },
+          "delivery_ms": {
+            "count": 300,
+            "p50": 0.0085,
+            "p95": 0.013542,
+            "p99": 0.023958,
+            "max": 0.029916
+          },
+          "ui_wait_ms": {
+            "count": 300,
+            "p50": 2.67,
+            "p95": 3.524084,
+            "p99": 3.96675,
+            "max": 4.311667
+          },
+          "ui_draw_ms": {
+            "count": 300,
+            "p50": 3.205208,
+            "p95": 3.610667,
+            "p99": 3.8845,
+            "max": 7.696959
+          },
+          "drawable_wait_ms": {
+            "count": 300,
+            "p50": 0.01225,
+            "p95": 0.016958,
+            "p99": 0.019042,
+            "max": 0.024667
+          },
+          "compose_encode_ms": {
+            "count": 300,
+            "p50": 0.055833,
+            "p95": 0.0635,
+            "p99": 0.067792,
+            "max": 0.123917
+          },
+          "compose_queue_ms": {
+            "count": 300,
+            "p50": 0.15775,
+            "p95": 0.204291,
+            "p99": 0.584999,
+            "max": 0.854958
+          },
+          "offscreen_gpu_ms": {
+            "count": 0
+          },
+          "offscreen_queue_ms": {
+            "count": 0
+          },
+          "compose_gpu_ms": {
+            "count": 300,
+            "p50": 1.5195,
+            "p95": 5.64475,
+            "p99": 5.968625,
+            "max": 6.401375
+          },
+          "compose_scheduled_callback_ms": {
+            "count": 300,
+            "p50": 0.071375,
+            "p95": 0.087084,
+            "p99": 0.112667,
+            "max": 0.500166
+          },
+          "submit_to_present_ms": {
+            "count": 300,
+            "p50": 24.178125,
+            "p95": 24.619333,
+            "p99": 25.529542,
+            "max": 25.989417
+          },
+          "gpu_end_to_present_ms": {
+            "count": 300,
+            "p50": 22.53125,
+            "p95": 22.993833,
+            "p99": 23.460042,
+            "max": 23.967417
+          },
+          "input_to_submit_ms": {
+            "count": 300,
+            "p50": 6.208208,
+            "p95": 7.099667,
+            "p99": 7.76925,
+            "max": 10.632209
+          },
+          "input_to_present_ms": {
+            "count": 300,
+            "p50": 30.337458,
+            "p95": 31.240709,
+            "p99": 31.636042,
+            "max": 31.953416
+          },
+          "timer_late_ms": {
+            "count": 300,
+            "p50": 1.684225,
+            "p95": 1.881785,
+            "p99": 2.027889,
+            "max": 2.043233
+          },
+          "delivery_drawable_overlap_ms": {
+            "count": 300,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "max": 0.0
+          },
+          "preview_queue_compose_overlap_ms": {
+            "count": 300,
+            "p50": 0.0,
+            "p95": 0.472667,
+            "p99": 0.646708,
+            "max": 0.904083
+          }
+        },
+        "delivery_drawable_overlap_fraction": 0.0,
+        "preview_queue_compose_overlap_fraction": 0.08509032221842652,
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 8.332042,
+          "p95": 9.403875,
+          "p99": 10.088166,
+          "max": 10.310209
+        },
+        "input_to_present_over_budget": 300,
+        "new_preview_present_interval_ms": {
+          "count": 299,
+          "p50": 8.333375,
+          "p95": 8.333458,
+          "p99": 8.3335,
+          "max": 8.333625
+        }
+      },
+      "zoom": {
+        "rows": 310,
+        "inputs": 300,
+        "window_present_fps": 119.99926107837557,
+        "new_preview_present_fps": 119.99925628422096,
+        "window_present_interval_ms": {
+          "count": 298,
+          "p50": 8.333375,
+          "p95": 8.333458,
+          "p99": 8.333459,
+          "max": 8.333541
+        },
+        "outcomes": {
+          "presented": 310
+        },
+        "metrics_ms": {
+          "input_handler_ms": {
+            "count": 310,
+            "p50": 0.032167,
+            "p95": 0.052709,
+            "p99": 0.056124,
+            "max": 0.058209
+          },
+          "edit_dispatch_ms": {
+            "count": 310,
+            "p50": 3.21325,
+            "p95": 3.52775,
+            "p99": 61.618084,
+            "max": 86.616292
+          },
+          "scene_ms": {
+            "count": 310,
+            "p50": 0.004167,
+            "p95": 0.006333,
+            "p99": 0.007667,
+            "max": 0.01
+          },
+          "mailbox_ms": {
+            "count": 310,
+            "p50": 0.011166,
+            "p95": 0.019,
+            "p99": 0.033709,
+            "max": 0.036875
+          },
+          "textures_ms": {
+            "count": 310,
+            "p50": 0.005208,
+            "p95": 0.010042,
+            "p99": 0.015125,
+            "max": 0.030541
+          },
+          "sync_ms": {
+            "count": 310,
+            "p50": 0.030958,
+            "p95": 0.047125,
+            "p99": 0.058417,
+            "max": 0.108334
+          },
+          "encode_ms": {
+            "count": 310,
+            "p50": 0.200916,
+            "p95": 0.342875,
+            "p99": 0.381333,
+            "max": 0.411084
+          },
+          "preview_submit_ms": {
+            "count": 310,
+            "p50": 0.253834,
+            "p95": 0.397542,
+            "p99": 0.447875,
+            "max": 0.48175
+          },
+          "preview_queue_ms": {
+            "count": 310,
+            "p50": 0.41825,
+            "p95": 1.071624,
+            "p99": 1.316958,
+            "max": 1.349083
+          },
+          "preview_gpu_ms": {
+            "count": 310,
+            "p50": 1.168209,
+            "p95": 2.039041,
+            "p99": 2.741625,
+            "max": 3.529041
+          },
+          "preview_wait_return_ms": {
+            "count": 310,
+            "p50": 0.1585,
+            "p95": 0.302333,
+            "p99": 0.339084,
+            "max": 0.40525
+          },
+          "delivery_ms": {
+            "count": 310,
+            "p50": 3.356542,
+            "p95": 3.904917,
+            "p99": 5.038125,
+            "max": 5.360834
+          },
+          "ui_wait_ms": {
+            "count": 310,
+            "p50": 4.736375,
+            "p95": 4.962125,
+            "p99": 5.071291,
+            "max": 5.248291
+          },
+          "ui_draw_ms": {
+            "count": 310,
+            "p50": 3.3715,
+            "p95": 3.803625,
+            "p99": 4.12925,
+            "max": 4.206375
+          },
+          "drawable_wait_ms": {
+            "count": 310,
+            "p50": 0.018,
+            "p95": 0.49675,
+            "p99": 1.879667,
+            "max": 2.204625
+          },
+          "compose_encode_ms": {
+            "count": 310,
+            "p50": 0.057125,
+            "p95": 0.064042,
+            "p99": 0.07125,
+            "max": 0.107625
+          },
+          "compose_queue_ms": {
+            "count": 310,
+            "p50": 0.154208,
+            "p95": 0.186167,
+            "p99": 0.423708,
+            "max": 1.026
+          },
+          "offscreen_gpu_ms": {
+            "count": 0
+          },
+          "offscreen_queue_ms": {
+            "count": 0
+          },
+          "compose_gpu_ms": {
+            "count": 310,
+            "p50": 1.3755,
+            "p95": 5.35275,
+            "p99": 5.696875,
+            "max": 5.867
+          },
+          "compose_scheduled_callback_ms": {
+            "count": 310,
+            "p50": 0.06975,
+            "p95": 0.084,
+            "p99": 0.091542,
+            "max": 0.940167
+          },
+          "submit_to_present_ms": {
+            "count": 310,
+            "p50": 32.246291,
+            "p95": 32.44275,
+            "p99": 32.479709,
+            "max": 32.498958
+          },
+          "gpu_end_to_present_ms": {
+            "count": 310,
+            "p50": 30.720042,
+            "p95": 30.927583,
+            "p99": 31.033167,
+            "max": 31.126625
+          },
+          "input_to_submit_ms": {
+            "count": 310,
+            "p50": 15.102708,
+            "p95": 15.76825,
+            "p99": 73.456792,
+            "max": 98.503417
+          },
+          "input_to_present_ms": {
+            "count": 310,
+            "p50": 47.338292,
+            "p95": 47.408041,
+            "p99": 105.720792,
+            "max": 130.720959
+          },
+          "timer_late_ms": {
+            "count": 310,
+            "p50": 1.067668,
+            "p95": 1.085855,
+            "p99": 1.105387,
+            "max": 1.692295
+          },
+          "delivery_drawable_overlap_ms": {
+            "count": 310,
+            "p50": 0.018042,
+            "p95": 0.49675,
+            "p99": 1.879667,
+            "max": 2.204625
+          },
+          "preview_queue_compose_overlap_ms": {
+            "count": 310,
+            "p50": 0.0,
+            "p95": 0.375499,
+            "p99": 0.730291,
+            "max": 1.291583
+          }
+        },
+        "delivery_drawable_overlap_fraction": 0.048476151902261205,
+        "preview_queue_compose_overlap_fraction": 0.0914577289711426,
+        "actual_input_interval_ms": {
+          "count": 299,
+          "p50": 8.333041,
+          "p95": 8.375292,
+          "p99": 9.035541,
+          "max": 9.191041
+        },
+        "input_to_present_over_budget": 310,
+        "new_preview_present_interval_ms": {
+          "count": 309,
+          "p50": 8.333375,
+          "p95": 8.333458,
+          "p99": 8.333459,
+          "max": 8.333541
+        }
+      }
+    }
+  },
+  "checks": {
+    "python_tests": 36,
+    "focused_rust_tests": 26,
+    "cargo_check_default": "passed",
+    "release_native_runs": "passed",
+    "cargo_fmt": "passed",
+    "diff_check": "passed"
+  },
+  "limits": [
+    "Event-handler and UI-draw durations are wall-clock boundaries, not pure thread CPU time.",
+    "Legacy baseline uses its original selection and workload; this is context, not a controlled before/after attribution to these widgets.",
+    "GPU p95 below budget does not eliminate individual GPU spikes.",
+    "Only correlated presented textures contribute presentation latency; all other outcomes stay in the denominator.",
+    "Performance fixes for the observed synchronous input and tooltip work remain outstanding."
+  ],
+  "artifact_retention": {
+    "raw_captures_retained": false,
+    "note": "Raw traces, temporary configurations, logs and source snapshots were removed at the user\u2019s request after preserving the reported results. Source paths identify historical runs and are not live file links."
+  }
+}
