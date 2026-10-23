@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "status": "R0 defaults for implementation; not enforced by existing code",
+  "python": {"minimum": "3.14", "maximum_exclusive": "3.15"},
+  "objects": {
+    "clients": 8,
+    "sessions": 32,
+    "edits_per_client_session": 1,
+    "edits_per_session": 4,
+    "edits_total": 16,
+    "plans_per_client": 64,
+    "previews_per_client": 4,
+    "snapshots_per_client": 8,
+    "proposals_per_session": 4
+  },
+  "jobs": {
+    "running_heavy_total": 2,
+    "exclusive_per_session": 1,
+    "queued_total": 32,
+    "queued_per_client": 8,
+    "queued_control_per_client": 16
+  },
+  "bytes": {
+    "host_accounted_cpu_total": 2147483648,
+    "candidate_total": 536870912,
+    "snapshot_proposal_total": 268435456,
+    "plan_total": 134217728,
+    "history_total": 536870912,
+    "resource_total": 805306368,
+    "prepared_image": 268435456,
+    "blob_total": 536870912,
+    "preview_cache_total": 268435456,
+    "event_per_session": 8388608,
+    "registry_event_total": 1048576,
+    "request_results_per_client": 8388608,
+    "request_results_total": 67108864,
+    "pending_messages_per_client": 33554432
+  },
+  "transport": {
+    "control_frame_bytes": 16777216,
+    "blob_chunk_bytes": 1048576,
+    "blob_bytes": 268435456,
+    "pending_messages_per_client": 64,
+    "session_events": 512,
+    "registry_events": 256,
+    "completed_requests_per_client": 1024,
+    "request_retention_seconds": 300,
+    "reconnect_grace_seconds": 30,
+    "released_blob_retention_seconds": 30,
+    "startup_wait_seconds": 15,
+    "protocol": "strict contract identity; no fallback host on mismatch"
+  },
+  "sdk_history": {"max_steps": 50, "max_bytes": 268435456},
+  "performance": {
+    "cpu_p50_relative_increase": 0.1,
+    "cpu_p95_relative_increase": 0.15,
+    "cpu_absolute_noise_ms": 0.2,
+    "input_to_display_absolute_noise_ms": 1.0,
+    "minimum_alternating_process_pairs": 5
+  }
+}

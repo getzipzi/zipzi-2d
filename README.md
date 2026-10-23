@@ -7,6 +7,10 @@ Start with the [Python SDK README](modules/kasane-python/README.md) and
 [architecture](docs/ARCHITECTURE.md). The [model inventory](models/README.md) records
 local models used by tests and benchmarks.
 
+The [Runtime preparation record](docs/runtime/README.md) contains the R0 API
+inventory, ownership audit and reproducible CPU fixture/baseline tools for the
+paired Editor integration. Runtime and ConnectedBackend are not implemented yet.
+
 ## Build and test
 
 Python tools use uv (0.10.7 or newer) and CPython 3.14. The root
