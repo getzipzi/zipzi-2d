@@ -100,6 +100,8 @@ pub(super) fn decide(
                     | editor_core::PanelKind::Parameters
                     | editor_core::PanelKind::AnimationMotions
                     | editor_core::PanelKind::AnimationExpressions
+                    | editor_core::PanelKind::AnimationPhysics
+                    | editor_core::PanelKind::AnimationPose
             ))
         )
         && bindings.iter().any(|binding| {

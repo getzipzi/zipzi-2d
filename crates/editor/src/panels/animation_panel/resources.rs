@@ -113,6 +113,9 @@ impl AnimationPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        if self.kind == PanelKind::AnimationPose {
+            return self.pose_toolbar(window, cx);
+        }
         if self.kind == PanelKind::AnimationPhysics {
             return self.physics_list_toolbar(window, cx);
         }

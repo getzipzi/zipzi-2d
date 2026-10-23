@@ -207,6 +207,23 @@ impl EditorView {
                     | CommandId::PaletteMoveTo => {
                         self.handle_palette_command(command, window, cx);
                     }
+                    CommandId::CreatePhysicsGroup
+                    | CommandId::CreatePoseGroup
+                    | CommandId::CreatePoseEntry
+                    | CommandId::CreatePoseLink => {
+                        if let Some(context) =
+                            crate::authoring::AuthoringContext::capture(&self.editor)
+                        {
+                            let kind = command.id.business_creation_kind().unwrap();
+                            let at = self.editor.active_inspection().and_then(|i| i.object());
+                            self.run_business_action(
+                                context,
+                                editor_core::BusinessAction::Create(kind, at),
+                                window,
+                                cx,
+                            );
+                        }
+                    }
                     CommandId::CreateMotion
                     | CommandId::CreateMotionGroup
                     | CommandId::CreateExpression

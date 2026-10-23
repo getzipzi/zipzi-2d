@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入；U3 Motion/Expression 创建、注册属性、成员、列表排序、Motion 复制/引用与删除影响审阅已接入**；跨阶段原生截图、实际窗口与 Release 性能验收仍待 U6，不代表 U1–U6 全部完成。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前 **U1 共享适配功能已收口，U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互已接入；U3 Motion/Expression 创建、注册属性、成员、列表排序、Motion 复制/引用与删除影响审阅已接入；U4 Physics/Pose 根配置、业务组、稳定子项与结构管理已接入**；跨阶段原生截图、实际窗口与 Release 性能验收仍待 U6，不代表 U1–U6 全部完成。
 
 ## 首轮实现：创建与输入边界
 
@@ -18,7 +18,7 @@
 | U1 | 共享适配功能已收口：对象/集合能力映射、统一回执转换、检查/结果定位、输入边界与现有入口的重复业务判断清理完成 | U3–U5 新增入口继续复用；跨阶段原生/性能完整验收随 U6 |
 | U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入；变形树 Mesh/Warp/Rotation 创建、双投影位置与显露已接入；保持形态审阅、可搜索变形目标、原子落点与后台取消已接入 | 原生截图和完整阶段验收待 U6 收口 |
 | U3 | 接入 Motion/Expression 创建、空 MotionGroup、Clip/当前注册分区、继承/覆盖、Expression 成员、列表排序与可搜索移组；补齐 Motion 内容/组复制、添加已有引用、注册/组/资源删除与影响审阅；保留原激活路径 | 中英文原生截图、实际窗口与 Release 性能验收随 U6 |
-| U4 | Physics 列表接入共享边界、能力与检查结果；默认内容和排序意图已移入 core，子项动作捕获稳定 ID | 组/子项默认策略、Pose 与完整稳定子条目控件仍需统一 |
+| U4 | 接入 Physics/Pose 根配置、业务组与成员/links 管理，统一原生计划、创建命令、迁移/删除审阅；Physics 子项选择和节点参数复用按稳定 ID 解析，保留专用拓扑与执行顺序语义 | 中英文原生截图、实际窗口与 Release 性能完整验收随 U6 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
 | U6 | 未开始 | 清理剩余旧路径、完整中英文/原生截图验收和性能对照 |
 
@@ -523,3 +523,56 @@ git diff --check
 **UI / 表单 / 输入回归 210 项、core 集成回归 125 项、core 单元回归 3 项通过**，包括新增 9 项 UI 和 8 项 core 管理回归。覆盖真实右键复制和引用选择、空组接收引用、共享组复制、审阅默认取消、最后注册保护、实际迁移与覆盖保留、共享 Clip 的所有注册和内部曲线影响、Expression 清理、空组直接删除、过期审阅/选择拒绝且不消耗 redo、深复制身份与单条历史、复制保持当前播放及已有曲线编辑仍使播放失效。此前单独运行的重叠测试不累计相加。
 
 最终格式与空白检查通过；未运行昂贵完整套件。原生截图、实际窗口与 Release 性能验收继续留待 U6，不以 headless 行为验证替代。
+
+
+## U4：Physics、Pose 业务集合与稳定子项
+
+2026 年 10 月 23 日开始实施，依赖仍为 `kasane-2d 26afe00`；本轮未改相邻仓库。
+
+- core 新增 Physics/Pose 的类型化 `BusinessAction` / `BusinessPlan` 适配。单例默认内容、组的唯一默认名称、相邻 Pose 成员/links 插入位置、执行顺序和节点链位置由 core 解析稳定身份，再交给 SDK 原生规划。边界移动为 no-op，保留 redo；计划以原生版本冻结，确认后单条历史发布。
+- 新建物理组、Pose 组、成员和 link 同时提供工具栏、上下文菜单、主菜单与可配置命令。不存在根资源时，首个组在一个原生事务内创建根；已有根时复用同一身份。Pose 初始组为空，成员与 link 的 Part 初始为未配置，不凭 UI 猜测业务目标。
+- Pose 面板改为可编辑导航列表，使用虚拟行；根、组、成员和 links 可单击检查，方向键浏览、折叠，Alt+Up/Down 调用共享移动命令。空组可见，定位成员会展开其拥有者。继续显示同一 presented snapshot 的 Part opacity；检查、折叠和定位不切换 Motion/Expression 或写入历史。
+- Pose 根 fade、组名、成员 Part 和 link Part 接入普通 PropertyForm；物理根 FPS 也可在无组时编辑。None、未配置和 `runtime:` 未解析引用分别保留，Part 选择可搜索并以稳定 ID 区分同名项。原生处理重复 Part/link、锁和引用有效性；不通过整段 JSON 修改。
+- Pose 组提供“迁移成员到其他组”，明确选择接收组，连同 links 一起保留成员身份；不提供迁往虚构根成员集合的解散。成员/links 可选择合法新拥有者。Physics 输入/输出可跨组移动，输出必须明确选择目的采样节点，改变目的组后清空旧选择，禁止按节点位置猜测映射。
+- 根、非空业务组及拥有 links 的成员删除展示冻结候选的实际移除集合；Pose 迁移展示将移除的组与保留身份的成员。取消默认聚焦，Enter/Esc 可取消；过期文档、工作区或 Undo 后拒绝提交。Part/Parameter 资源保留，最终校验和事务仍由原生负责。
+- Physics 组排序明确称为提前/推后执行，结构变化沿用原生测试预览重建；输入/输出行菜单捕获点击条目，不依赖其他选择。节点继续走专用链结构编辑，补上链节点复制、前移和后移；输出的采样引用按节点身份保留。根节点只检查并保持其根身份，不变成下一节；被输出引用、最短链及锁由共享原生能力提示。
+- Physics 输入、输出和节点选择保存稳定 ID，渲染时重算当前位置；重排、跨组移动、撤销/重做后检查和字段继续指向同一条目。复用节点参数的来源也从组/数组下标改为节点 ID。Physics 属性控件和 Pose 字段携带文档 revision，旧控件无法在 Undo 恢复后重用；普通表单候选仍保持单条手势历史。
+- 业务动作复用共享输入结算、检查和定位。审阅/目的地弹窗复用可退休的播放策略；提交后不自动选择另一播放资源。删除 Physics 单例会退出已失去配置的手动试验并恢复原动画位置，Undo 不自动重启试验。
+
+本轮最终定向门禁：
+
+```sh
+./scripts/test.sh regression -- \
+  business_authoring:: headless_tests::physics \
+  headless_tests::animation_authoring headless_tests::animation_management \
+  headless_tests::animation_panels headless_tests::animation:: \
+  headless_tests::authoring headless_tests::properties headless_tests::sorting \
+  headless_tests::palette headless_tests::workspaces headless_tests::command_targets \
+  headless_tests::input_routing headless_tests::ui_performance \
+  input_routing::policy::tests panels::sorting::destination \
+  properties::form::tests properties::timeline_tests properties::physics_tests \
+  keybindings::tests menus::tests animation_library:: animation_management:: \
+  animation:: pose_authoring:: expression_authoring:: commands:: keyboard:: \
+  timeline:: workspace::
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+**UI / 表单 / 输入回归 228 项、core 集成回归 140 项通过**，包括新增 10 项 UI 和 10 项 core 业务集合回归。覆盖根单例与空组、创建命令、稳定相邻插入、普通属性表单和引用状态、Part 修复、真实右键复制和 Alt+Up 排序、Pose 组迁移、删除默认取消、过期审阅拒绝、Physics 输出必须显式指定采样节点、节点链复制/移动与输出引用保持、根节点检查、Physics 子项重排与 Undo 的稳定选择、边界 no-op 保留 redo、执行顺序重建手动预览、删除 Physics 单例退出试验且 Undo 不自动重启。既有 presented Pose 值、手动试验、数字候选、输入路由、工作区与 U3 路径同时回归；重叠测试不累计相加。
+
+最终格式与空白检查通过；未执行昂贵完整套件。原生截图、实际窗口与 Release 性能验收继续留待 U6。
+
+
+### U4 Review 修复
+
+- Physics 输入、输出和节点作为检查目标时，presented frame 继续通知 Properties，保持摆链和实时数值刷新。新增回归同时验证三类子项的通知与显示数值；发布帧后使用普通绘制，不以强制全窗口刷新掩盖通知遗漏。
+- 删除最后一个输入或输出通道时，检查目标回退到所属物理组，保留属性面板与添加入口。新增回归覆盖输入和输出两种情况，并验证删除后可直接创建新通道、每次操作仅增加一条历史。
+
+修复验证：以下定向 UI 门禁 **32 项全部通过**，包含新增 2 项回归；格式与空白检查通过。review 阶段的 10 项 core `business_authoring` 集成测试已通过，本次未改 core。
+
+```sh
+./scripts/test.sh ui -- headless_tests::business_authoring headless_tests::physics headless_tests::animation_panels headless_tests::ui_performance
+cargo fmt --all -- --check
+git diff --check
+```

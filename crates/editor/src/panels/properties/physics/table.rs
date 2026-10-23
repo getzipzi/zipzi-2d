@@ -1,6 +1,7 @@
 //! Compact mapping tables; cells share the inspector's field and edit lifecycle.
 use super::*;
 use crate::ui::slide_number_input::format_one_decimal;
+use gpui_kit::component::menu::ContextMenuExt;
 use gpui_kit::component::tooltip::Tooltip;
 use std::collections::BTreeMap;
 
@@ -265,6 +266,19 @@ impl PropertiesPanel {
             }
             cells.push(value.into_any_element());
             let node = output.then(|| rig.node_index(&rig.outputs[i].node_id).unwrap_or(0));
+            let object = editor_core::ObjectRef::new(
+                if output {
+                    editor_core::ObjectKind::PhysicsOutput
+                } else {
+                    editor_core::ObjectKind::PhysicsInput
+                },
+                if output {
+                    &rig.outputs[i].id
+                } else {
+                    &rig.inputs[i].id
+                },
+            );
+            let inspect = object.clone();
             let mut row = div()
                 .id(SharedString::from(format!("physics-{prefix}-row-{i}")))
                 .test_support()
@@ -287,13 +301,17 @@ impl PropertiesPanel {
                         } else {
                             this.physics.input = i;
                         }
+                        this.physics_remember_selection(cx);
+                        this.physics_inspect_child(inspect.clone(), cx);
                         cx.notify();
                     }),
                 );
             for (column, content) in columns.iter().zip(cells) {
                 row = row.child(cell(column, content, cx));
             }
-            table = table.child(row);
+            table = table.child(
+                row.context_menu(crate::authoring::business::menu(self.owner.clone(), object)),
+            );
         }
         div()
             .id(if output {

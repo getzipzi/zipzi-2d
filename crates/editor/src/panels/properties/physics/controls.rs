@@ -314,16 +314,13 @@ impl PropertiesPanel {
         }
         self.physics_cancel(cx);
         let source = self.physics_asset(cx).and_then(|asset| {
-            value.rsplit_once(':').and_then(|(id, i)| {
-                asset
-                    .data
-                    .settings
-                    .iter()
-                    .find(|rig| rig.id == id)?
-                    .vertices
-                    .get(i.parse::<usize>().ok()?)
-                    .cloned()
-            })
+            asset
+                .data
+                .settings
+                .iter()
+                .flat_map(|g| &g.vertices)
+                .find(|node| node.id == value)
+                .cloned()
         });
         let (Some(source), Some(target)) = (source, self.target.clone()) else {
             return;
@@ -343,7 +340,7 @@ impl PropertiesPanel {
             .update(cx, |owner, cx| {
                 let result = (|| {
                     use editor_core::property::physics as schema;
-                    use editor_core::{PropertyPatch, PropertyScope, PropertyValue};
+                    use editor_core::{PropertyPatch, PropertyValue};
                     let current = target.values(&owner.editor)?;
                     let changes: editor_core::PropertyValues = [
                         (schema::RADIUS, source.radius),
@@ -369,7 +366,7 @@ impl PropertiesPanel {
                     target.commit(
                         &mut owner.editor,
                         PropertyPatch {
-                            scope: PropertyScope::Object,
+                            scope: target.scope.clone(),
                             expected,
                             changes,
                         },
@@ -502,6 +499,30 @@ impl PropertiesPanel {
                     } else {
                         this.physics.input = next;
                     }
+                    this.physics_remember_selection(cx);
+                    let selected = if output {
+                        this.physics.output_id.clone()
+                    } else {
+                        this.physics.input_id.clone()
+                    };
+                    if let Some(id) = selected {
+                        this.physics_inspect_child(
+                            editor_core::ObjectRef::new(
+                                if output {
+                                    editor_core::ObjectKind::PhysicsOutput
+                                } else {
+                                    editor_core::ObjectKind::PhysicsInput
+                                },
+                                id,
+                            ),
+                            cx,
+                        );
+                    } else {
+                        this.physics_inspect_child(
+                            ObjectRef::new(ObjectKind::PhysicsGroup, &this.physics.group),
+                            cx,
+                        );
+                    }
                     cx.notify();
                 })),
             );
@@ -550,8 +571,60 @@ impl PropertiesPanel {
             .owner
             .upgrade()
             .and_then(|o| crate::authoring::AuthoringContext::capture(&o.read(cx).editor));
+        let mut topology = div().flex().w_full().justify_end().gap(compact::rem(2.));
+        if let Some(object) = &object {
+            for (suffix, icon, label, action) in [
+                (
+                    "copy",
+                    IconName::Copy,
+                    "authoring.copy_chain_node",
+                    editor_core::BusinessAction::Copy(object.clone()),
+                ),
+                (
+                    "earlier",
+                    IconName::ArrowUp,
+                    "authoring.chain_earlier",
+                    editor_core::BusinessAction::Step(object.clone(), false),
+                ),
+                (
+                    "later",
+                    IconName::ArrowDown,
+                    "authoring.chain_later",
+                    editor_core::BusinessAction::Step(object.clone(), true),
+                ),
+            ] {
+                let available = self.owner.upgrade().and_then(|o| {
+                    crate::authoring::business::availability(&o.read(cx).editor, &action)
+                });
+                let Some(available) = available else { continue };
+                let hint = available.reason.unwrap_or_else(|| t!(label).into());
+                let owner = self.owner.clone();
+                topology = topology.child(
+                    compact::header_button(
+                        Button::new(SharedString::from(format!("physics-node-{suffix}")))
+                            .icon(icon)
+                            .ghost()
+                            .tooltip(hint)
+                            .accessibility_label(t!(label)),
+                    )
+                    .disabled(disabled || !available.enabled)
+                    .on_click(move |_, window, cx| {
+                        if let Some(context) = context {
+                            let owner = owner.clone();
+                            let action = action.clone();
+                            window.defer(cx, move |window, cx| {
+                                let _ = owner.update(cx, |v, cx| {
+                                    v.run_business_action(context, action, window, cx)
+                                });
+                            });
+                        }
+                    }),
+                );
+            }
+        }
         div()
             .flex()
+            .flex_wrap()
             .gap(compact::rem(2.))
             .items_center()
             .child(
@@ -587,6 +660,16 @@ impl PropertiesPanel {
                                     && this.physics_apply(intent, cx)
                                 {
                                     this.physics.node = len;
+                                    this.physics_remember_selection(cx);
+                                    if let Some(id) = this.physics.node_id.clone() {
+                                        this.physics_inspect_child(
+                                            editor_core::ObjectRef::new(
+                                                editor_core::ObjectKind::PhysicsNode,
+                                                id,
+                                            ),
+                                            cx,
+                                        );
+                                    }
                                 }
                             }
                         }
@@ -594,6 +677,7 @@ impl PropertiesPanel {
                     }
                 })),
             )
+            .child(topology)
             .when(supported, |row| {
                 row.child(
                     self.physics_button(
@@ -618,6 +702,16 @@ impl PropertiesPanel {
                                     cx,
                                 ) {
                                     this.physics.node = node.saturating_sub(1).max(1);
+                                    this.physics_remember_selection(cx);
+                                    if let Some(id) = this.physics.node_id.clone() {
+                                        this.physics_inspect_child(
+                                            editor_core::ObjectRef::new(
+                                                editor_core::ObjectKind::PhysicsNode,
+                                                id,
+                                            ),
+                                            cx,
+                                        );
+                                    }
                                 }
                             }
                             cx.notify();

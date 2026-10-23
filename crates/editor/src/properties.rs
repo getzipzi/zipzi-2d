@@ -1,6 +1,7 @@
 //! Object-specific inspector definitions and providers. The panel and form engine
 //! consume this interface without knowing parameter, scene or animation rules.
 pub(crate) mod animation;
+mod business;
 mod details;
 mod document;
 mod editing;
@@ -183,6 +184,11 @@ pub(crate) fn provider(kind: ObjectKind) -> &'static PropertyProvider {
         | ObjectKind::Expression
         | ObjectKind::ExpressionEntry => &animation::PROVIDER,
         ObjectKind::PhysicsGroup => &physics::PROVIDER,
+        ObjectKind::Physics
+        | ObjectKind::Pose
+        | ObjectKind::PoseGroup
+        | ObjectKind::PoseEntry
+        | ObjectKind::PoseLink => &business::PROVIDER,
         ObjectKind::Document => &document::PROVIDER,
         _ => &scene::PROVIDER,
     }
@@ -206,6 +212,12 @@ pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
             .first()
             .map(|info| info.reference.clone())
     })?;
+    if matches!(
+        object.kind,
+        ObjectKind::PhysicsInput | ObjectKind::PhysicsOutput | ObjectKind::PhysicsNode
+    ) {
+        object = editor.document()?.business_owner(&object)?;
+    }
     let explicit_motion = if object.kind == ObjectKind::MotionRegistration {
         let (_, entry) = editor.document()?.motion_registration(&object.id)?;
         let motion = editor_core::MotionSelection {
@@ -245,8 +257,10 @@ pub(crate) fn target(editor: &Editor) -> Option<PropertyTarget> {
         document: inspection.document,
         context: inspection.context,
         scope: if timeline.is_none()
-            && matches!(object.kind, ObjectKind::Motion | ObjectKind::Expression)
-        {
+            && matches!(
+                object.kind,
+                ObjectKind::Motion | ObjectKind::Expression | ObjectKind::PhysicsGroup
+            ) {
             editor_core::PropertyScope::Resource {
                 revision: editor.document()?.model_generation(),
             }

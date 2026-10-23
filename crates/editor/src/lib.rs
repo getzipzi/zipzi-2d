@@ -246,7 +246,15 @@ impl EditorView {
                     .editor
                     .active_inspection()
                     .and_then(|i| i.object())
-                    .is_some_and(|o| o.kind == editor_core::ObjectKind::PhysicsGroup)
+                    .is_some_and(|o| {
+                        matches!(
+                            o.kind,
+                            editor_core::ObjectKind::PhysicsGroup
+                                | editor_core::ObjectKind::PhysicsInput
+                                | editor_core::ObjectKind::PhysicsOutput
+                                | editor_core::ObjectKind::PhysicsNode
+                        )
+                    })
             {
                 App::notify(cx, dock.properties.entity_id());
             }

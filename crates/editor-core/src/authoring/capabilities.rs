@@ -339,6 +339,12 @@ impl crate::Editor {
         let doc = self
             .document()
             .ok_or_else(|| anyhow::anyhow!("Document no longer exists"))?;
+        if let Some(kind) = id.business_creation_kind() {
+            return doc.business_capability(&crate::BusinessAction::Create(
+                kind,
+                self.active_inspection().and_then(|i| i.object()),
+            ));
+        }
         if let Some(kind) = id.scene_creation_type() {
             doc.validate_scene_object_creation_in(
                 id.scene_creation_projection().unwrap(),

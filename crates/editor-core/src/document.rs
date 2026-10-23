@@ -163,14 +163,14 @@ mod authoring;
 pub use authoring::{
     AnimationDeletionPlan, AnimationLibraryPlan, AnimationRemoval, AuthoringAction,
     AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
-    AuthoringSessionReason, ExpressionAuthoringCapabilities, ExpressionEntryEditToken,
-    MotionCopyKind, MotionCopyPlan, ObjectAuthoringCapabilities, OperationResult,
-    OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination, PaletteMovePlan,
-    PaletteMovePlanningError, PalettePosition, PalettePreservation, PaletteProjection,
-    PaletteReparentCapture, PaletteReparentPlan, PhysicsAuthoringCapabilities,
-    PhysicsChannelAction, PoseAuthoringCapabilities, ReferenceAuthoringCapabilities,
-    ResourceAuthoringCapabilities, SceneAuthoringCapabilities, SceneContentAuthoringCapabilities,
-    SceneObjectCreationPlan, SceneObjectType,
+    AuthoringSessionReason, BusinessAction, BusinessDestination, BusinessPlan,
+    ExpressionAuthoringCapabilities, ExpressionEntryEditToken, MotionCopyKind, MotionCopyPlan,
+    ObjectAuthoringCapabilities, OperationResult, OrganizationAuthoringCapabilities, PaletteMove,
+    PaletteMoveDestination, PaletteMovePlan, PaletteMovePlanningError, PalettePosition,
+    PalettePreservation, PaletteProjection, PaletteReparentCapture, PaletteReparentPlan,
+    PhysicsAuthoringCapabilities, PhysicsChannelAction, PoseAuthoringCapabilities,
+    ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
+    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType,
 };
 mod edits;
 mod physics;

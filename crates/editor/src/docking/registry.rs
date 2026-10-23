@@ -106,6 +106,11 @@ impl DockWorkspace {
             &animation_inspectors[&PanelKind::AnimationPhysics],
             cx,
         );
+        header::register(
+            &mut headers,
+            &animation_inspectors[&PanelKind::AnimationPose],
+            cx,
+        );
         let headers = Rc::new(headers);
         let input_regions: HashMap<_, crate::input_routing::InputRegion> = panels
             .keys()

@@ -79,6 +79,14 @@ pub enum CommandId {
     PaletteMoveDown,
     #[serde(rename = "scene.create-part")]
     CreatePart,
+    #[serde(rename = "physics-group.create")]
+    CreatePhysicsGroup,
+    #[serde(rename = "pose-group.create")]
+    CreatePoseGroup,
+    #[serde(rename = "pose-entry.create")]
+    CreatePoseEntry,
+    #[serde(rename = "pose-link.create")]
+    CreatePoseLink,
     #[serde(rename = "motion.create")]
     CreateMotion,
     #[serde(rename = "motion-group.create")]
@@ -337,6 +345,28 @@ specs![
     ),
     (PaletteMoveTo, "authoring.move_to", Palette, false, []),
     (CreatePart, "authoring.new_part", Document, false, []),
+    (CreatePhysicsGroup, "physics.add_group", Document, false, []),
+    (
+        CreatePoseGroup,
+        "authoring.new_pose_group",
+        Document,
+        false,
+        []
+    ),
+    (
+        CreatePoseEntry,
+        "authoring.new_pose_entry",
+        Document,
+        false,
+        []
+    ),
+    (
+        CreatePoseLink,
+        "authoring.new_pose_link",
+        Document,
+        false,
+        []
+    ),
     (CreateMotion, "timeline.new_motion", Document, false, []),
     (
         CreateMotionGroup,
@@ -840,7 +870,14 @@ impl Editor {
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo => {
                 target && !self.is_busy() && !self.exiting()
             }
-            CreateMotion | CreateMotionGroup | CreateExpression | CreateExpressionEntry => {
+            CreatePhysicsGroup
+            | CreatePoseGroup
+            | CreatePoseEntry
+            | CreatePoseLink
+            | CreateMotion
+            | CreateMotionGroup
+            | CreateExpression
+            | CreateExpressionEntry => {
                 !modeling
                     && target
                     && !self.is_busy()

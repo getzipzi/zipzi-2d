@@ -374,6 +374,7 @@ impl PropertySpec {
 }
 
 pub mod animation_entry;
+pub mod business;
 pub mod deformer;
 pub mod document;
 pub mod expression;
@@ -405,6 +406,11 @@ pub fn property_specs(kind: ObjectKind) -> &'static [PropertySpec] {
         ObjectKind::ExpressionEntry => animation_entry::ENTRY_FIELDS,
         ObjectKind::Expression => expression::FIELDS,
         ObjectKind::PhysicsGroup => physics::FIELDS,
+        ObjectKind::Physics => &[business::PHYSICS_FPS],
+        ObjectKind::Pose => &[business::POSE_FADE],
+        ObjectKind::PoseGroup => &[business::POSE_NAME],
+        ObjectKind::PoseEntry => &[business::POSE_PART],
+        ObjectKind::PoseLink => &[business::POSE_LINK],
         _ => &[],
     }
 }
@@ -542,6 +548,9 @@ pub(crate) fn object_payload(model: &kasane_core::Document, object: &ObjectRef) 
         K::Texture => get!(get_asset),
         K::Motion => get!(get_motion),
         K::Expression => get!(get_expression),
+        K::Physics | K::Pose | K::PoseGroup | K::PoseEntry | K::PoseLink => {
+            business::payload(model, object)?
+        }
         K::MotionGroup | K::MotionRegistration | K::ExpressionEntry => {
             animation_entry::payload(model, object)?
         }

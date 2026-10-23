@@ -106,6 +106,8 @@ fn physics_uses_shared_form_baselines_and_one_owned_history_step() {
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.execute(EditorCommand::Undo).unwrap();
     assert_eq!(target.values(&editor).unwrap()[&spec.key], original);
+    assert!(begin_edit(&mut editor, &target, &patch).is_err());
+    let target = super::target(&editor).unwrap();
     let replacement = begin_edit(&mut editor, &target, &patch).unwrap();
     token.cancel(&mut editor);
     assert!(replacement.owned(&editor));
@@ -132,6 +134,7 @@ fn shared_form_commits_mapping_name_and_rejects_stale_or_invalid_physics_fields(
         target.values(&editor).unwrap()[&name.key],
         PropertyValue::Text("Hair".into())
     );
+    let target = super::target(&editor).unwrap();
     let axis = target
         .definition(&editor)
         .fields
@@ -166,6 +169,12 @@ fn shared_form_commits_mapping_name_and_rejects_stale_or_invalid_physics_fields(
     assert_eq!(
         target.values(&editor).unwrap()[&axis.key],
         PropertyValue::Text("Angle".into())
+    );
+    let target = super::target(&editor).unwrap();
+    forms.sync(
+        &target,
+        target.definition(&editor),
+        target.values(&editor).unwrap(),
     );
     forms
         .entries

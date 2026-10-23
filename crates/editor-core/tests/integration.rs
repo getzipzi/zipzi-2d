@@ -94,3 +94,5 @@ mod animation_library;
 
 #[path = "cases/animation_management.rs"]
 mod animation_management;
+#[path = "cases/business_authoring.rs"]
+mod business_authoring;

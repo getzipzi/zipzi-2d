@@ -24,6 +24,7 @@ pub(super) enum Row {
     Field(PropertyKey),
     Navigation,
     AnimationActions(ObjectRef),
+    BusinessActions(ObjectRef),
     Detail(properties::DetailRow),
 }
 impl Row {
@@ -100,6 +101,18 @@ impl PropertiesPanel {
             )
         {
             rows.push(Row::AnimationActions(target.object.clone()));
+        }
+        if target.timeline.is_none()
+            && matches!(
+                target.object.kind,
+                editor_core::ObjectKind::Pose
+                    | editor_core::ObjectKind::PoseGroup
+                    | editor_core::ObjectKind::PoseEntry
+                    | editor_core::ObjectKind::PoseLink
+                    | editor_core::ObjectKind::Physics
+            )
+        {
+            rows.push(Row::BusinessActions(target.object.clone()));
         }
         let mut section = None;
         let mut entity = None;

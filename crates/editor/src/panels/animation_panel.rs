@@ -1,7 +1,7 @@
 //! Animation resources, physics authoring and presented-frame inspectors.
-pub(crate) mod inspectors;
 pub(crate) use crate::properties::expression_info;
 mod physics_list;
+mod pose;
 mod resources;
 use crate::{EditorView, t};
 use gpui_kit::component::{
@@ -21,6 +21,9 @@ pub struct AnimationPanel {
     _observe: Subscription,
     resources: resources::ResourceList,
     sorting: Entity<crate::panels::sorting::SortState>,
+    business_collapsed: std::collections::HashSet<String>,
+    business_focus: Option<editor_core::ObjectRef>,
+    business_scroll: UniformListScrollHandle,
     location: Option<(editor_core::DocumentId, editor_core::ObjectRef)>,
 }
 impl AnimationPanel {
@@ -45,6 +48,9 @@ impl AnimationPanel {
                 crate::panels::sorting::SortState::new(owner.clone(), focus.clone(), window, cx);
             Self {
                 sorting,
+                business_collapsed: Default::default(),
+                business_focus: None,
+                business_scroll: UniformListScrollHandle::new(),
                 resources: resources::ResourceList::default(),
                 location: None,
                 _observe: cx.observe(&owner.upgrade().unwrap(), |_, _, cx| cx.notify()),
@@ -76,6 +82,7 @@ impl Panel for AnimationPanel {
             PanelKind::AnimationMotions
                 | PanelKind::AnimationExpressions
                 | PanelKind::AnimationPhysics
+                | PanelKind::AnimationPose
         )
     }
 
@@ -104,6 +111,9 @@ impl Render for AnimationPanel {
 
 impl AnimationPanel {
     fn render_content(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        if self.kind == PanelKind::AnimationPose {
+            return self.render_pose_list(window, cx);
+        }
         if self.kind == PanelKind::AnimationPhysics {
             return self.render_physics_list(window, cx);
         }
@@ -113,38 +123,7 @@ impl AnimationPanel {
         ) {
             return self.render_resources(window, cx);
         }
-        let Some(owner) = self.owner.upgrade() else {
-            return div().into_any_element();
-        };
-        let state = owner.read(cx);
-        let Some(document) = state.editor.document() else {
-            return div().p_3().child(t!("editor.welcome")).into_any_element();
-        };
-        let snapshot = state.displayed_animation();
-        let mut content = div()
-            .id(self.kind.name())
-            .key_context("KasaneDocument")
-            .size_full()
-            .overflow_y_scroll()
-            .p_3()
-            .flex()
-            .flex_col()
-            .gap_2()
-            .text_xs();
-        match self.kind {
-            PanelKind::AnimationExpressions | PanelKind::AnimationMotions => unreachable!(),
-            PanelKind::AnimationPhysics => {
-                unreachable!("physics has a dedicated renderer");
-            }
-            PanelKind::AnimationPose => {
-                content = inspectors::pose(content.gap_1(), document, snapshot, cx);
-            }
-            _ => unreachable!("invalid animation panel kind"),
-        }
-        content
-            .test_support()
-            .track_focus(&self.focus)
-            .into_any_element()
+        unreachable!("invalid animation panel kind")
     }
 }
 

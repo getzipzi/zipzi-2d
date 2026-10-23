@@ -1,4 +1,5 @@
 mod animation;
+mod business;
 mod controls;
 mod observe;
 pub(crate) mod physics;
@@ -321,6 +322,9 @@ impl PropertiesPanel {
     pub(crate) fn last_row_id(&self) -> Option<ElementId> {
         match self.rows.last()? {
             Row::Navigation => Some("property-navigation".into()),
+            Row::BusinessActions(object) => {
+                Some(SharedString::from(format!("business-action-new-{}", object.id)).into())
+            }
             Row::AnimationActions(object) => {
                 Some(SharedString::from(format!("expression-action-new-{}", object.id)).into())
             }
@@ -405,6 +409,7 @@ impl PropertiesPanel {
         let content = match row {
             Row::Navigation => self.render_navigation(cx),
             Row::AnimationActions(object) => self.animation_actions(object, cx),
+            Row::BusinessActions(object) => self.business_actions(object, cx),
             Row::Field(id) => self.render_field(*id, window, cx),
             Row::Detail(row) => details::render(row, cx),
             Row::Group {

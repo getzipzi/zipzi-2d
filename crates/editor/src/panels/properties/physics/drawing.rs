@@ -152,6 +152,16 @@ impl PropertiesPanel {
                                 }
                             }
                         }
+                        this.physics_remember_selection(cx);
+                        if let Some(id) = this.physics.node_id.clone() {
+                            this.physics_inspect_child(
+                                editor_core::ObjectRef::new(
+                                    editor_core::ObjectKind::PhysicsNode,
+                                    id,
+                                ),
+                                cx,
+                            );
+                        }
                         window.focus(&this.focus, cx);
                         cx.notify();
                         cx.stop_propagation();

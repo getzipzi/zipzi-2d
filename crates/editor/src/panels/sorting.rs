@@ -791,6 +791,52 @@ impl EditorView {
         else {
             return;
         };
+        for kind in [
+            editor_core::PanelKind::AnimationPose,
+            editor_core::PanelKind::AnimationPhysics,
+        ] {
+            if dock.displayed(kind, cx)
+                && dock.animation_inspectors[&kind]
+                    .read(cx)
+                    .focus_handle(cx)
+                    .is_focused(window)
+            {
+                let object = if kind == editor_core::PanelKind::AnimationPose {
+                    dock.animation_inspectors[&kind]
+                        .read(cx)
+                        .business_movement_object()
+                        .or_else(|| self.editor.active_inspection().and_then(|i| i.object()))
+                } else {
+                    self.editor.active_inspection().and_then(|i| i.object())
+                };
+                if let (Some(object), Some(context)) =
+                    (object, AuthoringContext::capture(&self.editor))
+                {
+                    if command.id == editor_core::CommandId::PaletteMoveTo {
+                        if matches!(
+                            object.kind,
+                            editor_core::ObjectKind::PoseEntry
+                                | editor_core::ObjectKind::PoseLink
+                                | editor_core::ObjectKind::PhysicsInput
+                                | editor_core::ObjectKind::PhysicsOutput
+                        ) {
+                            self.open_business_destination(context, object, false, window, cx);
+                        }
+                    } else {
+                        let action = editor_core::BusinessAction::Step(
+                            object,
+                            command.id == editor_core::CommandId::PaletteMoveDown,
+                        );
+                        if crate::authoring::business::availability(&self.editor, &action)
+                            .is_some_and(|a| a.enabled)
+                        {
+                            self.run_business_action(context, action, window, cx);
+                        }
+                    }
+                }
+                return;
+            }
+        }
         let mut resource_focus = None;
         for (kind, panel) in [
             (

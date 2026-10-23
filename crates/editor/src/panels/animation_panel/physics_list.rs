@@ -1,13 +1,22 @@
 //! Physics groups are navigated independently of animation playback.
 use super::*;
+use crate::authoring::{AuthoringContext, business};
 use crate::panels::{properties::physics::group_name, toolbar::PanelToolbar};
 use crate::ui::compact;
+use editor_core::BusinessAction as A;
 use editor_core::{DocumentId, ObjectKind, ObjectRef};
 use gpui_kit::assets::IconName;
-use kasane_core::document::{PhysicsAsset, PhysicsEdit};
+use gpui_kit::component::menu::ContextMenuExt;
+use kasane_core::document::PhysicsAsset;
 
 fn selected(editor: &editor_core::Editor, asset: &PhysicsAsset) -> Option<usize> {
-    let object = editor.active_inspection()?.object()?;
+    let mut object = editor.active_inspection()?.object()?;
+    if matches!(
+        object.kind,
+        ObjectKind::PhysicsInput | ObjectKind::PhysicsOutput | ObjectKind::PhysicsNode
+    ) {
+        object = editor.document()?.business_owner(&object)?;
+    }
     asset
         .data
         .settings
@@ -42,226 +51,110 @@ impl AnimationPanel {
             owner.complete_edit(result, cx);
         });
     }
-    fn physics_list_action(
-        &mut self,
-        document: DocumentId,
-        action: u8,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if window.has_active_dialog(cx) {
-            return;
-        }
-        let _ = self.owner.update(cx, |owner, cx| {
-            if owner.modal || owner.editor.is_busy() || owner.editor.active_id() != Some(document) {
-                return;
-            }
-            let Some(context) = crate::authoring::AuthoringContext::capture(&owner.editor) else {
-                return;
-            };
-            let doc = owner.editor.document().unwrap();
-            let asset = doc.physics_definition();
-            let position = asset.and_then(|a| selected(&owner.editor, a));
-            let group = position.and_then(|i| asset.map(|a| a.data.settings[i].id.clone()));
-            let candidates = group
-                .as_ref()
-                .map(|id| doc.authoring_neighbors(&reference(id)))
-                .unwrap_or_default();
-            let intent = match action {
-                0 => doc.physics_group_creation(t!("physics.new_group").into_owned()),
-                1 => {
-                    let Some(id) = group.clone() else {
-                        return;
-                    };
-                    PhysicsEdit::Duplicate {
-                        ids: vec![id],
-                        group_id: None,
-                        before: None,
-                    }
-                }
-                2 => {
-                    let Some(id) = group.clone() else {
-                        return;
-                    };
-                    PhysicsEdit::Delete {
-                        ids: vec![id],
-                        node_replacements: Default::default(),
-                    }
-                }
-                3 | 4 => {
-                    let Some(id) = &group else { return };
-                    match doc.physics_group_step(id, action == 4) {
-                        Ok(Some(intent)) => intent,
-                        Ok(None) => return,
-                        Err(error) => {
-                            owner.set_edit_error(crate::authoring::authoring_error(&error), cx);
-                            return;
-                        }
-                    }
-                }
-                _ => return,
-            };
-            let result = (|| {
-                let result = owner.execute_authoring(context, window, cx, |editor, document| {
-                    let plan = editor.plan_physics_authoring(document, intent)?;
-                    editor.execute_physics_authoring(document, &plan)
-                })?;
-                let presentation = match action {
-                    0 | 1 => crate::authoring::AuthoringPresentation::Created {
-                        kind: ObjectKind::PhysicsGroup,
-                        projection: None,
-                    },
-                    2 => crate::authoring::AuthoringPresentation::AfterDelete { candidates },
-                    _ => crate::authoring::AuthoringPresentation::Moved {
-                        object: reference(group.as_deref().unwrap()),
-                        projection: editor_core::PaletteProjection::Organization,
-                    },
-                };
-                owner.present_authoring_result(document, &result, presentation, window, cx)?;
-                Ok::<_, anyhow::Error>(())
-            })();
-            owner.animation_anchor = None;
-            match result {
-                Ok(()) => owner.redraw(cx),
-                Err(error) => owner.set_edit_error(crate::authoring::authoring_error(&error), cx),
-            }
-        });
-    }
     pub(super) fn physics_list_toolbar(
         &mut self,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let mut toolbar = PanelToolbar::new("physics-list-toolbar");
         let Some(owner) = self.owner.upgrade() else {
-            return Empty.into_any_element();
+            return toolbar.into_any_element();
         };
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
-        let Some(document) = state.editor.active_id() else {
-            return Empty.into_any_element();
+        let Some(doc) = state.editor.document() else {
+            return toolbar.into_any_element();
         };
-        let asset = state
-            .editor
-            .document()
-            .and_then(|doc| doc.physics_definition());
-        let index = asset.and_then(|asset| selected(&state.editor, asset));
-        let capabilities = index
-            .and_then(|index| asset.map(|asset| &asset.data.settings[index]))
-            .and_then(|group| {
-                state
-                    .editor
-                    .document()
-                    .unwrap()
-                    .authoring_capabilities(&reference(&group.id))
-                    .ok()
-            });
-
-        let disabled = state.modal || state.editor.is_busy() || dialog;
-        let mut toolbar = PanelToolbar::new("physics-list-toolbar");
-        for (action, id, icon, label, off) in [
+        let document = state.editor.active_id().unwrap();
+        let context = AuthoringContext::capture(&state.editor);
+        let group = doc
+            .physics_definition()
+            .and_then(|a| selected(&state.editor, a).map(|i| reference(&a.data.settings[i].id)));
+        for (id, icon, label, action) in [
             (
-                0,
                 "physics-add-group",
                 IconName::Plus,
                 "physics.add_group",
-                false,
+                Some(A::Create(ObjectKind::PhysicsGroup, group.clone())),
             ),
             (
-                1,
                 "physics-copy-group",
                 IconName::Copy,
                 "physics.copy_group",
-                index.is_none(),
+                group.clone().map(A::Copy),
             ),
             (
-                2,
                 "physics-delete-group",
                 IconName::Trash,
                 "physics.delete_group",
-                index.is_none(),
+                group.clone().map(A::Delete),
             ),
             (
-                3,
                 "physics-up-group",
                 IconName::ArrowUp,
-                "physics.up",
-                index.is_none_or(|i| {
-                    state
-                        .editor
-                        .document()
-                        .unwrap()
-                        .physics_group_step(&asset.unwrap().data.settings[i].id, false)
-                        .ok()
-                        .flatten()
-                        .is_none()
-                }),
+                "authoring.execute_earlier",
+                group.clone().map(|o| A::Step(o, false)),
             ),
             (
-                4,
                 "physics-down-group",
                 IconName::ArrowDown,
-                "physics.down",
-                index.is_none_or(|i| {
-                    state
-                        .editor
-                        .document()
-                        .unwrap()
-                        .physics_group_step(&asset.unwrap().data.settings[i].id, true)
-                        .ok()
-                        .flatten()
-                        .is_none()
-                }),
+                "authoring.execute_later",
+                group.clone().map(|o| A::Step(o, true)),
             ),
         ] {
-            let availability = if action == 0 {
-                Some(
-                    state
-                        .editor
-                        .document()
-                        .unwrap()
-                        .authoring_collection_capabilities(
-                            &editor_core::AuthoringCollection::Physics(
-                                kasane_sdk::PhysicsCollection::Groups,
-                            ),
-                        )
-                        .ok()
-                        .and_then(|c| {
-                            crate::authoring::ActionAvailability::from_core(&c.domain.create)
-                        }),
-                )
-            } else {
-                capabilities.as_ref().map(|c| {
-                    crate::authoring::ActionAvailability::from_authoring(
-                        c,
-                        match action {
-                            1 => editor_core::AuthoringAction::Duplicate,
-                            2 => editor_core::AuthoringAction::Delete,
-                            _ => editor_core::AuthoringAction::Reorder,
-                        },
-                    )
-                })
-            };
-            if matches!(availability, Some(None)) {
-                continue;
-            }
-            let availability = availability.flatten();
-            let unavailable = availability
+            let available = action
                 .as_ref()
-                .is_some_and(|availability| !availability.enabled);
-            let tooltip = availability
-                .and_then(|availability| availability.reason)
+                .and_then(|a| business::availability(&state.editor, a));
+            let off = state.modal || dialog || available.as_ref().is_none_or(|a| !a.enabled);
+            let hint = available
+                .and_then(|a| a.reason)
                 .unwrap_or_else(|| t!(label).into());
-            let listener = cx.listener(move |this, _, window, cx| {
-                this.physics_list_action(document, action, window, cx)
-            });
+            let owner = self.owner.clone();
             toolbar = toolbar.action(move |_| {
                 Button::new(id)
                     .icon(icon)
                     .ghost()
-                    .tooltip(tooltip.clone())
                     .accessibility_label(t!(label))
-                    .disabled(disabled || off || unavailable)
-                    .on_click(listener)
+                    .tooltip(hint.clone())
+                    .disabled(off)
+                    .on_click(move |_, window, cx| {
+                        if let (Some(context), Some(action)) = (context, action.clone()) {
+                            let _ = owner.update(cx, |v, cx| {
+                                v.run_business_action(context, action, window, cx)
+                            });
+                        }
+                    })
+            });
+        }
+        if let Some(asset) = doc.physics_definition() {
+            let object = ObjectRef::new(ObjectKind::Physics, &asset.id);
+            let owner = self.owner.clone();
+            let off = state.modal || dialog;
+            toolbar = toolbar.action(move |_| {
+                Button::new("physics-inspect-root")
+                    .icon(IconName::Settings)
+                    .ghost()
+                    .tooltip(t!("authoring.physics_settings"))
+                    .accessibility_label(t!("authoring.physics_settings"))
+                    .disabled(off)
+                    .on_click(move |_, window, cx| {
+                        if let Some(context) = context {
+                            let _ = owner.update(cx, |v, cx| {
+                                if AuthoringContext::capture(&v.editor) == Some(context)
+                                    && v.prepare_property_inputs(document, window, cx)
+                                {
+                                    let result = v.inspect_authoring_object(
+                                        document,
+                                        object.clone(),
+                                        false,
+                                        window,
+                                        cx,
+                                    );
+                                    v.complete_edit(result, cx);
+                                }
+                            });
+                        }
+                    })
             });
         }
         toolbar.into_any_element()
@@ -279,7 +172,7 @@ impl AnimationPanel {
             .overflow_y_scroll()
             .track_scroll(&self.resources.view.scroll)
             .track_focus(&self.focus)
-            .key_context("KasaneDocument")
+            .key_context("KasaneDocument KasanePalette")
             .text_size(compact::rem(compact::BODY));
         let Some(owner) = self.owner.upgrade() else {
             return root.into_any_element();
@@ -368,7 +261,8 @@ impl AnimationPanel {
                             this.choose_physics(document, object.clone(), window, cx);
                         }
                     }),
-                ),
+                )
+                .context_menu(business::menu(self.owner.clone(), reference(&rig.id))),
             );
         }
         root.on_key_down(cx.listener(move |this, event: &KeyDownEvent, window, cx| {

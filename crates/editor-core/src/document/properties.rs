@@ -7,6 +7,7 @@ enum PropertyPayload {
     Object(serde_json::Value),
     Physics(kasane_core::document::PhysicsPatch),
     Motion(kasane_core::document::MotionEdit),
+    Pose(kasane_core::document::PoseEdit),
     Expression(kasane_core::document::ExpressionEdit),
 }
 impl PropertyPayload {
@@ -41,7 +42,14 @@ impl Document {
     pub fn property_scope(&self, object: &ObjectRef) -> PropertyScope {
         if matches!(
             object.kind,
-            ObjectKind::MotionRegistration | ObjectKind::MotionGroup | ObjectKind::ExpressionEntry
+            ObjectKind::MotionRegistration
+                | ObjectKind::MotionGroup
+                | ObjectKind::ExpressionEntry
+                | ObjectKind::Physics
+                | ObjectKind::Pose
+                | ObjectKind::PoseGroup
+                | ObjectKind::PoseEntry
+                | ObjectKind::PoseLink
         ) {
             return PropertyScope::Resource {
                 revision: self.model_generation(),
@@ -272,6 +280,15 @@ impl Document {
                 payload,
             )
             .map(PropertyPayload::Expression),
+            ObjectKind::Pose
+            | ObjectKind::PoseGroup
+            | ObjectKind::PoseEntry
+            | ObjectKind::PoseLink => {
+                crate::property::business::pose_patch(self.session.document(), object, payload)
+                    .map(PropertyPayload::Pose)
+            }
+            ObjectKind::Physics => crate::property::business::physics_patch(object, payload)
+                .map(PropertyPayload::Physics),
             _ => Ok(PropertyPayload::Object(payload)),
         }
     }
@@ -290,6 +307,7 @@ impl Document {
         }
         let payload = match payload {
             PropertyPayload::Motion(intent) => return Ok(edit.edit_motion(intent)?),
+            PropertyPayload::Pose(intent) => return Ok(edit.edit_pose(intent)?),
             PropertyPayload::Expression(intent) => return Ok(edit.edit_expression(intent)?),
             payload => payload.json()?,
         };
@@ -567,6 +585,11 @@ impl Document {
                 | ObjectKind::MotionGroup
                 | ObjectKind::MotionRegistration
                 | ObjectKind::PhysicsGroup
+                | ObjectKind::Physics
+                | ObjectKind::Pose
+                | ObjectKind::PoseGroup
+                | ObjectKind::PoseEntry
+                | ObjectKind::PoseLink
         ) || (!receipt.changes.scene_fields.is_empty()
             && receipt
                 .changes

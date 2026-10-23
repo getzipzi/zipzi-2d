@@ -169,6 +169,7 @@ fn physics_list_and_properties_are_visible_together_and_numbers_commit_once_or_c
 
 #[gpui_kit::test]
 fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mut TestAppContext) {
+    cx.update(|cx| cx.set_reduce_motion(true));
     let (document, assets) = document_fixture::combined_animation_document().unwrap();
     let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {
@@ -200,7 +201,25 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
             )
         });
         window.click("physics-delete-group", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.try_find("business-dialog").is_some());
+        window.click("business-dialog-submit", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
+        assert!(
+            window.try_find("business-dialog").is_none(),
+            "review did not close: {:?}; edit: {:?}",
+            window
+                .try_find("business-dialog-reason")
+                .and_then(|e| e.label().map(str::to_owned)),
+            harness.view.read(cx).edit_error
+        );
         harness.view.read_with(cx, |view, _| {
             assert_eq!(
                 view.editor

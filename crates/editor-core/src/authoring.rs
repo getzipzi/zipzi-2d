@@ -52,10 +52,13 @@ pub enum AuthoringSessionReason {
 
 #[path = "authoring/binding.rs"]
 mod binding;
+#[path = "authoring/business.rs"]
+mod business;
 #[path = "authoring/motion.rs"]
 mod motion;
 #[path = "authoring/physics.rs"]
 mod physics;
+pub use business::{BusinessAction, BusinessDestination, BusinessPlan};
 #[derive(Debug, Clone)]
 pub struct PhysicsAuthoringCapabilities {
     pub domain: kasane_sdk::PhysicsCapabilities,

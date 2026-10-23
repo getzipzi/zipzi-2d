@@ -33,6 +33,9 @@ pub(super) struct PhysicsState {
     input: usize,
     output: usize,
     node: usize,
+    input_id: Option<String>,
+    output_id: Option<String>,
+    node_id: Option<String>,
     numbers: HashMap<NumberField, NumberControl>,
     selects: HashMap<SelectField, SelectControl>,
     epoch: u64,
@@ -89,8 +92,33 @@ impl PropertiesPanel {
         self.physics.input = 0;
         self.physics.output = 0;
         self.physics.node = 1;
+        self.physics.input_id = None;
+        self.physics.output_id = None;
+        self.physics.node_id = None;
         self.physics.drawing = Default::default();
         cx.notify();
+    }
+    fn physics_remember_selection(&mut self, cx: &mut Context<Self>) {
+        if let Some(asset) = self.physics_asset(cx) {
+            if let Some(rig) = asset
+                .data
+                .settings
+                .iter()
+                .find(|g| g.id == self.physics.group)
+            {
+                self.physics.input_id = rig.inputs.get(self.physics.input).map(|e| e.id.clone());
+                self.physics.output_id = rig.outputs.get(self.physics.output).map(|e| e.id.clone());
+                self.physics.node_id = rig.vertices.get(self.physics.node).map(|e| e.id.clone());
+            }
+        }
+    }
+    fn physics_inspect_child(&self, object: editor_core::ObjectRef, cx: &mut Context<Self>) {
+        let _ = self.owner.update(cx, |v, cx| {
+            if let Some(document) = v.editor.active_id() {
+                let _ = v.editor.inspect_authoring_object(document, object);
+                v.redraw(cx);
+            }
+        });
     }
     fn physics_apply(&mut self, intent: PhysicsEdit, cx: &mut Context<Self>) -> bool {
         self.physics_cancel(cx);
@@ -352,13 +380,49 @@ impl PropertiesPanel {
         else {
             return body.into_any_element();
         };
+        if let Some(object) = owner
+            .read(cx)
+            .editor
+            .active_inspection()
+            .and_then(|i| i.object())
+        {
+            match object.kind {
+                editor_core::ObjectKind::PhysicsInput => self.physics.input_id = Some(object.id),
+                editor_core::ObjectKind::PhysicsOutput => self.physics.output_id = Some(object.id),
+                editor_core::ObjectKind::PhysicsNode => self.physics.node_id = Some(object.id),
+                _ => {}
+            }
+        }
+        if let Some(i) = self
+            .physics
+            .input_id
+            .as_ref()
+            .and_then(|id| rig.inputs.iter().position(|e| &e.id == id))
+        {
+            self.physics.input = i;
+        }
+        if let Some(i) = self
+            .physics
+            .output_id
+            .as_ref()
+            .and_then(|id| rig.outputs.iter().position(|e| &e.id == id))
+        {
+            self.physics.output = i;
+        }
+        if let Some(i) = self
+            .physics
+            .node_id
+            .as_ref()
+            .and_then(|id| rig.vertices.iter().position(|e| &e.id == id))
+        {
+            self.physics.node = i;
+        }
         self.physics.input = self.physics.input.min(rig.inputs.len().saturating_sub(1));
         self.physics.output = self.physics.output.min(rig.outputs.len().saturating_sub(1));
-        self.physics.node = self
-            .physics
-            .node
-            .max(1)
-            .min(rig.vertices.len().saturating_sub(1));
+        self.physics.node = self.physics.node.min(rig.vertices.len().saturating_sub(1));
+        self.physics.input_id = rig.inputs.get(self.physics.input).map(|e| e.id.clone());
+        self.physics.output_id = rig.outputs.get(self.physics.output).map(|e| e.id.clone());
+        self.physics.node_id = rig.vertices.get(self.physics.node).map(|e| e.id.clone());
         let targets: Vec<_> = asset
             .data
             .settings
@@ -519,7 +583,7 @@ impl PropertiesPanel {
                         .iter()
                         .enumerate()
                         .skip(1)
-                        .map(move |(i, _)| (format!("{}:{i}", r.id), format!("{name} · {i}")))
+                        .map(move |(i, node)| (node.id.clone(), format!("{name} · {i}")))
                 })
                 .collect();
             settings = settings.child(self.physics_select(
@@ -527,7 +591,7 @@ impl PropertiesPanel {
                 choices,
                 String::new(),
                 t!("physics.reuse").into_owned(),
-                disabled,
+                disabled || self.physics.node == 0,
                 window,
                 cx,
             ));

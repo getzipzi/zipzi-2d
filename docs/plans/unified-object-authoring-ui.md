@@ -1,6 +1,6 @@
 # Editor UI 对象交互统一方案
 
-日期：2026 年 10 月 21 日。状态：2026 年 10 月 23 日开始实施；当前 U1 共享适配功能已收口，U2 创建、树与 Parameter 导航、共享移动及保持形态改父级交互已接入，U3 创建、注册属性、成员、列表排序、Motion 复制/引用和删除影响审阅已接入；跨阶段原生截图和完整验收仍待 U6 收口，见[实施记录](unified-object-authoring-ui-implementation.md)。
+日期：2026 年 10 月 21 日。状态：2026 年 10 月 23 日开始实施；当前 U1 共享适配功能已收口，U2 创建、树与 Parameter 导航、共享移动及保持形态改父级交互已接入，U3 创建、注册属性、成员、列表排序、Motion 复制/引用和删除影响审阅已接入，U4 Physics/Pose 根配置、业务组、稳定子项与结构管理已接入；跨阶段原生截图和完整验收仍待 U6 收口，见[实施记录](unified-object-authoring-ui-implementation.md)。
 
 在 [对象创作核心架构改造方案](unified-object-authoring-core.md)完成并交付后，统一 Editor 的对象创建、Properties 编辑、文件夹、预览、排序和引用管理交互。核心负责身份、数据、规则与事务；本方案负责操作入口、控件事件、焦点、反馈和视图协调。
 
@@ -262,7 +262,7 @@ Undo/Redo 到达文档命令层时，先取消未提交候选，再操作 SDK �
 
 - [Properties Provider](../../crates/editor/src/properties.rs)、[表单草稿与提交](../../crates/editor/src/properties/form.rs)、[预览生命周期适配](../../crates/editor/src/properties/editing.rs)。
 - [Parameter 创建与管理](../../crates/editor/src/panels/parameters/management.rs)、[共享拖拽实现](../../crates/editor/src/panels/sorting.rs)。
-- [Motion/Expression 列表](../../crates/editor/src/panels/animation_panel/resources.rs)、[Physics 列表](../../crates/editor/src/panels/animation_panel/physics_list.rs)、[Pose 展示](../../crates/editor/src/panels/animation_panel/inspectors.rs)。
+- [Motion/Expression 列表](../../crates/editor/src/panels/animation_panel/resources.rs)、[Physics 列表](../../crates/editor/src/panels/animation_panel/physics_list.rs)、[Pose 列表](../../crates/editor/src/panels/animation_panel/pose.rs)。
 - [Parameter 创建交互回归](../../crates/editor/headless_tests/parameter_creation.rs)。
 
 上述为设计时的代码依据；当前进度和验证结果见[实施记录](unified-object-authoring-ui-implementation.md)。
