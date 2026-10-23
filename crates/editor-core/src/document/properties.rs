@@ -931,7 +931,17 @@ mod tests {
             let old_payload = old.get(&object).unwrap().properties.clone();
             let builds = doc.object_index_builds.load(Ordering::Relaxed);
             let topology = doc.canvas_topology();
+            #[cfg(feature = "bench-instrumentation")]
+            let capture = kasane_core::benchmark::Capture::start();
             doc.set_object_property(&object, field, value)?;
+            #[cfg(feature = "bench-instrumentation")]
+            if field == "name" {
+                let stages = capture.finish();
+                assert!(
+                    !stages.contains_key("sdk.keys_in"),
+                    "Label patch enumerated identities: {stages:?}"
+                );
+            }
             let index = doc.object_index();
             assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
             assert_eq!(old.get(&object).unwrap().properties, old_payload);

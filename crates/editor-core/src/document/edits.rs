@@ -1,6 +1,20 @@
 //! Candidate edits, commit/cancel and history reconciliation.
 use super::*;
 
+impl PendingEdit {
+    fn property_index_target(&self) -> Option<crate::ObjectRef> {
+        match &self.original {
+            PendingOriginal::Properties(object, _, _) => Some(object.clone()),
+            PendingOriginal::Controls(crate::control_edit::EditOriginal::Mesh(mesh))
+                if self.kind == Gesture::Opacity =>
+            {
+                Some(crate::ObjectRef::new(crate::ObjectKind::Mesh, &mesh.id))
+            }
+            _ => None,
+        }
+    }
+}
+
 impl Document {
     fn begin_gesture(&mut self, kind: Gesture) -> Result<()> {
         self.ensure_editable(&self.context.selections)?;
@@ -134,8 +148,10 @@ impl Document {
             "Opacity must be between 0 and 1"
         );
         self.begin_gesture(Gesture::Opacity)?;
+        let previous_revision = self.projection_revision;
         self.invalidate_projection(false);
         let pending = self.pending.as_mut().unwrap();
+        let object = crate::ObjectRef::new(crate::ObjectKind::Mesh, pending.original.id());
         pending.changed.take();
         let result = pending
             .edit
@@ -143,6 +159,9 @@ impl Document {
         if result.is_err() {
             self.pending = None;
         }
+        // Read the accepted candidate, or the committed model after a failure.
+        // Publishing the new cache revision keeps inspector title reads local.
+        self.refresh_property_index(previous_revision, &object, false);
         Ok(result?)
     }
 
@@ -164,16 +183,25 @@ impl Document {
         let changed = self.pending_changed();
         if let Some(pending) = self.pending.take() {
             let previous_revision = self.projection_revision;
-            let property = match &pending.original {
-                PendingOriginal::Properties(object, _, _) => Some(object.clone()),
-                _ => None,
-            };
+            let property = pending.property_index_target();
             if changed
                 && property
                     .as_ref()
                     .is_some_and(|p| p.kind == crate::ObjectKind::PhysicsGroup)
             {
-                let receipt = pending.edit.commit_to(&mut self.session)?;
+                let receipt = match pending.edit.commit_to(&mut self.session) {
+                    Ok(receipt) => receipt,
+                    Err(error) => {
+                        if let Some(object) = &property {
+                            self.refresh_property_index(
+                                previous_revision,
+                                object,
+                                pending.draw_groups_changed,
+                            );
+                        }
+                        return Err(error.into());
+                    }
+                };
                 if receipt.changed {
                     self.pristine_blank = false;
                 }
@@ -185,7 +213,19 @@ impl Document {
             );
             if changed {
                 let parameter = matches!(&pending.original, PendingOriginal::Properties(object, _, _) if object.kind == crate::ObjectKind::Parameter);
-                let receipt = pending.edit.commit_to(&mut self.session)?;
+                let receipt = match pending.edit.commit_to(&mut self.session) {
+                    Ok(receipt) => receipt,
+                    Err(error) => {
+                        if let Some(object) = &property {
+                            self.refresh_property_index(
+                                previous_revision,
+                                object,
+                                pending.draw_groups_changed,
+                            );
+                        }
+                        return Err(error.into());
+                    }
+                };
                 if property
                     .as_ref()
                     .is_none_or(|p| p.kind != crate::ObjectKind::Motion)
@@ -235,10 +275,7 @@ impl Document {
                 return;
             }
             let previous_revision = self.projection_revision;
-            let property = match &pending.original {
-                PendingOriginal::Properties(object, _, _) => Some(object.clone()),
-                _ => None,
-            };
+            let property = pending.property_index_target();
             self.invalidate_projection(
                 matches!(pending.kind, Gesture::Rename) || pending.topology_changed,
             );
@@ -296,5 +333,133 @@ impl Document {
             .as_ref()
             .filter(|r| r.kind == crate::ObjectKind::Mesh)
             .map(|r| r.id.clone());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{ObjectKind, ObjectRef};
+    use kasane_core::Vec2;
+    use std::sync::atomic::Ordering;
+
+    #[test]
+    fn opacity_gestures_refresh_indexes_and_restore_committed_values_on_every_exit() -> Result<()> {
+        for outcome in ["cancel", "commit", "failed_commit", "unchanged"] {
+            let mut doc = Document::new_blank()?;
+            let mesh = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::new_v4().to_string());
+            let peer = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::new_v4().to_string());
+            doc.session.edit("Fixture", None, |edit| {
+                for object in [&mesh, &peer] {
+                    edit.create_mesh(kasane_core::Mesh {
+                        id: object.id.clone(),
+                        runtime_id: object.id.clone(),
+                        name: "Mesh".into(),
+                        vertex_ids: vec![0, 1, 2],
+                        base_positions: vec![
+                            Vec2::new(0., 0.),
+                            Vec2::new(1., 0.),
+                            Vec2::new(0., 1.),
+                        ],
+                        uvs: vec![Vec2::default(); 3],
+                        triangles: vec![[0, 1, 2]],
+                        ..Default::default()
+                    })?;
+                }
+                Ok(())
+            })?;
+            doc.invalidate_projection(true);
+            doc.select(&mesh.id)?;
+            let original = doc.object_index();
+            let original_payload = original.get(&mesh).unwrap().properties.clone();
+            let topology = doc.canvas_topology();
+            let builds = doc.object_index_builds.load(Ordering::Relaxed);
+            let history = doc.history_lengths();
+            for sample in 1..=12 {
+                let opacity = sample as f32 / 16.;
+                doc.preview_opacity(opacity)?;
+                let index = doc.object_index();
+                assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+                assert_eq!(
+                    index.get(&mesh).unwrap().properties["appearance"]["opacity"],
+                    serde_json::json!(opacity)
+                );
+                assert_eq!(original.get(&mesh).unwrap().properties, original_payload);
+                assert!(std::ptr::eq(
+                    original.get(&peer).unwrap(),
+                    index.get(&peer).unwrap()
+                ));
+                assert_eq!(original.bindings.as_ptr(), index.bindings.as_ptr());
+                for (a, b) in original.relations.iter().zip(&index.relations) {
+                    assert!(std::ptr::eq(a, b));
+                }
+                assert!(Arc::ptr_eq(&topology, &doc.canvas_topology()));
+                assert_eq!(
+                    index.get(&mesh).unwrap().properties,
+                    crate::ObjectIndex::build(doc.model())
+                        .get(&mesh)
+                        .unwrap()
+                        .properties
+                );
+            }
+            let candidate = doc.object_index();
+            let candidate_payload = candidate.get(&mesh).unwrap().properties.clone();
+            let expected = match outcome {
+                "cancel" => {
+                    doc.cancel_edit();
+                    1.
+                }
+                "failed_commit" => {
+                    assert!(
+                        doc.pending
+                            .as_mut()
+                            .unwrap()
+                            .edit
+                            .set_mesh_opacity(&mesh.id, f32::NAN)
+                            .is_err()
+                    );
+                    assert!(doc.finish_edit().is_err());
+                    1.
+                }
+                "unchanged" => {
+                    doc.preview_opacity(1.)?;
+                    doc.finish_edit()?;
+                    1.
+                }
+                _ => {
+                    doc.finish_edit()?;
+                    0.75
+                }
+            };
+            assert!(doc.pending.is_none());
+            let restored = doc.object_index();
+            assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            assert_eq!(
+                restored.get(&mesh).unwrap().properties["appearance"]["opacity"],
+                serde_json::json!(expected)
+            );
+            assert_eq!(
+                restored.get(&mesh).unwrap().properties,
+                crate::ObjectIndex::build(doc.model())
+                    .get(&mesh)
+                    .unwrap()
+                    .properties
+            );
+            assert_eq!(original.get(&mesh).unwrap().properties, original_payload);
+            assert_eq!(candidate.get(&mesh).unwrap().properties, candidate_payload);
+            assert!(std::ptr::eq(
+                original.get(&peer).unwrap(),
+                restored.get(&peer).unwrap()
+            ));
+            assert_eq!(
+                doc.history_lengths(),
+                if outcome == "commit" {
+                    (history.0 + 1, 0)
+                } else {
+                    history
+                }
+            );
+        }
+        Ok(())
     }
 }
