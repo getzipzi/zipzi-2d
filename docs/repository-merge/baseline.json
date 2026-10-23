@@ -1,0 +1,42 @@
+{
+  "sdk": {
+    "sha": "e27230ab2fed1df4b4d0743d28fb1ae3fca3405e",
+    "status": "clean",
+    "tracked_entries": 832,
+    "lock_sha256": "fc4ee25ff88bddb93f26f2ee60f8813883c57907bb3f4edffe5be3936fd7a181",
+    "workspace_packages": [
+      "kasane-core",
+      "kasane-live2d",
+      "kasane-animation",
+      "kasane-project",
+      "kasane-cmo3",
+      "kasane-moc3",
+      "kasane-psd",
+      "kasane-moc3-psd",
+      "kasane-render",
+      "kasane-render-metal",
+      "kasane-render-wgpu",
+      "kasane-sdk",
+      "kasane-sdk-observe",
+      "kasane-python",
+      "cubism-matrix-kasane"
+    ],
+    "local_model_files": 27,
+    "local_config_sha256": "c9fc68530414abed635cb278acf118b3a82dffcf694e62781969982e11de0289"
+  },
+  "editor": {
+    "sha": "b4e4abc737f88bdb895dfec960444dd3183369b7",
+    "status": "clean",
+    "tracked_entries": 1113,
+    "lock_sha256": "e52abbda2c1dc7158a6cec2a9985be01ca85752284e478cfccee4f5b7b8e61e5",
+    "workspace_packages": [
+      "kasane-editor",
+      "editor-core",
+      "editor-render"
+    ],
+    "local_model_files": 51,
+    "local_config_sha256": "9df3cac841fcace21776b49125d6cc828c896daf9c251d980a586c61ab277d2b"
+  },
+  "asset_conflicts": 0,
+  "recorded_at": "2026-10-23T14:28:28.618370+00:00"
+}
