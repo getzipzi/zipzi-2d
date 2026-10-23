@@ -1,0 +1,5 @@
+{
+  "commit": "0284d87e5c066c4f144c90d906fccf6ed00692db",
+  "prefix": "apps/editor",
+  "method": "git subtree add (without squash)"
+}

@@ -1,4 +1,8 @@
-# Kasane 2D
+# Zipzi 2D
+
+This checkout is beginning the Kasane SDK/Editor repository merge. SDK code is
+MIT licensed; `apps/editor` is GPL-3.0-only, with third-party notices retained.
+See the [migration status](docs/repository-merge/README.md) before building Editor.
 
 Kasane 2D provides a Rust authoring SDK, Python bindings, and a WGPU renderer
 
