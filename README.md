@@ -2,8 +2,8 @@
 
 This checkout is integrating the Kasane SDK and Editor. SDK code is
 MIT licensed; Editor code and assets retain GPL-3.0-only. See [licensing](LICENSING.md).
-The Cargo workspace and Editor script paths are unified; CI is still being migrated.
-Use explicit Cargo package selections until the broad test gates are adapted.
+The workspace, tools and CI share explicit SDK (15 packages) and Editor
+(3 packages) test domains; see [test gates](docs/development/testing.md).
 See the [migration status](docs/repository-merge/README.md) and the
 [revised flattening plan](docs/plans/repository-merge-plan.md). All 18 owned crates are flat under `crates/`; Editor assets, tools, docs and
 third-party patches are integrated into root directories.

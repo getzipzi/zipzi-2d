@@ -12,12 +12,10 @@ P0 baseline capture, P1 history import, P2 workspace integration and P3 path/too
 adaptation are complete.
 **Revised scope:** the user now requests a fully flattened repository. P3F
 (flatten all owned crates, consolidate assets/tools/docs/vendor, then adapt paths)
-is complete; P4–P6 remain. P0–P3 results describe the intermediate layout, not
+is complete; P4 test/CI routing is also implemented and locally verified. P5–P6 remain. P0–P3 results describe the intermediate layout, not
 acceptance of the flattened layout; see the new P3F evidence. Cargo resolves one
-workspace and lockfile; Editor entrypoints and fixtures use this checkout. SDK CI
-and broad test entrypoints still need package-scope adaptation. In particular, existing SDK
-`--workspace` commands now include Editor; use explicit package selections until
-P4. Native runtime, full app packaging and licensed-model acceptance remain
+workspace and lockfile; Editor entrypoints and fixtures use this checkout. SDK CI and broad test entrypoints now select their explicit package domains;
+hosted workflow execution is still unverified. Native runtime, full app packaging and licensed-model acceptance remain
 part of the later end-to-end gates.
 
 The governing [implementation plan](../plans/repository-merge-plan.md)
@@ -106,11 +104,15 @@ See [P3F validation](p3f-flattening.md), the [complete file map](p3f-file-map.js
 and `verify-flattening.py`. All 18 owned crates now live under root `crates/`;
 Editor assets, tools, documentation and vendor patches use root directories.
 
-## Next: P4, then repository acceptance
+## P4: test domains and CI
 
-1. Separate SDK and Editor package selection and CI gates (P4).
-2. Validate packaged licenses/assets, consolidate authorized local models (P5).
-3. Complete regression, fresh-clone/worktree isolation and final cutover (P6).
+See [P4 implementation and local validation](p4-test-domains.md). SDK and Editor
+have separate complete gates with exhaustive package coverage checks.
+
+## Next: P5 and repository acceptance
+
+1. Validate packaged licenses/assets, consolidate authorized local models (P5).
+2. Complete regression, hosted CI, fresh-clone/worktree isolation and final cutover (P6).
 
 Complete app packaging, licensed-model acceptance, Python wheel, GitHub license
 recognition and cross-platform CI remain unverified. Recheck original HEADs

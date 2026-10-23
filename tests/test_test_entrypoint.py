@@ -17,6 +17,8 @@ class TestEntrypointTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         (self.root / 'tools').mkdir()
         shutil.copy(Path(__file__).resolve().parents[1] / 'tools/test-sdk.sh', self.root / 'tools/test-sdk.sh')
+        for name in ['cargo_domain.py', 'package-domains.json']:
+            shutil.copy(Path(__file__).resolve().parents[1] / 'tools' / name, self.root / 'tools' / name)
         binary = self.root / 'bin'
         binary.mkdir()
         for name in ['cargo', 'uv']:
@@ -24,10 +26,18 @@ class TestEntrypointTests(unittest.TestCase):
             path.write_text(f'#!{sys.executable}\n' + '''import json,os,pathlib,sys
 with open('calls.jsonl','a') as output:
     output.write(json.dumps([pathlib.Path(sys.argv[0]).name,*sys.argv[1:]])+'\\n')
+if sys.argv[1:2]==['fmt']:sys.exit(int(os.environ.get('FORMAT_EXIT','0')))
 if sys.argv[1:2]==['test']:sys.exit(int(os.environ.get('CARGO_TEST_EXIT','0')))
+if pathlib.Path(sys.argv[0]).name=='uv':sys.exit(int(os.environ.get('WHEEL_EXIT','0')))
 ''')
             path.chmod(0o755)
         self.env = {**os.environ, 'PATH': f'{binary}:{os.environ["PATH"]}'}
+
+    def assert_sdk_packages(self, command):
+        expected = json.loads((self.root / 'tools/package-domains.json').read_text())['sdk']
+        actual = [command[i + 1] for i, value in enumerate(command) if value == '-p']
+        self.assertCountEqual(actual, expected)
+        self.assertNotIn('--all', command)
 
     def run_gate(self, *arguments, **environment):
         (self.root / 'calls.jsonl').unlink(missing_ok=True)
@@ -51,7 +61,11 @@ if sys.argv[1:2]==['test']:sys.exit(int(os.environ.get('CARGO_TEST_EXIT','0')))
                         self.assertIn('--nocapture', command)
                     else:
                         self.assertLess(command.index('--no-run'), command.index('--'))
-                    self.assertIn('alpha_mesh' if gate == 'mesh' else '--workspace', command)
+                    self.assertNotIn('--workspace', command)
+                    if gate == 'mesh':
+                        self.assertIn('alpha_mesh', command)
+                    else:
+                        self.assert_sdk_packages(command)
 
     def test_stress_and_full_include_the_matrix_without_exclusions(self):
         for gate in ['stress', 'full', 'default']:
@@ -61,9 +75,22 @@ if sys.argv[1:2]==['test']:sys.exit(int(os.environ.get('CARGO_TEST_EXIT','0')))
                 self.assertFalse(any('--skip' in call for call in calls))
                 rust = [call for call in calls if call[:2] == ['cargo', 'test']]
                 self.assertEqual(len(rust), 1)
-                self.assertIn('alpha_mesh' if gate == 'stress' else '--workspace', rust[0])
+                self.assertNotIn('--workspace', rust[0])
+                if gate == 'stress':
+                    self.assertIn('alpha_mesh', rust[0])
+                else:
+                    self.assert_sdk_packages(rust[0])
+                    self.assert_sdk_packages(calls[0])
                 if gate != 'stress':
                     self.assertEqual(calls[-1], ['uv', 'run', '--locked', 'python', 'tools/test_python.py', '--wheel'])
+
+    def test_format_and_wheel_failures_propagate(self):
+        result, calls = self.run_gate('full', FORMAT_EXIT='7')
+        self.assertEqual(result.returncode, 7)
+        self.assertEqual(len(calls), 1)
+        result, calls = self.run_gate('full', WHEEL_EXIT='23')
+        self.assertEqual(result.returncode, 23)
+        self.assertEqual(calls[-1][0], 'uv')
 
     def test_full_propagates_rust_failure_before_starting_wheel_acceptance(self):
         result, calls = self.run_gate('full', CARGO_TEST_EXIT='19')

@@ -1,0 +1,24 @@
+{
+  "sdk": [
+    "cubism-matrix-kasane",
+    "kasane-animation",
+    "kasane-cmo3",
+    "kasane-core",
+    "kasane-live2d",
+    "kasane-moc3",
+    "kasane-moc3-psd",
+    "kasane-project",
+    "kasane-psd",
+    "kasane-python",
+    "kasane-render",
+    "kasane-render-metal",
+    "kasane-render-wgpu",
+    "kasane-sdk",
+    "kasane-sdk-observe"
+  ],
+  "editor": [
+    "editor-core",
+    "editor-render",
+    "kasane-editor"
+  ]
+}

@@ -2,7 +2,7 @@
 
 修订日期：2026-10-23。用户要求更彻底地合并：平铺所有自有 crate，统一 Editor 资产、工具和文档。**最终不保留 `apps/editor/` 项目壳，也不保留 `modules/` 与 `crates/` 两套源码布局。**
 
-状态：P0–P3 与 **P3F：目录平铺与二次路径适配** 已完成。18 个自有 crate、Editor 资产、工具、文档、vendor 与 Purism 已按下述布局落位；逐文件映射及聚焦验收见 [P3F 实施记录](../repository-merge/p3f-flattening.md)。下一阶段为 P4 测试/CI 包集合划分，再执行 P5–P6 产物与总体验收。
+状态：P0–P3 与 **P3F：目录平铺与二次路径适配** 已完成。18 个自有 crate、Editor 资产、工具、文档、vendor 与 Purism 已按下述布局落位；逐文件映射及聚焦验收见 [P3F 实施记录](../repository-merge/p3f-flattening.md)。P4 测试/CI 包集合划分也已实施并通过本机聚焦验证（见 [P4 记录](../repository-merge/p4-test-domains.md)）；托管 CI 尚未运行。下一阶段为 P5，随后执行 P6 总体验收。
 
 权威计划现位于 `docs/plans/repository-merge-plan.md`。执行事实和测试结果见[实施记录](../repository-merge/README.md)。旧版计划可在提交 `9e3c98cc` 的 `apps/editor/docs/plans/repository-merge-plan.md` 查看；不另存一份可编辑的旧计划。
 

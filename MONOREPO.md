@@ -28,7 +28,7 @@
 - `assets/editor/{app-icons,icons,locales}/` — application and packaging assets.
 - `vendor/` — third-party GPUI patches; inner workspaces remain independent.
 - `tools/dev-editor.sh`, `tools/build-editor-app.sh`, `tools/test-editor.sh` — Editor entrypoints.
-- `tools/test-sdk.sh` — SDK entrypoint. Broad CI/test package selection is the next migration phase; prefer explicit packages meanwhile.
+- `tools/test-sdk.sh` — SDK entrypoint. Both test entrypoints and CI use `tools/package-domains.json`; new members must be assigned to one domain.
 - `docs/` — combined plans, references, development guides and historical records.
 
 All 18 owned Cargo members live directly in `crates/<package.name>`. See

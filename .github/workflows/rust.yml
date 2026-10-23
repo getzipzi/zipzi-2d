@@ -1,4 +1,4 @@
-name: CI
+name: SDK CI
 on:
   push:
   pull_request:
@@ -17,16 +17,23 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: rustfmt, clippy
-      - name: Format
-        run: cargo fmt --check
-      - name: Static analysis
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - uses: astral-sh/setup-uv@v6
         with:
           version: '0.10.7'
           enable-cache: true
       - name: Sync Python environment
         run: uv sync --locked
+      - name: Package domain coverage
+        run: uv run --locked python tools/cargo_domain.py --check
+      - name: Package gate controls
+        run: uv run --locked python -m unittest discover -s tools -p test_cargo_domain.py -v
+      - name: Format
+        run: uv run --locked python tools/cargo_domain.py sdk fmt -- --check
+      - name: Static analysis
+        run: uv run --locked python tools/cargo_domain.py sdk clippy --all-targets --locked -- -D warnings
+      - name: SDK entrypoint controls
+        if: runner.os != 'Windows'
+        run: uv run --locked python -m unittest discover -s tests -p test_test_entrypoint.py -v
       - name: Acceptance validator negative controls
         run: uv run --locked python -m unittest discover -s tests -p test_acceptance_validators.py -v
       - name: Decoder safety without native Core
@@ -34,7 +41,7 @@ jobs:
           KASANE_MOC3_DISABLE_CORE_VALIDATION: "1"
         run: cargo test -p kasane-moc3 --no-default-features --test safety_tests --locked
       - name: Regression tests
-        run: cargo test --workspace --locked
+        run: uv run --locked python tools/cargo_domain.py sdk test --locked
       - name: Build Python wheel
         run: uv build --wheel --python 3.14 --out-dir target/python-wheels crates/kasane-python
       - name: SDK experiment harness controls

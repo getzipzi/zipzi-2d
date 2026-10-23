@@ -35,6 +35,8 @@ Cargo artifact messages. Dev builds intentionally override `CARGO_TARGET_DIR`.
 
 ## Test
 
+See the shared [test and CI guide](testing.md) for package domains and hosted-runner coverage.
+
 The full suite requires macOS and Metal. The test script checks formatting,
 Python tooling, Rust behavior, and native acceptance. Native acceptance uses the
 production application library with the `test-support` feature; headless UI unit
@@ -61,7 +63,7 @@ remain part of the full gate.
 `fast` and `regression` omit example compilation and doctests. The core
 `acceptance` test target owns licensed transfers and imported-animation checks;
 `integration` keeps synthetic behavior checks. Native UI gates consistently use
-`test-support`. UI and regression gates select the same workspace packages to
+`test-support`. UI and regression gates select the same three Editor packages to
 keep dependency feature unification consistent with full runs. All Rust gates
 unset `KASANE_DEV_SESSION_DIR`.
 
