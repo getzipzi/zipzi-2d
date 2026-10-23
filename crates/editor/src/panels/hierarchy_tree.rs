@@ -134,6 +134,26 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         cx.notify();
     }
 
+    pub(crate) fn locate_created_object(
+        &mut self,
+        document: DocumentId,
+        object: editor_core::ObjectRef,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.sync_header(window, cx);
+        if self.document_id != Some(document) {
+            return;
+        }
+        self.view.filter.revealed = Some(object.clone());
+        self.view.filter.reveal_kind = filter::RevealKind::Created;
+        self.last_selection = None;
+        self.selection = selection::TreeSelection::default();
+        self.locate_target = Some(object);
+        self.rows_dirty = true;
+        cx.notify();
+    }
+
     fn prefix() -> &'static str {
         if DEFORMER { "deformer" } else { "mesh" }
     }

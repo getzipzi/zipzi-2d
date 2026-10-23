@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建、共享移动、树选择、Parameter 文件夹导航、多选移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树创建及命令入口、共享移动、树选择、Parameter 文件夹导航、多选移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
 
 ## 首轮实现：创建与输入边界
 
@@ -16,7 +16,7 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入 | 变形树创建、变形父级保持形态移动与其余创建命令入口仍待实施 |
+| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入 | 变形树创建与变形父级保持形态移动仍待实施 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
@@ -255,3 +255,42 @@ git diff --check
 受影响 UI/输入路由/移动/创建/虚拟化工作量门禁 **174 项通过**，包含新增 8 项文件夹导航回归：独立折叠与检查、可见层级导航、按焦点移动及未分组 no-op、旧文本结算与文本按键隔离、空组和文档/工作区切换、模态阻止、删除/Undo 光标校正，以及 80 行虚拟列表 Home/End 定位。格式与空白检查通过。本轮没有 core 产品改动，未重复运行 core 门禁；未运行完整套件、原生截图或 Release 性能基准。
 
 U2 仍待变形树创建的位置契约、保持形态改父级和其余创建命令入口；U3–U6 状态不变。
+
+
+## 第八轮实现：创建主菜单与可配置命令
+
+第七轮 Parameter 文件夹导航已提交为 `db58fce`。本轮继续使用当前 checkout，依赖仍为 `kasane-2d b86b13b`；没有创建 worktree 或修改相邻仓库。
+
+- 命令目录新增 `scene.create-part`、`scene.create-mesh`、`scene.create-warp`、`scene.create-rotation`、`scene.create-offscreen`。均为 Modeling 文档命令，无默认键位、不可按住连发，可通过现有 `keybindings.json` 配置；文本、搜索框、输入法字符输入和模态继续由既有路由隔离。原 `tool.generate-mesh` 保留其内容生成用途。
+- “编辑 → 创建”主菜单列出五种场景创建，以及已有 Parameter 和 ParameterGroup 创建命令。场景命令在调用时捕获与组织树工具栏相同的场景选择，使用组织投影的完整集合位置，不因焦点处于变形树就隐式指定实际变形父级。右键继续使用显式点击行上下文。
+- 新增共享 `authoring/scene_creation.rs`，组织树工具栏、右键、原生菜单与命令调用同一执行及结果协调路径。创建成功后显露结果和祖先、定位树、打开 Properties、选中名称；隐藏面板可重新打开。Properties 最后显示，支持树与 Properties 共用标签组的布局。延迟定位复核执行后上下文及检查对象；新建会重置树的范围选择锚点，移动仍保留原锚点。
+- core 提供轻量创建上下文可用性查询，复用创建拥有者解析、SDK 集合能力和原生 Offscreen 校验；查询不分配对象身份、不计算避重名称、不枚举插入顺序、不生成或保存文档计划。实际创建才解析完整集合锚点并规划，继续由 SDK 校验最终数据、锁及事务。
+- 原生菜单明确禁用锁定容器、缺少 Offscreen 拥有者或已有 Offscreen 的创建动作，并显示中英文原因。菜单缓存纳入创建原因，避免可用性一直为 false 时保留旧原因。过期文档目标、Animation、忙状态或模态不发布创建；输入结算和后续独立改名历史沿用共享边界。
+
+第八轮定向门禁：
+
+```sh
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p kasane-editor --lib -- \
+  headless_tests::scene_creation_commands headless_tests::parameter_navigation \
+  headless_tests::palette_steps headless_tests::palette_move_to \
+  panels::sorting::destination::tests \
+  headless_tests::tree_selection headless_tests::palette_commands \
+  headless_tests::hierarchy headless_tests::sorting headless_tests::scene_creation \
+  headless_tests::parameters headless_tests::parameter_groups \
+  headless_tests::parameter_management headless_tests::parameter_creation \
+  headless_tests::authoring headless_tests::properties headless_tests::panel_toolbar \
+  headless_tests::command_targets headless_tests::input_routing \
+  headless_tests::ui_performance keybindings::tests input_routing::policy \
+  panels::hierarchy_tree::filter menus::tests
+
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --test integration -- \
+  scene_creation:: scene_lifecycle:: organization_authoring:: palette_steps:: \
+  palette_moves:: sorting:: keyboard:: commands::
+
+cargo fmt --all -- --check
+git diff --check
+```
+
+受影响 UI/命令/移动/创建/输入路由/虚拟化门禁 **184 项通过**，包含新增 9 项创建命令 UI 回归：原生菜单真实动作、各命令来源、实际改键与文本/重复按键隔离、输入结算及过滤显露、禁用原因缓存更新、过期目标与工作区/模态拒绝、隐藏面板恢复、共用标签组名称聚焦、新建后的范围锚点。core 定向门禁 **63 项通过**，包含新增 2 项命令可用性/原生归属、历史与 redo 保留、稳定命令 ID、改键及冲突检查回归，并扩展已有忙状态断言。格式与空白检查通过。本轮未运行完整套件、原生截图或 Release 性能基准。
+
+U2 仍未全量验收：变形树创建需要核心方案第 6.1 节的双投影插入位置契约；改变实际变形父级需要保持形态转换交互。U1 的全入口收口与 U3–U6 状态不变。

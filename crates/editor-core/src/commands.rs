@@ -77,6 +77,16 @@ pub enum CommandId {
     PaletteMoveUp,
     #[serde(rename = "palette.move-down")]
     PaletteMoveDown,
+    #[serde(rename = "scene.create-part")]
+    CreatePart,
+    #[serde(rename = "scene.create-mesh")]
+    CreateMesh,
+    #[serde(rename = "scene.create-warp")]
+    CreateWarp,
+    #[serde(rename = "scene.create-rotation")]
+    CreateRotation,
+    #[serde(rename = "scene.create-offscreen")]
+    CreateOffscreen,
     #[serde(rename = "parameter.create")]
     CreateParameter,
     #[serde(rename = "parameter.edit")]
@@ -312,6 +322,23 @@ specs![
         ["alt-down"]
     ),
     (PaletteMoveTo, "authoring.move_to", Palette, false, []),
+    (CreatePart, "authoring.new_part", Document, false, []),
+    (CreateMesh, "authoring.new_mesh", Document, false, []),
+    (CreateWarp, "authoring.new_warp", Document, false, []),
+    (
+        CreateRotation,
+        "authoring.new_rotation",
+        Document,
+        false,
+        []
+    ),
+    (
+        CreateOffscreen,
+        "authoring.new_offscreen",
+        Document,
+        false,
+        []
+    ),
     (CreateParameter, "parameter.new", Document, false, []),
     (EditParameter, "parameter.edit", Document, false, []),
     (DeleteParameter, "parameter.delete", Document, false, []),
@@ -417,6 +444,17 @@ specs![
     (ShowShortcuts, "menu.shortcuts", Window, false, []),
 ];
 impl CommandId {
+    pub fn scene_creation_type(self) -> Option<crate::SceneObjectType> {
+        use crate::SceneObjectType as T;
+        Some(match self {
+            Self::CreatePart => T::Part,
+            Self::CreateMesh => T::Mesh,
+            Self::CreateWarp => T::Warp,
+            Self::CreateRotation => T::Rotation,
+            Self::CreateOffscreen => T::Offscreen,
+            _ => return None,
+        })
+    }
     pub fn spec(self) -> &'static CommandSpec {
         COMMANDS.iter().find(|s| s.id == self).unwrap()
     }
@@ -729,6 +767,19 @@ impl Editor {
             }
             PaletteMoveUp | PaletteMoveDown | PaletteMoveTo | CreateParameter
             | CreateParameterGroup => modeling && target && !self.is_busy() && !self.exiting(),
+            CreatePart | CreateMesh | CreateWarp | CreateRotation | CreateOffscreen => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && self.document().is_some_and(|doc| {
+                        doc.validate_scene_object_creation_context(
+                            command.id.scene_creation_type().unwrap(),
+                            &doc.context().selections,
+                        )
+                        .is_ok()
+                    })
+            }
             EditParameter | DeleteParameter | EditParameterGroup | DeleteParameterGroup => {
                 modeling
                     && target

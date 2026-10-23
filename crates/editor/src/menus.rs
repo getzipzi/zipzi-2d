@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 #[derive(Clone, Default, PartialEq, Eq)]
 pub struct MenuState {
     pub commands: Vec<editor_core::CommandState>,
+    pub creation_reasons: Vec<Option<String>>,
     pub targets: Vec<editor_core::CommandTarget>,
     pub text: bool,
     pub modal: bool,
@@ -138,6 +139,24 @@ impl EditorView {
                     )
                 })
                 .collect(),
+            creation_reasons: crate::authoring::scene_creation::COMMANDS
+                .iter()
+                .map(|id| {
+                    if self.editor.is_busy()
+                        || self.editor.editing_context()
+                            != Some(editor_core::EditingContext::Modeling)
+                    {
+                        return None;
+                    }
+                    let doc = self.editor.document()?;
+                    doc.validate_scene_object_creation_context(
+                        id.scene_creation_type().unwrap(),
+                        &doc.context().selections,
+                    )
+                    .err()
+                    .map(|error| crate::authoring::scene_creation::creation_error(&error))
+                })
+                .collect(),
             targets: COMMANDS
                 .iter()
                 .map(|spec| {
@@ -176,12 +195,19 @@ impl EditorView {
         let item = |id: CommandId| {
             let command = self.viewport_command(id, editor_core::CommandSource::NativeMenu);
             let state = property_state(id, self.editor.command_state(command));
-            MenuItem::action(
-                t!(id.spec().label).into_owned(),
-                RunCommand::targeted(command),
-            )
-            .disabled(modal || !state.enabled)
-            .checked(state.checked)
+            let mut label = t!(id.spec().label).into_owned();
+            if !state.enabled {
+                if let Some(reason) = crate::authoring::scene_creation::COMMANDS
+                    .iter()
+                    .position(|command| *command == id)
+                    .and_then(|i| self.menu_state.creation_reasons[i].as_ref())
+                {
+                    label = format!("{label} · {reason}");
+                }
+            }
+            MenuItem::action(label, RunCommand::targeted(command))
+                .disabled(modal || !state.enabled)
+                .checked(state.checked)
         };
         let edit = if text {
             vec![
@@ -241,16 +267,35 @@ impl EditorView {
                 item(CommandId::Close),
                 MenuItem::action(t!("menu.close_window"), CloseWindow).disabled(modal),
             ]),
-            Menu::new(t!("menu.edit")).items(edit.into_iter().chain([
-                MenuItem::separator(),
-                MenuItem::os_action(t!("menu.cut"), input::Cut, OsAction::Cut),
-                MenuItem::os_action(t!("menu.copy"), input::Copy, OsAction::Copy),
-                MenuItem::os_action(t!("menu.paste"), input::Paste, OsAction::Paste),
-                MenuItem::os_action(t!("menu.select_all"), input::SelectAll, OsAction::SelectAll),
-                item(CommandId::Deselect),
-                item(CommandId::CommitProperty),
-                item(CommandId::CancelProperty),
-            ])),
+            Menu::new(t!("menu.edit")).items(
+                edit.into_iter().chain([
+                    MenuItem::separator(),
+                    MenuItem::os_action(t!("menu.cut"), input::Cut, OsAction::Cut),
+                    MenuItem::os_action(t!("menu.copy"), input::Copy, OsAction::Copy),
+                    MenuItem::os_action(t!("menu.paste"), input::Paste, OsAction::Paste),
+                    MenuItem::os_action(
+                        t!("menu.select_all"),
+                        input::SelectAll,
+                        OsAction::SelectAll,
+                    ),
+                    item(CommandId::Deselect),
+                    item(CommandId::CommitProperty),
+                    item(CommandId::CancelProperty),
+                    MenuItem::separator(),
+                    MenuItem::submenu(
+                        Menu::new(t!("menu.create_object")).items(
+                            crate::authoring::scene_creation::COMMANDS
+                                .into_iter()
+                                .map(&item)
+                                .chain([
+                                    MenuItem::separator(),
+                                    item(CommandId::CreateParameter),
+                                    item(CommandId::CreateParameterGroup),
+                                ]),
+                        ),
+                    ),
+                ]),
+            ),
             view_menu(item, theme::current(cx)),
             Menu::new(t!("menu.window")).items([
                 item(CommandId::ResetLayout),

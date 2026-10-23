@@ -30,6 +30,40 @@ fn binding(
 }
 
 #[test]
+fn scene_creation_bindings_have_stable_ids_and_can_be_configured_without_defaults()
+-> anyhow::Result<()> {
+    for (id, key) in [
+        (CommandId::CreatePart, "scene.create-part"),
+        (CommandId::CreateMesh, "scene.create-mesh"),
+        (CommandId::CreateWarp, "scene.create-warp"),
+        (CommandId::CreateRotation, "scene.create-rotation"),
+        (CommandId::CreateOffscreen, "scene.create-offscreen"),
+    ] {
+        assert_eq!(serde_json::from_value::<CommandId>(key.into())?, id);
+        assert_eq!(serde_json::to_value(id)?, key);
+        assert!(keys(&resolve(ShortcutPlatform::Macos, vec![])?, id).is_empty());
+        assert_eq!(
+            keys(
+                &resolve(
+                    ShortcutPlatform::Macos,
+                    vec![binding(id, None, &["ctrl-alt-n"])]
+                )?,
+                id
+            ),
+            ["ctrl-alt-n"]
+        );
+        assert!(
+            resolve(
+                ShortcutPlatform::Macos,
+                vec![binding(id, None, &["secondary-s"])]
+            )
+            .is_err()
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn palette_bindings_are_configurable_and_conflict_with_document_commands() -> anyhow::Result<()> {
     let defaults = resolve(ShortcutPlatform::Macos, vec![])?;
     assert_eq!(keys(&defaults, CommandId::PaletteMoveUp), ["alt-up"]);

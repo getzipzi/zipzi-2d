@@ -1,5 +1,72 @@
 use super::support;
 use editor_core::*;
+
+#[test]
+fn scene_creation_commands_share_native_owner_availability_and_reject_stale_targets()
+-> anyhow::Result<()> {
+    let mut document = Document::new_blank()?;
+    let plan = document.plan_scene_object_creation(SceneObjectType::Part, "Owner".into(), &[])?;
+    let owner = document
+        .execute_scene_object_creation(&plan)?
+        .suggested_selection[0]
+        .clone();
+    let mut editor = crate::support::editor_from_document(document);
+    let commands = [
+        CommandId::CreatePart,
+        CommandId::CreateMesh,
+        CommandId::CreateWarp,
+        CommandId::CreateRotation,
+        CommandId::CreateOffscreen,
+    ];
+    for id in commands {
+        assert_eq!(
+            editor.command_available(editor.command(id)),
+            id != CommandId::CreateOffscreen
+        );
+        assert_eq!(id.spec().scope, CommandScope::Document);
+        assert!(!id.spec().repeat);
+    }
+    editor.execute(EditorCommand::SelectObject(owner.clone()))?;
+    for id in commands {
+        assert!(editor.command_available(editor.command(id)));
+    }
+    let plan = editor.document().unwrap().plan_scene_object_creation(
+        SceneObjectType::Offscreen,
+        "Composite".into(),
+        std::slice::from_ref(&owner),
+    )?;
+    editor.execute_scene_object_creation(editor.active_id().unwrap(), &plan)?;
+    assert!(!editor.command_available(editor.command(CommandId::CreateOffscreen)));
+    editor.execute(EditorCommand::Undo)?;
+    let history = editor.document().unwrap().history_lengths();
+    for _ in 0..16 {
+        for id in commands {
+            assert!(editor.command_available(editor.command(id)));
+        }
+    }
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+    editor.execute(EditorCommand::SetObjectsLocked {
+        objects: vec![owner.clone()],
+        locked: true,
+    })?;
+    for id in commands {
+        assert!(!editor.command_available(editor.command(id)));
+    }
+    editor.execute(EditorCommand::Undo)?;
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    for id in commands {
+        assert!(!editor.command_available(editor.command(id)));
+    }
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    let saved = editor.command(CommandId::CreateMesh);
+    editor.new_document()?;
+    assert!(editor.dispatch(saved).is_err());
+    assert!(matches!(
+        editor.dispatch(editor.command(CommandId::CreateMesh))?,
+        CommandEffect::Host(_)
+    ));
+    Ok(())
+}
 #[test]
 fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Result<()> {
     let (doc, dir) = support::sample_document()?;
@@ -37,6 +104,11 @@ fn commands_check_targets_busy_state_and_workspace_availability() -> anyhow::Res
         CommandId::GlueTool,
         CommandId::LassoTool,
         CommandId::ZoomIn,
+        CommandId::CreatePart,
+        CommandId::CreateMesh,
+        CommandId::CreateWarp,
+        CommandId::CreateRotation,
+        CommandId::CreateOffscreen,
     ] {
         assert!(!editor.command_available(editor.command(id)));
     }

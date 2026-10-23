@@ -4,6 +4,7 @@
 use crate::*;
 use editor_core::{DocumentId, EditingContextToken, ObjectKind, ObjectRef, OperationResult};
 use gpui_kit::component::WindowExt;
+pub(crate) mod scene_creation;
 
 /// A deferred menu must not target a restored incarnation of a deleted object.
 /// Until a domain supplies a narrower address, reject changed document versions.

@@ -27,6 +27,7 @@ mod project_import;
 mod properties;
 mod recent_files;
 mod scene_creation;
+mod scene_creation_commands;
 mod slide_number_input;
 mod sorting;
 mod themes;

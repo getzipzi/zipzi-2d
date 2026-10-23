@@ -215,6 +215,13 @@ impl EditorView {
                     | CommandId::DeleteParameterGroup => {
                         self.handle_parameter_command(command, window, cx);
                     }
+                    CommandId::CreatePart
+                    | CommandId::CreateMesh
+                    | CommandId::CreateWarp
+                    | CommandId::CreateRotation
+                    | CommandId::CreateOffscreen => {
+                        self.handle_scene_creation_command(command, window, cx)
+                    }
                     id if editor_core::PanelKind::for_command(id, self.editor.workspace())
                         .is_some() =>
                     {

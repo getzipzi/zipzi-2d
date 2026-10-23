@@ -18,6 +18,7 @@ third_party = "Third-party components retain their respective copyrights and lic
 warranty = "Free software: you may redistribute and modify it under the GNU GPL version 3 only. Provided without any warranty."
 
 [menu]
+create_object = "Create"
 language = "Language"
 follow_system = "Follow System"
 english = "English"

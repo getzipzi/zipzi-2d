@@ -31,6 +31,40 @@ enum CreationPlan {
 }
 
 impl Document {
+    /// Lightweight menu availability. Query native destination locks and
+    /// Offscreen validation without allocating identities or building plans.
+    /// Candidates are settled by the host before the final creation planner.
+    pub fn validate_scene_object_creation_context(
+        &self,
+        kind: SceneObjectType,
+        selection: &[ObjectRef],
+    ) -> anyhow::Result<()> {
+        let (part_id, _) = self.scene_creation_container(selection)?;
+        let state = self
+            .session
+            .organization_collection_capabilities(&OrganizationCollection::PartMembers {
+                part_id: part_id.clone(),
+            })?
+            .create;
+        if let kasane_sdk::CapabilityState::Unavailable { code }
+        | kasane_sdk::CapabilityState::Unsupported { code } = state
+        {
+            anyhow::bail!("{code}");
+        }
+        if kind == SceneObjectType::Offscreen {
+            let part_id = part_id.ok_or_else(|| anyhow::anyhow!("OFFSCREEN_REQUIRES_PART"))?;
+            // The document UUID cannot be another scene object's identity.
+            // Validation uses native defaults, as the final SceneCreate does.
+            let status = self.model().validate_offscreen(&kasane_core::Offscreen {
+                id: self.model().id().to_owned(),
+                part_id,
+                ..Default::default()
+            });
+            anyhow::ensure!(status.is_ok(), "{}: {}", status.code, status.message);
+        }
+        Ok(())
+    }
+
     /// Capture a location in the organization projection. This deliberately does
     /// not assign a deformation parent: the two tree projections are independent.
     pub fn plan_scene_object_creation(
@@ -105,11 +139,12 @@ impl Document {
         unreachable!()
     }
 
-    fn scene_creation_location(
+    // `after_selection` distinguishes sibling insertion from container append.
+    // Availability only needs the owner; collection order is queried on creation.
+    fn scene_creation_container(
         &self,
-        kind: SceneObjectType,
         selection: &[ObjectRef],
-    ) -> anyhow::Result<(Option<String>, Option<String>)> {
+    ) -> anyhow::Result<(Option<String>, bool)> {
         let mut owners = Vec::new();
         for object in selection {
             anyhow::ensure!(
@@ -124,7 +159,7 @@ impl Document {
             );
             self.organization_authoring_capabilities(object)?;
             if selection.len() == 1 && object.kind == ObjectKind::Part {
-                return Ok((Some(object.id.clone()), None));
+                return Ok((Some(object.id.clone()), false));
             }
             owners.push(
                 self.model()
@@ -133,10 +168,22 @@ impl Document {
             );
         }
         let Some(owner) = owners.first().cloned() else {
-            return Ok((None, None));
+            return Ok((None, false));
         };
         if owners.iter().any(|candidate| *candidate != owner) {
-            return Ok((None, None));
+            return Ok((None, false));
+        }
+        Ok((owner, true))
+    }
+
+    fn scene_creation_location(
+        &self,
+        kind: SceneObjectType,
+        selection: &[ObjectRef],
+    ) -> anyhow::Result<(Option<String>, Option<String>)> {
+        let (owner, after_selection) = self.scene_creation_container(selection)?;
+        if !after_selection {
+            return Ok((owner, None));
         }
         let order = self
             .session
@@ -153,9 +200,11 @@ impl Document {
                         == (kind == SceneObjectType::Part)
             })
             .collect();
+        let selected: std::collections::HashSet<_> =
+            selection.iter().map(|object| object.id.as_str()).collect();
         let before = order
             .iter()
-            .rposition(|handle| selection.iter().any(|object| object.id == handle.id()))
+            .rposition(|handle| selected.contains(handle.id()))
             .and_then(|index| order.get(index + 1))
             .map(|handle| handle.id().to_owned());
         Ok((owner, before))
