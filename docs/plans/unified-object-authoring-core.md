@@ -471,6 +471,10 @@ UI 的失焦、Esc、Save 等由 UI 方案协调为具体生命周期调用；�
 
 新父级可能引入新的参数依赖。例如原来的子对象只依赖 A，新父级旋转依赖 B；保持一个 B 值处的画面不能证明保持整个 B 区间。PreserveParameterDomain 必须检查新旧祖先及绑定的依赖闭包。有限点抽样只能作为回归测试，不能当作连续参数域的保证；必须有解析转换或覆盖该域的保守误差界，否则返回不支持原因。
 
+UI 第十轮接入补充了稳定目标位置与后台计划契约。`ReparentEdit.placement: Option<ReparentPlacement>` 在原生计划内表达 `before` 锚点；未提供时沿用既有顺序，显式 `before: None` 表示目标实际变形集合末尾。原生先归并选择、验证锁/循环/目标锚点，再同时规划几何替换与变形顺序；执行一次装入，不能由 Editor 在转换后另行重排。顺序数据计入转换容量，保存回读及单条 Undo/Redo 保留结果。
+
+SDK `AuthoringSnapshot::plan_scene_edit_with_control` 允许从一次只读捕获在后台规划；结果携带原会话版本、完整报告、容量与共享取消控制。确认时复用原计划并重新验证版本/取消/容量，不在 UI 线程重新进行保持形态计算。Editor 另行冻结并验证预览参数 revision；默认 `PreserveEditState`，参数域保持和容差调整均需显式选择。详细交互与门禁见[UI 第十轮实施记录](unified-object-authoring-ui-implementation.md)。
+
 #### 8.1.2 首批支持边界与验收
 
 | 关系与转换条件 | 必须交付的行为 |

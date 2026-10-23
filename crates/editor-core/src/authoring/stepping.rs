@@ -10,7 +10,7 @@ use kasane_sdk::{
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
-pub struct PaletteMovePlanningError(kasane_core::Status);
+pub struct PaletteMovePlanningError(pub(super) kasane_core::Status);
 impl PaletteMovePlanningError {
     pub fn code(&self) -> &str {
         &self.0.code

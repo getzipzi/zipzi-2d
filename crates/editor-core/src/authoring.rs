@@ -119,3 +119,7 @@ impl crate::DocumentSession {
         Ok(result)
     }
 }
+
+#[path = "authoring/reparenting.rs"]
+mod reparenting;
+pub use reparenting::{PalettePreservation, PaletteReparentCapture, PaletteReparentPlan};

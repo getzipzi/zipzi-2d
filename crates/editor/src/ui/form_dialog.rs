@@ -73,6 +73,7 @@ pub(crate) trait FormDialogView: Render {
     /// Must revalidate against the current source immediately before executing.
     fn submit(&mut self, window: &mut Window, cx: &mut Context<Self>) -> anyhow::Result<()>;
     fn error_message(error: &anyhow::Error) -> String;
+    fn closing(&mut self) {}
     fn focus_invalid(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
 }
 
@@ -166,6 +167,7 @@ pub(crate) fn open<V: FormDialogView>(
             .on_cancel(move |_, _, cx| cancel.read(cx).dialog().phase == Phase::Editing)
             .on_close(move |_, _, cx| {
                 close.update(cx, |v, cx| {
+                    v.closing();
                     v.dialog_mut().close();
                     cx.notify();
                 })

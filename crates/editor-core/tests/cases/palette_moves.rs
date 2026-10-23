@@ -184,7 +184,11 @@ fn destination_metadata_uses_typed_containers_in_native_preorder_without_history
             .all(|choice| choice.object.as_ref().unwrap().kind == K::Part)
     );
     assert_eq!(d.history_lengths(), before);
-    assert!(d.palette_move_destinations(V::Deformation).is_err());
+    assert!(
+        d.palette_move_destinations(V::Deformation)?[0]
+            .object
+            .is_none()
+    );
     let plan = d.plan_palette_move(PaletteMove {
         projection: V::Organization,
         sources: vec![object(K::Part, 103)],

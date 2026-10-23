@@ -43,14 +43,19 @@ pub struct PaletteMovePlan(pub(super) MovePlan);
 pub(super) enum MovePlan {
     Organization(kasane_sdk::OrganizationEditPlan),
     Scene(kasane_sdk::SceneEditPlan),
+    ReparentRequired { noop: bool },
     Steps(super::stepping::PaletteStepsPlan),
 }
 impl PaletteMovePlan {
+    pub fn requires_preservation(&self) -> bool {
+        matches!(self.0, MovePlan::ReparentRequired { .. })
+    }
     pub fn is_noop(&self) -> bool {
         match &self.0 {
             MovePlan::Organization(plan) => plan.is_noop(),
             MovePlan::Scene(plan) => plan.is_noop(),
             MovePlan::Steps(plan) => plan.is_noop(),
+            MovePlan::ReparentRequired { noop } => *noop,
         }
     }
 }
@@ -60,13 +65,11 @@ impl Document {
         &self,
         projection: PaletteProjection,
     ) -> Result<Vec<PaletteMoveDestination>> {
-        ensure!(
-            projection != PaletteProjection::Deformation,
-            "Deformation parent changes require a preservation plan"
-        );
         let index = self.object_index();
         let kind = if projection == PaletteProjection::Organization {
             ObjectKind::Part
+        } else if projection == PaletteProjection::Deformation {
+            ObjectKind::Deformer
         } else {
             ObjectKind::ParameterGroup
         };
@@ -81,12 +84,22 @@ impl Document {
                 Collection::ParameterGroups { parent_id: owner }
             };
             result.push(PaletteMoveDestination {
-                object,
+                object: object.clone(),
                 path: path.clone(),
             });
             let mut children = Vec::new();
-            for handle in self.session.organization_collection(collection)? {
+            let handles = if projection == PaletteProjection::Deformation {
+                self.session
+                    .scene_collection(&SceneCollection::Deformation {
+                        parent_id: object.as_ref().map(|o| o.id.clone()),
+                    })?
+            } else {
+                self.session.organization_collection(collection)?
+            };
+            for handle in handles {
                 if (kind == ObjectKind::Part && handle.kind() != kasane_sdk::ObjectKind::Part)
+                    || (kind == ObjectKind::Deformer
+                        && handle.kind() != kasane_sdk::ObjectKind::Transform)
                     || !seen.insert(handle.id().to_owned())
                 {
                     continue;
@@ -123,34 +136,18 @@ impl Document {
             .map(|object| object.id.clone())
             .collect();
         if request.projection == PaletteProjection::Deformation {
-            ensure!(
-                request.position != PalettePosition::Inside,
-                "Deformation parent changes require a preservation plan"
-            );
-            let target = request
-                .target
-                .as_ref()
-                .ok_or_else(|| anyhow!("Choose a deformation sibling"))?;
-            let parent = self
-                .model()
-                .scene_deformer_parent(&target.id)
-                .ok_or_else(|| anyhow!("Target has no deformation collection"))?;
-            let collection = SceneCollection::Deformation {
-                parent_id: (!parent.is_empty()).then(|| parent.to_owned()),
+            let (collection, before) =
+                super::reparenting::deformation_destination(self.model(), &request)?;
+            let SceneCollection::Deformation { ref parent_id } = collection else {
+                unreachable!()
             };
-            let members = self
-                .model()
-                .scene_collection(&collection)
-                .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
-            let members: Vec<String> = members
-                .into_iter()
-                .filter(|id| {
-                    !parent.is_empty()
-                        || self.model().get_transform(id).is_some()
-                            == self.model().get_transform(&target.id).is_some()
-                })
-                .collect();
-            let before = insertion(&members, &ids, target, request.position)?;
+            if request.sources.iter().any(|object| {
+                self.model().scene_deformer_parent(&object.id)
+                    != Some(parent_id.as_deref().unwrap_or(""))
+            }) {
+                let noop = self.palette_reparent_preflight(&request)?;
+                return Ok(PaletteMovePlan(MovePlan::ReparentRequired { noop }));
+            }
             return Ok(PaletteMovePlan(MovePlan::Scene(
                 self.plan_scene_authoring(SceneEdit::Move {
                     ids,
@@ -253,6 +250,9 @@ impl Document {
             MovePlan::Organization(plan) => self.execute_organization_authoring(plan),
             MovePlan::Scene(plan) => self.execute_scene_authoring(plan),
             MovePlan::Steps(plan) => self.execute_palette_steps(plan),
+            MovePlan::ReparentRequired { .. } => {
+                anyhow::bail!("Review the preservation plan before moving")
+            }
         }
     }
 
@@ -268,7 +268,7 @@ impl Document {
     }
 }
 
-fn insertion(
+pub(super) fn insertion(
     members: &[String],
     sources: &[String],
     target: &ObjectRef,

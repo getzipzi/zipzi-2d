@@ -907,7 +907,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                         .text_color(theme.muted_foreground)
                         .child(t!("editor.tree_drop_root")),
                     &self.sorting,
-                    SortItem::TreeRoot,
+                    SortItem::TreeRoot { deformer: DEFORMER },
                     None,
                     cx,
                 ),

@@ -2,6 +2,7 @@
 //! this view owns hit testing, feedback, hover expansion and scrolling.
 use crate::{EditorView, authoring::AuthoringContext};
 mod destination;
+mod reparent;
 use editor_core::{
     DocumentId, ObjectKind, ObjectRef, PaletteMove, PaletteMovePlan,
     PalettePosition as DropPosition, PaletteProjection,
@@ -13,7 +14,7 @@ use std::{cell::Cell, rc::Rc, time::Duration};
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(super) enum SortItem {
     Tree { deformer: bool, object: ObjectRef },
-    TreeRoot,
+    TreeRoot { deformer: bool },
     Parameter(String),
     Group(Option<String>),
 }
@@ -28,8 +29,10 @@ impl SortItem {
     }
     fn projection(&self) -> PaletteProjection {
         match self {
-            Self::Tree { deformer: true, .. } => PaletteProjection::Deformation,
-            Self::Tree { .. } | Self::TreeRoot => PaletteProjection::Organization,
+            Self::Tree { deformer: true, .. } | Self::TreeRoot { deformer: true } => {
+                PaletteProjection::Deformation
+            }
+            Self::Tree { .. } | Self::TreeRoot { .. } => PaletteProjection::Organization,
             _ => PaletteProjection::Parameters,
         }
     }
@@ -41,11 +44,12 @@ fn drop_position(
     pointer: Point<Pixels>,
     bounds: Bounds<Pixels>,
 ) -> DropPosition {
-    if matches!(target, SortItem::TreeRoot | SortItem::Group(None)) {
+    if matches!(target, SortItem::TreeRoot { .. } | SortItem::Group(None)) {
         return DropPosition::Inside;
     }
     let container = matches!(target, SortItem::Group(Some(_)))
-        || matches!(target, SortItem::Tree { deformer: false, object } if object.kind == ObjectKind::Part);
+        || matches!(target, SortItem::Tree { deformer: false, object } if object.kind == ObjectKind::Part)
+        || matches!(target, SortItem::Tree { deformer: true, object } if object.kind == ObjectKind::Deformer);
     if container
         && pointer.y >= bounds.top() + bounds.size.height * 0.25
         && pointer.y <= bounds.bottom() - bounds.size.height * 0.25
@@ -305,7 +309,28 @@ impl SortState {
             target: target.reference(),
             position,
         };
+        let preservation = self.cached.as_ref().is_some_and(|(_, _, result)| {
+            result
+                .as_ref()
+                .is_ok_and(|plan| plan.requires_preservation())
+        });
         self.clear(cx);
+        if preservation {
+            let owner = self.owner.clone();
+            let document = drag.document;
+            window.defer(cx, move |window, cx| {
+                reparent::open(
+                    owner,
+                    document,
+                    context,
+                    request.sources.clone(),
+                    Some(request),
+                    window,
+                    cx,
+                );
+            });
+            return;
+        }
         if let Some(owner) = self.owner.upgrade() {
             owner.update(cx, |owner, cx| {
                 let result = owner.execute_authoring(context, window, cx, |editor, document| {
@@ -793,7 +818,7 @@ pub(super) fn move_menu(
                 }),
         );
     }
-    if projection != PaletteProjection::Deformation {
+    {
         menu = menu.item(
             PopupMenuItem::new(crate::t!("authoring.move_to"))
                 .action(Box::new(crate::actions::RunCommand::new(
@@ -830,6 +855,20 @@ fn move_error(error: &anyhow::Error) -> String {
             "PALETTE_DEFORMATION_SIBLINGS" => {
                 return crate::t!("authoring.step_deformation_siblings").into_owned();
             }
+            "SUBTREE_CONVERSION_UNPROVEN" => {
+                return crate::t!("reparent.subtree_unproven").into_owned();
+            }
+            "NONLINEAR_PARENT_UNPROVEN" => {
+                return crate::t!("reparent.nonlinear_unproven").into_owned();
+            }
+            "PARAMETER_DOMAIN_UNPROVEN" => {
+                return crate::t!("reparent.domain_unproven").into_owned();
+            }
+            "SINGULAR_PARENT" => return crate::t!("reparent.singular").into_owned(),
+            "STALE_PLAN" | "STALE_VERSION" => {
+                return crate::t!("authoring.move_stale").into_owned();
+            }
+            "AUTHORING_CANCELLED" => return crate::t!("reparent.cancelled").into_owned(),
             "OBJECT_LOCKED" => return crate::t!("authoring.locked").into_owned(),
             "OFFSCREEN_REQUIRES_PART" => {
                 return crate::t!("authoring.move_requires_part").into_owned();

@@ -312,6 +312,10 @@ pub(super) fn open(
     window: &mut Window,
     cx: &mut App,
 ) {
+    if projection == PaletteProjection::Deformation {
+        super::reparent::open(owner, document, context, sources, None, window, cx);
+        return;
+    }
     if let Err(error) = MoveDestinationPicker::open(
         owner.clone(),
         document,

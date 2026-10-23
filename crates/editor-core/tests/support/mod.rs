@@ -641,3 +641,75 @@ pub fn empty_editor() -> Editor {
     attach_viewports(&mut editor);
     editor
 }
+
+/// Two nontrivial affine parent chains, optionally with a varying parent driver.
+#[allow(dead_code)]
+pub fn sample_document_for_reparent(driven: bool) -> anyhow::Result<(Document, TempDir)> {
+    use kasane_core::{PreciseVec2, RotationPose, RotationTransform, Transform, TransformData};
+    let (mut d, assets) = sample_document_with_two_layers()?;
+    let saved = d.save(&assets.path().join("reparent.kasane"))?;
+    let mut session = AuthoringSession::new(
+        &Uuid::new_v4().to_string(),
+        Canvas::new(256., 256., Vec2::default(), 1.),
+    )?;
+    session.open_project(&saved.manifest, None)?;
+    let meshes = session.mesh_ids().to_vec();
+    let id = |n| Uuid::from_u128(n).to_string();
+    session.edit("Affine parents", None, |e| {
+        for (n, name, angle, scale) in [
+            (501, "Source rotation", 25., 0.8),
+            (502, "Destination rotation", -18., 1.2),
+        ] {
+            e.create_transform(Transform {
+                id: id(n),
+                name: name.into(),
+                data: TransformData::Rotation(RotationTransform {
+                    base_angle: 0.,
+                    pose: RotationPose {
+                        angle,
+                        scale,
+                        origin: PreciseVec2::new(8., -3.),
+                        ..Default::default()
+                    },
+                }),
+                ..Default::default()
+            })?;
+        }
+        e.set_deform_parent(&meshes[0], &id(501))?;
+        e.set_deform_parent(&meshes[1], &id(502))?;
+        e.create_parameter(kasane_core::Parameter {
+            id: id(701),
+            name: "Driver".into(),
+            minimum: 0.,
+            maximum: 1.,
+            default_value: 0.5,
+            ..Default::default()
+        })?;
+        if driven {
+            e.create_scene_binding(kasane_core::SceneBinding {
+                id: id(702),
+                axes: vec![kasane_core::BindingAxis::new(id(701), vec![0., 1.])],
+                track: kasane_core::SceneTrack::Rotation {
+                    target_id: id(502).into(),
+                    keyforms: [(-15., 0.), (35., 1.)]
+                        .into_iter()
+                        .map(|(angle, key)| kasane_core::RotationKeyform {
+                            keys: vec![key],
+                            rotation: RotationPose {
+                                angle,
+                                scale: 1.,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        })
+                        .collect(),
+                },
+            })?;
+        }
+        Ok(())
+    })?;
+    session.save_project(&saved.manifest, None)?;
+    let mut d = Document::open(&saved.manifest)?;
+    d.select(&meshes[0])?;
+    Ok((d, assets))
+}

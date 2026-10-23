@@ -1,6 +1,6 @@
 # 对象交互 UI 实施记录
 
-对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的 Parameter/组织树与变形树创建及命令入口、共享移动、树选择、Parameter 文件夹导航、多选移动快捷键与“移到…”切片**，尚未完成 U1–U6 全部验收。
+对应[UI 方案](unified-object-authoring-ui.md)。2026 年 10 月 23 日开始实施，当前交付 **U1 的共享适配基础，以及 U2 的创建、树与 Parameter 导航、共享移动和保持形态改父级交互**，尚未完成 U1–U6 全部验收。
 
 ## 首轮实现：创建与输入边界
 
@@ -16,7 +16,7 @@
 | 阶段 | 当前状态 | 后续内容 |
 | --- | --- | --- |
 | U1 | 共享输入边界、操作上下文、能力显示与结果检查基础已接入上述入口 | 所有集合和旧入口的完整能力映射与统一结果定位尚未收口 |
-| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入；变形树 Mesh/Warp/Rotation 创建、双投影位置与显露已接入 | 变形父级保持形态移动仍待实施 |
+| U2 | Parameter 与组织树创建、组织树新建项过滤显露；Parameter/文件夹/Part 组织树的 core 移动规划、跨组/嵌套、树多选拖放、过滤排序与拒绝原因已接入；树 Shift/Cmd 选择、焦点导航及可配置上下移已接入；组织树和 Parameter 可通过可搜索“移到…”选择指定容器；右键和快捷键支持多选分段上下移，变形树限同一实际父级；Parameter 文件夹单击检查、独立折叠与列表键盘导航已接入；场景及 Parameter 创建主菜单、场景可配置创建快捷键已接入；变形树 Mesh/Warp/Rotation 创建、双投影位置与显露已接入；保持形态审阅、可搜索变形目标、原子落点与后台取消已接入 | 原生截图和完整阶段验收待 U6 收口 |
 | U3 | 保留 Motion/Expression 原预览路径，并在资源激活前结算输入 | 注册/Clip 分区、Expression 创建、空 MotionGroup 与列表排序尚未接入 |
 | U4 | Physics 列表接入共享边界、能力与检查结果 | 组/子项默认内容、Pose 和稳定子条目控件仍需统一；本轮不声称移除了现有 Physics 默认数据拼装 |
 | U5 | 未开始 | 绑定、场景内容、绘制组织、文档集合、资源和附件完整入口 |
@@ -341,3 +341,52 @@ git diff --check
 受影响 UI/命令/创建/移动/路由/虚拟化门禁 **191 项通过**，包含新增 7 项变形创建 UI 回归；core 定向门禁 **69 项通过**，包含新增 6 项投影位置、默认归属、多选、根集合、不可用/过期与命令能力回归；SDK 受影响门禁 **78 项通过**，包含新增 6 项双锚点、双集合发布、三种数据默认值、错误集合/缺失/自身锚点、两个拥有者的锁、事务回滚、JSON、过期计划、单条 Undo/Redo 与保存回读回归。既有快捷键回归扩展稳定 ID 与冲突断言。测试集合与前轮有重叠，不累计相加。
 
 两个仓库格式与空白检查通过。本轮未运行完整套件、Python 绑定构建/门禁、原生截图或 Release 性能基准。U2 尚未全量验收，剩余重点是改变实际变形父级时的保持形态转换交互；U1 全入口收口与 U3–U6 状态不变。
+
+
+## 第十轮实现：保持形态改父级审阅与执行
+
+上一轮已分别提交为 Editor `206333b`、SDK `2eaeef6`。本轮继续在当前 checkout 工作，没有创建 worktree；没有包含其他任务的 SDK runtime 设计文档。本轮新实现暂未提交。
+
+- 变形树拖放支持 Before/After 跨实际父级、变形器 Inside 和根集合落点；修正根落点投影身份。右键与既有 `palette.move-to` 命令接入可搜索变形容器选择器，路径同名时附稳定 ID。移动源来自打开前捕获的集合，不重新取全局选择；同父级普通排序继续走轻量场景移动。
+- 打开保持形态审阅时先结算旧输入并结束当前编辑，冻结 Modeling 参数值、完整参数区间、编辑时间、SDK 会话版本、编辑上下文与预览 revision。默认“仅当前编辑态”；用户可显式切换“整个参数范围”。不会因域证明失败自动选择较弱策略，也不提供静默 KeepLocalData 回退。
+- 绝对/相对容差初始为核心约定的 `1e-5` / `1e-6`，可显式输入；无效、非有限或负值禁用确认。默认误差界无法满足时保留原生原因，不自动放宽。测试包含非平凡旋转在默认容差下拒绝，以及用户明确请求 `0.001` 模型单位绝对容差后成功的路径。
+- 转换仅针对当前选定目标、范围与容差，在 120ms 防抖后从一份 COW 只读快照后台规划。搜索、重绘和拖放悬停不执行几何转换；切换目标/范围/容差、Esc/Cancel、关闭、文档/工作区/版本或冻结参数失效会取消旧控制并丢弃迟到结果。等待期间保留 Cancel，显示原生检查进度；共享 FormDialog 增加关闭生命周期钩子。
+- 审阅展示受影响对象、保留身份/重写/生成/删除/重映射地址数量、原生位置保证、冻结参数和时间、证明区间、实际误差与上界、绝对/相对容差及参考尺度、采样/数据/临时内存/历史容量。继承不透明度、颜色、启用状态、域可见性、Glue 和有状态动画的未覆盖范围按原生报告显示中英文说明。
+- 补充原生 `ReparentPlacement`，在保持形态计划中同时写入目标实际变形集合的稳定顺序，并纳入容量估算。SDK 只读快照可后台规划场景编辑；最终执行仍检查原会话版本、共享取消状态和当前容量。确认执行用户已审阅的同一份计划，不重新转换、不分成两条历史。失败事务整体回滚；取消、无变化和过期保留 redo。
+- 成功后保留选择和检查目标，通过既有变形树定位器展开/滚动到移动结果；筛选条件保持，必要时临时标记“移动”显露。锁、循环、Warp 非线性逆变换、变形器子树和无法证明的参数域显示原生拒绝原因。
+
+本轮保持形态交互在原生可证明范围内已接通。静态可逆仿射 Mesh 与已有 MeshBinding 的基础/关键形态转换继续由原生负责；不声称新增 Warp 非线性或变形器子树保持算法。U2 功能入口已接入，完整中英文原生截图、实际窗口验收与 Release 性能对照仍待 U6；U1 全入口收口及 U3–U6 其他工作状态不变。
+
+第十轮定向门禁：
+
+```sh
+# kasane-editor：沿用第九轮的 UI/core 过滤集合，并加入以下专项
+./scripts/test.sh regression -- \
+  panels::sorting::reparent panels::sorting::destination \
+  headless_tests::deformation_creation headless_tests::scene_creation_commands \
+  headless_tests::parameter_navigation headless_tests::palette_steps \
+  headless_tests::palette_move_to headless_tests::tree_selection \
+  headless_tests::palette_commands headless_tests::hierarchy headless_tests::sorting \
+  headless_tests::scene_creation headless_tests::parameters headless_tests::parameter_groups \
+  headless_tests::parameter_management headless_tests::parameter_creation \
+  headless_tests::authoring headless_tests::properties headless_tests::panel_toolbar \
+  headless_tests::command_targets headless_tests::input_routing \
+  headless_tests::ui_performance keybindings::tests input_routing::policy \
+  panels::hierarchy_tree::filter menus::tests \
+  deformation_creation:: scene_creation:: scene_lifecycle:: organization_authoring:: \
+  palette_steps:: palette_moves:: palette_reparent:: sorting:: keyboard:: commands::
+
+# ../kasane-2d
+cargo test --locked -p kasane-sdk --test integration -- \
+  binding_authoring::conversions::reparent scene_creation_placement:: scene_lifecycle:: \
+  scene_content:: scene_authoring:: organization_authoring:: hierarchy_order:: \
+  authoring_acceptance::
+
+# 两个仓库分别执行
+cargo fmt --all -- --check
+git diff --check
+```
+
+受影响 Editor UI **199 项通过**，包含新增 8 项保持形态交互回归：审阅保证与单条提交、原选择/检查/筛选保留和结果显露、默认编辑态与显式域证明/拒绝、搜索及重绘工作量、预览过期、待计算取消、根拖放、跨父级 After 锚点、右键入口、容差校验与 no-op/redo。core 定向门禁 **74 项通过**，包含新增 5 项保持形态回归。SDK 定向门禁 **92 项通过**，包含新增 2 项只读快照版本、转换及顺序原子发布、非法锚点、取消、JSON、失败事务、参数域采样、保存回读与 Undo/Redo 回归；其余保持形态专项已有用例一并执行。测试集合与前轮重叠，不累计相加。
+
+两个仓库格式与空白检查通过。未运行昂贵完整套件、Python 绑定构建、原生截图或 Release 性能测量。

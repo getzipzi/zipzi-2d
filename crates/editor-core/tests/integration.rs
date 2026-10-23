@@ -82,3 +82,6 @@ mod scene_creation;
 
 #[path = "cases/palette_steps.rs"]
 mod palette_steps;
+
+#[path = "cases/palette_reparent.rs"]
+mod palette_reparent;
