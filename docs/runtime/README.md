@@ -163,3 +163,20 @@ validation, compiler activity at process boundaries, source drift and model
 drift. Boundary process checks cannot exclude every possible background load;
 retain the hardware and run ranges. CPU timing does not establish UI latency.
 Results and the exact paired revisions belong to the Editor R0 delivery record.
+
+For native control measurements independent of an imported model's parent
+invertibility, generate a separate small fixture:
+
+```sh
+cargo run --locked --release -p kasane-sdk --example runtime_native_fixture -- /absolute/fresh/output
+```
+
+It contains two visible 12×12 meshes, a faint framing quad, an asymmetric
+in-memory texture, a root 2×2 Warp and an independent unit-scale root Rotation.
+The framing keeps outer Warp anchors inside the benchmark inset and fits the
+editor's 540-model-unit Rotation axis. Creation uses SDK edits;
+structure, evaluated model positions and save/reopen frame equality are asserted.
+Pass the emitted manifest to the Editor's existing deformation window benchmark.
+This fixture is separate from `runtime_baseline` and does not change that probe's
+measurements. An imported-model benchmark failure must still be recorded; a
+successful synthetic run does not prove that imported parent deformation works.
