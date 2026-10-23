@@ -897,6 +897,165 @@ mod tests {
     }
 
     #[test]
+    fn bound_mesh_opacity_text_and_preview_use_local_payload_publication() -> Result<()> {
+        let mut doc = Document::new_blank()?;
+        let object = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::new_v4().to_string());
+        let peer = uuid::Uuid::new_v4().to_string();
+        let parameter = uuid::Uuid::new_v4().to_string();
+        let binding = uuid::Uuid::new_v4().to_string();
+        let peer_binding = uuid::Uuid::new_v4().to_string();
+        doc.session.edit("Bound Mesh fixture", None, |edit| {
+            edit.create_parameter(kasane_core::Parameter {
+                id: parameter.clone(),
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            })?;
+            for (mesh, binding) in [(&object.id, &binding), (&peer, &peer_binding)] {
+                let positions = vec![
+                    kasane_core::Vec2::new(0., 0.),
+                    kasane_core::Vec2::new(1., 0.),
+                    kasane_core::Vec2::new(0., 1.),
+                ];
+                edit.create_mesh(kasane_core::Mesh {
+                    id: mesh.clone(),
+                    name: "Bound Mesh".into(),
+                    vertex_ids: vec![0, 1, 2],
+                    base_positions: positions.clone(),
+                    uvs: vec![kasane_core::Vec2::new(0., 0.); 3],
+                    triangles: vec![[0, 1, 2]],
+                    ..Default::default()
+                })?;
+                edit.create_binding(kasane_core::MeshBinding {
+                    id: binding.clone(),
+                    mesh_id: mesh.clone(),
+                    axes: vec![kasane_core::BindingAxis::new(
+                        parameter.clone(),
+                        vec![0., 1.],
+                    )],
+                    keyforms: [0., 1.]
+                        .into_iter()
+                        .map(|key| kasane_core::MeshKeyform {
+                            keys: vec![key],
+                            positions: positions.clone(),
+                            ..Default::default()
+                        })
+                        .collect(),
+                })?;
+            }
+            Ok(())
+        })?;
+        doc.invalidate_projection(true);
+        assert!(matches!(
+            doc.property_scope(&object),
+            PropertyScope::MeshKeyform { .. }
+        ));
+        let retained = doc.session.read_snapshot();
+        for preview in [false, true] {
+            let old = doc.object_index();
+            let old_payload = old.get(&object).unwrap().properties.clone();
+            let builds = doc.object_index_builds.load(Ordering::Relaxed);
+            let history = doc.session.history_lengths().0;
+            #[cfg(feature = "bench-instrumentation")]
+            let capture = kasane_core::benchmark::Capture::start();
+            if preview {
+                let initial = doc.object_property_patch(
+                    &object,
+                    "appearance.opacity",
+                    &serde_json::json!(0.4),
+                )?;
+                let serial = doc.begin_property_edit(&object, &initial)?;
+                for value in [0.25, 0.5, 0.4] {
+                    let patch = doc.object_property_patch(
+                        &object,
+                        "appearance.opacity",
+                        &serde_json::json!(value),
+                    )?;
+                    doc.update_property_edit(&object, serial, &patch)?;
+                }
+                doc.finish_edit()?;
+            } else {
+                doc.set_object_property(&object, "appearance.opacity", serde_json::json!(0.4))?;
+            }
+            #[cfg(feature = "bench-instrumentation")]
+            {
+                let work = capture.finish();
+                assert_eq!(work["sdk.publication.local"].calls, 1);
+                assert_eq!(work["sdk.binding_summary.record_reads"].calls, 2);
+                assert_eq!(work["sdk.binding_summary.derived_meshes"].calls, 1);
+                assert_eq!(work["core.validate_structure.full"].calls, 1);
+                assert!(!work.contains_key("core.validate_structure.local"));
+                for key in [
+                    "sdk.publication.fallback",
+                    "sdk.keys_in",
+                    "core.authoring_identity_scan",
+                    "sdk.summarize.fallback",
+                ] {
+                    assert!(!work.contains_key(key), "unexpected {key}: {work:?}");
+                }
+            }
+            assert_eq!(doc.session.history_lengths().0, history + 1);
+            assert_eq!(
+                doc.session
+                    .document()
+                    .get_binding(&binding)
+                    .unwrap()
+                    .keyforms[0]
+                    .appearance
+                    .opacity,
+                0.4
+            );
+            assert_eq!(
+                doc.session
+                    .document()
+                    .get_mesh(&object.id)
+                    .unwrap()
+                    .appearance
+                    .opacity,
+                1.
+            );
+            assert_eq!(
+                doc.session.document().get_binding(&peer_binding),
+                retained.document().get_binding(&peer_binding)
+            );
+            assert_eq!(
+                retained.document().get_binding(&binding).unwrap().keyforms[0]
+                    .appearance
+                    .opacity,
+                1.
+            );
+            assert_eq!(old.get(&object).unwrap().properties, old_payload);
+            let index = doc.object_index();
+            assert_eq!(doc.object_index_builds.load(Ordering::Relaxed), builds);
+            let rebuilt = crate::ObjectIndex::build(doc.model());
+            assert_eq!(
+                index.get(&object).unwrap().properties,
+                rebuilt.get(&object).unwrap().properties
+            );
+            assert_eq!(
+                format!("{:?}", index.bindings),
+                format!("{:?}", rebuilt.bindings)
+            );
+            assert_eq!(
+                format!("{:?}", index.relations),
+                format!("{:?}", rebuilt.relations)
+            );
+            doc.undo()?;
+            assert_eq!(
+                doc.session
+                    .document()
+                    .get_binding(&binding)
+                    .unwrap()
+                    .keyforms[0]
+                    .appearance
+                    .opacity,
+                1.
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
     fn mesh_presentation_commits_preserve_index_snapshots_and_relations() -> Result<()> {
         let mut doc = Document::new_blank()?;
         let directory = tempfile::tempdir()?;
@@ -935,8 +1094,14 @@ mod tests {
             let capture = kasane_core::benchmark::Capture::start();
             doc.set_object_property(&object, field, value)?;
             #[cfg(feature = "bench-instrumentation")]
-            if field == "name" {
+            {
                 let stages = capture.finish();
+                assert_eq!(stages["core.validate_structure.local"].calls, 1);
+                assert_eq!(stages["core.validate_structure.local.mesh_checks"].calls, 1);
+                assert!(
+                    !stages.contains_key("core.validate_structure.full"),
+                    "{field}: {stages:?}"
+                );
                 assert!(
                     !stages.contains_key("sdk.keys_in"),
                     "Label patch enumerated identities: {stages:?}"

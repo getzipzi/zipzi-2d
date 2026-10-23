@@ -1,6 +1,6 @@
 # Editor UI 对象交互统一方案
 
-日期：2026 年 10 月 21 日。状态：后续设计提案，尚未实施。
+日期：2026 年 10 月 21 日。状态：2026 年 10 月 23 日开始实施；当前交付 U1 共享基础与 U2 Parameter 创建切片，见[实施记录](unified-object-authoring-ui-implementation.md)。
 
 在 [对象创作核心架构改造方案](unified-object-authoring-core.md)完成并交付后，统一 Editor 的对象创建、Properties 编辑、文件夹、预览、排序和引用管理交互。核心负责身份、数据、规则与事务；本方案负责操作入口、控件事件、焦点、反馈和视图协调。
 
@@ -261,4 +261,4 @@ Undo/Redo 到达文档命令层时，先取消未提交候选，再操作 SDK �
 - [Motion/Expression 列表](../../crates/editor/src/panels/animation_panel/resources.rs)、[Physics 列表](../../crates/editor/src/panels/animation_panel/physics_list.rs)、[Pose 展示](../../crates/editor/src/panels/animation_panel/inspectors.rs)。
 - [Parameter 创建交互回归](../../crates/editor/headless_tests/parameter_creation.rs)。
 
-上述是现有实现依据；本方案尚未实施。
+上述为设计时的代码依据；当前进度和验证结果见[实施记录](unified-object-authoring-ui-implementation.md)。

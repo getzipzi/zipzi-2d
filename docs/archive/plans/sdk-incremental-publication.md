@@ -1,10 +1,235 @@
 # SDK 局部编辑的增量发布方案
 
-日期：2026-10-23。状态：**设计草案，尚未实施本文的变化记录机制**。
+日期：2026-10-23。状态：**A 已完成；B／C／D 已通过差分／工作次数验收，原生 UI 三轮复测已完成；独立 SDK／Editor 链耗时复测待执行**。
 
 目标是在保留现有 authoring 契约的前提下，让常用局部编辑减少提交阶段的全模型扫描。
 首期只记录被修改的对象，用于缩小变化摘要和身份判断的范围；保留当前结构验证、
 Document 存储和 checkpoint 历史。后续局部验证单独验收，不以建设通用依赖图为前置条件。
+
+### 2026-10-23 实施记录：阶段 A
+
+- Core 新增 `document/tracking.rs`，通过 `fork_tracked_candidate` 建立准确快照基线，
+  `tracked_records_since` 只读查询完整记录。默认及普通 clone／fork 为 Unknown；
+  checkpoint、restore、组织 Delta 安装和未知写入不携带旧事务的覆盖保证。
+- 覆盖现有 Mesh 的名称、Appearance、Enabled：typed setter、允许字段的 `replace_mesh`、
+  无结构 Delta 的 Scene field patch，以及不改变 draw order 的基础 Mesh `PropertyPatch`。
+  Binding payload／keyform、几何、关系、顺序和混合未覆盖操作整笔回退。
+- 记录只保存不同 touched Mesh IDs。重复修改和改回基线仍保留 touched 集合；
+  SDK 继续以原有完整内容判断处理 no-op、redo、历史、handle 与通知。
+- 预览失败同时恢复 tracker、snapshot、revision 和标量；结构型预览清理的导入遗留
+  editor-state 也在失败时恢复。普通 Appearance 预览不为此克隆 editor-state map。
+- 影子对照仅存在于测试：恢复 touched records 后比较完整持久化内容，使用真实事务的
+  `categories`／`object_ids` 对照完整序列化 ChangeSet，并验证固定种子序列、历史往返、
+  retained snapshot、混合回退、同 ID 重建和失败恢复。Release 不运行双份摘要或验证。
+- `replace_mesh` 与 typed rename 原有声明 categories 不同；各自保留原通知语义，
+  分别与完整算法对照。另补齐了同 ID 的 Part／DrawOrderGroup 在摘要排序中的 kind
+  次序，避免独立 HashSet 枚举导致序列化对照随机失败。
+
+已通过：Core `document::` 单元测试 13 项；SDK `changes::` 单元测试 9 项；
+SDK 普通 integration 321 项（2 项原有忽略）；Editor 属性链单元测试 3 项。
+阶段 A 交付时 SDK 提交仍走原验证、身份比较及摘要路径；未启用局部发布，也未运行真实模型
+或原生性能基准。后续阶段 B 的接入和验收见下文。
+
+### 2026-10-23 实施记录：阶段 B
+
+- SDK `changes/mesh.rs::MeshPublication` 消费 Core 的准确快照记录，仅接受既有 Mesh
+  名称、Appearance、Enabled 的完整覆盖；保留实际 `object_ids` 和累计 categories。
+  未知覆盖、退休身份或无法证明的通知范围分别记录 fallback 原因，继续原摘要算法。
+- 局部摘要只比较 touched Mesh 的三个允许字段，复用 Scene 字段分类及摘要排序／去重；
+  不调度 Organization、Binding、Motion、Physics、Pose、Resources、References、Content
+  全模型汇总。不把 Appearance 变化误报成 MeshTopology 的 content_changes。
+- 完整范围保证所有 authoring identities 不变时复用原 `Arc<HashSet<ObjectKey>>`。
+  Core `same_authoring_identities` 也消费同一窄范围证明，使现有验证路径中的身份判断
+  无需再扫描全模型；结构验证规则、绑定依赖检查和公开完整验证入口均保持原有规则。
+- 新增只在 `bench-instrumentation` 编译的工作计数；`Measurement.calls` 记录单位数，
+  计数条目的两个时间字段为零，计数本身不读时钟、不进入 span 栈。普通构建不含这些调用，
+  也不运行双份摘要／验证；`same_content`、checkpoint 和历史大小估算继续原流程。
+- 完整序列化 ChangeSet 与独立完整摘要逐字段对照。覆盖七种入口、绑定中的固定三角形、
+  RGB 外观、跨 Mesh 字段、改回基线但仍需通知、no-op／redo、历史往返、保留旧快照、
+  固定种子混合序列、删除重建、未知操作双顺序及通知范围回退；独立快照执行完整验证。
+
+工作次数验收的每档还包含恒定的目标 Mesh 两个 BindingSample；无关 Mesh／Part 的数量
+按 1／10／100 同步增长。下表每格对七种入口及 retained／unique 两种读者策略均成立：
+
+| 倍率 | 无关 MotionKey | 无关 BindingSample | touched 记录 | Core proof 记录读取 | 通知范围读取 | 局部摘要记录读取 | 全局身份扫描／key 枚举 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 8 | 4 | 1 | 4 | 2 | 2 | 0／0 |
+| 10 | 80 | 40 | 1 | 4 | 2 | 2 | 0／0 |
+| 100 | 800 | 400 | 1 | 4 | 2 | 2 | 0／0 |
+
+Core proof 在验证中的身份判断和 SDK 发布选择各查询一次，每次读取基线／最终 Mesh 各一条。
+两 Mesh 正对照的摘要读取数为 4、proof 读取数为 8。混合创建操作的反对照确实运行旧摘要并
+枚举一次 keys，避免仅测试“新计数器没有递增”。同 ID 的 Mesh handle 在局部提交后继续有效，
+缓存 key set 的 Arc 地址保持相同；删除重建仍走回退并永久退休旧 handle。
+
+验证：Core `document::` 及新增身份证明测试、benchmark 计数器测试均通过；SDK `changes::`
+在普通构建通过 11 项、开启插桩通过 13 项；普通 SDK integration 321 项通过（2 项原有忽略），
+Editor 属性链 3 项通过。七入口工作次数矩阵共 42 组，复现命令如下，原始输出保存在
+`../kasane-2d/target/sdk-incremental-publication/mesh-work-counts.txt`：
+
+```sh
+# cwd: ../kasane-2d
+cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::mesh_tests::mesh_publication_work_is_independent -- --nocapture
+```
+
+本次完成 B 的实现、差分和工作次数验收；尚未执行第 10 节规定的 plain Release 成对耗时、
+Mao 探针或原生 UI 复测，因此不宣称耗时收益，也未把 B 的“plain 无稳定回归”退出项判为通过。
+B 交付时 Binding payload／keyform 的 Opacity 文本路径仍回退；阶段 C 的接入见下文。
+
+### 2026-10-23 实施记录：阶段 C
+
+- Core 新增 `TrackedRecord::MeshBinding`。`replace_binding`、`set_mesh_keyform` 在原有
+  canonicalize 成功后比较实际安装记录；`PropertyPatch`／`preview_property` 的 keyform
+  分支在写入前记录 Binding。仅支持 positions、Appearance、draw order 的 payload 变化。
+  轴完整定义、Axis／Sample ID、target Mesh、keyform 数量和规范化后的坐标必须保持一致；
+  其他变化整笔回退，不把最终身份相同当成生命周期未变化的证明。
+- 通用 tracked 安装出口沿用默认 Unknown 和 editor-state 清理检查。普通 clone／恢复／
+  checkpoint 仍丢弃记录；预览失败同时恢复内容、snapshot、revision、tracker 和原预览帧。
+  原有锁、参数域、坐标、几何长度检查及提交验证保留；没有启用阶段 D 的局部验证。
+- SDK 局部摘要同时接受 Mesh 与 MeshBinding 记录，只比较 touched Binding 的最终
+  keyforms；净变化向其目标 Mesh 产生 `MeshTopology`、`topology=false` 的 content_changes，
+  推进内容 epoch，继承既有 Content／EvaluationInputs 分类。目标 Mesh 本身不必有存储写入。
+  净变化为空时不产生派生 content_changes，但若其他记录改变，仍保留事务原有通知对象。
+- 不把 updated Binding 当成唯一 modified 对象：保留 MeshBinding／目标 Mesh、原始
+  object_ids、累计 categories、Binding 参与时的 Topology 保留规则，以及最终排序／去重。
+  轴、sample、BindingGrid、关系及未改同级 Binding 不做扫描式摘要，也不伪造集合变更。
+  完整摘要和局部摘要共用字段、内容分类 helper；Release 不运行双份摘要或验证。
+- 真实 Editor 属性链新增验收：绑定形态下的 Opacity 文本提交和连续标量预览均命中局部
+  发布，SDK 摘要读取 2 条 Binding 记录并派生 1 个 Mesh；保留旧 ObjectIndex，当前索引
+  与完整重建一致且未增加构建次数。此为 CPU 属性链测试，未运行原生窗口／Metal 耗时基准。
+
+差分使用真实事务的 categories／object_ids 和独立快照完整验证，逐字段比较序列化 ChangeSet。
+覆盖七条入口、RGB／位置／draw order、规范化输入顺序、Mesh 与 Binding 混合、额外通知、
+净 no-op 与 redo、64 步固定种子序列、未知 Motion 操作双顺序、失败预览、晚期错误和预算拒绝。
+内容地址在 payload 编辑及历史往返后不复活；未变 sample 上下文和 handles 保持有效。
+轴／sample 删除重建即使最终全文相同也回退，旧 handles 和地址永久失效。
+
+同级未改 Binding 数、无关 samples 和 MotionKey 按 1／10／100 增长；目标 Binding 始终为
+固定三角形的两个 keyforms。七条入口 × retained／unique 读者策略 × 三档规模，共 42 组：
+
+| 倍率 | 同级未改 Binding | 无关 BindingSample | 无关 MotionKey | touched Binding | Core proof 记录读取 | SDK Binding 摘要读取 | 派生 Mesh 数 | 身份扫描／key 枚举 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 4 | 8 | 1 | 4 | 2 | 1 | 0／0 |
+| 10 | 10 | 40 | 80 | 1 | 4 | 2 | 1 | 0／0 |
+| 100 | 100 | 400 | 800 | 1 | 4 | 2 | 1 | 0／0 |
+
+Core proof 的 4 次记录读取来自两次基线／最终查询；SDK 摘要只读取 touched Binding 的
+基线／最终各一条，单独的通知范围查找共 6 次。每笔提交的 canonicalize 次数保持原入口行为：
+replacement／setter 共 2 次（写入、提交各一次），标量 patch／preview 为提交时 1 次；
+未改同级绑定不重复 canonicalize，未改 Motion 不重新验证。两 Binding 正对照读取 4 条摘要
+记录并派生 2 个排序后的 Mesh。SDK key set 继续共享同一 Arc。
+
+验证通过：Core `document::` 18 项；SDK `changes::` 普通构建 17 项、插桩构建 21 项；
+SDK 普通 integration 321 项（2 项原有忽略）；Editor 属性链普通／插桩构建各 4 项。
+工作次数原始输出保存在 `../kasane-2d/target/sdk-incremental-publication/binding-work-counts.txt`；
+复现命令：
+
+```sh
+# cwd: ../kasane-2d
+cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::binding_payload_tests::binding_payload_work_is_independent -- --nocapture
+# cwd: kasane-editor
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --features bench-instrumentation --lib document::properties::tests::bound_mesh_opacity
+```
+
+本次完成 C 的实现、差分及工作次数验收；plain Release 成对耗时、真实 Mao 探针和原生
+UI 性能复测仍未执行，不据此宣称耗时收益。结构验证、全文内容比较、checkpoint 和历史
+大小估算仍可能随模型规模增长；C 交付时 D 及存储／历史优化未启用。D 的后续接入见下文。
+
+### 2026-10-23 实施记录：阶段 D
+
+- Core `validate_structure_since` 仅在基线已有绑定准确 snapshot 的有效结构凭据，且整笔
+  事务完整覆盖允许的既有 Mesh 字段时启用局部验证。先筛选 Mesh-only 记录，再复核
+  tracking 两端快照与完整 Mesh 字段边界；不把 Complete 等同于结构有效。
+- 现有不变量审计：Mesh name 是自由字符串，Enabled 是布尔字段；基础 Appearance 的
+  opacity 必须有限且非负（允许大于 1），multiply／screen 六个通道必须有限且在 0..=1。
+  这些字段不改变几何、拥有身份、runtime ID、纹理引用、父关系、遮罩、draw order，
+  也不是 Binding／Motion／共享 Blend 表或其他结构验证规则的输入。
+  局部路径只对 touched Mesh 复用原 `validate_appearance`，共用诊断排序及凭据更新出口。
+- 无已验证基线、Unknown、分支不匹配、越界字段、Binding payload 或混合操作继续现有
+  广泛验证。首次回退可验证并建立基线凭据，但本次仍走原路径；无效导入仍可修复。
+  changed Binding 继续完整 canonicalize，未改 Binding／Motion 沿用现有复用规则；
+  阶段 C 的 canonicalize 次数和 proof 读取次数保持原样。
+- 公开 `validate_structure()` 始终完整验证。clone／restore 丢弃凭据或覆盖记录；
+  checkpoint／Undo／Redo 只携带准确内容的有效凭据，下一笔事务重新记录 touched IDs。
+  局部验证失败清除候选凭据，修复后重新验证；校验不改变内容、snapshot 或 revision。
+- 差分在独立 clone 上调用公开完整验证，对比完整 `StructureIssue` 列表（object ID、
+  code、message 和排序）。覆盖透明度与 RGB 边界、NaN／正负无穷、同一 Mesh 多项非法、
+  多 Mesh 诊断排序、自由名称、Enabled、重复写／净 no-op、未验证／无效导入、修复、
+  同 revision 分支、clone／checkpoint／restore、几何／参数域／关系／身份／共享表回退。
+  同时保留已有固定种子序列、预览失败恢复、retained snapshot、历史往返与混合回退对照。
+- 调整三处 Core 测试夹具：构造非法导入 flags 前先 clone 丢弃原有效凭据，避免测试直接
+  改写已验证基线的 raw content 却保留旧凭据；生产验证规则没有为夹具放宽。
+  Editor 的 Name／Enabled／未绑定 Opacity 属性链均断言命中局部验证；绑定 Opacity
+  文本／预览仍命中局部发布，但明确断言保留广泛验证。
+
+工作次数验收沿用固定目标三角形与两个目标 BindingSample；无关 Mesh／Part、Binding
+和 MotionKey 按 1／10／100 同步增长。九条入口（原七条，加 Scene Appearance、基础
+Appearance preview）× retained／unique 两种读者策略 × 三档规模，共 54 组：
+
+| 倍率 | 无关 MotionKey | 无关 BindingSample | touched Mesh | 局部 Mesh 检查 | 广泛验证 | Binding canonicalize | Motion 验证 | Core proof 记录读取 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 8 | 4 | 1 | 1 | 0 | 0 | 0 | 4 |
+| 10 | 80 | 40 | 1 | 1 | 0 | 0 | 0 | 4 |
+| 100 | 800 | 400 | 1 | 1 | 0 | 0 | 0 | 4 |
+
+每次提交的 Core proof 查询和 SDK 发布查询仍分别读取基线／最终记录各一条。局部验证
+另读取最终 Mesh 一条并检查 Appearance；这些检查不会遍历无关记录。两 touched Mesh
+正对照检查数为 2；混合创建反对照调用一次广泛验证。公开完整验证的正对照在三档规模
+检查 Mesh 分别为 3／12／102，canonicalize Binding 分别为 2／11／101，Motion 各 1，
+证明完整验证计数器确实反映工作量。原阶段 C 的 42 组仍通过且均明确回退广泛验证。
+
+验证：Core `document::` 普通／插桩构建各 24 项；SDK `changes::` 普通 17 项、插桩 22 项；
+SDK 普通 integration 321 项（2 项原有忽略）；Editor 属性链普通／插桩各 4 项。
+复现命令与原始输出：
+
+```sh
+# cwd: ../kasane-2d
+cargo test --locked -p kasane-core --features bench-instrumentation --lib document::
+cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes:: -- --nocapture
+cargo test --locked -p kasane-sdk --features bench-instrumentation --test integration
+# cwd: kasane-editor
+env -u KASANE_DEV_SESSION_DIR cargo test --locked -p editor-core --features bench-instrumentation --lib document::properties::tests
+```
+
+`../kasane-2d/target/sdk-incremental-publication/validation-work-counts.txt` 保存 54 组局部和
+3 组公开完整验证计数；`stage-d-core.txt`、`stage-d-changes.txt`、`stage-d-integration.txt`
+及对应 plain 日志保存测试结果。Editor 日志为 `target/stage-d-properties.txt` 和
+`target/stage-d-plain-properties.txt`。完成 D 的有限局部验证、差分和工作次数验收；
+上述 D 交付时，plain Release 成对耗时、真实 Mao／原生 UI 性能复测尚待执行；后续原生
+复测见下文。全文内容比较、checkpoint、历史大小估算及回退验证仍可能随模型增长，
+不据工作次数宣称整笔提交耗时收益。
+
+### 2026-10-23 原生 UI 性能复测
+
+已完成同一 editor `3f24179` 分别链接 SDK `4bb2fee` 保守发布、同一 HEAD 加 A–D 补丁的
+plain Release 对照，并同批重跑最初 editor `279f569`／SDK `01db56a` 的保存二进制。
+三轮交错顺序为保守→增量→原始、原始→增量→保守、增量→保守→原始；构建全部在测量前
+完成，期间不编译或跑测试。Name／Opacity 文本／Enabled 各 5＋96 次、120 Hz；
+直接 Opacity（同进程含 pan／zoom）各 30＋300 次、120 Hz。
+
+| 指标 | 保守发布 | 增量发布 | 变化 |
+| --- | ---: | ---: | ---: |
+| Name 提交 CPU P95（ms） | 8.758 | 6.343 | -27.6% |
+| Opacity 文本提交 CPU P95（ms） | 10.588 | 8.759 | -17.3% |
+| Enabled 提交 CPU P95（ms） | 8.635 | 6.221 | -28.0% |
+| 直接 Opacity UI draw P95（ms） | 3.492 | 3.450 | -1.2% |
+| 直接 Opacity 新预览呈现 Hz | 119.202 | 119.999 | +0.7% |
+
+上表是三个进程各自 P95／频率的中位数，没有混池。三个属性提交的每轮配对均下降；
+Opacity 文本仍走 Binding 验证路径，其收益包含阶段 C，不能全部归于 D。直接拖动的
+索引修复已在保守版本中，当前未见新的明显退化；输入到呈现 P95 轮间波动较大，中位数
+40.699→40.754 ms，不能认定为稳定改善或回归。
+
+36 个原生进程、10,692 个正式输入 ticks 全部通过完整性检查；属性均 96 次有效提交，
+benchmark_done 为真、唯一 end、lost_events=0、issues 为空。增量版本的三轮直接 Opacity
+共 900 个请求全部 presented；保守／原始版本的 accepted_not_composed 也在报告中保留。
+报告脚本测试 27 项通过。
+
+[详细报告与完整机器可读数据](../archive/benchmarks/2026-10-23-sdk-incremental-ui-retest.md)
+保存原始基线重测、逐轮 CPU／GPU、输入延迟、请求终态、源码／模型／二进制／锁文件哈希。
+本地原始数据和复现脚本位于 `target/ui-incremental-publication-20261023/`。
+本次完成原生 UI 边界复测；独立 SDK 及 Editor property-chain 的 plain／probe 成对耗时
+尚未重跑，不将这两个边界或全部性能退出条件标记为通过。
 
 ## 1. 依据和当前状态
 
@@ -13,9 +238,9 @@ Document 存储和 checkpoint 历史。后续局部验证单独验收，不以�
 
 关联文档：
 
-- [发布优化与复测](../benchmarks/2026-10-23-2d-publication-fix.md)：当前保守优化的实现与数字。
-- [回归定位](../benchmarks/2026-10-23-ui-authoring-diagnosis.md)：提交、ObjectIndex 和原生栈的证据。
-- [原始 UI 对照](../benchmarks/2026-10-23-ui-comparison.md)：最初指定的版本基线。
+- [发布优化与复测](../archive/benchmarks/2026-10-23-2d-publication-fix.md)：当前保守优化的实现与数字。
+- [回归定位](../archive/benchmarks/2026-10-23-ui-authoring-diagnosis.md)：提交、ObjectIndex 和原生栈的证据。
+- [原始 UI 对照](../archive/benchmarks/2026-10-23-ui-comparison.md)：最初指定的版本基线。
 - [SDK authoring 契约](../../../kasane-2d/modules/kasane-sdk/AUTHORING.md)：身份、锁、事务、历史及通知边界。
 - [C6 验收](unified-object-authoring-c6-acceptance.md)：既有跨领域回归入口。
 
@@ -58,12 +283,15 @@ Document 存储和 checkpoint 历史。后续局部验证单独验收，不以�
 1. 检查 session version、预算及取消状态。
 2. `candidate.validate_structure_since(session.document())`。
 3. 根据 `erased_keys` 找到删除后重建的身份；比较完整内容判断 changed。
-4. 取 before keys；通过 `same_authoring_identities` 决定是否复用 after keys。
-5. `changes::summarize` 比较实际领域数据，生成通知。
+4. 消费完整 Mesh／MeshBinding 记录证明；命中则复用原 keys，否则通过 `same_authoring_identities`
+   决定是否复用 after keys，必要时重新枚举。
+5. 命中则运行 Mesh／Binding 局部摘要及目标 Mesh 派生通知；否则 `changes::summarize`
+   比较实际领域数据，生成通知。
 6. 克隆 checkpoint、估算历史预算、再次检查取消。
 7. 发布 candidate，刷新 incarnation／缓存，安装历史并发布 receipt。
 
-`same_authoring_identities` 在验证和 commit 的身份判断中都会使用；它仍遍历多个集合。
+`same_authoring_identities` 在验证和 commit 的身份判断中都会使用；阶段 B／C 的完整
+记录可避免这部分扫描，其他情况仍遍历多个集合。
 `same_domain` 的部分领域也包含完整记录或跨域比较。这些借用比较减少分配，但不是常数成本。
 
 ### 三条必须分别测量的属性入口
@@ -236,10 +464,10 @@ Core 只读查询，取得“针对本 session 基线的完整 touched 记录”
 
 | 阶段 | 可独立审阅的交付 | 退出条件 |
 | --- | --- | --- |
-| A：记录与影子对照 | Core tracker、窄入口接入、clone／恢复／失败降级；发布仍走现有流程 | covered 事务的真实差异全部被记录；未知操作必然回退；锁与原子性不变 |
-| B：Mesh 局部摘要／身份判断 | SDK 消费 proof、局部 summary、工作次数计数 | 快慢结果一致；hot path 不为摘要／身份重新枚举全模型；plain 无稳定回归 |
-| C：Binding payload 接入 | keyform 实际写入记录、目标 Mesh 派生摘要 | 原生 Opacity 文本路径命中；同级绑定不被重复处理；旧地址／历史语义一致 |
-| D：有限局部验证 | Label／Appearance 等明确规则的验证选择 | 与完整验证接受／拒绝及诊断一致；工作次数随实际影响增长 |
+| A：记录与影子对照（已完成） | Core tracker、窄入口接入、clone／恢复／失败降级；发布仍走现有流程 | 已通过记录完整性、差分、分支／历史、锁与原子性测试；见开头实施记录 |
+| B：Mesh 局部摘要／身份判断（已接入） | SDK 消费 proof、局部 summary、工作次数计数 | 快慢结果及工作次数已通过；plain 成对耗时回归验收待执行 |
+| C：Binding payload 接入（已接入） | keyform 实际写入记录、目标 Mesh 派生摘要 | Editor 属性链命中；差分／工作次数、旧地址／历史语义已通过；原生窗口及耗时复测待执行 |
+| D：有限局部验证（已接入） | Label／Appearance／Enabled 的 Mesh-only 验证选择 | 已通过完整验证诊断差分、54 组恒定工作量及 touched／完整验证正反对照；见开头记录 |
 
 A–C 不要求 D 完成。每阶段都保存回退实现；普通 Release 不运行双份摘要或双份验证。
 若记录维护成本抵消收益，先停在 B 的已验证范围，不扩展到所有 authoring 域。
@@ -308,12 +536,15 @@ tracker 的完整摘要参照，逐字段比较整个序列化 ChangeSet，而�
 
 ### 测试入口
 
-以下是实施后的验证入口，本文仅新增文档，没有执行这些 Rust／原生测试。
+以下是分阶段验证入口。A–D 的门禁及原生 UI 三轮复测结果见开头记录；独立 SDK 与
+Editor 属性链成对耗时复测仍待执行。
 
 ```sh
 # cwd: ../kasane-2d，迭代时按本阶段选择，避免重复跑完整套件
 cargo test --locked -p kasane-core --lib document::structure::tests
-cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::tests
+cargo test --locked -p kasane-core --lib document::tracking::tests
+cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::
+cargo test --locked -p kasane-sdk --features bench-instrumentation --lib changes::binding_payload_tests::binding_payload_work_is_independent -- --nocapture
 cargo test --locked -p kasane-sdk --features bench-instrumentation --test integration scene_lifecycle::
 cargo test --locked -p kasane-sdk --features bench-instrumentation --test integration binding_authoring::
 cargo test --locked -p kasane-sdk --test integration authoring_acceptance::
