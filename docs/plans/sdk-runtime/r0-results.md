@@ -67,7 +67,7 @@ AuthoringSession 的 `size_of` 为 4,640 B，只是容器本体，不能替代�
 | Editor `cargo test --locked -p editor-core --test integration workspaces::` | 8 项通过；模式切换、手势、共享 Undo、多视图、后台保存 |
 | Editor `cargo test --locked -p editor-core --test integration -- editor:: properties:: timeline:: viewport_isolation:: viewport_states::` | 99 项通过；保存成功/失败与路径预留、属性、Timeline 编辑与播放、独立视口/隔离状态 |
 | Editor `cargo test --locked --workspace --features kasane-editor/test-support --lib headless_tests::ui_performance` | 4 项通过；Timeline scrub/overview 复用、画布通知、属性列表虚拟化与历史刷新 |
-| Editor `python3 scripts/runtime-migration-inventory.py --check` | 70 文件、669 个源引用匹配；未宣称已迁移 |
+| Editor `python3 scripts/runtime-migration-inventory.py --check` | 基线采集时 70 文件、669 个源引用；整合主分支后刷新为 72 文件、692 个引用并重新检查；未宣称已迁移 |
 | SDK `cargo fmt --all -- --check`；两仓 `git diff --check` | 通过 |
 
 Editor 测试均 unset `KASANE_DEV_SESSION_DIR`。Cargo 复用各主 checkout 的 target

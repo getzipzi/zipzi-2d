@@ -13,19 +13,26 @@ R0 准备产物已交付；R1–R7 尚未实现。本文不把目标接口、现
 两个工作树位于同一父目录，保持 Editor 原有 `../kasane-2d` 路径依赖；未改变
 Cargo manifests/lockfile 或运行期行为。起始两个主工作区均干净。实施期间原 Editor
 主工作区另有动画/UI 工作及并行编译出现；本阶段未复制、覆盖或提交那些变更。
-后续 R2 必须显式选择是否整合该工作，不能用本记录宣称已包含之后的主工作区状态。
+基线采集不包含这些后续变更；合并时已整合主分支的动画/UI 提交至 `ada2599`，
+并重新生成迁移清单。本文的性能与行为基线仍对应表中的起始 revision。
 
 SDK R0 交付提交为 `ec60e46268eafaf32861169350b0acc719743664`（含
 `49969dc49a11f6c972b9c6aa63526f6ad22097c8` 的清单/CPU 工具提交）；Editor 对应
 交付为包含本记录的 `codex/sdk-runtime` 提交。正式 crate 源码、Cargo manifests 和
-lockfile 与表中的起始 revision 相同；新增的是工具、示例 fixture 和实施证据。
+lockfile 在 R0 交付时与表中的起始 revision 相同；R0 新增的是工具、示例 fixture
+和实施证据，随后合入的主分支动画/UI 改动不计为 Runtime 实现。
 
-工作目录：
+采集时的工作目录（合并后清理）：
 
 ```text
 /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-editor
 /Users/liangbohao/.codex/worktrees/sdk-runtime/kasane-2d
 ```
+
+清理前将原始数据完整复制至主工作区的同名 `target/runtime-r0*` 目录：
+Editor 的 `target/runtime-r0-native/` 与 SDK 的 `target/runtime-r0-clean/`、
+`target/runtime-r0-baseline/`、`target/runtime-r0/` 均保留。原始报告中的采集路径
+继续用于来源追溯；本记录内相对路径可在各仓库主工作区复核。
 
 机器为 Mac mini / Apple M4（10 核 CPU、10 核 GPU、16 GiB 内存），Metal 4。
 显示器为 3840×2160、逻辑 1920×1080、120 Hz。工具链为 Rust 1.99.0
@@ -54,9 +61,9 @@ SDK 仓库的 `docs/runtime/api-inventory.json` 为逐方法/类型/意图清单
 
 ## Editor 正式写入与生命周期迁移表
 
-[`editor-migration.json`](editor-migration.json) 记录 70 个文件、669 个会话/发布/
+[`editor-migration.json`](editor-migration.json) 在整合主分支后记录 72 个文件、692 个会话/发布/
 IO/生命周期引用，包括读操作、测试和注释；它是保守源索引，不把命中文本直接等同于
-正式写入。逐领域归属如下，R2 完成时需要同时关闭此表与对应行为测试。
+正式写入。采集基线时为 70 个文件、669 个引用。逐领域归属如下，R2 完成时需要同时关闭此表与对应行为测试。
 
 | 当前入口 | 正式状态/副作用 | 迁移归属；留在 Editor 的状态 |
 | --- | --- | --- |
