@@ -4,7 +4,7 @@ use gpui_kit::base::Link;
 use gpui_kit::component::{ActiveTheme, WindowExt};
 use gpui_kit::{prelude::*, *};
 
-const REPOSITORY: &str = "https://github.com/pakholeung37/zipzi-editor";
+const REPOSITORY: &str = "https://github.com/getzipzi/zipzi-2d";
 
 pub(crate) fn show(window: &mut Window, cx: &mut App) {
     window.open_dialog(cx, |dialog, _, cx| {

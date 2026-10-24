@@ -309,6 +309,6 @@ The runner records output, exceptions, and session versions. It does not save
 projects automatically; scripts must call `Session.save()` themselves.
 
 For method groups, data records, and behavior details, see the
-[Python API reference](https://github.com/pakholeung37/zipzi-2d/blob/main/crates/zipzi-python/API.md).
+[Python API reference](https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python/API.md).
 For repository validation, see the
-[validation guide](https://github.com/pakholeung37/zipzi-2d/blob/main/docs/VALIDATION.md).
+[validation guide](https://github.com/getzipzi/zipzi-2d/blob/main/docs/VALIDATION.md).

@@ -12,8 +12,8 @@ license-files = ["LICENSE-MIT", "THIRD_PARTY_NOTICES.md"]
 readme = "README.md"
 
 [project.urls]
-Repository = "https://github.com/pakholeung37/zipzi-2d"
-Documentation = "https://github.com/pakholeung37/zipzi-2d/blob/main/crates/zipzi-python/API.md"
+Repository = "https://github.com/getzipzi/zipzi-2d"
+Documentation = "https://github.com/getzipzi/zipzi-2d/blob/main/crates/zipzi-python/API.md"
 
 [tool.maturin]
 python-source = "python"
