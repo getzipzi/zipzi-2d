@@ -1,7 +1,7 @@
 //! Candidate-document edits and atomic publication.
 use std::collections::HashSet;
 
-use crate::session::{AuthoringSession, keys_in, object_exists_in};
+use crate::session::{keys_in, object_exists_in, AuthoringSession};
 use crate::types::*;
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::{
@@ -27,6 +27,7 @@ pub struct EditSession<'a> {
     pub(crate) authoring_limits: zipzi_core::document::AuthoringLimits,
     pub(crate) resource_load_controls: Vec<std::sync::Arc<std::sync::atomic::AtomicBool>>,
     pub(crate) binding_controls: Vec<zipzi_core::document::ConversionControl>,
+    pub(crate) resource_store: zipzi_project::ImageResourceStore,
     pub(crate) prepared_images: Vec<crate::PreparedImageContent>,
     pub(crate) binding_cost: Option<zipzi_core::document::ConversionCost>,
 }
@@ -87,6 +88,20 @@ impl EditSession<'_> {
             .get_or_init(|| self.candidate_document().estimated_content_bytes())
     }
 
+    /// Re-admit retained images when an owned workspace crosses into a host.
+    pub fn set_image_memory_budget(
+        &mut self,
+        budget: zipzi_project::ImageMemoryBudget,
+    ) -> Result<(), SdkError> {
+        if !self.resource_store.budget().same_pool(&budget) {
+            let images =
+                crate::PreparedImageContent::with_budget_many(&self.prepared_images, &budget)
+                    .map_err(|s| SdkError::from_status(s, "set_image_memory_budget", vec![]))?;
+            self.prepared_images = images;
+            self.resource_store = self.resource_store.with_budget(budget);
+        }
+        Ok(())
+    }
     pub fn base_version(&self) -> Version {
         self.before
     }
@@ -136,6 +151,16 @@ impl EditSession<'_> {
             error.referrers = result.referrers.into_boxed_slice();
             return Err(error);
         }
+        if result.changes.kind == ChangeKind::Resources
+            || result.changes.kind == ChangeKind::Structure
+            || result
+                .changes
+                .object_ids
+                .iter()
+                .any(|id| self.candidate_document().get_asset(id).is_some())
+        {
+            self.pin_candidate_images();
+        }
         self.categories
             .extend(crate::changes::categories(result.changes.kind));
         self.kind = merge_kind(self.kind, result.changes.kind);
@@ -146,6 +171,91 @@ impl EditSession<'_> {
         }
         Ok(())
     }
+    fn pin_candidate_images(&mut self) {
+        let images: Vec<_> = self
+            .candidate_document()
+            .asset_order()
+            .iter()
+            .filter_map(|id| {
+                self.resource_store
+                    .memory_image(self.candidate_document().get_asset(id)?)
+            })
+            .collect();
+        for image in images {
+            if !self
+                .prepared_images
+                .iter()
+                .any(|p| p.content().source == image.content().source)
+            {
+                self.prepared_images.push(image);
+            }
+        }
+        let sources: HashSet<_> = self
+            .candidate_document()
+            .asset_order()
+            .iter()
+            .filter_map(|id| {
+                self.candidate_document()
+                    .get_asset(id)?
+                    .content
+                    .as_ref()
+                    .map(|c| c.source.clone())
+            })
+            .collect();
+        self.prepared_images
+            .retain(|p| sources.contains(&p.content().source));
+    }
+
+    /// Attach immutable image content to this candidate. No formal registration
+    /// occurs until commit, and dropping the edit releases its image lease.
+    pub fn create_prepared_image(
+        &mut self,
+        id: String,
+        name: String,
+        image: &crate::PreparedImageContent,
+    ) -> Result<(), SdkError> {
+        let image = image
+            .with_budget(self.resource_store.budget())
+            .map_err(|s| {
+                self.abort_with(SdkError::from_status(s, "create_prepared_image", vec![]))
+            })?;
+        self.create_asset(ImageAsset {
+            id,
+            name,
+            content: Some(image.content().clone()),
+            unresolved_source: None,
+        })?;
+        self.prepared_images.push(image.clone());
+        Ok(())
+    }
+    pub fn replace_prepared_image(
+        &mut self,
+        id: &str,
+        image: &crate::PreparedImageContent,
+    ) -> Result<(), SdkError> {
+        let image = image
+            .with_budget(self.resource_store.budget())
+            .map_err(|s| {
+                self.abort_with(SdkError::from_status(s, "replace_prepared_image", vec![]))
+            })?;
+        let mut asset = self
+            .candidate_document()
+            .get_asset(id)
+            .cloned()
+            .ok_or_else(|| {
+                self.abort_with(SdkError::new(
+                    "NOT_FOUND",
+                    "Image does not exist",
+                    "replace_prepared_image",
+                ))
+            })?;
+        asset.content = Some(image.content().clone());
+        asset.unresolved_source = None;
+        self.replace_asset(asset)?;
+        self.prepared_images.push(image.clone());
+        Ok(())
+    }
+
     pub(crate) fn track_expression_deletions(&mut self, ids: &[String]) {
         for id in ids {
             let key = ObjectKey {
@@ -893,6 +1003,7 @@ impl EditSession<'_> {
                 .check()
                 .map_err(|s| SdkError::from_status(s, "commit", vec![]))?;
         }
+        self.set_image_memory_budget(session.image_memory_budget().clone())?;
         session
             .project
             .publish_authoring_candidate(candidate, self.kind, identity_changed)
@@ -959,6 +1070,8 @@ impl EditSession<'_> {
         if changed {
             session.publish_receipt(receipt.clone());
         }
+        self.prepared_images.clear();
+        session.collect_image_resources();
         Ok(receipt)
     }
 }

@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "stage": "R4",
+  "status": "in_progress",
+  "contract": "zipzi-runtime-r4-1",
+  "record": "docs/plans/sdk-runtime/r4-modeling.md",
+  "python_entrypoints": [
+    "Session.modeling_query",
+    "Edit.modeling_query",
+    "Edit.apply_modeling",
+    "Session.sample_modeling",
+    "Edit.sample_modeling",
+    "Session.plan_modeling",
+    "Edit.plan_modeling",
+    "Edit.apply_modeling_plan",
+    "ModelingPlan.report",
+    "ModelingPlan.close",
+    "Edit.create_rgba_image",
+    "Edit.replace_rgba_image",
+    "Connection.create_blob",
+    "Blob.append",
+    "Blob.seal",
+    "Blob.read",
+    "Blob.recover",
+    "Blob.close",
+    "Edit.create_rgba_image_from_blob",
+    "Edit.apply_modeling_blob"
+  ],
+  "modeling_commands": [
+    "CreateAsset",
+    "ReplaceAsset",
+    "CreateMesh",
+    "ReplaceMesh",
+    "CreateParameter",
+    "ReplaceParameter",
+    "CreatePart",
+    "ReplacePart",
+    "CreateTransform",
+    "ReplaceTransform",
+    "CreateBinding",
+    "ReplaceBinding",
+    "CreateSceneBinding",
+    "ReplaceSceneBinding",
+    "CreateBlendKeyTable",
+    "ReplaceBlendKeyTable",
+    "CreateBlendConstraint",
+    "ReplaceBlendConstraint",
+    "CreateBlendBinding",
+    "ReplaceBlendBinding",
+    "CreateGlue",
+    "ReplaceGlue",
+    "CreateOffscreen",
+    "ReplaceOffscreen",
+    "Scene",
+    "Organization",
+    "Binding",
+    "Content",
+    "References",
+    "Resource",
+    "Document",
+    "Attachment",
+    "ReplaceModelSetup",
+    "ReplaceHierarchyOrder",
+    "ReplaceEditorState",
+    "ReplaceDrawOrderGroups",
+    "EraseObject",
+    "RenameMesh",
+    "UpdatePositions",
+    "SetMeshKeyform",
+    "SetSceneKeyform",
+    "ReplaceTopology"
+  ],
+  "plan_domains": [
+    "scene",
+    "organization",
+    "binding",
+    "content",
+    "references",
+    "resource",
+    "document",
+    "attachment"
+  ],
+  "verified_slices": [
+    {
+      "acceptance": [
+        "A04",
+        "A12",
+        "A15"
+      ],
+      "case": "installed Native/Connected shared modeling recipe",
+      "evidence": "crates/zipzi-python/tests/modeling_recipe.py",
+      "checks": [
+        "candidate reads",
+        "ordinary binding",
+        "BlendShape",
+        "explicit formal/candidate sweeps",
+        "source metadata",
+        "SDK geometry diagnostics",
+        "one-history publication",
+        "Undo/Redo",
+        "generated image save/hash",
+        "native preview isolation"
+      ]
+    },
+    {
+      "acceptance": [
+        "A05",
+        "A17"
+      ],
+      "case": "source-bound plan ownership, sequence rejection, budget admission and release",
+      "evidence": [
+        "crates/zipzi-runtime/tests/modeling.rs",
+        "crates/zipzi-python/tests/test_connected.py"
+      ]
+    },
+    {
+      "acceptance": [
+        "A14",
+        "A17"
+      ],
+      "case": "actual RGBA/PNG accounting, 100 cancelled distinct images and 100 history replacements",
+      "evidence": "crates/zipzi-sdk/tests/image_memory.rs"
+    },
+    {
+      "acceptance": [
+        "A07",
+        "A17"
+      ],
+      "case": "chunked blob pixel readback/sharing and lost append response recovery",
+      "evidence": "crates/zipzi-python/tests/test_connected.py"
+    }
+  ],
+  "wired_pending_domain_acceptance": [
+    "all remaining modeling command variants",
+    "all remaining plan domains",
+    "complete record collections outside the shared recipe"
+  ],
+  "pending_exit_requirements": [
+    "remote SDK handles and stable field/content addresses",
+    "complete capabilities",
+    "file image and attachment IO",
+    "disk resource byte pinning",
+    "full open/import/replacement/export coverage",
+    "cancellable heavy read/preparation jobs",
+    "pre-decode admission for all PSD/Cubism preparation payloads",
+    "native Editor projection/context acceptance",
+    "large bound topology/SDK capacity negatives",
+    "full host aggregate accounting and RSS/latency measurements",
+    "complete no-window import/build/save/reopen/export acceptance"
+  ],
+  "notes": [
+    "Legacy Python facade methods outside the verified slice remain explicitly unsupported by ConnectedBackend.",
+    "Blob byte arrays use bounded JSON control frames; no dedicated binary framing.",
+    "This manifest does not mark R4 complete."
+  ]
+}

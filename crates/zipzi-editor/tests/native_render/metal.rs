@@ -42,13 +42,7 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
         )?;
         let asset_id = uuid::Uuid::new_v4().to_string();
         let mesh_id = uuid::Uuid::new_v4().to_string();
-        let asset = session.prepare_rgba_asset(
-            &asset_id,
-            "solid",
-            32,
-            32,
-            [255, 0, 0, 255].repeat(32 * 32).into(),
-        )?;
+        let image = session.prepare_rgba_image(32, 32, [255, 0, 0, 255].repeat(32 * 32).into())?;
         let mesh = zipzi_sdk::rectangle_mesh(
             &mesh_id,
             "solid",
@@ -57,7 +51,7 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
             Vec2::new(48., 48.),
         )?;
         session.edit("fixture", None, |edit| {
-            edit.create_asset(asset)?;
+            edit.create_prepared_image(asset_id.clone(), "solid".into(), &image)?;
             edit.create_mesh(mesh)
         })?;
         let saved = session.save_project(&dir.path().join("solid.zipzi"), None)?;
@@ -921,8 +915,8 @@ fn check_modeling_isolation_composite(nested: bool, overlap_opacity: f32) -> any
             Canvas::new(64., 64., Vec2::default(), 1.),
         )?;
         let id = |n| uuid::Uuid::from_u128(n).to_string();
-        let red = sdk.prepare_rgba_asset(&id(1), "red", 1, 1, vec![255, 0, 0, 255].into())?;
-        let blue = sdk.prepare_rgba_asset(&id(2), "blue", 1, 1, vec![0, 0, 255, 255].into())?;
+        let red = sdk.prepare_rgba_image(1, 1, vec![255, 0, 0, 255].into())?;
+        let blue = sdk.prepare_rgba_image(1, 1, vec![0, 0, 255, 255].into())?;
         let mut mask = zipzi_sdk::rectangle_mesh(
             &id(3),
             "mask",
@@ -981,8 +975,8 @@ fn check_modeling_isolation_composite(nested: bool, overlap_opacity: f32) -> any
                     })?;
                 }
             }
-            edit.create_asset(red)?;
-            edit.create_asset(blue)?;
+            edit.create_prepared_image(id(1), "red".into(), &red)?;
+            edit.create_prepared_image(id(2), "blue".into(), &blue)?;
             edit.create_mesh(mask)?;
             edit.create_mesh(art)?;
             edit.create_mesh(other)?;

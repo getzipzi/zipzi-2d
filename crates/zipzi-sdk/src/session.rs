@@ -160,7 +160,27 @@ impl AuthoringSession {
             ));
         }
         let started = std::time::Instant::now();
-        Ok(self.snapshot_document(edit.candidate_document().clone(), base, started))
+        let mut snapshot = self.snapshot_document(edit.candidate_document().clone(), base, started);
+        let prepared: HashMap<_, _> = edit
+            .prepared_images
+            .iter()
+            .map(|image| (image.content().source.as_str(), image))
+            .collect();
+        for id in snapshot.document.asset_order() {
+            if let Some(content) = snapshot
+                .document
+                .get_asset(id)
+                .and_then(|a| a.content.as_ref())
+            {
+                if let Some(image) = prepared
+                    .get(content.source.as_str())
+                    .filter(|image| image.content() == content)
+                {
+                    snapshot.memory_images.insert(id.clone(), (*image).clone());
+                }
+            }
+        }
+        Ok(snapshot)
     }
 
     fn snapshot_document(
@@ -630,6 +650,46 @@ impl AuthoringSession {
         *cache = Some((version, bytes));
         bytes
     }
+    pub fn set_image_memory_budget(
+        &mut self,
+        budget: zipzi_project::ImageMemoryBudget,
+    ) -> Result<(), SdkError> {
+        self.project
+            .set_image_memory_budget(budget)
+            .map_err(|s| SdkError::from_status(s, "set_image_memory_budget", vec![]))
+    }
+    pub fn image_memory_budget(&self) -> &zipzi_project::ImageMemoryBudget {
+        self.project.image_memory_budget()
+    }
+    pub fn memory_image_entries(&self) -> usize {
+        self.project.memory_image_entries()
+    }
+    /// Collect registry entries with no formal, history, candidate, snapshot or
+    /// prepared-image owner. Pixel Arcs held by textures remain budgeted.
+    pub fn collect_image_resources(&self) -> usize {
+        let mut sources: HashSet<String> = self
+            .document()
+            .asset_order()
+            .iter()
+            .filter_map(|id| {
+                self.document()
+                    .get_asset(id)?
+                    .content
+                    .as_ref()
+                    .map(|c| c.source.clone())
+            })
+            .collect();
+        for entry in self.done.iter().chain(&self.redo) {
+            sources.extend(
+                entry
+                    .checkpoint
+                    .assets()
+                    .into_iter()
+                    .filter_map(|a| a.content.map(|c| c.source)),
+            );
+        }
+        self.project.collect_image_resources(&sources)
+    }
     pub fn drain_events(&mut self) -> Vec<EditReceipt> {
         std::mem::take(&mut self.events)
     }
@@ -696,7 +756,13 @@ impl AuthoringSession {
             erased_keys: HashSet::new(),
             authoring_limits: self.authoring_limits,
             resource_load_controls: vec![],
-            prepared_images: vec![],
+            resource_store: self.project.image_resource_store(),
+            prepared_images: self
+                .document()
+                .asset_order()
+                .iter()
+                .filter_map(|id| self.project.memory_image(self.document().get_asset(id)?))
+                .collect(),
             binding_controls: vec![],
             binding_cost: None,
         })

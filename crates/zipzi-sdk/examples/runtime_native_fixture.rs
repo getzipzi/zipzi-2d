@@ -5,7 +5,7 @@ use zipzi_core::{
     Canvas, PreciseVec2, RotationPose, RotationTransform, Transform, TransformData, Vec2,
     WarpTransform,
 };
-use zipzi_sdk::{rectangle_grid_geometry, rectangle_mesh, AuthoringSession, MeshGeometry};
+use zipzi_sdk::{AuthoringSession, MeshGeometry, rectangle_grid_geometry, rectangle_mesh};
 
 fn id(n: usize) -> String {
     format!("71000000-0000-4000-8000-{n:012x}")
@@ -22,9 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     // Match the editor's 540-model-unit rotation axis so its tip remains in view.
     let mut sdk = AuthoringSession::new(&id(1), Canvas::new(4000., 3000., Vec2::default(), 1.))?;
-    let asset = sdk.prepare_rgba_asset(
-        &id(2),
-        "asymmetric control texture",
+    let image = sdk.prepare_rgba_image(
         2,
         2,
         vec![
@@ -33,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into(),
     )?;
     sdk.edit("Native control fixture", None, |edit| {
-        edit.create_asset(asset)?;
+        edit.create_prepared_image(id(2), "asymmetric control texture".into(), &image)?;
         edit.create_transform(Transform {
             id: id(3),
             name: "Root Warp".into(),

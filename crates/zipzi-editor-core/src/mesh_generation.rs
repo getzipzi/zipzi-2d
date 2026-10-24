@@ -236,11 +236,8 @@ impl Document {
                     .geometry(&preview.target.id)
                     .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
                 let mut mesh = self.session.mesh(&preview.target.id).unwrap();
-                let asset = if let Some(texture) = &preview.padded_texture {
-                    let previous = self.session.asset(&mesh.texture_asset_id).unwrap();
-                    Some(self.session.prepare_rgba_asset(
-                        &previous.id,
-                        &previous.name,
+                let image = if let Some(texture) = &preview.padded_texture {
+                    Some(self.session.prepare_rgba_image(
                         texture.width,
                         texture.height,
                         texture.rgba.clone(),
@@ -248,6 +245,7 @@ impl Document {
                 } else {
                     None
                 };
+                let asset_id = mesh.texture_asset_id.to_string();
                 let g = &preview.geometry;
                 mesh.vertex_ids = g.vertex_ids.clone();
                 mesh.base_positions = g.positions.clone();
@@ -263,8 +261,8 @@ impl Document {
                 let (_, receipt) =
                     self.session
                         .edit("generate alpha mesh", Some(source.version), |edit| {
-                            if let Some(asset) = asset {
-                                edit.replace_asset(asset)?;
+                            if let Some(image) = image {
+                                edit.replace_prepared_image(&asset_id, &image)?;
                             }
                             edit.replace_topology(&source, replacement)
                         })?;

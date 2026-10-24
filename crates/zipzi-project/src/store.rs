@@ -16,7 +16,8 @@ use zipzi_core::{Document, Status};
 
 pub(crate) use assets::asset_path;
 pub use assets::{
-    PreparedImageContent, prepare_image_content, read_project_asset, read_project_asset_if_changed,
+    prepare_image_content, prepare_image_content_with_budget, read_project_asset,
+    read_project_asset_if_changed, ImageResourceStore, PreparedImageContent,
 };
 pub use manifest::{project_identity, project_manifest};
 pub use session::DocumentSession;
@@ -80,7 +81,8 @@ pub struct DocumentSnapshot {
 pub struct DocumentStore {
     filesystem: Arc<dyn FileSystem>,
     verified_pngs: Mutex<HashMap<String, (u32, u32)>>,
-    memory_assets: Mutex<HashMap<String, Arc<MemoryAsset>>>,
+    memory_assets: Arc<Mutex<HashMap<String, Arc<MemoryAsset>>>>,
+    image_budget: crate::ImageMemoryBudget,
 }
 
 impl Default for DocumentStore {
@@ -98,7 +100,8 @@ impl DocumentStore {
         Self {
             filesystem,
             verified_pngs: Mutex::new(HashMap::new()),
-            memory_assets: Mutex::new(HashMap::new()),
+            memory_assets: Arc::new(Mutex::new(HashMap::new())),
+            image_budget: Default::default(),
         }
     }
 }

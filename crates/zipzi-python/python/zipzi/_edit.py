@@ -70,6 +70,53 @@ class Edit:
         """Return this edit for use in a context manager."""
         return self
 
+    def apply_modeling(self, *commands: Mapping[str, object]) -> None:
+        """Apply a batch of SDK modeling commands in this transaction.
+
+        Commands use an ``op`` discriminator and native SDK record/intent values.
+        A failed command makes the entire candidate uncommittable.
+        """
+        self._call(lambda: self._native.apply_modeling_json(json.dumps(commands, allow_nan=False)))
+
+    def plan_modeling(self, domain: str, intent: Mapping[str, object]):
+        """Create a read-only source-bound plan; close it to release its resources."""
+        from ._modeling import ModelingPlan
+        return ModelingPlan(self._native.plan_modeling_json(json.dumps({"domain": domain, "intent": intent}, allow_nan=False)))
+
+    def apply_modeling_plan(self, plan) -> None:
+        """Apply a plan only to the exact formal/candidate source it captured."""
+        def apply():
+            if plan._closed:
+                from ._connection import ConnectionFailure
+                raise ConnectionFailure("INVALID_REFERENCE", "Plan is released")
+            return self._native.apply_modeling_plan(plan._native)
+        self._call(apply)
+
+    def modeling_query(self, **selection) -> dict:
+        """Read detached records after preceding candidate operations."""
+        return json.loads(self._native.modeling_query_json(json.dumps(selection, allow_nan=False)))
+
+    def sample_modeling(self, parameters: Sequence[Mapping[str, float]], *, min_triangle_area: float = 0., model_bounds=None) -> dict:
+        """Sample this candidate without publishing or changing any preview."""
+        return json.loads(self._native.sample_modeling_json(json.dumps(list(parameters), allow_nan=False),
+            json.dumps({"min_triangle_area": min_triangle_area, "model_bounds": model_bounds}, allow_nan=False)))
+
+    def apply_modeling_blob(self, blob) -> None:
+        """Apply a sealed UTF-8 JSON modeling batch from a connected blob."""
+        self._call(lambda: self._native.apply_modeling_blob(blob))
+
+    def create_rgba_image_from_blob(self, blob, image_id: str, name: str, width: int, height: int, *, replace: bool = False) -> None:
+        """Attach sealed RGBA bytes without a frame-sized array or payload copy."""
+        self._call(lambda: self._native.apply_rgba_blob(blob, image_id, name, width, height, replace))
+
+    def create_rgba_image(self, image_id: str, name: str, width: int, height: int, rgba: bytes) -> None:
+        """Retain immutable generated pixels in this candidate until commit/cancel."""
+        self._call(lambda: self._native.apply_rgba(image_id, name, width, height, bytes(rgba), False))
+
+    def replace_rgba_image(self, image_id: str, width: int, height: int, rgba: bytes) -> None:
+        """Replace image content while keeping the image's identity and label."""
+        self._call(lambda: self._native.apply_rgba(image_id, "", width, height, bytes(rgba), True))
+
     def parameter(self, parameter_id: str) -> ParameterSnapshot | None:
         """Read a parameter after preceding edit operations, or None if absent."""
         raw = self._native.parameter(parameter_id)

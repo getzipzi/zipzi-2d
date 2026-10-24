@@ -235,3 +235,32 @@ all currently active expressions at full weight without advancing the clock;
 `Fade` preserves authored fade-in/out. The transition is part of the schedule and
 cache identity, so seeking and cold replay preserve cuts. Expression values still
 feed the normal Physics and Pose stages; the authoring document is unchanged.
+
+## Modeling batches and image memory
+
+`prepare_rgba_image(width, height, rgba)` returns a `PreparedImageContent` lease
+without registering an asset. Pass it to `create_prepared_image` or
+`replace_prepared_image`; keep the lease until the candidate owns the content.
+Unrelated commits cannot collect its pixels, and dropping an unused lease frees
+its storage. This replaces the descriptor-only `prepare_rgba_asset` API.
+
+`ModelingCommand` dispatches a batch through existing SDK candidate methods;
+`modeling_records` borrows complete selected records without cloning the model.
+`AuthoringSnapshot::sample_modeling` evaluates explicit parameter maps and shares
+`diagnose_geometry` with formal sessions. `ModelingIntent`/`ModelingPlan` unify
+read-only domain plans and their cost/loss reports for native and hosted callers.
+No batch or plan creates a separate history; publication remains `commit_to`.
+
+Project's `ImageMemoryBudget` accounts shared RGBA/PNG buffers, temporary
+preparation reservations and blobs. `PreparedImageContent::from_rgba` accepts
+shared pixels; `from_rgba_bytes` reserves conversion space before copying.
+Candidates retain prepared/new and existing images; snapshots include uncommitted
+prepared images. `collect_image_resources` retains formal/history roots and
+independent leases while reclaiming unused registry entries. Commit collects
+after history/redo eviction; standalone callers can also collect after dropping
+an edit or snapshot. `set_image_memory_budget` admits retained images atomically,
+including owned candidates crossing into a host. Pixel Arcs held by textures
+continue to count until their last owner drops.
+
+[R4 evidence and remaining work](../../docs/plans/sdk-runtime/r4-modeling.md)
+describe the current connected slice and limits.

@@ -14,11 +14,11 @@ fn candidate_snapshot_keeps_new_memory_image_and_source_after_candidate_dropped(
     let session = sdk();
     let asset_id = "61000000-0000-4000-8000-000000000002";
     let rgba: Arc<[u8]> = Arc::from([255, 0, 0, 255]);
-    let asset = session
-        .prepare_rgba_asset(asset_id, "draft", 1, 1, rgba.clone())
-        .unwrap();
+    let prepared = session.prepare_rgba_image(1, 1, rgba.clone()).unwrap();
     let mut edit = session.begin_owned_edit("memory image", None).unwrap();
-    edit.create_asset(asset).unwrap();
+    edit.create_prepared_image(asset_id.into(), "draft".into(), &prepared)
+        .unwrap();
+    drop(prepared);
     let snapshot = session.candidate_snapshot(&edit).unwrap();
     assert_eq!(snapshot.version(), edit.base_version());
     assert!(session.read_snapshot().memory_image(asset_id).is_none());

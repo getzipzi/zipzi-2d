@@ -100,8 +100,9 @@ an expired client's terminal results and retains ongoing work through completion
 This conservative R1 slot policy is replaced/extended by R3 request-result windows.
 
 These are document/metadata estimates, not allocator/RSS measurements. Memory
-image payload/PNG-cache accounting and reclamation, disk byte pinning, Plan,
-Preview, Proposal, blob and transport queue budgets are later-stage work (R4–R6).
+image payload/PNG-cache accounting and reclamation, source-bound Plan tokens and
+blob uploads are now implemented in the first R4 slice below. Disk byte pinning,
+Preview, Proposal and complete transport-queue accounting remain later work.
 Caller-owned typed snapshots are not Runtime token-table allocations. R1 does not
 claim the A17 resource-reclamation or full host-memory acceptance gates.
 
@@ -150,9 +151,9 @@ continue via `Executor` and completion delivery. Terminal Job queries atomically
 transfer their results into the deduplicated request window and release Job slots.
 Request status queries do not advance the monotonic admission watermark.
 
-The contract is `zipzi-runtime-r3-2`: big-endian u32 length + UTF-8 JSON, at most
-16 MiB per control frame, strict handshake and runtime-scoped IDs. Binary blobs
-are unsupported until R4. The serial transport admits one outstanding request per
+The contract is `zipzi-runtime-r4-1`: big-endian u32 length + UTF-8 JSON, at most
+16 MiB per control frame, strict handshake and runtime-scoped IDs. R4 adds explicit client-owned blob uploads/readback in 1 MiB JSON byte-array
+chunks; each blob is at most 256 MiB. There is no separate binary frame type. The serial transport admits one outstanding request per
 connection (stricter than the R0 queue maxima), at most eight socket workers and
 16 queued transport notifications. Results retain at most 1024 entries/8 MiB per
 client, 64 MiB overall and 300 seconds; evicted IDs never execute as new requests.
@@ -174,3 +175,29 @@ python3 tools/python/test_connected.py
 
 See [R3 acceptance evidence](../../docs/plans/sdk-runtime/r3-ipc.md) and the
 [implemented connection slice](../../docs/runtime/r3-coverage.json).
+
+## R4 work in progress
+
+The first R4 slice adds shared SDK modeling batches, explicit complete-record
+queries, formal/candidate CPU parameter batches, and source-bound SDK plans.
+Image resources now have shared RGBA/PNG/blob accounting and preparation leases;
+SDK candidates, snapshots, history and plans keep referenced content readable.
+Cancellation/client expiry and history eviction reclaim unreferenced entries.
+`image_memory_usage` reports actual buffer bytes separately from document/plan
+estimates; pixel Arcs retained by textures remain charged after table collection.
+Resource/blob combined admission is currently capped at 768 MiB, with a separate
+512 MiB blob-table cap. Plans have 128 MiB of conservative estimates and 64 slots
+per client. These are CPU payload budgets, not RSS or GPU allocation limits.
+
+Modeling queries admit borrowed index storage first, then stream the borrowed
+response through a bounded byte counter before creating JSON Values. Admission
+uses the remaining Runtime CPU estimate, retained responses, the frame cap and
+result retention limits. A conservative 128-times-wire-size estimate covers JSON
+nodes, copies and encoding; it is not an exact allocator/RSS measurement.
+Over-budget queries return `BUDGET_EXCEEDED` without aborting their candidate.
+
+This is not the R4 exit gate: remote handles/addresses, full IO/export, disk-byte
+pinning, cancellable heavy read jobs and full Editor acceptance remain pending.
+See [R4 implementation record](../../docs/plans/sdk-runtime/r4-modeling.md) and
+[coverage](../../docs/runtime/r4-coverage.json). Rebuild/restart an old R3 host
+before connecting the R4 client.

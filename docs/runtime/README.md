@@ -14,6 +14,9 @@ see [R3 evidence](../plans/sdk-runtime/r3-ipc.md) and the explicit
 remains a classification catalog; `not-connected` there is not a claim that all
 entries are unimplemented. R3's coverage manifest records the verified routes.
 Python targets CPython 3.14; connection imports work without `_native`.
+R4 is in progress: see [implementation/evidence](../plans/sdk-runtime/r4-modeling.md)
+and [current verified/pending coverage](r4-coverage.json). The active protocol is
+`zipzi-runtime-r4-1`; R3 records retain their historical contract.
 
 ## Source inventory
 
@@ -109,6 +112,14 @@ Current `_edit.py` behavior and required R3 changes:
 | Script failure | Earlier successful commits remain | Same behavior connected; no implicit whole-script rollback. |
 
 ## Memory ownership gaps for R4
+
+The following records the pre-R4 baseline. The current preparation API is
+`AuthoringSession::prepare_rgba_image`, which returns an owned
+`PreparedImageContent` lease without inserting a registry entry. Candidates take
+ownership through `create_prepared_image` / `replace_prepared_image`; successful
+publication registers the content. R4 now collects unreferenced memory images
+while preserving formal/history roots and outstanding leases. The historical
+`prepare_rgba_asset` path described below has been removed.
 
 `AuthoringSession::prepare_rgba_asset` enters project `memory_assets` before any
 candidate publication. Entries hold `Arc<MemoryAsset>` with decoded RGBA and a

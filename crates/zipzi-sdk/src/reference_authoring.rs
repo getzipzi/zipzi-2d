@@ -349,3 +349,18 @@ impl EditSession<'_> {
 fn err(s: zipzi_core::Status, op: &'static str) -> SdkError {
     SdkError::from_status(s, op, vec![])
 }
+
+impl crate::AuthoringSnapshot {
+    pub fn plan_reference_edit(
+        &self,
+        intent: ReferenceEdit,
+    ) -> Result<ReferenceEditPlan, SdkError> {
+        Ok(ReferenceEditPlan {
+            version: self.version(),
+            domain: self
+                .document()
+                .plan_reference_edit(intent)
+                .map_err(|s| SdkError::from_status(s, "plan_reference_edit", vec![]))?,
+        })
+    }
+}

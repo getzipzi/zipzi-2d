@@ -9,44 +9,49 @@ pub mod motion;
 pub mod package;
 pub mod physics;
 pub mod pose;
+pub mod resource_budget;
 pub mod resources;
+pub use resource_budget::{
+    ImageBufferKind, ImageMemoryBudget, ImageMemoryReservation, ImageMemoryUsage,
+};
 pub mod store;
 pub mod transfer;
 
-pub use cdi::{CdiImport, CdiProjectDiagnostic, CdiProjectError, export_cdi3, import_cdi3};
+pub use cdi::{export_cdi3, import_cdi3, CdiImport, CdiProjectDiagnostic, CdiProjectError};
 pub use cmo3::{encode_document_cmo3, encode_project_cmo3, publish_cmo3};
 pub use codec::{decode_project, encode_project};
 #[cfg(feature = "binary-prototype")]
 pub use codec::{decode_project_cbor, encode_project_cbor};
 pub use cubism::{encode_document_cubism, encode_project_cubism, publish_can3, publish_cubism};
 pub use expression::{
-    ExpressionDiagnostic, ExpressionImport, ExpressionProjectError, export_available_expression3,
-    export_expression3, import_expression3,
+    export_available_expression3, export_expression3, import_expression3, ExpressionDiagnostic,
+    ExpressionImport, ExpressionProjectError,
 };
 pub use filesystem::{FileSystem, NativeFileSystem, Publication};
 pub use motion::{
-    MotionDiagnostic, MotionImport, MotionProjectError, export_available_motion3, export_motion3,
-    import_motion3,
+    export_available_motion3, export_motion3, import_motion3, MotionDiagnostic, MotionImport,
+    MotionProjectError,
 };
 pub use package::{
-    ExportFile, ExportFileKind, ExportPlan, PackageOptions, PackageReference, PackageValidation,
-    PackageValidator, RuntimeValidation, build_export_plan, publish_export_plan, publish_package,
+    build_export_plan, publish_export_plan, publish_package, ExportFile, ExportFileKind,
+    ExportPlan, PackageOptions, PackageReference, PackageValidation, PackageValidator,
+    RuntimeValidation,
 };
 pub use physics::{
-    PhysicsDiagnostic, PhysicsImport, PhysicsProjectError, export_available_physics3,
-    export_physics3, import_physics3,
+    export_available_physics3, export_physics3, import_physics3, PhysicsDiagnostic, PhysicsImport,
+    PhysicsProjectError,
 };
 pub use pose::{
-    PoseDiagnostic, PoseImport, PoseProjectError, export_available_pose3, export_pose3,
-    import_pose3,
+    export_available_pose3, export_pose3, import_pose3, PoseDiagnostic, PoseImport,
+    PoseProjectError,
 };
-pub use resources::{AssetData, TextureData, content_sha256, decode_png, is_valid_asset_path};
+pub use resources::{content_sha256, decode_png, is_valid_asset_path, AssetData, TextureData};
 pub use store::{
-    DocumentSession, DocumentSnapshot, DocumentStore, PreparedImageContent, ProjectResult,
-    ResourceDiagnostic, prepare_image_content, project_identity, project_manifest,
-    read_project_asset,
+    prepare_image_content, prepare_image_content_with_budget, project_identity, project_manifest,
+    read_project_asset, DocumentSession, DocumentSnapshot, DocumentStore, ImageResourceStore,
+    PreparedImageContent, ProjectResult, ResourceDiagnostic,
 };
-pub use transfer::{TransferFormat, TransferSnapshot, resolve_model3_entry};
+pub use transfer::{resolve_model3_entry, TransferFormat, TransferSnapshot};
 pub use zipzi_cmo3::{
     Can3Artifact, Can3Options, Cmo3Artifact, Cmo3Diagnostic, Cmo3Error, Cmo3Options, Cmo3Report,
     CubismArtifact, CubismOptions, DiagnosticSeverity as Cmo3DiagnosticSeverity, LossPolicy,

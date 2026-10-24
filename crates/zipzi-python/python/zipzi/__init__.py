@@ -197,7 +197,7 @@ if ObservationFailure.__module__ == "zipzi._observe":
 del _public_type
 
 __all__ = [
-    "Connection", "ConnectedBackend", "ConnectionFailure", "Busy", "OutcomeUnknown", "connect", "ObjectBatch",
+    "ModelingPlan", "Connection", "ConnectedBackend", "ConnectionFailure", "Busy", "OutcomeUnknown", "connect", "ObjectBatch",
     "Axis",
     "BlendConstraintSnapshot",
     "BlendConstraintSpec",
@@ -300,3 +300,5 @@ from ._connection import Connection, ConnectedBackend, ConnectionFailure, Busy, 
 from ._endpoint import connect
 
 ObjectBatch.__module__ = __name__
+
+from ._modeling import ModelingPlan as ModelingPlan

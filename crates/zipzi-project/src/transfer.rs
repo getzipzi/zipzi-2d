@@ -123,7 +123,8 @@ impl DocumentSession {
         if let Some(animation) = animation {
             zipzi_cmo3::import_animation(&animation, &mut imported.document).map_err(codec)?;
         }
-        let candidate = DocumentSession::from_authoring_document(imported.document);
+        let mut candidate = DocumentSession::from_authoring_document(imported.document);
+        candidate.set_image_memory_budget(self.image_memory_budget().clone())?;
         let mut document = candidate.document().clone();
         for asset_id in document.asset_order().to_vec() {
             let old = document.get_asset(&asset_id).unwrap().clone();
@@ -132,17 +133,16 @@ impl DocumentSession {
                 .get(&old.content.as_ref().unwrap().source)
                 .ok_or_else(|| Status::error("CUBISM_RESOURCE", "Missing imported image"))?;
             let texture = crate::decode_png(bytes)?;
-            let asset = candidate.prepare_rgba_asset(
-                &old.id,
-                &old.name,
-                texture.width,
-                texture.height,
-                texture.rgba.into(),
-            )?;
+            let image =
+                candidate.prepare_rgba_image(texture.width, texture.height, texture.rgba.into())?;
+            let mut asset = old;
+            asset.content = Some(image.content().clone());
+            asset.unresolved_source = None;
             let result = document.replace_asset(asset);
             if !result.status.is_ok() {
                 return Err(result.status);
             }
+            candidate.retain_prepared_image(&image);
         }
         // Keep the candidate resource store; publication replaces the session
         // only after every model, animation and texture has been validated.
@@ -316,7 +316,7 @@ fn resolve_cubism_model(parent: &Path, reference: &str) -> Result<PathBuf, Statu
                 return Err(Status::error(
                     "CUBISM_ENTRY",
                     format!("Model reference is not a file: {}", candidate.display()),
-                ))
+                ));
             }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => return Err(Status::error("CUBISM_IO", error.to_string())),
@@ -474,10 +474,12 @@ mod tests {
         fs::write(&animation, animation_reference(sibling.to_str().unwrap())).unwrap();
         assert!(linked_project(&sibling).unwrap().1.is_some());
         fs::write(root.join("second.can3"), animation_reference("model.cmo3")).unwrap();
-        assert!(linked_project(&sibling)
-            .unwrap_err()
-            .message
-            .contains("Multiple matching"));
+        assert!(
+            linked_project(&sibling)
+                .unwrap_err()
+                .message
+                .contains("Multiple matching")
+        );
         fs::remove_dir_all(root).unwrap();
     }
 }

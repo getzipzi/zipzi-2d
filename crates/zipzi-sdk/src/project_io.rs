@@ -193,19 +193,18 @@ impl AuthoringSession {
             SdkError::from_status(status, "read_texture_asset", vec![asset.id.clone()])
         })
     }
-    /// Stage immutable pixels for a later create_asset/replace_asset transaction.
-    /// This does not change the document, its revision, history, or any files.
-    pub fn prepare_rgba_asset(
+    /// Prepare a resource lease for create_prepared_image/replace_prepared_image.
+    /// The lease keeps pixels alive across unrelated commits and collection.
+    /// Preparation does not change the document, history, or resource registry.
+    pub fn prepare_rgba_image(
         &self,
-        id: &str,
-        name: &str,
         width: u32,
         height: u32,
         rgba: std::sync::Arc<[u8]>,
-    ) -> Result<zipzi_core::ImageAsset, SdkError> {
+    ) -> Result<crate::PreparedImageContent, SdkError> {
         self.project
-            .prepare_rgba_asset(id, name, width, height, rgba)
-            .map_err(|s| SdkError::from_status(s, "prepare_rgba_asset", vec![id.into()]))
+            .prepare_rgba_image(width, height, rgba)
+            .map_err(|s| SdkError::from_status(s, "prepare_rgba_image", vec![]))
     }
     /// Save through the project's publication path and retain SDK undo/redo.
     /// Project paths must be absolute; unsaved relative asset sources require an

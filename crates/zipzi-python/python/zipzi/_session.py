@@ -100,6 +100,29 @@ class Session:
         _sessions.add(session)
         return session
 
+    def plan_modeling(self, domain: str, intent: Mapping[str, object]):
+        """Create a read-only source-bound plan; close it to release its resources."""
+        from ._modeling import ModelingPlan
+        return ModelingPlan(self._native.plan_modeling_json(json.dumps({"domain": domain, "intent": intent}, allow_nan=False)))
+
+    def modeling_query(self, **selection) -> dict:
+        """Read collection IDs, metadata and explicitly requested SDK records.
+
+        Keywords are assets, meshes, parameters, parts, transforms, bindings,
+        scene_bindings, blend_key_tables, blend_constraints, blend_bindings,
+        glues, offscreens, parameter_groups and attachments; values are ID lists.
+        """
+        return json.loads(self._native.modeling_query_json(json.dumps(selection, allow_nan=False)))
+
+    def sample_modeling(self, parameters: Sequence[Mapping[str, float]], *, min_triangle_area: float = 0., model_bounds=None) -> dict:
+        """Evaluate an immutable formal source with explicit parameter maps.
+
+        Returns the source/version, input parameters, CPU frames and geometry
+        diagnostics. This call does not change authoring preview or history.
+        """
+        return json.loads(self._native.sample_modeling_json(json.dumps(list(parameters), allow_nan=False),
+            json.dumps({"min_triangle_area": min_triangle_area, "model_bounds": model_bounds}, allow_nan=False)))
+
     @classmethod
     def with_history_limits(
         cls,

@@ -5,7 +5,7 @@ use crate::resources::{content_sha256, decode_png, AssetData, TextureData};
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::{Arc, OnceLock},
+    sync::{Arc, Mutex},
 };
 use zipzi_core::{Document, ImageAsset, Status};
 
@@ -64,31 +64,49 @@ pub fn read_project_asset_if_changed(
 
 pub(super) struct MemoryAsset {
     pub(super) texture: TextureData,
-    pub(super) png: OnceLock<Result<VerifiedAsset, Status>>,
+    pub(super) png: Mutex<Option<Arc<VerifiedAsset>>>,
+    pub(super) budget: crate::ImageMemoryBudget,
 }
 
 impl MemoryAsset {
-    pub(super) fn encoded_png(&self) -> Result<&VerifiedAsset, Status> {
-        self.png
-            .get_or_init(|| {
-                let mut bytes = Vec::new();
-                {
-                    let mut encoder =
-                        png::Encoder::new(&mut bytes, self.texture.width, self.texture.height);
-                    encoder.set_color(png::ColorType::Rgba);
-                    encoder.set_depth(png::BitDepth::Eight);
-                    let mut writer = encoder
-                        .write_header()
-                        .map_err(|error| Status::error("PNG_ENCODE", error.to_string()))?;
-                    writer
-                        .write_image_data(&self.texture.rgba)
-                        .map_err(|error| Status::error("PNG_ENCODE", error.to_string()))?;
-                }
-                let sha256 = content_sha256(&bytes);
-                Ok(VerifiedAsset { bytes, sha256 })
-            })
-            .as_ref()
-            .map_err(Clone::clone)
+    pub(super) fn encoded_png(&self) -> Result<Arc<VerifiedAsset>, Status> {
+        let mut cache = self.png.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(png) = cache.as_ref() {
+            return Ok(png.clone());
+        }
+        // Conservative bound for an uncompressed zlib stream, row filters and
+        // PNG chunk framing. The capped writer checks before every Vec growth.
+        let raw = self
+            .texture
+            .rgba
+            .len()
+            .saturating_add(self.texture.height as usize);
+        let bound = raw.saturating_add(raw / 100).saturating_add(1024);
+        let reservation = self.budget.reserve(bound.saturating_mul(2))?;
+        let mut output = BoundedPng {
+            bytes: Vec::new(),
+            limit: bound,
+        };
+        {
+            let mut encoder =
+                png::Encoder::new(&mut output, self.texture.width, self.texture.height);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            let mut writer = encoder
+                .write_header()
+                .map_err(|e| Status::error("PNG_ENCODE", e.to_string()))?;
+            writer
+                .write_image_data(&self.texture.rgba)
+                .map_err(|e| Status::error("PNG_ENCODE", e.to_string()))?;
+        }
+        let bytes: Arc<[u8]> = output.bytes.into();
+        reservation.commit(&bytes, crate::ImageBufferKind::Png)?;
+        let result = Arc::new(VerifiedAsset {
+            sha256: content_sha256(&bytes),
+            bytes,
+        });
+        *cache = Some(result.clone());
+        Ok(result)
     }
 
     pub(super) fn validate_metadata(&self, asset: &ImageAsset) -> Result<(), Status> {
@@ -114,7 +132,7 @@ impl MemoryAsset {
 }
 
 pub(super) struct VerifiedAsset {
-    pub(super) bytes: Vec<u8>,
+    pub(super) bytes: Arc<[u8]>,
     pub(super) sha256: String,
 }
 
@@ -194,7 +212,10 @@ impl DocumentStore {
                 format!("{}: PNG differs from saved SHA-256", asset.id),
             ));
         }
-        Ok(VerifiedAsset { bytes, sha256 })
+        Ok(VerifiedAsset {
+            bytes: bytes.into(),
+            sha256,
+        })
     }
 
     pub(super) fn remember_imported_assets(&self, document: &Document) {
@@ -277,6 +298,59 @@ impl std::fmt::Debug for PreparedImageContent {
     }
 }
 impl PreparedImageContent {
+    pub fn texture(&self) -> TextureData {
+        self.memory.texture.clone()
+    }
+    pub fn with_budget(&self, budget: &crate::ImageMemoryBudget) -> Result<Self, Status> {
+        Ok(Self::with_budget_many(std::slice::from_ref(self), budget)?
+            .pop()
+            .unwrap())
+    }
+    pub fn with_budget_many(
+        images: &[Self],
+        budget: &crate::ImageMemoryBudget,
+    ) -> Result<Vec<Self>, Status> {
+        let captured: Vec<_> = images
+            .iter()
+            .map(|image| {
+                (
+                    image.memory.texture.clone(),
+                    image
+                        .memory
+                        .png
+                        .lock()
+                        .unwrap_or_else(|p| p.into_inner())
+                        .clone(),
+                )
+            })
+            .collect();
+        let mut buffers = Vec::new();
+        for (texture, png) in &captured {
+            buffers.push((&texture.rgba, crate::ImageBufferKind::Rgba));
+            if let Some(png) = png {
+                buffers.push((&png.bytes, crate::ImageBufferKind::Png));
+            }
+        }
+        budget.track_buffers(&buffers)?;
+        Ok(images
+            .iter()
+            .zip(captured)
+            .map(|(image, (texture, png))| {
+                if image.memory.budget.same_pool(budget) {
+                    image.clone()
+                } else {
+                    Self {
+                        content: image.content.clone(),
+                        memory: Arc::new(MemoryAsset {
+                            texture,
+                            png: Mutex::new(png),
+                            budget: budget.clone(),
+                        }),
+                    }
+                }
+            })
+            .collect())
+    }
     pub fn content(&self) -> &zipzi_core::ImageContent {
         &self.content
     }
@@ -291,7 +365,7 @@ impl PreparedImageContent {
             return Err(Status::error("RESOURCE_HASH", &self.content.source));
         }
         Ok(AssetData {
-            bytes: png.bytes.clone(),
+            bytes: png.bytes.to_vec(),
             rgba: self.memory.texture.rgba.to_vec(),
             width: self.memory.texture.width,
             height: self.memory.texture.height,
@@ -300,55 +374,134 @@ impl PreparedImageContent {
     }
 }
 pub fn prepare_image_content(path: &Path) -> Result<PreparedImageContent, Status> {
+    prepare_image_content_with_budget(path, &crate::ImageMemoryBudget::default())
+}
+pub fn prepare_image_content_with_budget(
+    path: &Path,
+    budget: &crate::ImageMemoryBudget,
+) -> Result<PreparedImageContent, Status> {
+    use std::io::Read;
     if !path.is_absolute() {
         return Err(Status::error("INVALID_PATH", "PNG source must be absolute"));
     }
-    let metadata = fs::metadata(path).map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?;
-    if metadata.len() > 64 * 1024 * 1024 {
+    let file = fs::File::open(path).map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?;
+    let length = file
+        .metadata()
+        .map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?
+        .len();
+    if length > 64 * 1024 * 1024 {
         return Err(Status::error("CAPACITY", "PNG source exceeds 64 MiB"));
     }
-    let bytes = fs::read(path).map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?;
-    if bytes.len() > 64 * 1024 * 1024 {
-        return Err(Status::error("CAPACITY", "PNG source exceeds 64 MiB"));
+    let encoded = budget.reserve((length as usize).saturating_mul(2))?;
+    let mut bytes = Vec::new();
+    file.take(length + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?;
+    if bytes.len() as u64 != length {
+        return Err(Status::error("RESOURCE_IO", "PNG changed while preparing"));
     }
-    if bytes.get(..8) == Some(b"\x89PNG\r\n\x1a\n") {
-        if let Some(header) = bytes.get(16..24) {
-            let width = u32::from_be_bytes(header[..4].try_into().unwrap());
-            let height = u32::from_be_bytes(header[4..].try_into().unwrap());
-            if width > 16384
-                || height > 16384
-                || u64::from(width) * u64::from(height) * 4 > 256 * 1024 * 1024
-            {
-                return Err(Status::error(
-                    "CAPACITY",
-                    "PNG pixels exceed resource limits",
-                ));
-            }
-        }
+    if bytes.get(..8) != Some(b"\x89PNG\r\n\x1a\n") || bytes.len() < 24 {
+        return Err(Status::error("INVALID_IMAGE", "Invalid PNG header"));
     }
-    let data = decode_png(&bytes)?;
-    let content = zipzi_core::ImageContent {
-        source: format!("assets/.memory-loaded/{}.png", data.sha256),
-        width: data.width,
-        height: data.height,
-        sha256: data.sha256.clone(),
-    };
-    let memory = MemoryAsset {
-        texture: TextureData {
-            rgba: data.rgba.into(),
-            width: data.width,
-            height: data.height,
-            cache_key: format!("png:{}", data.sha256),
-        },
-        png: OnceLock::from(Ok(VerifiedAsset {
-            bytes: data.bytes,
-            sha256: data.sha256,
-        })),
-    };
+    let width = u32::from_be_bytes(bytes[16..20].try_into().unwrap());
+    let height = u32::from_be_bytes(bytes[20..24].try_into().unwrap());
+    let size = rgba_size(width, height)?;
+    let pixels = budget.reserve(size.saturating_mul(2))?;
+    let data = zipzi_core::image::decode_png(&bytes)?;
+    let rgba: Arc<[u8]> = data.rgba.into();
+    pixels.commit(&rgba, crate::ImageBufferKind::Rgba)?;
+    let bytes: Arc<[u8]> = bytes.into();
+    encoded.commit(&bytes, crate::ImageBufferKind::Png)?;
+    let sha256 = content_sha256(&bytes);
     Ok(PreparedImageContent {
-        memory: Arc::new(memory),
-        content,
+        content: zipzi_core::ImageContent {
+            source: format!("assets/.memory-loaded/{sha256}.png"),
+            width,
+            height,
+            sha256: sha256.clone(),
+        },
+        memory: Arc::new(MemoryAsset {
+            texture: TextureData {
+                rgba,
+                width,
+                height,
+                cache_key: format!("png:{sha256}"),
+            },
+            png: Mutex::new(Some(Arc::new(VerifiedAsset { bytes, sha256 }))),
+            budget: budget.clone(),
+        }),
     })
+}
+fn rgba_size(width: u32, height: u32) -> Result<usize, Status> {
+    let size = (width as usize)
+        .checked_mul(height as usize)
+        .and_then(|n| n.checked_mul(4));
+    if width == 0
+        || height == 0
+        || width > 16384
+        || height > 16384
+        || size.is_none_or(|n| n > 256 * 1024 * 1024)
+    {
+        return Err(Status::error(
+            "INVALID_IMAGE",
+            "Invalid or excessive RGBA dimensions",
+        ));
+    }
+    Ok(size.unwrap())
+}
+impl PreparedImageContent {
+    pub fn from_rgba_bytes(
+        width: u32,
+        height: u32,
+        rgba: Vec<u8>,
+        budget: &crate::ImageMemoryBudget,
+    ) -> Result<Self, Status> {
+        if rgba_size(width, height)? != rgba.len() {
+            return Err(Status::error(
+                "INVALID_IMAGE",
+                "RGBA length differs from dimensions",
+            ));
+        }
+        let reservation = budget.reserve(rgba.len().saturating_mul(2))?;
+        let rgba: Arc<[u8]> = rgba.into();
+        reservation.commit(&rgba, crate::ImageBufferKind::Rgba)?;
+        Self::from_rgba(width, height, rgba, budget)
+    }
+    /// Callers owning input pixels pay no additional copy. Host-created input
+    /// buffers should reserve before decoding/allocating, then commit the lease.
+    pub fn from_rgba(
+        width: u32,
+        height: u32,
+        rgba: Arc<[u8]>,
+        budget: &crate::ImageMemoryBudget,
+    ) -> Result<Self, Status> {
+        if rgba_size(width, height)? != rgba.len() {
+            return Err(Status::error(
+                "INVALID_IMAGE",
+                "RGBA length differs from dimensions",
+            ));
+        }
+        budget.track(&rgba, crate::ImageBufferKind::Rgba)?;
+        let key = format!("{width}x{height}-{}", content_sha256(&rgba));
+        Ok(Self {
+            content: zipzi_core::ImageContent {
+                source: format!("assets/.memory-generated/{key}.png"),
+                width,
+                height,
+                sha256: String::new(),
+            },
+            memory: Arc::new(MemoryAsset {
+                texture: TextureData {
+                    rgba,
+                    width,
+                    height,
+                    cache_key: format!("generated:{key}"),
+                },
+                png: Mutex::new(None),
+                budget: budget.clone(),
+            }),
+        })
+    }
 }
 impl super::DocumentSession {
     /// Called only after a successful SDK publication. Registration clones an Arc.
@@ -365,5 +518,135 @@ impl super::DocumentSession {
             memory: self.store.memory_asset(asset)?,
             content: asset.content.clone()?,
         })
+    }
+}
+
+struct BoundedPng {
+    bytes: Vec<u8>,
+    limit: usize,
+}
+impl std::io::Write for BoundedPng {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        if self
+            .bytes
+            .len()
+            .checked_add(bytes.len())
+            .is_none_or(|n| n > self.limit)
+        {
+            return Err(std::io::Error::other(
+                "PNG exceeds reserved encoding capacity",
+            ));
+        }
+        self.bytes
+            .try_reserve_exact(bytes.len())
+            .map_err(std::io::Error::other)?;
+        self.bytes.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Shared lookup for owned SDK candidates. Pins keep resources readable after
+/// collection, while this lookup alone does not keep an unused payload alive.
+#[derive(Clone)]
+pub struct ImageResourceStore {
+    images: Arc<Mutex<std::collections::HashMap<String, Arc<MemoryAsset>>>>,
+    budget: crate::ImageMemoryBudget,
+}
+impl ImageResourceStore {
+    pub fn with_budget(&self, budget: crate::ImageMemoryBudget) -> Self {
+        Self {
+            images: self.images.clone(),
+            budget,
+        }
+    }
+    pub fn budget(&self) -> &crate::ImageMemoryBudget {
+        &self.budget
+    }
+    pub fn memory_image(&self, asset: &ImageAsset) -> Option<PreparedImageContent> {
+        Some(PreparedImageContent {
+            memory: self
+                .images
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .get(&asset.content.as_ref()?.source)?
+                .clone(),
+            content: asset.content.clone()?,
+        })
+    }
+}
+impl super::DocumentSession {
+    pub fn image_resource_store(&self) -> ImageResourceStore {
+        ImageResourceStore {
+            images: self.store.memory_assets.clone(),
+            budget: self.store.image_budget.clone(),
+        }
+    }
+    pub fn image_memory_budget(&self) -> &crate::ImageMemoryBudget {
+        &self.store.image_budget
+    }
+    pub fn set_image_memory_budget(
+        &mut self,
+        budget: crate::ImageMemoryBudget,
+    ) -> Result<(), Status> {
+        let mut images = self
+            .store
+            .memory_assets
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        let captured: Vec<_> = images
+            .iter()
+            .map(|(source, memory)| {
+                (
+                    source.clone(),
+                    memory.texture.clone(),
+                    memory.png.lock().unwrap_or_else(|p| p.into_inner()).clone(),
+                )
+            })
+            .collect();
+        let mut buffers = Vec::new();
+        for (_, texture, png) in &captured {
+            buffers.push((&texture.rgba, crate::ImageBufferKind::Rgba));
+            if let Some(png) = png {
+                buffers.push((&png.bytes, crate::ImageBufferKind::Png));
+            }
+        }
+        budget.track_buffers(&buffers)?;
+        *images = captured
+            .into_iter()
+            .map(|(source, texture, png)| {
+                (
+                    source,
+                    Arc::new(MemoryAsset {
+                        texture,
+                        png: Mutex::new(png),
+                        budget: budget.clone(),
+                    }),
+                )
+            })
+            .collect();
+        self.store.image_budget = budget;
+        Ok(())
+    }
+    /// Keep formal/history descriptors and independently pinned images. No byte
+    /// payload is copied; textures are separately tracked until their last Arc dies.
+    pub fn collect_image_resources(&self, sources: &std::collections::HashSet<String>) -> usize {
+        let mut images = self
+            .store
+            .memory_assets
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        let before = images.len();
+        images.retain(|source, image| sources.contains(source) || Arc::strong_count(image) > 1);
+        before - images.len()
+    }
+    pub fn memory_image_entries(&self) -> usize {
+        self.store
+            .memory_assets
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .len()
     }
 }

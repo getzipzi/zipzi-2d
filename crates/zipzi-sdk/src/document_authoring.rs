@@ -108,3 +108,18 @@ impl EditSession<'_> {
         })
     }
 }
+
+impl crate::AuthoringSnapshot {
+    pub fn plan_document_edit(
+        &self,
+        intent: DocumentAuthoringEdit,
+    ) -> Result<DocumentEditPlan, SdkError> {
+        Ok(DocumentEditPlan {
+            version: self.version(),
+            domain: self
+                .document()
+                .plan_document_edit(intent)
+                .map_err(|s| SdkError::from_status(s, "plan_document_edit", vec![]))?,
+        })
+    }
+}

@@ -66,6 +66,85 @@ class Connected(unittest.TestCase):
             action()
         self.assertEqual(error.exception.code, code)
 
+    def test_r4_modeling_recipe_and_stateless_candidate_samples(self):
+        result = subprocess.run([sys.executable, "-I", str(Path(__file__).with_name("modeling_recipe.py")), "connected"], env=os.environ, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_r4_hundred_cancelled_images_reclaim_underlying_payloads(self):
+        c = self.connect()
+        session = c.create_session(str(uuid4()))
+        initial = session.version
+        for n in range(100):
+            edit = session.edit("cancel image")
+            edit.create_rgba_image(str(uuid4()), "draft", 1, 1, bytes([n, 0, 0, 255]))
+            self.assertEqual(c.statistics()["image_memory"]["rgba_bytes"], 4)
+            edit.cancel()
+            stats = c.statistics()
+            self.assertEqual(stats["memory_image_entries"], 0)
+            self.assertEqual(stats["image_memory"]["rgba_bytes"], 0)
+            self.assertEqual(stats["image_memory"]["preparing_bytes"], 0)
+        self.assertEqual(session.version, initial)
+        self.assertEqual(session.history_lengths(), (0, 0))
+
+    def test_r4_chunked_blob_pixels_remain_owned_until_last_candidate_releases(self):
+        c = self.connect()
+        session = c.create_session(str(uuid4()))
+        data = bytes([4, 3, 2, 255]) * (1024 * 257)
+        with c.create_blob(len(data)) as blob:
+            for offset in range(0, len(data), 1 << 20):
+                blob.append(data[offset:offset + (1 << 20)])
+            blob.seal()
+            reconstructed = b"".join(blob.read(offset, min(1 << 20, len(data) - offset)) for offset in range(0, len(data), 1 << 20))
+            self.assertEqual(reconstructed, data)
+            self.assertEqual(c.statistics()["image_memory"]["blob_bytes"], len(data))
+            edit = session.edit("blob image")
+            edit.create_rgba_image_from_blob(blob, str(uuid4()), "chunked", 1024, 257)
+            self.assertEqual(c.statistics()["image_memory"]["rgba_bytes"], len(data))
+        self.assertEqual(c.statistics()["blobs"], 0)
+        self.assertEqual(c.statistics()["image_memory"]["rgba_bytes"], len(data))
+        edit.cancel()
+        self.assertEqual(c.statistics()["image_memory"]["rgba_bytes"], 0)
+
+    def test_r4_blob_append_response_loss_recovers_offset_without_duplicate_bytes(self):
+        os.environ["ZIPZI_TEST_DROP_RESPONSE"] = "append_blob"
+        c = self.connect()
+        with c.create_blob(4) as blob:
+            with self.assertRaises(zipzi.OutcomeUnknown):
+                blob.append(bytes([1, 2, 3, 255]))
+            self.assertEqual(blob.offset, 0)
+            self.assertEqual(blob.recover(), 4)
+            self.assertEqual(blob.offset, 4)
+            blob.seal()
+            session = c.create_session(str(uuid4()))
+            edit = session.edit("recovered upload")
+            edit.create_rgba_image_from_blob(blob, str(uuid4()), "image", 1, 1)
+            edit.cancel()
+        self.assertEqual(c.statistics()["blobs"], 0)
+        self.assertEqual(c.statistics()["image_memory"]["rgba_bytes"], 0)
+
+    def test_r4_plan_source_sequence_and_client_ownership(self):
+        c = self.connect()
+        session = c.create_session(str(uuid4()))
+        resource = str(uuid4())
+        with session.edit("resource") as edit:
+            edit.create_rgba_image(resource, "image", 1, 1, bytes([1, 2, 3, 255]))
+        plan = session.plan_modeling("resource", {"operation": "patch_name", "id": resource, "expected": "image", "name": "renamed"})
+        other = self.connect()
+        edit = other.attach_session(session._native.session_id).edit("foreign plan")
+        self.assert_code("WRONG_OWNER", lambda: edit.apply_modeling_plan(plan))
+        edit.cancel()
+        edit = session.edit("candidate plan")
+        candidate_plan = edit.plan_modeling("resource", {"operation": "patch_name", "id": resource, "expected": "image", "name": "renamed"})
+        edit.apply_modeling({"op": "resource", "intent": {"operation": "patch_name", "id": resource, "expected": "image", "name": "changed"}})
+        self.assert_code("STALE_PLAN", lambda: edit.apply_modeling_plan(candidate_plan))
+        edit.cancel()
+        candidate_plan.close()
+        with session.edit("apply formal plan") as edit:
+            edit.apply_modeling_plan(plan)
+        plan.close()
+        self.assertEqual(c.statistics()["plans"], 0)
+        self.assertEqual(session.modeling_query(assets=[resource])["records"]["assets"][0]["name"], "renamed")
+
     def test_installed_without_native_shared_history_mesh_parameter_save_events(self):
         self.assertIsNone(importlib.util.find_spec("zipzi._native"))
         self.assertNotIn("zipzi-python/python", zipzi.__file__)

@@ -11,9 +11,10 @@ use std::{
 use zipzi_core::{Document, Mesh, ModelSetup, Parameter, Vec2};
 use zipzi_sdk::Version;
 
+mod modeling_query;
 mod values;
 use values::*;
-pub const CONTRACT: &str = "zipzi-runtime-r3-2";
+pub const CONTRACT: &str = "zipzi-runtime-r4-1";
 pub const SDK_BUILD: &str = env!("ZIPZI_RUNTIME_SDK_BUILD");
 pub const MAX_FRAME: usize = 16 << 20;
 
@@ -74,6 +75,77 @@ enum Operation {
         edit: Option<EditId>,
         meshes: Vec<String>,
         parameters: Vec<String>,
+    },
+    ModelingQuery {
+        session: SessionId,
+        edit: Option<EditId>,
+        query: zipzi_sdk::ModelingQuery,
+    },
+    ApplyModeling {
+        edit: EditId,
+        commands: Vec<zipzi_sdk::ModelingCommand>,
+    },
+    SampleModeling {
+        session: SessionId,
+        edit: Option<EditId>,
+        parameters: Vec<zipzi_core::PreviewValues>,
+        #[serde(default)]
+        checks: zipzi_sdk::GeometryChecks,
+        expected: Option<SourceRef>,
+    },
+    ApplyRgba {
+        edit: EditId,
+        id: String,
+        name: String,
+        width: u32,
+        height: u32,
+        rgba: Vec<u8>,
+        replace: bool,
+    },
+    CreateBlob {
+        length: usize,
+    },
+    AppendBlob {
+        blob: BlobId,
+        offset: usize,
+        bytes: Vec<u8>,
+    },
+    ReadBlob {
+        blob: BlobId,
+        offset: usize,
+        length: usize,
+    },
+    SealBlob {
+        blob: BlobId,
+    },
+    ReleaseBlob {
+        blob: BlobId,
+    },
+    ApplyRgbaBlob {
+        edit: EditId,
+        id: String,
+        name: String,
+        width: u32,
+        height: u32,
+        blob: BlobId,
+        replace: bool,
+    },
+    ApplyModelingBlob {
+        edit: EditId,
+        blob: BlobId,
+    },
+    CollectImages,
+    PlanModeling {
+        session: SessionId,
+        edit: Option<EditId>,
+        intent: zipzi_sdk::ModelingIntent,
+    },
+    ApplyModelingPlan {
+        edit: EditId,
+        plan: PlanId,
+    },
+    ReleaseModelingPlan {
+        plan: PlanId,
     },
     BeginEdit {
         session: SessionId,
@@ -269,6 +341,13 @@ impl Protocol {
         remote.disconnected = None;
         remote.connection = self.next_connection;
         let mut capabilities = vec![
+            "modeling_batch",
+            "modeling_records",
+            "modeling_cpu_samples",
+            "image_rgba",
+            "image_memory_accounting",
+            "modeling_plans",
+            "blobs",
             "sessions",
             "mesh_parameter_batch",
             "candidate_reads",
@@ -445,7 +524,10 @@ impl Protocol {
                 let (results, result_bytes) = self.retained_results();
                 json!({"clients": clients, "sessions": sessions, "edits": edits, "jobs": jobs,
                     "request_results": results, "request_result_bytes": result_bytes,
-                    "accounted_document_bytes": rt.accounted_bytes()})
+                    "accounted_document_bytes": rt.accounted_bytes().saturating_sub(rt.image_memory_usage().total_bytes()),
+                    "accounted_cpu_bytes": rt.accounted_bytes(),
+                    "image_memory": rt.image_memory_usage(), "plans": rt.modeling_plan_count(), "blobs": rt.blob_count(),
+                    "memory_image_entries": rt.list_sessions().iter().filter_map(|s| rt.session(s.id).ok()).map(|s| s.memory_image_entries()).sum::<usize>()})
             }
             Operation::ListSessions => {
                 json!(rt.list_sessions().iter().map(info).collect::<Vec<_>>())
@@ -492,6 +574,249 @@ impl Protocol {
                     json!({"session":session, "edit":edit, "version":version, "sequence":sequence});
                 value["state"] = info(&session_info)["state"].clone();
                 value
+            }
+            Operation::CreateBlob { length } => json!(rt.create_blob(client, length)?),
+            Operation::AppendBlob {
+                blob,
+                offset,
+                bytes,
+            } => json!(rt.append_blob(client, blob, offset, &bytes)?),
+            Operation::ReadBlob {
+                blob,
+                offset,
+                length,
+            } => {
+                if length > 1 << 20 {
+                    return Err(RuntimeError::Budget("blob chunk"));
+                }
+                let data = rt.blob(client, blob)?;
+                let end = offset
+                    .checked_add(length)
+                    .ok_or(RuntimeError::InvalidReference)?;
+                json!(
+                    data.get(offset..end)
+                        .ok_or(RuntimeError::InvalidReference)?
+                )
+            }
+            Operation::SealBlob { blob } => json!(rt.seal_blob(client, blob)?),
+            Operation::ReleaseBlob { blob } => {
+                rt.release_blob(client, blob)?;
+                Value::Null
+            }
+            Operation::ApplyRgbaBlob {
+                edit,
+                id,
+                name,
+                width,
+                height,
+                blob,
+                replace,
+            } => {
+                let bytes = rt.blob(client, blob)?;
+                let image = zipzi_project::PreparedImageContent::from_rgba(
+                    width,
+                    height,
+                    bytes,
+                    rt.image_memory_budget(),
+                )
+                .map_err(|s| {
+                    RuntimeError::Sdk(zipzi_sdk::SdkError {
+                        code: s.code.into(),
+                        message: s.message.into(),
+                        operation: "prepare_rgba",
+                        object_ids: vec![id.clone()],
+                        field_path: None,
+                        expected_version: None,
+                        actual_version: None,
+                        referrers: Box::new([]),
+                    })
+                })?;
+                rt.apply_edit(client, edit, |candidate| {
+                    if replace {
+                        candidate.replace_prepared_image(&id, &image)
+                    } else {
+                        candidate.create_prepared_image(id, name, &image)
+                    }
+                })?;
+                Value::Null
+            }
+            Operation::ApplyModelingBlob { edit, blob } => {
+                let bytes = rt.blob(client, blob)?;
+                let commands: Vec<zipzi_sdk::ModelingCommand> =
+                    serde_json::from_slice(&bytes).map_err(|_| RuntimeError::InvalidReference)?;
+                if commands.len() > 1024 {
+                    return Err(RuntimeError::Budget("modeling commands"));
+                }
+                rt.apply_edit(client, edit, |candidate| candidate.apply_modeling(commands))?;
+                Value::Null
+            }
+            Operation::PlanModeling {
+                session,
+                edit,
+                intent,
+            } => {
+                let (plan, source, report) = rt.plan_modeling(client, session, edit, intent)?;
+                json!({"plan": plan, "source": source, "report": report})
+            }
+            Operation::ApplyModelingPlan { edit, plan } => {
+                rt.apply_modeling_plan(client, edit, plan)?;
+                Value::Null
+            }
+            Operation::ReleaseModelingPlan { plan } => {
+                rt.release_modeling_plan(client, plan)?;
+                Value::Null
+            }
+            Operation::CollectImages => {
+                json!({"collected": rt.collect_image_resources(), "usage": rt.image_memory_usage()})
+            }
+            Operation::ModelingQuery {
+                session,
+                edit,
+                query,
+            } => {
+                let frozen;
+                let session_info = rt.session_info(session)?;
+                let (doc, source) = if let Some(edit) = edit {
+                    let candidate = rt.candidate(client, edit)?;
+                    if candidate.base_version().session_id != session_info.version.session_id {
+                        return Err(RuntimeError::InvalidReference);
+                    }
+                    (
+                        rt.edit_document(client, edit)?,
+                        SourceRef::Edit {
+                            session,
+                            edit,
+                            base: candidate.base_version(),
+                            sequence: rt.edit_sequence(client, edit)?,
+                        },
+                    )
+                } else if matches!(session_info.state, SessionState::Ready) {
+                    (
+                        rt.document(session)?,
+                        SourceRef::Formal {
+                            session,
+                            version: session_info.version,
+                        },
+                    )
+                } else {
+                    frozen = rt.source_snapshot(session)?;
+                    (frozen.snapshot.document(), frozen.source)
+                };
+                modeling_query::response(
+                    doc,
+                    &query,
+                    source,
+                    &session_info,
+                    rt.limits()
+                        .accounted_bytes
+                        .saturating_sub(rt.accounted_bytes())
+                        .saturating_sub(
+                            self.retained_results()
+                                .1
+                                .saturating_mul(modeling_query::JSON_MEMORY_FACTOR),
+                        ),
+                    self.limits
+                        .result_bytes_per_client
+                        .min(self.limits.result_bytes_total),
+                )?
+            }
+            Operation::ApplyModeling { edit, commands } => {
+                if commands.len() > 1024 {
+                    return Err(RuntimeError::Budget("modeling commands"));
+                }
+                rt.apply_edit(client, edit, |candidate| candidate.apply_modeling(commands))?;
+                Value::Null
+            }
+            Operation::SampleModeling {
+                session,
+                edit,
+                parameters,
+                checks,
+                expected,
+            } => {
+                if parameters.len() > 64 {
+                    return Err(RuntimeError::Budget("modeling samples"));
+                }
+                let session_info = rt.session_info(session)?;
+                let doc_bytes = if let Some(edit) = edit {
+                    if rt.candidate(client, edit)?.base_version().session_id
+                        != session_info.version.session_id
+                    {
+                        return Err(RuntimeError::InvalidReference);
+                    }
+                    rt.edit_document(client, edit)?.estimated_content_bytes()
+                } else if matches!(session_info.state, SessionState::Ready) {
+                    rt.document(session)?.estimated_content_bytes()
+                } else {
+                    rt.source_snapshot(session)?
+                        .snapshot
+                        .document()
+                        .estimated_content_bytes()
+                };
+                let size = doc_bytes
+                    .saturating_mul(parameters.len().max(1))
+                    .saturating_mul(4)
+                    .saturating_add(
+                        crate::runtime::serialized_bytes(&parameters)?.saturating_mul(2),
+                    )
+                    .saturating_add(1024);
+                if size > MAX_FRAME / 2
+                    || rt
+                        .accounted_bytes()
+                        .saturating_add(size)
+                        .saturating_add(doc_bytes)
+                        > rt.limits().accounted_bytes
+                {
+                    return Err(RuntimeError::Budget(
+                        "modeling sample batch; split the batch",
+                    ));
+                }
+                let source = if let Some(edit) = edit {
+                    rt.edit_snapshot(client, edit)?
+                } else {
+                    rt.source_snapshot(session)?
+                };
+                if expected.is_some_and(|expected| expected != source.source) {
+                    return Err(RuntimeError::InvalidReference);
+                }
+                let samples = source.snapshot.sample_modeling(parameters, checks)?;
+                json!({"source": source.source, "state": info(&session_info)["state"], "samples": samples})
+            }
+            Operation::ApplyRgba {
+                edit,
+                id,
+                name,
+                width,
+                height,
+                rgba,
+                replace,
+            } => {
+                let image = zipzi_project::PreparedImageContent::from_rgba_bytes(
+                    width,
+                    height,
+                    rgba,
+                    rt.image_memory_budget(),
+                )
+                .map_err(|s| {
+                    RuntimeError::Sdk(zipzi_sdk::SdkError {
+                        code: s.code.into(),
+                        message: s.message.into(),
+                        operation: "prepare_rgba",
+                        object_ids: vec![id.clone()],
+                        field_path: None,
+                        expected_version: None,
+                        actual_version: None,
+                        referrers: Box::new([]),
+                    })
+                })?;
+                rt.apply_edit(client, edit, |candidate| {
+                    if replace {
+                        candidate.replace_prepared_image(&id, &image)
+                    } else {
+                        candidate.create_prepared_image(id, name, &image)
+                    }
+                })?;
+                Value::Null
             }
             Operation::BeginEdit {
                 session,

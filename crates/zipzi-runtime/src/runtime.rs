@@ -1,5 +1,7 @@
 mod editor;
 pub use editor::CandidateWork;
+mod blobs;
+mod modeling;
 mod typed;
 use crate::events::EventLog;
 use crate::jobs::Task;
@@ -7,8 +9,8 @@ use crate::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use zipzi_core::{Canvas, Document, ModelSetup, Vec2};
 use zipzi_sdk::{AuthoringSession, AuthoringSnapshot, EditReceipt, EditSession, Version};
@@ -66,6 +68,9 @@ pub struct Runtime {
     jobs: HashMap<JobId, JobEntry>,
     queue: VecDeque<Work>,
     registry: EventLog,
+    image_budget: zipzi_project::ImageMemoryBudget,
+    plans: HashMap<PlanId, modeling::PlanEntry>,
+    blobs: HashMap<BlobId, blobs::BlobEntry>,
 }
 impl Default for Runtime {
     fn default() -> Self {
@@ -82,6 +87,9 @@ impl Runtime {
             limits.registry_event_bytes,
         );
         Self {
+            image_budget: zipzi_project::ImageMemoryBudget::new(limits.image_bytes),
+            plans: HashMap::new(),
+            blobs: HashMap::new(),
             instance,
             next_id: 0,
             limits,
@@ -113,6 +121,19 @@ impl Runtime {
             self.edits.len(),
             self.jobs.len(),
         )
+    }
+    pub fn image_memory_usage(&self) -> zipzi_project::ImageMemoryUsage {
+        self.image_budget.usage()
+    }
+    pub fn collect_image_resources(&self) -> usize {
+        self.sessions
+            .values()
+            .filter_map(|s| s.sdk.as_ref())
+            .map(|sdk| sdk.collect_image_resources())
+            .sum()
+    }
+    pub fn image_memory_budget(&self) -> &zipzi_project::ImageMemoryBudget {
+        &self.image_budget
     }
     pub fn instance_id(&self) -> RuntimeInstanceId {
         self.instance
@@ -148,10 +169,15 @@ impl Runtime {
     /// jobs and their results survive, ordinary unsubmitted candidates do not.
     pub fn release_client(&mut self, client: ClientId) {
         self.clients.remove(&client);
+        self.plans.retain(|_, p| p.client != client);
+        self.blobs.retain(|_, b| b.client != client);
         self.edits.retain(|_, edit| edit.client != client);
         self.jobs
             .retain(|_, job| job.info.client != client || !job.info.state.is_terminal());
         for session in self.sessions.values_mut() {
+            if let Some(sdk) = &session.sdk {
+                sdk.collect_image_resources();
+            }
             session.users.remove(&client);
             if session.interaction == Some(client) {
                 session.interaction = None;
@@ -238,7 +264,12 @@ impl Runtime {
         let bytes = sdk
             .estimated_content_bytes()
             .saturating_add(sdk.history_state().estimated_bytes);
-        self.check_bytes(bytes, 0, 0)?;
+        let image_growth = if sdk.image_memory_budget().same_pool(&self.image_budget) {
+            0
+        } else {
+            sdk.image_memory_budget().usage().total_bytes()
+        };
+        self.check_bytes(bytes.saturating_add(image_growth), 0, 0)?;
         if self
             .history_bytes()
             .saturating_add(sdk.history_state().estimated_bytes)
@@ -246,6 +277,7 @@ impl Runtime {
         {
             return Err(RuntimeError::Budget("history"));
         }
+        sdk.set_image_memory_budget(self.image_budget.clone())?;
         let id = SessionId {
             runtime: self.instance,
             serial: self.serial(),
@@ -442,6 +474,7 @@ impl Runtime {
                 entry.state = EditState::Aborted;
                 entry.sdk = None;
                 entry.bytes = 0;
+                self.collect_image_resources();
                 std::panic::resume_unwind(panic);
             }
         };
@@ -464,6 +497,9 @@ impl Runtime {
         } else {
             entry.bytes = bytes;
         }
+        if failed || budget.is_err() {
+            self.collect_image_resources();
+        }
         let value = value.map_err(RuntimeError::from)?;
         budget?;
         if failed {
@@ -476,7 +512,10 @@ impl Runtime {
         self.client(client)?;
         if self.edits.contains_key(&edit) {
             self.edit(client, edit)?;
-            self.edits.remove(&edit);
+            let session = self.edits.remove(&edit).unwrap().session;
+            if let Some(sdk) = &self.entry(session)?.sdk {
+                sdk.collect_image_resources();
+            }
         }
         Ok(())
     }
@@ -593,6 +632,8 @@ impl Runtime {
             operation,
             EventKind::StateChanged(entry.info.clone()),
         );
+        self.plans
+            .retain(|_, p| p.source.source.session() != session);
         let mut entry = self.sessions.remove(&session).unwrap();
         if let Some(path) = &entry.info.path {
             self.paths.remove(path);
@@ -973,6 +1014,8 @@ impl Runtime {
             .fold(
                 self.registry
                     .bytes()
+                    .saturating_add(self.image_budget.usage().total_bytes())
+                    .saturating_add(self.plans.values().map(|p| p.bytes).sum::<usize>())
                     .saturating_add(self.candidate_bytes())
                     .saturating_add(self.frozen_bytes())
                     .saturating_add(
@@ -1013,6 +1056,22 @@ impl Runtime {
 }
 fn identity(path: &Path) -> Result<PathBuf> {
     zipzi_project::project_identity(path).map_err(|error| RuntimeError::Path(error.message))
+}
+
+pub(crate) fn serialized_bytes(value: &impl serde::Serialize) -> Result<usize> {
+    struct Counter(usize);
+    impl std::io::Write for Counter {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0 = self.0.saturating_add(bytes.len());
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let mut counter = Counter(0);
+    serde_json::to_writer(&mut counter, value).map_err(|_| RuntimeError::InvalidReference)?;
+    Ok(counter.0)
 }
 
 #[cfg(test)]

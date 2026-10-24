@@ -305,16 +305,13 @@ impl HostedSession {
     pub fn pose_field_address(&self, id: &str) -> Result<PoseFieldAddress, SdkError> {
         self.read().pose_field_address(id)
     }
-    pub fn prepare_rgba_asset(
+    pub fn prepare_rgba_image(
         &self,
-        id: &str,
-        name: &str,
         width: u32,
         height: u32,
         rgba: std::sync::Arc<[u8]>,
-    ) -> Result<zipzi_core::ImageAsset, SdkError> {
-        self.read()
-            .prepare_rgba_asset(id, name, width, height, rgba)
+    ) -> Result<zipzi_sdk::PreparedImageContent, SdkError> {
+        self.read().prepare_rgba_image(width, height, rgba)
     }
     pub fn read_snapshot(&self) -> AuthoringSnapshot {
         self.read().read_snapshot()

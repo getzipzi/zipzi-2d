@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use zipzi_core::{BindingAxis, Canvas, MeshBinding, MeshKeyform, Parameter, Vec2};
 use zipzi_sdk::{
-    rectangle_grid_geometry, rectangle_mesh, AuthoringSession, MeshGeometry, SdkError,
+    AuthoringSession, MeshGeometry, SdkError, rectangle_grid_geometry, rectangle_mesh,
 };
 
 pub fn id(n: usize) -> String {
@@ -19,10 +19,9 @@ pub fn build(
     let rgba: Arc<[u8]> = (0..image_side as usize * image_side as usize * 4)
         .map(|i| ((i * 37 + i / 11) % 256) as u8)
         .collect();
-    let asset =
-        sdk.prepare_rgba_asset(&id(2), "R0 memory texture", image_side, image_side, rgba)?;
+    let image = sdk.prepare_rgba_image(image_side, image_side, rgba)?;
     sdk.edit("R0 synthetic fixture", None, |edit| {
-        edit.create_asset(asset)?;
+        edit.create_prepared_image(id(2), "R0 memory texture".into(), &image)?;
         edit.create_parameter(Parameter {
             id: id(3),
             runtime_id: "ParamR0".into(),

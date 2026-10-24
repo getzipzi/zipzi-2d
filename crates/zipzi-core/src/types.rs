@@ -437,7 +437,7 @@ pub struct PartKeyform {
     pub draw_order: f32,
 }
 /// A single typed replacement; a track only accepts its matching variant.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SceneKeyform {
     Warp(WarpKeyform),
     Rotation(RotationKeyform),

@@ -106,3 +106,6 @@ pub(crate) use resources::{
     NativeDocumentFieldAddress, NativeDocumentPlan, NativeImageLoadToken,
     NativePreparedImageContent, NativeResourceNameAddress, NativeResourcePlan,
 };
+
+mod modeling;
+pub(crate) use modeling::NativeModelingPlan;

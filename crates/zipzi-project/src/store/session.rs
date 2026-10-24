@@ -3,23 +3,23 @@ use super::assets::MemoryAsset;
 use super::import::read_psd_bytes;
 use super::manifest::{publication_result, resolved_manifest};
 use super::{
-    read_project_asset, read_project_asset_if_changed, DocumentStore, ProjectResult,
-    ResourceDiagnostic,
+    DocumentStore, ProjectResult, ResourceDiagnostic, read_project_asset,
+    read_project_asset_if_changed,
 };
 use crate::filesystem::{self as io, FileSystem, NativeFileSystem};
 use crate::package::{
-    publish_with_filesystem, PackageOptions, PackageValidation, RuntimeValidation,
+    PackageOptions, PackageValidation, RuntimeValidation, publish_with_filesystem,
 };
-use crate::resources::{content_sha256, decode_png, AssetData, TextureData};
+use crate::resources::{AssetData, TextureData, decode_png};
 use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
-    sync::{Arc, OnceLock},
+    sync::{Arc, Mutex},
 };
 use zipzi_core::{Document, ImageAsset, Status};
 use zipzi_moc3::ImportReport;
-use zipzi_psd::{import_psd_pixels, ImportReport as PsdImportReport};
+use zipzi_psd::{ImportReport as PsdImportReport, import_psd_pixels};
 
 /// Project persistence and resource state. Authoring history belongs to the SDK.
 pub struct DocumentSession {
@@ -330,16 +330,25 @@ impl DocumentSession {
             // created by save, so saved files always get read from disk.
             asset.content.as_mut().unwrap().source =
                 format!("assets/.memory-psd/{}.png", pixels.id);
+            let rgba: Arc<[u8]> = pixels.rgba.into();
+            if let Err(status) = self
+                .store
+                .image_budget
+                .track(&rgba, crate::ImageBufferKind::Rgba)
+            {
+                return (ProjectResult::from_status(status), None);
+            }
             assets.insert(
                 asset.content.as_ref().unwrap().source.clone(),
                 Arc::new(MemoryAsset {
                     texture: TextureData {
-                        rgba: pixels.rgba.into(),
+                        rgba,
                         width: pixels.width,
                         height: pixels.height,
                         cache_key: format!("psd:{}", pixels.id),
                     },
-                    png: OnceLock::new(),
+                    png: Mutex::new(None),
+                    budget: self.store.image_budget.clone(),
                 }),
             );
             let edit = document.replace_asset(asset);
@@ -364,61 +373,15 @@ impl DocumentSession {
         (result, Some(bundle.report))
     }
 
-    /// Stage immutable generated pixels without editing or publishing a document.
-    /// The descriptor can be installed by an authoring transaction; the backing
-    /// pixels remain available to undo/redo until this project is closed.
-    pub fn prepare_rgba_asset(
+    /// Prepare immutable pixels with an explicit lease, without registering an
+    /// asset. Keep the returned image until a candidate or resource store owns it.
+    pub fn prepare_rgba_image(
         &self,
-        id: &str,
-        name: &str,
         width: u32,
         height: u32,
         rgba: Arc<[u8]>,
-    ) -> Result<ImageAsset, Status> {
-        if width == 0
-            || height == 0
-            || width > 16384
-            || height > 16384
-            || (width as usize)
-                .checked_mul(height as usize)
-                .and_then(|n| n.checked_mul(4))
-                != Some(rgba.len())
-            || rgba.len() > 256 * 1024 * 1024
-        {
-            return Err(Status::error(
-                "INVALID_IMAGE",
-                "Invalid or excessive RGBA dimensions",
-            ));
-        }
-        let key = format!("{width}x{height}-{}", content_sha256(&rgba));
-        let source = format!("assets/.memory-generated/{key}.png");
-        self.store
-            .memory_assets
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .entry(source.clone())
-            .or_insert_with(|| {
-                Arc::new(MemoryAsset {
-                    texture: TextureData {
-                        rgba,
-                        width,
-                        height,
-                        cache_key: format!("generated:{key}"),
-                    },
-                    png: OnceLock::new(),
-                })
-            });
-        Ok(ImageAsset {
-            unresolved_source: None,
-            id: id.into(),
-            name: name.into(),
-            content: Some(zipzi_core::ImageContent {
-                source,
-                width,
-                height,
-                sha256: String::new(),
-            }),
-        })
+    ) -> Result<super::PreparedImageContent, Status> {
+        super::PreparedImageContent::from_rgba(width, height, rgba, &self.store.image_budget)
     }
 
     /// Whether this source is owned by the current draft rather than a file.
@@ -476,7 +439,7 @@ impl DocumentSession {
             return Ok(None);
         }
         Ok(Some(AssetData {
-            bytes: verified.bytes.clone(),
+            bytes: verified.bytes.to_vec(),
             rgba: memory.texture.rgba.to_vec(),
             width: memory.texture.width,
             height: memory.texture.height,
@@ -500,7 +463,7 @@ impl DocumentSession {
                 return zipzi_core::types::EditResult {
                     status,
                     ..Default::default()
-                }
+                };
             }
         };
         let existing = match self.document.get_asset(id) {
@@ -509,7 +472,7 @@ impl DocumentSession {
                 return zipzi_core::types::EditResult {
                     status: Status::error("MISSING_ASSET", id),
                     ..Default::default()
-                }
+                };
             }
         };
         let mut asset = existing;
@@ -526,7 +489,7 @@ impl DocumentSession {
                 return zipzi_core::types::EditResult {
                     status: s,
                     ..Default::default()
-                }
+                };
             }
         };
         asset.content.as_mut().unwrap().sha256 = data.sha256;
@@ -549,7 +512,7 @@ impl DocumentSession {
                 return zipzi_core::types::EditResult {
                     status,
                     ..Default::default()
-                }
+                };
             }
         };
         let existing = match self.document.get_asset(id) {
@@ -558,7 +521,7 @@ impl DocumentSession {
                 return zipzi_core::types::EditResult {
                     status: Status::error("MISSING_ASSET", id),
                     ..Default::default()
-                }
+                };
             }
         };
         let bytes = match fs::read(&path) {
@@ -567,7 +530,7 @@ impl DocumentSession {
                 return zipzi_core::types::EditResult {
                     status: Status::error("RESOURCE_IO", e.to_string()),
                     ..Default::default()
-                }
+                };
             }
         };
         let data = match decode_png(&bytes) {
@@ -576,7 +539,7 @@ impl DocumentSession {
                 return zipzi_core::types::EditResult {
                     status: s,
                     ..Default::default()
-                }
+                };
             }
         };
         let mut asset = existing;
@@ -648,7 +611,7 @@ mod memory_psd_tests {
         let second = session.read_texture(&id).unwrap();
         assert!(Arc::ptr_eq(&first.rgba, &second.rgba));
         assert!(session.diagnose().is_empty());
-        assert!(memory.png.get().is_none());
+        assert!(memory.png.lock().unwrap().is_none());
 
         let mut invalid = descriptor.clone();
         invalid.content.as_mut().unwrap().width += 1;
@@ -657,12 +620,14 @@ mod memory_psd_tests {
             session.read_texture(&id).unwrap_err().code,
             "RESOURCE_DIMENSIONS"
         );
-        assert!(memory.png.get().is_none());
-        assert!(session
-            .document
-            .replace_asset(descriptor.clone())
-            .status
-            .is_ok());
+        assert!(memory.png.lock().unwrap().is_none());
+        assert!(
+            session
+                .document
+                .replace_asset(descriptor.clone())
+                .status
+                .is_ok()
+        );
 
         let eager = import_psd(fixture).unwrap();
         let data = session.read_asset(&id).unwrap();
@@ -679,11 +644,13 @@ mod memory_psd_tests {
                 .sha256
         );
         assert_eq!(data.rgba.as_slice(), first.rgba.as_ref());
-        assert!(memory.png.get().is_some());
-        assert!(session
-            .read_asset_if_changed(&id, Some((&data.sha256, data.width, data.height)),)
-            .unwrap()
-            .is_none());
+        assert!(memory.png.lock().unwrap().is_some());
+        assert!(
+            session
+                .read_asset_if_changed(&id, Some((&data.sha256, data.width, data.height)),)
+                .unwrap()
+                .is_none()
+        );
 
         let mut invalid = descriptor;
         invalid.content.as_mut().unwrap().sha256 = "bad hash".into();

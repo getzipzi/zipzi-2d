@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from ._backend import SdkFailure
 
-CONTRACT = "zipzi-runtime-r3-2"
+CONTRACT = "zipzi-runtime-r4-1"
 MAX_FRAME = 16 << 20
 
 
@@ -190,6 +190,16 @@ class Connection:
                 raise OutcomeUnknown("JOB_PENDING", "Job has not reached a terminal state", job_id=job)
             time.sleep(0.01)
 
+    def create_blob(self, length):
+        """Reserve a bounded client-owned payload, then append chunks and seal it.
+
+        After a lost response, ``OutcomeUnknown.blob`` retains the upload object;
+        call its ``recover()`` before continuing. Close blobs explicitly.
+        """
+        blob = Blob(self)
+        blob._call("create_blob", length=length)
+        return blob
+
     def statistics(self):
         return self.request({"op": "statistics"})
 
@@ -235,7 +245,7 @@ class Connection:
 
 
 class ConnectedBackend:
-    """The R3 session adapter; unsupported domains fail explicitly."""
+    """Hosted session adapter; unconnected operations fail explicitly."""
     def __init__(self, connection, session_id):
         self.connection, self.session_id = connection, dict(session_id)
 
@@ -255,6 +265,15 @@ class ConnectedBackend:
         q = self._query(meshes, parameters)
         return (_version(q["version"]), [_mesh(m, q["version"]) for m in q["meshes"]],
             [_parameter(p, q["version"]) for p in q["parameters"]])
+
+    def plan_modeling_json(self, intent):
+        return _RemoteModelingPlan(self.connection, self._request("plan_modeling", edit=None, intent=json.loads(intent)))
+
+    def modeling_query_json(self, query):
+        return json.dumps(self._request("modeling_query", query=json.loads(query), edit=None))
+
+    def sample_modeling_json(self, parameters, checks):
+        return json.dumps(self._request("sample_modeling", parameters=json.loads(parameters), checks=json.loads(checks), edit=None, expected=None))
 
     def version(self):
         return _version(self._info()["version"])
@@ -344,6 +363,46 @@ class _RemoteEdit:
         self._request("apply", commands=[command])
         self.pending_operation = None
 
+    def apply_modeling_json(self, commands):
+        self.pending_operation = "apply"
+        self._request("apply_modeling", commands=json.loads(commands))
+        self.pending_operation = None
+
+    def plan_modeling_json(self, intent):
+        return _RemoteModelingPlan(self.backend.connection, self.backend._request("plan_modeling", edit=self.token, intent=json.loads(intent)))
+
+    def apply_modeling_plan(self, plan):
+        if plan.connection is not self.backend.connection:
+            raise ConnectionFailure("WRONG_OWNER", "Plan belongs to another connection")
+        self.pending_operation = "apply"
+        self._request("apply_modeling_plan", plan=plan.token)
+        self.pending_operation = None
+
+    def modeling_query_json(self, query):
+        return json.dumps(self.backend._request("modeling_query", query=json.loads(query), edit=self.token))
+
+    def sample_modeling_json(self, parameters, checks):
+        return json.dumps(self.backend._request("sample_modeling", parameters=json.loads(parameters), checks=json.loads(checks), edit=self.token, expected=None))
+
+    def apply_rgba_blob(self, blob, image_id, name, width, height, replace):
+        if blob.connection is not self.backend.connection:
+            raise ConnectionFailure("WRONG_OWNER", "Blob belongs to another connection")
+        self.pending_operation = "apply"
+        self._request("apply_rgba_blob", id=image_id, name=name, width=width, height=height, blob=blob.token, replace=replace)
+        self.pending_operation = None
+
+    def apply_modeling_blob(self, blob):
+        if blob.connection is not self.backend.connection:
+            raise ConnectionFailure("WRONG_OWNER", "Blob belongs to another connection")
+        self.pending_operation = "apply"
+        self._request("apply_modeling_blob", blob=blob.token)
+        self.pending_operation = None
+
+    def apply_rgba(self, image_id, name, width, height, rgba, replace):
+        self.pending_operation = "apply"
+        self._request("apply_rgba", id=image_id, name=name, width=width, height=height, rgba=list(rgba), replace=replace)
+        self.pending_operation = None
+
     def mesh(self, mesh_id):
         q = self.backend._query(meshes=[mesh_id], edit=self.token)
         return _mesh(q["meshes"][0], q["version"])
@@ -428,3 +487,86 @@ class _RemoteEdit:
 
     def abort(self):
         self.cancel()
+
+
+class _RemoteModelingPlan:
+    def __init__(self, connection, value):
+        self.connection, self.token, self.source = connection, value["plan"], value["source"]
+        self._report = value["report"]
+
+    def report_json(self):
+        return json.dumps(self._report)
+
+    def close(self):
+        self.connection.request({"op": "release_modeling_plan", "plan": self.token})
+
+
+class Blob:
+    """Explicit upload lifetime with exact-request recovery and 1 MiB chunks."""
+    def __init__(self, connection):
+        self.connection = connection
+        self.token = None
+        self.offset = 0
+        self.sealed = False
+        self.closed = False
+        self._pending = None
+
+    def _accept(self, operation, result):
+        if operation == "create_blob":
+            self.token = result
+        elif operation == "append_blob":
+            self.offset = result
+        elif operation == "seal_blob":
+            self.sealed = True
+        elif operation == "release_blob":
+            self.closed = True
+        self._pending = None
+        return result
+
+    def _call(self, operation, **fields):
+        if self.closed:
+            raise ConnectionFailure("INVALID_REFERENCE", "Blob is released")
+        value = {"op": operation, **fields}
+        if self.token is not None:
+            value["blob"] = self.token
+        try:
+            result = self.connection.request(value, _owner=self)
+        except OutcomeUnknown as error:
+            self._pending = operation
+            error.blob = self
+            raise
+        return self._accept(operation, result)
+
+    def append(self, data):
+        data = bytes(data)
+        if len(data) > 1 << 20:
+            raise ValueError("Blob chunks must not exceed 1 MiB")
+        return self._call("append_blob", offset=self.offset, bytes=list(data))
+
+    def read(self, offset, length):
+        """Read a sealed blob chunk of at most 1 MiB."""
+        return bytes(self._call("read_blob", offset=offset, length=length))
+
+    def seal(self):
+        return self._call("seal_blob")
+
+    def recover(self):
+        if self._pending is None:
+            raise ConnectionFailure("NO_PENDING_REQUEST", "Blob has no pending operation")
+        return self._accept(self._pending, self.connection.recover(_owner=self))
+
+    def close(self):
+        if not self.closed:
+            self._call("release_blob")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        if exc[0] is None:
+            self.close()
+        else:
+            try:
+                self.close()
+            except Exception:
+                pass

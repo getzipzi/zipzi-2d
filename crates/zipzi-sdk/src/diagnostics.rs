@@ -4,13 +4,13 @@ use zipzi_core::Vec2;
 
 use crate::{AuthoringSession, SdkError};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GeometryBounds {
     pub min: Vec2,
     pub max: Vec2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GeometryChecks {
     /// Area in authored coordinates: model units squared at the root, or
     /// the appropriate rotation-local / Warp-parameter units under a parent.
@@ -28,14 +28,14 @@ impl Default for GeometryChecks {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum GeometryDiagnosticKind {
     SmallTriangle,
     InconsistentWinding,
     OutsideModelBounds,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct GeometryDiagnostic {
     pub kind: GeometryDiagnosticKind,
     pub mesh_id: String,
@@ -48,93 +48,107 @@ impl AuthoringSession {
         &self,
         checks: GeometryChecks,
     ) -> Result<Vec<GeometryDiagnostic>, SdkError> {
-        if !checks.min_triangle_area.is_finite() || checks.min_triangle_area < 0.0 {
+        diagnose_geometry(self.document(), checks)
+    }
+}
+impl crate::AuthoringSnapshot {
+    pub fn diagnose_geometry(
+        &self,
+        checks: GeometryChecks,
+    ) -> Result<Vec<GeometryDiagnostic>, SdkError> {
+        diagnose_geometry(self.document(), checks)
+    }
+}
+fn diagnose_geometry(
+    document: &zipzi_core::Document,
+    checks: GeometryChecks,
+) -> Result<Vec<GeometryDiagnostic>, SdkError> {
+    if !checks.min_triangle_area.is_finite() || checks.min_triangle_area < 0.0 {
+        return Err(SdkError::new(
+            "INVALID_DIAGNOSTIC_OPTIONS",
+            "Minimum triangle area must be finite and non-negative",
+            "diagnose_geometry",
+        ));
+    }
+    if let Some(bounds) = checks.model_bounds {
+        let finite = [bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y]
+            .into_iter()
+            .all(f32::is_finite);
+        if !finite || bounds.min.x >= bounds.max.x || bounds.min.y >= bounds.max.y {
             return Err(SdkError::new(
                 "INVALID_DIAGNOSTIC_OPTIONS",
-                "Minimum triangle area must be finite and non-negative",
+                "Canvas bounds require finite min below max",
                 "diagnose_geometry",
             ));
         }
-        if let Some(bounds) = checks.model_bounds {
-            let finite = [bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y]
-                .into_iter()
-                .all(f32::is_finite);
-            if !finite || bounds.min.x >= bounds.max.x || bounds.min.y >= bounds.max.y {
-                return Err(SdkError::new(
-                    "INVALID_DIAGNOSTIC_OPTIONS",
-                    "Canvas bounds require finite min below max",
-                    "diagnose_geometry",
-                ));
+    }
+    if let Some(issue) = document.validate_structure().into_iter().next() {
+        return Err(SdkError::from_status(
+            issue.status,
+            "diagnose_geometry",
+            vec![issue.object_id],
+        ));
+    }
+    let mut diagnostics = Vec::new();
+    for mesh_id in document.mesh_order() {
+        let mesh = document.get_mesh(mesh_id).expect("validated mesh exists");
+        let slots: HashMap<_, _> = mesh
+            .vertex_ids
+            .iter()
+            .enumerate()
+            .map(|(index, &vertex)| (vertex, index))
+            .collect();
+        let mut signed_areas = Vec::with_capacity(mesh.triangles.len());
+        let mut positive = 0usize;
+        let mut negative = 0usize;
+        for (triangle_index, triangle) in mesh.triangles.iter().enumerate() {
+            let a = mesh.base_positions[slots[&triangle[0]]];
+            let b = mesh.base_positions[slots[&triangle[1]]];
+            let c = mesh.base_positions[slots[&triangle[2]]];
+            let cross = (b.x as f64 - a.x as f64) * (c.y as f64 - a.y as f64)
+                - (b.y as f64 - a.y as f64) * (c.x as f64 - a.x as f64);
+            let area = cross * 0.5;
+            if area.abs() <= checks.min_triangle_area {
+                diagnostics.push(GeometryDiagnostic {
+                    kind: GeometryDiagnosticKind::SmallTriangle,
+                    mesh_id: mesh_id.clone(),
+                    triangle_index: Some(triangle_index),
+                });
+            } else if area > 0.0 {
+                positive += 1;
+            } else {
+                negative += 1;
             }
+            signed_areas.push(area);
         }
-        if let Some(issue) = self.validate_structure().into_iter().next() {
-            return Err(SdkError::from_status(
-                issue.status,
-                "diagnose_geometry",
-                vec![issue.object_id],
-            ));
-        }
-        let mut diagnostics = Vec::new();
-        for mesh_id in self.mesh_ids() {
-            let mesh = self.mesh(mesh_id).expect("validated mesh exists");
-            let slots: HashMap<_, _> = mesh
-                .vertex_ids
-                .iter()
-                .enumerate()
-                .map(|(index, &vertex)| (vertex, index))
-                .collect();
-            let mut signed_areas = Vec::with_capacity(mesh.triangles.len());
-            let mut positive = 0usize;
-            let mut negative = 0usize;
-            for (triangle_index, triangle) in mesh.triangles.iter().enumerate() {
-                let a = mesh.base_positions[slots[&triangle[0]]];
-                let b = mesh.base_positions[slots[&triangle[1]]];
-                let c = mesh.base_positions[slots[&triangle[2]]];
-                let cross = (b.x as f64 - a.x as f64) * (c.y as f64 - a.y as f64)
-                    - (b.y as f64 - a.y as f64) * (c.x as f64 - a.x as f64);
-                let area = cross * 0.5;
-                if area.abs() <= checks.min_triangle_area {
+        let expected_positive = positive >= negative;
+        if positive > 0 && negative > 0 {
+            for (triangle_index, area) in signed_areas.into_iter().enumerate() {
+                if area.abs() > checks.min_triangle_area && (area > 0.0) != expected_positive {
                     diagnostics.push(GeometryDiagnostic {
-                        kind: GeometryDiagnosticKind::SmallTriangle,
+                        kind: GeometryDiagnosticKind::InconsistentWinding,
                         mesh_id: mesh_id.clone(),
                         triangle_index: Some(triangle_index),
                     });
-                } else if area > 0.0 {
-                    positive += 1;
-                } else {
-                    negative += 1;
                 }
-                signed_areas.push(area);
-            }
-            let expected_positive = positive >= negative;
-            if positive > 0 && negative > 0 {
-                for (triangle_index, area) in signed_areas.into_iter().enumerate() {
-                    if area.abs() > checks.min_triangle_area && (area > 0.0) != expected_positive {
-                        diagnostics.push(GeometryDiagnostic {
-                            kind: GeometryDiagnosticKind::InconsistentWinding,
-                            mesh_id: mesh_id.clone(),
-                            triangle_index: Some(triangle_index),
-                        });
-                    }
-                }
-            }
-            if mesh.deformer_id.is_empty()
-                && checks.model_bounds.is_some_and(|bounds| {
-                    mesh.base_positions.iter().any(|p| {
-                        p.x < bounds.min.x
-                            || p.x > bounds.max.x
-                            || p.y < bounds.min.y
-                            || p.y > bounds.max.y
-                    })
-                })
-            {
-                diagnostics.push(GeometryDiagnostic {
-                    kind: GeometryDiagnosticKind::OutsideModelBounds,
-                    mesh_id: mesh_id.clone(),
-                    triangle_index: None,
-                });
             }
         }
-        Ok(diagnostics)
+        if mesh.deformer_id.is_empty()
+            && checks.model_bounds.is_some_and(|bounds| {
+                mesh.base_positions.iter().any(|p| {
+                    p.x < bounds.min.x
+                        || p.x > bounds.max.x
+                        || p.y < bounds.min.y
+                        || p.y > bounds.max.y
+                })
+            })
+        {
+            diagnostics.push(GeometryDiagnostic {
+                kind: GeometryDiagnosticKind::OutsideModelBounds,
+                mesh_id: mesh_id.clone(),
+                triangle_index: None,
+            });
+        }
     }
+    Ok(diagnostics)
 }

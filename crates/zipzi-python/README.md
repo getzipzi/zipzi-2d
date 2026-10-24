@@ -383,3 +383,31 @@ Run installed-client subprocess acceptance with
 `python3 tools/python/test_connected.py`; optional unittest names select cases.
 See the [R3 evidence](../../docs/plans/sdk-runtime/r3-ipc.md) for production desktop
 and native Metal acceptance commands.
+
+## R4 modeling API (in progress)
+
+Native and Connected sessions share `modeling_query(**selection)` and
+`sample_modeling(parameter_maps)`. Edits also support `apply_modeling(*commands)`,
+`create_rgba_image` and `replace_rgba_image`. Batch commands use public SDK record
+schemas with an `op` discriminator; the installed
+[shared recipe](tests/modeling_recipe.py) shows bindings, BlendShape, candidate
+sampling, plans and image persistence on both backends.
+
+`session.plan_modeling(domain, intent)` and the equivalent edit method return an
+explicitly owned `ModelingPlan`; apply it with `edit.apply_modeling_plan(plan)`
+and release it with `close()` or a context manager. A candidate plan is checked
+against its exact edit/sequence. Read-only results include source/version data;
+sampling does not change preview values or history.
+
+Connected large payloads use `connection.create_blob(length)`, `append(chunk)`,
+`seal()`, `read(offset, length)` and `close()`. Chunks are at most 1 MiB, blobs at
+most 256 MiB. `edit.create_rgba_image_from_blob` shares uploaded pixel storage;
+`edit.apply_modeling_blob` accepts a sealed UTF-8 JSON command batch. Blob append
+response loss keeps its exact request; call `blob.recover()` before continuing.
+If creation loses its response, the raised `OutcomeUnknown.blob` exposes the
+pending object. Release blobs explicitly after their consuming operation has
+been confirmed.
+
+The active protocol is `zipzi-runtime-r4-1`; rebuild/restart old hosts. This first
+slice does not yet provide all R4 handles/addresses, IO/export, background jobs
+or Editor acceptance. See [R4 status](../../docs/plans/sdk-runtime/r4-modeling.md).

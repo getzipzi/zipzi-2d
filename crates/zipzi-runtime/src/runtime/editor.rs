@@ -111,7 +111,7 @@ impl Runtime {
         &mut self,
         client: ClientId,
         session: SessionId,
-        sdk: EditSession<'static>,
+        mut sdk: EditSession<'static>,
     ) -> Result<EditId> {
         self.client(client)?;
         self.ready(session)?;
@@ -119,6 +119,7 @@ impl Runtime {
         if sdk.base_version() != self.ready(session)?.version() {
             return Err(RuntimeError::InvalidReference);
         }
+        sdk.set_image_memory_budget(self.image_budget.clone())?;
         let bytes = sdk.estimated_bytes();
         self.check_bytes(bytes, bytes, 0)?;
         let id = EditId {

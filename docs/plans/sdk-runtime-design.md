@@ -1,9 +1,9 @@
 # SDK Runtime 与 Editor 同进程详细设计
 
 合仓导航：SDK 与 Editor 现位于同一仓库的根 `crates/`，Editor 资产位于 `crates/zipzi-editor/assets/`；下文两仓名称表示原模块职责，旧 R0 记录保留原路径与 SHA。新采集使用同一仓库 SHA、dirty 状态和根锁文件。
-日期：2026 年 10 月 24 日。状态：**R0–R2 已交付：Runtime 核心、Editor 托管与窗口生命周期解耦；本机 IPC/Python 连接能力尚未实现**。
+日期：2026 年 10 月 24 日。状态：**R0–R3 已交付，R4 实施中**。
 
-实际进展与证据见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)与 [R2 实施记录](sdk-runtime/r2-editor.md)，不以本文的目标能力代替实施结果。
+实际进展与证据见 [R0 实施记录](sdk-runtime/r0-preparation.md)、[R1 实施记录](sdk-runtime/r1-core.md)、[R2 实施记录](sdk-runtime/r2-editor.md)、[R3 实施记录](sdk-runtime/r3-ipc.md)与 [R4 实施记录](sdk-runtime/r4-modeling.md)，不以本文的目标能力代替实施结果。
 
 实施顺序、跨仓交付物和验收编号见[分阶段实施计划](sdk-runtime-implementation-plan.md)。两份文档以本文件定义行为契约，以实施计划定义交付门槛；实施结果另行记录，不能把本文中的目标能力表述为现有能力。
 
@@ -42,7 +42,7 @@ Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观�
 | [Python 公共包](../../crates/zipzi-python/python/zipzi/__init__.py)、[Session](../../crates/zipzi-python/python/zipzi/_session.py) | 公共 API 直接依赖 `_native`；Plan、Handle 等为 PyO3 对象 | 分离公共值类型、后端引用和可选原生扩展 |
 | [Observer](../../crates/zipzi-sdk-observe/src/lib.rs) | 不可变观察输入、空间检查和离屏渲染 | 接受明确的正式/候选快照来源，按需执行 |
 
-旧[第一阶段架构](../archive/editor-foundation.md)把 Python 连接排除在当时范围之外。本设计更新该范围，保留其中的单一历史、文档身份、SDK 领域所有权和后台结果版本检查原则。对象身份与编辑规则继续遵循[对象创作核心方案](unified-object-authoring-core.md)。
+旧[第一阶段架构](../archive/editor-foundation.md)把 Python 连接排除在当时范围之外。本设计更新该范围，保留其中的单一历史、文档身份、SDK 领域所有权和后台结果版本检查原则。对象身份与编辑规则继续遵循[对象创作核心方案](../archive/plans/unified-object-authoring-core.md)。
 
 ## 3. 分层、依赖和 Runtime 厚度
 
@@ -264,6 +264,8 @@ Agent 无窗口完成全部制作不依赖 Proposal。Review 是可选交接方�
 
 控制消息采用长度前缀 JSON，批量数组/图像采用独立二进制 blob 帧。blob 描述包含类型、shape、长度、所有者和引用；Rust/PyO3 内存布局或地址不能作为 wire 格式。浮点往返、空数组、溢出/非法长度、UTF-8、非有限值和大消息限制都须契约测试。
 
+查询结果在展开、克隆与序列化之前做有界准入；重复选择、批量结果和编码临时副本都应计费，不能先分配完整超大结果再依赖 frame 限制拒绝。
+
 请求包含协议版本、ClientId、RequestId、SessionId（若适用）、操作、目标 token、expected Version 与参数。响应是成功值、JobId 或结构化错误。领域错误保留 `SdkError` 的 code、operation、object_ids、field_path、expected/actual version 和 referrers；Runtime/transport 错误使用可区分的类别。
 
 握手校验协议契约标识并返回 RuntimeInstanceId、SDK build、能力与预算。首期协议严格匹配；脚本可额外要求某个 SDK build。不兼容应在任何写入前失败，不能自动另开一个空白宿主让用户误以为连接了原工程。
@@ -283,6 +285,8 @@ Plan/Edit/Preview/Address token 在 Runtime 表中解析并检查所属会话、
 连接断开后先允许有界重连窗口，普通未提交 Edit 在窗口到期后取消，客户端临时 Plan/Preview/blob 随后回收；已提交内容不回滚，Proposal 按其显式生命周期保留。已进入提交点的请求即使断连也登记最终结果。实际宽限时间由 R0 的默认预算表冻结。
 
 数量、字节、待执行消息、事件、请求结果、预览缓存与临时资产均有上限。预算错误在破坏已有状态前返回，已有 SDK history/authoring 限制继续生效；不能只限制每个候选而不限制多个候选的总占用。
+
+准备图片返回持有实际内容的 PreparedImage lease，不能只返回无持有关系的描述符。候选接纳与提交后由候选、正式内容及历史各自固定必要引用；调用方释放 lease 不会释放仍被使用的内容，其他提交也不能回收尚被 lease 持有的准备资源。Buffer 上传按实际容量与转换期间的同时存活负载预留，包含 Vec 扩容及转 Arc 的临时副本；失败不得留下半个注册对象。回收优先随引用变化、历史淘汰与最终释放更新，不为每次无关 metadata/no-op 提交全量克隆历史资产描述。
 
 ## 11. 桌面宿主、Editor 上下文与退出
 

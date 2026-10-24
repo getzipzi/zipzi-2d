@@ -21,6 +21,7 @@ CHAR_LITERAL = re.compile(r"'(?:\\.|[^'\\\n])'")
 
 # Domain contracts specify source, history, ownership, bulk work and acceptance.
 DOMAINS = {
+    "modeling": ("modeling-batch", "R4", ["A04", "A05", "A14", "A15", "A17"]),
     "session": ("session-history", "R3", ["A02", "A03", "A04", "A05", "A10"]),
     "project_io": ("resources-project", "R4", ["A02", "A08", "A14", "A17"]),
     "assets": ("resources-project", "R4", ["A14", "A17"]),
@@ -182,8 +183,8 @@ def rust_contract(row: dict, path: Path) -> dict:
         elif "preview" in name:
             source, lifecycle = "client default Preview or frozen Preview source", "independent client Preview in R5"
             stage = "R5"
-        elif name == "prepare_rgba_asset":
-            effect = "retains resource payload; no formal revision/history; R4 accounting/reclamation required"
+        elif name == "prepare_rgba_image":
+            effect = "returns an owned image lease; no registry entry or formal revision/history"
         elif name in {"image_load_token", "attachment_load_token"}:
             effect = "registers cancellable resource operation; replacing token can cancel earlier load; no formal history"
         elif name.startswith("set_"):
@@ -198,6 +199,9 @@ def rust_contract(row: dict, path: Path) -> dict:
         source = "explicit arguments"
         classification = "connected" if name.startswith("prepare_") or module == "spatial" else "local-helper"
         lifecycle = "value result; host resource IO uses blob/path policy; no native pointer on wire"
+    if module == "modeling" and (name in {"apply", "modeling_records"}):
+        classification, source = "connected", "explicit formal/candidate source"
+        effect = "read-only records" if name == "modeling_records" else "SDK candidate operation; no independent publication"
     if name.startswith("plan_") or owner.endswith("Plan"):
         lifecycle = "Plan owned by client/session/source; base Version checked at execute; explicit release"
     expensive = (name.startswith(("import_", "export_", "plan_", "execute_", "prepare_"))
@@ -397,6 +401,11 @@ def python_row(path: Path, node: ast.FunctionDef, owner: str) -> dict:
         domain, stage, acceptance = DOMAINS["project_io"]
     elif owner == "Session" and name not in {"__init__", "edit", "version", "history_state", "undo", "redo", "modified", "drain_events"}:
         stage = "R4"
+    if name in {"modeling_query", "sample_modeling", "plan_modeling", "apply_modeling", "apply_modeling_plan", "apply_modeling_blob", "create_rgba_image", "replace_rgba_image", "create_rgba_image_from_blob"} or owner in {"ModelingPlan", "Blob"}:
+        domain, stage, acceptance = DOMAINS["modeling"]
+        classification = "local-value" if owner == "ModelingPlan" and name == "report" else "connected"
+        source_ref = "client-owned Plan/blob or explicit formal/candidate source"
+        effect = "candidate write, read-only source operation, or explicit token release; no independent history"
     return dict(id=f"python::{owner}.{name}" if owner != "free" else f"python::{path.stem}.{name}",
         location=str(path.relative_to(ROOT)), line=node.lineno, owner=owner, name=name,
         signature=f"def {name}({ast.unparse(node.args)})" + (f" -> {ast.unparse(node.returns)}" if node.returns else ""),

@@ -316,3 +316,18 @@ impl EditSession<'_> {
         Ok(())
     }
 }
+
+impl crate::AuthoringSnapshot {
+    pub fn plan_organization_edit(
+        &self,
+        intent: OrganizationEdit,
+    ) -> Result<OrganizationEditPlan, SdkError> {
+        Ok(OrganizationEditPlan {
+            version: self.version(),
+            domain: self
+                .document()
+                .plan_organization_edit(intent)
+                .map_err(|s| SdkError::from_status(s, "plan_organization_edit", vec![]))?,
+        })
+    }
+}

@@ -319,3 +319,21 @@ fn error(s: zipzi_core::Status, op: &'static str) -> SdkError {
     }
     e
 }
+
+impl crate::AuthoringSnapshot {
+    pub fn plan_scene_content_with_control(
+        &self,
+        intent: SceneContentEdit,
+        limits: crate::AuthoringLimits,
+        control: &ConversionControl,
+    ) -> Result<SceneContentEditPlan, SdkError> {
+        Ok(SceneContentEditPlan {
+            version: self.version(),
+            domain: self
+                .document()
+                .plan_scene_content_with_control(intent, limits, control)
+                .map_err(|s| error(s, "plan_scene_content"))?,
+            control: control.clone(),
+        })
+    }
+}

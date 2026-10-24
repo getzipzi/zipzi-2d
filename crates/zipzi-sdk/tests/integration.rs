@@ -67,3 +67,6 @@ mod authoring_collections;
 
 #[path = "candidate_snapshot.rs"]
 mod candidate_snapshot;
+
+#[path = "image_memory.rs"]
+mod image_memory;

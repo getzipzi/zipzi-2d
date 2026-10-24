@@ -116,14 +116,14 @@ pub struct PsdImportReceipt {
     pub manifest: PathBuf,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum GeometrySpace {
     Model,
     RotationLocal(String),
     WarpParameter(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GeometrySnapshot {
     pub version: Version,
     pub mesh_id: String,
@@ -242,7 +242,7 @@ impl From<&Mesh> for MeshProperties {
 
 /// All geometry dependencies are explicit. For an unbound mesh, pass None and
 /// empty vectors; mapping must mention every previous vertex ID exactly once.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TopologyReplacement {
     pub mesh: Mesh,
     pub binding: Option<MeshBinding>,

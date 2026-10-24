@@ -102,3 +102,9 @@ pub use document_authoring::*;
 
 mod authoring_collections;
 pub use authoring_collections::*;
+
+mod modeling;
+pub use modeling::{
+    modeling_records, ModelingCommand, ModelingIntent, ModelingPlan, ModelingPlanReport,
+    ModelingQuery, ModelingRecords, ModelingSamples,
+};

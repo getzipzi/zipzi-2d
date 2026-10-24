@@ -324,3 +324,73 @@ fn a04_parameter_replacement_preserves_candidate_fields_in_one_request() {
     rt.commit_edit(client, edit).unwrap();
     assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
 }
+
+#[test]
+fn modeling_query_rejects_expansion_before_json_and_keeps_candidate_usable() {
+    let mut rt = Runtime::new(RuntimeLimits {
+        accounted_bytes: 1 << 20,
+        ..Default::default()
+    });
+    let mut p = Protocol::new(Default::default());
+    let now = Instant::now();
+    let hello = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
+    let client = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
+    let connection = hello["ok"]["connection"].as_u64().unwrap();
+    let session = rt
+        .create_session(
+            client,
+            &uuid::Uuid::new_v4().to_string(),
+            ModelSetup::default(),
+        )
+        .unwrap();
+    let asset = uuid::Uuid::new_v4().to_string();
+    let edit = rt.begin_edit(client, session, "resource", None).unwrap();
+    rt.apply_edit(client, edit, |e| {
+        e.edit_resource(zipzi_sdk::ResourceEdit::Create {
+            id: asset.clone(),
+            name: "x".repeat(4096),
+            before: None,
+        })
+    })
+    .unwrap();
+    let op = json!({"op":"modeling_query", "session":session, "edit":edit,
+        "query":{"assets":vec![asset.clone(); 4300]}});
+    let result = request(&mut rt, &mut p, client, connection, 1, op.clone(), now);
+    assert_eq!(result["error"]["code"], "BUDGET_EXCEEDED");
+    assert_eq!(result["error"]["edit_state"], "editing");
+    assert!(serde_json::to_vec(&result).unwrap().len() < 1024);
+    assert_eq!(
+        request(&mut rt, &mut p, client, connection, 1, op, now),
+        result
+    );
+    assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
+    rt.commit_edit(client, edit).unwrap();
+    let version = rt.session(session).unwrap().version();
+    let oversized = request(
+        &mut rt,
+        &mut p,
+        client,
+        connection,
+        2,
+        json!({"op":"modeling_query", "session":session, "query":{"assets":vec![asset.clone(); 4300]}}),
+        now,
+    );
+    assert_eq!(oversized["error"]["code"], "BUDGET_EXCEEDED");
+    let small = request(
+        &mut rt,
+        &mut p,
+        client,
+        connection,
+        3,
+        json!({"op":"modeling_query", "session":session, "query":{"assets":[asset, "missing"]}}),
+        now,
+    );
+    assert_eq!(
+        small["ok"]["records"]["assets"][0]["name"],
+        "x".repeat(4096),
+        "{small}"
+    );
+    assert!(small["ok"]["records"]["assets"][1].is_null());
+    assert_eq!(rt.session(session).unwrap().version(), version);
+    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
+}

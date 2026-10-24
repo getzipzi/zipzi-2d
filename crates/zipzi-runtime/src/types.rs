@@ -20,7 +20,15 @@ macro_rules! ids {
         }
     )*};
 }
-ids!(SessionId, ClientId, EditId, JobId, OperationId);
+ids!(
+    SessionId,
+    ClientId,
+    EditId,
+    JobId,
+    OperationId,
+    PlanId,
+    BlobId
+);
 impl From<EditId> for OperationId {
     fn from(id: EditId) -> Self {
         Self {
@@ -136,7 +144,8 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 
 /// The first R1 source kinds. Candidate sequence distinguishes frames even if
 /// the formal SDK version did not change. Snapshot/Proposal tokens arrive later.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SourceRef {
     Formal {
         session: SessionId,
@@ -148,6 +157,20 @@ pub enum SourceRef {
         base: Version,
         sequence: u64,
     },
+}
+
+impl SourceRef {
+    pub fn session(self) -> SessionId {
+        match self {
+            Self::Formal { session, .. } | Self::Edit { session, .. } => session,
+        }
+    }
+    pub fn version(self) -> Version {
+        match self {
+            Self::Formal { version, .. } => version,
+            Self::Edit { base, .. } => base,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

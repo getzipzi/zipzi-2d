@@ -103,6 +103,7 @@ enum Command {
 struct PendingCommands {
     workspace: Option<EditSession<'static>>,
     error: Option<SdkError>,
+    sequence: u64,
 }
 
 impl PendingCommands {
@@ -110,6 +111,7 @@ impl PendingCommands {
         Self {
             workspace: Some(workspace),
             error: None,
+            sequence: 0,
         }
     }
 
@@ -118,7 +120,10 @@ impl PendingCommands {
             return Err(error.clone());
         }
         match command::apply_command(self.workspace.as_mut().expect("edit is open"), command) {
-            Ok(()) => Ok(()),
+            Ok(()) => {
+                self.sequence += 1;
+                Ok(())
+            }
             Err(error) => {
                 self.error = Some(error.clone());
                 Err(error)
@@ -144,6 +149,7 @@ pub(crate) struct NativeEdit {
     session: Arc<Mutex<AuthoringSession>>,
     active_edit: Arc<AtomicBool>,
     active_held: bool,
+    modeling_identity: u64,
     commands: PendingCommands,
     failed: bool,
     closed: bool,
@@ -159,6 +165,10 @@ impl NativeEdit {
             session,
             active_edit,
             active_held: true,
+            modeling_identity: {
+                static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            },
             commands: PendingCommands::new(workspace),
             failed: false,
             closed: false,
@@ -219,3 +229,5 @@ mod organization;
 mod scene;
 
 mod references;
+
+mod modeling;

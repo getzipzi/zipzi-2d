@@ -29,6 +29,11 @@ def main():
             for python, mode in [(environment / "bin/python", "connected"), (options.native_python.absolute(), "native")]]
         assert json.loads(outputs[0]) == json.loads(outputs[1]), outputs
         print("NativeBackend/ConnectedBackend shared recipe: equivalent geometry, parameters, errors, history and save state")
+        modeling = ROOT / "crates/zipzi-python/tests/modeling_recipe.py"
+        outputs = [subprocess.check_output([str(python), "-I", str(modeling), mode], cwd="/tmp", env=env, text=True)
+            for python, mode in [(environment / "bin/python", "connected"), (options.native_python.absolute(), "native")]]
+        assert json.loads(outputs[0]) == json.loads(outputs[1]), outputs
+        print("NativeBackend/ConnectedBackend modeling recipe: equivalent binding/BlendShape samples, diagnostics, image save and history")
 
 
 if __name__ == "__main__":

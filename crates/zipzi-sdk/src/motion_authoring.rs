@@ -605,3 +605,18 @@ impl AuthoringSession {
         })
     }
 }
+
+impl crate::AuthoringSnapshot {
+    pub fn plan_attachment_edit(
+        &self,
+        intent: zipzi_core::document::AttachmentEdit,
+    ) -> Result<AttachmentEditPlan, SdkError> {
+        Ok(AttachmentEditPlan {
+            version: self.version(),
+            domain: self
+                .document()
+                .plan_attachment_edit(intent)
+                .map_err(|s| SdkError::from_status(s, "plan_attachment_edit", vec![]))?,
+        })
+    }
+}

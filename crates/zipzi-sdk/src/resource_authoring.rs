@@ -4,11 +4,11 @@ use crate::{
     SdkError, Version,
 };
 use std::sync::{
-    Arc,
     atomic::{AtomicBool, Ordering},
+    Arc,
 };
 pub use zipzi_core::document::ResourceEdit;
-use zipzi_core::{ImageContent, document::ResourcePlan};
+use zipzi_core::{document::ResourcePlan, ImageContent};
 #[derive(Debug, Clone)]
 pub struct ResourceEditPlan {
     version: Version,
@@ -345,6 +345,9 @@ impl AuthoringSession {
         name: String,
         image: &PreparedImageContent,
     ) -> Result<EditSession<'static>, SdkError> {
+        let image = image.with_budget(self.image_memory_budget()).map_err(|s| {
+            SdkError::from_status(s, "begin_import_prepared_image", vec![id.clone()])
+        })?;
         let mut edit = self.begin_owned_edit("Import texture", None)?;
         edit.edit_resource(ResourceEdit::Create {
             id: id.clone(),
@@ -374,8 +377,23 @@ impl AuthoringSession {
         token: &ImageLoadToken,
         image: &PreparedImageContent,
     ) -> Result<EditSession<'static>, SdkError> {
+        let image = image
+            .with_budget(self.image_memory_budget())
+            .map_err(|s| SdkError::from_status(s, "begin_prepared_image_content_edit", vec![]))?;
         let mut edit = self.begin_image_content_edit(token, Some(image.content().clone()))?;
         edit.prepared_images.push(image.clone());
         Ok(edit)
+    }
+}
+
+impl crate::AuthoringSnapshot {
+    pub fn plan_resource_edit(&self, intent: ResourceEdit) -> Result<ResourceEditPlan, SdkError> {
+        Ok(ResourceEditPlan {
+            version: self.version(),
+            domain: self
+                .document()
+                .plan_resource_edit(intent)
+                .map_err(|s| SdkError::from_status(s, "plan_resource_edit", vec![]))?,
+        })
     }
 }

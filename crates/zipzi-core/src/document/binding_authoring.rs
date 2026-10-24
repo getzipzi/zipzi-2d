@@ -47,7 +47,7 @@ impl Default for AuthoringLimits {
         }
     }
 }
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConversionCost {
     pub sample_combinations: usize,
     pub payload_bytes: usize,
